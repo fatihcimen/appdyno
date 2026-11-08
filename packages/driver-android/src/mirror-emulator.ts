@@ -94,7 +94,7 @@ export class EmulatorMirror implements Mirror {
     try {
       return await this.openPixels(grpc, tell);
     } catch (e) {
-      await this.endPixels();
+      this.endPixels();
       return this.guest(opts, (e as Error).message);
     }
   }
@@ -166,11 +166,12 @@ export class EmulatorMirror implements Mirror {
         const status = headers['grpc-status'];
         if (status !== undefined && status !== '0')
           fail(`the gRPC port refused: ${String(headers['grpc-message'] ?? status)}`);
-        else if (headers[':status'] !== 200) fail(`the gRPC port answered ${headers[':status']}`);
+        else if (headers[':status'] !== 200)
+          fail(`the gRPC port answered ${String(headers[':status'])}`);
         else resolve();
       });
-      stream.once('error', (e) => fail(e.message));
-      client.once('error', (e) => fail(e.message));
+      stream.once('error', (e: Error) => fail(e.message));
+      client.once('error', (e: Error) => fail(e.message));
     });
     let turns = screen.rotation;
     let seen = { w, h, seq: 0 };
@@ -213,7 +214,7 @@ export class EmulatorMirror implements Mirror {
     return { kind: 'pixels', file, w, h };
   }
 
-  private async endPixels() {
+  private endPixels() {
     clearInterval(this.turnsTimer);
     const client = this.client;
     this.client = undefined;
@@ -223,7 +224,7 @@ export class EmulatorMirror implements Mirror {
   }
 
   async close() {
-    await this.endPixels();
+    this.endPixels();
     await this.phone.close();
   }
 

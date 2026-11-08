@@ -10,6 +10,7 @@ import {
 import {
   sleep,
   assertLatLon,
+  must,
   decodePng,
   RpcDevice,
   swipeThrough,
@@ -196,7 +197,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     const state = async () => {
       const out = await this.shell(`dumpsys power | grep -m1 'mWakefulness='; ${KEYGUARD_READ}`);
       return {
-        awake: /mWakefulness=Awake/.test(out),
+        awake: out.includes('mWakefulness=Awake'),
         locked: /isKeyguardShowing=true|mShowingLockscreen=true/.test(out),
       };
     };
@@ -442,6 +443,6 @@ export class AndroidDevice extends RpcDevice implements Device {
 
 function durationOf(a: ActParams): number {
   if (a.kind === 'longPress' || a.kind === 'swipe') return a.durationMs;
-  if (a.kind === 'gesture') return Math.max(...a.pointers.map((p) => p[p.length - 1]!.t));
+  if (a.kind === 'gesture') return Math.max(...a.pointers.map((p) => must(p.at(-1), 'a point').t));
   return 0;
 }

@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { copyFile, mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  must,
   joinVideos,
   pause,
   readVideo,
@@ -27,8 +28,8 @@ const PULL_MS = 600_000;
 
 /** The state folder may be on another volume than the video. */
 const move = (from: string, to: string) =>
-  rename(from, to).catch(async (e: NodeJS.ErrnoException) => {
-    if (e.code !== 'EXDEV') throw e;
+  rename(from, to).catch(async (e: unknown) => {
+    if (!(e instanceof Error && 'code' in e && e.code === 'EXDEV')) throw e;
     await copyFile(from, to);
   });
 
@@ -129,7 +130,10 @@ export class AndroidRecorder implements ScreenRecorder {
         await this.adb.run(['-s', this.serial, 'pull', `${dir}/${name}`, local], PULL_MS);
         await readVideo(local).then(
           () => good.push(local),
-          (e: Error) => torn.push(`${name}: ${e.message.replace(`${local} `, '')}`),
+          (e: unknown) =>
+            torn.push(
+              `${name}: ${(e instanceof Error ? e.message : String(e)).replace(`${local} `, '')}`,
+            ),
         );
       }
       if (good.length === 0) {
@@ -154,7 +158,7 @@ export class AndroidRecorder implements ScreenRecorder {
   /** One file: the only segment, or all of them joined; else the segments, next to it, in order. */
   private async finish(good: string[], file: string, notes: string[]) {
     if (good.length === 1) {
-      await move(good[0]!, file);
+      await move(must(good[0], 'a file'), file);
       return [file];
     }
     try {

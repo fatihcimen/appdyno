@@ -1,4 +1,4 @@
-import { sleep } from '@appdyno/core';
+import { must, sleep } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 /** How long a state asked for has to become the device's. */
@@ -18,14 +18,17 @@ export const poseOf = (name: string) =>
 
 /** The states of `cmd device_state print-states`, by their ids, which differ by device. */
 export const foldStates = (printed: string): FoldState[] =>
-  [...printed.matchAll(STATE)].map((m) => ({ id: Number(m[1]), pose: poseOf(m[2]!) }));
+  [...printed.matchAll(STATE)].map((m) => ({
+    id: Number(m[1]),
+    pose: poseOf(must(m[2], 'a name')),
+  }));
 
 /** The state `dumpsys device_state` names on its line `key`, as a pose. */
 const poseIn = (dump: string, key: string) => {
   const m = new RegExp(`${key}=Optional\\[DeviceState\\{identifier=\\d+, name='([^']+)'`).exec(
     dump,
   );
-  return m && poseOf(m[1]!);
+  return m && poseOf(must(m[1], 'a name'));
 };
 
 /**
@@ -44,7 +47,7 @@ export class AndroidFold {
         'UNSUPPORTED',
         states.length > 0
           ? `this device does not fold: its states are ${poses.join(', ')}`
-          : `this device has no fold states (cmd device_state, API 31+): ${printed.trim().split('\n')[0]}`,
+          : `this device has no fold states (cmd device_state, API 31+): ${must(printed.trim().split('\n')[0], 'a line')}`,
       );
     return states;
   }

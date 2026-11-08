@@ -21,9 +21,9 @@ function setup(
   };
   const rpc = {
     closed: false,
-    call: vi.fn(async (method: string, params: unknown) => {
+    call: vi.fn((method: string, params: unknown) => {
       calls.push([method, params]);
-      return { result: method === 'stream.status' ? status : {} };
+      return Promise.resolve({ result: method === 'stream.status' ? status : {} });
     }),
     close: vi.fn(function (this: { closed: boolean }) {
       this.closed = true;
@@ -31,20 +31,30 @@ function setup(
   };
   const adb = {
     port: 5037,
-    devices: async () =>
-      'state' in o && o.state === undefined
-        ? []
-        : [{ serial: SERIAL, state: o.state ?? 'device', props: {} }],
-    exec: async () => String(o.sdk ?? 34),
+    devices: () =>
+      Promise.resolve(
+        'state' in o && o.state === undefined
+          ? []
+          : [{ serial: SERIAL, state: o.state ?? 'device', props: {} }],
+      ),
+    exec: () => Promise.resolve(String(o.sdk ?? 34)),
   } as unknown as Adb;
+  const connect = vi.fn(() => {
+    if (o.connect) return Promise.reject(o.connect);
+    return Promise.resolve({ rpc, hello: {}, started: false });
+  });
   const launcher = {
-    connect: vi.fn(async () => {
-      if (o.connect) throw o.connect;
-      return { rpc, hello: {}, started: false };
-    }),
-    address: async () => ({ socket: 'appdyno_x', token: 'the-token' }),
+    connect,
+    address: () => Promise.resolve({ socket: 'appdyno_x', token: 'the-token' }),
   } as unknown as AndroidAgentLauncher;
-  return { mirror: new AndroidMirror(adb, SERIAL, launcher), rpc, calls, status, launcher };
+  return {
+    mirror: new AndroidMirror(adb, SERIAL, launcher),
+    rpc,
+    calls,
+    status,
+    launcher,
+    connect,
+  };
 }
 
 describe('an Android mirror', () => {
@@ -62,7 +72,7 @@ describe('an Android mirror', () => {
       expect(said).toHaveLength(1);
       expect(said[0]).toMatchObject({
         op: 'note',
-        text: expect.stringContaining('cannot keep up'),
+        text: expect.stringContaining('cannot keep up') as unknown,
       });
       answer(false);
       await vi.advanceTimersByTimeAsync(1_000);
@@ -118,14 +128,14 @@ describe('an Android mirror', () => {
   it('says on an address that it goes by the network, and what that costs', async () => {
     const adb = {
       port: 5037,
-      devices: async () => [{ serial: '192.168.1.5:41111', state: 'device', props: {} }],
-      exec: async () => '34',
+      devices: () => Promise.resolve([{ serial: '192.168.1.5:41111', state: 'device', props: {} }]),
+      exec: () => Promise.resolve('34'),
     } as unknown as Adb;
     const { launcher } = setup();
     const mirror = new AndroidMirror(adb, '192.168.1.5:41111', launcher);
     await expect(mirror.check()).resolves.toEqual({ ok: true, routes: ['agent', 'wifi'] });
     await expect(mirror.open({ quality: 'auto' })).resolves.toMatchObject({
-      note: expect.stringContaining('On Wi-Fi'),
+      note: expect.stringContaining('On Wi-Fi') as unknown,
     });
   });
 
@@ -166,14 +176,14 @@ describe('an Android mirror', () => {
   });
 
   it('a touch goes as it came, in fractions, on its own connection', async () => {
-    const { mirror, calls, launcher } = setup();
+    const { mirror, calls, connect } = setup();
     await mirror.input({ kind: 'touch', p: 0, x: 0.5, y: 0.25 });
     await mirror.input({ kind: 'touch', p: 1, x: 0.5, y: 0.25, x2: 0.1, y2: 0.2 });
     expect(calls).toEqual([
       ['touch', { p: 0, x: 0.5, y: 0.25 }],
       ['touch', { p: 1, x: 0.5, y: 0.25, x2: 0.1, y2: 0.2 }],
     ]);
-    expect(launcher.connect).toHaveBeenCalledTimes(1);
+    expect(connect).toHaveBeenCalledTimes(1);
   });
 
   it('a finger down or up waits for no answer, a move does, and a failure is said by the next', async () => {
@@ -221,11 +231,11 @@ describe('an Android mirror', () => {
     await mirror.input({ kind: 'button', name: 'home' });
     await mirror.input({ kind: 'button', name: 'no-such' });
     expect(calls.map((c) => c[0])).toEqual(['text.set', 'act']);
-    expect(calls[0]![1]).toMatchObject({ text: 'ş', focusTimeoutMs: 0 });
+    expect(calls[0]?.[1]).toMatchObject({ text: 'ş', focusTimeoutMs: 0 });
   });
 
   it('turns the screen on by the key that does nothing to a lit one', async () => {
-    const exec = vi.fn(async () => '');
+    const exec = vi.fn(() => Promise.resolve(''));
     const mirror = new AndroidMirror(
       { exec } as unknown as Adb,
       SERIAL,

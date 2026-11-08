@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import {
   allExits,
@@ -62,14 +62,14 @@ describe('a tombstone', () => {
 
   it('gives its signal and frames as a report’s detail, not its headers', () => {
     const [report] = crashReports('', dropbox, { app: 'dev.appdyno.fixture', limit: 5 });
-    expect(report!.detail).toBe(
+    expect(report?.detail).toBe(
       [
         'signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0000000000000000',
         '#00 pc 0000000000000660 libfixture_native.so',
         '#01 pc 0000000000377030 libart.so (art_quick_generic_jni_trampoline+144)',
       ].join('\n'),
     );
-    expect(report!.tombstone).toContain('backtrace:');
+    expect(report?.tombstone).toContain('backtrace:');
   });
 
   it('joins what ndk-stack names to each frame', () => {
@@ -101,7 +101,8 @@ describe('a tombstone', () => {
     const noteOf = async (reason: string) => {
       vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-tomb-')));
       const adb = {
-        exec: async (_s: string, c: string) => (c.includes('exit-info') ? exit(reason) : ''),
+        exec: (_s: string, c: string) =>
+          Promise.resolve(c.includes('exit-info') ? exit(reason) : ''),
       };
       const q = { app: 'dev.appdyno.fixture', limit: 5, symbols: '/no/such/folder' };
       const { note, reports } = await androidCrashes(adb as unknown as Adb, 'emulator-5554', q);
@@ -203,7 +204,9 @@ describe('how an app ended', () => {
       'reason=1 (EXIT_SELF) subreason=0 (UNKNOWN) status=3',
       'pss=0,00 rss=0,00 description=null',
     );
-    expect(allExits(turkish)[0]!.memory).toBeUndefined();
+    const [exit] = allExits(turkish);
+    assert(exit);
+    expect(exit.memory).toBeUndefined();
   });
 
   it('still calls only an end nobody asked for a death', () => {
@@ -224,6 +227,6 @@ Subject: ${subject}
 
   it('gives what it was as a report, not every thread', () => {
     const [report] = crashReports('', anr(INPUT), { app: 'dev.appdyno.fixture', limit: 5 });
-    expect(report!.detail).toBe(`Subject: ${INPUT}`);
+    expect(report?.detail).toBe(`Subject: ${INPUT}`);
   });
 });

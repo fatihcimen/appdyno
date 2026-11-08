@@ -226,7 +226,7 @@ export class Adb {
   async pair(address: string, code: string) {
     assertSerial(address);
     const said = await this.run(['pair', address, code], PAIR_MS);
-    if (!/Successfully paired/.test(said))
+    if (!said.includes('Successfully paired'))
       throw new DeviceError('CHECK_FAILED', `adb did not pair: ${shortFirstLine(said)}`);
   }
 
@@ -235,8 +235,8 @@ export class Adb {
     return new Promise((resolve, reject) => {
       const p = spawn(this.bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let out = '';
-      p.stdout.on('data', (b) => (out += b));
-      p.stderr.on('data', (b) => (out += b));
+      p.stdout.on('data', (b: Buffer) => (out += b.toString()));
+      p.stderr.on('data', (b: Buffer) => (out += b.toString()));
       const timer = setTimeout(() => p.kill('SIGKILL'), timeoutMs);
       const signal = callSignal();
       const abort = () => p.kill('SIGKILL');

@@ -1,8 +1,9 @@
+import { must } from '@appdyno/core';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Point, Tree } from '@appdyno/protocol';
 import { DeviceError } from '@appdyno/protocol';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidApps } from '../src/apps.js';
 import {
@@ -39,7 +40,9 @@ const left = (s: InstallStep | undefined) => {
   return s;
 };
 const centre = (t: Tree, text: string) => {
-  const [l, top, r, b] = t.nodes.find((n) => n.t === text)!.b;
+  const node = t.nodes.find((n) => n.t === text);
+  assert(node);
+  const [l, top, r, b] = node.b;
   return { x: Math.round((l + r) / 2), y: Math.round((top + b) / 2) };
 };
 
@@ -54,7 +57,9 @@ describe('the USB install prompt', () => {
 
   it('never touches the remember box', () => {
     const t = real('consent');
-    const box = t.nodes.find((n) => n.id?.endsWith(':id/do_not_ask_checkbox'))!.b;
+    const remember = t.nodes.find((n) => n.id?.endsWith(':id/do_not_ask_checkbox'));
+    assert(remember);
+    const box = remember.b;
     const { x, y } = touch(installStep(t, app, true)).touch;
     expect(x >= box[0] && x <= box[2] && y >= box[1] && y <= box[3]).toBe(false);
   });
@@ -173,7 +178,7 @@ const CONSENT_WINDOW =
 const PROTECT_WINDOW =
   'Window{2 u0 com.android.vending/com.google.android.finsky.protectdialogs.activity.PlayProtectDialogsActivity}';
 const APK = join(dir, 'plain.apk');
-const names = vi.fn(async () => app);
+const names = vi.fn(() => Promise.resolve(app));
 
 /** A phone that shows these screens in turn: each touch moves to the next, unless it ignores touches. */
 function phone(
@@ -183,21 +188,30 @@ function phone(
   let at = 0;
   let looks = 0;
   const presses: Point[] = [];
-  const s: InstallScreen & { presses: Point[]; ended: () => boolean } = {
+  const ensureAwake = vi.fn(() => {
+    if (screens[at]?.focus === '') at++;
+    return Promise.resolve();
+  });
+  const s: Omit<InstallScreen, 'ensureAwake'> & {
+    presses: Point[];
+    ended: () => boolean;
+    ensureAwake: typeof ensureAwake;
+  } = {
     presses,
     ended: () => at >= screens.length,
-    currentFocus: async () =>
-      (o.opensLater && looks++ === 0 ? undefined : screens[at]?.focus) ?? 'Window{0 u0 launcher}',
-    focusSteady: async () => undefined,
-    ensureAwake: vi.fn(async () => {
-      if (screens[at]?.focus === '') at++;
-    }),
-    tree: async () => screens[at]?.tree ?? real('consent'),
-    press: async (p) => {
+    currentFocus: () =>
+      Promise.resolve(
+        (o.opensLater && looks++ === 0 ? undefined : screens[at]?.focus) ?? 'Window{0 u0 launcher}',
+      ),
+    focusSteady: () => Promise.resolve(),
+    ensureAwake,
+    tree: () => Promise.resolve(screens[at]?.tree ?? real('consent')),
+    press: (p) => {
       presses.push(p);
       if (!o.ignores) at++;
+      return Promise.resolve();
     },
-    shell: async () => o.adbInput ?? '0',
+    shell: () => Promise.resolve(o.adbInput ?? '0'),
   };
   return s;
 }
@@ -256,10 +270,12 @@ describe('answering during an install', () => {
 
   it('touches only once the prompt has stopped sliding', async () => {
     const reads = [real('consent-sliding'), real('consent-sliding'), real('consent')];
-    reads[1]!.windows[1]!.b = [22, 1203, 698, 1736];
+    const sliding = reads[1]?.windows[1];
+    assert(sliding);
+    sliding.b = [22, 1203, 698, 1736];
     const s = phone([{ focus: CONSENT_WINDOW }]);
     let i = 0;
-    s.tree = async () => reads[Math.min(i++, reads.length - 1)]!;
+    s.tree = () => Promise.resolve(must(reads[Math.min(i++, reads.length - 1)], 'a read'));
     const said: string[] = [];
     await fast(() => answerInstallPrompts(s, names, false, until(s), said));
     // two reads of the same place came after the slide
@@ -337,7 +353,7 @@ describe('answering during an install', () => {
 
   it('a finger-up refused once does not cost the answer its line', async () => {
     const s = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }]);
-    const press = s.press;
+    const press = s.press.bind(s);
     let tries = 0;
     s.press = async (p, ms) => {
       if (++tries === 1) throw new DeviceError('INTERNAL', 'the input event was not delivered');
@@ -351,7 +367,7 @@ describe('answering during an install', () => {
 
   it('does not read the file before a prompt shows', async () => {
     const s = phone([{ focus: 'Window{0 u0 launcher}' }]);
-    const read = vi.fn(async () => app);
+    const read = vi.fn(() => Promise.resolve(app));
     let polls = 0;
     await fast(() => answerInstallPrompts(s, read, false, () => polls++ < 3, []));
     expect(read).not.toHaveBeenCalled();
@@ -373,7 +389,7 @@ describe('answering during an install', () => {
 describe('install', () => {
   const adb = (run: (stop?: AbortSignal) => Promise<string>) =>
     ({
-      exec: async () => '',
+      exec: () => Promise.resolve(''),
       run: (_a: string[], _ms: number, stop?: AbortSignal) => run(stop),
     }) as unknown as Adb;
   const restricted = () =>
@@ -385,7 +401,7 @@ describe('install', () => {
       prompts: false,
       warnings: true,
     });
-    const e = await apps.install(APK).catch((x: DeviceError) => x);
+    const e = await apps.install(APK).catch((x: unknown) => x);
     expect(screen.presses).toEqual([]);
     expect((e as DeviceError).message).toBe(
       'the phone asked on its screen whether to install over USB, and no one said yes in time',
@@ -395,9 +411,9 @@ describe('install', () => {
 
   it("refuses a prompt already open: it is an earlier install's, and nothing is touched or started", async () => {
     const screen = phone([{ focus: PROTECT_WINDOW, tree: real('warning') }]);
-    const run = vi.fn(async () => 'Success');
+    const run = vi.fn(() => Promise.resolve('Success'));
     const apps = new AndroidApps(adb(run), 'phone', screen, { prompts: true, warnings: true });
-    const e = await apps.install(APK).catch((x: DeviceError) => x);
+    const e = await apps.install(APK).catch((x: unknown) => x);
     expect((e as DeviceError).message).toContain('from before this install');
     expect(run).not.toHaveBeenCalled();
     expect(screen.presses).toEqual([]);
@@ -409,7 +425,7 @@ describe('install', () => {
     const refused = () => new Promise<void>((r) => setTimeout(r, 2_500)).then(restricted);
     const e = await new AndroidApps(adb(refused), 'phone', screen)
       .install(APK)
-      .catch((x: DeviceError) => x);
+      .catch((x: unknown) => x);
     expect(screen.presses).toHaveLength(1);
     expect((e as DeviceError).message).toContain('though its prompt was tapped');
     expect((e as DeviceError).message).toContain('tapped "Yükle"');
@@ -419,7 +435,7 @@ describe('install', () => {
   it('returns at once where no prompt comes, and says nothing', async () => {
     const screen = phone([{ focus: 'Window{0 u0 launcher}' }]);
     const apps = new AndroidApps(
-      adb(async () => 'Success'),
+      adb(() => Promise.resolve('Success')),
       'emulator-5680',
       screen,
     );
@@ -439,7 +455,7 @@ describe('install', () => {
       );
     const e = await new AndroidApps(adb(pending), 'phone', screen)
       .install(APK)
-      .catch((x: DeviceError) => x);
+      .catch((x: unknown) => x);
     expect(stopped).toBe(true);
     expect((e as DeviceError).code).toBe('PERMISSION_REQUIRED');
     expect((e as DeviceError).hint).toContain('--accept-install-warnings');

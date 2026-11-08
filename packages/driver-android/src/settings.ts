@@ -1,4 +1,4 @@
-import { type DeviceSettings, sleep, TIMEOUTS, type SettingName } from '@appdyno/core';
+import { must, type DeviceSettings, sleep, TIMEOUTS, type SettingName } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { type Adb, shq } from './adb.js';
 import { AndroidFold } from './fold.js';
@@ -55,7 +55,11 @@ export async function emulatorConsole(adb: Adb, serial: string, what: string, wo
   const out = await adb.run(['-s', serial, 'emu', ...words], 30_000);
   // the console answers OK or KO; adb says nothing of it in its exit code
   const ko = /^KO:?\s*(.*)$/m.exec(out);
-  if (ko) throw new DeviceError('UNSUPPORTED', `this emulator refused ${what}: ${ko[1]}`);
+  if (ko)
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `this emulator refused ${what}: ${must(ko[1], 'a reason')}`,
+    );
   return out;
 }
 
@@ -64,7 +68,7 @@ export class AndroidSettings implements DeviceSettings {
     private readonly adb: Adb,
     private readonly serial: string,
     /** The session's animations-off option lets go: the agent puts the scales back and holds nothing. */
-    private readonly releaseAnimations: () => Promise<void> = async () => undefined,
+    private readonly releaseAnimations: () => Promise<void> = () => Promise.resolve(),
     /** The whole device's languages, by the agent, set first when given. */
     deviceLocales: (set?: string) => Promise<string> = () =>
       Promise.reject(new DeviceError('UNSUPPORTED', 'no agent to reach the device languages')),
@@ -97,10 +101,12 @@ export class AndroidSettings implements DeviceSettings {
     if (v.length !== 3 || v.some((x) => x !== 'null' && !/^\d+(\.\d+)?$/.test(x)))
       throw new DeviceError('INVALID_ARGUMENT', `animations: on or off, not ${value}`);
     await this.releaseAnimations();
-    for (const [i, key] of ANIMATION_SCALES.entries())
+    for (const [i, key] of ANIMATION_SCALES.entries()) {
+      const scale = must(v[i], 'a scale');
       await this.sh(
-        v[i] === 'null' ? `settings delete global ${key}` : `settings put global ${key} ${v[i]}`,
+        scale === 'null' ? `settings delete global ${key}` : `settings put global ${key} ${scale}`,
       );
+    }
   }
 
   private async getAnimations() {
@@ -134,7 +140,7 @@ export class AndroidSettings implements DeviceSettings {
       case 'battery': {
         const out = await this.sh('dumpsys battery');
         const level = /^\s*level: (\d+)/m.exec(out)?.[1] ?? '?';
-        return /UPDATES STOPPED/.test(out) ? level : `default (now ${level})`;
+        return out.includes('UPDATES STOPPED') ? level : `default (now ${level})`;
       }
       case 'proxy': {
         const v = (await this.sh('settings get global http_proxy')).trim();
@@ -159,11 +165,11 @@ export class AndroidSettings implements DeviceSettings {
 
   /** With no credential to give, the check passes only where there is none. */
   private async unlocked() {
-    return /verified successfully/.test(await this.sh('cmd lock_settings verify'));
+    return (await this.sh('cmd lock_settings verify')).includes('verified successfully');
   }
 
   private async avd() {
-    return (await this.emu('its name', 'avd', 'name')).split('\n')[0]!.trim();
+    return must((await this.emu('its name', 'avd', 'name')).split('\n')[0], 'a line').trim();
   }
 
   /**
@@ -184,19 +190,19 @@ export class AndroidSettings implements DeviceSettings {
       value = 'none';
     }
     if (value === 'none' && (await this.unlocked())) return;
-    const [command, done] =
+    const change =
       value === 'pin'
-        ? [`set-pin ${EMULATOR_PIN}`, /Pin set/]
+        ? { command: `set-pin ${EMULATOR_PIN}`, done: /Pin set/ }
         : value === 'none'
-          ? [`clear --old ${EMULATOR_PIN}`, /cleared/]
-          : [];
-    if (!command)
+          ? { command: `clear --old ${EMULATOR_PIN}`, done: /cleared/ }
+          : undefined;
+    if (!change)
       throw new DeviceError('INVALID_ARGUMENT', `screen_lock: pin or none, not ${value}`);
-    const out = await this.sh(`cmd lock_settings ${command}`);
-    if (!done!.test(out))
+    const out = await this.sh(`cmd lock_settings ${change.command}`);
+    if (!change.done.test(out))
       throw new DeviceError(
         'UNSUPPORTED',
-        `the screen lock did not change: ${out.trim().split('\n')[0]}`,
+        `the screen lock did not change: ${must(out.trim().split('\n')[0], 'a line')}`,
       );
   }
 
@@ -250,7 +256,7 @@ export class AndroidSettings implements DeviceSettings {
     if (now !== value)
       throw new DeviceError(
         'UNSUPPORTED',
-        `asked for ${name} ${value} and it still reads ${now} after ${RADIO_MS / 1000} s${said.trim() ? `: ${said.trim().split('\n')[0]}` : ''}`,
+        `asked for ${name} ${value} and it still reads ${now} after ${RADIO_MS / 1000} s${said.trim() ? `: ${must(said.trim().split('\n')[0], 'a line')}` : ''}`,
       );
   }
 

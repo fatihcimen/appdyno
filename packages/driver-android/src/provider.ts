@@ -9,7 +9,7 @@ import type { InstallAnswers } from './install-consent.js';
 import { needOfState } from './mirror.js';
 import { queryTrace } from './perf/perfetto.js';
 import { traceProcessor } from './tools.js';
-import { run } from '@appdyno/core';
+import { must, run } from '@appdyno/core';
 
 /**
  * What this machine (and, with `serial`, that device) needs: adb, the agent build; on the device the agent
@@ -31,7 +31,7 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
   );
   try {
     const { stdout } = await run(adb.bin, ['version'], { timeout: 10_000 });
-    checks.push({ name: 'adb', ok: true, detail: stdout.split('\n')[0]!.trim() });
+    checks.push({ name: 'adb', ok: true, detail: must(stdout.split('\n')[0], 'a line').trim() });
   } catch {
     checks.push({
       name: 'adb',
@@ -81,7 +81,7 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
     });
   if (!serial) return checks;
   const dev = (await adb.devices()).find((d) => d.serial === serial);
-  if (!dev || dev.state !== 'device') {
+  if (dev?.state !== 'device') {
     checks.push({
       name: `device ${serial}`,
       ok: false,
@@ -100,7 +100,7 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
       const port = serial.slice('emulator-'.length);
       const line = stdout
         .split('\n')
-        .find((l) => /qemu-system/.test(l) && l.includes(`-port ${port}`));
+        .find((l) => l.includes('qemu-system') && l.includes(`-port ${port}`));
       const gpu = line && /-gpu (\S+)/.exec(line)?.[1];
       checks.push({
         name: 'emulator gpu',
@@ -123,7 +123,7 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
     checks.push({
       name: 'agent',
       ok: true,
-      detail: `${hello.agentVersion} on Android ${hello.osVersion} (SDK ${hello.sdk}), ${d.lastStartWasCold ? 'started' : 'already running'} in ${Date.now() - t} ms`,
+      detail: `${hello.agentVersion} on Android ${hello.osVersion} (SDK ${String(hello.sdk)}), ${d.lastStartWasCold ? 'started' : 'already running'} in ${Date.now() - t} ms`,
     });
     const tree = await d.tree();
     checks.push({
@@ -132,11 +132,11 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
       detail: `${tree.nodes.length} nodes in ${tree.elapsedMs} ms`,
     });
   } catch (e) {
-    const de = e as DeviceError;
+    const de = e as Partial<DeviceError>;
     checks.push({
       name: 'agent',
       ok: false,
-      detail: `${de.code ?? 'ERROR'}: ${de.message}`,
+      detail: `${de.code ?? 'ERROR'}: ${String(de.message)}`,
       ...(de.hint && { fix: de.hint }),
     });
   } finally {

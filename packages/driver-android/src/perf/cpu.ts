@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { sleep, type Measured, type ThreadReading, type CpuProfile } from '@appdyno/core';
+import { must, sleep, type Measured, type ThreadReading, type CpuProfile } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
 import { parseProcStatTicks, parseThreadReads, parseSimpleperfReport } from './parse.js';
@@ -26,7 +26,9 @@ export async function cpu(
   const b = await read();
   const ms = Date.now() - t0;
   const hz = Number(b.trim().split('\n').pop()) || 100;
-  const ticks = parseProcStatTicks(b.split('\n')[0]!) - parseProcStatTicks(a.split('\n')[0]!);
+  const ticks =
+    parseProcStatTicks(must(b.split('\n')[0], 'a line')) -
+    parseProcStatTicks(must(a.split('\n')[0], 'a line'));
   const percent = Math.round(((ticks / hz) * 1000 * 1000) / ms) / 10;
   return {
     value: { percent, windowMs: ms, ticks, clockTicksPerSec: hz },

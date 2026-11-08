@@ -1,5 +1,6 @@
+import { must } from '@appdyno/core';
 import { DeviceError, NODE_FLAGS, type Tree } from '@appdyno/protocol';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidEvents } from '../src/events.js';
 import { enrolmentStep } from '../src/fingerprint.js';
@@ -10,14 +11,14 @@ import { openSettingsAt } from '../src/settings-pages.js';
 const device = (serial: string, answers: [RegExp, string | (() => string)][]) => {
   const asked: string[] = [];
   const adb = {
-    exec: async (_serial: string, command: string) => {
+    exec: (_serial: string, command: string) => {
       asked.push(command);
       const hit = answers.find(([p]) => p.test(command))?.[1];
-      return typeof hit === 'function' ? hit() : (hit ?? '');
+      return Promise.resolve(typeof hit === 'function' ? hit() : (hit ?? ''));
     },
-    run: async (words: string[]) => {
+    run: (words: string[]) => {
       asked.push(words.join(' '));
-      return 'OK';
+      return Promise.resolve('OK');
     },
   };
   return {
@@ -68,7 +69,10 @@ describe('a radio', () => {
       [
         /dumpsys wifi/,
         () => {
-          const [chosen, airplane, state] = turns[Math.min(reads++, turns.length - 1)]!;
+          const [chosen, airplane, state] = must(
+            turns[Math.min(reads++, turns.length - 1)],
+            'a turn',
+          );
           return `${chosen}\n${airplane}\nWi-Fi is ${state}\n`;
         },
       ],
@@ -182,7 +186,7 @@ describe('a fingerprint', () => {
     const { events, asked } = device('emulator-5554', [
       [
         /dumpsys fingerprint/,
-        () => prints(asked.filter((c) => /touch/.test(c)).length >= 3 ? 1 : 0, 0, 0, 1),
+        () => prints(asked.filter((c) => c.includes('touch')).length >= 3 ? 1 : 0, 0, 0, 1),
       ],
     ]);
     expect(await events.biometric('enroll')).toBeUndefined();
@@ -201,10 +205,13 @@ describe('a fingerprint', () => {
     expect(enrolmentStep(t)).toEqual({ kind: 'tap', x: 900, y: 2250 });
     const typing = tree([['android.widget.EditText', [0, 900, 1080, 1000], EDIT]]);
     expect(enrolmentStep(typing)).toEqual({ kind: 'pin', x: 540, y: 950 });
+    const [win] = typing.windows;
+    const [field] = typing.nodes;
+    assert(win && field);
     const onKeyboard: Tree = {
       ...typing,
-      windows: [...typing.windows, { ...typing.windows[0]!, type: 2 }],
-      nodes: [{ ...typing.nodes[0]!, w: 1 }],
+      windows: [...typing.windows, { ...win, type: 2 }],
+      nodes: [{ ...field, w: 1 }],
     };
     expect(enrolmentStep(onKeyboard)).toBeUndefined();
   });
@@ -216,25 +223,27 @@ describe('a fingerprint', () => {
       let listening = false;
       const asked: string[] = [];
       const adb = {
-        exec: async (_: string, command: string) => {
+        exec: (_: string, command: string) => {
           asked.push(command);
-          if (/keyevent 66/.test(command)) listening = true;
+          if (command.includes('keyevent 66')) listening = true;
           if (command.startsWith('cmd lock_settings verify'))
-            return 'Lock credential verified successfully';
-          const touches = asked.filter((c) => /touch/.test(c)).length;
-          if (/dumpsys fingerprint/.test(command))
-            return prints(touches >= 3 ? 1 : 0, 0, 0, listening && touches < 3 ? 1 : 0);
-          return '';
+            return Promise.resolve('Lock credential verified successfully');
+          const touches = asked.filter((c) => c.includes('touch')).length;
+          if (command.includes('dumpsys fingerprint'))
+            return Promise.resolve(
+              prints(touches >= 3 ? 1 : 0, 0, 0, listening && touches < 3 ? 1 : 0),
+            );
+          return Promise.resolve('');
         },
-        run: async (words: string[]) => (asked.push(words.join(' ')), 'OK'),
+        run: (words: string[]) => Promise.resolve((asked.push(words.join(' ')), 'OK')),
       };
       const pin = tree([['android.widget.EditText', [0, 900, 1080, 1000], EDIT]]);
       const done = tree([['android.widget.Button', [800, 2200, 1000, 2300], BUTTON]]);
       const screens = [pin, done];
-      const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', async () =>
-        screens.shift()!,
+      const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', () =>
+        Promise.resolve(must(screens.shift(), 'a screen')),
       );
-      const setUp = vi.fn(async () => undefined);
+      const setUp = vi.fn(() => Promise.resolve());
       const said = await events.biometric('enroll', setUp);
       expect(setUp).toHaveBeenCalledWith('screen_lock', 'pin');
       expect(said).toBe(
@@ -249,19 +258,21 @@ describe('a fingerprint', () => {
   it('says the PIN it set when Settings never reaches the sensor, and closes Settings', async () => {
     const asked: string[] = [];
     const adb = {
-      exec: async (_: string, c: string) => {
+      exec: (_: string, c: string) => {
         asked.push(c);
         if (c.startsWith('cmd lock_settings verify'))
-          return 'Lock credential verified successfully';
-        return c.startsWith('dumpsys fingerprint') ? prints(0) : '';
+          return Promise.resolve('Lock credential verified successfully');
+        return Promise.resolve(c.startsWith('dumpsys fingerprint') ? prints(0) : '');
       },
-      run: async () => 'OK',
+      run: () => Promise.resolve('OK'),
     };
     // each read of the clock a second on, so that each wait for the sensor ends at once
     let t = 0;
     const now = vi.spyOn(Date, 'now').mockImplementation(() => (t += 1_000));
-    const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', async () => tree([]));
-    const e = await refusal(events.biometric('enroll', async () => undefined));
+    const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', () =>
+      Promise.resolve(tree([])),
+    );
+    const e = await refusal(events.biometric('enroll', () => Promise.resolve()));
     now.mockRestore();
     expect(e.message).toBe(
       "Settings' fingerprint enrolment did not come to its sensor in 8 screens: enrol by hand, then biometric enroll; the screen lock is PIN 1234 until restore takes it off",
@@ -274,7 +285,7 @@ describe('a fingerprint', () => {
       [/dumpsys fingerprint/, prints(0)],
       [/lock_settings verify/, 'java.lang.IllegalArgumentException'],
     ]);
-    const setUp = vi.fn(async () => undefined);
+    const setUp = vi.fn(() => Promise.resolve());
     const e = await refusal(theirs.events.biometric('enroll', setUp));
     expect(e.message).toContain('a screen lock of its own');
     expect(setUp).not.toHaveBeenCalled();
@@ -338,7 +349,7 @@ describe('a fingerprint', () => {
     const other = device('emulator-5554', [
       [
         /dumpsys fingerprint/,
-        () => prints(1, 0, other.asked.some((c) => /touch 99/.test(c)) ? 1 : 0),
+        () => prints(1, 0, other.asked.some((c) => c.includes('touch 99')) ? 1 : 0),
       ],
     ]);
     await other.events.biometric('nomatch');
@@ -368,9 +379,9 @@ it('says Android has no keychain', async () => {
 
 describe('the pages of Settings', () => {
   const asked: string[] = [];
-  const start = async (intent: string) => {
+  const start = (intent: string) => {
     asked.push(intent);
-    return undefined;
+    return Promise.resolve(undefined);
   };
 
   it('stops it first, as an intent to it would bring back the page it shows', async () => {
@@ -387,7 +398,7 @@ describe('the pages of Settings', () => {
       /no privacy_photos page in Settings/,
     );
     await expect(
-      openSettingsAt({ page: 'wifi' }, async () => 'Error: no activity'),
+      openSettingsAt({ page: 'wifi' }, () => Promise.resolve('Error: no activity')),
     ).rejects.toThrow(/no wifi page in Settings: Error: no activity/);
   });
 });

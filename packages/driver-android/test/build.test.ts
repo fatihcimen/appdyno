@@ -33,7 +33,7 @@ describe('a Gradle build', () => {
   });
 
   it('says when a build left nothing', () => {
-    expect(() => builtApk(join(outputs, 'gone'), 'debug')).toThrowError(/no APK for debug/);
+    expect(() => builtApk(join(outputs, 'gone'), 'debug')).toThrow(/no APK for debug/);
   });
 
   it('refuses a folder with no wrapper, so nothing it holds runs', async () => {

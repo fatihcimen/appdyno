@@ -1,4 +1,4 @@
-import { type BiometricAnswer, type SettingName, sleep } from '@appdyno/core';
+import { type BiometricAnswer, must, type SettingName, sleep } from '@appdyno/core';
 import { DeviceError, NODE_FLAGS, type Tree } from '@appdyno/protocol';
 import { EMULATOR_PIN } from './settings.js';
 
@@ -30,10 +30,10 @@ export function enrolmentStep(tree: Tree): Step | undefined {
   const shown = tree.nodes.filter(
     (n) => apps.has(n.w) && n.f & NODE_FLAGS.visible && n.f & NODE_FLAGS.enabled,
   );
-  const centre = (kind: Step['kind'], [l, t, r, b]: number[]) => ({
+  const centre = (kind: Step['kind'], [l, t, r, b]: [number, number, number, number]) => ({
     kind,
-    x: Math.round((l! + r!) / 2),
-    y: Math.round((t! + b!) / 2),
+    x: Math.round((l + r) / 2),
+    y: Math.round((t + b) / 2),
   });
   const pin = shown.find((n) => n.f & NODE_FLAGS.editable && n.f & NODE_FLAGS.password);
   if (pin) return centre('pin', pin.b);
@@ -59,7 +59,7 @@ export class EmulatorFingerprint {
     if (!m)
       throw new DeviceError(
         'UNSUPPORTED',
-        `this device gives no fingerprint counts: ${out.trim().split('\n')[0]}`,
+        `this device gives no fingerprint counts: ${must(out.trim().split('\n')[0], 'a line')}`,
       );
     const state = /Fps state: (\d+)/.exec(out)?.[1];
     return {
@@ -142,10 +142,13 @@ export class EmulatorFingerprint {
         'UNSUPPORTED',
         `${NO_FINGERPRINT}, but not here: it leaves the app for Settings`,
       );
-    const unlocked = /verified successfully/;
-    const none = unlocked.test(await this.sh('cmd lock_settings verify'));
+    const unlocked = 'verified successfully';
+    const none = (await this.sh('cmd lock_settings verify')).includes(unlocked);
     // a lock with another PIN takes this as one failed attempt, which an emulator can spare
-    if (!none && !unlocked.test(await this.sh(`cmd lock_settings verify --old ${EMULATOR_PIN}`)))
+    if (
+      !none &&
+      !(await this.sh(`cmd lock_settings verify --old ${EMULATOR_PIN}`)).includes(unlocked)
+    )
       throw new DeviceError(
         'UNSUPPORTED',
         'this emulator has a screen lock of its own, whose PIN this tool cannot type: enrol a fingerprint in Settings by hand',

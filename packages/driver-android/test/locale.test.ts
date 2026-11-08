@@ -7,15 +7,15 @@ const on = (sdk: number, tags = 'en-US', reads?: string) => {
   const shell: string[] = [];
   const agent: (string | undefined)[] = [];
   const locale = new AndroidLocale(
-    async (c) => {
+    (c) => {
       shell.push(c);
-      if (c.startsWith('getprop')) return `${sdk}\n`;
-      return c.includes('get-app-locales') ? 'Locales for x are [tr-TR]' : '';
+      if (c.startsWith('getprop')) return Promise.resolve(`${sdk}\n`);
+      return Promise.resolve(c.includes('get-app-locales') ? 'Locales for x are [tr-TR]' : '');
     },
-    async (set) => {
+    (set) => {
       agent.push(set);
       if (set) tags = reads ?? set;
-      return tags;
+      return Promise.resolve(tags);
     },
   );
   return { locale, shell, agent };

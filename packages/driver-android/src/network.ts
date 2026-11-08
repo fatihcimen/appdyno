@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  must,
   run,
   pause,
   type NetworkAnswer,
@@ -30,7 +31,7 @@ export function uidBytes(dump: string, uid: string) {
   let inUid = false;
   let inSection = false;
   for (const line of dump.split('\n')) {
-    if (/^UID stats:/.test(line)) inSection = true;
+    if (line.startsWith('UID stats:')) inSection = true;
     else if (inSection && /^\S/.test(line)) break;
     if (!inSection) continue;
     if (line.includes('ident=[')) inUid = line.includes(` uid=${uid} `) && line.includes('tag=0x0');
@@ -52,8 +53,8 @@ export function packetEntries(csv: string): NetworkEntry[] {
     .map((l) => {
       const [direction, transport, port, packets, bytes] = l.split(',');
       return {
-        direction: direction!.replaceAll('"', ''),
-        host: `${transport!.replaceAll('"', '').replace('IPPROTO_', '')} port ${port}`,
+        direction: must(direction, 'a direction').replaceAll('"', ''),
+        host: `${must(transport, 'a transport').replaceAll('"', '').replace('IPPROTO_', '')} port ${String(port)}`,
         packets: Number(packets),
         bytes: Number(bytes),
       };
@@ -146,8 +147,8 @@ export class AndroidNetwork implements NetworkSource {
     const tx = now.tx - Number(h.tx);
     return {
       entries: [
-        { direction: 'Received', host: `uid ${h.uid}`, bytes: rx },
-        { direction: 'Transmitted', host: `uid ${h.uid}`, bytes: tx },
+        { direction: 'Received', host: `uid ${String(h.uid)}`, bytes: rx },
+        { direction: 'Transmitted', host: `uid ${String(h.uid)}`, bytes: tx },
       ],
       note: `${now.packets - Number(h.packets)} packets. Traffic on the loopback (an adb reverse) is not counted.`,
     };

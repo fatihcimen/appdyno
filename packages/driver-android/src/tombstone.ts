@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { run } from '@appdyno/core';
+import { must, run } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { sdkDir } from './emulators.js';
 
@@ -54,15 +54,16 @@ export function namedFrames(out: string) {
   for (const line of out.split('\n')) {
     if (/^#\d+ 0x/.test(line)) frames.push(shortFrame(line.replace(/ 0x[0-9a-f]+/, '')));
     else if (/^\s{20,}\S/.test(line) && frames.length > 0)
-      frames[frames.length - 1] += ` ${line.trim().replace(/^.*\//, '')}`;
+      frames[frames.length - 1] =
+        `${must(frames.at(-1), 'a frame')} ${line.trim().replace(/^.*\//, '')}`;
   }
   const other = [
     ...out.matchAll(
       /^WARNING: Mismatched build id for (?:.*\/)?(\S+)\nWARNING:\s+Expected\s+(\w+)\nWARNING:\s+Found\s+(\w+)$/gm,
     ),
   ].map(
-    ([, lib, expected, found]) =>
-      `${lib}: the crash is of build ${expected}, these symbols of ${found}`,
+    (m) =>
+      `${must(m[1], 'a library')}: the crash is of build ${must(m[2], 'a build')}, these symbols of ${must(m[3], 'a build')}`,
   );
   return { frames, otherBuilds: [...new Set(other)] };
 }

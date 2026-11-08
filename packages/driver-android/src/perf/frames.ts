@@ -1,4 +1,5 @@
 import {
+  must,
   frozenMoments,
   refreshMsOf,
   sleep,
@@ -53,7 +54,7 @@ export async function frames(
   if (/No process found/i.test(raw))
     throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
   // a process up for a broadcast or a job has no window, and prints no summary: it drew nothing
-  if (!/Total frames rendered/.test(raw)) return { value: NOTHING_DRAWN, raw, at: at() };
+  if (!raw.includes('Total frames rendered')) return { value: NOTHING_DRAWN, raw, at: at() };
   return { value: parseFrameStats(raw), raw, at: at() };
 }
 
@@ -80,11 +81,12 @@ export async function framesDuring(
   during: () => Promise<unknown>,
 ): Promise<Measured<FrameStats>> {
   await resetFrames(d, pkg);
-  const rows = new Map<number, FrameRow>();
+  const rows = new Map<number, Required<FrameRow>>();
   const keep = (text: string) => {
-    for (const r of parseFramestats(text)) rows.set(r.startNs!, r);
+    for (const r of parseFramestats(text)) rows.set(r.startNs, r);
   };
-  let on = true;
+  // set by the finally below, which the compiler does not follow into the loop
+  let on = true as boolean;
   const reading = (async () => {
     while (on) {
       await d
@@ -103,7 +105,7 @@ export async function framesDuring(
   const m = await frames(d, pkg);
   keep(m.raw);
   const moments = frozenMoments(
-    [...rows.values()].map((r) => ({ start: r.startNs! / 1e6, ms: r.durationMs })),
+    [...rows.values()].map((r) => ({ start: r.startNs / 1e6, ms: r.durationMs })),
   );
   // the summary saw one the rows did not: at least that
   const frozenFrames = m.value.frozenFrames > 0 ? Math.max(moments, 1) : moments;
@@ -172,7 +174,7 @@ async function heldInLog(d: PerfDevice, pkg: string, sinceMs: number, refreshMs:
     logcatCommand(String(pid), { since: sinceMs, level: 'info', maxLines: 0, timed: true }),
   ).catch(() => '');
   const lines = out.split(/\r?\n/);
-  const stops = stopsInLog(lines, (i) => markOfLine(lines[i]!)?.at, refreshMs);
+  const stops = stopsInLog(lines, (i) => markOfLine(must(lines[i], 'a line'))?.at, refreshMs);
   return stops.length ? Math.round(Math.max(...stops.map((s) => s.ms))) : undefined;
 }
 

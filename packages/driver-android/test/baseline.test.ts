@@ -28,13 +28,13 @@ vi.mock('../src/perf/launch.js', async (original) => {
 const device = (answer: (command: string) => string) => {
   const asked: string[] = [];
   const d = {
-    readyToMeasure: async () => undefined,
-    ensureAwake: async () => undefined,
+    readyToMeasure: () => Promise.resolve(),
+    ensureAwake: () => Promise.resolve(),
     serial: 'emulator-5554',
-    shell: async (command: string) => {
+    shell: (command: string) => {
       const c = command.replace(/^LC_ALL=C /, '');
       asked.push(c);
-      return answer(c);
+      return Promise.resolve(answer(c));
     },
   };
   return { d: d as unknown as PerfDevice, asked };

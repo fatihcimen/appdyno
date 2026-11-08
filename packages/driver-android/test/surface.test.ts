@@ -77,11 +77,12 @@ RequestedLayerState{ad16944 SurfaceView[dev.app/x]#111503 parentId=111502 relati
     const device = (answers: Record<string, string>, frames?: () => string) =>
       ({
         serial: 'emulator-5554',
-        readyToMeasure: async () => undefined,
-        shell: async (c: string) => {
-          if (frames && c.includes('--latency') && c.includes('BLAST')) return frames();
+        readyToMeasure: () => Promise.resolve(),
+        shell: (c: string) => {
+          if (frames && c.includes('--latency') && c.includes('BLAST'))
+            return Promise.resolve(frames());
           const hit = Object.keys(answers).find((k) => c.includes(k));
-          return hit ? answers[hit]! : '';
+          return Promise.resolve(hit ? answers[hit] : '');
         },
       }) as unknown as PerfDevice;
     const list =

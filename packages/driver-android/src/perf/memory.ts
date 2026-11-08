@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import {
+  must,
   sleep,
   type AnonMemory,
   type Measured,
@@ -110,7 +111,7 @@ export async function heapProfile(
       : HEAPPROFD_SITES_SQL,
   );
   const rows = parseCsv(raw).rows.map((r) => ({
-    name: r[0]!,
+    name: must(r[0], 'a name'),
     bytes: Number(r[1]),
     count: Number(r[2]),
   }));

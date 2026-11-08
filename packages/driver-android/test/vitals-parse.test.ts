@@ -31,7 +31,7 @@ describe("what Play's definitions are read from", () => {
   });
 
   const device = (dropbox: string) => ({
-    shell: async (cmd: string) => (cmd.includes('dropbox') ? dropbox : EXIT_INFO),
+    shell: (cmd: string) => Promise.resolve(cmd.includes('dropbox') ? dropbox : EXIT_INFO),
   });
   const filed = (...subjects: string[]) =>
     subjects
@@ -48,8 +48,8 @@ describe("what Play's definitions are read from", () => {
   });
 
   it('counts an ANR the app recovered from, which ends in no exit', async () => {
-    const shell = async (cmd: string) =>
-      cmd.includes('dropbox') ? filed(TOUCH, TOUCH, TOUCH) : 'no exits here';
+    const shell = (cmd: string) =>
+      Promise.resolve(cmd.includes('dropbox') ? filed(TOUCH, TOUCH, TOUCH) : 'no exits here');
     const { value } = await exits({ shell } as never, 'dev.appdyno.fixture');
     expect(value.held).toMatchObject({ crashes: 0, anrs: 3, userAnrs: 3, total: 0 });
   });
@@ -67,18 +67,18 @@ describe("what Play's definitions are read from", () => {
     const { value } = await exits(device(other) as never, 'dev.appdyno.fixture');
     expect(value.held).toMatchObject({ anrs: 2, userAnrs: 1 });
     const failing = {
-      shell: async (cmd: string) => {
-        if (cmd.includes('dropbox')) throw new Error('no dropbox');
-        return EXIT_INFO;
+      shell: (cmd: string) => {
+        if (cmd.includes('dropbox')) return Promise.reject(new Error('no dropbox'));
+        return Promise.resolve(EXIT_INFO);
       },
     };
     expect((await exits(failing as never, 'dev.appdyno.fixture')).value.held.userAnrs).toBe(1);
   });
 
   it('reads no ANR as none where the dropbox was unread and the exits show none', async () => {
-    const shell = async (cmd: string) => {
-      if (cmd.includes('dropbox')) throw new Error('no dropbox');
-      return 'no exits here';
+    const shell = (cmd: string) => {
+      if (cmd.includes('dropbox')) return Promise.reject(new Error('no dropbox'));
+      return Promise.resolve('no exits here');
     };
     const { value } = await exits({ shell } as never, 'dev.appdyno.fixture');
     expect(value.held.anrs).toBeUndefined();
@@ -88,9 +88,9 @@ describe("what Play's definitions are read from", () => {
 
   /** A device whose local clock reads `now`, this Mac's being `macNow`. */
   const onClock = (now: string, dropbox = '') => ({
-    shell: async (cmd: string) => {
-      if (cmd.includes("date '+")) return `${now}\n`;
-      return cmd.includes('dropbox') ? dropbox : EXIT_INFO;
+    shell: (cmd: string) => {
+      if (cmd.includes("date '+")) return Promise.resolve(`${now}\n`);
+      return Promise.resolve(cmd.includes('dropbox') ? dropbox : EXIT_INFO);
     },
   });
   const macNow = new Date('2026-11-04T12:00:00').getTime();
@@ -143,9 +143,9 @@ describe("what Play's definitions are read from", () => {
     });
 
     it('has no reading of a run where the device’s clock cannot be read', async () => {
-      const shell = async (cmd: string) => {
-        if (cmd.includes("date '+")) throw new Error('no clock');
-        return cmd.includes('dropbox') ? '' : EXIT_INFO;
+      const shell = (cmd: string) => {
+        if (cmd.includes("date '+")) return Promise.reject(new Error('no clock'));
+        return Promise.resolve(cmd.includes('dropbox') ? '' : EXIT_INFO);
       };
       const { value } = await exits({ shell } as never, 'dev.appdyno.fixture', macNow - 1_000);
       expect(value.run).toBeUndefined();

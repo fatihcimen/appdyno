@@ -1,11 +1,13 @@
 import { DeviceError } from '@appdyno/protocol';
-import { processAlive, TIMEOUTS } from '@appdyno/core';
+import { must, processAlive, TIMEOUTS } from '@appdyno/core';
 import { shortFirstLine } from './adb.js';
 import { REMOTE_DIR } from './agent.js';
 
 type Shell = (command: string, timeoutMs?: number) => Promise<string>;
 
 const TEST_PROVIDERS = ['gps', 'network', 'fused'];
+/** `gps` of `gps/plain`. */
+const providerOf = (entry: string) => must(entry.split('/')[0], 'a provider');
 /** The attribution tag of our test providers (dumpsys location shows it in the provider's block). */
 export const TEST_TAG = 'appdyno';
 
@@ -36,9 +38,9 @@ export function parseLocationRun(out: string): { had: string[]; made: string[] }
   const had: string[] = [];
   const made: string[] = [];
   for (const m of out.matchAll(/^(had|made) (\w+(?:\/plain)?)\s*$/gm)) {
-    const [, kind, entry] = m;
-    if (!TEST_PROVIDERS.includes(entry!.split('/')[0]!)) continue;
-    (kind === 'had' ? had : made).push(entry!);
+    const entry = must(m[2], 'an entry');
+    if (!TEST_PROVIDERS.includes(providerOf(entry))) continue;
+    (m[1] === 'had' ? had : made).push(entry);
   }
   return { had, made };
 }
@@ -54,7 +56,8 @@ function mockBlocks(dumpsys: string): Map<string, string> {
       if (current) blocks.set(current, '');
       continue;
     }
-    if (current && /^\s{5,}\S/.test(line)) blocks.set(current, blocks.get(current)! + line + '\n');
+    if (current && /^\s{5,}\S/.test(line))
+      blocks.set(current, must(blocks.get(current), 'a block') + line + '\n');
     else if (current && line.trim()) current = undefined;
   }
   return blocks;
@@ -69,10 +72,10 @@ export function removableProviders(listed: string[], dumpsys: string): string[] 
   const blocks = mockBlocks(dumpsys);
   const tagged = new RegExp(`extra attribution tags=\\{[^}]*\\b${TEST_TAG}\\b`);
   return listed.flatMap((entry) => {
-    const [p, kind] = entry.split('/');
-    const block = blocks.get(p!);
+    const p = providerOf(entry);
+    const block = blocks.get(p);
     if (block === undefined) return [];
-    return kind === 'plain' || tagged.test(block) ? [p!] : [];
+    return entry.split('/')[1] === 'plain' || tagged.test(block) ? [p] : [];
   });
 }
 /** The test location providers this library added: `<host pid> <provider>…`. */
@@ -85,7 +88,7 @@ export function parseTestLocation(text: string): { pid?: number; providers: stri
   return {
     pid: Number(pid),
     providers: rest.filter(
-      (e) => /^\w+(\/plain)?$/.test(e) && TEST_PROVIDERS.includes(e.split('/')[0]!),
+      (e) => /^\w+(\/plain)?$/.test(e) && TEST_PROVIDERS.includes(providerOf(e)),
     ),
   };
 }
@@ -112,7 +115,7 @@ export async function setTestLocation(shell: Shell, lat: number, lon: number) {
   // still ours: what this call created, and what an earlier call of this process created that is still there
   const kept =
     before.pid === process.pid
-      ? before.providers.filter((e) => run.had.includes(e.split('/')[0]!))
+      ? before.providers.filter((e) => run.had.includes(providerOf(e)))
       : [];
   await shell(
     `mkdir -p ${REMOTE_DIR}; echo ${process.pid} ${[...kept, ...run.made].join(' ')} > ${TEST_LOCATION}`,

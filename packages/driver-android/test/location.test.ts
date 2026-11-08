@@ -78,10 +78,10 @@ describe('clearing the test location', () => {
     const ran: string[] = [];
     return {
       ran,
-      shell: async (command: string) => {
+      shell: (command: string) => {
         ran.push(command);
-        if (command.startsWith('cat ')) return marker;
-        return command === 'dumpsys location' ? dumpsys : '';
+        if (command.startsWith('cat ')) return Promise.resolve(marker);
+        return Promise.resolve(command === 'dumpsys location' ? dumpsys : '');
       },
     };
   };

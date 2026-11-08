@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { num } from './parse-common.js';
 
 /** The platform's way of writing a time (`-1h2m3s4ms`, `+25ms`), in milliseconds and without its sign. */
@@ -25,17 +26,21 @@ export type HeldLock = {
  */
 export function parseWakeLocks(text: string, uid: number): HeldLock[] {
   return [...text.matchAll(/^\s*PARTIAL_WAKE_LOCK\s+'(.*)'.*? ACQ=(\S+) \((.*)\)\s*$/gm)].flatMap(
-    ([, tag, acquired, owner]) => {
-      const own = new RegExp(`\\buid=${uid}\\b`).test(owner!);
-      const onBehalf = new RegExp(`\\bws=\\S*\\b${uid}\\b`).test(owner!);
+    (m) => {
+      const tag = must(m[1], 'a tag');
+      const owner = must(m[3], 'an owner');
+      const own = new RegExp(`\\buid=${uid}\\b`).test(owner);
+      const onBehalf = new RegExp(`\\bws=\\S*\\b${uid}\\b`).test(owner);
       if (!own && !onBehalf) return [];
       const exempt =
-        own || !/audio|gnss|location/i.test(tag!)
+        own || !/audio|gnss|location/i.test(tag)
           ? undefined
-          : /audio/i.test(tag!)
+          : /audio/i.test(tag)
             ? ('audio' as const)
             : ('location' as const);
-      return [{ tag: tag!, acquiredMsAgo: parseDuration(acquired!), ...(exempt && { exempt }) }];
+      return [
+        { tag, acquiredMsAgo: parseDuration(must(m[2], 'a time')), ...(exempt && { exempt }) },
+      ];
     },
   );
 }
@@ -58,10 +63,11 @@ export function parseAlarmStats(text: string, pkg: string): AlarmStats {
   );
   if (at < 0) return out;
   for (let i = at + 1; i < lines.length; i++) {
-    const row = /^\s*\+\S+ (\d+) wakes (\d+) alarms/.exec(lines[i]!);
+    const line = must(lines[i], 'a line');
+    const row = /^\s*\+\S+ (\d+) wakes (\d+) alarms/.exec(line);
     if (!row) {
       // the rows of the next package, or the end of the table
-      if (!/^\s{6,}\S/.test(lines[i]!)) break;
+      if (!/^\s{6,}\S/.test(line)) break;
       continue;
     }
     const [wakeups, alarms] = [Number(row[1]), Number(row[2])];
@@ -77,6 +83,7 @@ export function parseAlarmStats(text: string, pkg: string): AlarmStats {
 /** How many of this package's jobs began within `windowMs` of now, from `Job history:` of `dumpsys jobscheduler`. */
 export function parseJobStarts(text: string, pkg: string, windowMs: number): number {
   return [...text.matchAll(/^\s*(-\S+)\s+START: #\S+ (\S+)/gm)].filter(
-    ([, ago, job]) => job!.startsWith(`${pkg}/`) && parseDuration(ago!) <= windowMs,
+    ([, ago, job]) =>
+      must(job, 'a job').startsWith(`${pkg}/`) && parseDuration(must(ago, 'a time')) <= windowMs,
   ).length;
 }

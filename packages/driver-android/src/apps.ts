@@ -6,6 +6,7 @@ import {
   type AppEntry,
   type BuildRequest,
   type LaunchOptions,
+  must,
   run,
   TIMEOUTS,
 } from '@appdyno/core';
@@ -48,7 +49,8 @@ export class AndroidApps implements AppManager {
     private readonly screen: InstallScreen,
     private readonly answers: InstallAnswers = { prompts: true, warnings: false },
     /** What the agent knows of names; with no agent up, nothing. */
-    private readonly labels: () => Promise<{ id: string; name: string }[]> = async () => [],
+    private readonly labels: () => Promise<{ id: string; name: string }[]> = () =>
+      Promise.resolve([]),
   ) {}
 
   private sh = (c: string, ms: number = TIMEOUTS.app) =>
@@ -85,7 +87,7 @@ export class AndroidApps implements AppManager {
     } catch (e) {
       stop.abort();
       const also = said.length > 0 ? `. ${said.join('. ')}` : '';
-      if (/INSTALL_FAILED_USER_RESTRICTED/.test((e as Error).message))
+      if ((e as Error).message.includes('INSTALL_FAILED_USER_RESTRICTED'))
         throw said.some((s) => s.includes(CONSENT_TAPPED))
           ? new DeviceError(
               'PERMISSION_REQUIRED',
@@ -210,7 +212,10 @@ export class AndroidApps implements AppManager {
       : `android.permission.${PERMISSIONS[service.toLowerCase()] ?? service.toUpperCase()}`;
     const out = await this.sh(`pm ${grant ? 'grant' : 'revoke'} ${assertPkg(app)} ${shq(name)}`);
     if (/Exception|Unknown|Error/.test(out))
-      throw new DeviceError('INVALID_ARGUMENT', `${name}: ${out.trim().split('\n')[0]}`);
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `${name}: ${must(out.trim().split('\n')[0], 'a line')}`,
+      );
   }
 
   links(app: string) {
@@ -234,14 +239,10 @@ export class AndroidApps implements AppManager {
 
   /** Starts the app's launcher activity and waits for it (`am start -W`). */
   async start(app: string, args: string[] = []) {
-    const activity = (
-      await this.sh(
-        `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${assertPkg(app)}`,
-      )
-    )
-      .trim()
-      .split('\n')
-      .pop()!;
+    const said = await this.sh(
+      `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${assertPkg(app)}`,
+    );
+    const activity = must(said.trim().split('\n').at(-1), 'a line');
     if (!activity.includes('/'))
       throw new DeviceError(
         'APP_NOT_RUNNING',

@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { AndroidFold, foldStates, poseOf } from '../src/fold.js';
 
@@ -14,19 +15,22 @@ const state = (key: string, id: number, name: string) =>
 const foldable = (states = STATES) => {
   const asked: string[] = [];
   let override: [number, string] | undefined;
-  const fold = new AndroidFold(async (c) => {
+  const fold = new AndroidFold((c) => {
     asked.push(c);
-    if (c === 'cmd device_state print-states') return states;
-    if (c === 'cmd device_state print-state') return `${override?.[0] ?? 3}\n`;
+    if (c === 'cmd device_state print-states') return Promise.resolve(states);
+    if (c === 'cmd device_state print-state') return Promise.resolve(`${override?.[0] ?? 3}\n`);
     if (c === 'cmd device_state state reset') override = undefined;
     const id = /state (\d+)$/.exec(c)?.[1];
-    if (id) override = [Number(id), ['', 'CLOSED', 'HALF_OPENED', 'OPENED'][Number(id)]!];
+    if (id)
+      override = [Number(id), must(['', 'CLOSED', 'HALF_OPENED', 'OPENED'][Number(id)], 'a state')];
     if (c === 'dumpsys device_state')
-      return [
-        state('mCommittedState', ...(override ?? [3, 'OPENED'])),
-        override ? state('mOverrideState', ...override) : '  mOverrideState=Optional.empty',
-      ].join('\n');
-    return '';
+      return Promise.resolve(
+        [
+          state('mCommittedState', ...(override ?? [3, 'OPENED'])),
+          override ? state('mOverrideState', ...override) : '  mOverrideState=Optional.empty',
+        ].join('\n'),
+      );
+    return Promise.resolve('');
   });
   return { fold, asked };
 };

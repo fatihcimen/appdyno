@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  must,
   stateDir,
   type CrashesAnswer,
   type CrashesQuery,
@@ -56,7 +57,7 @@ export function allExits(text: string): Exit[] {
           ...(subreason && subreason !== 'UNKNOWN' && { subreason }),
           ...(status && status !== '0' && { status }),
           // in the phone's language: `0,00` on one in Turkish
-          ...(pss && !/^0[.,]0+$/.test(pss) && { memory: `pss ${pss}, rss ${rss}` }),
+          ...(pss && !/^0[.,]0+$/.test(pss) && { memory: `pss ${pss}, rss ${String(rss)}` }),
         },
       ];
     });
@@ -87,14 +88,8 @@ export function parseDropbox(text: string, app: string): Drop[] {
     const h = /^\s*(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) (\w+) \(/.exec(block);
     if (!h || !new RegExp(`^(Process|Package): ${app.replace(/\./g, '\\.')}\\b`, 'm').test(block))
       return [];
-    return [
-      {
-        at: h[1]!,
-        time: stampTime(h[1]!),
-        tag: h[2]!,
-        text: block.trim(),
-      },
-    ];
+    const at = must(h[1], 'a time');
+    return [{ at, time: stampTime(at), tag: must(h[2], 'a tag'), text: block.trim() }];
   });
 }
 
@@ -130,13 +125,12 @@ export function crashReports(exitInfo: string, dropbox: string, q: CrashesQuery)
   const near = (t: number) => drops.find((d) => Math.abs(d.time - t) < 5_000);
   const fromExits = parseExitInfo(exitInfo).map((e) => {
     const stack = near(e.time);
+    const detail = stack ? stackOf(stack.text) : e.detail;
     return {
       time: e.time,
       at: e.at,
       reason: e.reason,
-      ...((stack ? stackOf(stack.text) : e.detail) && {
-        detail: stack ? stackOf(stack.text) : e.detail!,
-      }),
+      ...(detail && { detail }),
       ...(stack?.tag === NATIVE && { tombstone: stack.text }),
     };
   });
@@ -197,7 +191,7 @@ export async function androidCrashes(
     ...(otherBuilds.size > 0 && { note: [...otherBuilds].join('\n') }),
     ...(q.symbols &&
       reports.every((r) => !r.tombstone) && {
-        note: reports.some((r) => /NATIVE/.test(r.reason)) ? NO_TOMBSTONE : NOT_NATIVE,
+        note: reports.some((r) => r.reason.includes('NATIVE')) ? NO_TOMBSTONE : NOT_NATIVE,
       }),
   };
 }

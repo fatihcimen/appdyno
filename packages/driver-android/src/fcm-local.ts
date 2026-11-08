@@ -1,4 +1,4 @@
-import type { Push, PushRoute } from '@appdyno/core';
+import { must, type Push, type PushRoute } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from './adb.js';
 import { checkMessage } from './fcm.js';
@@ -54,7 +54,7 @@ export function extrasOf(message: Message, id: string): Extra[] {
   if (priority !== 'high' && priority !== 'normal')
     throw new DeviceError(
       'INVALID_ARGUMENT',
-      `an FCM priority is HIGH or NORMAL, not ${android.priority}`,
+      `an FCM priority is HIGH or NORMAL, not ${String(android.priority)}`,
     );
   const shown = shownOf(message);
   if (typeof shown?.image === 'string' && !/^https?:\/\//.test(shown.image))
@@ -136,7 +136,7 @@ export class LocalFcm {
       const said = out.trim().split('\n');
       throw new DeviceError(
         'UNSUPPORTED',
-        `${pkg}'s Firebase receiver did not take the message: ${result === undefined ? (said.find((l) => /Exception|Error/.test(l)) ?? said[0]) : `result ${result}`}`,
+        `${pkg}'s Firebase receiver did not take the message: ${result === undefined ? (said.find((l) => /Exception|Error/.test(l)) ?? must(said[0], 'a line')) : `result ${result}`}`,
         'a force-stopped app takes none, as from FCM: launch it once',
       );
     }

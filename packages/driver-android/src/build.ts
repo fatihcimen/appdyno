@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { type BuildRequest, runBuild } from '@appdyno/core';
+import { type BuildRequest, must, runBuild } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 const WORDS = {
@@ -33,7 +33,7 @@ export async function buildVariant(req: BuildRequest) {
     throw new DeviceError('INVALID_ARGUMENT', `no gradlew in ${project}`);
   const module = req.scheme ?? 'app';
   const variant = req.configuration ?? 'debug';
-  const task = `:${module}:assemble${variant[0]!.toUpperCase()}${variant.slice(1)}`;
+  const task = `:${module}:assemble${must(variant[0], 'a variant').toUpperCase()}${variant.slice(1)}`;
   await runBuild('./gradlew', [task], WORDS, project);
   return builtApk(join(project, module, 'build', 'outputs', 'apk'), variant);
 }

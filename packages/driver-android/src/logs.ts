@@ -1,4 +1,4 @@
-import type { LogLevel, LogMark, LogsAnswer, LogsQuery } from '@appdyno/core';
+import { must, type LogLevel, type LogMark, type LogsAnswer, type LogsQuery } from '@appdyno/core';
 import { type Adb, shq } from './adb.js';
 
 const LEVEL: Record<LogLevel, string> = {
@@ -25,7 +25,7 @@ const RANK: Record<string, LogMark['level']> = { W: 'warn', E: 'error', F: 'erro
 export const markOfLine = (line: string): LogMark | undefined => {
   const m = /^\s*(\d+)\.(\d{3})\s+\d+\s+\d+\s+([VDIWEFA])\s/.exec(line);
   if (!m) return undefined;
-  const level = RANK[m[3]!];
+  const level = RANK[must(m[3], 'a level')];
   return { at: Number(m[1]) * 1000 + Number(m[2]), ...(level && { level }) };
 };
 

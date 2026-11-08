@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { battery, noteLocks, type SeenLock } from '../src/perf/battery.js';
 import {
@@ -74,14 +75,16 @@ describe('a window of battery signals', () => {
   const device = (locks: string[][], alarms = ['', ALARMS]) => {
     let read = 0;
     let alarmsRead = 0;
-    const shell = async (cmd: string) => {
-      if (cmd.includes('pm list packages')) return `package:dev.appdyno.fixture uid:${UID}\n`;
+    const shell = (cmd: string) => {
+      if (cmd.includes('pm list packages'))
+        return Promise.resolve(`package:dev.appdyno.fixture uid:${UID}\n`);
       if (cmd.includes('dumpsys power')) {
-        const held = locks[Math.min(read++, locks.length - 1)]!;
-        return `Wake Locks: size=${held.length}\n${held.join('\n')}\n`;
+        const held = must(locks[Math.min(read++, locks.length - 1)], 'a read');
+        return Promise.resolve(`Wake Locks: size=${held.length}\n${held.join('\n')}\n`);
       }
-      if (cmd.includes('dumpsys alarm')) return alarms[Math.min(alarmsRead++, 1)]!;
-      return JOBS;
+      if (cmd.includes('dumpsys alarm'))
+        return Promise.resolve(must(alarms[Math.min(alarmsRead++, 1)], 'a read'));
+      return Promise.resolve(JOBS);
     };
     return { shell } as never;
   };

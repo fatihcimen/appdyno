@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
 import { NODE_FLAGS, type AuditType, type Tree, type WireNode } from '@appdyno/protocol';
-import { decodePng, type Image } from '@appdyno/core';
+import { decodePng, must, type Image } from '@appdyno/core';
 import type { Adb } from '../src/adb.js';
 import { auditAndroid, contrastRatio } from '../src/audit.js';
 import { AndroidDevice } from '../src/device.js';
@@ -18,17 +18,17 @@ const canvas = (): Image => ({
   channels: 4,
   data: new Uint8Array(W * H * 4).fill(255),
 });
+type Box = [number, number, number, number];
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-function paint(img: Image, [l, t, r, b]: number[], hex: string) {
-  const [R, G, B] = rgb(hex);
-  for (let y = t!; y < b!; y++)
-    for (let x = l!; x < r!; x++) img.data.set([R!, G!, B!, 255], (y * img.width + x) * 4);
+function paint(img: Image, [l, t, r, b]: Box, hex: string) {
+  const colour = [...rgb(hex), 255];
+  for (let y = t; y < b; y++)
+    for (let x = l; x < r; x++) img.data.set(colour, (y * img.width + x) * 4);
 }
 /** Text-like strokes of `hex` inside a box: 3 px bars every 12 px, the middle half of its height. */
-function strokes(img: Image, [l, t, r, b]: number[], hex: string) {
-  const h = b! - t!;
-  for (let x = l! + 4; x + 3 <= r! - 4; x += 12)
-    paint(img, [x, t! + h / 4, x + 3, b! - h / 4], hex);
+function strokes(img: Image, [l, t, r, b]: Box, hex: string) {
+  const h = b - t;
+  for (let x = l + 4; x + 3 <= r - 4; x += 12) paint(img, [x, t + h / 4, x + 3, b - h / 4], hex);
 }
 /** PNG of an RGBA image, every row filter 1 (Sub), as a device's encoder may write it. */
 function encodePng(img: Image): Buffer {
@@ -37,8 +37,9 @@ function encodePng(img: Image): Buffer {
   for (let y = 0; y < img.height; y++) {
     raw[y * (stride + 1)] = 1;
     for (let x = 0; x < stride; x++) {
-      const v = img.data[y * stride + x]!;
-      raw[y * (stride + 1) + 1 + x] = (v - (x >= 4 ? img.data[y * stride + x - 4]! : 0)) & 255;
+      const v = must(img.data[y * stride + x], 'a byte');
+      const left = x >= 4 ? must(img.data[y * stride + x - 4], 'a byte') : 0;
+      raw[y * (stride + 1) + 1 + x] = (v - left) & 255;
     }
   }
   const chunk = (type: string, data: Buffer) => {
@@ -155,7 +156,7 @@ describe('android accessibility checks', () => {
     );
     const r = auditAndroid(t, decodePng(encodePng(img)), { scale: SCALE });
     expect(r.issues.map((i) => [i.type, i.element?.id])).toEqual([['contrast', 'faint']]);
-    expect(r.issues[0]!.message).toMatch(
+    expect(r.issues[0]?.message).toMatch(
       /^text contrast 1\.\d\d:1 \(#C[0-9A-F]{5} on #F[0-9A-F]{5}\), under 4\.5:1$/,
     );
     expect(contrastRatio([0x8c, 0x8c, 0x8c], [255, 255, 255])).toBeGreaterThan(3);
@@ -259,9 +260,9 @@ describe('android accessibility checks', () => {
     it("takes them from the device's audit", async () => {
       const d = new AndroidDevice('emulator-5640', {} as Adb);
       Object.assign(d, {
-        open: async () => ({ screen: { density: 420 } }),
-        call: async () => ({ result: { tree: t, clips: [], traversal: [] } }),
-        screenshot: async () => ({ data: encodePng(canvas()) }),
+        open: () => Promise.resolve({ screen: { density: 420 } }),
+        call: () => Promise.resolve({ result: { tree: t, clips: [], traversal: [] } }),
+        screenshot: () => Promise.resolve({ data: encodePng(canvas()) }),
       });
       expect(types(await d.audit({ types: ['duplicateLabel'] }))).toEqual(['duplicateLabel']);
     });
@@ -270,7 +271,8 @@ describe('android accessibility checks', () => {
   it('decodes every PNG row filter it may meet and refuses what it cannot', () => {
     const img = canvas();
     paint(img, [10, 10, 50, 50], '#123456');
-    const back = decodePng(encodePng(img))!;
+    const back = decodePng(encodePng(img));
+    assert(back);
     expect([back.width, back.height, back.channels]).toEqual([W, H, 4]);
     expect(Array.from(back.data.subarray((20 * W + 20) * 4, (20 * W + 20) * 4 + 4))).toEqual([
       0x12, 0x34, 0x56, 255,

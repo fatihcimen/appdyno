@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from './adb.js';
 
@@ -47,7 +48,7 @@ export class AndroidLocale {
       if (/Unknown|Exception|Error/.test(out))
         throw new DeviceError(
           'UNSUPPORTED',
-          `this Android cannot set an app's locale: ${out.trim().split('\n')[0]}`,
+          `this Android cannot set an app's locale: ${must(out.trim().split('\n')[0], 'a line')}`,
         );
       return;
     }
@@ -55,7 +56,8 @@ export class AndroidLocale {
     if (!asked)
       throw new DeviceError('INVALID_ARGUMENT', `locale: a language such as tr-TR, not ${value}`);
     const now = await this.device(asked);
-    const first = (tags: string) => (canonical(tags) ?? tags).split(',')[0]!.toLowerCase();
+    const first = (tags: string) =>
+      must((canonical(tags) ?? tags).split(',')[0], 'a tag').toLowerCase();
     if (first(now) !== first(asked))
       throw new DeviceError(
         'UNSUPPORTED',

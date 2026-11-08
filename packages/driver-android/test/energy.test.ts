@@ -13,17 +13,17 @@ function device(reads: string[], guard = 'Enabled: no-auto-reset') {
   const sent: string[] = [];
   let tick = 0;
   const left = [...reads];
-  const shell = async (cmd: string) => {
+  const shell = (cmd: string) => {
     const c = cmd.replace(/^LC_ALL=C /, '');
     sent.push(c);
-    if (c.startsWith('pm list packages')) return `package:dev.app uid:${UID}\n`;
-    if (c.startsWith('pidof')) return '4242\n';
+    if (c.startsWith('pm list packages')) return Promise.resolve(`package:dev.app uid:${UID}\n`);
+    if (c.startsWith('pidof')) return Promise.resolve('4242\n');
     if (c.startsWith('cat /proc/4242/stat'))
-      return `4242 (app) S 1 2 3 4 5 6 7 8 9 10 ${(tick += 200)} 0 0 0\n100\n`;
-    if (c.includes('netstats')) return '';
-    if (c.includes('enable no-auto-reset')) return guard;
-    if (c.includes('batterystats --usage')) return left.shift() ?? '';
-    return '';
+      return Promise.resolve(`4242 (app) S 1 2 3 4 5 6 7 8 9 10 ${(tick += 200)} 0 0 0\n100\n`);
+    if (c.includes('netstats')) return Promise.resolve('');
+    if (c.includes('enable no-auto-reset')) return Promise.resolve(guard);
+    if (c.includes('batterystats --usage')) return Promise.resolve(left.shift() ?? '');
+    return Promise.resolve('');
   };
   return { sent, d: { serial: 'x', shell } as unknown as PerfDevice };
 }
@@ -68,7 +68,7 @@ describe('energy on Android', () => {
         if (cmd.includes('--usage')) throw new Error('adb went away');
         return d.shell(cmd);
       },
-    } as unknown as PerfDevice;
+    };
     await expect(energy(failing, 'dev.app', 10)).rejects.toThrow('adb went away');
     expect(sent.at(-1)).toMatch(/battery reset/);
   });

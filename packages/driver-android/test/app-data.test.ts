@@ -20,17 +20,17 @@ describe('an Android app data', () => {
   const phone = (rules: [string, string][], archive = Buffer.alloc(0)) => {
     const said: string[] = [];
     const adb = {
-      exec: async (_: string, c: string) => {
+      exec: (_: string, c: string) => {
         said.push(c);
-        return rules.find(([w]) => c.includes(w))?.[1] ?? '';
+        return Promise.resolve(rules.find(([w]) => c.includes(w))?.[1] ?? '');
       },
-      execBuffer: async (_: string, c: string) => {
+      execBuffer: (_: string, c: string) => {
         said.push(c);
-        return archive;
+        return Promise.resolve(archive);
       },
-      run: async (args: string[]) => {
+      run: (args: string[]) => {
         said.push(args.join(' '));
-        return '';
+        return Promise.resolve('');
       },
     } as unknown as Adb;
     return { said, apps: new AndroidApps(adb, 'phone', screen) };

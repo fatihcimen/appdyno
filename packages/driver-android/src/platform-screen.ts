@@ -16,7 +16,7 @@ const ALLOW = /:id\/permission_allow(_foreground_only|_one_time)?_button$/;
 const DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
 const STATUS_BAND_DP = 56;
 /** The system's own prompt, by its ids, in any language. */
-const BIOMETRIC_PROMPT = /^com\.android\.systemui:id\/biometric_/;
+const BIOMETRIC_PROMPT = 'com.android.systemui:id/biometric_';
 /** Android 17 asks for the credential inside the biometric prompt, by a view of its own there. */
 const CREDENTIAL_PROMPT =
   /^com\.android\.(systemui:id\/(lockPassword|lockPattern|lockPIN|compose_credential_view)|settings:id\/(password_entry|lockPattern))/;
@@ -28,14 +28,13 @@ export const androidScreen: PlatformScreen = {
    */
   systemAlert(tree, elements) {
     const pkgs = new Set(
-      tree.windows
-        .filter(
-          (w) =>
-            w.pkg &&
-            w.pkg !== SYSTEM_UI &&
-            ((w.type === SYSTEM_WINDOW && w.focused) || SYSTEM_DIALOGS.test(w.pkg)),
-        )
-        .map((w) => w.pkg!),
+      tree.windows.flatMap((w) =>
+        w.pkg &&
+        w.pkg !== SYSTEM_UI &&
+        ((w.type === SYSTEM_WINDOW && w.focused) || SYSTEM_DIALOGS.test(w.pkg))
+          ? [w.pkg]
+          : [],
+      ),
     );
     return alertOf(
       elements.filter((e) => e.pkg && pkgs.has(e.pkg)),
@@ -47,7 +46,7 @@ export const androidScreen: PlatformScreen = {
   personPrompt(tree, elements) {
     const ids = elements.map((e) => e.identifier ?? '');
     if (ids.some((id) => CREDENTIAL_PROMPT.test(id))) return 'a passcode';
-    if (ids.some((id) => BIOMETRIC_PROMPT.test(id))) return 'a fingerprint or a face';
+    if (ids.some((id) => id.startsWith(BIOMETRIC_PROMPT))) return 'a fingerprint or a face';
     if (tree.windows.some((w) => PERMISSION_PACKAGES.test(w.pkg ?? ''))) return undefined;
     return personNeeded(androidScreen.systemAlert(tree, elements));
   },

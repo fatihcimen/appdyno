@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import { quantile } from '@appdyno/core';
 import { parseExitInfo } from '../src/crashes.js';
 import { THERMAL_READ } from '../src/perf/app.js';
@@ -51,8 +51,9 @@ describe('android perf parsers on recorded outputs', () => {
       deadlineMissed: 9,
       fewFrames: false,
     });
-    expect(s.frames!.count).toBeGreaterThan(50);
-    expect(s.frames!.worstMs).toBeGreaterThanOrEqual(s.frames!.p95Ms);
+    assert(s.frames);
+    expect(s.frames.count).toBeGreaterThan(50);
+    expect(s.frames.worstMs).toBeGreaterThanOrEqual(s.frames.p95Ms);
     // the first row: IntendedVsync 851716987249 → FrameCompleted 851744228572 is 27.2 ms at a 16.7 ms interval
     expect(parseFramestats(fx('android-gfxinfo-framestats.txt'))[0]).toEqual({
       durationMs: 27.2,
@@ -223,7 +224,8 @@ describe('android perf parsers on recorded outputs', () => {
   });
 
   it('reads android_frame_stats, nanoseconds to ms', () => {
-    const s = parseAndroidFrameStats(fx('frame-stats.csv'))!;
+    const s = parseAndroidFrameStats(fx('frame-stats.csv'));
+    assert(s);
     expect(s.frames).toBe(32);
     expect(s.overrunWorstMs).toBeGreaterThanOrEqual(s.overrunP95Ms);
     expect(s.overrunWorstMs).toBeCloseTo(316.5, 0);
@@ -271,8 +273,10 @@ describe('android perf parsers on recorded outputs', () => {
       ],
       findings: ['bindApplication took 1533 ms (limit 1250 ms)'],
     });
-    expect(s.breakdown[0]!.reason).toBe('bind_application');
-    expect(s.breakdown[0]!.ms).toBeGreaterThan(1500);
+    const [first] = s.breakdown;
+    assert(first);
+    expect(first.reason).toBe('bind_application');
+    expect(first.ms).toBeGreaterThan(1500);
     expect(s.odex).toMatch(
       /^location=.*base\.odex status=up-to-date filter=verify reason=install$/,
     );
@@ -534,12 +538,12 @@ describe('the measures of a device', () => {
   const on = (serial: string, answer: string) =>
     new AndroidPerf({
       serial,
-      shell: async () => answer,
-      shellAlongside: async () => answer,
-      shellBuffer: async () => Buffer.from(answer),
-      pull: async () => undefined,
-      readyToMeasure: async () => undefined,
-      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+      shell: () => Promise.resolve(answer),
+      shellAlongside: () => Promise.resolve(answer),
+      shellBuffer: () => Promise.resolve(Buffer.from(answer)),
+      pull: () => Promise.resolve(),
+      readyToMeasure: () => Promise.resolve(),
+      ensureAwake: () => Promise.resolve({ woke: false, unlocked: false, locked: false }),
     });
 
   it('says what it has no way of measuring', async () => {
@@ -564,13 +568,13 @@ describe('the measures of a device', () => {
   it('keeps no size of an app whose files it could not read, where none would read as 0 bytes', async () => {
     const device = {
       serial: 'R58M',
-      shell: async (cmd: string) =>
-        cmd.includes('pm path') ? 'package:/data/app/a.apk\n' : 'nope',
-      shellAlongside: async () => '',
-      shellBuffer: async () => Buffer.from(''),
-      pull: async () => undefined,
-      readyToMeasure: async () => undefined,
-      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+      shell: (cmd: string) =>
+        Promise.resolve(cmd.includes('pm path') ? 'package:/data/app/a.apk\n' : 'nope'),
+      shellAlongside: () => Promise.resolve(''),
+      shellBuffer: () => Promise.resolve(Buffer.from('')),
+      pull: () => Promise.resolve(),
+      readyToMeasure: () => Promise.resolve(),
+      ensureAwake: () => Promise.resolve({ woke: false, unlocked: false, locked: false }),
     };
     await expect(new AndroidPerf(device).size('dev.app')).rejects.toMatchObject({
       code: 'UNSUPPORTED',
@@ -581,19 +585,19 @@ describe('the measures of a device', () => {
     const heard: unknown[] = [];
     const note = (e: unknown) => void heard.push(e);
     process.on('unhandledRejection', note);
-    let fail = (_: Error) => {};
+    let fail: (e: Error) => void = () => undefined;
     const recording = new Promise<string>((_, reject) => (fail = reject));
     const device = {
       serial: 'R58M',
-      shell: async () => '4242\n',
+      shell: () => Promise.resolve('4242\n'),
       shellAlongside: () => recording,
-      shellBuffer: async () => Buffer.from(''),
-      pull: async () => undefined,
-      readyToMeasure: async () => undefined,
-      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+      shellBuffer: () => Promise.resolve(Buffer.from('')),
+      pull: () => Promise.resolve(),
+      readyToMeasure: () => Promise.resolve(),
+      ensureAwake: () => Promise.resolve({ woke: false, unlocked: false, locked: false }),
     };
-    const during = async () => {
-      throw new Error('the swipe failed');
+    const during = () => {
+      return Promise.reject(new Error('the swipe failed'));
     };
     await expect(new AndroidPerf(device).cpuProfile('dev.app', 1_000, during)).rejects.toThrow(
       'the swipe failed',
@@ -608,18 +612,18 @@ describe('the measures of a device', () => {
     const sent: string[] = [];
     const device = {
       serial: 'R58M',
-      shell: async (cmd: string) => {
+      shell: (cmd: string) => {
         sent.push(cmd);
-        return cmd.includes('perfetto') ? '4242\n' : '';
+        return Promise.resolve(cmd.includes('perfetto') ? '4242\n' : '');
       },
-      shellAlongside: async () => '',
-      shellBuffer: async () => Buffer.from(''),
-      pull: async () => undefined,
-      readyToMeasure: async () => undefined,
-      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+      shellAlongside: () => Promise.resolve(''),
+      shellBuffer: () => Promise.resolve(Buffer.from('')),
+      pull: () => Promise.resolve(),
+      readyToMeasure: () => Promise.resolve(),
+      ensureAwake: () => Promise.resolve({ woke: false, unlocked: false, locked: false }),
     };
-    const during = async () => {
-      throw new Error('the swipe failed');
+    const during = () => {
+      return Promise.reject(new Error('the swipe failed'));
     };
     await expect(recordTrace(device, 'dev.app', 'frames', [], { during })).rejects.toThrow(
       'the swipe failed',
@@ -629,15 +633,15 @@ describe('the measures of a device', () => {
   });
 
   it('readies the device for frames that are measured, and not for what only looks', async () => {
-    const ready = vi.fn(async () => undefined);
+    const ready = vi.fn(() => Promise.resolve());
     const device = {
       serial: 'R58M',
-      shell: async () => '',
-      shellAlongside: async () => '',
-      shellBuffer: async () => Buffer.from(''),
-      pull: async () => undefined,
+      shell: () => Promise.resolve(''),
+      shellAlongside: () => Promise.resolve(''),
+      shellBuffer: () => Promise.resolve(Buffer.from('')),
+      pull: () => Promise.resolve(),
       readyToMeasure: ready,
-      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+      ensureAwake: () => Promise.resolve({ woke: false, unlocked: false, locked: false }),
     };
     await new AndroidPerf(device).frames('dev.app', { asItIs: true });
     expect(ready).not.toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import {
+  must,
   PUSH_PLACEHOLDERS,
   PUSH_TYPES,
   type Push,
@@ -66,7 +67,7 @@ export class AndroidPush {
       const out = await this.sh(
         `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER -a android.intent.action.MAIN ${pkg}`,
       );
-      const component = out.trim().split('\n').at(-1)!;
+      const component = must(out.trim().split('\n').at(-1), 'a line');
       if (!component.startsWith(`${pkg}/`))
         throw new DeviceError('NOT_FOUND', `${pkg} has no launcher activity: ${component}`);
       target = `-n ${component}`;
@@ -75,7 +76,10 @@ export class AndroidPush {
     // as Firebase's own tap opens it: the activity on top of the app's task anew, with this intent
     const out = await this.sh(`am start -W -f ${CLEAR_TOP} ${target} ${extras}`);
     if (/Error|Exception/.test(out))
-      throw new DeviceError('NOT_FOUND', `the app did not open: ${out.trim().split('\n').at(-1)}`);
+      throw new DeviceError(
+        'NOT_FOUND',
+        `the app did not open: ${must(out.trim().split('\n').at(-1), 'a line')}`,
+      );
     return `opened ${pkg} as a tapped push, with ${data.length} data keys as extras`;
   }
 }

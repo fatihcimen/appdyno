@@ -66,7 +66,7 @@ export class AndroidEmulators implements VirtualDevices {
     const root = join(sdkDir(), 'system-images');
     if (!existsSync(avdmanager()) || !existsSync(root)) return undefined;
     const under = (...path: string[]) =>
-      readdirSync(join(root, ...path)).filter((f) => f[0] !== '.');
+      readdirSync(join(root, ...path)).filter((f) => !f.startsWith('.'));
     const systems = under().flatMap((api) =>
       under(api).flatMap((tag) =>
         under(api, tag).map((abi) => ({
@@ -93,7 +93,7 @@ export class AndroidEmulators implements VirtualDevices {
         stdio: ['pipe', 'ignore', 'pipe'],
       });
       let said = '';
-      p.stderr.on('data', (b) => (said += b));
+      p.stderr.on('data', (b: Buffer) => (said += b.toString()));
       p.on('error', reject);
       p.on('close', (code) =>
         code === 0 ? resolve() : reject(new DeviceError('UNSUPPORTED', said.trim().slice(-200))),
@@ -109,7 +109,7 @@ export class AndroidEmulators implements VirtualDevices {
         stdio: ['ignore', 'pipe', 'ignore'],
       });
       let out = '';
-      p.stdout.on('data', (b) => (out += b));
+      p.stdout.on('data', (b: Buffer) => (out += b.toString()));
       p.on('error', (e) =>
         reject(
           new DeviceError('UNSUPPORTED', `the Android emulator is not installed: ${e.message}`),
@@ -180,7 +180,10 @@ export class AndroidEmulators implements VirtualDevices {
     const end = Date.now() + BOOT_MS;
     while (Date.now() < end) {
       if (exited !== undefined)
-        throw new DeviceError('INTERNAL', `the emulator ${id} exited at once (code ${exited})`);
+        throw new DeviceError(
+          'INTERNAL',
+          `the emulator ${id} exited at once (code ${String(exited)})`,
+        );
       const on = (await this.adb.devices()).find((d) => d.serial === serial);
       if (on?.state === 'device') {
         const done = await this.adb.exec(serial, 'getprop sys.boot_completed').catch(() => '');

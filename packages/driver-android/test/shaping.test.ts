@@ -6,15 +6,15 @@ const on = (serial: string, sdk: number, cap = 'null') => {
   const asked: string[] = [];
   const shaping = new AndroidShaping(
     serial,
-    async (c) => {
+    (c) => {
       asked.push(c);
-      if (c.startsWith('getprop')) return `${sdk}\n`;
+      if (c.startsWith('getprop')) return Promise.resolve(`${sdk}\n`);
       const put = /settings put global ingress_rate_limit_bytes_per_second (\d+)/.exec(c)?.[1];
       if (put) cap = put;
       if (c.startsWith('settings delete')) cap = 'null';
-      return c.startsWith('settings get') ? `${cap}\n` : '';
+      return Promise.resolve(c.startsWith('settings get') ? `${cap}\n` : '');
     },
-    async (_what, ...words) => (asked.push(`emu ${words.join(' ')}`), 'OK'),
+    (_what, ...words) => Promise.resolve((asked.push(`emu ${words.join(' ')}`), 'OK')),
   );
   return { shaping, asked };
 };

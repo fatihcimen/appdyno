@@ -50,7 +50,13 @@ export const downloadedAdb = () => join(adbDir(), 'platform-tools/adb');
 const asset = () => PERFETTO.assets[`${platform()}-${arch()}`];
 
 /** The trace processor binary: APPDYNO_TRACE_PROCESSOR, else the installed pinned one. */
-export async function traceProcessor(): Promise<string> {
+export function traceProcessor(): Promise<string> {
+  return new Promise((resolve) => {
+    resolve(installedTraceProcessor());
+  });
+}
+
+function installedTraceProcessor() {
   const env = process.env.APPDYNO_TRACE_PROCESSOR;
   if (env) return env;
   const a = asset();

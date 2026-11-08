@@ -13,7 +13,7 @@ describe('pinned host tools', () => {
   it('never unpacks a download whose sha256 is not the pinned one', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-tools-'));
     vi.stubEnv('APPDYNO_STATE_DIR', dir);
-    vi.stubGlobal('fetch', async () => new Response(Buffer.from('not the release')));
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response(Buffer.from('not the release'))));
     const e = await installTools().catch((x: unknown) => x);
     expect((e as { code?: string }).code).toBe('POLICY_DENIED');
     expect(existsSync(join(dir, 'tools')) ? readdirSync(join(dir, 'tools')) : []).toEqual([]);
@@ -37,7 +37,7 @@ describe('adb, from Google', () => {
 
   it('is never unpacked when its digest differs', async () => {
     process.env.APPDYNO_STATE_DIR = mkdtempSync(join(tmpdir(), 'appdyno-adb-'));
-    vi.stubGlobal('fetch', async () => new Response(Buffer.from('not the zip')));
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response(Buffer.from('not the zip'))));
     await expect(installAdb()).rejects.toMatchObject({ code: 'POLICY_DENIED' });
     expect(existsSync(join(process.env.APPDYNO_STATE_DIR, 'tools'))).toBe(false);
     vi.unstubAllGlobals();

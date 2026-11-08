@@ -1,4 +1,4 @@
-import { alertButtonOf, elementsOf, sleep, type UiElement } from '@appdyno/core';
+import { alertButtonOf, elementsOf, must, sleep, type UiElement } from '@appdyno/core';
 import { DeviceError, type Point, type Tree } from '@appdyno/protocol';
 import type { ApkNames } from './apk-names.js';
 
@@ -62,26 +62,29 @@ const WAITS =
   "It was left alone and still waits on the phone, where a person's answer still installs it";
 const TROUBLE = "could not answer the phone's prompt";
 
-const lastParagraph = (e: UiElement) => (e.text ?? '').split('\n\n').pop()!.trim();
+const lastParagraph = (e: UiElement) =>
+  must((e.text ?? '').split('\n\n').pop(), 'a paragraph').trim();
+
+type Texted = UiElement & { text: string };
 
 /** A button's label is a text beside an empty button: that is how Compose's dialog reads. */
 const labelsButton = (e: UiElement, els: UiElement[]) =>
   els.some((o) => o.parent === e.parent && o.type === 'android.widget.Button');
 
 /** What the dialog says, to quote: without its brand, the app's name, its buttons and its link. */
-function wordsOf(texts: UiElement[], els: UiElement[], app: ApkNames) {
+function wordsOf(texts: Texted[], els: UiElement[], app: ApkNames) {
   return texts
     .filter(
       (e) =>
         e.text !== BRAND &&
-        !app.names.includes(e.text!) &&
-        !MORE_DETAILS.has(e.text!) &&
+        !app.names.includes(e.text) &&
+        !MORE_DETAILS.has(e.text) &&
         !labelsButton(e, els),
     )
     .map((e) =>
       INSTALL_ANYWAY.has(lastParagraph(e))
-        ? e.text!.slice(0, e.text!.lastIndexOf('\n\n')).trim()
-        : e.text!,
+        ? e.text.slice(0, e.text.lastIndexOf('\n\n')).trim()
+        : e.text,
     )
     .join(' / ');
 }
@@ -98,7 +101,7 @@ function consentStep(els: UiElement[], app: ApkNames): InstallStep | undefined {
       left: `the phone's USB install prompt names "${named}", and this file is ${app.id}. It was left alone`,
       hint: 'it says no by itself after about 10 s; see what else is being installed on the phone',
     };
-  const { x, y } = alertButtonOf(yes)!;
+  const { x, y } = must(alertButtonOf(yes), 'a button');
   return {
     touch: { x, y },
     what: 'consent',
@@ -107,25 +110,25 @@ function consentStep(els: UiElement[], app: ApkNames): InstallStep | undefined {
 }
 
 function protectStep(els: UiElement[], app: ApkNames, warnings: boolean): InstallStep | undefined {
-  const texts = els.filter((e) => e.text);
+  const texts = els.filter((e): e is Texted => !!e.text);
   // its Compose content comes after the window, and after a wake it is drawn again
   if (!texts.some((e) => labelsButton(e, els))) return undefined;
   const words = wordsOf(texts, els, app);
-  if (!texts.some((e) => app.names.includes(e.text!)))
+  if (!texts.some((e) => app.names.includes(e.text)))
     return {
       left: `Play Protect shows a prompt that does not name ${app.id}: "${words}". It was left alone`,
       hint: 'answer it on the phone',
     };
-  const no = texts.find((e) => DONT_SEND.has(e.text!));
-  if (no && texts.some((e) => SEND.has(e.text!))) {
-    const { x, y } = alertButtonOf(no)!;
+  const no = texts.find((e) => DONT_SEND.has(e.text));
+  if (no && texts.some((e) => SEND.has(e.text))) {
+    const { x, y } = must(alertButtonOf(no), 'a button');
     return {
       touch: { x, y },
       what: 'scan',
       said: `answered "${no.text}" to Play Protect's prompt to send the app to Google: ${app.id} stayed on this machine`,
     };
   }
-  const details = texts.find((e) => MORE_DETAILS.has(e.text!));
+  const details = texts.find((e) => MORE_DETAILS.has(e.text));
   const anyway = texts.find((e) => INSTALL_ANYWAY.has(lastParagraph(e)));
   if (!details && !anyway)
     return {
@@ -141,15 +144,13 @@ function protectStep(els: UiElement[], app: ApkNames, warnings: boolean): Instal
       hint: 'a person can answer it on the phone, or the server can pass warnings: --accept-install-warnings (APPDYNO_ACCEPT_INSTALL_WARNINGS=1)',
     };
   if (!anyway) {
-    const { x, y } = alertButtonOf(details)!;
+    const { x, y } = must(alertButtonOf(details), 'a button');
     return { touch: { x, y }, what: 'details' };
   }
-  const line = Math.min(...texts.map((e) => e.rect!.height));
+  const line = Math.min(...texts.map((e) => must(e.rect, 'a rect').height));
+  const link = must(anyway.rect, 'a rect');
   return {
-    touch: {
-      x: anyway.rect!.x + LINK_INSET_PX,
-      y: anyway.rect!.y + anyway.rect!.height - Math.round(line / 2),
-    },
+    touch: { x: link.x + LINK_INSET_PX, y: link.y + link.height - Math.round(line / 2) },
     what: 'warning',
     said: `passed a Play Protect warning for ${app.id}: "${words}"`,
   };
@@ -237,10 +238,10 @@ export async function answerInstallPrompts(
     await s.focusSteady();
     const tree = await stillTree(s);
     if (!tree || !pending()) return;
-    app ??= await names().catch((e: Error) => {
+    app ??= await names().catch((e: unknown) => {
       throw new DeviceError(
         'PERMISSION_REQUIRED',
-        `the phone asks about this install, and the file's names could not be read to check it: ${e.message}. ${WAITS}`,
+        `the phone asks about this install, and the file's names could not be read to check it: ${e instanceof Error ? e.message : String(e)}. ${WAITS}`,
         'answer it on the phone',
       );
     });

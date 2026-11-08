@@ -1,3 +1,5 @@
+import { must } from '@appdyno/core';
+
 export const num = (re: RegExp, text: string) => {
   const v = re.exec(text)?.[1];
   return v === undefined ? undefined : Number(v);
@@ -8,7 +10,7 @@ export function parseCsv(csv: string): { columns: string[]; rows: string[][] } {
   const table: string[][] = [];
   let row: string[] = [];
   for (const m of csv.matchAll(/("(?:[^"]|"")*"|[^,\n]*)(,|\n|$)/g)) {
-    const raw = m[1]!;
+    const raw = must(m[1], 'a cell');
     row.push(raw.startsWith('"') ? raw.slice(1, -1).replace(/""/g, '"') : raw);
     if (m[2] !== ',') {
       if (row.some(Boolean)) table.push(row);

@@ -1,3 +1,5 @@
+import { must } from '@appdyno/core';
+
 /** Who may hold Android's one UI automation connection, as the device's `ps` shows it. */
 export type Holder = {
   /** What kind of process it is: `uiautomator`, `instrumentation` or `app_process`. */
@@ -13,7 +15,7 @@ export const PROCESS_LIST = 'ps -A -o PID,USER,ARGS';
 
 const OUR_AGENT = 'dev.appdyno.agent.Main';
 /** Mirrors a screen with no UI automation: stopping it frees nothing. */
-const HOLDS_NOTHING = /com\.genymobile\.scrcpy/;
+const HOLDS_NOTHING = 'com.genymobile.scrcpy';
 const UIAUTOMATOR = /(?:^|[\s/])uiautomator(?:\s|$)|com\.android\.commands\.uiautomator/;
 const AM_INSTRUMENT = /\bam instrument\b/;
 const COMPONENT = /\s([A-Za-z]\w*(?:\.\w+)+)\/\S+/;
@@ -33,7 +35,7 @@ function holderOf(
   user: string,
 ): Pick<Holder, 'tool' | 'shell'> | undefined {
   const kill = `kill ${pid}`;
-  const name = command.split(/\s/, 1)[0]!.replace(/:\w+$/, '');
+  const name = must(command.split(/\s/, 1)[0], 'a name').replace(/:\w+$/, '');
   // runs as the app it tests; everything else here was started from adb's shell, and an app or a
   // system service that merely looks like one must never be stopped by --takeover
   if (PACKAGE.test(name) && INSTRUMENTED.test(name))
@@ -56,12 +58,16 @@ export function holdersIn(ps: string): Holder[] {
     const m = /^\s*(\d+)\s+(\S+)\s+(.+?)\s*$/.exec(line);
     if (!m) continue;
     const pid = Number(m[1]);
-    const command = m[3]!;
-    if (/^(ps|grep)\b/.test(command) || command.includes(OUR_AGENT) || HOLDS_NOTHING.test(command))
+    const command = must(m[3], 'a command');
+    if (
+      /^(ps|grep)\b/.test(command) ||
+      command.includes(OUR_AGENT) ||
+      command.includes(HOLDS_NOTHING)
+    )
       continue;
     // the shell that started a holder holds nothing; killing it would not free the device
     if (/^(\S*\/)?sh -c (?!.*\bam instrument\b)/.test(command)) continue;
-    const found = holderOf(command, pid, m[2]!);
+    const found = holderOf(command, pid, must(m[2], 'a user'));
     if (found && !seen.has(found.shell)) seen.set(found.shell, { ...found, pid, command });
   }
   return [...seen.values()];

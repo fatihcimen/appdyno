@@ -13,16 +13,20 @@ describe('an agent reached', () => {
     const ran: string[] = [];
     const rpc = {
       closed: false,
-      call: async (method: string) => {
+      call: (method: string) => {
         asked.push(method);
-        return { result: {} };
+        return Promise.resolve({ result: {} });
       },
       close: () => undefined,
     };
     const hello = { model: 'Pixel' };
-    const adb = { exec: async (_: string, c: string) => (ran.push(c), '') } as unknown as Adb;
+    const adb = {
+      exec: (_: string, c: string) => Promise.resolve((ran.push(c), '')),
+    } as unknown as Adb;
     const device = new AndroidDevice('emulator-5640', adb, { animations });
-    Object.assign(device, { launcher: { connect: async () => ({ rpc, hello, started }) } });
+    Object.assign(device, {
+      launcher: { connect: () => Promise.resolve({ rpc, hello, started }) },
+    });
     return { asked, ran, device, hello };
   };
 
@@ -38,15 +42,15 @@ describe('an agent reached', () => {
     const said = 'no window to read: the app in front is not answering';
     const rpc = {
       closed: false,
-      call: async () => {
-        throw new DeviceError('NOT_FOUND', said);
+      call: () => {
+        return Promise.reject(new DeviceError('NOT_FOUND', said));
       },
       close: () => undefined,
     };
-    const adb = { exec: async () => 'mWakefulness=Awake' } as unknown as Adb;
+    const adb = { exec: () => Promise.resolve('mWakefulness=Awake') } as unknown as Adb;
     const device = new AndroidDevice('emulator-5640', adb);
     Object.assign(device, {
-      launcher: { connect: async () => ({ rpc, hello: {}, started: false }) },
+      launcher: { connect: () => Promise.resolve({ rpc, hello: {}, started: false }) },
     });
     await expect(device.tree()).rejects.toMatchObject({ code: 'NOT_FOUND', message: said });
     await expect(device.tree({ asItIs: true })).rejects.toMatchObject({ message: said });
@@ -67,13 +71,15 @@ describe('launching an app', () => {
   const device = (answer: string, ps = '') => {
     const ran: string[] = [];
     const adb = {
-      exec: async (_serial: string, command: string) => {
+      exec: (_serial: string, command: string) => {
         ran.push(command);
-        return command.startsWith('ps ')
-          ? ps
-          : command.includes('resolve-activity')
-            ? 'priority=0\na.b/.Main\n'
-            : answer;
+        return Promise.resolve(
+          command.startsWith('ps ')
+            ? ps
+            : command.includes('resolve-activity')
+              ? 'priority=0\na.b/.Main\n'
+              : answer,
+        );
       },
     } as unknown as Adb;
     return { d: new AndroidDevice('emulator-5640', adb), ran };
@@ -95,7 +101,7 @@ describe('launching an app', () => {
   });
 
   it('refuses an app with no launcher activity', async () => {
-    const adb = { exec: async () => 'No activity found\n' } as unknown as Adb;
+    const adb = { exec: () => Promise.resolve('No activity found\n') } as unknown as Adb;
     await expect(new AndroidDevice('emulator-5640', adb).launch('a.b')).rejects.toMatchObject({
       code: 'APP_NOT_RUNNING',
     });
@@ -242,10 +248,6 @@ describe('adb helpers', () => {
 
 describe('adb server', () => {
   it('starts the server again after each outage (kill-server between calls)', async () => {
-    const { mkdtempSync, writeFileSync, readFileSync, chmodSync } = await import('node:fs');
-    const { tmpdir } = await import('node:os');
-    const { join } = await import('node:path');
-    const { createServer } = await import('node:net');
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-adb-'));
     const count = join(dir, 'starts');
     // a stand-in adb whose start-server is only counted; nothing listens, so every dial fails
@@ -271,13 +273,13 @@ describe('adb server', () => {
 describe('what a window calls a device', () => {
   const answers = (table: Record<string, string>) =>
     ({
-      exec: async (_s: string, command: string) => table[command] ?? '',
+      exec: (_s: string, command: string) => Promise.resolve(table[command] ?? ''),
     }) as unknown as Adb;
-  const PROPS = /^getprop ro\.product\.marketname;/;
+  const PROPS = 'getprop ro.product.marketname;';
   const withProps = (out: string, rest: Record<string, string>) =>
     ({
-      exec: async (_s: string, command: string) =>
-        PROPS.test(command) ? out : (rest[command] ?? ''),
+      exec: (_s: string, command: string) =>
+        Promise.resolve(command.startsWith(PROPS) ? out : (rest[command] ?? '')),
     }) as unknown as Adb;
 
   it('is plainly an emulator, whatever its model says', async () => {

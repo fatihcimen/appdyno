@@ -2,7 +2,7 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { sleep, run, type TraceDigest, tracesDir } from '@appdyno/core';
+import { must, sleep, run, type TraceDigest, tracesDir } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { traceProcessor } from '../tools.js';
 import { parseCsv } from './parse.js';
@@ -62,7 +62,7 @@ export function assertReadOnlySql(sql: string): void {
   if (!/^\s*(SELECT|WITH)\b/i.test(rest)) throw refuse('it must be one SELECT or WITH');
   if (rest.replace(/;\s*$/, '').includes(';')) throw refuse('more than one statement');
   const write = WRITES.exec(rest);
-  if (write) throw refuse(`it holds ${write[1]}`);
+  if (write) throw refuse(`it holds ${must(write[1], 'a write')}`);
 }
 
 /** A bounded table from a kept Perfetto trace; undefined for a file of another kind. */
@@ -75,9 +75,10 @@ export async function queryTrace(
   assertReadOnlySql(q.sql);
   // absolute: a path that starts with a dash would read as an option
   const file = resolve(tracePath);
-  const csv = await queryFile(file, q.sql).catch((e: { stderr?: string; message: string }) => {
+  const csv = await queryFile(file, q.sql).catch((e: unknown) => {
     if (e instanceof DeviceError) throw e;
-    const why = (e.stderr ?? e.message).split('\n').slice(-6).join('\n').trim();
+    const said = (e as { stderr?: string }).stderr ?? (e instanceof Error ? e.message : String(e));
+    const why = said.split('\n').slice(-6).join('\n').trim();
     throw new DeviceError('INVALID_ARGUMENT', `the trace processor refused: ${why}`);
   });
   const { columns, rows } = parseCsv(csv);

@@ -138,6 +138,7 @@ export class AndroidMirror implements Mirror {
     if (this.lostTouch) {
       const failure = this.lostTouch;
       this.lostTouch = undefined;
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- a touch's own failure, passed on as its call rejected
       throw failure;
     }
     const rpc = await this.agent();

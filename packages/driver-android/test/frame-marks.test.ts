@@ -34,7 +34,7 @@ describe('touches on the clock', () => {
   it('makes one touch of the events of a tap', () => {
     // a real tap's two events
     expect(parseInputMarks(rows([1793841336403888, 3010000], [1793841336407446, 134000]))).toEqual([
-      { at: 1793841336403.888, ms: expect.closeTo(3.66, 2) },
+      { at: 1793841336403.888, ms: expect.closeTo(3.66, 2) as unknown },
     ]);
   });
 
@@ -45,7 +45,7 @@ describe('touches on the clock', () => {
     ]);
     const touches = parseInputMarks(rows(...events));
     expect(touches).toHaveLength(1);
-    expect(touches[0]!.ms).toBe(465);
+    expect(touches[0]?.ms).toBe(465);
   });
 
   it('keeps two touches apart', () => {

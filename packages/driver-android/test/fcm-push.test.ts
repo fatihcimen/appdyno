@@ -2,7 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import { AndroidEvents } from '../src/events.js';
 import { keepFcmKey } from '../src/fcm-key.js';
 import { FcmPush, fcmTokensIn, type FcmTarget } from '../src/fcm-push.js';
@@ -31,8 +31,9 @@ const NOW = Date.UTC(2026, 10, 7, 16, 0, 0);
 const AT = new Date(NOW).toTimeString().slice(0, 8);
 
 const target = (over: Partial<FcmTarget> = {}): FcmTarget => ({
-  installed: async () => true,
-  lines: async () => [`11-07 19:00:00.000  1  1 D Push: FCM registration token: ${TOKEN}`],
+  installed: () => Promise.resolve(true),
+  lines: () =>
+    Promise.resolve([`11-07 19:00:00.000  1  1 D Push: FCM registration token: ${TOKEN}`]),
   ...over,
 });
 
@@ -42,9 +43,9 @@ function fcm(t: FcmTarget = target()) {
   let now = NOW;
   const p = new FcmPush(t, {
     key: () => KEY,
-    send: async (r) => {
+    send: (r) => {
       sent.push(r);
-      return answer;
+      return Promise.resolve(answer);
     },
     now: () => now,
   });
@@ -79,7 +80,9 @@ describe('a push by FCM', () => {
     expect(said).toBe(
       `pushed to dev.app by FCM by the registration token its log gave at ${AT}: FCM took it, projects/appdyno-test/messages/0:1`,
     );
-    expect(message(f.sent[0]!)).toEqual({
+    const [first] = f.sent;
+    assert(first);
+    expect(message(first)).toEqual({
       notification: { title: 'T', body: 'B' },
       data: { order: '7' },
       android: { priority: 'HIGH', ttl: '0s' },
@@ -94,7 +97,7 @@ describe('a push by FCM', () => {
     await f.p.push('dev.app', { type: 'background', data: { sync: '1' } });
     await f.p.push('dev.app', { type: 'live_activity', data: { eta: '5' } });
     const [rich, background, live] = f.sent.map(message);
-    expect(rich!.notification).toEqual({ title: 'T', image: 'https://example.com/i.png' });
+    expect(rich?.notification).toEqual({ title: 'T', image: 'https://example.com/i.png' });
     expect(background).not.toHaveProperty('notification');
     expect(live).toMatchObject({ data: { eta: '5' }, android: { priority: 'HIGH' } });
   });
@@ -103,7 +106,9 @@ describe('a push by FCM', () => {
     const f = fcm();
     const own = { data: { a: 'b' }, android: { priority: 'NORMAL', ttl: '3600s' } };
     await f.p.push('dev.app', { type: 'background', payload: own });
-    expect(message(f.sent[0]!)).toEqual({ ...own, token: TOKEN });
+    const [first] = f.sent;
+    assert(first);
+    expect(message(first)).toEqual({ ...own, token: TOKEN });
     await expect(
       f.p.push('dev.app', { type: 'alert', payload: { topic: 'news' } }),
     ).rejects.toThrow('names no topic');
@@ -114,9 +119,9 @@ describe('a push by FCM', () => {
 
   it('refuses an app not there, and one that printed no token, saying how one is found', async () => {
     await expect(
-      fcm(target({ installed: async () => false })).p.push('dev.app', { type: 'alert' }),
+      fcm(target({ installed: () => Promise.resolve(false) })).p.push('dev.app', { type: 'alert' }),
     ).rejects.toThrow('dev.app is not installed on this device');
-    const none = (await fcm(target({ lines: async () => ['nothing'] }))
+    const none = (await fcm(target({ lines: () => Promise.resolve(['nothing']) }))
       .p.push('dev.app', { type: 'alert' })
       .catch((x: unknown) => x)) as { message: string; hint: string };
     expect(none.message).toBe('no registration token from dev.app in this session');
@@ -133,7 +138,8 @@ describe('a push by FCM', () => {
   });
 
   it("says FCM's code in words, and reads the token again after one no longer valid", async () => {
-    const lines = vi.fn(target().lines);
+    const t = target();
+    const lines = vi.fn((app: string) => t.lines(app));
     const f = fcm(target({ lines }));
     f.answer({ status: 404, code: 'UNREGISTERED' });
     const e = (await f.p.push('dev.app', { type: 'alert' }).catch((x: unknown) => x)) as {
@@ -150,7 +156,7 @@ describe('a push by FCM', () => {
   });
 
   it("takes a person's token, typed in a window, and nothing that is not one", async () => {
-    const f = fcm(target({ lines: async () => [] }));
+    const f = fcm(target({ lines: () => Promise.resolve([]) }));
     f.p.typed('dev.app', TOKEN);
     expect(await f.p.push('dev.app', { type: 'alert' })).toContain('a person typed');
     expect(() => f.p.typed('dev.app', 'abc')).toThrow('not a registration token');
@@ -166,26 +172,32 @@ describe("an Android device's pushes, by FCM once it is set up", () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-fcm-')));
     const asked: string[] = [];
     const adb = {
-      exec: async (_serial: string, command: string) => {
+      exec: (_serial: string, command: string) => {
         asked.push(command);
-        if (command.startsWith('pm path')) return 'package:/data/app/base.apk';
-        if (command.startsWith('pidof')) return '4242\n';
-        if (command.startsWith('logcat')) return `D Push: token ${TOKEN}\n`;
-        return '';
+        if (command.startsWith('pm path')) return Promise.resolve('package:/data/app/base.apk');
+        if (command.startsWith('pidof')) return Promise.resolve('4242\n');
+        if (command.startsWith('logcat')) return Promise.resolve(`D Push: token ${TOKEN}\n`);
+        return Promise.resolve('');
       },
     };
     const events = new AndroidEvents(adb as never, 'emulator-5554');
-    const route = async (type: string) => (await events.pushRoutes()).find((r) => r.type === type)!;
+    const route = async (type: string) => {
+      const r = (await events.pushRoutes()).find((x) => x.type === type);
+      assert(r);
+      return r;
+    };
     expect(await route('background')).toMatchObject({
-      why: expect.stringContaining("the app's own Firebase SDK takes it, as FCM's own message"),
+      why: expect.stringContaining(
+        "the app's own Firebase SDK takes it, as FCM's own message",
+      ) as unknown,
     });
     keepFcmKey(ACCOUNT);
     expect(await route('background')).toMatchObject({
-      route: expect.stringMatching(/^FCM, data alone/),
+      route: expect.stringMatching(/^FCM, data alone/) as unknown,
       tokens: ['device'],
     });
     expect(await route('tapped')).toMatchObject({
-      route: expect.stringContaining('the launcher activity'),
+      route: expect.stringContaining('the launcher activity') as unknown,
     });
     // a person types a token only for what goes by FCM
     expect('tokens' in (await route('tapped'))).toBe(false);
@@ -194,7 +206,7 @@ describe("an Android device's pushes, by FCM once it is set up", () => {
     expect(await events.push('dev.app', { type: 'background', data: { a: 'b' } })).toContain(
       'pushed to dev.app by FCM',
     );
-    expect(post.mock.calls[0]![0]).toBe(
+    expect(post.mock.calls[0]?.[0]).toBe(
       'https://fcm.googleapis.com/v1/projects/appdyno-test/messages:send',
     );
     expect(asked.find((c) => c.startsWith('logcat'))).toMatch(/^logcat -d --pid=4242 /);

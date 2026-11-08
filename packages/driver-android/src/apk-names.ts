@@ -44,9 +44,9 @@ function poolOf(b: Buffer, c: Chunk): (i: number) => string {
       }
       return b.toString('utf16le', p, p + 2 * n);
     }
-    p += b[p]! & 0x80 ? 2 : 1; // its length in characters, of no use here
-    let n = b[p]!;
-    if (n & 0x80) n = ((n & 0x7f) << 8) | b[++p]!;
+    p += b.readUInt8(p) & 0x80 ? 2 : 1; // its length in characters, of no use here
+    let n = b.readUInt8(p);
+    if (n & 0x80) n = ((n & 0x7f) << 8) | b.readUInt8(++p);
     return b.toString('utf8', p + 1, p + 1 + n);
   };
 }
@@ -81,14 +81,14 @@ function valuesOf(b: Buffer, ref: number, seen = new Set<number>()): string[] {
     if (c.type !== TABLE_PACKAGE || b.readUInt32LE(c.at + 8) !== pkg) continue;
     for (const t of chunks(b, c.at + c.head, c.at + c.size)) {
       if (t.type !== TABLE_TYPE || b[t.at + 8] !== type) continue;
-      const offset = entryOffset(b, t, b[t.at + 9]!, entry);
+      const offset = entryOffset(b, t, b.readUInt8(t.at + 9), entry);
       if (offset === undefined) continue;
       const p = t.at + b.readUInt32LE(t.at + 16) + offset;
       const flags = b.readUInt16LE(p + 2);
       if (flags & ENTRY_COMPLEX && !(flags & ENTRY_COMPACT)) continue;
       const compact = (flags & ENTRY_COMPACT) !== 0;
       const size = b.readUInt16LE(p);
-      const kind = compact ? flags >>> 8 : b[p + size + 3]!;
+      const kind = compact ? flags >>> 8 : b.readUInt8(p + size + 3);
       const data = b.readUInt32LE(compact ? p + 4 : p + size + 4);
       if (kind === VALUE_STRING && pool) out.push(pool(data));
       if (kind === VALUE_REFERENCE) out.push(...valuesOf(b, data, seen));
@@ -109,15 +109,17 @@ function manifestOf(xml: Buffer) {
     if (c.type !== XML_START || !pool) continue;
     const tag = pool(xml.readUInt32LE(c.at + 20));
     if (tag !== 'manifest' && tag !== 'application') continue;
-    const [first, size, count] = [24, 26, 28].map((o) => xml.readUInt16LE(c.at + o));
-    for (let i = 0; i < count!; i++) {
-      const a = c.at + 16 + first! + i * size!;
+    const first = xml.readUInt16LE(c.at + 24);
+    const size = xml.readUInt16LE(c.at + 26);
+    const count = xml.readUInt16LE(c.at + 28);
+    for (let i = 0; i < count; i++) {
+      const a = c.at + 16 + first + i * size;
       const name = xml.readUInt32LE(a + 4);
       if (tag === 'manifest' && pool(name) === 'package') id = pool(xml.readUInt32LE(a + 8));
       const isLabel = resources && name * 4 < resources.length && resources.readUInt32LE(name * 4);
       if (tag === 'application' && isLabel === LABEL_ATTRIBUTE)
         label = {
-          kind: xml[a + 15]!,
+          kind: xml.readUInt8(a + 15),
           data: xml.readUInt32LE(a + 16),
           raw: xml.readUInt32LE(a + 8),
         };

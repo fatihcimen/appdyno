@@ -1,4 +1,11 @@
-import { PushRate, type Push, type PushField, type PushRoute, type PushType } from '@appdyno/core';
+import {
+  must,
+  PushRate,
+  type Push,
+  type PushField,
+  type PushRoute,
+  type PushType,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { fcmKey, type FcmKey } from './fcm-key.js';
 import {
@@ -41,7 +48,7 @@ const clock = (ms: number) => new Date(ms).toTimeString().slice(0, 8);
 /** The message of a push of these fields: high priority and a TTL of 0, delivered now or never. */
 export function messageOf(push: Push): Record<string, unknown> {
   if (push.payload) return push.payload;
-  const t = BY_TYPE[push.type]!;
+  const t = must(BY_TYPE[push.type], 'a push type');
   const notification = {
     ...(push.title && { title: push.title }),
     ...(push.body && { body: push.body }),

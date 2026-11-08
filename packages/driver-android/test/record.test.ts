@@ -6,9 +6,11 @@ import { AndroidRecorder } from '../src/record.js';
 const saying = (...reads: string[]) =>
   new AndroidRecorder(
     {
-      startDetached: async () => ({ close: () => undefined }),
-      exec: async (_serial: string, command: string) =>
-        command.startsWith('rm') ? '' : reads.length > 1 ? reads.shift()! : reads[0]!,
+      startDetached: () => Promise.resolve({ close: () => undefined }),
+      exec: (_serial: string, command: string) =>
+        Promise.resolve(
+          command.startsWith('rm') ? '' : reads.length > 1 ? reads.shift() : reads[0],
+        ),
     } as unknown as Adb,
     'R58M',
   );

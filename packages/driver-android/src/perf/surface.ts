@@ -1,4 +1,4 @@
-import { quantile, sleep, type Measured, type SurfaceFrames } from '@appdyno/core';
+import { must, quantile, sleep, type Measured, type SurfaceFrames } from '@appdyno/core';
 import { assertPkg, shq } from '../adb.js';
 import { at, sh, type PerfDevice } from './shared.js';
 
@@ -46,7 +46,7 @@ export function surfaceStats(
   drawing: boolean,
 ): SurfaceFrames {
   const refreshMs = periodNs / 1e6;
-  const gaps = presents.slice(1).map((t, i) => (t - presents[i]!) / 1e6);
+  const gaps = presents.slice(1).map((t, i) => (t - must(presents[i], 'a present')) / 1e6);
   const whole = gaps.map((g) => round(Math.round(g / refreshMs) * refreshMs)).sort((a, b) => a - b);
   const slow = (bar: number) =>
     round((whole.filter((g) => g >= bar).length / Math.max(whole.length, 1)) * 100);

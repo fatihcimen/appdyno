@@ -149,27 +149,30 @@ function fakeEmulator(answer: (s: http2.ServerHttp2Stream) => void) {
 
 const phone = (
   screen: { w: number; h: number; rotation: number } = { w: 1080, h: 2400, rotation: 0 },
-) =>
-  ({
-    status: vi.fn(async () => screen),
-    check: vi.fn(async () => ({ ok: true, routes: ['agent'] })),
-    keyframe: vi.fn(async () => undefined),
-    input: vi.fn(async () => undefined),
-    close: vi.fn(async () => undefined),
-    watch: vi.fn(() => () => undefined),
-    sourceWith: vi.fn(async (_o: unknown, start: object) => ({
-      kind: 'adb',
-      serial: 'emulator-5720',
-      socket: 's',
-      token: 't',
-      codec: 'h264',
-      start,
-    })),
-  }) as unknown as AndroidMirror & {
-    sourceWith: ReturnType<typeof vi.fn>;
-    close: ReturnType<typeof vi.fn>;
-    input: ReturnType<typeof vi.fn>;
+) => {
+  const mocks = {
+    input: vi.fn(() => Promise.resolve()),
+    close: vi.fn(() => Promise.resolve()),
+    sourceWith: vi.fn((_o: unknown, start: object) =>
+      Promise.resolve({
+        kind: 'adb',
+        serial: 'emulator-5720',
+        socket: 's',
+        token: 't',
+        codec: 'h264',
+        start,
+      }),
+    ),
   };
+  const fake = {
+    status: vi.fn(() => Promise.resolve(screen)),
+    check: vi.fn(() => Promise.resolve({ ok: true, routes: ['agent'] })),
+    keyframe: vi.fn(() => Promise.resolve()),
+    watch: vi.fn(() => () => undefined),
+    ...mocks,
+  } as unknown as AndroidMirror;
+  return Object.assign(fake, { mocks });
+};
 
 const signal = new AbortController().signal;
 const until = async (test: () => boolean) => {
@@ -179,7 +182,7 @@ const until = async (test: () => boolean) => {
 };
 
 describe('an emulator mirror', () => {
-  let close = () => undefined as void;
+  let close: () => void = () => undefined;
   afterEach(() => close());
 
   it('asks with its token, and each frame becomes a tick after the attach', async () => {
@@ -276,7 +279,7 @@ describe('an emulator mirror', () => {
     const p = phone();
     const mirror = new EmulatorMirror('emulator-5720', p, () => undefined);
     const source = await mirror.open({ quality: 'auto' }, signal, () => undefined);
-    expect(p.sourceWith).toHaveBeenCalledWith({ quality: 'auto' }, { maxSize: 1200 });
+    expect(p.mocks.sourceWith).toHaveBeenCalledWith({ quality: 'auto' }, { maxSize: 1200 });
     expect(source).toMatchObject({ kind: 'adb', start: { maxSize: 1200 } });
     expect((source as { note: string }).note).toMatch(/lags by seconds.*simulator tool/);
   });
@@ -306,9 +309,9 @@ describe('an emulator mirror', () => {
     const p = phone();
     const mirror = new EmulatorMirror('emulator-5720', p, () => undefined);
     await mirror.input({ kind: 'touch', p: 0, x: 0, y: 0 });
-    expect(p.input).toHaveBeenCalledOnce();
+    expect(p.mocks.input).toHaveBeenCalledOnce();
     await mirror.close();
     await mirror.close();
-    expect(p.close).toHaveBeenCalledTimes(2);
+    expect(p.mocks.close).toHaveBeenCalledTimes(2);
   });
 });

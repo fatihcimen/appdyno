@@ -57,7 +57,7 @@ export function parseStartInfo(text: string): StartRecord[] {
         {
           reason,
           startType,
-          wasForceStopped: /wasForceStopped=true/.test(block),
+          wasForceStopped: block.includes('wasForceStopped=true'),
           phases: phasesOf(block),
           ...(startedNs !== undefined && { startedNs }),
         },
@@ -85,12 +85,12 @@ export async function startInfo(
     );
   const raw = await sh(d, `dumpsys activity start-info ${pkg}`, 30_000);
   const starts = parseStartInfo(raw);
-  if (starts.length === 0)
+  const [newest] = starts;
+  if (!newest)
     throw new DeviceError(
       'UNSUPPORTED',
       `this device keeps no start info of ${pkg}: its build may not have the feature on`,
     );
-  const newest = starts[0]!;
   const newestIsNew =
     seen !== undefined && newest.startedNs !== undefined && newest.startedNs !== seen;
   return { value: { starts, newest, newestIsNew }, raw, at: at() };

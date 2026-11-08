@@ -47,7 +47,7 @@ describe('who holds UI automation', () => {
     );
     const [h] = holdersIn(ps);
     expect(h).toMatchObject({ tool, pid: 901, command });
-    expect(h!.shell).toMatch(stop);
+    expect(h?.shell).toMatch(stop);
   });
 
   it('leaves out what holds nothing: others, our agent, the shell that started it, ps itself', () => {
@@ -192,14 +192,14 @@ describe('crashes', () => {
   it('reads the dropbox entries of this app only', () => {
     const drops = parseDropbox(DROPBOX, 'dev.appdyno.fixture');
     expect(drops).toHaveLength(1);
-    expect(drops[0]!.tag).toBe('data_app_crash');
+    expect(drops[0]?.tag).toBe('data_app_crash');
   });
 
   it('joins an exit with its stack and keeps to the time asked', () => {
     const q = { app: 'dev.appdyno.fixture', limit: 5 };
     const [r] = crashReports(EXIT_INFO, DROPBOX, q);
-    expect(r!.reason).toBe('APP CRASH(EXCEPTION)');
-    expect(r!.detail).toContain('shell-induced crash');
+    expect(r?.reason).toBe('APP CRASH(EXCEPTION)');
+    expect(r?.detail).toContain('shell-induced crash');
     expect(
       crashReports(EXIT_INFO, DROPBOX, {
         ...q,

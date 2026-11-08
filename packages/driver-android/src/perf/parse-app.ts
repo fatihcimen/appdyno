@@ -7,7 +7,7 @@ import type {
   EnergyReading,
   BuildType,
 } from '@appdyno/core';
-import { PROFILE_FUNCTIONS } from '@appdyno/core';
+import { must, PROFILE_FUNCTIONS } from '@appdyno/core';
 import { num } from './parse-common.js';
 
 export type MemoryStats = {
@@ -94,7 +94,7 @@ export function busyPercent(before: string, after: string): number | undefined {
   const fields = (l: string) => l.trim().split(/\s+/).slice(1).map(Number);
   const moved = fields(after).map((n, i) => n - (fields(before)[i] ?? NaN));
   const total = moved.reduce((a, b) => a + b, 0);
-  const idle = moved[3]! + moved[4]!;
+  const idle = (moved[3] ?? NaN) + (moved[4] ?? NaN);
   return total > 0 && Number.isFinite(idle)
     ? Math.round((100 * (total - idle)) / total)
     : undefined;
@@ -138,7 +138,8 @@ export function parseSimpleperfReport(text: string, limit = PROFILE_FUNCTIONS): 
   const out: ProfileEntry[] = [];
   for (const line of text.split('\n')) {
     const m = /^\s*([\d.]+)%\s+(\d+)\s+(.+?)\s*$/.exec(line);
-    if (m) out.push({ percent: Number(m[1]), samples: Number(m[2]), symbol: m[3]! });
+    if (m)
+      out.push({ percent: Number(m[1]), samples: Number(m[2]), symbol: must(m[3], 'a symbol') });
   }
   return out.sort((a, b) => b.percent - a.percent).slice(0, limit);
 }
@@ -151,6 +152,7 @@ const THREAD_LIMIT_PERCENT = 90;
  * from zero. `over90Ms` adds up the time above the limit, as Flashlight does.
  */
 export function parseThreadReads(text: string): ThreadReading {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a hz of 0 is none too
   const hz = num(/^hz (\d+)/m, text) || 100;
   const reads = text
     .split(/^== /m)
@@ -160,14 +162,18 @@ export function parseThreadReads(text: string): ThreadReading {
       const ticks = new Map<number, { name: string; ticks: number }>();
       for (const line of lines) {
         const m = /^(\d+) \((.*)\) /.exec(line);
-        if (m) ticks.set(Number(m[1]), { name: m[2]!, ticks: parseProcStatTicks(line) });
+        if (m)
+          ticks.set(Number(m[1]), { name: must(m[2], 'a name'), ticks: parseProcStatTicks(line) });
       }
       return { ms: Number(time) / 1e6, ticks };
     });
-  const windowMs = reads.length > 1 ? Math.round(reads.at(-1)!.ms - reads[0]!.ms) : 0;
+  const windowMs =
+    reads.length > 1
+      ? Math.round(must(reads.at(-1), 'a read').ms - must(reads[0], 'a read').ms)
+      : 0;
   const seen = new Map<number, { name: string; steps: { ms: number; busyMs: number }[] }>();
   reads.slice(1).forEach((read, i) => {
-    const before = reads[i]!;
+    const before = must(reads[i], 'a read');
     for (const [tid, t] of read.ticks) {
       const busyMs = ((t.ticks - (before.ticks.get(tid)?.ticks ?? 0)) / hz) * 1000;
       const row = seen.get(tid) ?? { name: t.name, steps: [] };
@@ -234,8 +240,10 @@ export function parseBatteryUsage(text: string, uid: number): Omit<EnergyReading
   );
   if (!row) return computed > 0 ? { mah: 0 } : {};
   const breakdown: Record<string, number> = {};
-  for (const m of `${row[2]} ${row[3] ?? ''}`.matchAll(/(?:^|\s)(\w+)=([\d.]+)/g))
-    breakdown[m[1]!] = Number(m[2]);
+  for (const m of `${must(row[2], 'the parts')} ${row[3] ?? ''}`.matchAll(
+    /(?:^|\s)(\w+)=([\d.]+)/g,
+  ))
+    breakdown[must(m[1], 'a part')] = Number(m[2]);
   return { mah: Number(row[1]), breakdown };
 }
 
@@ -255,8 +263,8 @@ export function usageSince(
 
 /** The flags of `dumpsys package <pkg>`. */
 export function parseBuildType(text: string): BuildType {
-  const flags = [...text.matchAll(/^\s*(?:pkg|private|privatePkg)?[fF]lags=\[(.*)\]/gm)].map(
-    (m) => m[1]!,
+  const flags = [...text.matchAll(/^\s*(?:pkg|private|privatePkg)?[fF]lags=\[(.*)\]/gm)].map((m) =>
+    must(m[1], 'the flags'),
   );
   if (flags.length === 0) return 'unknown';
   if (flags.some((f) => /\bDEBUGGABLE\b/.test(f))) return 'debug';
@@ -267,7 +275,10 @@ export function parseBuildType(text: string): BuildType {
 export function parseDiskstats(text: string, pkg: string): Record<string, number> {
   const list = (name: string): unknown[] => {
     try {
-      return JSON.parse(new RegExp(`^${name}: (\\[.*\\])`, 'm').exec(text)?.[1] ?? '[]');
+      const v: unknown = JSON.parse(
+        new RegExp(`^${name}: (\\[.*\\])`, 'm').exec(text)?.[1] ?? '[]',
+      );
+      return Array.isArray(v) ? v : [];
     } catch {
       return [];
     }

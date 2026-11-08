@@ -1,4 +1,5 @@
 import {
+  must,
   FROZEN_FRAME_MS,
   MIN_FRAMES,
   quantile,
@@ -56,11 +57,11 @@ export type FrameRow = { durationMs: number; intervalMs: number; startNs?: numbe
  * IntendedVsync → FrameCompleted and the frame interval (the vsync period). Flagged rows (not a normal
  * frame) and broken rows are left out. Columns are found by their header: releases add columns.
  */
-export function parseFramestats(text: string): FrameRow[] {
-  const out: FrameRow[] = [];
+export function parseFramestats(text: string): Required<FrameRow>[] {
+  const out: Required<FrameRow>[] = [];
   // one block per window of the process (an empty one for a window that drew nothing)
   for (const m of text.matchAll(/---PROFILEDATA---\n([\s\S]*?)---PROFILEDATA---/g)) {
-    const [head, ...rows] = m[1]!.trim().split('\n');
+    const [head, ...rows] = must(m[1], 'a block').trim().split('\n');
     const cols = (head ?? '').split(',');
     const at = (c: string) => cols.indexOf(c);
     const [flags, start, end] = [at('Flags'), at('IntendedVsync'), at('FrameCompleted')];
@@ -94,6 +95,7 @@ export function parseFrameStats(text: string): FrameStats {
     // a frame finishes about one interval after its vsync even when smooth (the render pipeline): slow is
     // over two intervals, a missed frame
     const slow = rows.filter((r) => r.durationMs > 2 * r.intervalMs).length;
+    const worst = worstWindow(rows);
     out.frames = {
       count: rows.length,
       slow,
@@ -101,7 +103,7 @@ export function parseFrameStats(text: string): FrameStats {
       p50Ms: round1(quantile(ms, 0.5)),
       p95Ms: round1(quantile(ms, 0.95)),
       worstMs: Math.max(...ms),
-      ...(worstWindow(rows) && { worstWindow: worstWindow(rows)! }),
+      ...(worst && { worstWindow: worst }),
     };
   }
   return out;
@@ -111,12 +113,14 @@ export function parseFrameStats(text: string): FrameStats {
 export function worstWindow(
   rows: FrameRow[],
 ): { frames: number; slow: number; avgMs: number } | undefined {
-  const timed = rows.filter((r) => r.startNs !== undefined).sort((a, b) => a.startNs! - b.startNs!);
+  const timed = rows
+    .filter((r): r is Required<FrameRow> => r.startNs !== undefined)
+    .sort((a, b) => a.startNs - b.startNs);
   if (timed.length === 0) return undefined;
   let best: { frames: number; slow: number; avgMs: number } | undefined;
   let j = 0;
-  for (let i = 0; i < timed.length; i++) {
-    while (timed[i]!.startNs! - timed[j]!.startNs! > 1e9) j++;
+  for (const [i, row] of timed.entries()) {
+    while (row.startNs - must(timed[j], 'a frame').startNs > 1e9) j++;
     const win = timed.slice(j, i + 1);
     const slow = win.filter((r) => r.durationMs > 2 * r.intervalMs).length;
     const avgMs = Math.round((win.reduce((a, r) => a + r.durationMs, 0) / win.length) * 10) / 10;

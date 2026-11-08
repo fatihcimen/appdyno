@@ -1,4 +1,4 @@
-import type { AppLink } from '@appdyno/core';
+import { must, type AppLink } from '@appdyno/core';
 
 const VIEW = '"android.intent.action.VIEW"';
 
@@ -7,18 +7,20 @@ export function linkFilters(dump: string): AppLink[] {
   const found = new Set<string>();
   // a filter is listed under each scheme it has: its lines follow its header, deeper in
   for (const block of dump.split(/\n(?=\s+[0-9a-f]+ \S+ filter [0-9a-f]+\s*$)/m).slice(1)) {
-    const lines = block.split('\n');
-    const indent = /^\s*/.exec(lines[0]!)![0].length;
-    const own = lines.slice(1).filter((l) => /^\s*/.exec(l)![0].length > indent);
+    const depth = (l: string) => l.length - l.trimStart().length;
+    const [header = '', ...rest] = block.split('\n');
+    const own = rest.filter((l) => depth(l) > depth(header));
     if (!own.some((l) => l.includes(VIEW))) continue;
     const of = (key: string) =>
       own.flatMap((l) => {
         const m = new RegExp(`^\\s*${key}: "([^"]*)"`).exec(l);
-        return m ? [m[1]!] : [];
+        return m ? [must(m[1], 'a value')] : [];
       });
     const paths = own.flatMap((l) => {
       const m = /^\s*Path: "PatternMatcher\{(\w+): ([^}]*)\}"/.exec(l);
-      return m ? [m[1] === 'LITERAL' ? m[2]! : `${m[2]}*`] : [];
+      if (!m) return [];
+      const path = must(m[2], 'a path');
+      return [m[1] === 'LITERAL' ? path : `${path}*`];
     });
     for (const scheme of of('Scheme'))
       for (const host of of('Authority').length > 0 ? of('Authority') : [''])
@@ -31,9 +33,9 @@ export function linkFilters(dump: string): AppLink[] {
 export function linkStates(out: string): AppLink[] {
   const after = out.split(/Domain verification state:\s*\n/)[1] ?? '';
   return [...after.matchAll(/^\s+([\w.*-]+): (\w+)\s*$/gm)].map((m) => ({
-    url: `https://${m[1]}`,
+    url: `https://${must(m[1], 'a domain')}`,
     kind: 'domain' as const,
-    state: m[2]!,
+    state: must(m[2], 'a state'),
   }));
 }
 

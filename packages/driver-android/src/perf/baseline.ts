@@ -1,4 +1,4 @@
-import type { BaselineReading, Measured } from '@appdyno/core';
+import { must, type BaselineReading, type Measured } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from '../adb.js';
 import { buildType } from './app.js';
@@ -9,7 +9,7 @@ import { at, sh, type PerfDevice } from './shared.js';
 const PROFILE = 'assets/dexopt/baseline.prof';
 /** In turns, so that what the device or the Mac drifts by falls on both. */
 const ROUNDS = 3;
-const COMPILED = /status=speed-profile/;
+const COMPILED = 'status=speed-profile';
 
 const coldStarts = (m: Measured<LaunchStats>) =>
   m.value.samples.flatMap((s) =>
@@ -50,13 +50,13 @@ export async function baselineProfile(
   if (!listing.includes('Archive:'))
     throw new DeviceError(
       'UNSUPPORTED',
-      `this device cannot list an APK: ${listing.trim().split('\n')[0]}`,
+      `this device cannot list an APK: ${must(listing.trim().split('\n')[0], 'a line')}`,
     );
   const state = parseCompileStatus(await dexoptState(d, pkg));
   const found = {
     present: listing.includes(PROFILE),
     ...(state && { state }),
-    applied: COMPILED.test(state ?? ''),
+    applied: (state ?? '').includes(COMPILED),
   };
   const raws = [listing, state ?? ''];
   const without: number[] = [];
@@ -70,10 +70,10 @@ export async function baselineProfile(
     );
     rules ??= await profileRules(d, pkg);
     const on = await launch(d, pkg, { mode: 'cold', repeats, compile: 'speed-profile' });
-    if (!COMPILED.test(on.value.compile?.status ?? ''))
+    if (!(on.value.compile?.status ?? '').includes(COMPILED))
       throw new DeviceError(
         'UNSUPPORTED',
-        `the profile compiled nothing here (${on.value.compile?.status}): ProfileInstaller answered ${/result=\d+/.exec(said)?.[0] ?? said.trim()}, where 0 is none in the app and 3 an Android newer than it knows: install the APK with its .dm`,
+        `the profile compiled nothing here (${String(on.value.compile?.status)}): ProfileInstaller answered ${/result=\d+/.exec(said)?.[0] ?? said.trim()}, where 0 is none in the app and 3 an Android newer than it knows: install the APK with its .dm`,
       );
     without.push(...coldStarts(off));
     withProfile.push(...coldStarts(on));

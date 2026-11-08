@@ -4,7 +4,7 @@ import { ANDROID_PUSHES, AndroidPush } from '../src/push.js';
 /** A device whose shell answers `answer` to each command, and what it was asked. */
 const device = (answer = (_: string) => '') => {
   const asked: string[] = [];
-  const push = new AndroidPush(async (c) => (asked.push(c), answer(c)));
+  const push = new AndroidPush((c) => Promise.resolve((asked.push(c), answer(c))));
   return { push, asked };
 };
 const LAUNCHER = 'priority=0 preferredOrder=0\ndev.app/.Main';

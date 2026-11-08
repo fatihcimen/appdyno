@@ -111,10 +111,10 @@ export async function sendFcm(
     headers: request.headers,
     body: request.body,
     signal: AbortSignal.timeout(timeoutMs),
-  }).catch((e: Error) => {
+  }).catch((e: unknown) => {
     throw new DeviceError(
       'INTERNAL',
-      `FCM was not reached: ${e.name}`,
+      `FCM was not reached: ${e instanceof Error ? e.name : String(e)}`,
       'check that this Mac reaches Google',
     );
   });

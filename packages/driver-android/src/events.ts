@@ -75,7 +75,9 @@ export class AndroidEvents implements DeviceEvents {
     return this.fingerprint.answer(answer, setUp);
   }
 
-  async resetKeychain(): Promise<number> {
-    throw new DeviceError('UNSUPPORTED', 'Android has no keychain: app clear empties an app');
+  resetKeychain(): Promise<number> {
+    return Promise.reject(
+      new DeviceError('UNSUPPORTED', 'Android has no keychain: app clear empties an app'),
+    );
   }
 }

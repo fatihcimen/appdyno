@@ -8,7 +8,7 @@ const PROJECT = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 
 const FcmKeySchema = z.object({
   projectId: z.string().regex(PROJECT),
-  clientEmail: z.string().email(),
+  clientEmail: z.email(),
   keyId: z.string().min(1),
   key: z.string(),
 });

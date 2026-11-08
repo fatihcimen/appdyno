@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { generateKeyPairSync, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,7 +19,10 @@ const RECORDED = JSON.parse(
 ) as { url: string; headers: Record<string, string>; body: unknown };
 
 const part = (jwt: string, i: number) =>
-  JSON.parse(Buffer.from(jwt.split('.')[i]!, 'base64url').toString()) as Record<string, unknown>;
+  JSON.parse(Buffer.from(must(jwt.split('.')[i], 'a part'), 'base64url').toString()) as Record<
+    string,
+    unknown
+  >;
 
 describe("FCM's own token", () => {
   it("is the service account's RS256 JWT for FCM's audience, an hour long, with no exchange at another host", () => {
@@ -54,7 +58,7 @@ describe('a message to FCM', () => {
     const r = fcmRequest('appdyno-test', TOKEN, message, 'J');
     const { authorization, ...headers } = r.headers;
     expect(authorization).toBe('Bearer J');
-    expect({ url: r.url, headers, body: JSON.parse(r.body) }).toEqual(RECORDED);
+    expect({ url: r.url, headers, body: JSON.parse(r.body) as unknown }).toEqual(RECORDED);
   });
 
   it('names no other target, and is 4 KB at most', () => {
@@ -66,15 +70,15 @@ describe('a message to FCM', () => {
   });
 
   it("is answered with its name, or FCM's error code, and nothing from a body not FCM's", async () => {
-    const post = vi.fn(async (_url: string, _init: unknown) =>
-      Response.json({ name: 'projects/appdyno-test/messages/0:1' }),
+    const post = vi.fn((_url: string, _init: unknown) =>
+      Promise.resolve(Response.json({ name: 'projects/appdyno-test/messages/0:1' })),
     );
     const request = fcmRequest('appdyno-test', TOKEN, { data: {} }, 'J');
     expect(await sendFcm(request, post as never)).toEqual({
       status: 200,
       name: 'projects/appdyno-test/messages/0:1',
     });
-    expect(post.mock.calls[0]![0]).toBe(
+    expect(post.mock.calls[0]?.[0]).toBe(
       `https://${FCM_HOST}/v1/projects/appdyno-test/messages:send`,
     );
     const error = {
@@ -101,11 +105,11 @@ describe('a message to FCM', () => {
     await expect(sendFcm(elsewhere, vi.fn() as never)).rejects.toThrow(
       'FCM is fcm.googleapis.com alone',
     );
-    const down = vi.fn(async () => {
-      throw Object.assign(new Error(`failed with ${TOKEN}`), { name: 'TypeError' });
-    });
+    const down = vi.fn(() =>
+      Promise.reject(Object.assign(new Error(`failed with ${TOKEN}`), { name: 'TypeError' })),
+    );
     const e = await sendFcm(fcmRequest('p', TOKEN, {}, 'SECRETJWT'), down as never).catch(
-      (x: Error) => x,
+      (x: unknown) => x,
     );
     expect(String(e)).toContain('FCM was not reached');
     expect(String(e)).not.toMatch(/SECRETJWT|APA91/);

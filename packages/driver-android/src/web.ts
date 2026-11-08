@@ -1,4 +1,4 @@
-import { CdpSession, devToolsTargets, type WebInspector, type WebPage } from '@appdyno/core';
+import { must, CdpSession, devToolsTargets, type WebInspector, type WebPage } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { type Adb } from './adb.js';
 
@@ -28,12 +28,12 @@ export class AndroidWeb implements WebInspector {
   async pages(app: string | undefined): Promise<WebPage[]> {
     const unix = await this.adb.exec(this.serial, 'cat /proc/net/unix');
     const pages: WebPage[] = [];
-    for (const [, socket, pid] of unix.matchAll(SOCKET)) {
-      const pkg = (await this.adb.exec(this.serial, `cat /proc/${pid}/cmdline`))
-        .split('\0')[0]!
-        .trim();
+    for (const m of unix.matchAll(SOCKET)) {
+      const socket = must(m[1], 'a socket');
+      const cmdline = await this.adb.exec(this.serial, `cat /proc/${must(m[2], 'a pid')}/cmdline`);
+      const pkg = must(cmdline.split('\0')[0], 'a name').trim();
       if (app && pkg !== app) continue;
-      const targets = await this.through(socket!, devToolsTargets).catch(() => []);
+      const targets = await this.through(socket, devToolsTargets).catch(() => []);
       for (const t of targets)
         if (t.type === 'page')
           pages.push({

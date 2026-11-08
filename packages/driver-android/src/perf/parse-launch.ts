@@ -1,4 +1,4 @@
-import type { StartupAnalysis } from '@appdyno/core';
+import { must, type StartupAnalysis } from '@appdyno/core';
 import { num, parseCsv, cellNum, nsToMs } from './parse-common.js';
 
 export type LaunchSample = {
@@ -35,7 +35,7 @@ export function parseFullyDrawn(log: string, pkg: string): number | undefined {
 /** The compiler state in `dumpsys package dexopt`: `arm64: [status=verify] [reason=cmdline]`. */
 export function parseCompileStatus(text: string): string | undefined {
   const m = /status=([\w-]+)\]?\s*\[reason=([\w-]+)/.exec(text);
-  return m ? `status=${m[1]} reason=${m[2]}` : undefined;
+  return m ? `status=${must(m[1], 'a status')} reason=${must(m[2], 'a reason')}` : undefined;
 }
 
 /** A finding's name, the slices summed for it (as the `android_startup` metric's `to_first_frame` did), its limit. */
@@ -89,7 +89,7 @@ export function parseStartup(csv: string, reasons: string[], tracePath: string):
     reasons,
     breakdown: rows
       .filter((r) => r[0] === 'reason')
-      .map((r) => ({ reason: r[1]!, ms: nsToMs(cellNum(r[2]) ?? 0) }))
+      .map((r) => ({ reason: must(r[1], 'a reason'), ms: nsToMs(cellNum(r[2]) ?? 0) }))
       .sort((a, b) => b.ms - a.ms),
     findings,
     ...(odex && { odex }),

@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { basename } from 'node:path';
 import {
+  must,
   modelledEnergy,
   sleep,
   type BuildType,
@@ -113,7 +114,7 @@ export async function energy(
   const uid = await uidOf(d, pkg);
   try {
     // a build that does not take the guard is never told it is unplugged: that could reset its history
-    const guarded = /Enabled: no-auto-reset/.test(await sh(d, BATTERY_GUARD));
+    const guarded = (await sh(d, BATTERY_GUARD)).includes('Enabled: no-auto-reset');
     if (guarded) await sh(d, 'dumpsys battery unplug');
     // Android 15 and later collect their samples first for this one, and it prints no more than the estimate
     const read = () => sh(d, 'dumpsys batterystats --usage', 60_000);
@@ -167,7 +168,7 @@ function countsOf(
   const anrs = Math.max(anrExits.length, filed?.length ?? 0);
   return {
     crashes: ended.filter((e) => /CRASH/i.test(e.reason)).length,
-    ...((filed || anrs > 0) && {
+    ...((filed !== undefined || anrs > 0) && {
       anrs,
       userAnrs: Math.max(
         anrExits.filter((e) => USER_PERCEIVED.test(e.detail ?? '')).length,
@@ -199,7 +200,7 @@ export async function exits(
   const ended = parseExitInfo(raw);
   const anrFiled = filed === undefined ? undefined : parseDropbox(filed, pkg);
   const ahead = since === undefined ? NaN : await stampsAhead(d);
-  const newer = ({ time }: { time: number }) => time >= since! + ahead;
+  const newer = ({ time }: { time: number }) => since !== undefined && time >= since + ahead;
   return {
     value: {
       ...(!Number.isNaN(ahead) && {
@@ -226,7 +227,7 @@ export async function size(d: PerfDevice, pkg: string): Promise<Measured<SizeRea
   const disk = await sh(d, 'dumpsys diskstats', 30_000);
   const parts: Record<string, number> = {};
   for (const [, bytes, path] of stat.matchAll(/^(\d+) (.+)$/gm))
-    parts[basename(path!.trim())] = Number(bytes);
+    parts[basename(must(path, 'a path').trim())] = Number(bytes);
   if (Object.keys(parts).length === 0)
     throw new DeviceError('UNSUPPORTED', `no size of ${pkg} in: ${stat.trim().slice(0, 200)}`);
   const bytes = Object.values(parts).reduce((a, b) => a + b, 0);

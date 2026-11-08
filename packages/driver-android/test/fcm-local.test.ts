@@ -22,19 +22,28 @@ type Device = {
 /** A shell by what it answers: the app's receivers, whether run-as lets in, adbd's uid, the broadcast's end. */
 const answers =
   (d: Device, asked: string[] = []) =>
-  async (c: string) => {
+  (c: string) => {
     asked.push(c);
     if (c.startsWith('cmd package query-receivers'))
-      return d.receiver === false
-        ? 'No receivers found'
-        : `1 receivers found:\n  Receiver #0:\n    ${RECEIVER}`;
-    if (c.startsWith('pm path')) return d.installed === false ? '' : 'package:/data/app/base.apk';
-    if (c.startsWith('cmd package resolve-activity')) return 'priority=0\ndev.app/.Main';
+      return Promise.resolve(
+        d.receiver === false
+          ? 'No receivers found'
+          : `1 receivers found:\n  Receiver #0:\n    ${RECEIVER}`,
+      );
+    if (c.startsWith('pm path'))
+      return Promise.resolve(d.installed === false ? '' : 'package:/data/app/base.apk');
+    if (c.startsWith('cmd package resolve-activity'))
+      return Promise.resolve('priority=0\ndev.app/.Main');
     if (c.startsWith('run-as') && c.endsWith('id -u'))
-      return d.debuggable === false ? 'run-as: package not debuggable: dev.app' : '10193';
-    if (c === 'id -u') return d.root ? '0' : '2000';
-    if (c.startsWith('cmd appops')) return d.appops ?? 'No operations.\nDefault mode: allow';
-    return `Broadcasting: Intent { act=... }\nBroadcast completed: result=${d.result ?? '-1'}`;
+      return Promise.resolve(
+        d.debuggable === false ? 'run-as: package not debuggable: dev.app' : '10193',
+      );
+    if (c === 'id -u') return Promise.resolve(d.root ? '0' : '2000');
+    if (c.startsWith('cmd appops'))
+      return Promise.resolve(d.appops ?? 'No operations.\nDefault mode: allow');
+    return Promise.resolve(
+      `Broadcasting: Intent { act=... }\nBroadcast completed: result=${d.result ?? '-1'}`,
+    );
   };
 
 const local = (d: Device) => {

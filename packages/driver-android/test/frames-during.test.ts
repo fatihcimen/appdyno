@@ -18,10 +18,10 @@ const dump = (histogramMs: number, count: number, rows: string[]) =>
 
 function device(reads: string[]) {
   const left = [...reads];
-  const next = async () => left.shift() ?? reads.at(-1)!;
+  const next = () => Promise.resolve(left.shift() ?? reads.at(-1));
   return {
     serial: 'x',
-    readyToMeasure: async () => undefined,
+    readyToMeasure: () => Promise.resolve(),
     shell: next,
     shellAlongside: next,
   } as unknown as PerfDevice;
@@ -34,7 +34,7 @@ describe('frames of what ran, on Android', () => {
       device(['', dump(1000, 4, [row(0, 8), ...stall])]),
       'dev.app',
       0,
-      async () => undefined,
+      () => Promise.resolve(),
     );
     expect(value.frozenFrames).toBe(1);
   });
@@ -45,7 +45,7 @@ describe('frames of what ran, on Android', () => {
       device(['', dump(1000, 4, [row(0, 8), ...stall])]),
       'dev.app',
       0,
-      async () => undefined,
+      () => Promise.resolve(),
     );
     expect(value.histogram).toEqual({ frames: 142, over16: 4, over700: 1, rowFrames: 4 });
   });
@@ -63,18 +63,12 @@ describe('frames of what ran, on Android', () => {
   });
 
   it('reads a plain list as none, and at least one where only the summary saw it', async () => {
-    const plain = await framesDuring(
-      device(['', dump(5, 0, [row(0, 8)])]),
-      'dev.app',
-      0,
-      async () => undefined,
+    const plain = await framesDuring(device(['', dump(5, 0, [row(0, 8)])]), 'dev.app', 0, () =>
+      Promise.resolve(),
     );
     expect(plain.value.frozenFrames).toBe(0);
-    const lost = await framesDuring(
-      device(['', dump(1000, 4, [row(0, 8)])]),
-      'dev.app',
-      0,
-      async () => undefined,
+    const lost = await framesDuring(device(['', dump(1000, 4, [row(0, 8)])]), 'dev.app', 0, () =>
+      Promise.resolve(),
     );
     expect(lost.value.frozenFrames).toBe(1);
   });

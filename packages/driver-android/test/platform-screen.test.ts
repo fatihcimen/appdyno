@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import {
+  must,
   buildScreen,
   elementsOf,
   screenElements,
@@ -205,7 +206,7 @@ describe('what a tester sees of a tree', () => {
     identifier,
     ref: `n-${text}`,
     parent: 0,
-    pkg: identifier.split(':')[0]!,
+    pkg: must(identifier.split(':')[0], 'a package'),
     rect: { x: 0, y: 100, width: 500, height: 100 },
     ...over,
   });
@@ -302,7 +303,7 @@ describe('wire tree to screen', () => {
     );
     const els = elementsOf(tree);
     expect(els.map((e) => e.text).filter(Boolean)).toEqual(['Uygulama', 'İzin ver']);
-    expect(els.at(-1)!.parent).toBe(2);
+    expect(els.at(-1)?.parent).toBe(2);
     const s = buildScreen(tree, { port: androidScreen, appId: 'dev.app' });
     expect(s.foreground).toBe('com.google.android.permissioncontroller');
     expect(s.list.map((e) => e.label)).toContain('İzin ver');
@@ -351,7 +352,9 @@ describe('wire tree to screen', () => {
         { type: 1, pkg: 'dev.app', layer: 1, b: [128, 0, 2400, 1080], active: true, focused: true },
       ],
     });
-    tree.nodes[0]!.b = [128, 0, 2400, 1080];
+    const [first] = tree.nodes;
+    assert(first);
+    first.b = [128, 0, 2400, 1080];
     expect(buildScreen(tree, { port: androidScreen }).window).toEqual({ w: 2400, h: 1080 });
   });
 });

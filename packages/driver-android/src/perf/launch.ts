@@ -1,4 +1,5 @@
 import {
+  must,
   sleep,
   type LaunchReading,
   median,
@@ -86,12 +87,11 @@ export async function launch(
   const mode = opts.mode ?? 'cold';
   const repeats = Math.min(Math.max(opts.repeats ?? 3, 1), 10);
   if (opts.trace) await traceProcessor();
-  const component = (
-    await sh(d, `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${pkg}`)
-  )
-    .trim()
-    .split('\n')
-    .pop()!;
+  const resolved = await sh(
+    d,
+    `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${pkg}`,
+  );
+  const component = must(resolved.trim().split('\n').at(-1), 'a line');
   if (!component.includes('/'))
     throw new DeviceError('APP_NOT_RUNNING', `${pkg} has no launcher activity`);
   const flags = mode === 'warm' ? `-f ${RECREATE_ACTIVITY} ` : '';
@@ -169,8 +169,10 @@ export async function launch(
     if (opts.compile) await resetCompile(d, pkg, before);
   }
   const want = mode.toUpperCase();
-  const ok = samples.filter((s) => s.totalMs !== undefined && s.state === want);
-  const m = medianMs(ok.map((s) => s.totalMs!));
+  const ok = samples.filter(
+    (s): s is LaunchSample & { totalMs: number } => s.totalMs !== undefined && s.state === want,
+  );
+  const m = medianMs(ok.map((s) => s.totalMs));
   const drawn = medianMs(ok.flatMap((s) => s.fullyDrawnMs ?? []));
   return {
     value: {
@@ -192,7 +194,7 @@ export async function launch(
  */
 export async function resetCompile(d: PerfDevice, pkg: string, before: string | undefined) {
   await sh(d, `cmd package compile --reset ${pkg}`, 300_000);
-  const compiled = (s: string | undefined) => /status=speed-profile/.test(s ?? '');
+  const compiled = (s: string | undefined) => (s ?? '').includes('status=speed-profile');
   if (compiled(before) && !compiled(parseCompileStatus(await dexoptState(d, pkg))))
     await sh(d, `cmd package compile -m speed-profile -f ${pkg}`, 300_000);
 }

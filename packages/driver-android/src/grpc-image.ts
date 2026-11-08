@@ -55,7 +55,7 @@ function fieldsOf(buf: Buffer): Field[] {
     let scale = 1;
     for (;;) {
       if (at >= buf.length || scale > 2 ** 49) return undefined;
-      const b = buf[at++]!;
+      const b = buf.readUInt8(at++);
       v += (b & 0x7f) * scale;
       if (b < 0x80) return v;
       scale *= 128;

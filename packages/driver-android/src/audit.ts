@@ -1,5 +1,5 @@
 import type { AuditIssue, AuditResult, AuditType, TextClip, Tree } from '@appdyno/protocol';
-import { elementsOf, familyOf, type Image, type UiElement } from '@appdyno/core';
+import { elementsOf, familyOf, must, type Image, type UiElement } from '@appdyno/core';
 
 /**
  * Android's accessibility checks, computed on the host from the agent's tree, a screenshot and the
@@ -15,8 +15,8 @@ const lum = ([r, g, b]: Rgb) => {
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 };
 export const contrastRatio = (a: Rgb, b: Rgb) => {
-  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
-  return (x! + 0.05) / (y! + 0.05);
+  const [x, y] = [lum(a), lum(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 };
 const hex = (c: Rgb) =>
   `#${c
@@ -41,7 +41,11 @@ function sample(img: Image, r: { x: number; y: number; w: number; h: number }) {
   for (let y = y0; y < y1; y += step)
     for (let x = x0; x < x1; x += step) {
       const i = (y * img.width + x) * img.channels;
-      const px: Rgb = [img.data[i]!, img.data[i + 1]!, img.data[i + 2]!];
+      const px: Rgb = [
+        must(img.data[i], 'a byte'),
+        must(img.data[i + 1], 'a byte'),
+        must(img.data[i + 2], 'a byte'),
+      ];
       const k = ((px[0] >> 3) << 10) | ((px[1] >> 3) << 5) | (px[2] >> 3);
       const b = bins.get(k) ?? { n: 0, s: [0, 0, 0] };
       b.n++;
@@ -54,7 +58,7 @@ function sample(img: Image, r: { x: number; y: number; w: number; h: number }) {
   const list = [...bins.values()]
     .map((b) => ({ share: b.n / total, rgb: b.s.map((v) => v / b.n) as Rgb }))
     .sort((a, b) => b.share - a.share);
-  const bg = list[0]!;
+  const bg = must(list[0], 'a colour');
   const dist = (a: Rgb, b: Rgb) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   const fg = list
     .filter((b) => b.share >= 0.005 && dist(b.rgb, bg.rgb) > 30)
@@ -98,11 +102,12 @@ export function auditAndroid(
   const byRef = new Map(els.map((e, i) => [e.ref, i] as const));
   const { ancestors, descendants } = familyOf(els);
   const win = els.find((e) => e.parent === undefined && e.rect?.x === 0 && e.rect.y === 0)?.rect;
-  const shown = (e: UiElement) =>
+  const el = (i: number) => must(els[i], 'an element');
+  const shown = (e: UiElement): e is UiElement & { rect: Rect } =>
     e.visible !== false && !!e.rect && e.rect.width > 0 && e.rect.height > 0;
   const own = (e: UiElement) => (e.label || e.text || '').trim();
   const spoken = (i: number) =>
-    [own(els[i]!), ...descendants(i).map((d) => own(els[d]!))].filter(Boolean).join(' ');
+    [own(el(i)), ...descendants(i).map((d) => own(el(d)))].filter(Boolean).join(' ');
   const touches = (r: Rect, a: Rect) =>
     Math.abs(r.x - a.x) <= 1 ||
     Math.abs(r.y - a.y) <= 1 ||
@@ -110,18 +115,21 @@ export function auditAndroid(
     Math.abs(r.y + r.height - a.y - a.height) <= 1;
   /** At the window's edge or a scrolling container's: possibly cut there. */
   const cut = (i: number) => {
-    const r = els[i]!.rect!;
+    const r = must(el(i).rect, 'a rect');
     return (
       (!!win && touches(r, win)) ||
-      ancestors(i).some((a) => els[a]!.scrollable && els[a]!.rect && touches(r, els[a]!.rect!))
+      ancestors(i).some((a) => {
+        const { scrollable, rect } = el(a);
+        return scrollable && rect && touches(r, rect);
+      })
     );
   };
   const dp = (px: number) => px / o.scale;
 
   const issues: AuditIssue[] = [];
   const add = (i: number, type: AuditType, rule: string, message: string) => {
-    const e = els[i]!;
-    const r = e.rect!;
+    const e = el(i);
+    const r = must(e.rect, 'a rect');
     issues.push({
       type,
       rule: `android.${rule}`,
@@ -139,7 +147,7 @@ export function auditAndroid(
   const clickable = (e: UiElement) => !!e.clickable;
   els.forEach((e, i) => {
     if (!shown(e) || e.notImportant) return;
-    const r = e.rect!;
+    const r = e.rect;
     const parent = e.parent !== undefined ? els[e.parent] : undefined;
     const twin =
       !!parent &&
@@ -221,19 +229,14 @@ export function auditAndroid(
   // text the screen does not show whole (cut by its frame or ellipsized)
   for (const c of o.clips ?? []) {
     const i = byRef.get(`n${c.n}`);
-    if (i === undefined || c.hidden === 0 || !shown(els[i]!) || cut(i)) continue;
+    if (i === undefined || c.hidden === 0 || !shown(el(i)) || cut(i)) continue;
     add(i, 'textClipped', 'textClipped', `${c.hidden} of ${c.chars} characters are not shown`);
   }
 
   // controls a screen reader announces alike (the outermost of nested clickables)
   const groups = new Map<string, number[]>();
   els.forEach((e, i) => {
-    if (
-      !shown(e) ||
-      !clickable(e) ||
-      e.notImportant ||
-      ancestors(i).some((a) => clickable(els[a]!))
-    )
+    if (!shown(e) || !clickable(e) || e.notImportant || ancestors(i).some((a) => clickable(el(a))))
       return;
     const name = spoken(i).toLocaleLowerCase();
     if (name) groups.set(name, [...(groups.get(name) ?? []), i]);
@@ -241,13 +244,14 @@ export function auditAndroid(
   for (const [name, list] of groups)
     if (list.length > 1)
       add(
-        list[0]!,
+        must(list[0], 'a control'),
         'duplicateLabel',
         'duplicateLabel',
         `${list.length} controls are read as "${name}"`,
       );
 
-  const asked = o.types ? issues.filter((i) => o.types!.includes(i.type)) : issues;
+  const { types } = o;
+  const asked = types ? issues.filter((i) => types.includes(i.type)) : issues;
   const max = o.maxIssues ?? 50;
   return {
     engine: 'rules',

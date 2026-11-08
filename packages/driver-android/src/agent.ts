@@ -16,6 +16,7 @@ import {
   agentLeft,
   sharedAgent,
   stateDir,
+  must,
   writeStateFile,
   type RpcClient,
 } from '@appdyno/core';
@@ -201,7 +202,7 @@ export class AndroidAgentLauncher {
           'AGENT_CONFLICT' | 'UNSUPPORTED' | 'INTERNAL' | 'INVALID_ARGUMENT';
         throw new DeviceError(
           code,
-          `the Android agent could not start: ${failed[2]}`,
+          `the Android agent could not start: ${must(failed[2], 'the reason')}`,
           code === 'AGENT_CONFLICT'
             ? 'another UI automation server runs on this device: stop it, then retry'
             : undefined,
@@ -231,7 +232,7 @@ export class AndroidAgentLauncher {
   /** Our agent process for this socket is running (its command line names the socket). */
   private async running(socket: string): Promise<boolean> {
     // [g]etir… never matches this shell's own command line
-    const pattern = `[${socket[0]}]${socket.slice(1)}`;
+    const pattern = `[${socket.charAt(0)}]${socket.slice(1)}`;
     const out = await this.adb
       .exec(this.serial, `pgrep -f '${pattern}' >/dev/null && echo yes; true`)
       .catch(() => 'yes');

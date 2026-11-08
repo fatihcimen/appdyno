@@ -20,7 +20,7 @@ const DUMP = `ACTIVITY MANAGER LRU PROCESSES (dumpsys activity start-info)
 `;
 
 const device = (sdk: number, dump: string) => ({
-  shell: async (cmd: string) => (cmd.includes('getprop') ? `${sdk}\n` : dump),
+  shell: (cmd: string) => Promise.resolve(cmd.includes('getprop') ? `${sdk}\n` : dump),
 });
 
 describe('start info', () => {
@@ -52,20 +52,20 @@ describe('start info', () => {
     const [start] = parseStartInfo(
       'ApplicationStartInfo #0:\n reason=START ACTIVITY startType=HOT\n timestamps: 0=1000000000 4=1100000000 \n',
     );
-    expect(start!.phases).toEqual({ first_frame: 100 });
+    expect(start?.phases).toEqual({ first_frame: 100 });
   });
 
   it('counts no phase across two clocks, as a Xiaomi stamps a service start', () => {
     const [start] = parseStartInfo(
       'ApplicationStartInfo #0:\n reason=SERVICE startType=COLD\n timestamps: 0=665171850087996 1=559172317414559 4=559172463732328 \n',
     );
-    expect(start!.phases).toEqual({ first_frame: 146.3 });
+    expect(start?.phases).toEqual({ first_frame: 146.3 });
   });
 
   it('refuses before Android 15, by name', async () => {
     await expect(startInfo(device(34, '') as never, 'dev.app')).rejects.toMatchObject({
       code: 'UNSUPPORTED',
-      message: expect.stringContaining('this device has API 34'),
+      message: expect.stringContaining('this device has API 34') as unknown,
     });
   });
 
@@ -105,9 +105,9 @@ describe('start info', () => {
 
     it('asks no clock of the phone', async () => {
       const asked: string[] = [];
-      const shell = async (cmd: string) => {
+      const shell = (cmd: string) => {
         asked.push(cmd);
-        return cmd.includes('getprop') ? '36\n' : DUMP;
+        return Promise.resolve(cmd.includes('getprop') ? '36\n' : DUMP);
       };
       await startInfo({ shell } as never, 'dev.app', NEWEST);
       expect(asked.filter((c) => /uptime|gfxinfo/.test(c))).toEqual([]);

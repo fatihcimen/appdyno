@@ -46,29 +46,29 @@ describe('an agent that holds a device and that this host has no state of', () =
     const { sha256 } = await agentApk();
     const ran: string[] = [];
     const adb = {
-      exec: async (_: string, command: string) => {
+      exec: (_: string, command: string) => {
         ran.push(command);
-        if (command.startsWith('sha256sum')) return `${sha256} agent.apk`;
-        if (command.startsWith('cat ')) return log;
-        if (command.includes('/proc/net/unix')) return sockets;
-        if (command.startsWith('pgrep')) return '1234\n';
-        return '';
+        if (command.startsWith('sha256sum')) return Promise.resolve(`${sha256} agent.apk`);
+        if (command.startsWith('cat ')) return Promise.resolve(log);
+        if (command.includes('/proc/net/unix')) return Promise.resolve(sockets);
+        if (command.startsWith('pgrep')) return Promise.resolve('1234\n');
+        return Promise.resolve('');
       },
-      startDetached: async () => ({ close: () => undefined }),
-      open: async () => {
-        throw answer;
+      startDetached: () => Promise.resolve({ close: () => undefined }),
+      open: () => {
+        return Promise.reject(answer);
       },
     } as unknown as Adb;
     return { launcher: new AndroidAgentLauncher(adb, SERIAL), ran };
   };
-  const killed = (ran: string[]) => ran.filter((c) => /&& kill 1234/.test(c));
+  const killed = (ran: string[]) => ran.filter((c) => c.includes('&& kill 1234'));
 
   it('ends at an agent of another version, which no wait would change', async () => {
     const answer = new DeviceError('AGENT_VERSION_MISMATCH', 'agent protocol 1, host 2');
     const { launcher, ran } = await device('', { answer, log: '' });
     await expect(launcher.connect()).rejects.toMatchObject({
       code: 'AGENT_VERSION_MISMATCH',
-      hint: expect.stringContaining('assembleDebug'),
+      hint: expect.stringContaining('assembleDebug') as unknown,
     });
     // the first answer ended it: a poll reads the log before it asks again
     expect(ran.filter((c) => c.startsWith('cat '))).toEqual([]);
@@ -78,7 +78,7 @@ describe('an agent that holds a device and that this host has no state of', () =
     const { launcher, ran } = await device(LISTENING + CONNECTED);
     await expect(launcher.connect()).rejects.toMatchObject({
       code: 'AGENT_CONFLICT',
-      message: expect.stringContaining('state folder of its own'),
+      message: expect.stringContaining('state folder of its own') as unknown,
     });
     expect(killed(ran)).toEqual([]);
   });
