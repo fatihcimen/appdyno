@@ -26,10 +26,12 @@ import { type Simctl, assertBundle } from './simctl.js';
 import {
   DATA_FOLDERS,
   appLanguage,
+  heldSize,
   holdAppLanguage,
   installingApp,
   launchLanguage,
   on,
+  textSize,
 } from './manage.js';
 
 const copyFolders = (from: string, to: string) => {
@@ -197,7 +199,8 @@ export class SimulatorSettings implements DeviceSettings {
       case 'dark_mode':
         return this.ui('appearance');
       case 'text_size':
-        return this.ui('content_size');
+        // simctl reads extra-small back as extra-Small
+        return (await this.ui('content_size')).toLowerCase();
       case 'reduce_motion': {
         const v = await this.spawn(
           'defaults',
@@ -251,9 +254,11 @@ export class SimulatorSettings implements DeviceSettings {
       case 'dark_mode':
         await this.ui('appearance', on(value, 'dark', 'light'));
         return;
-      case 'text_size':
-        await this.ui('content_size', value);
+      case 'text_size': {
+        const said = await this.ui('content_size', textSize(value));
+        heldSize(value, await this.get('text_size'), said);
         return;
+      }
       case 'reduce_motion':
         await this.spawn(
           'defaults',

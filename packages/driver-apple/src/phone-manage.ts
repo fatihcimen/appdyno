@@ -26,10 +26,12 @@ import { assertBundle } from './simctl.js';
 import {
   DATA_FOLDERS,
   appLanguage,
+  heldSize,
   holdAppLanguage,
   installingApp,
   launchLanguage,
   on,
+  textSize,
 } from './manage.js';
 
 const PHONE_CANNOT = {
@@ -267,8 +269,10 @@ export class PhoneSettings implements DeviceSettings {
     }
     if (name === 'network' || name === 'thermal') return this.conditions.set(name, value);
     if (name === 'dark_mode') await this.appearance('--mode', on(value, 'dark', 'light'));
-    else if (name === 'text_size') await this.appearance('--text-size', value);
-    else if (name === 'reduce_motion') await this.appearance('--reduce-motion', value);
+    else if (name === 'text_size') {
+      await this.appearance('--text-size', textSize(value));
+      heldSize(value, await this.get('text_size'));
+    } else if (name === 'reduce_motion') await this.appearance('--reduce-motion', value);
     else if (name === 'increase_contrast') await this.appearance('--increase-contrast', value);
     else if (name === 'reduce_transparency') await this.appearance('--reduce-transparency', value);
     else throw noSwitch(name);

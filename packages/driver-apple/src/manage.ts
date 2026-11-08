@@ -98,3 +98,39 @@ export async function holdAppLanguage(
 export const appLanguage = (device: string, app: string) => appLanguages.read(device)?.[app] ?? '';
 
 export const on = (v: string, yes: string, no: string) => ({ on: yes, off: no })[v] ?? v;
+
+/** iOS's text sizes, as simctl and devicectl both take them. */
+export const TEXT_SIZES = [
+  'extra-small',
+  'small',
+  'medium',
+  'large',
+  'extra-large',
+  'extra-extra-large',
+  'extra-extra-extra-large',
+  'accessibility-medium',
+  'accessibility-large',
+  'accessibility-extra-large',
+  'accessibility-extra-extra-large',
+  'accessibility-extra-extra-extra-large',
+];
+
+/** A text size iOS has, else a refusal that names them: simctl says "Invalid argument" to another and exits 0. */
+export function textSize(value: string) {
+  if (!TEXT_SIZES.includes(value))
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      `text_size on iOS is a size, not ${value}`,
+      `one of ${TEXT_SIZES.join(', ')}`,
+    );
+  return value;
+}
+
+/** A text size that does not read back as it was set is refused, with what it reads. */
+export function heldSize(value: string, now: string, said = '') {
+  if (now !== value)
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `asked for text_size ${value} and it reads ${now}${said ? `: ${said}` : ''}`,
+    );
+}
