@@ -1,0 +1,5 @@
+root = true
+
+# ktlint: Kotlin's coding conventions, the style gradle.properties gives the IDE (kotlin.code.style=official)
+[*.{kt,kts}]
+ktlint_code_style = intellij_idea

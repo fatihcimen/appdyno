@@ -1,0 +1,68 @@
+# SwiftLint for the iOS runner, its core and the fixture, run with --strict: a warning fails as an error does.
+included:
+  - ios
+excluded:
+  - ios/RunnerCore/.build
+  - ios/.derived
+  - ios/.derived-device
+# beyond the defaults: what catches a bug, a crash or a slow call, and the idiom the Swift API has for it
+opt_in_rules:
+  - array_init
+  - async_without_await
+  - balanced_xctest_lifecycle
+  - closure_spacing
+  - comma_inheritance
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - convenience_type
+  - direct_return
+  - discarded_notification_center_observer
+  - discouraged_optional_boolean
+  - empty_count
+  - empty_string
+  - empty_xctest_method
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - flatmap_over_map_reduce
+  - force_unwrapping
+  - identical_operands
+  - implicitly_unwrapped_optional
+  - joined_default_parameter
+  - last_where
+  - legacy_multiple
+  - legacy_objc_type
+  - legacy_random
+  - lower_acl_than_parent
+  - modifier_order
+  - operator_usage_whitespace
+  - optional_enum_case_matching
+  - overridden_super_call
+  - pattern_matching_keywords
+  - period_spacing
+  - prefer_self_type_over_type_of_self
+  - prefer_zero_over_explicit_init
+  - private_swiftui_state
+  - prohibited_super_call
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - reduce_into
+  - return_value_from_void_function
+  - self_binding
+  - shorthand_optional_binding
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - test_case_accessibility
+  - toggle_bool
+  - unhandled_throwing_task
+  - unneeded_parentheses_in_closure_argument
+  - unowned_variable_capture
+  - unused_parameter
+  - xct_specific_matcher
+  - yoda_condition
+# one limit for a file, structure.test.ts's
+file_length:
+  warning: 450
