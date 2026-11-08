@@ -29,6 +29,16 @@ const Changes = z.record(
 
 export const conditions = deviceState('conditions', Changes);
 
+/** A switch reads as it is set, on or off: iOS says light and dark, Android yes and no. */
+const SWITCH_WORDS: Partial<Record<string, string>> = {
+  dark: 'on',
+  yes: 'on',
+  light: 'off',
+  no: 'off',
+};
+const wordOf = (name: string, value: string) =>
+  name === 'dark_mode' ? (SWITCH_WORDS[value] ?? value) : value;
+
 /** Whose entries a restore takes, by their owner. */
 export type Whose = (owner: Owner | undefined) => boolean;
 
@@ -61,13 +71,19 @@ const forget = (s: Session, name: string) =>
     return Object.keys(rest).length > 0 ? rest : undefined;
   });
 
+/** When a change goes back: a command line's stays for the next command, as each command is a process. */
+const back = (s: Session) =>
+  s.owner
+    ? 'put back when this session ends, or by restore; it cannot be kept past the session'
+    : 'it stays until restore';
+
 /** Sets a condition, the old value written down first so a crash cannot lose it; what the answer should add. */
 export async function setCondition(s: Session, name: SettingName, value: string, app?: string) {
   const settings = s.device.settings;
   return s.conditions.run(async () => {
     const first = await writeDown(s, settings, name, app);
     try {
-      return await settings.set(name, value, app);
+      return [await settings.set(name, value, app), back(s)].filter(Boolean).join('; ');
     } catch (e) {
       // what went out stays written down until the device reads as it was: a refusal may come after the change
       if (first && (await readsAsItWas(s, name, app))) forget(s, name);
@@ -123,7 +139,7 @@ export function restoreConditions(s: Session, whose: Whose) {
       try {
         await settings.set(name as SettingName, c.was, c.app);
         forget(s, name);
-        restored.push(`${name}: ${c.was}`);
+        restored.push(`${name}: ${wordOf(name, c.was)}`);
       } catch (e) {
         failed.push(`${name} (was ${c.was}): ${(e as Error).message}`);
       }
@@ -226,7 +242,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         const pkg = app ?? (name === 'locale' ? s.appId : undefined);
         if (pkg) checkApp(policy, pkg);
         if (value === undefined) {
-          const now = await settings.get(name, pkg);
+          const now = wordOf(name, await settings.get(name, pkg));
           const t = `${name}: ${now}`;
           return reply(clean(t), { done: clean(t), value: now });
         }

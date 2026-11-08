@@ -95,6 +95,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         `settings: an app's id, app, or a page: ${SETTINGS_PAGES.join(', ')}`,
         'INVALID_ARGUMENT',
       );
+    s.leftApp = true;
     const { row } = await s.device.openSettings(
       page ? { page } : { app: must(app, "the app's id") },
     );
@@ -163,6 +164,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
         if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         reportProgress(`launching ${pkg}`);
+        s.leftApp = pkg !== s.appId;
         if (!language) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
           await s.device.launch(pkg).catch(notThere(s, pkg));
@@ -195,6 +197,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const pkg = checkApp(policy, app ?? s.appId ?? '');
         if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         await s.device.terminate(pkg);
+        if (pkg === s.appId) s.leftApp = true;
         s.acted();
         s.appPid = undefined;
         return reply(`stopped ${pkg}`, { done: `stopped ${pkg}` });

@@ -933,6 +933,33 @@ describe('gestures, keys, clipboard', () => {
     expect((await call('launch_app')).data.done).toBe('started dev.app');
   });
 
+  it('warns that the app is not in front only when it left by itself', async () => {
+    const d = new FakeDevice();
+    let front = 'dev.app';
+    const shown = d.current.bind(d);
+    d.current = () => {
+      const t = shown();
+      for (const w of t.windows) w.pkg = front;
+      return t;
+    };
+    const { call } = await connect(d);
+    const warned = async (n: OpName, args: Record<string, unknown> = {}) =>
+      (await call(n, args)).text.includes('WARNING: the app is not in the foreground');
+    await call('screen');
+    front = 'launcher';
+    expect([await warned('press_key', { key: 'home' }), await warned('screen')]).toEqual([
+      false,
+      false,
+    ]);
+    front = 'dev.other';
+    expect(await warned('launch_app', { app: 'dev.other' })).toBe(false);
+    front = 'dev.app';
+    expect(await warned('launch_app')).toBe(false);
+    // back in front, and gone with nothing that took it away
+    front = 'launcher';
+    expect(await warned('screen')).toBe(true);
+  });
+
   it('refuses an app the device does not have by one code on every platform, with how to list them', async () => {
     const d = new FakeDevice();
     let state = 'not_installed';
@@ -1009,6 +1036,18 @@ describe('gestures, keys, clipboard', () => {
     const named = await call('screenshot', { file: dir });
     expect(named.data.file).toMatch(/emulator-5580-.*\.png$/);
     expect((await call('screenshot', { file: join(dir, 'a.gif') })).error).toBe(true);
+    // a picture at full size, 3 pixels to a tap unit, says to tap at a third
+    const png = Buffer.alloc(24);
+    png[0] = 0x89;
+    png.writeUInt32BE(3240, 16);
+    png.writeUInt32BE(7200, 20);
+    d.screenshot = () =>
+      Promise.resolve({ meta: { w: 3240, h: 7200, format: 'png', bytes: 24 }, data: png });
+    const full = await call('screenshot', { file: join(dir, 'full.png') });
+    expect([full.text, full.data.scale]).toEqual([
+      `saved ${join(dir, 'full.png')} (3240x7200 px; its pixel x,y is tapped at x/3, y/3)`,
+      0.333,
+    ]);
   });
 
   it('reads the clipboard and keeps a secret off it', async () => {
@@ -1456,8 +1495,13 @@ describe('device conditions', () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings });
     const { call, ctx } = await connect(d);
-    expect((await call('device_setting', { name: 'dark_mode' })).data.value).toBe('no');
-    await call('device_setting', { name: 'dark_mode', value: 'on' });
+    // read as it is set on both platforms: Android says no, iOS light
+    expect((await call('device_setting', { name: 'dark_mode' })).data.value).toBe('off');
+    expect((await call('device_setting', { name: 'dark_mode', value: 'on' })).text).toBe(
+      'dark_mode: on; put back when this session ends, or by restore; it cannot be kept past the session',
+    );
+    settings.values.dark_mode = 'dark';
+    expect((await call('device_setting', { name: 'dark_mode' })).text).toBe('dark_mode: on');
     await call('device_setting', { name: 'dark_mode', value: 'off' });
     await call('device_setting', { name: 'text_size', value: '1.3' });
     settings.values.fold = 'default (now open)';

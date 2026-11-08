@@ -383,6 +383,10 @@ describe.skipIf(!android)('driving on Android', () => {
       }),
     );
     expect(await get('cmd uimode night')).not.toBe(dark);
+    // read in the words it is set by, not Android's yes and no
+    expect(ok(await h.call('device_setting', { name: 'dark_mode' })).data.value).toBe(
+      dark.includes('yes') ? 'off' : 'on',
+    );
     ok(await h.call('device_setting', { name: 'text_size', value: '1.3' }));
     expect(await get('settings get system font_scale')).toBe('1.3');
     ok(await h.call('device_setting', { name: 'animations', value: 'off' }));
@@ -606,6 +610,10 @@ describe.skipIf(!ios)('driving on a simulator', () => {
       }),
     );
     expect(await ui('appearance')).not.toBe(before.dark);
+    // read in the words it is set by, not iOS's light and dark
+    expect(ok(await h.call('device_setting', { name: 'dark_mode' })).data.value).toBe(
+      before.dark === 'dark' ? 'off' : 'on',
+    );
     ok(await h.call('device_setting', { name: 'text_size', value: 'extra-large' }));
     expect(await ui('content_size')).toBe('extra-large');
     ok(await h.call('device_setting', { name: 'reduce_motion', value: 'on' }));
@@ -714,11 +722,11 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
       size: await read('text_size'),
       motion: await read('reduce_motion'),
     };
-    expect(before.dark).toMatch(/^(light|dark)$/);
+    expect(before.dark).toMatch(/^(on|off)$/);
     expect(before.motion).toMatch(/^(on|off)$/);
-    const other = before.dark === 'dark' ? 'off' : 'on';
+    const other = before.dark === 'on' ? 'off' : 'on';
     ok(await h.call('device_setting', { name: 'dark_mode', value: other }));
-    expect(await read('dark_mode')).toBe(before.dark === 'dark' ? 'light' : 'dark');
+    expect(await read('dark_mode')).toBe(other);
     const size = before.size === 'extra-large' ? 'large' : 'extra-large';
     ok(await h.call('device_setting', { name: 'text_size', value: size }));
     expect(await read('text_size')).toBe(size);

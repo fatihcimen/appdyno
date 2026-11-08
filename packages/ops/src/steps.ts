@@ -370,6 +370,7 @@ export function stepsFor(
               `${st.key} is off on this server: the app may not be left`,
               'POLICY_DENIED',
             );
+          s.leftApp = true;
           await s.device.openView(view);
           const { screen } = await settleRead(s);
           // what the answer compares with is what was on the screen before, not this read
@@ -383,6 +384,7 @@ export function stepsFor(
             `${st.key} is off on this server: the app may not be left`,
             'POLICY_DENIED',
           );
+        if (leaves) s.leftApp = true;
         const dark = NOTHING_TO_READ.has(key);
         const quiet = { settle: false, read: 'none' } as const;
         const count = st.count ?? 1;

@@ -28,6 +28,8 @@ ve kendileri hakkında söyledikleri her birinde bayt bayt aynıdır.
 
 Bir yanıttaki bütün bir ekran, tekrar edeni katlar. Etiketi kendisini içeren bir satırın içindeki düz bir metin ya da görsel ayrı bir satır almaz; satırın tam yerinde duran, satırın adını taşıyan bir kontrol de almaz; ilk satır bunları sayar. Art arda gelen, birbirine benzeyen üç ya da daha fazla satır tek bir başlığı paylaşır (`cell x=201 clickable: ref "label" y`). İki kez verilen bir etiket bir kez söylenir; benzer öğeleri birbirinden ayıran şey de yalnızca başka bir satır aynı adı gösterdiğinde söylenir. Yalnızca metin katlanır: `find`, seçiciler, ref'ler, diff'ler, akışlar ve `report` yine her öğeye ulaşır.
 
+Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyler: x ve y'si, dokunma birimine ölçeğiyle çarpılır; bu bir tam sayıya bölmeyse bölme olarak söylenir, bir iPhone'un tam boyutlu resmi için `x/3`.
+
 ## Hedefler
 
 Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce
@@ -47,7 +49,7 @@ argümanlar ve ortam değişkenleriyle `launch`, yeni ya da boş bir klasöre `d
 (uygulamayı durdurur ve klasörde olmayanı kaldırır) ve bu Mac'teki bir projeden `build_and_run` içerir:
 `scheme` ve `configuration` ile bir Xcode projesi ya da modülü `scheme`,
 varyantı `configuration` olan bir Gradle klasörü. `device_setting`; `dark_mode`, `text_size`,
-`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` ve `keychain` içerir.
+`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` ve `keychain` içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`.
 
 `launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `app` `list` vardır.
 
@@ -224,7 +226,7 @@ bittiğinde ya da `device_setting` ile `restore` adıyla geri döner; bu, başka
 dokunmaz ve bunu söyler. Ölen bir oturum dosyayı bırakır; o cihazdaki sonraki oturum yalnızca ölü bir sürecin
 bıraktığını geri koyar ve bunu söyler; geri konamayan bildirilir, okunamayan bir dosya da
 yanında `.bad` olarak tutulur. Komut satırında her komut ayrı bir süreçtir, bu yüzden onun değişiklikleri
-oturumlar gelip gitse de `restore`'a kadar kalır.
+oturumlar gelip gitse de `restore`'a kadar kalır. Bir değişikliğin yanıtı bu ikisinden hangisi olduğunu söyler.
 
 Bir kayıt, bir ağ yakalaması, açık bir rapor ve bir akış kaydı da aynı yoldan gider. Sonraki oturum
 ölü bir sürecin bıraktığını bitirir ve bunu söyler (bir akış kaydı adımları saklanarak durur), canlı bir sürecin
@@ -250,7 +252,7 @@ Bir işlem durulmuş ekranla yanıt verir. `settled`, ekranın bekleme süresi b
 `changed`, ekranın işlemden öncekinden düzende ya da metinde farklı olduğu anlamına gelir; farka işlemin
 yol açtığını söylemez. Hiçbir şey değişmediyse yanıt "no change seen in N ms; if a slow reaction is expected,
 use wait_for" der. Her yanıtın `structuredContent`'i, özetin yanında metninin tamamını `text` olarak taşır, çünkü bir istemci iki kısımdan yalnızca birini gösterebilir. Başarısız bir çağrı, metni `code` ile başlayıp `hint` ile biten bir `isError` yanıtıdır, ikisi `structuredContent`'te de vardır; başarısız bir işlem de dokunuşunun gidip gitmediğini söyler (`dispatched`). Bir işlem, kimsenin görmediği bir ekrana dokunmadan önce onu okur ve kilitli bir telefonda adını koyarak reddeder (`DEVICE_LOCKED`). Bir isteğin iptali
-cihaza ulaşır ve uzun işlemler ilerleme bildirir.
+cihaza ulaşır ve uzun işlemler ilerleme bildirir. Bir yanıt, uygulama önden kendiliğinden çıktığında önde olmadığını söyleyerek uyarır; onu bilerek bırakan bir tuştan, bir Ayarlar sayfasından, başka bir uygulamanın başlatılmasından ya da bir durdurmadan sonra uyarmaz.
 
 ## Loglar ve çökmeler
 

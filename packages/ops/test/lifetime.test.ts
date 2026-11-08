@@ -151,7 +151,9 @@ describe('whose conditions go back', () => {
     const { settings, device } = withSettings();
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
     const cli = connect(device, { remember });
-    await cli.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    expect((await cli.call('device_setting', { name: 'dark_mode', value: 'yes' })).text).toBe(
+      'dark_mode: yes; it stays until restore',
+    );
     expect(await cli.ctx.end()).toEqual([]);
     cli.ctx.close();
     const next = connect(device, { claims: true });
@@ -162,7 +164,7 @@ describe('whose conditions go back', () => {
     next.ctx.close();
     const later = connect(device, { remember });
     expect((await later.call('device_setting', { name: 'restore' })).text).toContain(
-      'restored dark_mode: no',
+      'restored dark_mode: off',
     );
     expect(settings.values.dark_mode).toBe('no');
     later.ctx.close();

@@ -28,6 +28,8 @@ and what they say of themselves are the same, byte for byte, on each.
 
 A whole screen in an answer folds what repeats. A plain text or image inside a row whose label holds it gets no line, nor does a control of the row's name at the row's very place, and the first line counts them. Three or more rows alike in a row share one header (`cell x=201 clickable: ref "label" y`). A label given twice over is said once, and what tells alike elements apart only when another line shows the same name. Only the text is folded: `find`, selectors, refs, diffs, flows and `report` still reach every element.
 
+A screenshot's answer says where its pixel is tapped: its x and y times its scale to tap units, said as a division where that is a whole one, `x/3` for an iPhone's picture at full size.
+
 ## Targets
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
@@ -47,7 +49,7 @@ hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, 
 from one, which stops the app and takes away what the folder does not hold, and `build_and_run` from a
 project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gradle folder with `scheme` as
 its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
-`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` and `keychain`.
+`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` and `keychain`. `dark_mode` reads as it is set, `on` or `off`, on both platforms.
 
 `launch_app` says whether it started the app or brought a running one to the front, on the screen it was on. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `app` `list` in its hint.
 
@@ -224,7 +226,7 @@ when that session ends, or with `device_setting` name `restore`, which leaves al
 process changed and says so. A session that died leaves the file, and the next one on that device puts
 back only what a dead process left, and says so; what cannot be put back is reported, and a file that
 cannot be read is kept beside it as `.bad`. A command line is one process per command, so its changes
-stay until `restore`, whatever sessions come and go.
+stay until `restore`, whatever sessions come and go. A change's answer says which of the two it is.
 
 A recording, a network capture, an open report and a flow recording go the same way. The next session
 ends what a dead process left and says so (a flow recording stops with its steps kept), leaves what a
@@ -250,7 +252,7 @@ An action answers with the settled screen. `settled` means the screen was still 
 `changed` means the screen differs from before the action, in layout or text; it does not say the action
 caused it. If nothing changed the answer says "no change seen in N ms; if a slow reaction is expected,
 use wait_for". Every answer's `structuredContent` holds its whole text as `text`, beside the summary, as a client may show either part alone. A failed call is an `isError` answer whose text starts with its `code` and ends with its `hint`, both in `structuredContent` too, and a failed action says whether its touch went out (`dispatched`). An action reads a screen nobody has seen before it touches it, and a locked phone refuses by name (`DEVICE_LOCKED`). Cancelling a request
-reaches the device, and long operations report progress.
+reaches the device, and long operations report progress. An answer warns that the app is not in front when it left by itself, not after a key, a Settings page, another app's launch or a stop that left it on purpose.
 
 ## Logs and crashes
 

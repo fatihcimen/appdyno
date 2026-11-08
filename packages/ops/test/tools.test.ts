@@ -339,7 +339,7 @@ describe('act and read', () => {
     await t.textOf('screen');
     const r = await t.call('screenshot');
     expect(r.content.map((c) => c.type)).toEqual(['text', 'image']);
-    expect(r.content[0]?.text).toContain('pixel × 2.348');
+    expect(r.content[0]?.text).toContain('its pixel x,y is tapped at x × 2.348, y × 2.348');
     const again = await t.textOf('screenshot');
     expect(again).toMatchObject({ error: true });
   });

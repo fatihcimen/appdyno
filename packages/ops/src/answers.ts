@@ -53,6 +53,7 @@ const needsPerson = (what: string) => `\nneeds a person: ${what}. hand_off asks 
 
 /** The app check: a permission prompt points to alert; another app in front is said. */
 function appCheck(s: Session, screen: Screen) {
+  if (screen.foreground === s.appId) s.leftApp = false;
   if (s.wordless && screen.elements.some((e) => e.type === PICTURE_TEXT))
     return `\nno words in the tree: these were read from the picture, and their places are near${s.pictureLevel === 'fast' ? FAST_READ : ''}`;
   if (s.pictureFailed)
@@ -61,7 +62,7 @@ function appCheck(s: Session, screen: Screen) {
   if (person) return needsPerson(person);
   if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
     return '\na system permission prompt is open: answer it with alert';
-  if (!s.appId || !screen.foreground || screen.foreground === s.appId) return '';
+  if (!s.appId || !screen.foreground || screen.foreground === s.appId || s.leftApp) return '';
   return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
 }
 

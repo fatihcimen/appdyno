@@ -194,6 +194,8 @@ export class Session {
     return this.latest?.at === this.version ? this.latest.screen : undefined;
   }
 
+  /** The app was left on purpose (a key, Settings, another app, a stop): out of the front, it did not crash. */
+  leftApp = false;
   /** The app's process when last looked: another one means it went down and came back. */
   appPid: string | undefined;
   /** When the last device action ended (epoch ms): `logs` starts here. */

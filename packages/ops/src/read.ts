@@ -27,6 +27,20 @@ const SHOT_PX = 800;
 const SHOT_QUALITY = 60;
 const MAX_SHOT_PX = 8_192;
 
+/** Where an image's pixel is tapped: by its scale to tap units, said as a division where that is a whole one. */
+const tapAt = (scale: number) => {
+  if (scale === 1) return 'a pixel of it is a tap unit';
+  const per = Math.round(1 / scale);
+  const by = Math.abs(per * scale - 1) < 0.005 ? `/${per}` : ` × ${scale.toFixed(3)}`;
+  return `its pixel x,y is tapped at x${by}, y${by}`;
+};
+
+/** Tap units per pixel of an image `w` pixels wide, to 3 places. */
+const scaleOf = (s: Session, w: number) => {
+  const screen = s.device.hello?.screen.w;
+  return screen && w ? Math.round((screen / w) * 1000) / 1000 : undefined;
+};
+
 /** The whole picture in a file: a folder gets a new name, and what is there stays unless asked. */
 async function saveShot(s: Session, file: string, overwrite: boolean) {
   const given = resolve(file);
@@ -44,12 +58,17 @@ async function saveShot(s: Session, file: string, overwrite: boolean) {
   mkdirSync(dirname(to), { recursive: true });
   writeFileSync(to, data, { flag: overwrite ? 'w' : 'wx' });
   const size = imageSize(data);
-  return reply(`saved ${to}${size ? ` (${size.w}x${size.h} px)` : ''}`, {
-    width: size?.w ?? 0,
-    height: size?.h ?? 0,
-    warnings: [],
-    file: to,
-  });
+  const scale = size && scaleOf(s, size.w);
+  return reply(
+    `saved ${to}${size ? ` (${size.w}x${size.h} px${scale ? `; ${tapAt(scale)}` : ''})` : ''}`,
+    {
+      width: size?.w ?? 0,
+      height: size?.h ?? 0,
+      ...(scale && { scale }),
+      warnings: [],
+      file: to,
+    },
+  );
 }
 
 export function readOps(
@@ -224,11 +243,10 @@ export function readOps(
         const look = await s.current().catch(() => undefined);
         // a sheet over the app is in the picture: no look past the app, which took 4.5 s of an iPhone's after typing
         const fg = look ? await noticed(s, look, false) : '';
-        const w = s.device.hello?.screen.w;
         s.shot = { at: s.version, hash: layout ?? '' };
-        const scale = w ? Math.round((w / meta.w) * 1000) / 1000 : undefined;
+        const scale = scaleOf(s, meta.w);
         return reply(
-          `image ${meta.w}x${meta.h} px${scale ? `; tap unit = pixel × ${scale.toFixed(3)}` : ''}${fg}`,
+          `image ${meta.w}x${meta.h} px${scale ? `; ${tapAt(scale)}` : ''}${fg}`,
           {
             width: meta.w,
             height: meta.h,
