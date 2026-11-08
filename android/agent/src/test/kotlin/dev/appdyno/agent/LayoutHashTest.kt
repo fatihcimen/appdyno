@@ -7,8 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LayoutHashTest {
-    private fun node(text: String?, l: Int, r: Int, flags: Int = Flags.VISIBLE, top: Int = 10, id: String? = "a:id/x") =
-        CNode(-1, 0, "android.widget.TextView", id, text, null, null, l, top, r, top + 20, flags)
+    private fun node(text: String?, l: Int, r: Int, flags: Int = Flags.VISIBLE, top: Int = 10, id: String? = "a:id/x") = CNode(-1, 0, "android.widget.TextView", id, text, null, null, l, top, r, top + 20, flags)
 
     @Test
     fun textAndItsWidthAreNoLayoutChange() {
@@ -47,8 +46,7 @@ class LayoutHashTest {
 }
 
 class HitTestTest {
-    private fun n(parent: Int, cls: String, l: Int, t: Int, r: Int, b: Int, flags: Int = Flags.VISIBLE) =
-        CNode(parent, 0, cls, null, null, null, null, l, t, r, b, flags)
+    private fun n(parent: Int, cls: String, l: Int, t: Int, r: Int, b: Int, flags: Int = Flags.VISIBLE) = CNode(parent, 0, cls, null, null, null, null, l, t, r, b, flags)
 
     private val screen = listOf(
         n(-1, "FrameLayout", 0, 0, 1000, 2000),

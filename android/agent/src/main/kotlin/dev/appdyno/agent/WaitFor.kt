@@ -34,8 +34,7 @@ object WaitFor {
     }
 
     /** A window as the tree sends it. */
-    fun window(w: CWindow) =
-        "${w.type}|${w.pkg}|${w.layer}|${w.bounds.left},${w.bounds.top},${w.bounds.right},${w.bounds.bottom}|${w.active}|${w.focused}"
+    fun window(w: CWindow) = "${w.type}|${w.pkg}|${w.layer}|${w.bounds.left},${w.bounds.top},${w.bounds.right},${w.bounds.bottom}|${w.active}|${w.focused}"
 
     fun <S> run(
         since: String?,

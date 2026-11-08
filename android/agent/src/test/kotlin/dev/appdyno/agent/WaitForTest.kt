@@ -12,15 +12,17 @@ import org.junit.Test
 class WaitForTest {
     private var now = 1_000L
 
-    private fun node(cls: String = "View", id: String? = "x", text: String? = "a", desc: String? = "d", right: Int = 10, flags: Int = 1) =
-        CNode(-1, 0, cls, id, text, desc, null, 0, 0, right, 10, flags)
+    private fun node(cls: String = "View", id: String? = "x", text: String? = "a", desc: String? = "d", right: Int = 10, flags: Int = 1) = CNode(-1, 0, cls, id, text, desc, null, 0, 0, right, 10, flags)
 
     private fun sig(n: CNode, window: String = "w") = WaitFor.sig(listOf(window), listOf(n))
 
     /** Reads take 10 ms; `sigAt(t)` is the screen's digest at t after the start. */
     private fun go(since: String?, timeout: Long = 1_000, min: Long = 300, cancelled: () -> Boolean = { false }, sigAt: (Long) -> String): WaitOutcome<String> {
         val start = now
-        return WaitFor.run(since, timeout, min, { now }, { now += it }, cancelled, { now += 10; sigAt(now - start) }, { it })
+        return WaitFor.run(since, timeout, min, { now }, { now += it }, cancelled, {
+            now += 10
+            sigAt(now - start)
+        }, { it })
     }
 
     @Test
@@ -42,8 +44,7 @@ class WaitForTest {
 
     @Test
     fun aWindowIsDescribedByWhatTheTreeSends() {
-        fun w(right: Int = 100, focused: Boolean = true, pkg: String? = "app") =
-            WaitFor.window(CWindow(7, 1, pkg, 0, Rect().apply { this.right = right }, true, focused))
+        fun w(right: Int = 100, focused: Boolean = true, pkg: String? = "app") = WaitFor.window(CWindow(7, 1, pkg, 0, Rect().apply { this.right = right }, true, focused))
         assertEquals(w(), w())
         assertNotEquals(w(), w(right = 200))
         assertNotEquals(w(), w(focused = false))

@@ -1,7 +1,6 @@
 package dev.appdyno.agent
 
 import android.graphics.Rect
-import java.math.BigDecimal
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -9,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 
 /** The protocol's canonical JSON, `packages/protocol/fixtures`, which the host's tests hold to its schemas. */
 class WireFixturesTest {

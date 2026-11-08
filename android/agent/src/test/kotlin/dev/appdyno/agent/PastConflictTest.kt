@@ -10,11 +10,10 @@ class PastConflictTest {
 
     private fun held() = AgentFailure("AGENT_CONFLICT", "held")
 
-    private fun <T> run(attempt: () -> T): T =
-        pastConflict(4_000, 200, { now }, { now += it }) {
-            attempts++
-            attempt()
-        }
+    private fun <T> run(attempt: () -> T): T = pastConflict(4_000, 200, { now }, { now += it }) {
+        attempts++
+        attempt()
+    }
 
     @Test
     fun takesTheFirstAttemptThatIsNotRefused() {

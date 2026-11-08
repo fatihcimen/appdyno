@@ -101,32 +101,27 @@ class Capture(
 /** Windows in a transition (pure, unit tested). */
 object Slide {
     /** A band along an edge of the display: the status bar, a gesture handle, the handle of a maker's edge panel. */
-    fun strip(left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) =
-        (bottom - top < d.height / 8 && (top == 0 || bottom == d.height)) ||
-            (right - left < d.width / 8 && (left == 0 || right == d.width))
+    fun strip(left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) = (bottom - top < d.height / 8 && (top == 0 || bottom == d.height)) ||
+        (right - left < d.width / 8 && (left == 0 || right == d.width))
 
     /**
      * A window that is a screen: an application's, or a system one (a shade, a keyguard, a dialog such as "not
      * responding") that is not a strip. Between two screens only the strips are there, for 100 to 500 ms.
      */
-    fun hasScreen(type: Int, left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) =
-        type == AccessibilityWindowInfo.TYPE_APPLICATION ||
-            (type == AccessibilityWindowInfo.TYPE_SYSTEM && !strip(left, top, right, bottom, d))
+    fun hasScreen(type: Int, left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) = type == AccessibilityWindowInfo.TYPE_APPLICATION ||
+        (type == AccessibilityWindowInfo.TYPE_SYSTEM && !strip(left, top, right, bottom, d))
 
     /** A node at this place in a window `dx`, `dy` off its own: wholly past the display, so its visibility cannot be known now. */
-    fun pushedOff(left: Int, top: Int, right: Int, bottom: Int, dx: Int, dy: Int, d: DisplayInfo) =
-        right + dx <= 0 || bottom + dy <= 0 || left + dx >= d.width || top + dy >= d.height
+    fun pushedOff(left: Int, top: Int, right: Int, bottom: Int, dx: Int, dy: Int, d: DisplayInfo) = right + dx <= 0 || bottom + dy <= 0 || left + dx >= d.width || top + dy >= d.height
 
-    fun outside(left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) =
-        left < 0 || top < 0 || right > d.width || bottom > d.height
+    fun outside(left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) = left < 0 || top < 0 || right > d.width || bottom > d.height
 
     /**
      * An application window of the display's size: it slides at most, and comes to rest filling the display, where a place in the window is the place on the screen. Not known
      * for any other shape, nor without `getBoundsInWindow` (API 34).
      */
-    fun fills(type: Int, width: Int, height: Int, d: DisplayInfo, sdk: Int = Build.VERSION.SDK_INT) =
-        sdk >= 34 && type == AccessibilityWindowInfo.TYPE_APPLICATION &&
-            kotlin.math.abs(width - d.width) <= 2 && kotlin.math.abs(height - d.height) <= 2
+    fun fills(type: Int, width: Int, height: Int, d: DisplayInfo, sdk: Int = Build.VERSION.SDK_INT) = sdk >= 34 && type == AccessibilityWindowInfo.TYPE_APPLICATION &&
+        kotlin.math.abs(width - d.width) <= 2 && kotlin.math.abs(height - d.height) <= 2
 }
 
 /**
@@ -285,7 +280,9 @@ class TreeCapture(private val automation: Automation) {
             n.flags = when {
                 // under a window above (the status bar's background) it will not be visible
                 visible && windows.drop(n.window + 1).any { it.bounds.contains(n.left, n.top, n.right, n.bottom) } -> n.flags and Flags.VISIBLE.inv()
+
                 !visible && !empty && Slide.pushedOff(n.left, n.top, n.right, n.bottom, w.offsetX, w.offsetY, d) -> n.flags or Flags.VISIBLE
+
                 else -> n.flags
             }
         }
@@ -343,6 +340,7 @@ class TreeCapture(private val automation: Automation) {
         private const val PREFETCH =
             AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST or
                 AccessibilityNodeInfo.FLAG_PREFETCH_UNINTERRUPTIBLE
+
         /** The same prefetch, stopped by the app's UI thread when it has input or other work waiting. */
         private const val PREFETCH_YIELDING = AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST
     }

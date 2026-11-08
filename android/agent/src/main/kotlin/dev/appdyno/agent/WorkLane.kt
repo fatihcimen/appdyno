@@ -21,8 +21,7 @@ class WorkLane(private val timers: ScheduledExecutorService, private val graceMs
     /** Threads given up so far (for the agent's health). */
     val replaced = AtomicInteger()
 
-    private fun newLane(): ExecutorService =
-        Executors.newSingleThreadExecutor { r -> Thread(r, "appdyno-actions").apply { isDaemon = true } }
+    private fun newLane(): ExecutorService = Executors.newSingleThreadExecutor { r -> Thread(r, "appdyno-actions").apply { isDaemon = true } }
 
     /** Runs `work` after the jobs before it; `onTimeout` once `deadlineMs` passes before it ends. */
     fun submit(job: Job, deadlineMs: Long, onTimeout: () -> Unit, work: () -> Unit) {

@@ -59,8 +59,7 @@ class Settler(
     }
 
     /** The longest a read of this size takes on this device when it is not slowed, by the measure of `slowdown`; 0 until known. */
-    private fun usualRead(nodes: Int) =
-        if (readCosts.size < 3) 0L else (readCosts.min() * nodes.coerceAtLeast(20) * 2).toLong()
+    private fun usualRead(nodes: Int) = if (readCosts.size < 3) 0L else (readCosts.min() * nodes.coerceAtLeast(20) * 2).toLong()
 
     fun <S> run(
         actionAt: Long,

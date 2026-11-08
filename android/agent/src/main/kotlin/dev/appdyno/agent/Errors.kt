@@ -33,8 +33,7 @@ fun rpcCode(code: String): Int {
 }
 
 /** A failure the host gets as a typed error (code, message, what to do). */
-class AgentFailure(val code: String, message: String, val hint: String? = null, cause: Throwable? = null) :
-    Exception(message, cause)
+class AgentFailure(val code: String, message: String, val hint: String? = null, cause: Throwable? = null) : Exception(message, cause)
 
 /** A lit screen with no window to read has an app that does not answer, as a busy main thread does. */
 fun noWindow(screenOn: Boolean) = AgentFailure(
@@ -47,9 +46,12 @@ fun unknownMethod(method: String) = AgentFailure("UNSUPPORTED", "unknown method 
 /** What a thrown failure tells the host. */
 fun failureOf(t: Throwable): AgentFailure = when (t) {
     is AgentFailure -> t
+
     is InvocationTargetException -> failureOf(t.targetException)
+
     is IllegalArgumentException, is org.json.JSONException ->
         AgentFailure("INVALID_ARGUMENT", t.message ?: t.toString(), cause = t)
+
     else -> {
         t.printStackTrace()
         AgentFailure("INTERNAL", t.toString(), cause = t)

@@ -38,9 +38,13 @@ sealed class Action {
     companion object {
         fun from(a: JSONObject): Action = when (a.getString("kind")) {
             "tap" -> Tap(a.x(), a.y())
+
             "doubleTap" -> DoubleTap(a.x(), a.y())
+
             "longPress" -> LongPress(a.x(), a.y(), a.getLong("durationMs"))
+
             "swipe" -> Swipe(a.getJSONObject("from").point(), a.getJSONObject("to").point(), a.getLong("durationMs"))
+
             "gesture" -> {
                 val pointers = a.getJSONArray("pointers")
                 Gesture(
@@ -53,10 +57,12 @@ sealed class Action {
                     },
                 )
             }
+
             "key" -> {
                 val held = a.optJSONArray("modifiers")
                 Key(a.getString("key"), (0 until (held?.length() ?: 0)).map { held!!.getString(it) })
             }
+
             else -> throw AgentFailure("INVALID_ARGUMENT", "unknown action")
         }
     }

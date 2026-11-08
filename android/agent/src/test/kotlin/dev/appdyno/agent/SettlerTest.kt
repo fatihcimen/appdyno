@@ -14,12 +14,19 @@ class SettlerTest {
     private fun r(hash: String, busy: Boolean = false) = R(hash, busy)
 
     /** Reads take 10 ms; `layoutAt(t)` gives the layout at time t after the action. */
-    private fun go(quiet: Long, max: Long, before: String?, start: Long = now, layoutAt: (Long) -> R, cancelled: () -> Boolean = { false }) =
-        Settler({ now }, { now += it }, { lastEvent }).run(
-            start, quiet, max, before?.let { R(it) },
-            { now += 10; layoutAt(now - start) },
-            { a, b -> a.hash == b.hash }, { it.busy }, cancelled,
-        )
+    private fun go(quiet: Long, max: Long, before: String?, start: Long = now, layoutAt: (Long) -> R, cancelled: () -> Boolean = { false }) = Settler({ now }, { now += it }, { lastEvent }).run(
+        start,
+        quiet,
+        max,
+        before?.let { R(it) },
+        {
+            now += 10
+            layoutAt(now - start)
+        },
+        { a, b -> a.hash == b.hash },
+        { it.busy },
+        cancelled,
+    )
 
     @Test
     fun unchangedScreenSettlesAfterTheQuietWindow() {
@@ -50,7 +57,10 @@ class SettlerTest {
     fun endlessEventsHoldItAtMostTwoQuietWindows() {
         val start = now
         val s = Settler({ now }, { now += it }, { now - 5 }) // an event just now, every time
-        val o = s.run(start, 250, 3_000, R("L"), { now += 10; R("L") }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        val o = s.run(start, 250, 3_000, R("L"), {
+            now += 10
+            R("L")
+        }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
         assertTrue(o.settled)
         assertTrue("settled ${o.elapsedMs}", o.elapsedMs in 500..600)
     }
@@ -82,8 +92,20 @@ class SettlerTest {
         // the first read takes 1.5 s (a starved device) and still shows the screen before the tap
         val s = Settler({ now }, { now += it }, { lastEvent })
         var n = 0
-        val o = s.run(now, 200, 3_000, R("A"), { n++; now += if (n == 1) 1_500 else 10; R(if (n == 1) "A" else "B") },
-            { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        val o = s.run(
+            now,
+            200,
+            3_000,
+            R("A"),
+            {
+                n++
+                now += if (n == 1) 1_500 else 10
+                R(if (n == 1) "A" else "B")
+            },
+            { a, b -> a.hash == b.hash },
+            { it.busy },
+            { false },
+        )
         assertTrue(o.settled)
         assertEquals("B", o.last.hash)
         assertTrue("reads ${o.reads}", o.reads >= 3)
@@ -93,9 +115,17 @@ class SettlerTest {
     fun lateWakeUpsStretchTheQuietWindow() {
         // every 80 ms sleep takes 240 ms (a starved CPU) while reads stay fast
         val s = Settler({ now }, { now += it * 3 }, { lastEvent })
-        repeat(3) { s.run(now, 100, 3_000, R("A"), { now += 5; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }) }
+        repeat(3) {
+            s.run(now, 100, 3_000, R("A"), {
+                now += 5
+                R("A")
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        }
         assertTrue("slowdown ${s.slowdown()}", s.slowdown() > 2.5)
-        val o = s.run(now, 100, 3_000, R("A"), { now += 5; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        val o = s.run(now, 100, 3_000, R("A"), {
+            now += 5
+            R("A")
+        }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
         assertTrue("window ${o.quietMs}", o.quietMs >= 250)
     }
 
@@ -103,10 +133,18 @@ class SettlerTest {
     fun slowReadsStretchTheQuietWindow() {
         val s = Settler({ now }, { now += it }, { lastEvent })
         // warm up: fast reads (10 ms)
-        repeat(5) { s.run(now, 100, 3_000, R("A"), { now += 10; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }) }
+        repeat(5) {
+            s.run(now, 100, 3_000, R("A"), {
+                now += 10
+                R("A")
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        }
         assertEquals(1.0, s.slowdown(), 0.01)
         // the device gets slow: reads take 60 ms, the window grows to 3×
-        val o = s.run(now, 100, 3_000, R("A"), { now += 60; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        val o = s.run(now, 100, 3_000, R("A"), {
+            now += 60
+            R("A")
+        }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
         assertTrue(o.settled)
         assertTrue("settled ${o.elapsedMs}", o.elapsedMs >= 280)
         assertEquals(3.0, s.slowdown(), 0.01)
@@ -118,7 +156,10 @@ class SettlerTest {
         // between two screens for 500 ms: no read of the empty screen, and the window starts after it
         val start = now
         val o = Settler({ now }, { now += it }, { lastEvent }).run(
-            start, 200, 3_000, R("A"), { now += 10; R("B") }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            start, 200, 3_000, R("A"), {
+                now += 10
+                R("B")
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
             hold = { now - start < 500 },
         )
         assertTrue(o.settled)
@@ -133,7 +174,10 @@ class SettlerTest {
         // then shows in `hold` until 400 ms, after which the new screen is there
         val start = now
         val o = Settler({ now }, { now += it }, { lastEvent }).run(
-            start, 200, 3_000, R("A"), { now += 10; R(if (now - start < 400) "A" else "B") }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            start, 200, 3_000, R("A"), {
+                now += 10
+                R(if (now - start < 400) "A" else "B")
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
             hold = { now - start in 201..399 },
         )
         assertTrue(o.settled)
@@ -145,7 +189,10 @@ class SettlerTest {
         // still the old screen when read at the end of the window; a new window appeared meanwhile
         val start = now
         val o = Settler({ now }, { now += it }, { lastEvent }).run(
-            start, 200, 3_000, R("A"), { now += 60; R(if (now - start < 300) "A" else "B") }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            start, 200, 3_000, R("A"), {
+                now += 60
+                R(if (now - start < 300) "A" else "B")
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
             outdated = { it.hash == "A" },
         )
         assertTrue(o.settled)
@@ -155,7 +202,10 @@ class SettlerTest {
     @Test
     fun aHoldThatNeverEndsAnswersOnceAtTheCapUnsettled() {
         val o = Settler({ now }, { now += it }, { lastEvent }).run(
-            now, 200, 1_000, R("A"), { now += 10; R("gap", true) }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            now, 200, 1_000, R("A"), {
+                now += 10
+                R("gap", true)
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
             hold = { true },
         )
         assertFalse(o.settled)
@@ -187,10 +237,24 @@ class SettlerTest {
                 seen = true
                 now = start + 60
                 lastEvent = now
-            } else now += ms
+            } else {
+                now += ms
+            }
         }, { lastEvent })
-        val o = s.run(start, 200, 3_000, R("A"), { at += now - start; now += 10; R(if (now - start < 60) "A" else "B") },
-            { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        val o = s.run(
+            start,
+            200,
+            3_000,
+            R("A"),
+            {
+                at += now - start
+                now += 10
+                R(if (now - start < 60) "A" else "B")
+            },
+            { a, b -> a.hash == b.hash },
+            { it.busy },
+            { false },
+        )
         assertTrue(o.settled)
         assertEquals("B", o.last.hash)
         assertTrue("reads at $at", at.first() in 60..60 + Settler.POLL_MS)
@@ -202,8 +266,18 @@ class SettlerTest {
         val at = mutableListOf<Long>()
         val start = now
         val o = Settler({ now }, { now += it }, { lastEvent }).run(
-            start, 200, 3_000, null, { at += now - start; now += 10; R(if (now - start < 500) "m${now - start}" else "B") },
-            { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            start,
+            200,
+            3_000,
+            null,
+            {
+                at += now - start
+                now += 10
+                R(if (now - start < 500) "m${now - start}" else "B")
+            },
+            { a, b -> a.hash == b.hash },
+            { it.busy },
+            { false },
         )
         assertTrue(o.settled)
         assertTrue("reads at $at", at.zipWithNext { a, b -> b - a }.take(4).all { it <= Settler.POLL_MS + 10 })
@@ -214,8 +288,20 @@ class SettlerTest {
         // reads taking 300 ms against a 200 ms window: one such read may be all of the "still" time
         var n = 0
         val s = Settler({ now }, { now += it }, { lastEvent })
-        val o = s.run(now, 200, 3_000, R("A"), { n++; now += if (n == 1) 300 else 5; R("A") },
-            { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        val o = s.run(
+            now,
+            200,
+            3_000,
+            R("A"),
+            {
+                n++
+                now += if (n == 1) 300 else 5
+                R("A")
+            },
+            { a, b -> a.hash == b.hash },
+            { it.busy },
+            { false },
+        )
         assertTrue(o.settled)
         assertEquals(2, o.reads)
     }
@@ -226,7 +312,10 @@ class SettlerTest {
         // waited out its 3 s
         val s = Settler({ now }, { now += it }, { lastEvent })
         val tap = {
-            s.run(now, 80, 3_000, R("A"), { now += 165; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
+            s.run(now, 80, 3_000, R("A"), {
+                now += 165
+                R("A")
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
         }
         val first = tap()
         assertTrue(first.settled)
@@ -240,10 +329,19 @@ class SettlerTest {
     fun readsThatTurnSlowAreStillNoProof() {
         // the same 165 ms on a device that read in 10: it is loaded now, and the guard holds
         val s = Settler({ now }, { now += it }, { lastEvent })
-        s.run(now, 80, 3_000, R("A"), { now += 10; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
+        s.run(now, 80, 3_000, R("A"), {
+            now += 10
+            R("A")
+        }, { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
         var n = 0
-        val o = s.run(now, 80, 3_000, R("A"), { n++; now += if (n < 3) 165 else 10; R("A") },
-            { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
+        val o = s.run(
+            now, 80, 3_000, R("A"), {
+                n++
+                now += if (n < 3) 165 else 10
+                R("A")
+            },
+            { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 },
+        )
         assertTrue(o.settled)
         assertEquals(3, o.reads)
     }

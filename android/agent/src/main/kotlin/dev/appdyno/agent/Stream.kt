@@ -33,6 +33,7 @@ class StreamRequest(
 interface StreamOutput {
     fun video(frame: VideoFrame)
     fun info(params: JSONObject)
+
     /** The stream will not go on, and why. */
     fun end(why: String)
 }
@@ -119,7 +120,9 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
                         System.err.println("too slow at ${step.maxSize}: its frames took ${pace.ms} ms")
                         ladder.smaller(pace.ms, SystemClock.uptimeMillis())
                     }
+
                     SizePace.Room -> ladder.larger()
+
                     null -> null
                 }
                 if (next != null) {
@@ -197,9 +200,11 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
 
     companion object {
         private const val POLL_US = 50_000L
+
         /** A rotation or fold is seen within this; asked by a timer, as listeners differ from release to release. */
         private const val SHAPE_CHECK_MS = 100L
         private const val JOIN_MS = 3_000L
+
         /** A size is given this long before a larger one is tried: a picture's restart is seen. */
         private const val ROOM_AFTER_MS = 30_000L
 
@@ -234,14 +239,14 @@ class Streams {
 
     fun status(): JSONObject = Platform.display().let { d ->
         JSONObject()
-        .put("active", active.size)
-        .put("on", d.on)
-        .put("w", d.width)
-        .put("h", d.height)
-        .put("rotation", d.rotation)
-        .put("modes", org.json.JSONArray(active.map { it.mode }))
-        .put("dropped", active.sumOf { it.dropped })
-        .put("behind", active.any { it.behind })
+            .put("active", active.size)
+            .put("on", d.on)
+            .put("w", d.width)
+            .put("h", d.height)
+            .put("rotation", d.rotation)
+            .put("modes", org.json.JSONArray(active.map { it.mode }))
+            .put("dropped", active.sumOf { it.dropped })
+            .put("behind", active.any { it.behind })
     }
 }
 

@@ -39,10 +39,12 @@ class FrameReader(input: InputStream) {
         inp.readFully(payload)
         return when (type) {
             FRAME_JSON -> Frame.Json(String(payload, Charsets.UTF_8))
+
             FRAME_BINARY -> {
                 if (length < 4) throw FrameException("a binary frame has no request id")
                 Frame.Binary(readU32(payload, 0), payload.copyOfRange(4, length))
             }
+
             else -> throw FrameException("unknown frame type $type")
         }
     }
@@ -92,6 +94,5 @@ class FrameWriter(private val out: OutputStream) {
 
 internal fun u32(v: Int) = byteArrayOf((v ushr 24).toByte(), (v ushr 16).toByte(), (v ushr 8).toByte(), v.toByte())
 
-internal fun readU32(b: ByteArray, at: Int) =
-    ((b[at].toInt() and 0xff) shl 24) or ((b[at + 1].toInt() and 0xff) shl 16) or
-        ((b[at + 2].toInt() and 0xff) shl 8) or (b[at + 3].toInt() and 0xff)
+internal fun readU32(b: ByteArray, at: Int) = ((b[at].toInt() and 0xff) shl 24) or ((b[at + 1].toInt() and 0xff) shl 16) or
+    ((b[at + 2].toInt() and 0xff) shl 8) or (b[at + 3].toInt() and 0xff)

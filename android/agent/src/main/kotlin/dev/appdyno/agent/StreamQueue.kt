@@ -40,21 +40,25 @@ class StreamQueue(
         when {
             // parameter sets are never in the way, and without them nothing after can be decoded
             frame.isConfig -> frames.addLast(frame)
+
             frame.isKey -> {
                 dropped += frames.count { !it.isConfig }
                 frames.removeAll { !it.isConfig }
                 awaitingKey = false
                 frames.addLast(frame)
             }
+
             awaitingKey -> {
                 dropped++
                 if (now() - askedAt >= ASK_AGAIN_MS) ask()
             }
+
             frames.count { !it.isConfig } >= capacity -> {
                 dropped++
                 awaitingKey = true
                 ask()
             }
+
             else -> frames.addLast(frame)
         }
         (this as Object).notifyAll()

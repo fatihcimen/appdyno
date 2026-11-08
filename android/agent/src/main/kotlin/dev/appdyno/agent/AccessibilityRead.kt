@@ -41,6 +41,7 @@ class AccessibilityRead(private val capture: TreeCapture, private val settling: 
     private companion object {
         /** Its character lookups stop after this long (the tree read is not counted). */
         const val TEXT_CLIP_MS = 1_500L
+
         /** Its traversal hints are resolved for this long at most. */
         const val TRAVERSAL_MS = 300L
     }

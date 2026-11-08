@@ -15,8 +15,7 @@ class Held(val code: Int, val meta: Int)
 object Paths {
     const val STEP_MS = 10L
 
-    fun line(fromX: Float, fromY: Float, toX: Float, toY: Float, durationMs: Long): List<Sample> =
-        resample(listOf(Sample(0, fromX, fromY), Sample(durationMs, toX, toY)))
+    fun line(fromX: Float, fromY: Float, toX: Float, toY: Float, durationMs: Long): List<Sample> = resample(listOf(Sample(0, fromX, fromY), Sample(durationMs, toX, toY)))
 
     /** Points every STEP_MS between the given samples (linear), the last sample always included. */
     fun resample(points: List<Sample>): List<Sample> {
@@ -88,8 +87,18 @@ class Input(private val automation: Automation) {
         val fingers = paths.map { Paths.resample(it) }
         val end = fingers.maxOf { it.last().t }
         val n = fingers.size
-        val props = Array(n) { i -> MotionEvent.PointerProperties().apply { id = i; toolType = MotionEvent.TOOL_TYPE_FINGER } }
-        val coords = Array(n) { MotionEvent.PointerCoords().apply { pressure = 1f; size = 1f } }
+        val props = Array(n) { i ->
+            MotionEvent.PointerProperties().apply {
+                id = i
+                toolType = MotionEvent.TOOL_TYPE_FINGER
+            }
+        }
+        val coords = Array(n) {
+            MotionEvent.PointerCoords().apply {
+                pressure = 1f
+                size = 1f
+            }
+        }
         fun at(t: Long) {
             for (i in 0 until n) {
                 val s = fingers[i].lastOrNull { it.t <= t } ?: fingers[i].first()
@@ -123,8 +132,18 @@ class Input(private val automation: Automation) {
 
     private var liveDownAt = 0L
     private var liveFingers = 0
-    private val liveProps = Array(2) { i -> MotionEvent.PointerProperties().apply { id = i; toolType = MotionEvent.TOOL_TYPE_FINGER } }
-    private val liveCoords = Array(2) { MotionEvent.PointerCoords().apply { pressure = 1f; size = 1f } }
+    private val liveProps = Array(2) { i ->
+        MotionEvent.PointerProperties().apply {
+            id = i
+            toolType = MotionEvent.TOOL_TYPE_FINGER
+        }
+    }
+    private val liveCoords = Array(2) {
+        MotionEvent.PointerCoords().apply {
+            pressure = 1f
+            size = 1f
+        }
+    }
 
     /**
      * One phase of a person's touch, in fractions of the screen as it is now: `p` 0 down, 1 moved, 2 up. A
@@ -142,8 +161,7 @@ class Input(private val automation: Automation) {
         }
         val fingers = if (x2 != null && y2 != null) 2 else 1
         val now = SystemClock.uptimeMillis()
-        fun send(action: Int, count: Int) =
-            automation.injectLive(multi(liveDownAt, now, action, count, liveProps, liveCoords))
+        fun send(action: Int, count: Int) = automation.injectLive(multi(liveDownAt, now, action, count, liveProps, liveCoords))
         val second = 1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT
         when (p) {
             0 -> {
@@ -153,17 +171,20 @@ class Input(private val automation: Automation) {
                 if (fingers == 2) send(MotionEvent.ACTION_POINTER_DOWN or second, 2)
                 liveFingers = fingers
             }
+
             1 -> if (liveFingers > 0) {
                 if (fingers == 2 && liveFingers == 1) send(MotionEvent.ACTION_POINTER_DOWN or second, 2)
                 if (fingers == 1 && liveFingers == 2) send(MotionEvent.ACTION_POINTER_UP or second, 2)
                 liveFingers = fingers
                 send(MotionEvent.ACTION_MOVE, fingers)
             }
+
             2 -> if (liveFingers > 0) {
                 if (liveFingers == 2) send(MotionEvent.ACTION_POINTER_UP or second, 2)
                 send(MotionEvent.ACTION_UP, 1)
                 liveFingers = 0
             }
+
             else -> throw AgentFailure("INVALID_ARGUMENT", "a touch has no phase $p")
         }
     }
@@ -193,11 +214,9 @@ class Input(private val automation: Automation) {
     }
 
     /** A keyboard with arrows, as a real one says: a text field keeps the focus from an arrow that names a keyboard alone. */
-    private fun keyEvent(time: Long, action: Int, code: Int, meta: Int) =
-        KeyEvent(time, time, action, code, 0, meta, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_DPAD)
+    private fun keyEvent(time: Long, action: Int, code: Int, meta: Int) = KeyEvent(time, time, action, code, 0, meta, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_DPAD)
 
-    private fun touch(down: Long, time: Long, action: Int, x: Float, y: Float): MotionEvent =
-        MotionEvent.obtain(down, time, action, x, y, 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
+    private fun touch(down: Long, time: Long, action: Int, x: Float, y: Float): MotionEvent = MotionEvent.obtain(down, time, action, x, y, 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
 
     private fun multi(
         down: Long,
@@ -264,7 +283,6 @@ class Input(private val automation: Automation) {
             }
         }
 
-        fun heldOf(modifiers: List<String>): List<Held> =
-            modifiers.map { HELD[it] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown modifier") }
+        fun heldOf(modifiers: List<String>): List<Held> = modifiers.map { HELD[it] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown modifier") }
     }
 }

@@ -8,9 +8,9 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
-import java.lang.reflect.Method
 import org.json.JSONArray
 import org.json.JSONObject
+import java.lang.reflect.Method
 
 /**
  * Access to framework internals an app_process server needs (it has no app context of its own). Every
@@ -69,8 +69,7 @@ object Platform {
             ?: throw AgentFailure("UNSUPPORTED", "no $name service on this device")
     }
 
-    fun asInterface(stubClass: String, binder: IBinder): Any =
-        Class.forName(stubClass).getDeclaredMethod("asInterface", IBinder::class.java).invoke(null, binder)!!
+    fun asInterface(stubClass: String, binder: IBinder): Any = Class.forName(stubClass).getDeclaredMethod("asInterface", IBinder::class.java).invoke(null, binder)!!
 
     private val power by lazy { asInterface("android.os.IPowerManager\$Stub", service("power")) }
 
@@ -81,8 +80,11 @@ object Platform {
     fun userActivity() {
         runCatching {
             val now = SystemClock.uptimeMillis()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) callByTypes(power, "userActivity", DEFAULT_DISPLAY, now, EVENT_TOUCH, 0)
-            else callByTypes(power, "userActivity", now, EVENT_TOUCH, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                callByTypes(power, "userActivity", DEFAULT_DISPLAY, now, EVENT_TOUCH, 0)
+            } else {
+                callByTypes(power, "userActivity", now, EVENT_TOUCH, 0)
+            }
         }
     }
 
@@ -140,6 +142,7 @@ object Platform {
     private const val DEFAULT_RATE = 60f
     private val OFF_STATES = listOf(Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND)
     private const val DEFAULT_DISPLAY = 0
+
     /** `PowerManager.USER_ACTIVITY_EVENT_TOUCH`. */
     private const val EVENT_TOUCH = 2
 

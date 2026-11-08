@@ -132,9 +132,13 @@ class Automation private constructor(private val looper: Looper) {
         // read before then shows part of the screen (seen: 17 nodes, then 46). Until the app's window is
         // known and its events have gone quiet.
         while (SystemClock.uptimeMillis() - start < WINDOWS_WAIT_MS &&
-            (ua.windows.none { it.type == AccessibilityWindowInfo.TYPE_APPLICATION } ||
-                SystemClock.uptimeMillis() - lastEventAt < OPEN_QUIET_MS)
-        ) Thread.sleep(20)
+            (
+                ua.windows.none { it.type == AccessibilityWindowInfo.TYPE_APPLICATION } ||
+                    SystemClock.uptimeMillis() - lastEventAt < OPEN_QUIET_MS
+                )
+        ) {
+            Thread.sleep(20)
+        }
         lastOpenMs = SystemClock.uptimeMillis() - start
         return ua
     }
@@ -149,10 +153,13 @@ class Automation private constructor(private val looper: Looper) {
         AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED,
         AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED,
         -> false
+
         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ->
             e.contentChangeTypes != AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT
+
         // a window only moving (a slide): reads tell its place; a sliding window's content has not moved
         AccessibilityEvent.TYPE_WINDOWS_CHANGED -> android.os.Build.VERSION.SDK_INT < 34 || e.windowChanges and WINDOW_APPEARS != 0
+
         else -> true
     }
 
@@ -162,8 +169,11 @@ class Automation private constructor(private val looper: Looper) {
     }
 
     fun inject(event: InputEvent) = deliver(event) {
-        if (injectNoWait != null) injectNoWait.invoke(ua, it, true, false) as Boolean
-        else ua.injectInputEvent(it, true)
+        if (injectNoWait != null) {
+            injectNoWait.invoke(ua, it, true, false) as Boolean
+        } else {
+            ua.injectInputEvent(it, true)
+        }
     }
 
     /** The input manager's own injection, which a shell user may call: no accessibility connection on its way. */
@@ -184,9 +194,13 @@ class Automation private constructor(private val looper: Looper) {
      * app. Directly where the release allows: measured on a Xiaomi, the way by UI automation cost a tap 30 ms.
      */
     fun injectLive(event: InputEvent) = deliver(event) {
-        if (direct != null) direct.second.invoke(direct.first, it, INJECT_ASYNC) as Boolean
-        else if (injectNoWait != null) injectNoWait.invoke(ua, it, false, false) as Boolean
-        else ua.injectInputEvent(it, false)
+        if (direct != null) {
+            direct.second.invoke(direct.first, it, INJECT_ASYNC) as Boolean
+        } else if (injectNoWait != null) {
+            injectNoWait.invoke(ua, it, false, false) as Boolean
+        } else {
+            ua.injectInputEvent(it, false)
+        }
     }
 
     private fun deliver(event: InputEvent, send: (InputEvent) -> Boolean) {
@@ -216,12 +230,16 @@ class Automation private constructor(private val looper: Looper) {
      * Cancels a finger an injection left down, one or a pinch's two, and says whether there was one. Held on the
      * status bar it opens the shade at the next activity start on Android 17, so a new agent lifts it at once.
      */
-    fun liftLeftFinger(send: (InputEvent) -> Boolean = { ua.injectInputEvent(it, true) }): Boolean =
-        (1..2).any { send(cancel(it)) }
+    fun liftLeftFinger(send: (InputEvent) -> Boolean = { ua.injectInputEvent(it, true) }): Boolean = (1..2).any { send(cancel(it)) }
 
     private fun cancel(fingers: Int): MotionEvent {
         val now = SystemClock.uptimeMillis()
-        val props = Array(fingers) { i -> MotionEvent.PointerProperties().apply { id = i; toolType = MotionEvent.TOOL_TYPE_FINGER } }
+        val props = Array(fingers) { i ->
+            MotionEvent.PointerProperties().apply {
+                id = i
+                toolType = MotionEvent.TOOL_TYPE_FINGER
+            }
+        }
         val coords = Array(fingers) { MotionEvent.PointerCoords() }
         return MotionEvent.obtain(
             now, now, MotionEvent.ACTION_CANCEL, fingers, props, coords,
@@ -229,13 +247,16 @@ class Automation private constructor(private val looper: Looper) {
         )
     }
 
-    private fun injectFailure(t: Throwable): Throwable =
-        if (t is SecurityException) AgentFailure(
+    private fun injectFailure(t: Throwable): Throwable = if (t is SecurityException) {
+        AgentFailure(
             "PERMISSION_REQUIRED",
             "the device refuses injected input (${t.message})",
             "Xiaomi/HyperOS: Developer options → USB debugging (Security settings) on, then reconnect",
             t,
-        ) else t
+        )
+    } else {
+        t
+    }
 
     companion object {
         /** InputManager's INJECT_INPUT_EVENT_MODE_ASYNC. */
@@ -265,7 +286,10 @@ class Automation private constructor(private val looper: Looper) {
         fun connect(): Automation {
             val thread = HandlerThread("appdyno-a11y").apply { start() }
             // a device that refuses injected input says so at the first touch, not here
-            return Automation(thread.looper).also { it.ua; runCatching { it.liftLeftFinger() } }
+            return Automation(thread.looper).also {
+                it.ua
+                runCatching { it.liftLeftFinger() }
+            }
         }
 
         /** The constructor this release has: a looper or a context, the connection, maybe a display id. */
@@ -297,17 +321,21 @@ class Automation private constructor(private val looper: Looper) {
                 } catch (_: NoSuchMethodException) {
                     null
                 }
-                if (withFlags != null) withFlags.apply { isAccessible = true }.invoke(ua, flags)
-                else UiAutomation::class.java.getDeclaredMethod("connect").apply { isAccessible = true }.invoke(ua)
+                if (withFlags != null) {
+                    withFlags.apply { isAccessible = true }.invoke(ua, flags)
+                } else {
+                    UiAutomation::class.java.getDeclaredMethod("connect").apply { isAccessible = true }.invoke(ua)
+                }
             } catch (e: InvocationTargetException) {
                 val t = e.targetException
-                if (t is IllegalStateException && t.message?.contains("already registered") == true)
+                if (t is IllegalStateException && t.message?.contains("already registered") == true) {
                     throw AgentFailure(
                         "AGENT_CONFLICT",
                         "another UI automation client holds this device",
                         "stop the other automation server on the device, then start again",
                         t,
                     )
+                }
                 throw t
             }
         }

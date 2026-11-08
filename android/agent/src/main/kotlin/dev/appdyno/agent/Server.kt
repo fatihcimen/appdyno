@@ -9,15 +9,15 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.exitProcess
 
+/** How long the agent keeps its UI automation after the last host left. */
+const val RELEASE_GRACE_MS = 2_000L
+
 /**
  * The agent's server on an abstract unix socket (reachable only through adb on this device). The first
  * request of a connection must be `hello` with the launch token. Device work runs on one thread in order
  * (WorkLane); every request has a deadline after which the host gets TIMEOUT and the work is told to stop,
  * and a job stuck past it does not hold the requests behind it.
  */
-/** How long the agent keeps its UI automation after the last host left. */
-const val RELEASE_GRACE_MS = 2_000L
-
 class Server(private val opts: Options, private val handlers: Handlers) {
     private val timers = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "appdyno-timers").apply { isDaemon = true } }
     private val actions = WorkLane(timers)
@@ -76,11 +76,14 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                 }
                 when (method) {
                     "hello" -> writer.json(resultJson(id, handlers.hello()))
+
                     "ping" -> writer.json(resultJson(id, handlers.ping()))
+
                     "cancel" -> {
                         jobs.cancel(OneValue.id(params))
                         writer.json(resultJson(id, JSONObject()))
                     }
+
                     "animations.set" -> {
                         val off = OneValue.off(params)
                         synchronized(animationsOff) {
@@ -89,27 +92,34 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                         }
                         submit(id, method, params, writer, jobs)
                     }
+
                     // on this thread, not the work lane: a person's finger and a stream wait for nothing
                     "touch" -> {
                         handlers.touch(TouchRequest.from(params))
                         writer.json(resultJson(id, JSONObject()))
                     }
+
                     "stream.start" -> {
                         stream?.let { streams.end(it) }
                         stream = streams.start(StreamRequest.from(params), ConnectionOutput(writer))
                         writer.json(resultJson(id, JSONObject()))
                         releaseIfNoDrivers()
                     }
+
                     "stream.clock" -> writer.json(resultJson(id, Results.streamClock(System.nanoTime())))
+
                     "stream.sync" -> {
                         streams.requestKey()
                         writer.json(resultJson(id, JSONObject()))
                     }
+
                     "stream.status" -> writer.json(resultJson(id, streams.status()))
+
                     "shutdown" -> {
                         writer.json(resultJson(id, JSONObject()))
                         exitProcess(0)
                     }
+
                     else -> {
                         if (!drives) {
                             drives = true

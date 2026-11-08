@@ -45,24 +45,22 @@ object Results {
             .put("elapsedMs", c.elapsedMs).put("hash", c.hash).apply { if (c.sliding) put("moving", true) }
     }
 
-    fun settle(o: SettleOutcome<*>, moving: Boolean): JSONObject =
-        JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", o.quietMs)
-            .apply { if (moving) put("moving", true) }
+    fun settle(o: SettleOutcome<*>, moving: Boolean): JSONObject = JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", o.quietMs)
+        .apply { if (moving) put("moving", true) }
 
-    fun text(o: TextOutcome): JSONObject =
-        JSONObject().put("mode", o.mode).put("focusMs", o.focusMs).apply { o.verified?.let { put("verified", it) } }
+    fun text(o: TextOutcome): JSONObject = JSONObject().put("mode", o.mode).put("focusMs", o.focusMs).apply { o.verified?.let { put("verified", it) } }
 
-    fun shot(w: Int, h: Int, png: Boolean, bytes: Int): JSONObject =
-        JSONObject().put("w", w).put("h", h).put("format", if (png) "png" else "jpeg").put("bytes", bytes)
+    fun shot(w: Int, h: Int, png: Boolean, bytes: Int): JSONObject = JSONObject().put("w", w).put("h", h).put("format", if (png) "png" else "jpeg").put("bytes", bytes)
 
-    fun wait(o: WaitOutcome<*>, tree: JSONObject?): JSONObject =
-        JSONObject().put("sig", o.sig).put("changed", o.changed).put("reads", o.reads).put("elapsedMs", o.elapsedMs)
-            .apply { tree?.let { put("tree", it) } }
+    fun wait(o: WaitOutcome<*>, tree: JSONObject?): JSONObject = JSONObject().put("sig", o.sig).put("changed", o.changed).put("reads", o.reads).put("elapsedMs", o.elapsedMs)
+        .apply { tree?.let { put("tree", it) } }
 
     fun clip(n: Int, chars: Int, hidden: Int): JSONObject = JSONObject().put("n", n).put("chars", chars).put("hidden", hidden)
 
-    fun traversal(n: Int, before: Int?, after: Int?): JSONObject =
-        JSONObject().put("n", n).apply { before?.let { put("before", it) }; after?.let { put("after", it) } }
+    fun traversal(n: Int, before: Int?, after: Int?): JSONObject = JSONObject().put("n", n).apply {
+        before?.let { put("before", it) }
+        after?.let { put("after", it) }
+    }
 
     private fun rect(l: Int, t: Int, r: Int, b: Int) = JSONArray().put(l).put(t).put(r).put(b)
 }

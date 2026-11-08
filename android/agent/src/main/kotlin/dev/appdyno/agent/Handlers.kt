@@ -51,31 +51,45 @@ class Handlers(private val automation: Automation, private val token: String) {
             val r = TreeRequest.from(p)
             Reply(settling.treeJson(settling.aScreen(job) { capture.capture(r.maxDepth, r.maxNodes, yielding = !quiet) }).apply { if (!Platform.display().on) put("dark", true) })
         }
+
         "wait" -> WaitFor.handle(WaitRequest.from(p), job, { capture.capture(yielding = !settling.idle(job)) }, settling::treeJson)
+
         "act" -> act(Action.from(p.getJSONObject("action")), AfterRequest.from(p), job)
+
         "a11y.read" -> a11y.read(OneValue.maxNodes(p), job)
+
         "text.set" -> textSet(TextRequest.from(p), job)
+
         "screenshot" -> screenshots.take(ShotRequest.from(p))
+
         "app.foreground" -> Reply(JSONObject().apply { foreground()?.let { put("pkg", it) } })
+
         "app.labels" -> Reply(JSONObject().put("apps", Platform.launcherLabels()))
+
         "clipboard.set" -> {
             clipboard.set(OneValue.text(p))
             Reply(JSONObject())
         }
+
         "clipboard.get" -> Reply(JSONObject().apply { clipboard.get()?.let { put("text", it) } })
+
         "rest.wait" -> {
             settling.awaitRest()
             Reply(JSONObject())
         }
+
         "animations.set" -> {
             if (OneValue.off(p)) animations.off() else animations.restore()
             Reply(JSONObject())
         }
+
         "locales" -> Reply(JSONObject().put("tags", OneValue.tags(p)?.let(Locales::set) ?: Locales.get()))
+
         "orientation.set" -> {
             automation.ua.setRotation(OneValue.rotation(p))
             Reply(JSONObject())
         }
+
         else -> throw unknownMethod(method)
     }
 
@@ -87,11 +101,13 @@ class Handlers(private val automation: Automation, private val token: String) {
         val cancelled = { job.cancelled }
         // a touch aimed at a screen that another window has replaced since it was read lands on the wrong one (A/B
         // run 8559e13f: the app restarted into its splash between the read and the tap, and the tap was lost)
-        if (touch) settling.sent(r.before)?.let { read ->
-            val then = WindowIds.app(read.windows.map { it.id to it.type })
-            val now = WindowIds.app(automation.ua.windows.map { it.id to it.type })
-            if (WindowIds.replaced(then, now)) {
-                throw AgentFailure("STALE", "the screen changed since it was read: another window is in front", "read the screen again")
+        if (touch) {
+            settling.sent(r.before)?.let { read ->
+                val then = WindowIds.app(read.windows.map { it.id to it.type })
+                val now = WindowIds.app(automation.ua.windows.map { it.id to it.type })
+                if (WindowIds.replaced(then, now)) {
+                    throw AgentFailure("STALE", "the screen changed since it was read: another window is in front", "read the screen again")
+                }
             }
         }
         val then = settling.appWindows()

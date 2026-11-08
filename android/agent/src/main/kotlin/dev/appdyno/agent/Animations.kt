@@ -50,6 +50,5 @@ object AnimationScript {
         }
     }
 
-    fun watch(pid: Int, old: List<Pair<String, String>>) =
-        "while kill -0 $pid 2>/dev/null; do sleep 1; done; ${restore(old)}"
+    fun watch(pid: Int, old: List<Pair<String, String>>) = "while kill -0 $pid 2>/dev/null; do sleep 1; done; ${restore(old)}"
 }

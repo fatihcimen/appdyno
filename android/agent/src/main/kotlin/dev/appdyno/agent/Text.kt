@@ -135,6 +135,7 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         }
         val verdict: Boolean? = if (password) null else true
         val path = StringBuilder()
+
         // on a device that stalls (a starved emulator) an action's answer times out and the text still lands a
         // moment later: an accepted or slow action is read back with patience, and nothing that is already in
         // the field is cleared to try the next way
@@ -148,7 +149,7 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         }
         fun done(mode: String, verified: Boolean?): TextOutcome {
             // the way it went in, never the text: what a stalled device did shows in its log
-            Log.i(TAG, "typing ${target.length} chars into a field: ${path}-> $mode verified=$verified")
+            Log.i(TAG, "typing ${target.length} chars into a field: $path-> $mode verified=$verified")
             return TextOutcome(mode, verified, focusMs)
         }
         if (!TextPlan.keysOnly(field.maxTextLength, text) &&
@@ -177,13 +178,12 @@ class TextInput(private val automation: Automation, private val input: Input, pr
                 return done("keys", false)
             }
         }
-        Log.i(TAG, "typing ${target.length} chars into a field: ${path}-> not taken")
+        Log.i(TAG, "typing ${target.length} chars into a field: $path-> not taken")
         throw AgentFailure("INTERNAL", "the field did not take the text", "read the screen; the field may be read-only")
     }
 
     /** An input method window is on screen (the keyboard is up). */
-    private fun keyboardShown(): Boolean =
-        automation.ua.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+    private fun keyboardShown(): Boolean = automation.ua.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
     /** The field read back holds `target`, read until `waitMs` has passed (0: one read). */
     private fun check(field: AccessibilityNodeInfo, target: String, password: Boolean, waitMs: Long = 0): Boolean {
@@ -220,7 +220,12 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         var i = 0
         while (i < nodes.size && nodes.size < 3_000) {
             val n = nodes[i]
-            for (c in 0 until n.childCount) n.getChild(c)?.let { nodes.add(it); parents.add(i) }
+            for (c in 0 until n.childCount) {
+                n.getChild(c)?.let {
+                    nodes.add(it)
+                    parents.add(i)
+                }
+            }
             i++
         }
         val boxes = nodes.map { n -> android.graphics.Rect().also { n.getBoundsInScreen(it) } }
@@ -234,7 +239,6 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         return pick?.let { nodes[it] }
     }
 
-    /** The focused editable node of the active window, searched breadth-first (bounded). */
     /** Every window's root: a sheet or dialog that just opened has its own window, often not the active one. */
     private fun roots(): List<AccessibilityNodeInfo> {
         val all = try {
@@ -283,13 +287,17 @@ class TextInput(private val automation: Automation, private val input: Input, pr
 
     companion object {
         const val TAG = "appdyno"
+
         /** How long a read-back waits for an accepted (or slow) action's text to show in the field. */
         const val CHECK_MS = 1_000L
         const val CHECK_POLL_MS = 50L
+
         /** An action that took this long answered from a device that stalled: its text may land late. */
         const val SLOW_ACTION_MS = 1_000L
+
         /** A focus poll this far from the one before it: the device stalled between them. */
         const val STALL_MS = 1_000L
+
         /** The most a focus wait is stretched for stalls. */
         const val MAX_STALL_MS = 10_000L
     }

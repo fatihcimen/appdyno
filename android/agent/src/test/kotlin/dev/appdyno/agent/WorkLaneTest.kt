@@ -29,8 +29,14 @@ class WorkLaneTest {
         val done = Collections.synchronizedList(mutableListOf<String>())
         val bothDone = CountDownLatch(2)
         lane.submit(Job(1), 100, { timedOut.countDown() }) { stuckUntil(release) }
-        lane.submit(Job(2), 30_000, {}) { done.add("second"); bothDone.countDown() }
-        lane.submit(Job(3), 30_000, {}) { done.add("third"); bothDone.countDown() }
+        lane.submit(Job(2), 30_000, {}) {
+            done.add("second")
+            bothDone.countDown()
+        }
+        lane.submit(Job(3), 30_000, {}) {
+            done.add("third")
+            bothDone.countDown()
+        }
         assertTrue("the stuck job was answered TIMEOUT", timedOut.await(10, TimeUnit.SECONDS))
         // the jobs behind it ran while it is still stuck (it is released only at the end), in order, on a
         // new thread: without the lane given up they would wait for ever
@@ -46,7 +52,10 @@ class WorkLaneTest {
         val ran = CountDownLatch(3)
         val threads = Collections.synchronizedSet(mutableSetOf<Thread>())
         repeat(3) { i ->
-            lane.submit(Job(i), 1_000, {}) { threads.add(Thread.currentThread()); ran.countDown() }
+            lane.submit(Job(i), 1_000, {}) {
+                threads.add(Thread.currentThread())
+                ran.countDown()
+            }
         }
         assertTrue(ran.await(10, TimeUnit.SECONDS))
         // past every deadline and grace: nothing was given up

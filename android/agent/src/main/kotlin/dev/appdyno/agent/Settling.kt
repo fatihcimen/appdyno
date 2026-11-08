@@ -56,7 +56,11 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
         }
         if (r.read != "none") {
             val c = last?.takeUnless { it.noApp } ?: aScreen(job) { capture.capture() }
-            if (r.read == "tree") out.put("tree", treeJson(c)) else if (r.read == "hash") out.put("hash", c.also { recent[it.hash] = it }.hash)
+            if (r.read == "tree") {
+                out.put("tree", treeJson(c))
+            } else if (r.read == "hash") {
+                out.put("hash", c.also { recent[it.hash] = it }.hash)
+            }
         }
         return Reply(out)
     }
@@ -143,10 +147,13 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
     companion object {
         /** The quiet window after a tap on something that cannot react (an immediate touch reaction still shows). */
         const val INERT_QUIET_MS = 80L
+
         /** A read to answer with waits this long for a screen. */
         const val NO_SCREEN_MS = 2_000L
+
         /** WMS's own cap on a transition's wait. */
         const val SLIDE_MAX_MS = 5_000L
+
         /** A read waits for this long without a layout-moving event (an app already quiet: no wait). */
         const val IDLE_QUIET_MS = 150L
         const val IDLE_MAX_MS = 1_000L
