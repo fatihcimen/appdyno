@@ -11,7 +11,7 @@ import { opsOn, type Call } from './helpers.js';
  *   (cd android && ./gradlew :fixture:assembleDebug :fixture:assembleRelease)
  *
  * The build's folder holds a `.dm` per range of API, and one for another range installs with no word and
- * compiles nothing. The debug build goes back at the end.
+ * compiles nothing, where Android 17 refuses the install. The debug build goes back at the end.
  */
 const APP = 'dev.appdyno.fixture';
 const SERIAL = process.env.APPDYNO_ANDROID_SERIAL;
@@ -79,6 +79,12 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   });
 
   it('calls a .dm that compiled nothing what it is, whatever its reason says', async () => {
+    if (Number(adb('shell', 'getprop', 'ro.build.version.sdk')) >= 37) {
+      // Android 17 refuses the install of a .dm for another range of API, so none compiles nothing
+      expect(() => installed(RELEASE, DM_FOR_OLDER)).toThrow(/profile is in the wrong format/);
+      adb('install', '-g', RELEASE);
+      return;
+    }
     installed(RELEASE, DM_FOR_OLDER);
     expect(state()).toContain('reason=install-dm');
     const r = await call('perf_launch', { baselineProfile: true, repeats: 1 });
