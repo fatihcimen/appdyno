@@ -181,6 +181,22 @@ describe('failed answers', () => {
     ).toHaveLength(1);
   });
 
+  it('what a step fetched on the way is said once, at the end of the answer of the steps', async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    const real = device.screenshot.bind(device);
+    device.screenshot = () => {
+      noteInAnswer('fetched a tool');
+      return real();
+    };
+    const r = await call('steps', {
+      steps: [{ action: 'screenshot' }, { action: 'screenshot' }],
+    });
+    expect(r.isError).toBeUndefined();
+    expect(r.text.match(/fetched a tool/g)).toHaveLength(1);
+    expect(r.text.endsWith('fetched a tool')).toBe(true);
+  });
+
   it('of the last of several steps still say which step it was and show the screen', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
