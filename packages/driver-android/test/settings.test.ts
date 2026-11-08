@@ -372,6 +372,66 @@ describe('a fingerprint', () => {
   });
 });
 
+describe('a text size', () => {
+  /** A scale the system writes back once a change has gone, the one before first `stale` times, as API 34 did. */
+  const scaled = (scale: string, stale = 0) => {
+    let held = scale;
+    const asked: string[] = [];
+    const exec = (_serial: string, command: string) => {
+      asked.push(command);
+      if (command.startsWith('settings get')) return Promise.resolve(held);
+      const put = /^settings put system font_scale (\S+)/.exec(command)?.[1] ?? '1.0';
+      if (stale-- <= 0) held = put;
+      return Promise.resolve('');
+    };
+    return { settings: new AndroidSettings({ exec } as unknown as Adb, 'emulator-5554'), asked };
+  };
+
+  it('is a scale Android takes, from 0.25 to 5, or default, and nothing else is asked of the device', async () => {
+    for (const value of ['large', '0.2', '6', '1.3x', '']) {
+      const { settings, asked } = device('emulator-5554', []);
+      const e = await refusal(settings.set('text_size', value));
+      expect([e.code, e.message, e.hint]).toEqual([
+        'INVALID_ARGUMENT',
+        `text_size on Android is a scale, not ${value}`,
+        'from 0.25 to 5, such as 1.3, or default',
+      ]);
+      expect(asked).toEqual([]);
+    }
+  });
+
+  it('reads the 1.0 Android writes back after a delete as default', async () => {
+    const read = (v: string) =>
+      device('emulator-5554', [[/font_scale/, v]]).settings.get('text_size');
+    expect([await read('null'), await read('1.0'), await read('1.3')]).toEqual([
+      'default',
+      'default',
+      '1.3',
+    ]);
+  });
+
+  it('asks again while the write of the scale before lands after it, and is done once it holds', async () => {
+    const { settings, asked } = scaled('1.3', 1);
+    await settings.set('text_size', 'default');
+    expect(asked.filter((c) => c.includes('delete'))).toHaveLength(2);
+    expect(await settings.get('text_size')).toBe('default');
+  });
+
+  it('says what the device said when it refuses a scale', async () => {
+    const { settings } = device('emulator-5554', [
+      [
+        /settings put/,
+        "Exception occurred while executing 'put':\njava.lang.IllegalArgumentException: Invalid value: 4 for setting: font_scale",
+      ],
+    ]);
+    const e = await refusal(settings.set('text_size', '4'));
+    expect([e.code, e.message]).toEqual([
+      'UNSUPPORTED',
+      'this device refused text_size 4: Invalid value: 4 for setting: font_scale',
+    ]);
+  });
+});
+
 it('says Android has no keychain', async () => {
   const { events } = device('emulator-5554', []);
   expect((await refusal(events.resetKeychain())).code).toBe('UNSUPPORTED');

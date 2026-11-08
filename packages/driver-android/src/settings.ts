@@ -37,6 +37,13 @@ const RADIOS = {
 /** How long a radio has to read as asked: a change takes under a second on a calm emulator. */
 const RADIO_MS = 10_000;
 const READ_AGAIN_MS = 200;
+/** The text scales Android's settings take, on API 34: 0.24 and 5.1 are refused. */
+const SCALES = { min: 0.25, max: 5 };
+/**
+ * The system writes the scale back after each change, and the write of one just before can land after the next: on an
+ * API 34 emulator, within 0.2 s of it.
+ */
+const SCALE_HOLDS_MS = 500;
 /** `adb connect`, or wireless debugging: a device whose radio is also the way to it. */
 const OVER_ITS_NETWORK = /:\d+$|_adb-tls-connect/;
 
@@ -122,7 +129,8 @@ export class AndroidSettings implements DeviceSettings {
         return /Night mode: (\w+)/.exec(await this.sh('cmd uimode night'))?.[1] ?? 'no';
       case 'text_size': {
         const v = (await this.sh('settings get system font_scale')).trim();
-        return v === 'null' ? 'default' : v;
+        // a scale deleted is written back by the system as 1.0
+        return v === 'null' || Number(v) === 1 ? 'default' : v;
       }
       case 'reduce_motion':
       case 'animations':
@@ -260,6 +268,36 @@ export class AndroidSettings implements DeviceSettings {
       );
   }
 
+  /** A text scale, asked again until it reads as asked once the system's own write has come. */
+  private async setScale(value: string) {
+    const scale = value === 'default' ? 1 : Number(value);
+    if (!/^(\d+(\.\d+)?|default)$/.test(value) || scale < SCALES.min || scale > SCALES.max)
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `text_size on Android is a scale, not ${value}`,
+        `from ${SCALES.min} to ${SCALES.max}, such as 1.3, or default`,
+      );
+    const end = Date.now() + RADIO_MS;
+    for (;;) {
+      const said = await this.sh(
+        value === 'default'
+          ? 'settings delete system font_scale'
+          : `settings put system font_scale ${value}`,
+      );
+      const refused = /\w+Exception: (.*)/.exec(said)?.[1];
+      if (refused)
+        throw new DeviceError('UNSUPPORTED', `this device refused text_size ${value}: ${refused}`);
+      await sleep(SCALE_HOLDS_MS);
+      const now = await this.get('text_size');
+      if ((now === 'default' ? 1 : Number(now)) === scale) return;
+      if (Date.now() >= end)
+        throw new DeviceError(
+          'UNSUPPORTED',
+          `asked for text_size ${value} and it still reads ${now} after ${RADIO_MS / 1000} s`,
+        );
+    }
+  }
+
   async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {
     switch (name) {
       case 'dark_mode': {
@@ -270,16 +308,7 @@ export class AndroidSettings implements DeviceSettings {
         return;
       }
       case 'text_size':
-        if (value === 'default') {
-          await this.sh('settings delete system font_scale');
-          return;
-        }
-        if (!/^\d+(\.\d+)?$/.test(value))
-          throw new DeviceError(
-            'INVALID_ARGUMENT',
-            `text_size on Android is a scale such as 1.3, not ${value}`,
-          );
-        await this.sh(`settings put system font_scale ${value}`);
+        await this.setScale(value);
         return;
       case 'reduce_motion':
         await this.setAnimations({ on: 'off', off: 'on' }[value] ?? value);
