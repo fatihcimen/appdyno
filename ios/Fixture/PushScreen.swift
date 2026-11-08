@@ -7,35 +7,40 @@ final class PushDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCen
     static let shared = PushDelegate()
     @Published var last = "none"
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         let center = UNUserNotificationCenter.current()
         center.delegate = PushDelegate.shared
         let reply = UNNotificationAction(identifier: "reply", title: "Reply")
-        center.setNotificationCategories([UNNotificationCategory(identifier: "order", actions: [reply], intentIdentifiers: [])])
+        center.setNotificationCategories([
+            UNNotificationCategory(identifier: "order", actions: [reply], intentIdentifiers: [])
+        ])
         application.registerForRemoteNotifications()
         return true
     }
 
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken token: Data) {
+    func application(_: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken token: Data) {
         NSLog("appdyno-fixture device token: %@", token.map { String(format: "%02x", $0) }.joined())
     }
 
-    func application(_ application: UIApplication, didReceiveRemoteNotification info: [AnyHashable: Any],
+    func application(_: UIApplication, didReceiveRemoteNotification info: [AnyHashable: Any],
                      fetchCompletionHandler done: @escaping (UIBackgroundFetchResult) -> Void) {
         PushDelegate.record("background", info)
         done(.newData)
     }
 
     // the center's calls are bound to no actor, as its protocol declares them
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent n: UNNotification,
-                                            withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
-        PushDelegate.record("alert \(n.request.content.title)", n.request.content.userInfo)
+    nonisolated func userNotificationCenter(
+        _: UNUserNotificationCenter, willPresent notification: UNNotification,
+        withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        PushDelegate.record("alert \(notification.request.content.title)", notification.request.content.userInfo)
         done([.banner, .list, .sound, .badge])
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive r: UNNotificationResponse,
+    nonisolated func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler done: @escaping () -> Void) {
-        PushDelegate.record("opened \(r.actionIdentifier)", r.notification.request.content.userInfo)
+        PushDelegate.record("opened \(response.actionIdentifier)", response.notification.request.content.userInfo)
         done()
     }
 

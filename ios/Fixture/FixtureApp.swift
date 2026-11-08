@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A known cost by name, from `APPDYNO_FIXTURE_<NAME>_MS`, or kept by `appdyno-fixture://cost/<name>/<ms>` (0 clears it):
-/// a phone's flow launches the app with no environment, so a cost has to outlive a stop.
+/// A known cost by name, from `APPDYNO_FIXTURE_<NAME>_MS`, or kept by `appdyno-fixture://cost/<name>/<ms>` (0 clears
+/// it): a phone's flow launches the app with no environment, so a cost has to outlive a stop.
 func fixtureCost(_ name: String) -> Double? {
     let env = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_\(name.uppercased())_MS"]
     if let ms = env.flatMap(Double.init) { return ms }
@@ -41,36 +41,44 @@ struct FixtureApp: App {
     }
 
     @ViewBuilder func screen(_ key: String) -> some View {
-        switch key {
-        case "form": FormScreen()
-        case "list": ListScreen()
-        case "list_heavy": CostListScreen(drawMs: 40)
-        case "list_stall": CostListScreen(stallMs: 1000)
-        case "dialog": DialogScreen()
-        case "keychain": KeychainScreen()
-        case "crash": CrashScreen()
-        case "biometric": BiometricScreen()
-        case "ticker": TickerScreen()
-        case "delayed": DelayedScreen()
-        case "permission": PermissionScreen()
-        case "late": LateScreen()
-        case "gestures": GesturesScreen()
-        case "memory": MemoryScreen()
-        case "cpu": CpuScreen()
-        case "stall": StallScreen()
-        case "frames": FramesScreen()
-        case "noise": NoiseScreen()
-        case "leak": LeakScreen()
-        case "network": NetworkScreen()
-        case "code": CodeScreen()
-        case "slide": SlideScreen()
-        case "a11y": A11yScreen()
-        case "web": WebScreen()
-        case "canvas": CanvasScreen()
-        case "marquee", "marquee_jumps", "marquee_back", "marquee_cut": MarqueeScreen(mode: key)
-        case "locale": LocaleScreen()
-        case "push": PushScreen()
-        default: Text("Unknown screen: \(key)")
+        if let make = Self.screens[key] {
+            make(key)
+        } else {
+            Text("Unknown screen: \(key)")
         }
     }
+
+    /// A marquee's key is its mode as well.
+    private static let marquee: (String) -> AnyView = { AnyView(MarqueeScreen(mode: $0)) }
+
+    private static let screens: [String: (String) -> AnyView] = [
+        "form": { _ in AnyView(FormScreen()) },
+        "list": { _ in AnyView(ListScreen()) },
+        "list_heavy": { _ in AnyView(CostListScreen(drawMs: 40)) },
+        "list_stall": { _ in AnyView(CostListScreen(stallMs: 1000)) },
+        "dialog": { _ in AnyView(DialogScreen()) },
+        "keychain": { _ in AnyView(KeychainScreen()) },
+        "crash": { _ in AnyView(CrashScreen()) },
+        "biometric": { _ in AnyView(BiometricScreen()) },
+        "ticker": { _ in AnyView(TickerScreen()) },
+        "delayed": { _ in AnyView(DelayedScreen()) },
+        "permission": { _ in AnyView(PermissionScreen()) },
+        "late": { _ in AnyView(LateScreen()) },
+        "gestures": { _ in AnyView(GesturesScreen()) },
+        "memory": { _ in AnyView(MemoryScreen()) },
+        "cpu": { _ in AnyView(CpuScreen()) },
+        "stall": { _ in AnyView(StallScreen()) },
+        "frames": { _ in AnyView(FramesScreen()) },
+        "noise": { _ in AnyView(NoiseScreen()) },
+        "leak": { _ in AnyView(LeakScreen()) },
+        "network": { _ in AnyView(NetworkScreen()) },
+        "code": { _ in AnyView(CodeScreen()) },
+        "slide": { _ in AnyView(SlideScreen()) },
+        "a11y": { _ in AnyView(A11yScreen()) },
+        "web": { _ in AnyView(WebScreen()) },
+        "canvas": { _ in AnyView(CanvasScreen()) },
+        "marquee": marquee, "marquee_jumps": marquee, "marquee_back": marquee, "marquee_cut": marquee,
+        "locale": { _ in AnyView(LocaleScreen()) },
+        "push": { _ in AnyView(PushScreen()) }
+    ]
 }

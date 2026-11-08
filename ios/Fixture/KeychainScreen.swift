@@ -7,7 +7,7 @@ struct KeychainScreen: View {
     private let item: [String: Any] = [
         kSecClass as String: kSecClassGenericPassword,
         kSecAttrService as String: "dev.appdyno.fixture",
-        kSecAttrAccount as String: "fixture",
+        kSecAttrAccount as String: "fixture"
     ]
 
     var body: some View {

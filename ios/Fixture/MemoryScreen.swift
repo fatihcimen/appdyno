@@ -6,7 +6,8 @@ struct MemoryScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button("Hold 50 MB") { held = [UInt8](repeating: 7, count: 50 * 1024 * 1024) }.accessibilityIdentifier("memory_alloc")
+            Button("Hold 50 MB") { held = [UInt8](repeating: 7, count: 50 * 1024 * 1024) }
+                .accessibilityIdentifier("memory_alloc")
             Button("Release") { held = [] }.accessibilityIdentifier("memory_free")
             Text(held.isEmpty ? "Empty" : "Holding 50 MB").accessibilityIdentifier("memory_state")
             Spacer()

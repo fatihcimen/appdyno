@@ -12,9 +12,9 @@ struct CodeScreen: View {
                 // hidden from accessibility: XCUI sees no element with the focus while the keyboard is up
                 HiddenField(text: $code).frame(width: 1, height: 1).opacity(0.01).accessibilityHidden(true)
                 HStack(spacing: 8) {
-                    ForEach(0 ..< 6, id: \.self) { i in
+                    ForEach(0 ..< 6, id: \.self) { index in
                         let chars = Array(code)
-                        Text(i < chars.count ? String(chars[i]) : "–")
+                        Text(index < chars.count ? String(chars[index]) : "–")
                             .frame(width: 36, height: 44)
                             .overlay(RoundedRectangle(cornerRadius: 6).stroke(.gray))
                     }

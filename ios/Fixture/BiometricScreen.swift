@@ -11,10 +11,10 @@ struct BiometricScreen: View {
                 let context = LAContext()
                 context.evaluatePolicy(
                     .deviceOwnerAuthenticationWithBiometrics, localizedReason: "Fixture sign-in"
-                ) { ok, error in
+                ) { success, error in
                     DispatchQueue.main.async {
                         let code = (error as? LAError)?.code
-                        result = ok
+                        result = success
                             ? "Authenticated" : code == .authenticationFailed
                             ? "Not recognized" : "Error: \(error?.localizedDescription ?? "")"
                     }

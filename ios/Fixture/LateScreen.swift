@@ -13,7 +13,7 @@ struct LateScreen: View {
                 .accessibilityIdentifier("late_\(d)")
             }
             Button("Clear") { lines.removeAll() }.accessibilityIdentifier("late_clear")
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, l in Text(l) }
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in Text(line) }
             Spacer()
         }
         .padding()

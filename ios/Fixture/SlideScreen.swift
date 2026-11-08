@@ -39,7 +39,7 @@ struct SlidePanel: UIViewRepresentable {
             addSubview(confirm)
         }
 
-        required init?(coder: NSCoder) { nil }
+        required init?(coder _: NSCoder) { nil }
 
         override func layoutSubviews() {
             super.layoutSubviews()
@@ -58,11 +58,11 @@ struct SlidePanel: UIViewRepresentable {
         }
     }
 
-    func makeUIView(context: Context) -> Panel {
+    func makeUIView(context _: Context) -> Panel {
         let p = Panel()
         p.onConfirm = onConfirm
         return p
     }
 
-    func updateUIView(_ p: Panel, context: Context) { p.onConfirm = onConfirm }
+    func updateUIView(_ p: Panel, context _: Context) { p.onConfirm = onConfirm }
 }

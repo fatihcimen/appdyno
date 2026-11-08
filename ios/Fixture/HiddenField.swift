@@ -24,14 +24,14 @@ struct HiddenField: UIViewRepresentable {
         }
     }
 
-    func makeUIView(context: Context) -> KeyInput {
-        let v = KeyInput()
-        v.isAccessibilityElement = false
-        v.accessibilityElementsHidden = true
-        v.onChange = { text = $0 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { v.becomeFirstResponder() }
-        return v
+    func makeUIView(context _: Context) -> KeyInput {
+        let input = KeyInput()
+        input.isAccessibilityElement = false
+        input.accessibilityElementsHidden = true
+        input.onChange = { text = $0 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { input.becomeFirstResponder() }
+        return input
     }
 
-    func updateUIView(_ v: KeyInput, context: Context) {}
+    func updateUIView(_: KeyInput, context _: Context) {}
 }

@@ -11,10 +11,10 @@ struct LeakScreen: View {
     var body: some View {
         VStack(spacing: 12) {
             Button("Make a leak") {
-                let a = LeakNode()
-                let b = LeakNode()
-                a.other = b
-                b.other = a
+                let first = LeakNode()
+                let second = LeakNode()
+                first.other = second
+                second.other = first
                 made += 1
             }
             .accessibilityIdentifier("leak_make")

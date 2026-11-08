@@ -18,13 +18,13 @@ struct FramesScreen: View {
             link?.add(to: .main, forMode: .common)
         }
 
-        @objc private func tick(_ l: CADisplayLink) {
+        @objc private func tick(_ displayLink: CADisplayLink) {
             // spins, as real work does: a sleep would leave the CPU free
             let stop = CACurrentMediaTime() + workMs / 1000
             while CACurrentMediaTime() < stop {}
-            x = CGFloat(l.timestamp.truncatingRemainder(dividingBy: 1)) * 200
-            if l.timestamp > end {
-                l.invalidate()
+            x = CGFloat(displayLink.timestamp.truncatingRemainder(dividingBy: 1)) * 200
+            if displayLink.timestamp > end {
+                displayLink.invalidate()
                 link = nil
             }
         }

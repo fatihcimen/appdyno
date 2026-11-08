@@ -12,8 +12,8 @@ struct PermissionScreen: View {
             manager.delegate = self
         }
 
-        func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
-            switch m.authorizationStatus {
+        func locationManagerDidChangeAuthorization(_ locationManager: CLLocationManager) {
+            switch locationManager.authorizationStatus {
             case .authorizedWhenInUse, .authorizedAlways: status = "Allowed"
             case .denied, .restricted: status = "Denied"
             default: status = "Not asked"
@@ -25,7 +25,8 @@ struct PermissionScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button("Request location") { asker.manager.requestWhenInUseAuthorization() }.accessibilityIdentifier("ask_location")
+            Button("Request location") { asker.manager.requestWhenInUseAuthorization() }
+                .accessibilityIdentifier("ask_location")
             Text(asker.status).accessibilityIdentifier("permission_status")
             Spacer()
         }

@@ -8,9 +8,9 @@ struct CostListScreen: View {
     @State private var stalled = false
 
     var body: some View {
-        List(0 ..< 60, id: \.self) { i in
-            Text("Row \(i + 1)").onAppear {
-                guard i == 20, stallMs > 0, !stalled else { return }
+        List(0 ..< 60, id: \.self) { index in
+            Text("Row \(index + 1)").onAppear {
+                guard index == 20, stallMs > 0, !stalled else { return }
                 stalled = true
                 usleep(stallMs * 1000)
             }
