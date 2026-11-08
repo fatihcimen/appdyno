@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   gate:
-    uses: ./.github/workflows/ci.yml
+    uses: ./.github/workflows/ci.yml # zizmor: ignore[self-repository] actionlint 1.7.12, the newest, refuses GitHub's newer $/ form
 
   publish:
     needs: gate
@@ -25,6 +25,8 @@ jobs:
       APPDYNO_CERTIFICATE: ${{ secrets.APPDYNO_CERTIFICATE }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: The tag is the version
         run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./packages/appdyno/package.json').version")"
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -33,6 +35,8 @@ jobs:
           # its npm can publish by trusted publishing too, which the 22's cannot
           node-version: 26
           registry-url: https://registry.npmjs.org
+          # what is published is built from what the tag holds, and from no cache another run could have written
+          package-manager-cache: false
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
