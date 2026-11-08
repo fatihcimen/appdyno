@@ -546,6 +546,8 @@ describe('perf tools', () => {
 
 /** The fake app on an iOS simulator; its permission prompt is the home screen app's Alert (German labels). */
 class FakeIos extends FakeDevice {
+  /** What the alert says and its two buttons, as iOS lays them out. */
+  alertWords = ['Mitteilungen erlauben?', 'Nicht erlauben', 'Erlauben'];
   constructor() {
     super('75505767-61E2-40F2-8FC6-8AFE20EE25C9');
     Object.defineProperty(this, 'platform', { value: 'ios' });
@@ -582,7 +584,7 @@ class FakeIos extends FakeDevice {
           p: -1,
           w: 1,
           c: 'Alert',
-          d: 'Mitteilungen erlauben?',
+          d: this.alertWords[0],
           b: [60, 800, 342, 1150] as [number, number, number, number],
           f: 17,
         },
@@ -590,7 +592,7 @@ class FakeIos extends FakeDevice {
           p: app.length,
           w: 1,
           c: 'Button',
-          d: 'Nicht erlauben',
+          d: this.alertWords[1],
           b: [60, 1000, 200, 1100] as [number, number, number, number],
           f: 19,
         },
@@ -598,9 +600,17 @@ class FakeIos extends FakeDevice {
           p: app.length,
           w: 1,
           c: 'Button',
-          d: 'Erlauben',
+          d: this.alertWords[2],
           b: [202, 1000, 342, 1100] as [number, number, number, number],
           f: 19,
+        },
+        {
+          p: app.length,
+          w: 1,
+          c: 'StaticText',
+          d: this.alertWords[0],
+          b: [60, 820, 342, 880] as [number, number, number, number],
+          f: 1,
         },
       ],
     };
@@ -626,6 +636,19 @@ describe('iOS simulators', () => {
     const r = await t.textOf('alert', { answer: 'allow' });
     expect(r.text).toContain('"Erlauben"');
     expect(t.device.permissionUp).toBe(false);
+  });
+
+  it("names a link's Open in …? by its own words, and calls it no permission prompt", async () => {
+    const d = new FakeIos();
+    // a simulator asks so before an app's scheme first opens it, and its allow is the second of two buttons
+    d.alertWords = ['Open in “appdyno fixture”?', 'Cancel', 'Open'];
+    const t = await connect({}, d);
+    const home = (await t.textOf('screen')).text;
+    const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
+    expect(asked.text).toContain(
+      'the system asks: Open in “appdyno fixture”? (Cancel, Open): answer it with alert',
+    );
+    expect(asked.text).not.toContain('permission');
   });
 
   it('lists what the providers list, in their order', async () => {

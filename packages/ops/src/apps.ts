@@ -1,6 +1,6 @@
 import { fold, must, reportProgress, type Screen } from '@appdyno/core';
 import { z } from 'zod';
-import type { Answers, ReadMode } from './answers.js';
+import { systemAsks, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp, checkUrl } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
@@ -67,9 +67,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
   /** What a link did, by the screen it left: iOS asks before a scheme first opens an app, and nothing opens until then. */
   const linkSaid = (s: Session, href: string) => (screen: Screen | undefined) => {
     const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
-    if (!asks) return `opened ${href}`;
-    const buttons = asks.buttons.map((b) => b.label).join(', ');
-    return `sent ${href}, and the system asks: ${asks.texts.join(' ')} (${buttons}): answer it with alert`;
+    return asks ? `sent ${href}, and ${systemAsks(asks)}` : `opened ${href}`;
   };
 
   const openSettings = async (s: Session, settings: string, read: ReadMode) => {

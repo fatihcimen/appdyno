@@ -12,6 +12,7 @@ import {
   type ActOptions,
   type Screen,
   type ScreenDiff,
+  type SystemAlert,
 } from '@appdyno/core';
 import type { ActResult, TextResult } from '@appdyno/protocol';
 import { appDeath } from './app-death.js';
@@ -51,7 +52,11 @@ type Clean = (s: string) => string;
 
 const needsPerson = (what: string) => `\nneeds a person: ${what}. hand_off asks yours, and waits`;
 
-/** The app check: a permission prompt points to alert; another app in front is said. */
+/** A system alert by its own words and buttons, whatever it asks: a permission, or a link's "Open in …?". */
+export const systemAsks = (a: SystemAlert) =>
+  `the system asks: ${a.texts.join(' ')} (${a.buttons.map((b) => b.label).join(', ')}): answer it with alert`;
+
+/** The app check: a system alert points to alert; another app in front is said. */
 function appCheck(s: Session, screen: Screen) {
   if (screen.foreground === s.appId) s.leftApp = false;
   if (s.wordless && screen.elements.some((e) => e.type === PICTURE_TEXT))
@@ -60,8 +65,11 @@ function appCheck(s: Session, screen: Screen) {
     return `\nno words in the tree, and none from the picture: ${s.pictureFailed}`;
   const person = s.device.platformScreen.personPrompt(screen.tree, screen.elements);
   if (person) return needsPerson(person);
-  if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
-    return '\na system permission prompt is open: answer it with alert';
+  // an iOS alert of two buttons has an allow by its place, the one a link's "Open in …?" asks with too
+  if (s.device.platformScreen.alertButton(screen.elements, 'allow')) {
+    const asks = s.device.platformScreen.systemAlert(screen.tree, screen.elements);
+    return `\n${asks ? systemAsks(asks) : 'a system alert is open: answer it with alert'}`;
+  }
   if (!s.appId || !screen.foreground || screen.foreground === s.appId || s.leftApp) return '';
   return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
 }
