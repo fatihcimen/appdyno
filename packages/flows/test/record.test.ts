@@ -1,6 +1,6 @@
 import type { Screen, ScreenElement } from '@appdyno/core';
 import { selectIn } from '@appdyno/core';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import {
   bestSelector,
   elementAt,
@@ -73,9 +73,12 @@ describe('the selector a target is recorded with', () => {
       el('@b', 'button', 'Add', 'add_button'),
       el('@c', 'button', 'Add', 'add_button'),
     ];
-    const c = bestSelector(on(list), list[2]!);
+    const [, , third] = list;
+    assert(third);
+    const c = bestSelector(on(list), third);
     expect(c).toEqual({ selector: { id: 'add_button', index: 2 }, ambiguous: 3 });
-    expect(selectIn(list, c.selector)[c.selector.index!]).toBe(list[2]);
+    assert(c.selector.index !== undefined);
+    expect(selectIn(list, c.selector)[c.selector.index]).toBe(third);
   });
 
   it('judges a label as replay will: a part of a longer one does not count as another match', () => {
@@ -196,6 +199,6 @@ describe('secrets in a recording', () => {
     r.add(type('a ${B} c'));
     const f = parseFlow(r.text());
     expect(f.secrets).toEqual([]);
-    expect(f.steps[0]!.args.text).toBe('a $${B} c');
+    expect(f.steps[0]?.args.text).toBe('a $${B} c');
   });
 });

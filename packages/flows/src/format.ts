@@ -134,11 +134,11 @@ function tokens(text: string, line: number): { key?: string; value: string; quot
   };
   const word = () => {
     const start = i;
-    while (i < text.length && !/[\s=]/.test(text[i]!)) i++;
+    while (i < text.length && !/[\s=]/.test(text.charAt(i))) i++;
     return text.slice(start, i);
   };
   while (i < text.length) {
-    if (/\s/.test(text[i]!)) {
+    if (/\s/.test(text.charAt(i))) {
       i++;
       continue;
     }
@@ -156,7 +156,7 @@ function tokens(text: string, line: number): { key?: string; value: string; quot
     if (text[i] === '"') out.push({ key: first, value: quoted(), quoted: true });
     else {
       const start = i;
-      while (i < text.length && !/\s/.test(text[i]!)) i++;
+      while (i < text.length && !/\s/.test(text.charAt(i))) i++;
       out.push({ key: first, value: text.slice(start, i), quoted: false });
     }
   }
@@ -233,10 +233,11 @@ function parseStep(action: string, rest: ReturnType<typeof tokens>, line: number
 
 /** The names a string's placeholders use. */
 const namesIn = (value: string, line: number) =>
-  [...value.matchAll(PLACEHOLDER)].flatMap((m) => {
-    if (m[0] === '$${') return [];
-    if (!NAME.test(m[1]!)) throw new FlowError(`no such placeholder: ${m[0]}`, line);
-    return [m[1]!];
+  [...value.matchAll(PLACEHOLDER)].flatMap(([whole, name]) => {
+    // `$${` is the one match without a name
+    if (name === undefined) return [];
+    if (!NAME.test(name)) throw new FlowError(`no such placeholder: ${whole}`, line);
+    return [name];
   });
 
 const stringsOf = (st: FlowStep) => [
@@ -254,8 +255,8 @@ export function parseFlow(text: string): Flow {
   for (const [i, raw] of lines.entries()) {
     const line = i + 1;
     const toks = tokens(raw, line);
-    if (toks.length === 0) continue;
-    const head = toks[0]!;
+    const [head] = toks;
+    if (!head) continue;
     if (head.quoted || head.key !== undefined)
       throw new FlowError(`a line starts with a step: ${raw.trim()}`, line);
     const word = head.value;
@@ -349,7 +350,7 @@ export const escapeLiteral = (s: string) => s.replace(/\$\{/g, '$$$${');
 
 const fill = (value: string, values: Record<string, string>) =>
   value.replace(PLACEHOLDER, (m, name: string | undefined) =>
-    m === '$${' ? '${' : (values[name!] ?? m),
+    name === undefined ? '${' : (values[name] ?? m),
   );
 
 /** A step with its placeholders filled. */
@@ -396,9 +397,10 @@ export function valuesFor(
     if (v === undefined) missing.push(name);
     else values[name] = v;
   }
-  if (missing.length > 0)
+  const [first] = missing;
+  if (first !== undefined)
     throw new FlowError(
-      `no value for ${missing.join(', ')}: give --param ${missing[0]}=... or set it in the environment`,
+      `no value for ${missing.join(', ')}: give --param ${first}=... or set it in the environment`,
       0,
     );
   return values;

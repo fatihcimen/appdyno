@@ -1,10 +1,10 @@
-import { selectIn, type Screen, type ScreenElement } from '@appdyno/core';
+import { must, selectIn, type Screen, type ScreenElement } from '@appdyno/core';
 import type { FlowSelector } from './format.js';
 
 /** The roles both platforms give a control alike; the others (`tappable`, a class name) may not match on another. */
 const PORTABLE_ROLE = /^(button|link|switch|checkbox|radio|textField|slider|tab)$/;
 /** Android's own views' ids (`android:id/button1` is whichever button a dialog has first): not the app's name for anything. */
-const FRAMEWORK_ID = /^android:id\//;
+const FRAMEWORK_ID = 'android:id/';
 /** At most this share of the screen: a tap at any point of it does what a tap at its centre does. */
 const POINT_AREA = 0.25;
 
@@ -17,7 +17,7 @@ export type Chosen = { selector: FlowSelector; ambiguous?: number };
  */
 export function bestSelector(screen: Pick<Screen, 'list' | 'elements'>, e: ScreenElement): Chosen {
   const el = screen.elements.find((x) => x.ref === e.ref);
-  const id = e.id && !FRAMEWORK_ID.test(el?.identifier ?? '') ? e.id : undefined;
+  const id = e.id && !(el?.identifier ?? '').startsWith(FRAMEWORK_ID) ? e.id : undefined;
   const volatile = e.role === 'textField' && !!el?.text;
   const text = e.label && !volatile ? e.label : undefined;
   const candidates: FlowSelector[] = [
@@ -26,11 +26,12 @@ export function bestSelector(screen: Pick<Screen, 'list' | 'elements'>, e: Scree
     ...(text ? [{ text }] : []),
   ];
   const hits = (c: FlowSelector) => selectIn(screen.list, c);
-  const unique = candidates.find((c) => hits(c).length === 1 && hits(c)[0]!.ref === e.ref);
+  const unique = candidates.find((c) => hits(c).length === 1 && hits(c)[0]?.ref === e.ref);
   if (unique) return { selector: unique };
-  const within = [...candidates, { role: e.role }].find((c) =>
-    hits(c).some((x) => x.ref === e.ref),
-  )!;
+  const within = must(
+    [...candidates, { role: e.role }].find((c) => hits(c).some((x) => x.ref === e.ref)),
+    `${e.ref} on the screen it was chosen from`,
+  );
   const among = hits(within);
   return {
     selector: { ...within, index: among.findIndex((x) => x.ref === e.ref) },

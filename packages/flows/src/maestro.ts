@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { FlowError, type Flow, type FlowSelector, type FlowStep } from './format.js';
 
 type Yaml = string | number | boolean | { [k: string]: Yaml | undefined };
@@ -154,7 +155,8 @@ function commands(st: FlowStep): Yaml[] {
   }
 }
 
-const scalar = (v: string | number | boolean) => (typeof v === 'string' ? JSON.stringify(v) : v);
+const scalar = (v: string | number | boolean) =>
+  typeof v === 'string' ? JSON.stringify(v) : String(v);
 
 /** One command at this indent; a map's values below it. JSON's strings are YAML's double-quoted ones. */
 function write(value: Yaml, indent: string): string[] {
@@ -188,7 +190,7 @@ export function toMaestro(flow: Flow): string {
         if (typeof c === 'string') lines.push(`- ${c}`);
         else {
           const [first, ...rest] = write(c, '  ');
-          lines.push(`- ${first!.trimStart()}`, ...rest);
+          lines.push(`- ${must(first, 'a command').trimStart()}`, ...rest);
         }
       }
     } catch (e) {

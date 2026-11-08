@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import {
   junitXml,
   parseFlow,
@@ -16,16 +16,16 @@ assert id=two
 `);
 
 describe('running a flow', () => {
-  const ok: Executor = { act: async () => ({ settledMs: 7, settled: true }) };
+  const ok: Executor = { act: () => Promise.resolve({ settledMs: 7, settled: true }) };
 
   it('runs in order, filling values, and shows the line, never the value', async () => {
     const seen: string[] = [];
     const r = await runSteps(
       flow,
       {
-        act: async (st) => {
+        act: (st) => {
           seen.push(st.action === 'type' ? String(st.args.text) : st.action);
-          return {};
+          return Promise.resolve({});
         },
       },
       { values: { P: 'hidden' } },
@@ -39,10 +39,11 @@ describe('running a flow', () => {
   it('stops at the first failure with the step and the line', async () => {
     const seen: string[] = [];
     const r = await runSteps(flow, {
-      act: async (st) => {
+      act: (st) => {
         seen.push(st.action);
-        if (st.action === 'type') throw Object.assign(new Error('no field'), { code: 'NO_FOCUS' });
-        return {};
+        if (st.action === 'type')
+          return Promise.reject(Object.assign(new Error('no field'), { code: 'NO_FOCUS' }));
+        return Promise.resolve({});
       },
     });
     expect(seen).toEqual(['tap', 'type']);
@@ -58,9 +59,9 @@ describe('running a flow', () => {
     await runSteps(
       flow,
       {
-        act: async (st) => {
+        act: (st) => {
           seen.push(st.action);
-          return {};
+          return Promise.resolve({});
         },
       },
       { from: 3 },
@@ -71,27 +72,34 @@ describe('running a flow', () => {
   it('calls onStep around the action, after its target came, with the settled time', async () => {
     const order: string[] = [];
     const events: StepEvent[] = [];
+    const [first] = flow.steps;
+    assert(first);
     const r = await runSteps(
       flow,
       {
-        prepare: async () => void order.push('prepare'),
+        prepare: () => {
+          order.push('prepare');
+          return Promise.resolve();
+        },
         act: async () => {
           order.push('act');
-          return ok.act(flow.steps[0]!);
+          return ok.act(first);
         },
       },
       {
         from: 3,
-        onStep: async (e) => {
+        onStep: (e) => {
           order.push(e.phase);
           events.push(e);
+          return Promise.resolve();
         },
       },
     );
     expect(order).toEqual(['prepare', 'before', 'act', 'after']);
-    const after = events[1]!;
+    const after = events[1];
+    assert(after);
     expect(after.phase === 'after' && after.result).toMatchObject({ n: 3, settledMs: 7 });
-    expect(r.steps[0]!.ms).toBeGreaterThanOrEqual(0);
+    expect(r.steps[0]?.ms).toBeGreaterThanOrEqual(0);
   });
 
   it('ends with the error of a hook that throws', async () => {

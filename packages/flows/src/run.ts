@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { fillStep, stepLine, type Flow, type FlowStep } from './format.js';
 
 /** What a step's action did. */
@@ -81,7 +82,7 @@ export async function runSteps(
   const total = flow.steps.length;
   const steps: StepResult[] = [];
   for (let n = from; n <= total; n++) {
-    const written = flow.steps[n - 1]!;
+    const written = must(flow.steps[n - 1], `step ${n}`);
     const step = fillStep(written, values);
     const at = {
       n,

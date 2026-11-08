@@ -11,6 +11,7 @@ export * from './build.js';
 export * from './owner.js';
 export { agentLeft, sharedAgent } from './agent-hosts.js';
 export * from './stats.js';
+export * from './must.js';
 export * from './call.js';
 export * from './client-calls.js';
 export * from './clock.js';

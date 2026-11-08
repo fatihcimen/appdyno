@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import {
   escapeLiteral,
   fillStep,
@@ -71,7 +71,7 @@ describe('the flow format', () => {
       steps: [{ action: 'type', line: 0, args: { text }, flags: [] }],
     };
     const back = parseFlow(flowText(f));
-    expect(back.steps[0]!.args.text).toBe(text);
+    expect(back.steps[0]?.args.text).toBe(text);
     expect(flowText(f)).toContain('İstanbul');
   });
 
@@ -133,7 +133,9 @@ describe('parameters', () => {
       A: 'from-param',
       B: 'env-b',
     });
-    expect(fillStep(flow.steps[1]!, { A: '1', B: '2' }).args.text).toBe('1-2');
+    const [, typed] = flow.steps;
+    assert(typed);
+    expect(fillStep(typed, { A: '1', B: '2' }).args.text).toBe('1-2');
   });
 
   it('names a missing one and never a value', () => {
@@ -149,7 +151,9 @@ describe('parameters', () => {
   it('takes $${ as a literal ${, which a typed text may hold', () => {
     const typed = 'costs ${PRICE} today';
     const f = parseFlow(`type ${JSON.stringify(escapeLiteral(typed))}\n`);
-    expect(f.steps[0]!.args.text).toBe('costs $${PRICE} today');
-    expect(fillStep(f.steps[0]!, {}).args.text).toBe(typed);
+    const [step] = f.steps;
+    assert(step);
+    expect(step.args.text).toBe('costs $${PRICE} today');
+    expect(fillStep(step, {}).args.text).toBe(typed);
   });
 });

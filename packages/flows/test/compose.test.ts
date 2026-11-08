@@ -48,7 +48,7 @@ describe('a flow that runs another', () => {
   it('takes a relative path to the first file', () => {
     const top = resolve('here/a.flow');
     const { load } = files({ 'here/a.flow': 'run b.flow\n', [resolve('here/b.flow')]: 'launch\n' });
-    expect(composeFlow('here/a.flow', load).steps[0]!.file).toBe(`${dirname(top)}/b.flow`);
+    expect(composeFlow('here/a.flow', load).steps[0]?.file).toBe(`${dirname(top)}/b.flow`);
   });
 
   it('asks for the names of every file, a name secret in one being secret in all', () => {
