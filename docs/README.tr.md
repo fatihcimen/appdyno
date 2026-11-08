@@ -20,15 +20,15 @@ Her biri sizi bir işin baştan sonuna götürür.
 
 Bir şeye bakmak için burası.
 
-| başvuru                               | içindekiler                                                            |
-| ------------------------------------- | ---------------------------------------------------------------------- |
-| [Araçlar](reference/tools.tr.md)      | her araç, her platformun neyi yapıp neyi yapamadığı                    |
-| [Komut satırı](reference/cli.tr.md)   | her komut, sunucunun bayrakları ve değişkenleri                        |
-| [Kütüphane](reference/library.tr.md)  | bir cihazı TypeScript'ten yönetmek                                     |
-| [Pencere ve hub](reference/mirror.md) | canlı pencere: onu neyin beslediği, durumları, hattı, sınırları        |
-| [Performans](reference/perf.md)       | her ölçümün her cihazda neyi okuduğu ve her sayının nasıl kanıtlandığı |
-| [Protokol](reference/protocol.tr.md)  | host ile bir cihazın ajanı arasındaki baytlar                          |
-| [CI ve sürümler](reference/ci.tr.md)  | her kapı, cihaz suite'leri, bir sürümün nasıl yapıldığı                |
+| başvuru                                  | içindekiler                                                            |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| [Araçlar](reference/tools.tr.md)         | her araç, her platformun neyi yapıp neyi yapamadığı                    |
+| [Komut satırı](reference/cli.tr.md)      | her komut, sunucunun bayrakları ve değişkenleri                        |
+| [Kütüphane](reference/library.tr.md)     | bir cihazı TypeScript'ten yönetmek                                     |
+| [Pencere ve hub](reference/mirror.tr.md) | canlı pencere: onu neyin beslediği, durumları, hattı, sınırları        |
+| [Performans](reference/perf.md)          | her ölçümün her cihazda neyi okuduğu ve her sayının nasıl kanıtlandığı |
+| [Protokol](reference/protocol.tr.md)     | host ile bir cihazın ajanı arasındaki baytlar                          |
+| [CI ve sürümler](reference/ci.tr.md)     | her kapı, cihaz suite'leri, bir sürümün nasıl yapıldığı                |
 
 ## Nasıl çalışır
 

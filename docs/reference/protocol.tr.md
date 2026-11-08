@@ -351,7 +351,7 @@ Viewer bunların hepsini ajanla, aralarında host olmadan, kendisi konuşur; bu 
 **Geri basınç**: en çok üç kare bekler. Soket doluyken bir kare atılır ve bir sonraki keyframe'e kadar her kare de;
 o keyframe istenir: görüntü bir an donar ve asla yanlış olmaz.
 
-Bir emülatörün konuk kodlayıcısı bunun gibi çalışır ve saniyelerce geride kalır: bkz. [mirror.md](mirror.md).
+Bir emülatörün konuk kodlayıcısı bunun gibi çalışır ve saniyelerce geride kalır: bkz. [mirror.md](mirror.tr.md).
 
 ### Bir telefonun ekranı kapanır
 

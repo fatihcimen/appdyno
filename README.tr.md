@@ -72,7 +72,7 @@ Her türün her cihazdaki durumu ve neyin nerede denendiği: [Push bildirimleri]
 
 <img src="docs/images/hub.tr.webp" width="100%" alt="Karanlık görünümüyle hub: Ayarlar'da canlı bir Android emülatörü, listede yanında bir iPhone simülatörü; Performans paneli saniyede 59 kareyi, işlemciyi ve belleği okuyor">
 
-`appdyno hub`, bu Mac'teki bütün cihazları tek pencerede açar. Ajan bir cihazı kullanırken siz de fare ve klavyeyle kullanabilirsiniz. Performans paneli kareleri, CPU'yu ve belleği anında okur. Yapay Zekâ İstemcileri, bu Mac'teki her MCP istemcisini gerçek durumuyla gösterir ve appdyno'yu ona ekler. Telefon kabloyla bağlanır; `appdyno pair` ile bir kez eşleştirildikten sonra Wi-Fi ile de. Ayrıntılar: [The window and the hub](docs/reference/mirror.md).
+`appdyno hub`, bu Mac'teki bütün cihazları tek pencerede açar. Ajan bir cihazı kullanırken siz de fare ve klavyeyle kullanabilirsiniz. Performans paneli kareleri, CPU'yu ve belleği anında okur. Yapay Zekâ İstemcileri, bu Mac'teki her MCP istemcisini gerçek durumuyla gösterir ve appdyno'yu ona ekler. Telefon kabloyla bağlanır; `appdyno pair` ile bir kez eşleştirildikten sonra Wi-Fi ile de. Ayrıntılar: [Pencere ve hub](docs/reference/mirror.tr.md).
 
 <p>
   <img src="docs/images/window.webp" width="49.5%" alt="Bir simülatörün kendi penceresi, açık görünümüyle; ana ekranda appdyno'dan gelen bir push">

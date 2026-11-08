@@ -12,7 +12,7 @@ appdyno tap --help
 appdyno --help
 ```
 
-`action` alan bir op onu ilk sözcüğü olarak alır: `appdyno record start`, `appdyno network stop`. Diğer komutlar: `mirror` (bkz. [pencere](mirror.md)), `doctor [--serial S]`, `ios build`, `test` (bkz. [akışlar](../guides/flows.tr.md)), `tools install` (sabitlenmiş
+`action` alan bir op onu ilk sözcüğü olarak alır: `appdyno record start`, `appdyno network stop`. Diğer komutlar: `mirror` (bkz. [pencere](mirror.tr.md)), `doctor [--serial S]`, `ios build`, `test` (bkz. [akışlar](../guides/flows.tr.md)), `tools install` (sabitlenmiş
 Perfetto trace processor'ı indirir), `bench`, `push setup apns|fcm [--forget]` (bkz. [Araçlar](tools.tr.md#apple-ve-google-üzerinden-bir-telefona-ve-bir-simülatöre-push)). Çıkış kodu 1 çağrının reddedildiği, 2 argümanların yanlış olduğu anlamına gelir. CLI süreçleri
 arasında seçili cihaz ve diff baseline'ı, durum klasöründe çalışma klasörü başına bir tane olan küçük bir dosyada
 tutulur, böylece iki klasördeki iki terminal bir cihazı paylaşmaz. Veri kaybettiren bir komut önce kendi terminalinde sorar,

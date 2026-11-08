@@ -1,5 +1,7 @@
 # Mirror
 
+[Türkçe](mirror.tr.md)
+
 `appdyno mirror` opens one native window per device, driven by mouse, trackpad and keyboard, while an agent
 may drive the same device. A window is a small Objective-C program, compiled by `clang` on first use as the
 simulator helpers are: Command Line Tools are enough. Node is the control plane: it starts and stops streams,

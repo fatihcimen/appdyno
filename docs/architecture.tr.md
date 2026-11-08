@@ -76,7 +76,7 @@ Her platformun kendi giriş yolu vardır. Bir simülatörün hiç ajana ihtiyaç
 
 Bir pencere cihazın kendisi gibi hissettirmelidir. Biçimini bu belirler.
 
-**Pencere native'dir, kontrol düzlemi Node'dur.** `mac/Viewer` içindeki viewer Objective-C'dir; her pencere için bir süreçtir ve ilk kullanımda `clang` ile derlenir. Görüntüyü çözer ve çizer. Node yayınları başlatır ve durdurur, girdiyi taşır ve neyin yanlış olduğunu adıyla söyler. İkisi viewer'ın stdin ve stdout'unda, her seferinde bir satır JSON konuşur. Her mesajı [hat](reference/mirror.md#the-wire) listeler.
+**Pencere native'dir, kontrol düzlemi Node'dur.** `mac/Viewer` içindeki viewer Objective-C'dir; her pencere için bir süreçtir ve ilk kullanımda `clang` ile derlenir. Görüntüyü çözer ve çizer. Node yayınları başlatır ve durdurur, girdiyi taşır ve neyin yanlış olduğunu adıyla söyler. İkisi viewer'ın stdin ve stdout'unda, her seferinde bir satır JSON konuşur. Her mesajı [hat](reference/mirror.tr.md#hat) listeler.
 
 **Bir görüntü var olan en kısa yolu izler.** Bir Android telefonda viewer ajana kendisi bağlanır, böylece Node hiçbir kareyi görmez. Bir simülatör yüzeyini paylaşır, bir emülatör de bir dosyayı doldurur. Node'un bunlardaki tek payı yeni bir karenin geldiğini söylemektir. İstisna iPhone'dur: yayınını Node sürecinin bir worker thread'i tutar ve bu thread adlandırılmış bir pipe'a yazar.
 
