@@ -9,14 +9,16 @@ static const double kFieldWide = 300, kIndexTile = 18, kIndexHigh = 36, kIndexGa
 /// A row: the command's name, its title, what it does, what it cannot run without, and the word on its button.
 static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   NSMutableArray *mac = [@[
-    @[@"tools", @"Get Trace Tools", @"Download what frame timelines need.", @"", @"Get"],
+    @[@"tools", @"Get Trace Tools", @"Fetch Android's trace processor now, before a trace needs it.", @"", @"Get"],
     @[@"clients-preview", @"Add to All AI Clients", @"Show the lines first, then add this server to each client.", @"", @"Show Lines"],
     @[@"update-check", @"Check for Updates", @"Look for a newer release, and change nothing.", @"", @"Check"],
     @[@"update", @"Update", @"Move to the latest release, verified before anything changes.", @"", @"Update"],
   ] mutableCopy];
   if (fromApp) {
-    [mac insertObject:@[@"path-on", @"Add to PATH", @"Put this appdyno on the PATH of every shell.", @"", @"Add"] atIndex:2];
-    [mac insertObject:@[@"path-off", @"Take off PATH", @"Take this appdyno off the PATH again.", @"", @"Remove"] atIndex:3];
+    // the app carries its own trace processor, so there is nothing to get
+    [mac removeObjectAtIndex:0];
+    [mac insertObject:@[@"path-on", @"Add to PATH", @"Put this appdyno on the PATH of every shell.", @"", @"Add"] atIndex:1];
+    [mac insertObject:@[@"path-off", @"Take off PATH", @"Take this appdyno off the PATH again.", @"", @"Remove"] atIndex:2];
   }
   return @[
     @{@"title": @"Performance Gate",

@@ -117,6 +117,7 @@ void MVCheckTools(MVHub *hub) {
   MVPump(0.1);
   MVCheck(@"tools: PATH is offered only from the app", [clicked(hub, @"run:path-on")[@"name"] isEqual:@"path-on"], nil);
   MVCheck(@"tools: and comes off the same way", [clicked(hub, @"run:path-off")[@"name"] isEqual:@"path-off"], nil);
+  MVCheck(@"tools: the app, which carries its own trace processor, offers none to get", MVFindControl(hub.room.window.contentView, @"run:tools") == nil, nil);
   [hub pokeClick:@"chooseFolder"];
   MVPump(0.1);
   MVCheck(@"tools: Choose asks for a folder, and takes no keyboard from a test", [MVLastOpened() isEqual:@"folder panel"], MVLastOpened());

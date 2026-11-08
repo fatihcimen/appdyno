@@ -102,7 +102,7 @@ const MVWordRow MVWordTableConnect[] = {
     {"This Mac", "Bu Mac"},
     {"Say what this Mac and its devices lack.", "Bu Mac ve cihazlarında neyin eksik olduğunu söyler."},
     {"Get Trace Tools", "İz Araçlarını Al"},
-    {"Download what frame timelines need.", "Kare zaman çizelgelerinin gerektirdiklerini indirir."},
+    {"Fetch Android's trace processor now, before a trace needs it.", "Android'in trace processor'ını, bir trace ona ihtiyaç duymadan önce şimdi indirir."},
     {"Add to All AI Clients", "Tüm Yapay Zekâ İstemcilerine Ekle"},
     {"Show the lines first, then add this server to each client.", "Önce satırları gösterir, sonra bu sunucuyu her istemciye ekler."},
     {"Add to All", "Hepsine Ekle"},

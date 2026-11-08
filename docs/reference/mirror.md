@@ -238,7 +238,7 @@ Tools runs what appdyno does at a terminal, each row the very command, spawned b
 | Run Flows                                             | `test`, with its artifacts in the folder chosen       |
 | Timeline, Flight Recorder                             | `timeline`, `flight`                                  |
 | Dashboard                                             | `perf dashboard`, and it opens                        |
-| Get Trace Tools, Get adb                              | `tools install`, `tools install adb --accept-license` |
+| Get Trace Tools, outside the app, Get adb             | `tools install`, `tools install adb --accept-license` |
 | Pair for Wi-Fi, Forget Pairing, in Connect a Phone    | `pair`, `pair --forget`                               |
 | Add to All AI Clients                                 | `install --dry-run` first, then `install --yes`       |
 | Add to PATH, Take off PATH                            | `path`, `path --remove`, from the app only            |

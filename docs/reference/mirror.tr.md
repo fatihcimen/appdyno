@@ -238,7 +238,7 @@ Araçlar, appdyno'nun bir terminalde yaptığını çalıştırır; her satır k
 | Akışları Çalıştır                                                  | `test`, çıktıları seçilen klasöre                     |
 | Zaman Çizelgesi, Uçuş Kaydedici                                    | `timeline`, `flight`                                  |
 | Gösterge Paneli                                                    | `perf dashboard` ve açılır                            |
-| İz Araçlarını Al, adb'yi edinin                                    | `tools install`, `tools install adb --accept-license` |
+| İz Araçlarını Al, uygulamanın dışında, adb'yi edinin               | `tools install`, `tools install adb --accept-license` |
 | Telefon Bağla içinde Wi-Fi için Eşleştir, Eşleştirmeyi Unut        | `pair`, `pair --forget`                               |
 | Tüm Yapay Zekâ İstemcilerine Ekle                                  | önce `install --dry-run`, sonra `install --yes`       |
 | PATH'e Ekle, PATH'ten Çıkar                                        | `path`, `path --remove`, yalnızca uygulamadan         |
