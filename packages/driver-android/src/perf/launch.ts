@@ -191,7 +191,8 @@ export function dexoptState(d: PerfDevice, pkg: string) {
 
 async function analyseStartup(pkg: string, file: string): Promise<StartupAnalysis> {
   const csv = await queryFile(file, startupSql(pkg));
-  // shortcut: slow_start_reason has no source but the v1 metric, deprecated in Perfetto v59; drop or port it when v1 goes
+  // shortcut: slow_start_reason has no source but the v1 metric, which Perfetto v59 deprecates; move it to the standard
+  // library once that has the reasons, or before Perfetto removes v1
   const { stdout: metric } = await run(
     await traceProcessor(),
     ['--run-metrics', 'android_startup', '--metrics-output=json', file],
