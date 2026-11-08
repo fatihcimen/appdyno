@@ -34,14 +34,14 @@ scripts/lint-native.sh                        # all that is not TypeScript; need
 `pnpm lint` runs eslint and `prettier --check`; `pnpm format` fixes formatting. The same checks run in
 `.github/workflows/ci.yml`.
 
-`scripts/lint-native.sh` runs the linters `.mise.toml` pins, and fails on any warning:
-shellcheck and shfmt for the shell scripts (`ci.sh` is zsh, which shellcheck does not read, so `zsh -n` parses it),
-actionlint and zizmor for the workflows, `brew style` for the cask in CI (it installs gems into Homebrew, so on a Mac of
-your own `ruby -c` stands in), and for the Objective-C clang-format by `.clang-format`, Xcode's recommended warnings as
-errors, and the clang static analyzer. `clang-format -i <file>` fixes a format, now and then in a second pass. A parameter
-an API's block or callback gives and the code leaves unread is marked `__unused`. The warnings are the lint's alone: the
-flags a Mac compiles the viewer and helpers with on first use stay as they are, as a newer clang's new warning must not
-leave a person with no viewer. `.swiftlint.yml` and `android/.editorconfig` (ktlint) hold the rules for Swift and
+`scripts/lint-native.sh` runs the linters `.mise.toml` pins, and fails on any warning: shellcheck and shfmt for the
+shell scripts (`ci.sh` is zsh, which shellcheck does not read, so `zsh -n` parses it), actionlint and zizmor for the
+workflows, SwiftLint by `.swiftlint.yml` with `--strict`, `brew style` for the cask in CI (it installs gems into
+Homebrew, so on a Mac of your own `ruby -c` stands in), and for the Objective-C clang-format by `.clang-format`, Xcode's
+recommended warnings as errors, and the clang static analyzer. `clang-format -i <file>` fixes a format, now and then in
+a second pass. A parameter an API's block or callback gives and the code leaves unread is marked `__unused`. The
+warnings are the lint's alone: the flags a Mac compiles the viewer and helpers with on first use stay as they are, as a
+newer clang's new warning must not leave a person with no viewer. `android/.editorconfig` holds ktlint's rules for the
 Kotlin.
 
 `pnpm typecheck` holds every `.mjs` to the packages' types too, by `tsconfig.scripts.json`: a script is run by hand and

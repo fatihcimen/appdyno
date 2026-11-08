@@ -35,7 +35,7 @@ jobs:
         with:
           version: 2026.11.4
           # the linters .mise.toml pins: Node, pnpm and Java are the steps above
-          install_args: uv pipx:clang-format shellcheck shfmt actionlint zizmor
+          install_args: uv pipx:clang-format shellcheck shfmt actionlint zizmor swiftlint
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - name: Native lint

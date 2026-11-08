@@ -6,6 +6,8 @@ excluded:
   - ios/.derived
   - ios/.derived-device
 # beyond the defaults: what catches a bug, a crash or a slow call, and the idiom the Swift API has for it
+# but legacy_objc_type: JSONSerialization hands NSNumber and NSDictionary, and XCTest's private API takes NSString and
+# NSArray through @convention(c); and discouraged_optional_boolean: the wire has a boolean that may be absent (`verified`)
 opt_in_rules:
   - array_init
   - async_without_await
@@ -19,7 +21,6 @@ opt_in_rules:
   - convenience_type
   - direct_return
   - discarded_notification_center_observer
-  - discouraged_optional_boolean
   - empty_count
   - empty_string
   - empty_xctest_method
@@ -33,7 +34,6 @@ opt_in_rules:
   - joined_default_parameter
   - last_where
   - legacy_multiple
-  - legacy_objc_type
   - legacy_random
   - lower_acl_than_parent
   - modifier_order
@@ -63,6 +63,9 @@ opt_in_rules:
   - unused_parameter
   - xct_specific_matcher
   - yoda_condition
+# the protocol's names on the wire (packages/protocol/fixtures), which the runner's types keep, and CGPoint's x and y
+identifier_name:
+  excluded: [b, c, d, f, h, p, t, w, x, y, at, id, ms, to]
 # one limit for a file, structure.test.ts's
 file_length:
   warning: 450

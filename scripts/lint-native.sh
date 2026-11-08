@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The linters of all that is not TypeScript, at the versions .mise.toml pins (`mise install`), with this Mac's
-# Xcode for the Objective-C: the shell scripts, the workflows, the cask, and the Objective-C's format, warnings
+# Xcode for the Objective-C: the shell scripts, the workflows, the cask, the Swift, and the Objective-C's format, warnings
 # and static analysis. Exits 1 when any of them finds something.
 set -u
 cd "$(dirname "$0")/.." || exit 2
@@ -40,6 +40,9 @@ else
   # brew style installs its gems into Homebrew and turns on its developer mode: that is for a runner's Homebrew
   check cask ruby -c mac/App/appdyno.rb
 fi
+
+# by .swiftlint.yml; --strict: a warning fails as an error does
+check swiftlint swiftlint lint --strict --quiet
 
 objc=(mac/Viewer/*.m mac/Viewer/*.h mac/App/*.m mac/TextScan/*.m ios/SimHelper/*.m)
 check clang-format clang-format --dry-run --Werror "${objc[@]}"
