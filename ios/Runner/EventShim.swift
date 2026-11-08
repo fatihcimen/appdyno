@@ -1,12 +1,13 @@
 import Foundation
 import ObjectiveC
+import os
 import UIKit
 import XCTest
 
 /// A tap sent straight to XCTest's event synthesizer (private API): one finger down and up at a screen
 /// point, without XCUI's per-tap lookups and interruption checks. Used only when every class and
 /// selector is there at run time (APPDYNO_FAST_TAP=0 turns it off); otherwise the public coordinate tap.
-enum EventShim {
+@MainActor enum EventShim {
     private typealias InitRecord = @convention(c) (AnyObject, Selector, NSString, Int) -> AnyObject
     private typealias InitPath = @convention(c) (AnyObject, Selector, CGPoint, Double) -> AnyObject
     private typealias Lift = @convention(c) (AnyObject, Selector, Double) -> Void
@@ -115,16 +116,15 @@ enum EventShim {
 
     private static func synthesize(_ record: AnyObject, within seconds: Double) -> Bool {
         guard let synth = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue() else { return false }
-        var done = false
-        var ok = false
-        let completion: @convention(block) (Bool, NSError?) -> Void = { success, _ in
-            ok = success
-            done = true
+        let result = OSAllocatedUnfairLock<Bool?>(initialState: nil)
+        // Sendable, as it may come on another thread
+        let completion: @Sendable @convention(block) (Bool, NSError?) -> Void = { success, _ in
+            result.withLock { $0 = success }
         }
         imp(synth, selSynthesize, Synthesize.self)(synth, selSynthesize, record, completion as AnyObject)
         let end = Date().addingTimeInterval(seconds)
         // the completion may come on this (main) thread: turn the run loop, never block it
-        while !done, Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005)) }
-        return done && ok
+        while result.withLock({ $0 }) == nil, Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005)) }
+        return result.withLock { $0 } ?? false
     }
 }

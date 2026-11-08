@@ -3,7 +3,7 @@ import XCTest
 /// XCTest's own metrics under `measure()`, apart from the runner's test (one set of metrics per test method).
 /// The app is named by APPDYNO_METRICS_APP; xcodebuild passes TEST_RUNNER_-prefixed variables.
 final class PerfMetricsTests: XCTestCase {
-    private func target() throws -> XCUIApplication {
+    @MainActor private func target() throws -> XCUIApplication {
         guard let id = ProcessInfo.processInfo.environment["APPDYNO_METRICS_APP"], !id.isEmpty else {
             throw AgentError("INVALID_ARGUMENT", "APPDYNO_METRICS_APP is required")
         }
@@ -11,7 +11,7 @@ final class PerfMetricsTests: XCTestCase {
     }
 
     /// Scrolls what is on the app's screen, so the caller brings it there first.
-    func testHitches() throws {
+    @MainActor func testHitches() throws {
         let app = try target()
         guard #available(iOS 26, *) else { throw XCTSkip("XCTHitchMetric needs iOS 26") }
         app.activate()
@@ -26,7 +26,7 @@ final class PerfMetricsTests: XCTestCase {
         }
     }
 
-    func testLaunch() throws {
+    @MainActor func testLaunch() throws {
         let app = try target()
         // the language the host holds the app in, as every launch it makes carries it
         app.launchArguments = (ProcessInfo.processInfo.environment["APPDYNO_METRICS_ARGS"] ?? "")

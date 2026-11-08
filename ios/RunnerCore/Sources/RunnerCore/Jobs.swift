@@ -1,7 +1,8 @@
 import Foundation
 
-/// One request's work: run on the main thread in arrival order, stopped by its deadline or a cancel.
-public final class Job {
+/// One request's work: run on the main thread in arrival order, stopped by its deadline or a cancel. Unchecked: its params
+/// are never changed once made, and `cancelled` is behind its lock.
+public final class Job: @unchecked Sendable {
     public let id: Int
     public let method: String
     public let params: Wire

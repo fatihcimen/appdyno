@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import os
 
 /// What a method answers: a JSON result and, for a screenshot, the image bytes.
 struct Reply {
@@ -7,31 +8,28 @@ struct Reply {
     var binary: Data?
 }
 
-/// The work queue the test method drains on the main thread (XCUI calls must run there).
-final class MainPump {
-    private let lock = NSLock()
-    private var jobs: [() -> Void] = []
-    private(set) var stopped = false
+/// The one way a request reaches the main actor, where XCUI must be asked: the network's queue hands its work here, and
+/// the test method drains it on the main thread.
+final class MainPump: Sendable {
+    typealias Work = @MainActor @Sendable () -> Void
+    private let state = OSAllocatedUnfairLock(initialState: (jobs: [Work](), stopped: false))
 
     /// A request came (one answered off the main thread, like ping): the runner is in use.
     func touch() { submit {} }
 
-    func submit(_ work: @escaping () -> Void) {
-        lock.lock(); jobs.append(work); lock.unlock()
-    }
+    func submit(_ work: @escaping Work) { state.withLock { $0.jobs.append(work) } }
 
-    func stop() { lock.lock(); stopped = true; lock.unlock() }
-
-    private var lastWork = Date()
+    func stop() { state.withLock { $0.stopped = true } }
 
     /// Runs queued work until `stop()`, or until nothing came for `idleExit` seconds (a runner whose host
     /// is gone stops instead of lingering); between jobs the main run loop keeps turning.
-    func run(idleExit: TimeInterval) {
+    @MainActor func run(idleExit: TimeInterval) {
+        var lastWork = Date()
         while true {
-            lock.lock()
-            let next = jobs.isEmpty ? nil : jobs.removeFirst()
-            let done = stopped && jobs.isEmpty
-            lock.unlock()
+            let (next, done) = state.withLock { s -> (Work?, Bool) in
+                let next = s.jobs.isEmpty ? nil : s.jobs.removeFirst()
+                return (next, s.stopped && s.jobs.isEmpty)
+            }
             if let next { lastWork = Date(); next(); continue }
             if done { return }
             if Date().timeIntervalSince(lastWork) > idleExit {
@@ -51,17 +49,17 @@ final class MainPump {
 /// its interface comes after the listener and its path names the Wi-Fi it rides on as well: so a connection is read only when
 /// it came by the loopback, or by an interface of a tunnel's kind between a tunnel's two ends, and any other is closed
 /// unread, a VPN's among them.
-final class Server {
+final class Server: Sendable {
     private let listeners: [NWListener]
     private let queue = DispatchQueue(label: "server")
     private let token: String
     private let pump: MainPump
-    private let handle: (Job) throws -> Reply
-    private let hello: () -> [String: Any]
+    private let handle: @MainActor @Sendable (Job) throws -> Reply
+    private let hello: @Sendable () -> [String: Any]
     private let startedAt = Date()
 
-    init(port: UInt16, token: String, tunnels: Bool, pump: MainPump, hello: @escaping () -> [String: Any],
-         handle: @escaping (Job) throws -> Reply) throws {
+    init(port: UInt16, token: String, tunnels: Bool, pump: MainPump, hello: @escaping @Sendable () -> [String: Any],
+         handle: @escaping @MainActor @Sendable (Job) throws -> Reply) throws {
         let loopback = NWParameters.tcp
         loopback.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: NWEndpoint.Port(rawValue: port)!)
         loopback.allowLocalEndpointReuse = true
@@ -106,7 +104,8 @@ final class Server {
         c.start(queue: queue)
     }
 
-    private final class Session {
+    /// Unchecked: only the server's queue touches it, where each of its connection's callbacks runs.
+    private final class Session: @unchecked Sendable {
         let connection: NWConnection
         let decoder = FrameDecoder()
         let jobs = JobTable()
@@ -144,54 +143,60 @@ final class Server {
                 return
             }
             s.greeted = true
-            send(s, id: id, Reply(result: hello()))
+            send(s, Self.frame(id: id, Reply(result: hello())))
             return
         }
         pump.touch()
         switch method {
         case "ping":
             let now = Date()
-            send(s, id: id, Reply(result: ["uptimeMs": Int(now.timeIntervalSince(startedAt) * 1000),
-                                           "atMs": now.timeIntervalSince1970 * 1000]))
+            send(s, Self.frame(id: id, Reply(result: ["uptimeMs": Int(now.timeIntervalSince(startedAt) * 1000),
+                                                      "atMs": now.timeIntervalSince1970 * 1000])))
         case "cancel":
             s.jobs.cancel(try OneValue.id(params))
-            send(s, id: id, Reply(result: [:]))
+            send(s, Self.frame(id: id, Reply(result: [:])))
         default:
             let job = try Job(id: id, method: method, params: params)
             s.jobs.add(job)
-            pump.submit { [weak self] in
-                guard let self else { return }
-                var reply: Reply?
-                var failure: AgentError?
-                if job.cancelled {
-                    failure = AgentError("CANCELLED", "cancelled before it started")
-                } else if job.over {
-                    failure = AgentError("TIMEOUT", "the deadline passed before the work started")
-                } else {
-                    do { reply = try self.handle(job) } catch let e as AgentError { failure = e } catch {
-                        failure = AgentError("INTERNAL", "\(error)")
-                    }
-                }
-                if failure == nil, job.cancelled { failure = AgentError("CANCELLED", "cancelled") }
-                self.queue.async {
+            pump.submit { [handle, queue] in
+                let answer = Self.answer(job, handle)
+                queue.async {
                     s.jobs.remove(job)
-                    if let failure { self.sendError(s, id: id, failure) } else { self.send(s, id: id, reply!) }
+                    s.connection.send(content: answer, completion: .contentProcessed { _ in })
                 }
             }
         }
     }
 
-    private func send(_ s: Session, id: Int, _ r: Reply) {
+    /// The job's answer as the bytes that go back: made on the main actor, so that only bytes leave it.
+    @MainActor private static func answer(_ job: Job, _ handle: (Job) throws -> Reply) -> Data {
+        var reply: Reply?
+        var failure: AgentError?
+        if job.cancelled {
+            failure = AgentError("CANCELLED", "cancelled before it started")
+        } else if job.over {
+            failure = AgentError("TIMEOUT", "the deadline passed before the work started")
+        } else {
+            do { reply = try handle(job) } catch let e as AgentError { failure = e } catch {
+                failure = AgentError("INTERNAL", "\(error)")
+            }
+        }
+        if failure == nil, job.cancelled { failure = AgentError("CANCELLED", "cancelled") }
+        if let failure {
+            return encodeJSON(try! JSONSerialization.data(withJSONObject: ["jsonrpc": "2.0", "id": job.id, "error": failure.json]))
+        }
+        return frame(id: job.id, reply!)
+    }
+
+    private static func frame(id: Int, _ r: Reply) -> Data {
         var out = Data()
         if let b = r.binary { out.append(encodeBinary(id: UInt32(id), b)) }
         let body: [String: Any] = ["jsonrpc": "2.0", "id": id, "result": r.result]
         out.append(encodeJSON(try! JSONSerialization.data(withJSONObject: body)))
-        s.connection.send(content: out, completion: .contentProcessed { _ in })
+        return out
     }
 
-    private func sendError(_ s: Session, id: Int, _ e: AgentError) {
-        let body: [String: Any] = ["jsonrpc": "2.0", "id": id, "error": e.json]
-        s.connection.send(content: encodeJSON(try! JSONSerialization.data(withJSONObject: body)),
-                          completion: .contentProcessed { _ in })
+    private func send(_ s: Session, _ frame: Data) {
+        s.connection.send(content: frame, completion: .contentProcessed { _ in })
     }
 }

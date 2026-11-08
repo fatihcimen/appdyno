@@ -1,5 +1,6 @@
 import Foundation
 import ObjectiveC
+import os
 import XCTest
 
 /// The one place the runner uses private XCTest API: XCUI waits for the app to go idle before and after
@@ -8,7 +9,7 @@ import XCTest
 /// are turned off. Each method is patched only when it exists with the expected type; otherwise the
 /// public behaviour stays (slower, still correct).
 enum LogShim {
-    final class Nothing: NSObject {
+    final class Nothing: NSObject, Sendable {
         @objc func logDebugMessage(_ message: String) {}
     }
 
@@ -28,7 +29,7 @@ enum LogShim {
     }
 }
 
-enum IdleShim {
+@MainActor enum IdleShim {
     /// Which patches took effect, e.g. for the hello.
     private(set) static var applied: [String] = []
     /// The replacements, called once at start with a BOOL-like value in every slot (none may crash).
@@ -62,14 +63,14 @@ enum IdleShim {
               let process = app.perform(selProcess)?.takeUnretainedValue(), process.responds(to: selAnimationsIdle)
         else { return nil }
         let t0 = Date()
-        var idle = false
-        // no parameters: safe whatever the reply passes the block
-        let reply: @convention(block) () -> Void = { idle = true }
+        let idle = OSAllocatedUnfairLock(initialState: false)
+        // no parameters: safe whatever the reply passes the block; Sendable, as it may come on another thread
+        let reply: @Sendable @convention(block) () -> Void = { idle.withLock { $0 = true } }
         unsafeBitCast((process as! NSObject).method(for: selAnimationsIdle), to: NotifyIdle.self)(process, selAnimationsIdle, reply as AnyObject)
         let end = t0.addingTimeInterval(seconds)
         // the reply may come on this (main) thread: turn the run loop, never block it
-        while !idle, Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005)) }
-        if !idle { NSLog("appdyno runner: animations still running after %.0f s, touching anyway", seconds) }
+        while !idle.withLock({ $0 }), Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005)) }
+        if !idle.withLock({ $0 }) { NSLog("appdyno runner: animations still running after %.0f s, touching anyway", seconds) }
         return Int(Date().timeIntervalSince(t0) * 1000)
     }
 
@@ -82,7 +83,7 @@ enum IdleShim {
     /// A BOOL getter that answers YES.
     private static func skip(_ c: AnyClass, _ cls: String, _ sel: String) {
         guard let (m, enc) = method(c, sel), enc.hasPrefix("B") || enc.hasPrefix("c") else { return }
-        let block: @convention(block) (UnsafeRawPointer?) -> Bool = { _ in true }
+        let block: @Sendable @convention(block) (UnsafeRawPointer?) -> Bool = { _ in true }
         method_setImplementation(m, imp_implementationWithBlock(block))
         applied.append("\(cls).\(sel)")
     }
@@ -92,23 +93,24 @@ enum IdleShim {
         guard let (m, enc) = method(c, sel), let ret = enc.first.map(String.init), types.contains(ret),
               method_getNumberOfArguments(m) == UInt32(args + 2) else { return }
         // plain integers and raw pointers only: a replacement never retains or releases an argument, whatever
-        // the real method passes in each slot (a BOOL taken for an object crashed the runner)
+        // the real method passes in each slot (a BOOL taken for an object crashed the runner). Each is Sendable, so
+        // none is the main actor's: XCTest may call it on any thread
         let imp: IMP
         switch (ret, args) {
         case ("v", 1):
-            let b: @convention(block) (UnsafeRawPointer?, UInt) -> Void = { _, _ in }
+            let b: @Sendable @convention(block) (UnsafeRawPointer?, UInt) -> Void = { _, _ in }
             imp = imp_implementationWithBlock(b)
         case ("v", 2):
-            let b: @convention(block) (UnsafeRawPointer?, UInt, UInt) -> Void = { _, _, _ in }
+            let b: @Sendable @convention(block) (UnsafeRawPointer?, UInt, UInt) -> Void = { _, _, _ in }
             imp = imp_implementationWithBlock(b)
         case ("v", 3):
-            let b: @convention(block) (UnsafeRawPointer?, UInt, UInt, UInt) -> Void = { _, _, _, _ in }
+            let b: @Sendable @convention(block) (UnsafeRawPointer?, UInt, UInt, UInt) -> Void = { _, _, _, _ in }
             imp = imp_implementationWithBlock(b)
         case (_, 2):
-            let b: @convention(block) (UnsafeRawPointer?, UInt, UInt) -> Bool = { _, _, _ in true }
+            let b: @Sendable @convention(block) (UnsafeRawPointer?, UInt, UInt) -> Bool = { _, _, _ in true }
             imp = imp_implementationWithBlock(b)
         case (_, 3):
-            let b: @convention(block) (UnsafeRawPointer?, UInt, UInt, UInt) -> Bool = { _, _, _, _ in true }
+            let b: @Sendable @convention(block) (UnsafeRawPointer?, UInt, UInt, UInt) -> Bool = { _, _, _, _ in true }
             imp = imp_implementationWithBlock(b)
         default:
             return

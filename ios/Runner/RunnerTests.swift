@@ -1,3 +1,4 @@
+import os
 import UIKit
 import XCTest
 
@@ -9,10 +10,9 @@ let agentVersion = "0.6.0"
 /// iPhone a live element's frame read after the element went ended this test, whatever `continueAfterFailure` says, so
 /// a request reads by snapshots, which throw.
 enum IssueTrap {
-    private static let lock = NSLock()
-    private static var last: String?
-    static func record(_ s: String) { lock.lock(); last = s; lock.unlock() }
-    static func take() -> String? { lock.lock(); defer { last = nil; lock.unlock() }; return last }
+    private static let last = OSAllocatedUnfairLock<String?>(initialState: nil)
+    static func record(_ s: String) { last.withLock { $0 = s } }
+    static func take() -> String? { last.withLock { l in defer { l = nil }; return l } }
 }
 
 final class RunnerTests: XCTestCase {
@@ -21,7 +21,7 @@ final class RunnerTests: XCTestCase {
         super.record(issue)
     }
 
-    func testServe() throws {
+    @MainActor func testServe() throws {
         // one failed interaction must not end the runner: the request that caused it answers with it
         continueAfterFailure = true
         let env = ProcessInfo.processInfo.environment
@@ -33,14 +33,14 @@ final class RunnerTests: XCTestCase {
         let device = Device()
         if let target = env["APPDYNO_TARGET"], !target.isEmpty { device.setTarget(target) }
         let pump = MainPump()
-        // XCUI must be asked on the main thread; hello is answered on the network queue from this copy
-        let lock = NSLock()
-        var info = Self.hello(env)
-        let server = try Server(port: port, token: token, tunnels: env["APPDYNO_TUNNELS"] == "1", pump: pump, hello: { lock.lock(); defer { lock.unlock() }; return info }) { job in
+        // XCUI must be asked on the main thread; hello is answered on the network queue from this copy, unchecked as a
+        // dictionary is a value: each read takes a whole copy
+        let info = OSAllocatedUnfairLock(uncheckedState: Self.hello(env))
+        let server = try Server(port: port, token: token, tunnels: env["APPDYNO_TUNNELS"] == "1", pump: pump, hello: { info.withLockUnchecked { $0 } }) { job in
             let reply = try Self.handle(job, device, pump)
             if job.method == "orientation.set" {
                 let fresh = Self.hello(env)
-                lock.lock(); info = fresh; lock.unlock()
+                info.withLockUnchecked { $0 = fresh }
             }
             return reply
         }
@@ -50,7 +50,7 @@ final class RunnerTests: XCTestCase {
         server.stop()
     }
 
-    static func hello(_ env: [String: String]) -> [String: Any] {
+    @MainActor static func hello(_ env: [String: String]) -> [String: Any] {
         // the home screen app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480
         let b = XCUIApplication(bundleIdentifier: Device.springboardId).frame
         let rotation: Int = {
@@ -68,14 +68,14 @@ final class RunnerTests: XCTestCase {
                          pid: Int(ProcessInfo.processInfo.processIdentifier), idleShimChecked: IdleShim.selfChecked)
     }
 
-    static func handle(_ job: Job, _ d: Device, _ pump: MainPump) throws -> Reply {
+    @MainActor static func handle(_ job: Job, _ d: Device, _ pump: MainPump) throws -> Reply {
         _ = IssueTrap.take()
         let reply = try serve(job, d, pump)
         if let issue = IssueTrap.take() { throw AgentError("INTERNAL", "XCTest: \(issue)") }
         return reply
     }
 
-    static func serve(_ job: Job, _ d: Device, _ pump: MainPump) throws -> Reply {
+    @MainActor static func serve(_ job: Job, _ d: Device, _ pump: MainPump) throws -> Reply {
         let p = job.params
         switch job.method {
         case "tree.get":

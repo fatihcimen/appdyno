@@ -2,7 +2,7 @@ import UIKit
 import XCTest
 
 /// The device side of every method, on top of public XCUI API. Coordinates are points.
-final class Device {
+@MainActor final class Device {
     static let springboardId = "com.apple.springboard"
     let springboard = XCUIApplication(bundleIdentifier: Device.springboardId)
     private(set) var target: XCUIApplication?

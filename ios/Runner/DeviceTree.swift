@@ -115,7 +115,7 @@ extension Device {
  * the runner 45-47 ms against 59-60 with all of XCTest's attributes, the same tree, on a simulator. Each part is looked
  * up once and checked; where this XCTest lacks one, or a request fails, the public snapshot is taken.
  */
-enum KeyedSnapshot {
+@MainActor enum KeyedSnapshot {
     /// What `Device.node` reads of a snapshot: a key it reads and this list lacks comes back empty.
     private static let keys = ["identifier", "frame", "value", "label", "elementType", "enabled", "selected",
                                "placeholderValue", "hasFocus", "hasKeyboardFocus"]
