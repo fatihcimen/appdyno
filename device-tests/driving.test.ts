@@ -431,10 +431,16 @@ describe.skipIf(!android)('driving on Android', () => {
     await expect.poll(scales, { timeout: 15_000, interval: 500 }).toBe(before);
   }, 120_000);
 
-  it('posts a notification, and says biometrics are not here', async () => {
-    ok(await h.call('push', { type: 'alert', title: 'appdyno', body: 'merhaba' }));
-    // posting is queued: the list has it a moment later
-    await expect.poll(() => sh('cmd notification list')).toContain('appdyno');
+  it("posts no notification that is not the app's own, and says biometrics are not here", async () => {
+    const shell = async () =>
+      (await sh('cmd notification list'))
+        .split('\n')
+        .filter((l) => l.includes('|com.android.shell|')).length;
+    const before = await shell();
+    const r = await h.call('push', { type: 'alert', title: 'appdyno', body: 'merhaba' });
+    // the fixture has no Firebase Messaging, the only way an alert reaches its code
+    expect(r.text).toContain(`${APP} has no Firebase Messaging`);
+    expect(await shell()).toBe(before);
     const b = await h.call('device_setting', { name: 'biometric', value: 'match' });
     expect(b.data.code).toBe('UNSUPPORTED');
   });

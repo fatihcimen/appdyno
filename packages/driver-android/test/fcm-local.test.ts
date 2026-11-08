@@ -29,6 +29,7 @@ const answers =
         ? 'No receivers found'
         : `1 receivers found:\n  Receiver #0:\n    ${RECEIVER}`;
     if (c.startsWith('pm path')) return d.installed === false ? '' : 'package:/data/app/base.apk';
+    if (c.startsWith('cmd package resolve-activity')) return 'priority=0\ndev.app/.Main';
     if (c.startsWith('run-as') && c.endsWith('id -u'))
       return d.debuggable === false ? 'run-as: package not debuggable: dev.app' : '10193';
     if (c === 'id -u') return d.root ? '0' : '2000';
@@ -48,10 +49,10 @@ describe("FCM's own message to an app's Firebase SDK, on this device", () => {
       by: 'root',
     });
     expect(await local({ debuggable: false }).local.sender('dev.app')).toEqual({
-      why: 'dev.app is not a debuggable build and adbd does not run as root here: only FCM set up with `appdyno push setup fcm` reaches its code',
+      why: "dev.app is not a debuggable build and adbd does not run as root here: a debuggable build takes FCM's own message here, or FCM set up with `appdyno push setup fcm`",
     });
     expect(await local({ receiver: false }).local.sender('dev.app')).toEqual({
-      why: "dev.app has no Firebase Messaging to take FCM's own message",
+      why: "dev.app has no Firebase Messaging, which takes FCM's own message: an Android push reaches an app's code only by it",
     });
     expect(await local({ receiver: false, installed: false }).local.sender('dev.app')).toEqual({
       why: 'dev.app is not installed on this device',
@@ -135,28 +136,29 @@ describe("an Android device's pushes, by the app's own Firebase SDK", () => {
       (await e.pushRoutes(app)).map((r) => [r.type, 'route' in r ? r.route : r.why]),
     );
 
-  it('name the route each type takes for the app named, and keep the shell for what FCM has no style for', async () => {
+  it('name the route each type takes for the app named', async () => {
     const routes = await said(events({}), 'dev.app');
     expect(routes.background).toMatch(
       /^FCM's own message to the app's Firebase SDK, .* by run-as on its debuggable build: onMessageReceived gets it wherever the app is/,
     );
     expect(routes.alert).toContain('in front onMessageReceived gets it, else the SDK draws it');
-    expect(routes.inbox).toContain('FCM has no such style');
+    expect(routes.inbox).toContain('draws its inbox style itself');
     expect(routes.tapped).toContain('the launcher activity');
     // with no app named, nothing is read of a build
-    expect((await said(events({}))).background).toContain('takes one here');
+    expect((await said(events({}))).background).toContain('name an app with Firebase Messaging');
   });
 
-  it('draw an alert by the shell, saying why, where the app takes no FCM message', async () => {
+  it('refuse every push but a tap, saying what it needs, where the app takes no FCM message', async () => {
     const e = events({ debuggable: false });
-    expect((await said(e, 'dev.app')).background).toBe(
-      "a data message reaches the app's code only as FCM's own message, and dev.app is not a debuggable build and adbd does not run as root here: only FCM set up with `appdyno push setup fcm` reaches its code",
-    );
-    expect(await e.push('dev.app', { type: 'alert', title: 'T' })).toMatch(
-      /^drawn by the shell in the bigtext style, not by dev\.app: its code got nothing, as dev\.app is not a debuggable build/,
-    );
-    await expect(e.push('dev.app', { type: 'background' })).rejects.toThrow(
-      'dev.app is not a debuggable build',
+    const routes = await said(e, 'dev.app');
+    for (const type of ['alert', 'rich', 'background', 'live_activity'])
+      expect(routes[type], type).toMatch(/^dev\.app is not a debuggable build/);
+    for (const type of ['alert', 'background'] as const)
+      await expect(e.push('dev.app', { type, title: 'T' })).rejects.toThrow(
+        "a debuggable build takes FCM's own message here, or FCM set up with `appdyno push setup fcm`",
+      );
+    expect(await e.push('dev.app', { type: 'tapped' })).toMatch(
+      /^opened dev\.app as a tapped push/,
     );
   });
 });

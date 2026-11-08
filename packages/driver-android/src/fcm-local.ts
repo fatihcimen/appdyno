@@ -3,7 +3,6 @@ import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from './adb.js';
 import { checkMessage } from './fcm.js';
 import { BY_TYPE, messageOf, templateOf } from './fcm-push.js';
-import { FCM_ONLY } from './push.js';
 
 /**
  * The broadcast Google Play services hands an app an FCM message by, and the receiver the Firebase Messaging SDK
@@ -95,23 +94,22 @@ export class LocalFcm {
     const receivers = await this.sh(`cmd package query-receivers --brief -a ${RECEIVE} ${pkg}`);
     if (!receivers.includes(`${pkg}/${RECEIVER}`))
       return (await this.sh(`pm path ${pkg}`)).startsWith('package:')
-        ? { why: `${pkg} has no Firebase Messaging to take FCM's own message` }
+        ? {
+            why: `${pkg} has no Firebase Messaging, which takes FCM's own message: an Android push reaches an app's code only by it`,
+          }
         : { why: `${pkg} is not installed on this device` };
     if (/^\d+$/.test((await this.sh(`run-as ${pkg} id -u`)).trim())) return { by: 'run-as' };
     if ((await this.sh('id -u')).trim() === '0') return { by: 'root' };
     return {
-      why: `${pkg} is not a debuggable build and adbd does not run as root here: only FCM set up with \`appdyno push setup fcm\` reaches its code`,
+      why: `${pkg} is not a debuggable build and adbd does not run as root here: a debuggable build takes FCM's own message here, or FCM set up with \`appdyno push setup fcm\``,
     };
   }
 
-  /** The route of each type FCM takes, by this sender; any other stays as it was. */
+  /** The route of each type FCM takes, by this sender, or why there is none; any other stays as it was. */
   static route(r: PushRoute, sender: LocalSender): PushRoute {
     const t = BY_TYPE[r.type];
     if (!t) return r;
-    if ('why' in sender)
-      return FCM_ONLY[r.type]
-        ? { type: r.type, why: `${FCM_ONLY[r.type]}, and ${sender.why}` }
-        : { ...r, ...('route' in r && { route: `${r.route}, as ${sender.why}` }) };
+    if ('why' in sender) return { type: r.type, why: sender.why };
     const what = t.notification
       ? 'in front onMessageReceived gets it, else the SDK draws it'
       : `onMessageReceived gets it wherever the app is${r.type === 'live_activity' ? ', for the app to make its own Live Update' : ''}`;

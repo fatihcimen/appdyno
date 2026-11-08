@@ -34,29 +34,31 @@ describe('a push on Android', () => {
     ]);
   });
 
-  it('draws a style, and says the app got nothing', async () => {
+  it("draws nothing of its own: a style is the app's to draw, and the rest goes by FCM", async () => {
     const { push, asked } = device();
-    const said = await push.send('dev.app', { type: 'inbox', title: 'T', body: 'one\ntwo' });
-    expect(said).toMatch(
-      /^drawn by the shell in the inbox style, not by dev\.app: its code got nothing, as FCM has no such style/,
+    await expect(push.send('dev.app', { type: 'inbox', title: 'T', body: 'one' })).rejects.toThrow(
+      'an Android app draws its inbox style itself, from the data its code is handed: background, with that data, is the push for it',
     );
-    expect(asked[0]).toBe(
-      "cmd notification post -S inbox --line 'one' --line 'two' -t 'T' appdyno-dev.app 'one'",
+    await expect(push.send('dev.app', { type: 'alert', title: 'T' })).rejects.toThrow(
+      "the app's own Firebase SDK takes it, as FCM's own message",
     );
+    expect(asked).toEqual([]);
   });
 
-  it("refuses a data key a shell would take apart, and what only FCM's own message gives", async () => {
+  it('refuses a data key a shell would take apart, and names each type with tapped alone its own', async () => {
     await expect(
       device().push.send('dev.app', { type: 'tapped', data: { 'a b': 'c' } }),
     ).rejects.toThrow('a data key is letters, digits, _ . -: not a b');
     const routes = Object.fromEntries(
       ANDROID_PUSHES.map((r) => [r.type, 'route' in r ? 'route' : r.why]),
     );
-    expect(routes.background).toBe(
-      "a data message reaches the app's code only as FCM's own message: FCM set up, or a debuggable build of an app with Firebase Messaging, takes one here",
-    );
-    expect(routes.inbox).toBe('route');
-    expect(routes.alert).toBe('route');
+    for (const type of ['alert', 'rich', 'background', 'live_activity'])
+      expect(routes[type], type).toBe(
+        "the app's own Firebase SDK takes it, as FCM's own message: name an app with Firebase Messaging on a debuggable build, or set FCM up with `appdyno push setup fcm`",
+      );
+    for (const type of ['inbox', 'messaging', 'media'])
+      expect(routes[type], type).toContain(`draws its ${type} style itself`);
+    expect(routes.tapped).toBe('route');
     expect(routes.voip).toContain('an iOS push');
     expect(Object.keys(routes)).toHaveLength(10);
   });

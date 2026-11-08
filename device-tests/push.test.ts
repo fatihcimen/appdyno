@@ -52,34 +52,38 @@ async function goHome(call: ReturnType<typeof toolCaller>) {
 
 describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
   const call = server(ANDROID!);
-  const drawn = () =>
-    execFileSync('adb', ['-s', ANDROID!, 'shell', 'cmd notification list'], { encoding: 'utf8' });
+  /** The notifications the shell posted, which would be no app's own. */
+  const byShell = () =>
+    execFileSync('adb', ['-s', ANDROID!, 'shell', 'cmd notification list'], { encoding: 'utf8' })
+      .split('\n')
+      .filter((l) => l.includes('|com.android.shell|')).length;
 
   it('says which types it takes, and how', async () => {
     const r = await call('push');
     expect(r.text).toContain('tapped: the launcher activity');
     expect(r.text).toContain(
-      "background: no: a data message reaches the app's code only as FCM's own message, and dev.appdyno.fixture has no Firebase Messaging",
+      "background: no: dev.appdyno.fixture has no Firebase Messaging, which takes FCM's own message",
     );
+    expect(r.text).toContain('inbox: no: an Android app draws its inbox style itself');
   });
 
-  it('draws each style, and says the app got nothing', async () => {
-    const before = drawn().split('\n').length;
-    const alert = await call('push', { type: 'alert', title: 'Order 42', body: 'shipped' });
-    expect(alert.text).toMatch(
-      /^drawn by the shell in the bigtext style, not by dev\.appdyno\.fixture/,
-    );
+  it('refuses every push but a tap to an app with no Firebase Messaging, saying why, and draws none of its own', async () => {
+    const before = byShell();
     for (const [type, extra] of [
-      ['rich', { image: PICTURE }],
-      ['inbox', { body: 'one\ntwo' }],
-      ['messaging', { body: 'Ada: hi\nBo: hello' }],
-      ['media', {}],
+      ['alert', { body: 'shipped' }],
+      ['rich', { image: 'https://example.com/p.png' }],
+      ['background', {}],
+      ['live_activity', {}],
     ] as const) {
       const r = await call('push', { type, title: type, ...extra });
-      expect(r.error ? r.text : '', type).toBe('');
+      expect(r.error, type).toBe(true);
+      expect(r.text, type).toContain('dev.appdyno.fixture has no Firebase Messaging');
     }
-    expect(drawn()).toContain(`appdyno-${APP}`);
-    expect(drawn().split('\n').length).toBeGreaterThanOrEqual(before);
+    for (const type of ['inbox', 'messaging', 'media'] as const) {
+      const r = await call('push', { type, title: type, body: 'a' });
+      expect(r.text, type).toContain(`draws its ${type} style itself`);
+    }
+    expect(byShell()).toBe(before);
   });
 
   it('opens the app as a tapped push, its data in the extras', async () => {
@@ -99,12 +103,6 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
       /^filter appdyno-fixture:\/\/open\nfilter https:\/\/example\.com\/order\*\ndomain https:\/\/example\.com: \w+$/,
     );
     expect(r.data.links).toContainEqual({ url: 'appdyno-fixture://open', kind: 'filter' });
-  });
-
-  it("refuses what only FCM's own message gives, and says why", async () => {
-    const r = await call('push', { type: 'background', data: { a: 'b' } });
-    expect(r.error).toBe(true);
-    expect(r.text).toContain('dev.appdyno.fixture has no Firebase Messaging');
   });
 });
 
@@ -140,8 +138,7 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
       /alert: FCM's own message to the app's Firebase SDK, as Google Play services hands it, by run-as on its debuggable build/,
     );
     expect(types).toMatch(/background: FCM's own message .*onMessageReceived gets it wherever/);
-    expect(types).toContain('inbox: drawn by the shell in the inbox style');
-    expect(types).toContain('FCM has no such style');
+    expect(types).toContain('inbox: no: an Android app draws its inbox style itself');
   });
 
   it('hands its code a data message in front, away and not running, each value as given', async () => {
@@ -334,7 +331,7 @@ describe.skipIf(!ANDROID)('an Android emulator with FCM set up, over MCP', () =>
     const types = (await call('push')).text;
     expect(types).toContain('background: FCM, data alone');
     expect(types).toContain('alert: FCM, a notification');
-    expect(types).toContain('inbox: drawn by the shell');
+    expect(types).toContain('inbox: no: an Android app draws its inbox style itself');
     await call('launch_app');
     const quiet = await call('push', { type: 'background', data: { sync: '7' } });
     expect(quiet.text).toContain(`no registration token from ${APP} in this session (NOT_FOUND)`);

@@ -63,13 +63,8 @@ export class AndroidEvents implements DeviceEvents {
     if (this.fcm.routes().some((r) => r.type === push.type)) return this.fcm.push(app, push);
     if (!BY_TYPE[push.type]) return this.pusher.send(app, push);
     const sender = await this.local.sender(app);
-    if ('by' in sender) return this.local.send(app, push, sender.by);
-    const route = LocalFcm.route(
-      ANDROID_PUSHES.find((r) => r.type === push.type)!,
-      sender,
-    );
-    if ('why' in route) throw new DeviceError('UNSUPPORTED', route.why);
-    return this.pusher.send(app, push, sender.why);
+    if ('why' in sender) throw new DeviceError('UNSUPPORTED', sender.why);
+    return this.local.send(app, push, sender.by);
   }
 
   pushToken(app: string, token: string) {

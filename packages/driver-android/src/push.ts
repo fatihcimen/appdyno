@@ -1,145 +1,72 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { PUSH_PLACEHOLDERS, run, type Push, type PushRoute, type PushType } from '@appdyno/core';
+import {
+  PUSH_PLACEHOLDERS,
+  PUSH_TYPES,
+  type Push,
+  type PushRoute,
+  type PushType,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from './adb.js';
 
-/** What only FCM's own message gives the app's code. */
-export const FCM_ONLY: Partial<Record<PushType, string>> = {
-  background: "a data message reaches the app's code only as FCM's own message",
-  live_activity: "a Live Update is the app's own notification, built from FCM's own data message",
+/** What gives an app's code a push on Android: FCM's own message, to the app's own Firebase SDK. */
+const BY_FCM =
+  "the app's own Firebase SDK takes it, as FCM's own message: name an app with Firebase Messaging on a debuggable build, or set FCM up with `appdyno push setup fcm`";
+/** An Android style is the app's own notification, drawn by its code from what it was handed. */
+const style = (name: string) =>
+  `an Android app draws its ${name} style itself, from the data its code is handed: background, with that data, is the push for it`;
+const WHY: Partial<Record<PushType, string>> = {
+  inbox: style('inbox'),
+  messaging: style('messaging'),
+  media: style('media'),
+  voip: "PushKit's, an iOS push: a call reaches an Android app as a data message",
+  widgets: "WidgetKit's, an iOS push: an Android widget updates from the app's own code",
 };
-const TAKES_ONE =
-  'FCM set up, or a debuggable build of an app with Firebase Messaging, takes one here';
-const STYLES: Partial<Record<PushType, string>> = {
-  alert: 'bigtext',
-  rich: 'bigpicture',
-  inbox: 'inbox',
-  messaging: 'messaging',
-  media: 'media',
-};
-/** Where a style takes a line of the body each. */
-const LINES: Record<string, string> = {
-  inbox: ', a line of the body each',
-  messaging: ', a line of the body each, who: what',
-};
-/** Why the shell draws a style FCM takes no notification in. */
-const noStyle = (type: string) =>
-  type === 'alert' || type === 'rich' ? undefined : 'FCM has no such style';
 const DATA_KEY = /^[\w.-]{1,100}$/;
 /** `Intent.FLAG_ACTIVITY_CLEAR_TOP`. */
 const CLEAR_TOP = '0x04000000';
 
-/** An FCM message of placeholders, as the fields make one: what this tool reads of it. */
-const fcmTemplate = (type: PushType) => {
-  const { title, body, image, data } = PUSH_PLACEHOLDERS;
-  return JSON.stringify({
-    notification: { title, body, ...(type === 'rich' && { image }) },
-    data,
-  });
-};
-
 type Fcm = {
-  notification?: { title?: string; body?: string; image?: string; click_action?: string };
-  android?: {
-    notification?: { title?: string; body?: string; image?: string; click_action?: string };
-  };
+  notification?: { click_action?: string };
+  android?: { notification?: { click_action?: string } };
   data?: Record<string, unknown>;
 };
 
-/** A push's fields, from its own or from an FCM message given as its payload. */
-function fieldsOf(push: Push) {
-  const fcm = (push.payload ?? {}) as Fcm;
-  const shown = { ...fcm.notification, ...fcm.android?.notification };
-  const data = Object.entries(fcm.data ?? push.data ?? {}).map(([k, v]) => [k, String(v)] as const);
-  const bad = data.find(([k]) => !DATA_KEY.test(k));
-  if (bad)
-    throw new DeviceError(
-      'INVALID_ARGUMENT',
-      `a data key is letters, digits, _ . -: not ${bad[0]}`,
-    );
-  return {
-    title: shown.title ?? push.title ?? 'appdyno',
-    body: shown.body ?? push.body ?? '',
-    image: shown.image ?? push.image,
-    action: shown.click_action,
-    data,
-  };
-}
-
 /**
- * Each type on Android. The shell draws one, though not as the app: it can open nothing when tapped. `tapped` is what
- * Firebase documents for a push tapped while the app is in the background: the launcher activity, or the one
- * `click_action` names, opened with the data in its intent's extras.
+ * Each type on Android, where a push is always the app's own: what its code is handed as FCM's own message, by the
+ * routes beside this, or the tap on one. `tapped` is what Firebase documents for a push tapped while the app is in the
+ * background: the launcher activity, or the one `click_action` names, opened with the data in its intent's extras.
  * https://firebase.google.com/docs/cloud-messaging/android/receive
  */
-export const ANDROID_PUSHES: PushRoute[] = [
-  ...Object.entries(STYLES).map(([type, style]): PushRoute => ({
-    type: type as PushType,
-    route: `drawn by the shell in the ${style} style${LINES[style] ?? ''}; ${noStyle(type) ? `${noStyle(type)}, and ` : ''}the app's code gets nothing`,
-    fields: type === 'rich' ? ['title', 'body', 'image'] : ['title', 'body'],
-    template: fcmTemplate(type as PushType),
-  })),
-  {
-    type: 'tapped',
-    route: "the launcher activity, or click_action's, opened with the data as extras",
-    fields: ['data'],
-    template: fcmTemplate('tapped'),
-  },
-  { type: 'background', why: `${FCM_ONLY.background}: ${TAKES_ONE}` },
-  { type: 'live_activity', why: `${FCM_ONLY.live_activity}: ${TAKES_ONE}` },
-  { type: 'voip', why: "PushKit's, an iOS push: a call reaches an Android app as a data message" },
-  {
-    type: 'widgets',
-    why: "WidgetKit's, an iOS push: an Android widget updates from the app's own code",
-  },
-];
+export const ANDROID_PUSHES: PushRoute[] = PUSH_TYPES.map((type) =>
+  type === 'tapped'
+    ? {
+        type,
+        route: "the launcher activity, or click_action's, opened with the data as extras",
+        fields: ['data'],
+        template: JSON.stringify({ data: PUSH_PLACEHOLDERS.data }),
+      }
+    : { type, why: WHY[type] ?? BY_FCM },
+);
 
+/** A tapped push: it draws nothing, and opens the app as a person's tap on its push does. */
 export class AndroidPush {
   constructor(private readonly sh: (command: string) => Promise<string>) {}
 
-  /** `why`: why the app's code cannot be given this push here, for an answer that says so. */
-  async send(app: string, push: Push, why?: string): Promise<string> {
+  async send(app: string, push: Push): Promise<string> {
+    const route = ANDROID_PUSHES.find((r) => r.type === push.type);
+    if (!route || 'why' in route) throw new DeviceError('UNSUPPORTED', route?.why ?? push.type);
     const pkg = assertPkg(app);
-    const f = fieldsOf(push);
-    if (push.type === 'tapped') return this.tapped(pkg, f.action, f.data);
-    const style = STYLES[push.type];
-    if (!style) throw new DeviceError('UNSUPPORTED', `Android takes no ${push.type} push here`);
-    const lines = f.body.split('\n').filter(Boolean);
-    const args =
-      style === 'bigpicture'
-        ? ['--picture', await this.picture(f.image)]
-        : style === 'inbox'
-          ? lines.flatMap((l) => ['--line', shq(l)])
-          : style === 'messaging'
-            ? [
-                '--conversation',
-                shq(f.title),
-                ...lines.flatMap((l) => [
-                  '--message',
-                  shq(l.includes(':') ? l : `${f.title}:${l}`),
-                ]),
-              ]
-            : [];
-    const out = await this.sh(
-      `cmd notification post -S ${style} ${args.join(' ')} -t ${shq(f.title)} appdyno-${pkg} ${shq(lines[0] ?? f.title)}`,
+    const fcm = (push.payload ?? {}) as Fcm;
+    const action = { ...fcm.notification, ...fcm.android?.notification }.click_action;
+    const data = Object.entries(fcm.data ?? push.data ?? {}).map(
+      ([k, v]) => [k, String(v)] as const,
     );
-    if (/Exception|Error/.test(out))
+    const bad = data.find(([k]) => !DATA_KEY.test(k));
+    if (bad)
       throw new DeviceError(
-        'INTERNAL',
-        `the notification was not drawn: ${out.trim().split('\n')[0]}`,
+        'INVALID_ARGUMENT',
+        `a data key is letters, digits, _ . -: not ${bad[0]}`,
       );
-    const as = why ?? noStyle(push.type);
-    return `drawn by the shell in the ${style} style, not by ${pkg}: its code got nothing${as ? `, as ${as}` : ''}, and a tap opens nothing; type tapped opens it as a tapped push`;
-  }
-
-  /** As a person's tap on a push opens the app: its activity, with the data as extras. */
-  private async tapped(
-    pkg: string,
-    action: string | undefined,
-    data: (readonly [string, string])[],
-  ) {
     let target = `-a ${shq(action ?? '')} -p ${pkg}`;
     if (!action) {
       const out = await this.sh(
@@ -156,44 +83,5 @@ export class AndroidPush {
     if (/Error|Exception/.test(out))
       throw new DeviceError('NOT_FOUND', `the app did not open: ${out.trim().split('\n').at(-1)}`);
     return `opened ${pkg} as a tapped push, with ${data.length} data keys as extras`;
-  }
-
-  /**
-   * The image as the shell takes it, from a link or a file on this Mac: in the command itself, as the system cannot
-   * read the shell's files, made small enough for one argument.
-   */
-  private async picture(image: string | undefined) {
-    if (!image)
-      throw new DeviceError('INVALID_ARGUMENT', 'a rich push needs image: a link or a file');
-    const dir = mkdtempSync(join(tmpdir(), 'appdyno-push-'));
-    try {
-      let file = image;
-      if (/^https?:\/\//.test(image)) {
-        const r = await fetch(image);
-        if (!r.ok)
-          throw new DeviceError('NOT_FOUND', `the image did not come: ${r.status} from ${image}`);
-        file = join(dir, 'picture');
-        writeFileSync(file, Buffer.from(await r.arrayBuffer()));
-      }
-      const small = join(dir, 'small.jpg');
-      await run('sips', [
-        '-s',
-        'format',
-        'jpeg',
-        '-s',
-        'formatOptions',
-        '70',
-        '-Z',
-        '720',
-        file,
-        '--out',
-        small,
-      ]).catch(() => {
-        throw new DeviceError('INVALID_ARGUMENT', `not an image this Mac reads: ${image}`);
-      });
-      return `data:base64,${readFileSync(small).toString('base64')}`;
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
   }
 }

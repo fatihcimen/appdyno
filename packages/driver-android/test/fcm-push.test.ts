@@ -162,7 +162,7 @@ describe('a push by FCM', () => {
 });
 
 describe("an Android device's pushes, by FCM once it is set up", () => {
-  it("go by FCM for what only Google delivers, read the app's own logcat for its token, and keep the shell's styles", async () => {
+  it("go by FCM for what only Google delivers, read the app's own logcat for its token, and leave a style to the app", async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-fcm-')));
     const asked: string[] = [];
     const adb = {
@@ -177,7 +177,7 @@ describe("an Android device's pushes, by FCM once it is set up", () => {
     const events = new AndroidEvents(adb as never, 'emulator-5554');
     const route = async (type: string) => (await events.pushRoutes()).find((r) => r.type === type)!;
     expect(await route('background')).toMatchObject({
-      why: expect.stringContaining("only as FCM's own message"),
+      why: expect.stringContaining("the app's own Firebase SDK takes it, as FCM's own message"),
     });
     keepFcmKey(ACCOUNT);
     expect(await route('background')).toMatchObject({
@@ -185,7 +185,7 @@ describe("an Android device's pushes, by FCM once it is set up", () => {
       tokens: ['device'],
     });
     expect(await route('inbox')).toMatchObject({
-      route: expect.stringContaining('drawn by the shell'),
+      why: expect.stringContaining('draws its inbox style itself'),
     });
     // a person types a token only for what goes by FCM
     expect('tokens' in (await route('inbox'))).toBe(false);
