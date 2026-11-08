@@ -201,7 +201,7 @@ Kablosuyla bağlı bir iPhone 13 Pro Max'te çalıştırıldı: fixture'ın veri
 
 ## Yavaş bir ağ
 
-Bir emülatörde `network` `slow` konsolu üzerinden gider: iki yönde EDGE hızı ve 40 ile 100 ms arası gecikme. Android 13'ten itibaren bir telefonda yalnızca Android'in kendi sınırı vardır, `ingress_rate_limit_bytes_per_second`: `slow` indirmeyi bir EDGE ağının indirme hızı olan 30 kB/s ile sınırlar; bir sayı da onu bir telefonda ya da emülatörde saniyede o kadar bayta sınırlar. Gecikme eklemez ve yüklemeleri tam hızda bırakır, yanıt da bunu söyler. Sınır cihazın tuttuğu bir ayardır, bu yüzden eskisi not edilir ve `restore` onu siler. Bir API 34 emülatöründe bu Mac'ten bir megabayt 778 ms sürdü, 100.000'lik bir sınır altında 11,2 s; `restore`'dan sonra sınır kalkmıştı. Aşağıda bir Samsung'da da çalıştırıldı.
+Bir emülatörde `network` `slow` konsolu üzerinden gider: iki yönde EDGE hızı ve 40 ile 100 ms arası gecikme. Android 13'ten itibaren bir telefonda yalnızca Android'in kendi sınırı vardır, `ingress_rate_limit_bytes_per_second`: `slow` indirmeyi bir EDGE ağının indirme hızı olan 30 kB/s ile sınırlar; bir sayı da onu bir telefonda ya da emülatörde saniyede o kadar bayta sınırlar. Gecikme eklemez ve yüklemeleri tam hızda bırakır, yanıt da bunu söyler. Sınır cihazın tuttuğu bir ayardır, bu yüzden eskisi not edilir ve `restore` onu siler. Bir API 34 emülatöründe bu Mac'ten bir megabayt 778 ms sürdü, 100.000'lik bir sınır altında 11,2 s; `restore`'dan sonra sınır kalkmıştı. Bir Samsung'da da çalıştırıldı: bkz. [Bir iPhone'un kendi koşulları, verisi ve izinleri](#bir-iphoneun-kendi-koşulları-verisi-ve-izinleri) bölümünün sonu.
 
 ## Katlanma
 
