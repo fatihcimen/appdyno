@@ -384,7 +384,8 @@ describe('a command that loses data', () => {
     expect(yes.asked).toEqual([expect.stringMatching(/^Clear the data of dev\.app on .*\? /)]);
     const no = await runOn(['clear'], false);
     expect(no).toMatchObject({ code: 1, cleared: [] });
-    expect(no.err).toContain('the person declined app clear');
+    expect(no.err).toContain('app clear on');
+    expect(no.err).toContain('was not allowed: its question got no yes, and nothing was done');
   });
 
   it('takes --yes for the answer, and with nobody to ask refuses, saying so', async () => {

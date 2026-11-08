@@ -51,7 +51,7 @@ No tool reboots, erases or resets a device or a simulator, and none deletes a si
 removes what it made, and runs none of it.
 
 What loses data a person may want asks the person first: [the list](docs/reference/tools.md#what-asks-the-person-first).
-The client shows the question, the model cannot answer it, and a no does nothing. Where the client cannot ask, and over
+The client shows the question, the model cannot answer it, and a no does nothing. A client may answer no by itself, so the answer says the question got no yes, never that the person declined, and every refusal says how a person allows it ahead. Where the client cannot ask, and over
 `--http`, it is refused, unless the person started the server with `--allow-data-loss virtual` (simulators and
 emulators) or `all`. Nothing a tool call carries sets that or stands for a yes. A model that can change the client's
 settings or run a shell is past what the server can hold back: it can run `appdyno` with `--yes`, or `adb` itself, and

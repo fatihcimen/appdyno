@@ -51,7 +51,7 @@ herhangi bir kaynak bunun bir yolunu kazanırsa `packages/appdyno/test/device-re
 nasıl kaldıracağını söyler ve bunların hiçbirini çalıştırmaz.
 
 Bir kişinin isteyebileceği veriyi kaybettiren işlem önce o kişiye sorar: [liste](docs/reference/tools.tr.md#önce-kişiye-sorulanlar).
-Soruyu istemci gösterir, model onu yanıtlayamaz ve bir hayır hiçbir şey yaptırmaz. İstemcinin soramadığı yerde ve
+Soruyu istemci gösterir, model onu yanıtlayamaz ve bir hayır hiçbir şey yaptırmaz. Bir istemci kendi kendine hayır diyebilir, bu yüzden yanıt soruya evet gelmediğini söyler, asla kişinin reddettiğini değil; her ret de bir kişinin buna önceden nasıl izin vereceğini söyler. İstemcinin soramadığı yerde ve
 `--http` üzerinden işlem reddedilir; ancak kişi sunucuyu `--allow-data-loss virtual` (simülatörler ve
 emülatörler) ya da `all` ile başlattıysa reddedilmez. Bir araç çağrısının taşıdığı hiçbir şey bunu ayarlamaz ya da evet yerine geçmez. İstemcinin
 ayarlarını değiştirebilen ya da bir kabuk çalıştırabilen bir model, sunucunun durdurabileceklerinin ötesindedir: `appdyno`'yu `--yes` ile ya da doğrudan `adb`'yi çalıştırabilir ve

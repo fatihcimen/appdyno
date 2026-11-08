@@ -62,11 +62,13 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
     await Promise.all(clients.splice(0).map((c) => c.close()));
   });
 
-  it('leaves the data on a no, and says the person declined', async () => {
+  it('leaves the data on a no, never says a person declined, and says how a person allows it ahead', async () => {
     const r = await (await connect('decline'))('app', { action: 'clear', app: APP });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(
-      new RegExp(`^the person declined app clear on .*${SIMULATOR}.*: nothing was done$`),
+      new RegExp(
+        `^PERMISSION_REQUIRED: app clear on .*${SIMULATOR}.* was not allowed: its question got no yes, and nothing was done\\nhint: a client may answer no by itself, with no person shown the question; a person allows it ahead in this server's own command line: --allow-data-loss virtual`,
+      ),
     );
     expect(asked).toEqual([
       expect.stringMatching(
@@ -81,8 +83,8 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
   it('leaves the data where the client cannot ask, and says how a person allows it', async () => {
     const r = await (await connect())('app', { action: 'clear', app: APP });
     expect(r.error).toBe(true);
-    expect(r.text).toBe(
-      'app clear asks the person first, and this client cannot ask: nothing was done',
+    expect(r.text).toMatch(
+      /^PERMISSION_REQUIRED: app clear asks the person first, and this client cannot ask: nothing was done\nhint: a person allows it ahead in this server's own command line: --allow-data-loss virtual/,
     );
     expect(existsSync(kept())).toBe(true);
   }, 120_000);

@@ -41,8 +41,9 @@ export const DATA_LOSS_WORDS = Object.keys(DATA_LOSS)
   .map((k) => [k, ONLY[k as DataLoss]].filter(Boolean).join(' '))
   .join(', ');
 
-const ALLOW =
-  "a person allows it in this server's own command line: --allow-data-loss virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_DATA_LOSS); on the command line, --yes";
+/** How a person allows it ahead, as SECURITY.md has it: in what starts the server, which no tool call reaches. */
+const AHEAD =
+  "a person allows it ahead in this server's own command line: --allow-data-loss virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_DATA_LOSS)";
 
 /** Returns once the person said yes, or the policy allows it on this device; else refuses, with nothing done. */
 export async function approve(policy: Policy, s: Session, action: DataLoss, app = '', also = '') {
@@ -57,13 +58,13 @@ export async function approve(policy: Policy, s: Session, action: DataLoss, app 
     throw new ToolError(
       `${action} asks the person first, and this client cannot ask: nothing was done`,
       'PERMISSION_REQUIRED',
-      ALLOW,
+      `${AHEAD}; on the command line, --yes`,
     );
-  // a prompt closed, or one that never came back, is no yes
+  // a prompt closed, or one that never came back, is no yes: and a client may answer one itself, with no person shown it
   if (!(await ask(`${doing} on ${device}? ${lost}.`).catch(() => false)))
     throw new ToolError(
-      `the person declined ${action} on ${device}: nothing was done`,
+      `${action} on ${device} was not allowed: its question got no yes, and nothing was done`,
       'PERMISSION_REQUIRED',
-      'ask again only if the person asks for it',
+      `a client may answer no by itself, with no person shown the question; ${AHEAD}; ask again only if the person asks for it`,
     );
 }

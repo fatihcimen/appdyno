@@ -69,7 +69,7 @@ Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri k
 
 Sunucu, istemcinin bunu yapabildiğini bildirdiği yerde istemcinin kendi sorusuyla, yani MCP elicitation ile sorar; istemci bunu bir 2025
 revizyonunda `initialize`'da, 2026-07-28'de ise her istekte bildirir; soru cihazı, uygulamayı ve neyin kaybolacağını söyler. Model onu yanıtlayamaz.
-Hayır yanıtında ya da kapatılan bir soruda hiçbir şey yapılmaz ve yanıt kişinin reddettiğini söyler. 2026-07-28'de hiçbir istek
+Hayır yanıtında ya da kapatılan bir soruda hiçbir şey yapılmaz; yanıt, sorusuna evet gelmediğini söyler, asla bir kişinin reddettiğini değil: bir istemci kendi kendine yanıt verebilir; arayüzü olmadan çalışan biri, soruyu hiçbir kişiye göstermeden 9 ms'de hayır dedi. Her reddin ipucu, bir kişinin buna önceden nasıl izin vereceğini aşağıdaki bayrakla söyler, bir hayırınki de. 2026-07-28'de hiçbir istek
 istemciye geri gitmez, bu yüzden çağrı turunu soruyla bitirir ve istemci yanıtı çağrıyla geri getirir: çağrı durduğu yerde
 bekler, böylece aynı `steps` içinde ondan önceki bir adım yeniden yapılmaz; 5 dakika içinde gelmeyen
 bir yanıt hayır sayılır. Soramayan bir istemci `PERMISSION_REQUIRED` ve bir kişinin buna nasıl izin vereceğiyle reddedilir;

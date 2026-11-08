@@ -15,6 +15,10 @@ import { linkedClient, REVISIONS, type Revision } from './helpers.js';
 
 const folder = mkdtempSync(join(tmpdir(), 'appdyno-approval-'));
 
+/** How a person allows it ahead, which every refusal's hint says. */
+const AHEAD =
+  "a person allows it ahead in this server's own command line: --allow-data-loss virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_DATA_LOSS)";
+
 type Kind = { grantResets?: boolean };
 
 /** Each action that loses data, its call, what the driver is asked to do by it, and the device it loses data on. */
@@ -116,7 +120,8 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
       if (tool === 'app') expect(asked[0]).toContain('dev.app');
     });
 
-    it('does nothing on a no or a closed prompt, and says the person declined', async () => {
+    it('does nothing on a no or a closed prompt, never says a person declined, and says how a person allows it ahead', async () => {
+      // a client may answer by itself, with no person shown the question, as one run headless did in 9 ms
       for (const answer of ['decline', 'cancel'] as const) {
         const { call, done, asked } = await on({ ...kind, answer });
         const r = await call(tool, args);
@@ -124,8 +129,12 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
         expect(r.code).toBe('PERMISSION_REQUIRED');
         expect(r.text).toMatch(
           new RegExp(
-            `^PERMISSION_REQUIRED: the person declined ${action} on .*: nothing was done\\nhint: ask again only if the person asks for it$`,
+            `^PERMISSION_REQUIRED: ${action} on .* was not allowed: its question got no yes, and nothing was done\\nhint: `,
           ),
+        );
+        expect(r.text).not.toMatch(/person declined/);
+        expect(r.hint).toBe(
+          `a client may answer no by itself, with no person shown the question; ${AHEAD}; ask again only if the person asks for it`,
         );
         expect(asked).toHaveLength(1);
         expect(done).toEqual([]);
@@ -138,7 +147,7 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
         const r = await call(tool, args);
         expect(r.error).toBe(true);
         expect(r.code).toBe('PERMISSION_REQUIRED');
-        expect(r.hint).toContain('--allow-data-loss virtual');
+        expect(r.hint).toBe(`${AHEAD}; on the command line, --yes`);
         expect(r.text).toBe(
           `PERMISSION_REQUIRED: ${action} asks the person first, and this client cannot ask: nothing was done\nhint: ${String(r.hint)}`,
         );

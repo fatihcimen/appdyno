@@ -69,7 +69,7 @@ These lose what a person may want, so each waits for the person's yes:
 
 The server asks by the client's own prompt, MCP elicitation, where the client declared it can, at `initialize` on a 2025
 revision and on each request on 2026-07-28, and names the device, the app and what is lost. The model cannot answer it.
-A no or a closed prompt does nothing, and the answer says the person declined. On 2026-07-28 no request goes back to a
+A no or a closed prompt does nothing, and the answer says its question got no yes, never that a person declined: a client may answer by itself, as one run headless answered no in 9 ms, with no person shown the question. Each refusal's hint says how a person allows it ahead, by the flag below, the hint of a no too. On 2026-07-28 no request goes back to a
 client, so the call ends its round with the question and the client brings the answer back with the call: the call waits
 where it stopped, so a step before it in the same `steps` is not done again, and an answer that does not come in 5
 minutes is a no. A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person allows it, and so is a
