@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 708" width="960" height="708" role="img" aria-labelledby="title desc">
+  <title id="title">Hangi cihazda ne çalışır</title>
+  <desc id="desc">iOS’ta simülatör ve iPhone, Android’de emülatör ve telefon. Ekranı okumak, dokunmak, yazmak, kaydırmak: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Deep link, universal link, App Link: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, seçili uygulamada; Emülatör çalışır; Telefon çalışır. Uygulamanın bağlantılarını listelemek: Simülatör çalışır, şema, alan adı; iPhone hayır, simülatörde okunur; Emülatör çalışır, App Link durumu; Telefon telefonda henüz denenmedi. Push bildirimi göndermek: Simülatör bir kısmı, notta yazdığı gibi, alert; APNs: fazlası; iPhone telefonda henüz denenmedi, APNs kurulunca; Emülatör bir kısmı, notta yazdığı gibi, 10 türün 6’sı; Telefon telefonda henüz denenmedi. Elle kullanılan canlı pencere: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, deneysel; Emülatör çalışır; Telefon çalışır, Android 10 ve üstü. Açılış, kare, bellek, CPU: Simülatör bir kısmı, notta yazdığı gibi, kare: main thread; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Video, log, çökme kaydı: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, uygulama logu yok; Emülatör çalışır; Telefon çalışır. Karanlık mod, yazı boyutu: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Biyometri: Simülatör çalışır, Face ID, Touch ID; iPhone hayır; Emülatör çalışır, parmak izi; Telefon hayır. Uçak modu, Wi-Fi, mobil veri: Simülatör hayır, Mac’in ağı; iPhone hayır; Emülatör çalışır; Telefon çalışır.</desc>
+  <style>
+    svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
+    .ground { fill: var(--ground); }
+    .band-h { fill: var(--host-band); }
+    .band-d { fill: var(--device-band); }
+    .card { fill: var(--card); stroke-width: 1.5; }
+    .s-h { stroke: var(--host); }
+    .s-d { stroke: var(--device); }
+    .s-p { stroke: var(--person); }
+    .f-h { fill: var(--host); }
+    .f-d { fill: var(--device); }
+    .f-p { fill: var(--person); }
+    .line { fill: none; stroke-width: 2; }
+    .rule { fill: none; stroke: var(--soft); stroke-width: 1; stroke-dasharray: 3 5; }
+    .dash { stroke-dasharray: 6 5; }
+    .label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; fill: var(--soft); }
+    .big { font-size: 22px; font-weight: 700; }
+    .name { font-size: 16px; font-weight: 600; }
+    .text { font-size: 14px; fill: var(--soft); }
+    .note { font-size: 14px; fill: var(--ink); }
+    .code { font-size: 13px; fill: var(--soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .on-h { fill: var(--host); font-weight: 600; }
+    .on-d { fill: var(--device); font-weight: 600; }
+    .on-p { fill: var(--person); font-weight: 600; }
+    .mid { text-anchor: middle; }
+    .end { text-anchor: end; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-h" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-d" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
+  </defs>
+
+  <rect class="ground" width="960" height="708" rx="16"/>
+
+  <rect class="band-h" x="380" y="24" width="272" height="630" rx="20"/>
+  <rect class="band-d" x="664" y="24" width="272" height="630" rx="20"/>
+  <text class="label" x="44" y="50">BİR AJANIN YAPABİLDİKLERİ</text>
+  <text class="label" x="398" y="50">iOS</text>
+  <text class="label" x="682" y="50">ANDROID</text>
+  <text class="name mid" x="446" y="84">Simülatör</text>
+  <text class="text mid" x="446" y="106">Xcode ile</text>
+  <text class="name mid" x="586" y="84">iPhone</text>
+  <text class="text mid" x="586" y="106">Geliştirici Modu</text>
+  <text class="name mid" x="726" y="84">Emülatör</text>
+  <text class="text mid" x="726" y="106">bir AVD</text>
+  <text class="name mid" x="866" y="84">Telefon</text>
+  <text class="text mid" x="866" y="106">USB hata ayıklama</text>
+
+  <path class="rule" d="M32 124H936"/>
+  <text class="note" x="44" y="155">Ekranı okumak, dokunmak, yazmak, kaydırmak</text>
+  <circle class="f-h" cx="446" cy="150" r="7"/>
+  <circle class="f-h" cx="586" cy="150" r="7"/>
+  <circle class="f-d" cx="726" cy="150" r="7"/>
+  <circle class="f-d" cx="866" cy="150" r="7"/>
+  <path class="rule" d="M32 176H936"/>
+  <text class="note" x="44" y="207">Deep link, universal link, App Link</text>
+  <circle class="f-h" cx="446" cy="202" r="7"/>
+  <circle class="card s-h" cx="586" cy="193" r="7"/><path class="f-h" d="M586 186A7 7 0 0 0 586 200Z"/>
+  <text class="text mid" x="586" y="219">seçili uygulamada</text>
+  <circle class="f-d" cx="726" cy="202" r="7"/>
+  <circle class="f-d" cx="866" cy="202" r="7"/>
+  <path class="rule" d="M32 228H936"/>
+  <text class="note" x="44" y="259">Uygulamanın bağlantılarını listelemek</text>
+  <circle class="f-h" cx="446" cy="245" r="7"/>
+  <text class="text mid" x="446" y="271">şema, alan adı</text>
+  <text class="name mid" x="586" y="250">–</text>
+  <text class="text mid" x="586" y="271">simülatörde okunur</text>
+  <circle class="f-d" cx="726" cy="245" r="7"/>
+  <text class="text mid" x="726" y="271">App Link durumu</text>
+  <circle class="card s-d dash" cx="866" cy="254" r="7"/>
+  <path class="rule" d="M32 280H936"/>
+  <text class="note" x="44" y="311">Push bildirimi göndermek</text>
+  <circle class="card s-h" cx="446" cy="297" r="7"/><path class="f-h" d="M446 290A7 7 0 0 0 446 304Z"/>
+  <text class="text mid" x="446" y="323">alert; APNs: fazlası</text>
+  <circle class="card s-h dash" cx="586" cy="297" r="7"/>
+  <text class="text mid" x="586" y="323">APNs kurulunca</text>
+  <circle class="card s-d" cx="726" cy="297" r="7"/><path class="f-d" d="M726 290A7 7 0 0 0 726 304Z"/>
+  <text class="text mid" x="726" y="323">10 türün 6’sı</text>
+  <circle class="card s-d dash" cx="866" cy="306" r="7"/>
+  <path class="rule" d="M32 332H936"/>
+  <text class="note" x="44" y="363">Elle kullanılan canlı pencere</text>
+  <circle class="f-h" cx="446" cy="358" r="7"/>
+  <circle class="card s-h" cx="586" cy="349" r="7"/><path class="f-h" d="M586 342A7 7 0 0 0 586 356Z"/>
+  <text class="text mid" x="586" y="375">deneysel</text>
+  <circle class="f-d" cx="726" cy="358" r="7"/>
+  <circle class="f-d" cx="866" cy="349" r="7"/>
+  <text class="text mid" x="866" y="375">Android 10 ve üstü</text>
+  <path class="rule" d="M32 384H936"/>
+  <text class="note" x="44" y="415">Açılış, kare, bellek, CPU</text>
+  <circle class="card s-h" cx="446" cy="401" r="7"/><path class="f-h" d="M446 394A7 7 0 0 0 446 408Z"/>
+  <text class="text mid" x="446" y="427">kare: main thread</text>
+  <circle class="f-h" cx="586" cy="410" r="7"/>
+  <circle class="f-d" cx="726" cy="410" r="7"/>
+  <circle class="f-d" cx="866" cy="410" r="7"/>
+  <path class="rule" d="M32 436H936"/>
+  <text class="note" x="44" y="467">Video, log, çökme kaydı</text>
+  <circle class="f-h" cx="446" cy="462" r="7"/>
+  <circle class="card s-h" cx="586" cy="453" r="7"/><path class="f-h" d="M586 446A7 7 0 0 0 586 460Z"/>
+  <text class="text mid" x="586" y="479">uygulama logu yok</text>
+  <circle class="f-d" cx="726" cy="462" r="7"/>
+  <circle class="f-d" cx="866" cy="462" r="7"/>
+  <path class="rule" d="M32 488H936"/>
+  <text class="note" x="44" y="519">Karanlık mod, yazı boyutu</text>
+  <circle class="f-h" cx="446" cy="514" r="7"/>
+  <circle class="f-h" cx="586" cy="514" r="7"/>
+  <circle class="f-d" cx="726" cy="514" r="7"/>
+  <circle class="f-d" cx="866" cy="514" r="7"/>
+  <path class="rule" d="M32 540H936"/>
+  <text class="note" x="44" y="571">Biyometri</text>
+  <circle class="f-h" cx="446" cy="557" r="7"/>
+  <text class="text mid" x="446" y="583">Face ID, Touch ID</text>
+  <text class="name mid" x="586" y="571">–</text>
+  <circle class="f-d" cx="726" cy="557" r="7"/>
+  <text class="text mid" x="726" y="583">parmak izi</text>
+  <text class="name mid" x="866" y="571">–</text>
+  <path class="rule" d="M32 592H936"/>
+  <text class="note" x="44" y="623">Uçak modu, Wi-Fi, mobil veri</text>
+  <text class="name mid" x="446" y="614">–</text>
+  <text class="text mid" x="446" y="635">Mac’in ağı</text>
+  <text class="name mid" x="586" y="623">–</text>
+  <circle class="f-d" cx="726" cy="618" r="7"/>
+  <circle class="f-d" cx="866" cy="618" r="7"/>
+
+  <circle class="f-h" cx="52" cy="673" r="7"/>
+  <text class="text" x="68" y="678">çalışır</text>
+  <circle class="card s-h" cx="132" cy="673" r="7"/><path class="f-h" d="M132 666A7 7 0 0 0 132 680Z"/>
+  <text class="text" x="148" y="678">bir kısmı, notta yazdığı gibi</text>
+  <text class="name mid" x="382" y="678">–</text>
+  <text class="text" x="398" y="678">hayır</text>
+  <circle class="card s-h dash" cx="456" cy="673" r="7"/>
+  <text class="text" x="472" y="678">telefonda henüz denenmedi</text>
+</svg>

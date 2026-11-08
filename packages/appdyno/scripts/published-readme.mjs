@@ -4,7 +4,7 @@
 export const publishedReadme = (text, repository) => {
   const home = repository.replace(/^git\+/, '').replace(/\.git$/, '');
   return text
-    .replace(/(<img[^>]* src=")(?![a-z]+:)/g, `$1${home}/raw/main/`)
+    .replace(/(<img[^>]* src="|<source[^>]* srcset=")(?![a-z]+:)/g, `$1${home}/raw/main/`)
     .replace(/(!\[[^\]]*\]\()(?![a-z]+:)/g, `$1${home}/raw/main/`)
     .replace(/(^|[^!])(\[[^\]]*\]\()(?![a-z]+:|#)/gm, `$1$2${home}/blob/main/`);
 };

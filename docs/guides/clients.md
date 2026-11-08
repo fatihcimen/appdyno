@@ -51,7 +51,7 @@ brew install --cask you/tools/appdyno
 
 You need a Mac and Node 22 or newer. Check with `node --version`; if it says "command not found", install the LTS from [nodejs.org](https://nodejs.org/).
 
-appdyno is not on the npm registry yet. Until it is, build it from a checkout, which also needs pnpm and a JDK 25:
+appdyno is not on the npm registry yet. Until it is, build it from a checkout, which also needs pnpm, a JDK 25 and the Android SDK, as it builds the agent appdyno puts on an Android device:
 
 ```sh
 sh scripts/install.sh      # builds this checkout and installs the appdyno command

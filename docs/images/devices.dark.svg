@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 708" width="960" height="708" role="img" aria-labelledby="title desc">
+  <title id="title">What works on each device</title>
+  <desc id="desc">On iOS a simulator and an iPhone, on Android an emulator and a phone. Read the screen, tap, type, swipe: Simulator works; iPhone works; Emulator works; Phone works. Open a deep link, universal or App Link: Simulator works; iPhone part of it, as the note says, in a named app; Emulator works; Phone works. List the links an app opens: Simulator works, schemes, domains; iPhone no, use a simulator; Emulator works, App Link state; Phone not run on a phone yet. Send a push notification: Simulator part of it, as the note says, alert; APNs: more; iPhone not run on a phone yet, APNs, once set up; Emulator part of it, as the note says, 6 of 10 types; Phone not run on a phone yet. Live window, by hand: Simulator works; iPhone part of it, as the note says, experimental; Emulator works; Phone works, Android 10 and up. Launch, frames, memory, CPU: Simulator part of it, as the note says, frames: main thread; iPhone works; Emulator works; Phone works. Video, logs, crashes: Simulator works; iPhone part of it, as the note says, no app log; Emulator works; Phone works. Dark mode, text size: Simulator works; iPhone works; Emulator works; Phone works. Biometrics: Simulator works, Face ID, Touch ID; iPhone no; Emulator works, fingerprint; Phone no. Airplane, Wi-Fi, mobile data: Simulator no, the Mac's network; iPhone no; Emulator works; Phone works.</desc>
+  <style>
+    svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
+    .ground { fill: var(--ground); }
+    .band-h { fill: var(--host-band); }
+    .band-d { fill: var(--device-band); }
+    .card { fill: var(--card); stroke-width: 1.5; }
+    .s-h { stroke: var(--host); }
+    .s-d { stroke: var(--device); }
+    .s-p { stroke: var(--person); }
+    .f-h { fill: var(--host); }
+    .f-d { fill: var(--device); }
+    .f-p { fill: var(--person); }
+    .line { fill: none; stroke-width: 2; }
+    .rule { fill: none; stroke: var(--soft); stroke-width: 1; stroke-dasharray: 3 5; }
+    .dash { stroke-dasharray: 6 5; }
+    .label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; fill: var(--soft); }
+    .big { font-size: 22px; font-weight: 700; }
+    .name { font-size: 16px; font-weight: 600; }
+    .text { font-size: 14px; fill: var(--soft); }
+    .note { font-size: 14px; fill: var(--ink); }
+    .code { font-size: 13px; fill: var(--soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .on-h { fill: var(--host); font-weight: 600; }
+    .on-d { fill: var(--device); font-weight: 600; }
+    .on-p { fill: var(--person); font-weight: 600; }
+    .mid { text-anchor: middle; }
+    .end { text-anchor: end; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-h" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-d" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
+  </defs>
+
+  <rect class="ground" width="960" height="708" rx="16"/>
+
+  <rect class="band-h" x="380" y="24" width="272" height="630" rx="20"/>
+  <rect class="band-d" x="664" y="24" width="272" height="630" rx="20"/>
+  <text class="label" x="44" y="50">WHAT AN AGENT CAN DO</text>
+  <text class="label" x="398" y="50">iOS</text>
+  <text class="label" x="682" y="50">ANDROID</text>
+  <text class="name mid" x="446" y="84">Simulator</text>
+  <text class="text mid" x="446" y="106">with Xcode</text>
+  <text class="name mid" x="586" y="84">iPhone</text>
+  <text class="text mid" x="586" y="106">developer mode</text>
+  <text class="name mid" x="726" y="84">Emulator</text>
+  <text class="text mid" x="726" y="106">an AVD</text>
+  <text class="name mid" x="866" y="84">Phone</text>
+  <text class="text mid" x="866" y="106">USB debugging</text>
+
+  <path class="rule" d="M32 124H936"/>
+  <text class="note" x="44" y="155">Read the screen, tap, type, swipe</text>
+  <circle class="f-h" cx="446" cy="150" r="7"/>
+  <circle class="f-h" cx="586" cy="150" r="7"/>
+  <circle class="f-d" cx="726" cy="150" r="7"/>
+  <circle class="f-d" cx="866" cy="150" r="7"/>
+  <path class="rule" d="M32 176H936"/>
+  <text class="note" x="44" y="207">Open a deep link, universal or App Link</text>
+  <circle class="f-h" cx="446" cy="202" r="7"/>
+  <circle class="card s-h" cx="586" cy="193" r="7"/><path class="f-h" d="M586 186A7 7 0 0 0 586 200Z"/>
+  <text class="text mid" x="586" y="219">in a named app</text>
+  <circle class="f-d" cx="726" cy="202" r="7"/>
+  <circle class="f-d" cx="866" cy="202" r="7"/>
+  <path class="rule" d="M32 228H936"/>
+  <text class="note" x="44" y="259">List the links an app opens</text>
+  <circle class="f-h" cx="446" cy="245" r="7"/>
+  <text class="text mid" x="446" y="271">schemes, domains</text>
+  <text class="name mid" x="586" y="250">–</text>
+  <text class="text mid" x="586" y="271">use a simulator</text>
+  <circle class="f-d" cx="726" cy="245" r="7"/>
+  <text class="text mid" x="726" y="271">App Link state</text>
+  <circle class="card s-d dash" cx="866" cy="254" r="7"/>
+  <path class="rule" d="M32 280H936"/>
+  <text class="note" x="44" y="311">Send a push notification</text>
+  <circle class="card s-h" cx="446" cy="297" r="7"/><path class="f-h" d="M446 290A7 7 0 0 0 446 304Z"/>
+  <text class="text mid" x="446" y="323">alert; APNs: more</text>
+  <circle class="card s-h dash" cx="586" cy="297" r="7"/>
+  <text class="text mid" x="586" y="323">APNs, once set up</text>
+  <circle class="card s-d" cx="726" cy="297" r="7"/><path class="f-d" d="M726 290A7 7 0 0 0 726 304Z"/>
+  <text class="text mid" x="726" y="323">6 of 10 types</text>
+  <circle class="card s-d dash" cx="866" cy="306" r="7"/>
+  <path class="rule" d="M32 332H936"/>
+  <text class="note" x="44" y="363">Live window, by hand</text>
+  <circle class="f-h" cx="446" cy="358" r="7"/>
+  <circle class="card s-h" cx="586" cy="349" r="7"/><path class="f-h" d="M586 342A7 7 0 0 0 586 356Z"/>
+  <text class="text mid" x="586" y="375">experimental</text>
+  <circle class="f-d" cx="726" cy="358" r="7"/>
+  <circle class="f-d" cx="866" cy="349" r="7"/>
+  <text class="text mid" x="866" y="375">Android 10 and up</text>
+  <path class="rule" d="M32 384H936"/>
+  <text class="note" x="44" y="415">Launch, frames, memory, CPU</text>
+  <circle class="card s-h" cx="446" cy="401" r="7"/><path class="f-h" d="M446 394A7 7 0 0 0 446 408Z"/>
+  <text class="text mid" x="446" y="427">frames: main thread</text>
+  <circle class="f-h" cx="586" cy="410" r="7"/>
+  <circle class="f-d" cx="726" cy="410" r="7"/>
+  <circle class="f-d" cx="866" cy="410" r="7"/>
+  <path class="rule" d="M32 436H936"/>
+  <text class="note" x="44" y="467">Video, logs, crashes</text>
+  <circle class="f-h" cx="446" cy="462" r="7"/>
+  <circle class="card s-h" cx="586" cy="453" r="7"/><path class="f-h" d="M586 446A7 7 0 0 0 586 460Z"/>
+  <text class="text mid" x="586" y="479">no app log</text>
+  <circle class="f-d" cx="726" cy="462" r="7"/>
+  <circle class="f-d" cx="866" cy="462" r="7"/>
+  <path class="rule" d="M32 488H936"/>
+  <text class="note" x="44" y="519">Dark mode, text size</text>
+  <circle class="f-h" cx="446" cy="514" r="7"/>
+  <circle class="f-h" cx="586" cy="514" r="7"/>
+  <circle class="f-d" cx="726" cy="514" r="7"/>
+  <circle class="f-d" cx="866" cy="514" r="7"/>
+  <path class="rule" d="M32 540H936"/>
+  <text class="note" x="44" y="571">Biometrics</text>
+  <circle class="f-h" cx="446" cy="557" r="7"/>
+  <text class="text mid" x="446" y="583">Face ID, Touch ID</text>
+  <text class="name mid" x="586" y="571">–</text>
+  <circle class="f-d" cx="726" cy="557" r="7"/>
+  <text class="text mid" x="726" y="583">fingerprint</text>
+  <text class="name mid" x="866" y="571">–</text>
+  <path class="rule" d="M32 592H936"/>
+  <text class="note" x="44" y="623">Airplane, Wi-Fi, mobile data</text>
+  <text class="name mid" x="446" y="614">–</text>
+  <text class="text mid" x="446" y="635">the Mac's network</text>
+  <text class="name mid" x="586" y="623">–</text>
+  <circle class="f-d" cx="726" cy="618" r="7"/>
+  <circle class="f-d" cx="866" cy="618" r="7"/>
+
+  <circle class="f-h" cx="52" cy="673" r="7"/>
+  <text class="text" x="68" y="678">works</text>
+  <circle class="card s-h" cx="132" cy="673" r="7"/><path class="f-h" d="M132 666A7 7 0 0 0 132 680Z"/>
+  <text class="text" x="148" y="678">part of it, as the note says</text>
+  <text class="name mid" x="382" y="678">–</text>
+  <text class="text" x="398" y="678">no</text>
+  <circle class="card s-h dash" cx="456" cy="673" r="7"/>
+  <text class="text" x="472" y="678">not run on a phone yet</text>
+</svg>

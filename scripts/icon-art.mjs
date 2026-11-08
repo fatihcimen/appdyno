@@ -207,13 +207,15 @@ function wordmark(x, baseline, height, stroke) {
   };
 }
 
-/** For the README: a dark page gets light letters, and the mark holds on both. */
-export function logo() {
-  const word = wordmark(176, 134, 76, INK);
+/**
+ * For the README, one for each theme: the README's <picture> picks by GitHub's theme, where a media query in the SVG
+ * would follow the system's, light letters on a light page. The mark holds on both.
+ */
+export function logo(letters = INK) {
+  const word = wordmark(176, 134, 76, letters);
   const width = Math.ceil(176 + word.width + 8);
   return (
     `<svg ${SVG} width="${width}" height="192" viewBox="0 0 ${width} 192" role="img" aria-label="appdyno">` +
-    `<style>@media (prefers-color-scheme:dark){.word{stroke:${PALE}}}</style>` +
     `<g transform="translate(16 36) scale(.1171875)"><path d="${MARK_UPPER}" fill="${BLUE}"/><path d="${MARK_LOWER}" fill="${VIOLET}"/></g>` +
     `${word.svg}</svg>\n`
   );
@@ -248,6 +250,7 @@ const androidArt = `<?xml version="1.0" encoding="utf-8"?>
 /** Every generated text in the repository, by path, so that a test can hold them to this file. */
 export const GENERATED = {
   'docs/images/logo.svg': logo(),
+  'docs/images/logo.dark.svg': logo(PALE),
   'mac/App/appdyno.icon/Assets/slab.svg': layer(`<path d="${SLAB}" fill="${NIGHT}"/>`),
   'mac/App/appdyno.icon/Assets/curve.svg': layer(
     `<defs><clipPath id="in"><path d="${SLAB}"/></clipPath></defs><path d="${UNDER_PULL}" fill="${WHITE}" clip-path="url(#in)"/>`,

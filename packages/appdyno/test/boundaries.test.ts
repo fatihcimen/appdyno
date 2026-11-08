@@ -191,7 +191,7 @@ describe('the phone stream', () => {
 });
 
 /**
- * What the clients are called has to be written somewhere, and only here: the list, how to set each up, and the two
+ * What the clients are called has to be written somewhere, and only here: the list, how to set each up, and the
  * places a person searching for one finds this tool.
  */
 const CLIENT_DATA = [
@@ -199,6 +199,7 @@ const CLIENT_DATA = [
   'docs/guides/clients.md',
   'docs/guides/clients.tr.md',
   'README.md',
+  'README.tr.md',
   'packages/appdyno/package.json',
 ];
 

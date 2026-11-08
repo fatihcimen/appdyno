@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 476" width="960" height="476" role="img" aria-labelledby="title desc">
+  <title id="title">Veri kaybettiren işi kişi onaylar</title>
+  <desc id="desc">Bir yapay zekâ ajanı bir uygulamanın verisini silmek ister. appdyno durur, çünkü bu bir kişinin isteyebileceği şeyleri kaybettirir, ve kişiye istemcinin kendi penceresinden sorar: uygulamayı, cihazı ve neyin kaybolacağını söyler. Kişi evet der; appdyno ancak o zaman cihazdaki veriyi siler ve ajana yanıt verir. Hayır derse ya da yanıt gelmezse hiçbir şey yapılmaz ve ajana bu söylenir. Ajanın gönderdiği hiçbir şey evet sayılmaz.</desc>
+  <style>
+    svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
+    .ground { fill: var(--ground); }
+    .band-h { fill: var(--host-band); }
+    .band-d { fill: var(--device-band); }
+    .card { fill: var(--card); stroke-width: 1.5; }
+    .s-h { stroke: var(--host); }
+    .s-d { stroke: var(--device); }
+    .s-p { stroke: var(--person); }
+    .f-h { fill: var(--host); }
+    .f-d { fill: var(--device); }
+    .f-p { fill: var(--person); }
+    .line { fill: none; stroke-width: 2; }
+    .rule { fill: none; stroke: var(--soft); stroke-width: 1; stroke-dasharray: 3 5; }
+    .dash { stroke-dasharray: 6 5; }
+    .label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; fill: var(--soft); }
+    .big { font-size: 22px; font-weight: 700; }
+    .name { font-size: 16px; font-weight: 600; }
+    .text { font-size: 14px; fill: var(--soft); }
+    .note { font-size: 14px; fill: var(--ink); }
+    .code { font-size: 13px; fill: var(--soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .on-h { fill: var(--host); font-weight: 600; }
+    .on-d { fill: var(--device); font-weight: 600; }
+    .on-p { fill: var(--person); font-weight: 600; }
+    .mid { text-anchor: middle; }
+    .end { text-anchor: end; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-h" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-d" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
+  </defs>
+
+  <rect class="ground" width="960" height="476" rx="16"/>
+
+  <!-- the agent -->
+  <text class="label" x="44" y="50">YAPAY ZEKÂ AJANINIZ</text>
+  <rect class="card s-p" x="32" y="66" width="250" height="150" rx="12"/>
+  <text class="name" x="52" y="98">Sorar</text>
+  <text class="text" x="52" y="122">Uygulamayı sıfırdan başlat:</text>
+  <text class="text" x="52" y="142">verisini sil.</text>
+  <text class="code" x="52" y="176">app {"action":"clear",</text>
+  <text class="code" x="52" y="196">"app":"dev.appdyno.fixture"}</text>
+
+  <rect class="card s-p" x="32" y="236" width="250" height="196" rx="12"/>
+  <text class="name" x="52" y="268">Geri alır</text>
+  <text class="text" x="52" y="292">evet derse, iş bitince</text>
+  <text class="code" x="52" y="318">cleared the data of</text>
+  <text class="code" x="52" y="338">dev.appdyno.fixture</text>
+  <text class="text" x="52" y="370">hayır derse ya da yanıt yoksa</text>
+  <text class="code" x="52" y="396">PERMISSION_REQUIRED</text>
+  <text class="code" x="52" y="416">nothing was done</text>
+
+  <!-- appdyno -->
+  <rect class="band-h" x="306" y="24" width="360" height="408" rx="20"/>
+  <text class="label" x="326" y="50">APPDYNO, MAC’İNİZDE</text>
+
+  <rect class="card s-h" x="322" y="66" width="328" height="72" rx="12"/>
+  <circle class="card s-h" cx="352" cy="102" r="15"/>
+  <text class="name on-h mid" x="352" y="108">1</text>
+  <text class="name" x="380" y="97">Durur</text>
+  <text class="text" x="380" y="121">bu veri kaybettirir: karar kişinin</text>
+
+  <rect class="card s-h" x="322" y="156" width="328" height="72" rx="12"/>
+  <circle class="card s-h" cx="352" cy="192" r="15"/>
+  <text class="name on-h mid" x="352" y="198">2</text>
+  <text class="name" x="380" y="187">Kişiye sorar</text>
+  <text class="text" x="380" y="211">istemcinin kendi penceresinde</text>
+
+  <rect class="card s-h" x="322" y="300" width="328" height="72" rx="12"/>
+  <circle class="card s-h" cx="352" cy="336" r="15"/>
+  <text class="name on-h mid" x="352" y="342">4</text>
+  <text class="name" x="380" y="331">Çalıştırır</text>
+  <text class="text" x="380" y="355">cihazda, evet geldikten sonra</text>
+
+  <text class="text" x="326" y="410">Soru soramayan istemci reddedilir.</text>
+
+  <!-- the person -->
+  <text class="label" x="716" y="50">KİŞİ</text>
+  <rect class="card s-p" x="706" y="66" width="230" height="200" rx="14"/>
+  <text class="note" x="724" y="98">Clear the data of</text>
+  <text class="note" x="724" y="120">dev.appdyno.fixture on</text>
+  <text class="note" x="724" y="142">iPhone 17 Pro (…)?</text>
+  <text class="text" x="724" y="170">All it keeps there is</text>
+  <text class="text" x="724" y="190">lost for good.</text>
+  <rect class="card s-p" x="722" y="214" width="96" height="34" rx="8"/>
+  <text class="note mid" x="770" y="236">Decline</text>
+  <rect class="card s-p" x="826" y="214" width="96" height="34" rx="8"/>
+  <text class="note" x="846" y="236">Accept</text>
+  <circle class="f-p" cx="906" cy="231" r="5"/>
+
+  <circle class="card s-p" cx="724" cy="336" r="15"/>
+  <text class="name on-p mid" x="724" y="342">3</text>
+  <text class="name" x="748" y="331">Evet der</text>
+  <text class="text" x="748" y="355">ajan onun yerine</text>
+  <text class="text" x="748" y="375">yanıt veremez</text>
+
+  <!-- the way there and back -->
+  <path class="line s-p" marker-end="url(#ap)" d="M282 102H320"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M486 138V154"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M650 192H704"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M724 266V319"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M708 336H652"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M322 336H284"/>
+
+  <text class="note mid" x="480" y="458">Evet yalnızca kişiden gelir: ajanın gönderdiği hiçbir şey evet sayılmaz.</text>
+</svg>

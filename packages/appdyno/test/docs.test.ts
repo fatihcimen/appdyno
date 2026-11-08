@@ -31,7 +31,7 @@ const linksOf = (text: string) =>
     ...text
       .replace(/```[^]*?```/g, '')
       .replace(/`[^`\n]*`/g, '')
-      .matchAll(/\]\(([^)\s]+)\)|<img[^>]* src="([^"]+)"/g),
+      .matchAll(/\]\(([^)\s]+)\)|<(?:img[^>]* src|source[^>]* srcset)="([^"]+)"/g),
   ].map((m) => (m[1] ?? m[2])!);
 
 describe('the docs', () => {
@@ -70,22 +70,61 @@ describe('the docs', () => {
 
 const IMAGES = 'docs/images';
 const diagrams = readdirSync(join(root, IMAGES)).filter(
-  (f) => f.endsWith('.svg') && f !== 'logo.svg',
+  (f) => f.endsWith('.svg') && !f.startsWith('logo.'),
 );
 const drawn = (name: string) => read(`${IMAGES}/${name}.svg`).replace(/\s+/g, ' ');
 const styleOf = (text: string) => /<style>[^]*<\/defs>/.exec(text)?.[0];
+/**
+ * The look's dark half. A README's diagram comes made light and made dark, for its <picture> to pick by GitHub's theme:
+ * a media query in the SVG follows the system's, and draws a dark diagram on a light page.
+ */
+const DARK = /\n {4}@media \(prefers-color-scheme: dark\) \{\n {6}(svg \{[^}]*\})\n {4}\}/;
+const lightAndDark = (look: string) => {
+  const light = look.replace(DARK, '');
+  return { light, dark: light.replace(/svg \{[^}]*\}/, DARK.exec(look)![1]!) };
+};
+const lightOf = (dark: string) => dark.replace(/\.dark\.svg$/, '.svg');
 
 describe('a diagram', () => {
   it('is one of the set, in one look', () => {
     expect(diagrams.sort()).toEqual([
+      'approval.dark.svg',
+      'approval.svg',
+      'approval.tr.dark.svg',
+      'approval.tr.svg',
+      'devices.dark.svg',
+      'devices.svg',
+      'devices.tr.dark.svg',
+      'devices.tr.svg',
+      'one-call.dark.svg',
+      'one-call.svg',
+      'one-call.tr.dark.svg',
+      'one-call.tr.svg',
       'overview.svg',
       'package-map.svg',
       'perf-gate.svg',
       'tool-call.svg',
       'touch-and-frame.svg',
     ]);
-    const look = styleOf(read(`${IMAGES}/overview.svg`));
-    for (const f of diagrams) expect(styleOf(read(`${IMAGES}/${f}`)), f).toBe(look);
+    const look = styleOf(read(`${IMAGES}/overview.svg`))!;
+    const { light, dark } = lightAndDark(look);
+    expect(light).not.toBe(look);
+    const lights = diagrams.filter((f) => f.endsWith('.dark.svg')).map(lightOf);
+    for (const f of diagrams)
+      expect(styleOf(read(`${IMAGES}/${f}`)), f).toBe(
+        f.endsWith('.dark.svg') ? dark : lights.includes(f) ? light : look,
+      );
+  });
+
+  it("comes as a pair where a README shows it, picked by GitHub's theme", () => {
+    const readmes = read('README.md') + read('README.tr.md');
+    const path = (f: string) => `docs/images/${f}`.replaceAll('.', '\\.');
+    for (const f of diagrams.filter((f) => f.endsWith('.dark.svg')))
+      expect(readmes, f).toMatch(
+        new RegExp(
+          `<source media="\\(prefers-color-scheme: dark\\)" srcset="${path(f)}">\\s*<img src="${path(lightOf(f))}"`,
+        ),
+      );
   });
 
   it('renders on GitHub in both themes, with no font of ours', () => {
@@ -141,8 +180,9 @@ describe('a diagram', () => {
   });
 
   it('says of a settle what the settle does', () => {
-    const call = drawn('tool-call');
-    expect(call).toContain(`still for ${SETTLE.quietMs} ms,`);
-    expect(call).toContain(`at most ${SETTLE.maxMs / 1000} s`);
+    for (const call of [drawn('tool-call'), drawn('one-call'), drawn('one-call.dark')]) {
+      expect(call).toContain(`still for ${SETTLE.quietMs} ms,`);
+      expect(call).toContain(`at most ${SETTLE.maxMs / 1000} s`);
+    }
   });
 });
