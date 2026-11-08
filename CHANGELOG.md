@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- An iOS runner's read asks XCTest only for what its answer uses, 10 of the attributes XCTest fetches by default: on an iPhone 17 Pro simulator with iOS 27.2, Settings read in 56 ms against 71-73 and the home screen app in 43-44 against 54-55, the same trees, at load 6 to 8. Where XCTest lacks a part of its private request, the runner reads as before. An iPhone has not been measured yet.
 - `alert deny` on an iPhone's location prompt taps "Don't Allow": in Turkish it tapped the Precise Location switch, which comes after it twice.
 - An iPhone takes `app clear`, a `grant` or `revoke` as a reset to ask that `alert` answers, `locale` per app, and the phone's own `network` and new `thermal` conditions, as Xcode sets them. A condition the phone keeps after a killed process is turned off at the next start. Run on an iPhone 13 Pro Max; `network slow` was run on a Samsung too.
 - A simulator a person shuts down while a host has its runner stays down: its runner's xcodebuild booted it again 1 to 3 s later, to start the runner again, and shut it down once more about 30 s after. When the runner's connection drops and the simulator reads as shutting down, that xcodebuild is ended first. On an iPhone 17 Pro simulator with iOS 27.2, 3 of 3 stayed down for 40 s, at load 40 to 79. With no host connected, nothing sees the shutdown.

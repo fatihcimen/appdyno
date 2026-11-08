@@ -33,7 +33,7 @@ extension Device {
             }
         }
         let snap: XCUIElementSnapshot
-        do { snap = try app.snapshot() } catch {
+        do { snap = try KeyedSnapshot.of(app) ?? app.snapshot() } catch {
             throw AgentError("APP_NOT_RUNNING", "the screen could not be read: \(error.localizedDescription)")
         }
         // the app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480 on a bigger one
@@ -107,5 +107,52 @@ extension Device {
 
     func treeJSON(_ c: Capture, elapsedMs: Int) -> [String: Any] {
         treeWire(windows: c.windows, nodes: c.nodes, truncated: c.truncated, elapsedMs: elapsedMs, hash: c.hash)
+    }
+}
+
+/**
+ * An app's snapshot asking XCTest only for what `Device.node` reads, by private XCTest API: Settings' 167 elements took
+ * the runner 45-47 ms against 59-60 with all of XCTest's attributes, the same tree, on a simulator. Each part is looked
+ * up once and checked; where this XCTest lacks one, or a request fails, the public snapshot is taken.
+ */
+enum KeyedSnapshot {
+    /// What `Device.node` reads of a snapshot: a key it reads and this list lacks comes back empty.
+    private static let keys = ["identifier", "frame", "value", "label", "elementType", "enabled", "selected",
+                               "placeholderValue", "hasFocus", "hasKeyboardFocus"]
+    private typealias AttributesOf = @convention(c) (AnyClass, Selector, NSArray, Bool) -> AnyObject?
+    private typealias Request = @convention(c) (AnyObject, Selector, AnyObject, NSArray, NSDictionary,
+                                                UnsafeMutablePointer<NSError?>?) -> AnyObject?
+    private static let selRequest = NSSelectorFromString("requestSnapshotForElement:attributes:parameters:error:")
+
+    private static func ask(_ o: AnyObject, _ name: String) -> AnyObject? {
+        let sel = NSSelectorFromString(name)
+        return o.responds(to: sel) ? o.perform(sel)?.takeUnretainedValue() : nil
+    }
+
+    /// The accessibility client, its request, the attributes' own names and the parameters; nil where any is missing.
+    private static let parts: (client: AnyObject, request: Request, attributes: NSArray, parameters: NSDictionary)? = {
+        guard let snapshotClass: AnyClass = NSClassFromString("XCElementSnapshot"),
+              let client = ask(XCUIDevice.shared, "accessibilityInterface"),
+              let map = class_getClassMethod(snapshotClass, NSSelectorFromString("axAttributesForElementSnapshotKeyPaths:isMacOS:")),
+              let request = class_getInstanceMethod(object_getClass(client), selRequest),
+              let parameters = ask(client, "defaultParameters") as? NSDictionary
+        else {
+            NSLog("appdyno runner: snapshots ask XCTest for all it reads")
+            return nil
+        }
+        let mapped = unsafeBitCast(method_getImplementation(map), to: AttributesOf.self)(
+            snapshotClass, method_getName(map), keys as NSArray, false)
+        // an NSSet in Xcode 27.1, which the request refuses
+        guard let attributes = (mapped as? NSArray) ?? ((mapped as? NSSet)?.allObjects as NSArray?) else { return nil }
+        NSLog("appdyno runner: snapshots ask XCTest for %d attributes", attributes.count)
+        return (client, unsafeBitCast(method_getImplementation(request), to: Request.self), attributes, parameters)
+    }()
+
+    static func of(_ app: XCUIApplication) -> XCUIElementSnapshot? {
+        guard let p = parts, let process = ask(app, "currentProcess"), let element = ask(process, "accessibilityElement")
+        else { return nil }
+        var error: NSError?
+        guard let result = p.request(p.client, selRequest, element, p.attributes, p.parameters, &error) else { return nil }
+        return ask(result, "rootElementSnapshot") as? XCUIElementSnapshot
     }
 }

@@ -666,7 +666,7 @@ A server named its simulator (`--device`, `use_device`, or the first call that o
 
 The speed table's first read comes after `list_devices`, which the start runs beside. A client that calls the moment it has the list still waits for the read helper. One first touch of 21 took 1,010 ms after, none before; it did not come again in 14 more. Every answer of the speed table was the same, proved by its words.
 
-In the same runs, `tap` by coordinate, the touch alone, the table's last call, was 273 before and 268 after: it waits out the slide of the Back tap just before it. At `553a94dd` it was 63 (worst 264); what changed between was not looked into.
+In the same runs, `tap` by coordinate, the touch alone, the table's last call, was 273 before and 268 after. At `553a94dd` it was 63 (worst 264), and no commit made the difference: built and run in turn on the same simulator, `553a94dd` gave 62 (worst 270) and `52726c2e` 66 (worst 282), at load 6.3-8.3. The touch waits out the rest of the 650 ms slide that the Back tap just before it started. The Back comes with the keyboard closing, which made its own settle 247-304 ms in 8 replays of 12, so the touch then waited 212-312 ms. In the other 4 the settle took 611-712 ms, nothing of the slide was left, and the touch took 61-64 ms. The app's own animation wait was 2-4 ms each time.
 
 ### A simulator's `logs`
 
@@ -681,6 +681,21 @@ Tried and dropped:
 
 - A narrower predicate, the process's name for the image path: 793-803 against 783-809. `log show`'s start is the cost, not the filter.
 - A `log stream` kept for the session, answering from what it held: its answer is not `log show`'s. Over the same 8 s of the fixture's relaunch, links and a push, it held 1,545 lines against 296: debug lines, which the log store does not keep, so `log show` never had them. The same message was stamped 7 ms apart by each. Lines from the process's first moment were in `log show` alone.
+
+### A runner's read, asking only for what it uses
+
+A runner's read took XCTest's whole snapshot of the app, every attribute XCTest asks for by default. The tree the answer is made of reads 10 of them: identifier, frame, value, label, type, enabled, selected, placeholder, focus and the keyboard's focus. The runner now asks for those alone, by XCTest's own private snapshot request, which maps them to 12 accessibility attributes. Where this XCTest lacks a part, or the request fails, it takes the public snapshot as before, and its log says which it uses. On an iPhone 17 Pro simulator with iOS 27.2, `tree.get` 15 times each, medians in ms, the runner's own time in brackets, before and after in turn:
+
+| ms, median (the runner's own)            | before        | after   | host load, before; after |
+| ---------------------------------------- | ------------- | ------- | ------------------------ |
+| the fixture's first screen, 32 elements  | 38-39 (26)    | 34 (22) | 6.2-8.1; 5.8-5.9         |
+| Settings, 167 elements                   | 71-73 (59-60) | 56 (44) | 6.2-8.1; 5.8-5.9         |
+| the home screen app, the fixture over it | 54-55 (41-42) | 43 (31) | 6.2-8.1; 5.8-5.9         |
+| the home screen app, Settings over it    | 54-55 (42-43) | 44 (33) | 6.2-8.1; 5.8-5.9         |
+
+Each tree was the same as before, all of it, but the status bar's clock. An iPhone, where a runner read is 170-300 ms, has not been measured yet. A depth limit was not tried: the answer is the whole tree.
+
+The home screen app's read for a sheet over the app (`screen` on an iPhone reads twice) reads its whole tree, 110 elements here with the home screen's icons, for the words of a sheet. A query for the sheets alone is not built, as no sheet on the phone has proved it yet.
 
 ## iPhone speed
 
