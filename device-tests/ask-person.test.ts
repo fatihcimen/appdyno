@@ -2,10 +2,10 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { ElicitRequestSchema, type ElicitResult } from '@modelcontextprotocol/sdk/types.js';
+import { Client, type ElicitResult } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { REVISIONS } from '../packages/ops/test/helpers.js';
 import { toolCaller } from './helpers.js';
 
 /**
@@ -25,7 +25,7 @@ const kept = () =>
     'Documents/kept-by-a-person.txt',
   );
 
-describe.skipIf(!SIMULATOR)('what loses data, over stdio', () => {
+describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s', (revision) => {
   const clients: Client[] = [];
   const asked: string[] = [];
 
@@ -33,10 +33,13 @@ describe.skipIf(!SIMULATOR)('what loses data, over stdio', () => {
   async function connect(answer?: ElicitResult['action'], flags: string[] = []) {
     const client = new Client(
       { name: 'ask-person-test', version: '0' },
-      answer && { capabilities: { elicitation: {} } },
+      {
+        ...(answer && { capabilities: { elicitation: {} } }),
+        ...(revision === '2026-07-28' && { versionNegotiation: { mode: { pin: revision } } }),
+      },
     );
     if (answer)
-      client.setRequestHandler(ElicitRequestSchema, (r) => {
+      client.setRequestHandler('elicitation/create', (r) => {
         asked.push(r.params.message);
         return { action: answer };
       });

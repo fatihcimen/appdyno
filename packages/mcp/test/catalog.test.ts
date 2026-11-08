@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import {
+  Client,
+  InMemoryTransport,
+  StreamableHTTPClientTransport,
+} from '@modelcontextprotocol/client';
+import { createMcpHandler } from '@modelcontextprotocol/server';
 import { DATA_LOSS, DATA_LOSS_WORDS, DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { expect, it } from 'vitest';
 import { INSTRUCTIONS } from '../src/brand.js';
@@ -68,6 +72,33 @@ it('names in the docs and in its instructions each action that asks the person f
   expect(listed.sort()).toEqual(Object.keys(DATA_LOSS).sort());
   expect(INSTRUCTIONS).toContain(`${DATA_LOSS_WORDS} ask the person first.`);
   expect(DATA_LOSS_WORDS).toContain('app revoke, app grant on an iPhone, device_setting keychain');
+});
+
+it('lists the same tools on both revisions, byte for byte, and says the same of itself', async () => {
+  const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  await createServer(ops, () => undefined).connect(a);
+  const legacy = new Client({ name: 'test', version: '0' });
+  await legacy.connect(b);
+  // no in-memory entry serves 2026-07-28: the HTTP one does, its fetch called here
+  const handler = createMcpHandler(() => createServer(ops, () => undefined));
+  const modern = new Client(
+    { name: 'test', version: '0' },
+    { versionNegotiation: { mode: { pin: '2026-07-28' } } },
+  );
+  const fetch = (url: string | URL, init?: RequestInit) => handler.fetch(new Request(url, init));
+  await modern.connect(
+    new StreamableHTTPClientTransport(new URL('http://in.process/mcp'), { fetch }),
+  );
+  expect([legacy, modern].map((c) => c.getNegotiatedProtocolVersion())).toEqual([
+    '2025-11-25',
+    '2026-07-28',
+  ]);
+  const [was, now] = await Promise.all([legacy, modern].map((c) => c.listTools()));
+  expect(JSON.stringify(now!.tools)).toBe(JSON.stringify(was!.tools));
+  expect(modern.getServerVersion()).toEqual(legacy.getServerVersion());
+  expect(modern.getInstructions()).toBe(INSTRUCTIONS);
+  expect(modern.getServerCapabilities()).toEqual(legacy.getServerCapabilities());
 });
 
 it('keeps the tool catalog within its budget', async () => {

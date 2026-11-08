@@ -5,6 +5,10 @@ The 48 tools an MCP client can call. Each is also [a command](cli.md), and a cal
 Tools take no `device` parameter. The device is the server's `--device`, else the only connected one,
 else the one `use_device` selected.
 
+The server speaks MCP's revisions from 2024-10-07 to 2025-11-25, which open with `initialize`, and 2026-07-28, which
+opens with `server/discover`, over stdio and over `--http` alike: the client's first message says which. The tools
+and what they say of themselves are the same, byte for byte, on each.
+
 | purpose  | tools                                                                                                                      |
 | -------- | -------------------------------------------------------------------------------------------------------------------------- |
 | devices  | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
@@ -55,15 +59,19 @@ These lose what a person may want, so each waits for the person's yes:
   and Android's lose nothing and ask nothing
 - `device_setting keychain`: every item apps keep in the keychain
 
-The server asks by the client's own prompt, MCP elicitation, where the client declared it at `initialize`, and names the
-device, the app and what is lost. The model cannot answer it. A no or a closed prompt does nothing, and the answer says
-the person declined. A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person allows it, and so is
-every client over `--http`, whose server lasts one POST and never saw its `initialize`. `--allow-data-loss virtual` on the
+The server asks by the client's own prompt, MCP elicitation, where the client declared it can, at `initialize` on a 2025
+revision and on each request on 2026-07-28, and names the device, the app and what is lost. The model cannot answer it.
+A no or a closed prompt does nothing, and the answer says the person declined. On 2026-07-28 no request goes back to a
+client, so the call ends its round with the question and the client brings the answer back with the call: the call waits
+where it stopped, so a step before it in the same `steps` is not done again, and an answer that does not come in 5
+minutes is a no. A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person allows it, and so is a
+2025 client over `--http`, whose server lasts one POST and never saw its `initialize`; a 2026-07-28 one is asked within
+the call. `--allow-data-loss virtual` on the
 server's command line lets these go ahead with nothing asked on simulators and emulators, and `all` on phones too. Only a
 person's registration of the server sets it: no argument, step or file of a tool stands for a yes. A command asks on its
 terminal and takes `--yes` for the answer; with neither, only the flag lets it go ahead. `device-tests/ask-person.test.ts`
-runs a yes, a no, a client that cannot ask and the flag over stdio on a simulator, and the fixture's data stays on the no
-and where nothing could ask.
+runs a yes, a no, a client that cannot ask and the flag over stdio on a simulator, on each revision, and the fixture's
+data stays on the no and where nothing could ask.
 
 `app install` and `build_and_run` are not among them: neither removes an app first, and on a simulator a file the
 fixture kept was still there after its install over itself.

@@ -1,7 +1,16 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  CLIENT_CAPABILITIES_META_KEY,
+  CLIENT_INFO_META_KEY,
+  isInputRequiredResult,
+  McpServer,
+  type CallToolResult,
+  type ClientCapabilities,
+  type Implementation,
+  type ServerContext,
+} from '@modelcontextprotocol/server';
 import { noteClientCall } from '@appdyno/core';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
+import { ASK_MS, inRound, verifyRound } from './rounds.js';
 import {
   ANY_ARGUMENTS,
   argumentsFor,
@@ -12,28 +21,41 @@ import {
   type Op,
 } from '@appdyno/ops';
 
-/** How often a call with a progress token says it is still working. */
-const BEAT_MS = 5_000;
-
-/** How long a question waits for the person, who may be away from the screen: past it, no answer is a no. */
-const ASK_MS = 5 * 60_000;
-
 /**
- * A yes or no, put to the person by the client's own prompt, where the client declared it can show one: an empty form,
- * whose accept is the yes. Over `--http` there is none, as a server lasts one POST and never saw the client's `initialize`.
+ * Who calls, and whether its person can be asked: a 2026-07-28 request says so itself. Over `--http` a 2025 client never
+ * can be, as a server lasts one POST and never saw its `initialize`.
  */
-const askerOf = (server: McpServer, signal: AbortSignal) =>
-  // what `initialize` declared, as the SDK parsed it: `elicitation: {}` reads as `{ form: {} }`, which the specification
-  // (2025-11-25, Elicitation, Capabilities) makes the same, and `elicitInput` refuses a form without it
-  server.server.getClientCapabilities()?.elicitation?.form
-    ? async (message: string) =>
-        (
-          await server.server.elicitInput(
-            { mode: 'form', message, requestedSchema: { type: 'object', properties: {} } },
-            { signal, timeout: ASK_MS },
-          )
-        ).action === 'accept'
-    : undefined;
+function callerOf(server: McpServer, ctx: ServerContext) {
+  // the published type of the envelope is empty: these are its keys
+  const envelope = ctx.mcpReq.envelope as
+    | {
+        [CLIENT_INFO_META_KEY]?: Implementation;
+        [CLIENT_CAPABILITIES_META_KEY]?: ClientCapabilities;
+      }
+    | undefined;
+  // a 2025 client says who it is and what it can once, in `initialize`, which only these deprecated accessors keep
+  const [named, declared] = [
+    server.server.getClientVersion(),
+    server.server.getClientCapabilities(),
+  ];
+  const elicitation = (envelope?.[CLIENT_CAPABILITIES_META_KEY] ?? declared)?.elicitation;
+  return {
+    info: envelope?.[CLIENT_INFO_META_KEY] ?? named,
+    // `elicitation: {}` is `{ form: {} }` (2025-11-25, Elicitation, Capabilities); a form is what is put
+    canAsk: elicitation !== undefined && ('form' in elicitation || !('url' in elicitation)),
+  };
+}
+
+/** A refusal as a client reads it: the words, and the code and hint to act on. */
+const refusal = (e: ToolError): CallToolResult => ({
+  isError: true,
+  content: text(e.message),
+  structuredContent: {
+    code: e.code,
+    ...(e.hint && { hint: e.hint }),
+    ...(e.dispatched !== undefined && { dispatched: e.dispatched }),
+  },
+});
 
 /** What many tools would each say of an argument: the server's instructions say it once. */
 const IN_INSTRUCTIONS = new Set([
@@ -73,8 +95,11 @@ export function createServer(
   log: (line: object) => void,
   held?: string,
 ): McpServer {
-  const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS });
-  const caller = () => (held ? { name: held } : server.server.getClientVersion());
+  const server = new McpServer(SERVER_INFO, {
+    instructions: INSTRUCTIONS,
+    inputRequired: { roundTimeoutMs: ASK_MS },
+    requestState: { verify: verifyRound },
+  });
   for (const { name, ...t } of Object.values(ops)) {
     server.registerTool(
       name,
@@ -84,77 +109,61 @@ export function createServer(
         inputSchema: ANY_ARGUMENTS,
         annotations: t.annotations,
       },
-      async (args, extra) => {
-        const started = Date.now();
-        const client = caller();
+      async (args, ctx) => {
+        const caller = callerOf(server, ctx);
+        const client = held ? { name: held } : caller.info;
         // what earns a client its word in the hub: a call that got here, whatever came of it
         if (client) noteClientCall(client, held ? 'http' : 'stdio');
-        const token = extra._meta?.progressToken;
-        let sent = 0;
-        const progress =
-          token === undefined
-            ? undefined
-            : (message: string) =>
-                void extra
-                  .sendNotification({
-                    method: 'notifications/progress',
-                    params: { progressToken: token, progress: ++sent, message },
-                  })
-                  .catch(() => undefined);
-        const beat =
-          progress &&
-          setInterval(
-            () =>
-              progress(`${name}: still working (${Math.round((Date.now() - started) / 1000)} s)`),
-            BEAT_MS,
-          );
-        const ask = askerOf(server, extra.signal);
-        try {
-          const r = await inCall(
-            {
-              signal: extra.signal,
-              ...(progress && { progress }),
-              ...(client && { client: client.name }),
-              ...(ask && { ask }),
-            },
-            () => t.handler(argumentsFor(t, args)),
-          );
-          log({ tool: name, ms: Date.now() - started, outcome: 'ok' });
-          return { content: r.blocks, structuredContent: r.data };
-        } catch (e) {
-          if (e instanceof ToolError) {
-            log({ tool: name, ms: Date.now() - started, outcome: 'refused', code: e.code });
-            return {
-              isError: true,
-              content: text(e.message),
-              structuredContent: {
-                code: e.code,
-                ...(e.hint && { hint: e.hint }),
-                ...(e.dispatched !== undefined && { dispatched: e.dispatched }),
-              },
-            };
-          }
-          // never the arguments: they may hold typed text
-          log({
-            tool: name,
-            ms: Date.now() - started,
-            outcome: 'error',
-            error: (e as Error)?.message ?? String(e),
-          });
-          return {
-            isError: true,
-            content: text(`${name} failed with an internal error`),
-            structuredContent: { code: 'INTERNAL', hint: 'see the server log' },
-          };
-        } finally {
-          clearInterval(beat);
-        }
+        const started = Date.now();
+        const said = (outcome: string, more?: object) =>
+          log({ tool: name, ms: Date.now() - started, outcome, ...more });
+        const answer = await inRound(
+          name,
+          ctx,
+          async ({ signal, progress, ask }): Promise<CallToolResult> => {
+            try {
+              const r = await inCall(
+                {
+                  signal,
+                  progress,
+                  ...(client && { client: client.name }),
+                  ...(caller.canAsk && { ask }),
+                },
+                () => t.handler(argumentsFor(t, args)),
+              );
+              said('ok');
+              return { content: r.blocks, structuredContent: r.data };
+            } catch (e) {
+              if (e instanceof ToolError) {
+                said('refused', { code: e.code });
+                return refusal(e);
+              }
+              // never the arguments: they may hold typed text
+              said('error', { error: (e as Error)?.message ?? String(e) });
+              return {
+                isError: true,
+                content: text(`${name} failed with an internal error`),
+                structuredContent: { code: 'INTERNAL', hint: 'see the server log' },
+              };
+            }
+          },
+          () =>
+            refusal(
+              new ToolError(
+                `${name}: the question it asked is no longer waiting, unanswered for ${ASK_MS / 60_000} minutes or asked before a restart: nothing more was done`,
+                'PERMISSION_REQUIRED',
+                'ask again only if the person asks for it',
+              ),
+            ),
+        );
+        if (isInputRequiredResult(answer)) said('asked');
+        return answer;
       },
     );
   }
   // the SDK's own list adds a schema dialect and a task setting to every tool, and closed-object markers that
   // cost thousands of characters in every session: arguments are still checked strictly when they arrive
-  server.server.setRequestHandler(ListToolsRequestSchema, () => ({
+  server.server.setRequestHandler('tools/list', () => ({
     tools: Object.values(ops).map((op) => ({
       name: op.name,
       title: op.title,

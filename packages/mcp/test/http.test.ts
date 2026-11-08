@@ -4,11 +4,14 @@ import { join } from 'node:path';
 import { clientCalls } from '@appdyno/core';
 import type { DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { ElicitRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  Client,
+  StreamableHTTPClientTransport,
+  type ClientCapabilities,
+} from '@modelcontextprotocol/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
+import { REVISIONS, type Revision } from '../../ops/test/helpers.js';
 import { listenOn, serveHttp } from '../src/http.js';
 
 const TOKEN = 'a-token-of-the-length-it-should-have';
@@ -49,9 +52,22 @@ async function serving(idleMs?: number) {
   return { ...http, dark, device, contexts, log };
 }
 
-/** A real client of the SDK, by header unless given a URL with the token in it. */
-async function clientOf(url: string, name = 'first', headers: Record<string, string> = bearer) {
-  const client = new Client({ name, version: '1' });
+/** A real client of the SDK on `revision`, by header unless given a URL with the token in it. */
+async function clientOf(
+  url: string,
+  name = 'first',
+  headers: Record<string, string> = bearer,
+  revision: Revision = '2025-11-25',
+  capabilities?: ClientCapabilities,
+) {
+  const client = new Client(
+    { name, version: '1' },
+    {
+      ...(capabilities && { capabilities }),
+      ...(revision === '2026-07-28' && { versionNegotiation: { mode: { pin: revision } } }),
+    },
+  );
+  if (capabilities) client.setRequestHandler('elicitation/create', () => ({ action: 'accept' }));
   await client.connect(
     new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers } }),
   );
@@ -146,10 +162,13 @@ describe('what may call it', () => {
   });
 });
 
-describe('a client', () => {
+describe.each(REVISIONS)('a client, on %s', (revision) => {
+  const clientAt = (url: string, name?: string, headers?: Record<string, string>) =>
+    clientOf(url, name, headers, revision);
+
   it('lists the tools and calls one through the SDK', async () => {
     const { url } = await serving();
-    const client = await clientOf(url);
+    const client = await clientAt(url);
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name)).toContain('list_devices');
     expect(text(await client.callTool({ name: 'list_devices' }))).toContain('emulator-5580');
@@ -157,7 +176,7 @@ describe('a client', () => {
 
   it('earns its word in the hub by a call, not by a look, and leaves no token behind', async () => {
     const { url } = await serving();
-    const client = await clientOf(url, 'A Hosted Client');
+    const client = await clientAt(url, 'A Hosted Client');
     await client.listTools();
     expect(clientCalls()).toEqual([]);
     await client.callTool({ name: 'list_devices' });
@@ -167,47 +186,31 @@ describe('a client', () => {
       expect(readFileSync(join(dir, file), 'utf8')).not.toContain(TOKEN);
   });
 
-  it('cannot ask the person, whatever it declares, so what loses data is refused', async () => {
-    const { url } = await serving();
-    const client = new Client(
-      { name: 'asks', version: '1' },
-      { capabilities: { elicitation: {} } },
-    );
-    const asked = vi.fn(() => ({ action: 'accept' as const }));
-    client.setRequestHandler(ElicitRequestSchema, asked);
-    await client.connect(
-      new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: bearer } }),
-    );
-    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
-    expect(text(await client.callTool(reset))).toBe(
-      'device_setting keychain asks the person first, and this client cannot ask: nothing was done',
-    );
-    expect(asked).not.toHaveBeenCalled();
-  });
-
   it('reaches it with the token in the path, for a client with no field for a header', async () => {
     const { url } = await serving();
-    const client = await clientOf(`${url}/${TOKEN}`, 'first', {});
+    const client = await clientAt(`${url}/${TOKEN}`, 'first', {});
     expect((await client.listTools()).tools.length).toBeGreaterThan(10);
   });
 
   it('sees the progress of a call as it goes', async () => {
     const { url } = await serving();
-    const client = await clientOf(url);
+    const client = await clientAt(url);
     const seen: (string | undefined)[] = [];
-    await client.callTool({ name: 'device_info' }, undefined, {
-      onprogress: (p) => seen.push(p.message),
-    });
+    await client.callTool(
+      { name: 'device_info' },
+      {
+        onprogress: (p) => seen.push(p.message),
+      },
+    );
     expect(seen).toContain('connecting to emulator-5580');
   });
 
   it('cancels a running call, by a POST of its own', async () => {
     const { url, log, device } = await serving();
-    const client = await clientOf(url);
+    const client = await clientAt(url);
     const stop = new AbortController();
     const call = client.callTool(
       { name: 'wait_for', arguments: { text: 'never', timeoutMs: 10_000 } },
-      undefined,
       { signal: stop.signal },
     );
     await vi.waitFor(() => expect(device.calls.length).toBeGreaterThan(0));
@@ -222,7 +225,7 @@ describe('a client', () => {
 
   it('stops what it was running when it goes away in the middle', async () => {
     const { url, log, device } = await serving();
-    const client = await clientOf(url);
+    const client = await clientAt(url);
     void client
       .callTool({ name: 'wait_for', arguments: { text: 'never', timeoutMs: 10_000 } })
       .catch(() => undefined);
@@ -232,6 +235,39 @@ describe('a client', () => {
       expect(log).toHaveBeenCalledWith(
         expect.objectContaining({ tool: 'wait_for', code: 'CANCELLED' }),
       ),
+    );
+  });
+});
+
+describe('asking the person over HTTP', () => {
+  it('cannot on 2025, whatever the client declares: a server lasts one POST, so what loses data is refused', async () => {
+    const { url } = await serving();
+    const client = new Client(
+      { name: 'asks', version: '1' },
+      { capabilities: { elicitation: {} } },
+    );
+    const asked = vi.fn(() => ({ action: 'accept' as const }));
+    client.setRequestHandler('elicitation/create', asked);
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: bearer } }),
+    );
+    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
+    expect(text(await client.callTool(reset))).toBe(
+      'device_setting keychain asks the person first, and this client cannot ask: nothing was done',
+    );
+    expect(asked).not.toHaveBeenCalled();
+  });
+
+  it('asks within the call itself on 2026-07-28, and goes on with the yes', async () => {
+    const { url, device, log } = await serving();
+    const resets = vi.fn(async () => 3);
+    Object.assign(device, { events: { ...device.events, resetKeychain: resets } });
+    const client = await clientOf(url, 'asks', bearer, '2026-07-28', { elicitation: {} });
+    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
+    expect(text(await client.callTool(reset))).toBe('the keychain is empty: it held 3 items');
+    expect(resets).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledWith(
+      expect.objectContaining({ tool: 'device_setting', outcome: 'asked' }),
     );
   });
 });
@@ -253,6 +289,17 @@ describe('one client at a time', () => {
     await first.callTool({ name: 'list_devices' });
     await expect(clientOf(url, 'second')).rejects.toThrow('first has held it since');
     expect((await first.listTools()).tools.length).toBeGreaterThan(10);
+  });
+
+  it('knows a 2026-07-28 client by the name its requests carry, and refuses another one', async () => {
+    const { url, log } = await serving();
+    const first = await clientOf(url, 'first', bearer, '2026-07-28');
+    await first.callTool({ name: 'list_devices' });
+    await expect(clientOf(url, 'second', bearer, '2026-07-28')).rejects.toThrow();
+    expect(log).toHaveBeenCalledWith(
+      expect.objectContaining({ http: 'refused', status: 409, client: 'second', heldBy: 'first' }),
+    );
+    expect(text(await first.callTool({ name: 'list_devices' }))).toContain('emulator-5580');
   });
 
   it('refuses at the call a client that connected before the holder first called', async () => {

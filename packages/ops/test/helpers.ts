@@ -1,9 +1,13 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { ElicitRequestSchema, type ElicitResult } from '@modelcontextprotocol/sdk/types.js';
+import {
+  Client,
+  InMemoryTransport,
+  StreamableHTTPClientTransport,
+  type ElicitResult,
+} from '@modelcontextprotocol/client';
+import { createMcpHandler } from '@modelcontextprotocol/server';
 import { createServer } from '@appdyno/mcp';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import {
@@ -82,20 +86,40 @@ export async function keptBy(
   };
 }
 
-/** A client of this context's server, in this process; with `answer`, one that shows the server's questions to a person. */
+/** The revisions the server serves: the newest of 2025's, and 2026-07-28, where no request goes back to a client. */
+export const REVISIONS = ['2025-11-25', '2026-07-28'] as const;
+export type Revision = (typeof REVISIONS)[number];
+
+/**
+ * A client of this context's server, in this process, on `revision`; with `answer`, one that shows the server's
+ * questions to a person. No in-memory entry serves 2026-07-28: the HTTP one does, its fetch called here.
+ */
 export async function linkedClient(
   ctx: ServerContext,
   log: Parameters<typeof createServer>[1] = () => undefined,
   answer?: (question: string) => ElicitResult['action'],
+  revision: Revision = '2025-11-25',
 ) {
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  await createServer(checkedOps(ctx), log).connect(a);
+  const ops = checkedOps(ctx);
   const client = new Client(
     { name: 'test', version: '0' },
-    answer && { capabilities: { elicitation: {} } },
+    {
+      ...(answer && { capabilities: { elicitation: {} } }),
+      ...(revision === '2026-07-28' && { versionNegotiation: { mode: { pin: revision } } }),
+    },
   );
   if (answer)
-    client.setRequestHandler(ElicitRequestSchema, (r) => ({ action: answer(r.params.message) }));
-  await client.connect(b);
+    client.setRequestHandler('elicitation/create', (r) => ({ action: answer(r.params.message) }));
+  if (revision === '2026-07-28') {
+    const handler = createMcpHandler(() => createServer(ops, log));
+    const fetch = (url: string | URL, init?: RequestInit) => handler.fetch(new Request(url, init));
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL('http://in.process/mcp'), { fetch }),
+    );
+  } else {
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(ops, log).connect(a);
+    await client.connect(b);
+  }
   return client;
 }

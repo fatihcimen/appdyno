@@ -86,7 +86,7 @@
     "@appdyno/ops": "workspace:*",
     "@appdyno/perf": "workspace:*",
     "@appdyno/protocol": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/server": "^2.4.0",
     "esbuild": "^0.28.2",
     "zod": "^4.6.7"
   }

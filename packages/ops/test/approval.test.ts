@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ElicitResult } from '@modelcontextprotocol/sdk/types.js';
+import type { ElicitResult } from '@modelcontextprotocol/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DATA_LOSS,
@@ -11,7 +11,7 @@ import {
   type Policy,
 } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { linkedClient, REVISIONS, type Revision } from './helpers.js';
 
 const folder = mkdtempSync(join(tmpdir(), 'appdyno-approval-'));
 
@@ -31,8 +31,12 @@ beforeEach(() => {
   vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-approval-state-')));
 });
 
-/** A device whose drivers only write down what they were asked; a client that answers each question as `answer` says. */
-async function on(
+/**
+ * A device whose drivers only write down what they were asked; a client on `revision` that answers each question as
+ * `answer` says.
+ */
+async function onDevice(
+  revision: Revision,
   o: Kind & { virtual?: boolean; policy?: Partial<Policy>; answer?: ElicitResult['action'] } = {},
 ) {
   const done: string[] = [];
@@ -62,7 +66,12 @@ async function on(
     { app: 'dev.app' },
   );
   const answer = o.answer;
-  const client = await linkedClient(ctx, undefined, answer && ((q) => (asked.push(q), answer)));
+  const client = await linkedClient(
+    ctx,
+    undefined,
+    answer && ((q) => (asked.push(q), answer)),
+    revision,
+  );
   const call = async (name: string, args: Record<string, unknown>) => {
     const r = (await client.callTool({ name, arguments: args })) as {
       isError?: boolean;
@@ -75,10 +84,12 @@ async function on(
       ...r.structuredContent,
     };
   };
-  return { call, done, asked, serial: device.serial };
+  return { call, done, asked, device, serial: device.serial };
 }
 
-describe('what loses data', () => {
+describe.each(REVISIONS)('what loses data, on %s', (revision) => {
+  const on = (o?: Parameters<typeof onDevice>[1]) => onDevice(revision, o);
+
   it('is each action of the table, and each is tested here', () => {
     expect(GATED.map(([action]) => action).sort()).toEqual(Object.keys(DATA_LOSS).sort());
   });
@@ -147,6 +158,20 @@ describe('what loses data', () => {
     expect(r.error).toBe(true);
     expect(r.text).toContain('device_setting keychain asks the person first');
     expect(done).toEqual([]);
+  });
+
+  it('stops at its question in the middle of steps, and goes on from there with the yes: what came before is done once', async () => {
+    const { call, done, asked, device } = await on({ answer: 'accept' });
+    const r = await call('steps', {
+      steps: [
+        { action: 'tap', x: 1, y: 1 },
+        { action: 'device_setting', name: 'keychain', value: 'reset' },
+      ],
+    });
+    expect(r.error ? r.text : '').toBe('');
+    expect(asked).toHaveLength(1);
+    expect(done).toEqual(['keychain']);
+    expect(device.calls.filter((c) => c.name === 'act')).toHaveLength(1);
   });
 
   it("asks nothing of a grant that loses nothing, as a simulator's and Android's", async () => {

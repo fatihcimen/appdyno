@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { parseArgs } from 'node:util';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
 import { opsFor, type ServerContext } from '@appdyno/ops';
 import { endWithClient, putBack } from './lifetime.js';
@@ -42,7 +42,9 @@ export async function serveCommand(
   if (!values.http) {
     const ctx = started(context(values));
     endWithClient(ctx, log);
-    await createServer(opsFor(ctx), log).connect(new StdioServerTransport());
+    // either revision, as the client's first message says
+    const ops = opsFor(ctx);
+    serveStdio(() => createServer(ops, log));
     return;
   }
   const listen = listenOn(values.http);

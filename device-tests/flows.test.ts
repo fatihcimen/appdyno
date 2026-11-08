@@ -3,8 +3,8 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } fro
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { OpData, OpName } from '@appdyno/ops';
 import { Devicectl, IosSimulatorDevice } from './workspace.js';
@@ -64,9 +64,12 @@ for (const { platform, serial, form } of targets)
     const params = [`PASSWORD_INPUT=${PASSWORD}`, `SECRET_1=${LISTED_SECRET}`];
 
     const raw = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
-      const r = (await client.callTool({ name, arguments: args }, undefined, {
-        timeout: LONG_MS,
-      })) as {
+      const r = (await client.callTool(
+        { name, arguments: args },
+        {
+          timeout: LONG_MS,
+        },
+      )) as {
         isError?: boolean;
         content: { type: string; text?: string }[];
         structuredContent?: Record<string, unknown>;

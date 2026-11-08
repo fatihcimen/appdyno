@@ -1,8 +1,8 @@
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { afterAll, describe, expect, it } from 'vitest';
 import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
 import {
@@ -152,9 +152,12 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
       return async (name: string, args: Record<string, unknown> = {}) => {
         const at = Date.now();
         // a runner's first start may take this long, and a client's own default of a minute is less
-        const r = (await client.callTool({ name, arguments: args }, undefined, {
-          timeout: LIVE_MS,
-        })) as { isError?: boolean; content: { text?: string }[] };
+        const r = (await client.callTool(
+          { name, arguments: args },
+          {
+            timeout: LIVE_MS,
+          },
+        )) as { isError?: boolean; content: { text?: string }[] };
         const text = r.content.map((c) => c.text ?? '').join('\n');
         const refused = r.isError === true;
         say(`${name}: ${Date.now() - at} ms, ${refused ? 'refused' : 'ok'}: ${text.slice(0, 90)}`);

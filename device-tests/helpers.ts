@@ -13,7 +13,7 @@ import {
   type OpName,
 } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
-import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import type { Client } from '@modelcontextprotocol/client';
 
 /** What a client sees: the op's data, or with `error` its refusal's code. */
 export type Answer<D = unknown> = { error: boolean; text: string; data: D & { code?: string } };

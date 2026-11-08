@@ -289,7 +289,6 @@ describe('cancellation and progress', () => {
     const abort = new AbortController();
     const waiting = client.callTool(
       { name: 'wait_for', arguments: { text: 'never', timeoutMs: 15_000 } },
-      undefined,
       { signal: abort.signal },
     );
     setTimeout(() => abort.abort(), 50);
@@ -311,9 +310,12 @@ describe('cancellation and progress', () => {
     };
     const { client } = await connect(device);
     const seen: (string | undefined)[] = [];
-    await client.callTool({ name: 'launch_app', arguments: {} }, undefined, {
-      onprogress: (p) => seen.push(p.message),
-    });
+    await client.callTool(
+      { name: 'launch_app', arguments: {} },
+      {
+        onprogress: (p) => seen.push(p.message),
+      },
+    );
     expect(seen).toEqual(
       expect.arrayContaining([
         expect.stringContaining('connecting to'),

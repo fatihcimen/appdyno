@@ -130,6 +130,8 @@ describe('what ships', () => {
       logLevel: 'silent',
     });
     const inlined = inlinedPackages([shipped], pkg, join(pkg, 'licenses'));
+    // what the MCP SDK builds into its own files, which this check must see to be worth anything
+    expect(inlined.map((f: string) => f.slice(join(pkg, 'licenses').length + 1))).toContain('ajv');
     expect(() => noticesFor('', [...bundledPackages([shipped], pkg), ...inlined])).not.toThrow();
   });
 });

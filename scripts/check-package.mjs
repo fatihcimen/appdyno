@@ -17,8 +17,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
 const { values: flags } = parseArgs({
   options: {
@@ -81,8 +81,11 @@ function run(cmd, args, cwd) {
   return r.stdout;
 }
 
-async function serve(args, use) {
-  const client = new Client({ name: 'check-package', version: '1' });
+async function serve(args, use, revision = '2025-11-25') {
+  const client = new Client(
+    { name: 'check-package', version: '1' },
+    revision === '2026-07-28' ? { versionNegotiation: { mode: { pin: revision } } } : {},
+  );
   const transport = new StdioClientTransport({
     command: 'npx',
     args: ['appdyno', 'mcp', ...args],
@@ -112,14 +115,17 @@ async function drive(device, app, keys) {
       /** @type {any} */
       let answer;
       await step(`${device} ${name}`, async () => {
-        answer = await client.callTool({ name, arguments: args }, undefined, {
-          timeout: 20 * 60_000,
-          resetTimeoutOnProgress: true,
-          onprogress: (p) => {
-            notifications++;
-            console.log(`     progress: ${p.message ?? p.progress}`);
+        answer = await client.callTool(
+          { name, arguments: args },
+          {
+            timeout: 20 * 60_000,
+            resetTimeoutOnProgress: true,
+            onprogress: (p) => {
+              notifications++;
+              console.log(`     progress: ${p.message ?? p.progress}`);
+            },
           },
-        });
+        );
         if (answer.isError) throw new Error(`${name}: ${textOf(answer)}`);
       });
       return answer;
@@ -187,13 +193,18 @@ try {
     if (!`${r.stdout}${r.stderr}`.includes('usage: appdyno'))
       throw new Error(`no usage line: ${r.stderr || r.error}`);
   });
-  await step('tools/list over stdio', () =>
-    serve([], async (client) => {
-      const { tools } = await client.listTools();
-      if (tools.length === 0) throw new Error('no tools');
-      return `${tools.length} tools, ${JSON.stringify(tools).length} bytes`;
-    }),
-  );
+  await step('tools/list over stdio, on each revision', async () => {
+    /** @type {string[]} */
+    const lists = [];
+    for (const revision of ['2025-11-25', '2026-07-28'])
+      lists.push(
+        await serve([], async (c) => JSON.stringify((await c.listTools()).tools), revision),
+      );
+    if (lists[0] !== lists[1]) throw new Error('2025-11-25 and 2026-07-28 list other tools');
+    const count = JSON.parse(lists[0]).length;
+    if (count === 0) throw new Error('no tools');
+    return `${count} tools, ${lists[0].length} bytes, the same on 2025-11-25 and 2026-07-28`;
+  });
   if (flags.android) {
     // the adb server outlives this run: it starts under the real HOME, not one about to go
     spawnSync(join(String(adb), 'adb'), ['start-server'], { stdio: 'ignore' });

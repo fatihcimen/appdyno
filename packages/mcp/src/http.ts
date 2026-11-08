@@ -5,8 +5,13 @@ import {
   type ServerResponse,
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { toNodeHandler } from '@modelcontextprotocol/node';
+import {
+  CLIENT_INFO_META_KEY,
+  createMcpHandler,
+  isInitializeRequest,
+  type McpServer,
+} from '@modelcontextprotocol/server';
 import type { Op } from '@appdyno/ops';
 import { createServer } from './server.js';
 
@@ -99,14 +104,18 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
     const message = (body ?? {}) as {
       id?: unknown;
       method?: string;
-      params?: { requestId?: unknown };
+      params?: { requestId?: unknown; _meta?: { [CLIENT_INFO_META_KEY]?: { name?: unknown } } };
     };
     const session = req.headers[SESSION];
+    // a 2026-07-28 request names its client itself, and has no session
+    const named = message.params?._meta?.[CLIENT_INFO_META_KEY]?.name;
     const client = isInitializeRequest(body)
       ? body.params.clientInfo.name
       : typeof session === 'string'
         ? Buffer.from(session, 'base64url').toString()
-        : undefined;
+        : typeof named === 'string'
+          ? named
+          : undefined;
     if (held?.acted && held.client !== client) {
       log({ http: 'refused', status: 409, client, heldBy: held.client });
       refuse(
@@ -131,19 +140,22 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
     held ??= { ...open(), since: new Date().toISOString() };
     if (client) held.client = client;
     held.acted ||= message.method === 'tools/call';
-    const server = createServer(held.ops, log, held.client);
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    const seat = held;
+    let server: McpServer | undefined;
+    // either revision, by the request: a 2025 one served stateless, as before, a 2026-07-28 one as it comes
+    const serve = toNodeHandler(
+      createMcpHandler(() => (server = createServer(seat.ops, log, seat.client))),
+    );
     if (isInitializeRequest(body) && client !== undefined)
       res.setHeader(SESSION, Buffer.from(client).toString('base64url'));
-    const stop = () => void server.close();
+    const stop = () => void server?.close();
     if (message.id !== undefined) running.set(message.id, stop);
     // closing the server ends what its call was doing: nobody is left to answer
     res.once('close', () => {
       running.delete(message.id);
       stop();
     });
-    await server.connect(transport);
-    await transport.handleRequest(req, res, body);
+    await serve(req, res, body);
   };
 
   const route = async (req: IncomingMessage, res: ServerResponse) => {
