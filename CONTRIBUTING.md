@@ -1,5 +1,7 @@
 # Contributing
 
+[Türkçe](CONTRIBUTING.tr.md)
+
 Everyone here follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
@@ -158,8 +160,8 @@ code does.
 [The docs](docs/README.md) hold guides, which take a reader through a task, and a reference to look things up in. A new
 page goes in one of those and in the index. A number in the docs is one you ran: say on what, and with what load.
 
-A page is in English and in Turkish, `X.md` and `X.tr.md`, but for the few `docs.test.ts` names, and a change to one is
-made in both: the test holds the two to the same lines, code, numbers and links, each in its own language.
+Every doc is in English and in Turkish, `X.md` and `X.tr.md`, `CHANGELOG.md` too, and a change to one is made in both,
+a changelog line as well: `docs.test.ts` holds the two to the same lines, code, numbers and links, each in its own language.
 
 Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its own ground, so it reads on any page, and
 comes as two files, `X.svg` light and `X.dark.svg` dark, which a page shows in a `<picture>` whose

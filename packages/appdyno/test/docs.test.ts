@@ -83,10 +83,6 @@ describe('the docs', () => {
 });
 
 const TR = /\.tr\.md$/;
-/** The pages in English alone, and why. */
-const ENGLISH_ONLY: Record<string, string> = {
-  'CONTRIBUTING.md': 'not yet in Turkish',
-};
 const english = tracked.filter((f) => f.endsWith('.md') && !f.endsWith('.tr.md'));
 const turkishOf = (page: string) => page.replace(/\.md$/, '.tr.md');
 const pairs = english
@@ -154,16 +150,9 @@ const targetsOf = (page: string, across = false) =>
     .sort();
 
 describe('a page', () => {
-  it('is in English and in Turkish, but for the few named', () => {
+  it('is in English and in Turkish, every one, the changelog too', () => {
     expect(pairs.length).toBeGreaterThan(1);
-    expect(english.filter((p) => !tracked.includes(turkishOf(p)) && !(p in ENGLISH_ONLY))).toEqual(
-      [],
-    );
-    expect(
-      Object.keys(ENGLISH_ONLY).filter(
-        (p) => !english.includes(p) || tracked.includes(turkishOf(p)),
-      ),
-    ).toEqual([]);
+    expect(english.filter((p) => !tracked.includes(turkishOf(p)))).toEqual([]);
     expect(
       tracked.filter((f) => f.endsWith('.tr.md') && !english.includes(f.replace(TR, '.md'))),
     ).toEqual([]);

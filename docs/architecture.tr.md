@@ -38,7 +38,7 @@ Bunu üç karar biçimlendirir.
 
 **Bir araç bir kez yazılır.** `packages/ops` içindeki bir `Op`, bir MCP istemcisi için bir araç, komut satırında bir komut, bir akışta bir adım ve kütüphanede bir çağrıdır. Böylece bir düzeltme dördüne birden ulaşır ve hiçbiri diğerlerinden ayrı düşemez.
 
-**Bir sürücünün adını yalnızca en üstteki paket anar.** `ops`, `core` içindeki `Device` portuna karşı çalışır. Ona Android ve Apple sürücülerini veren tek yer `appdyno/src/providers.ts`'dir. Bu, iki platformun birbirine yaslanmasını önler; yeni bir platformun tek bir paket olmasının nedeni de budur. Başka nelere dokunduğunu [CONTRIBUTING](../CONTRIBUTING.md#a-new-platform) listeler.
+**Bir sürücünün adını yalnızca en üstteki paket anar.** `ops`, `core` içindeki `Device` portuna karşı çalışır. Ona Android ve Apple sürücülerini veren tek yer `appdyno/src/providers.ts`'dir. Bu, iki platformun birbirine yaslanmasını önler; yeni bir platformun tek bir paket olmasının nedeni de budur. Başka nelere dokunduğunu [CONTRIBUTING](../CONTRIBUTING.tr.md#yeni-bir-platform) listeler.
 
 **Tek bir paket yayımlanır.** `packages/appdyno/scripts/bundle.mjs`, çalışma alanını ve her bağımlılığı `dist` içine gömer; böylece bir kurulum başka bir paket gerektirmez. Diğerleri `private`'tır. Paketler arasında adla içe aktarırsınız; aşağıdaki kurallar bu içe aktarmaları haritaya bağlı tutar.
 

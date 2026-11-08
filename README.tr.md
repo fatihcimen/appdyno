@@ -218,7 +218,7 @@ Yalnızca yereldir: varsayılan olarak ağdan bağlantı dinlemez, telemetri yok
 
 ## Katkıda bulunmak
 
-Bkz. [CONTRIBUTING.md](CONTRIBUTING.md) ve [Davranış Kuralları](CODE_OF_CONDUCT.tr.md). Sürümler `CHANGELOG.md` dosyasında.
+Bkz. [CONTRIBUTING.tr.md](CONTRIBUTING.tr.md) ve [Davranış Kuralları](CODE_OF_CONDUCT.tr.md). Sürümler `CHANGELOG.md` dosyasında.
 
 ## Lisans
 
