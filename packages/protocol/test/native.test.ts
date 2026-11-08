@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import { ERROR_CODES } from '../src/errors.js';
 import {
@@ -36,10 +36,17 @@ const inside = (text: string, open: RegExp, close: string) => {
 
 /** What a constant of a native file comes to, written as a number or as a product. */
 const valueOf = (text: string, name: string) => {
-  const m = new RegExp(`\\b${name} = ([\\d *]+)`).exec(text);
-  if (!m) throw new Error(`no ${name}`);
-  return m[1]!.split('*').reduce((all, n) => all * Number(n), 1);
+  const [, value] = new RegExp(`\\b${name} = ([\\d *]+)`).exec(text) ?? [];
+  if (!value) throw new Error(`no ${name}`);
+  return value.split('*').reduce((all, n) => all * Number(n), 1);
 };
+
+/** The group of each match of `of`, which has one. */
+const read$ = (text: string, of: RegExp) =>
+  [...text.matchAll(of)].map(([, group]) => {
+    assert(group !== undefined, `${of.source} has a group`);
+    return group;
+  });
 
 const quoted = (text: string) => [...text.matchAll(/"(\w+)"/g)].map((m) => m[1]);
 
@@ -59,10 +66,13 @@ describe('what is written three times', () => {
   it('the Android agent numbers every node flag as the host does', () => {
     const block = inside(read(`${AGENT}/LayoutHash.kt`), /object Flags \{/, '}');
     const named = Object.fromEntries(
-      [...block.matchAll(/const val (\w+) = (\d+)/g)].map((m) => [
-        m[1]!.toLowerCase().replace(/_(\w)/g, (_, c: string) => c.toUpperCase()),
-        Number(m[2]),
-      ]),
+      [...block.matchAll(/const val (\w+) = (\d+)/g)].map(([, name, value]) => {
+        assert(name !== undefined);
+        return [
+          name.toLowerCase().replace(/_(\w)/g, (_, c: string) => c.toUpperCase()),
+          Number(value),
+        ];
+      }),
     );
     expect(named).toEqual(NODE_FLAGS);
   });
@@ -86,11 +96,10 @@ describe('what is written three times', () => {
     const keyboard = quoted(inside(device, /keyboard: \[String: XCUIKeyboardKey\] = \[/, ']'));
     // the typed keys, then the device's own buttons
     const cases = [/func key\(/, /func press\(/].flatMap((func) =>
-      [
-        ...inside(inside(device, func, '\n    }\n'), /switch name \{/, 'default:').matchAll(
-          /case (.+):/g,
-        ),
-      ].flatMap((m) => quoted(m[1]!)),
+      read$(
+        inside(inside(device, func, '\n    }\n'), /switch name \{/, 'default:'),
+        /case (.+):/g,
+      ).flatMap((c) => quoted(c)),
     );
     expect([...new Set([...keyboard, ...cases])].sort()).toEqual(
       KEYS.filter((k) => k !== 'back' && k !== 'appSwitch').sort(),
@@ -143,7 +152,7 @@ describe('what is written three times', () => {
 
   it('an export to Maestro goes by the keys there are', () => {
     const table = inside(read('packages/flows/src/maestro.ts'), /MAESTRO_KEYS: .* = \{/, '}');
-    const named = [...table.matchAll(/^\s*(\w+):/gm)].map((m) => m[1]!);
+    const named = read$(table, /^\s*(\w+):/gm);
     expect(named.length).toBeGreaterThan(0);
     expect(named.filter((k) => !(KEYS as readonly string[]).includes(k))).toEqual([]);
   });
@@ -156,10 +165,11 @@ describe('what is written three times', () => {
   });
 
   it('the host calls a region cut at an edge by the tile the viewer looks in', () => {
-    const tile = /MVTile = (\d+)/.exec(read('mac/Viewer/Motion.m'));
-    const width = /MVWatchWidth = (\d+)/.exec(read('mac/Viewer/Watch.m'));
-    const edge = /const EDGE = ([\d.]+)/.exec(read('packages/ops/src/watch.ts'));
-    expect(Number(edge![1])).toBeCloseTo(Number(tile![1]) / Number(width![1]), 2);
+    const [tile] = read$(read('mac/Viewer/Motion.m'), /MVTile = (\d+)/g);
+    const [width] = read$(read('mac/Viewer/Watch.m'), /MVWatchWidth = (\d+)/g);
+    const [edge] = read$(read('packages/ops/src/watch.ts'), /const EDGE = ([\d.]+)/g);
+    assert(tile && width && edge);
+    expect(Number(edge)).toBeCloseTo(Number(tile) / Number(width), 2);
   });
 
   it('all speak one version', () => {
@@ -171,10 +181,7 @@ describe('what is written three times', () => {
 
 describe('the stream, which a viewer speaks to the agent with no host between them', () => {
   const VIEWER = 'mac/Viewer/SourceStream.m';
-  const names = (path: string) => [
-    ...new Set([...read(path).matchAll(/["'](stream\.\w+)["']/g)].map((m) => m[1]!)),
-  ];
-  const read$ = (text: string, of: RegExp) => [...text.matchAll(of)].map((m) => m[1]!);
+  const names = (path: string) => [...new Set(read$(read(path), /["'](stream\.\w+)["']/g))];
   const fields = (name: Notification) =>
     Object.keys((NOTIFICATIONS[name] as unknown as z.ZodObject).shape);
 
@@ -201,13 +208,17 @@ describe('the stream, which a viewer speaks to the agent with no host between th
     expect(
       read$(viewer, /info\[@"(\w+)"\]/g).filter((f) => !fields('stream.info').includes(f)),
     ).toEqual([]);
-    expect(viewer).toContain(`[@"params"][@"${fields('stream.turns')[0]}"]`);
-    expect(viewer).toContain(`[@"params"][@"${fields('stream.end')[0]}"]`);
+    const [[turns], [end]] = [fields('stream.turns'), fields('stream.end')];
+    assert(turns && end);
+    expect(viewer).toContain(`[@"params"][@"${turns}"]`);
+    expect(viewer).toContain(`[@"params"][@"${end}"]`);
   });
 
   it('the viewer reads its clock by the field the table has', () => {
     const clock = METHODS['stream.clock'].result as unknown as z.ZodObject;
-    expect(read(VIEWER)).toContain(`[@"result"][@"${Object.keys(clock.shape)[0]}"]`);
+    const [field] = Object.keys(clock.shape);
+    assert(field);
+    expect(read(VIEWER)).toContain(`[@"result"][@"${field}"]`);
   });
 
   it('the Android agent reads the whole of a start, and nothing else', () => {

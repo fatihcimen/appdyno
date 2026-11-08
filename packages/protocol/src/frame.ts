@@ -81,12 +81,17 @@ export class FrameDecoder {
   }
 
   private peek(n: number): Buffer {
-    if (this.chunks[0]!.length < n) this.chunks = [Buffer.concat(this.chunks)];
-    return this.chunks[0]!.subarray(0, n);
+    let [first] = this.chunks;
+    if (!first || first.length < n) {
+      first = Buffer.concat(this.chunks);
+      this.chunks = [first];
+    }
+    return first.subarray(0, n);
   }
 
   private take(n: number): Buffer {
-    const all = this.chunks.length === 1 ? this.chunks[0]! : Buffer.concat(this.chunks);
+    const [first] = this.chunks;
+    const all = first && this.chunks.length === 1 ? first : Buffer.concat(this.chunks);
     this.chunks = all.length > n ? [all.subarray(n)] : [];
     this.size -= n;
     return all.subarray(0, n);

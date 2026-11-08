@@ -6,18 +6,22 @@ import { ERROR_CODES, codeOfRpc, rpcCode, type ErrorCode } from '../src/errors.j
 import { METHODS, NOTIFICATIONS, type Method, type Notification } from '../src/messages.js';
 
 /** The wire as canonical JSON: the agent's unit tests and the runner's read the same files. */
-const fixture = <T>(name: string) =>
-  JSON.parse(readFileSync(join(import.meta.dirname, '../fixtures', name), 'utf8')) as T;
+const fixture = (name: string): unknown =>
+  JSON.parse(readFileSync(join(import.meta.dirname, '../fixtures', name), 'utf8'));
 
-const requests =
-  fixture<Record<string, { method: Method; input?: unknown; params: object }>>('requests.json');
-const results = fixture<Record<string, { method: Method; result: object }>>('results.json');
-const notifications =
-  fixture<Record<string, { method: Notification; params: object }>>('notifications.json');
-const errors =
-  fixture<Record<string, { code: number; message: string; data: { code: ErrorCode } }>>(
-    'errors.json',
-  );
+const requests = fixture('requests.json') as Record<
+  string,
+  { method: Method; input?: unknown; params: object }
+>;
+const results = fixture('results.json') as Record<string, { method: Method; result: object }>;
+const notifications = fixture('notifications.json') as Record<
+  string,
+  { method: Notification; params: object }
+>;
+const errors = fixture('errors.json') as Record<
+  string,
+  { code: number; message: string; data: { code: ErrorCode } }
+>;
 
 const paramsOf = (m: Method) => METHODS[m].params as z.ZodType;
 const resultOf = (m: Method) => METHODS[m].result as z.ZodType;

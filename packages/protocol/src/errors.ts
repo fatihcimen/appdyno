@@ -38,8 +38,7 @@ const RETRYABLE: ReadonlySet<ErrorCode> = new Set(['TIMEOUT', 'AGENT_UNAVAILABLE
 
 /** JSON-RPC error codes on the wire: -32000 minus the index of the code. */
 export const rpcCode = (code: ErrorCode) => -32000 - ERROR_CODES.indexOf(code);
-export const codeOfRpc = (n: number): ErrorCode =>
-  n <= -32000 && n > -32000 - ERROR_CODES.length ? ERROR_CODES[-32000 - n]! : 'INTERNAL';
+export const codeOfRpc = (n: number): ErrorCode => ERROR_CODES[-32000 - n] ?? 'INTERNAL';
 
 export class DeviceError extends Error {
   readonly retryable: boolean;

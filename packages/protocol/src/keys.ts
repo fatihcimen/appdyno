@@ -55,10 +55,10 @@ export const KEY_USAGES = {
   siri: undefined,
 } as const satisfies Record<Key, { page: number; usage: number } | undefined>;
 
-const KEY_OF_USAGE = new Map(
+const KEY_OF_USAGE = new Map<number, Key>(
   KEYS.flatMap((key) => {
     const at = KEY_USAGES[key];
-    return at?.page === KEYBOARD ? [[at.usage as number, key] as const] : [];
+    return at?.page === KEYBOARD ? [[at.usage, key] as const] : [];
   }),
 );
 
