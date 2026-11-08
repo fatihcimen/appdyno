@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { refIn, toolCaller } from './helpers.js';
 import { IosPhoneDevice } from './workspace.js';
 
@@ -35,13 +35,12 @@ describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
     });
     client = new Client({ name: 'stdio-test', version: '0' });
     await client.connect(transport);
-  });
-  afterAll(async () => {
-    await call('terminate_app').catch(() => undefined);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await client?.close();
-    // the runner does not stay on a shared phone after the run
-    await new IosPhoneDevice(udid).stopAgent();
+    return async () => {
+      await call('terminate_app').catch(() => undefined);
+      await client.close();
+      // the runner does not stay on a shared phone after the run
+      await new IosPhoneDevice(udid).stopAgent();
+    };
   });
 
   it('lists the phone and drives Settings: launch, read, tap by ref, screenshot', async () => {

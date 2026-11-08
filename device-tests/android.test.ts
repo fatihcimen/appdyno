@@ -1,4 +1,4 @@
-import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { PROTOCOL } from '@appdyno/protocol';
 import { agentMayGo } from './one-agent.js';
@@ -105,9 +105,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
     await d.shell(
       'settings put global window_animation_scale 1; settings put global transition_animation_scale 1',
     );
+    return () => d.close();
   });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => d?.close());
 
   it('says hello with the device and the protocol', () => {
     expect(d.hello).toMatchObject({ platform: 'android', protocol: PROTOCOL });

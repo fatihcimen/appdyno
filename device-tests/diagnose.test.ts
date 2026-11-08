@@ -276,9 +276,8 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
     ctx = new ServerContext(DEFAULT_POLICY, [iphoneProvider()], { device: iphone, app: APP });
     call = caller(ctx);
     await call('launch_app', { read: 'none' });
+    return () => ctx.close();
   }, 240_000);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => ctx?.close());
 
   it('says what it cannot read of a phone log, and how to read it', async () => {
     const r = await call('logs');

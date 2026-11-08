@@ -38,17 +38,15 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     throw e;
   };
 
-  beforeAll(async () => {
+  beforeAll(() => {
     d = new IosPhoneDevice(udid);
-    await d.open();
-  }, 240_000);
-  // the runner does not stay on a shared phone after the run
-  afterAll(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await d?.terminate(SETTINGS).catch(() => undefined);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await d?.stopAgent();
+    // the runner does not stay on a shared phone after the run, nor after an open that failed
+    return async () => {
+      await d.terminate(SETTINGS).catch(() => undefined);
+      await d.stopAgent();
+    };
   });
+  beforeAll(() => d.open(), 240_000);
 
   it('says hello as iOS from the phone', () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: PROTOCOL });
@@ -215,10 +213,8 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     beforeAll(async () => {
       await new Devicectl(udid).install(FIXTURE_APP);
     }, 240_000);
-    afterAll(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-      await d?.terminate(APP).catch(() => undefined);
-    });
+    // the outer suite's beforeAll set it: had it failed, nothing here runs
+    afterAll(() => d.terminate(APP).catch(() => undefined));
 
     it('memory: 50 MB held shows in the footprint (within 15 %)', async () => {
       const s = await open('memory');

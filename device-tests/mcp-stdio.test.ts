@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { REVISIONS } from '../packages/ops/test/helpers.js';
 import { refIn, toolCaller } from './helpers.js';
 import { IosSimulatorDevice } from './workspace.js';
@@ -51,12 +51,11 @@ for (const revision of REVISIONS)
         );
         await client.connect(transport);
         expect(client.getNegotiatedProtocolVersion()).toBe(revision);
-      });
-      afterAll(async () => {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-        await client?.close();
-        // the iOS runner does not stay on a shared simulator after the run
-        if (platform === 'ios') await new IosSimulatorDevice(serial).stopAgent();
+        return async () => {
+          await client.close();
+          // the iOS runner does not stay on a shared simulator after the run
+          if (platform === 'ios') await new IosSimulatorDevice(serial).stopAgent();
+        };
       });
 
       it('says how far a long call has got, as it goes', async () => {

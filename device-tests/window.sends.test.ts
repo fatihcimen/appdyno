@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   MirrorSession,
   viewerBinary,
@@ -133,16 +133,17 @@ describe.runIf(devices.length > 0).each(devices)(
         told.push(m);
         tell(m);
       };
+      // a window a start that failed opened is closed too
+      return async () => {
+        await session.stop('the test ended');
+        await device.terminate(APP).catch(() => undefined);
+        device.close();
+      };
+    });
+    beforeAll(async () => {
       await session.start();
       await until('a picture', () => session.status.state === 'live', 60_000);
       await device.terminate(APP).catch(() => undefined);
-    });
-
-    afterAll(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-      await session?.stop('the test ended');
-      await device.terminate(APP).catch(() => undefined);
-      device.close();
     });
 
     it(

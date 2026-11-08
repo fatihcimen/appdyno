@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   iphoneProvider,
   buildScreen,
@@ -50,15 +50,13 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   beforeAll(async () => {
     await ctl.install(fixture);
     d = (await t.ctx.session()).device as IosPhoneDevice;
-    await d.tree();
+    return async () => {
+      await d.terminate(APP).catch(() => undefined);
+      await d.stopAgent();
+      t.ctx.close();
+    };
   }, 240_000);
-  afterAll(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await d?.terminate(APP).catch(() => undefined);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await d?.stopAgent();
-    t.ctx.close();
-  });
+  beforeAll(() => d.tree(), 240_000);
 
   it('frames: perf_scroll with no argument records around its swipes', async () => {
     await open('list');

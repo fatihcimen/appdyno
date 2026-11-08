@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   MirrorSession,
   startViewer,
@@ -45,14 +45,13 @@ describe.runIf(udid)('mirror on a simulator', () => {
       title: 'a test',
       onChange: (s) => seen.push(s),
     });
-    await session.start();
+    // a viewer a start that failed opened is closed too
+    return async () => {
+      await session.stop('the test ended');
+      device.close();
+    };
   }, 300_000);
-
-  afterAll(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await session?.stop('the test ended');
-    device.close();
-  });
+  beforeAll(() => session.start(), 300_000);
 
   it('is live in moments, at the simulator own size', async () => {
     await until('picture', () => session.status.state === 'live');

@@ -1,4 +1,4 @@
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from './workspace.js';
 import { PROTOCOL, type Tree } from '@appdyno/protocol';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
@@ -54,11 +54,10 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   beforeAll(async () => {
     await simctl.install(udid, SIM_FIXTURE);
     d = new IosSimulatorDevice(udid);
-    await d.open();
+    // the runner does not stay on a shared simulator after the run, nor after an open that failed
+    return () => d.stopAgent();
   }, 240_000);
-  // the runner does not stay on a shared simulator after the run
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => d?.stopAgent());
+  beforeAll(() => d.open(), 240_000);
 
   it('launches, reads and taps with no runner, from the first touch on', async () => {
     expect(d.hello?.agentVersion).toBe('helper');

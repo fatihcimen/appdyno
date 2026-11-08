@@ -158,9 +158,8 @@ for (const { platform, serial, provider } of targets)
       if (platform === 'iphone') await new Devicectl(serial).install(iphoneFixture);
       h = harness(serial, provider());
       await h.ok('launch_app');
+      return () => h.ctx.close();
     }, 240_000);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    afterAll(() => h?.ctx.close());
 
     // devicectl offers no recording on some phones (an iPhone 13 Pro Max on iOS 27.0.1): then it says so, with what to do
     let noRecorder = false;
@@ -351,16 +350,13 @@ describe.skipIf(!android)('network on Android', () => {
     web = await localWeb();
     h = harness(android, androidProvider(adb));
     await h.ok('launch_app');
+    return async () => {
+      // a test that failed half way must not leave the device on a proxy that is about to close
+      await h.ctx.end();
+      h.ctx.close();
+      web.close();
+    };
   }, 240_000);
-  afterAll(async () => {
-    // a test that failed half way must not leave the device on a proxy that is about to close
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await h?.ctx.end();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    h?.ctx.close();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    web?.close();
-  });
 
   it('says what each way sees', async () => {
     const r = await h.ok('network', { action: 'paths' });
@@ -452,13 +448,11 @@ describe.skipIf(!simulator)('network on a simulator', () => {
     web = await localWeb();
     h = harness(simulator, simulatorProvider());
     await h.ok('launch_app');
+    return () => {
+      h.ctx.close();
+      web.close();
+    };
   }, 240_000);
-  afterAll(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    h?.ctx.close();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    web?.close();
-  });
 
   it('says what each way sees and what it follows', async () => {
     const r = await h.ok('network', { action: 'paths' });
@@ -503,9 +497,8 @@ for (const { platform, serial, provider, pageId, other } of [
       await h.ok('launch_app');
       await h.ok('open_link', { url: 'appdyno-fixture://open/web' });
       await h.ok('wait_for', { text: 'Web content' });
+      return () => h.ctx.close();
     }, 240_000);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    afterAll(() => h?.ctx.close());
 
     it('marks what a web view shows in the screen', async () => {
       const s = await h.ok('screen');
@@ -603,9 +596,8 @@ for (const { platform, serial, provider } of targets)
       await h.ok('terminate_app');
       await h.ok('launch_app');
       await open('dialog', 'Open dialog');
+      return () => h.ctx.close();
     }, 240_000);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    afterAll(() => h?.ctx.close());
 
     it('finds a screen the same as its baseline', async () => {
       const saved = await h.ok('visual', { action: 'baseline', name: 'dialog', dir: baselines });
@@ -727,9 +719,8 @@ describe.skipIf(!android.startsWith('emulator-'))('emulator events on Android', 
   beforeAll(async () => {
     h = harness(android, androidProvider(adb));
     await h.ok('launch_app');
+    return () => h.ctx.close();
   }, 240_000);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => h?.ctx.close());
 
   it('sets the battery and puts it back', async () => {
     const level = async () => /level: (\d+)/.exec(await adb.exec(android, 'dumpsys battery'))?.[1];
@@ -795,9 +786,8 @@ describe.skipIf(!android)('recording on Android', () => {
   beforeAll(async () => {
     h = harness(android, androidProvider(adb));
     await h.ok('launch_app');
+    return () => h.ctx.close();
   }, 240_000);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => h?.ctx.close());
 
   it('joins its segments into one video, across the limit of one run', async () => {
     process.env.APPDYNO_RECORD_SEGMENT_S = '5';

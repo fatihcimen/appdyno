@@ -1,7 +1,7 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { createServer, type AddressInfo } from 'node:net';
 import { promisify } from 'node:util';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, simulatorProvider } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 import { untilWithin } from './until.js';
@@ -45,10 +45,7 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
   beforeAll(() => {
     const o = opsOn(androidProvider(new Adb()), ANDROID, APP);
     call = o.call;
-  });
-  afterAll(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await call?.('device_setting', { name: 'restore' });
+    return () => call('device_setting', { name: 'restore' });
   });
 
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import type { OpData, OpName } from '@appdyno/ops';
 import { Devicectl, IosSimulatorDevice } from './workspace.js';
 
@@ -102,12 +102,11 @@ for (const { platform, serial, form } of targets)
       });
       client = new Client({ name: 'flows-test', version: '0' });
       await client.connect(transport);
+      return async () => {
+        await client.close();
+        if (platform === 'ios') await new IosSimulatorDevice(serial).stopAgent();
+      };
     }, 240_000);
-    afterAll(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-      await client?.close();
-      if (platform === 'ios') await new IosSimulatorDevice(serial).stopAgent();
-    }, 60_000);
 
     it(
       'records the form, the list and the dialog through the MCP tools',

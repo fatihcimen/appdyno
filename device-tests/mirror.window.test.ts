@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   decodePng,
   MirrorSession,
@@ -107,17 +107,18 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
       told.push(m);
       tell(m);
     };
+    // a window a start that failed opened is closed too
+    return async () => {
+      await session.stop('done');
+      device.close();
+    };
+  }, 120_000);
+  beforeAll(async () => {
     await session.start();
     await until('picture', () => session.status.state === 'live');
     // an app closes to the page its icon is on: what these clicks aim at is on Settings' page, whatever ran before
     execFileSync('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
   }, 120_000);
-
-  afterAll(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await session?.stop('done');
-    device.close();
-  });
 
   it('sends the toolbar Home to the device', async () => {
     inputs.length = 0;

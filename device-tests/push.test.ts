@@ -39,9 +39,8 @@ function server(serial: string, app: string | undefined = APP, env: Record<strin
     });
     client = new Client({ name: 'push-test', version: '0' });
     await client.connect(transport);
+    return () => client.close();
   });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => client?.close());
   return call;
 }
 

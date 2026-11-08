@@ -1,4 +1,4 @@
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   IosSimulatorDevice,
   Simctl,
@@ -48,11 +48,10 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   beforeAll(async () => {
     await new Simctl().install(udid, SIM_FIXTURE);
     d = new IosSimulatorDevice(udid);
-    await d.open();
+    // the runner does not stay on a shared simulator after the run, nor after an open that failed
+    return () => d.stopAgent();
   }, 240_000);
-  // the runner does not stay on a shared simulator after the run
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => d?.stopAgent());
+  beforeAll(() => d.open(), 240_000);
 
   it('memory: 50 MB held shows in the footprint (within 15 %)', async () => {
     const s = await open('memory');

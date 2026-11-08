@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   simulatorProvider,
   buildScreen,
@@ -39,14 +39,15 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
   beforeAll(async () => {
     await new Simctl().install(udid, SIM_FIXTURE);
     d = (await t.ctx.session()).device as IosSimulatorDevice;
+    return async () => {
+      await d.stopAgent();
+      t.ctx.close();
+    };
+  }, 240_000);
+  beforeAll(async () => {
     await d.terminate(APP);
     await d.launch(APP);
   }, 240_000);
-  afterAll(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-    await d?.stopAgent();
-    t.ctx.close();
-  });
 
   it('frames: the probe attaches itself, says so, and tells a 40 ms draw from a plain list', async () => {
     const first = await t.call('perf_scroll', { repeats: 1 });

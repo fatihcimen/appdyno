@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AndroidDevice,
   androidProvider,
@@ -47,11 +47,10 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await d.stopAgent();
     await d.shell('pkill -f dev.appdyno.agent.Main || true');
     await d.open();
+    return () => d.close();
   });
   // these tests go by shell, and a phone's screen goes off by itself meanwhile
   beforeEach(() => d.ensureAwake());
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
-  afterAll(() => d?.close());
 
   it('frames: a light animation is smooth, a 40 ms draw misses every deadline', async () => {
     const s = await open('frames');
