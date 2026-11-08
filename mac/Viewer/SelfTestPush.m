@@ -72,6 +72,13 @@ void MVCheckPush(void) {
   NSPopUpButton *type = [pane valueForKey:@"_type"];
   NSTextField *app = [pane valueForKey:@"_app"];
   MVCheck(@"push: the window's app stands in its field", [app.stringValue isEqual:@"dev.app"], app.stringValue);
+  [window.nsWindow makeFirstResponder:app];
+  [app.currentEditor selectAll:nil];
+  [app.currentEditor insertText:@"dev.other"];
+  [sent removeAllObjects];
+  [window.nsWindow makeFirstResponder:nil];
+  MVCheck(@"push: another app named, the pane asks what that app's build takes", [sent.lastObject isEqual:(@{@"op": @"control", @"name": @"pushes", @"app": @"dev.other"})], sent.description);
+  app.stringValue = @"dev.app";
   MVCheck(@"push: a type the device does not take is there, and cannot be chosen, with why", type.numberOfItems == 3 && ![type itemAtIndex:1].enabled && [[type itemAtIndex:1].toolTip containsString:@"simctl"] && [type.titleOfSelectedItem isEqual:MVWord(@"Alert")], type.titleOfSelectedItem);
   NSGridView *fields = [pane valueForKey:@"_fields"];
   MVCheck(@"push: the fields follow the type", [fields rowAtIndex:2].hidden && ![fields rowAtIndex:0].hidden, nil);

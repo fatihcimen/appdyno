@@ -82,9 +82,14 @@ export function windowSends(
     tell('openLink', { ...answer, recent: recent() });
   };
 
-  /** What this device takes, by the op with no type, and the app in front where it is a person's own. */
-  const pushes = async () => {
-    const [{ answer, data }, front] = await Promise.all([call('push', 'push', {}), ownFront()]);
+  /**
+   * What this device takes, by the op with no type, for the app the pane names, else the one in front where it is a
+   * person's own, as an app's build may take another route; and that app in front, which the pane starts from.
+   */
+  const pushes = async (named: string) => {
+    const front = await ownFront();
+    const app = named || front.app;
+    const { answer, data } = await call('push', 'push', app ? { app } : {});
     tell('push', data ? { types: data.types, ...front } : answer);
   };
 
@@ -123,7 +128,7 @@ export function windowSends(
       });
     },
     openLink: (m) => openLink(String(m.url ?? '').trim(), String(m.app ?? '').trim()),
-    pushes: () => pushes(),
+    pushes: (m) => pushes(String(m.app ?? '').trim()),
     push: (m) => push(m.args),
     pushToken,
   };

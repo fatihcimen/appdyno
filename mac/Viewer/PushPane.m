@@ -155,9 +155,16 @@ static NSString *readable(NSString *json) {
   return self;
 }
 
-/// What this device takes, and the app in front, asked again each time: either may have changed.
+/// What this device takes for the app a person named, else the one in front, and that one, asked again each time: any
+/// may have changed, and an app's build may take other routes.
 - (void)ask {
-  MVPaneSend(self, @{@"op": @"control", @"name": @"pushes"});
+  NSString *app = self.appNamed;
+  MVPaneSend(self, app.length && ![app isEqual:_suggested] ? @{@"op": @"control", @"name": @"pushes", @"app": app} : @{@"op": @"control", @"name": @"pushes"});
+}
+
+/// Another app named, once a person is done with it.
+- (void)controlTextDidEndEditing:(NSNotification *)note {
+  if (note.object == _app) [self ask];
 }
 
 - (void)focus {

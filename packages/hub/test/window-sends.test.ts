@@ -84,8 +84,9 @@ describe('what a window sends to its device', () => {
       { type: 'alert', route: 'by hand', fields: ['title', 'data'], template: '{"aps":{}}' },
       { type: 'tapped', why: 'no hand' },
     ];
+    const listedFor: (string | undefined)[] = [];
     device.events = {
-      pushRoutes: () => routes,
+      pushRoutes: async (app?: string) => (listedFor.push(app), routes),
       push: async (app: string, push: unknown) => {
         pushed.push([app, push]);
         return `pushed to ${app}`;
@@ -103,6 +104,13 @@ describe('what a window sends to its device', () => {
         types: routes,
         app: front,
       });
+    told.length = 0;
+    // another app named in the pane: its build may take other routes, and the pane still starts from the one in front
+    sends.onWindow({ op: 'control', name: 'pushes', app: 'dev.other' });
+    await expect
+      .poll(() => told.find((m) => 'types' in m))
+      .toMatchObject({ types: routes, app: front });
+    expect(listedFor).toEqual([front, 'dev.other']);
     told.length = 0;
     const args = { app: 'dev.app', type: 'alert', title: 'Order 42', data: { order: '42' } };
     expect(sends.onWindow({ op: 'control', name: 'push', args })).toBe(true);
