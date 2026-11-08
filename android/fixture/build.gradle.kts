@@ -7,7 +7,7 @@ plugins {
 // moving content, slow focus, a web view, a crash and a hang). Debug, but for what only a store's build shows.
 android {
     namespace = "dev.appdyno.fixture"
-    compileSdk = 37
+    compileSdk { version = release(37) { minorApiLevel = 2 } }
     buildToolsVersion = "37.0.0"
     ndkVersion = "30.0.16248370"
     defaultConfig {

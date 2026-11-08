@@ -5,7 +5,7 @@ plugins {
 // The agent is never installed: its APK is the class path of an app_process server run as the shell user.
 android {
     namespace = "dev.appdyno.agent"
-    compileSdk = 37
+    compileSdk { version = release(37) { minorApiLevel = 2 } }
     buildToolsVersion = "37.0.0"
     defaultConfig {
         applicationId = "dev.appdyno.agent"
