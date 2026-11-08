@@ -168,6 +168,10 @@ static NSString *askAdb(int fd, NSString *request) {
 
 - (int)connectToAdb {
   int fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0) {
+    [self lost:@"adb server not reachable" fatal:NO];
+    return -1;
+  }
   int on = 1;
   setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &on, sizeof on);
   setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof on);

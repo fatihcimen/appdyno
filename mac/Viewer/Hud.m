@@ -113,7 +113,7 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   int span = self.fills ? MAX(_count, 2) : MAX(_count, MIN(_capacity, kHistory));
   double height = box.size.height - 3, step = box.size.width / (span - 1);
   double (^across)(int) = ^(int i) {
-    return (i - (_capacity - span)) * step;
+    return (i - (self->_capacity - span)) * step;
   };
   double (^level)(double) = ^(double v) {
     return 1.5 + v / top * height;

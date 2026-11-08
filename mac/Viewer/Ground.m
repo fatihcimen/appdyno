@@ -2,9 +2,7 @@
 // nothing at all to do while it stays as it is. A still grain over it keeps a slow gradient from showing bands.
 #import "Window.h"
 
-enum { kWide = 128,
-       kTall = 84,
-       kGrain = 192 };
+static const int kWide = 128, kTall = 84, kGrain = 192;
 static const double kGrainAlpha = 0.012;
 
 static double linear(uint32_t channel) {
@@ -31,7 +29,9 @@ static void pixelOf(const double lab[3], uint8_t *px) {
   double l = lab[0] + 0.3963377774 * lab[1] + 0.2158037573 * lab[2];
   double m = lab[0] - 0.1055613458 * lab[1] - 0.0638541728 * lab[2];
   double s = lab[0] - 0.0894841775 * lab[1] - 1.2914855480 * lab[2];
-  l = l * l * l, m = m * m * m, s = s * s * s;
+  l = l * l * l;
+  m = m * m * m;
+  s = s * s * s;
   px[0] = gamma8(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s);
   px[1] = gamma8(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s);
   px[2] = gamma8(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);

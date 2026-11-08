@@ -283,7 +283,10 @@ static BOOL redMood(OSType format, size_t lines, NSString *name) {
   CVPixelBufferLockBaseAddress(image, 0);
   memset(CVPixelBufferGetBaseAddressOfPlane(image, 0), 63, CVPixelBufferGetBytesPerRowOfPlane(image, 0) * 64);
   uint8_t *chroma = CVPixelBufferGetBaseAddressOfPlane(image, 1);
-  for (size_t i = 0; i < CVPixelBufferGetBytesPerRowOfPlane(image, 1) * lines; i += 2) chroma[i] = 102, chroma[i + 1] = 240;
+  for (size_t i = 0; i < CVPixelBufferGetBytesPerRowOfPlane(image, 1) * lines; i += 2) {
+    chroma[i] = 102;
+    chroma[i + 1] = 240;
+  }
   CVPixelBufferUnlockBaseAddress(image, 0);
   CGImageRef mood = MVImageMood(image, NO);
   uint8_t px[4] = {0};
@@ -300,7 +303,9 @@ static void checkStreamMood(void) {
   redMood(kCVPixelFormatType_444YpCbCr8BiPlanarFullRange, 64, @"backdrop: an iPhone's 4:4:4 stream gives its colours too");
   CVPixelBufferRef ten = NULL;
   CVPixelBufferCreate(NULL, 64, 64, kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange, NULL, &ten);
-  MVCheck(@"backdrop: a kind of image it cannot read leaves the window as it was", ten && !MVImageMood(ten, NO), nil);
+  CGImageRef none = ten ? MVImageMood(ten, NO) : NULL;
+  MVCheck(@"backdrop: a kind of image it cannot read leaves the window as it was", ten && !none, nil);
+  if (none) CGImageRelease(none);
   CVPixelBufferRelease(ten);
 }
 

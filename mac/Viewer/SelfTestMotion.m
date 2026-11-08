@@ -2,10 +2,7 @@
 #import "Motion.h"
 #import "SelfTest.h"
 
-enum { W = 360,
-       H = 780,
-       BandY = 240,
-       BandH = 48 };
+static const int W = 360, H = 780, BandY = 240, BandH = 48;
 
 /// Marks that do not repeat, as letters: a position along the band.
 static uint8_t mark(int x, int y) {

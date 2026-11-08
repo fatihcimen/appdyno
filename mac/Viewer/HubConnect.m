@@ -6,7 +6,7 @@
 #import "Words.h"
 
 // while this place shows; nothing looks at a phone while it does not
-static const double kLookSeconds = 3, kShowSeconds = 0.2;
+static const double kLookSeconds = 3;
 static const double kPictureWide = 216, kPictureTall = 196, kWashShare = 0.46, kWashInset = 12, kSlideFrom = 14;
 
 /// What a phone of this maker calls a place, for the two steps that differ.
@@ -190,8 +190,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSString *maker = _guide[@"maker"];
   if (need) return @[_guide[@"need"], @[need[@"title"], need[@"fix"], @"", @""]];
   if ([self phoneReady]) return @[@"ready", @[[NSString stringWithFormat:@"%@ is ready", _guide[@"name"] ?: MVWord(@"Your phone")], @"Ask your AI app what is on its screen.", @"", @""]];
-  NSString *step = [self stepLeft][@"id"];
-  return @[step ?: @"plug", wordsOf(step, maker)];
+  NSString *step = [self stepLeft][@"id"] ?: @"plug";
+  return @[step, wordsOf(step, maker)];
 }
 
 - (void)drawStep {

@@ -126,9 +126,9 @@ BOOL MVWriteWindowPart(NSWindow *window, NSRect part, NSString *file);
 NSArray<NSDictionary *> *MVWindowParts(NSWindow *window);
 
 /// A few cells of a picture's own colours, for a layer to stretch into a soft mesh with no blur pass. Caller owns it.
-CGImageRef _Nullable MVPictureMood(IOSurfaceRef surface, BOOL dark);
+CGImageRef _Nullable MVPictureMood(IOSurfaceRef surface, BOOL dark) CF_RETURNS_RETAINED;
 /// The same of a decoded stream's image; NULL for a kind of image it cannot read.
-CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark);
+CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark) CF_RETURNS_RETAINED;
 /// What is behind everything in a window: the palette's ground, joined by the picture's own colours, so that glass has
 /// something to show whatever the device does.
 @interface MVBackdrop : NSObject

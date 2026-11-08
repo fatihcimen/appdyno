@@ -38,7 +38,8 @@ enum {
   BOOL odd = turns % 2;
   int w = MVWatchWidth, h = (int)(MVWatchWidth * (odd ? width : height) / (odd ? height : width)) & ~1;
   if (!_gray) {
-    _w = w, _h = h;
+    _w = w;
+    _h = h;
     _gray = [NSMutableData dataWithLength:w * h];
     _motion = [[MVMotion alloc] initWithWidth:w height:h];
   }

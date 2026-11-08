@@ -7,8 +7,8 @@
 // memory is bounded by these, and no frame is kept to catch up; a frame dropped costs all of them to the next key, about as
 // long as this, so a decoder's moment of stall is waited out
 enum { kMaxInFlight = 3,
-       kMaxParameterSet = 4096,
-       kRoomWaitMs = 100 };
+       kMaxParameterSet = 4096 };
+static const double kRoomWaitMs = 100;
 
 void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_t *nal, size_t length)) {
   size_t start = 0;

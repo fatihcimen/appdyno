@@ -65,7 +65,7 @@ typedef struct {
 /// The palette's ground for a look, its colours turned for a place.
 void MVGroundOf(BOOL dark, NSInteger place, MVGroundPlan *plan);
 /// A few pixels of it, for a layer to stretch. Caller owns it.
-CGImageRef MVPaintGround(const MVGroundPlan *plan);
+CGImageRef MVPaintGround(const MVGroundPlan *plan) CF_RETURNS_RETAINED;
 /// A still fine grain, as a layer's colour.
 CGColorRef MVGrain(void);
 /// A symbol in its own ink: AppKit dims a template in a window behind others, and leaves this as it is.

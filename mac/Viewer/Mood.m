@@ -29,13 +29,17 @@ static double unit(double v) {
 static void pixelAt(const MVPixels *p, size_t x, size_t y, double out[3]) {
   if (!p->chroma) {
     const uint8_t *px = p->base + y * p->row + x * 4;
-    out[0] = px[2] / 255.0, out[1] = px[1] / 255.0, out[2] = px[0] / 255.0;
+    out[0] = px[2] / 255.0;
+    out[1] = px[1] / 255.0;
+    out[2] = px[0] / 255.0;
     return;
   }
   const uint8_t *pair = p->chroma + y / p->linesApart * p->chromaRow + x / p->columnsApart * 2;
   // BT.709, as a video's range: a mood has no need of more, and a phone's stream is near enough to it
   double luma = (p->base[y * p->row] - 16) / 219.0, cb = (pair[0] - 128) / 224.0, cr = (pair[1] - 128) / 224.0;
-  out[0] = unit(luma + 1.5748 * cr), out[1] = unit(luma - 0.1873 * cb - 0.4681 * cr), out[2] = unit(luma + 1.8556 * cb);
+  out[0] = unit(luma + 1.5748 * cr);
+  out[1] = unit(luma - 0.1873 * cb - 0.4681 * cr);
+  out[2] = unit(luma + 1.8556 * cb);
 }
 
 static void cellOf(const MVPixels *p, size_t x0, size_t y0, double out[3]) {
@@ -51,7 +55,7 @@ static void cellOf(const MVPixels *p, size_t x0, size_t y0, double out[3]) {
   for (int i = 0; i < 3; i++) out[i] = sum[i] / (kMoodSamples * kMoodSamples);
 }
 
-static CGImageRef moodOf(const MVPixels *p, BOOL dark) {
+CF_RETURNS_RETAINED static CGImageRef moodOf(const MVPixels *p, BOOL dark) {
   uint8_t cells[kMoodRows * kMoodColumns * 4];
   for (int y = 0; y < kMoodRows; y++) {
     for (int x = 0; x < kMoodColumns; x++) {
@@ -88,15 +92,18 @@ static BOOL spacingOf(OSType format, MVPixels *p) {
   switch (format) {
     case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
     case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
-      p->columnsApart = 2, p->linesApart = 2;
+      p->columnsApart = 2;
+      p->linesApart = 2;
       return YES;
     case kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange:
     case kCVPixelFormatType_422YpCbCr8BiPlanarFullRange:
-      p->columnsApart = 2, p->linesApart = 1;
+      p->columnsApart = 2;
+      p->linesApart = 1;
       return YES;
     case kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange:
     case kCVPixelFormatType_444YpCbCr8BiPlanarFullRange:
-      p->columnsApart = 1, p->linesApart = 1;
+      p->columnsApart = 1;
+      p->linesApart = 1;
       return YES;
     default:
       return NO;
@@ -229,7 +236,7 @@ static MVGroundBloom bloomOf(const uint8_t *bytes, size_t row, size_t wide, size
 }
 
 /// What a picture adds is its hue and no more: its light stays the ground's, so that nothing a device shows can reach what is read over it.
-- (void)show:(nullable CGImageRef)mood side:(NSInteger)side {
+- (void)show:(nullable CGImageRef)CF_CONSUMED mood side:(NSInteger)side {
   if (!mood) return;
   MVGroundBloom was[2] = {_mood[0], _mood[1]};
   NSData *cells = CFBridgingRelease(CGDataProviderCopyData(CGImageGetDataProvider(mood)));

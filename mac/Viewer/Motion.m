@@ -2,8 +2,8 @@
 // touch are a region, and the middle of their shifts at each step is how it moved: its steady speed, and what broke it.
 #import "Motion.h"
 
+static const int MVTile = 24;
 enum {
-  MVTile = 24,
   /// Half a screen would find a repeat of a letter: this is 650 points a second, or a jump of 100, on a phone.
   MVReach = 64,
   MVMaxSteps = 256,
@@ -104,11 +104,19 @@ static int compareInts(const void *a, const void *b) {
         for (int s = -reach; s <= reach; s += 2 * reach) {
           if (x0 + s >= 0 && x0 + s + MVTile <= _w) {
             long d = difference(tile, after + y0 * _w + x0 + s, _w);
-            if (d < best) best = d, dx[t] = s, dy[t] = MVStill;
+            if (d < best) {
+              best = d;
+              dx[t] = s;
+              dy[t] = MVStill;
+            }
           }
           if (y0 + s >= 0 && y0 + s + MVTile <= _h) {
             long d = difference(tile, after + (y0 + s) * _w + x0, _w);
-            if (d < best) best = d, dy[t] = s, dx[t] = MVStill;
+            if (d < best) {
+              best = d;
+              dy[t] = s;
+              dx[t] = MVStill;
+            }
           }
         }
     }
@@ -154,10 +162,16 @@ static int compareInts(const void *a, const void *b) {
     while (top) {
       int t = stack[--top], c = t % _cols, r = t / _cols;
       members[count++] = t;
-      left = MIN(left, c), right = MAX(right, c), up = MIN(up, r), down = MAX(down, r);
+      left = MIN(left, c);
+      right = MAX(right, c);
+      up = MIN(up, r);
+      down = MAX(down, r);
       int near[4] = {c > 0 ? t - 1 : -1, c + 1 < _cols ? t + 1 : -1, r > 0 ? t - _cols : -1, r + 1 < _rows ? t + _cols : -1};
       for (int i = 0; i < 4; i++)
-        if (near[i] >= 0 && !seen[near[i]] && kind[near[i]] == kind[first]) seen[near[i]] = 1, stack[top++] = near[i];
+        if (near[i] >= 0 && !seen[near[i]] && kind[near[i]] == kind[first]) {
+          seen[near[i]] = 1;
+          stack[top++] = near[i];
+        }
     }
     NSMutableDictionary *region = [@{
       @"kind": kind[first] == 3 ? @"changes" : @"moves",

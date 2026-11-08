@@ -209,6 +209,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)useToolbar;
 /// What a control of the window does, by its name.
 - (void)perform:(NSString *)name;
+/// A menu item's or a bar button's action: the control it names.
+- (void)control:(id)sender;
 /// What More holds.
 - (NSMenu *)moreMenu;
 @end
