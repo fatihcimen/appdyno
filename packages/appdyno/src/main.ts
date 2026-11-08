@@ -220,8 +220,6 @@ async function main(): Promise<number> {
       });
     case 'pair':
       return pairCommand(rest);
-    case 'push':
-      return pushCommand(rest);
     case 'timeline':
       return timelineCommand(rest, contextFrom);
     case 'flight':
@@ -342,6 +340,8 @@ async function main(): Promise<number> {
       if (command === 'perf' && rest[0] === 'dashboard') return dashboardCommand(rest.slice(1));
       if (command === 'perf' && rest[0] === 'survey') return surveyCommand(rest.slice(1));
       if (command === 'perf' && rest[0] === 'comment') return commentCommand(rest.slice(1));
+      // `push setup` keeps a push service's credentials; any other `push` is the tool's
+      if (command === 'push' && rest[0] === 'setup') return pushCommand(rest);
       // `perf compare|baseline|budget [flags]`: the gate's names for one operation
       const gate = command === 'perf' ? rest.shift() : undefined;
       if (

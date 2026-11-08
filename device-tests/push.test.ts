@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
@@ -198,6 +198,18 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
     expect(named.text).toContain("google.x is FCM's own name");
     const file = await call('push', { type: 'rich', title: 'T', image: PICTURE });
     expect(file.text).toContain('give a link');
+  });
+
+  it('is a command as the tool is, and `push setup` stays the credentials', () => {
+    const cli = (...words: string[]) =>
+      spawnSync(process.execPath, [MAIN, 'push', ...words], { encoding: 'utf8' });
+    // shared: this suite's server holds the device
+    const types = cli('--device', ANDROID!, '--share', '--app', PUSH_APP);
+    expect(types.status, types.stderr).toBe(0);
+    expect(types.stdout).toMatch(/background: FCM's own message .* by run-as/);
+    const setup = cli('setup');
+    expect(setup.status).toBe(2);
+    expect(setup.stdout + setup.stderr).toContain('usage: appdyno push setup');
   });
 });
 

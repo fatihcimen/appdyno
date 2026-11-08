@@ -42,6 +42,9 @@ describe('usage', () => {
     expect(helpFor('perf', ['survey', '--help'])).toContain('every measure on that device');
     expect(helpFor('test', ['a.flow', '--help'])).toContain('usage: appdyno test');
     expect(helpFor('perf', ['compare', '--help'])).toBeUndefined();
+    expect(helpFor('push', ['setup', '--help'])).toContain('usage: appdyno push setup');
+    expect(helpFor('push', ['--help'])).toBeUndefined();
+    expect(helpFor('push', ['--type', 'alert', '-h'])).toBeUndefined();
     expect(helpFor('tap', ['--help'])).toBeUndefined();
     expect(helpFor('doctor', ['--serial', 'S'])).toBeUndefined();
     expect(helpFor(undefined, [])).toBeUndefined();
