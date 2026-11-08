@@ -18,7 +18,7 @@ appdyno perf survey --app A                             # bu cihazdaki her ölç
 
 Her çalıştırma geldiği ham çıktıyla birlikte saklanır. Mac'inizden hiçbir şey çıkmaz.
 
-`perf survey`, bir uygulamanın bütün cihazlarınızdaki sayılarını tek sayfada gösteren [dashboard'u](../reference/perf.md#the-dashboard) yazarak biter. `appdyno perf dashboard --open` onu yeniden açar.
+`perf survey`, bir uygulamanın bütün cihazlarınızdaki sayılarını tek sayfada gösteren [dashboard'u](../reference/perf.tr.md#dashboard) yazarak biter. `appdyno perf dashboard --open` onu yeniden açar.
 
 ## Baseline ve kapı
 
@@ -44,11 +44,11 @@ Baseline `.appdyno/perf/baselines/` altına gider. Onu commit edin. Kendi sını
   <img src="../images/perf-gate.tr.svg" alt="Kapı nasıl karar verir: sırayla yedi soru, her biri bir kararla biter: new, refused, ok, few-samples, improvement, noisy ya da regression">
 </picture>
 
-Karar veremeyen bir kapı geçirmez. `few-samples`, `noisy` ve `refused` hepsi, ne yapılacağıyla birlikte 1 ile çıkar. Yöntem ve neden üç testin de gerektiği [Kapı](../reference/perf.md#the-gate) bölümünde.
+Karar veremeyen bir kapı geçirmez. `few-samples`, `noisy` ve `refused` hepsi, ne yapılacağıyla birlikte 1 ile çıkar. Yöntem ve neden üç testin de gerektiği [Kapı](../reference/perf.tr.md#kapı) bölümünde.
 
 ## Neden kötüleşti
 
-`appdyno perf why --app A`, `compare`'dir ve bir gerilemede nedeni bulur. Bkz. [Neden kötüleşti](../reference/perf.md#why-it-got-worse).
+`appdyno perf why --app A`, `compare`'dir ve bir gerilemede nedeni bulur. Bkz. [Neden kötüleşti](../reference/perf.tr.md#neden-kötüleşti).
 
 ## Bir yolculuk
 
@@ -69,7 +69,7 @@ Job, simülatörlü bir macOS runner'ında çalışır, bu yüzden sayıları o 
 
 Pull request'in base'ini ve head'ini tek bir job'da ölçer, çünkü başka bir makineden gelen bir baseline karşılaştırılamaz:
 
-1. base'i derler, baseline'da üç çalıştırma olana kadar akışı ölçer ve [referansı](../reference/perf.md#why-it-got-worse) alır;
+1. base'i derler, baseline'da üç çalıştırma olana kadar akışı ölçer ve [referansı](../reference/perf.tr.md#neden-kötüleşti) alır;
 2. head'i derler ve akışı ölçer;
 3. `appdyno perf why`; bir gerilemede, aşılan bir bütçede ya da karar veremediği bir değişiklikte (`few-samples`, `noisy`, `refused`) job'ı sonunda başarısız sayar;
 4. kapı ne demiş olursa olsun `appdyno perf comment --out perf-comment.md`;

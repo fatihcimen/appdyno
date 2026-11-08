@@ -372,7 +372,7 @@ Bir kodlayıcının kendisi hakkında yayımladıkları buna karar veremezdi: An
 
 `packages/appdyno/scripts/mirror-bench.mjs <device>`, Android'de fixture'ın frames ekranını, iOS'ta ise bir
 listeyi çalıştırır, dokunmadan önce ekranı okur ve her hedefin kararını host'un yükü yanında söyler. Hepsi
-camdaki değil, Mac'e varış değerleridir. 60 yükünün üstündeki bir ıskalama "run it later" der. Bkz. [perf.md](perf.md#mirror).
+camdaki değil, Mac'e varış değerleridir. 60 yükünün üstündeki bir ıskalama "run it later" der. Bkz. [perf.md](perf.tr.md#yansıtma).
 
 ## Bir pencereye bakmak
 

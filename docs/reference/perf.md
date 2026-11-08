@@ -1,5 +1,7 @@
 # Performance measurement
 
+[Türkçe](perf.tr.md)
+
 Every measurement is read from the platform's own tools and stored with the raw output it came from
 (`<measurements dir>/pm-<id>.json` and `.txt`; the MCP server's `--measurements`, default
 `~/Library/Caches/appdyno/measurements`). Commands run in the C locale. Nothing leaves the machine.

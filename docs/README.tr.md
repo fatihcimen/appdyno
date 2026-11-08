@@ -26,7 +26,7 @@ Bir şeye bakmak için burası.
 | [Komut satırı](reference/cli.tr.md)      | her komut, sunucunun bayrakları ve değişkenleri                        |
 | [Kütüphane](reference/library.tr.md)     | bir cihazı TypeScript'ten yönetmek                                     |
 | [Pencere ve hub](reference/mirror.tr.md) | canlı pencere: onu neyin beslediği, durumları, hattı, sınırları        |
-| [Performans](reference/perf.md)          | her ölçümün her cihazda neyi okuduğu ve her sayının nasıl kanıtlandığı |
+| [Performans](reference/perf.tr.md)       | her ölçümün her cihazda neyi okuduğu ve her sayının nasıl kanıtlandığı |
 | [Protokol](reference/protocol.tr.md)     | host ile bir cihazın ajanı arasındaki baytlar                          |
 | [CI ve sürümler](reference/ci.tr.md)     | her kapı, cihaz suite'leri, bir sürümün nasıl yapıldığı                |
 

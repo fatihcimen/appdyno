@@ -85,7 +85,6 @@ const TR = /\.tr\.md$/;
 const ENGLISH_ONLY: Record<string, string> = {
   'CHANGELOG.md': 'not yet in Turkish',
   'CONTRIBUTING.md': 'not yet in Turkish',
-  'docs/reference/perf.md': 'not yet in Turkish',
 };
 const english = tracked.filter((f) => f.endsWith('.md') && !TR.test(f));
 const turkishOf = (page: string) => page.replace(/\.md$/, '.tr.md');

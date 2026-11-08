@@ -104,7 +104,7 @@ Ajanın gönderdiği hiçbir şey evet sayılmaz; hiçbir araç bir cihazı silm
 | Android emülatörü | Android Studio'dan ya da Google'ın platform-tools paketinden gelen adb |
 | Android telefon   | adb ve USB hata ayıklama. Bir kez eşleştirildikten sonra Wi-Fi         |
 
-Her ölçümün her cihazdaki durumu ve nasıl kanıtlandığı: [What works where](docs/reference/perf.md#what-works-where). iPhone'un canlı görüntüsü deneyseldir; Apple'ın belgelenmemiş, değişebilecek servislerine dayanır.
+Her ölçümün her cihazdaki durumu ve nasıl kanıtlandığı: [Ne nerede çalışır](docs/reference/perf.tr.md#ne-nerede-çalışır). iPhone'un canlı görüntüsü deneyseldir; Apple'ın belgelenmemiş, değişebilecek servislerine dayanır.
 
 ## Kurulum
 
@@ -198,7 +198,7 @@ appdyno perf survey --app A    # bu cihazdaki her ölçüm, ardından hepsini g�
 | bir alana yazmak     | 1.271 ms       | 635 ms            | 2.287 ms | 1.023 ms        |
 | ekran görüntüsü      | 90 ms          | 24 ms             | 183 ms   | 184 ms          |
 
-Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğini söyler; bu yüzden süresinin çoğu uygulamanın kendisine aittir. `node scripts/speed.mjs <device id>` aynı çağrıları sizin Mac'inizde çalıştırır. Her çağrı, sürenin nereye gittiği ve her birinin neyi kanıtladığı: [Speed](docs/reference/perf.md#speed).
+Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğini söyler; bu yüzden süresinin çoğu uygulamanın kendisine aittir. `node scripts/speed.mjs <device id>` aynı çağrıları sizin Mac'inizde çalıştırır. Her çağrı, sürenin nereye gittiği ve her birinin neyi kanıtladığı: [Hız](docs/reference/perf.tr.md#hız).
 
 ## Belgeler
 

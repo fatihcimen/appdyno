@@ -86,7 +86,7 @@ Bir kişi ve bir ajan bir cihazı aynı anda kullanabilir. Bir ajanın çağrıl
 
 ## Ölçmek
 
-Her ölçüm platformun kendi araçlarından okunur ve geldiği ham çıktıyla birlikte saklanır. Okunamayan bir sayı adıyla reddedilir, asla sıfır olarak bildirilmez. Her cihazın neyi okuyabildiğini [Ne nerede çalışır](reference/perf.md#what-works-where) söyler.
+Her ölçüm platformun kendi araçlarından okunur ve geldiği ham çıktıyla birlikte saklanır. Okunamayan bir sayı adıyla reddedilir, asla sıfır olarak bildirilmez. Her cihazın neyi okuyabildiğini [Ne nerede çalışır](reference/perf.tr.md#ne-nerede-çalışır) söyler.
 
 Bir çalıştırma `packages/perf` içinde bir kayıt kümesine dönüşür; bir baseline da bir çalıştırma kümesidir. Kapı bunları tek bir fonksiyonda, `compareMetric` içinde, şu sırayla karşılaştırır.
 
@@ -95,7 +95,7 @@ Bir çalıştırma `packages/perf` içinde bir kayıt kümesine dönüşür; bir
   <img src="images/perf-gate.tr.svg" alt="Kapı nasıl karar verir: sırayla yedi soru, her biri bir kararla biter: new, refused, ok, few-samples, improvement, noisy ya da regression">
 </picture>
 
-Önemli olan sıradır. Bir değişiklik bir tabanı, bir sıra testini ve baseline'ın çalıştırmadan çalıştırmaya kendi oynamasını geçmelidir. Bir çalıştırmanın örnekleri onun yükünü ve ısısını paylaşır; bu yüzden değişmemiş bir uygulamanın iki çalıştırması, yalnızca bir sıra testine bakılırsa çoğu zaman anlamlı biçimde farklıdır. Her parçayla ve her parça olmadan oranlar [Kapı](reference/perf.md#the-gate) bölümünde.
+Önemli olan sıradır. Bir değişiklik bir tabanı, bir sıra testini ve baseline'ın çalıştırmadan çalıştırmaya kendi oynamasını geçmelidir. Bir çalıştırmanın örnekleri onun yükünü ve ısısını paylaşır; bu yüzden değişmemiş bir uygulamanın iki çalıştırması, yalnızca bir sıra testine bakılırsa çoğu zaman anlamlı biçimde farklıdır. Her parçayla ve her parça olmadan oranlar [Kapı](reference/perf.tr.md#kapı) bölümünde.
 
 Karar veremeyen bir kapı geçirmemelidir. Bu yüzden `few-samples`, `noisy` ve `refused` hepsi 1 ile çıkar.
 
