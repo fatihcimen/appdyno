@@ -124,7 +124,7 @@ appdyno is not on npm yet, and has no release yet, so today it installs from a c
 ```sh
 git clone https://github.com/fatihcimen/appdyno.git
 cd appdyno
-mise install               # Node 22, pnpm 12 and a JDK 25, from .mise.toml, if you use mise
+mise install               # Node 26, pnpm 12 and a JDK 25, from .mise.toml, if you use mise
 sh scripts/install.sh      # builds this checkout and installs the appdyno command
 ```
 

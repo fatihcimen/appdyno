@@ -4,10 +4,10 @@ Everyone here follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
 
-You need macOS, Node 22 and pnpm 12.
+You need macOS, Node 26 and pnpm 12. Node 22 is the oldest appdyno runs on, and CI tests on it too.
 
 ```sh
-mise install        # Node 22, pnpm 12, JDK 25 (see .mise.toml)
+mise install        # Node 26, pnpm 12, JDK 25 (see .mise.toml)
 pnpm install
 pnpm run ci         # lint, types, tests, build
 ```

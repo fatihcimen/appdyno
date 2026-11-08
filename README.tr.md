@@ -124,7 +124,7 @@ appdyno henüz npm'de değil ve henüz bir sürümü yayımlanmadı; bu yüzden 
 ```sh
 git clone https://github.com/fatihcimen/appdyno.git
 cd appdyno
-mise install               # mise kullanıyorsanız .mise.toml'dan Node 22, pnpm 12 ve JDK 25
+mise install               # mise kullanıyorsanız .mise.toml'dan Node 26, pnpm 12 ve JDK 25
 sh scripts/install.sh      # bu kopyayı derler ve appdyno komutunu kurar
 ```
 
