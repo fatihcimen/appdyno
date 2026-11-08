@@ -1,5 +1,7 @@
 # Security
 
+[Türkçe](SECURITY.tr.md)
+
 ## Reporting a vulnerability
 
 Report it privately. Do not open a public issue. When this repository is public, use GitHub private

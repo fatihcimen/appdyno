@@ -215,7 +215,7 @@ Diğer başvuru sayfaları [belgelerin dizininde](docs/README.md). İstemci rehb
 
 ## Güvenlik
 
-Yalnızca yereldir: varsayılan olarak ağdan bağlantı dinlemez, telemetri yoktur; hangi cihazlara, uygulamalara ve bağlantılara dokunabileceğine siz karar verirsiniz. Test cihazı ve test hesapları kullanın. Bkz. [SECURITY.md](SECURITY.md).
+Yalnızca yereldir: varsayılan olarak ağdan bağlantı dinlemez, telemetri yoktur; hangi cihazlara, uygulamalara ve bağlantılara dokunabileceğine siz karar verirsiniz. Test cihazı ve test hesapları kullanın. Bkz. [SECURITY.tr.md](SECURITY.tr.md).
 
 ## Katkıda bulunmak
 
