@@ -41,8 +41,12 @@ export class AndroidShaping {
       const cap = (await this.sh(`settings get global ${INGRESS}`)).trim();
       if (/^\d+$/.test(cap) && cap !== '0') return cap;
     } else if (!this.emulator) throw this.noShaping();
-    if (this.emulator) await this.emu('network shaping', 'network', 'status');
-    return 'full';
+    if (!this.emulator) return 'full';
+    const status = await this.emu('network shaping', 'network', 'status');
+    // shortcut: any shaping of the console reads as slow, a speed by its name (gsm) too; read its numbers when one is needed
+    return /download speed:\s+0 bits/.test(status) && /maximum latency:\s+0 ms/.test(status)
+      ? 'full'
+      : 'slow';
   }
 
   /** What the answer says of it, where it is only a cap. */

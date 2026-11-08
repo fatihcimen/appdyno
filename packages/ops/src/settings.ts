@@ -42,7 +42,10 @@ const wordOf = (name: string, value: string) =>
 /** Whose entries a restore takes, by their owner. */
 export type Whose = (owner: Owner | undefined) => boolean;
 
-/** Writes a condition's old value down, once: true when this call did. One held for another app is refused, as its own could not be put back. */
+/**
+ * Writes a condition's old value down, once: `first` when this call did, and what it reads now. One held for another app
+ * is refused, as its own could not be put back.
+ */
 async function writeDown(s: Session, settings: DeviceSettings, name: SettingName, app?: string) {
   const serial = s.device.serial;
   const held = conditions.read(serial)?.[name];
@@ -52,7 +55,7 @@ async function writeDown(s: Session, settings: DeviceSettings, name: SettingName
       'INVALID_ARGUMENT',
       'device_setting restore first',
     );
-  if (held) return false;
+  if (held) return { first: false, now: await settings.get(name, app) };
   await settings.willChange?.(name);
   const was = await settings.get(name, app);
   let first = false;
@@ -62,7 +65,7 @@ async function writeDown(s: Session, settings: DeviceSettings, name: SettingName
     first = true;
     return { ...now, [name]: { was, ...(app && { app }), owner: s.owner } };
   });
-  return first;
+  return { first, now: was };
 }
 
 const forget = (s: Session, name: string) =>
@@ -77,18 +80,33 @@ const back = (s: Session) =>
     ? 'put back when this session ends, or by restore; it cannot be kept past the session'
     : 'it stays until restore';
 
-/** Sets a condition, the old value written down first so a crash cannot lose it; what the answer should add. */
+/** What a device reads of a condition, as `set` takes it: what follows "(now" is its state of the moment (a battery's level). */
+const asSet = (value: string) => value.replace(/ \(now [^)]*\)$/, '');
+const same = (a: string, b: string | undefined) => b !== undefined && asSet(a) === asSet(b);
+
+/**
+ * Sets a condition, the old value written down first so a crash cannot lose it, and reads it back: `moved` only when it
+ * reads otherwise than before, and one that did not move is not left written down. `also`: what the answer should add.
+ */
 export async function setCondition(s: Session, name: SettingName, value: string, app?: string) {
   const settings = s.device.settings;
   return s.conditions.run(async () => {
-    const first = await writeDown(s, settings, name, app);
+    const { first, now: before } = await writeDown(s, settings, name, app);
+    let said: string | undefined;
     try {
-      return [await settings.set(name, value, app), back(s)].filter(Boolean).join('; ');
+      said = await settings.set(name, value, app);
     } catch (e) {
       // what went out stays written down until the device reads as it was: a refusal may come after the change
       if (first && (await readsAsItWas(s, name, app))) forget(s, name);
       throw e;
     }
+    // a device's command may take what it cannot do and exit 0, saying "Invalid argument" and changing nothing
+    const now = await settings.get(name, app);
+    const moved = !same(now, before);
+    if (first && !moved) forget(s, name);
+    // what did not move is not written down, so nothing goes back
+    const also = [said, ...(moved ? [back(s)] : [])].filter(Boolean).join('; ');
+    return { also, moved, now };
   });
 }
 
@@ -96,7 +114,7 @@ export async function setCondition(s: Session, name: SettingName, value: string,
 async function readsAsItWas(s: Session, name: SettingName, app?: string) {
   const was = conditions.read(s.device.serial)?.[name]?.was;
   return s.device.settings.get(name, app).then(
-    (now) => now === was,
+    (now) => same(now, was),
     () => false,
   );
 }
@@ -104,7 +122,7 @@ async function readsAsItWas(s: Session, name: SettingName, app?: string) {
 /** `during` changes a condition for its time and puts it back itself: only a process dying meanwhile leaves it. */
 export async function holdingCondition<T>(s: Session, name: SettingName, during: () => Promise<T>) {
   const settings = s.device.settings;
-  const first = await s.conditions.run(() => writeDown(s, settings, name));
+  const { first } = await s.conditions.run(() => writeDown(s, settings, name));
   try {
     return await during();
   } finally {
@@ -112,13 +130,25 @@ export async function holdingCondition<T>(s: Session, name: SettingName, during:
   }
 }
 
+/** Puts `was` back and reads it: what the device reads where that is not `was`, which then stays written down. */
+async function putBack(
+  s: Session,
+  name: SettingName,
+  c: { was: string; app?: string | undefined },
+) {
+  await s.device.settings.set(name, c.was, c.app);
+  const now = await s.device.settings.get(name, c.app);
+  if (!same(now, c.was)) return now;
+  forget(s, name);
+  return undefined;
+}
+
 /** Puts back one condition, if this tool changed it and no other live process did. */
 export async function restoreCondition(s: Session, name: SettingName) {
   await s.conditions.run(async () => {
     const c = conditions.read(s.device.serial)?.[name];
     if (!c || heldElsewhere(c.owner)) return;
-    await s.device.settings.set(name, c.was, c.app);
-    forget(s, name);
+    await putBack(s, name, c);
   });
 }
 
@@ -128,7 +158,6 @@ export function restoreConditions(s: Session, whose: Whose) {
     const restored: string[] = [];
     const failed: string[] = [];
     const left: string[] = [];
-    const settings = s.device.settings;
     const changes = conditions.read(s.device.serial) ?? {};
     // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
     for (const [name, c] of Object.entries(changes).reverse()) {
@@ -137,9 +166,9 @@ export function restoreConditions(s: Session, whose: Whose) {
         continue;
       }
       try {
-        await settings.set(name as SettingName, c.was, c.app);
-        forget(s, name);
-        restored.push(`${name}: ${wordOf(name, c.was)}`);
+        const reads = await putBack(s, name as SettingName, c);
+        if (reads === undefined) restored.push(`${name}: ${wordOf(name, c.was)}`);
+        else failed.push(`${name} (was ${c.was}): it reads ${reads}`);
       } catch (e) {
         failed.push(`${name} (was ${c.was}): ${(e as Error).message}`);
       }
@@ -163,7 +192,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(500)
             .describe(
-              'A switch: on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
+              'A switch: on, off; text_size: Android 1.3, iOS extra-large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
             )
             .optional(),
           title: z.string().max(200).optional(),
@@ -246,8 +275,13 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
           const t = `${name}: ${now}`;
           return reply(clean(t), { done: clean(t), value: now });
         }
-        const also = await setCondition(s, name, value, pkg);
+        const { also, moved, now } = await setCondition(s, name, value, pkg);
         s.acted();
+        if (!moved) {
+          const reads = wordOf(name, now);
+          const t = clean(`${name} reads ${reads}, as before: nothing changed`);
+          return reply(t, { done: t, value: reads });
+        }
         const t = [`${name}: ${value}`, also].filter(Boolean).join('; ');
         return reply(t, { done: t, value, changed: { [name]: value } });
       },

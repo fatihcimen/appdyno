@@ -1449,6 +1449,58 @@ describe('device conditions', () => {
     };
   }
 
+  it('answers changed only when the device reads it moved, as a command may take what it cannot do and say nothing', async () => {
+    const settings = new Settings();
+    settings.values.text_size = 'large';
+    const set = settings.set;
+    // as a simulator takes 1.3: "Invalid argument", and exit 0
+    settings.set = (name: SettingName, value: string) =>
+      value === '1.3' ? Promise.resolve(undefined) : set(name, value);
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    const r = await call('device_setting', { name: 'text_size', value: '1.3' });
+    expect([r.error, r.text, r.data.changed, r.data.value]).toEqual([
+      false,
+      'text_size reads large, as before: nothing changed',
+      undefined,
+      'large',
+    ]);
+    expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
+    const moved = await call('device_setting', { name: 'text_size', value: 'extra-large' });
+    expect(moved.data.changed).toEqual({ text_size: 'extra-large' });
+  });
+
+  it('restores only what reads as it was, and keeps the rest written down with what it reads', async () => {
+    const settings = new Settings();
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    await call('device_setting', { name: 'dark_mode', value: 'on' });
+    const set = settings.set;
+    // as Android's own write of a scale just before lands after the one that puts it back
+    settings.set = () => Promise.resolve(undefined);
+    const r = await call('device_setting', { name: 'restore' });
+    expect(r.text).toBe('could not restore dark_mode (was no): it reads on');
+    expect(r.data.notRestored).toHaveLength(1);
+    settings.set = set;
+    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+      'restored dark_mode: off',
+    );
+  });
+
+  it("reads a battery back at default whatever its level, which is the moment's and no part of what is set", async () => {
+    const settings = new Settings();
+    settings.values.battery = 'default (now 80)';
+    const set = settings.set;
+    settings.set = (name: SettingName, value: string) =>
+      set(name, value.startsWith('default') ? 'default (now 79)' : value);
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    await call('device_setting', { name: 'battery', value: '50' });
+    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+      'restored battery: default (now 80)',
+    );
+    expect((await call('device_setting', { name: 'battery', value: 'default' })).text).toBe(
+      'battery reads default (now 79), as before: nothing changed',
+    );
+  });
+
   it('takes one-shot events, and refuses what is not one', async () => {
     const settings = new Settings();
     const { call } = await connect(Object.assign(new FakeDevice(), { settings, events: settings }));

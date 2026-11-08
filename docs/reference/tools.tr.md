@@ -53,6 +53,8 @@ varyantı `configuration` olan bir Gradle klasörü. `device_setting`; `dark_mod
 
 `launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `app` `list` vardır.
 
+Her değişiklik geri okunur: yanıt `changed`'i yalnızca cihaz sonra öncekinden başka okunduğunda söyler, `restore` da yalnızca eskisi gibi okunanı geri koyduğunu söyler. `text_size` iOS'ta kendi boyutlarından biridir, `extra-small`'dan `accessibility-extra-extra-extra-large`'a kadar; Android'de 0,25 ile 5 arasında bir ölçek ya da `default`: başkası, aldıklarıyla birlikte reddedilir.
+
 ## Önce kişiye sorulanlar
 
 Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri kişinin evet demesini bekler:

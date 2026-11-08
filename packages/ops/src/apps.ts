@@ -178,7 +178,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         }
         const { apps } = s.device;
         const held = apps.languageStays
-          ? await setCondition(s, 'locale', language, pkg)
+          ? (await setCondition(s, 'locale', language, pkg)).also
           : undefined;
         await apps.launchWith(pkg, { language }).catch(notThere(s, pkg));
         const done = [`started ${pkg} in ${language}`, held].filter(Boolean).join('; ');

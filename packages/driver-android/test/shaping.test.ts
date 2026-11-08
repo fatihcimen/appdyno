@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { AndroidShaping, CAP_SAYS } from '../src/shaping.js';
 
+/** What an emulator's console says of its network, as an API 34 one does: slow is the edge speed and 40 ms. */
+const status = (shaped: boolean) =>
+  shaped
+    ? 'Current network status:\n  download speed:     473600 bits/s (57.8 KB/s)\n  upload speed:       473600 bits/s (57.8 KB/s)\n  minimum latency:  40 ms\n  maximum latency:  40 ms\nOK'
+    : 'Current network status:\n  download speed:          0 bits/s (0.0 KB/s)\n  upload speed:            0 bits/s (0.0 KB/s)\n  minimum latency:  0 ms\n  maximum latency:  0 ms\nOK';
+
 /** A device of this serial and API level whose download cap is `cap`, and what it was asked. */
 const on = (serial: string, sdk: number, cap = 'null') => {
   const asked: string[] = [];
+  let shaped = false;
   const shaping = new AndroidShaping(
     serial,
     (c) => {
@@ -14,7 +21,11 @@ const on = (serial: string, sdk: number, cap = 'null') => {
       if (c.startsWith('settings delete')) cap = 'null';
       return Promise.resolve(c.startsWith('settings get') ? `${cap}\n` : '');
     },
-    (_what, ...words) => Promise.resolve((asked.push(`emu ${words.join(' ')}`), 'OK')),
+    (_what, ...words) => {
+      asked.push(`emu ${words.join(' ')}`);
+      if (words[1] === 'speed') shaped = words[2] !== 'full';
+      return Promise.resolve(words[1] === 'status' ? status(shaped) : 'OK');
+    },
   );
   return { shaping, asked };
 };
@@ -44,6 +55,15 @@ describe('a slow network', () => {
       'emu network speed full',
       'emu network delay none',
     ]);
+  });
+
+  it("reads an emulator's shaping from its console, so that a slow one does not read as full", async () => {
+    const { shaping } = on('emulator-5554', 34);
+    expect(await shaping.get()).toBe('full');
+    await shaping.set('slow');
+    expect(await shaping.get()).toBe('slow');
+    await shaping.set('full');
+    expect(await shaping.get()).toBe('full');
   });
 
   it('is refused on a phone below Android 13, and in words a phone has not', async () => {
