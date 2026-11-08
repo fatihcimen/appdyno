@@ -8,13 +8,13 @@ appdyno, iOS ve Android uygulamalarını Mac'inizden yönetir ve ölçer. Yeni m
 
 Her biri sizi bir işin baştan sonuna götürür.
 
-| rehber                                      | ne için okunur                                                                                      |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [İstemci bağlamak](guides/clients.tr.md)    | appdyno'yu MCP istemcinize bağlamak ve imzalama dahil bir telefonu hazırlamak                       |
-| [Connecting a client](guides/clients.md)    | aynı rehber, İngilizce                                                                              |
-| [Akışlar](guides/flows.tr.md)               | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak                       |
-| [Kanıt](guides/evidence.tr.md)              | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                                        |
-| [Performansı ölçmek](guides/performance.md) | bir uygulamayı ölçmek, baseline tutmak ve uygulamayı yavaşlatan bir pull request'i başarısız saymak |
+| rehber                                         | ne için okunur                                                                                      |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [İstemci bağlamak](guides/clients.tr.md)       | appdyno'yu MCP istemcinize bağlamak ve imzalama dahil bir telefonu hazırlamak                       |
+| [Connecting a client](guides/clients.md)       | aynı rehber, İngilizce                                                                              |
+| [Akışlar](guides/flows.tr.md)                  | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak                       |
+| [Kanıt](guides/evidence.tr.md)                 | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                                        |
+| [Performansı ölçmek](guides/performance.tr.md) | bir uygulamayı ölçmek, baseline tutmak ve uygulamayı yavaşlatan bir pull request'i başarısız saymak |
 
 ## Başvuru
 

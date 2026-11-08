@@ -207,7 +207,7 @@ Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğin
 | [İstemci bağlamak](docs/guides/clients.tr.md)       | appdyno'yu MCP istemcinize bağlamak ve bir telefonu hazırlamak                |
 | [Akışlar](docs/guides/flows.tr.md)                  | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak |
 | [Kanıt](docs/guides/evidence.tr.md)                 | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                  |
-| [Measuring performance](docs/guides/performance.md) | bir uygulamayı ölçmek, baseline tutmak, yavaşlatan değişikliği durdurmak      |
+| [Performansı ölçmek](docs/guides/performance.tr.md) | bir uygulamayı ölçmek, baseline tutmak, yavaşlatan değişikliği durdurmak      |
 | [Tools](docs/reference/tools.md)                    | her araç, her platformun neyi yapıp neyi yapamadığı                           |
 | [Nasıl yapıldığı](docs/architecture.tr.md)          | parçaların nasıl birleştiği, kodu değiştirecek olan için                      |
 

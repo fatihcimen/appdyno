@@ -1,5 +1,7 @@
 # Measuring performance
 
+[Türkçe](performance.tr.md)
+
 appdyno reads performance numbers from the device itself, keeps them, and tells you when an app got slower. This guide goes from a first number to a gate on your pull requests.
 
 **Real measurement needs a real device.** An emulator's or a simulator's numbers are relative to your Mac. Real frame rates, frozen frames, hitches and energy need a phone. A simulator is still good for catching a change between two builds on one machine.
