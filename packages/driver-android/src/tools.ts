@@ -11,23 +11,23 @@ import { run, stateDir } from '@appdyno/core';
  * a download whose hash differs is never unpacked.
  */
 export const PERFETTO = {
-  version: 'v58.2',
+  version: 'v59.1',
   assets: {
     'darwin-arm64': {
       name: 'mac-arm64.zip',
-      sha256: '9dbd484a32c9833c95cf58ca5ef86d2c9ad4767149054ad4eaa52bdf027d1507',
+      sha256: '91b2cb63c706526a2c067c219115f9f044fa8467459868757bae15c97906037f',
     },
     'darwin-x64': {
       name: 'mac-amd64.zip',
-      sha256: '1ec01f5de30fbf3b4e91c2b96508e3f537f0f57d1d1ce4bdf0892c98c4de039c',
+      sha256: '392cb203372f8904a138d7f5e0d5c6163b1657cb772b6036807bbb8247bcdadd',
     },
     'linux-arm64': {
       name: 'linux-arm64.zip',
-      sha256: 'a82bf4111a340a7ea8577bcfd62e014e8e81b9e6a35a3190f5415fb800051ab0',
+      sha256: '8f59e2cf7197c8de388ab4765a650eaf1774a405b1753c54a9741910b6f11350',
     },
     'linux-x64': {
       name: 'linux-amd64.zip',
-      sha256: '32c739f71b2d39721afd294c0b038f2499a44a71b5b6bcdd85b83faca0b240b9',
+      sha256: '7deb8c2572c6ae7ec80cd719d388041079827b0c44a1659694d5d88faa4f501e',
     },
   } as Record<string, { name: string; sha256: string }>,
 } as const;
