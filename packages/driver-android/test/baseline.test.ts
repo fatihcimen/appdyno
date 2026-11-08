@@ -4,6 +4,7 @@ import type { CompileMode } from '@appdyno/core';
 import { parseCompileStatus } from '../src/perf/parse.js';
 import type { PerfDevice } from '../src/perf/shared.js';
 import { baselineProfile } from '../src/perf/baseline.js';
+import { resetCompile } from '../src/perf/launch.js';
 
 /** A measured launch as the device did it: compiled as asked, one start of what that compiled, and reset. */
 vi.mock('../src/perf/launch.js', async (original) => {
@@ -110,6 +111,29 @@ describe('a Baseline Profile', () => {
     expect(value.present).toBe(false);
     expect(value.without).toEqual([]);
     expect(asked.filter((c) => c.startsWith('am start'))).toEqual([]);
+  });
+
+  it("compiles a .dm's profile again after the reset, where Android 17's reset compiles nothing with it", async () => {
+    let status = 'status=speed-profile] [reason=install-dm';
+    const { d, asked } = device((c) => {
+      if (c.includes('dexopt')) return `arm64: [${status}] [primary-abi]`;
+      if (c.includes('compile --reset')) status = 'status=verify] [reason=install-dm';
+      else if (c.includes('compile -m speed-profile'))
+        status = 'status=speed-profile] [reason=cmdline';
+      return '';
+    });
+    await resetCompile(d, 'dev.app', 'status=speed-profile reason=install-dm');
+    expect(asked.filter((c) => c.startsWith('cmd package compile'))).toEqual([
+      'cmd package compile --reset dev.app',
+      'cmd package compile -m speed-profile -f dev.app',
+    ]);
+    expect(status).toContain('speed-profile');
+    // an app the install left at verify stays there
+    asked.length = 0;
+    await resetCompile(d, 'dev.app', 'status=verify reason=install');
+    expect(asked.filter((c) => c.startsWith('cmd package compile'))).toEqual([
+      'cmd package compile --reset dev.app',
+    ]);
   });
 
   it('refuses a debuggable app, and a device that cannot list an APK', async () => {

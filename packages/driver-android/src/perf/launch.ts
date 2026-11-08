@@ -134,10 +134,12 @@ export async function launch(
     return s;
   };
   let compile: LaunchReading['compile'];
+  let before: string | undefined;
   let startup: StartupAnalysis | undefined;
   const samples: LaunchSample[] = [];
   try {
     if (opts.compile) {
+      before = parseCompileStatus(await dexoptState(d, pkg));
       await sh(d, `cmd package compile -m ${opts.compile} -f ${pkg}`, 300_000);
       const status = parseCompileStatus(await dexoptState(d, pkg));
       compile = { asked: opts.compile, ...(status && { status }) };
@@ -164,7 +166,7 @@ export async function launch(
       startup = await analyseStartup(pkg, trace);
     }
   } finally {
-    if (opts.compile) await sh(d, `cmd package compile --reset ${pkg}`, 300_000);
+    if (opts.compile) await resetCompile(d, pkg, before);
   }
   const want = mode.toUpperCase();
   const ok = samples.filter((s) => s.totalMs !== undefined && s.state === want);
@@ -182,6 +184,17 @@ export async function launch(
     raw: raws.join('\n---\n'),
     at: at(),
   };
+}
+
+/**
+ * The app's compiled code as the install left it, `before` the measure. Android 17's reset keeps a `.dm`'s profile
+ * and compiles nothing with it, leaving at verify an app the `.dm` had compiled, so that one is compiled with it again.
+ */
+export async function resetCompile(d: PerfDevice, pkg: string, before: string | undefined) {
+  await sh(d, `cmd package compile --reset ${pkg}`, 300_000);
+  const compiled = (s: string | undefined) => /status=speed-profile/.test(s ?? '');
+  if (compiled(before) && !compiled(parseCompileStatus(await dexoptState(d, pkg))))
+    await sh(d, `cmd package compile -m speed-profile -f ${pkg}`, 300_000);
 }
 
 /** What the device says about the app's compiled code; both formats name status and reason. */
