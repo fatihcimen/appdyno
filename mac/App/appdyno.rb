@@ -10,7 +10,7 @@ cask "appdyno" do
   # it replaces itself, when a person asks it to
   auto_updates true
   depends_on arch: :arm64
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "Appdyno.app"
   binary "#{appdir}/Appdyno.app/Contents/Resources/bin/appdyno"
