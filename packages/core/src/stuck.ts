@@ -13,7 +13,7 @@ const STUCK_PROBE_MS = 3_000;
 export async function afterTimeout(
   e: unknown,
   rpc: RpcClient | undefined,
-  restart: () => Promise<void>,
+  restart: (rpc: RpcClient) => Promise<void>,
   probeMs = STUCK_PROBE_MS,
 ): Promise<unknown> {
   if (!(e instanceof DeviceError) || e.code !== 'TIMEOUT' || !rpc || rpc.closed) return e;
@@ -22,7 +22,7 @@ export async function afterTimeout(
     (x: unknown) => x instanceof DeviceError && x.code === 'TIMEOUT',
   );
   if (!stuck) return e;
-  await restart().catch(() => undefined);
+  await restart(rpc).catch(() => undefined);
   return new DeviceError(
     'TIMEOUT',
     e.message,

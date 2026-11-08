@@ -23,7 +23,7 @@ const DEADLINE_SLACK_MS = 1_000;
 type Pending = {
   method: string;
   resolve: (v: { result: unknown; binary?: Buffer }) => void;
-  reject: (e: unknown) => void;
+  reject: (e: DeviceError) => void;
   timer: NodeJS.Timeout;
   binary?: Buffer;
 };
@@ -166,9 +166,11 @@ export class RpcClient {
       clearTimeout(p.timer);
       if (msg.data.error) {
         const e = msg.data.error;
-        const code = (ERROR_CODES as readonly string[]).includes(e.data?.code ?? '')
-          ? (e.data!.code as ErrorCode)
-          : codeOfRpc(e.code);
+        const named = e.data?.code;
+        const code =
+          named !== undefined && (ERROR_CODES as readonly string[]).includes(named)
+            ? (named as ErrorCode)
+            : codeOfRpc(e.code);
         p.reject(new DeviceError(code, e.message, e.data?.hint));
       } else {
         p.resolve({ result: msg.data.result, ...(p.binary && { binary: p.binary }) });

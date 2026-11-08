@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'node:child_process';
+import { must } from './must.js';
 
 export type EndChild = {
   /** How long it has after each signal, and after the kill. */
@@ -18,7 +19,8 @@ export async function endChild(
   { graceMs, group = false, signals = ['SIGTERM'] }: EndChild,
 ) {
   if (child.exitCode !== null || child.signalCode !== null) return;
-  let closed = false;
+  // set when it closes, which the compiler does not follow into the loop below
+  let closed = false as boolean;
   const whenClosed = new Promise<void>((done) => {
     child.once('close', () => {
       closed = true;
@@ -27,7 +29,7 @@ export async function endChild(
   });
   const send = (signal: NodeJS.Signals) => {
     try {
-      if (group) process.kill(-child.pid!, signal);
+      if (group) process.kill(-must(child.pid, 'its pid'), signal);
       else child.kill(signal);
     } catch {
       // nothing of it is left

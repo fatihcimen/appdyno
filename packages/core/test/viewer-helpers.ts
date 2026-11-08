@@ -44,7 +44,10 @@ export function viewer(binary: string) {
   const until = (op: string, test: (m: ViewerMessage) => boolean = () => true) =>
     new Promise<ViewerMessage>((done, fail) => {
       const old = said.find((m) => m.op === op && test(m));
-      if (old) return done(old);
+      if (old) {
+        done(old);
+        return;
+      }
       waiting.push({ op, test, done });
       setTimeout(() => fail(new Error(`no ${op}: ${JSON.stringify(said).slice(-400)}`)), WAIT_MS);
     });

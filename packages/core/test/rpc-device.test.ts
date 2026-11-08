@@ -41,13 +41,19 @@ class TestDevice extends RpcDevice {
     super();
   }
 
-  protected async startAgent() {
+  protected startAgent() {
     const pid = this.pids[this.connects];
-    const { rpc } = fakeAgent(this.agents[this.connects++]!);
-    return { rpc, hello: { ...HELLO, ...(pid && { pid }) } as Hello, started: true };
+    const { rpc } = fakeAgent(this.agents[this.connects++]);
+    return Promise.resolve({
+      rpc,
+      hello: { ...HELLO, ...(pid && { pid }) } as Hello,
+      started: true,
+    });
   }
 
-  protected async restartStuck() {}
+  protected restartStuck() {
+    return Promise.resolve();
+  }
 
   async tree(): Promise<Tree> {
     return (await this.call('tree.get', {}, 1_000)).result;
@@ -63,9 +69,9 @@ const tree: FakeHandler = () => ({ result: wireTree([{ t: 'Merhaba' }]) });
 
 describe('a start that failed', () => {
   class Failing extends TestDevice {
-    protected override async startAgent(): Promise<never> {
+    protected override startAgent(): Promise<never> {
       this.connects++;
-      throw new DeviceError('AGENT_UNAVAILABLE', 'it did not start');
+      return Promise.reject(new DeviceError('AGENT_UNAVAILABLE', 'it did not start'));
     }
   }
 
@@ -99,7 +105,7 @@ describe('an agent that stops under a device', () => {
     await expect(d.tree()).resolves.toBeDefined();
     expect(heard).toEqual([{ serial: 'lost-under-a-read', was: 10, pid: 20 }]);
     expect(said).toHaveBeenCalledTimes(1);
-    expect(String(said.mock.calls[0]![0])).toContain('lost-under-a-read');
+    expect(String(said.mock.calls[0]?.[0])).toContain('lost-under-a-read');
   });
 
   it("is said to a device made after it, as what a process had is its own and no object's", async () => {
@@ -127,7 +133,7 @@ describe('an agent that stops under a device', () => {
 
 describe('a device through its agent', () => {
   it('reads its clock past whatever the device is busy with', async () => {
-    let let_go = () => undefined as void;
+    let let_go: () => void = () => undefined;
     const d = new TestDevice([
       {
         'tree.get': () =>
@@ -186,7 +192,7 @@ describe('a device through its agent', () => {
     });
 
     it('closes a connection that came up after it', async () => {
-      let up = () => undefined as void;
+      let up: () => void = () => undefined;
       const opened: { closed: boolean }[] = [];
       class Slow extends TestDevice {
         protected override async startAgent() {
@@ -202,7 +208,7 @@ describe('a device through its agent', () => {
       d.close();
       up();
       await expect(read).rejects.toMatchObject({ code: 'AGENT_UNAVAILABLE' });
-      expect(opened[0]!.closed).toBe(true);
+      expect(opened[0]?.closed).toBe(true);
     });
 
     it('still connects for what is asked after it', async () => {
@@ -281,12 +287,12 @@ describe('a device through its agent', () => {
 
   it('takes a position on the planet only', () => {
     expect(() => assertLatLon(41, 29)).not.toThrow();
-    for (const [lat, lon] of [
+    const outside: [number, number][] = [
       [91, 0],
       [0, 181],
       [Number.NaN, 0],
-    ])
-      expect(() => assertLatLon(lat!, lon!)).toThrow(DeviceError);
+    ];
+    for (const [lat, lon] of outside) expect(() => assertLatLon(lat, lon)).toThrow(DeviceError);
   });
 });
 

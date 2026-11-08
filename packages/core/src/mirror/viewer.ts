@@ -50,9 +50,10 @@ function compiled(o: {
     headers: inDir('.h'),
     flags: o.flags,
     ...(o.env && { env: o.env }),
-  }).catch((e: Error) => {
+  }).catch((e: unknown) => {
     if (e instanceof NeedError) throw e;
-    throw new Error(`the viewer did not compile: ${e.message.slice(0, 500)}`, { cause: e });
+    const said = e instanceof Error ? e.message : String(e);
+    throw new Error(`the viewer did not compile: ${said.slice(0, 500)}`, { cause: e });
   });
 }
 
@@ -146,13 +147,13 @@ export type ViewerMessage = { op: (typeof VIEWER_OPS.says)[number] } & Record<st
 export type ViewerOrder = { op: (typeof VIEWER_OPS.takes)[number] } & Record<string, unknown>;
 
 /** The viewer as a session sees it, a process or a test's stand-in. */
-export interface ViewerLink {
+export type ViewerLink = {
   send(message: ViewerOrder): void;
   onMessage(listener: (m: ViewerMessage) => void): void;
   /** Once, however it ended; what it last said on stderr. */
   onExit(listener: (tail: string) => void): void;
   kill(): void;
-}
+};
 
 /** What is kept of what a viewer says on stderr, for a stop's reason. */
 const STDERR_TAIL = 2_000;

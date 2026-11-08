@@ -105,24 +105,26 @@ export class FakeMirror implements Mirror {
   tell: ((m: ViewerOrder) => void) | undefined;
   keyOf = keyOfUsage;
 
-  async check() {
+  check() {
     this.checks++;
-    return this.checkAnswer;
+    return Promise.resolve(this.checkAnswer);
   }
 
-  async open(_o: unknown, _s: AbortSignal, tell: (m: ViewerOrder) => void): Promise<MirrorSource> {
+  open(_o: unknown, _s: AbortSignal, tell: (m: ViewerOrder) => void): Promise<MirrorSource> {
     this.opens++;
     this.tell = tell;
-    if (this.openFails) throw this.openFails;
-    return this.source;
+    if (this.openFails) return Promise.reject(this.openFails);
+    return Promise.resolve(this.source);
   }
 
-  async keyframe() {
+  keyframe() {
     this.keyframes++;
+    return Promise.resolve();
   }
 
-  async wake() {
+  wake() {
     this.wakes++;
+    return Promise.resolve();
   }
 
   async input(e: InputEvent) {
@@ -130,8 +132,9 @@ export class FakeMirror implements Mirror {
     await this.inputWait;
   }
 
-  async close() {
+  close() {
     this.closes++;
+    return Promise.resolve();
   }
 
   watch(onChange: (s: DeviceState) => void) {

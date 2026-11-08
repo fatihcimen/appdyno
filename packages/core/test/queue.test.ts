@@ -11,9 +11,9 @@ describe('device queue', () => {
       order.push('a end');
       throw new Error('boom');
     });
-    const fast = q.run(async () => {
+    const fast = q.run(() => {
       order.push('b');
-      return 2;
+      return Promise.resolve(2);
     });
     await expect(slow).rejects.toThrow('boom');
     expect(await fast).toBe(2);

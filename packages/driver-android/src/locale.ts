@@ -40,7 +40,7 @@ export class AndroidLocale {
   }
 
   /** What the answer says: the whole device, where the app was meant and Android has no language of its own for it. */
-  async set(value: string, app?: string): Promise<string | void> {
+  async set(value: string, app?: string): Promise<string | undefined> {
     const pkg = await this.perApp(app);
     if (pkg) {
       const out = await this.sh(`cmd locale set-app-locales ${pkg} --locales ${shq(value)}`);

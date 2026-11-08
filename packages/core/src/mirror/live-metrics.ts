@@ -33,13 +33,13 @@ export type LiveSample = Partial<Record<LiveField, number>> & {
  * A driver's live numbers, optional on a `Device` as `recorder?` and `network?` are. Reuses what the driver already reads
  * with. Nothing runs until `start`: sampling costs the device, so it is off until a person opens what shows it.
  */
-export interface LiveMetrics {
+export type LiveMetrics = {
   /**
    * Calls `onSample` about once a second until the answer is called, which is safe twice. What that returns ends with
    * the reading under way, which goes on asking the device: only then may it close.
    */
   start(onSample: (sample: LiveSample) => void, app?: string): Promise<() => unknown>;
-}
+};
 
 /** Why a window's numbers are not a clean run's: a stream runs an encoder on the device. */
 export const LIVE_NOISE = ['mirrored'] as const;

@@ -63,7 +63,7 @@ export type InputEvent =
 export type DeviceState = 'ok' | Need;
 
 /** A device's end of a mirror: only what differs between kinds of device. */
-export interface Mirror {
+export type Mirror = {
   /** What this device can do, and why not: asked before anything is opened. */
   check(opts?: MirrorOptions): Promise<MirrorCheck>;
   /** Readies the device's end; `tell` reaches the viewer, for a feeder that has something to say to it. */
@@ -94,7 +94,7 @@ export interface Mirror {
   readonly holdsThrough?: DeviceState;
   /** No first picture in this time means this, rather than a failed stream. */
   readonly noFirstFrame?: { ms: number; need: Need };
-}
+};
 
 /** What moved, as the viewer read it; places and speeds as fractions of the frame. */
 export type MotionRegion = {

@@ -2,6 +2,7 @@ import { createReadStream, createWriteStream } from 'node:fs';
 import { open, rename, rm, type FileHandle } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import { DeviceError } from '@appdyno/protocol';
+import { must } from './must.js';
 
 /**
  * MP4 and QuickTime files as boxes, with no dependency: enough to tell a playable video from a torn one
@@ -153,7 +154,9 @@ function firstSample(m: Buffer, trak: Box) {
   const co64 = child(m, stbl, 'co64');
   if (!stsz || (!stco && !co64)) return undefined;
   const size = m.readUInt32BE(stsz.body + 4) || m.readUInt32BE(stsz.body + 12);
-  const at = stco ? m.readUInt32BE(stco.body + 8) : Number(m.readBigUInt64BE(co64!.body + 8));
+  const at = stco
+    ? m.readUInt32BE(stco.body + 8)
+    : Number(m.readBigUInt64BE(must(co64, 'a chunk table').body + 8));
   return { at, size };
 }
 
@@ -232,7 +235,7 @@ async function segmentOf(file: string): Promise<Segment> {
     await f.read(ftyp, 0, ftyp.length, ftypAt.start);
     const trak = videoTrack(moov, root);
     const stbl = need(moov, trak, 'mdia', 'minf', 'stbl');
-    return { file, moov, root, trak, stbl, mdat: mdats[0]!, ftyp };
+    return { file, moov, root, trak, stbl, mdat: must(mdats[0], 'an mdat box'), ftyp };
   } finally {
     await f.close();
   }
@@ -255,7 +258,7 @@ function withDuration(m: Buffer, at: Box, duration: number) {
  */
 export async function joinVideos(files: string[], out: string): Promise<void> {
   const parts = await Promise.all(files.map(segmentOf));
-  const first = parts[0]!;
+  const first = must(parts[0], 'a segment');
   const m = first.moov;
   const movieScale = (s: Segment) => timing(s.moov, need(s.moov, s.root, 'mvhd'));
   const mediaScale = (s: Segment) => timing(s.moov, need(s.moov, s.trak, 'mdia', 'mdhd'));

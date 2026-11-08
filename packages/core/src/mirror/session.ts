@@ -181,6 +181,7 @@ export class MirrorSession {
       v.onExit((tail) => {
         if (v === this.viewer) void this.onViewerExit(tail);
       });
+      return v;
     } catch (e) {
       await this.stop((e as Error).message, e instanceof NeedError ? e.need : undefined);
     }
@@ -411,8 +412,7 @@ export class MirrorSession {
     this.run++;
     this.cancelTimer?.();
     await this.o.mirror.close().catch(() => undefined);
-    await this.openViewer();
-    if (this.viewer) void this.connect();
+    if (await this.openViewer()) void this.connect();
   }
 
   private onMacSleep() {
@@ -442,7 +442,7 @@ export class MirrorSession {
       else if (state === 'waiting') void this.connect();
       return;
     }
-    if (state === 'waiting' && this.current.state === 'waiting' && this.current.need === s) return;
+    if (state === 'waiting' && this.current.need === s) return;
     this.viewer?.send({ op: 'detach' });
     void this.o.mirror.close().catch(() => undefined);
     this.waitFor(s);

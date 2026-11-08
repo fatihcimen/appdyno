@@ -55,7 +55,7 @@ async function sampleOf(
   const memoryDue =
     !sameApp || kept.memoryMb === undefined || !!only || kept.turn % MEMORY_EVERY === 0;
   kept.turn += 1;
-  if (!memoryDue) sample.memoryMb = kept.memoryMb!;
+  if (!memoryDue && kept.memoryMb !== undefined) sample.memoryMb = kept.memoryMb;
   await Promise.all([
     read(
       ['cpuPercent'],
@@ -114,8 +114,9 @@ export function measuredLive(
   everyMs = SECOND_MS,
 ): LiveMetrics {
   return {
-    async start(onSample, app) {
-      let on = true;
+    start(onSample, app) {
+      // set by the stop below, which the compiler does not follow into the loop
+      let on = true as boolean;
       const kept: Kept = { turn: 0 };
       const running = (async () => {
         while (on) {
@@ -125,14 +126,15 @@ export function measuredLive(
           const sample = front
             ? await sampleOf(device, front, kept, only)
             : { at: began, absent: allAbsent(LIVE_FIELDS, 'waiting for the app in front') };
-          if (on) onSample(sample);
+          // the stop may have come while it read, which the compiler does not follow
+          if (on as boolean) onSample(sample);
           await pause(Math.max(0, everyMs - (Date.now() - began)));
         }
       })();
-      return () => {
+      return Promise.resolve(() => {
         on = false;
         return running;
-      };
+      });
     },
   };
 }

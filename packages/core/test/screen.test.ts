@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import {
   buildScreen,
   diffScreens,
@@ -53,7 +54,7 @@ describe('stable refs', () => {
       withStableRefs([root, button('Ekle', 100, '@e2'), button('Ekle', 160, '@e3')], ios),
       ios,
     ).map((e) => e.ref);
-    expect(twins[1]).toBe(`${twins[0]}-2`);
+    expect(twins[1]).toBe(`${String(twins[0])}-2`);
   });
 
   it('two identities with the same short form both take the long form, whatever their order', () => {
@@ -62,7 +63,8 @@ describe('stable refs', () => {
     for (let n = 0; !pair; n++) {
       const label = `x${n}`;
       const h = refHash(`button"${label}"`).slice(-4);
-      if (short.has(h)) pair = [short.get(h)!, label];
+      const before = short.get(h);
+      if (before !== undefined) pair = [before, label];
       else short.set(h, label);
     }
     const of = (labels: string[]) =>
@@ -108,10 +110,20 @@ describe('stable refs', () => {
     const a = read([win, ...card('Süt', 200, 1), ...card('Yumurta', 400, 4)]);
     const b = read([win, ...card('Yumurta', 200, 1), ...card('Ekmek', 400, 4)]);
     const ekle = (l: typeof a, ctx: string) =>
-      l.find((e) => e.label === 'Ekle' && e.refContext === ctx)!.ref;
+      must(
+        l.find((e) => e.label === 'Ekle' && e.refContext === ctx),
+        ctx,
+      ).ref;
     expect(ekle(a, 'Yumurta')).toBe(ekle(b, 'Yumurta'));
     expect(ekle(a, 'Süt')).not.toBe(ekle(a, 'Yumurta'));
-    expect(elementLine(a.find((e) => e.refContext === 'Süt')!)).toMatch(/ — Süt$/);
+    expect(
+      elementLine(
+        must(
+          a.find((e) => e.refContext === 'Süt'),
+          'Süt',
+        ),
+      ),
+    ).toMatch(/ — Süt$/);
   });
 });
 
@@ -135,9 +147,9 @@ describe('screen diff', () => {
     expect(diffText(d, next.length)).toBe(
       [
         'screen changed: +1 -1 ~1 (3 elements; ref role "label" x,y flags)',
-        `+ ${elementLine(d.added[0]!)}`,
-        `- ${d.removed[0]!.ref} "C"`,
-        `~ ${elementLine(d.changed[0]!.now)} (was "B")`,
+        `+ ${elementLine(must(d.added[0], 'an added'))}`,
+        `- ${must(d.removed[0], 'a removed').ref} "C"`,
+        `~ ${elementLine(must(d.changed[0], 'a changed').now)} (was "B")`,
       ].join('\n'),
     );
     expect(diffText(diffScreens(next, next), 3)).toBe('screen unchanged (3 elements)');
@@ -179,7 +191,7 @@ describe('wire tree to screen', () => {
 
   it('takes no dialog for the screen', () => {
     const tree = wireTree([]);
-    tree.nodes[0]!.b = [54, 900, 1026, 1500];
+    must(tree.nodes[0], 'the root').b = [54, 900, 1026, 1500];
     expect(buildScreen(tree, { port: plainScreen }).window).toBeUndefined();
   });
 

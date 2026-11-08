@@ -204,7 +204,7 @@ export class AndroidApps implements AppManager {
     return (await this.sh(`pidof ${app}`)).trim() ? 'running' : 'stopped';
   }
 
-  async permission(app: string, grant: boolean, service: string) {
+  async permission(app: string, grant: boolean, service: string): Promise<undefined> {
     const name = service.includes('.')
       ? service
       : `android.permission.${PERMISSIONS[service.toLowerCase()] ?? service.toUpperCase()}`;

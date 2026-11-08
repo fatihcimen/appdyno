@@ -38,7 +38,7 @@ export function fakeAgentStream(handlers: Record<string, FakeHandler> = {}) {
   const decoder = new FrameDecoder();
   const seen: { method: string; params: Record<string, unknown> }[] = [];
   agent.on('error', () => undefined);
-  agent.on('data', async (b: Buffer) => {
+  const answer = async (b: Buffer) => {
     for (const f of decoder.push(b)) {
       if (f.type !== FRAME_JSON) continue;
       const m = f.message as { id: number; method: string; params: Record<string, unknown> };
@@ -70,7 +70,9 @@ export function fakeAgentStream(handlers: Record<string, FakeHandler> = {}) {
         agent.write(encodeJson({ jsonrpc: '2.0', id: m.id, result: r.result }));
       }
     }
-  });
+  };
+  // a handler that fails is the test's own mistake: it stays unhandled, which fails the run
+  agent.on('data', (b: Buffer) => void answer(b));
   return { host, agent, seen };
 }
 

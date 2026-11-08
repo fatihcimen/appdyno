@@ -1309,7 +1309,7 @@ describe('device conditions', () => {
         throw new DeviceError('UNSUPPORTED', 'a phone has no network shaping');
       return this.values[name]!;
     };
-    set = async (name: SettingName, value: string) => {
+    set = async (name: SettingName, value: string): Promise<undefined> => {
       if (this.failing) throw new DeviceError('INTERNAL', 'broke');
       this.values[name] = value;
     };

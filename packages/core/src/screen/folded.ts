@@ -1,3 +1,4 @@
+import { must } from '../must.js';
 import { elementLine, screenHeader } from './diff.js';
 import type { Rect } from './elements.js';
 import { cutContext, type ScreenElement } from './model.js';
@@ -93,9 +94,9 @@ export function renderFolded(
     `${screenHeader(list.length)}${inside.size ? `; ${inside.size} inside rows, by find` : ''}`,
   ];
   for (let i = 0, end: number; i < rows.length; i = end) {
-    const first = rows[i]!;
+    const first = must(rows[i], 'a row');
     end = i + 1;
-    while (first.label && end < rows.length && alike(first, rows[end]!)) end++;
+    while (first.label && end < rows.length && alike(first, must(rows[end], 'a row'))) end++;
     const run = rows.slice(i, end);
     if (run.length < MIN_RUN) lines.push(...run.map((e) => line(e)));
     else

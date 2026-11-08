@@ -1,7 +1,8 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { box, parseStamps, u32s, videoStamps } from '../src/video.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-stamps-'));
@@ -66,9 +67,10 @@ describe('a recording that keeps its own clock', () => {
   });
 
   it('adds without losing what a double would: an epoch in ns is past 2^53', () => {
-    const [first, second] = parseStamps(CURRENT)!;
+    const [first, second] = must(parseStamps(CURRENT), 'its stamps');
+    assert(first !== undefined && second !== undefined);
     // the video's own frame gap, read by a player
-    expect(second! - first!).toBeCloseTo(1729.304, 2);
+    expect(second - first).toBeCloseTo(1729.304, 2);
   });
 
   it('takes the track with a wall clock, past the older one before it', async () => {

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import {
   exclusively,
   heldElsewhere,
@@ -22,20 +23,20 @@ describe('one at a time', () => {
     const f = file();
     let inner: unknown;
     await exclusively(f, 'first', busy, async () => {
-      inner = await exclusively(f, 'second', busy, async () => 'ran').catch(
-        (e: Error) => e.message,
+      inner = await exclusively(f, 'second', busy, () => Promise.resolve('ran')).catch(
+        (e: unknown) => (e instanceof Error ? e.message : String(e)),
       );
     });
     expect(inner).toBe('held by first');
     expect(existsSync(f)).toBe(false);
-    await expect(exclusively(f, 'third', busy, async () => 'ran')).resolves.toBe('ran');
+    await expect(exclusively(f, 'third', busy, () => Promise.resolve('ran'))).resolves.toBe('ran');
   });
 
   it('frees it when the body fails', async () => {
     const f = file();
     await expect(
-      exclusively(f, 'x', busy, async () => {
-        throw new Error('it failed');
+      exclusively(f, 'x', busy, () => {
+        return Promise.reject(new Error('it failed'));
       }),
     ).rejects.toThrow('it failed');
     expect(existsSync(f)).toBe(false);
@@ -44,19 +45,21 @@ describe('one at a time', () => {
   it('takes over what a dead process left', async () => {
     const f = file();
     const dead = spawnSync('true').pid;
-    await exclusively(f, 'held', busy, async () => {
+    await exclusively(f, 'held', busy, () => {
       writeFileSync(f, JSON.stringify({ ...thisOwner('old'), pid: dead }));
       expect(ownerIn(f)).toBeUndefined();
+      return Promise.resolve();
     });
     writeFileSync(f, JSON.stringify({ ...thisOwner('old'), pid: dead }));
-    await expect(exclusively(f, 'new', busy, async () => 'ran')).resolves.toBe('ran');
+    await expect(exclusively(f, 'new', busy, () => Promise.resolve('ran'))).resolves.toBe('ran');
   });
 
   it('reads a broken file as no owner', async () => {
     const f = file();
-    await exclusively(f, 'x', busy, async () => {
+    await exclusively(f, 'x', busy, () => {
       writeFileSync(f, 'not json');
       expect(ownerIn(f)).toBeUndefined();
+      return Promise.resolve();
     });
   });
 });
@@ -64,7 +67,7 @@ describe('one at a time', () => {
 /** A process that runs until killed, and what a file would say of it. */
 function otherProcess() {
   const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
-  const pid = child.pid!;
+  const pid = must(child.pid, 'its pid');
   const started = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
     encoding: 'utf8',
   }).trim();
@@ -78,7 +81,7 @@ function otherProcess() {
 describe('who owns a file', () => {
   it('tells a running process from one that is gone, by its pid alone', () => {
     expect(processAlive(process.pid)).toBe(true);
-    expect(processAlive(spawnSync('true').pid!)).toBe(false);
+    expect(processAlive(spawnSync('true').pid)).toBe(false);
   });
 
   it('knows this process, a live one and a dead one', async () => {

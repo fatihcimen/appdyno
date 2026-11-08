@@ -1,4 +1,5 @@
 import { deflateSync, inflateSync } from 'node:zlib';
+import { must } from './must.js';
 
 /** A decoded screenshot: 8-bit RGB or RGBA rows, top to bottom. */
 export type Image = { width: number; height: number; channels: 3 | 4; data: Uint8Array };
@@ -30,7 +31,7 @@ export function decodePng(buf: Buffer): Image | null {
         if ((depth !== 8 && depth !== 16) || interlace !== 0 || (color !== 2 && color !== 6))
           return null;
         c = color === 6 ? 4 : 3;
-        sample = depth! / 8;
+        sample = depth / 8;
       } else if (type === 'IDAT') idat.push(data);
       else if (type === 'IEND') break;
       p += 12 + len;
@@ -42,28 +43,31 @@ export function decodePng(buf: Buffer): Image | null {
     const raw = inflateSync(Buffer.concat(idat), { maxOutputLength: height * (stride + 1) });
     if (raw.length < height * (stride + 1)) return null;
     const out = new Uint8Array(height * stride);
-    const left = (dst: number, x: number) => (x >= pixel ? out[dst + x - pixel]! : 0);
+    const left = (dst: number, x: number) =>
+      x >= pixel ? must(out[dst + x - pixel], 'a byte') : 0;
     for (let y = 0; y < height; y++) {
       const f = raw[y * (stride + 1)];
       const src = y * (stride + 1) + 1;
       const dst = y * stride;
-      const up = (x: number) => (y > 0 ? out[dst - stride + x]! : 0);
+      const up = (x: number) => (y > 0 ? must(out[dst - stride + x], 'a byte') : 0);
       // one loop per filter type: a branch per byte would double the decode time
       if (f === 0) out.set(raw.subarray(src, src + stride), dst);
       else if (f === 1)
-        for (let x = 0; x < stride; x++) out[dst + x] = raw[src + x]! + left(dst, x);
-      else if (f === 2) for (let x = 0; x < stride; x++) out[dst + x] = raw[src + x]! + up(x);
+        for (let x = 0; x < stride; x++) out[dst + x] = must(raw[src + x], 'a byte') + left(dst, x);
+      else if (f === 2)
+        for (let x = 0; x < stride; x++) out[dst + x] = must(raw[src + x], 'a byte') + up(x);
       else if (f === 3)
         for (let x = 0; x < stride; x++)
-          out[dst + x] = raw[src + x]! + ((left(dst, x) + up(x)) >> 1);
+          out[dst + x] = must(raw[src + x], 'a byte') + ((left(dst, x) + up(x)) >> 1);
       else if (f === 4)
         for (let x = 0; x < stride; x++) {
           const a = left(dst, x);
           const b = up(x);
-          const d = x >= pixel && y > 0 ? out[dst - stride + x - pixel]! : 0;
+          const d = x >= pixel && y > 0 ? must(out[dst - stride + x - pixel], 'a byte') : 0;
           const q = a + b - d;
           const [pa, pb, pc] = [Math.abs(q - a), Math.abs(q - b), Math.abs(q - d)];
-          out[dst + x] = raw[src + x]! + (pa <= pb && pa <= pc ? a : pb <= pc ? b : d);
+          out[dst + x] =
+            must(raw[src + x], 'a byte') + (pa <= pb && pa <= pc ? a : pb <= pc ? b : d);
         }
       else return null;
     }
@@ -85,7 +89,7 @@ const CRC = Int32Array.from({ length: 256 }, (_, n) => {
 });
 const crc32 = (b: Buffer) => {
   let c = -1;
-  for (const v of b) c = CRC[(c ^ v) & 0xff]! ^ (c >>> 8);
+  for (const v of b) c = must(CRC[(c ^ v) & 0xff], 'a CRC') ^ (c >>> 8);
   return (c ^ -1) >>> 0;
 };
 
@@ -177,14 +181,20 @@ export function diffImages(a: Image, b: Image, masks: PixelRect[] = []): ImageDi
     }
     compared++;
     const near =
-      Math.abs(a.data[pa]! - b.data[pb]!) <= CHANNEL_TOLERANCE &&
-      Math.abs(a.data[pa + 1]! - b.data[pb + 1]!) <= CHANNEL_TOLERANCE &&
-      Math.abs(a.data[pa + 2]! - b.data[pb + 2]!) <= CHANNEL_TOLERANCE;
+      Math.abs(must(a.data[pa], 'a byte') - must(b.data[pb], 'a byte')) <= CHANNEL_TOLERANCE &&
+      Math.abs(must(a.data[pa + 1], 'a byte') - must(b.data[pb + 1], 'a byte')) <=
+        CHANNEL_TOLERANCE &&
+      Math.abs(must(a.data[pa + 2], 'a byte') - must(b.data[pb + 2], 'a byte')) <=
+        CHANNEL_TOLERANCE;
     if (!near) {
       differing++;
       out.set([230, 30, 30], at);
     } else {
-      const grey = (b.data[pb]! * 77 + b.data[pb + 1]! * 151 + b.data[pb + 2]! * 28) >> 8;
+      const grey =
+        (must(b.data[pb], 'a byte') * 77 +
+          must(b.data[pb + 1], 'a byte') * 151 +
+          must(b.data[pb + 2], 'a byte') * 28) >>
+        8;
       out.fill(255 - ((255 - grey) >> 2), at, at + 3);
     }
   }
@@ -200,7 +210,7 @@ export function diffImages(a: Image, b: Image, masks: PixelRect[] = []): ImageDi
 export function imageSize(b: Buffer): { w: number; h: number } | undefined {
   if (b[0] === 0x89) return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
   for (let o = 2; o + 9 < b.length;) {
-    const marker = b[o + 1]!;
+    const marker = must(b[o + 1], 'a marker');
     // a frame header, leaving out the three that are no frames
     if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
       return { w: b.readUInt16BE(o + 7), h: b.readUInt16BE(o + 5) };

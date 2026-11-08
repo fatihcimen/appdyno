@@ -46,7 +46,7 @@ export class AndroidShaping {
   }
 
   /** What the answer says of it, where it is only a cap. */
-  async set(value: string): Promise<string | void> {
+  async set(value: string): Promise<string | undefined> {
     const bytes = value === 'slow' && !this.emulator ? String(SLOW_BYTES) : value;
     if (/^\d+$/.test(bytes)) {
       if (!(await this.capped())) throw this.noShaping();

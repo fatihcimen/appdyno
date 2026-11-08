@@ -14,7 +14,7 @@ export type AppLink = { url: string; kind: 'scheme' | 'domain' | 'filter'; state
 export type BuildRequest = { project: string; scheme?: string; configuration?: string };
 
 /** Apps on a device; what a device cannot do answers UNSUPPORTED with the reason. */
-export interface AppManager {
+export type AppManager = {
   /** A launch's language stays with the app, as a condition to put back; else it lasts that launch. */
   readonly languageStays?: boolean;
   /** A grant resets the permission to ask, as a revoke does, and so takes away the answer the person gave. */
@@ -33,8 +33,8 @@ export interface AppManager {
   /** Installed and running; `foreground` is told by the caller, which has the screen. */
   appState(app: string): Promise<Exclude<AppState, 'foreground'>>;
   /** What the answer says, where a grant or a revoke is less than its name. */
-  permission(app: string, grant: boolean, service: string): Promise<string | void>;
+  permission(app: string, grant: boolean, service: string): Promise<string | undefined>;
   launchWith(app: string, opts: LaunchOptions): Promise<void>;
   /** The links the installed app says it opens: its schemes, its domains, Android's filters and their verification. */
   links(app: string): Promise<AppLink[]>;
-}
+};

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { STEP_IDS, VIEWER_OPS, VIEWER_TEST_FILES } from '../src/index.js';
 
 const root = join(import.meta.dirname, '../../..');
@@ -13,7 +14,7 @@ const viewer = readdirSync(join(root, 'mac/Viewer'))
   .join('\n');
 
 const found = (text: string, name: RegExp) =>
-  [...new Set([...text.matchAll(name)].map((m) => m[1]!))].sort();
+  [...new Set([...text.matchAll(name)].map((m) => must(m[1], name.source)))].sort();
 
 const sorted = (names: readonly string[]) => [...names].sort();
 

@@ -3,7 +3,7 @@ import type { AlertAction, AlertButton, AlertWords, SystemAlert } from './alert.
 import type { Rect, UiElement } from './elements.js';
 
 /** What only a platform knows about what its screen shows. */
-export interface PlatformScreen {
+export type PlatformScreen = {
   /** What of this platform's audit is about contrast: a type it does not have refuses the whole audit. */
   readonly contrastAudits: readonly AuditType[];
   /** The system alert on the screen, whatever it asks. */
@@ -37,7 +37,7 @@ export interface PlatformScreen {
   windowByBars(elements: UiElement[]): Rect | undefined;
   /** An untyped element with no words of its own is listed when an id names it. */
   readonly listsByIdAlone: boolean;
-}
+};
 
 /** What makes a tree a screen: its platform's rules, and the app it is read for. */
 export type ScreenOptions = { port: PlatformScreen; appId?: string };

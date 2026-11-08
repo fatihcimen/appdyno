@@ -3,14 +3,18 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { VIEWER_TEST_FILES } from '../src/index.js';
 
 /** A Mac at the floor is one nobody here has, so what it lacks fails nowhere but on its owner's screen. */
 const root = join(import.meta.dirname, '../../..');
 const viewer = join(root, 'mac/Viewer');
-const floor = /^const MIN_MACOS = '([\d.]+)';$/m.exec(
-  readFileSync(join(root, 'scripts/build-app.mjs'), 'utf8'),
-)![1]!;
+const floor = must(
+  /^const MIN_MACOS = '([\d.]+)';$/m.exec(
+    readFileSync(join(root, 'scripts/build-app.mjs'), 'utf8'),
+  )?.[1],
+  'MIN_MACOS in build-app.mjs',
+);
 const sources = readdirSync(viewer).filter((f) => f.endsWith('.m') && !VIEWER_TEST_FILES.test(f));
 const SYMBOLS =
   '/System/Library/PrivateFrameworks/SFSymbols.framework/Versions/A/Resources/CoreGlyphs.bundle/Contents/Resources/name_availability.plist';
@@ -49,14 +53,17 @@ describe.runIf(process.platform === 'darwin')(`the viewer at macOS ${floor}`, ()
       ) as { symbols: Record<string, string>; year_to_release: Record<string, { macOS: string }> };
       const texts = sources.map((f) => readFileSync(join(viewer, f), 'utf8'));
       const said = new Set(
-        texts.flatMap((t) => [...t.matchAll(/@"([a-z0-9]+(?:\.[a-z0-9]+)+)"/g)].map((m) => m[1]!)),
+        texts.flatMap((t) =>
+          [...t.matchAll(/@"([a-z0-9]+(?:\.[a-z0-9]+)+)"/g)].map((m) => must(m[1], 'a name')),
+        ),
       );
       const style = readFileSync(join(viewer, 'Style.m'), 'utf8');
       for (const name of said) {
         const year = table.symbols[name];
         if (
           year &&
-          Number.parseFloat(table.year_to_release[year]!.macOS) > Number.parseFloat(floor)
+          Number.parseFloat(must(table.year_to_release[year], year).macOS) >
+            Number.parseFloat(floor)
         )
           expect(style, name).toContain(`@"${name}": @"`);
       }

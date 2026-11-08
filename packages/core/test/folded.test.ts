@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import {
   diffText,
   insideRows,
@@ -133,9 +134,9 @@ describe('what repeats in an answer', () => {
     expect(text).toContain('— the ••• one');
     expect(text).not.toContain('xxx');
     expect(renderScreen(list)).toContain(`— the ${secret} one`);
-    expect(diffText({ added: [list[0]!], removed: [], changed: [] }, 9)).toContain(
-      `— the ${secret} one`,
-    );
+    expect(
+      diffText({ added: [must(list[0], 'an element')], removed: [], changed: [] }, 9),
+    ).toContain(`— the ${secret} one`);
   });
 
   it('puts rows under one header when their context is the same and so tells nothing', () => {
@@ -165,7 +166,7 @@ describe('what repeats in an answer', () => {
       row('@c', 'Three', 204),
       row('@far', 'Four', 256),
     ];
-    list[4]!.x = 300;
+    must(list[4], 'the fifth').x = 300;
     expect(renderFolded(list).split('\n').slice(1)).toEqual([
       '@t text "Settings" 200,40',
       'cell x=200 clickable: ref "label" y',

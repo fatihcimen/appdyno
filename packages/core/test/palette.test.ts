@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { PAGE_BASE } from '../src/html.js';
 
 /** The viewer's colours are Objective-C and a page's are CSS: this is what keeps the dashboard wearing the hub's palette. */
@@ -11,11 +12,11 @@ const side = (name: string) => {
   return palette.slice(from, palette.indexOf('\n};', from));
 };
 const one = (block: string, field: string) =>
-  `#${/0x([0-9A-F]{6})/.exec(block.slice(block.indexOf(`.${field} = `)))![1]!.toLowerCase()}`;
+  `#${must(/0x([0-9A-F]{6})/.exec(block.slice(block.indexOf(`.${field} = `)))?.[1], field).toLowerCase()}`;
 const many = (block: string, field: string, count: number) =>
   [...block.slice(block.indexOf(`.${field} = `)).matchAll(/0x([0-9A-F]{6})/g)]
     .slice(0, count)
-    .map((m) => `#${m[1]!.toLowerCase()}`);
+    .map((m) => `#${must(m[1], field).toLowerCase()}`);
 
 const linear = (hex: string) =>
   [1, 3, 5].map((at) => {

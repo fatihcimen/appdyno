@@ -313,7 +313,7 @@ export class Cannot extends DeviceError {
 export const cannot = (what: string) => (): Promise<never> => Promise.reject(new Cannot(what));
 
 /** What a device can measure: every member answers, by `cannot` where this device has no way. */
-export interface MeasureSource {
+export type MeasureSource = {
   /** What has no quick read here, so a journey does not read it between two steps. */
   readonly slowReads: readonly Capability[];
   /** Its frames come through a probe in the app, which `attachProbe` puts there unless a caller says no. */
@@ -408,7 +408,7 @@ export interface MeasureSource {
     during: () => Promise<unknown>,
     keepSeconds?: number,
   ): Promise<Measured<FrameMarks>>;
-}
+};
 
 /** The measures, as against what a source says of itself. */
 export type Capability = Exclude<

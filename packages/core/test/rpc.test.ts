@@ -23,7 +23,7 @@ describe('rpc client', () => {
     });
     const text = { text: 'a', extra: 1 } as Parameters<typeof rpc.call<'text.set'>>[1];
     await rpc.call('text.set', text, { timeoutMs: 1000 });
-    expect(seen[0]!.params).toEqual({
+    expect(seen[0]?.params).toEqual({
       text: 'a',
       replace: false,
       submit: false,

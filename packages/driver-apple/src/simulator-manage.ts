@@ -136,7 +136,7 @@ export class SimulatorApps implements AppManager {
     return list.includes(`UIKitApplication:${app}[`) ? 'running' : 'stopped';
   }
 
-  async permission(app: string, grant: boolean, service: string) {
+  async permission(app: string, grant: boolean, service: string): Promise<undefined> {
     await this.simctl.privacy(this.udid, grant ? 'grant' : 'revoke', service, app);
   }
 
@@ -245,7 +245,7 @@ export class SimulatorSettings implements DeviceSettings {
     }
   }
 
-  async set(name: SettingName, value: string, app?: string): Promise<string | void> {
+  async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {
     switch (name) {
       case 'dark_mode':
         await this.ui('appearance', on(value, 'dark', 'light'));
@@ -336,7 +336,7 @@ export class SimulatorEvents implements DeviceEvents {
   }
 
   /** Enrols if needed and answers the next biometric request: Face ID and Touch ID, whichever it has. */
-  async biometric(answer: BiometricAnswer) {
+  async biometric(answer: BiometricAnswer): Promise<undefined> {
     await this.spawn('notifyutil', '-s', 'com.apple.BiometricKit.enrollmentChanged', '1');
     await this.spawn('notifyutil', '-p', 'com.apple.BiometricKit.enrollmentChanged');
     if (answer === 'enroll') return;

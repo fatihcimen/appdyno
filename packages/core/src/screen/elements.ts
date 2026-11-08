@@ -1,4 +1,5 @@
 import { NODE_FLAGS, type Traversal, type Tree } from '@appdyno/protocol';
+import { must } from '../must.js';
 
 export type Rect = { x: number; y: number; width: number; height: number };
 
@@ -70,6 +71,7 @@ export function elementsOf(tree: Tree, traversal: Traversal[] = []): UiElement[]
     if (!keep[n.w]) return;
     const has = (f: keyof typeof NODE_FLAGS) => (n.f & NODE_FLAGS[f]) !== 0;
     const [l, t, r, b] = n.b;
+    const win = tree.windows[n.w];
     const parent = n.p >= 0 ? index.get(n.p) : undefined;
     const el: UiElement = {
       type: n.c,
@@ -92,8 +94,8 @@ export function elementsOf(tree: Tree, traversal: Traversal[] = []): UiElement[]
       ...(has('notImportant') && { notImportant: true }),
       ...(has('screenReaderFocusable') && { screenReaderFocusable: true }),
       ...(parent !== undefined && { parent }),
-      ...(tree.windows[n.w]?.pkg && { pkg: tree.windows[n.w]!.pkg }),
-      ...(tree.windows[n.w] && systemUi(tree.windows[n.w]!) && { prompt: true }),
+      ...(win?.pkg && { pkg: win.pkg }),
+      ...(win && systemUi(win) && { prompt: true }),
     };
     index.set(i, out.length);
     out.push(el);
@@ -116,7 +118,8 @@ export function familyOf(elements: { parent?: number | undefined }[]) {
   });
   const ancestors = (i: number) => {
     const out: number[] = [];
-    for (let p = elements[i]!.parent; p !== undefined; p = elements[p]!.parent) out.push(p);
+    const at = (n: number) => must(elements[n], `element ${n}`);
+    for (let p = at(i).parent; p !== undefined; p = at(p).parent) out.push(p);
     return out;
   };
   const descendants = (i: number): number[] =>

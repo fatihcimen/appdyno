@@ -10,6 +10,7 @@ const strict = [
   'packages/mcp/**',
   'packages/flows/**',
   'packages/cli/**',
+  'packages/core/**',
 ];
 
 export default defineConfig(

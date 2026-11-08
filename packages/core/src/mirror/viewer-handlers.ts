@@ -28,44 +28,57 @@ export type ViewerHandlers = {
 export function handleViewerMessage(m: ViewerMessage, on: ViewerHandlers) {
   switch (m.op) {
     case 'first':
-      return on.first(m);
+      on.first(m);
+      break;
     case 'stats':
-      return on.stats(m as MirrorStats, Number(m.decoded));
+      on.stats(m as MirrorStats, Number(m.decoded));
+      break;
     case 'lost':
-      return on.lost(String(m.why), m.fatal === true);
+      on.lost(String(m.why), m.fatal === true);
+      break;
     case 'needKey':
-      return on.needKey(Number(m.consecutive ?? 0));
+      on.needKey(Number(m.consecutive ?? 0));
+      break;
     case 'recorded':
-      return on.recorded(m);
+      on.recorded(m);
+      break;
     case 'watched':
-      return on.watched(m);
+      on.watched(m);
+      break;
     case 'touch':
     case 'key':
     case 'text':
     case 'button':
-      return on.input(inputOf(m));
+      on.input(inputOf(m));
+      break;
     case 'zoom':
-      return on.zoom(Number(m.scale));
+      on.zoom(Number(m.scale));
+      break;
     case 'control':
     case 'app':
     case 'perfWatch':
     case 'inspect':
     case 'hover':
     case 'pick':
-      return on.control(m);
+      on.control(m);
+      break;
     case 'done':
-      return on.done(String(m.id));
+      on.done(String(m.id));
+      break;
     case 'marked':
-      return on.marked(Number(m.ms));
+      on.marked(Number(m.ms));
+      break;
     case 'closed':
-      return on.closed();
+      on.closed();
+      break;
     case 'refused':
-      return on.refused(m.need as Need);
+      on.refused(m.need as Need);
+      break;
     case 'sleep':
-      return on.sleep();
+      on.sleep();
+      break;
     case 'wake':
-      return on.wake();
-    default:
-      return undefined;
+      on.wake();
+      break;
   }
 }

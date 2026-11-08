@@ -11,7 +11,8 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Tree } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { assert, beforeEach, describe, expect, it, vi } from 'vitest';
+import { must } from '../src/must.js';
 import { fastWords, PICTURE_TEXT, readPicture, withPictureText } from '../src/ocr.js';
 
 /** The first use compiles it, on a Mac that may be busy. */
@@ -35,9 +36,10 @@ describe('the words of a picture', () => {
       expect(found.map((t) => t.text)).toEqual(['Start Game', 'High Score 42']);
       const [first, second] = found;
       // the picture's top left is the origin: the first line is above the second
-      expect(first!.y).toBeLessThan(second!.y);
-      expect(first!.x).toBeGreaterThan(0.05);
-      expect(first!.y).toBeLessThan(0.3);
+      assert(first && second);
+      expect(first.y).toBeLessThan(second.y);
+      expect(first.x).toBeGreaterThan(0.05);
+      expect(first.y).toBeLessThan(0.3);
     },
     COMPILE_MS,
   );
@@ -81,8 +83,9 @@ printf '${ACCURATE}' "$3" > "$2/accurate.json"
     chmodSync(file, 0o700);
     return file;
   };
-  const texts = (r: Awaited<ReturnType<typeof readPicture>>) => [r.level, r.words[0]!.text];
-  const inFolder = (name: string) => join(process.env.APPDYNO_STATE_DIR!, 'picture-words', name);
+  const texts = (r: Awaited<ReturnType<typeof readPicture>>) => [r.level, r.words[0]?.text];
+  const state = () => must(process.env.APPDYNO_STATE_DIR, "a test's own state folder");
+  const inFolder = (name: string) => join(state(), 'picture-words', name);
   const ended = () =>
     vi.waitFor(() => expect(existsSync(inFolder('running'))).toBe(false), { timeout: 8_000 });
   /** Accurate words left unread, which this keeps a while. */
@@ -132,7 +135,7 @@ printf '${ACCURATE}' "$3" > "$2/accurate.json"
     const long = new Date(Date.now() - 60_000);
     utimesSync(inFolder('accurate.json'), long, long);
     const r = await readPicture(Buffer.from('a'), scanner(0), 30);
-    expect(r.words[0]!.text).toBe('doğru');
+    expect(r.words[0]?.text).toBe('doğru');
     expect(existsSync(inFolder('accurate.json'))).toBe(false);
   }, 15_000);
 
@@ -141,7 +144,7 @@ printf '${ACCURATE}' "$3" > "$2/accurate.json"
     await readPicture(Buffer.from('a'), slow, 1);
     expect(texts(await readPicture(Buffer.from('b'), slow, 1))).toEqual(['fast', 'fast']);
     // answered while the first is still at work: that is the order that shows it did not wait, however busy this Mac is
-    const running = join(process.env.APPDYNO_STATE_DIR!, 'picture-words/running');
+    const running = join(state(), 'picture-words/running');
     expect(readFileSync(running, 'utf8')).toBe(createHash('sha256').update('a').digest('hex'));
   }, 15_000);
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import {
   MirrorSession,
   NeedError,
@@ -15,10 +16,10 @@ function setup(over: Partial<MirrorSessionOptions> = {}) {
   const seen: MirrorStatus[] = [];
   const session = new MirrorSession({
     mirror,
-    viewer: async () => {
+    viewer: () => {
       const v = new FakeViewer();
       viewers.push(v);
-      return v;
+      return Promise.resolve(v);
     },
     options: { quality: 'auto' },
     title: 'a device',
@@ -26,7 +27,7 @@ function setup(over: Partial<MirrorSessionOptions> = {}) {
     onChange: (s) => seen.push(s),
     ...over,
   });
-  const viewer = () => viewers[viewers.length - 1]!;
+  const viewer = () => must(viewers.at(-1), 'a viewer');
   const live = async () => {
     await session.start();
     await flush();
@@ -274,16 +275,13 @@ describe('a mirror, whatever the device', () => {
 
   it('a device that cannot answer tries again; one that never will stops it, saying why', async () => {
     const tries = setup();
-    tries.mirror.check = async () => {
-      throw new Error('adb is restarting');
-    };
+    tries.mirror.check = () => Promise.reject(new Error('adb is restarting'));
     await tries.session.start();
     await flush();
     expect(tries.session.status).toMatchObject({ state: 'reconnecting', attempt: 1 });
     const never = setup();
-    never.mirror.check = async () => {
-      throw Object.assign(new Error('another tool holds UI automation'), { fatal: true });
-    };
+    never.mirror.check = () =>
+      Promise.reject(Object.assign(new Error('another tool holds UI automation'), { fatal: true }));
     await never.session.start();
     await flush();
     expect(never.session.status).toMatchObject({
@@ -400,9 +398,7 @@ describe('a mirror, whatever the device', () => {
 
   it('no compiler: stopped, by its need, before anything opens', async () => {
     const { session, mirror } = setup({
-      viewer: async () => {
-        throw new NeedError('no-compiler');
-      },
+      viewer: () => Promise.reject(new NeedError('no-compiler')),
     });
     await session.start();
     expect(session.status).toMatchObject({ state: 'stopped', need: 'no-compiler' });
@@ -450,12 +446,12 @@ describe('a mirror, whatever the device', () => {
     const { session, mirror, viewer, live } = setup();
     await live();
     mirror.checkAnswer = { ok: false, need: 'asleep' };
-    mirror.push!('asleep');
+    must(mirror.push, 'a session that listens')('asleep');
     await flush();
     expect(session.status).toMatchObject({ state: 'waiting', need: 'asleep' });
     expect(viewer().of('detach')).toHaveLength(1);
     mirror.checkAnswer = { ok: true, routes: ['x'] };
-    mirror.push!('ok');
+    must(mirror.push, 'a session that listens')('ok');
     await flush();
     expect(mirror.opens).toBe(2);
   });
@@ -464,20 +460,20 @@ describe('a mirror, whatever the device', () => {
     const { session, mirror, viewer, live } = setup();
     await live();
     mirror.holdsThrough = 'asleep';
-    mirror.push!('asleep');
-    mirror.push!('asleep');
+    must(mirror.push, 'a session that listens')('asleep');
+    must(mirror.push, 'a session that listens')('asleep');
     await flush();
     expect(session.status).toMatchObject({ state: 'waiting', need: 'asleep' });
     expect(viewer().of('detach')).toHaveLength(0);
-    mirror.push!('ok');
+    must(mirror.push, 'a session that listens')('ok');
     await flush();
     expect(session.status.state).toBe('live');
     expect(mirror.opens).toBe(1);
     // and a device gone from under it is a loss as ever
-    mirror.push!('asleep');
+    must(mirror.push, 'a session that listens')('asleep');
     await flush();
     mirror.checkAnswer = { ok: false, need: 'not-connected' };
-    mirror.push!('not-connected');
+    must(mirror.push, 'a session that listens')('not-connected');
     await flush();
     expect(session.status).toMatchObject({ state: 'waiting', need: 'not-connected' });
     expect(viewer().of('detach')).toHaveLength(1);
@@ -488,10 +484,10 @@ describe('a mirror, whatever the device', () => {
     await live();
     expect(viewer().of('attach')[0]).toMatchObject({ focus: true, input: 'click' });
     mirror.checkAnswer = { ok: false, need: 'asleep' };
-    mirror.push!('asleep');
+    must(mirror.push, 'a session that listens')('asleep');
     await flush();
     mirror.checkAnswer = { ok: true, routes: ['x'] };
-    mirror.push!('ok');
+    must(mirror.push, 'a session that listens')('ok');
     await flush();
     expect(viewer().of('attach')[1]).toMatchObject({ focus: false, input: 'click' });
     session.raise();
@@ -508,7 +504,7 @@ describe('a mirror, whatever the device', () => {
     viewer().say('touch', { p: 0, x: 0, y: 0 });
     expect(mirror.wakes).toBe(1);
     mirror.checkAnswer = { ok: false, need: 'asleep' };
-    mirror.push!('asleep');
+    must(mirror.push, 'a session that listens')('asleep');
     await flush();
     viewer().say('touch', { p: 0, x: 0, y: 0 });
     expect(mirror.wakes).toBe(2);
@@ -519,7 +515,7 @@ describe('a mirror, whatever the device', () => {
     const { session, mirror, clock, live } = setup();
     await live();
     mirror.checkAnswer = { ok: false, need: 'asleep' };
-    mirror.push!('asleep');
+    must(mirror.push, 'a session that listens')('asleep');
     await flush();
     const opens = mirror.opens;
     session.askAgain();

@@ -48,7 +48,7 @@ export function runBuild(
       if (signal?.aborted) reject(cancelled('the build'));
       else if (code === 0) resolve();
       else {
-        const why = errors.slice(-ERRORS_KEPT).join('\n') || `${tool} ended with ${code}`;
+        const why = errors.slice(-ERRORS_KEPT).join('\n') || `${tool} ended with ${String(code)}`;
         reject(new DeviceError('BUILD_FAILED', `the build failed:\n${why}`));
       }
     });

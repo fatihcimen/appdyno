@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { modelledEnergy } from '../src/energy-model.js';
 
 describe('the energy model', () => {
@@ -13,6 +14,8 @@ describe('the energy model', () => {
   });
 
   it('reads a busy core clearly above an idle app', () => {
-    expect(modelledEnergy(3_000, 0).mj).toBeGreaterThan(modelledEnergy(30, 0).mj! * 10);
+    expect(modelledEnergy(3_000, 0).mj).toBeGreaterThan(
+      must(modelledEnergy(30, 0).mj, 'its energy') * 10,
+    );
   });
 });

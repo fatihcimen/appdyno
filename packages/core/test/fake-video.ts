@@ -1,4 +1,5 @@
 import { box, u32s } from '../src/video.js';
+import { must } from '../src/must.js';
 
 const u32 = (...v: number[]) => u32s(v);
 
@@ -34,7 +35,7 @@ export function fakeVideo(
     box('stss', u32(0, 1, 1)),
     box('stsc', u32(0, 1, 1, n, 1)),
     opts.oneSize
-      ? box('stsz', u32(0, frames[0]!.length, n))
+      ? box('stsz', u32(0, must(frames[0], 'a frame').length, n))
       : box('stsz', u32(0, 0, n), u32(...frames.map((f) => f.length))),
     box('stco', u32(0, 1, first)),
   );

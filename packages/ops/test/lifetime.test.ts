@@ -17,7 +17,7 @@ class Settings implements DeviceSettings {
     await tick();
     return this.values[name]!;
   };
-  set = async (name: SettingName, value: string) => {
+  set = async (name: SettingName, value: string): Promise<undefined> => {
     await tick();
     if (this.failNext) {
       this.failNext = false;

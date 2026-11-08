@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { createServer, type Server, type Socket } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { COMPILE_MS, compiled, run, viewer } from './viewer-helpers.js';
 
 const built = compiled();
@@ -135,12 +136,12 @@ describe('the viewer on an agent stream, through adb', () => {
     expect(agent.methods.find((m) => m.method === 'stream.start')).toMatchObject({
       params: { codec: 'h264', failFirst: 2 },
     });
-    expect(existsSync(`/proc/${v.pid}/cmdline`)).toBe(false);
+    expect(existsSync(`/proc/${String(v.pid)}/cmdline`)).toBe(false);
     const stats = await until('stats', (m) => Number(m.arrived) > 0);
     expect(Number(stats.decoded)).toBeGreaterThan(0);
     expect(stats.source).toBe('adb');
     // the end of the connection, and the same viewer on a new one: no new process for a reconnect
-    agent.socket!.destroy();
+    must(agent.socket, 'its connection').destroy();
     await expect(until('lost')).resolves.toMatchObject({ why: 'the stream ended', fatal: false });
     const started = agent.methods.filter((m) => m.method === 'stream.start').length;
     v.send({ op: 'attach', source: source() });

@@ -254,7 +254,7 @@ export class AndroidSettings implements DeviceSettings {
       );
   }
 
-  async set(name: SettingName, value: string, app?: string) {
+  async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {
     switch (name) {
       case 'dark_mode': {
         const mode = { on: 'yes', off: 'no' }[value] ?? value;

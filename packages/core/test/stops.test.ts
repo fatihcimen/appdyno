@@ -13,7 +13,7 @@ describe('a stop of a main thread in its log', () => {
   });
 
   it('goes by the refresh it is given: the same 90 frames on a 120 Hz screen are half as long', () => {
-    expect(stopsInLog([SKIPPED], at([10_000]), 8.3)[0]!.ms).toBeCloseTo(747, 0);
+    expect(stopsInLog([SKIPPED], at([10_000]), 8.3)[0]?.ms).toBeCloseTo(747, 0);
   });
 
   it('finds every one, among whatever else a log says', () => {

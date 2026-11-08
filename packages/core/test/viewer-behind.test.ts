@@ -40,7 +40,7 @@ describe('the viewer, compiled by its first-use path', () => {
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
       writeFileSync(file, Buffer.from(pixel, 'base64'));
       const v = new ViewerProcess(built.binary, [flag]);
-      const board = `$.NSPasteboard.pasteboardWithName('dev.appdyno.behind.${v.pid}')`;
+      const board = `$.NSPasteboard.pasteboardWithName('dev.appdyno.behind.${String(v.pid)}')`;
       const ask = async (what: string) => {
         const read = `ObjC.import('AppKit'); ${what}`;
         return (await run('osascript', ['-l', 'JavaScript', '-e', read])).stdout.trim();

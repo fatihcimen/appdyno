@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { box, joinVideos, readVideo } from '../src/video.js';
 import { fakeVideo as video } from './fake-video.js';
 
@@ -43,10 +44,14 @@ function framesOf(file: string) {
   const out: string[] = [];
   let s = 0;
   chunkOffsets.forEach((o, c) => {
-    const each = runs.findLast((r) => r.first <= c + 1)!.each;
+    const { each } = must(
+      runs.findLast((r) => r.first <= c + 1),
+      `the run of chunk ${c + 1}`,
+    );
     for (let i = 0, at = o; i < each; i++) {
-      out.push(b.toString('latin1', at, at + sizes[s]!));
-      at += sizes[s++]!;
+      const size = must(sizes[s++], 'a size');
+      out.push(b.toString('latin1', at, at + size));
+      at += size;
     }
   });
   return out;

@@ -1,3 +1,4 @@
+import { must } from '../must.js';
 import { familyOf, type Rect, type UiElement } from './elements.js';
 import type { PlatformScreen, ScreenOptions } from './port.js';
 
@@ -92,8 +93,9 @@ type Item = {
  */
 export function windowRect(elements: UiElement[], port: PlatformScreen): Rect | undefined {
   const area = (r: Rect) => r.width * r.height;
-  const roots = elements.filter((e) => e.parent === undefined && e.rect && area(e.rect) > 0);
-  const [big, next] = roots.map((e) => e.rect!).sort((a, b) => area(b) - area(a));
+  const [big, next] = elements
+    .flatMap((e) => (e.parent === undefined && e.rect && area(e.rect) > 0 ? [e.rect] : []))
+    .sort((a, b) => area(b) - area(a));
   const same = (a: Rect, b: Rect) =>
     a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
   const sideBar = port.barBesideWindow && !!big && big.width > big.height;
@@ -150,7 +152,7 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
 
   const family = familyOf(elements);
   const descendants = (i: number): Item[] =>
-    family.descendants(i).flatMap((d) => (items.has(d) ? [items.get(d)!] : []));
+    family.descendants(i).flatMap((d) => items.get(d) ?? []);
   const { ancestors } = family;
   const nameOf = (i: Item) =>
     ownName(i.el) ||
@@ -194,13 +196,12 @@ export function screenElements(
   const { items, nameOf, ancestors, descendants, win } = appTree(elements, opts);
   const screenWide = (r: Rect | undefined) =>
     !!r && !!win && r.width * r.height >= 0.5 * Math.min(win.width * win.height, 1e8);
+  const at = (n: number) => must(elements[n], `element ${n}`);
   const pathOf = (i: Item, role: string) => {
-    const anc = ancestors(i.index).find(
-      (a) => idOf(elements[a]!.identifier) && !screenWide(elements[a]!.rect),
-    );
+    const anc = ancestors(i.index).find((a) => idOf(at(a).identifier) && !screenWide(at(a).rect));
     if (anc === undefined) return undefined;
     const same = descendants(anc).filter((d) => (d.role ?? d.type) === role);
-    return `${cut(idOf(elements[anc]!.identifier)!)}/${role}[${same.indexOf(i)}]`;
+    return `${cut(must(idOf(at(anc).identifier), 'its id'))}/${role}[${same.indexOf(i)}]`;
   };
   const labelled = [...items.values()].filter((i) => ownName(i.el));
   const centre = (i: Item) => ({ x: i.r.x + i.r.w / 2, y: i.r.y + i.r.h / 2 });
@@ -246,7 +247,7 @@ export function screenElements(
       ...(id && { id: cut(id) }),
       name,
       nameKind,
-      rect: i.el.rect!,
+      rect: must(i.el.rect, 'its rect'),
       ...((nameKind === 'path' || nameKind === 'position') && { context: contextOf(i) }),
       ...(i.el.refContext && { refContext: i.el.refContext }),
       x,
@@ -254,7 +255,7 @@ export function screenElements(
       flags: [
         ...(['clickable', 'checked', 'focused'] as const).filter((f) => i.el[f]),
         // what a web view shows: its coordinates hold, its text is the page's
-        ...([i.index, ...ancestors(i.index)].some((a) => isWebView(elements[a]!.type))
+        ...([i.index, ...ancestors(i.index)].some((a) => isWebView(at(a).type))
           ? (['web'] as const)
           : []),
       ],

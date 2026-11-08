@@ -26,10 +26,14 @@ describe('the viewer, compiled by its first-use path', () => {
       },
     ).then(
       ({ stdout }) => ({ stdout, ended: '' }),
-      (e: { stdout: string; stderr: string; code?: number; signal?: string }) => ({
-        stdout: e.stdout,
-        ended: `it ended by ${e.signal ?? `exit ${e.code}`}: ${e.stderr.slice(-1_000)}`,
-      }),
+      (failed: unknown) => {
+        // what execFile rejects with: the error, with what the binary said
+        const e = failed as { stdout: string; stderr: string; code?: number; signal?: string };
+        return {
+          stdout: e.stdout,
+          ended: `it ended by ${e.signal ?? `exit ${String(e.code)}`}: ${e.stderr.slice(-1_000)}`,
+        };
+      },
     );
     const lines = stdout
       .trim()

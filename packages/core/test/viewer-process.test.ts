@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { chmodSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import type { ViewerProcess } from '../src/index.js';
 import { COMPILE_MS, compiled, viewer, WAIT_MS } from './viewer-helpers.js';
 
@@ -45,7 +46,7 @@ describe('the viewer, compiled by its first-use path', () => {
         });
       });
       expect(pid).toBeGreaterThan(0);
-      process.kill(parent.pid!, 'SIGKILL');
+      process.kill(must(parent.pid, 'its pid'), 'SIGKILL');
       const end = Date.now() + WAIT_MS;
       let alive = true;
       while (alive && Date.now() < end) {

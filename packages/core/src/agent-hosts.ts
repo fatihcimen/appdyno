@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { reportProgress } from './call.js';
 import { heldElsewhere, isThisProcess, Owner, thisOwner } from './owner.js';
 import type { RpcClient } from './rpc.js';
+import { must } from './must.js';
 import { deviceState } from './state.js';
 
 /** The processes of this Mac that use a device's agent: it has no word on who is connected, and a process's end says it left. */
@@ -64,7 +65,7 @@ export async function sharedAgent<State extends { sha256: string }>(
   });
   if (agent && otherBuild)
     reportProgress(
-      `using the agent pid ${others[0]!.pid} uses, of another build: this one's starts when that has gone`,
+      `using the agent pid ${must(others[0], 'its host').pid} uses, of another build: this one's starts when that has gone`,
     );
   return agent && { ...agent, started: false };
 }

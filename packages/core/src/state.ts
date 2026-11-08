@@ -143,6 +143,13 @@ export function deviceState<T>(folder: string, schema: Parser<T>) {
 }
 
 /** An agent's state file, for the drivers. */
-export const readStateFile = async <T>(file: string, schema: Parser<T>) => readState(file, schema);
+export const readStateFile = <T>(file: string, schema: Parser<T>) =>
+  new Promise<T | undefined>((resolve) => {
+    resolve(readState(file, schema));
+  });
 
-export const writeStateFile = async (file: string, value: unknown) => writeState(file, value);
+export const writeStateFile = (file: string, value: unknown) =>
+  new Promise<void>((resolve) => {
+    writeState(file, value);
+    resolve();
+  });

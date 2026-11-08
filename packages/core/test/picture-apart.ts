@@ -1,4 +1,5 @@
 import { decodePng } from '../src/png.js';
+import { must } from '../src/must.js';
 
 const COLUMNS = 54;
 const ROWS = 120;
@@ -21,11 +22,12 @@ function cellsOf(png: Buffer) {
     for (let x = 0; x < width; x += 2) {
       const i = (y * width + x) * channels;
       const cell = row * COLUMNS + Math.floor((x * COLUMNS) / width);
-      sums[cell]! += (data[i]! + data[i + 1]! + data[i + 2]!) / 3;
-      counts[cell]! += 1;
+      const at = (k: number) => must(data[k], 'a byte');
+      sums[cell] = must(sums[cell], 'a cell') + (at(i) + at(i + 1) + at(i + 2)) / 3;
+      counts[cell] = must(counts[cell], 'a cell') + 1;
     }
   }
-  return sums.map((sum, i) => sum / counts[i]!);
+  return sums.map((sum, i) => sum / must(counts[i], 'a cell'));
 }
 
 const apartAt = (a: Float64Array, b: Float64Array, dx: number, dy: number) => {
@@ -33,7 +35,9 @@ const apartAt = (a: Float64Array, b: Float64Array, dx: number, dy: number) => {
   let seen = 0;
   for (let y = Math.max(0, -dy); y < Math.min(ROWS, ROWS - dy); y++)
     for (let x = Math.max(0, -dx); x < Math.min(COLUMNS, COLUMNS - dx); x++, seen++)
-      sum += Math.abs(a[(y + dy) * COLUMNS + x + dx]! - b[y * COLUMNS + x]!);
+      sum += Math.abs(
+        must(a[(y + dy) * COLUMNS + x + dx], 'a cell') - must(b[y * COLUMNS + x], 'a cell'),
+      );
   return sum / seen;
 };
 

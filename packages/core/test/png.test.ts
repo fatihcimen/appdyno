@@ -1,5 +1,6 @@
 import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { decodePng, diffImages, encodePng, paintRects, type Image } from '../src/png.js';
 
 const image = (w: number, h: number, channels: 3 | 4 = 3, v = 200): Image => ({
@@ -14,7 +15,7 @@ describe('PNG', () => {
     for (const channels of [3, 4] as const) {
       const img = image(5, 4, channels);
       img.data[7] = 12;
-      const back = decodePng(encodePng(img))!;
+      const back = must(decodePng(encodePng(img)), 'a PNG');
       expect(back).toMatchObject({ width: 5, height: 4, channels });
       expect([...back.data]).toEqual([...img.data]);
     }
@@ -40,7 +41,7 @@ describe('PNG', () => {
       chunk('IDAT', deflateSync(Buffer.from(row))),
       chunk('IEND', Buffer.alloc(0)),
     ]);
-    const back = decodePng(png)!;
+    const back = must(decodePng(png), 'a PNG');
     expect([back.width, back.height, back.channels]).toEqual([2, 1, 4]);
     expect([...back.data]).toEqual([0x12, 0x56, 0x9a, 0xff, 0x13, 0x57, 0x9b, 0xff]);
   });

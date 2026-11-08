@@ -74,7 +74,7 @@ export type DeviceHardware = {
 };
 
 /** One device, whichever platform: what the operations are written against. */
-export interface Device {
+export type Device = {
   readonly platformScreen: PlatformScreen;
   readonly apps: AppManager;
   readonly settings: DeviceSettings;
@@ -157,7 +157,7 @@ export interface Device {
   /** Its process id, where reading it is cheap enough to do on every action. */
   appPid?(app: string): Promise<string | undefined>;
   readonly measure: MeasureSource;
-}
+};
 
 /** A doctor's finding. */
 export type Check = { name: string; ok: boolean; warn?: boolean; detail: string; fix?: string };
@@ -174,7 +174,7 @@ export type ListedDevice = {
 };
 
 /** The devices of one driver. */
-export interface DeviceProvider {
+export type DeviceProvider = {
   /** `state` is the driver's own word; `ready` says whether the device can be driven now. */
   list(): Promise<ListedDevice[]>;
   handles(serial: string): boolean;
@@ -191,4 +191,4 @@ export interface DeviceProvider {
     tracePath: string,
     q: { sql?: string; table?: string; limit: number },
   ): Promise<TraceDigest | undefined>;
-}
+};

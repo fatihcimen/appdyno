@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { must } from '../src/must.js';
 import { measureClock } from '../src/clock.js';
 
 /** A Mac's clock that moves only when a read takes time, and a device `ahead` of it, read `out` ms after the call. */
@@ -7,12 +8,12 @@ function clocks(ahead: number, trips: { out: number; back: number }[]) {
   let i = 0;
   return {
     now: () => mac,
-    read: async () => {
-      const trip = trips[i++ % trips.length]!;
+    read: () => {
+      const trip = must(trips[i++ % trips.length], 'a trip');
       mac += trip.out;
       const device = mac + ahead;
       mac += trip.back;
-      return device;
+      return Promise.resolve(device);
     },
   };
 }
@@ -52,7 +53,14 @@ describe('a device clock measured against the Mac', () => {
 
   it('reads no fewer than it was asked to', async () => {
     let reads = 0;
-    await measureClock(async () => (reads++, Date.now()), Date.now, 5);
+    await measureClock(
+      () => {
+        reads++;
+        return Promise.resolve(Date.now());
+      },
+      Date.now,
+      5,
+    );
     expect(reads).toBe(5);
   });
 });

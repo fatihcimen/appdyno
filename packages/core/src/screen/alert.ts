@@ -1,4 +1,5 @@
-import type { UiElement } from './elements.js';
+import type { Rect, UiElement } from './elements.js';
+import { must } from '../must.js';
 import { fold } from './fold.js';
 
 export type AlertAction = 'allow' | 'deny';
@@ -17,14 +18,14 @@ export type SystemAlert = {
   buttons: AlertButton[];
 };
 
-const centreOf = (e: UiElement) => ({
-  x: Math.round(e.rect!.x + e.rect!.width / 2),
-  y: Math.round(e.rect!.y + e.rect!.height / 2),
+const centreOf = (r: Rect) => ({
+  x: Math.round(r.x + r.width / 2),
+  y: Math.round(r.y + r.height / 2),
 });
 
 /** A permission prompt's button, to tap. */
 export const alertButtonOf = (e: UiElement | undefined): AlertButton | undefined =>
-  e?.rect && { label: (e.label || e.text || e.name || '').trim(), ...centreOf(e) };
+  e?.rect && { label: (e.label || e.text || e.name || '').trim(), ...centreOf(e.rect) };
 
 /** An alert from the elements inside it: what can be pressed is its buttons, the rest its words. */
 export function alertOf(
@@ -32,9 +33,11 @@ export function alertOf(
   pressable: (e: UiElement) => boolean,
 ): SystemAlert | undefined {
   const words = (e: UiElement) => (e.label || e.text || '').trim();
-  const buttons = inside
-    .filter((e) => e.rect && e.visible !== false && pressable(e) && words(e))
-    .map((e) => ({ label: words(e), ...centreOf(e) }));
+  const buttons = inside.flatMap((e) =>
+    e.rect && e.visible !== false && pressable(e) && words(e)
+      ? [{ label: words(e), ...centreOf(e.rect) }]
+      : [],
+  );
   const texts = [
     ...new Set(inside.filter((e) => e.visible !== false && !pressable(e) && words(e)).map(words)),
   ];
@@ -76,6 +79,6 @@ export function alertAnswer(
   const w = fold(answer);
   const exact = alert.buttons.filter((b) => fold(b.label) === w);
   const hits = exact.length > 0 ? exact : alert.buttons.filter((b) => fold(b.label).includes(w));
-  if (hits.length === 1) return { hit: hits[0]! };
+  if (hits.length === 1) return { hit: must(hits[0], 'a button') };
   return hits.length > 1 ? { many: hits.map((b) => b.label) } : {};
 }

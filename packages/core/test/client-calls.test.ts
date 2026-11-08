@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { must } from '../src/must.js';
 import { clientCalls, forgetClientCall, noteClientCall } from '../src/client-calls.js';
 
 let dir: string;
@@ -15,7 +16,9 @@ describe('what is kept of a client', () => {
   it('is its name, its version, how it came and when, with nothing else', () => {
     noteClientCall({ name: 'Some Client', version: '1.2' }, 'stdio');
     const [file] = readdirSync(join(dir, 'clients'));
-    const kept = JSON.parse(readFileSync(join(dir, 'clients', file!), 'utf8')) as object;
+    const kept = JSON.parse(
+      readFileSync(join(dir, 'clients', must(file, 'a file')), 'utf8'),
+    ) as object;
     expect(Object.keys(kept).sort()).toEqual(['last', 'link', 'name', 'version']);
     expect(clientCalls()).toMatchObject([{ name: 'Some Client', version: '1.2', link: 'stdio' }]);
   });
@@ -31,8 +34,8 @@ describe('what is kept of a client', () => {
     noteClientCall({ name: ' \n ' }, 'stdio');
     const calls = clientCalls();
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.name).toMatch(/^\.\.\/\.\.\/x y+$/);
-    expect(calls[0]!.name.length).toBe(80);
+    expect(calls[0]?.name).toMatch(/^\.\.\/\.\.\/x y+$/);
+    expect(calls[0]?.name.length).toBe(80);
     expect(calls[0]).not.toHaveProperty('version');
     expect(readdirSync(join(dir, 'clients'))).toHaveLength(1);
   });
@@ -41,13 +44,13 @@ describe('what is kept of a client', () => {
     vi.useFakeTimers({ now: 1_000_000 });
     try {
       noteClientCall({ name: 'quick' }, 'stdio');
-      const first = clientCalls()[0]!.last;
+      const first = must(clientCalls()[0], 'a call').last;
       vi.setSystemTime(1_005_000);
       noteClientCall({ name: 'quick' }, 'stdio');
-      expect(clientCalls()[0]!.last).toBe(first);
+      expect(clientCalls()[0]?.last).toBe(first);
       vi.setSystemTime(1_011_000);
       noteClientCall({ name: 'quick' }, 'stdio');
-      expect(clientCalls()[0]!.last).not.toBe(first);
+      expect(must(clientCalls()[0], 'a call').last).not.toBe(first);
     } finally {
       vi.useRealTimers();
     }

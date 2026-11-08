@@ -252,7 +252,7 @@ export class PhoneSettings implements DeviceSettings {
     return flags[name as keyof typeof flags]?.enabled ? 'on' : 'off';
   }
 
-  async set(name: SettingName, value: string, app?: string): Promise<string | void> {
+  async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {
     if (name === 'locale') {
       const bundle = this.appOf(app);
       return holdAppLanguage(this.ctl.udid, bundle, value, async () => {
@@ -308,7 +308,7 @@ export class PhoneEvents implements DeviceEvents {
     this.target.close();
   }
 
-  async biometric(_answer: BiometricAnswer): Promise<void> {
+  async biometric(_answer: BiometricAnswer): Promise<undefined> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.biometric);
   }
 

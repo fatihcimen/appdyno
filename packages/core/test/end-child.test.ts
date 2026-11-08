@@ -37,7 +37,7 @@ describe('ending a child', () => {
     const { child } = await started(
       `${STAYS}; for (const s of ['SIGINT', 'SIGTERM']) process.on(s, () => console.log(s))`,
     );
-    child.stdout!.on('data', (d) => heard.push(String(d).trim()));
+    child.stdout.on('data', (d) => heard.push(String(d).trim()));
     await endChild(child, { graceMs: 300, signals: ['SIGINT', 'SIGTERM'] });
     expect(child.signalCode).toBe('SIGKILL');
     expect(heard).toEqual(['SIGINT', 'SIGTERM']);
@@ -62,7 +62,7 @@ describe('ending a child', () => {
     );
     await endChild(child, { graceMs: 300, group: true });
     expect(ended(child)).toBe(true);
-    expect(child.stdout!.destroyed).toBe(true);
+    expect(child.stdout.destroyed).toBe(true);
   });
 
   it('has nothing to do for what has already gone', async () => {

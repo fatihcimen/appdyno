@@ -71,13 +71,13 @@ export type SettingsPage = (typeof SETTINGS_PAGES)[number];
  * The device's conditions. `get` answers what `set` takes, so a change can be put back; `app` is the app
  * a per-app setting (Android's locale) is about.
  */
-export interface DeviceSettings {
+export type DeviceSettings = {
   /** Before a condition is written down and changed: whatever else holds it lets go, so that the old value read is the user's. */
   willChange?(name: SettingName): Promise<void>;
   get(name: SettingName, app?: string): Promise<string>;
   /** What the answer should add, where the change is less than its name says. */
-  set(name: SettingName, value: string, app?: string): Promise<string | void>;
-}
+  set(name: SettingName, value: string, app?: string): Promise<string | undefined>;
+};
 
 /**
  * A push by what it does: `alert` is seen, `background` wakes the app's code alone, `rich` carries an image, `tapped`
@@ -133,7 +133,12 @@ export class PushRate {
 
   /** Refuses while 10 went in the last minute. */
   check(now: number) {
-    while (this.sent.length > 0 && now - this.sent[0]! >= 60_000) this.sent.shift();
+    for (
+      let first = this.sent[0];
+      first !== undefined && now - first >= 60_000;
+      first = this.sent[0]
+    )
+      this.sent.shift();
     if (this.sent.length >= 10)
       throw new DeviceError('UNSUPPORTED', '10 pushes a minute to a device at most: wait a little');
   }
@@ -151,7 +156,7 @@ export type PushTokenKind = (typeof PUSH_TOKEN_KINDS)[number];
 export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
 
 /** What happens to a device once: a condition holds and is put back, an event is over when it is said. */
-export interface DeviceEvents {
+export type DeviceEvents = {
   /** Each type, by how this device takes it, for `app` where it is named: an app's build may take another route. */
   pushRoutes(app?: string): Promise<PushRoute[]>;
   /** Sends one to the app, by its type's route; what reached the app's code, for the answer. */
@@ -165,10 +170,10 @@ export interface DeviceEvents {
   biometric(
     answer: BiometricAnswer,
     setUp?: (name: SettingName, value: string) => Promise<void>,
-  ): Promise<string | void>;
+  ): Promise<string | undefined>;
   /** Empties a simulator's keychain, and answers how many items it held. */
   resetKeychain(): Promise<number>;
   /** A call coming in from `number`, or that call ended. */
   call(number: string, end: boolean): Promise<void>;
   sms(from: string, text: string): Promise<void>;
-}
+};

@@ -1,3 +1,5 @@
+import { must } from './must.js';
+
 export type FrameSummary = {
   totalFrames: number;
   jankyFrames: number;
@@ -167,7 +169,7 @@ const REFRESH_MS = { least: 4, most: 34, otherwise: 1_000 / 60 };
 export function refreshMsOf(times: number[]) {
   const gaps = times
     .slice(1)
-    .map((t, i) => t - times[i]!)
+    .map((t, i) => t - must(times[i], 'a time'))
     .filter((g) => g > 0)
     .sort((a, b) => a - b);
   const usual = gaps[gaps.length >> 1] ?? 0;

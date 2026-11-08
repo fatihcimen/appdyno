@@ -19,7 +19,7 @@ export type VirtualCatalog = {
 export type NewDevice = { name: string; model: string; system: string };
 
 /** Starting and stopping the virtual devices of a driver. */
-export interface VirtualDevices {
+export type VirtualDevices = {
   readonly kind: 'simulator' | 'emulator';
   readonly platform: Platform;
   startable(): Promise<Startable[]>;
@@ -32,4 +32,4 @@ export interface VirtualDevices {
   create?(device: NewDevice): Promise<string>;
   /** What a person runs to remove one that was made: there is no tool for it here. */
   removedBy?(id: string): string;
-}
+};

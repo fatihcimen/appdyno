@@ -79,8 +79,8 @@ export async function nativeBinary(build: NativeBuild): Promise<string> {
   await run('xcrun', [...build.flags, '-o', tmp, ...build.sources], {
     ...(build.env && { env: build.env }),
     timeout: COMPILE_MS,
-  }).catch((e: Error) => {
-    if (/ENOENT|invalid active developer path|xcrun: error/.test(e.message))
+  }).catch((e: unknown) => {
+    if (e instanceof Error && /ENOENT|invalid active developer path|xcrun: error/.test(e.message))
       throw new NeedError('no-compiler');
     throw e;
   });

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
   Cannot,
   measuredLive,
@@ -6,12 +6,17 @@ import {
   type LiveField,
   type LiveSample,
 } from '../src/index.js';
+import { must } from '../src/must.js';
 
 const reading = <T>(value: T) => Promise.resolve({ value, raw: '', at: '' });
 
+/** The fake's readers, as the mocks they are. */
+const mocks = (d: Pick<Device, 'measure'>) =>
+  d.measure as unknown as Record<'cpu' | 'memory' | 'network' | 'frames', Mock>;
+
 function device(over: Record<string, unknown> = {}) {
   return {
-    foreground: vi.fn(async () => 'dev.app'),
+    foreground: vi.fn(() => Promise.resolve('dev.app')),
     measure: {
       slowReads: [],
       cpu: vi.fn(() => reading({ percent: 12.5, windowMs: 500 })),
@@ -28,7 +33,7 @@ function device(over: Record<string, unknown> = {}) {
 /** The first samples of a source, which is then stopped. */
 async function samples(d: Pick<Device, 'measure' | 'foreground'>, count: number, app?: string) {
   const seen: LiveSample[] = [];
-  let stop = () => {};
+  let stop: () => void = () => undefined;
   await new Promise<void>((done) => {
     void measuredLive(d)
       .start((sample) => {
@@ -42,12 +47,12 @@ async function samples(d: Pick<Device, 'measure' | 'foreground'>, count: number,
 }
 
 const first = async (d: Pick<Device, 'measure' | 'foreground'>, app?: string) =>
-  (await samples(d, 1, app))[0]!;
+  must((await samples(d, 1, app))[0], 'a sample');
 
 describe('what one that runs all day reads', () => {
   const firstOf = (d: Pick<Device, 'measure' | 'foreground'>, fields: readonly LiveField[]) =>
     new Promise<LiveSample>((done) => {
-      let stop = () => {};
+      let stop: () => void = () => undefined;
       void measuredLive(d, fields)
         .start((sample) => {
           stop();
@@ -60,22 +65,25 @@ describe('what one that runs all day reads', () => {
     const d = device();
     const s = await firstOf(d, ['memoryMb', 'fps']);
     expect(s.memoryMb).toBe(200);
-    expect(d.measure.cpu).not.toHaveBeenCalled();
-    expect(d.measure.network).not.toHaveBeenCalled();
-    expect(d.measure.frames).toHaveBeenCalled();
+    expect(mocks(d).cpu).not.toHaveBeenCalled();
+    expect(mocks(d).network).not.toHaveBeenCalled();
+    expect(mocks(d).frames).toHaveBeenCalled();
     expect(s.absent?.cpuPercent).toContain('not read');
   });
 
   it('takes the screen as it is: a number is no reason to light a phone a person turned off', async () => {
     const d = device();
     await firstOf(d, ['fps']);
-    expect(d.measure.frames).toHaveBeenCalledWith('dev.app', { reset: true, asItIs: true });
+    expect(mocks(d).frames).toHaveBeenCalledWith('dev.app', {
+      reset: true,
+      asItIs: true,
+    });
   });
 });
 
 describe("a device's numbers each second", () => {
   it('come from the measures it already has', async () => {
-    const sample = (await samples(device(), 2))[1]!;
+    const sample = must((await samples(device(), 2))[1], 'a second sample');
     expect(sample).toMatchObject({
       app: 'dev.app',
       cpuPercent: 12.5,
@@ -104,7 +112,7 @@ describe("a device's numbers each second", () => {
         at: '',
       }));
     const frames = () => reading({ totalFrames: 150, jankyFrames: 0, frozenFrames: 0 });
-    const sample = (await samples(device({ memory: slow, frames }), 2))[1]!;
+    const sample = must((await samples(device({ memory: slow, frames }), 2))[1], 'a second sample');
     // 150 frames in the second and a half the memory read holds a turn for, and not in a second
     expect(sample.fps).toBeGreaterThan(90);
     expect(sample.fps).toBeLessThan(110);
@@ -115,13 +123,13 @@ describe("a device's numbers each second", () => {
     vi.mocked(d.foreground).mockResolvedValueOnce('dev.app').mockResolvedValue('dev.other');
     const [, second] = await samples(d, 2);
     expect(second).not.toHaveProperty('fps');
-    expect(second!.absent?.fps).toBe('counting begins');
+    expect(second?.absent?.fps).toBe('counting begins');
   });
 
   it('read memory every few turns, its reader being the heaviest, and say it as read', async () => {
     const d = device();
     const seen = await samples(d, 3);
-    expect(d.measure.memory).toHaveBeenCalledOnce();
+    expect(mocks(d).memory).toHaveBeenCalledOnce();
     expect(seen.map((s) => s.memoryMb)).toEqual([200, 200, 200]);
   });
 
@@ -129,7 +137,7 @@ describe("a device's numbers each second", () => {
     const d = device();
     vi.mocked(d.foreground).mockResolvedValueOnce('dev.app').mockResolvedValue('dev.other');
     await samples(d, 2);
-    expect(d.measure.memory).toHaveBeenCalledTimes(2);
+    expect(mocks(d).memory).toHaveBeenCalledTimes(2);
   });
 
   it('keep a refusal as its reason, and never as a 0', async () => {
@@ -161,7 +169,7 @@ describe("a device's numbers each second", () => {
     vi.mocked(d.foreground).mockResolvedValue(undefined);
     const sample = await first(d);
     expect(sample.absent?.fps).toBe('waiting for the app in front');
-    expect(d.measure.cpu).not.toHaveBeenCalled();
+    expect(mocks(d).cpu).not.toHaveBeenCalled();
   });
 
   it('go on through a read of what is in front that failed, rather than go blank', async () => {
@@ -172,7 +180,7 @@ describe("a device's numbers each second", () => {
       .mockResolvedValue('dev.app');
     const [, second] = await samples(d, 2);
     expect(second).toMatchObject({ app: 'dev.app', cpuPercent: 12.5, memoryMb: 200 });
-    expect(second!.absent?.cpuPercent).toBeUndefined();
+    expect(must(second, 'a second sample').absent?.cpuPercent).toBeUndefined();
   });
 
   it('wait when that read fails with no app known yet: there is nothing to go on with', async () => {
@@ -180,7 +188,7 @@ describe("a device's numbers each second", () => {
     vi.mocked(d.foreground).mockRejectedValue(new Error('timed out'));
     const sample = await first(d);
     expect(sample.absent?.fps).toBe('waiting for the app in front');
-    expect(d.measure.cpu).not.toHaveBeenCalled();
+    expect(mocks(d).cpu).not.toHaveBeenCalled();
   });
 
   it('are about the app asked for, when one is', async () => {
@@ -199,14 +207,14 @@ describe("a device's numbers each second", () => {
   });
 
   it('stop only once the reading under way has ended, as it goes on asking the device', async () => {
-    let answer = () => undefined as void;
+    let answer: () => void = () => undefined;
     let ended = false;
     const d = device();
     d.measure.cpu = vi.fn(
       () => new Promise((r) => (answer = () => r({ value: { percent: 1 } }))),
     ) as never;
     const stop = await measuredLive(d, ['cpuPercent'], 1).start(() => undefined);
-    await vi.waitFor(() => expect(d.measure.cpu).toHaveBeenCalled());
+    await vi.waitFor(() => expect(mocks(d).cpu).toHaveBeenCalled());
     const stopped = Promise.resolve(stop()).then(() => (ended = true));
     await new Promise((r) => setTimeout(r, 20));
     expect(ended).toBe(false);

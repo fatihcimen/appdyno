@@ -15,6 +15,7 @@ import {
   type Tree,
 } from '@appdyno/protocol';
 import { agentMet } from './agent-hosts.js';
+import { must } from './must.js';
 import { TIMEOUTS, type ActOptions, type TreeOptions } from './device.js';
 import { DeviceQueue } from './queue.js';
 import type { RpcClient } from './rpc.js';
@@ -88,6 +89,7 @@ export abstract class RpcDevice extends DeviceActions {
   abstract tree(opts?: TreeOptions): Promise<Tree>;
 
   /** Whether the device can be asked to `wait`; where not, the caller polls. */
+  // eslint-disable-next-line @typescript-eslint/class-literal-property-style -- a simulator's own reads its state
   protected get waits() {
     return true;
   }
@@ -105,7 +107,7 @@ export abstract class RpcDevice extends DeviceActions {
   /** Connects (starting the agent when needed); the agent's hello. */
   async open(): Promise<Hello> {
     await this.queue.run(() => this.ensure());
-    return this.helloInfo!;
+    return must(this.helloInfo, "the agent's hello");
   }
 
   get hello(): Hello | undefined {
@@ -176,7 +178,7 @@ export abstract class RpcDevice extends DeviceActions {
     } catch (e) {
       // no connection to lose: a start that failed takes as long again, for the same answer
       if (!this.connectionLost(e, rpc))
-        throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
+        throw await afterTimeout(e, rpc, (stuck) => this.restartStuck(stuck));
       // closed here is not lost: a connection that dropped is worth a new one, and this one was let go
       if (closes !== this.closes || !this.retrySafe.has(method)) throw e;
       this.rpc = undefined;
@@ -189,7 +191,9 @@ export abstract class RpcDevice extends DeviceActions {
     return !!had && e instanceof DeviceError && e.code === 'AGENT_UNAVAILABLE';
   }
 
-  protected async beforeRetry(_lost: unknown): Promise<void> {}
+  protected beforeRetry(_lost: unknown): Promise<void> {
+    return Promise.resolve();
+  }
 
   /** The screen with stable refs. */
   async read(appId?: string): Promise<Screen> {

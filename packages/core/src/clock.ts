@@ -1,3 +1,5 @@
+import { must } from './must.js';
+
 /** A device's clock against this Mac's, as read: no two clocks here are the same by assumption, an emulator's neither. */
 export type ClockReading = {
   /** The device's clock minus the Mac's, in ms: add it to a time on the Mac to have it on the device's. */
@@ -32,5 +34,6 @@ export async function measureClock(
     const boundMs = (after - before) / 2;
     if (!best || boundMs < best.boundMs) best = { offsetMs: device - (before + boundMs), boundMs };
   }
-  return { offsetMs: tenth(best!.offsetMs), boundMs: tenth(best!.boundMs + TICK_MS) };
+  const { offsetMs, boundMs } = must(best, 'a read of the clock');
+  return { offsetMs: tenth(offsetMs), boundMs: tenth(boundMs + TICK_MS) };
 }
