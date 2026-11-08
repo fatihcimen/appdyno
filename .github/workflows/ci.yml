@@ -29,8 +29,21 @@ jobs:
         with:
           distribution: temurin
           java-version: 25
+      # the native linters ask nothing of Node: once is enough
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        if: matrix.node == 26
+        with:
+          version: 2026.11.4
+          # the linters .mise.toml pins: Node, pnpm and Java are the steps above
+          install_args: uv pipx:clang-format shellcheck shfmt actionlint zizmor
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - name: Native lint
+        if: matrix.node == 26
+        run: scripts/lint-native.sh
+        env:
+          # the audits of zizmor that ask GitHub
+          GH_TOKEN: ${{ github.token }}
       - run: pnpm typecheck
       - run: pnpm test
       # before `pnpm build`, which packages it

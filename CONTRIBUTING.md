@@ -7,7 +7,7 @@ Everyone here follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 You need macOS, Node 26 and pnpm 12. Node 22 is the oldest appdyno runs on, and CI tests on it too.
 
 ```sh
-mise install        # Node 26, pnpm 12, JDK 25 (see .mise.toml)
+mise install        # Node 26, pnpm 12, JDK 25 and the linters (see .mise.toml)
 pnpm install
 pnpm run ci         # lint, types, tests, build
 ```
@@ -26,12 +26,23 @@ pnpm build          # packages the agent; a package without it refuses to leave 
 
 ```sh
 pnpm run ci
+scripts/lint-native.sh                        # all that is not TypeScript; needs Xcode
 (cd android && ./gradlew --console=plain :agent:testDebugUnitTest)
 (cd ios/RunnerCore && swift test)             # the iOS runner's core
 ```
 
 `pnpm lint` runs eslint and `prettier --check`; `pnpm format` fixes formatting. The same checks run in
 `.github/workflows/ci.yml`.
+
+`scripts/lint-native.sh` runs the linters `.mise.toml` pins, and fails on any warning:
+shellcheck and shfmt for the shell scripts (`ci.sh` is zsh, which shellcheck does not read, so `zsh -n` parses it),
+actionlint and zizmor for the workflows, `brew style` for the cask in CI (it installs gems into Homebrew, so on a Mac of
+your own `ruby -c` stands in), and for the Objective-C clang-format by `.clang-format`, Xcode's recommended warnings as
+errors, and the clang static analyzer. `clang-format -i <file>` fixes a format, now and then in a second pass. A parameter
+an API's block or callback gives and the code leaves unread is marked `__unused`. The warnings are the lint's alone: the
+flags a Mac compiles the viewer and helpers with on first use stay as they are, as a newer clang's new warning must not
+leave a person with no viewer. `.swiftlint.yml` and `android/.editorconfig` (ktlint) hold the rules for Swift and
+Kotlin.
 
 `pnpm typecheck` holds every `.mjs` to the packages' types too, by `tsconfig.scripts.json`: a script is run by hand and
 no test reaches it. That config lets a parameter go untyped, under which an empty array that fills later needs a type.

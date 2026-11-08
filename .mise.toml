@@ -2,3 +2,12 @@
 node = "26"
 pnpm = "12.18.0"
 java = "temurin-25"
+# the linters scripts/lint-native.sh runs, and uv, which installs clang-format's build on PyPI
+uv = "0.13.7"
+"pipx:clang-format" = "23.1.5"
+shellcheck = "0.11.0"
+shfmt = "3.14.1"
+actionlint = "1.7.12"
+zizmor = "1.32.0"
+swiftlint = "0.65.1"
+ktlint = "1.8.0"

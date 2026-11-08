@@ -2,7 +2,7 @@
 # Local CI: every gate in order, the device suites on a named device, and (--nightly) the latency suite with
 # its JSON history and a regression gate. Each step's exit code and time go to .ci/runs/<stamp>.json.
 #
-#   scripts/ci.sh                         unit gates only (format, lint, typecheck, unit, agent unit, build)
+#   scripts/ci.sh                         unit gates only (format, lint, native lint, typecheck, unit, agent unit, build)
 #   scripts/ci.sh --device emulator-5580  + install the fixture, device suites (contract, smoke, stdio, perf)
 #   scripts/ci.sh --device … --nightly    + latency suite into .ci/history.jsonl, gate against recent runs
 #   scripts/ci.sh --ios <simulator id>    + the iOS runner build and the simulator suites (contract, perf, stdio)
@@ -103,6 +103,7 @@ measuring() { # name, command…: skipped while busy, holds the lock while it ru
 step install mise exec -- pnpm install --frozen-lockfile
 step format mise exec -- pnpm exec prettier --check .
 step lint mise exec -- pnpm lint
+step lint-native mise exec -- scripts/lint-native.sh
 step typecheck mise exec -- pnpm typecheck
 step unit mise exec -- pnpm test
 step agent zsh -c 'cd android && mise exec -- ./gradlew --console=plain :agent:testDebugUnitTest :agent:assembleDebug :fixture:assembleDebug :push-fixture:assembleDebug'
