@@ -99,9 +99,11 @@ static NSString *shownName(NSDictionary *row) {
   if (!self.window) return;
   MVAskClients(@"list", @{});
   __weak MVClientsPane *weak = self;
-  _timer = [NSTimer scheduledTimerWithTimeInterval:kListSeconds repeats:YES block:^(NSTimer *timer) {
-    if (weak) MVAskClients(@"list", @{});
-  }];
+  _timer = [NSTimer scheduledTimerWithTimeInterval:kListSeconds
+                                           repeats:YES
+                                             block:^(NSTimer *timer) {
+                                               if (weak) MVAskClients(@"list", @{});
+                                             }];
 }
 
 - (void)show:(NSDictionary *)message {
@@ -168,7 +170,7 @@ static NSString *shownName(NSDictionary *row) {
   NSMutableArray<NSString *> *away = [NSMutableArray array];
   for (NSDictionary *row in _rows) {
     if ([row[@"state"] isEqual:@"absent"]) [away addObject:shownName(row)];
-    else [[_browserNames containsObject:row[@"name"]] ? browser : here addObject:[self rowFor:row]];
+    else [([_browserNames containsObject:row[@"name"]] ? browser : here) addObject:[self rowFor:row]];
   }
   [self fill:_here with:here];
   [self fill:_browser with:browser];
@@ -250,7 +252,8 @@ static NSString *shownName(NSDictionary *row) {
 - (NSView *)previewOf:(NSDictionary *)preview {
   NSString *name = preview[@"client"];
   BOOL remove = [preview[@"remove"] boolValue], update = [preview[@"did"] isEqual:@"replaced"];
-  NSString *lead = remove ? @"Takes this out of %@:" : update ? @"Changes this in %@:" : @"Adds this to %@:";
+  NSString *lead = remove ? @"Takes this out of %@:" : update ? @"Changes this in %@:"
+                                                              : @"Adds this to %@:";
   NSTextField *where = line([NSString stringWithFormat:lead, [preview[@"file"] stringByAbbreviatingWithTildeInPath]], MVStyleSub);
   NSView *lines = MVCard(MVCodeText([preview[@"lines"] componentsJoinedByString:@"\n"]), 8);
   NSTextField *promise = line([preview[@"backup"] boolValue] ? @"Only this entry changes, and a backup stays beside the file." : @"Only this entry changes.", MVStyleSub);
@@ -259,7 +262,9 @@ static NSString *shownName(NSDictionary *row) {
   NSButton *cancel = [self button:@"Cancel" do:@"cancel" for:name];
   cancel.keyEquivalent = @"\e";
   [buttons addView:cancel inGravity:NSStackViewGravityTrailing];
-  NSButton *apply = MVPlacePrimary(remove ? @"Remove" : update ? @"Update" : @"Add", [@"apply:" stringByAppendingString:name], self, @selector(rowClicked:));
+  NSButton *apply = MVPlacePrimary(remove ? @"Remove" : update ? @"Update"
+                                                               : @"Add",
+                                   [@"apply:" stringByAppendingString:name], self, @selector(rowClicked:));
   apply.keyEquivalent = @"\r";
   apply.hasDestructiveAction = remove;
   [buttons addView:apply inGravity:NSStackViewGravityTrailing];
@@ -333,9 +338,11 @@ static NSString *shownName(NSDictionary *row) {
   BOOL on = _address.length > 0;
   [_serverMark paint:on ? @"circle.fill" : @"circle" color:on ? MVGreen() : MVQuietColor()];
   if (on) _failure = nil;
-  _listening.stringValue = on ? [NSString stringWithFormat:@"Listening on %@", _address] : _failure ?: @"Off";
+  _listening.stringValue = on ? [NSString stringWithFormat:@"Listening on %@", _address] : _failure ?
+                                                                                                    : @"Off";
   BOOL starting = [server[@"starting"] boolValue];
-  _power.title = MVWord(on ? @"Stop Server" : starting ? @"Starting…" : @"Start Server");
+  _power.title = MVWord(on ? @"Stop Server" : starting ? @"Starting…"
+                                                       : @"Start Server");
   _power.enabled = !starting;
   _copyAddress.hidden = !on;
 }

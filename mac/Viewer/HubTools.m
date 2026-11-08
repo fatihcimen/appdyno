@@ -19,19 +19,34 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
     [mac insertObject:@[@"path-off", @"Take off PATH", @"Take this appdyno off the PATH again.", @"", @"Remove"] atIndex:3];
   }
   return @[
-    @{@"title": @"Performance Gate", @"symbol": @"gauge.with.dots.needle.33percent", @"hue": @0, @"rows": @[
-      @[@"baseline", @"Save as Baseline", @"Keep the newest runs as what later ones are compared with.", @"a", @"Save"],
-      @[@"compare", @"Compare with Baseline", @"Say whether the newest runs got worse.", @"a", @"Compare"],
-      @[@"why", @"Find Out Why", @"Find a regression's cause on the device.", @"a", @"Find Out"],
-      @[@"survey", @"Measure Everything", @"Run every measure on the device in turn, then write the page.", @"ad", @"Start"],
-    ]},
-    @{@"title": @"Flows", @"symbol": @"arrow.triangle.branch", @"hue": @1, @"rows": @[@[@"flows", @"Run Flows", @"Replay every flow in the folder on the device.", @"df", @"Run"]]},
-    @{@"title": @"Record", @"symbol": @"record.circle", @"hue": @2, @"rows": @[
-      @[@"timeline", @"Timeline", @"Keep video, touches, frames and requests on one clock for 30 s.", @"ad", @"Record"],
-      @[@"flight", @"Flight Recorder", @"Keep the last seconds of the app, saved on a crash or a stall, until you stop it.", @"ad", @"Start"],
-    ]},
-    @{@"title": @"Reports", @"symbol": @"chart.bar.doc.horizontal", @"hue": @3, @"rows": @[@[@"dashboard", @"Dashboard", @"Write one page of what was measured, and open it.", @"", @"Open"]]},
-    @{@"title": @"This Mac", @"symbol": @"desktopcomputer", @"hue": @4, @"rows": mac},
+    @{@"title": @"Performance Gate",
+      @"symbol": @"gauge.with.dots.needle.33percent",
+      @"hue": @0,
+      @"rows": @[
+        @[@"baseline", @"Save as Baseline", @"Keep the newest runs as what later ones are compared with.", @"a", @"Save"],
+        @[@"compare", @"Compare with Baseline", @"Say whether the newest runs got worse.", @"a", @"Compare"],
+        @[@"why", @"Find Out Why", @"Find a regression's cause on the device.", @"a", @"Find Out"],
+        @[@"survey", @"Measure Everything", @"Run every measure on the device in turn, then write the page.", @"ad", @"Start"],
+      ]},
+    @{@"title": @"Flows",
+      @"symbol": @"arrow.triangle.branch",
+      @"hue": @1,
+      @"rows": @[@[@"flows", @"Run Flows", @"Replay every flow in the folder on the device.", @"df", @"Run"]]},
+    @{@"title": @"Record",
+      @"symbol": @"record.circle",
+      @"hue": @2,
+      @"rows": @[
+        @[@"timeline", @"Timeline", @"Keep video, touches, frames and requests on one clock for 30 s.", @"ad", @"Record"],
+        @[@"flight", @"Flight Recorder", @"Keep the last seconds of the app, saved on a crash or a stall, until you stop it.", @"ad", @"Start"],
+      ]},
+    @{@"title": @"Reports",
+      @"symbol": @"chart.bar.doc.horizontal",
+      @"hue": @3,
+      @"rows": @[@[@"dashboard", @"Dashboard", @"Write one page of what was measured, and open it.", @"", @"Open"]]},
+    @{@"title": @"This Mac",
+      @"symbol": @"desktopcomputer",
+      @"hue": @4,
+      @"rows": mac},
   ];
 }
 
@@ -63,7 +78,8 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
       [self addSubview:part];
     }
     [NSLayoutConstraint activateConstraints:@[
-      [bar.topAnchor constraintEqualToAnchor:self.safeAreaLayoutGuide.topAnchor constant:kIndexGap],
+      [bar.topAnchor constraintEqualToAnchor:self.safeAreaLayoutGuide.topAnchor
+                                    constant:kIndexGap],
       [bar.centerXAnchor constraintEqualToAnchor:self.centerXAnchor],
       [bar.heightAnchor constraintEqualToConstant:kIndexHigh],
       [_page.topAnchor constraintEqualToAnchor:self.topAnchor],
@@ -122,7 +138,8 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
 /// What the rows run on: one app, one device and one folder, chosen once for all of them.
 - (NSView *)subjectCard {
   NSString *kept = _app.stringValue;
-  _app = [NSTextField textFieldWithString:kept ?: MVFrontApp() ?: @""];
+  _app = [NSTextField textFieldWithString:kept ?: MVFrontApp() ?
+                                                               : @""];
   _app.identifier = @"app";
   _app.placeholderString = MVWord(@"Choose an app, or type its id");
   _app.delegate = self;
@@ -239,11 +256,12 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   NSOpenPanel *panel = [NSOpenPanel openPanel];
   panel.canChooseDirectories = YES;
   panel.canChooseFiles = NO;
-  [panel beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse answer) {
-    if (answer != NSModalResponseOK) return;
-    self->_folder.stringValue = panel.URL.path;
-    [self refreshRows];
-  }];
+  [panel beginSheetModalForWindow:self.window
+                completionHandler:^(NSModalResponse answer) {
+                  if (answer != NSModalResponseOK) return;
+                  self->_folder.stringValue = panel.URL.path;
+                  [self refreshRows];
+                }];
 }
 
 - (void)heard:(NSDictionary *)run {

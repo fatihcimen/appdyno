@@ -6,7 +6,9 @@
 
 // memory is bounded by these, and no frame is kept to catch up; a frame dropped costs all of them to the next key, about as
 // long as this, so a decoder's moment of stall is waited out
-enum { kMaxInFlight = 3, kMaxParameterSet = 4096, kRoomWaitMs = 100 };
+enum { kMaxInFlight = 3,
+       kMaxParameterSet = 4096,
+       kRoomWaitMs = 100 };
 
 void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_t *nal, size_t length)) {
   size_t start = 0;
@@ -25,7 +27,12 @@ void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_
   if (open && length > start) found(data + start, length - start);
 }
 
-typedef NS_ENUM(int, NalKind) { NalSlice, NalKeySlice, NalVps, NalSps, NalPps, NalOther };
+typedef NS_ENUM(int, NalKind) { NalSlice,
+                                NalKeySlice,
+                                NalVps,
+                                NalSps,
+                                NalPps,
+                                NalOther };
 
 static NalKind nalKind(const uint8_t *nal, size_t length, BOOL hevc) {
   if (hevc) {
@@ -302,7 +309,7 @@ CFStringRef const MVCapturedAt = CFSTR("MVCapturedAt");
     CVBufferSetAttachment(image, kCVImageBufferCleanApertureKey, (__bridge CFDictionaryRef)aperture, kCVAttachmentMode_ShouldPropagate);
   }
   if (show && from) {
-    CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef)@(frame.capturedMs), kCVAttachmentMode_ShouldNotPropagate);
+    CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef) @(frame.capturedMs), kCVAttachmentMode_ShouldNotPropagate);
     [sink source:from image:image];
   }
 }

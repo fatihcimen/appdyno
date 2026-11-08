@@ -18,7 +18,7 @@ static NSArray *wordsOf(NSData *image, VNRequestTextRecognitionLevel level, NSEr
   request.usesLanguageCorrection = NO;
   if (level == VNRequestTextRecognitionLevelAccurate) request.automaticallyDetectsLanguage = YES;
   VNImageRequestHandler *handler = [[VNImageRequestHandler alloc] initWithData:image options:@{}];
-  if (![handler performRequests:@[ request ] error:error]) return nil;
+  if (![handler performRequests:@[request] error:error]) return nil;
   NSMutableArray *found = [NSMutableArray array];
   for (VNRecognizedTextObservation *o in request.results) {
     VNRecognizedText *best = [o topCandidates:1].firstObject;
@@ -50,7 +50,10 @@ int main(int argc, char **argv) {
       alarm((unsigned)atoi(argv[4]));
       NSArray *found = wordsOf(image, VNRequestTextRecognitionLevelAccurate, &error);
       if (found)
-        [[NSJSONSerialization dataWithJSONObject:@{@"key": @(argv[3]), @"words": found} options:0 error:NULL]
+        [[NSJSONSerialization dataWithJSONObject:@{@"key": @(argv[3]),
+                                                   @"words": found}
+                                         options:0
+                                           error:NULL]
             writeToFile:[@(argv[2]) stringByAppendingPathComponent:@"accurate.json"]
              atomically:YES];
       return found ? 0 : 1;

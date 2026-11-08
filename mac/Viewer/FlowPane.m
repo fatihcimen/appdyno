@@ -10,7 +10,8 @@ static const double kWordsWide = 280;
 
 /// What a click does, by the segment chosen; nil: it touches the device.
 static NSString *clickNamed(NSInteger segment) {
-  return segment == 1 ? @"copy" : segment == 2 ? @"assert" : nil;
+  return segment == 1 ? @"copy" : segment == 2 ? @"assert"
+                                               : nil;
 }
 
 @implementation MVFlowPane {
@@ -59,9 +60,12 @@ static NSString *clickNamed(NSInteger segment) {
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
     [NSLayoutConstraint activateConstraints:@[
-      [stack.topAnchor constraintEqualToAnchor:self.topAnchor constant:6],
-      [stack.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:4],
-      [stack.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-4],
+      [stack.topAnchor constraintEqualToAnchor:self.topAnchor
+                                      constant:6],
+      [stack.leadingAnchor constraintEqualToAnchor:self.leadingAnchor
+                                          constant:4],
+      [stack.trailingAnchor constraintEqualToAnchor:self.trailingAnchor
+                                           constant:-4],
       [stack.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
       [_steps.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
       [_what.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
@@ -87,7 +91,8 @@ static NSString *clickNamed(NSInteger segment) {
 }
 
 - (void)chooseClick:(NSString *)does {
-  _clickChosen = [does isEqual:@"copy"] ? 1 : [does isEqual:@"assert"] ? 2 : 0;
+  _clickChosen = [does isEqual:@"copy"] ? 1 : [does isEqual:@"assert"] ? 2
+                                                                       : 0;
   [self showClick];
   if (self.onClick) self.onClick();
 }
@@ -118,14 +123,15 @@ static NSString *clickNamed(NSInteger segment) {
 
 - (void)show:(NSDictionary *)m {
   BOOL on = [m[@"on"] boolValue], starting = [m[@"starting"] boolValue];
-  _record.title = MVWord(on ? @"Stop" : starting ? @"Starting" : @"Record");
+  _record.title = MVWord(on ? @"Stop" : starting ? @"Starting"
+                                                 : @"Record");
   _record.enabled = !starting;
   _record.hasDestructiveAction = on;
   _record.needsDisplay = YES;
   NSArray<NSString *> *lines = [m[@"lines"] isKindOfClass:NSArray.class] ? m[@"lines"] : @[];
   _look = [m[@"look"] isKindOfClass:NSArray.class] ? m[@"look"] : @[];
-  _state.stringValue = starting ? @"Reading the screen. The first time, this starts the device agent."
-                       : on     ? [NSString stringWithFormat:@"Recording: %lu steps, %lu to look at", (unsigned long)lines.count, (unsigned long)_look.count]
+  _state.stringValue = starting     ? @"Reading the screen. The first time, this starts the device agent."
+                       : on         ? [NSString stringWithFormat:@"Recording: %lu steps, %lu to look at", (unsigned long)lines.count, (unsigned long)_look.count]
                        : m[@"file"] ? [NSString stringWithFormat:@"Saved %@", [m[@"file"] lastPathComponent]]
                                     : @"Each click is written by the element it touched.";
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
@@ -150,7 +156,9 @@ static NSString *clickNamed(NSInteger segment) {
   _ids.stringValue = named ? ids : @"A click here is written as coordinates.";
   _writes.stringValue = m[@"tap"] ?: @"";
   NSArray *issues = [m[@"contrast"] isKindOfClass:NSArray.class] ? m[@"contrast"] : @[];
-  _contrast.stringValue = !named ? @"" : issues.count ? [issues componentsJoinedByString:@"\n"] : m[@"contrastNote"] ?: @"No contrast issue";
+  _contrast.stringValue = !named ? @"" : issues.count     ? [issues componentsJoinedByString:@"\n"]
+                                     : m[@"contrastNote"] ?
+                                                          : @"No contrast issue";
   _contrast.textColor = issues.count ? MVOrange() : MVQuietColor();
 }
 

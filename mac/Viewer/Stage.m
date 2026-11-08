@@ -282,7 +282,9 @@
   dispatch_async(dispatch_get_main_queue(), ^{
     if (![self isCurrent:from]) return;
     [self detach];
-    [self say:@{@"op": @"lost", @"why": why, @"fatal": @(fatal)}];
+    [self say:@{@"op": @"lost",
+                @"why": why,
+                @"fatal": @(fatal)}];
   });
 }
 

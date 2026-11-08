@@ -1,7 +1,7 @@
 // What the hub's places are made of: AI Clients and Help, which take the room and hold no device.
-#import <AppKit/AppKit.h>
 #import "Style.h"
 #import "Window.h"
+#import <AppKit/AppKit.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

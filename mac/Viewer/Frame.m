@@ -73,9 +73,11 @@ MVFrameSpec MVFrameSpecOf(NSString *_Nullable model, NSString *_Nullable platfor
     BOOL ipad = [name hasPrefix:@"ipad"];
     BOOL homeButton = kRows[i].cutout == MVCutoutHomeButton;
     MVFrameSpec spec = {
-        .points = shortSide / (ipad ? kIpadScale : homeButton ? kCompactScale : kIphoneScale),
+        .points = shortSide / (ipad ? kIpadScale : homeButton ? kCompactScale
+                                                              : kIphoneScale),
         .radius = kRows[i].radius,
-        .bezel = ipad ? 18 : homeButton ? 14 : 7,
+        .bezel = ipad ? 18 : homeButton ? 14
+                                        : 7,
         .rim = ipad ? 3.5 : 3,
         .chin = homeButton ? 70 : 0,
         .cutout = kRows[i].cutout,
@@ -106,7 +108,9 @@ MVFrameLayout MVLayOutFrame(MVFrameSpec spec, CGSize screen, int turns) {
       .body = CGSizeMake(screen.width + 2 * dx, screen.height + 2 * dy),
       .screen = CGRectMake(dx, dy, screen.width, screen.height),
       .radius = spec.radius * unit,
-      .outer = (spec.radius > 0 ? spec.radius + spec.bezel + spec.rim : spec.chin > 0 ? 44 : spec.rim) * unit,
+      .outer = (spec.radius > 0 ? spec.radius + spec.bezel + spec.rim : spec.chin > 0 ? 44
+                                                                                      : spec.rim) *
+               unit,
       .unit = unit,
   };
 }

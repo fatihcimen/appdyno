@@ -165,10 +165,14 @@ static NSString *stateWords(NSDictionary *device) {
     [view addSubview:part];
   }
   [NSLayoutConstraint activateConstraints:@[
-    [top.topAnchor constraintEqualToAnchor:view.topAnchor constant:kBelowLights],
-    [top.leadingAnchor constraintEqualToAnchor:view.leadingAnchor constant:12],
-    [top.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-10],
-    [_list.topAnchor constraintEqualToAnchor:top.bottomAnchor constant:8],
+    [top.topAnchor constraintEqualToAnchor:view.topAnchor
+                                  constant:kBelowLights],
+    [top.leadingAnchor constraintEqualToAnchor:view.leadingAnchor
+                                      constant:12],
+    [top.trailingAnchor constraintEqualToAnchor:view.trailingAnchor
+                                       constant:-10],
+    [_list.topAnchor constraintEqualToAnchor:top.bottomAnchor
+                                    constant:8],
     [_list.leadingAnchor constraintEqualToAnchor:view.leadingAnchor],
     [_list.trailingAnchor constraintEqualToAnchor:view.trailingAnchor],
     [_list.bottomAnchor constraintEqualToAnchor:view.bottomAnchor],

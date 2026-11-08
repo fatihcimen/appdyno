@@ -1,0 +1,14 @@
+# The Objective-C and C as they are written here: two spaces, and each line broken where its author broke it
+BasedOnStyle: LLVM
+IndentWidth: 2
+# no width: a line of words for a person is as long as they are
+ColumnLimit: 0
+IndentCaseLabels: true
+PointerAlignment: Right
+DerivePointerAlignment: false
+SpacesInContainerLiterals: false
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Always
+AllowShortFunctionsOnASingleLine: All
+AllowShortCaseLabelsOnASingleLine: true

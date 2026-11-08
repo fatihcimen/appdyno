@@ -76,16 +76,17 @@ static MVRow *rowOfCall(NSDictionary *call) {
 
 - (void)listRuns {
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
-  [_runs enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(MVRun *run, NSUInteger at, BOOL *stop) {
-    MVRow *head = [MVRow new];
-    head.title = tookWords(run);
-    head.detail = run.calls.firstObject[@"time"] ?: @"";
-    head.symbol = run.open ? @"chevron.down" : @"chevron.right";
-    head.key = [NSString stringWithFormat:@"run%lu", (unsigned long)at];
-    [rows addObject:head];
-    if (!run.open) return;
-    for (NSDictionary *call in run.calls.reverseObjectEnumerator) [rows addObject:rowOfCall(call)];
-  }];
+  [_runs enumerateObjectsWithOptions:NSEnumerationReverse
+                          usingBlock:^(MVRun *run, NSUInteger at, BOOL *stop) {
+                            MVRow *head = [MVRow new];
+                            head.title = tookWords(run);
+                            head.detail = run.calls.firstObject[@"time"] ?: @"";
+                            head.symbol = run.open ? @"chevron.down" : @"chevron.right";
+                            head.key = [NSString stringWithFormat:@"run%lu", (unsigned long)at];
+                            [rows addObject:head];
+                            if (!run.open) return;
+                            for (NSDictionary *call in run.calls.reverseObjectEnumerator) [rows addObject:rowOfCall(call)];
+                          }];
   _list.rows = rows;
   _none.hidden = rows.count > 0;
   _list.hidden = !_none.hidden;

@@ -220,7 +220,8 @@ static NSString *readable(NSString *json) {
 /// The fields the type takes, how it goes or why not, and its payload to start from where a person has not changed it.
 - (void)typeChosen:(nullable id)sender {
   NSDictionary *entry = self.chosen;
-  _how.stringValue = MVWord(entry[@"route"] ?: entry[@"why"] ?: @"");
+  _how.stringValue = MVWord(entry[@"route"] ?: entry[@"why"] ?
+                                                             : @"");
   NSArray *takes = [entry[@"fields"] isKindOfClass:NSArray.class] ? entry[@"fields"] : @[];
   for (int i = 0; i < kFieldCount; i++) [_fields rowAtIndex:i].hidden = ![takes containsObject:kFields[i]];
   if ([entry[@"template"] isKindOfClass:NSString.class] && (!_payload.string.length || [_payload.string isEqual:_template])) _payload.string = _template = readable(entry[@"template"]);

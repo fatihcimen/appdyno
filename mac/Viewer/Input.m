@@ -239,7 +239,11 @@ static CALayer *dotLayer(CALayer *parent) {
   _pinchGap = MVPinchGap(_pinchGap, event.magnification, MAX(self.bounds.size.width, self.bounds.size.height));
   NSPoint a = NSMakePoint(_pinchAt.x - _pinchGap, _pinchAt.y), b = NSMakePoint(_pinchAt.x + _pinchGap, _pinchAt.y);
   BOOL ended = event.phase == NSEventPhaseEnded || event.phase == NSEventPhaseCancelled;
-  [self sendPhase:event.phase == NSEventPhaseBegan ? 0 : ended ? 2 : 1 at:a second:[NSValue valueWithPoint:b] clampToEdge:YES];
+  [self sendPhase:event.phase == NSEventPhaseBegan ? 0 : ended ? 2
+                                                               : 1
+               at:a
+           second:[NSValue valueWithPoint:b]
+      clampToEdge:YES];
 }
 
 // a trackpad's two fingers, or a wheel, as one finger dragging: the device scrolls as it does for a finger

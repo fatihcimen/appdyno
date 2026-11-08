@@ -3,7 +3,8 @@
 #import "Window.h"
 #import "Words.h"
 
-enum { kHistory = 60, kLongest = 600 };
+enum { kHistory = 60,
+       kLongest = 600 };
 static const double kCardHeight = 92, kLineHeight = 26, kGlowAlpha = 0.38;
 // a frame this long is seen as a stutter, and marked where it fell
 static const double kStutterMs = 100;
@@ -26,9 +27,11 @@ static const MVMeasureRow kCards[] = {
 };
 
 MVLiveState MVStateOf(NSString *field, double value) {
-  if ([field isEqual:@"jankyFrames"]) return value <= 0 ? MVLiveGood : value <= 3 ? MVLiveWarning : MVLiveCritical;
+  if ([field isEqual:@"jankyFrames"]) return value <= 0 ? MVLiveGood : value <= 3 ? MVLiveWarning
+                                                                                  : MVLiveCritical;
   if ([field isEqual:@"frozenFrames"]) return value <= 0 ? MVLiveGood : MVLiveCritical;
-  if ([field isEqual:@"cpuPercent"]) return value < 60 ? MVLiveGood : value < 90 ? MVLiveWarning : MVLiveCritical;
+  if ([field isEqual:@"cpuPercent"]) return value < 60 ? MVLiveGood : value < 90 ? MVLiveWarning
+                                                                                 : MVLiveCritical;
   return MVLiveNeutral;
 }
 
@@ -37,20 +40,27 @@ MVLiveState MVFramesState(NSDictionary *sample) {
   id late = sample[@"jankyFrames"];
   if (drawn <= 0 || ![late isKindOfClass:NSNumber.class]) return MVLiveNeutral;
   double share = [late doubleValue] / drawn;
-  return share <= kLateWatch ? MVLiveGood : share <= kLatePoor ? MVLiveWarning : MVLiveCritical;
+  return share <= kLateWatch ? MVLiveGood : share <= kLatePoor ? MVLiveWarning
+                                                               : MVLiveCritical;
 }
 
 /// The words of a state: a state is never a colour alone.
 static NSString *wordsOf(MVLiveState state) {
-  return state == MVLiveGood ? @"Good" : state == MVLiveWarning ? @"Watch" : state == MVLiveCritical ? @"Poor" : @"";
+  return state == MVLiveGood ? @"Good" : state == MVLiveWarning ? @"Watch"
+                                     : state == MVLiveCritical  ? @"Poor"
+                                                                : @"";
 }
 
 static NSColor *colorOf(MVLiveState state) {
-  return state == MVLiveGood ? MVGreen() : state == MVLiveWarning ? MVOrange() : state == MVLiveCritical ? MVRed() : MVAccent();
+  return state == MVLiveGood ? MVGreen() : state == MVLiveWarning ? MVOrange()
+                                       : state == MVLiveCritical  ? MVRed()
+                                                                  : MVAccent();
 }
 
 static NSString *symbolOf(MVLiveState state) {
-  return state == MVLiveGood ? @"checkmark.circle.fill" : state == MVLiveWarning ? @"exclamationmark.triangle.fill" : state == MVLiveCritical ? @"xmark.octagon.fill" : nil;
+  return state == MVLiveGood ? @"checkmark.circle.fill" : state == MVLiveWarning ? @"exclamationmark.triangle.fill"
+                                                      : state == MVLiveCritical  ? @"xmark.octagon.fill"
+                                                                                 : nil;
 }
 
 NSNumber *MVReadingOf(NSDictionary *sample, NSString *field, NSNumber *pictureRate) {
@@ -254,9 +264,12 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
       [group.topAnchor constraintEqualToAnchor:self.topAnchor],
       [group.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
       [group.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
-      [_noise.topAnchor constraintEqualToAnchor:group.bottomAnchor constant:6],
-      [_noise.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:6],
-      [_noise.trailingAnchor constraintLessThanOrEqualToAnchor:self.trailingAnchor constant:-6],
+      [_noise.topAnchor constraintEqualToAnchor:group.bottomAnchor
+                                       constant:6],
+      [_noise.leadingAnchor constraintEqualToAnchor:self.leadingAnchor
+                                           constant:6],
+      [_noise.trailingAnchor constraintLessThanOrEqualToAnchor:self.trailingAnchor
+                                                      constant:-6],
     ]];
   }
   return self;
@@ -296,7 +309,8 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
     card.pane.toolTip = absent[card.field];
     // a still screen sends nothing to count, and is no fault
     BOOL still = [card.field isEqual:@"fps"] && value.doubleValue <= 0;
-    MVLiveState state = still ? MVLiveNeutral : [card.field isEqual:@"fps"] ? MVFramesState(sample) : MVStateOf(card.field, value.doubleValue);
+    MVLiveState state = still ? MVLiveNeutral : [card.field isEqual:@"fps"] ? MVFramesState(sample)
+                                                                            : MVStateOf(card.field, value.doubleValue);
     double v = value.doubleValue;
     card.number.stringValue = still ? @"Still" : MVReadingWords(v, card.unit);
     card.state.stringValue = wordsOf(state);
@@ -310,7 +324,8 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   // whose numbers these are, and that a stream ran beside them
   BOOL mirrored = [message[@"noise"] containsObject:@"mirrored"];
   NSString *app = [sample[@"app"] isKindOfClass:NSString.class] ? sample[@"app"] : nil;
-  _noise.stringValue = app ? (mirrored ? [app stringByAppendingString:@", with a stream running"] : app) : mirrored ? @"Read with a stream running" : @"";
+  _noise.stringValue = app ? (mirrored ? [app stringByAppendingString:@", with a stream running"] : app) : mirrored ? @"Read with a stream running"
+                                                                                                                    : @"";
   _noise.hidden = _noise.stringValue.length == 0;
 }
 

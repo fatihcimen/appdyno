@@ -4,8 +4,14 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(int, MVCutout) { MVCutoutNone, MVCutoutIsland, MVCutoutNotch, MVCutoutHole, MVCutoutHomeButton };
-typedef NS_ENUM(int, MVEdge) { MVEdgeLeft, MVEdgeRight, MVEdgeTop };
+typedef NS_ENUM(int, MVCutout) { MVCutoutNone,
+                                 MVCutoutIsland,
+                                 MVCutoutNotch,
+                                 MVCutoutHole,
+                                 MVCutoutHomeButton };
+typedef NS_ENUM(int, MVEdge) { MVEdgeLeft,
+                               MVEdgeRight,
+                               MVEdgeTop };
 
 /// A button on a device's edge, in fractions of that edge's screen length. No name: drawn, and it does nothing here.
 typedef struct {

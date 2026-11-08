@@ -8,25 +8,50 @@
 static NSString *const kToken = @"c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffee";
 
 static NSDictionary *typesSaid(void) {
-  return @{@"op": @"answer", @"name": @"push", @"app": @"dev.app", @"types": @[
-    @{@"type": @"alert", @"route": @"simctl push", @"fields": @[@"title", @"body", @"data"], @"template": @"{\"aps\":{\"alert\":{\"title\":\"T\"}}}"},
-    @{@"type": @"background", @"why": @"simctl takes no push with nothing to see"},
-    @{@"type": @"rich", @"route": @"simctl push with mutable-content", @"fields": @[@"title", @"body", @"image", @"data"], @"template": @"{\"aps\":{\"mutable-content\":1},\"image\":\"I\"}"},
-  ]};
+  return @{@"op": @"answer",
+           @"name": @"push",
+           @"app": @"dev.app",
+           @"types": @[
+             @{@"type": @"alert",
+               @"route": @"simctl push",
+               @"fields": @[@"title", @"body", @"data"],
+               @"template": @"{\"aps\":{\"alert\":{\"title\":\"T\"}}}"},
+             @{@"type": @"background", @"why": @"simctl takes no push with nothing to see"},
+             @{@"type": @"rich",
+               @"route": @"simctl push with mutable-content",
+               @"fields": @[@"title", @"body", @"image", @"data"],
+               @"template": @"{\"aps\":{\"mutable-content\":1},\"image\":\"I\"}"},
+           ]};
 }
 
 /// The same once APNs is set up: a route by it names the tokens it goes by.
 static NSDictionary *tokensSaid(void) {
-  return @{@"op": @"answer", @"name": @"push", @"types": @[
-    @{@"type": @"alert", @"route": @"simctl push", @"fields": @[@"title"], @"template": @"{}"},
-    @{@"type": @"rich", @"route": @"APNs' sandbox", @"fields": @[@"title"], @"template": @"{}", @"tokens": @[@"device"]},
-    @{@"type": @"live_activity", @"route": @"APNs' sandbox", @"fields": @[], @"template": @"{}", @"tokens": @[@"activity", @"start"]},
-  ]};
+  return @{@"op": @"answer",
+           @"name": @"push",
+           @"types": @[
+             @{@"type": @"alert",
+               @"route": @"simctl push",
+               @"fields": @[@"title"],
+               @"template": @"{}"},
+             @{@"type": @"rich",
+               @"route": @"APNs' sandbox",
+               @"fields": @[@"title"],
+               @"template": @"{}",
+               @"tokens": @[@"device"]},
+             @{@"type": @"live_activity",
+               @"route": @"APNs' sandbox",
+               @"fields": @[],
+               @"template": @"{}",
+               @"tokens": @[@"activity", @"start"]},
+           ]};
 }
 
 static void checkToken(MVWindow *window, MVPushPane *pane, NSMutableArray<NSDictionary *> *sent) {
   MVHoldStill(YES);
-  [pane show:@{@"op": @"answer", @"name": @"push", @"ok": @YES, @"text": @"Pushed to dev.app"}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"push",
+               @"ok": @YES,
+               @"text": @"Pushed to dev.app"}];
   NSView *card = [pane valueForKey:@"_tokenCard"];
   MVCheck(@"push: no token field where no route takes one a person types", card.isHiddenOrHasHiddenAncestor, nil);
   [pane show:tokensSaid()];
@@ -46,7 +71,10 @@ static void checkToken(MVWindow *window, MVPushPane *pane, NSMutableArray<NSDict
   MVPressReturn(window.nsWindow);
   NSDictionary *wanted = @{@"op": @"control", @"name": @"pushToken", @"app": @"dev.app", @"token": kToken, @"kind": @"start"};
   MVCheck(@"push: Return keeps the token for the app and kind in the pane, once, and the field lets it go", sent.count == 1 && [sent[0] isEqual:wanted] && !token.stringValue.length, sent.description);
-  [pane show:@{@"op": @"answer", @"name": @"push", @"ok": @YES, @"text": @"Kept dev.app's start token for this session only"}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"push",
+               @"ok": @YES,
+               @"text": @"Kept dev.app's start token for this session only"}];
   MVCheck(@"push: what became of the token is said, with no move for a person who asked for less, and none of the token", [pane.answer.said containsString:@"session only"] && ![pane.answer.layer animationForKey:@"slide"] && ![note.stringValue containsString:kToken], pane.answer.said);
   MVHoldStill(NO);
   // a secure field with the keyboard keeps the Mac's other apps from what is typed: it lets go
@@ -60,7 +88,9 @@ static void checkToken(MVWindow *window, MVPushPane *pane, NSMutableArray<NSDict
 static void checkInHub(void) {
   MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
   MVWindow *window = [[MVWindow alloc] initInRoom:hub.room];
-  [window configure:@{@"title": @"push", @"stage": @"emulator-5554", @"look": @{@"controls": @[@"home"]}}];
+  [window configure:@{@"title": @"push",
+                      @"stage": @"emulator-5554",
+                      @"look": @{@"controls": @[@"home"]}}];
   [window pokeMenu:@"push"];
   MVPump(0.3);
   MVInspector *inspector = window.inspector;
@@ -75,7 +105,8 @@ static void checkInHub(void) {
 void MVCheckPush(void) {
   MVWindow *window = [MVWindow new];
   window.behind = YES;
-  [window configure:@{@"title": @"push", @"look": @{@"controls": @[@"home"]}}];
+  [window configure:@{@"title": @"push",
+                      @"look": @{@"controls": @[@"home"]}}];
   [window.nsWindow setContentSize:NSMakeSize(1200, 800)];
   MVPushPane *pane = window.inspector.push;
   NSMutableArray<NSDictionary *> *sent = [NSMutableArray array];
@@ -112,10 +143,16 @@ void MVCheckPush(void) {
   [window.nsWindow makeFirstResponder:title];
   MVPressReturn(window.nsWindow);
   NSDictionary *args = sent.lastObject[@"args"];
-  NSDictionary *wanted = @{@"app": @"dev.app", @"type": @"rich", @"title": @"Order 42", @"data": @{@"order": @"42", @"kind": @"shipped"}};
+  NSDictionary *wanted = @{@"app": @"dev.app",
+                           @"type": @"rich",
+                           @"title": @"Order 42",
+                           @"data": @{@"order": @"42", @"kind": @"shipped"}};
   MVCheck(@"push: Return sends what the type takes, and only what was filled", sent.count == 1 && [args isEqual:wanted], [args description]);
   NSString *refusal = @"payload replaces the fields: give one or the other";
-  [pane show:@{@"op": @"answer", @"name": @"push", @"ok": @NO, @"text": refusal}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"push",
+               @"ok": @NO,
+               @"text": refusal}];
   MVCheck(@"push: a refusal is shown whole", [pane.answer.said isEqual:MVWord(refusal)], pane.answer.said);
   [window pokeClick:@"pushMode:1"];
   MVPump(0.1);

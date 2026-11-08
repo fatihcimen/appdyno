@@ -1,7 +1,7 @@
 // The viewer tested as it runs, with no device and no window: real frames through the real reader and
 // decoder, bad input, and the arithmetic a window depends on. One JSON line per check, then the verdict.
-#import "Place.h"
 #import "SelfTest.h"
+#import "Place.h"
 #import <Carbon/Carbon.h>
 #import <arpa/inet.h>
 #import <sys/socket.h>
@@ -11,7 +11,8 @@ static int gFailed;
 
 void MVCheck(NSString *name, BOOL ok, NSString *_Nullable detail) {
   if (!ok) gFailed++;
-  NSMutableDictionary *line = [@{@"check": name, @"ok": @(ok)} mutableCopy];
+  NSMutableDictionary *line = [@{@"check": name,
+                                 @"ok": @(ok)} mutableCopy];
   if (detail) line[@"detail"] = detail;
   MVEmit(line);
 }
@@ -19,7 +20,6 @@ void MVCheck(NSString *name, BOOL ok, NSString *_Nullable detail) {
 void MVSkip(NSString *name, NSString *why) {
   MVEmit(@{@"check": name, @"skipped": why});
 }
-
 
 @implementation MVTestSink {
   MVStats *_stats;
@@ -129,7 +129,8 @@ static void answerRequests(int fd, void (^_Nullable onStart)(void)) {
         have += n;
       }
       NSDictionary *m = [NSJSONSerialization JSONObjectWithData:body options:0 error:NULL];
-      if ([m[@"method"] isEqual:@"stream.clock"]) sendJson(own, @{@"id": m[@"id"], @"result": @{@"now": @(MVNowMs() * 1e6)}});
+      if ([m[@"method"] isEqual:@"stream.clock"]) sendJson(own, @{@"id": m[@"id"],
+                                                                  @"result": @{@"now": @(MVNowMs() * 1e6)}});
       else if ([m[@"method"] isEqual:@"stream.start"] && onStart) onStart();
     }
   done:
@@ -331,7 +332,8 @@ static void checkBroken(void) {
   sendVideo(c.agent, [NSData dataWithBytes:junk length:sizeof junk]);
   usleep(100000);
   MVCheck(@"stream: short and unknown frames are passed over", sink.lost == nil && sink.images == 0, sink.lost);
-  sendJson(c.agent, @{@"id": @0, @"error": @{@"message": @"no encoder took this display"}});
+  sendJson(c.agent, @{@"id": @0,
+                      @"error": @{@"message": @"no encoder took this display"}});
   MVCheck(@"stream: a refusal says why", [sink waitForLost] && [sink.lost containsString:@"encoder"], sink.lost);
   [c.source stop];
   hangUp(c.agent);
@@ -376,6 +378,8 @@ int MVSelfTest(NSString *fixtures) {
   MVCheckHevc444(fixtures);
   // the one way to a board, not the general board's count: that is the whole Mac's, and anything else copying moves it
   MVCheck(@"pasteboard: a viewer kept behind copies to a board of its own", ![MVPlaceBoard().name isEqual:NSPasteboardNameGeneral], nil);
-  MVEmit(@{@"selftest": @"done", @"ok": @(gFailed == 0), @"failed": @(gFailed)});
+  MVEmit(@{@"selftest": @"done",
+           @"ok": @(gFailed == 0),
+           @"failed": @(gFailed)});
   return gFailed ? 1 : 0;
 }

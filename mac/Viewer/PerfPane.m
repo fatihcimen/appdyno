@@ -4,7 +4,8 @@
 #import "Place.h"
 #import "Window.h"
 
-enum { kSeconds = 60, kResults = 20 };
+enum { kSeconds = 60,
+       kResults = 20 };
 static const double kNewsGrows = 1.02, kFirstFrom = 14;
 static const double kChartHeight = 34, kWhyWide = 244, kRowHeight = 36, kRowInset = 10, kTile = 24, kBetween = 14, kFigure = 20, kMaySwayShare = 0.1, kMaySwayFps = 3, kWaiting = 0.6;
 
@@ -42,7 +43,8 @@ static NSButton *rowButton(NSString *name, NSInteger hue, id target) {
   [button addSubview:row];
   [NSLayoutConstraint activateConstraints:@[
     [button.heightAnchor constraintEqualToConstant:kRowHeight],
-    [row.leadingAnchor constraintEqualToAnchor:button.leadingAnchor constant:kRowInset],
+    [row.leadingAnchor constraintEqualToAnchor:button.leadingAnchor
+                                      constant:kRowInset],
     [row.centerYAnchor constraintEqualToAnchor:button.centerYAnchor],
   ]];
   return button;
@@ -188,7 +190,8 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     // with no number there is nothing to draw, and with one the line says what the words cannot
     trend.line.hidden = !value;
     BOOL still = [trend.field isEqual:@"fps"] && value && value.doubleValue <= 0;
-    trend.now.stringValue = still ? @"Still" : value ? MVReadingWords(value.doubleValue, trend.unit) : @"–";
+    trend.now.stringValue = still ? @"Still" : value ? MVReadingWords(value.doubleValue, trend.unit)
+                                                     : @"–";
     if ([trend.field isEqual:@"fps"]) _sentence.stringValue = [self sentenceFor:value];
     if (!value) continue;
     [trend.line pass];
@@ -208,11 +211,14 @@ static MVRow *rowOfResult(NSDictionary *result) {
   MVRow *row = [MVRow new];
   // that it ran is no verdict: only what its tool found in it, or that it did not run, gets a mark of its own
   BOOL plain = [result[@"ok"] boolValue] && ![result[@"flagged"] boolValue], regression = [result[@"verdict"] isEqual:@"regression"];
-  row.title = [result[@"value"] length] ? [NSString stringWithFormat:@"%@  %@", result[@"title"], result[@"value"]] : result[@"title"] ?: @"";
+  row.title = [result[@"value"] length] ? [NSString stringWithFormat:@"%@  %@", result[@"title"], result[@"value"]] : result[@"title"] ?
+                                                                                                                                       : @"";
   row.detail = result[@"detail"] ?: @"";
   row.help = result[@"why"];
-  row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar" : @"exclamationmark.triangle.fill";
-  row.tint = regression ? MVRed() : plain ? MVHue(0) : MVOrange();
+  row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar"
+                                                            : @"exclamationmark.triangle.fill";
+  row.tint = regression ? MVRed() : plain ? MVHue(0)
+                                          : MVOrange();
   return row;
 }
 

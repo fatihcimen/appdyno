@@ -38,7 +38,8 @@ void MVCheckRowClick(NSString *name, BOOL ok, NSString *_Nullable detail) {
 static void checkTabs(void) {
   MVWindow *window = [MVWindow new];
   window.behind = YES;
-  [window configure:@{@"title": @"tabs", @"look": @{@"controls": @[@"home"]}}];
+  [window configure:@{@"title": @"tabs",
+                      @"look": @{@"controls": @[@"home"]}}];
   [window.nsWindow setContentSize:NSMakeSize(1200, 800)];
   [window showPane:MVPanePerf];
   [window.nsWindow displayIfNeeded];
@@ -51,7 +52,12 @@ static void checkTabs(void) {
   [window openInspector:YES];
   MVPump(0.5);
   MVCheck(@"inspector: nothing stands over the device, as the ground runs on under it", NSMaxX(window.deviceInWindow) <= NSMinX(window.inspectorInWindow), [NSString stringWithFormat:@"device to %.0f, Inspector from %.0f", NSMaxX(window.deviceInWindow), NSMinX(window.inspectorInWindow)]);
-  NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow), @"tabApps": @(MVPaneApps), @"tabActivity": @(MVPaneActivity), @"tabPerformance": @(MVPanePerf), @"tabLinks": @(MVPaneLinks), @"tabPush": @(MVPanePush)};
+  NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow),
+                         @"tabApps": @(MVPaneApps),
+                         @"tabActivity": @(MVPaneActivity),
+                         @"tabPerformance": @(MVPanePerf),
+                         @"tabLinks": @(MVPaneLinks),
+                         @"tabPush": @(MVPanePush)};
   for (NSString *tab in tabs) {
     [window pokeClick:tab];
     MVPump(0.1);
@@ -74,7 +80,11 @@ static void checkTabs(void) {
   [window pokeClick:@"status"];
   MVPump(0.2);
   [window showPane:MVPaneActivity];
-  for (int i = 0; i < 3; i++) [window addActivity:@{@"at": @(i * 1000), @"tool": @"tap", @"ok": @YES, @"ms": @3, @"time": @"12:00"}];
+  for (int i = 0; i < 3; i++) [window addActivity:@{@"at": @(i * 1000),
+                                                    @"tool": @"tap",
+                                                    @"ok": @YES,
+                                                    @"ms": @3,
+                                                    @"time": @"12:00"}];
   [window.nsWindow displayIfNeeded];
   MVPump(0.1);
   NSUInteger open = window.inspector.activity.lines;
@@ -116,9 +126,18 @@ static void checkLine(void) {
 
 static void checkActivity(void) {
   MVActivityPane *pane = [[MVActivityPane alloc] initWithFrame:NSMakeRect(0, 0, 288, 400)];
-  for (int i = 0; i < 23; i++) [pane add:@{@"at": @(1000 + i * 1000), @"tool": @"tap", @"ok": @YES, @"ms": @3, @"time": @"12:00", @"done": @"Tapped Sign in"}];
+  for (int i = 0; i < 23; i++) [pane add:@{@"at": @(1000 + i * 1000),
+                                           @"tool": @"tap",
+                                           @"ok": @YES,
+                                           @"ms": @3,
+                                           @"time": @"12:00",
+                                           @"done": @"Tapped Sign in"}];
   MVCheck(@"activity: calls close together are one run, said in a line", [pane.firstLine isEqual:@"Worked for 22 s · 23 calls"], pane.firstLine);
-  [pane add:@{@"at": @(100000), @"tool": @"tap", @"ok": @YES, @"ms": @3, @"time": @"12:01"}];
+  [pane add:@{@"at": @(100000),
+              @"tool": @"tap",
+              @"ok": @YES,
+              @"ms": @3,
+              @"time": @"12:01"}];
   MVCheck(@"activity: a gap starts a new run, which stands first", [pane.firstLine isEqual:@"Worked for 1 s · 1 call"], pane.firstLine);
 }
 
@@ -155,7 +174,8 @@ static void checkGoneAnotherWay(void) {
   NSString *network = @"adb-R5C-Ab._adb-tls-connect._tcp";
   NSDictionary *cable = @{@"id": @"R5C", @"serial": @"R5C", @"kind": @"phone", @"state": @"running", @"name": @"Test Phone", @"link": @"USB"};
   NSDictionary *wifi = @{@"id": network, @"serial": network, @"kind": @"phone", @"state": @"running", @"name": @"Test Phone", @"detail": @"Wi-Fi", @"link": @"Wi-Fi", @"sameAs": @"R5C"};
-  [hub show:@{@"devices": @[cable], @"showing": @"R5C"}];
+  [hub show:@{@"devices": @[cable],
+              @"showing": @"R5C"}];
   [hub show:@{@"devices": @[wifi]}];
   NSString *needs = MVWord(@"Needs You");
   MVCheck(@"sidebar: a phone off its cable that runs by Wi-Fi is not under Needs You", ![hub.rowTitles containsObject:needs] && [hub.rowTitles containsObject:MVWord(@"Running")], [hub.rowTitles componentsJoinedByString:@"|"]);
@@ -163,7 +183,8 @@ static void checkGoneAnotherWay(void) {
   MVCheck(@"sidebar: gone every way, it is", [hub.rowTitles containsObject:needs], [hub.rowTitles componentsJoinedByString:@"|"]);
   // and the other way: chosen by Wi-Fi, its cable back, the network row gives way to the cable's
   MVHub *back = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
-  [back show:@{@"devices": @[wifi], @"showing": network}];
+  [back show:@{@"devices": @[wifi],
+               @"showing": network}];
   [back show:@{@"devices": @[cable]}];
   MVCheck(@"sidebar: nor is one on its cable again after Wi-Fi", ![back.rowTitles containsObject:needs], [back.rowTitles componentsJoinedByString:@"|"]);
 }

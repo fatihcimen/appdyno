@@ -8,7 +8,8 @@
 #import <sys/stat.h>
 
 // the one on screen, the one being written, and one to spare: a layer may hold on to the last a moment longer
-enum { kSurfaces = 3, kMaxSide = 16384 };
+enum { kSurfaces = 3,
+       kMaxSide = 16384 };
 
 static IOSurfaceRef newSurface(size_t w, size_t h) {
   NSDictionary *properties = @{

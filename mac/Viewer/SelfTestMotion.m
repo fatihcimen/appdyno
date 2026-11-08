@@ -2,7 +2,10 @@
 #import "Motion.h"
 #import "SelfTest.h"
 
-enum { W = 360, H = 780, BandY = 240, BandH = 48 };
+enum { W = 360,
+       H = 780,
+       BandY = 240,
+       BandH = 48 };
 
 /// Marks that do not repeat, as letters: a position along the band.
 static uint8_t mark(int x, int y) {
@@ -46,7 +49,7 @@ static void checkNoClock(void) {
   MVWatch *watch = [[MVWatch alloc] initWithId:@"clock" ms:100 strip:NO];
   CVPixelBufferRef image = NULL;
   CVPixelBufferCreate(NULL, W, H, kCVPixelFormatType_32BGRA, NULL, &image);
-  CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef)@0.0, kCVAttachmentMode_ShouldNotPropagate);
+  CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef) @0.0, kCVAttachmentMode_ShouldNotPropagate);
   // past a step of what is read, or time stands still for a reason of its own
   for (int i = 0; i < 4; i++) {
     [watch addImage:image turns:0];
@@ -69,7 +72,8 @@ void MVTestMotion(void) {
   NSDictionary *jump = [jumps[@"events"] firstObject];
   MVCheck(@"motion: a jump is said, and when", hasEvent(jumps, @"jump") && fabs([jump[@"at"] doubleValue] - 1200) < 200, [NSString stringWithFormat:@"%@", jumps[@"events"]]);
 
-  NSDictionary *back = only(watched(^int(double s) { return s > 1 && s < 1.5 ? (int)(120 - (s - 1) * 120) : s >= 1.5 ? (int)(60 + (s - 1.5) * 120) : (int)(s * 120); }, W));
+  NSDictionary *back = only(watched(^int(double s) { return s > 1 && s < 1.5 ? (int)(120 - (s - 1) * 120) : s >= 1.5 ? (int)(60 + (s - 1.5) * 120)
+                                                                                                                     : (int)(s * 120); }, W));
   MVCheck(@"motion: running backwards is said", hasEvent(back, @"back"), [NSString stringWithFormat:@"%@", back[@"events"]]);
 
   NSDictionary *cut = only(watched(^int(double s) { return (int)(s * 120); }, 216));

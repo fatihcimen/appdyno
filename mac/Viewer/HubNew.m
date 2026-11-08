@@ -28,7 +28,7 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   _os = popUp(_systems);
   // the newest comes last, and is the one a newest model runs on
   [_os selectItemAtIndex:_systems.count - 1];
-  NSTextField *(^caption)(NSString *) = ^(NSString *text) {
+  NSTextField * (^caption)(NSString *) = ^(NSString *text) {
     return [NSTextField labelWithString:text];
   };
   NSGridView *grid = [NSGridView gridViewWithViews:@[@[caption(MVWord(@"Name")), _name], @[caption(MVWord(@"Model")), _model], @[caption([kind isEqual:@"simulator"] ? @"iOS" : @"Android"), _os]]];

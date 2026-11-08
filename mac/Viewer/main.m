@@ -70,12 +70,18 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
   if (!_behind && NSApp.activationPolicy == NSApplicationActivationPolicyProhibited) NSApp.activationPolicy = NSApplicationActivationPolicyAccessory;
   NSNotificationCenter *center = NSWorkspace.sharedWorkspace.notificationCenter;
-  [center addObserverForName:NSWorkspaceWillSleepNotification object:nil queue:nil usingBlock:^(NSNotification *n) {
-    MVEmit(@{@"op": @"sleep"});
-  }];
-  [center addObserverForName:NSWorkspaceDidWakeNotification object:nil queue:nil usingBlock:^(NSNotification *n) {
-    MVEmit(@{@"op": @"wake"});
-  }];
+  [center addObserverForName:NSWorkspaceWillSleepNotification
+                      object:nil
+                       queue:nil
+                  usingBlock:^(NSNotification *n) {
+                    MVEmit(@{@"op": @"sleep"});
+                  }];
+  [center addObserverForName:NSWorkspaceDidWakeNotification
+                      object:nil
+                       queue:nil
+                  usingBlock:^(NSNotification *n) {
+                    MVEmit(@{@"op": @"wake"});
+                  }];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
@@ -187,7 +193,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 - (void)openHub:(BOOL)focus {
   NSApp.mainMenu = MVHubMenu();
-  _hub =[[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
+  _hub = [[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
   [self forget:@""];
 }
 

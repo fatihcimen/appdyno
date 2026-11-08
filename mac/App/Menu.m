@@ -54,7 +54,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   _behind = [args containsObject:@"--behind"];
   if ([args containsObject:@"--menu"]) return [self printMenu];
   // an app that moved: what points at it follows, and with nothing stale this writes nothing
-  Ask(@[ @"install", @"--moved" ], ^(int code, NSString *said) {});
+  Ask(@[@"install", @"--moved"], ^(int code, NSString *said){});
   [self showItem];
   [self openHub];
 }
@@ -82,22 +82,23 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 - (void)openHub {
   if (_hub.running) {
     pid_t children[8];
-    if (proc_listchildpids(_hub.processIdentifier, children, sizeof children) > 0)
+    if (proc_listchildpids(_hub.processIdentifier, children, sizeof children) > 0) {
       [[NSRunningApplication runningApplicationWithProcessIdentifier:children[0]]
           activateWithOptions:NSApplicationActivateAllWindows];
+    }
     return;
   }
-  _hub = Start(@[ @"hub", _behind ? @"--behind" : @"--focus" ], NSFileHandle.fileHandleWithNullDevice);
+  _hub = Start(@[@"hub", _behind ? @"--behind" : @"--focus"], NSFileHandle.fileHandleWithNullDevice);
 }
 
 - (void)openWindow:(NSMenuItem *)item {
-  NSMutableArray *words = [@[ @"mirror", @"--device", item.representedObject ] mutableCopy];
+  NSMutableArray *words = [@[@"mirror", @"--device", item.representedObject] mutableCopy];
   if (_behind) [words addObject:@"--behind"];
   Start(words, NSFileHandle.fileHandleWithNullDevice);
 }
 
 - (void)read:(void (^)(void))done {
-  Ask(@[ @"devices", @"--json" ], ^(int code, NSString *said) {
+  Ask(@[@"devices", @"--json"], ^(int code, NSString *said) {
     // what a tool said on stderr comes first
     NSString *last = [said componentsSeparatedByString:@"\n"].lastObject;
     NSData *data = [last dataUsingEncoding:NSUTF8StringEncoding];
@@ -181,13 +182,13 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   if ([self confirm:@"Put appdyno on the PATH?"
              saying:@"Every terminal will find appdyno. This adds a link at /usr/local/bin/appdyno, and macOS may ask for your password."
                with:@"Put on PATH"])
-    [self doing:@[ @"path" ] title:@"appdyno on the PATH"];
+    [self doing:@[@"path"] title:@"appdyno on the PATH"];
 }
 
 - (void)addToClients {
-  Ask(@[ @"install", @"--dry-run" ], ^(int code, NSString *said) {
+  Ask(@[@"install", @"--dry-run"], ^(int code, NSString *said) {
     if ([self confirm:@"Add Appdyno to these MCP clients?" saying:said with:@"Add"])
-      [self doing:@[ @"install", @"--yes" ] title:@"MCP clients"];
+      [self doing:@[@"install", @"--yes"] title:@"MCP clients"];
   });
 }
 
@@ -195,14 +196,14 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   if ([self confirm:@"Download adb from Google?"
              saying:@"Android phones need adb, and Google's terms keep it out of this app. This downloads Google's platform-tools, 16 MB, and checks it. By downloading you accept Google's terms: https://developer.android.com/studio/terms"
                with:@"Accept and Download"])
-    [self doing:@[ @"tools", @"install", @"adb", @"--accept-license" ] title:@"adb"];
+    [self doing:@[@"tools", @"install", @"adb", @"--accept-license"] title:@"adb"];
 }
 
 - (void)checkForUpdates {
-  Ask(@[ @"update", @"--check" ], ^(int code, NSString *said) {
+  Ask(@[@"update", @"--check"], ^(int code, NSString *said) {
     if (![said containsString:@"would download"]) return [self tell:@"Updates" saying:said];
     if (![self confirm:@"Install the new version?" saying:said with:@"Install"]) return;
-    Ask(@[ @"update" ], ^(int done, NSString *result) {
+    Ask(@[@"update"], ^(int done, NSString *result) {
       if (done != 0) return [self tell:@"The update did not finish" saying:result];
       NSWorkspaceOpenConfiguration *config = NSWorkspaceOpenConfiguration.configuration;
       config.createsNewApplicationInstance = YES;

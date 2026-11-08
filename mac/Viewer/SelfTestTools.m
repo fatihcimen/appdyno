@@ -112,7 +112,8 @@ void MVCheckTools(MVHub *hub) {
   MVPump(0.1);
   MVCheck(@"tools: one button: it shows the lines, and then adds them", [wordsOf(hub) containsString:@"+ a line"] && [clicked(hub, @"run:clients-preview")[@"name"] isEqual:@"clients"], wordsOf(hub));
   MVCheck(@"tools: PATH stands out of a run that is not the app's", MVFindControl(hub.room.window.contentView, @"run:path-on") == nil, nil);
-  [hub showClients:@{@"apps": @[@"com.kept.app"], @"fromApp": @YES}];
+  [hub showClients:@{@"apps": @[@"com.kept.app"],
+                     @"fromApp": @YES}];
   MVPump(0.1);
   MVCheck(@"tools: PATH is offered only from the app", [clicked(hub, @"run:path-on")[@"name"] isEqual:@"path-on"], nil);
   MVCheck(@"tools: and comes off the same way", [clicked(hub, @"run:path-off")[@"name"] isEqual:@"path-off"], nil);

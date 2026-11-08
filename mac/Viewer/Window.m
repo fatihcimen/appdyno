@@ -109,7 +109,10 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 /// How a device is, said once: a colour around it and the capsule over it. The window's title stays for the Window menu and
 /// Mission Control, and the bar says it, as the system's own title fades to 2:1 in a window behind others.
 - (void)showState {
-  NSColor *edge = _recording || _line.failing ? MVRed() : _waitingForPerson ? MVOrange() : _line.tool ? MVAgent() : _line.both ? MVAccent() : nil;
+  NSColor *edge = _recording || _line.failing ? MVRed() : _waitingForPerson ? MVOrange()
+                                                      : _line.tool          ? MVAgent()
+                                                      : _line.both          ? MVAccent()
+                                                                            : nil;
   [_frame setEdge:edge];
   if (_window.toolbar != _toolbar) return;
   _window.title = _line.name ?: @"";
@@ -144,7 +147,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   if ([attach[@"zoom"] doubleValue] > 0) _zoom = [attach[@"zoom"] doubleValue];
   // one name everywhere: a room says what its sidebar says
   NSDictionary *row = _room.rowOf ? _room.rowOf(_root.stage ?: @"") : nil;
-  _line.name = row[@"title"] ?: _look[@"name"] ?: _name;
+  _line.name = row[@"title"] ?: _look[@"name"] ?
+                                               : _name;
   [self showState];
   [_window makeFirstResponder:_view];
   if (!_hosted) MVPresent(_window, MVShowOf([attach[@"focus"] boolValue], self.behind));
@@ -269,7 +273,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 - (void)setStatus:(NSDictionary *)message {
   NSString *state = message[@"state"];
   BOOL live = [state isEqual:@"live"];
-  _line.state = live ? @"Live" : message[@"title"] ?: state;
+  _line.state = live ? @"Live" : message[@"title"] ?
+                                                   : state;
   _line.live = live;
   _line.stuck = [state isEqual:@"waiting"] || [state isEqual:@"stopped"];
   [self showState];
@@ -367,7 +372,8 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 - (void)sayMeasuring:(nullable NSString *)line {
   NSRegularExpression *count = [NSRegularExpression regularExpressionWithPattern:@"(\\d+) of (\\d+)" options:0 error:NULL];
   NSTextCheckingResult *found = line ? [count firstMatchInString:line options:0 range:NSMakeRange(0, line.length)] : nil;
-  _line.measuring = found ? [@"Measuring " stringByAppendingString:line] : line.length ? line : nil;
+  _line.measuring = found ? [@"Measuring " stringByAppendingString:line] : line.length ? line
+                                                                                       : nil;
   _line.progress = found ? [line substringWithRange:[found rangeAtIndex:1]].doubleValue / [line substringWithRange:[found rangeAtIndex:2]].doubleValue : 0;
   [self showState];
 }

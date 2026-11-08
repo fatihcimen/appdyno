@@ -1,8 +1,8 @@
 // A `watch`: the decoded frames a window would show, made small and gray once, and read by MVMotion. Nothing here decodes.
-#import <Accelerate/Accelerate.h>
-#import <AppKit/AppKit.h>
 #import "Motion.h"
 #import "Viewer.h"
+#import <Accelerate/Accelerate.h>
+#import <AppKit/AppKit.h>
 
 enum {
   /// About 1 sample to 2 tap units on a phone: a letter of a line of text still has a shape.

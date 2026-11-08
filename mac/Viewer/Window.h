@@ -55,7 +55,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// Where a window of two stands in this room: on its side of the middle, tops level, and never off its left.
 NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left);
 
-typedef NS_ENUM(NSInteger, MVTone) { MVToneLive, MVToneBusy, MVToneNeedsYou, MVToneAgent, MVToneBad };
+typedef NS_ENUM(NSInteger, MVTone) { MVToneLive,
+                                     MVToneBusy,
+                                     MVToneNeedsYou,
+                                     MVToneAgent,
+                                     MVToneBad };
 
 /// All that is happening to a device, and the one thing to say of it now.
 @interface MVStatusLine : NSObject
@@ -161,7 +165,10 @@ NSMenu *MVControlMenu(NSString *title, NSArray<NSString *> *_Nullable names);
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names);
 NSMenu *MVHubMenu(void);
 
-typedef NS_ENUM(NSInteger, MVLiveState) { MVLiveNeutral, MVLiveGood, MVLiveWarning, MVLiveCritical };
+typedef NS_ENUM(NSInteger, MVLiveState) { MVLiveNeutral,
+                                          MVLiveGood,
+                                          MVLiveWarning,
+                                          MVLiveCritical };
 /// How a reading stands: what a card says in words and a symbol, as well as a colour.
 MVLiveState MVStateOf(NSString *field, double value);
 /// How a frame rate stands. It has no right value, as a screen draws what it has to: what can be judged is whether what it
@@ -288,7 +295,9 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 @property(nonatomic, nullable) NSView *note;
 @end
 
-typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind, MVShowFront, MVShowFocused };
+typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind,
+                                     MVShowFront,
+                                     MVShowFocused };
 
 /// A device's controls as the system's own toolbar.
 @interface MVToolbar : NSObject <NSToolbarDelegate>
@@ -371,6 +380,5 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 - (NSArray<NSString *> *)rowTitles;
 - (BOOL)sidebarClosed;
 @end
-
 
 NS_ASSUME_NONNULL_END

@@ -55,7 +55,8 @@ static const double kBetween = 10;
     }
     [NSLayoutConstraint activateConstraints:@[
       [stack.topAnchor constraintEqualToAnchor:self.topAnchor],
-      [_recent.topAnchor constraintEqualToAnchor:stack.bottomAnchor constant:kBetween],
+      [_recent.topAnchor constraintEqualToAnchor:stack.bottomAnchor
+                                        constant:kBetween],
       [_recent.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
     ]];
   }

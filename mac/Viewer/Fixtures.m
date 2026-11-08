@@ -78,7 +78,7 @@ NSArray<MVTestFrame *> *MVEncodeFrames(BOOL hevc, int count, int keyEvery) {
   if (status != noErr) return nil;
   VTSessionSetProperty(session, kVTCompressionPropertyKey_RealTime, kCFBooleanTrue);
   VTSessionSetProperty(session, kVTCompressionPropertyKey_AllowFrameReordering, kCFBooleanFalse);
-  VTSessionSetProperty(session, kVTCompressionPropertyKey_MaxKeyFrameInterval, (__bridge CFNumberRef)@(keyEvery));
+  VTSessionSetProperty(session, kVTCompressionPropertyKey_MaxKeyFrameInterval, (__bridge CFNumberRef) @(keyEvery));
   CVPixelBufferRef buffer = NULL;
   NSDictionary *attributes = @{(id)kCVPixelBufferIOSurfacePropertiesKey: @{}};
   CVPixelBufferCreate(NULL, w, h, kCVPixelFormatType_32BGRA, (__bridge CFDictionaryRef)attributes, &buffer);

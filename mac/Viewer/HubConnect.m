@@ -13,7 +13,8 @@ static const double kPictureWide = 216, kPictureTall = 196, kWashShare = 0.46, k
 static NSString *placeOn(NSString *step, NSString *maker) {
   BOOL building = [step isEqual:@"developer-options"];
   NSDictionary *known = building ? @{@"samsung": @"Settings, About phone, Software information, Build number", @"xiaomi": @"Settings, About phone, OS version", @"google": @"Settings, About phone, Build number"} : @{@"samsung": @"Settings, Developer options", @"xiaomi": @"Settings, Additional settings, Developer options", @"google": @"Settings, System, Developer options"};
-  return known[maker] ?: building ? @"Settings, About phone, Build number. On some phones it is under Software information." : @"Settings, Developer options. On some phones it is under System.";
+  return known[maker] ?: building ? @"Settings, About phone, Build number. On some phones it is under Software information."
+                                  : @"Settings, Developer options. On some phones it is under System.";
 }
 
 /// A step's title, its one sentence, where it is on the phone, and what is said when that is not enough.
@@ -102,14 +103,17 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
     [wash.leadingAnchor constraintEqualToAnchor:all.leadingAnchor],
     [wash.topAnchor constraintEqualToAnchor:all.topAnchor],
     [wash.bottomAnchor constraintEqualToAnchor:all.bottomAnchor],
-    [wash.widthAnchor constraintEqualToAnchor:all.widthAnchor multiplier:kWashShare],
+    [wash.widthAnchor constraintEqualToAnchor:all.widthAnchor
+                                   multiplier:kWashShare],
     [wash.heightAnchor constraintGreaterThanOrEqualToConstant:kPictureTall + 2 * kWashInset],
     [_picture.widthAnchor constraintEqualToConstant:kPictureWide],
     [_picture.heightAnchor constraintEqualToConstant:kPictureTall],
     [_picture.centerXAnchor constraintEqualToAnchor:wash.centerXAnchor],
     [_picture.centerYAnchor constraintEqualToAnchor:wash.centerYAnchor],
-    [_body.leadingAnchor constraintEqualToAnchor:wash.trailingAnchor constant:16],
-    [_body.trailingAnchor constraintEqualToAnchor:all.trailingAnchor constant:-4],
+    [_body.leadingAnchor constraintEqualToAnchor:wash.trailingAnchor
+                                        constant:16],
+    [_body.trailingAnchor constraintEqualToAnchor:all.trailingAnchor
+                                         constant:-4],
     [_body.centerYAnchor constraintEqualToAnchor:all.centerYAnchor],
     [_body.topAnchor constraintGreaterThanOrEqualToAnchor:all.topAnchor],
     [_body.bottomAnchor constraintLessThanOrEqualToAnchor:all.bottomAnchor],
@@ -147,9 +151,11 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   if (!self.window) return;
   MVAskClients(@"connect", @{@"fresh": @YES});
   __weak MVConnectPane *weak = self;
-  _timer = [NSTimer scheduledTimerWithTimeInterval:kLookSeconds repeats:YES block:^(NSTimer *timer) {
-    if (weak) MVAskClients(@"connect", @{});
-  }];
+  _timer = [NSTimer scheduledTimerWithTimeInterval:kLookSeconds
+                                           repeats:YES
+                                             block:^(NSTimer *timer) {
+                                               if (weak) MVAskClients(@"connect", @{});
+                                             }];
 }
 
 /// The first step left: what is done is done, and what the Mac cannot see waits only for a person's word.
@@ -201,7 +207,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   _where.stringValue = MVWord(words[2]);
   _where.hidden = !words[2].length;
   BOOL failed = _got.length && !_getting;
-  _more.stringValue = failed ? MVWord(@"Getting adb failed.") : _guide ? MVWord(words[3]) : @"";
+  _more.stringValue = failed ? MVWord(@"Getting adb failed.") : _guide ? MVWord(words[3])
+                                                                       : @"";
   _gotText.stringValue = _got ?: @"";
   _detailsOfGet.hidden = !failed;
   if (!failed) _gotCard.hidden = YES;
@@ -235,7 +242,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSDictionary *left = [self stepLeft];
   for (NSDictionary *step in steps) {
     BOOL done = [step[@"done"] boolValue] || (left && [steps indexOfObject:step] < [steps indexOfObject:left]) || (!left && [_passed containsObject:step[@"id"]]);
-    [items addObject:@{@"title": wordsOf(step[@"id"], _guide[@"maker"])[0], @"state": done ? @"done" : step == left ? @"now" : @"later"}];
+    [items addObject:@{@"title": wordsOf(step[@"id"], _guide[@"maker"])[0], @"state": done ? @"done" : step == left ? @"now"
+                                                                                                                    : @"later"}];
   }
   [_ticks showItems:items];
   _ticksCard.hidden = steps.count == 0;
@@ -249,7 +257,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSArray<NSString *> *titles = @[@"Add a device", @"Connect an AI client", @"Try a prompt"];
   NSMutableArray<NSDictionary *> *started = [NSMutableArray array];
   [titles enumerateObjectsUsingBlock:^(NSString *title, NSUInteger at, BOOL *stop) {
-    NSMutableDictionary *item = [@{@"title": title, @"state": ticked[at].boolValue ? @"done" : at == now ? @"now" : @"later"} mutableCopy];
+    NSMutableDictionary *item = [@{@"title": title, @"state": ticked[at].boolValue ? @"done" : at == now ? @"now"
+                                                                                                         : @"later"} mutableCopy];
     if (at) item[@"end"] = at == 1 ? self->_startClients : self->_startHelp;
     [started addObject:item];
   }];

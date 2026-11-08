@@ -39,11 +39,31 @@ static MVFilled filled(NSDictionary *_Nullable device, NSString *_Nullable app) 
 
 static NSArray<NSDictionary *> *cards(void) {
   return @[
-    @{@"goal": MVWord(@"Check a screen"), @"symbol": @"eye", @"does": MVWord(@"Reads only: it looks at the screen and changes nothing."), @"tools": @"screen, audit", @"kinds": @[@"picture"]},
-    @{@"goal": MVWord(@"Test a flow"), @"symbol": @"hand.tap", @"does": MVWord(@"Changes the device: it taps and types as you would."), @"tools": @"tap, type_text, screenshot", @"kinds": @[@"acts", @"picture"]},
-    @{@"goal": MVWord(@"Measure launch"), @"symbol": @"timer", @"does": MVWord(@"Restarts the app: a cold launch starts from closed."), @"tools": @"perf_launch", @"kinds": @[@"long"]},
-    @{@"goal": MVWord(@"Find why it got slower"), @"symbol": @"chart.line.downtrend.xyaxis", @"does": MVWord(@"Restarts the app: it measures again, then looks at where the time went."), @"tools": @"perf_compare, perf_profile", @"kinds": @[@"long"]},
-    @{@"goal": MVWord(@"Compare two builds"), @"symbol": @"square.split.2x1", @"does": MVWord(@"Changes the device: it installs each build, and restarts the app to measure it."), @"tools": @"app, perf_launch, perf_compare", @"kinds": @[@"long", @"acts"]},
+    @{@"goal": MVWord(@"Check a screen"),
+      @"symbol": @"eye",
+      @"does": MVWord(@"Reads only: it looks at the screen and changes nothing."),
+      @"tools": @"screen, audit",
+      @"kinds": @[@"picture"]},
+    @{@"goal": MVWord(@"Test a flow"),
+      @"symbol": @"hand.tap",
+      @"does": MVWord(@"Changes the device: it taps and types as you would."),
+      @"tools": @"tap, type_text, screenshot",
+      @"kinds": @[@"acts", @"picture"]},
+    @{@"goal": MVWord(@"Measure launch"),
+      @"symbol": @"timer",
+      @"does": MVWord(@"Restarts the app: a cold launch starts from closed."),
+      @"tools": @"perf_launch",
+      @"kinds": @[@"long"]},
+    @{@"goal": MVWord(@"Find why it got slower"),
+      @"symbol": @"chart.line.downtrend.xyaxis",
+      @"does": MVWord(@"Restarts the app: it measures again, then looks at where the time went."),
+      @"tools": @"perf_compare, perf_profile",
+      @"kinds": @[@"long"]},
+    @{@"goal": MVWord(@"Compare two builds"),
+      @"symbol": @"square.split.2x1",
+      @"does": MVWord(@"Changes the device: it installs each build, and restarts the app to measure it."),
+      @"tools": @"app, perf_launch, perf_compare",
+      @"kinds": @[@"long", @"acts"]},
   ];
 }
 
@@ -159,7 +179,11 @@ static NSArray<NSDictionary *> *cards(void) {
   for (NSView *view in _checks.arrangedSubviews) [view removeFromSuperview];
   for (NSDictionary *check in checks) {
     BOOL ok = [check[@"ok"] boolValue], warn = [check[@"warn"] boolValue];
-    MVInk *mark = [[MVInk alloc] initWithSymbol:ok ? @"checkmark.circle.fill" : warn ? @"exclamationmark.triangle.fill" : @"xmark.octagon.fill" color:ok ? MVGreen() : warn ? MVOrange() : MVRed() size:13];
+    MVInk *mark = [[MVInk alloc] initWithSymbol:ok ? @"checkmark.circle.fill" : warn ? @"exclamationmark.triangle.fill"
+                                                                                     : @"xmark.octagon.fill"
+                                          color:ok ? MVGreen() : warn ? MVOrange()
+                                                                      : MVRed()
+                                           size:13];
     [mark.widthAnchor constraintEqualToConstant:18].active = YES;
     NSMutableArray<NSView *> *words = [NSMutableArray arrayWithObject:MVText([NSString stringWithFormat:@"%@: %@", check[@"name"], check[@"detail"]], MVStyleCallout)];
     if ([check[@"fix"] length]) [words addObject:MVParagraph(check[@"fix"], MVStyleSub)];

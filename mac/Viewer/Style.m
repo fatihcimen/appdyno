@@ -33,13 +33,14 @@ static const double kPulseSeconds = 0.16, kPulseBounce = 0.2;
 @end
 
 NSColor *MVSolid(NSColor *color) {
-  return [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *look) {
-    __block NSColor *solid;
-    [look performAsCurrentDrawingAppearance:^{
-      solid = [color colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
-    }];
-    return solid;
-  }];
+  return [NSColor colorWithName:nil
+                dynamicProvider:^NSColor *(NSAppearance *look) {
+                  __block NSColor *solid;
+                  [look performAsCurrentDrawingAppearance:^{
+                    solid = [color colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+                  }];
+                  return solid;
+                }];
 }
 
 static void dress(NSTextField *field, MVStyle style) {
@@ -84,12 +85,14 @@ NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFont
   NSImage *shape = [found imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:size weight:weight]];
   if (!shape) return nil;
   NSColor *ink = MVSolid(color);
-  return [NSImage imageWithSize:shape.size flipped:NO drawingHandler:^BOOL(NSRect rect) {
-    [shape drawInRect:rect];
-    [ink set];
-    NSRectFillUsingOperation(rect, NSCompositingOperationSourceIn);
-    return YES;
-  }];
+  return [NSImage imageWithSize:shape.size
+                        flipped:NO
+                 drawingHandler:^BOOL(NSRect rect) {
+                   [shape drawInRect:rect];
+                   [ink set];
+                   NSRectFillUsingOperation(rect, NSCompositingOperationSourceIn);
+                   return YES;
+                 }];
 }
 
 @implementation MVInk {
@@ -135,7 +138,8 @@ NSString *MVNeedSymbol(NSString *_Nullable need) {
 }
 
 void MVAnnounce(NSString *words) {
-  NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification, @{NSAccessibilityAnnouncementKey: MVWord(words), NSAccessibilityPriorityKey: @(NSAccessibilityPriorityHigh)});
+  NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification, @{NSAccessibilityAnnouncementKey: MVWord(words),
+                                                                                                         NSAccessibilityPriorityKey: @(NSAccessibilityPriorityHigh)});
 }
 
 CABasicAnimation *MVSpring(NSString *keyPath, double seconds, double bounce) {

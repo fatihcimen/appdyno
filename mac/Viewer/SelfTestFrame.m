@@ -67,13 +67,21 @@ static void checkControls(void) {
 }
 
 static void checkLive(void) {
-  MVCheck(@"hud: a low rate with every frame on time is no fault", MVFramesState(@{@"fps": @20, @"framesDrawn": @20, @"jankyFrames": @0}) == MVLiveGood, nil);
-  MVCheck(@"hud: a rate is judged by what came late", MVFramesState(@{@"framesDrawn": @20, @"jankyFrames": @4}) == MVLiveWarning && MVFramesState(@{@"framesDrawn": @12, @"jankyFrames": @10}) == MVLiveCritical, nil);
+  MVCheck(@"hud: a low rate with every frame on time is no fault", MVFramesState(@{@"fps": @20,
+                                                                                   @"framesDrawn": @20,
+                                                                                   @"jankyFrames": @0}) == MVLiveGood,
+          nil);
+  MVCheck(@"hud: a rate is judged by what came late", MVFramesState(@{@"framesDrawn": @20,
+                                                                      @"jankyFrames": @4}) == MVLiveWarning &&
+                                                          MVFramesState(@{@"framesDrawn": @12,
+                                                                          @"jankyFrames": @10}) == MVLiveCritical,
+          nil);
   MVCheck(@"hud: with no count of late frames there is no verdict", MVFramesState(@{@"fps": @12}) == MVLiveNeutral, nil);
   MVCheck(@"hud: one frozen frame is poor", MVStateOf(@"frozenFrames", 1) == MVLiveCritical && MVStateOf(@"frozenFrames", 0) == MVLiveGood, nil);
   MVCheck(@"hud: memory has no threshold to be judged by", MVStateOf(@"memoryMb", 4000) == MVLiveNeutral, nil);
   MVHud *hud = [[MVHud alloc] initWithFrame:NSMakeRect(0, 0, 180, 600)];
-  [hud show:@{@"sample": @{@"at": @1, @"fps": @0, @"absent": @{@"cpuPercent": @"cannot measure CPU"}}, @"noise": @[@"mirrored"]}];
+  [hud show:@{@"sample": @{@"at": @1, @"fps": @0, @"absent": @{@"cpuPercent": @"cannot measure CPU"}},
+              @"noise": @[@"mirrored"]}];
   MVCheck(@"hud: a device that counted no frames shows a still screen, no fault", [[hud shownFor:@"fps"] isEqual:@"Still"], [hud shownFor:@"fps"]);
   [hud setPictureRate:0];
   [hud show:@{@"sample": @{@"at": @2}}];
@@ -97,9 +105,16 @@ static void checkMeasures(void) {
   MVCheck(@"performance: a reading a device cannot give is a dash", [[pane shownFor:@"fps"] isEqual:@"\u2013"], [pane shownFor:@"fps"]);
   [pane showMeasuring:@"round 1 of 3"];
   MVCheck(@"performance: no second measure over the first", !MVFindControl(pane, @"measureScroll").enabled, nil);
-  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms", @"detail": @"dev.app"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"412 ms",
+                       @"detail": @"dev.app"}];
   MVCheck(@"performance: a measure's result stands, and the next can start", [pane.lastResult containsString:@"412 ms"] && MVFindControl(pane, @"measureScroll").enabled, pane.lastResult);
-  [pane showMeasured:@{@"ok": @YES, @"flagged": @YES, @"title": @"Scroll", @"value": @"72% jank", @"detail": @"3 rounds"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"flagged": @YES,
+                       @"title": @"Scroll",
+                       @"value": @"72% jank",
+                       @"detail": @"3 rounds"}];
   MVCheck(@"performance: that a measure ran is no verdict, and what its tool found is marked", pane.lastMarked, nil);
   MVCheck(@"performance: a second result reaches the list, not only its rows", ((NSTableView *)((MVList *)[pane valueForKey:@"_results"]).documentView).numberOfRows == 2, nil);
 }
@@ -125,7 +140,10 @@ static void checkFirstResult(void) {
   MVCheck(@"performance: a window opening on old results shows them, and nothing comes in", card.layer && !card.hidden && ![card.layer animationForKey:@"fade"], nil);
   pane = newPane();
   card = resultsCardOf(pane, &holder);
-  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms", @"detail": @"dev.app"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"412 ms",
+                       @"detail": @"dev.app"}];
   MVCheck(@"performance: the first result just measured comes in", [card.layer animationForKey:@"fade"] != nil, nil);
 }
 
@@ -168,7 +186,8 @@ static void checkClicks(void) {
     MVAskedWindow *window = [MVAskedWindow new];
     window.asked = [NSMutableArray array];
     window.behind = YES;
-    [window configure:@{@"title": @"clicks", @"look": @{@"controls": controls}}];
+    [window configure:@{@"title": @"clicks",
+                        @"look": @{@"controls": controls}}];
     // room for the whole toolbar, which folds into its own menu where it has none
     [window.nsWindow setContentSize:NSMakeSize(1000, 700)];
     [window.nsWindow displayIfNeeded];
@@ -193,7 +212,8 @@ static void checkMenus(void) {
   for (MVAskedWindow *window in @[[MVAskedWindow new], [[MVAskedWindow alloc] initInRoom:hub.room]]) {
     window.asked = [NSMutableArray array];
     window.behind = YES;
-    [window configure:@{@"title": @"menus", @"look": @{@"controls": controls}}];
+    [window configure:@{@"title": @"menus",
+                        @"look": @{@"controls": controls}}];
     for (NSString *name in names) [window pokeMenu:name];
     MVCheck(@"menus: an item of More reaches its window, alone and in a room", [window.asked isEqual:names], [window.asked componentsJoinedByString:@" "]);
     [window.asked removeAllObjects];
@@ -222,7 +242,10 @@ static void checkGlass(void) {
 }
 
 static void checkMood(void) {
-  NSDictionary *shape = @{(id)kIOSurfaceWidth: @64, (id)kIOSurfaceHeight: @64, (id)kIOSurfaceBytesPerElement: @4, (id)kIOSurfacePixelFormat: @(kCVPixelFormatType_32BGRA)};
+  NSDictionary *shape = @{(id)kIOSurfaceWidth: @64,
+                          (id)kIOSurfaceHeight: @64,
+                          (id)kIOSurfaceBytesPerElement: @4,
+                          (id)kIOSurfacePixelFormat: @(kCVPixelFormatType_32BGRA)};
   IOSurfaceRef surface = IOSurfaceCreate((__bridge CFDictionaryRef)shape);
   IOSurfaceLock(surface, 0, NULL);
   memset(IOSurfaceGetBaseAddress(surface), 255, IOSurfaceGetAllocSize(surface));

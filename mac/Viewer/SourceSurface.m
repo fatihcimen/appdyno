@@ -77,9 +77,10 @@ enum { kBooted = 3 };
   for (id<MVSimulator> port in io.ioPorts) {
     id<MVSimulator> descriptor = port.descriptor;
     if (![(id)descriptor respondsToSelector:@selector(enumerateScreensWithCompletionQueue:completionHandler:)]) continue;
-    [descriptor enumerateScreensWithCompletionQueue:dispatch_get_main_queue() completionHandler:^(NSArray *screens, NSError *e) {
-      [weak registerScreens:screens];
-    }];
+    [descriptor enumerateScreensWithCompletionQueue:dispatch_get_main_queue()
+                                  completionHandler:^(NSArray *screens, NSError *e) {
+                                    [weak registerScreens:screens];
+                                  }];
   }
 }
 
@@ -108,15 +109,15 @@ enum { kBooted = 3 };
     if (![(id)screen respondsToSelector:@selector(registerScreenCallbacksWithUUID:callbackQueue:frameCallback:surfacesChangedCallback:propertiesChangedCallback:)]) continue;
     [_screens addObject:screen];
     __weak id weakScreen = screen;
-    [screen registerScreenCallbacksWithUUID:_uuid callbackQueue:dispatch_get_main_queue()
+    [screen registerScreenCallbacksWithUUID:_uuid
+        callbackQueue:dispatch_get_main_queue()
         frameCallback:^{
           [weak presented:weakScreen];
         }
         surfacesChangedCallback:^(id surface, id masked) {
           [weak screen:weakScreen surface:surface];
         }
-        propertiesChangedCallback:^(id properties){
-        }];
+        propertiesChangedCallback:^(id properties){}];
   }
 }
 

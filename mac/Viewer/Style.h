@@ -7,7 +7,13 @@ NS_ASSUME_NONNULL_BEGIN
 @class MVStatusLine;
 
 /// Words of the hub's panes.
-typedef NS_ENUM(NSInteger, MVStyle) { MVStyleHero, MVStyleTitle, MVStyleBody, MVStyleStrong, MVStyleCallout, MVStyleHeading, MVStyleSub };
+typedef NS_ENUM(NSInteger, MVStyle) { MVStyleHero,
+                                      MVStyleTitle,
+                                      MVStyleBody,
+                                      MVStyleStrong,
+                                      MVStyleCallout,
+                                      MVStyleHeading,
+                                      MVStyleSub };
 NSTextField *MVText(NSString *text, MVStyle style);
 NSTextField *MVWrappedText(NSString *text, MVStyle style);
 /// A colour as it is, by its look: the system's own fade to 2:1 in the bar of a window behind others, and this does not.

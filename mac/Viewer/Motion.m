@@ -133,7 +133,9 @@ static int compareInts(const void *a, const void *b) {
   // 1 along x, 2 along y, 3 changes with no direction
   char *kind = calloc(tiles, 1);
   for (int t = 0; t < tiles; t++)
-    kind[t] = along[t] >= often && along[t] >= across[t] ? 1 : across[t] >= often ? 2 : lost[t] >= often ? 3 : 0;
+    kind[t] = along[t] >= often && along[t] >= across[t] ? 1 : across[t] >= often ? 2
+                                                           : lost[t] >= often     ? 3
+                                                                                  : 0;
   // what leaves the frame has nowhere to be found: a tile that lost its way beside a moving one is the same thing
   for (int pass = 0; pass < _cols + _rows; pass++)
     for (int t = 0; t < tiles; t++) {
@@ -211,7 +213,9 @@ static int compareInts(const void *a, const void *b) {
     BOOL back = heard[k] && s * usual < 0;
     BOOL jump = heard[k] && !back && fabs(s - expected) >= MAX(MVJump, fabs(expected));
     BOOL stop = !heard[k] && k > 0 && k < last;
-    NSString *what = back ? @"back" : jump ? @"jump" : stop ? @"stop" : nil;
+    NSString *what = back ? @"back" : jump ? @"jump"
+                                  : stop   ? @"stop"
+                                           : nil;
     if (what && ![what isEqual:lastKind])
       [events addObject:@{@"kind": what, @"at": @(_at[k]), @"by": @((s - (back ? 0 : expected)) / size)}];
     lastKind = what;

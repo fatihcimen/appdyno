@@ -22,11 +22,17 @@ static NSDictionary *clicked(MVHub *hub, NSString *name) {
 }
 
 static NSDictionary *step(NSString *id, BOOL done, BOOL sees) {
-  return @{@"id": id, @"done": @(done), @"sees": @(sees)};
+  return @{@"id": id,
+           @"done": @(done),
+           @"sees": @(sees)};
 }
 
 static NSDictionary *android(NSString *maker, BOOL heard, BOOL allowed) {
-  NSMutableDictionary *guide = [@{@"hand": @"android", @"maker": maker, @"ready": @(allowed), @"name": @"Test Phone", @"steps": @[step(@"developer-options", heard, NO), step(@"usb-debugging", heard, NO), step(@"allow", allowed, YES)]} mutableCopy];
+  NSMutableDictionary *guide = [@{@"hand": @"android",
+                                  @"maker": maker,
+                                  @"ready": @(allowed),
+                                  @"name": @"Test Phone",
+                                  @"steps": @[step(@"developer-options", heard, NO), step(@"usb-debugging", heard, NO), step(@"allow", allowed, YES)]} mutableCopy];
   if (heard) guide[@"serial"] = @"R5C";
   return guide;
 }
@@ -37,7 +43,8 @@ static void look(MVHub *hub, NSDictionary *guide) {
 }
 
 static void checkAndroid(MVHub *hub) {
-  look(hub, @{@"steps": @[], @"ready": @NO});
+  look(hub, @{@"steps": @[],
+              @"ready": @NO});
   MVCheck(@"connect: with nothing on USB it says the cable plainly", says(hub, @"Plug in your phone") && says(hub, @"Nothing shows on this Mac yet. A cable that only charges shows nothing, so try another one."), wordsOf(hub));
   look(hub, android(@"samsung", NO, NO));
   MVCheck(@"connect: a Samsung is told where its Build number is", says(hub, @"Settings, About phone, Software information, Build number") && says(hub, @"Step 1 of 3"), wordsOf(hub));
@@ -86,7 +93,13 @@ static void checkNeeds(MVHub *hub) {
 }
 
 static void checkIphone(MVHub *hub) {
-  NSDictionary *trust = @{@"hand": @"ios", @"maker": @"apple", @"ready": @NO, @"steps": @[step(@"trust", NO, YES), step(@"developer-mode", NO, YES)], @"runner": @[@{@"name": @"xcode", @"ok": @YES, @"detail": @"Xcode 27"}]};
+  NSDictionary *trust = @{@"hand": @"ios",
+                          @"maker": @"apple",
+                          @"ready": @NO,
+                          @"steps": @[step(@"trust", NO, YES), step(@"developer-mode", NO, YES)],
+                          @"runner": @[@{@"name": @"xcode",
+                                         @"ok": @YES,
+                                         @"detail": @"Xcode 27"}]};
   look(hub, trust);
   MVCheck(@"connect: an iPhone is asked for Trust and its passcode", says(hub, @"Unlock the phone, tap Trust, then enter your passcode."), wordsOf(hub));
   MVCheck(@"connect: and told what a runner needs", says(hub, @"To drive an iPhone by its screen, appdyno puts a small runner on it. That takes Xcode and a signing team.") && [wordsOf(hub) containsString:@"Xcode 27"], wordsOf(hub));
@@ -94,7 +107,10 @@ static void checkIphone(MVHub *hub) {
   MVCheck(@"connect: Build Runner has the colour where nothing else asks for it", !runner.quiet, nil);
   NSDictionary *build = clicked(hub, @"run:runner");
   MVCheck(@"connect: and can build one from here", [build[@"do"] isEqual:@"run"] && [build[@"name"] isEqual:@"runner"], nil);
-  look(hub, @{@"hand": @"ios", @"maker": @"apple", @"ready": @NO, @"steps": @[step(@"trust", YES, YES), step(@"developer-mode", NO, YES)]});
+  look(hub, @{@"hand": @"ios",
+              @"maker": @"apple",
+              @"ready": @NO,
+              @"steps": @[step(@"trust", YES, YES), step(@"developer-mode", NO, YES)]});
   MVCheck(@"connect: Developer Mode says first that the phone restarts", says(hub, @"Your phone restarts when you turn this on.") && says(hub, @"Settings, Privacy & Security, Developer Mode."), wordsOf(hub));
 }
 
@@ -108,7 +124,12 @@ static NSTextField *wifiField(MVHub *hub, NSString *name) {
 }
 
 static void checkWifi(MVHub *hub) {
-  NSDictionary *phone = @{@"hand": @"ios", @"maker": @"apple", @"ready": @YES, @"serial": @"U", @"steps": @[], @"wifi": @{@"way": @"cable", @"paired": @NO}};
+  NSDictionary *phone = @{@"hand": @"ios",
+                          @"maker": @"apple",
+                          @"ready": @YES,
+                          @"serial": @"U",
+                          @"steps": @[],
+                          @"wifi": @{@"way": @"cable", @"paired": @NO}};
   look(hub, phone);
   MVCheck(@"wi-fi: an iPhone on its cable is told to pair there, once", says(hub, @"Pair this iPhone once, while it is on this cable and unlocked. After that it shows here by Wi-Fi, on this Mac's network."), wordsOf(hub));
   NSDictionary *asked = clicked(hub, @"pairWifi");
@@ -116,22 +137,37 @@ static void checkWifi(MVHub *hub) {
   [hub showClients:@{@"run": @{@"name": @"pair", @"text": @"Tap Trust on the phone.\n"}}];
   MVPump(0.1);
   MVCheck(@"wi-fi: what the phone wants of a person is said, in their language", says(hub, @"Tap Trust on the phone."), wordsOf(hub));
-  look(hub, @{@"hand": @"ios", @"maker": @"apple", @"ready": @YES, @"serial": @"U", @"steps": @[], @"wifi": @{@"way": @"cable", @"paired": @YES}});
+  look(hub, @{@"hand": @"ios",
+              @"maker": @"apple",
+              @"ready": @YES,
+              @"serial": @"U",
+              @"steps": @[],
+              @"wifi": @{@"way": @"cable", @"paired": @YES}});
   NSDictionary *forget = clicked(hub, @"forgetWifi");
   MVCheck(@"wi-fi: a paired iPhone can be forgotten here", says(hub, @"Paired for Wi-Fi. Unplug it, and it stays in the list while it is on this Mac's network.") && [forget[@"name"] isEqual:@"forget"], wordsOf(hub));
-  look(hub, @{@"hand": @"android", @"maker": @"samsung", @"ready": @YES, @"serial": @"W1", @"steps": @[], @"wifi": @{@"way": @"code", @"paired": @NO}});
+  look(hub, @{@"hand": @"android",
+              @"maker": @"samsung",
+              @"ready": @YES,
+              @"serial": @"W1",
+              @"steps": @[],
+              @"wifi": @{@"way": @"code", @"paired": @NO}});
   MVCheck(@"wi-fi: an Android phone is told where its code is", says(hub, @"On the phone: Settings, Developer options, Wireless debugging, Pair device with pairing code. Type here what it shows."), wordsOf(hub));
   MVCheck(@"wi-fi: and nothing goes without one", clicked(hub, @"pairWifi") == nil && says(hub, @"Type the address and the six digits the phone shows."), wordsOf(hub));
   wifiField(hub, @"wifiAddress").stringValue = @"10.0.0.2:37000";
   wifiField(hub, @"wifiCode").stringValue = @"123456";
   NSDictionary *byCode = clicked(hub, @"pairWifi");
   MVCheck(@"wi-fi: what it shows goes to the command as typed", [byCode[@"address"] isEqual:@"10.0.0.2:37000"] && [byCode[@"code"] isEqual:@"123456"], nil);
-  look(hub, @{@"steps": @[], @"ready": @NO});
+  look(hub, @{@"steps": @[],
+              @"ready": @NO});
   MVCheck(@"wi-fi: with no phone the card goes", !says(hub, @"Without a Cable"), wordsOf(hub));
 }
 
 static void checkAdb(MVHub *hub) {
-  NSDictionary *guide = @{@"hand": @"android", @"maker": @"samsung", @"ready": @NO, @"terms": @"https://terms.example", @"steps": @[step(@"get-adb", NO, YES), step(@"developer-options", NO, NO)]};
+  NSDictionary *guide = @{@"hand": @"android",
+                          @"maker": @"samsung",
+                          @"ready": @NO,
+                          @"terms": @"https://terms.example",
+                          @"steps": @[step(@"get-adb", NO, YES), step(@"developer-options", NO, NO)]};
   look(hub, guide);
   MVCheck(@"adb: Google's terms come first", says(hub, @"This Mac talks to an Android phone through adb, which comes from Google under its own terms."), wordsOf(hub));
   [hub pokeClick:@"terms"];
@@ -254,12 +290,15 @@ static void checkNoteLeaves(MVHub *hub) {
 }
 
 static void checkWays(MVHub *hub) {
-  NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17", @"id": @"m"}], @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]};
+  NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17", @"id": @"m"}],
+                          @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]};
   NSDictionary *choices = @{@"simulator": kinds, @"emulator": kinds};
-  [hub show:@{@"devices": @[], @"choices": choices}];
+  [hub show:@{@"devices": @[],
+              @"choices": choices}];
   MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.2);
-  look(hub, @{@"steps": @[], @"ready": @NO});
+  look(hub, @{@"steps": @[],
+              @"ready": @NO});
   [hub pokeClick:@"startClients"];
   MVPump(0.3);
   MVCheck(@"started: Open goes to AI Clients", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
@@ -270,7 +309,10 @@ static void checkWays(MVHub *hub) {
   MVCheck(@"started: and to Help", [hub.placeShown isKindOfClass:MVHelpPane.class], nil);
   MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
-  look(hub, @{@"steps": @[], @"ready": @NO, @"client": @YES, @"prompt": @YES});
+  look(hub, @{@"steps": @[],
+              @"ready": @NO,
+              @"client": @YES,
+              @"prompt": @YES});
   NSWindow *window = hub.room.window;
   [hub pokeClick:@"newSimulator"];
   MVPump(0.3);

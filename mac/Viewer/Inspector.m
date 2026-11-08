@@ -94,9 +94,12 @@ static NSString *ms(id v) {
     _flow = [[MVFlowPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPaneFlow] = _flow;
     NSMutableArray *rules = [NSMutableArray arrayWithArray:@[
-      [head.topAnchor constraintEqualToAnchor:self.topAnchor constant:12],
-      [head.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:kInset],
-      [head.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-kInset],
+      [head.topAnchor constraintEqualToAnchor:self.topAnchor
+                                     constant:12],
+      [head.leadingAnchor constraintEqualToAnchor:self.leadingAnchor
+                                         constant:kInset],
+      [head.trailingAnchor constraintEqualToAnchor:self.trailingAnchor
+                                          constant:-kInset],
     ]];
     for (int i = 0; i < MVPanes; i++) {
       NSView *pane = _panes[i];
@@ -104,10 +107,14 @@ static NSString *ms(id v) {
       pane.hidden = i != MVPanePerf;
       [self addSubview:pane];
       [rules addObjectsFromArray:@[
-        [pane.topAnchor constraintEqualToAnchor:head.bottomAnchor constant:12],
-        [pane.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:kInset],
-        [pane.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-kInset],
-        [pane.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-kInset],
+        [pane.topAnchor constraintEqualToAnchor:head.bottomAnchor
+                                       constant:12],
+        [pane.leadingAnchor constraintEqualToAnchor:self.leadingAnchor
+                                           constant:kInset],
+        [pane.trailingAnchor constraintEqualToAnchor:self.trailingAnchor
+                                            constant:-kInset],
+        [pane.bottomAnchor constraintEqualToAnchor:self.bottomAnchor
+                                          constant:-kInset],
       ]];
     }
     [NSLayoutConstraint activateConstraints:rules];
@@ -182,9 +189,12 @@ static NSString *ms(id v) {
   stack.translatesAutoresizingMaskIntoConstraints = NO;
   [pane addSubview:stack];
   [NSLayoutConstraint activateConstraints:@[
-    [stack.topAnchor constraintEqualToAnchor:pane.topAnchor constant:6],
-    [stack.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor constant:4],
-    [stack.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor constant:-4],
+    [stack.topAnchor constraintEqualToAnchor:pane.topAnchor
+                                    constant:6],
+    [stack.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor
+                                        constant:4],
+    [stack.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor
+                                         constant:-4],
   ]];
   return pane;
 }
@@ -269,7 +279,8 @@ static NSString *ms(id v) {
   // a still screen is a good state, and sends nothing to count
   if (shown > 0) _lastRate = shown;
   _fps.stringValue = shown > 0 ? [NSString stringWithFormat:@"%.0f", shown] : @"Still";
-  _fpsNote.stringValue = shown > 0 ? @"frames a second" : _lastRate > 0 ? [NSString stringWithFormat:@"last moved at %.0f frames a second", _lastRate] : @"nothing has moved yet";
+  _fpsNote.stringValue = shown > 0 ? @"frames a second" : _lastRate > 0 ? [NSString stringWithFormat:@"last moved at %.0f frames a second", _lastRate]
+                                                                        : @"nothing has moved yet";
   _tiles[@"frames"].stringValue = [NSString stringWithFormat:@"%.0f", shown];
   _tiles[@"dropped"].stringValue = [NSString stringWithFormat:@"%@", s[@"dropped"] ?: @0];
   _tiles[@"latency"].stringValue = ms(s[@"captureP50"]);
@@ -331,9 +342,10 @@ static NSString *ms(id v) {
   [alert addButtonWithTitle:MVWord(@"Remove")].hasDestructiveAction = YES;
   [alert addButtonWithTitle:MVWord(@"Cancel")];
   NSString *key = row.key;
-  [alert beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse answer) {
-    if (answer == NSAlertFirstButtonReturn) MVEmitFrom(self, @{@"op": @"app", @"action": @"remove", @"id": key ?: @""});
-  }];
+  [alert beginSheetModalForWindow:self.window
+                completionHandler:^(NSModalResponse answer) {
+                  if (answer == NSAlertFirstButtonReturn) MVEmitFrom(self, @{@"op": @"app", @"action": @"remove", @"id": key ?: @""});
+                }];
 }
 
 @end

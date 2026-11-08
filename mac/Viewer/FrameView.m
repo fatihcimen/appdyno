@@ -190,8 +190,8 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
   CGRect screen = _layout.screen;
   BOOL sideways = _layout.body.width > _layout.body.height;
   CGRect place = sideways
-      ? CGRectMake(CGRectGetMaxX(screen) + (_layout.body.width - CGRectGetMaxX(screen) - across) / 2 - 2 * _layout.unit, CGRectGetMidY(screen) - across / 2, across, across)
-      : CGRectMake(CGRectGetMidX(screen) - across / 2, CGRectGetMaxY(screen) + (_layout.body.height - CGRectGetMaxY(screen) - across) / 2 - 2 * _layout.unit, across, across);
+                     ? CGRectMake(CGRectGetMaxX(screen) + (_layout.body.width - CGRectGetMaxX(screen) - across) / 2 - 2 * _layout.unit, CGRectGetMidY(screen) - across / 2, across, across)
+                     : CGRectMake(CGRectGetMidX(screen) - across / 2, CGRectGetMaxY(screen) + (_layout.body.height - CGRectGetMaxY(screen) - across) / 2 - 2 * _layout.unit, across, across);
   [self addKey:@"home" at:CGRectOffset(place, _pad, _pad) round:YES];
 }
 

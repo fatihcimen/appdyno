@@ -55,7 +55,8 @@ MVRow *MVDeviceRow(NSDictionary *device) {
 
 /// One phone whatever the way to it: a row by the network carries its serial on the cable.
 static NSString *phoneOf(NSDictionary *device) {
-  return device[@"sameAs"] ?: device[@"serial"] ?: device[@"id"];
+  return device[@"sameAs"] ?: device[@"serial"] ?
+                                                : device[@"id"];
 }
 
 /// A phone that left one way in and runs by another needs nothing of a person.
@@ -85,7 +86,9 @@ static MVRow *goneRow(NSDictionary *device) {
   for (NSDictionary *device in _devices) {
     if (!matches(device, words)) continue;
     BOOL phone = [device[@"kind"] isEqual:@"phone"], up = [device[@"state"] isEqual:@"running"];
-    [device[@"need"] ? needs : phone ? phones : up ? running : off addObject:MVDeviceRow(device)];
+    [device[@"need"] ? needs : phone ? phones
+                           : up      ? running
+                                     : off addObject:MVDeviceRow(device)];
   }
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   BOOL gone = _left && !hereAnotherWay(_left, _devices);

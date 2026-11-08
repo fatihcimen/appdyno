@@ -2,7 +2,9 @@
 // nothing at all to do while it stays as it is. A still grain over it keeps a slow gradient from showing bands.
 #import "Window.h"
 
-enum { kWide = 128, kTall = 84, kGrain = 192 };
+enum { kWide = 128,
+       kTall = 84,
+       kGrain = 192 };
 static const double kGrainAlpha = 0.012;
 
 static double linear(uint32_t channel) {

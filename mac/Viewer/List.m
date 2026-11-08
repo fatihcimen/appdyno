@@ -199,8 +199,10 @@ static NSString *identityOf(MVRow *row) {
   title.translatesAutoresizingMaskIntoConstraints = NO;
   [cell addSubview:title];
   [NSLayoutConstraint activateConstraints:@[
-    [title.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:6],
-    [title.bottomAnchor constraintEqualToAnchor:cell.bottomAnchor constant:-4],
+    [title.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor
+                                        constant:6],
+    [title.bottomAnchor constraintEqualToAnchor:cell.bottomAnchor
+                                       constant:-4],
   ]];
   return cell;
 }
@@ -210,7 +212,8 @@ static NSString *identityOf(MVRow *row) {
   MVRowCell *cell = [MVRowCell new];
   cell.toolTip = row.help;
   if (row.header) return [self headerCell:row.title in:cell];
-  NSView *icon = row.tile ? MVTile(row.symbol, row.tile, kTileSide) : row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: MVInkColor() size:15] : [NSView new];
+  NSView *icon = row.tile ? MVTile(row.symbol, row.tile, kTileSide) : row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: MVInkColor() size:15]
+                                                                                 : [NSView new];
   NSTextField *title = MVText(row.title, MVStyleBody);
   cell.title = title;
   NSTextField *detail = MVText(row.detail, MVStyleSub);
@@ -229,7 +232,8 @@ static NSString *identityOf(MVRow *row) {
     dot.translatesAutoresizingMaskIntoConstraints = NO;
     [cell addSubview:dot];
     [NSLayoutConstraint activateConstraints:@[
-      [dot.trailingAnchor constraintEqualToAnchor:cell.trailingAnchor constant:-8],
+      [dot.trailingAnchor constraintEqualToAnchor:cell.trailingAnchor
+                                         constant:-8],
       [dot.widthAnchor constraintEqualToConstant:14],
       [dot.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
     ]];
@@ -238,8 +242,10 @@ static NSString *identityOf(MVRow *row) {
   [cell addSubview:stack];
   [NSLayoutConstraint activateConstraints:@[
     [icon.widthAnchor constraintEqualToConstant:row.tile ? kTileSide : 18],
-    [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:row.tile ? 8 : 6],
-    [stack.trailingAnchor constraintLessThanOrEqualToAnchor:cell.trailingAnchor constant:-4],
+    [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor
+                                        constant:row.tile ? 8 : 6],
+    [stack.trailingAnchor constraintLessThanOrEqualToAnchor:cell.trailingAnchor
+                                                   constant:-4],
     [stack.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
   ]];
   return cell;

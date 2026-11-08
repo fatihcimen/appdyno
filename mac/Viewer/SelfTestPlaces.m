@@ -8,13 +8,20 @@ static NSMutableArray<NSDictionary *> *gAsked;
 static NSDictionary *fixture(void) {
   return @{
     @"rows": @[
-      @{@"name": @"One", @"state": @"connected", @"file": @"/x/one", @"lastSaid": @"2 minutes ago", @"check": @{@"en": @"Type `one`.", @"tr": @"`one` yazın."}},
+      @{@"name": @"One",
+        @"state": @"connected",
+        @"file": @"/x/one",
+        @"lastSaid": @"2 minutes ago",
+        @"check": @{@"en": @"Type `one`.", @"tr": @"`one` yazın."}},
       @{@"name": @"Two", @"state": @"added", @"file": @"/x/two"},
       @{@"name": @"Three", @"state": @"open", @"file": @"/x/three"},
       @{@"name": @"Four", @"state": @"refused", @"file": @"/x/four", @"why": @"not JSON"},
       @{@"name": @"Five", @"state": @"absent"},
       @{@"name": @"Six", @"state": @"browser"},
-      @{@"name": @"Seven", @"state": @"added", @"file": @"/x/seven", @"stale": @YES},
+      @{@"name": @"Seven",
+        @"state": @"added",
+        @"file": @"/x/seven",
+        @"stale": @YES},
     ],
     @"browser": @[@"Six"],
     @"server": @{},
@@ -48,7 +55,12 @@ static void checkStates(MVHub *hub) {
 static void checkChange(MVHub *hub) {
   MVCheck(@"clients: Update goes by the lines too", [clicked(hub, @"add:Seven")[@"do"] isEqual:@"preview"], nil);
   MVCheck(@"clients: Add asks for the change first", [clicked(hub, @"add:Three")[@"do"] isEqual:@"preview"], nil);
-  NSDictionary *preview = @{@"client": @"Three", @"remove": @NO, @"file": @"/x/three", @"did": @"added", @"backup": @YES, @"lines": @[@"+ the line"]};
+  NSDictionary *preview = @{@"client": @"Three",
+                            @"remove": @NO,
+                            @"file": @"/x/three",
+                            @"did": @"added",
+                            @"backup": @YES,
+                            @"lines": @[@"+ the line"]};
   [hub showClients:@{@"preview": preview}];
   MVCheck(@"clients: the lines stand before anything is done", [wordsOf(hub) containsString:@"+ the line"] && has(hub, @"apply:Three"), nil);
   MVCheck(@"clients: Cancel asks nothing, and takes the lines away", clicked(hub, @"cancel:Three") == nil && !has(hub, @"apply:Three"), nil);
@@ -57,8 +69,13 @@ static void checkChange(MVHub *hub) {
   NSDictionary *change = clicked(hub, @"apply:Three");
   MVCheck(@"clients: the second click makes the change", [change[@"do"] isEqual:@"change"] && [change[@"client"] isEqual:@"Three"] && ![change[@"remove"] boolValue], nil);
   NSMutableArray *rows = [fixture()[@"rows"] mutableCopy];
-  rows[2] = @{@"name": @"Three", @"state": @"added", @"file": @"/x/three", @"undo": @YES};
-  [hub showClients:@{@"rows": rows, @"browser": @[@"Six"], @"done": @{@"client": @"Three", @"did": @"added", @"backup": @"/x/three.backup"}}];
+  rows[2] = @{@"name": @"Three",
+              @"state": @"added",
+              @"file": @"/x/three",
+              @"undo": @YES};
+  [hub showClients:@{@"rows": rows,
+                     @"browser": @[@"Six"],
+                     @"done": @{@"client": @"Three", @"did": @"added", @"backup": @"/x/three.backup"}}];
   MVCheck(@"clients: what was done says so, with a way back", has(hub, @"undo:Three") && [wordsOf(hub) containsString:@"/x/three.backup"], wordsOf(hub));
   MVCheck(@"clients: Undo asks for it", [clicked(hub, @"undo:Three")[@"do"] isEqual:@"undo"], nil);
   [hub showClients:fixture()];
@@ -81,7 +98,8 @@ static void checkTest(MVHub *hub) {
   NSMutableDictionary *later = [rows[0] mutableCopy];
   later[@"lastSaid"] = @"3 minutes ago";
   rows[0] = later;
-  [hub showClients:@{@"rows": rows, @"browser": @[@"Six"]}];
+  [hub showClients:@{@"rows": rows,
+                     @"browser": @[@"Six"]}];
   MVCheck(@"clients: time going by draws no row again, and takes no button from a pointer", button.window != nil && [wordsOf(hub) containsString:MVWord(@"Connected · last call 3 minutes ago")], nil);
 }
 
@@ -93,10 +111,13 @@ static void checkServer(MVHub *hub) {
   MVCheck(@"server: and shows it", [wordsOf(hub) containsString:@"the-token"], nil);
   MVCheck(@"server: Hide asks nothing, and hides it", clicked(hub, @"showToken") == nil && ![wordsOf(hub) containsString:@"the-token"], nil);
   MVCheck(@"server: Copy asks for it, and does not show it", [clicked(hub, @"copyToken")[@"do"] isEqual:@"copyToken"], nil);
-  [hub showClients:@{@"copy": @"the-token", @"concealed": @YES}];
+  [hub showClients:@{@"copy": @"the-token",
+                     @"concealed": @YES}];
   MVCheck(@"server: a copied token is on the board, marked not to be kept", [[MVPlaceBoard() stringForType:NSPasteboardTypeString] isEqual:@"the-token"] && [MVPlaceBoard() stringForType:@"org.nspasteboard.ConcealedType"] != nil && ![wordsOf(hub) containsString:@"the-token"], nil);
   MVCheck(@"server: Start asks for it", [clicked(hub, @"serverPower")[@"do"] isEqual:@"start"], nil);
-  [hub showClients:@{@"rows": fixture()[@"rows"], @"browser": @[@"Six"], @"server": @{@"address": @"http://127.0.0.1:1/mcp"}}];
+  [hub showClients:@{@"rows": fixture()[@"rows"],
+                     @"browser": @[@"Six"],
+                     @"server": @{@"address": @"http://127.0.0.1:1/mcp"}}];
   MVCheck(@"server: it says where it listens, in a window behind others too", [wordsOf(hub) containsString:MVWord(@"Listening on http://127.0.0.1:1/mcp")], wordsOf(hub));
   MVCheck(@"server: New Token asks for one", [clicked(hub, @"newToken")[@"do"] isEqual:@"renewToken"], nil);
   [hub pokeClick:@"copyAddress"];
@@ -105,7 +126,9 @@ static void checkServer(MVHub *hub) {
   MVCheck(@"server: Stop asks for that", [clicked(hub, @"serverPower")[@"do"] isEqual:@"stop"], nil);
   [hub showClients:@{@"serverFailed": @"no port free"}];
   [hub showClients:fixture()];
-  [hub showClients:@{@"rows": @[@{@"name": @"", @"state": @"open", @"file": @"/x/none"}, @{@"name": @"\U0001F98A Fox", @"state": @"open", @"file": @"/x/fox"}], @"browser": @[], @"server": @{}}];
+  [hub showClients:@{@"rows": @[@{@"name": @"", @"state": @"open", @"file": @"/x/none"}, @{@"name": @"\U0001F98A Fox", @"state": @"open", @"file": @"/x/fox"}],
+                     @"browser": @[],
+                     @"server": @{}}];
   MVCheck(@"clients: a client of no name, or of a letter two units long, still gets its row", has(hub, @"add:") && has(hub, @"add:\U0001F98A Fox"), wordsOf(hub));
   [hub showClients:fixture()];
   MVCheck(@"server: why it could not start outlasts the next look", [wordsOf(hub) containsString:@"no port free"], wordsOf(hub));
@@ -138,7 +161,13 @@ static void checkHelp(MVHub *hub) {
   MVCheck(@"help: a client's own note stands on the cards it touches", [words containsString:MVSaid(@{@"en": @"It has 120 seconds.", @"tr": @"120 saniyesi var."})], words);
   for (NSString *word in @[@"could not judge", @"noisy", @"mirrored", @"modelled"]) MVCheck([@"help: says what this means: " stringByAppendingString:word], [words containsString:MVWord(word)], nil);
   MVCheck(@"help: Run Doctor asks for it", [clicked(hub, @"runDoctor")[@"do"] isEqual:@"doctor"], nil);
-  [hub showClients:@{@"doctor": @[@{@"name": @"adb", @"ok": @NO, @"detail": @"not found", @"fix": @"get it"}, @{@"name": @"node", @"ok": @YES, @"detail": @"22"}]}];
+  [hub showClients:@{@"doctor": @[@{@"name": @"adb",
+                                    @"ok": @NO,
+                                    @"detail": @"not found",
+                                    @"fix": @"get it"},
+                                  @{@"name": @"node",
+                                    @"ok": @YES,
+                                    @"detail": @"22"}]}];
   MVPump(0.1);
   MVCheck(@"help: its checks stand there, with what to do", [wordsOf(hub) containsString:@"get it"], nil);
   NSMenu *bar = MVHubMenu();

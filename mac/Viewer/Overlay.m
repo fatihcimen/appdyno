@@ -51,10 +51,14 @@ static MVOverlayCard *card(NSArray<NSView *> *parts) {
   stack.translatesAutoresizingMaskIntoConstraints = NO;
   [box addSubview:stack];
   [NSLayoutConstraint activateConstraints:@[
-    [stack.leadingAnchor constraintEqualToAnchor:box.leadingAnchor constant:kInset],
-    [stack.trailingAnchor constraintEqualToAnchor:box.trailingAnchor constant:-kInset],
-    [stack.topAnchor constraintEqualToAnchor:box.topAnchor constant:kInset],
-    [stack.bottomAnchor constraintEqualToAnchor:box.bottomAnchor constant:-kInset],
+    [stack.leadingAnchor constraintEqualToAnchor:box.leadingAnchor
+                                        constant:kInset],
+    [stack.trailingAnchor constraintEqualToAnchor:box.trailingAnchor
+                                         constant:-kInset],
+    [stack.topAnchor constraintEqualToAnchor:box.topAnchor
+                                    constant:kInset],
+    [stack.bottomAnchor constraintEqualToAnchor:box.bottomAnchor
+                                       constant:-kInset],
   ]];
   return box;
 }
@@ -67,7 +71,8 @@ static void place(NSView *box, NSView *view, NSLayoutConstraint *vertical) {
     vertical,
     wide,
     [box.centerXAnchor constraintEqualToAnchor:view.centerXAnchor],
-    [box.widthAnchor constraintLessThanOrEqualToAnchor:view.widthAnchor constant:-24],
+    [box.widthAnchor constraintLessThanOrEqualToAnchor:view.widthAnchor
+                                              constant:-24],
   ]];
 }
 

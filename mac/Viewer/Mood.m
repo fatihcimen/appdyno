@@ -3,7 +3,9 @@
 #import "Viewer.h"
 #import "Window.h"
 
-enum { kMoodColumns = 5, kMoodRows = 9, kMoodSamples = 6 };
+enum { kMoodColumns = 5,
+       kMoodRows = 9,
+       kMoodSamples = 6 };
 // the rate a backdrop follows its picture: it is mood, and costs nothing for being slow
 static const double kBackdropSeconds = 2;
 static const double kPlaceSeconds = 0.24;
@@ -144,9 +146,12 @@ CGImageRef MVImageMood(CVImageBufferRef image, BOOL dark) {
     [view.layer insertSublayer:_layer atIndex:0];
     [self repaint];
     __weak MVBackdrop *weak = self;
-    [NSWorkspace.sharedWorkspace.notificationCenter addObserverForName:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *n) {
-      [weak settingsChanged];
-    }];
+    [NSWorkspace.sharedWorkspace.notificationCenter addObserverForName:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
+                                                                object:nil
+                                                                 queue:NSOperationQueue.mainQueue
+                                                            usingBlock:^(NSNotification *n) {
+                                                              [weak settingsChanged];
+                                                            }];
   }
   return self;
 }

@@ -20,14 +20,22 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   [pane show:@{@"op": @"answer", @"name": @"openLink", @"line": @"Connecting to a device"}];
   MVCheck(@"links: progress shows as it comes", [pane.answer.said containsString:@"Connecting"], pane.answer.said);
   MVHoldStill(YES);
-  [pane show:@{@"op": @"answer", @"name": @"openLink", @"ok": @YES, @"text": @"Opened app://screen/form", @"recent": @[@"app://screen/form", @"https://example.test/item/7"]}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"openLink",
+               @"ok": @YES,
+               @"text": @"Opened app://screen/form",
+               @"recent": @[@"app://screen/form", @"https://example.test/item/7"]}];
   MVCheck(@"links: what the op did is said, with no move for a person who asked for less", [pane.answer.said isEqual:@"Opened app://screen/form"] && ![answer.layer animationForKey:@"slide"], pane.answer.said);
   MVHoldStill(NO);
   MVCheck(@"links: the recent links stand under a heading", pane.rows.count == 3 && pane.rows[0].header && [pane.rows[2].key isEqual:@"https://example.test/item/7"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
   NSString *refusal = @"this link is not on this server's allow list", *hint = @"change that and call again: nothing was done";
   [pane fill:@"https://elsewhere.test/" app:nil];
   MVPressReturn(pane.window);
-  [pane show:@{@"op": @"answer", @"name": @"openLink", @"ok": @NO, @"text": refusal, @"hint": hint}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"openLink",
+               @"ok": @NO,
+               @"text": refusal,
+               @"hint": hint}];
   MVCheck(@"links: a refusal is shown whole, with what to do", [pane.answer.said isEqual:MVWord(refusal)] && [pane.answer.hint isEqual:MVWord(hint)], [NSString stringWithFormat:@"%@ / %@", pane.answer.said, pane.answer.hint]);
   MVCheck(@"links: an answer arrives with a move, where motion is on", [answer.layer animationForKey:@"slide"] != nil, nil);
   [pane.window layoutIfNeeded];
@@ -39,7 +47,9 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   MVPump(0.2);
   MVPressReturn(pane.window);
   MVCheck(@"links: a recent link chosen opens again with Return", [sent.lastObject[@"url"] isEqual:@"https://example.test/item/7"], [sent.lastObject description]);
-  [pane show:@{@"op": @"answer", @"name": @"openLink", @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"openLink",
+               @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
   NSArray<NSString *> *titles = [pane.rows valueForKey:@"title"];
   MVCheck(@"links: the links the app opens stand under their own heading, after the recent ones", titles.count == 7 && [titles[3] isEqual:MVWord(@"This app's links")] && [pane.rows.lastObject.detail isEqual:[NSString stringWithFormat:@"%@ · verified", MVWord(@"domain")]], [titles componentsJoinedByString:@"|"]);
   MVPokeListRow([pane valueForKey:@"_recent"], @"https://example.test/order*");
@@ -51,7 +61,8 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
 void MVCheckLinks(void) {
   MVWindow *window = [MVWindow new];
   window.behind = YES;
-  [window configure:@{@"title": @"links", @"look": @{@"controls": @[@"home"]}}];
+  [window configure:@{@"title": @"links",
+                      @"look": @{@"controls": @[@"home"]}}];
   [window.nsWindow setContentSize:NSMakeSize(1200, 800)];
   MVLinkPane *pane = window.inspector.links;
   NSMutableArray<NSDictionary *> *sent = [NSMutableArray array];
@@ -63,7 +74,10 @@ void MVCheckLinks(void) {
   NSTextField *field = [pane valueForKey:@"_field"];
   MVCheck(@"links: Open Link in More shows the pane, its field taking the keyboard", window.inspecting && window.inspector.chosen == MVPaneLinks && typesInto(window.nsWindow, field), NSStringFromClass([window.nsWindow.firstResponder class]));
   MVCheck(@"links: the pane asks for this device's recent links and the app in front as it shows", sent.count == 1 && [sent[0][@"name"] isEqual:@"links"], sent.description);
-  [pane show:@{@"op": @"answer", @"name": @"openLink", @"recent": @[], @"app": @"dev.app"}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"openLink",
+               @"recent": @[],
+               @"app": @"dev.app"}];
   MVCheck(@"links: its field and button say what they are to a screen reader", [field.accessibilityLabel isEqual:MVWord(@"Link to open")] && [MVFindControl(window.nsWindow.contentView, @"openLinkGo").accessibilityLabel isEqual:MVControlTitle(@"openLink")], nil);
   [sent removeAllObjects];
   [pane fill:@"  appdyno-fixture://open/form " app:nil];

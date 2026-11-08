@@ -153,7 +153,13 @@ static NSString *durationOf(double seconds) {
   NSString *sentence = sentenceOf(run);
   BOOL good = [run[@"code"] intValue] == 0, stopped = [run[@"stopped"] boolValue], more = unfinished(sentence);
   BOOL plain = [sentence isEqual:@"Stopped"];
-  [self tell:sentence symbol:plain ? @"stop.circle" : more ? @"exclamationmark.triangle.fill" : good || stopped ? @"checkmark.circle.fill" : @"xmark.octagon.fill" color:plain ? MVQuietColor() : more ? MVOrange() : good || stopped ? MVGreen() : MVRed()];
+  [self tell:sentence
+      symbol:plain ? @"stop.circle" : more          ? @"exclamationmark.triangle.fill"
+                                  : good || stopped ? @"checkmark.circle.fill"
+                                                    : @"xmark.octagon.fill"
+       color:plain ? MVQuietColor() : more          ? MVOrange()
+                                  : good || stopped ? MVGreen()
+                                                    : MVRed()];
   [self turn:NO];
   [_resultLine layoutSubtreeIfNeeded];
   MVPulse(_mark, kEndGrows);

@@ -32,7 +32,9 @@ void MVRealClick(NSWindow *window, NSPoint at) {
 
 NSDictionary *MVClickControl(NSWindow *window, NSButton *_Nullable button, NSString *name) {
   // a hidden control takes no click, and one where it last stood would land on what stands there now
-  if (!button.window || button.isHiddenOrHasHiddenAncestor) return @{@"op": @"clicked", @"name": name, @"found": @NO};
+  if (!button.window || button.isHiddenOrHasHiddenAncestor) return @{@"op": @"clicked",
+                                                                     @"name": name,
+                                                                     @"found": @NO};
   [window layoutIfNeeded];
   [button scrollRectToVisible:button.bounds];
   [window displayIfNeeded];
@@ -40,7 +42,11 @@ NSDictionary *MVClickControl(NSWindow *window, NSButton *_Nullable button, NSStr
   // the window's top view: a point in the window is a point in what it stands on
   NSView *under = [window.contentView.superview hitTest:at];
   MVRealClick(window, at);
-  return @{@"op": @"clicked", @"name": name, @"found": @YES, @"under": NSStringFromClass(under.class) ?: @"", @"isIt": @(under == button || [under isDescendantOf:button])};
+  return @{@"op": @"clicked",
+           @"name": name,
+           @"found": @YES,
+           @"under": NSStringFromClass(under.class) ?: @"",
+           @"isIt": @(under == button || [under isDescendantOf:button])};
 }
 
 /// A click on a control where it stands, as a mouse's: through the window's own hit testing, and no shortcut to what it does.

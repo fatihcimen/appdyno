@@ -17,7 +17,8 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   NSString *with = message[@"with"] ?: @"the other";
   self.line.both = both;
   self.line.failing = message[@"failing"];
-  self.line.pairing = ended ? nil : both ? @"To both" : @"Here only";
+  self.line.pairing = ended ? nil : both ? @"To both"
+                                         : @"Here only";
   NSButton *button = [self.bar buttonNamed:@"both"];
   button.enabled = !ended;
   [self.bar paint:@"both" symbol:@"link" color:both ? MVAccent() : MVInkColor()];
@@ -39,9 +40,10 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   panel.allowedFileTypes = @[@"flow"];
 #pragma clang diagnostic pop
-  [panel beginSheetModalForWindow:self.nsWindow completionHandler:^(NSModalResponse answer) {
-    if (answer == NSModalResponseOK) MVEmitFrom(self.screenView, @{@"op": @"control", @"name": @"journey", @"file": panel.URL.path ?: @""});
-  }];
+  [panel beginSheetModalForWindow:self.nsWindow
+                completionHandler:^(NSModalResponse answer) {
+                  if (answer == NSModalResponseOK) MVEmitFrom(self.screenView, @{@"op": @"control", @"name": @"journey", @"file": panel.URL.path ?: @""});
+                }];
 }
 
 @end

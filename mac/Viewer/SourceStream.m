@@ -327,9 +327,9 @@ static NSString *askAdb(int fd, NSString *request) {
   NSNumber *requestId = m[@"id"];
   NSNumber *sentAt = nil;
   if (requestId) @synchronized(self) {
-    sentAt = _pings[requestId];
-    [_pings removeObjectForKey:requestId];
-  }
+      sentAt = _pings[requestId];
+      [_pings removeObjectForKey:requestId];
+    }
   id<MVSink> sink = _sink;
   if (sentAt) {
     double now = MVNowMs(), rtt = now - sentAt.doubleValue;

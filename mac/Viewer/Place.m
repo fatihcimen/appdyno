@@ -43,10 +43,13 @@ NSScrollView *MVPlacePage(NSView *column) {
     [page.leadingAnchor constraintEqualToAnchor:clip.leadingAnchor],
     [page.trailingAnchor constraintEqualToAnchor:clip.trailingAnchor],
     wide,
-    [column.widthAnchor constraintLessThanOrEqualToAnchor:page.widthAnchor constant:-2 * kMargin],
+    [column.widthAnchor constraintLessThanOrEqualToAnchor:page.widthAnchor
+                                                 constant:-2 * kMargin],
     [column.centerXAnchor constraintEqualToAnchor:page.centerXAnchor],
-    [column.topAnchor constraintEqualToAnchor:page.topAnchor constant:kMargin],
-    [column.bottomAnchor constraintEqualToAnchor:page.bottomAnchor constant:-kMargin],
+    [column.topAnchor constraintEqualToAnchor:page.topAnchor
+                                     constant:kMargin],
+    [column.bottomAnchor constraintEqualToAnchor:page.bottomAnchor
+                                        constant:-kMargin],
   ]];
   return scroll;
 }
@@ -135,10 +138,14 @@ NSView *MVCardInset(NSView *content, CGFloat tall, CGFloat wide) {
   content.translatesAutoresizingMaskIntoConstraints = NO;
   [card addSubview:content];
   [NSLayoutConstraint activateConstraints:@[
-    [content.topAnchor constraintEqualToAnchor:card.topAnchor constant:tall],
-    [content.bottomAnchor constraintEqualToAnchor:card.bottomAnchor constant:-tall],
-    [content.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:wide],
-    [content.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-wide],
+    [content.topAnchor constraintEqualToAnchor:card.topAnchor
+                                      constant:tall],
+    [content.bottomAnchor constraintEqualToAnchor:card.bottomAnchor
+                                         constant:-tall],
+    [content.leadingAnchor constraintEqualToAnchor:card.leadingAnchor
+                                          constant:wide],
+    [content.trailingAnchor constraintEqualToAnchor:card.trailingAnchor
+                                           constant:-wide],
   ]];
   return card;
 }
@@ -163,10 +170,14 @@ NSView *MVNote(NSView *content) {
   content.translatesAutoresizingMaskIntoConstraints = NO;
   [note addSubview:content];
   [NSLayoutConstraint activateConstraints:@[
-    [content.topAnchor constraintEqualToAnchor:note.topAnchor constant:kCardInset],
-    [content.bottomAnchor constraintEqualToAnchor:note.bottomAnchor constant:-kCardInset],
-    [content.leadingAnchor constraintEqualToAnchor:note.leadingAnchor constant:kCardInset],
-    [content.trailingAnchor constraintEqualToAnchor:note.trailingAnchor constant:-kCardInset],
+    [content.topAnchor constraintEqualToAnchor:note.topAnchor
+                                      constant:kCardInset],
+    [content.bottomAnchor constraintEqualToAnchor:note.bottomAnchor
+                                         constant:-kCardInset],
+    [content.leadingAnchor constraintEqualToAnchor:note.leadingAnchor
+                                          constant:kCardInset],
+    [content.trailingAnchor constraintEqualToAnchor:note.trailingAnchor
+                                           constant:-kCardInset],
   ]];
   return note;
 }
@@ -178,7 +189,8 @@ NSView *MVIndented(NSView *view, CGFloat left) {
   [NSLayoutConstraint activateConstraints:@[
     [view.topAnchor constraintEqualToAnchor:holder.topAnchor],
     [view.bottomAnchor constraintEqualToAnchor:holder.bottomAnchor],
-    [view.leadingAnchor constraintEqualToAnchor:holder.leadingAnchor constant:left],
+    [view.leadingAnchor constraintEqualToAnchor:holder.leadingAnchor
+                                       constant:left],
     [view.trailingAnchor constraintEqualToAnchor:holder.trailingAnchor],
   ]];
   return holder;
@@ -195,7 +207,8 @@ NSView *MVPlaceRow(NSView *words, NSArray<NSView *> *ends) {
   }
   [NSLayoutConstraint activateConstraints:@[
     [words.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
-    [words.trailingAnchor constraintEqualToAnchor:end.leadingAnchor constant:-kCardInset],
+    [words.trailingAnchor constraintEqualToAnchor:end.leadingAnchor
+                                         constant:-kCardInset],
     [end.trailingAnchor constraintEqualToAnchor:row.trailingAnchor],
     [words.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
     [end.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
@@ -241,7 +254,8 @@ NSView *MVFieldPlate(NSTextField *field, NSView *_Nullable end) {
   [NSLayoutConstraint activateConstraints:@[
     [plate.heightAnchor constraintEqualToConstant:kPlateHigh],
     [field.centerYAnchor constraintEqualToAnchor:plate.centerYAnchor],
-    [field.leadingAnchor constraintEqualToAnchor:plate.leadingAnchor constant:kPlateInset],
+    [field.leadingAnchor constraintEqualToAnchor:plate.leadingAnchor
+                                        constant:kPlateInset],
   ]];
   if (!end) {
     [field.trailingAnchor constraintEqualToAnchor:plate.trailingAnchor constant:-kPlateInset].active = YES;
@@ -251,8 +265,10 @@ NSView *MVFieldPlate(NSTextField *field, NSView *_Nullable end) {
   [plate addSubview:end];
   [NSLayoutConstraint activateConstraints:@[
     [end.centerYAnchor constraintEqualToAnchor:plate.centerYAnchor],
-    [end.trailingAnchor constraintEqualToAnchor:plate.trailingAnchor constant:-kPlateInset],
-    [field.trailingAnchor constraintEqualToAnchor:end.leadingAnchor constant:-kPlateInset / 2],
+    [end.trailingAnchor constraintEqualToAnchor:plate.trailingAnchor
+                                       constant:-kPlateInset],
+    [field.trailingAnchor constraintEqualToAnchor:end.leadingAnchor
+                                         constant:-kPlateInset / 2],
   ]];
   return plate;
 }
