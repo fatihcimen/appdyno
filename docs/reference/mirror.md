@@ -245,7 +245,7 @@ Tools runs what appdyno does at a terminal, each row the very command, spawned b
 | Check for Updates, Update                             | `update --check`, `update`                            |
 | Build Runner, in Connect a Phone                      | `ios build`                                           |
 
-Elsewhere in the hub: Doctor is in Help, the sidebar has `devices`, a new simulator or emulator with start and shut down, and AI Clients has `mcp --http` and each client's `install`.
+Elsewhere in the hub: Doctor is in Help, the sidebar has `devices`, making a new simulator or emulator, and starting and shutting one down, and AI Clients has `mcp --http` and each client's `install`.
 
 Left out on purpose, as they are for CI or scripts, or belong to a session:
 

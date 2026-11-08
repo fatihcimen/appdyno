@@ -245,7 +245,7 @@ Araçlar, appdyno'nun bir terminalde yaptığını çalıştırır; her satır k
 | Güncellemeleri Denetle, Güncelle                                   | `update --check`, `update`                            |
 | Telefon Bağla içinde Çalıştırıcıyı Derle                           | `ios build`                                           |
 
-Hub'ın başka yerlerinde: Doktor Yardım'dadır; kenar çubuğunda `devices`, yeni simülatör ya da emülatör ile başlatma ve kapatma vardır; Yapay Zekâ İstemcileri'nde de `mcp --http` ve her istemcinin `install`'ı vardır.
+Hub'ın başka yerlerinde: Doktor Yardım'dadır; kenar çubuğunda `devices`, yeni bir simülatör ya da emülatör oluşturma ve birini başlatıp kapatma vardır; Yapay Zekâ İstemcileri'nde de `mcp --http` ve her istemcinin `install`'ı vardır.
 
 CI ya da betikler için oldukları ya da bir oturuma ait oldukları için bilerek dışarıda bırakılanlar:
 
