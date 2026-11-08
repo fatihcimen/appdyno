@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A checkout's iOS runner built before its sources in `ios/` last changed is said to be so, by `appdyno doctor` as a warning with the line that builds it, and at a runner start in progress: a phone run took a 5-day-old runner without the Wi-Fi fixes and waited 180 s for a port that never answered. Nothing is refused or built by itself; a packaged build is keyed by its sources' hash as before.
 - `launch_app` `language` on a simulator and an iPhone is for that launch alone again: since `locale` per app came, a launch in Turkish was held as that app's language, and the next plain launch was still in Turkish. `device_setting locale` for an app still holds until `restore`.
 - An iOS runner's read asks XCTest only for what its answer uses, 10 of the attributes XCTest fetches by default: on an iPhone 17 Pro simulator with iOS 27.2, Settings read in 56 ms against 71-73 and the home screen app in 43-44 against 54-55, the same trees, at load 6 to 8. Where XCTest lacks a part of its private request, the runner reads as before. On an iPhone 13 Pro Max with iOS 27.2, Settings read in 307-310 ms against 348-350 and the home screen app in 150 against 181-184, again the same trees.
 - `alert deny` on an iPhone's location prompt taps "Don't Allow": in Turkish it tapped the Precise Location switch, which comes after it twice.

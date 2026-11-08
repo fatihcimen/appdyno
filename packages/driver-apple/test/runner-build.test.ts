@@ -1,10 +1,48 @@
-import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { inCall } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { buildPhase, xcodebuildTelling } from '../src/runner-build.js';
+import { BUILD_LINE, buildPhase, checkoutBehind, xcodebuildTelling } from '../src/runner-build.js';
+
+describe("a checkout's runner products", () => {
+  /** An ios folder with the runner's sources and a build of them, each file made at `at` seconds from now. */
+  const checkout = () => {
+    const ios = mkdtempSync(join(tmpdir(), 'appdyno-ios-'));
+    const at = (file: string, s: number) => {
+      const path = join(ios, file);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, '');
+      const t = Date.now() / 1000 + s;
+      utimesSync(path, t, t);
+    };
+    for (const f of ['Runner/A.swift', 'RunnerCore/Sources/B.swift', 'Fixture/C.swift']) at(f, 0);
+    at('Appdyno.xcodeproj/project.pbxproj', 0);
+    at('.derived-device/Build/Products/Runner_iphoneos27.1-arm64.xctestrun', 60);
+    return { ios, at, products: join(ios, '.derived-device/Build/Products') };
+  };
+
+  it('are behind once a source of the runner changed after they were built, and say the line that builds them', () => {
+    const { ios, at, products } = checkout();
+    expect(checkoutBehind('device', products, ios)).toBeUndefined();
+    // SwiftPM's own folder, and the project's per-person state, are no source
+    at('RunnerCore/.build/x.o', 120);
+    at('Appdyno.xcodeproj/xcuserdata/me.xcuserstate', 120);
+    expect(checkoutBehind('device', products, ios)).toBeUndefined();
+    at('RunnerCore/Sources/B.swift', 120);
+    expect(checkoutBehind('device', products, ios)).toBe(BUILD_LINE.device);
+    expect(BUILD_LINE.device).toContain('-derivedDataPath .derived-device');
+  });
+
+  it('are none of this when they are not the checkout’s own', () => {
+    const { ios, at } = checkout();
+    at('Fixture/C.swift', 120);
+    const elsewhere = join(ios, 'elsewhere');
+    at('elsewhere/Runner_iphoneos27.1-arm64.xctestrun', 0);
+    expect(checkoutBehind('device', elsewhere, ios)).toBeUndefined();
+  });
+});
 
 describe('the runner build', () => {
   const path = process.env.PATH;

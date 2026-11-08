@@ -1,9 +1,10 @@
+import { join } from 'node:path';
 import { run, type Check, type DeviceProvider } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './simulator.js';
 import { Simulators } from './simulators.js';
 import { phoneRunnerApp } from './phone.js';
-import { iosProducts } from './runner-build.js';
+import { checkoutBehind, iosProducts } from './runner-build.js';
 import { DirectSim } from './simdirect.js';
 import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js';
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
@@ -34,18 +35,18 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
     return out;
   }
   // looked up only: a missing runner is built once on its first use, never by doctor
+  const runner = (name: string, kind: 'simulator' | 'device', products?: string, at = products) => {
+    if (!products || !at) return warn(name, 'not built yet', RUNNER_NOT_BUILT);
+    const behind = checkoutBehind(kind, products);
+    return behind
+      ? warn(name, `older than its sources in ios/: ${at}`, behind)
+      : { name, ok: true, detail: at };
+  };
   const sim = await iosProducts('simulator', false).catch(() => undefined);
-  out.push(
-    sim
-      ? { name: 'ios runner (simulator)', ok: true, detail: sim }
-      : warn('ios runner (simulator)', 'not built yet', RUNNER_NOT_BUILT),
-  );
+  out.push(runner('ios runner (simulator)', 'simulator', sim));
   const phone = await phoneRunnerApp(false).catch(() => undefined);
-  out.push(
-    phone
-      ? { name: 'ios runner (iPhone)', ok: true, detail: phone }
-      : warn('ios runner (iPhone)', 'not built yet', RUNNER_NOT_BUILT),
-  );
+  // the app is Debug-iphoneos/Runner-Runner.app in the products
+  out.push(runner('ios runner (iPhone)', 'device', phone && join(phone, '../..'), phone));
   const phones = (await listPhones().catch(() => [])).map((p) => p.udid);
   const explicit = phoneSigningFromEnv();
   if (!phones.length && !explicit)

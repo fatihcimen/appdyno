@@ -11,12 +11,52 @@ import { xcodeEnv } from './simctl.js';
 
 const buildIds = new Map<string, { mtime: number; sha256: string }>();
 
+type Kind = 'simulator' | 'device';
+const DERIVED = { simulator: '.derived', device: '.derived-device' } as const;
+
+/** The line that builds a checkout's runner, run from its root. */
+export const BUILD_LINE = {
+  simulator:
+    "(cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)",
+  device:
+    "(cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner -destination 'generic/platform=iOS' -derivedDataPath .derived-device CODE_SIGNING_ALLOWED=NO)",
+} as const;
+
+/** What a build of the runner reads in a checkout's ios folder. */
+const SOURCES = ['Runner', 'RunnerCore', 'Fixture', 'Appdyno.xcodeproj/project.pbxproj'];
+
+/** The last change under a path, a folder's own (a file gone) too; dot folders, SwiftPM's .build, aside. */
+function lastChange(path: string): number {
+  const s = statSync(path, { throwIfNoEntry: false });
+  if (!s?.isDirectory()) return s?.mtimeMs ?? 0;
+  const inside = readdirSync(path).filter((f) => !f.startsWith('.'));
+  return Math.max(s.mtimeMs, ...inside.map((f) => lastChange(join(path, f))));
+}
+
+/**
+ * Where the products are a checkout's own and were built before its runner's sources last changed: the line that
+ * builds them again. A packaged build is keyed by its sources' hash instead.
+ */
+export function checkoutBehind(
+  kind: Kind,
+  products: string,
+  ios = inCheckout('ios'),
+): string | undefined {
+  if (!ios || products !== join(ios, DERIVED[kind], 'Build/Products')) return undefined;
+  // xcodebuild writes the xctestrun at every build, one that changes nothing too
+  const built = Math.max(
+    0,
+    ...readdirSync(products)
+      .filter((f) => f.endsWith('.xctestrun'))
+      .map((f) => statSync(join(products, f)).mtimeMs),
+  );
+  return Math.max(...SOURCES.map((p) => lastChange(join(ios, p)))) > built
+    ? BUILD_LINE[kind]
+    : undefined;
+}
+
 /** The runner's products for a simulator or a phone: a development build, else built once from the packaged sources. */
-export async function iosProducts(
-  kind: 'simulator' | 'device',
-  build = true,
-): Promise<string | undefined> {
-  const derived = kind === 'simulator' ? '.derived' : '.derived-device';
+export async function iosProducts(kind: Kind, build = true): Promise<string | undefined> {
   const env =
     kind === 'simulator'
       ? process.env.APPDYNO_IOS_PRODUCTS
@@ -25,10 +65,15 @@ export async function iosProducts(
   const has = (dir: string) =>
     existsSync(dir) && readdirSync(dir).some((f) => f.includes(sdk) && f.endsWith('.xctestrun'));
   const repo = inCheckout('ios');
-  const found = [env, repo && join(repo, derived, 'Build/Products')].find(
+  const found = [env, repo && join(repo, DERIVED[kind], 'Build/Products')].find(
     (d): d is string => !!d && has(d),
   );
-  if (found) return found;
+  if (found) {
+    // said, not refused nor built here: a person decides when to build
+    const behind = checkoutBehind(kind, found, repo);
+    if (behind) reportProgress(`this checkout's iOS runner is older than ios/: ${behind}`);
+    return found;
+  }
   const src = inPackage('ios');
   if (!src || !existsSync(join(src, 'Appdyno.xcodeproj'))) return undefined;
   const id = (await readFile(join(src, 'sources.sha256'), 'utf8').catch(() => 'unknown'))
@@ -149,7 +194,7 @@ export async function runnerBuild(): Promise<{ xctestrun: string; sha256: string
     throw new DeviceError(
       'UNSUPPORTED',
       'the iOS runner is not built',
-      "build it: (cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)",
+      `build it: ${BUILD_LINE.simulator}`,
     );
   // the home screen shows the runner as appdyno (once per build; the test binary is not touched)
   await brandSimulatorRunner(join(dir, 'Debug-iphonesimulator/Runner-Runner.app'));

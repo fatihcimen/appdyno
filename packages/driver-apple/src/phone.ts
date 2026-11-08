@@ -20,7 +20,7 @@ import {
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { type RunnerTransport, IosRunnerLauncher } from './runner.js';
-import { iosProducts } from './runner-build.js';
+import { BUILD_LINE, iosProducts } from './runner-build.js';
 import { PHONE_CONTROLS } from './mirror-press.js';
 import { PhoneInspector } from './phone-inspector.js';
 import { PHONE_LINKS } from './settings-pages.js';
@@ -40,7 +40,7 @@ export async function phoneRunnerApp(build = true): Promise<string> {
     throw new DeviceError(
       'UNSUPPORTED',
       'the iPhone runner is not built',
-      "build it: (cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner -destination 'generic/platform=iOS' -derivedDataPath .derived-device CODE_SIGNING_ALLOWED=NO)",
+      `build it: ${BUILD_LINE.device}`,
     );
   return app;
 }
