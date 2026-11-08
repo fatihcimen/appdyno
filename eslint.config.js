@@ -2,25 +2,6 @@ import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
-/** What is clean under the type-checked rules: the rest keeps the recommended ones until it is, and then this goes. */
-const strict = [
-  '*.js',
-  '*.ts',
-  'packages/protocol/**',
-  'packages/mcp/**',
-  'packages/flows/**',
-  'packages/cli/**',
-  'packages/core/**',
-  'packages/ops/**',
-  'packages/hub/**',
-  'device-tests/**',
-  'packages/driver-apple/**',
-  'packages/driver-android/**',
-  'packages/perf/**',
-  'packages/appdyno/**',
-  'scripts/**',
-];
-
 export default defineConfig(
   { ignores: ['**/dist/**', 'android/**', '**/node_modules/**'] },
   js.configs.recommended,
@@ -41,7 +22,6 @@ export default defineConfig(
     },
   },
   {
-    files: strict,
     extends: [tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },

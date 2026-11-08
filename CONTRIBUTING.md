@@ -32,9 +32,8 @@ scripts/lint-native.sh                        # all that is not TypeScript; need
 ```
 
 `pnpm lint` runs eslint and `prettier --check`; `pnpm format` fixes formatting. The same checks run in
-`.github/workflows/ci.yml`. eslint holds the paths in `strict` in `eslint.config.js` to typescript-eslint's
-`strictTypeChecked` and `stylisticTypeChecked`, with the compiler's types; a package goes in that list once it is clean
-under them.
+`.github/workflows/ci.yml`. eslint holds all the TypeScript and JavaScript to typescript-eslint's `strictTypeChecked`
+and `stylisticTypeChecked`, with the compiler's types.
 
 `scripts/lint-native.sh` runs the linters `.mise.toml` pins, and fails on any warning: shellcheck and shfmt for the
 shell scripts (`ci.sh` is zsh, which shellcheck does not read, so `zsh -n` parses it), actionlint and zizmor for the
@@ -124,7 +123,7 @@ and tests use neutral English names.
 
 ## Types and the strict lint
 
-A package in `strict` meets typescript-eslint's type-checked rules by its code: a rule is turned off for one line only,
+The code meets typescript-eslint's type-checked rules by itself: a rule is turned off for one line only,
 with `-- why`, where it is wrong there, and `eslint.config.js` says why for each it tunes. A fix never changes what the
 code does.
 
