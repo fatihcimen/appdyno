@@ -24,6 +24,10 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+    lint {
+        warningsAsErrors = true
+        abortOnError = true
+    }
     // the wire as canonical JSON, read by the host's tests and the runner's as well
     sourceSets["test"].resources.directories += "../../packages/protocol/fixtures"
 }

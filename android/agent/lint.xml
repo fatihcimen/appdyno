@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Automation.kt's hidden methods: the agent runs as the shell user by app_process and is never installed, so no
+         target SDK's hidden-API policy applies to it. By message, as lint takes a path or a message, not both. -->
+    <issue id="BlockedPrivateApi">
+        <ignore regexp="^Reflective access to syncInputTransactions " />
+    </issue>
+    <issue id="SoonBlockedPrivateApi">
+        <ignore regexp="^Reflective access to (connect|disconnect) " />
+    </issue>
+    <!-- the agent is no app a person installs or a store bundles; it runs as shell, which sees every package -->
+    <issue id="AppBundleLocaleChanges">
+        <ignore path="src/main/kotlin/dev/appdyno/agent/Locales.kt" />
+    </issue>
+    <issue id="QueryPermissionsNeeded">
+        <ignore path="src/main/kotlin/dev/appdyno/agent/Platform.kt" />
+    </issue>
+    <issue id="MissingApplicationIcon">
+        <ignore path="src/main/AndroidManifest.xml" />
+    </issue>
+</lint>

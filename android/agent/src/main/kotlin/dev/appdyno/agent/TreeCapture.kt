@@ -157,7 +157,14 @@ class TreeCapture(private val automation: Automation) {
         val ua = automation.ua
         val display = Platform.display()
         automation.clearCache()
-        val prefetch = if (yielding) PREFETCH_YIELDING else PREFETCH
+        val prefetch = when {
+            // no call takes the flags below 33
+            Build.VERSION.SDK_INT < 33 -> 0
+
+            yielding -> AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST
+
+            else -> AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST or AccessibilityNodeInfo.FLAG_PREFETCH_UNINTERRUPTIBLE
+        }
         val windows = mutableListOf<CWindow>()
         val roots = mutableListOf<Pair<AccessibilityNodeInfo, Int>>()
         val list: List<AccessibilityWindowInfo> = try {
@@ -295,7 +302,7 @@ class TreeCapture(private val automation: Automation) {
         val r = Rect().also { n.getBoundsInScreen(it) }
         var f = 0
         if (n.isVisibleToUser) f = f or Flags.VISIBLE
-        if (w.fills) {
+        if (Build.VERSION.SDK_INT >= 34 && w.fills) {
             val p = Rect().also { n.getBoundsInWindow(it) }
             inWindow += p
             // one node whole on the display says how far the window is from its place (its matrix may round a pixel);
@@ -337,11 +344,5 @@ class TreeCapture(private val automation: Automation) {
         const val PARALLEL = 8
         const val TEST_TAG = "androidx.compose.ui.semantics.testTag"
         const val TAGS_MS = 500L
-        private const val PREFETCH =
-            AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST or
-                AccessibilityNodeInfo.FLAG_PREFETCH_UNINTERRUPTIBLE
-
-        /** The same prefetch, stopped by the app's UI thread when it has input or other work waiting. */
-        private const val PREFETCH_YIELDING = AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST
     }
 }

@@ -158,7 +158,12 @@ class Automation private constructor(private val looper: Looper) {
             e.contentChangeTypes != AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT
 
         // a window only moving (a slide): reads tell its place; a sliding window's content has not moved
-        AccessibilityEvent.TYPE_WINDOWS_CHANGED -> android.os.Build.VERSION.SDK_INT < 34 || e.windowChanges and WINDOW_APPEARS != 0
+        AccessibilityEvent.TYPE_WINDOWS_CHANGED ->
+            android.os.Build.VERSION.SDK_INT < 34 ||
+                e.windowChanges and (
+                    AccessibilityEvent.WINDOWS_CHANGE_ADDED or
+                        AccessibilityEvent.WINDOWS_CHANGE_REMOVED or AccessibilityEvent.WINDOWS_CHANGE_ACTIVE
+                    ) != 0
 
         else -> true
     }
@@ -232,6 +237,7 @@ class Automation private constructor(private val looper: Looper) {
      */
     fun liftLeftFinger(send: (InputEvent) -> Boolean = { ua.injectInputEvent(it, true) }): Boolean = (1..2).any { send(cancel(it)) }
 
+    @SuppressLint("InlinedApi") // FLAG_CANCELED goes to every release as it always has; below 33 a guard would change the cancel
     private fun cancel(fingers: Int): MotionEvent {
         val now = SystemClock.uptimeMillis()
         val props = Array(fingers) { i ->
@@ -271,9 +277,6 @@ class Automation private constructor(private val looper: Looper) {
         /** How long a holder that was killed is waited out, about twice what the system keeps it. */
         const val RELEASE_WAIT_MS = 4_000L
         const val RELEASE_PAUSE_MS = 200L
-
-        private const val WINDOW_APPEARS = AccessibilityEvent.WINDOWS_CHANGE_ADDED or
-            AccessibilityEvent.WINDOWS_CHANGE_REMOVED or AccessibilityEvent.WINDOWS_CHANGE_ACTIVE
 
         /** The events that can mean the layout moved (movesLayout reads them). */
         const val LAYOUT_EVENTS = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
