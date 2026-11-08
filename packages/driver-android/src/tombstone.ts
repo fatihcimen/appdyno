@@ -33,7 +33,7 @@ function ndkStack() {
   if (!found)
     throw new DeviceError(
       'UNSUPPORTED',
-      `naming a tombstone takes ndk-stack, from the NDK, and ${dir} holds none: sdkmanager "ndk;<version>"`,
+      `naming a tombstone takes ndk-stack, from the NDK, and ${dir} holds none: install one with Android Studio's SDK Manager, or \`android sdk install ndk/<version>\``,
     );
   return found;
 }
