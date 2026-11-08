@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 
 /**
  * Known accessibility problems, one of each, for the audit's device tests: faint text, a small target, an
@@ -28,12 +29,12 @@ class A11yActivity : ComponentActivity() {
         column {
             setBackgroundColor(white)
             label("Accessibility", R.id.title).setTextColor(android.graphics.Color.BLACK)
-            label("Faint text", R.id.a11y_faint).setTextColor(android.graphics.Color.parseColor("#C8C8C8"))
+            label("Faint text", R.id.a11y_faint).setTextColor("#C8C8C8".toColorInt())
             addView(
                 View(context).apply {
                     id = R.id.a11y_small
                     contentDescription = "Small"
-                    setBackgroundColor(android.graphics.Color.parseColor("#1F3A93"))
+                    setBackgroundColor("#1F3A93".toColorInt())
                     setOnClickListener {}
                 },
                 LinearLayout.LayoutParams(px(24), px(24)),
@@ -54,7 +55,7 @@ class A11yActivity : ComponentActivity() {
                         android.graphics.drawable.InsetDrawable(
                             android.graphics.drawable.GradientDrawable().apply {
                                 shape = android.graphics.drawable.GradientDrawable.OVAL
-                                setColor(android.graphics.Color.parseColor("#E2E2E2"))
+                                setColor("#E2E2E2".toColorInt())
                             },
                             px(12),
                         ),

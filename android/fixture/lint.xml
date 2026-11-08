@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- a fixture shows the text its suites read, English and computed, never translated -->
+    <issue id="SetTextI18n" severity="ignore" />
+    <!-- the web screen exists to be driven with its scripts on, and loads only its own page -->
+    <issue id="SetJavaScriptEnabled">
+        <ignore path="src/main/kotlin/dev/appdyno/fixture/WebActivity.kt" />
+    </issue>
+    <!-- the receiver takes the suites' broadcasts from adb's shell, which a permission would keep out -->
+    <issue id="ExportedReceiver">
+        <ignore path="src/main/AndroidManifest.xml" />
+    </issue>
+    <!-- -PoldTarget builds it with minSdk 24, where v26 is what keeps the adaptive icon off API 24 and 25 -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="src/main/res/drawable-anydpi-v26" />
+    </issue>
+    <!-- MarqueeView is only ever built in code, with its mode -->
+    <issue id="ViewConstructor">
+        <ignore path="src/main/kotlin/dev/appdyno/fixture/MarqueeActivity.kt" />
+    </issue>
+    <!-- a library's own lint checks, built against an older lint; nothing of ours. By message: it sits in Gradle's cache -->
+    <issue id="ObsoleteLintCustomCheck">
+        <ignore regexp="androidx\.lifecycle\.lint\.LifecycleRuntimeIssueRegistry" />
+    </issue>
+    <!-- the gesture pad and the late touch area read raw touches, as a drawing or a game does: a finger's lift is no click -->
+    <issue id="ClickableViewAccessibility">
+        <ignore path="src/main/kotlin/dev/appdyno/fixture/GesturesActivity.kt" />
+        <ignore path="src/main/kotlin/dev/appdyno/fixture/LateActivity.kt" />
+    </issue>
+    <!-- the icon's art is its background: a themed copy of it would be a blank or a solid square -->
+    <issue id="MonochromeLauncherIcon">
+        <ignore path="src/main/res/drawable-anydpi-v26/ic_launcher.xml" />
+    </issue>
+</lint>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- a fixture shows the text its suites read, English and computed, never translated -->
+    <issue id="SetTextI18n" severity="ignore" />
+    <!-- the fixture's Firebase options are made up and no token ever reaches a server -->
+    <issue id="MissingFirebaseInstanceTokenRefresh">
+        <ignore path="src/main/kotlin/dev/appdyno/pushfixture/PushService.kt" />
+    </issue>
+</lint>

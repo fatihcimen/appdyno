@@ -2,6 +2,7 @@ package dev.appdyno.fixture
 
 import android.app.Activity
 import android.os.Bundle
+import androidx.core.graphics.createBitmap
 
 /** Java heap held on purpose: 50 MB in 1 MB arrays, every page written; released on demand. */
 class MemoryActivity : Activity() {
@@ -25,7 +26,7 @@ class MemoryActivity : Activity() {
             }
             button("Hold 50 MB bitmap", R.id.memory_bitmap) {
                 // 4 bytes a pixel: 50 MB, and every pixel written
-                bitmap = android.graphics.Bitmap.createBitmap(3621, 3621, android.graphics.Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF112233.toInt()) }
+                bitmap = createBitmap(3621, 3621, android.graphics.Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF112233.toInt()) }
                 status.text = "Held bitmap"
             }
             button("Release", R.id.memory_free) {

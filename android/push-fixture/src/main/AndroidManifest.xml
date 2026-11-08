@@ -3,8 +3,11 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- its data stays on the device: allowBackup and fullBackupContent up to Android 11, the extraction rules from 12 -->
     <application
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:icon="@android:drawable/sym_def_app_icon"
         android:label="Push Fixture">
 
