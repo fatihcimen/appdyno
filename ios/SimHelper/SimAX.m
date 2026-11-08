@@ -2,8 +2,8 @@
 // XCTest test running in it. Requests and answers are JSON lines on stdin and stdout. The calls and the
 // halving of rejected depths follow idb's SimulatorFrameworkBridge (MIT, see THIRD_PARTY_NOTICES). Private
 // API: appdyno checks it at start, and any read it refuses goes to the runner.
-#import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
+#import <Foundation/Foundation.h>
 #import <dlfcn.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -76,10 +76,17 @@ static NSString *setup(void) {
   gSetAutomation = dlsym(RTLD_DEFAULT, "_AXSSetAutomationEnabled");
   if (!gAppAXOn || !gAutomationOn || !gSetAppAX || !gSetAutomation) return @"the accessibility switches are missing";
   NSDictionary<NSString *, NSString *> *names = @{
-    @"XC_kAXXCAttributeAutomationType": @"a", @"XC_kAXXCAttributeElementType": @"e", @"XC_kAXXCAttributeLabel": @"l",
-    @"XC_kAXXCAttributeValue": @"v", @"XC_kAXXCAttributePlaceholderValue": @"h", @"XC_kAXXCAttributeIdentifier": @"i",
-    @"XC_kAXXCAttributeFrame": @"f", @"XC_kAXXCAttributeTraits": @"t", @"XC_kAXXCAttributeChildren": @"k",
-    @"XC_kAXXCAttributeIsRemoteElement": @"r", @"XC_kAXXCAttributeHasNativeFocus": @"n",
+    @"XC_kAXXCAttributeAutomationType": @"a",
+    @"XC_kAXXCAttributeElementType": @"e",
+    @"XC_kAXXCAttributeLabel": @"l",
+    @"XC_kAXXCAttributeValue": @"v",
+    @"XC_kAXXCAttributePlaceholderValue": @"h",
+    @"XC_kAXXCAttributeIdentifier": @"i",
+    @"XC_kAXXCAttributeFrame": @"f",
+    @"XC_kAXXCAttributeTraits": @"t",
+    @"XC_kAXXCAttributeChildren": @"k",
+    @"XC_kAXXCAttributeIsRemoteElement": @"r",
+    @"XC_kAXXCAttributeHasNativeFocus": @"n",
   };
   gNames = names.allKeys;
   gNumbers = gNumbersForNames(gNames);
@@ -92,7 +99,11 @@ static NSString *setup(void) {
   return nil;
 }
 
-typedef struct { int requests; int rejected; NSUInteger levels; } Capture;
+typedef struct {
+  int requests;
+  int rejected;
+  NSUInteger levels;
+} Capture;
 
 static NSDictionary *request(id element, NSUInteger maxNodes, Capture *c, NSError **error) {
   for (;;) {
@@ -109,7 +120,7 @@ static NSDictionary *request(id element, NSUInteger maxNodes, Capture *c, NSErro
     if (tree) return tree;
     NSNumber *ax = failure.userInfo[@"accessibility-error"];
     BOOL rejected = ([ax isKindOfClass:NSNumber.class] && ax.integerValue == -25201) ||
-        ([failure.domain isEqualToString:@"com.apple.dt.xctest.automation-support.error"] && failure.code == 5);
+                    ([failure.domain isEqualToString:@"com.apple.dt.xctest.automation-support.error"] && failure.code == 5);
     if (!rejected || c->levels <= 1 || ++c->rejected > 2) {
       if (error) *error = failure;
       return nil;
@@ -149,7 +160,10 @@ static NSDictionary *build(NSDictionary *snapshot, NSUInteger left, NSUInteger *
   if (children.count) {
     NSMutableArray *built = [NSMutableArray arrayWithCapacity:children.count];
     for (NSDictionary *child in children) {
-      if (++*count > maxNodes) { node[@"cut"] = @YES; break; }
+      if (++*count > maxNodes) {
+        node[@"cut"] = @YES;
+        break;
+      }
       NSDictionary *b = build(child, left - 1, count, maxNodes, c, error);
       if (!b) return nil;
       [built addObject:b];
@@ -159,7 +173,10 @@ static NSDictionary *build(NSDictionary *snapshot, NSUInteger left, NSUInteger *
   return node;
 }
 
-static NSDictionary *refuse(NSString *why) { return @{@"ok": @NO, @"refused": why}; }
+static NSDictionary *refuse(NSString *why) {
+  return @{@"ok": @NO,
+           @"refused": why};
+}
 
 static NSDictionary *readApp(NSDictionary *q) {
   id<AX> primary = [(id<AX>)gAXElement primaryApp];
@@ -167,7 +184,9 @@ static NSDictionary *readApp(NSDictionary *q) {
   NSString *bundle = [(id)primary respondsToSelector:@selector(bundleId)] ? [primary bundleId] : nil;
   if (pid <= 0 || !bundle) return refuse(@"no-foreground");
   NSString *wanted = q[@"bundle"];
-  if (wanted && ![wanted isEqualToString:bundle]) return @{@"ok": @NO, @"refused": @"not-foreground", @"front": bundle};
+  if (wanted && ![wanted isEqualToString:bundle]) return @{@"ok": @NO,
+                                                           @"refused": @"not-foreground",
+                                                           @"front": bundle};
   id<AX> system = [(id<AX>)gAXElement systemApplication];
   CGRect window = [primary frame], screen = [system frame];
   if (CGRectGetWidth(screen) > 0 && CGRectGetWidth(window) > 0 && !CGRectEqualToRect(CGRectIntegral(window), CGRectIntegral(screen)))
@@ -179,13 +198,24 @@ static NSDictionary *readApp(NSDictionary *q) {
   Capture c = {0, 0, FirstRequestLevels};
   NSError *error = nil;
   NSDictionary *snapshot = request((__bridge id)raw, maxNodes, &c, &error);
-  if (!snapshot) return @{@"ok": @NO, @"refused": @"read-failed", @"error": error.localizedDescription ?: @"", @"requests": @(c.requests)};
+  if (!snapshot) return @{@"ok": @NO,
+                          @"refused": @"read-failed",
+                          @"error": error.localizedDescription ?: @"",
+                          @"requests": @(c.requests)};
   NSUInteger count = 1;
   NSDictionary *tree = build(snapshot, FirstRequestLevels, &count, maxNodes, &c, &error);
-  if (!tree) return @{@"ok": @NO, @"refused": @"read-failed", @"error": error.localizedDescription ?: @"cut short", @"requests": @(c.requests)};
+  if (!tree) return @{@"ok": @NO,
+                      @"refused": @"read-failed",
+                      @"error": error.localizedDescription ?: @"cut short",
+                      @"requests": @(c.requests)};
   // a change of owner during the read: its tree may be neither's
   if ([[(id<AX>)gAXElement primaryApp] pid] != pid) return refuse(@"owner-changed");
-  return @{@"ok": @YES, @"bundle": bundle, @"pid": @(pid), @"tree": tree, @"requests": @(c.requests), @"screen": @[@(CGRectGetWidth(screen)), @(CGRectGetHeight(screen))]};
+  return @{@"ok": @YES,
+           @"bundle": bundle,
+           @"pid": @(pid),
+           @"tree": tree,
+           @"requests": @(c.requests),
+           @"screen": @[@(CGRectGetWidth(screen)), @(CGRectGetHeight(screen))]};
 }
 
 // The app's reports to an observer of the system-wide element (private, from the accessibility runtime).
@@ -253,7 +283,8 @@ static NSDictionary *animationsOver(NSTimeInterval within, long touches) {
   NSDictionary *asked = ask(kAskAnimations);
   if (![asked[@"ok"] boolValue]) return asked;
   turnUntil(^{ return (BOOL)(gAnimationsOver != seen); }, within);
-  return @{@"ok": @YES, @"over": @(gAnimationsOver != seen)};
+  return @{@"ok": @YES,
+           @"over": @(gAnimationsOver != seen)};
 }
 
 // What the host says of this simulator before any test runner is there.
@@ -267,7 +298,11 @@ static NSDictionary *hello(void) {
   NSOperatingSystemVersion v = NSProcessInfo.processInfo.operatingSystemVersion;
   NSString *os = v.patchVersion ? [NSString stringWithFormat:@"%ld.%ld.%ld", (long)v.majorVersion, (long)v.minorVersion, (long)v.patchVersion]
                                 : [NSString stringWithFormat:@"%ld.%ld", (long)v.majorVersion, (long)v.minorVersion];
-  return @{@"ok": @YES, @"osVersion": os, @"model": env[@"SIMULATOR_MODEL_IDENTIFIER"] ?: @"iPhone", @"scale": @(scale), @"screen": @[@(w), @(h)]};
+  return @{@"ok": @YES,
+           @"osVersion": os,
+           @"model": env[@"SIMULATOR_MODEL_IDENTIFIER"] ?: @"iPhone",
+           @"scale": @(scale),
+           @"screen": @[@(w), @(h)]};
 }
 
 static void handle(NSData *line) {
@@ -285,7 +320,10 @@ static void handle(NSData *line) {
       else if ([q[@"op"] isEqual:@"arm"]) a = gBlind ? refuse(gBlind) : arm();
       else if ([q[@"op"] isEqual:@"animations"]) a = gBlind ? refuse(gBlind) : animationsOver([q[@"within"] doubleValue], [q[@"touches"] longValue]);
       else if ([q[@"op"] isEqual:@"leave"]) {
-        if (gTurnedOn) { gSetAppAX(0); gSetAutomation(0); }
+        if (gTurnedOn) {
+          gSetAppAX(0);
+          gSetAutomation(0);
+        }
         gTurnedOn = NO;
         answer(@{@"ok": @YES}, q[@"id"], t0);
         exit(0);
@@ -296,14 +334,21 @@ static void handle(NSData *line) {
       } else if ([q[@"op"] isEqual:@"hello"]) a = hello();
       else if ([q[@"op"] isEqual:@"front"]) {
         NSString *front = [(id<AX>)[(id<AX>)gAXElement primaryApp] bundleId];
-        a = front ? @{@"ok": @YES, @"bundle": front} : refuse(@"no-foreground");
+        a = front ? @{@"ok": @YES,
+                      @"bundle": front}
+                  : refuse(@"no-foreground");
       } else if ([q[@"op"] isEqual:@"orientation"]) {
         // how the app in front is drawn: one that does not turn stays upright though the device has turned
-        a = @{@"ok": @YES, @"orientation": @([(id<AX>)[(id<AX>)gAXElement systemApplication] applicationOrientation])};
-      } else if ([q[@"op"] isEqual:@"ping"]) a = gBlind ? @{@"ok": @YES, @"blind": gBlind} : @{@"ok": @YES};
+        a = @{@"ok": @YES,
+              @"orientation": @([(id<AX>)[(id<AX>)gAXElement systemApplication] applicationOrientation])};
+      } else if ([q[@"op"] isEqual:@"ping"]) a = gBlind ? @{@"ok": @YES,
+                                                            @"blind": gBlind}
+                                                        : @{@"ok": @YES};
       else a = refuse(@"unknown request");
     } @catch (NSException *e) {
-      a = @{@"ok": @NO, @"refused": @"exception", @"error": e.reason ?: @""};
+      a = @{@"ok": @NO,
+            @"refused": @"exception",
+            @"error": e.reason ?: @""};
     }
     answer(a, q[@"id"], t0);
   }

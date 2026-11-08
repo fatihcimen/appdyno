@@ -140,7 +140,9 @@ int main(int argc, char **argv) {
         else if ([op isEqual:@"keyState"]) sendKeyState([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue], [q[@"state"] unsignedLongLongValue]);
         else if ([op isEqual:@"key"]) error = sendKey([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue], q[@"modifiers"]);
         else error = @"unknown request";
-        NSMutableDictionary *a = [@{@"id": q[@"id"] ?: @0, @"ok": @(error == nil), @"ms": @((clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - t0) / 1000000)} mutableCopy];
+        NSMutableDictionary *a = [@{@"id": q[@"id"] ?: @0,
+                                    @"ok": @(error == nil),
+                                    @"ms": @((clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - t0) / 1000000)} mutableCopy];
         if (error) a[@"error"] = error;
         NSData *out = [NSJSONSerialization dataWithJSONObject:a options:0 error:NULL];
         fwrite(out.bytes, 1, out.length, stdout);

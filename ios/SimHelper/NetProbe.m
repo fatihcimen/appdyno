@@ -3,8 +3,8 @@
 // app's process: not background sessions (their requests run in another process), not WKWebView (nor
 // that), not Network.framework (below it). Bodies are not kept.
 #import <Foundation/Foundation.h>
-#import <objc/runtime.h>
 #include <fcntl.h>
+#import <objc/runtime.h>
 #include <unistd.h>
 
 static NSString *const kHandled = @"dev.appdyno.netprobe.handled";
@@ -91,12 +91,12 @@ static void writeEntry(NSDictionary *entry) {
                     task:(NSURLSessionTask *)task
     didCompleteWithError:(NSError *)error {
   NSMutableDictionary *entry = [@{
-    @"at" : @([[NSDate date] timeIntervalSince1970] * 1000),
-    @"method" : self.request.HTTPMethod ?: @"GET",
-    @"url" : self.request.URL.absoluteString ?: @"",
-    @"status" : @(self.status),
-    @"ms" : @((CFAbsoluteTimeGetCurrent() - self.started) * 1000),
-    @"bytes" : @(self.received),
+    @"at": @([[NSDate date] timeIntervalSince1970] * 1000),
+    @"method": self.request.HTTPMethod ?: @"GET",
+    @"url": self.request.URL.absoluteString ?: @"",
+    @"status": @(self.status),
+    @"ms": @((CFAbsoluteTimeGetCurrent() - self.started) * 1000),
+    @"bytes": @(self.received),
   } mutableCopy];
   if (error) entry[@"error"] = error.localizedDescription;
   writeEntry(entry);
