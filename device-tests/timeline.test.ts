@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, describe, expect, it } from 'vitest';
 import {
   Adb,
   androidProvider,
@@ -19,10 +19,10 @@ import type { Timeline } from '@appdyno/perf';
  * The video is the check on the frames: both are stamped by the device, by two different parts of it, so a slow frame
  * and the freeze in the video have to fall together. Numbers are printed: docs/reference/perf.md quotes them.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 const run = promisify(execFile);
-const adb = (command: string) => run('adb', ['-s', serial!, 'shell', command]);
+const adb = (command: string) => run('adb', ['-s', serial, 'shell', command]);
 const flows = mkdtempSync(join(tmpdir(), 'appdyno-timeline-flows-'));
 /** Longer than a look of the flight recorder, which queues behind the device's other work: 22 s apart under load. */
 const WATCHED_MS = 30_000;
@@ -30,10 +30,11 @@ const WATCHED_MS = 30_000;
 const writesSkippedFrames = async () =>
   !/samsung/i.test((await adb('getprop ro.product.manufacturer')).stdout);
 
-const pageData = (file: string) =>
-  JSON.parse(
-    /id="timeline">([\s\S]*?)<\/script>/.exec(readFileSync(file, 'utf8'))![1]!,
-  ) as Timeline;
+const pageData = (file: string) => {
+  const json = /id="timeline">([\s\S]*?)<\/script>/.exec(readFileSync(file, 'utf8'))?.[1];
+  assert(json !== undefined, file);
+  return JSON.parse(json) as Timeline;
+};
 
 /** The screen on, and the fixture in front: what a video holds on a phone is what is in front when it starts. */
 const fixtureInFront = async () => {
@@ -48,7 +49,7 @@ const leave = async (t: ReturnType<typeof opsOn>) => {
 };
 
 describe.skipIf(!serial)('a timeline of a journey', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   afterAll(() => leave(t));
 
   const journey = async (name: string, steps: string[]) => {
@@ -64,7 +65,9 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
     expect(ran.error, ran.text).toBe(false);
     expect(done.error, done.text).toBe(false);
     console.log(done.text, 'host load', loadavg()[0]);
-    return { dir, file: done.data.timeline!, page: pageData(done.data.timeline!) };
+    const { timeline } = done.data;
+    assert(timeline);
+    return { dir, file: timeline, page: pageData(timeline) };
   };
 
   it('puts a slow frame where the video stood still, to within a display refresh', async () => {
@@ -81,18 +84,22 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
     expect(worst.late).toBe(true);
     expect(page.video?.bytes).toBeGreaterThan(1_000);
 
-    const stamps = (await videoStamps(join(dir, 'video', 'screen.mp4')))!;
-    expect(page.video!.firstAt).toBe(stamps[0]);
+    const stamps = await videoStamps(join(dir, 'video', 'screen.mp4'));
+    assert(stamps && page.video);
+    expect(page.video.firstAt).toBe(stamps[0]);
     const end = worst.at + worst.ms;
-    const last = stamps.findLast((x) => x < worst.at + worst.ms / 2)!;
-    const next = stamps.find((x) => x > worst.at + worst.ms / 2)!;
+    const last = stamps.findLast((x) => x < worst.at + worst.ms / 2);
+    const next = stamps.find((x) => x > worst.at + worst.ms / 2);
+    assert(last !== undefined && next !== undefined);
     console.log(
       `the video stood still ${(next - last).toFixed(1)} ms, for a frame of ${worst.ms} ms: ` +
         `${(worst.at - last).toFixed(1)} ms after its last frame, and ${(next - end).toFixed(1)} ms before its next`,
     );
     expect(next - last).toBeGreaterThan(worst.ms * 0.9);
     // no further off than the page says it is
-    const within = page.clock.sources.find((s) => s.row === 'Video')!.withinMs;
+    const video = page.clock.sources.find((s) => s.row === 'Video');
+    assert(video);
+    const within = video.withinMs;
     expect(Math.abs(worst.at - last)).toBeLessThan(within);
     expect(Math.abs(next - end)).toBeLessThan(within);
 
@@ -121,22 +128,25 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
       console.log('longest frame', longest, 'stalls', JSON.stringify(page.stalls.marks));
       // what every frame source says of it
       expect(longest).toBeLessThan(200);
-      if (!(await writesSkippedFrames())) return expect(page.stalls.marks).toEqual([]);
+      if (!(await writesSkippedFrames())) {
+        expect(page.stalls.marks).toEqual([]);
+        return;
+      }
       expect(page.stalls.marks).toHaveLength(1);
-      expect(page.stalls.marks[0]!.ms).toBeGreaterThan(1_200);
-      expect(page.stalls.marks[0]!.ms).toBeLessThan(1_800);
+      expect(page.stalls.marks[0]?.ms).toBeGreaterThan(1_200);
+      expect(page.stalls.marks[0]?.ms).toBeLessThan(1_800);
     } finally {
       await adb(`run-as ${APP} rm -f files/sleep_ms`);
     }
   }, 180_000);
 });
 
-const udid = process.env.APPDYNO_IOS_UDID;
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
 
 /** The same journey on a simulator, where everything but the video is on one clock already. */
 /** The hold no frame shows, in the measure that used to read its longest frame for it. */
 describe.skipIf(!serial)('perf_trace of a held main thread', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   afterAll(() => leave(t));
 
   it('reads the hold, and says where that came from', async () => {
@@ -155,8 +165,11 @@ describe.skipIf(!serial)('perf_trace of a held main thread', () => {
         pause(3_000).then(() => t.call('tap', { selector: { id: 'cpu_stall' } })),
       ]);
       expect(trace.error, trace.text).toBe(false);
-      console.log(`longest frame ${trace.data.worstMs}, held ${trace.data.heldMs}`);
-      if (!(await writesSkippedFrames())) return expect(trace.data.heldMs).toBeUndefined();
+      console.log(`longest frame ${String(trace.data.worstMs)}, held ${String(trace.data.heldMs)}`);
+      if (!(await writesSkippedFrames())) {
+        expect(trace.data.heldMs).toBeUndefined();
+        return;
+      }
       expect(trace.data.heldMs).toBeGreaterThan(1_200);
       expect(trace.data.heldMs).toBeLessThan(1_800);
       expect(trace.text).toContain('Skipped frames');
@@ -167,7 +180,7 @@ describe.skipIf(!serial)('perf_trace of a held main thread', () => {
 });
 
 describe.skipIf(!udid)('a timeline on a simulator', () => {
-  const t = opsOn(simulatorProvider(), udid!, APP);
+  const t = opsOn(simulatorProvider(), udid, APP);
   afterAll(() => leave(t));
 
   it('holds the stall, and says what a simulator cannot give', async () => {
@@ -184,13 +197,14 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
     const done = await t.call('report', { action: 'stop' });
     expect(done.error, done.text).toBe(false);
     console.log(done.text, 'host load', loadavg()[0]);
-    const page = pageData(done.data.timeline!);
+    assert(done.data.timeline);
+    const page = pageData(done.data.timeline);
     const worst = page.frames.marks.reduce((a, b) => (b.ms > a.ms ? b : a));
     console.log('worst frame', worst, 'clock', JSON.stringify(page.clock));
     expect(worst.ms).toBeGreaterThan(900);
     // a simulator runs on this Mac's clock, and that is read as well, not assumed
     expect(Math.abs(page.clock.offsetMs)).toBeLessThanOrEqual(page.clock.boundMs);
-    expect(page.clock.sources.find((c) => c.row === 'Video')!.withinMs).toBe(150);
+    expect(page.clock.sources.find((c) => c.row === 'Video')?.withinMs).toBe(150);
     expect(page.touches.absent).toContain('Steps are what this tool sent');
     expect(page.steps.marks.map((m) => m.name)).toContain('swipe');
     expect(page.memory.marks.length).toBeGreaterThan(0);
@@ -202,7 +216,7 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
  * unasked (APPDYNO_ANDROID_SERIAL). Nothing here tells it what happened: it finds out by what it watches.
  */
 describe.skipIf(!serial)('the flight recorder', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   afterAll(() => leave(t));
 
   /** The query makes each link a new intent: one equal to the task's root only brings the task to front. */
@@ -216,15 +230,17 @@ describe.skipIf(!serial)('the flight recorder', () => {
   const flying = async (act: () => Promise<void>) => {
     const on = await t.call('report', { action: 'flight' });
     expect(on.error, on.text).toBe(false);
-    const failed = await act().then(
-      () => undefined,
-      (e: unknown) => e,
-    );
-    const off = await t.call('report', { action: 'stop' });
-    if (failed) throw failed;
+    let off;
+    try {
+      await act();
+    } finally {
+      off = await t.call('report', { action: 'stop' });
+    }
     console.log(off.text, 'host load', loadavg()[0]);
     expect(off.data.saved).toHaveLength(1);
-    return pageData(off.data.saved![0]!);
+    const saved = off.data.saved?.[0];
+    assert(saved);
+    return pageData(saved);
   };
   /** What it answers, as a tap that ends the app may have no good answer: the test looks at what came of it. */
   const tapById = async (id: string) => {
@@ -299,7 +315,7 @@ describe.skipIf(!serial)('the flight recorder', () => {
 
 /** The same on a simulator, which restarts nothing, and whose crash reports are this Mac's (APPDYNO_IOS_UDID). */
 describe.skipIf(!udid)('the flight recorder on a simulator', () => {
-  const t = opsOn(simulatorProvider(), udid!, APP);
+  const t = opsOn(simulatorProvider(), udid, APP);
   afterAll(() => leave(t));
 
   it('keeps a real crash', async () => {
@@ -317,7 +333,9 @@ describe.skipIf(!udid)('the flight recorder on a simulator', () => {
     const off = await t.call('report', { action: 'stop' });
     console.log(off.text, 'host load', loadavg()[0]);
     expect(off.data.saved).toHaveLength(1);
-    const page = pageData(off.data.saved![0]!);
+    const saved = off.data.saved?.[0];
+    assert(saved);
+    const page = pageData(saved);
     console.log(
       JSON.stringify({
         reason: page.reason,

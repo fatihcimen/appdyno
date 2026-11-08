@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { doctor } from '../packages/appdyno/src/doctor.js';
 import { deviceProviders } from '../packages/appdyno/src/providers.js';
@@ -21,7 +21,7 @@ import { untilWithin } from './until.js';
  * What a phone that gets ready leads to, and every command of Tools for real, on a simulator of the runner's own: its
  * id in APPDYNO_HUB_SIM. It may drive no other device. What a phone says on its way is stood in for; the rest is real.
  */
-const sim = process.env.APPDYNO_HUB_SIM;
+const sim = process.env.APPDYNO_HUB_SIM ?? '';
 const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
 const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
 /** Only the pictures: the gate's four rounds of every measure take their time once. */
@@ -84,11 +84,13 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
       ms,
     );
     const these = runs(name).slice(before);
+    const last = these.at(-1);
+    assert(last);
     return {
-      code: these.at(-1)!.code!,
+      code: last.code,
       said: these.map((r) => r.text ?? '').join(''),
-      file: these.at(-1)!.file,
-      verdict: these.at(-1)!.verdict,
+      file: last.file,
+      verdict: last.verdict,
     };
   };
 
@@ -101,12 +103,12 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
     process.env.ANDROID_HOME = home;
     const stand = join(home, 'ioreg');
     writeFileSync(stand, '#!/bin/sh\n', { mode: 0o755 });
-    process.env.PATH = `${home}:${path}`;
+    process.env.PATH = `${home}:${String(path)}`;
     const staged: DeviceProvider = {
       ...androidProvider(),
       handles: () => true,
-      list: async () => phones,
-      need: async (d) => phones.find((p) => p.serial === d.serial)?.need,
+      list: () => Promise.resolve(phones),
+      need: (d) => Promise.resolve(phones.find((p) => p.serial === d.serial)?.need),
     };
     const only = new RegExp(`^${sim}$`);
     const binary = await viewerBinary();
@@ -146,6 +148,7 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
   }, 120_000);
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.send({ op: 'quit' });
     await done;
     process.env.PATH = path;
@@ -156,11 +159,11 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
 
   it('opens a phone that got ready by itself, with what to try', async () => {
     await clickRow('Connect a Phone');
-    phones = [{ serial: sim!, state: 'unauthorized', ready: false, need: 'not-trusted' }];
+    phones = [{ serial: sim, state: 'unauthorized', ready: false, need: 'not-trusted' }];
     await until('a look with the phone in it', () =>
       sent.some((m) => (m.connect as { serial?: string } | undefined)?.serial === sim),
     );
-    phones = [{ serial: sim!, state: 'device', ready: true, model: 'iPhone 17 Pro' }];
+    phones = [{ serial: sim, state: 'device', ready: true, model: 'iPhone 17 Pro' }];
     await until(
       'the phone to open',
       () => sent.some((m) => m.op === 'attach') || heard.some((m) => m.action === 'select'),

@@ -2,6 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { assert } from 'vitest';
 import { iphoneProvider, Devicectl } from './workspace.js';
 import type { DeviceProvider } from '@appdyno/core';
 import {
@@ -30,9 +31,10 @@ export const opCaller =
     name: N,
     args: Record<string, unknown> = {},
   ): Promise<Answer<OpData<N>>> => {
-    const op = ops[name] as Op;
+    const op = ops[name];
+    assert(op, name);
     try {
-      const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
+      const r = await op.handler(op.input.parse(args));
       return {
         error: false,
         text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
@@ -60,8 +62,8 @@ export function opsOn(provider: DeviceProvider, device: string, app: string) {
 }
 
 /** A fixture signed for the iPhone APPDYNO_IPHONE_UDID names. */
-export const IPHONE_FIXTURE = process.env.APPDYNO_IPHONE_FIXTURE_APP;
-export const IPHONE = IPHONE_FIXTURE && process.env.APPDYNO_IPHONE_UDID;
+export const IPHONE_FIXTURE = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
+export const IPHONE = IPHONE_FIXTURE && (process.env.APPDYNO_IPHONE_UDID ?? '');
 
 /** The fixture CONTRIBUTING's simulator build makes, for a suite to install on its simulator. */
 export const SIM_FIXTURE = join(
@@ -71,8 +73,8 @@ export const SIM_FIXTURE = join(
 
 /** The operations on that iPhone, with the fixture on it. */
 export async function onIphone(app: string, provider: DeviceProvider = iphoneProvider()) {
-  await new Devicectl(IPHONE!).install(IPHONE_FIXTURE!);
-  return opsOn(provider, IPHONE!, app);
+  await new Devicectl(IPHONE).install(IPHONE_FIXTURE);
+  return opsOn(provider, IPHONE, app);
 }
 
 /** Calls a tool over the client `get` gives, which connects after this is made. */

@@ -1,6 +1,6 @@
 import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   isAlive,
   viewerBinary,
@@ -72,6 +72,7 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   }, 60_000);
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.send({ op: 'quit' });
     await done;
   }, 60_000);
@@ -89,7 +90,8 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       await until('a first device', () => serials.some(live), LIVE_MS);
       await quiet(2_000);
       await picture('first');
-      const shown = serials.find(live)!;
+      const shown = serials.find(live);
+      assert(shown);
       // it stands open, reading: a real click closes it, and what it read stops with it
       await until(
         'readings',
@@ -171,7 +173,8 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   it(
     'gives a device a window of its own on request, and closes it again',
     async () => {
-      const serial = serials[0]!;
+      const [serial] = serials;
+      assert(serial);
       link.send({ op: 'poke', id: serial, press: 'window' });
       await until(
         'a window of its own',
@@ -181,7 +184,8 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
         },
         LIVE_MS,
       );
-      const window = liveMirror(serial)!;
+      const window = liveMirror(serial);
+      assert(window);
       await picture('own-window');
       // the hub's list follows within its poll, and a press acts on what it lists
       await quiet(5_000);
@@ -204,7 +208,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   const inRoom = async () => {
     await quiet(3_000);
     await until('a device in the room', () => told.some((m) => m.op === 'first'), LIVE_MS);
-    return String(told.findLast((m) => m.op === 'first')!.stage);
+    const first = told.findLast((m) => m.op === 'first');
+    assert(first);
+    return String(first.stage);
   };
 
   it(
@@ -212,7 +218,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     async () => {
       const shown = await inRoom();
       const size = () => {
-        const { w, h } = told.findLast((m) => m.op === 'stats' && m.stage === shown && m.w)!;
+        const stats = told.findLast((m) => m.op === 'stats' && m.stage === shown && m.w);
+        assert(stats);
+        const { w, h } = stats;
         return `${String(w)}x${String(h)}`;
       };
       await until(
@@ -246,7 +254,8 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
           },
           LIVE_MS,
         );
-        const window = liveMirror(shown)!;
+        const window = liveMirror(shown);
+        assert(window);
         await quiet(5_000);
         link.send({ op: 'poke', id: shown, press: 'window' });
         await until('it to close', () => !isAlive(window), 60_000);
@@ -270,7 +279,8 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
         await new Adb().exec(shown, 'input keyevent KEYCODE_WAKEUP');
       const at = Date.now();
       told.length = 0;
-      process.kill(link.pid!, 'SIGKILL');
+      assert(link.pid !== undefined);
+      process.kill(link.pid, 'SIGKILL');
       // the window that comes back keeps the device that stood in it
       await until('the device again', () => live(shown), LIVE_MS);
       measured(`back after a kill: ${Date.now() - at} ms`);

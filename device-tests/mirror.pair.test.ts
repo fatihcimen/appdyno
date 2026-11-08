@@ -1,14 +1,8 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  androidProvider,
-  iphoneProvider,
-  simulatorProvider,
-  type MirrorSession,
-  type WireNode,
-} from './workspace.js';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
+import { androidProvider, iphoneProvider, simulatorProvider, type WireNode } from './workspace.js';
 import { viewerBinary, ViewerProcess, type Device } from '../packages/core/src/index.js';
 import { NODE_FLAGS } from '../packages/protocol/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
@@ -41,8 +35,11 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
     [androidProvider(), simulatorProvider(), iphoneProvider()].map((provider) => ({
       ...provider,
       // one driver object on a device: a second would be a second agent on it
-      open: (serial: string) =>
-        held.get(serial) ?? held.set(serial, provider.open(serial)).get(serial)!,
+      open: (serial: string) => {
+        const own = held.get(serial) ?? provider.open(serial);
+        held.set(serial, own);
+        return own;
+      },
     })),
     {
       mirrorCommand: [process.execPath, main, 'mirror'],
@@ -64,11 +61,20 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
   });
   const told = new Map<string, Record<string, unknown>[]>();
   const device = (serial: string) => ctx.deviceFor(serial);
-  const session = (serial: string) => parent.sessions.get(serial) as MirrorSession;
+  const session = (serial: string) => {
+    const s = parent.sessions.get(serial);
+    assert(s, `a window on ${serial}`);
+    return s;
+  };
+  const toldOf = (serial: string) => {
+    const t = told.get(serial);
+    assert(t, `what the window on ${serial} was told`);
+    return t;
+  };
   const poke = (serial: string, m: Record<string, unknown>) =>
     session(serial).tell({ op: 'poke', ...m });
   const heard = (serial: string, m: Record<string, unknown>) =>
-    told.get(serial)!.some((said) => Object.entries(m).every(([k, v]) => said[k] === v));
+    toldOf(serial).some((said) => Object.entries(m).every(([k, v]) => said[k] === v));
 
   const shows = async (serial: string, link: string) => {
     // a link reaches Android's fixture as it starts, and the simulator's once it runs, where it is asked about first
@@ -114,7 +120,7 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
       told.set(serial, []);
       const tell = s.tell.bind(s);
       s.tell = (m) => {
-        told.get(serial)!.push(m);
+        toldOf(serial).push(m);
         tell(m);
       };
     }
@@ -174,7 +180,7 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
     const before = await device(b).tree();
     await clickOn(a, 'submit');
     await until('the words on the window', () =>
-      told.get(b)!.some((m) => typeof m.failing === 'string' && m.failing.endsWith('here')),
+      toldOf(b).some((m) => typeof m.failing === 'string' && m.failing.endsWith('here')),
     );
     await picture('missing');
     expect((await device(b).tree()).nodes.length).toBe(before.nodes.length);
@@ -192,7 +198,7 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
     await new Promise((r) => setTimeout(r, 1_000));
     expect((await device(b).tree()).hash).toBe(other);
     poke(a, { control: 'both' });
-    await until('the window to say so', () => told.get(a)!.at(-1)?.both === true);
+    await until('the window to say so', () => toldOf(a).at(-1)?.both === true);
   }, 60_000);
 
   it(
@@ -202,7 +208,7 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
       writeFileSync(file, 'stop\nlaunch\ntap text="Form"\ntap id=submit\nassert id=result\n');
       poke(a, { journey: file });
       const compared = (serial: string) =>
-        told.get(serial)!.find((m) => String(m.title).startsWith('Against'));
+        toldOf(serial).find((m) => String(m.title).startsWith('Against'));
       await until('both compared', () => serials.every((s) => compared(s)), LONG_MS);
       for (const serial of serials) expect(String(compared(serial)?.detail)).toContain('ms there');
       await new Promise((r) => setTimeout(r, 1_000));
@@ -235,7 +241,9 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
       () => serials.every((s) => liveMirror(s)?.status.state === 'live'),
       120_000,
     );
-    expect(liveMirror(a)!.pid).toBe(liveMirror(b)!.pid);
+    const [one, two] = [liveMirror(a), liveMirror(b)];
+    assert(one && two, 'both windows');
+    expect(one.pid).toBe(two.pid);
     // the hub's list follows within its poll, and a press acts on what it lists
     await new Promise((r) => setTimeout(r, 3_000));
     link.send({ op: 'quit' });

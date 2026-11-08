@@ -3,8 +3,9 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } f
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { MirrorStatus, ViewerLink } from '../packages/core/src/index.js';
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
+import type { MirrorSession, MirrorStatus, ViewerLink } from '../packages/core/src/index.js';
+import type { IosPhoneDevice } from '../packages/driver-apple/src/index.js';
 import { expectSamePicture, shownByWindow } from './window-picture.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls } from '../packages/hub/src/controls.js';
@@ -16,7 +17,7 @@ import { untilWithin } from './until.js';
  * from built files, so build first. Each touch reads the screen first: a phone left alone may lock, and a blind flick on
  * its home screen opens Spotlight. Headless, unless APPDYNO_MIRROR_WINDOW=1 asks for the one real window; by the network at APPDYNO_MIRROR_WIFI=1. APPDYNO_IPHONE_ADDRESS is its address on the Wi-Fi of a phone paired for that.
  */
-const udid = process.env.APPDYNO_IPHONE_UDID;
+const udid = process.env.APPDYNO_IPHONE_UDID ?? '';
 const FIXTURE = 'dev.appdyno.fixture';
 const packages = join(import.meta.dirname, '../packages');
 const dist = join(packages, 'appdyno/dist');
@@ -33,7 +34,7 @@ const show = (screen: string) =>
       'process',
       'launch',
       '--device',
-      udid!,
+      udid,
       '--terminate-existing',
       '--payload-url',
       `appdyno-fixture://open/${screen}`,
@@ -44,17 +45,15 @@ const show = (screen: string) =>
 
 describe.runIf(udid)('mirror on an iPhone', () => {
   // from what is built, as a Node worker cannot start from sources
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let built: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let device: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let session: any;
+  let built: typeof import('../packages/core/src/index.js') &
+    typeof import('../packages/driver-apple/src/index.js');
+  let device: IosPhoneDevice;
+  let session: MirrorSession;
   let viewerProcess: (ViewerLink & { pid?: number }) | undefined;
   let runner: number | undefined;
   const seen: MirrorStatus[] = [];
 
-  const status = () => session.status as MirrorStatus;
+  const status = () => session.status;
   const read = () => device.read(FIXTURE);
   /** The length of the picture from low to high, whichever way the phone is. */
   const flick = async () => {
@@ -67,15 +66,18 @@ describe.runIf(udid)('mirror on an iPhone', () => {
   };
   const firstRowMoved = async () => {
     const first = (await read()).list.find((e: { id?: string }) => e.id === 'row_name');
-    return first && first.label !== 'Product 1';
+    return first !== undefined && first.label !== 'Product 1';
   };
 
   const start = async () => {
     const binary = await built.viewerBinary();
     session = new built.MirrorSession({
       mirror: device.mirror,
-      viewer: async () =>
-        (viewerProcess = new built.ViewerProcess(binary, [headless ? '--headless' : '--behind'])),
+      viewer: () =>
+        new Promise((resolve) => {
+          viewerProcess = new built.ViewerProcess(binary, [headless ? '--headless' : '--behind']);
+          resolve(viewerProcess);
+        }),
       options: process.env.APPDYNO_MIRROR_WIFI
         ? { quality: 'high', wifi: true }
         : { quality: 'auto' },
@@ -88,25 +90,34 @@ describe.runIf(udid)('mirror on an iPhone', () => {
   beforeAll(async () => {
     // the package's own index holds only `connect`
     built = {
-      ...(await import(join(packages, 'core/dist/index.js'))),
-      ...(await import(join(packages, 'driver-apple/dist/index.js'))),
+      ...((await import(
+        join(packages, 'core/dist/index.js')
+      )) as typeof import('../packages/core/src/index.js')),
+      ...((await import(
+        join(packages, 'driver-apple/dist/index.js')
+      )) as typeof import('../packages/driver-apple/src/index.js')),
     };
-    device = new built.IosPhoneDevice(udid!);
+    device = new built.IosPhoneDevice(udid);
     runner = (await device.open()).pid;
     await device.launch(FIXTURE);
     await start();
   }, 300_000);
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await session?.stop('the test ended');
-    await device?.stopAgent?.().catch(() => undefined);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
+    await device?.stopAgent().catch(() => undefined);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     device?.close();
   }, 60_000);
 
   it('is live in moments at the phone own size, in 4:4:4 by the hardware', async () => {
     await until('picture', () => status().state === 'live');
     expect(status().picture).toMatchObject({ codec: 'hevc' });
-    expect(status().picture!.h).toBeGreaterThan(status().picture!.w);
+    const { picture } = status();
+    assert(picture, 'a picture');
+    expect(picture.h).toBeGreaterThan(picture.w);
     await until('frames', () => Number(status().stats?.arrived ?? 0) > 0);
     // both told by the first image, which comes after the first frame's arrival
     await until('the mode', () => status().stats?.mode === 'mode 7');
@@ -122,7 +133,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
         (await read()).list.some((e: { id?: string }) => e.id === 'row_name'),
       );
       await new Promise((r) => setTimeout(r, 2_000));
-      const own = (await device.screenshot({ format: 'png' })).data as Buffer;
+      const own = (await device.screenshot({ format: 'png' })).data;
       expectSamePicture(await shownByWindow(session), own);
     },
     90_000,
@@ -152,9 +163,10 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       height = s.window?.h ?? 0;
       return !!add && width > 0;
     });
-    session.send({ kind: 'touch', p: 0, x: add!.x / width, y: add!.y / height });
+    assert(add, 'add_button');
+    session.send({ kind: 'touch', p: 0, x: add.x / width, y: add.y / height });
     await new Promise((r) => setTimeout(r, 80));
-    session.send({ kind: 'touch', p: 2, x: add!.x / width, y: add!.y / height });
+    session.send({ kind: 'touch', p: 2, x: add.x / width, y: add.y / height });
     await until('a count', async () =>
       (await read()).list.some((e: { label: string }) => e.label === 'In basket: 1'),
     );
@@ -162,7 +174,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
 
   describe('text with no key on the keyboard', () => {
     const pasteboard = (action: string, input?: string) =>
-      execFileSync('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', udid!], {
+      execFileSync('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', udid], {
         encoding: 'utf8',
         ...(input && { input }),
       });
@@ -177,9 +189,13 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       // a screen still sliding in takes no touch
       await new Promise((r) => setTimeout(r, 1_500));
       await until('its focus', async () => {
-        const { x, y, flags } = await field(id);
-        if (flags?.includes('focused')) return true;
-        const { w, h } = (await read()).window;
+        const found = await field(id);
+        assert(found, id);
+        const { x, y, flags } = found;
+        if (flags.includes('focused')) return true;
+        const { window } = await read();
+        assert(window, 'its window');
+        const { w, h } = window;
         session.send({ kind: 'touch', p: 0, x: x / w, y: y / h });
         await new Promise((r) => setTimeout(r, 80));
         session.send({ kind: 'touch', p: 2, x: x / w, y: y / h });
@@ -197,7 +213,8 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     }, 120_000);
 
     it('with no runner goes by the pasteboard, which gets back what it held', async () => {
-      device.mirror.keysOnly = true;
+      // eslint-disable-next-line @typescript-eslint/dot-notation -- the mirror's own private switch, which a dot does not reach
+      device.mirror['keysOnly'] = true;
       pasteboard('copy', 'a person copied this');
       await focus('name_input');
       session.send({ kind: 'text', s: 'çay 12' });
@@ -224,7 +241,8 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       session.send({ kind: 'text', s: 'çay' });
       await new Promise((r) => setTimeout(r, 6_000));
       expect(pasteboard('paste')).not.toContain('çay');
-      device.mirror.keysOnly = false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation -- the mirror's own private switch, which a dot does not reach
+      device.mirror['keysOnly'] = false;
     }, 120_000);
   });
 
@@ -264,7 +282,9 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     await until('the list', async () =>
       (await read()).list.some((e: { id?: string }) => e.id === 'add_button'),
     );
-    const { w, h } = status().picture!;
+    const { picture } = status();
+    assert(picture, 'a picture');
+    const { w, h } = picture;
     try {
       let count = 0;
       for (const rotation of [1, 3] as const) {
@@ -273,8 +293,10 @@ describe.runIf(udid)('mirror on an iPhone', () => {
         // a tap during the turn's animation goes nowhere
         await new Promise((r) => setTimeout(r, 2_500));
         const screen = await read();
+        assert(screen.window, 'its window');
         expect(screen.window.w).toBeGreaterThan(screen.window.h);
         const add = screen.list.find((e: { id?: string }) => e.id === 'add_button');
+        assert(add, 'add_button');
         const [x, y] = [add.x / screen.window.w, add.y / screen.window.h];
         if (headless) {
           session.send({ kind: 'touch', p: 0, x, y });
@@ -326,7 +348,8 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       const controls = windowControls(device, await device.hardware(), () => session, measures);
       controls.onWindow({ op: 'control', name: 'screenshot' });
       await until('its file', () => readdirSync(desktop).some((f) => f.endsWith('.png')));
-      const file = readdirSync(desktop).find((f) => f.endsWith('.png'))!;
+      const file = readdirSync(desktop).find((f) => f.endsWith('.png'));
+      assert(file, 'its file');
       await until('a whole picture', () => statSync(join(desktop, file)).size > 1_000);
       expect(readFileSync(join(desktop, file))[0]).toBe(0x89);
       // a viewer with no person at it copies to a board of its own, as a test in the viewer's holds
@@ -353,7 +376,10 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     'a runner answers nothing on the phone network, its own token included',
     async () => {
       const file = join(built.stateDir(), `ios-${udid}.json`);
-      const { port, token } = JSON.parse(readFileSync(file, 'utf8'));
+      const { port, token } = JSON.parse(readFileSync(file, 'utf8')) as {
+        port: number;
+        token: string;
+      };
       const socket = connect({ host: process.env.APPDYNO_IPHONE_ADDRESS, port });
       await expect(built.greet(socket, undefined, 'runner', token, 5_000)).rejects.toThrow();
       socket.destroy();
@@ -362,9 +388,13 @@ describe.runIf(udid)('mirror on an iPhone', () => {
   );
 
   it('a viewer killed comes back, with a new key for its picture', async () => {
-    const pid = viewerProcess!.pid!;
+    assert(viewerProcess?.pid !== undefined, 'the viewer');
+    const { pid } = viewerProcess;
     process.kill(pid, 'SIGKILL');
-    await until('a new viewer', () => viewerProcess!.pid !== pid);
+    await until('a new viewer', () => {
+      assert(viewerProcess, 'a viewer');
+      return viewerProcess.pid !== pid;
+    });
     await until('its picture', () => status().state === 'live', 60_000);
     await until('its frames', () => Number(status().stats?.decoded ?? 0) > 0, 30_000);
   }, 120_000);
@@ -383,7 +413,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       join(dist, 'main.js'),
       'mirror',
       '--device',
-      udid!,
+      udid,
       '--headless',
       '--seconds',
       '120',
@@ -392,7 +422,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     child.stdout.setEncoding('utf8').on('data', (s: string) => (said += s));
     await until('a live parent', () => said.includes('live'), 60_000);
     child.kill('SIGKILL');
-    device = new built.IosPhoneDevice(udid!);
+    device = new built.IosPhoneDevice(udid);
     await start();
     await until('a picture after it', () => status().state === 'live', 60_000);
   }, 180_000);

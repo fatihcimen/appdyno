@@ -48,23 +48,23 @@ describe('an app data on a device', () => {
     expect(existsSync(join(again, file))).toBe(false);
   };
 
-  const simulator = process.env.APPDYNO_IOS_UDID;
+  const simulator = process.env.APPDYNO_IOS_UDID ?? '';
   it.runIf(simulator)(
     'goes both ways on a simulator',
-    () => thereAndBack(new SimulatorApps(new Simctl(), simulator!), 'simulator', iosFile),
+    () => thereAndBack(new SimulatorApps(new Simctl(), simulator), 'simulator', iosFile),
     120_000,
   );
 
-  const iphone = process.env.APPDYNO_IPHONE_UDID;
+  const iphone = process.env.APPDYNO_IPHONE_UDID ?? '';
   it.runIf(iphone)(
     'goes both ways on an iPhone',
-    () => thereAndBack(new PhoneApps(new Devicectl(iphone!)), 'iphone', iosFile),
+    () => thereAndBack(new PhoneApps(new Devicectl(iphone)), 'iphone', iosFile),
     120_000,
   );
 
-  const serial = process.env.APPDYNO_ANDROID_SERIAL;
+  const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
   const android = () =>
-    new AndroidApps(new Adb(), serial!, {} as ConstructorParameters<typeof AndroidApps>[2]);
+    new AndroidApps(new Adb(), serial, {} as ConstructorParameters<typeof AndroidApps>[2]);
 
   it.runIf(serial)(
     'goes both ways on Android, with a debuggable build',

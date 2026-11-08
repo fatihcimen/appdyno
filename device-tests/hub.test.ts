@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   isAlive,
   viewerBinary,
@@ -18,7 +18,7 @@ import { untilWithin } from './until.js';
  * every screen, driven by its own buttons. A window it opens is a process of its own, from what is built, so build first.
  * APPDYNO_SHOTS names a folder for pictures of it.
  */
-const udid = process.env.APPDYNO_IOS_UDID;
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const main = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
 const BOOT_MS = 180_000;
 const WINDOW_MS = 120_000;
@@ -28,7 +28,7 @@ const until = untilWithin(30_000);
 
 const booted = () =>
   execFileSync('xcrun', ['simctl', 'list', 'devices', 'booted'], { encoding: 'utf8' }).includes(
-    udid!,
+    udid,
   );
 
 describe.runIf(udid)('the hub', () => {
@@ -71,6 +71,7 @@ describe.runIf(udid)('the hub', () => {
   }, 60_000);
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.kill();
     await done;
     if (udid && booted()) execFileSync('xcrun', ['simctl', 'shutdown', udid]);
@@ -88,12 +89,13 @@ describe.runIf(udid)('the hub', () => {
       await until(
         'a window',
         () => {
-          const own = liveMirror(udid!);
+          const own = liveMirror(udid);
           return own?.pid !== process.pid && own?.status.state === 'live';
         },
         WINDOW_MS,
       );
-      const window = liveMirror(udid!)!;
+      const window = liveMirror(udid);
+      assert(window);
       expect(window.pid).not.toBe(process.pid);
       await until('the list to say so', () => listed()?.mirrored === true, WINDOW_MS);
       await picture('open');

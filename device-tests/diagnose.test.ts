@@ -22,13 +22,13 @@ import {
   type ToolResult,
 } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { SIM_FIXTURE } from './helpers.js';
 
 /** Conflicts with a real holder, logs and crashes of the fixture, cancellation: on the devices named. */
 const APP = 'dev.appdyno.fixture';
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
-const udid = process.env.APPDYNO_IOS_UDID;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const textOf = (r: ToolResult) => r.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
 type Call = <N extends OpName>(
   name: N,
@@ -37,25 +37,28 @@ type Call = <N extends OpName>(
 /** An operation as its tool calls it: through its input schema. */
 const caller = (ctx: ServerContext): Call => {
   const ops = checkedOps(ctx);
-  return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) =>
-    (await ops[name]!.handler(ops[name]!.input.parse(args))) as ToolResult<OpData<N>>;
+  return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
+    const op = ops[name];
+    assert(op, name);
+    return (await op.handler(op.input.parse(args))) as ToolResult<OpData<N>>;
+  };
 };
 
 describe.skipIf(!serial)('android: another tool holds UI automation', () => {
   const adb = new Adb();
-  const shell = (cmd: string) => adb.exec(serial!, cmd);
+  const shell = (cmd: string) => adb.exec(serial, cmd);
   const holderRunning = async () =>
     holdersIn(await shell(PROCESS_LIST)).find((h) => h.tool === 'uiautomator');
   let holder: ChildProcess;
 
   beforeAll(async () => {
-    const first = new AndroidDevice(serial!);
+    const first = new AndroidDevice(serial);
     await first.stopAgent();
     first.close();
     // an agent another suite started from its own state folder holds UI automation for a moment yet
     await shell('pkill -f dev.appdyno.agent.Main || true');
     // a real client of UI automation, as long as this adb session lives
-    holder = spawn(adb.bin, ['-s', serial!, 'shell', 'uiautomator', 'events'], {
+    holder = spawn(adb.bin, ['-s', serial, 'shell', 'uiautomator', 'events'], {
       stdio: 'ignore',
     });
     for (let i = 0; i < 40 && !(await holderRunning()); i++) await pause(250);
@@ -69,29 +72,29 @@ describe.skipIf(!serial)('android: another tool holds UI automation', () => {
   });
 
   it('names the holder and the command, and leaves it running', async () => {
-    const d = new AndroidDevice(serial!);
+    const d = new AndroidDevice(serial);
     const e = (await d.open().catch((x: unknown) => x)) as DeviceError;
     d.close();
     expect(e).toBeInstanceOf(DeviceError);
     expect(e.code).toBe('AGENT_CONFLICT');
     const h = await holderRunning();
-    expect(h).toBeDefined();
-    expect(e.hint).toContain(`uiautomator (pid ${h!.pid})`);
-    expect(e.hint).toContain(`adb -s ${serial} shell ${h!.shell}`);
+    assert(h);
+    expect(e.hint).toContain(`uiautomator (pid ${h.pid})`);
+    expect(e.hint).toContain(`adb -s ${serial} shell ${h.shell}`);
     expect(e.hint).toContain('--takeover');
   });
 
   it('answers the agent with that hint through an operation, as a client sees it', async () => {
-    const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider()], { device: serial! });
+    const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider()], { device: serial });
     await expect(caller(ctx)('screen')).rejects.toMatchObject({
       code: 'AGENT_CONFLICT',
-      hint: expect.stringContaining('uiautomator'),
+      hint: expect.stringContaining('uiautomator') as unknown,
     });
     ctx.close();
   });
 
   it('stops the holder only with --takeover, and drives', async () => {
-    const d = new AndroidDevice(serial!, adb, { takeover: true });
+    const d = new AndroidDevice(serial, adb, { takeover: true });
     const hello = await d.open();
     expect(hello.platform).toBe('android');
     expect((await d.tree()).nodes.length).toBeGreaterThan(0);
@@ -106,20 +109,20 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
   const adb = new Adb();
 
   beforeAll(async () => {
-    ctx = new ServerContext(DEFAULT_POLICY, [androidProvider()], { device: serial!, app: APP });
+    ctx = new ServerContext(DEFAULT_POLICY, [androidProvider()], { device: serial, app: APP });
     call = caller(ctx);
     await call('launch_app', { read: 'none' });
   });
   afterAll(async () => {
     ctx.close();
     // a crash dialog left up would cover the next suite's screens
-    await adb.exec(serial!, `am force-stop ${APP}`);
+    await adb.exec(serial, `am force-stop ${APP}`);
   });
 
   it('reads the log since the last action, at the level asked', async () => {
     const marker = `appdyno-mark-${Date.now()}`;
     await call('screen');
-    await adb.exec(serial!, `log -t appdyno-test ${marker}`);
+    await adb.exec(serial, `log -t appdyno-test ${marker}`);
     const r = await call('logs', { level: 'verbose', maxLines: 50 });
     expect(textOf(r)).toContain(APP);
     expect(r.data.source).toMatch(/^logcat --pid=\d+/);
@@ -130,9 +133,9 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
   it('says an action killed the app, with the reason', async () => {
     // as a tap would: the app goes down while the action runs
     const crashing = async () => {
-      const was = (await adb.exec(serial!, `pidof ${APP}`)).trim();
-      await adb.exec(serial!, `am crash ${APP}`);
-      for (let i = 0; i < 60 && (await adb.exec(serial!, `pidof ${APP}`)).trim() === was; i++)
+      const was = (await adb.exec(serial, `pidof ${APP}`)).trim();
+      await adb.exec(serial, `am crash ${APP}`);
+      for (let i = 0; i < 60 && (await adb.exec(serial, `pidof ${APP}`)).trim() === was; i++)
         await pause(250);
       await pause(1_000);
     };
@@ -147,7 +150,9 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
       await call('screen');
       const r = await call('press_key', { key: 'enter', read: 'diff' });
       expect(textOf(r)).toMatch(/the app died: /);
-      expect(r.data.appDied).toMatchObject({ reason: expect.stringMatching(/CRASH|EXCESSIVE/) });
+      expect(r.data.appDied).toMatchObject({
+        reason: expect.stringMatching(/CRASH|EXCESSIVE/) as unknown,
+      });
     } finally {
       s.device.key = key;
     }
@@ -194,8 +199,8 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
   let call: Call;
 
   beforeAll(async () => {
-    await simctl.install(udid!, SIM_FIXTURE);
-    ctx = new ServerContext(DEFAULT_POLICY, [simulatorProvider()], { device: udid!, app: APP });
+    await simctl.install(udid, SIM_FIXTURE);
+    ctx = new ServerContext(DEFAULT_POLICY, [simulatorProvider()], { device: udid, app: APP });
     call = caller(ctx);
     await call('launch_app', { read: 'none' });
   });
@@ -214,9 +219,9 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
 
   it('says an action killed the app, with the reason, and lists the report', async () => {
     await call('screen');
-    const device = new IosSimulatorDevice(udid!);
+    const device = new IosSimulatorDevice(udid);
     const found = Number(
-      execFileSync('xcrun', ['simctl', 'spawn', udid!, 'launchctl', 'list'], { encoding: 'utf8' })
+      execFileSync('xcrun', ['simctl', 'spawn', udid, 'launchctl', 'list'], { encoding: 'utf8' })
         .split('\n')
         .find((l) => l.includes(`UIKitApplication:${APP}[`))
         ?.trim()
@@ -242,8 +247,8 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
       reports = c.data.reports;
       if (reports.length === 0) await pause(1_000);
     }
-    expect(reports[0]!.reason).toMatch(/SIGSEGV|EXC_/);
-    expect(reports[0]!.file).toMatch(/\.ips$/);
+    expect(reports[0]?.reason).toMatch(/SIGSEGV|EXC_/);
+    expect(reports[0]?.file).toMatch(/\.ips$/);
   });
 
   it('cancels a device call and keeps working', async () => {
@@ -266,11 +271,13 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
   const ctl = new Devicectl(iphone ?? '00000000-0000000000000000');
 
   beforeAll(async () => {
-    await ctl.install(iphoneFixture!);
-    ctx = new ServerContext(DEFAULT_POLICY, [iphoneProvider()], { device: iphone!, app: APP });
+    assert(iphone && iphoneFixture);
+    await ctl.install(iphoneFixture);
+    ctx = new ServerContext(DEFAULT_POLICY, [iphoneProvider()], { device: iphone, app: APP });
     call = caller(ctx);
     await call('launch_app', { read: 'none' });
   }, 240_000);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
   afterAll(() => ctx?.close());
 
   it('says what it cannot read of a phone log, and how to read it', async () => {
@@ -282,12 +289,13 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
 
   it('says an action killed the app, and copies its crash report from the phone', async () => {
     await call('screen');
+    assert(iphone);
     await ctl.json([
       'device',
       'process',
       'signal',
       '--device',
-      iphone!,
+      iphone,
       '--pid',
       String(await ctl.pid(APP)),
       '--signal',

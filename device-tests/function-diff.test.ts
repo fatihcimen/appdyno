@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from './workspace.js';
 import { opsOn } from './helpers.js';
 
@@ -6,12 +6,12 @@ import { opsOn } from './helpers.js';
  * Which function moved between two runs, against a known cost (APPDYNO_ANDROID_SERIAL): two runs of the same work name
  * nothing, and 300 ms a second put into one function tops the diff.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 const KNOWN_MS = 300;
 
 describe.skipIf(!serial)('a function-level diff of two runs', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   let d: AndroidDevice;
   const costs = (ms?: number) =>
     d.shell(
@@ -24,10 +24,9 @@ describe.skipIf(!serial)('a function-level diff of two runs', () => {
   const profiled = async () => {
     await d.ensureAwake();
     const s = await d.read(APP);
-    await d.tap(
-      s.list.find((e) => e.id === 'cpu_steady')!,
-      { settle: false },
-    );
+    const steady = s.list.find((e) => e.id === 'cpu_steady');
+    assert(steady);
+    await d.tap(steady, { settle: false });
     await pause(500);
     const r = await t.call('perf_profile', { seconds: 5 });
     expect(r.error, r.text).toBe(false);
@@ -60,13 +59,14 @@ describe.skipIf(!serial)('a function-level diff of two runs', () => {
     const same = await t.call('perf_compare', { action: 'functions', from: a, to: b });
     console.log(same.text);
     expect(same.error, same.text).toBe(false);
-    expect(same.data.functions!.filter((f) => f.symbol.includes('fixture'))).toEqual([]);
+    expect(same.data.functions?.filter((f) => f.symbol.includes('fixture'))).toEqual([]);
 
     await costs(KNOWN_MS);
     const c = await profiled();
     const moved = await t.call('perf_compare', { action: 'functions', from: b, to: c });
     console.log(moved.text);
-    const top = moved.data.functions![0]!;
+    const top = moved.data.functions?.[0];
+    assert(top);
     expect(top.symbol).toContain('knownCost');
     expect(Math.abs(top.changeMs - KNOWN_MS)).toBeLessThan(KNOWN_MS * 0.2);
   }, 300_000);

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   Adb,
   androidProvider,
@@ -14,11 +14,11 @@ import { opsOn } from './helpers.js';
  * (APPDYNO_ANDROID_SERIAL): one frozen frame, the start's phases kept, energy of a busy core against an idle app, with
  * the battery and its count put back.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 
 describe.skipIf(!serial)('measures on Android, through the operations', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   let d: AndroidDevice;
   const open = async (screen: string, id: string): Promise<Screen> => {
     await d.shell(
@@ -33,13 +33,13 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     await pause(1_200);
     return d.read(APP);
   };
-  const onBattery = async () =>
-    Number(
-      /Time on battery: (?:(\d+)h )?(?:(\d+)m )?(?:(\d+)s )?/
-        .exec(await d.shell('dumpsys batterystats --charged | head -20'))
-        ?.slice(1, 4)
-        .reduce((a, b, i) => a + Number(b ?? 0) * [3600, 60, 1][i]!, 0) ?? 0,
-    );
+  const onBattery = async () => {
+    const [, h, m, s] =
+      /Time on battery: (?:(\d+)h )?(?:(\d+)m )?(?:(\d+)s )?/.exec(
+        await d.shell('dumpsys batterystats --charged | head -20'),
+      ) ?? [];
+    return Number(h ?? 0) * 3600 + Number(m ?? 0) * 60 + Number(s ?? 0);
+  };
 
   beforeAll(async () => {
     d = (await t.ctx.session()).device as AndroidDevice;
@@ -74,22 +74,22 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     console.log(r.text);
     expect(r.error).toBe(false);
     const keys = await runKeys(t.measurements, { app: APP });
-    const runs = await latestRuns(
-      t.measurements,
-      keys.find((k) => k.scenario === 'why')!,
-      1,
-    );
-    expect(runs[0]!.some((x) => x.kind.startsWith('launch.phase.'))).toBe(true);
+    const why = keys.find((k) => k.scenario === 'why');
+    assert(why);
+    const runs = await latestRuns(t.measurements, why, 1);
+    expect(runs[0]?.some((x) => x.kind.startsWith('launch.phase.'))).toBe(true);
   }, 240_000);
 
   it('energy: a busy core reads clearly above an idle app; the answer says what it is; all goes back', async () => {
     const s = await open('cpu', 'cpu_load');
-    const cpuLoad = s.list.find((e) => e.id === 'cpu_load')!;
+    const cpuLoad = s.list.find((e) => e.id === 'cpu_load');
+    assert(cpuLoad);
     const counted = await onBattery();
     await pause(1_000);
     const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 3_000 });
     // its loop lasts 3 s, and the snapshot reads the CPU before the energy
-    let on = true;
+    // set to false below, which the compiler does not follow into the loop
+    let on = true as boolean;
     const loop = (async () => {
       while (on) {
         await d.tap(cpuLoad, { settle: false }).catch(() => undefined);
@@ -102,13 +102,14 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     await loop;
     console.log('energy', idle.text, '\n', busy.text);
     expect(busy.data.energyModelled).toBe(true);
-    if (serial!.startsWith('emulator-')) {
+    if (serial.startsWith('emulator-')) {
       expect(busy.text).toMatch(/A model, not a reading/);
-      expect(busy.data.energyMj!).toBeGreaterThan(idle.data.energyMj! * 2 + 100);
+      assert(idle.data.energyMj !== undefined);
+      expect(busy.data.energyMj).toBeGreaterThan(idle.data.energyMj * 2 + 100);
     } else {
       expect(busy.text).toMatch(/model-based/);
       // an idle app that grew nothing has no estimate to give, on a phone that counts so little
-      expect(busy.data.energyMah!).toBeGreaterThan(idle.data.energyMah ?? 0);
+      expect(busy.data.energyMah).toBeGreaterThan(idle.data.energyMah ?? 0);
       expect(busy.text).toMatch(/energy \(a model\)/);
     }
     expect(await d.shell('dumpsys battery')).not.toMatch(/UPDATES STOPPED/);

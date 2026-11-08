@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   simulatorProvider,
   buildScreen,
@@ -15,7 +15,7 @@ import { opsOn, SIM_FIXTURE } from './helpers.js';
  * Every measure a simulator has, with no argument, against a known cost (APPDYNO_IOS_UDID): a slow start named in its
  * phase, the frames of a 40 ms draw, a stall read to 10 %, one frozen frame, energy of a busy core against an idle app.
  */
-const udid = process.env.APPDYNO_IOS_UDID;
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
 const within = (read: number, known: number, share: number) => {
   expect(read).toBeGreaterThan(known * (1 - share));
@@ -23,7 +23,7 @@ const within = (read: number, known: number, share: number) => {
 };
 
 describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
-  const t = opsOn(simulatorProvider(), udid!, APP);
+  const t = opsOn(simulatorProvider(), udid, APP);
   let d: IosSimulatorDevice;
   const open = async (screen: string): Promise<Screen> => {
     await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
@@ -37,12 +37,13 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
   };
 
   beforeAll(async () => {
-    await new Simctl().install(udid!, SIM_FIXTURE);
+    await new Simctl().install(udid, SIM_FIXTURE);
     d = (await t.ctx.session()).device as IosSimulatorDevice;
     await d.terminate(APP);
     await d.launch(APP);
   }, 240_000);
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await d?.stopAgent();
     t.ctx.close();
   });
@@ -63,7 +64,8 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     const of = (a: typeof light) => a.data.rounds;
     expect(a95(of(heavy))).toBeGreaterThan(40);
     expect(a95(of(heavy))).toBeGreaterThan(a95(of(light)));
-    expect(heavy.data.jankMedianPercent!).toBeGreaterThan(light.data.jankMedianPercent!);
+    assert(light.data.jankMedianPercent !== undefined);
+    expect(heavy.data.jankMedianPercent).toBeGreaterThan(light.data.jankMedianPercent);
   }, 240_000);
 
   it('probe: false turns it off, and its refusal is not kept as what the device cannot do', async () => {
@@ -85,7 +87,8 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
       pause(3_000).then(() => d.tap(byId(s, 'stall_500'), { settle: false })),
     ]);
     console.log(r.text);
-    within(r.data.worstMs!, 500, 0.1);
+    assert(r.data.worstMs !== undefined);
+    within(r.data.worstMs, 500, 0.1);
     expect(r.data.stalls).toBe(1);
   }, 120_000);
 
@@ -108,16 +111,20 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
         await d.measure.launch(APP, { mode: 'cold', repeats: 1, trace: true, ...(env && { env }) })
       ).value;
       console.log(JSON.stringify(startup));
-      return startup!.breakdown;
+      assert(startup);
+      return startup.breakdown;
     };
-    const ms = (b: Awaited<ReturnType<typeof phases>>, name: string) =>
-      b.find((p) => p.reason === name)!.ms;
+    const ms = (b: Awaited<ReturnType<typeof phases>>, name: string) => {
+      const phase = b.find((p) => p.reason === name);
+      assert(phase, name);
+      return phase.ms;
+    };
     const base = await phases();
     const slow = await phases({ APPDYNO_FIXTURE_STARTUP_MS: '500' });
     within(ms(slow, 'main') - ms(base, 'main'), 500, 0.15);
     // what rose is `main`; on a loaded Mac another phase can be longer, and rise by a little
     const rises = slow.map((p) => ({ name: p.reason, by: p.ms - ms(base, p.reason) }));
-    expect(rises.toSorted((a, b) => b.by - a.by)[0]!.name).toBe('main');
+    expect(rises.toSorted((a, b) => b.by - a.by)[0]?.name).toBe('main');
   }, 600_000);
 
   it('why slow: an operation keeps the phases for the dashboard', async () => {
@@ -125,12 +132,10 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     expect(r.error).toBe(false);
     expect(r.text).toMatch(/where the time went: .*main/);
     const keys = await runKeys(t.measurements, { app: APP });
-    const runs = await latestRuns(
-      t.measurements,
-      keys.find((k) => k.scenario === 'why')!,
-      1,
-    );
-    expect(runs[0]!.map((x) => x.kind)).toContain('launch.phase.main_ms');
+    const why = keys.find((k) => k.scenario === 'why');
+    assert(why);
+    const runs = await latestRuns(t.measurements, why, 1);
+    expect(runs[0]?.map((x) => x.kind)).toContain('launch.phase.main_ms');
   }, 180_000);
 
   it("energy: a busy core reads clearly above an idle app, and says it is this Mac's", async () => {
@@ -140,7 +145,8 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     await pause(3_000);
     const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 2_000 });
     // its loop lasts 3 s, and the snapshot reads the CPU before the energy
-    let on = true;
+    // set to false below, which the compiler does not follow into the loop
+    let on = true as boolean;
     const loop = (async () => {
       while (on) {
         await d.tap(byId(s, 'cpu_load'), { settle: false }).catch(() => undefined);
@@ -154,11 +160,16 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     console.log('energy', idle.data.energyMj, busy.data.energyMj, busy.text);
     expect(busy.data.energyModelled).toBe(false);
     expect(busy.text).toMatch(/This Mac's energy/);
-    expect(busy.data.energyMj!).toBeGreaterThan(idle.data.energyMj! * 3);
-    expect(execFileSync('xcrun', ['simctl', 'list', 'devices', udid!]).toString()).toMatch(
-      /Booted/,
-    );
+    assert(idle.data.energyMj !== undefined);
+    expect(busy.data.energyMj).toBeGreaterThan(idle.data.energyMj * 3);
+    expect(execFileSync('xcrun', ['simctl', 'list', 'devices', udid]).toString()).toMatch(/Booted/);
   }, 120_000);
 });
 
-const a95 = (rounds: { p95Ms?: number | undefined }[]) => Math.max(...rounds.map((r) => r.p95Ms!));
+const a95 = (rounds: { p95Ms?: number | undefined }[]) =>
+  Math.max(
+    ...rounds.map((r) => {
+      assert(r.p95Ms !== undefined, 'a p95');
+      return r.p95Ms;
+    }),
+  );

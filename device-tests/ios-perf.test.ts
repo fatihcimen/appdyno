@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   IosSimulatorDevice,
   Simctl,
@@ -21,7 +21,7 @@ import { SIM_FIXTURE } from './helpers.js';
  * launch takes longer than a warm one, a 500 ms stall and a 500 ms slow start show in the frame probe,
  * retain cycles in the leaks count and 5 MB fetched in the network bytes.
  */
-const udid = process.env.APPDYNO_IOS_UDID;
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
 
 /**
@@ -46,11 +46,12 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   };
 
   beforeAll(async () => {
-    await new Simctl().install(udid!, SIM_FIXTURE);
-    d = new IosSimulatorDevice(udid!);
+    await new Simctl().install(udid, SIM_FIXTURE);
+    d = new IosSimulatorDevice(udid);
     await d.open();
   }, 240_000);
   // the runner does not stay on a shared simulator after the run
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
   afterAll(() => d?.stopAgent());
 
   it('memory: 50 MB held shows in the footprint (within 15 %)', async () => {
@@ -86,7 +87,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     expect(prof.samples).toBeGreaterThan(100);
     // a debug build spends the loop's own time in runtime helpers: the app's functions rank by busy inclusive time
     expect(prof.appTop[0]?.symbol).toMatch(/CpuScreen/);
-    expect(prof.appTop[0]!.percent).toBeGreaterThan(30);
+    expect(prof.appTop[0]?.percent).toBeGreaterThan(30);
     await pause(2_000);
   }, 60_000);
 
@@ -113,10 +114,11 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   it('leaks: each retain cycle made counts', async () => {
     const s = await open('leak');
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-leak-'));
-    const before = (await d.measure.heapGraph(APP, join(dir, 'before.memgraph'))).value.leaks!;
+    const before = (await d.measure.heapGraph(APP, join(dir, 'before.memgraph'))).value.leaks;
     for (let i = 0; i < 5; i++) await d.tap(byId(s, 'leak_make'), { settle: false });
-    const after = (await d.measure.heapGraph(APP, join(dir, 'after.memgraph'))).value.leaks!;
-    console.log(`leaks ${before} -> ${after} after 5 cycles of 2 objects`);
+    const after = (await d.measure.heapGraph(APP, join(dir, 'after.memgraph'))).value.leaks;
+    console.log(`leaks ${String(before)} -> ${String(after)} after 5 cycles of 2 objects`);
+    assert(before !== undefined && after !== undefined, 'a leaks count');
     expect(after - before).toBeGreaterThanOrEqual(5);
   }, 240_000);
 
@@ -138,7 +140,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     try {
       const port = (server.address() as AddressInfo).port;
       await d.terminate(APP);
-      await new Simctl().launch(udid!, APP, {
+      await new Simctl().launch(udid, APP, {
         APPDYNO_FIXTURE_FETCH_URL: `http://127.0.0.1:${port}/`,
       });
       await d.openUrl('appdyno-fixture://open/network', APP);
@@ -160,19 +162,20 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     const s = await open('cpu');
     const trace = await recordTrace({
       template: 'Time Profiler',
-      device: udid!,
+      device: udid,
       attach: () => d.measure.pid(APP),
       seconds: 2,
       dir: mkdtempSync(join(tmpdir(), 'appdyno-trace-')),
       during: () => d.tap(byId(s, 'cpu_load'), { settle: false }),
     });
     const provider = simulatorProvider();
-    const tables = await provider.queryTrace!(trace, { limit: 500 });
-    expect(tables!.rows.flat()).toContain('time-profile');
-    const digest = await provider.queryTrace!(trace, { table: 'time-profile', limit: 3 });
-    expect(digest!.columns).toContain('weight');
-    expect(digest!.rows.length).toBeLessThanOrEqual(3);
-    expect(await provider.queryTrace!('/tmp/x.jsonl', { limit: 3 })).toBeUndefined();
+    assert(provider.queryTrace !== undefined);
+    const tables = await provider.queryTrace(trace, { limit: 500 });
+    expect(tables?.rows.flat()).toContain('time-profile');
+    const digest = await provider.queryTrace(trace, { table: 'time-profile', limit: 3 });
+    expect(digest?.columns).toContain('weight');
+    expect(digest?.rows.length).toBeLessThanOrEqual(3);
+    expect(await provider.queryTrace('/tmp/x.jsonl', { limit: 3 })).toBeUndefined();
   }, 120_000);
 
   describe('frame probe', () => {
@@ -186,7 +189,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
 
     it('without the probe, frames say how to have it', async () => {
       await open('stall');
-      const e = await d.measure.frames(APP).catch((x: DeviceError) => x);
+      const e = await d.measure.frames(APP).catch((x: unknown) => x);
       expect(e).toBeInstanceOf(DeviceError);
       expect((e as DeviceError).code).toBe('UNSUPPORTED');
       expect((e as DeviceError).hint).toMatch(/leave `probe` on/);
@@ -260,7 +263,8 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       console.log('lastInput', v.kind === 'probe' && v.lastInputMsAgo, tappedAfter);
       if (v.kind !== 'probe') throw new Error(v.kind);
       // somewhere between the tap's start and its return: a tap takes the runner its time to return
-      const touchedAfter = v.durationMs - v.lastInputMsAgo!;
+      assert(v.lastInputMsAgo !== undefined);
+      const touchedAfter = v.durationMs - v.lastInputMsAgo;
       expect(touchedAfter).toBeGreaterThanOrEqual(0);
       expect(touchedAfter).toBeLessThan(tappedAfter + 200);
     }, 60_000);
@@ -288,7 +292,8 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     it('launch', async () => {
       const m = (await d.measure.xctMetrics(APP, 'launch')).value;
       console.log('xct launch', JSON.stringify(m.metrics));
-      const durations = Object.values(m.metrics)[0]!;
+      const [durations] = Object.values(m.metrics);
+      assert(durations);
       expect(durations.length).toBeGreaterThanOrEqual(5);
       expect(durations[0]).toBeGreaterThan(0);
       await d.tree();
@@ -296,7 +301,11 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
 
     it('hitches: says plainly when a simulator records none', async () => {
       await open('list');
-      const r = await d.measure.xctMetrics(APP, 'hitches').catch((e: DeviceError) => e);
+      // a refusal is a value to check; anything else fails the test as it is
+      const r = await d.measure.xctMetrics(APP, 'hitches').catch((e: unknown) => {
+        if (e instanceof DeviceError) return e;
+        throw e;
+      });
       console.log('xct hitches', r instanceof Error ? r.message : JSON.stringify(r.value.metrics));
       if (r instanceof DeviceError) {
         expect(r.code).toBe('UNSUPPORTED');

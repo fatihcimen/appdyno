@@ -1,11 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   decodePng,
   MirrorSession,
   viewerBinary,
   ViewerProcess,
+  type Image,
   type InputEvent,
 } from '../packages/core/src/index.js';
 import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
@@ -19,7 +20,7 @@ import { untilWithin } from './until.js';
  * A window's controls on our own booted simulator (APPDYNO_IOS_UDID; never a default): a real window, kept off
  * every screen, driven by its own events. It leaves the simulator on its home screen, upright.
  */
-const udid = process.env.APPDYNO_IOS_UDID;
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
 /** A first turn may have to build the simulator's runner. */
 const ROTATE_MS = 420_000;
 const SCREEN_MS = 30_000;
@@ -31,14 +32,16 @@ const SETTINGS = { x: 0.845, y: 0.483 };
  * a widget above it and the clock change by themselves, and what covers the screen covers this too.
  */
 const changedShare = (before: Buffer, after: Buffer) => {
-  const [a, b] = [decodePng(before)!, decodePng(after)!];
+  const [a, b] = [decodePng(before), decodePng(after)];
+  assert(a && b, 'two pictures');
+  // a place one picture lacks counts as no change, as NaN compares false
+  const at = (p: Image, i: number) => p.data[i] ?? NaN;
   let changed = 0;
   let seen = 0;
   for (let y = Math.floor(a.height * 0.58); y < a.height * 0.8; y += 31) {
     for (let x = 0; x < a.width; x += 29, seen++) {
       const i = (y * a.width + x) * a.channels;
-      if (Math.abs(a.data[i]! - b.data[i]!) + Math.abs(a.data[i + 1]! - b.data[i + 1]!) > 24)
-        changed++;
+      if (Math.abs(at(a, i) - at(b, i)) + Math.abs(at(a, i + 1) - at(b, i + 1)) > 24) changed++;
     }
   }
   return changed / seen;
@@ -47,7 +50,7 @@ const changedShare = (before: Buffer, after: Buffer) => {
 const until = untilWithin(30_000);
 
 describe.runIf(udid)("a window's controls on a simulator", () => {
-  const device = new IosSimulatorDevice(udid!);
+  const device = new IosSimulatorDevice(udid);
   const inputs: InputEvent[] = [];
   const told: Record<string, unknown>[] = [];
   let session: MirrorSession;
@@ -89,12 +92,15 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     };
     session = new MirrorSession({
       mirror: device.mirror,
-      viewer: async () => new ViewerProcess(binary, ['--behind']),
+      viewer: () =>
+        new Promise((resolve) => {
+          resolve(new ViewerProcess(binary, ['--behind']));
+        }),
       options: { quality: 'auto' },
       title: 'a window under test',
       look: windowLook(hardware),
-      press: controls.press,
-      onWindow: controls.onWindow,
+      press: (name) => controls.press(name),
+      onWindow: (m) => controls.onWindow(m),
     });
     const tell = session.tell.bind(session);
     session.tell = (m) => {
@@ -104,10 +110,11 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     await session.start();
     await until('picture', () => session.status.state === 'live');
     // an app closes to the page its icon is on: what these clicks aim at is on Settings' page, whatever ran before
-    execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.Preferences']);
+    execFileSync('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
   }, 120_000);
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await session?.stop('done');
     device.close();
   });
@@ -204,14 +211,17 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
   it(
     'turns the device and back, in an app that turns, and its picture stands up',
     async () => {
-      execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.mobilesafari']);
+      execFileSync('xcrun', ['simctl', 'launch', udid, 'com.apple.mobilesafari']);
       await settled();
-      expect(session.status.picture!.h).toBeGreaterThan(session.status.picture!.w);
+      const { picture } = session.status;
+      assert(picture);
+      expect(picture.h).toBeGreaterThan(picture.w);
       control('rotateLeft');
       await until(
         'a turned picture',
         () => {
-          const p = session.status.picture!;
+          const p = session.status.picture;
+          assert(p);
           return p.w > p.h;
         },
         ROTATE_MS,
@@ -220,12 +230,13 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
       await until(
         'an upright picture',
         () => {
-          const p = session.status.picture!;
+          const p = session.status.picture;
+          assert(p);
           return p.h > p.w;
         },
         60_000,
       );
-      execFileSync('xcrun', ['simctl', 'terminate', udid!, 'com.apple.mobilesafari']);
+      execFileSync('xcrun', ['simctl', 'terminate', udid, 'com.apple.mobilesafari']);
     },
     ROTATE_MS + 80_000,
   );

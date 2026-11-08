@@ -1,8 +1,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { MirrorSession, viewerBinary, ViewerProcess } from '../packages/core/src/index.js';
 import { AndroidDevice } from '../packages/driver-android/src/index.js';
+import type { IosPhoneDevice } from '../packages/driver-apple/src/index.js';
 import { untilWithin } from './until.js';
 
 /**
@@ -10,8 +11,8 @@ import { untilWithin } from './until.js';
  * no others, into the field tapped and no other, and in no file on this Mac. On our own Android phone
  * (APPDYNO_ANDROID_SERIAL), the letters.
  */
-const udid = process.env.APPDYNO_IPHONE_UDID;
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const udid = process.env.APPDYNO_IPHONE_UDID ?? '';
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const FIXTURE = 'dev.appdyno.fixture';
 const FORM = 'appdyno-fixture://open/form';
 const packages = join(import.meta.dirname, '../packages');
@@ -26,78 +27,104 @@ const SECRET = 'zqs3cr3t';
 type Element = { id?: string; label: string; x: number; y: number; flags?: string[] };
 
 /** What drives a phone, filled in as a suite begins. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Driven = { device?: any; session?: any };
+type Driven = { device?: IosPhoneDevice | AndroidDevice; session?: MirrorSession };
 
 const on = (w: Driven) => {
-  const field = async (id: string): Promise<Element> =>
-    (await w.device.read(FIXTURE)).list.find((e: Element) => e.id === id);
+  const device = () => {
+    assert(w.device, 'a device');
+    return w.device;
+  };
+  const session = () => {
+    assert(w.session, 'a window');
+    return w.session;
+  };
+  const field = async (id: string): Promise<Element | undefined> =>
+    (await device().read(FIXTURE)).list.find((e: Element) => e.id === id);
+  /** A field the test goes on with. */
+  const found = async (id: string) => {
+    const e = await field(id);
+    assert(e, id);
+    return e;
+  };
   const tap = async ({ x, y }: Element) => {
-    const { w: width, h } = (await w.device.read(FIXTURE)).window;
-    w.session.send({ kind: 'touch', p: 0, x: x / width, y: y / h });
+    const { window } = await device().read(FIXTURE);
+    assert(window, 'its window');
+    const { w: width, h } = window;
+    session().send({ kind: 'touch', p: 0, x: x / width, y: y / h });
     await pause(80);
-    w.session.send({ kind: 'touch', p: 2, x: x / width, y: y / h });
+    session().send({ kind: 'touch', p: 2, x: x / width, y: y / h });
   };
   const form = async () => {
-    await w.device.terminate(FIXTURE);
-    await w.device.launch(FIXTURE);
-    await w.device.openUrl(FORM, FIXTURE);
+    await device().terminate(FIXTURE);
+    await device().launch(FIXTURE);
+    await device().openUrl(FORM, FIXTURE);
     await until('the field', async () => !!(await field('name_input')));
     // a screen still sliding in takes no touch
     await pause(1_500);
   };
-  const typed = (s: string) => w.session.send({ kind: 'text', s });
+  const typed = (s: string) => session().send({ kind: 'text', s });
   const hardOnes = async () => {
     await form();
-    const name = await field('name_input');
+    const name = await found('name_input');
     await tap(name);
-    await until('its focus', async () => !!(await field('name_input')).flags?.includes('focused'));
+    await until('its focus', async () => !!(await found('name_input')).flags?.includes('focused'));
     const at = { x: name.x, y: name.y };
     for (const ch of HARD) {
-      await w.device.typeText('x', { at, replace: true, settle: false });
+      await device().typeText('x', { at, replace: true, settle: false });
       typed(`${ch}x`);
-      await until(`${ch} by a window`, async () => (await field('name_input')).label === `x${ch}x`);
-      await w.device.typeText(`y${ch}y`, { at, replace: true, settle: false });
-      await until(`${ch} by the tool`, async () => (await field('name_input')).label === `y${ch}y`);
+      await until(`${ch} by a window`, async () => (await found('name_input')).label === `x${ch}x`);
+      await device().typeText(`y${ch}y`, { at, replace: true, settle: false });
+      await until(`${ch} by the tool`, async () => (await found('name_input')).label === `y${ch}y`);
     }
   };
-  return { field, tap, form, typed, hardOnes };
+  return { device, field, found, tap, form, typed, hardOnes };
 };
 
 describe.runIf(udid)('letters in a window on an iPhone', () => {
   // from what is built, as a Node worker cannot start from sources
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let built: any;
+  let built: typeof import('../packages/core/src/index.js') &
+    typeof import('../packages/driver-apple/src/index.js');
+  let phone: IosPhoneDevice;
   const w: Driven = {};
-  const { field, tap, form, typed, hardOnes } = on(w);
+  const { device, field, found, tap, form, typed, hardOnes } = on(w);
   let runner: number | undefined;
   const keys = (text: string, into?: Element) =>
-    w.device.call('text.keys', { text, ...(into && { into }) }, 30_000);
+    // eslint-disable-next-line @typescript-eslint/dot-notation -- the runner's own call, protected, which a dot does not reach
+    phone['call']('text.keys', { text, ...(into && { into }) }, 30_000);
 
   beforeAll(async () => {
     built = {
-      ...(await import(join(packages, 'core/dist/index.js'))),
-      ...(await import(join(packages, 'driver-apple/dist/index.js'))),
+      ...((await import(
+        join(packages, 'core/dist/index.js')
+      )) as typeof import('../packages/core/src/index.js')),
+      ...((await import(
+        join(packages, 'driver-apple/dist/index.js')
+      )) as typeof import('../packages/driver-apple/src/index.js')),
     };
-    w.device = new built.IosPhoneDevice(udid!);
-    runner = (await w.device.open()).pid;
-    await w.device.launch(FIXTURE);
+    phone = new built.IosPhoneDevice(udid);
+    w.device = phone;
+    runner = (await phone.open()).pid;
+    await phone.launch(FIXTURE);
     const binary = await built.viewerBinary();
-    w.session = new built.MirrorSession({
-      mirror: w.device.mirror,
-      viewer: async () => new built.ViewerProcess(binary, ['--headless']),
+    const session = new built.MirrorSession({
+      mirror: phone.mirror,
+      viewer: () =>
+        new Promise((resolve) => {
+          resolve(new built.ViewerProcess(binary, ['--headless']));
+        }),
       options: { quality: 'auto' },
       title: 'a test',
       onChange: () => undefined,
     });
-    await w.session.start();
-    await until('the picture', () => w.session.status.state === 'live');
+    w.session = session;
+    await session.start();
+    await until('the picture', () => session.status.state === 'live');
   }, 300_000);
 
   afterAll(async () => {
     await w.session?.stop('the test ended');
     await w.device?.terminate(FIXTURE).catch(() => undefined);
-    await w.device?.stopAgent?.().catch(() => undefined);
+    await w.device?.stopAgent().catch(() => undefined);
     w.device?.close();
   }, 60_000);
 
@@ -107,45 +134,45 @@ describe.runIf(udid)('letters in a window on an iPhone', () => {
     'after a tap on a secure field %i ms before go there and nowhere else',
     async (gap) => {
       await form();
-      await tap(await field('name_input'));
+      await tap(await found('name_input'));
       typed('Ada');
-      await until('the name', async () => (await field('name_input')).label === 'Ada');
-      await tap(await field('password_input'));
+      await until('the name', async () => (await found('name_input')).label === 'Ada');
+      await tap(await found('password_input'));
       await pause(gap);
       typed('s3');
-      await until('the secret', async () => (await field('password_input')).label === '••');
-      expect((await field('name_input')).label).toBe('Ada');
+      await until('the secret', async () => (await found('password_input')).label === '••');
+      expect((await found('name_input')).label).toBe('Ada');
     },
     90_000,
   );
 
   it('for a field that does not have the focus go nowhere', async () => {
     await form();
-    await tap(await field('name_input'));
+    await tap(await found('name_input'));
     typed('Ada');
-    await until('the name', async () => (await field('name_input')).label === 'Ada');
+    await until('the name', async () => (await found('name_input')).label === 'Ada');
     const from = Date.now();
     await expect(keys('s3', await field('password_input'))).rejects.toMatchObject({
       code: 'NO_FOCUS',
     });
     expect(Date.now() - from).toBeGreaterThan(5_000);
-    expect((await field('name_input')).label).toBe('Ada');
-    expect((await field('password_input')).label).not.toContain('•');
+    expect((await found('name_input')).label).toBe('Ada');
+    expect((await found('password_input')).label).not.toContain('•');
   }, 60_000);
 
   it('leave no word in what xcodebuild keeps', async () => {
     await form();
-    await tap(await field('name_input'));
+    await tap(await found('name_input'));
     typed(WORD);
-    await until('the word', async () => (await field('name_input')).label === WORD);
-    await tap(await field('password_input'));
-    await w.device.typeText(SECRET, { settle: false });
+    await until('the word', async () => (await found('name_input')).label === WORD);
+    await tap(await found('password_input'));
+    await device().typeText(SECRET, { settle: false });
     await until('the secret', async () =>
-      (await field('password_input')).label.startsWith('••••••••'),
+      (await found('password_input')).label.startsWith('••••••••'),
     );
-    const name = await field('name_input');
-    await w.device.typeText(WORD, { at: { x: name.x, y: name.y }, replace: true, settle: false });
-    await w.device.read(FIXTURE);
+    const name = await found('name_input');
+    await device().typeText(WORD, { at: { x: name.x, y: name.y }, replace: true, settle: false });
+    await device().read(FIXTURE);
 
     const kept = join(built.stateDir(), `ios-${udid}.kept`);
     const files = (readdirSync(kept, { recursive: true }) as string[])
@@ -164,7 +191,7 @@ describe.runIf(udid)('letters in a window on an iPhone', () => {
   }, 90_000);
 
   it('kept one runner through all of this', async () => {
-    expect((await w.device.open()).pid).toBe(runner);
+    expect((await phone.open()).pid).toBe(runner);
   });
 });
 
@@ -173,19 +200,23 @@ describe.runIf(serial)('letters in a window on an Android phone', () => {
   const { hardOnes } = on(w);
 
   beforeAll(async () => {
-    w.device = new AndroidDevice(serial!);
+    w.device = new AndroidDevice(serial);
     await w.device.open();
     await w.device.launch(FIXTURE);
     const binary = await viewerBinary();
-    w.session = new MirrorSession({
+    const session = new MirrorSession({
       mirror: w.device.mirror,
-      viewer: async () => new ViewerProcess(binary, ['--headless']),
+      viewer: () =>
+        new Promise((resolve) => {
+          resolve(new ViewerProcess(binary, ['--headless']));
+        }),
       options: { quality: 'auto' },
       title: 'a test',
       onChange: () => undefined,
     });
-    await w.session.start();
-    await until('the picture', () => w.session.status.state === 'live');
+    w.session = session;
+    await session.start();
+    await until('the picture', () => session.status.state === 'live');
   }, 120_000);
 
   afterAll(async () => {

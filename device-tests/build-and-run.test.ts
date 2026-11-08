@@ -18,11 +18,11 @@ const xcode = { project: join(repo, 'ios/Appdyno.xcodeproj'), scheme: 'Runner' }
 const MINUTES = 15 * 60_000;
 
 describe('build and run on a device', () => {
-  const simulator = process.env.APPDYNO_IOS_UDID;
+  const simulator = process.env.APPDYNO_IOS_UDID ?? '';
   it.runIf(simulator)(
     'a scheme on a simulator',
     async () => {
-      const apps = new SimulatorApps(new Simctl(), simulator!);
+      const apps = new SimulatorApps(new Simctl(), simulator);
       expect(await apps.buildAndInstall(xcode)).toBe(FIXTURE);
       expect((await apps.listApps(false)).map((a) => a.id)).toContain(FIXTURE);
     },
@@ -32,7 +32,7 @@ describe('build and run on a device', () => {
   it.runIf(simulator)(
     'says what a build said was wrong',
     async () => {
-      const apps = new SimulatorApps(new Simctl(), simulator!);
+      const apps = new SimulatorApps(new Simctl(), simulator);
       await expect(
         apps.buildAndInstall({ ...xcode, scheme: 'NoSuchScheme' }),
       ).rejects.toMatchObject({
@@ -43,21 +43,21 @@ describe('build and run on a device', () => {
     MINUTES,
   );
 
-  const iphone = process.env.APPDYNO_IPHONE_UDID;
+  const iphone = process.env.APPDYNO_IPHONE_UDID ?? '';
   it.runIf(iphone)(
     'a scheme on an iPhone',
     async () => {
-      const apps = new PhoneApps(new Devicectl(iphone!));
+      const apps = new PhoneApps(new Devicectl(iphone));
       expect(await apps.buildAndInstall(xcode)).toBe(FIXTURE);
     },
     MINUTES,
   );
 
-  const serial = process.env.APPDYNO_ANDROID_SERIAL;
+  const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
   it.runIf(serial)(
     'a variant on Android',
     async () => {
-      const { apps } = new AndroidDevice(serial!, new Adb());
+      const { apps } = new AndroidDevice(serial, new Adb());
       const project = join(repo, 'android');
       expect(await apps.buildAndInstall({ project, scheme: 'fixture' })).toBe(FIXTURE);
       expect((await apps.listApps(false)).map((a) => a.id)).toContain(FIXTURE);

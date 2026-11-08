@@ -15,8 +15,8 @@ const APP = 'dev.appdyno.fixture';
 const PUSH_APP = 'dev.appdyno.pushfixture';
 const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 const PICTURE = fileURLToPath(new URL('../docs/images/social.png', import.meta.url));
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 /** The server on that device, with `app` named as its app, or none, as in a window. */
 function server(serial: string, app: string | undefined = APP, env: Record<string, string> = {}) {
@@ -40,6 +40,7 @@ function server(serial: string, app: string | undefined = APP, env: Record<strin
     client = new Client({ name: 'push-test', version: '0' });
     await client.connect(transport);
   });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
   afterAll(() => client?.close());
   return call;
 }
@@ -51,10 +52,10 @@ async function goHome(call: ReturnType<typeof toolCaller>) {
 }
 
 describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
-  const call = server(ANDROID!);
+  const call = server(ANDROID);
   /** The notifications the shell posted, which would be no app's own. */
   const byShell = () =>
-    execFileSync('adb', ['-s', ANDROID!, 'shell', 'cmd notification list'], { encoding: 'utf8' })
+    execFileSync('adb', ['-s', ANDROID, 'shell', 'cmd notification list'], { encoding: 'utf8' })
       .split('\n')
       .filter((l) => l.includes('|com.android.shell|')).length;
 
@@ -116,9 +117,9 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
 });
 
 describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator, over MCP", () => {
-  const call = server(ANDROID!, PUSH_APP);
+  const call = server(ANDROID, PUSH_APP);
   const adb = (...words: string[]) =>
-    execFileSync('adb', ['-s', ANDROID!, ...words], { encoding: 'utf8' });
+    execFileSync('adb', ['-s', ANDROID, ...words], { encoding: 'utf8' });
   // a mark in the fixture's own log before each push, as clearing the log would clear it for all on a shared phone
   let mark = '';
   /** What the fixture's code was handed since the last push, a line a message. */
@@ -212,7 +213,7 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
     const cli = (...words: string[]) =>
       spawnSync(process.execPath, [MAIN, 'push', ...words], { encoding: 'utf8' });
     // shared: this suite's server holds the device
-    const types = cli('--device', ANDROID!, '--share', '--app', PUSH_APP);
+    const types = cli('--device', ANDROID, '--share', '--app', PUSH_APP);
     expect(types.status, types.stderr).toBe(0);
     expect(types.stdout).toMatch(/background: FCM's own message .* by run-as/);
     const setup = cli('setup');
@@ -222,9 +223,9 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
 });
 
 describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
-  const call = server(SIMULATOR!);
-  afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
-  const last = async () => (await call('find', { id: 'push_last' })).text.match(/"([^"]*)"/)?.[1];
+  const call = server(SIMULATOR);
+  afterAll(() => new IosSimulatorDevice(SIMULATOR).stopAgent());
+  const last = async () => /"([^"]*)"/.exec((await call('find', { id: 'push_last' })).text)?.[1];
 
   it('says which types it takes, and how', async () => {
     const r = await call('push');
@@ -289,8 +290,8 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
 });
 
 describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
-  const call = server(SIMULATOR!, undefined);
-  afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
+  const call = server(SIMULATOR, undefined);
+  afterAll(() => new IosSimulatorDevice(SIMULATOR).stopAgent());
 
   it('reads the app a link brought back, with a runner up, and a push says it was in front', async () => {
     await call('open_link', { url: 'appdyno-fixture://open/push' });
@@ -306,8 +307,8 @@ describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
 });
 
 describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
-  const call = server(SIMULATOR!, APP, madeUp('apns'));
-  afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
+  const call = server(SIMULATOR, APP, madeUp('apns'));
+  afterAll(() => new IosSimulatorDevice(SIMULATOR).stopAgent());
 
   it("takes what simctl cannot by APNs' sandbox, and only by a token the app printed in this session", async () => {
     const types = (await call('push')).text;
@@ -334,7 +335,7 @@ describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
 });
 
 describe.skipIf(!ANDROID)('an Android emulator with FCM set up, over MCP', () => {
-  const call = server(ANDROID!, APP, madeUp('fcm'));
+  const call = server(ANDROID, APP, madeUp('fcm'));
 
   it('takes what only Google delivers by FCM, by a token the app printed in this session, and nothing aimed elsewhere', async () => {
     const types = (await call('push')).text;

@@ -11,9 +11,9 @@ import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './
  * names and the emulator APPDYNO_ANDROID_SERIAL names, which is given a PIN for it if it has none, and keeps none it was given.
  */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const EMULATOR = ANDROID?.startsWith('emulator-');
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const EMULATOR = ANDROID.startsWith('emulator-');
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 const PIN = '1234';
 
 const ok = <A extends Answer>(r: A) => {
@@ -31,8 +31,8 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-person-')));
-    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+    o = opsOn(simulatorProvider(), SIMULATOR, APP);
     ok(await o.call('device_setting', { name: 'biometric', value: 'enroll' }));
   }, 300_000);
   afterAll(() => o.ctx.close());
@@ -65,7 +65,7 @@ describe.skipIf(!IPHONE)('a prompt on an iPhone', () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-person-')));
     const o = await onIphone(APP);
     const r = await asks(o.call);
-    if (/not enrolled/.test(r.text)) return t.skip();
+    if (r.text.includes('not enrolled')) return t.skip();
     expect(r.text).toContain('needs a person');
     await o.call('terminate_app');
     await o.ctx.end();
@@ -75,18 +75,18 @@ describe.skipIf(!IPHONE)('a prompt on an iPhone', () => {
 
 describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {
   const adb = (...words: string[]) =>
-    execFileSync('adb', ['-s', ANDROID!, 'shell', ...words], { encoding: 'utf8' });
-  const enrolled = () => !/"count":0/.test(adb('dumpsys', 'fingerprint'));
+    execFileSync('adb', ['-s', ANDROID, 'shell', ...words], { encoding: 'utf8' });
+  const enrolled = () => !adb('dumpsys', 'fingerprint').includes('"count":0');
   let o: ReturnType<typeof opsOn>;
   let ours = false;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-person-')));
-    o = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    o = opsOn(androidProvider(new Adb()), ANDROID, APP);
     ok(await o.call('launch_app'));
     if (!enrolled()) adb('locksettings', 'set-pin', PIN);
     ours = !enrolled();
   }, 120_000);
-  afterAll(async () => {
+  afterAll(() => {
     if (ours) adb('locksettings', 'clear', '--old', PIN);
     o.ctx.close();
   });

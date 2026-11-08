@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   LIVE_FIELDS,
   MirrorSession,
@@ -24,8 +24,8 @@ import { untilWithin } from './until.js';
  * A window's live numbers on a device we hold (APPDYNO_IOS_UDID or APPDYNO_ANDROID_SERIAL; never a default): a real
  * window, kept off every screen, reading a real app. APPDYNO_SHOTS names a folder for a picture of it.
  */
-const udid = process.env.APPDYNO_IOS_UDID;
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const READING_MS = 200_000;
 const OUT_OF_A_READING = 3_000;
 /** A runner's first start and five launches, on a shared Mac. */
@@ -40,7 +40,7 @@ const inFront = async () => {
   if (udid) execFileSync('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
   else
     await new Adb().exec(
-      serial!,
+      serial,
       'am start -a android.intent.action.VIEW -d appdyno-fixture://open/ticker dev.appdyno.fixture',
     );
 };
@@ -49,15 +49,13 @@ const fixtureInFront = async () => {
   if (udid) execFileSync('xcrun', ['simctl', 'launch', udid, FIXTURE]);
   else
     await new Adb().exec(
-      serial!,
+      serial,
       `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/list ${FIXTURE}`,
     );
 };
 
-describe.runIf(udid ?? serial)("a window's live numbers", () => {
-  const device: Device = udid
-    ? new IosSimulatorDevice(udid)
-    : new AndroidDevice(serial!, new Adb());
+describe.runIf(udid || serial)("a window's live numbers", () => {
+  const device: Device = udid ? new IosSimulatorDevice(udid) : new AndroidDevice(serial, new Adb());
   const told: Record<string, unknown>[] = [];
   let session: MirrorSession;
   const runs = mkdtempSync(join(tmpdir(), 'appdyno-window-runs-'));
@@ -85,12 +83,15 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
     const controls = windowControls(device, hardware, () => session, measures);
     session = new MirrorSession({
       mirror: device.mirror,
-      viewer: async () => new ViewerProcess(binary, ['--behind']),
+      viewer: () =>
+        new Promise((resolve) => {
+          resolve(new ViewerProcess(binary, ['--behind']));
+        }),
       options: { quality: 'auto' },
       title: 'a window under test',
       look: windowLook(hardware),
-      press: controls.press,
-      onWindow: controls.onWindow,
+      press: (name) => controls.press(name),
+      onWindow: (m) => controls.onWindow(m),
     });
     const tell = session.tell.bind(session);
     session.tell = (m) => {
@@ -112,6 +113,7 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
 
   afterAll(async () => {
     removeMirrorFile(device.serial);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await session?.stop('done');
     await device.stopAgent().catch(() => undefined);
     device.close();
@@ -126,8 +128,10 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
       session.tell({ op: 'poke', clickOn: 'hud' });
       const read = (m: Record<string, unknown>) =>
         m.op === 'perf' && (m.sample as LiveSample).memoryMb !== undefined;
-      await until('a real reading', () => told.some(read), READING_MS).catch((e: Error) => {
-        throw new Error(`${e.message}; last sample: ${JSON.stringify(perf().at(-1)?.sample)}`);
+      await until('a real reading', () => told.some(read), READING_MS).catch((e: unknown) => {
+        throw new Error(
+          `${e instanceof Error ? e.message : String(e)}; last sample: ${JSON.stringify(perf().at(-1)?.sample)}`,
+        );
       });
       await until('a few more', () => perf().length >= 4, READING_MS);
       const { sample, noise } = perf().findLast(read) as unknown as {
@@ -164,7 +168,8 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
         const before = answers().length;
         control(name);
         await until(name, () => answers().length > before, MEASURE_MS);
-        const said = answers().at(-1)!;
+        const said = answers().at(-1);
+        assert(said, name);
         console.log(`measured: ${JSON.stringify(said)}`);
         expect(said.ok).toBe(true);
         expect(String(said.value)).toMatch(value);

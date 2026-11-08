@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 
@@ -9,7 +9,7 @@ import { opsOn, type Call } from './helpers.js';
  * 60 ms gaps of 50 and 66.7, all of them slow by Play's bars.
  */
 const APP = 'dev.appdyno.fixture';
-const SERIAL = process.env.APPDYNO_ANDROID_SERIAL;
+const SERIAL = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 
 describe.skipIf(!SERIAL)('frames of a surface', () => {
   let call: Call;
@@ -25,12 +25,13 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
   };
 
   beforeAll(() => {
-    call = opsOn(androidProvider(new Adb()), SERIAL!, APP).call;
+    call = opsOn(androidProvider(new Adb()), SERIAL, APP).call;
   });
 
   it('reads a surface drawn every 30 ms as 33 ms frames, none slow', async () => {
     const { data, text } = await surface(30);
-    const s = data.surface!;
+    const s = data.surface;
+    assert(s);
     expect(s.refreshMs).toBeCloseTo(16.7, 0);
     expect(s.fps).toBeGreaterThan(28);
     expect(s.fps).toBeLessThan(35);
@@ -43,7 +44,8 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
 
   it('reads one drawn every 40 ms as 25 frames a second, two in five of them slow', async () => {
     const { data, text } = await surface(40);
-    const s = data.surface!;
+    const s = data.surface;
+    assert(s);
     expect(s.fps).toBeGreaterThan(22.5);
     expect(s.fps).toBeLessThan(27.5);
     expect(s.slow50Percent).toBeGreaterThan(25);
@@ -53,11 +55,12 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
 
   it('reads one drawn every 60 ms as all slow, where gfxinfo reads next to nothing', async () => {
     const { data } = await surface(60);
-    const s = data.surface!;
+    const s = data.surface;
+    assert(s);
     expect(s.fps).toBeGreaterThan(15);
     expect(s.fps).toBeLessThan(18.5);
     expect(s.slow50Percent).toBeGreaterThan(90);
-    expect(data.frames!.total).toBeLessThan(s.frames / 2);
+    expect(data.frames?.total).toBeLessThan(s.frames / 2);
   });
 
   it('says a screen of the View toolkit has no surface to read', async () => {

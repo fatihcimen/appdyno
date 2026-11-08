@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   Adb,
   androidProvider,
@@ -17,9 +17,9 @@ import { opsOn } from './helpers.js';
  * is not touched, two recordings at once refuse by name. A PIN is set only on an emulator, and taken off again; a phone
  * keeps what it has. APPDYNO_ANDROID_SERIAL, APPDYNO_IOS_UDID, APPDYNO_IPHONE_UDID.
  */
-const android = process.env.APPDYNO_ANDROID_SERIAL;
-const phone = process.env.APPDYNO_IPHONE_UDID;
-const simulator = process.env.APPDYNO_IOS_UDID;
+const android = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const phone = process.env.APPDYNO_IPHONE_UDID ?? '';
+const simulator = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
 const PIN = '1234';
 /** With no credential to give, `verify` passes: a lock screen a swipe opens. */
@@ -30,7 +30,7 @@ const swipeOnly =
   }).includes('verified successfully');
 
 describe.skipIf(!android)('guards on Android', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), android!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), android, APP);
   let d: AndroidDevice;
 
   beforeAll(async () => {
@@ -74,7 +74,8 @@ describe.skipIf(!android)('guards on Android', () => {
     await d.shell(
       `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/gestures ${APP}`,
     );
-    const pad = (await d.tree()).nodes.find((n) => n.d === 'Gesture pad')!;
+    const pad = (await d.tree()).nodes.find((n) => n.d === 'Gesture pad');
+    assert(pad);
     const [l, top, r, b] = pad.b;
     await vi.waitFor(
       async () =>
@@ -87,7 +88,7 @@ describe.skipIf(!android)('guards on Android', () => {
     );
   }, 150_000);
 
-  it.runIf(android?.startsWith('emulator-'))(
+  it.runIf(android.startsWith('emulator-'))(
     'a phone locked behind a PIN refuses by name, reads and touches alike',
     async () => {
       const seen = async (name: 'screen' | 'tap' | 'swipe', args = {}) => {
@@ -124,7 +125,7 @@ for (const [name, serial, provider] of [
   ['an iPhone', phone, iphoneProvider],
 ] as const)
   describe.skipIf(!serial)(`guards on ${name}`, () => {
-    const t = opsOn(provider(), serial!, APP);
+    const t = opsOn(provider(), serial, APP);
 
     afterAll(() => t.ctx.close());
 
@@ -148,7 +149,7 @@ for (const [name, serial, provider] of [
   });
 
 describe.skipIf(!phone)('an iPhone that locked itself', () => {
-  const t = opsOn(iphoneProvider(), phone!, APP);
+  const t = opsOn(iphoneProvider(), phone, APP);
   let d: IosPhoneDevice;
   const LOCKS_AFTER_MS = 90_000;
 
@@ -177,7 +178,7 @@ describe.skipIf(!phone)('an iPhone that locked itself', () => {
 
   it('a read with no app chosen gets past it too', async () => {
     await d.stopAgent();
-    const fresh = opsOn(iphoneProvider(), phone!, APP);
+    const fresh = opsOn(iphoneProvider(), phone, APP);
     await pause(LOCKS_AFTER_MS);
     const s = await fresh.ctx.session();
     const read = await s.device.tree();

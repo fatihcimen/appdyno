@@ -5,12 +5,12 @@ import { IPHONE, opsOn } from './helpers.js';
 import { untilWithin } from './until.js';
 
 /** A PIN comes and goes on the emulator APPDYNO_ANDROID_SERIAL names: never on a phone. */
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const EMULATOR = ANDROID?.startsWith('emulator-');
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const EMULATOR = ANDROID.startsWith('emulator-');
 const PIN = '1234';
 
 const adb = (...words: string[]) =>
-  execFileSync('adb', ['-s', ANDROID!, 'shell', ...words], { encoding: 'utf8' });
+  execFileSync('adb', ['-s', ANDROID, 'shell', ...words], { encoding: 'utf8' });
 
 const until = untilWithin(20_000);
 
@@ -23,12 +23,12 @@ describe.skipIf(!EMULATOR)('what blocks an emulator', () => {
       adb('locksettings', 'clear', '--old', PIN);
     } catch (e) {
       // Android 17 fails a clear where there is no PIN, as after the test's own
-      if (!/has no password/.test(String((e as { stdout?: string }).stdout))) throw e;
+      if (!String((e as { stdout?: string }).stdout).includes('has no password')) throw e;
     }
   });
 
   it('a lock behind a PIN is listed with its fix, and is gone with the PIN', async () => {
-    const { call } = opsOn(androidProvider(new Adb()), ANDROID!, 'dev.appdyno.fixture');
+    const { call } = opsOn(androidProvider(new Adb()), ANDROID, 'dev.appdyno.fixture');
     const listed = async () =>
       (await call('list_devices')).data.devices.find((d) => d.serial === ANDROID);
     expect((await listed())?.blocked).toBeUndefined();
@@ -53,7 +53,7 @@ describe.skipIf(!EMULATOR)('what blocks an emulator', () => {
 
 describe.skipIf(!IPHONE)('what blocks an iPhone', () => {
   it('nothing, when it is unlocked and trusts this Mac', async () => {
-    const { call } = opsOn(iphoneProvider(), IPHONE!, 'dev.appdyno.fixture');
+    const { call } = opsOn(iphoneProvider(), IPHONE, 'dev.appdyno.fixture');
     const { devices } = (await call('list_devices')).data;
     const phone = devices.find((d) => d.serial === IPHONE);
     expect(phone).toBeDefined();

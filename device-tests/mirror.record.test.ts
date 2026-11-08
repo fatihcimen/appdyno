@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, describe, expect, it } from 'vitest';
 import {
   buildScreen,
   MirrorSession,
@@ -27,9 +27,9 @@ import { untilWithin } from './until.js';
  * kinds. The clicks' places come from a read of this test's own, so the recorder is told nothing but what a mouse would
  * tell it.
  */
-const UDID = process.env.APPDYNO_IOS_UDID;
-const SERIAL = process.env.APPDYNO_ANDROID_SERIAL;
-const IPHONE = process.env.APPDYNO_IPHONE_UDID;
+const UDID = process.env.APPDYNO_IOS_UDID ?? '';
+const SERIAL = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const IPHONE = process.env.APPDYNO_IPHONE_UDID ?? '';
 const BUILT = join(import.meta.dirname, '../packages/driver-apple/dist/index.js');
 const APP = 'dev.appdyno.fixture';
 const FORM = 'appdyno-fixture://open/form';
@@ -58,7 +58,13 @@ mkdirSync(join(home, 'Desktop'));
 // a flow's file goes under another HOME for a moment, and the state folder must not go with it
 process.env.APPDYNO_STATE_DIR ??= join(home, 'state');
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+/** The Mac's load over the last minute, as a whole number. */
+const load = () => {
+  const [minute] = loadavg();
+  assert(minute !== undefined, 'the load');
+  return minute.toFixed(0);
+};
 
 const until = untilWithin(60_000);
 
@@ -71,7 +77,7 @@ const restart = async (device: Device) => {
 };
 
 const providerOf = (device: Device): DeviceProvider => ({
-  list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+  list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
   handles: () => true,
   open: () => device,
 });
@@ -91,15 +97,18 @@ async function windowOn(device: Device) {
   const flow = windowFlow(ctx, device, hardware, () => session, controls.measuring);
   const session: MirrorSession = new MirrorSession({
     mirror: device.mirror,
-    viewer: async () => new ViewerProcess(binary, ['--behind']),
+    viewer: () =>
+      new Promise((resolve) => {
+        resolve(new ViewerProcess(binary, ['--behind']));
+      }),
     options: { quality: 'auto' },
     title: 'a recording window',
     look: windowLook(hardware),
-    press: controls.press,
+    press: (name) => controls.press(name),
     onWindow: (m) => {
       if (!flow.onWindow(m)) controls.onWindow(m);
     },
-    onInput: flow.input,
+    onInput: (e) => flow.input(e),
   });
   const tell = session.tell.bind(session);
   session.tell = (m) => {
@@ -112,7 +121,10 @@ async function windowOn(device: Device) {
   const flowSaid = () =>
     told.filter((m) => m.op === 'flow').at(-1) as
       { on: boolean; starting: boolean; lines: string[]; file?: string } | undefined;
-  const size = () => device.hello!.screen;
+  const size = () => {
+    assert(device.hello, 'its hello');
+    return device.hello.screen;
+  };
   const screen = async () =>
     buildScreen(await device.tree(), { port: device.platformScreen, appId: APP });
   const place = (e: ScreenElement) => ({ x: e.x / size().w, y: e.y / size().h });
@@ -153,7 +165,9 @@ async function windowOn(device: Device) {
       poke({ control: 'recordFlow' });
       await until('a file', () => !!flowSaid()?.file);
     });
-    return flowSaid()!.file!;
+    const said = flowSaid();
+    assert(said?.file, 'a file');
+    return said.file;
   };
   return {
     ops,
@@ -179,8 +193,12 @@ async function windowOn(device: Device) {
 }
 
 /** What has the focus, with no agent: the Android device's. */
-const focusIsFixture = async () =>
-  execFileSync('adb', ['-s', SERIAL!, 'shell', FOCUS_READ], { encoding: 'utf8' }).includes(APP);
+const focusIsFixture = () =>
+  new Promise<boolean>((resolve) => {
+    resolve(
+      execFileSync('adb', ['-s', SERIAL, 'shell', FOCUS_READ], { encoding: 'utf8' }).includes(APP),
+    );
+  });
 
 /** Where an element came to rest, as a fraction of the screen. */
 const restingPlace = async (device: Device, id: string) => {
@@ -190,7 +208,8 @@ const restingPlace = async (device: Device, id: string) => {
     const hit = now.list.find((e) => e.id === id);
     const place = hit && `${hit.x},${hit.y}`;
     if (place && place === was) {
-      const { w, h } = device.hello!.screen;
+      assert(device.hello, 'its hello');
+      const { w, h } = device.hello.screen;
       return { x: hit.x / w, y: hit.y / h };
     }
     was = place ?? '';
@@ -198,8 +217,11 @@ const restingPlace = async (device: Device, id: string) => {
   }
 };
 
-const open = (w: Awaited<ReturnType<typeof windowOn>>, url: string) =>
-  w.ops.open_link!.handler(w.ops.open_link!.input.parse({ url }));
+const open = (w: Awaited<ReturnType<typeof windowOn>>, url: string) => {
+  const op = w.ops.open_link;
+  assert(op, 'open_link');
+  return op.handler(op.input.parse({ url }));
+};
 
 /** A flow's run on a device of its own, as `appdyno flow run` runs it. */
 const replay = async (device: Device, file: string) => {
@@ -245,7 +267,11 @@ const form = async (w: Awaited<ReturnType<typeof windowOn>>) => {
   w.poke({ click: 'assert' });
   await pause(200);
   w.poke(w.place(result));
-  await until('an assertion', () => w.flowSaid()!.lines.some((l) => l.startsWith('assert')));
+  await until('an assertion', () => {
+    const said = w.flowSaid();
+    assert(said, 'the flow');
+    return said.lines.some((l) => l.startsWith('assert'));
+  });
   w.poke({ click: 'touch' });
   await pause(200);
   return w.stopRecording();
@@ -316,7 +342,8 @@ const scrolled = async (w: Awaited<ReturnType<typeof windowOn>>) => {
     await pause(1_200);
   }
   await atRest(w);
-  const row = (await w.screen()).list.filter((e) => /^Product \d+$/.test(e.label)).at(-2)!;
+  const row = (await w.screen()).list.filter((e) => /^Product \d+$/.test(e.label)).at(-2);
+  assert(row, 'a row');
   await pause(500);
   w.poke(w.place(row));
   await pause(900);
@@ -330,12 +357,26 @@ const scrolled = async (w: Awaited<ReturnType<typeof windowOn>>) => {
 /** An iPhone's stream runs only from what is built, as a Node worker cannot start from sources. */
 const builtPhone = async (): Promise<Device> => {
   const built = (await import(BUILT)) as { IosPhoneDevice: new (udid: string) => Device };
-  return new built.IosPhoneDevice(IPHONE!);
+  return new built.IosPhoneDevice(IPHONE);
 };
 
 const kinds = [
-  { name: 'simulator', serial: UDID, device: async () => new IosSimulatorDevice(UDID!) },
-  { name: 'Android', serial: SERIAL, device: async () => new AndroidDevice(SERIAL!) },
+  {
+    name: 'simulator',
+    serial: UDID,
+    device: () =>
+      new Promise<Device>((resolve) => {
+        resolve(new IosSimulatorDevice(UDID));
+      }),
+  },
+  {
+    name: 'Android',
+    serial: SERIAL,
+    device: () =>
+      new Promise<Device>((resolve) => {
+        resolve(new AndroidDevice(SERIAL));
+      }),
+  },
   { name: 'iPhone', serial: IPHONE, device: builtPhone },
 ];
 const made = new Map<string, string>();
@@ -349,12 +390,14 @@ describe.each(kinds)('a flow recorded in a window on $name', ({ name, serial, de
       const w = await windowOn(d);
       try {
         const file = await form(w);
-        console.log(`${name}, load ${loadavg()[0]!.toFixed(0)}:\n${checkForm(file)}`);
+        console.log(`${name}, load ${load()}:\n${checkForm(file)}`);
         made.set(name, file);
       } finally {
         await w.close();
       }
-      await replay(await device(), made.get(name)!);
+      const file = made.get(name);
+      assert(file, 'the flow made');
+      await replay(await device(), file);
     },
     LONG_MS,
   );
@@ -403,8 +446,8 @@ describe.each(kinds)('a flow recorded in a window on $name', ({ name, serial, de
         await until('its contrast', () => (said()?.contrast.length ?? 0) > 0, AUDIT_MS);
         console.log(`${name}: ${JSON.stringify(said())}`);
         expect(said()).toMatchObject({ role: 'text', tap: 'tap id=a11y_faint' });
-        expect(said()!.ref).toMatch(/^@/);
-        expect(said()!.contrast.join()).toMatch(/contrast/i);
+        expect(said()?.ref).toMatch(/^@/);
+        expect(said()?.contrast.join()).toMatch(/contrast/i);
         const after = await w.element((e) => e.id === 'a11y_faint', 'the faint text');
         expect(after.rect).toEqual(faint.rect);
       } finally {
@@ -432,14 +475,18 @@ describe.each(kinds)('a flow recorded in a window on $name', ({ name, serial, de
         const off = await clickMs(w, add, inFront);
         await w.startRecording();
         const on = await clickMs(w, add, inFront);
-        const load = loadavg()[0]!.toFixed(0);
+        const now = load();
         console.log(`off ${off.join(' ')}\non ${on.join(' ')}`);
         console.log(
-          `${name}: click to first changed picture, p50 ${median(off)} ms off, ${median(on)} ms on, ${TAPS} clicks each, load ${load}`,
+          `${name}: click to first changed picture, p50 ${String(median(off))} ms off, ${String(median(on))} ms on, ${TAPS} clicks each, load ${now}`,
         );
         expect(off.length).toBeGreaterThan(TAPS / 2);
         expect(on.length).toBeGreaterThan(TAPS / 2);
-        if (Number(load) < LOAD_LIMIT) expect(median(on) - median(off)).toBeLessThan(ADDED_MS);
+        if (Number(now) < LOAD_LIMIT) {
+          const [offMs, onMs] = [median(off), median(on)];
+          assert(offMs !== undefined && onMs !== undefined, 'the medians');
+          expect(onMs - offMs).toBeLessThan(ADDED_MS);
+        }
         await w.stopRecording();
       } finally {
         await w.close();

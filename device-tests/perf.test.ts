@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AndroidDevice,
   androidProvider,
@@ -17,7 +17,7 @@ import {
  * machine): frames whose draw takes ~1 ms or 40 ms, 50 MB of Java heap held, one core busy for 3 s, and
  * launch times cross-checked with the system's own "Displayed" line.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 
 describe.skipIf(!serial)('android perf accuracy', () => {
@@ -35,10 +35,14 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await new Promise((r) => setTimeout(r, 1_200));
     return d.read(APP);
   };
-  const byId = (s: Screen, id: string) => s.list.find((e) => e.id === id)!;
+  const byId = (s: Screen, id: string) => {
+    const e = s.list.find((x) => x.id === id);
+    assert(e, id);
+    return e;
+  };
 
   beforeAll(async () => {
-    d = new AndroidDevice(serial!);
+    d = new AndroidDevice(serial);
     // an agent another suite started from its own state folder holds UI automation for a moment yet
     await d.stopAgent();
     await d.shell('pkill -f dev.appdyno.agent.Main || true');
@@ -46,6 +50,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
   });
   // these tests go by shell, and a phone's screen goes off by itself meanwhile
   beforeEach(() => d.ensureAwake());
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
   afterAll(() => d?.close());
 
   it('frames: a light animation is smooth, a 40 ms draw misses every deadline', async () => {
@@ -59,12 +64,12 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const heavy = (await d.measure.frames(APP)).value;
     expect(light.totalFrames).toBeGreaterThanOrEqual(60);
     expect(light.jankyPercent).toBeLessThan(25);
-    expect(light.frames!.slowPercent).toBeLessThan(20);
+    expect(light.frames?.slowPercent).toBeLessThan(20);
     // 2 s of 40+ ms frames: about 45 frames, nearly all late
     expect(heavy.totalFrames).toBeGreaterThanOrEqual(20);
     expect(heavy.totalFrames).toBeLessThan(light.totalFrames);
-    expect(heavy.frames!.slowPercent).toBeGreaterThan(80);
-    expect(heavy.frames!.p50Ms).toBeGreaterThanOrEqual(40);
+    expect(heavy.frames?.slowPercent).toBeGreaterThan(80);
+    expect(heavy.frames?.p50Ms).toBeGreaterThanOrEqual(40);
   });
 
   it('memory: 50 MB of Java heap held shows in the Java heap within 15 %', async () => {
@@ -75,7 +80,8 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await d.tap(byId(s, 'memory_alloc'), { settle: false });
     await pause(1_500);
     const after = (await d.measure.memory(APP)).value;
-    const delta = after.javaHeapKb! - before.javaHeapKb!;
+    assert(after.javaHeapKb !== undefined && before.javaHeapKb !== undefined);
+    const delta = after.javaHeapKb - before.javaHeapKb;
     expect(delta).toBeGreaterThan(50 * 1024 * 0.85);
     expect(delta).toBeLessThan(50 * 1024 * 1.15);
     expect(after.pssKb - before.pssKb).toBeGreaterThan(50 * 1024 * 0.85);
@@ -105,14 +111,16 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const displayed = [...log.matchAll(/\+(?:(\d+)s)?(\d+)ms/g)].map(
       (m) => Number(m[1] ?? 0) * 1000 + Number(m[2]),
     );
-    const last = cold.samples.at(-1)!.totalMs!;
+    const last = cold.samples.at(-1)?.totalMs;
+    assert(last !== undefined);
     expect(displayed.length).toBeGreaterThan(0);
     expect(Math.min(...displayed.map((x) => Math.abs(x - last)))).toBeLessThanOrEqual(50);
     const warm = (await d.measure.launch(APP, { mode: 'warm', repeats: 3 })).value;
     expect(
       warm.samples.filter((x) => x.state === 'WARM' || x.state === 'HOT').length,
     ).toBeGreaterThanOrEqual(2);
-    expect(warm.medianMs!).toBeLessThan(cold.medianMs!);
+    assert(cold.medianMs !== undefined);
+    expect(warm.medianMs).toBeLessThan(cold.medianMs);
   }, 120_000);
 
   it('CPU profile: the busy loop of the fixture is the top function', async () => {
@@ -125,8 +133,8 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     ).value;
     expect(prof.samples).toBeGreaterThan(100);
     // the loop runs in a lambda of the CPU screen: the top function belongs to it
-    expect(prof.top[0]!.symbol).toMatch(/CpuActivity/);
-    expect(prof.top[0]!.percent).toBeGreaterThan(30);
+    expect(prof.top[0]?.symbol).toMatch(/CpuActivity/);
+    expect(prof.top[0]?.percent).toBeGreaterThan(30);
     await pause(1_500);
   }, 60_000);
 
@@ -145,9 +153,10 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const v = (await d.measure.vitals()).value;
     // a kernel may hide its load and give its pressure, as a Samsung's, or the reverse, as a Xiaomi's
     expect(v.load ?? v.cpuPressure).toBeDefined();
-    if (!serial!.startsWith('emulator-')) expect(v.thermalStatus).toBeGreaterThanOrEqual(0);
+    if (!serial.startsWith('emulator-')) expect(v.thermalStatus).toBeGreaterThanOrEqual(0);
     expect(v.memAvailableKb).toBeGreaterThan(0);
-    expect(v.memTotalKb).toBeGreaterThan(v.memAvailableKb!);
+    assert(v.memAvailableKb !== undefined);
+    expect(v.memTotalKb).toBeGreaterThan(v.memAvailableKb);
   });
 
   it('frame timeline: the 40 ms draw is late by the app, the light one mostly on time', async (ctx) => {
@@ -174,16 +183,19 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     expect(heavy.p95Ms).toBeGreaterThanOrEqual(40);
     expect(light.p95Ms).toBeLessThan(heavy.p95Ms);
     // what each frame cost: the 40 ms draw is over 30 ms, the light one far less
-    expect(heavy.stats!.overrunP95Ms).toBeGreaterThan(30);
-    expect(heavy.stats!.overrunP95Ms).toBeGreaterThan(2 * light.stats!.overrunP95Ms);
+    assert(heavy.stats && light.stats);
+    expect(heavy.stats.overrunP95Ms).toBeGreaterThan(30);
+    expect(heavy.stats.overrunP95Ms).toBeGreaterThan(2 * light.stats.overrunP95Ms);
     // the kept trace answers later queries, bounded
-    const digest = await androidProvider().queryTrace!(heavy.tracePath!, {
+    const provider = androidProvider();
+    assert(provider.queryTrace !== undefined && heavy.tracePath !== undefined);
+    const digest = await provider.queryTrace(heavy.tracePath, {
       sql: 'SELECT name FROM process',
       limit: 2,
     });
-    expect(digest!.columns).toEqual(['name']);
-    expect(digest!.rows).toHaveLength(2);
-    expect(digest!.dropped).toBeGreaterThan(0);
+    expect(digest?.columns).toEqual(['name']);
+    expect(digest?.rows).toHaveLength(2);
+    expect(digest?.dropped).toBeGreaterThan(0);
   }, 90_000);
 
   /** Known costs of the fixture's start, in its own files. */
@@ -202,13 +214,15 @@ describe.skipIf(!serial)('android perf accuracy', () => {
         const base = (await d.measure.launch(APP, { mode: 'cold', repeats: 2 })).value;
         await setCost('startup_ms', 600);
         const slow = (await d.measure.launch(APP, { mode: 'cold', repeats: 2 })).value;
-        raised.push(slow.medianMs! - base.medianMs!);
+        assert(slow.medianMs !== undefined && base.medianMs !== undefined);
+        raised.push(slow.medianMs - base.medianMs);
       }
     } finally {
       await clearCosts();
     }
     console.log('startup 400 ms:', raised);
-    const median = [...raised].sort((a, b) => a - b)[2]!;
+    const [, , median] = [...raised].sort((a, b) => a - b);
+    assert(median !== undefined);
     expect(Math.abs(median - 400)).toBeLessThanOrEqual(100);
   }, 300_000);
 
@@ -216,7 +230,8 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await setCost('startup_ms', 1500);
     try {
       const m = (await d.measure.launch(APP, { mode: 'cold', repeats: 1, trace: true })).value;
-      const startup = m.startup!;
+      const { startup } = m;
+      assert(startup);
       console.log('startup 1500 ms:', JSON.stringify(startup));
       expect(statSync(startup.tracePath).size).toBeGreaterThan(0);
       expect(startup.tracePath).toMatch(/\.pftrace$/);
@@ -225,8 +240,8 @@ describe.skipIf(!serial)('android perf accuracy', () => {
       expect(startup.ttidMs).toBeGreaterThan(1500);
       expect(startup.findings.join()).toMatch(/bindApplication took \d+ ms/);
       expect(startup.reasons.join()).toMatch(/bindApplication/);
-      expect(startup.breakdown[0]!.reason).toBe('bind_application');
-      expect(startup.breakdown[0]!.ms).toBeGreaterThan(1500);
+      expect(startup.breakdown[0]?.reason).toBe('bind_application');
+      expect(startup.breakdown[0]?.ms).toBeGreaterThan(1500);
       expect(startup.odex).toMatch(/^location=.* status=.* filter=.* reason=/);
     } finally {
       await clearCosts();
@@ -237,12 +252,21 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await setCost('ttfd_ms', 400);
     try {
       const m = (await d.measure.launch(APP, { mode: 'cold', repeats: 5, trace: true })).value;
-      const gaps = m.samples.map((s) => s.fullyDrawnMs! - s.totalMs!).sort((a, b) => a - b);
+      const gaps = m.samples
+        .map((s) => {
+          assert(s.fullyDrawnMs !== undefined && s.totalMs !== undefined);
+          return s.fullyDrawnMs - s.totalMs;
+        })
+        .sort((a, b) => a - b);
       console.log('ttfd 400 ms:', gaps, m.startup?.ttidMs, m.startup?.ttfdMs);
-      expect(m.fullyDrawnMedianMs).toBeGreaterThan(m.medianMs!);
-      expect(Math.abs(gaps[2]! - 400)).toBeLessThanOrEqual(100);
+      assert(m.medianMs !== undefined);
+      expect(m.fullyDrawnMedianMs).toBeGreaterThan(m.medianMs);
+      const [, , gap] = gaps;
+      assert(gap !== undefined);
+      expect(Math.abs(gap - 400)).toBeLessThanOrEqual(100);
       // the trace has one launch, not a median: it says the same more loosely
-      expect(Math.abs(m.startup!.ttfdMs! - m.startup!.ttidMs! - 400)).toBeLessThanOrEqual(200);
+      assert(m.startup?.ttfdMs !== undefined && m.startup.ttidMs !== undefined);
+      expect(Math.abs(m.startup.ttfdMs - m.startup.ttidMs - 400)).toBeLessThanOrEqual(200);
     } finally {
       await clearCosts();
     }
@@ -260,15 +284,21 @@ describe.skipIf(!serial)('android perf accuracy', () => {
       const h = (await d.measure.launch(APP, { mode: 'hot', repeats: 3, trace: i === 0 })).value;
       expect(w.samples.filter((s) => s.state === 'WARM').length).toBeGreaterThanOrEqual(2);
       expect(h.samples.filter((s) => s.state === 'HOT').length).toBeGreaterThanOrEqual(2);
-      if (i === 0) expect(h.startup!.startupType).toBe('hot');
-      warm.push(w.medianMs!);
-      hot.push(h.medianMs!);
+      if (i === 0) expect(h.startup?.startupType).toBe('hot');
+      assert(w.medianMs !== undefined && h.medianMs !== undefined);
+      warm.push(w.medianMs);
+      hot.push(h.medianMs);
     }
-    const mid = (xs: number[]) => [...xs].sort((a, b) => a - b)[1]!;
+    const mid = (xs: number[]) => {
+      const [, m] = [...xs].sort((a, b) => a - b);
+      assert(m !== undefined);
+      return m;
+    };
     console.log('hot warm cold:', hot, warm, cold.medianMs, cold.compile);
     expect(cold.samples.filter((s) => s.state === 'COLD').length).toBeGreaterThanOrEqual(2);
     expect(mid(hot)).toBeLessThan(mid(warm));
-    expect(mid(warm)).toBeLessThan(cold.medianMs!);
+    assert(cold.medianMs !== undefined);
+    expect(mid(warm)).toBeLessThan(cold.medianMs);
     // what the device says: a debuggable build asked for speed stays at verify
     expect(cold.compile).toEqual({ asked: 'speed', status: 'status=verify reason=cmdline' });
     expect(await d.shell(`dumpsys package dexopt | grep -A 3 '\\[${APP}\\]'`)).not.toMatch(
@@ -300,13 +330,14 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await d.shell(`am start -W -n ${APP}/.MainActivity`);
     await pause(1_000);
     const base = await live();
+    assert(base.activities !== undefined);
     for (let i = 0; i < 3; i++) await link('nothing');
     const control = await live(base.activities);
     for (let i = 0; i < 3; i++) await link('leak');
-    const leaked = await live(base.activities! + 3);
+    const leaked = await live(base.activities + 3);
     console.log('activities:', base.activities, control.activities, leaked.activities);
     expect(control.activities).toBe(base.activities);
-    expect(leaked.activities).toBe(base.activities! + 3);
+    expect(leaked.activities).toBe(base.activities + 3);
     expect(base.viewRootImpl).toBe(1);
     expect(base.appContexts).toBeGreaterThan(0);
   }, 120_000);
@@ -317,13 +348,14 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const m = (await d.measure.threads(APP, 5_000)).value;
     console.log('threads:', m.reads, m.windowMs, m.worstOver90Ms, m.threads.slice(0, 2));
     expect(m.reads).toBeGreaterThanOrEqual(10);
-    expect(m.threads[0]!.over90Ms).toBe(m.worstOver90Ms);
+    expect(m.threads[0]?.over90Ms).toBe(m.worstOver90Ms);
     expect(m.worstOver90Ms).toBeGreaterThanOrEqual(3_000 * 0.7);
     expect(m.worstOver90Ms).toBeLessThanOrEqual(3_000 * 1.3);
   }, 60_000);
 
   it('network: a 5 MB download reads 5 MB received', async (ctx) => {
-    let reached = false;
+    // set inside the measured callback, which the compiler does not follow
+    let reached = false as boolean;
     const size = 5 * 1024 * 1024;
     const body = Buffer.alloc(size, 7);
     let served!: () => void;
@@ -340,8 +372,8 @@ describe.skipIf(!serial)('android perf accuracy', () => {
       const lan = Object.values(networkInterfaces())
         .flat()
         .find((a) => a?.family === 'IPv4' && !a.internal)?.address;
-      const host = serial!.startsWith('emulator-') ? '10.0.2.2' : lan;
-      const url = `appdyno-fixture://open/network?url=http://${host}:${port}/x`;
+      const host = serial.startsWith('emulator-') ? '10.0.2.2' : lan;
+      const url = `appdyno-fixture://open/network?url=http://${String(host)}:${port}/x`;
       const m = (
         await d.measure.network(APP, 1_000, async () => {
           await d.shell(`am start -W -a android.intent.action.VIEW -d '${url}' ${APP}`);
@@ -351,7 +383,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
       ).value;
       console.log('network:', m);
       // a phone on another network never asked
-      if (!reached && !serial!.startsWith('emulator-')) return ctx.skip();
+      if (!reached && !serial.startsWith('emulator-')) return ctx.skip();
       expect(m.rxBytes).toBeGreaterThan(size * 0.85);
       expect(m.rxBytes).toBeLessThan(size * 1.15);
       expect(m.txBytes).toBeGreaterThan(0);
@@ -363,7 +395,9 @@ describe.skipIf(!serial)('android perf accuracy', () => {
 
   it('size: the apks read as the file on disk', async () => {
     const m = (await d.measure.size(APP)).value;
-    const path = (await d.shell(`pm path ${APP}`)).match(/(?<=^package:).+/m)![0]!.trim();
+    const listed = /(?<=^package:).+/m.exec(await d.shell(`pm path ${APP}`));
+    assert(listed);
+    const path = listed[0].trim();
     const local = join(mkdtempSync(join(tmpdir(), 'appdyno-apk-')), 'base.apk');
     await d.pull(path, local);
     const size = statSync(local).size;
@@ -381,10 +415,9 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await d.shell(`am start -W -n ${APP}/.MainActivity`);
     await pause(1_000);
     const s = await d.read(APP);
-    await d.tap(
-      s.list.find((e) => /^crash$/i.test(e.label))!,
-      { settle: false },
-    );
+    const crash = s.list.find((e) => /^crash$/i.test(e.label));
+    assert(crash);
+    await d.tap(crash, { settle: false });
     await pause(2_000);
     const after = (await d.measure.exits(APP, start)).value;
     await d.shell(`am force-stop ${APP}`);
@@ -392,7 +425,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     expect(after.run?.crashes).toBe(1);
     expect(after.held.crashes).toBe(before.held.crashes + 1);
     expect(after.held.total).toBe(before.held.total + 1);
-    expect(after.recent[0]!.reason).toMatch(/CRASH/);
+    expect(after.recent[0]?.reason).toMatch(/CRASH/);
   }, 60_000);
 
   it('heap profile: 50 MB held shows in byte[] of the Java heap; other builds are refused', async () => {
@@ -402,7 +435,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const m = (await d.measure.heapProfile(APP, 'java_hprof', 1)).value;
     await d.tap(byId(s, 'memory_free'), { settle: false });
     console.log('java_hprof:', m.top.slice(0, 3), m.totalBytes, m.tracePath);
-    expect(m.top.find((t) => t.name === 'byte[]')!.bytes).toBeGreaterThanOrEqual(40 * 1024 * 1024);
+    expect(m.top.find((t) => t.name === 'byte[]')?.bytes).toBeGreaterThanOrEqual(40 * 1024 * 1024);
     expect(statSync(m.tracePath).size).toBeGreaterThan(0);
     await expect(
       d.measure.heapProfile('com.android.settings', 'java_hprof', 1),
@@ -419,7 +452,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     ).value;
     console.log('heapprofd:', m.top.slice(0, 3), m.totalBytes);
     expect(m.totalBytes).toBeGreaterThan(0);
-    expect(m.top[0]!.bytes).toBeGreaterThan(0);
+    expect(m.top[0]?.bytes).toBeGreaterThan(0);
   }, 120_000);
 
   it('build type: the fixture is a debug build, a system app a release one', async () => {
@@ -430,12 +463,11 @@ describe.skipIf(!serial)('android perf accuracy', () => {
 
   it('energy: an emulator answers a model and says so; a phone estimates, and its history stays', async () => {
     const onBattery = async () =>
-      Number(
-        /Time on battery: (?:(\d+)h )?(?:(\d+)m )?/
-          .exec(await d.shell('dumpsys batterystats --charged | head -20'))
-          ?.slice(1, 3)
-          .reduce((a, b, i) => a + Number(b ?? 0) * (i === 0 ? 60 : 1), 0) ?? 0,
-      );
+      /Time on battery: (?:(\d+)h )?(?:(\d+)m )?/
+        .exec(await d.shell('dumpsys batterystats --charged | head -20'))
+        // a group that matched nothing is undefined
+        ?.slice(1, 3)
+        .reduce((a, b: string | undefined, i) => a + Number(b ?? 0) * (i === 0 ? 60 : 1), 0) ?? 0;
     const before = await onBattery();
     await open('cpu');
     const m = (await d.measure.energy(APP, 5_000)).value;

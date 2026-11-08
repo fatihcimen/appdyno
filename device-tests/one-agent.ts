@@ -16,7 +16,9 @@ subscribe('appdyno.agent.lost', (m) => {
 });
 
 /** This test ends an agent on purpose: the next one found gone is what it did, however late that is found. */
-export const agentMayGo = () => void meant++;
+export const agentMayGo = () => {
+  meant++;
+};
 
 afterEach(() => {
   const gone = lost;

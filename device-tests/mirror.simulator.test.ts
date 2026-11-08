@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   MirrorSession,
   startViewer,
@@ -17,18 +17,18 @@ import { untilWithin } from './until.js';
  * A mirror on our own booted simulator (APPDYNO_IOS_UDID; never a default). Headless, unless
  * APPDYNO_MIRROR_WINDOW=1 asks for the one real window, which is closed right after.
  */
-const udid = process.env.APPDYNO_IOS_UDID;
+const udid = process.env.APPDYNO_IOS_UDID ?? '';
 
 const until = untilWithin(30_000);
 
 const percentile = (values: number[], p: number) =>
-  [...values].sort((a, b) => a - b)[Math.floor(values.length * p)]!;
+  [...values].sort((a, b) => a - b)[Math.floor(values.length * p)];
 
 /** Past this, a picture is an iPad's or an open Duo's, not a phone's. */
 const WIDE_PIXELS = 1300;
 
 describe.runIf(udid)('mirror on a simulator', () => {
-  const device = new IosSimulatorDevice(udid!);
+  const device = new IosSimulatorDevice(udid);
   const seen: MirrorStatus[] = [];
   let viewerProcess: ViewerProcess | undefined;
   let session: MirrorSession;
@@ -37,10 +37,10 @@ describe.runIf(udid)('mirror on a simulator', () => {
     const binary = await viewerBinary();
     session = new MirrorSession({
       mirror: device.mirror,
-      viewer: async () => {
-        const started: ViewerLink = (viewerProcess = new ViewerProcess(binary, ['--headless']));
-        return started;
-      },
+      viewer: () =>
+        new Promise<ViewerLink>((resolve) => {
+          resolve((viewerProcess = new ViewerProcess(binary, ['--headless'])));
+        }),
       options: { quality: 'auto' },
       title: 'a test',
       onChange: (s) => seen.push(s),
@@ -49,6 +49,7 @@ describe.runIf(udid)('mirror on a simulator', () => {
   }, 300_000);
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await session?.stop('the test ended');
     device.close();
   });
@@ -62,7 +63,8 @@ describe.runIf(udid)('mirror on a simulator', () => {
 
   it('costs next to nothing on a still screen', async () => {
     await new Promise((r) => setTimeout(r, 4_000));
-    const stats = session.status.stats!;
+    const { stats } = session.status;
+    assert(stats);
     expect(stats.source).toBe('surface');
     expect(Number(stats.cpu)).toBeLessThan(10);
     expect(Number(stats.rssMb)).toBeLessThan(150);
@@ -71,13 +73,16 @@ describe.runIf(udid)('mirror on a simulator', () => {
   it('a person drag reaches the simulator, and the screen answers', async () => {
     // a list as wide as any screen: Settings on an iPad or an open Duo has a sidebar and a pane that does not move. By
     // the app's own button, as a link from outside first asks whether to open it
-    await new Simctl().install(udid!, SIM_FIXTURE);
+    await new Simctl().install(udid, SIM_FIXTURE);
     await device.launch('dev.appdyno.fixture');
     const home = await device.read('dev.appdyno.fixture');
-    const open = home.list.find((e) => e.id === 'open_list')!;
-    session.send({ kind: 'touch', p: 0, x: open.x / home.window!.w, y: open.y / home.window!.h });
+    const open = home.list.find((e) => e.id === 'open_list');
+    assert(open);
+    const size = home.window;
+    assert(size);
+    session.send({ kind: 'touch', p: 0, x: open.x / size.w, y: open.y / size.h });
     await new Promise((r) => setTimeout(r, 80));
-    session.send({ kind: 'touch', p: 2, x: open.x / home.window!.w, y: open.y / home.window!.h });
+    session.send({ kind: 'touch', p: 2, x: open.x / size.w, y: open.y / size.h });
     await new Promise((r) => setTimeout(r, 3_000));
     const times: number[] = [];
     for (let round = 0; round < 8; round++) {
@@ -98,17 +103,18 @@ describe.runIf(udid)('mirror on a simulator', () => {
     const answered = times.filter((t) => t >= 0);
     expect(answered.length).toBeGreaterThanOrEqual(6);
     console.log(
-      `touch to first changed frame: p50 ${percentile(answered, 0.5)} ms, all ${times.join(', ')}`,
+      `touch to first changed frame: p50 ${String(percentile(answered, 0.5))} ms, all ${times.join(', ')}`,
     );
     expect(session.status.inputFailed).toBe(0);
   }, 60_000);
 
   it('a viewer killed is restarted by itself', async () => {
-    const pid = viewerProcess!.pid!;
+    assert(viewerProcess?.pid !== undefined);
+    const pid = viewerProcess.pid;
     const before = seen.length;
     process.kill(pid, 'SIGKILL');
     await until('restart', () => seen.slice(before).some((s) => s.state === 'live'), 60_000);
-    expect(viewerProcess!.pid).not.toBe(pid);
+    expect(viewerProcess.pid).not.toBe(pid);
     expect(session.status.state).toBe('live');
   }, 90_000);
 
@@ -124,7 +130,7 @@ describe.runIf(udid)('mirror on a simulator', () => {
 
 describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real window', () => {
   it('shows the simulator, and a click on it goes back as a touch in the device coordinates', async () => {
-    const device = new IosSimulatorDevice(udid!);
+    const device = new IosSimulatorDevice(udid);
     const input = device.mirror.input.bind(device.mirror);
     const touches: InputEvent[] = [];
     const answered: string[] = [];
@@ -182,7 +188,7 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_RESTART === '1')(
   'a simulator shut down under its window',
   () => {
     it('waits with its need, and is live again once it is booted', async () => {
-      const device = new IosSimulatorDevice(udid!);
+      const device = new IosSimulatorDevice(udid);
       const seen: MirrorStatus[] = [];
       const session = new MirrorSession({
         mirror: device.mirror,
@@ -194,14 +200,14 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_RESTART === '1')(
       await session.start();
       try {
         await until('picture', () => session.status.state === 'live');
-        execFileSync('xcrun', ['simctl', 'shutdown', udid!]);
+        execFileSync('xcrun', ['simctl', 'shutdown', udid]);
         await until(
           'its need',
           () => session.status.state === 'waiting' && session.status.need === 'simulator-off',
           60_000,
         );
         const back = seen.length;
-        execFileSync('xcrun', ['simctl', 'bootstatus', udid!, '-b'], { timeout: 300_000 });
+        execFileSync('xcrun', ['simctl', 'bootstatus', udid, '-b'], { timeout: 300_000 });
         await until(
           'a new picture',
           () => seen.slice(back).some((s) => s.state === 'live'),
@@ -221,7 +227,7 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
   const window = process.env.APPDYNO_MIRROR_WINDOW === '1';
 
   it('stands its picture up, and a touch lands on what the picture shows', async () => {
-    const device = new IosSimulatorDevice(udid!);
+    const device = new IosSimulatorDevice(udid);
     await device.open();
     await device.launch(APP);
     const told: unknown[] = [];
@@ -235,17 +241,21 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
     let viewer: ViewerProcess | undefined;
     const session = new MirrorSession({
       mirror: device.mirror,
-      viewer: async () =>
-        (viewer = new ViewerProcess(binary, [window ? '--behind' : '--headless'])),
+      viewer: () =>
+        new Promise<ViewerLink>((resolve) => {
+          resolve((viewer = new ViewerProcess(binary, [window ? '--behind' : '--headless'])));
+        }),
       options: { quality: 'auto' },
       title: 'a test',
     });
     const shaped = (w: number, h: number) =>
-      session.status.picture?.w === w && session.status.picture?.h === h;
+      session.status.picture?.w === w && session.status.picture.h === h;
     await session.start();
     try {
       await until('picture', () => session.status.state === 'live');
-      const { w, h } = session.status.picture!;
+      const { picture } = session.status;
+      assert(picture);
+      const { w, h } = picture;
       expect(h).toBeGreaterThan(w);
 
       // an open Duo stays as it is, whatever is asked: then nothing has turned, and the picture must say so
@@ -253,7 +263,8 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
       await device.setOrientation(1);
       await new Promise((r) => setTimeout(r, 2_500));
       const { window: tried } = await device.read(APP);
-      if (tried!.h > tried!.w) {
+      assert(tried);
+      if (tried.h > tried.w) {
         expect(told.at(-1) ?? 0).toBe(0);
         expect(shaped(w, h)).toBe(true);
         return;
@@ -268,10 +279,12 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
         await new Promise((r) => setTimeout(r, 1_000));
         // the button where the app has it on the turned screen, touched as a click on the picture would
         const screen = await device.read(APP);
-        const button = screen.list.find((e) => e.id?.startsWith('open_'))!;
-        expect(screen.window!.w).toBeGreaterThan(screen.window!.h);
-        const x = button.x / screen.window!.w;
-        const y = button.y / screen.window!.h;
+        const button = screen.list.find((e) => e.id?.startsWith('open_'));
+        assert(button);
+        assert(screen.window);
+        expect(screen.window.w).toBeGreaterThan(screen.window.h);
+        const x = button.x / screen.window.w;
+        const y = button.y / screen.window.h;
         if (window) session.poke(x, y);
         else {
           session.send({ kind: 'touch', p: 0, x, y });
@@ -286,18 +299,19 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
       }
 
       // a viewer that comes back starts turned
-      const pid = viewer!.pid!;
+      assert(viewer?.pid !== undefined);
+      const pid = viewer.pid;
       process.kill(pid, 'SIGKILL');
       await until(
         'a restart',
-        () => viewer!.pid !== pid && session.status.state === 'live',
+        () => viewer?.pid !== pid && session.status.state === 'live',
         60_000,
       );
       await until('the same shape', () => shaped(h, w));
 
       // an app that does not turn is upright, though the device has turned; on a wide screen Settings turns too
       if (w < WIDE_PIXELS) {
-        execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.Preferences']);
+        execFileSync('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
         await until('an upright app', () => shaped(w, h));
         await device.launch(APP);
         await until('a turned app', () => shaped(h, w));

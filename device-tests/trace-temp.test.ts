@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, describe, expect, it } from 'vitest';
 import { recordTrace, run, sleep, stateDir, traceTable, xcodeEnv } from './workspace.js';
 
 /**
@@ -10,7 +10,7 @@ import { recordTrace, run, sleep, stateDir, traceTable, xcodeEnv } from './works
  * recording or Instruments may run: with one, a run takes only what it held, and a killed run's line waits for it to end.
  * The ktrace of each is found from outside: what the tool holds while it records.
  */
-const device = process.env.APPDYNO_TRACE_DEVICE;
+const device = process.env.APPDYNO_TRACE_DEVICE ?? '';
 
 const toolOf = async (output: string) => {
   const { stdout } = await run('ps', ['-axo', 'pid=,command=']);
@@ -36,7 +36,8 @@ const gone = async (paths: Set<string>) => {
 const watching = (dir: string) => {
   const held = new Set<string>();
   let tool: number | undefined;
-  let over = false;
+  // set by stop, which the compiler does not follow into the loop
+  let over = false as boolean;
   const seen = (async () => {
     while (!over) {
       tool = (await toolOf(dir)) ?? tool;
@@ -74,7 +75,7 @@ describe.skipIf(!device)('what a recording leaves in the temp folder', () => {
     const w = watching(dir);
     const trace = await recordTrace({
       template: 'Time Profiler',
-      device: device!,
+      device,
       seconds: 3,
       dir,
     });
@@ -90,14 +91,16 @@ describe.skipIf(!device)('what a recording leaves in the temp folder', () => {
     const w = watching(dir);
     await recordTrace({
       template: 'Time Profiler',
-      device: device!,
+      device,
       seconds: 30,
       dir,
       during: async () => {
         await w.holding();
-        process.kill(w.tool()!, 'SIGKILL');
+        const tool = w.tool();
+        assert(tool !== undefined, 'the tool');
+        process.kill(tool, 'SIGKILL');
       },
-    }).catch((e: Error) => console.log(`it said: ${e.message}`));
+    }).catch((e: unknown) => console.log(`it said: ${e instanceof Error ? e.message : String(e)}`));
     await w.stop();
     expect(w.held.size).toBeGreaterThan(0);
     await gone(w.held);
@@ -116,7 +119,7 @@ describe.skipIf(!device)('what a recording leaves in the temp folder', () => {
         '--template',
         'Time Profiler',
         '--device',
-        device!,
+        device,
         '--time-limit',
         '30s',
         '--all-processes',
@@ -138,10 +141,10 @@ describe.skipIf(!device)('what a recording leaves in the temp folder', () => {
     const dead = spawn('true');
     await new Promise((r) => dead.once('exit', r));
     mkdirSync(join(stateDir(), 'trace-temp'), { recursive: true });
-    writeFileSync(join(stateDir(), 'trace-temp', `${dead.pid}-${from}`), '');
+    writeFileSync(join(stateDir(), 'trace-temp', `${String(dead.pid)}-${from}`), '');
     await recordTrace({
       template: 'Time Profiler',
-      device: device!,
+      device,
       seconds: 2,
       dir: fresh('next'),
     });

@@ -13,13 +13,13 @@ import { toolCaller } from './helpers.js';
  * question and says yes, one that says no, and one that cannot ask, on the simulator APPDYNO_IOS_UDID names with the
  * fixture installed. A file the fixture keeps says whether its data went.
  */
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
 const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 
 const kept = () =>
   join(
-    execFileSync('xcrun', ['simctl', 'get_app_container', SIMULATOR!, APP, 'data'], {
+    execFileSync('xcrun', ['simctl', 'get_app_container', SIMULATOR, APP, 'data'], {
       encoding: 'utf8',
     }).trim(),
     'Documents/kept-by-a-person.txt',
@@ -43,7 +43,7 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
         asked.push(r.params.message);
         return { action: answer };
       });
-    const args = [MAIN, 'mcp', '--device', SIMULATOR!, '--allow-devices', `^${SIMULATOR}$`];
+    const args = [MAIN, 'mcp', '--device', SIMULATOR, '--allow-devices', `^${SIMULATOR}$`];
     // the flag is what the test gives, never the shell's
     const { APPDYNO_ALLOW_DATA_LOSS: _, ...env } = process.env as Record<string, string>;
     await client.connect(

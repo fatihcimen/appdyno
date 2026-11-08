@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from './workspace.js';
 import { opsOn } from './helpers.js';
 
@@ -6,11 +6,11 @@ import { opsOn } from './helpers.js';
  * Why a slow frame was slow, against a known cause in each mode of the fixture, and none in a smooth run
  * (APPDYNO_ANDROID_SERIAL).
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 
 describe.skipIf(!serial)('why a slow frame was slow', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   let d: AndroidDevice;
 
   /** A trace of the fixture's frames of this kind, started inside the recording. */
@@ -21,7 +21,8 @@ describe.skipIf(!serial)('why a slow frame was slow', () => {
       `am start -W -a android.intent.action.VIEW -d 'appdyno-fixture://open/frozen?${query}' ${APP}`,
     );
     await pause(1_500);
-    const start = (await d.read(APP)).list.find((e) => e.id === 'frozen_start')!;
+    const start = (await d.read(APP)).list.find((e) => e.id === 'frozen_start');
+    assert(start);
     const [r] = await Promise.all([
       t.call('perf_trace', { seconds: 7 }),
       pause(3_000).then(() => d.tap(start, { settle: false })),
@@ -46,7 +47,7 @@ describe.skipIf(!serial)('why a slow frame was slow', () => {
     'a 100 ms %s in each frame names %s',
     async (cause, named, words) => {
       const r = await traced(`frames=300&cause=${cause}`);
-      expect(r.data.slowFrames!).toBeGreaterThan(5);
+      expect(r.data.slowFrames).toBeGreaterThan(5);
       expect(r.data.slowBecause).toBe(named);
       expect(r.text).toMatch(words);
     },

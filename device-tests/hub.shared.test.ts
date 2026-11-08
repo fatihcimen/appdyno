@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, describe, expect, it } from 'vitest';
 import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
 import {
   Adb,
@@ -117,7 +117,8 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
       });
       // a choice of a row the window has not been given is lost, and a phone's takes longer than a simulator's
       await until('its row', () => listed);
-      link!.send({ op: 'poke', id: serial });
+      assert(link, 'the window');
+      link.send({ op: 'poke', id: serial });
     };
 
     /** The real server over stdio, as a client starts it, and what calls it. */
@@ -189,7 +190,8 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
       /** A person's click on the picture, which has to reach the device with the client driving. */
       touched: async () => {
         // on the fixture's title: its home holds Crash and Freeze lower down, and a hang outlasts the scene
-        link!.send({ op: 'poke', stage: serial, x: 0.5, y: 0.11 });
+        assert(link, 'the window');
+        link.send({ op: 'poke', stage: serial, x: 0.5, y: 0.11 });
         await until('the touch', () => liveMirror(serial)?.status.touchedAt !== undefined);
         expect(liveMirror(serial)?.status).toMatchObject({ state: 'live', inputFailed: 0 });
       },

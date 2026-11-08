@@ -8,7 +8,7 @@ import { type Answer, IPHONE, IPHONE_FIXTURE, onIphone, opsOn, SIM_FIXTURE } fro
 
 /** The fixture as an `.ipa`, on the simulator APPDYNO_IOS_UDID names and an iPhone, and each refusing the other's. */
 const APP = 'dev.appdyno.fixture';
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -33,7 +33,7 @@ const ipa = (platform?: string, from = SIM_FIXTURE) => {
 };
 
 describe.skipIf(!SIMULATOR)('an .ipa on a simulator', () => {
-  const { call } = opsOn(simulatorProvider(), SIMULATOR!, APP);
+  const { call } = opsOn(simulatorProvider(), SIMULATOR, APP);
 
   it('installs what is built for a simulator', async () => {
     ok(await call('app', { action: 'uninstall' }));

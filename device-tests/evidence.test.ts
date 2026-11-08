@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { homedir, networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
 import { opCaller, type Call } from './helpers.js';
@@ -72,8 +72,9 @@ function assertPlayable(file: string, minSeconds = 0) {
       streams: { codec_name: string; nb_read_frames: string }[];
       format: { duration: string };
     };
-    expect(j.streams[0]!.codec_name).toBe('h264');
-    expect(Number(j.streams[0]!.nb_read_frames)).toBeGreaterThan(0);
+    const [stream] = j.streams;
+    expect(stream?.codec_name).toBe('h264');
+    expect(Number(stream?.nb_read_frames)).toBeGreaterThan(0);
     expect(Number(j.format.duration)).toBeGreaterThanOrEqual(minSeconds);
     return j;
   }
@@ -110,7 +111,7 @@ const cli = (serial: string, ...args: string[]) =>
   new Promise<{ code: number; out: string; err: string }>((resolve) => {
     execFile(
       process.execPath,
-      [CLI, args[0]!, ...args.slice(1), '--device', serial, '--share'],
+      [CLI, ...args, '--device', serial, '--share'],
       {
         env: { ...process.env, APPDYNO_STATE_DIR: stateDir },
         timeout: LONG_MS,
@@ -130,12 +131,19 @@ const stir = async (ok: ReturnType<typeof harness>['ok'], rounds = 3) => {
   }
 };
 
-const android = process.env.APPDYNO_ANDROID_SERIAL;
-const simulator = process.env.APPDYNO_IOS_UDID;
-const iphone = process.env.APPDYNO_IPHONE_FIXTURE_APP ? process.env.APPDYNO_IPHONE_UDID : undefined;
+const android = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const simulator = process.env.APPDYNO_IOS_UDID ?? '';
+const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
+const iphone = iphoneFixture ? (process.env.APPDYNO_IPHONE_UDID ?? '') : '';
+const onAndroid = {
+  platform: 'android',
+  serial: android,
+  provider: () => androidProvider(new Adb()),
+};
+const onSimulator = { platform: 'ios', serial: simulator, provider: () => simulatorProvider() };
 const targets = [
-  { platform: 'android', serial: android, provider: () => androidProvider(new Adb()) },
-  { platform: 'ios', serial: simulator, provider: () => simulatorProvider() },
+  onAndroid,
+  onSimulator,
   { platform: 'iphone', serial: iphone, provider: () => iphoneProvider() },
 ];
 
@@ -147,11 +155,11 @@ for (const { platform, serial, provider } of targets)
     const file = (name: string) => join(dir, `${platform}-${name}`);
 
     beforeAll(async () => {
-      if (platform === 'iphone')
-        await new Devicectl(serial!).install(process.env.APPDYNO_IPHONE_FIXTURE_APP!);
-      h = harness(serial!, provider());
+      if (platform === 'iphone') await new Devicectl(serial).install(iphoneFixture);
+      h = harness(serial, provider());
       await h.ok('launch_app');
     }, 240_000);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     afterAll(() => h?.ctx.close());
 
     // devicectl offers no recording on some phones (an iPhone 13 Pro Max on iOS 27.0.1): then it says so, with what to do
@@ -183,12 +191,12 @@ for (const { platform, serial, provider } of targets)
       it('starts in one process and stops in another', async (ctx) => {
         if (noRecorder) return ctx.skip();
         const to = file(platform === 'ios' ? 'cli.mov' : 'cli.mp4');
-        const start = await cli(serial!, 'record', 'start', '--file', to);
+        const start = await cli(serial, 'record', 'start', '--file', to);
         expect(faults(start.err)).toBe('');
         expect(start.code).toBe(0);
         // the starter is gone; only the recording remains
         await stir(h.ok, 2);
-        const stop = await cli(serial!, 'record', 'stop');
+        const stop = await cli(serial, 'record', 'stop');
         expect(faults(stop.err)).toBe('');
         expect(stop.out).toContain(to);
         assertPlayable(to, 0.1);
@@ -248,15 +256,20 @@ for (const { platform, serial, provider } of targets)
         if (!fg.error) expect(html).toMatch(/Measurements \([1-9]/);
 
         // every image it names is there, and is one
-        const shots = [...html.matchAll(/<img [^>]*src="([^"]+)"/g)].map((m) => m[1]!);
+        const shots = [...html.matchAll(/<img [^>]*src="([^"]+)"/g)].map(([, src]) => {
+          assert(src);
+          return src;
+        });
         expect(shots.length).toBeGreaterThan(2);
         for (const shot of shots) expect(statSync(join(folder, shot)).size).toBeGreaterThan(100);
 
         // the steps that show the secret: an image painted over where the secret stands
         const painted = shots.filter((s) => s.endsWith('.png'));
         expect(painted.length, 'an image with the secret in it').toBeGreaterThan(0);
-        const img = decodePng(readFileSync(join(folder, painted[0]!)))!;
-        expect(img).not.toBeNull();
+        const [first] = painted;
+        assert(first);
+        const img = decodePng(readFileSync(join(folder, first)));
+        assert(img);
         const blacks = img.data.filter(
           (_, i) => i % img.channels === 0 && img.data[i] === 0,
         ).length;
@@ -265,18 +278,18 @@ for (const { platform, serial, provider } of targets)
         // the video is in the folder, and plays
         const video = /<video controls src="([^"]+)"/.exec(html)?.[1];
         if (noRecorder) return;
-        expect(video).toBeDefined();
-        assertPlayable(join(folder, video!), 0.05);
+        assert(video);
+        assertPlayable(join(folder, video), 0.05);
       }, 240_000);
 
       it('works from the command line, one process per step', async () => {
         const folder = file('report-cli');
         // an iPhone opens a link in the selected app
-        expect((await cli(serial!, 'use-device', '--app', APP)).code).toBe(0);
-        expect((await cli(serial!, 'report', 'start', '--dir', folder)).code).toBe(0);
-        const open = await cli(serial!, 'open-link', '--url', 'appdyno-fixture://open/list');
+        expect((await cli(serial, 'use-device', '--app', APP)).code).toBe(0);
+        expect((await cli(serial, 'report', 'start', '--dir', folder)).code).toBe(0);
+        const open = await cli(serial, 'open-link', '--url', 'appdyno-fixture://open/list');
         expect(faults(open.err)).toBe('');
-        const r = await cli(serial!, 'report', 'stop');
+        const r = await cli(serial, 'report', 'stop');
         expect(faults(r.err)).toBe('');
         expect(r.out).toContain('1 steps');
         expect(readFileSync(join(folder, 'index.html'), 'utf8')).toMatch(/1\. open_link/);
@@ -326,23 +339,26 @@ describe.skipIf(!android)('network on Android', () => {
   const adb = new Adb();
   // no proxy reads either way: a device that once had one keeps `:0`
   const proxySetting = async () =>
-    (await adb.exec(android!, 'settings get global http_proxy')).trim().replace(/^:0$/, 'null');
+    (await adb.exec(android, 'settings get global http_proxy')).trim().replace(/^:0$/, 'null');
   // the count needs real traffic, not `adb reverse`: an emulator reaches this Mac at 10.0.2.2, a phone at its address
   const macHost = () =>
-    android!.startsWith('emulator-')
+    android.startsWith('emulator-')
       ? '10.0.2.2'
       : Object.values(networkInterfaces())
           .flat()
           .find((a) => a?.family === 'IPv4' && !a.internal)?.address;
   beforeAll(async () => {
     web = await localWeb();
-    h = harness(android!, androidProvider(adb));
+    h = harness(android, androidProvider(adb));
     await h.ok('launch_app');
   }, 240_000);
   afterAll(async () => {
     // a test that failed half way must not leave the device on a proxy that is about to close
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await h?.ctx.end();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     h?.ctx.close();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     web?.close();
   });
 
@@ -363,7 +379,7 @@ describe.skipIf(!android)('network on Android', () => {
   });
 
   // never on a phone: a person's proxy is no test's to change, and a run that dies would leave their traffic pointing here
-  it.runIf(android?.startsWith('emulator-'))(
+  it.runIf(android.startsWith('emulator-'))(
     'sends an app through a proxy on this Mac, lists it from the export and puts it back',
     async () => {
       const proxy = `127.0.0.1:${web.proxyPort}`;
@@ -385,18 +401,17 @@ describe.skipIf(!android)('network on Android', () => {
       expect(none.text).toMatch(/export it as HAR/);
       await h.ok('network', { action: 'stop' });
       expect(await proxySetting()).toBe('null');
-      expect(await adb.run(['-s', android!, 'reverse', '--list'])).not.toContain(
-        `${web.proxyPort}`,
-      );
+      expect(await adb.run(['-s', android, 'reverse', '--list'])).not.toContain(`${web.proxyPort}`);
     },
     120_000,
   );
 
   it('counts an app by its bytes, with no URL and no body', async () => {
     await h.ok('network', { action: 'start', via: 'bytes' });
-    await fetchIn(h.ok, `http://${macHost()}:${web.webPort}/big`);
+    await fetchIn(h.ok, `http://${String(macHost())}:${web.webPort}/big`);
     const r = await h.ok('network', { action: 'stop' });
-    const got = r.data.entries!.find((e) => e.direction === 'Received')!;
+    const got = r.data.entries?.find((e) => e.direction === 'Received');
+    assert(got);
     expect(got.bytes).toBeGreaterThan(200_000);
     expect(r.text).toMatch(/bodies: not by this way/);
   }, 120_000);
@@ -404,12 +419,16 @@ describe.skipIf(!android)('network on Android', () => {
   it('traces an app by its packets, read at the end', async () => {
     const started = await h.call('network', { action: 'start', via: 'packets' });
     // a Xiaomi's user build has no packet source, and says so before it records
-    if (started.error && !android!.startsWith('emulator-'))
-      return expect(started.text).toMatch(/does not register android.network_packets/);
-    await fetchIn(h.ok, `http://${macHost()}:${web.webPort}/big`);
+    if (started.error && !android.startsWith('emulator-')) {
+      expect(started.text).toMatch(/does not register android.network_packets/);
+      return;
+    }
+    await fetchIn(h.ok, `http://${String(macHost())}:${web.webPort}/big`);
     expect((await h.ok('network', { action: 'read' })).text).toMatch(/can be read when it ends/);
     const r = await h.ok('network', { action: 'stop' });
-    const port = r.data.entries!.find(
+    const { entries } = r.data;
+    assert(entries);
+    const port = entries.find(
       (e) => e.direction === 'Received' && e.host === `TCP port ${web.webPort}`,
     );
     expect(port?.bytes).toBeGreaterThan(200_000);
@@ -417,12 +436,12 @@ describe.skipIf(!android)('network on Android', () => {
   }, 120_000);
 
   it('works from the command line, one process per step', async () => {
-    const start = await cli(android!, 'network', 'start', '--via', 'bytes', '--app', APP);
+    const start = await cli(android, 'network', 'start', '--via', 'bytes', '--app', APP);
     expect(faults(start.err)).toBe('');
-    const read = await cli(android!, 'network', 'read');
+    const read = await cli(android, 'network', 'read');
     expect(read.err).toBe('');
     expect(read.out).toMatch(/Received uid \d+/);
-    expect((await cli(android!, 'network', 'stop')).code).toBe(0);
+    expect((await cli(android, 'network', 'stop')).code).toBe(0);
   }, 120_000);
 });
 
@@ -431,11 +450,13 @@ describe.skipIf(!simulator)('network on a simulator', () => {
   let web: Awaited<ReturnType<typeof localWeb>>;
   beforeAll(async () => {
     web = await localWeb();
-    h = harness(simulator!, simulatorProvider());
+    h = harness(simulator, simulatorProvider());
     await h.ok('launch_app');
   }, 240_000);
   afterAll(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     h?.ctx.close();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     web?.close();
   });
 
@@ -471,18 +492,19 @@ describe.skipIf(!simulator)('network on a simulator', () => {
 });
 
 for (const { platform, serial, provider, pageId, other } of [
-  { ...targets[0]!, pageId: 'webview_devtools_remote_\\d+/\\S+', other: 'com.android.settings' },
-  { ...targets[1]!, pageId: 'PID:\\d+/\\d+', other: 'com.apple.Preferences' },
+  { ...onAndroid, pageId: 'webview_devtools_remote_\\d+/\\S+', other: 'com.android.settings' },
+  { ...onSimulator, pageId: 'PID:\\d+/\\d+', other: 'com.apple.Preferences' },
 ])
   describe.skipIf(!serial)(`web views on ${platform}`, () => {
     let h: ReturnType<typeof harness>;
     beforeAll(async () => {
-      h = harness(serial!, provider());
+      h = harness(serial, provider());
       await h.ok('terminate_app');
       await h.ok('launch_app');
       await h.ok('open_link', { url: 'appdyno-fixture://open/web' });
       await h.ok('wait_for', { text: 'Web content' });
     }, 240_000);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     afterAll(() => h?.ctx.close());
 
     it('marks what a web view shows in the screen', async () => {
@@ -506,9 +528,11 @@ for (const { platform, serial, provider, pageId, other } of [
       expect(r.text).toMatch(/^"Fixture web" /);
       expect(r.text).toMatch(/button "Pay" \d+,\d+ #pay/);
       expect(r.text).toMatch(/input "Card" \d+,\d+ #card/);
-      const pay = r.data.elements!.find((e) => e.text === 'Pay')!;
+      const pay = r.data.elements?.find((e) => e.text === 'Pay');
+      assert(pay, 'Pay');
       const found = await h.ok('find', { text: 'Pay' });
-      const inTree = found.data.matches[0]!;
+      const [inTree] = found.data.matches;
+      assert(inTree);
       expect(Math.abs(pay.x - inTree.x)).toBeLessThan(40);
       expect(Math.abs(pay.y - inTree.y)).toBeLessThan(40);
     }, 60_000);
@@ -541,7 +565,8 @@ for (const { platform, serial, provider, pageId, other } of [
         js: "document.getElementById('paid').textContent = ''",
       });
       const r = await h.ok('webview', { action: 'elements' });
-      const pay = r.data.elements!.find((e) => e.text === 'Pay')!;
+      const pay = r.data.elements?.find((e) => e.text === 'Pay');
+      assert(pay, 'Pay');
       await h.ok('tap', { x: pay.x, y: pay.y });
       expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
     }, 60_000);
@@ -559,7 +584,7 @@ for (const { platform, serial, provider, pageId, other } of [
     }, 60_000);
 
     it('works from the command line', async () => {
-      const r = await cli(serial!, 'webview', 'pages', '--app', APP);
+      const r = await cli(serial, 'webview', 'pages', '--app', APP);
       expect(faults(r.err)).toBe('');
       expect(r.out).toContain('"Fixture web"');
     }, 60_000);
@@ -574,11 +599,12 @@ for (const { platform, serial, provider } of targets)
       await h.ok('wait_for', { text: label });
     };
     beforeAll(async () => {
-      h = harness(serial!, provider());
+      h = harness(serial, provider());
       await h.ok('terminate_app');
       await h.ok('launch_app');
       await open('dialog', 'Open dialog');
     }, 240_000);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     afterAll(() => h?.ctx.close());
 
     it('finds a screen the same as its baseline', async () => {
@@ -595,8 +621,8 @@ for (const { platform, serial, provider } of targets)
       expect(r.error).toBe(true);
       expect(r.data.code).toBe('CHECK_FAILED');
       expect(r.text).toMatch(/[\d.]+ percent of pixels differ .* tolerance 0\.1: diff /);
-      const diff = decodePng(readFileSync(join(baselines, 'dialog.diff.png')))!;
-      expect(diff).not.toBeNull();
+      const diff = decodePng(readFileSync(join(baselines, 'dialog.diff.png')));
+      assert(diff);
       const red = diff.data.filter(
         (_, i) => i % 3 === 0 && diff.data[i] === 230 && diff.data[i + 1] === 30,
       ).length;
@@ -628,7 +654,9 @@ for (const { platform, serial, provider } of targets)
       await h.ok('tap', { selector: { id: 'open_dialog' } });
       const seen = await h.call('visual', { action: 'compare', name: 'masked', dir: baselines });
       expect(seen.error).toBe(true);
-      const percent = Number(/([\d.]+) percent/.exec(seen.text)![1]);
+      const shown = /([\d.]+) percent/.exec(seen.text)?.[1];
+      assert(shown, seen.text);
+      const percent = Number(shown);
       const loose = await h.ok('visual', {
         action: 'compare',
         name: 'masked',
@@ -659,7 +687,7 @@ for (const { platform, serial, provider } of targets)
       const r = await h.call('visual', { action: 'compare', name: 'never', dir: baselines });
       expect(r.error).toBe(true);
       expect(r.text).toMatch(/no baseline/);
-      const c = await cli(serial!, 'visual', 'compare', '--name', 'never', '--dir', baselines);
+      const c = await cli(serial, 'visual', 'compare', '--name', 'never', '--dir', baselines);
       expect(c.code).toBe(1);
       expect(c.err).toMatch(/no baseline/);
     }, 60_000);
@@ -668,11 +696,11 @@ for (const { platform, serial, provider } of targets)
 describe.skipIf(!android)('visual comparison leaves the status bar out', () => {
   it('holds when only the clock moves', async () => {
     const adb = new Adb();
-    const h = harness(android!, androidProvider(adb));
+    const h = harness(android, androidProvider(adb));
     const demo = (args: string) =>
-      adb.exec(android!, `am broadcast -a com.android.systemui.demo ${args}`);
+      adb.exec(android, `am broadcast -a com.android.systemui.demo ${args}`);
     try {
-      await adb.exec(android!, 'settings put global sysui_demo_allowed 1');
+      await adb.exec(android, 'settings put global sysui_demo_allowed 1');
       await demo('-e command enter');
       await demo('-e command clock -e hhmm 0101');
       await h.ok('open_link', { url: 'appdyno-fixture://open/dialog' });
@@ -684,26 +712,27 @@ describe.skipIf(!android)('visual comparison leaves the status bar out', () => {
       expect(r.data.same).toBe(true);
     } finally {
       await demo('-e command exit');
-      await adb.exec(android!, 'settings delete global sysui_demo_allowed');
+      await adb.exec(android, 'settings delete global sysui_demo_allowed');
       h.ctx.close();
     }
   }, 120_000);
 });
 
-describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events on Android', () => {
+describe.skipIf(!android.startsWith('emulator-'))('emulator events on Android', () => {
   let h: ReturnType<typeof harness>;
   const adb = new Adb();
   const callState = async () =>
-    /mCallState=(\d)/.exec(await adb.exec(android!, 'dumpsys telephony.registry'))?.[1];
+    /mCallState=(\d)/.exec(await adb.exec(android, 'dumpsys telephony.registry'))?.[1];
   const until = untilWithin(15_000);
   beforeAll(async () => {
-    h = harness(android!, androidProvider(adb));
+    h = harness(android, androidProvider(adb));
     await h.ok('launch_app');
   }, 240_000);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
   afterAll(() => h?.ctx.close());
 
   it('sets the battery and puts it back', async () => {
-    const level = async () => /level: (\d+)/.exec(await adb.exec(android!, 'dumpsys battery'))?.[1];
+    const level = async () => /level: (\d+)/.exec(await adb.exec(android, 'dumpsys battery'))?.[1];
     const was = await h.ok('device_setting', { name: 'battery' });
     expect(was.text).toMatch(/battery: default \(now \d+\)/);
     const before = await level();
@@ -712,7 +741,7 @@ describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events o
     expect((await h.call('device_setting', { name: 'battery', value: '170' })).error).toBe(true);
     await h.ok('device_setting', { name: 'restore' });
     expect(await level()).toBe(before);
-    expect(await adb.exec(android!, 'dumpsys battery')).not.toContain('UPDATES STOPPED');
+    expect(await adb.exec(android, 'dumpsys battery')).not.toContain('UPDATES STOPPED');
   }, 60_000);
 
   it('brings a call in and ends it', async () => {
@@ -728,7 +757,7 @@ describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events o
     await h.ok('device_setting', { name: 'sms', title: '5553434', value: text });
     await until('the SMS in the inbox', async () =>
       (
-        await adb.exec(android!, 'content query --uri content://sms/inbox --projection body')
+        await adb.exec(android, 'content query --uri content://sms/inbox --projection body')
       ).includes(text),
     );
     await h.ok('launch_app');
@@ -744,7 +773,7 @@ describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events o
 
 describe.skipIf(!simulator)('emulator events on a simulator', () => {
   it('says why it has none', async () => {
-    const h = harness(simulator!, simulatorProvider());
+    const h = harness(simulator, simulatorProvider());
     for (const [args, why] of [
       [{ name: 'fold', value: 'closed' }, /simctl has no fold pose/],
       [{ name: 'call', value: '5551212' }, /no telephony/],
@@ -764,9 +793,10 @@ describe.skipIf(!android)('recording on Android', () => {
   let h: ReturnType<typeof harness>;
   const adb = new Adb();
   beforeAll(async () => {
-    h = harness(android!, androidProvider(adb));
+    h = harness(android, androidProvider(adb));
     await h.ok('launch_app');
   }, 240_000);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
   afterAll(() => h?.ctx.close());
 
   it('joins its segments into one video, across the limit of one run', async () => {
@@ -798,7 +828,7 @@ describe.skipIf(!android)('recording on Android', () => {
     const to = join(dir, 'killed.mp4');
     await h.ok('record', { action: 'start', file: to });
     await stirOnce(h.ok);
-    await adb.exec(android!, 'pkill -9 screenrecord');
+    await adb.exec(android, 'pkill -9 screenrecord');
     const r = await h.call('record', { action: 'stop' });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(/recording failed.*(did not end properly|runs past|empty)/);
@@ -812,7 +842,7 @@ describe.skipIf(!android)('recording on Android', () => {
 
   it('stops a session-long recording when the session ends', async () => {
     const to = join(dir, 'ended.mp4');
-    const e = harness(android!, androidProvider(adb));
+    const e = harness(android, androidProvider(adb));
     await e.ok('record', { action: 'start', file: to });
     await stirOnce(e.ok);
     expect(await e.ctx.end()).toEqual([]);

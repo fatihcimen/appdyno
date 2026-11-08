@@ -6,7 +6,7 @@ import { refIn, toolCaller } from './helpers.js';
 import { IosPhoneDevice } from './workspace.js';
 
 /** The built MCP server over stdio on a real iPhone (APPDYNO_IPHONE_UDID), on Settings: read, open General, screenshot. */
-const udid = process.env.APPDYNO_IPHONE_UDID;
+const udid = process.env.APPDYNO_IPHONE_UDID ?? '';
 const APP = 'com.apple.Preferences';
 const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 
@@ -22,7 +22,7 @@ describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
         MAIN,
         'mcp',
         '--device',
-        udid!,
+        udid,
         '--app',
         APP,
         '--allow-devices',
@@ -38,9 +38,10 @@ describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
   });
   afterAll(async () => {
     await call('terminate_app').catch(() => undefined);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await client?.close();
     // the runner does not stay on a shared phone after the run
-    await new IosPhoneDevice(udid!).stopAgent();
+    await new IosPhoneDevice(udid).stopAgent();
   });
 
   it('lists the phone and drives Settings: launch, read, tap by ref, screenshot', async () => {

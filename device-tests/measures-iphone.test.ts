@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   iphoneProvider,
   buildScreen,
@@ -20,8 +20,8 @@ import { opsOn } from './helpers.js';
  * What a phone gives on an app signed for development, against a known cost (APPDYNO_IPHONE_UDID,
  * APPDYNO_IPHONE_FIXTURE_APP): a slow start named in its phase, retain cycles, a download, a busy core, a frozen frame.
  */
-const udid = process.env.APPDYNO_IPHONE_UDID;
-const fixture = process.env.APPDYNO_IPHONE_FIXTURE_APP;
+const udid = process.env.APPDYNO_IPHONE_UDID ?? '';
+const fixture = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
 const APP = 'dev.appdyno.fixture';
 const SETTINGS = 'com.apple.Preferences';
 const within = (read: number, known: number, share: number) => {
@@ -30,9 +30,9 @@ const within = (read: number, known: number, share: number) => {
 };
 
 describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture', () => {
-  const t = opsOn(iphoneProvider(), udid!, APP);
+  const t = opsOn(iphoneProvider(), udid, APP);
   let d: IosPhoneDevice;
-  const ctl = new Devicectl(udid!);
+  const ctl = new Devicectl(udid);
   const open = async (screen: string, env?: Record<string, string>): Promise<Screen> => {
     await d.terminate(APP);
     if (env) await ctl.launch(APP, undefined, env);
@@ -48,12 +48,14 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   };
 
   beforeAll(async () => {
-    await ctl.install(fixture!);
+    await ctl.install(fixture);
     d = (await t.ctx.session()).device as IosPhoneDevice;
     await d.tree();
   }, 240_000);
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await d?.terminate(APP).catch(() => undefined);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await d?.stopAgent();
     t.ctx.close();
   });
@@ -63,7 +65,8 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     const r = await t.call('perf_scroll', { repeats: 1 });
     console.log(r.text);
     expect(r.error).toBe(false);
-    const round = r.data.rounds[0]!;
+    const [round] = r.data.rounds;
+    assert(round);
     expect(round.frames).toBeGreaterThan(30);
     expect(r.data.frozen).toBe(0);
   }, 240_000);
@@ -102,7 +105,9 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
         dsym ? { dsym } : undefined,
       );
       console.log(id, JSON.stringify(h.causes));
-      return h.causes[0]!;
+      const [cause] = h.causes;
+      assert(cause, 'a cause');
+      return cause;
     };
     const blocked = await hang('stall_500');
     expect(blocked.kind).toBe('blocked');
@@ -120,14 +125,18 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
         await d.measure.launch(APP, { mode: 'cold', repeats: 1, trace: true, ...(env && { env }) })
       ).value;
       console.log(JSON.stringify(startup));
-      return startup!.breakdown;
+      assert(startup);
+      return startup.breakdown;
     };
-    const ms = (b: Awaited<ReturnType<typeof phases>>, name: string) =>
-      b.find((p) => p.reason === name)!.ms;
+    const ms = (b: Awaited<ReturnType<typeof phases>>, name: string) => {
+      const phase = b.find((p) => p.reason === name);
+      assert(phase, name);
+      return phase.ms;
+    };
     const base = await phases();
     const slow = await phases({ APPDYNO_FIXTURE_STARTUP_MS: '500' });
     within(ms(slow, 'main') - ms(base, 'main'), 500, 0.15);
-    expect(slow.toSorted((a, b) => b.ms - a.ms)[0]!.reason).toBe('main');
+    expect(slow.toSorted((a, b) => b.ms - a.ms)[0]?.reason).toBe('main');
   }, 300_000);
 
   it('a launch that shows no screen in 20 s refuses by name', async () => {
@@ -167,8 +176,8 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
 
   it('leaks: a system app refuses and says what would work', async () => {
     await d.launch(SETTINGS);
-    const e = await d.measure.heap(SETTINGS, tmpdir()).catch((x: DeviceError) => x);
-    console.log(e instanceof Error ? `${e.message} / ${(e as DeviceError).hint}` : e);
+    const e = await d.measure.heap(SETTINGS, tmpdir()).catch((x: unknown) => x);
+    console.log(e instanceof Error ? `${e.message} / ${String((e as DeviceError).hint)}` : e);
     expect(e).toBeInstanceOf(DeviceError);
     expect((e as DeviceError).code).toBe('UNSUPPORTED');
     expect((e as DeviceError).message).toMatch(/task port/);
@@ -187,8 +196,9 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
       .find((a) => a?.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254'));
     try {
       const port = (server.address() as AddressInfo).port;
+      assert(lan, 'an address on the network');
       const s = await open('network', {
-        APPDYNO_FIXTURE_FETCH_URL: `http://${lan!.address}:${port}/`,
+        APPDYNO_FIXTURE_FETCH_URL: `http://${lan.address}:${port}/`,
         APPDYNO_FIXTURE_NO_PROXY: '1',
       });
       const n = (
@@ -219,7 +229,8 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   it('energy: a busy core reads clearly above an idle app, and is a reading', async () => {
     const s = await open('cpu');
     const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 8_000 });
-    let on = true;
+    // set to false below, which the compiler does not follow into the loop
+    let on = true as boolean;
     await d.inFront(APP);
     const loop = (async () => {
       while (on) {
@@ -233,6 +244,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     console.log('energy', idle.text, '\n', busy.text);
     expect(busy.data.energyModelled).toBe(false);
     expect(busy.text).toMatch(/power impact/);
-    expect(busy.data.energyImpact!).toBeGreaterThan(idle.data.energyImpact! * 2);
+    assert(idle.data.energyImpact !== undefined);
+    expect(busy.data.energyImpact).toBeGreaterThan(idle.data.energyImpact * 2);
   }, 600_000);
 });

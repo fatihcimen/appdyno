@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { Devicectl } from '../packages/driver-apple/src/devicectl.js';
 import { PhoneInspector } from '../packages/driver-apple/src/phone-inspector.js';
 import { PhoneMirror } from '../packages/driver-apple/src/mirror-phone.js';
@@ -8,7 +8,7 @@ import { PhoneMirror } from '../packages/driver-apple/src/mirror-phone.js';
  * Our own iPhone (APPDYNO_IPHONE_UDID) with no runner, from what is built. The phone must be awake and open: each press
  * here reads its screen first, and a phone found on its lock screen fails the first check, with nothing pressed.
  */
-const udid = process.env.APPDYNO_IPHONE_UDID;
+const udid = process.env.APPDYNO_IPHONE_UDID ?? '';
 const FIXTURE = 'dev.appdyno.fixture';
 
 const launch = (more: string[] = []) =>
@@ -18,14 +18,14 @@ const launch = (more: string[] = []) =>
     'process',
     'launch',
     '--device',
-    udid!,
+    udid,
     '--terminate-existing',
     ...more,
     FIXTURE,
   ]);
 
 describe.runIf(udid)('an iPhone with no runner', () => {
-  const inspector = () => new PhoneInspector(new Devicectl(udid!));
+  const inspector = () => new PhoneInspector(new Devicectl(udid));
 
   it('reads a screen, presses by id, and reads the next', async () => {
     launch();
@@ -43,13 +43,15 @@ describe.runIf(udid)('an iPhone with no runner', () => {
   }, 60_000);
 
   it('leaves the screen as it found it', async () => {
-    const shot = async () => (await new PhoneMirror(udid!).screenshot('png'))?.data;
+    const shot = async () => (await new PhoneMirror(udid).screenshot('png'))?.data;
     launch(['--payload-url', 'appdyno-fixture://open/list']);
     await new Promise((r) => setTimeout(r, 2_500));
     const before = await shot();
     await inspector().elements();
     await new Promise((r) => setTimeout(r, 1_000));
-    expect((await shot())?.equals(before!)).toBe(true);
+    const after = await shot();
+    assert(before);
+    expect(after?.equals(before)).toBe(true);
     launch();
   }, 60_000);
 

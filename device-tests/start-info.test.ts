@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from './workspace.js';
 import { latestRuns, loadRefusals, runKeys } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
@@ -7,12 +7,12 @@ import { opsOn } from './helpers.js';
  * Why an app started and where the start went, against a known cost, with no trace (APPDYNO_ANDROID_SERIAL). On API 35
  * and later; before that a refusal by name is what is proven.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 const COST_MS = 500;
 
 describe.skipIf(!serial)('start info', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   let d: AndroidDevice;
   let sdk = 0;
   const costs = (ms?: number) =>
@@ -27,7 +27,7 @@ describe.skipIf(!serial)('start info', () => {
     await d.shell(how);
     await pause(3_000);
     const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500 });
-    console.log(r.text.split('\n').filter((l) => /start/.test(l)));
+    console.log(r.text.split('\n').filter((l) => l.includes('start')));
     expect(r.error, r.text).toBe(false);
     return r;
   };
@@ -48,9 +48,14 @@ describe.skipIf(!serial)('start info', () => {
     if (sdk < 35) return ctx.skip();
     const onCreate = async () => {
       const seen: number[] = [];
-      for (let i = 0; i < 3; i++)
-        seen.push((await started(launcher)).data.startPhases!.oncreate_to_first_frame!);
-      return seen.sort((a, b) => a - b)[1]!;
+      for (let i = 0; i < 3; i++) {
+        const phase = (await started(launcher)).data.startPhases?.oncreate_to_first_frame;
+        assert(phase !== undefined, 'oncreate_to_first_frame');
+        seen.push(phase);
+      }
+      const median = seen.sort((a, b) => a - b)[1];
+      assert(median !== undefined);
+      return median;
     };
     await costs();
     const plain = await onCreate();
@@ -59,7 +64,7 @@ describe.skipIf(!serial)('start info', () => {
     await costs();
     console.log('oncreate_to_first_frame', plain, slow);
     // an emulator's own start work runs alongside a sleep, which shows only in part there (docs/reference/perf.md)
-    if (serial!.startsWith('emulator-')) expect(slow).toBeGreaterThan(plain + COST_MS * 0.3);
+    if (serial.startsWith('emulator-')) expect(slow).toBeGreaterThan(plain + COST_MS * 0.3);
     else expect(Math.abs(slow - plain - COST_MS)).toBeLessThan(COST_MS * 0.1);
   }, 180_000);
 
@@ -88,8 +93,10 @@ describe.skipIf(!serial)('start info', () => {
       const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500, scenario });
       expect(r.error, r.text).toBe(false);
       const [key] = await runKeys(t.measurements, { app: APP, scenario });
-      const [run] = await latestRuns(t.measurements, key!, 1);
-      return run!.filter((r) => r.kind.startsWith('launch.phase.')).length;
+      assert(key);
+      const [run] = await latestRuns(t.measurements, key, 1);
+      assert(run);
+      return run.filter((r) => r.kind.startsWith('launch.phase.')).length;
     };
     await start();
     expect(await phasesKept()).toBe(0);
@@ -106,7 +113,7 @@ describe.skipIf(!serial)('start info', () => {
     // HyperOS completes the broadcast and starts nothing, which leaves no record to read
     if (!(await d.shell(`pidof ${APP}`).catch(() => '')).trim()) return ctx.skip();
     const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500 });
-    console.log(r.text.split('\n').filter((l) => /start/.test(l)));
+    console.log(r.text.split('\n').filter((l) => l.includes('start')));
     expect(r.data.startReason).toBe('BROADCAST');
   }, 60_000);
 

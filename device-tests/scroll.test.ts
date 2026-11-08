@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
@@ -10,8 +10,8 @@ import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './
  * APPDYNO_IOS_UDID names. The rows are one height apart, so where any row is says how far the list went.
  */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 /** Tap units: a row's place rounds to a whole one at both ends. */
 const CLOSE = 4;
 
@@ -31,12 +31,18 @@ function scrollOf(get: () => Call) {
   /** A list's offset, from a row's number, its place and the rows' spacing. */
   const offset = async (spacing: number) => {
     const rows = (await call('find', { text: 'Product' })).data.matches;
-    const row = rows[Math.floor(rows.length / 2)]!;
-    return Number(/Product (\d+)/.exec(row.label)![1]) * spacing - row.y;
+    const row = rows[Math.floor(rows.length / 2)];
+    assert(row);
+    const number = /Product (\d+)/.exec(row.label);
+    assert(number, row.label);
+    return Number(number[1]) * spacing - row.y;
   };
   const spacing = async () => {
-    const y = async (n: number) =>
-      (await call('find', { text: `Product ${n}` })).data.matches[0]!.y;
+    const y = async (n: number) => {
+      const [row] = (await call('find', { text: `Product ${n}` })).data.matches;
+      assert(row, `Product ${n}`);
+      return row.y;
+    };
     return ((await y(7)) - (await y(1))) / 6;
   };
 
@@ -72,7 +78,7 @@ describe.skipIf(!ANDROID)('exact scrolling on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-scroll-')));
-    o = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    o = opsOn(androidProvider(new Adb()), ANDROID, APP);
   });
   afterAll(() => o.ctx.close());
   scrollOf(() => o.call);
@@ -82,8 +88,8 @@ describe.skipIf(!SIMULATOR)('exact scrolling on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-scroll-')));
-    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+    o = opsOn(simulatorProvider(), SIMULATOR, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
   scrollOf(() => o.call);

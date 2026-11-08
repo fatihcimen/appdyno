@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from './workspace.js';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
@@ -8,12 +8,12 @@ import { untilWithin } from './until.js';
  * Numbers against Play's definitions, on known shares of frames, a known slow start and a provoked ANR
  * (APPDYNO_ANDROID_SERIAL). What is read is printed: docs/reference/perf.md quotes it.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 const until = untilWithin(30_000);
 
 describe.skipIf(!serial)("Android against Play's definitions", () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   let d: AndroidDevice;
   const costs = (name: string, ms?: number) =>
     d.shell(
@@ -30,16 +30,18 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     );
     const shown = async (id: string) => (await d.read(APP)).list.find((e) => e.id === id);
     await until('the start button', async () => {
-      const button = await shown('frozen_start').catch((e: { code?: string }) => {
+      const button = await shown('frozen_start').catch((e: unknown) => {
         // no wait ends another client's hold of the device, and running out would read as a slow screen
-        if (e.code === 'AGENT_CONFLICT') throw e;
+        if (e instanceof Error && 'code' in e && e.code === 'AGENT_CONFLICT') throw e;
       });
       return !!button;
     });
     await pause(1_000);
     // a read resets the count: from here on it is the frames of the run alone
     await t.call('perf_snapshot', { cpuWindowMs: 500, scenario: 'reset' });
-    await d.tap((await shown('frozen_start'))!, { settle: false });
+    const start = await shown('frozen_start');
+    assert(start, 'frozen_start');
+    await d.tap(start, { settle: false });
     const end = Date.now() + seconds * 1_000;
     let status = '';
     while (status !== 'done' && Date.now() < end) {
@@ -72,28 +74,29 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
 
   it('a screen of 40 ms draws reads near 100 % over 16 ms, and would count', async () => {
     const r = await framesOf('frames=600&draw=40', 90);
-    expect(r.data.frames!.slowPercent!).toBeGreaterThan(90);
+    expect(r.data.frames?.slowPercent).toBeGreaterThan(90);
     expect(r.text).toContain('this session would count as slow frames');
   }, 180_000);
 
   it('a light screen would not count as slow', async () => {
     const r = await framesOf('frames=300', 60);
-    expect(r.data.frames!.slowPercent!).toBeLessThan(50);
+    expect(r.data.frames?.slowPercent).toBeLessThan(50);
     expect(r.text).toContain('this session would not count as slow frames');
   }, 180_000);
 
   it('one frozen frame in 500 says too few frames', async () => {
     const r = await framesOf('frames=300&stalls=1', 60);
-    expect(r.data.frames!.frozenPercent).toBeUndefined();
+    assert(r.data.frames);
+    expect(r.data.frames.frozenPercent).toBeUndefined();
     expect(r.text).toContain('too few frames to say of frozen frames');
   }, 180_000);
 
   it('one frozen frame in many would not count, and many would', async () => {
     const few = await framesOf('frames=4000&stalls=1', 180);
-    expect(few.data.frames!.frozenPercent!).toBeLessThanOrEqual(0.1);
+    expect(few.data.frames?.frozenPercent).toBeLessThanOrEqual(0.1);
     expect(few.text).toContain('this session would not count as frozen frames');
     const many = await framesOf('frames=1500&stalls=6', 180);
-    expect(many.data.frames!.frozenPercent!).toBeGreaterThan(0.1);
+    expect(many.data.frames?.frozenPercent).toBeGreaterThan(0.1);
     expect(many.text).toContain('this session would count as frozen frames');
   }, 600_000);
 
@@ -106,11 +109,12 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     await costs('startup_ms');
     const fast = await t.call('perf_launch', { repeats: 1 });
     console.log(fast.text);
-    expect(fast.data.medianMs!).toBeLessThan(5_000);
+    expect(fast.data.medianMs).toBeLessThan(5_000);
     expect(fast.text).toContain('this session would count as a slow cold start');
     const [key] = await runKeys(t.measurements, { app: APP, scenario: 'launch-cold' });
-    const [run] = await latestRuns(t.measurements, key!, 1);
-    expect(run!.find((r) => r.kind === 'launch.worst_cold_ms')!.value).toBeLessThan(5_000);
+    assert(key);
+    const [run] = await latestRuns(t.measurements, key, 1);
+    expect(run?.find((r) => r.kind === 'launch.worst_cold_ms')?.value).toBeLessThan(5_000);
   }, 300_000);
 
   it('a hot start says which limit it holds to, and that the two pages differ', async () => {
@@ -124,9 +128,11 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     await d.shell(`am force-stop ${APP}`);
     await t.call('launch_app');
     const before = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
-    const heldBefore = before.data.exitsHeld!.userAnrs!;
+    const heldBefore = before.data.exitsHeld?.userAnrs;
+    assert(heldBefore !== undefined);
     await pause(1_500);
-    const freeze = (await d.read(APP)).list.find((e) => /freeze/i.test(e.label ?? ''))!;
+    const freeze = (await d.read(APP)).list.find((e) => /freeze/i.test(e.label));
+    assert(freeze);
     await d.tap(freeze, { settle: false });
     await pause(800);
     // more touches on the same button, and not awaited as each waits for the app: the system takes longer than one 12 s
@@ -145,7 +151,7 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     await Promise.all(stuck);
     console.log(after.text);
     expect(after.data.userAnrs).toBe(1);
-    expect(after.data.exitsHeld!.userAnrs).toBe(heldBefore + 1);
+    expect(after.data.exitsHeld?.userAnrs).toBe(heldBefore + 1);
     expect(after.text).toContain('this session would count as a user-perceived ANR');
     const next = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
     expect(next.data.userAnrs).toBe(0);

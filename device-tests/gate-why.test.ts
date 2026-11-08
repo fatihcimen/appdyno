@@ -10,7 +10,7 @@ import {
 import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, iphoneProvider, simulatorProvider, Devicectl } from './workspace.js';
 import { gateAnswers, writeComment, type Comparison, type GateAnswer } from '@appdyno/perf';
 import { IPHONE_FIXTURE, opsOn } from './helpers.js';
@@ -37,16 +37,23 @@ const note = (line: string) => {
   appendFileSync('.ci/gate-why.txt', `${line}\n`);
 };
 
+/** The Mac's load over the last minute. */
+const lastMinute = () => {
+  const [one] = loadavg();
+  assert(one !== undefined);
+  return one;
+};
+
 /** Under high load the gate is right to say "noisy", which proves nothing: this waits, and says what it waited at. */
 const quiet = async () => {
   const end = Date.now() + 15 * 60_000;
-  while (loadavg()[0]! > cpus().length * 0.7 && Date.now() < end)
+  while (lastMinute() > cpus().length * 0.7 && Date.now() < end)
     await new Promise((r) => setTimeout(r, 15_000));
 };
 
 type Target = {
   name: string;
-  serial: string | undefined;
+  serial: string;
   provider: () => ReturnType<typeof androidProvider>;
   flow: string;
   step: string;
@@ -89,30 +96,39 @@ const IPHONE_COSTS: Record<string, string> = { busy: 'stall', sleep: 'sleep', st
 const targets: Target[] = [
   {
     name: 'android',
-    serial: process.env.APPDYNO_ANDROID_SERIAL,
+    serial: process.env.APPDYNO_ANDROID_SERIAL ?? '',
     provider: () => androidProvider(new Adb(), {}),
     flow: `app ${APP}\nstop\nlaunch\nopen_link "appdyno-fixture://open/cpu"\ntap id=cpu_stall\nassert id=cpu_taps\n`,
     step: '04_tap_id_cpu_stall',
     phase: 'bind_application',
-    cost: async (name, ms, serial) => ANDROID_COSTS[name]!(ms, serial),
+    cost: async (name, ms, serial) => {
+      const set = ANDROID_COSTS[name];
+      assert(set, name);
+      return set(ms, serial);
+    },
     phone: !process.env.APPDYNO_ANDROID_SERIAL?.startsWith('emulator-'),
   },
   {
     name: 'simulator',
-    serial: process.env.APPDYNO_IOS_UDID,
-    provider: () => simulatorProvider() as ReturnType<typeof androidProvider>,
+    serial: process.env.APPDYNO_IOS_UDID ?? '',
+    provider: () => simulatorProvider(),
     flow: IOS_FLOW,
     step: '04_tap_id_stall_light',
     phase: 'main',
-    cost: async (name, ms) => {
-      if (ms === undefined) delete process.env[SIM_COSTS[name]!];
-      else process.env[SIM_COSTS[name]!] = String(ms);
+    cost: (name, ms) => {
+      const key = SIM_COSTS[name];
+      assert(key, name);
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- the cost's own variable: one set to undefined reads "undefined"
+      if (ms === undefined) delete process.env[key];
+      else process.env[key] = String(ms);
+      return Promise.resolve();
     },
   },
   {
     name: 'iphone',
-    serial: process.env.APPDYNO_IPHONE_FIXTURE_APP && process.env.APPDYNO_IPHONE_UDID,
-    provider: () => iphoneProvider() as ReturnType<typeof androidProvider>,
+    serial:
+      (process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '') && (process.env.APPDYNO_IPHONE_UDID ?? ''),
+    provider: () => iphoneProvider(),
     flow: IOS_FLOW,
     step: '04_tap_id_stall_light',
     phase: 'main',
@@ -130,11 +146,11 @@ const dir = mkdtempSync(join(tmpdir(), 'appdyno-why-flows-'));
 
 for (const t of targets)
   describe.skipIf(!t.serial)(`the gate's own answer on the ${t.name}`, () => {
-    const ops = opsOn(t.provider(), t.serial!, APP);
+    const ops = opsOn(t.provider(), t.serial, APP);
     const project = ops.ctx.perfDir;
     const named = t.dsym ? { dsym: t.dsym } : {};
     const link = (url: string) => ops.call('open_link', { url });
-    const cost = (name: string, ms?: number) => t.cost(name, ms, t.serial!, link);
+    const cost = (name: string, ms?: number) => t.cost(name, ms, t.serial, link);
     const clear = async () => {
       for (const name of ['busy', 'sleep', 'start', 'cpu']) await cost(name);
     };
@@ -148,13 +164,15 @@ for (const t of targets)
       await link(`appdyno-fixture://open/${screen}`);
     };
     const settled = () => (t.phone ? undefined : quiet());
-    const load = () => `host load ${loadavg()[0]!.toFixed(0)} on ${cpus().length} cores`;
+    const load = () => `host load ${lastMinute().toFixed(0)} on ${cpus().length} cores`;
     const asked = async (scenario: string, last = 1) => {
       const r = await ops.call('perf_compare', { action: 'why', scenario, last, ...named });
       expect(r.error, r.text).toBe(false);
       note(`${t.name} ${scenario}, ${load()}\n${r.text}\nexit ${r.data.exitCode}`);
       console.log(r.text);
-      return { r, answer: (r.data.answers as GateAnswer[])[0]! };
+      const [answer] = r.data.answers as GateAnswer[];
+      assert(answer, scenario);
+      return { r, answer };
     };
     /** A run the gate can read: under noise it says so, and this measures again, as its answer asks. */
     const measured = async (measure: () => Promise<unknown>, scenario: string) => {
@@ -189,7 +207,7 @@ for (const t of targets)
     };
 
     beforeAll(async () => {
-      if (t.name === 'iphone') await new Devicectl(t.serial!).install(IPHONE_FIXTURE!);
+      if (t.name === 'iphone') await new Devicectl(t.serial).install(IPHONE_FIXTURE);
     }, 240_000);
     afterAll(async () => {
       await clear().catch(() => undefined);
@@ -229,8 +247,9 @@ for (const t of targets)
       await measured(measure, scenario);
       const busy = await asked(scenario);
       expect(busy.r.data.exitCode).toBe(1);
-      const found = busy.answer.findings.find((f) => f.place === t.step)!;
-      expect(found.causes[0]!.name).toContain('knownCost');
+      const found = busy.answer.findings.find((f) => f.place === t.step);
+      assert(found, t.step);
+      expect(found.causes[0]?.name).toContain('knownCost');
       if (t.name === 'iphone')
         expect(found.causes.find((c) => c.kind === 'hang')?.says).toContain('busy');
       await cost('busy');
@@ -241,7 +260,8 @@ for (const t of targets)
       const asleep = await asked(scenario);
       await cost('sleep');
       expect(asleep.r.data.exitCode).toBe(1);
-      const slept = asleep.answer.findings.find((f) => f.place === t.step)!;
+      const slept = asleep.answer.findings.find((f) => f.place === t.step);
+      assert(slept, t.step);
       expect(slept.causes.filter((c) => c.kind === 'function')).toEqual([]);
       if (t.name === 'simulator') expect(slept.cannot.join()).toContain('no cause was found');
       if (t.name === 'iphone')
@@ -251,7 +271,8 @@ for (const t of targets)
       await writeComment(ops.measurements, project, out, { scenario });
       note(readFileSync(out, 'utf8'));
       const page = await ops.call('perf_compare', { action: 'dashboard' });
-      expect(readFileSync(page.data.file!, 'utf8')).toContain('Why it got worse');
+      assert(page.data.file);
+      expect(readFileSync(page.data.file, 'utf8')).toContain('Why it got worse');
     }, 3_600_000);
 
     it('calls a slow start by its phase', async () => {
@@ -271,7 +292,7 @@ for (const t of targets)
       const { r, answer } = await asked(scenario, traced ? 5 : 1);
       await cost('start');
       expect(r.data.exitCode).toBe(1);
-      expect(answer.findings[0]!.causes[0]).toMatchObject({ kind: 'phase', name: t.phase });
+      expect(answer.findings[0]?.causes[0]).toMatchObject({ kind: 'phase', name: t.phase });
       expect(await gateAnswers(ops.measurements, project, { scenario })).toHaveLength(1);
     }, 3_600_000);
 
@@ -288,7 +309,7 @@ for (const t of targets)
       await measured(measure, scenario);
       const { r, answer } = await asked(scenario);
       expect(r.data.exitCode).toBe(1);
-      expect(answer.findings[0]!.causes.length).toBeGreaterThan(0);
+      expect(answer.findings[0]?.causes.length).toBeGreaterThan(0);
     }, 3_600_000);
 
     it('looks at a core at work off the main thread', async () => {
@@ -306,7 +327,7 @@ for (const t of targets)
         await d.inFront?.(APP);
         const m = await ops.call('perf_snapshot', { scenario });
         expect(m.error, m.text).toBe(false);
-        note(`${t.name} ${scenario}: ${/CPU: .*/.exec(m.text)?.[0]}`);
+        note(`${t.name} ${scenario}: ${String(/CPU: .*/.exec(m.text)?.[0])}`);
       };
       // a first sample in the app's own start read 46.7 %, and one such run widens the gate's limit past the change
       const settled = async () => {
@@ -321,6 +342,6 @@ for (const t of targets)
       const { r, answer } = await asked(scenario, 5);
       await cost('cpu');
       expect(r.data.exitCode).toBe(1);
-      expect(answer.findings[0]!.causes[0]!.name).toMatch(/known(Cpu)?Cost/);
+      expect(answer.findings[0]?.causes[0]?.name).toMatch(/known(Cpu)?Cost/);
     }, 3_600_000);
   });

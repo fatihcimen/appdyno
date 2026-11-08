@@ -7,8 +7,8 @@ import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './
 
 /** Settings at a page and at an app's own, read back from what it shows, on the devices the variables name. */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -28,8 +28,8 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
   let call: Call;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-settings-')));
-    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    call = opsOn(simulatorProvider(), SIMULATOR!, APP).call;
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+    call = opsOn(simulatorProvider(), SIMULATOR, APP).call;
   }, 300_000);
   afterAll(() => call('terminate_app'));
 
@@ -105,7 +105,7 @@ describe.skipIf(!ANDROID)('Settings on Android', () => {
   let call: Call;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-settings-')));
-    call = opsOn(androidProvider(new Adb()), ANDROID!, APP).call;
+    call = opsOn(androidProvider(new Adb()), ANDROID, APP).call;
   });
 
   it.each([

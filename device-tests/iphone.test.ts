@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   Devicectl,
   IosPhoneDevice,
@@ -12,10 +12,10 @@ import { DeviceError, PROTOCOL } from '@appdyno/protocol';
  * The runner on a real iPhone (APPDYNO_IPHONE_UDID; signing from APPDYNO_IOS_*), on the Settings
  * app: it is read, opened into General and searched, nothing is changed.
  */
-const udid = process.env.APPDYNO_IPHONE_UDID;
+const udid = process.env.APPDYNO_IPHONE_UDID ?? '';
 const SETTINGS = 'com.apple.Preferences';
 const APP = 'dev.appdyno.fixture';
-const FIXTURE_APP = process.env.APPDYNO_IPHONE_FIXTURE_APP;
+const FIXTURE_APP = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
 const SETTLE = { quietMs: 200, maxMs: 3_000 };
 
 describe.skipIf(!udid)('ios runner on an iPhone', () => {
@@ -28,20 +28,31 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     await pause(800);
     return screen();
   };
+  const helloOf = (x: IosPhoneDevice) => {
+    assert(x.hello, 'its hello');
+    return x.hello;
+  };
+  /** A refusal is a value to check; anything else fails the test as it is. */
+  const refusal = (e: unknown) => {
+    if (e instanceof DeviceError) return e;
+    throw e;
+  };
 
   beforeAll(async () => {
-    d = new IosPhoneDevice(udid!);
+    d = new IosPhoneDevice(udid);
     await d.open();
   }, 240_000);
   // the runner does not stay on a shared phone after the run
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await d?.terminate(SETTINGS).catch(() => undefined);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await d?.stopAgent();
   });
 
   it('says hello as iOS from the phone', () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: PROTOCOL });
-    expect(d.hello!.screen.density).toBe(3);
+    expect(d.hello?.screen.density).toBe(3);
   });
 
   it('launches an app and reads it in front', async () => {
@@ -52,11 +63,13 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
   it('taps into a screen and settles there', async () => {
     const s = await settings();
-    const general = s.list.find((e) => /^(General|Genel)$/.test(e.label))!;
+    const general = s.list.find((e) => /^(General|Genel)$/.test(e.label));
+    assert(general);
     const r = await d.tap(general, { settle: SETTLE, read: 'tree', before: s.hash });
-    expect(r.settle!.settled).toBe(true);
+    expect(r.settle?.settled).toBe(true);
+    assert(r.tree);
     expect(
-      buildScreen(r.tree!, { port: d.platformScreen }).list.some((e) =>
+      buildScreen(r.tree, { port: d.platformScreen }).list.some((e) =>
         /^(About|Hakkında)$/.test(e.label),
       ),
     ).toBe(true);
@@ -65,13 +78,15 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
   // on a phone the runner cannot reach the clipboard: the text goes in as keys
   it('types Turkish text into a search field', async () => {
     await settings();
-    const { w, h } = d.hello!.screen;
+    const { w, h } = helloOf(d).screen;
     await d.swipe({ x: w / 2, y: h * 0.3 }, { x: w / 2, y: h * 0.6 }, 300, { settle: SETTLE });
-    const field = (await screen()).elements.find((e) => e.editable && e.visible)!;
-    expect(field).toBeDefined();
+    const field = (await screen()).elements.find((e) => e.editable && e.visible);
+    assert(field);
+    const { rect } = field;
+    assert(rect);
     const at = {
-      x: field.rect!.x + field.rect!.width / 2,
-      y: field.rect!.y + field.rect!.height / 2,
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height / 2,
     };
     // reports say iOS 27 delivers a few characters of a typed text and reports success: read back apart
     const text = 'Kapı zili çalışmıyor';
@@ -83,7 +98,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
   it('brings a running app forward as it is', async () => {
     await settings();
-    const ctl = new Devicectl(udid!);
+    const ctl = new Devicectl(udid);
     const pid = await ctl.pid(SETTINGS);
     const t0 = performance.now();
     await d.launch(SETTINGS);
@@ -104,7 +119,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
     it('profiles the CPU while the list scrolls, and counts its hangs', async () => {
       await settings();
-      const { w, h } = d.hello!.screen;
+      const { w, h } = helloOf(d).screen;
       const scroll = async () => {
         for (let i = 0; i < 3; i++)
           await d.swipe({ x: w / 2, y: h * 0.75 }, { x: w / 2, y: h * 0.25 }, 250, {
@@ -132,7 +147,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
   it('records animation hitches while the list scrolls', async () => {
     await settings();
-    const { w, h } = d.hello!.screen;
+    const { w, h } = helloOf(d).screen;
     // a recording without displayed surfaces must say so, never "no hitches"
     const v = await d.measure
       .hitches(SETTINGS, 5, async () => {
@@ -141,7 +156,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
             settle: false,
           });
       })
-      .catch((e: DeviceError) => e);
+      .catch(refusal);
     if (v instanceof DeviceError) {
       expect(v.code).toBe('CHECK_FAILED');
       expect(v.message).toMatch(/no frames/);
@@ -153,10 +168,10 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
   it('opens a link in the running app, its state kept (no new launch)', async () => {
     await settings();
-    const pid = await new Devicectl(udid!).pid(SETTINGS);
+    const pid = await new Devicectl(udid).pid(SETTINGS);
     await d.openUrl('prefs:root=General', SETTINGS);
     await pause(1_500);
-    expect(await new Devicectl(udid!).pid(SETTINGS)).toBe(pid);
+    expect(await new Devicectl(udid).pid(SETTINGS)).toBe(pid);
     expect((await screen()).list.some((e) => /^(About|Hakkında)$/.test(e.label))).toBe(true);
   });
 
@@ -173,7 +188,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
   it('reconnects to the running runner without starting it again', async () => {
     d.close();
-    d = new IosPhoneDevice(udid!);
+    d = new IosPhoneDevice(udid);
     await d.tree();
     expect(d.lastStartWasCold).toBe(false);
   });
@@ -185,7 +200,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
   describe.skipIf(!FIXTURE_APP)('measures on the fixture', () => {
     const open = async (screen: string, env?: Record<string, string>) => {
       await d.terminate(APP);
-      if (env) await new Devicectl(udid!).launch(APP, undefined, env);
+      if (env) await new Devicectl(udid).launch(APP, undefined, env);
       else await d.launch(APP);
       await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
       await pause(1_000);
@@ -198,9 +213,10 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     };
 
     beforeAll(async () => {
-      await new Devicectl(udid!).install(FIXTURE_APP!);
+      await new Devicectl(udid).install(FIXTURE_APP);
     }, 240_000);
     afterAll(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
       await d?.terminate(APP).catch(() => undefined);
     });
 
@@ -228,12 +244,12 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
       ).value;
       console.log(
         'profile',
-        JSON.stringify(p.appTop?.slice(0, 3)),
+        JSON.stringify(p.appTop.slice(0, 3)),
         JSON.stringify(p.top.slice(0, 3)),
       );
       expect(p.samples).toBeGreaterThan(100);
       // a Release build without its symbols here: an address, on nearly all of the samples
-      expect(p.appTop?.[0]?.percent).toBeGreaterThan(50);
+      expect(p.appTop[0]?.percent).toBeGreaterThan(50);
       await pause(1_000);
     }, 120_000);
 
@@ -251,7 +267,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
     it('hitches: a real scroll of the list', async () => {
       const s = await open('list');
-      const { w, h } = d.hello!.screen;
+      const { w, h } = helloOf(d).screen;
       const v = await d.measure
         .hitches(APP, 6, async () => {
           for (let i = 0; i < 4; i++)
@@ -259,7 +275,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
               settle: false,
             });
         })
-        .catch((e: DeviceError) => e);
+        .catch(refusal);
       console.log('hitches', v instanceof Error ? v.message : JSON.stringify(v));
       expect(s.list.length).toBeGreaterThan(0);
       if (v instanceof DeviceError) expect(v.code).toBe('CHECK_FAILED');
@@ -277,7 +293,8 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
         })
       ).value;
       console.log('launch', JSON.stringify(base.samples), JSON.stringify(slow.samples));
-      const delta = slow.medianMs! - base.medianMs!;
+      assert(slow.medianMs !== undefined && base.medianMs !== undefined, 'a median');
+      const delta = slow.medianMs - base.medianMs;
       expect(delta).toBeGreaterThan(500 * 0.75);
       expect(delta).toBeLessThan(500 * 1.25);
     }, 240_000);
@@ -290,13 +307,13 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
     // the runner gives way to the test and the next command starts it again
     it("XCTest's metrics: launch and hitches", async () => {
-      const launch = await d.measure.xctMetrics(APP, 'launch').catch((e: DeviceError) => e);
+      const launch = await d.measure.xctMetrics(APP, 'launch').catch(refusal);
       console.log(
         'xct launch',
         launch instanceof Error ? launch.message : JSON.stringify(launch.value.metrics),
       );
       await open('list');
-      const hitches = await d.measure.xctMetrics(APP, 'hitches').catch((e: DeviceError) => e);
+      const hitches = await d.measure.xctMetrics(APP, 'hitches').catch(refusal);
       console.log(
         'xct hitches',
         hitches instanceof Error ? hitches.message : JSON.stringify(hitches.value.metrics),

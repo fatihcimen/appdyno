@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { PROTOCOL } from '@appdyno/protocol';
 import { agentMayGo } from './one-agent.js';
@@ -19,7 +19,7 @@ import {
  * The Android agent against the fixture app on a real emulator or device (APPDYNO_ANDROID_SERIAL; never a
  * default). Each test starts from a known screen; the app is reinstalled by the caller (scripts/).
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 const SETTLE = { quietMs: 200, maxMs: 3_000 };
 /** At most this many reads in one quiet window (the agent reads far less than this bound allows). */
@@ -34,7 +34,17 @@ describe.skipIf(!serial)('android agent on a device', () => {
     s.list.find((e) =>
       typeof label === 'string' ? dotless(e.label) === label : label.test(dotless(e.label)),
     );
+  /** The element the test needs there. */
+  const found = (s: Screen, label: string | RegExp) => {
+    const e = find(s, label);
+    assert(e, String(label));
+    return e;
+  };
   const labels = (s: Screen) => s.list.map((e) => dotless(e.label));
+  const helloOf = (x: AndroidDevice) => {
+    assert(x.hello, 'its hello');
+    return x.hello;
+  };
   /** The screen showing `label`, settled: the same layout for 600 ms (its activity transition is over). */
   const settledOn = async (label: string | RegExp, reads = 40) => {
     let last: Screen | undefined;
@@ -53,7 +63,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
       await new Promise((r) => setTimeout(r, 200));
     }
     throw new Error(
-      `the screen with ${String(label)} did not settle: ${last && labels(last).slice(0, 12).join(' | ')}, windows ${last?.tree.windows.map((w) => `${w.type}:${w.pkg}`).join(' ')}`,
+      `the screen with ${String(label)} did not settle: ${String(last && labels(last).slice(0, 12).join(' | '))}, windows ${String(last?.tree.windows.map((w) => `${w.type}:${String(w.pkg)}`).join(' '))}`,
     );
   };
   /** The fixture's home, its task cleared, settled. */
@@ -63,8 +73,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
   };
   const open = async (button: string) => {
     const s = await home();
-    const b = find(s, button)!;
-    expect(b, button).toBeDefined();
+    const b = find(s, button);
+    assert(b, button);
     const r = await d.tap(b, { settle: SETTLE, read: 'tree', before: s.hash });
     return d.read(APP).then((x) => ({ ...x, settle: r.settle }));
   };
@@ -90,17 +100,18 @@ describe.skipIf(!serial)('android agent on a device', () => {
   beforeEach(() => answerSystemDialog());
 
   beforeAll(async () => {
-    d = new AndroidDevice(serial!);
+    d = new AndroidDevice(serial);
     await d.open();
     await d.shell(
       'settings put global window_animation_scale 1; settings put global transition_animation_scale 1',
     );
   });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
   afterAll(() => d?.close());
 
   it('says hello with the device and the protocol', () => {
     expect(d.hello).toMatchObject({ platform: 'android', protocol: PROTOCOL });
-    expect(d.hello!.screen.w).toBeGreaterThan(0);
+    expect(d.hello?.screen.w).toBeGreaterThan(0);
   });
 
   it('reads the home screen with the app in front', async () => {
@@ -110,18 +121,20 @@ describe.skipIf(!serial)('android agent on a device', () => {
       expect.arrayContaining(['appdyno fixture', 'FORM', 'LIST', 'COMPOSE']),
     );
     expect(s.tree.truncated).toBe(false);
-    expect(s.window).toEqual({ w: d.hello!.screen.w, h: d.hello!.screen.h });
+    const { screen: own } = helloOf(d);
+    expect(s.window).toEqual({ w: own.w, h: own.h });
   });
 
   it('taps into another screen and settles there in one call', async () => {
     const s = await open('FORM');
-    expect(s.settle!.settled).toBe(true);
+    expect(s.settle?.settled).toBe(true);
     expect(labels(s), JSON.stringify(s.settle)).toContain('Enter your details');
   });
 
   it('an answer between two screens is never an empty screen, and every place in it is final', async () => {
-    const shown = (t: { nodes: { f: number; b: number[]; c: string; id?: string }[] }) =>
-      t.nodes.filter((n) => n.f & 1 && n.b[2]! > n.b[0]! && n.b[3]! > n.b[1]!);
+    const shown = (t: {
+      nodes: { f: number; b: [number, number, number, number]; c: string; id?: string }[];
+    }) => t.nodes.filter((n) => n.f & 1 && n.b[2] > n.b[0] && n.b[3] > n.b[1]);
     const app = (t: Parameters<typeof shown>[0] & { windows: { type: number }[] }) =>
       shown({
         nodes: (t.nodes as ((typeof t.nodes)[0] & { w: number })[]).filter(
@@ -131,19 +144,21 @@ describe.skipIf(!serial)('android agent on a device', () => {
     let moving = 0;
     for (let i = 0; i < 6; i++) {
       const s = await home();
-      const r = await d.tap(find(s, 'FORM')!, { settle: SETTLE, read: 'tree', before: s.hash });
-      expect(app(r.tree!).length, JSON.stringify(r.settle)).toBeGreaterThan(0);
-      if (r.settle!.moving) moving++;
+      const r = await d.tap(found(s, 'FORM'), { settle: SETTLE, read: 'tree', before: s.hash });
+      assert(r.tree && r.settle);
+      expect(app(r.tree).length, JSON.stringify(r.settle)).toBeGreaterThan(0);
+      if (r.settle.moving) moving++;
       await new Promise((x) => setTimeout(x, 1_500));
       const later = await d.tree();
-      expect(app(r.tree!).map((n) => [n.c, n.id, n.b])).toEqual(
+      expect(app(r.tree).map((n) => [n.c, n.id, n.b])).toEqual(
         app(later).map((n) => [n.c, n.id, n.b]),
       );
       const back = await d.key('back', { settle: SETTLE, read: 'tree', before: later.hash });
-      expect(app(back.tree!).length, JSON.stringify(back.settle)).toBeGreaterThan(0);
-      if (back.settle!.moving) moving++;
+      assert(back.tree && back.settle);
+      expect(app(back.tree).length, JSON.stringify(back.settle)).toBeGreaterThan(0);
+      if (back.settle.moving) moving++;
       await new Promise((x) => setTimeout(x, 1_500));
-      expect(app(back.tree!).map((n) => [n.c, n.id, n.b])).toEqual(
+      expect(app(back.tree).map((n) => [n.c, n.id, n.b])).toEqual(
         app(await d.tree()).map((n) => [n.c, n.id, n.b]),
       );
     }
@@ -153,14 +168,15 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('an action right after an answer given during a slide waits for its end and lands', async () => {
     for (let i = 0; i < 3; i++) {
       const s = await home();
-      const r = await d.tap(find(s, 'DIALOG')!, { settle: SETTLE, read: 'tree', before: s.hash });
-      expect(r.settle!.settled, JSON.stringify(r.settle)).toBe(true);
+      const r = await d.tap(found(s, 'DIALOG'), { settle: SETTLE, read: 'tree', before: s.hash });
+      expect(r.settle?.settled, JSON.stringify(r.settle)).toBe(true);
       const shot = await d.screenshot({ maxPx: 256 });
       expect(shot.data.length).toBeGreaterThan(0);
       const on = await screen();
-      expect(find(on, 'OPEN DIALOG'), JSON.stringify({ s: r.settle, l: labels(on) })).toBeDefined();
-      const t = await d.tap(find(on, 'OPEN DIALOG')!, { settle: SETTLE, read: 'tree' });
-      expect(t.settle!.settled).toBe(true);
+      const button = find(on, 'OPEN DIALOG');
+      assert(button, JSON.stringify({ s: r.settle, l: labels(on) }));
+      const t = await d.tap(button, { settle: SETTLE, read: 'tree' });
+      expect(t.settle?.settled).toBe(true);
       expect(labels(await screen())).toContain('Emin misiniz?');
     }
   });
@@ -175,7 +191,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
         .trim()
         .split(/\s+/);
     const before = await scales();
-    const off = new AndroidDevice(serial!, undefined, { animations: 'off' });
+    const off = new AndroidDevice(serial, undefined, { animations: 'off' });
     await off.open();
     expect(await scales()).toEqual(['0', '0', '0']);
     expect((await off.tree()).nodes.length).toBeGreaterThan(0);
@@ -184,7 +200,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const form = before2.list.find((e) => /^form$/i.test(e.label));
     if (form) {
       const r = await off.tap(form, { settle: SETTLE, read: 'none', before: before2.hash });
-      expect(r.settle!.moving).toBeUndefined();
+      assert(r.settle);
+      expect(r.settle.moving).toBeUndefined();
       await off.key('back', { settle: SETTLE, read: 'none' });
     }
     // a measurement sees what a user sees
@@ -192,17 +209,19 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(await scales()).toEqual(before);
     off.close();
 
-    const crash = new AndroidDevice(serial!, undefined, { animations: 'off' });
+    const crash = new AndroidDevice(serial, undefined, { animations: 'off' });
     await crash.open();
     expect(await scales()).toEqual(['0', '0', '0']);
-    const checks = await androidProvider().doctor!(serial!);
+    const provider = androidProvider();
+    assert(provider.doctor !== undefined);
+    const checks = await provider.doctor(serial);
     expect(checks.find((c) => c.name === 'animations')?.warn).toBe(true);
     agentMayGo();
-    await d.shell(`kill -9 ${crash.hello!.pid}`);
+    await d.shell(`kill -9 ${String(helloOf(crash).pid)}`);
     crash.close();
     await expect.poll(scales, { timeout: 15_000, interval: 500 }).toEqual(before);
 
-    const graceful = new AndroidDevice(serial!, undefined, { animations: 'off' });
+    const graceful = new AndroidDevice(serial, undefined, { animations: 'off' });
     await graceful.open();
     expect(await scales()).toEqual(['0', '0', '0']);
     graceful.close();
@@ -212,21 +231,26 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('an unchanged screen settles after one quiet window', async () => {
     const s = await home();
-    const title = find(s, 'appdyno fixture')!;
+    const title = found(s, 'appdyno fixture');
     const r = await d.tap(title, { settle: SETTLE, read: 'hash', before: s.hash });
-    expect(r.settle!.settled).toBe(true);
+    expect(r.settle?.settled).toBe(true);
+    assert(r.settle?.quietMs !== undefined);
     // the agent's own clock: the window it used (short after a tap on plain text, stretched on a loaded
     // device) was waited out
-    expect(r.settle!.ms).toBeGreaterThanOrEqual(r.settle!.quietMs!);
+    expect(r.settle.ms).toBeGreaterThanOrEqual(r.settle.quietMs);
     // one window, no second one
-    expect(r.settle!.reads).toBeLessThanOrEqual(oneWindow(r.settle!.quietMs!));
+    expect(r.settle.reads).toBeLessThanOrEqual(oneWindow(r.settle.quietMs));
     expect(r.hash).toBe(s.hash);
   });
 
   it('types into a text-input layout tapped on its middle, which is not on its field', async () => {
     await open('FORM');
     const nodes = (await d.tree()).nodes;
-    const box = (id: string) => nodes.find((n) => n.id?.endsWith(`:id/${id}`))!.b;
+    const box = (id: string) => {
+      const node = nodes.find((n) => n.id?.endsWith(`:id/${id}`));
+      assert(node, id);
+      return node.b;
+    };
     const [l, t, r, b] = box('gsm_layout');
     const at = { x: (l + r) / 2, y: (t + b) / 2 };
     const [fl, ft, fr, fb] = box('gsm_input');
@@ -240,7 +264,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('types Turkish text into a field and reads it back, replacing and appending', async () => {
     const s = await open('FORM');
-    const name = s.list.find((e) => e.id === 'name_input')!;
+    const name = s.list.find((e) => e.id === 'name_input');
+    assert(name);
     const r = await d.typeText('Çağrı İşgüzar', {
       at: name,
       replace: true,
@@ -250,26 +275,29 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(r).toMatchObject({ mode: 'setText', verified: true });
     await d.typeText(' öğün', { replace: false });
     const after = await screen();
-    expect(after.list.find((e) => e.id === 'name_input')!.label).toBe('Çağrı İşgüzar öğün');
-    const phone = after.list.find((e) => e.id === 'phone_input')!;
+    expect(after.list.find((e) => e.id === 'name_input')?.label).toBe('Çağrı İşgüzar öğün');
+    const phone = after.list.find((e) => e.id === 'phone_input');
+    assert(phone);
     expect((await d.typeText('+90 555 123 45 67', { at: phone, replace: true })).verified).toBe(
       true,
     );
-    const pw = after.list.find((e) => e.id === 'password_input')!;
+    const pw = after.list.find((e) => e.id === 'password_input');
+    assert(pw);
     // a password field reports no readable text: typed, no verdict
     expect((await d.typeText('Gizli123!', { at: pw, replace: true })).verified).toBeUndefined();
-    const submit = (await screen()).list.find((e) => e.label === 'SEND')!;
+    const submit = (await screen()).list.find((e) => e.label === 'SEND');
+    assert(submit);
     const done = await d.tap(submit, { settle: SETTLE, read: 'tree' });
-    expect(done.tree!.nodes.some((n) => n.t === 'Sent: Çağrı İşgüzar öğün')).toBe(true);
+    expect(done.tree?.nodes.some((n) => n.t === 'Sent: Çağrı İşgüzar öğün')).toBe(true);
   });
 
   // a loaded Mac starves the emulator: an A/B run's device stopped for 3.5 s while a phone number was
   // typed, its clock going on, and the field stayed empty. The emulator's process is stopped here as the
   // Mac's load stopped it (the guest's time goes on: its timeouts run out meanwhile)
-  it.skipIf(!serial?.startsWith('emulator-'))(
+  it.skipIf(!serial.startsWith('emulator-'))(
     'types the text in although the device stops for 3.5 s mid-typing (4 of 4)',
     async () => {
-      const port = serial!.slice('emulator-'.length);
+      const port = serial.slice('emulator-'.length);
       const pids = spawnSync('pgrep', ['-f', `qemu.*-port ${port}( |$)`])
         .stdout.toString()
         .trim()
@@ -283,7 +311,9 @@ describe.skipIf(!serial)('android agent on a device', () => {
         for (const pid of pids) process.kill(pid, 'SIGCONT');
       };
       await open('FORM');
-      const [l, t, r, b] = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/phone_input'))!.b;
+      const node = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/phone_input'));
+      assert(node);
+      const [l, t, r, b] = node.b;
       const phone = { x: (l + r) / 2, y: (t + b) / 2 };
       for (const [i, offsetMs] of [0, 60, 150, 300].entries()) {
         await d.tap(phone, { settle: SETTLE });
@@ -308,7 +338,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('types into the field a sheet focuses as it opens, without a tap (3 of 3)', async () => {
     for (const n of ['5321234561', '5321234562', '5321234563']) {
       const s = await open('DIALOG');
-      await d.tap(find(s, /DIALOG WITH FIELD|Dialog with field/)!, { settle: SETTLE });
+      await d.tap(found(s, /DIALOG WITH FIELD|Dialog with field/), { settle: SETTLE });
       const r = await d.typeText(n, { replace: true, settle: false });
       const field = (await d.tree()).nodes.find((x) => x.id?.endsWith(':id/sheet_input'));
       expect({ text: field?.t, verified: r.verified }).toEqual({ text: n, verified: true });
@@ -319,7 +349,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   // wait for the focus must not run out meanwhile (A/B runs 3b9df4d5, 64985b2a: a 4 s stall ended it)
   it('types into a sheet whose field takes the focus after the app stalled for 6 s', async () => {
     const s = await open('DIALOG');
-    await d.tap(find(s, /BUSY DIALOG|Busy dialog/)!, { settle: false });
+    await d.tap(found(s, /BUSY DIALOG|Busy dialog/), { settle: false });
     const r = await d.typeText('5321234569', { replace: true, settle: false });
     // the stall can bring the system's dialog up already: "wait" keeps the sheet
     const wait = find(await d.read(), /^(Wait|Bekle)$/);
@@ -330,7 +360,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
       verified: true,
     });
     // the stall is an ANR to the system: its dialog would cover the next tests
-    await answerSystemDialog(serial?.startsWith('emulator-') ? 8_000 : 15_000);
+    await answerSystemDialog(serial.startsWith('emulator-') ? 8_000 : 15_000);
     await d.shell(`am force-stop ${APP}`);
   }, 60_000);
 
@@ -338,7 +368,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   // never sent to the new screen (A/B run 8559e13f: a tap meant for the landing went to a splash)
   it('refuses a tap aimed at a screen another window has replaced since it was read', async () => {
     const s = await home();
-    const form = find(s, 'FORM')!;
+    const form = found(s, 'FORM');
     await d.openUrl('appdyno-fixture://open/list', APP);
     await new Promise((r) => setTimeout(r, 1_500));
     const e = await d.tap(form, { settle: SETTLE, before: s.hash }).catch((x: unknown) => x);
@@ -357,7 +387,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('waits for a field that takes focus late (a slow phone)', async () => {
     const s = await open('SLOW FOCUS');
-    const field = s.list.find((e) => e.id === 'slow_input')!;
+    const field = s.list.find((e) => e.id === 'slow_input');
+    assert(field);
     const r = await d.typeText('482913', { at: field, replace: true, settle: false });
     expect(r.verified).toBe(true);
     expect(r.focusMs).toBeGreaterThanOrEqual(500);
@@ -367,12 +398,13 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const s = await open('LIST');
     const add = s.list.filter((e) => e.label === 'ADD');
     expect(add.length).toBeGreaterThan(5);
-    const third = add.find((e) => e.refContext === 'Product 3')!;
-    expect(third).toBeDefined();
-    const fifth = add.find((e) => e.refContext === 'Product 5')!;
+    const third = add.find((e) => e.refContext === 'Product 3');
+    assert(third);
+    const fifth = add.find((e) => e.refContext === 'Product 5');
+    assert(fifth);
     const r = await d.tap(third, { settle: SETTLE, read: 'tree' });
-    expect(r.tree!.nodes.filter((n) => n.t === 'In basket: 1')).toHaveLength(1);
-    const w = d.hello!.screen;
+    expect(r.tree?.nodes.filter((n) => n.t === 'In basket: 1')).toHaveLength(1);
+    const w = helloOf(d).screen;
     await d.swipe({ x: w.w / 2, y: w.h * 0.6 }, { x: w.w / 2, y: w.h * 0.45 }, 400, {
       settle: SETTLE,
       read: 'none',
@@ -380,7 +412,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const moved = await screen();
     const fifthAfter = moved.list.find((e) => e.label === 'ADD' && e.refContext === 'Product 5');
     expect(fifthAfter?.ref).toBe(fifth.ref);
-    expect(fifthAfter!.y).toBeLessThan(fifth.y);
+    expect(fifthAfter?.y).toBeLessThan(fifth.y);
   });
 
   it('sends a node off the screen with an empty box, never a negative one', async () => {
@@ -393,16 +425,16 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('reads a dialog and answers it', async () => {
     const s = await open('DIALOG');
-    const r = await d.tap(find(s, 'OPEN DIALOG')!, {
+    const r = await d.tap(found(s, 'OPEN DIALOG'), {
       settle: SETTLE,
       read: 'tree',
     });
-    expect(r.settle!.settled).toBe(true);
+    expect(r.settle?.settled).toBe(true);
     const dlg = await screen();
     expect(labels(dlg)).toEqual(
       expect.arrayContaining(['Emin misiniz?', 'The basket will be emptied.']),
     );
-    const ok = find(dlg, /^OK$/i)!;
+    const ok = found(dlg, /^OK$/i);
     await d.tap(ok, { settle: SETTLE, read: 'none' });
     expect(labels(await screen())).toContain('Confirmed');
   });
@@ -412,7 +444,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
       'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/code dev.appdyno.fixture',
     );
     await new Promise((r) => setTimeout(r, 1_000));
-    const first = (await screen()).list.find((e) => e.label === 'Code')!;
+    const first = (await screen()).list.find((e) => e.label === 'Code');
+    assert(first);
     const r = await d.typeText('9643', { at: first });
     expect(r.mode).toBe('keys');
     expect(labels(await screen())).toContain('Code: 9643');
@@ -424,12 +457,13 @@ describe.skipIf(!serial)('android agent on a device', () => {
       s.list.find((e) => e.id === 'compose_title')?.label,
       JSON.stringify({ settle: s.settle, labels: labels(s).slice(0, 8) }),
     ).toBe('Compose screen');
-    const input = s.list.find((e) => e.id === 'compose_input')!;
-    expect(input).toBeDefined();
+    const input = s.list.find((e) => e.id === 'compose_input');
+    assert(input);
     expect((await d.typeText('Kapı zili çalışmıyor', { at: input, replace: true })).verified).toBe(
       true,
     );
-    const save = (await screen()).list.find((e) => e.id === 'compose_save')!;
+    const save = (await screen()).list.find((e) => e.id === 'compose_save');
+    assert(save);
     await d.tap(save, { settle: SETTLE, read: 'none' });
     expect((await screen()).list.find((e) => e.id === 'compose_result')?.label).toBe(
       'Saved: Kapı zili çalışmıyor',
@@ -438,7 +472,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('settles on a screen whose text keeps ticking', async () => {
     const opened = await open('TICKER');
-    expect(opened.settle!.settled).toBe(true);
+    expect(opened.settle?.settled).toBe(true);
     // the tap below is measured once the activity is in: a loaded emulator ends its slide-in after the open
     // tap's settle, and a tap during it counts that motion (seen: DUR not there yet, 10 reads). The ticking
     // text moves its own box, so the screen is never the same twice: DUR in three reads 200 ms apart
@@ -448,19 +482,22 @@ describe.skipIf(!serial)('android agent on a device', () => {
       s = await screen();
       seen = find(s, 'STOP') ? seen + 1 : 0;
     }
-    const stop = s.list.find((e) => e.label === 'STOP')!;
+    const stop = s.list.find((e) => e.label === 'STOP');
+    assert(stop);
     const r = await d.tap(stop, { settle: SETTLE, read: 'none', before: s.hash });
     // the ticking text never held it to the cap: settled within one window of reads
-    expect(r.settle!.settled).toBe(true);
-    expect(r.settle!.reads).toBeLessThanOrEqual(oneWindow(r.settle!.quietMs!));
+    expect(r.settle?.settled).toBe(true);
+    assert(r.settle?.quietMs !== undefined);
+    expect(r.settle.reads).toBeLessThanOrEqual(oneWindow(r.settle.quietMs));
   });
 
   it('waits for content that arrives after a spinner', async () => {
     const s = await open('DELAYED');
-    const load = s.list.find((e) => e.label === 'LOAD')!;
+    const load = s.list.find((e) => e.label === 'LOAD');
+    assert(load);
     const r = await d.tap(load, { settle: SETTLE, read: 'tree', before: s.hash });
-    expect(r.settle!.settled).toBe(true);
-    expect(r.tree!.nodes.some((n) => n.t === 'RESULT 1' || n.t === 'Result 1')).toBe(true);
+    expect(r.settle?.settled).toBe(true);
+    expect(r.tree?.nodes.some((n) => n.t === 'RESULT 1' || n.t === 'Result 1')).toBe(true);
   });
 
   it('finds the system permission prompt and answers it', async () => {
@@ -468,16 +505,17 @@ describe.skipIf(!serial)('android agent on a device', () => {
       `pm revoke ${APP} android.permission.ACCESS_FINE_LOCATION; pm revoke ${APP} android.permission.ACCESS_COARSE_LOCATION`,
     );
     const s = await open('PERMISSION');
-    await d.tap(find(s, 'REQUEST LOCATION')!, { settle: SETTLE, read: 'none' });
+    await d.tap(found(s, 'REQUEST LOCATION'), { settle: SETTLE, read: 'none' });
     let prompt: Screen | undefined;
     for (let i = 0; i < 20 && !prompt; i++) {
       const now = await screen();
       if (androidScreen.alertButton(now.elements, 'allow')) prompt = now;
       else await new Promise((r) => setTimeout(r, 200));
     }
-    expect(prompt, 'permission prompt').toBeDefined();
-    expect(prompt!.foreground).toMatch(/permissioncontroller/);
-    const allow = androidScreen.alertButton(prompt!.elements, 'allow')!;
+    assert(prompt, 'permission prompt');
+    expect(prompt.foreground).toMatch(/permissioncontroller/);
+    const allow = androidScreen.alertButton(prompt.elements, 'allow');
+    assert(allow);
     await d.tap(allow, { settle: SETTLE, read: 'none' });
     expect(androidScreen.alertButton((await screen()).elements, 'allow')).toBeUndefined();
     expect(await d.shell(`dumpsys package ${APP} | grep ACCESS_FINE_LOCATION`)).toMatch(
@@ -502,10 +540,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(Math.max(small.meta.w, small.meta.h)).toBe(1024);
     expect(small.data.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xd8]));
     const full = await d.screenshot({ format: 'png' });
-    expect({ w: full.meta.w, h: full.meta.h }).toEqual({
-      w: d.hello!.screen.w,
-      h: d.hello!.screen.h,
-    });
+    const { screen: own } = helloOf(d);
+    expect({ w: full.meta.w, h: full.meta.h }).toEqual({ w: own.w, h: own.h });
     expect(full.data.subarray(1, 4).toString('ascii')).toBe('PNG');
   });
 
@@ -566,20 +602,22 @@ describe.skipIf(!serial)('android agent on a device', () => {
       expect(of(id), id).toEqual([]);
     expect(r.elapsedMs).toBeLessThan(5_000);
     // the read the checks ran on carries the traversal hints: the price is read before the name above it
-    const els = elementsOf(r.read!.tree, r.read!.traversal);
+    assert(r.read);
+    const els = elementsOf(r.read.tree, r.read.traversal);
     const at = (id: string) => els.findIndex((e) => e.identifier === `${APP}:id/${id}`);
-    expect(els[at('a11y_price')]!.traversalBefore).toBe(at('a11y_name'));
+    expect(els[at('a11y_price')]?.traversalBefore).toBe(at('a11y_name'));
     // the tree says what a screen reader skips or reads as one unit: Compose's text is read, as one unit
     // (its ellipsis is not found: Compose reports its characters' places at another scale, a known gap)
     const t = await d.tree();
-    const compose = t.nodes.find((n) => n.t?.startsWith('A very long product name in Compose'))!;
+    const compose = t.nodes.find((n) => n.t?.startsWith('A very long product name in Compose'));
+    assert(compose);
     expect(compose.f & NODE_FLAGS.notImportant).toBe(0);
     expect(compose.f & NODE_FLAGS.screenReaderFocusable).toBe(NODE_FLAGS.screenReaderFocusable);
   });
 
   const mocks = async () =>
     [...(await d.shell('dumpsys location')).matchAll(/^\s*(\w+) provider \[mock\]/gm)]
-      .map((m) => m[1]!)
+      .map(([, name]) => name)
       .sort();
 
   it('sets a test location and removes only the providers it added', async () => {
@@ -601,11 +639,11 @@ describe.skipIf(!serial)('android agent on a device', () => {
     await d.setLocation(41.0082, 28.9784);
     expect(await mocks()).toEqual(['fused', 'gps', 'network']);
     // the host that set them is gone (a process that ran and exited), and its agent with it
-    const dead = spawnSync('true').pid!;
+    const dead = spawnSync('true').pid;
     await d.shell(`sed -i 's/^[0-9]*/${dead}/' ${TEST_LOCATION}`);
     agentMayGo();
-    await new Adb().exec(serial!, `kill ${d.hello!.pid}`);
-    const next = new AndroidDevice(serial!);
+    await new Adb().exec(serial, `kill ${String(helloOf(d).pid)}`);
+    const next = new AndroidDevice(serial);
     try {
       await next.open();
       expect(next.lastStartWasCold).toBe(true);
@@ -617,7 +655,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('sees the app leave the foreground when it crashes, and starts it again', async () => {
     const s = await home();
-    await d.tap(find(s, 'CRASH')!, { settle: SETTLE, read: 'none' });
+    await d.tap(found(s, 'CRASH'), { settle: SETTLE, read: 'none' });
     let fg: string | undefined = APP;
     for (let i = 0; i < 20 && fg === APP; i++) {
       await new Promise((r) => setTimeout(r, 200));
@@ -648,18 +686,18 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const s = await home();
     await d.shell('input keyevent KEYCODE_SLEEP');
     await new Promise((r) => setTimeout(r, 1_500));
-    await d.tap(find(s, 'FORM')!, { settle: SETTLE, read: 'none' });
+    await d.tap(found(s, 'FORM'), { settle: SETTLE, read: 'none' });
     expect(labels(await d.read(APP))).toContain('Enter your details');
   });
 
   it('a dropped adb connection: a read waits for the device and finds the running agent again', async () => {
-    const back = new AndroidDevice(serial!, new Adb(), { reconnectWaitMs: 30_000 });
+    const back = new AndroidDevice(serial, new Adb(), { reconnectWaitMs: 30_000 });
     await back.open();
-    const pid = back.hello!.pid;
-    await new Adb().run(['-s', serial!, 'reconnect'], 30_000);
+    const { pid } = helloOf(back);
+    await new Adb().run(['-s', serial, 'reconnect'], 30_000);
     const s = await back.read(APP);
     expect(s.list.length).toBeGreaterThan(0);
-    expect(back.hello!.pid).toBe(pid); // the same agent, reconnected, not restarted
+    expect(helloOf(back).pid).toBe(pid); // the same agent, reconnected, not restarted
     back.close();
   });
 
@@ -676,18 +714,18 @@ describe.skipIf(!serial)('android agent on a device', () => {
     }
     expect(off).toBe(true);
     // the next request opens it again: the same agent, the screen read as before
-    const pid = d.hello!.pid;
+    const { pid } = helloOf(d);
     const t = await d.tree();
     expect(t.nodes.length).toBeGreaterThan(3);
     expect(await bound()).toBe(true);
-    expect(d.hello!.pid).toBe(pid);
+    expect(helloOf(d).pid).toBe(pid);
   });
 
   it('a second host connects to the running agent without starting another', async () => {
-    const other = new AndroidDevice(serial!);
+    const other = new AndroidDevice(serial);
     await other.open();
     expect(other.lastStartWasCold).toBe(false);
-    expect(other.hello!.pid).toBe(d.hello!.pid);
+    expect(helloOf(other).pid).toBe(helloOf(d).pid);
     const [a, b] = await Promise.all([d.read(APP), other.read(APP)]);
     expect(a.hash).toBe(b.hash);
     other.close();
@@ -695,18 +733,19 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('a killed agent fails the call in flight, comes back on the next read, and a touch lands after it', async () => {
     await home();
-    const pid = d.hello!.pid!;
+    const { pid } = helloOf(d);
+    assert(pid !== undefined);
     const pending = d.longPress({ x: 10, y: 10 }, 3_000, { settle: false });
     await new Promise((r) => setTimeout(r, 300));
     // not through the device's queue: it waits for the long press
     agentMayGo();
-    await new Adb().exec(serial!, `kill ${pid}`);
+    await new Adb().exec(serial, `kill ${pid}`);
     const e = await pending.catch((x: unknown) => x);
     expect((e as DeviceError).code).toBe('AGENT_UNAVAILABLE');
     const s = await d.read(APP);
     expect(s.list.length).toBeGreaterThan(0);
     expect(d.lastStartWasCold).toBe(true);
-    expect(d.hello!.pid).not.toBe(pid);
+    expect(helloOf(d).pid).not.toBe(pid);
     // the long press it killed left its finger down, which Android 17 holds against every later one
     expect(labels(await open('FORM'))).toContain('Enter your details');
   });
@@ -725,13 +764,13 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('takes UI automation over from an agent killed a moment ago, which the system keeps for about 2 s', async () => {
     await d.read(APP);
     agentMayGo();
-    await d.shell(`kill -9 ${d.hello!.pid}`);
+    await d.shell(`kill -9 ${String(helloOf(d).pid)}`);
     expect(labels(await d.read(APP)).length).toBeGreaterThan(0);
   });
 
   it('stays answerable while the app hangs its main thread', async () => {
     const s = await home();
-    await d.tap(find(s, 'FREEZE')!, { settle: false });
+    await d.tap(found(s, 'FREEZE'), { settle: false });
     const t = Date.now();
     const r = await d.tree().then(
       (x) => ({ ok: true as const, truncated: x.truncated }),
@@ -751,7 +790,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
       if (ok) break;
       await new Promise((r) => setTimeout(r, 1_000));
     }
-    await answerSystemDialog(serial?.startsWith('emulator-') ? 8_000 : 15_000);
+    await answerSystemDialog(serial.startsWith('emulator-') ? 8_000 : 15_000);
     await d.shell('input keyevent KEYCODE_BACK');
     await home();
   }, 90_000);

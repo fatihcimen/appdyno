@@ -9,16 +9,16 @@ import { opsOn, type Call } from './helpers.js';
  * nothing on an emulator makes one on demand.
  */
 const APP = 'dev.appdyno.fixture';
-const SERIAL = process.env.APPDYNO_ANDROID_SERIAL;
+const SERIAL = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const PERMISSION = 'android.permission.ACCESS_FINE_LOCATION';
 
 const shell = (...words: string[]) =>
-  execFileSync('adb', ['-s', SERIAL!, 'shell', ...words], { encoding: 'utf8' }).trim();
+  execFileSync('adb', ['-s', SERIAL, 'shell', ...words], { encoding: 'utf8' }).trim();
 
 describe.skipIf(!SERIAL)('how an app ended', () => {
   let call: Call;
   /** The reasons `crashes` counts after `cause`, with the app up on its crash screen when it runs. */
-  const after = async (cause: () => Promise<unknown> | unknown) => {
+  const after = async (cause: () => unknown) => {
     await call('terminate_app');
     await call('open_link', { url: 'appdyno-fixture://open/crash' });
     await call('wait_for', { id: 'exit', timeoutMs: 8_000 });
@@ -31,7 +31,7 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
   const reasons = (exits: { reason: string }[]) => exits.map((e) => e.reason);
 
   beforeAll(() => {
-    call = opsOn(androidProvider(new Adb()), SERIAL!, APP).call;
+    call = opsOn(androidProvider(new Adb()), SERIAL, APP).call;
   });
 
   it('reads an app that left by itself, with its code', async () => {

@@ -23,7 +23,7 @@ import { untilWithin } from './until.js';
  * the token kept is the one a push goes by. The push goes to this test, which answers as Apple does a key it never
  * issued: nothing leaves this Mac.
  */
-const UDID = process.env.APPDYNO_IOS_UDID;
+const UDID = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
 /** No device's: made up here, as long as a real one. */
 const TOKEN = 'c0ffee'.repeat(11);
@@ -59,25 +59,25 @@ describe.runIf(UDID)('a push token typed in a window, on a simulator', () => {
     heard.length = 0;
     poke({ clickOn: 'pushTokenGo' });
     await until('the click', () => heard.some((m) => m.op === 'clicked'));
-    return heard.find((m) => m.op === 'clicked')!;
+    return heard.find((m) => m.op === 'clicked');
   };
 
   beforeAll(async () => {
     state = madeUp('apns').APPDYNO_STATE_DIR;
     vi.stubEnv('APPDYNO_STATE_DIR', state);
     const simctl = new Simctl();
-    device = new IosSimulatorDevice(UDID!, simctl);
+    device = new IosSimulatorDevice(UDID, simctl);
     Object.assign(device, {
       events: new SimulatorEvents(
         simctl,
-        UDID!,
+        UDID,
         () => device.foreground().catch(() => undefined),
-        new ApnsPush(simulatorApnsTarget(simctl, UDID!), {
+        new ApnsPush(simulatorApnsTarget(simctl, UDID), {
           key: apnsKey,
           // what Apple answers a key it never issued
-          send: async (_, request) => {
+          send: (_, request) => {
             sent.push(request);
-            return { status: 403, reason: 'InvalidProviderToken' };
+            return Promise.resolve({ status: 403, reason: 'InvalidProviderToken' });
           },
           now: Date.now,
         }),
@@ -87,11 +87,12 @@ describe.runIf(UDID)('a push token typed in a window, on a simulator', () => {
     const sends = windowSends(new ServerContext(DEFAULT_POLICY, []), device, () => session);
     session = new MirrorSession({
       mirror: device.mirror,
-      viewer: async () => {
-        const viewer = new ViewerProcess(binary, ['--behind']);
-        viewer.onMessage((m) => heard.push(m));
-        return viewer;
-      },
+      viewer: () =>
+        new Promise((resolve) => {
+          const viewer = new ViewerProcess(binary, ['--behind']);
+          viewer.onMessage((m) => heard.push(m));
+          resolve(viewer);
+        }),
       options: { quality: 'auto' },
       title: 'a window under test',
       onWindow: (m) => void sends.onWindow(m),
@@ -107,6 +108,7 @@ describe.runIf(UDID)('a push token typed in a window, on a simulator', () => {
   });
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await session?.stop('the test ended');
     device.close();
     vi.unstubAllEnvs();
@@ -139,10 +141,10 @@ describe.runIf(UDID)('a push token typed in a window, on a simulator', () => {
         ok: false,
         text: expect.stringMatching(
           /^APNs' sandbox refused the push by the device token a person typed at [\d:]{8}: InvalidProviderToken \(403\)/,
-        ),
+        ) as unknown,
       });
       expect(sent.map((r) => r.headers[':path'])).toEqual([`/3/device/${TOKEN}`]);
-      expect(sent[0]!.headers['apns-topic']).toBe(APP);
+      expect(sent[0]?.headers['apns-topic']).toBe(APP);
       // the window's own word of it is the one place the token goes, and this test's pokes
       expect(JSON.stringify(all.filter((m) => m.op !== 'poke'))).not.toContain(TOKEN);
       expect(JSON.stringify(heard.filter((m) => m.name !== 'pushToken'))).not.toContain(TOKEN);

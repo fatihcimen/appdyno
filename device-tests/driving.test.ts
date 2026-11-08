@@ -2,8 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_POLICY, ServerContext, type Op } from '@appdyno/ops';
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
 import { opCaller, SUITE_POLICY, type Answer, type Call, SIM_FIXTURE } from './helpers.js';
 import {
@@ -96,16 +96,18 @@ function shared(
   it('waits on the device: at once with no baseline, then only for a change', async () => {
     await open('home');
     const { device } = await get().ctx.session();
-    const first = await device.waitChange!(undefined, 0);
+    const first = await device.waitChange(undefined, 0);
     expect(first?.tree).toBeDefined();
+    assert(first);
     // a clock may tick once: of two waits on a still screen one answers with nothing
-    const quiet = await device.waitChange!(first!.sig, 800);
-    const again = quiet?.tree ? await device.waitChange!(quiet.sig, 800) : quiet;
+    const quiet = await device.waitChange(first.sig, 800);
+    const again = quiet?.tree ? await device.waitChange(quiet.sig, 800) : quiet;
     expect(again?.tree).toBeUndefined();
     ok(await call('tap', { selector: { text: 'Form' }, read: 'none' }));
-    const moved = await device.waitChange!(again!.sig, 8_000);
+    assert(again);
+    const moved = await device.waitChange(again.sig, 8_000);
     expect(moved?.tree).toBeDefined();
-    expect(moved?.sig).not.toBe(again!.sig);
+    expect(moved?.sig).not.toBe(again.sig);
   });
 
   it('waits on the device, whichever way the screen comes', async () => {
@@ -132,8 +134,9 @@ function shared(
     ok(await call('tap', { selector: names.field }));
     ok(await call('type_text', { text: 'Ayşe' }));
     const f = ok(await call('find', { ...names.field }));
-    const m = f.data.matches[0]!;
+    const [m] = f.data.matches;
     expect(m).toMatchObject({ enabled: true, focused: true, value: 'Ayşe' });
+    assert(m);
     expect(m.bounds.w).toBeGreaterThan(0);
     ok(await call('assert', { ...names.field, check: 'text', equals: 'Ayşe' }));
     expect((await call('assert', { ...names.field, check: 'text', equals: 'No' })).data.code).toBe(
@@ -156,7 +159,8 @@ function shared(
     ok(await call('gesture', { kind: 'double_tap', ...pad }));
     ok(await call('assert', { text: 'double taps: 1' }));
     const f = ok(await call('find', { text: 'Gesture pad' }));
-    const b = f.data.matches[0]!;
+    const [b] = f.data.matches;
+    assert(b);
     ok(
       await call('gesture', {
         kind: 'drag',
@@ -193,7 +197,7 @@ function shared(
     const held = await call('clipboard');
     const set = await call('clipboard', { text: 'pano içeriği' });
     // a simulator whose pasteboard stalls on a loaded Mac: a refusal that says so, not a hang
-    if (set.error && /did not take the text/.test(set.text)) return ctx.skip();
+    if (set.error && set.text.includes('did not take the text')) return ctx.skip();
     ok(set);
     expect(ok(await call('clipboard')).text).toBe('pano içeriği');
     ok(await call('type_text', { text: 'x', selector: names.field }));
@@ -234,11 +238,11 @@ function shared(
   });
 }
 
-const android = process.env.APPDYNO_ANDROID_SERIAL;
+const android = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 describe.skipIf(!android)('driving on Android', () => {
   let h: ReturnType<typeof harness>;
   const adb = new Adb();
-  const sh = (c: string) => adb.exec(android!, c);
+  const sh = (c: string) => adb.exec(android, c);
   const open = async (screen: string) => {
     await h.call('terminate_app');
     if (screen === 'home') ok(await h.call('launch_app'));
@@ -247,13 +251,13 @@ describe.skipIf(!android)('driving on Android', () => {
 
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-drive-')));
-    h = harness(android!, androidProvider(adb));
-    ok(await h.call('use_device', { device: android!, app: APP }));
+    h = harness(android, androidProvider(adb));
+    ok(await h.call('use_device', { device: android, app: APP }));
   }, 180_000);
   afterAll(async () => {
     await h.ctx.end();
     h.ctx.close();
-    await new AndroidDevice(android!).stopAgent().catch(() => undefined);
+    await new AndroidDevice(android).stopAgent().catch(() => undefined);
   }, 60_000);
 
   shared(() => h, open, {
@@ -266,7 +270,8 @@ describe.skipIf(!android)('driving on Android', () => {
   it('counts two fingers in a plan', async () => {
     await open('gestures');
     const f = ok(await h.call('find', { text: 'Gesture pad' }));
-    const b = f.data.matches[0]!;
+    const [b] = f.data.matches;
+    assert(b);
     ok(
       await h.call('gesture', {
         kind: 'plan',
@@ -375,7 +380,7 @@ describe.skipIf(!android)('driving on Android', () => {
     const slow = await h.call('device_setting', { name: 'network', value: 'slow' });
     // a phone from Android 13 caps its downloads
     const shapes =
-      android!.startsWith('emulator-') || Number(await get('getprop ro.build.version.sdk')) >= 33;
+      android.startsWith('emulator-') || Number(await get('getprop ro.build.version.sdk')) >= 33;
     if (shapes) ok(slow);
     else expect(slow.data.code).toBe('UNSUPPORTED');
     const restored = ok(await h.call('device_setting', { name: 'restore' }));
@@ -399,20 +404,21 @@ describe.skipIf(!android)('driving on Android', () => {
     const before = await scales();
     const session = () => {
       const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider(adb, { animations: 'off' })], {
-        device: android!,
+        device: android,
         app: APP,
         share: true,
       });
       const ops = checkedOps(ctx);
       const set = async (args: Record<string, unknown>) => {
-        const op = ops.device_setting as Op;
-        return op.handler(op.input.parse(args) as Record<string, unknown>);
+        const op = ops.device_setting;
+        assert(op, 'device_setting');
+        return op.handler(op.input.parse(args));
       };
       return { ctx, set };
     };
     // the option, then a setting: the setting's old value is the user's, not the option's zeros
     const a = session();
-    await a.ctx.use(android!);
+    await a.ctx.use(android);
     expect((await scales()).replace(/\s+/g, ' ').trim()).toBe('0 0 0');
     await a.set({ name: 'animations', value: 'on' });
     expect((await scales()).replace(/\s+/g, ' ').trim()).toBe('1 1 1');
@@ -423,7 +429,7 @@ describe.skipIf(!android)('driving on Android', () => {
     // a setting, then a session with the option that dies and comes back: as the user had them, whichever came last
     ok(await h.call('device_setting', { name: 'animations', value: 'off' }));
     const b = session();
-    await b.ctx.use(android!);
+    await b.ctx.use(android);
     await b.set({ name: 'restore' });
     await b.ctx.end();
     b.ctx.close();
@@ -446,7 +452,7 @@ describe.skipIf(!android)('driving on Android', () => {
   it('answers a fingerprint as the device can: an emulator wants one enrolled first, a phone a person', async () => {
     const b = await h.call('device_setting', { name: 'biometric', value: 'match' });
     // an emulator has a sensor to touch, so nothing enrolled is a step away; a phone's sensor is a person's alone
-    if (android!.startsWith('emulator-')) {
+    if (android.startsWith('emulator-')) {
       const enrolled = /"count":(\d+)/.exec(await sh('dumpsys fingerprint'))?.[1];
       expect(b.data.code).toBe('NOT_FOUND');
       if (enrolled === '0') expect(b.text).toContain('biometric enroll takes one');
@@ -460,7 +466,7 @@ describe.skipIf(!android)('driving on Android', () => {
     if (!existsSync(other)) return ctx.skip();
     const refused = (() => {
       try {
-        return execFileSync(process.execPath, [other, 'screen', '--device', android!], {
+        return execFileSync(process.execPath, [other, 'screen', '--device', android], {
           encoding: 'utf8',
           stdio: ['ignore', 'pipe', 'pipe'],
           env: { ...process.env },
@@ -473,7 +479,7 @@ describe.skipIf(!android)('driving on Android', () => {
   });
 });
 
-const ios = process.env.APPDYNO_IOS_UDID;
+const ios = process.env.APPDYNO_IOS_UDID ?? '';
 describe.skipIf(!ios)('driving on a simulator', () => {
   let h: ReturnType<typeof harness>;
   const simctl = new Simctl();
@@ -486,9 +492,9 @@ describe.skipIf(!ios)('driving on a simulator', () => {
 
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-drive-')));
-    await simctl.install(ios!, SIM_FIXTURE);
-    h = harness(ios!, simulatorProvider());
-    ok(await h.call('use_device', { device: ios!, app: APP }));
+    await simctl.install(ios, SIM_FIXTURE);
+    h = harness(ios, simulatorProvider());
+    ok(await h.call('use_device', { device: ios, app: APP }));
     ok(await h.call('launch_app'));
   }, 300_000);
   afterAll(async () => {
@@ -506,7 +512,8 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   it('pinches with two fingers in a plan, as the app sees it', async () => {
     await open('gestures');
     const f = ok(await h.call('find', { text: 'Gesture pad' }));
-    const b = f.data.matches[0]!;
+    const [b] = f.data.matches;
+    assert(b);
     ok(
       await h.call('gesture', {
         kind: 'plan',
@@ -528,7 +535,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   });
 
   it('reads and answers a permission alert', async () => {
-    await simctl.privacy(ios!, 'reset', 'location', APP).catch(() => undefined);
+    await simctl.privacy(ios, 'reset', 'location', APP).catch(() => undefined);
     await open('permission');
     ok(await h.call('tap', { selector: { text: 'Request location' } }));
     const read = ok(await h.call('alert'));
@@ -577,7 +584,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   });
 
   it('changes and restores dark mode, text size, reduce motion and locale', async () => {
-    const ui = async (...w: string[]) => (await simctl.exec(['ui', ios!, ...w])).trim();
+    const ui = async (...w: string[]) => (await simctl.exec(['ui', ios, ...w])).trim();
     const before = { dark: await ui('appearance'), size: await ui('content_size') };
     ok(
       await h.call('device_setting', {
@@ -591,12 +598,10 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     ok(await h.call('device_setting', { name: 'reduce_motion', value: 'on' }));
     expect(ok(await h.call('device_setting', { name: 'reduce_motion' })).data.value).toBe('on');
     // with an app selected, its own launches: the whole simulator is left alone
-    const global = await simctl.exec(['spawn', ios!, 'defaults', 'read', '-g', 'AppleLocale']);
+    const global = await simctl.exec(['spawn', ios, 'defaults', 'read', '-g', 'AppleLocale']);
     ok(await h.call('device_setting', { name: 'locale', value: 'tr-TR' }));
     expect(ok(await h.call('device_setting', { name: 'locale' })).data.value).toBe('tr-TR');
-    expect(await simctl.exec(['spawn', ios!, 'defaults', 'read', '-g', 'AppleLocale'])).toBe(
-      global,
-    );
+    expect(await simctl.exec(['spawn', ios, 'defaults', 'read', '-g', 'AppleLocale'])).toBe(global);
     const restored = ok(await h.call('device_setting', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
     expect(await ui('appearance')).toBe(before.dark);
@@ -626,8 +631,8 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   });
 });
 
-const iphone = process.env.APPDYNO_IPHONE_UDID;
-const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP;
+const iphone = process.env.APPDYNO_IPHONE_UDID ?? '';
+const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
 describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
   let h: ReturnType<typeof harness>;
   const open = async (screen: string) => {
@@ -638,9 +643,9 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
   };
 
   beforeAll(async () => {
-    await new Devicectl(iphone!).install(iphoneFixture!);
-    h = harness(iphone!, iphoneProvider());
-    ok(await h.call('use_device', { device: iphone!, app: APP }));
+    await new Devicectl(iphone).install(iphoneFixture);
+    h = harness(iphone, iphoneProvider());
+    ok(await h.call('use_device', { device: iphone, app: APP }));
     ok(await h.call('launch_app'));
   }, 300_000);
   afterAll(async () => {
@@ -669,7 +674,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     ok(await h.call('app', { action: 'uninstall' }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    ok(await h.call('app', { action: 'install', path: iphoneFixture! }));
+    ok(await h.call('app', { action: 'install', path: iphoneFixture }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     expect((await h.call('app', { action: 'install', path: '/tmp/none.app' })).error).toBe(true);
   }, 240_000);
@@ -690,7 +695,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
   });
 
   it('changes and restores dark mode, text size and reduce motion', async () => {
-    const read = async (name: string) => ok(await h.call('device_setting', { name })).data.value!;
+    const read = async (name: string) => ok(await h.call('device_setting', { name })).data.value;
     const before = {
       dark: await read('dark_mode'),
       size: await read('text_size'),
@@ -730,26 +735,27 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
 });
 
 /** Last of all: it stops the emulator it names and starts its AVD again (read-only flags from the caller). */
-const emulator = process.env.APPDYNO_TEST_EMULATOR;
+const emulator = process.env.APPDYNO_TEST_EMULATOR ?? '';
 describe.skipIf(!emulator)('emulator lifecycle', () => {
   it('lists, shuts down the one named, boots its AVD, and shuts down only that', async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-life-')));
     const adb = new Adb();
     const serials = async () => (await adb.devices()).map((d) => d.serial);
-    const h = harness(emulator!, androidProvider(adb));
+    const h = harness(emulator, androidProvider(adb));
     const list = ok(await h.call('simulator', { action: 'list' }));
-    const avd = new RegExp(`${emulator} "([^"]+)"`).exec(list.text)![1]!;
+    const avd = new RegExp(`${emulator} "([^"]+)"`).exec(list.text)?.[1];
+    assert(avd, 'its AVD');
     const others = (await serials()).filter((x) => x !== emulator);
     expect(ok(await h.call('simulator', { action: 'shutdown' })).text).toContain(
       'none to shut down',
     );
     expect(await serials()).toContain(emulator);
-    ok(await h.call('simulator', { action: 'shutdown', name: emulator! }));
+    ok(await h.call('simulator', { action: 'shutdown', name: emulator }));
     expect(await serials()).not.toContain(emulator);
     // other work may run the same AVD: the name is then ambiguous, a refusal, and the driver boots it as asked
     const up = await h.call('simulator', { action: 'boot', name: avd });
     if (up.error) expect(up.data.code).toBe('AMBIGUOUS');
-    const serial = up.error ? await new AndroidEmulators(adb).boot(avd) : up.data.serial!;
+    const serial = up.error ? await new AndroidEmulators(adb).boot(avd) : up.data.serial;
     expect(await serials()).toContain(serial);
     if (!up.error) {
       expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(
@@ -765,18 +771,18 @@ describe.skipIf(!emulator)('emulator lifecycle', () => {
 describe.skipIf(!ios)('simulator lifecycle', () => {
   it('lists, shuts down the one named, and boots it again', async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-life-')));
-    const h = harness(ios!, simulatorProvider());
-    expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(ios!);
+    const h = harness(ios, simulatorProvider());
+    expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(ios);
     expect(ok(await h.call('simulator', { action: 'shutdown' })).text).toContain(
       'none to shut down',
     );
-    expect(await new Simctl().state(ios!)).toBe('Booted');
-    ok(await h.call('simulator', { action: 'shutdown', name: ios! }));
-    expect(await new Simctl().state(ios!)).toBe('Shutdown');
-    ok(await h.call('simulator', { action: 'boot', name: ios! }));
-    expect(await new Simctl().state(ios!)).toBe('Booted');
+    expect(await new Simctl().state(ios)).toBe('Booted');
+    ok(await h.call('simulator', { action: 'shutdown', name: ios }));
+    expect(await new Simctl().state(ios)).toBe('Shutdown');
+    ok(await h.call('simulator', { action: 'boot', name: ios }));
+    expect(await new Simctl().state(ios)).toBe('Booted');
     ok(await h.call('simulator', { action: 'shutdown' }));
-    expect(await new Simctl().state(ios!)).toBe('Shutdown');
-    ok(await h.call('simulator', { action: 'boot', name: ios! }));
+    expect(await new Simctl().state(ios)).toBe('Shutdown');
+    ok(await h.call('simulator', { action: 'boot', name: ios }));
   }, 400_000);
 });

@@ -25,9 +25,9 @@ import { opCaller } from './helpers.js';
  * the warning's tests are skipped. APPDYNO_UNSEEN_APK is an app it has not seen, as its prompt to send an app comes only
  * for some: without it that test is skipped.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
-const WARNED_APK = process.env.APPDYNO_WARNED_APK;
-const UNSEEN_APK = process.env.APPDYNO_UNSEEN_APK;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const WARNED_APK = process.env.APPDYNO_WARNED_APK ?? '';
+const UNSEEN_APK = process.env.APPDYNO_UNSEEN_APK ?? '';
 const ROUNDS = Number(process.env.APPDYNO_INSTALL_ROUNDS ?? 5);
 const APP = 'dev.appdyno.fixture';
 const WARNED_APP = WARNED_APK ? (await apkNames(WARNED_APK)).id : '';
@@ -37,7 +37,7 @@ const APK = join(
   '../android/fixture/build/outputs/apk/debug/fixture-debug.apk',
 );
 const adb = new Adb();
-const sh = (c: string, s = serial!) =>
+const sh = (c: string, s = serial) =>
   execFileSync(adb.bin, ['-s', s, 'shell', c], { encoding: 'utf8' }).trim();
 const asks = !!serial && sh('getprop persist.security.adbinstall') === '1';
 const verifies = !!serial && sh('settings get global verifier_verify_adb_installs') === '1';
@@ -45,12 +45,12 @@ const installed = (app: string) => sh(`pm path ${app} 2>&1; true`).includes('pac
 const gone = (app: string) => sh(`pm uninstall ${app} >/dev/null 2>&1; true`);
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const focus = () => sh(FOCUS_READ);
-const PROTECT = /PlayProtectDialogsActivity/;
-const CONSENT = /AdbInstallActivity/;
+const PROTECT = 'PlayProtectDialogsActivity';
+const CONSENT = 'AdbInstallActivity';
 
 function harness(installAnswers: InstallAnswers) {
   const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider(new Adb(), { installAnswers })], {
-    device: serial!,
+    device: serial,
     app: APP,
     claims: true,
   });
@@ -131,7 +131,7 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
 
   it('with no agent running starts one in time', async () => {
     gone(APP);
-    await new AndroidDevice(serial!, new Adb()).stopAgent();
+    await new AndroidDevice(serial, new Adb()).stopAgent();
     const r = await started(on).call('app', { action: 'install', path: APK });
     expect(r.text).toMatch(/^tapped "/m);
     expect(installed(APP)).toBe(true);
@@ -140,10 +140,11 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
   it('wakes a screen that goes dark as the prompt opens', async () => {
     gone(APP);
     const installing = started(on).call('app', { action: 'install', path: APK });
-    let slept = false;
+    // set in the loop below, which the compiler does not follow out of it
+    let slept = false as boolean;
     const dark = (async () => {
       for (let i = 0; i < 200 && !slept; i++) {
-        if (CONSENT.test(focus())) {
+        if (focus().includes(CONSENT)) {
           sh('input keyevent KEYCODE_SLEEP');
           slept = true;
         } else await pause(50);
@@ -151,7 +152,7 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
     })();
     const r = await installing;
     await dark;
-    console.log(`slept: ${slept}\n${r.text}`);
+    console.log(`slept: ${String(slept)}\n${r.text}`);
     expect(r.text).toMatch(/^tapped "/m);
     expect(installed(APP)).toBe(true);
   }, 120_000);
@@ -160,14 +161,15 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
     gone(APP);
     const h = started(off);
     const installing = h.call('app', { action: 'install', path: APK });
-    let done = false;
+    // set when the install ends, which the compiler does not follow into the loop
+    let done = false as boolean;
     void installing.then(() => (done = true));
     let asked = false;
     while (!done) {
       const f = focus();
-      asked ||= CONSENT.test(f);
+      asked ||= f.includes(CONSENT);
       // the tool leaves it, so a person answers the prompt that comes before the one under test
-      if (PROTECT.test(f)) await person(h, /^(Gönderme|Don't send)$/);
+      if (f.includes(PROTECT)) await person(h, /^(Gönderme|Don't send)$/);
       await pause(300);
     }
     const r = await installing;
@@ -190,7 +192,7 @@ describe.skipIf(!verifies)('Play Protect on a USB install', () => {
     'answers no when asked to send the app to Google',
     async () => {
       gone(UNSEEN_APP);
-      const r = await started(on).call('app', { action: 'install', path: UNSEEN_APK! });
+      const r = await started(on).call('app', { action: 'install', path: UNSEEN_APK });
       console.log(r.text);
       expect(r.text).toMatch(/^answered ".+" to Play Protect's prompt .+ stayed on this machine$/m);
       if (asks) expect(r.text).toMatch(/^tapped "/m);
@@ -203,24 +205,24 @@ describe.skipIf(!verifies)('Play Protect on a USB install', () => {
     it('is left alone without the flag, and quoted, and waits for a person', async () => {
       gone(WARNED_APP);
       const h = started(on);
-      const r = await h.call('app', { action: 'install', path: WARNED_APK! });
+      const r = await h.call('app', { action: 'install', path: WARNED_APK });
       console.log(r.text);
       expect(r.data.code).toBe('PERMISSION_REQUIRED');
       expect(r.text).toContain(`Play Protect warned about ${WARNED_APP}`);
       expect(r.text).toContain('--accept-install-warnings');
-      expect(PROTECT.test(focus())).toBe(true);
+      expect(focus().includes(PROTECT)).toBe(true);
       expect(installed(WARNED_APP)).toBe(false);
       // the next install is another call's: that old prompt is not its to touch, even with the flag
       const again = await started(withWarnings).call('app', {
         action: 'install',
-        path: WARNED_APK!,
+        path: WARNED_APK,
       });
       expect(again.text).toContain('from before this install');
-      expect(PROTECT.test(focus())).toBe(true);
+      expect(focus().includes(PROTECT)).toBe(true);
       // a person says no
       expect(await person(h, /^(Anladım|Got it)$/)).toBe(true);
-      for (let i = 0; i < 20 && PROTECT.test(focus()); i++) await pause(250);
-      expect(PROTECT.test(focus())).toBe(false);
+      for (let i = 0; i < 20 && focus().includes(PROTECT); i++) await pause(250);
+      expect(focus().includes(PROTECT)).toBe(false);
       expect(installed(WARNED_APP)).toBe(false);
     }, 120_000);
 
@@ -229,7 +231,7 @@ describe.skipIf(!verifies)('Play Protect on a USB install', () => {
       const { call } = started(withWarnings);
       const dir = join(mkdtempSync(join(tmpdir(), 'appdyno-install-')), 'report');
       await call('report', { action: 'start', dir });
-      const r = await call('app', { action: 'install', path: WARNED_APK! });
+      const r = await call('app', { action: 'install', path: WARNED_APK });
       await call('report', { action: 'stop' });
       console.log(r.text);
       expect(r.error).toBe(false);

@@ -13,6 +13,7 @@ const strict = [
   'packages/core/**',
   'packages/ops/**',
   'packages/hub/**',
+  'device-tests/**',
 ];
 
 export default defineConfig(

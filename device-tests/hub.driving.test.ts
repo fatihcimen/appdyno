@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { clientNamed, CLIENTS } from '../packages/cli/src/index.js';
 import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
@@ -18,13 +18,14 @@ import { untilWithin } from './until.js';
  * window kept off every screen: its name on the device it drives, and the one real call that earns it Connected. Its home
  * is a folder of its own, and the fixture is installed there. APPDYNO_SHOTS names a folder for pictures.
  */
-const serial = process.env.APPDYNO_HUB_SIMULATOR;
+const serial = process.env.APPDYNO_HUB_SIMULATOR ?? '';
 const dist = join(import.meta.dirname, '../packages/appdyno/dist');
 const shots = process.env.APPDYNO_SHOTS;
 const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
 const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
 const tag = `${look}-${language}`;
-const client = CLIENTS.find((c) => c.ownFile)!;
+const client = CLIENTS.find((c) => c.ownFile);
+assert(client, 'a client with a file of its own');
 /** As it names itself. */
 const said = client.says.source;
 
@@ -62,12 +63,14 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
   beforeAll(async () => {
     home = mkdtempSync(join(tmpdir(), 'appdyno-hub-driving-'));
     process.env.APPDYNO_STATE_DIR = join(home, 'state');
-    const file = join(home, client.files[0]!);
+    const [own] = client.files;
+    assert(own);
+    const file = join(home, own);
     mkdirSync(dirname(file), { recursive: true });
     const entry = { command: process.execPath, args: [join(dist, 'main.js'), 'mcp'] };
     writeFileSync(file, JSON.stringify({ [client.key]: { appdyno: entry } }));
     // before the window: what is in front is read as a stream opens
-    execFileSync('xcrun', ['simctl', 'launch', serial!, 'dev.appdyno.fixture']);
+    execFileSync('xcrun', ['simctl', 'launch', serial, 'dev.appdyno.fixture']);
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^${serial}$`) };
     const ctx = new ServerContext(policy, [simulatorProvider()], { clientNamed });
@@ -79,7 +82,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, join(dist, 'main.js'), 'mcp'],
-        doctor: async () => [],
+        doctor: () => Promise.resolve([]),
       }),
       viewer: () => {
         link = new ViewerProcess(binary, [
@@ -105,13 +108,19 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
       () => sent.some((m) => m.op === 'results' && m.app),
       170_000,
     );
-    front = String(sent.find((m) => m.op === 'results' && m.app)!.app);
+    const results = sent.find((m) => m.op === 'results' && m.app);
+    assert(results);
+    front = String(results.app);
     const { devices } = sent.find((m) => m.devices) as { devices: { model: string }[] };
-    model = devices[0]!.model;
+    const [first] = devices;
+    assert(first);
+    model = first.model;
   }, 300_000);
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await agent?.close();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.send({ op: 'quit' });
     await done;
     rmSync(home, { recursive: true, force: true });
@@ -122,7 +131,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
     await agent.connect(
       new StdioClientTransport({
         command: process.execPath,
-        args: [join(dist, 'main.js'), 'mcp', '--device', serial!, '--allow-devices', `^${serial}$`],
+        args: [join(dist, 'main.js'), 'mcp', '--device', serial, '--allow-devices', `^${serial}$`],
         env: process.env as Record<string, string>,
       }),
     );
@@ -133,7 +142,8 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
       }
     })();
     await until('the client on the device', () => sent.some((m) => m.op === 'agent' && m.driving));
-    const told = sent.find((m) => m.op === 'agent' && m.driving)!;
+    const told = sent.find((m) => m.op === 'agent' && m.driving);
+    assert(told);
     expect(told.client).toBe(client.name);
     const words = await looked('driving');
     expect(words).toContain(
@@ -147,7 +157,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
     await clickRow('AI Clients');
     await until('rows', () => sent.some((m) => m.rows));
     const { rows } = sent.find((m) => m.rows) as { rows: { name: string; state: string }[] };
-    expect(rows.find((r) => r.name === client.name)!.state).toBe('connected');
+    expect(rows.find((r) => r.name === client.name)?.state).toBe('connected');
     await looked('connected');
   });
 

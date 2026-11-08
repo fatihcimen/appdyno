@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   MirrorSession,
   viewerBinary,
@@ -27,23 +27,37 @@ const ASK_MS = 8_000;
 
 /** An iPhone's picture comes by the phone stream, which only a build holds. */
 // by a path the type checker does not follow, so a clean clone checks types before anything is built
-const built: typeof import('../packages/driver-apple/src/index.js') | undefined = process.env
-  .APPDYNO_IPHONE_UDID
-  ? await import(join(import.meta.dirname, '../packages/driver-apple/dist/index.js'))
+const built = process.env.APPDYNO_IPHONE_UDID
+  ? ((await import(
+      join(import.meta.dirname, '../packages/driver-apple/dist/index.js')
+    )) as typeof import('../packages/driver-apple/src/index.js'))
   : undefined;
 
 type Kind = 'simulator' | 'iphone' | 'android';
 const devices = (
   [
-    ['a simulator', process.env.APPDYNO_IOS_UDID, 'simulator', (id) => new IosSimulatorDevice(id)],
-    ['an iPhone', process.env.APPDYNO_IPHONE_UDID, 'iphone', (id) => new built!.IosPhoneDevice(id)],
+    [
+      'a simulator',
+      process.env.APPDYNO_IOS_UDID ?? '',
+      'simulator',
+      (id) => new IosSimulatorDevice(id),
+    ],
+    [
+      'an iPhone',
+      process.env.APPDYNO_IPHONE_UDID ?? '',
+      'iphone',
+      (id) => {
+        assert(built, 'the built driver');
+        return new built.IosPhoneDevice(id);
+      },
+    ],
     [
       'Android',
-      process.env.APPDYNO_ANDROID_SERIAL,
+      process.env.APPDYNO_ANDROID_SERIAL ?? '',
       'android',
       (id) => new AndroidDevice(id, new Adb()),
     ],
-  ] as [string, string | undefined, Kind, (id: string) => Device][]
+  ] as [string, string, Kind, (id: string) => Device][]
 ).filter(([, id]) => id);
 
 const until = untilWithin(30_000);
@@ -51,7 +65,7 @@ const until = untilWithin(30_000);
 describe.runIf(devices.length > 0).each(devices)(
   "a window's panes that send, on %s",
   (_, id, kind, make) => {
-    const device = make(id!);
+    const device = make(id);
     const ios = kind !== 'android';
     const simulator = kind === 'simulator';
     const told: Record<string, unknown>[] = [];
@@ -64,15 +78,18 @@ describe.runIf(devices.length > 0).each(devices)(
     };
     const showsForm = async () => (await nodesOf(APP)).some((n) => n.id?.endsWith('name_input'));
     /** A person's click on what a node shows, through the window. */
-    const click = async ({ b: [left, top, right, bottom] }: { b: readonly number[] }) => {
+    const click = async ({
+      b: [left, top, right, bottom],
+    }: {
+      b: readonly [number, number, number, number];
+    }) => {
       const { screen } = await device.open();
-      poke({ x: (left! + right!) / 2 / screen.w, y: (top! + bottom!) / 2 / screen.h });
+      poke({ x: (left + right) / 2 / screen.w, y: (top + bottom) / 2 / screen.h });
     };
     /** A button of the system's, over whatever is up. */
     const systemButton = async (label: RegExp) =>
       (await nodesOf(HOME)).find((n) => n.c.endsWith('Button') && label.test(n.t ?? n.d ?? ''));
-    const answered = () =>
-      told.find((m) => m.op === 'answer' && 'ok' in m) as Record<string, unknown> | undefined;
+    const answered = () => told.find((m) => m.op === 'answer' && 'ok' in m);
 
     /** A link typed in the pane and sent by its button, as a person does, and the answer the pane is given. */
     const openFromPane = async (url: string, ms?: number) => {
@@ -82,7 +99,9 @@ describe.runIf(devices.length > 0).each(devices)(
       poke({ link: url, ...(kind === 'iphone' && { app: APP }) });
       poke({ clickOn: 'openLinkGo' });
       await until('an answer', () => !!answered(), ms);
-      return answered()!;
+      const answer = answered();
+      assert(answer, 'an answer');
+      return answer;
     };
 
     /** A link from the pane, until `there` holds: a simulator asks before an app's scheme first opens it, and a person presses Open in the window. */
@@ -101,7 +120,10 @@ describe.runIf(devices.length > 0).each(devices)(
       const sends = windowSends(new ServerContext(DEFAULT_POLICY, []), device, () => session);
       session = new MirrorSession({
         mirror: device.mirror,
-        viewer: async () => new ViewerProcess(binary, ['--behind']),
+        viewer: () =>
+          new Promise((resolve) => {
+            resolve(new ViewerProcess(binary, ['--behind']));
+          }),
         options: { quality: 'auto' },
         title: 'a window under test',
         onWindow: (m) => void sends.onWindow(m),
@@ -117,6 +139,7 @@ describe.runIf(devices.length > 0).each(devices)(
     });
 
     afterAll(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
       await session?.stop('the test ended');
       await device.terminate(APP).catch(() => undefined);
       device.close();
@@ -130,8 +153,8 @@ describe.runIf(devices.length > 0).each(devices)(
           // a simulator asks before an app's scheme first opens it, and until then nothing has opened
           text: expect.stringMatching(
             /^Opened appdyno-fixture:\/\/open\/form$|^Sent appdyno-fixture:\/\/open\/form, and the system asks: .+ \(Cancel, Open\): answer it with alert$/,
-          ),
-          recent: expect.arrayContaining(['appdyno-fixture://open/form']),
+          ) as unknown,
+          recent: expect.arrayContaining(['appdyno-fixture://open/form']) as unknown,
         });
       },
       FIRST_MS + 60_000,
@@ -153,7 +176,9 @@ describe.runIf(devices.length > 0).each(devices)(
       poke({ push: { app: APP, ...fields } });
       poke({ clickOn: 'pushGo' });
       await until('an answer', () => !!answered());
-      return answered()!;
+      const answer = answered();
+      assert(answer, 'an answer');
+      return answer;
     };
 
     it.runIf(simulator)(
@@ -161,7 +186,9 @@ describe.runIf(devices.length > 0).each(devices)(
       async () => {
         const ask = async () => (await nodesOf(APP)).find((n) => n.id === 'ask_notifications');
         await openAt('appdyno-fixture://open/push', async () => !!(await ask()));
-        await click((await ask())!);
+        const button = await ask();
+        assert(button, 'ask_notifications');
+        await click(button);
         // the first time, the system asks the person whether the app may show notifications, a moment after the tap; a
         // click while it still comes in is not taken, so a person clicks again
         const askedBy = Date.now() + ASK_MS;
@@ -178,7 +205,7 @@ describe.runIf(devices.length > 0).each(devices)(
           await pushFromPane({ type: 'alert', title: 'Order 42', data: 'order=42' }),
         ).toMatchObject({
           ok: true,
-          text: expect.stringMatching(/^Pushed to dev\.appdyno\.fixture by simctl/),
+          text: expect.stringMatching(/^Pushed to dev\.appdyno\.fixture by simctl/) as unknown,
         });
         await until('the push in the app', async () =>
           (await nodesOf(APP)).some((n) => (n.t ?? n.d) === 'alert Order 42: order=42'),
@@ -207,7 +234,7 @@ describe.runIf(devices.length > 0).each(devices)(
           ok: true,
           text: expect.stringMatching(
             /^Opened dev\.appdyno\.fixture as a tapped push, with 2 data keys/,
-          ),
+          ) as unknown,
         });
         await until('the extras', async () =>
           (await nodesOf(APP)).some((n) => n.t?.includes('extras: kind=shipped, order=42')),

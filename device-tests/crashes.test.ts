@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, simulatorProvider, sleep } from './workspace.js';
 import { opsOn, type Call, SIM_FIXTURE } from './helpers.js';
 
@@ -20,8 +20,8 @@ import { opsOn, type Call, SIM_FIXTURE } from './helpers.js';
  * The Debug build goes back on the simulator at the end, for the suites that need it.
  */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 const RELEASE = process.env.APPDYNO_IOS_RELEASE_BUILD;
 const LIBS = join(
   import.meta.dirname,
@@ -38,7 +38,8 @@ const crash = async (call: Call, button: string, shows: RegExp) => {
   await call('tap', { selector: { id: button } });
   for (let i = 0; i < 40; i++) {
     const { data } = await call('crashes', { since });
-    if (data.reports?.some((r) => shows.test(`${r.reason}\n${r.detail}`))) return since;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a refusal's data has no reports
+    if (data.reports?.some((r) => shows.test(`${r.reason}\n${String(r.detail)}`))) return since;
     await sleep(500);
   }
   throw new Error('no report of the crash');
@@ -46,37 +47,42 @@ const crash = async (call: Call, button: string, shows: RegExp) => {
 
 const report = async (call: Call, since: string, symbols?: string) => {
   const r = await call('crashes', { since, ...(symbols && { symbols }) });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a refusal's data has no reports
   return { ...r, report: r.data.reports?.[0] };
 };
 
 describe.skipIf(!ANDROID)('a crash on an emulator', () => {
   let call: Call;
   beforeAll(() => {
-    call = opsOn(androidProvider(new Adb()), ANDROID!, APP).call;
+    call = opsOn(androidProvider(new Adb()), ANDROID, APP).call;
   });
 
   it('finds a native crash, and only its symbols name the function', async () => {
     const since = await crash(call, 'crash_native', /signal 11/);
     const bare = await report(call, since);
-    expect(bare.report!.detail).toContain('signal 11 (SIGSEGV)');
-    expect(bare.report!.detail).toContain('libfixture_native.so');
-    expect(bare.report!.detail).not.toContain('fixture_native_crash');
-    expect(bare.report!.symbolicated).toBeUndefined();
+    assert(bare.report);
+    expect(bare.report.detail).toContain('signal 11 (SIGSEGV)');
+    expect(bare.report.detail).toContain('libfixture_native.so');
+    expect(bare.report.detail).not.toContain('fixture_native_crash');
+    expect(bare.report.symbolicated).toBeUndefined();
 
     const named = await report(call, since, LIBS);
-    expect(named.report!.detail).toMatch(
+    assert(named.report);
+    expect(named.report.detail).toMatch(
       /#00 libfixture_native\.so fixture_native_crash crash\.c:4:\d+/,
     );
-    expect(named.report!.detail).toContain('Java_dev_appdyno_fixture_Native_crash crash.c:7');
+    expect(named.report.detail).toContain('Java_dev_appdyno_fixture_Native_crash crash.c:7');
     expect(named.data.note).toBeUndefined();
-    expect(readFileSync(named.report!.symbolicated!, 'utf8')).toContain('fixture_native_crash');
+    assert(named.report.symbolicated);
+    expect(readFileSync(named.report.symbolicated, 'utf8')).toContain('fixture_native_crash');
 
     // the same library for another ABI is another build, with its own id
     const other = await report(call, since, join(LIBS, 'x86_64'));
     expect(other.data.note).toMatch(
       /libfixture_native\.so: the crash is of build \w+, these symbols of \w+/,
     );
-    expect(other.report!.detail).not.toContain('fixture_native_crash');
+    assert(other.report);
+    expect(other.report.detail).not.toContain('fixture_native_crash');
 
     const none = await call('crashes', { since, symbols: '/no/such/folder' });
     expect(none.data.code).toBe('NOT_FOUND');
@@ -86,7 +92,8 @@ describe.skipIf(!ANDROID)('a crash on an emulator', () => {
   it('says a crash with no tombstone has nothing to name', async () => {
     const since = await crash(call, 'crash', /CRASH/);
     const r = await report(call, since, LIBS);
-    expect(r.report!.symbolicated).toBeUndefined();
+    assert(r.report);
+    expect(r.report.symbolicated).toBeUndefined();
     expect(r.data.note).toContain('only a native crash leaves a tombstone');
   });
 });
@@ -99,7 +106,7 @@ describe.skipIf(!SIMULATOR || !RELEASE)('a crash on a simulator', () => {
 
   beforeAll(() => {
     expect(existsSync(join(build, 'Fixture.app.dSYM'))).toBe(true);
-    execFileSync('xcrun', ['simctl', 'install', SIMULATOR!, join(build, 'Fixture.app')]);
+    execFileSync('xcrun', ['simctl', 'install', SIMULATOR, join(build, 'Fixture.app')]);
     // a real dSYM of another binary: what a stale one looks like
     const source = join(dir, 'other.c');
     writeFileSync(source, 'int main(void) { return 0; }\n');
@@ -108,30 +115,34 @@ describe.skipIf(!SIMULATOR || !RELEASE)('a crash on a simulator', () => {
     execFileSync('xcrun', ['clang', '-g', '-arch', 'arm64', '-c', source, '-o', `${binary}.o`]);
     execFileSync('xcrun', ['clang', '-arch', 'arm64', `${binary}.o`, '-o', binary]);
     execFileSync('xcrun', ['dsymutil', binary, '-o', other]);
-    call = opsOn(simulatorProvider(), SIMULATOR!, APP).call;
+    call = opsOn(simulatorProvider(), SIMULATOR, APP).call;
   });
   afterAll(() => {
     if (existsSync(SIM_FIXTURE))
-      execFileSync('xcrun', ['simctl', 'install', SIMULATOR!, SIM_FIXTURE]);
+      execFileSync('xcrun', ['simctl', 'install', SIMULATOR, SIM_FIXTURE]);
   });
 
   it('finds a crash, and only the dSYM with its UUID names the function', async () => {
     const since = await crash(call, 'crash', /EXC_BREAKPOINT/);
     const bare = await report(call, since);
-    expect(bare.report!.reason).toContain('EXC_BREAKPOINT');
-    expect(bare.report!.detail).toMatch(/^Fixture$/m);
-    expect(bare.report!.detail).not.toContain('fixtureCrash');
+    assert(bare.report);
+    expect(bare.report.reason).toContain('EXC_BREAKPOINT');
+    expect(bare.report.detail).toMatch(/^Fixture$/m);
+    expect(bare.report.detail).not.toContain('fixtureCrash');
 
     for (const symbols of [build, join(build, 'Fixture.app.dSYM')]) {
       const named = await report(call, since, symbols);
-      expect(named.report!.detail).toContain('Fixture fixtureCrash(_:)');
+      assert(named.report);
+      expect(named.report.detail).toContain('Fixture fixtureCrash(_:)');
       expect(named.data.note).toBeUndefined();
-      expect(readFileSync(named.report!.symbolicated!, 'utf8')).toContain('fixtureCrash');
+      assert(named.report.symbolicated);
+      expect(readFileSync(named.report.symbolicated, 'utf8')).toContain('fixtureCrash');
     }
 
     const wrong = await report(call, since, other);
-    expect(wrong.report!.detail).not.toContain('fixtureCrash');
-    expect(wrong.report!.symbolicated).toBeUndefined();
+    assert(wrong.report);
+    expect(wrong.report.detail).not.toContain('fixtureCrash');
+    expect(wrong.report.symbolicated).toBeUndefined();
     expect(wrong.data.note).toMatch(/no dSYM for Fixture [0-9a-f-]+: .*other\.dSYM has other /);
     expect(wrong.data.note).not.toContain('Gestures');
   });

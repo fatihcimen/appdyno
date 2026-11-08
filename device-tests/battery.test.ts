@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from './workspace.js';
 import { opsOn } from './helpers.js';
 
@@ -6,12 +6,12 @@ import { opsOn } from './helpers.js';
  * A battery's signals against known costs, with no power model and nothing reset (APPDYNO_ANDROID_SERIAL): a tagged wake
  * lock, wakeup alarms, jobs, on a phone and on an emulator alike.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 const LOCK_MS = 30_000;
 
 describe.skipIf(!serial)('battery signals on Android', () => {
-  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   let d: AndroidDevice;
   /** The fixture's battery screen, under what is asked of it, with its buttons found. */
   const open = async (query: string) => {
@@ -26,8 +26,11 @@ describe.skipIf(!serial)('battery signals on Android', () => {
     }
     throw new Error('the battery screen did not come');
   };
-  const button = (s: Awaited<ReturnType<typeof open>>, id: string) =>
-    s.list.find((e) => e.id === id)!;
+  const button = (s: Awaited<ReturnType<typeof open>>, id: string) => {
+    const e = s.list.find((x) => x.id === id);
+    assert(e, id);
+    return e;
+  };
   const reading = (windowMs: number) =>
     t.call('perf_snapshot', {
       also: ['battery'],
@@ -69,9 +72,11 @@ describe.skipIf(!serial)('battery signals on Android', () => {
     ]);
     console.log(r.text);
     expect(r.error, r.text).toBe(false);
-    const lock = r.data.wakeLocks!.find((l) => l.tag === 'fixture:held')!;
+    const lock = r.data.wakeLocks?.find((l) => l.tag === 'fixture:held');
+    assert(lock);
     expect(Math.abs(lock.ms - LOCK_MS)).toBeLessThan(LOCK_MS * 0.1);
-    expect(Math.abs(r.data.longestLockMs! - LOCK_MS)).toBeLessThan(LOCK_MS * 0.1);
+    assert(r.data.longestLockMs !== undefined);
+    expect(Math.abs(r.data.longestLockMs - LOCK_MS)).toBeLessThan(LOCK_MS * 0.1);
     expect(r.text).toContain('would count as excessive partial wake locks, at this pace');
     // nothing was reset, and the phone was never told it was unplugged
     expect(await d.shell('dumpsys battery')).not.toMatch(/UPDATES STOPPED/);

@@ -10,8 +10,8 @@ import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './
  * simulator APPDYNO_IOS_UDID names, with the longest there may be, and how long it took.
  */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -67,7 +67,7 @@ describe.skipIf(!ANDROID)('steps on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-steps-')));
-    o = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    o = opsOn(androidProvider(new Adb()), ANDROID, APP);
   });
   afterAll(() => o.ctx.close());
   stepsOf(() => o.call);
@@ -77,8 +77,8 @@ describe.skipIf(!SIMULATOR)('steps on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-steps-')));
-    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+    o = opsOn(simulatorProvider(), SIMULATOR, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
   stepsOf(() => o.call);

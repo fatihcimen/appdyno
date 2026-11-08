@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
@@ -10,8 +10,8 @@ import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './
  * APPDYNO_IOS_UDID names: the fixture's canvas, with nothing of them in the tree.
  */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -33,7 +33,8 @@ function wordsOf(get: () => Call) {
     const screen = ok(await call('screen'));
     expect(screen.text).toContain('"Start Game"');
     expect(screen.text).toContain('read from the picture');
-    const found = ok(await call('find', { text: 'Start Game' })).data.matches[0]!;
+    const [found] = ok(await call('find', { text: 'Start Game' })).data.matches;
+    assert(found);
     expect(found.bounds.w).toBeGreaterThan(50);
   });
 
@@ -50,7 +51,7 @@ describe.skipIf(!ANDROID)('a picture on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-words-')));
-    o = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    o = opsOn(androidProvider(new Adb()), ANDROID, APP);
   });
   afterAll(() => o.ctx.close());
   wordsOf(() => o.call);
@@ -60,8 +61,8 @@ describe.skipIf(!SIMULATOR)('a picture on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-words-')));
-    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+    o = opsOn(simulatorProvider(), SIMULATOR, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
   wordsOf(() => o.call);

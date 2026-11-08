@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AndroidDevice, renderScreen } from './workspace.js';
 
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 
 describe.skipIf(!serial)('smoke', () => {
   it('connects, reads, taps, screenshots', async () => {
-    const d = new AndroidDevice(serial!);
+    const d = new AndroidDevice(serial);
     let t = performance.now();
     const hello = await d.open();
     console.log(

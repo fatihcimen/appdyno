@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { CLIENTS, BROWSER_CLIENTS, type Client } from '../packages/cli/src/index.js';
 import {
@@ -26,16 +26,29 @@ const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
 const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
 const tag = `${look}-${language}${process.env.APPDYNO_HUB_KEY ? '-key' : ''}`;
 
-const named = (name: string) => CLIENTS.find((c) => c.name === name)!;
+const named = (name: string) => CLIENTS.find((c) => c.name === name);
+/** The client of the table that `is` picks, which the table holds. */
+const clientWhere = (is: (c: Client) => unknown) => {
+  const client = CLIENTS.find(is);
+  assert(client, 'a client');
+  return client;
+};
 /** Each in a state of its own, so that a picture holds them all. */
 const [connected, added, working, open, broken] = [
-  CLIENTS.find((c) => c.ownFile)!,
-  CLIENTS.find((c) => c.format === 'toml')!,
-  CLIENTS.find((c) => c.format === 'jsonc' && c.key === 'mcpServers')!,
-  CLIENTS.find((c) => c.format === 'json' && !c.ownFile)!,
-  CLIENTS.find((c) => c.key === 'context_servers')!,
+  clientWhere((c) => c.ownFile),
+  clientWhere((c) => c.format === 'toml'),
+  clientWhere((c) => c.format === 'jsonc' && c.key === 'mcpServers'),
+  clientWhere((c) => c.format === 'json' && !c.ownFile),
+  clientWhere((c) => c.key === 'context_servers'),
 ];
-const fileIn = (home: string, client: Client) => join(home, client.files[0]!);
+const fileIn = (home: string, client: Client) => {
+  const [file] = client.files;
+  assert(file, client.name);
+  return join(home, file);
+};
+/** The address a message to the window shows the server at: none while it is off. */
+const addressIn = (m: Record<string, unknown>) =>
+  (m.server as { address?: string } | undefined)?.address;
 const put = (file: string, text: string) => {
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, text);
@@ -55,7 +68,7 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
     heard.length = 0;
     link.send({ op: 'poke', clickOn: name });
     await until(`click on ${name}`, () => heard.some((m) => m.op === 'clicked'));
-    const clicked = heard.find((m) => m.op === 'clicked')!;
+    const clicked = heard.find((m) => m.op === 'clicked');
     expect(clicked).toMatchObject({ found: true, isIt: 1, name });
   };
   const clickRow = async (title: string) => {
@@ -66,7 +79,9 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
   };
   const answer = async (key: string, ms?: number) => {
     await until(`answer ${key}`, () => sent.some((m) => m[key] !== undefined), ms);
-    return sent.find((m) => m[key] !== undefined)![key] as Record<string, unknown>;
+    const m = sent.find((x) => x[key] !== undefined);
+    assert(m, key);
+    return m[key] as Record<string, unknown>;
   };
   const picture = async (name: string) => {
     if (!shots) return;
@@ -75,14 +90,18 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
     heard.length = 0;
     link.send({ op: 'snapshot', file });
     await until('picture', () => heard.some((m) => m.op === 'snapped'));
-    const { parts } = heard.find((m) => m.op === 'snapped')!;
+    const snapped = heard.find((m) => m.op === 'snapped');
+    assert(snapped, 'snapped');
+    const { parts } = snapped;
     writeFileSync(file.replace('.png', '.json'), JSON.stringify(parts));
   };
   const board = async () => {
     heard.length = 0;
     link.send({ op: 'poke', board: true });
     await until('the pasteboard', () => heard.some((m) => m.op === 'board'));
-    return String(heard.find((m) => m.op === 'board')!.text);
+    const said = heard.find((m) => m.op === 'board');
+    assert(said, 'board');
+    return String(said.text);
   };
 
   beforeAll(async () => {
@@ -114,15 +133,16 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, main, 'mcp'],
-        doctor: async () => [
-          { name: 'node', ok: true, detail: process.versions.node },
-          {
-            name: 'adb',
-            ok: false,
-            detail: 'not found',
-            fix: 'accept the USB debugging prompt on the phone',
-          },
-        ],
+        doctor: () =>
+          Promise.resolve([
+            { name: 'node', ok: true, detail: process.versions.node },
+            {
+              name: 'adb',
+              ok: false,
+              detail: 'not found',
+              fix: 'accept the USB debugging prompt on the phone',
+            },
+          ]),
       }),
       viewer: () => {
         link = new ViewerProcess(binary, [
@@ -146,6 +166,7 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
   });
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.send({ op: 'quit' });
     await done;
     rmSync(home, { recursive: true, force: true });
@@ -163,7 +184,9 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
     expect(states[added.name]).toBe('added');
     expect(states[open.name]).toBe('open');
     expect(states[broken.name]).toBe('refused');
-    expect(states[BROWSER_CLIENTS[0]!.name]).toBe('browser');
+    const [browser] = BROWSER_CLIENTS;
+    assert(browser);
+    expect(states[browser.name]).toBe('browser');
     expect(Object.values(states)).toContain('absent');
     expect(readFileSync(fileIn(home, broken), 'utf8')).toBe(before);
     await picture('clients');
@@ -221,14 +244,17 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
   });
 
   it('starts the server, keeps its token hidden until asked, and copies what it should', async () => {
-    const browser = BROWSER_CLIENTS[0]!.name;
+    const [first] = BROWSER_CLIENTS;
+    assert(first);
+    const browser = first.name;
     sent.length = 0;
     await click(`test:${browser}`);
     expect(await answer('tested')).toMatchObject({ ok: false, said: 'The server is not running.' });
     sent.length = 0;
     await click('serverPower');
-    await until('the address', () => sent.some((m) => (m.server as { address?: string })?.address));
-    const shown = sent.find((m) => (m.server as { address?: string })?.address)!;
+    await until('the address', () => sent.some(addressIn));
+    const shown = sent.find(addressIn);
+    assert(shown);
     expect(JSON.stringify(sent)).not.toMatch(/"token"/);
     const address = (shown.server as { address: string }).address;
     expect(await fetch(address, { method: 'POST' }).then((r) => r.status)).toBe(401);
@@ -259,19 +285,18 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
     expect(await board()).toBe(token);
     sent.length = 0;
     await click('newToken');
-    await until('a new token', () =>
-      sent.some((m) => m.rows && (m.server as { address?: string })?.address),
-    );
+    await until('a new token', () => sent.some((m) => m.rows && addressIn(m)));
     await click('showToken');
     await until('the token', () => sent.some((m) => m.token));
-    expect(sent.find((m) => m.token)!.token).not.toBe(token);
+    const told = sent.find((m) => m.token);
+    assert(told);
+    expect(told.token).not.toBe(token);
     await click('showToken');
     await click('serverPower');
-    await until(
-      'the server stopped',
-      () =>
-        sent.at(-1)?.server !== undefined && !(sent.at(-1)!.server as { address?: string }).address,
-    );
+    await until('the server stopped', () => {
+      const last = sent.at(-1);
+      return last?.server !== undefined && !addressIn(last);
+    });
     await expect(fetch(address, { method: 'POST' })).rejects.toThrow();
   });
 

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, describe, expect, it } from 'vitest';
 import { simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, opsOn } from './helpers.js';
 
@@ -6,7 +6,7 @@ import { type Answer, opsOn } from './helpers.js';
  * Creates a simulator of a model and starts it, with APPDYNO_IOS_UDID set for a Mac that has simulators at all: what
  * it makes is deleted again, and nothing else is touched.
  */
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -16,7 +16,7 @@ const ok = <A extends Answer>(r: A) => {
 describe.skipIf(!SIMULATOR)('a simulator of a model', () => {
   const simctl = new Simctl();
   let made: string | undefined;
-  const { call, ctx } = opsOn(simulatorProvider(), SIMULATOR!, 'dev.appdyno.fixture');
+  const { call, ctx } = opsOn(simulatorProvider(), SIMULATOR, 'dev.appdyno.fixture');
   afterAll(async () => {
     if (!made) return;
     await ctx.forget(made);
@@ -27,7 +27,8 @@ describe.skipIf(!SIMULATOR)('a simulator of a model', () => {
   it('is created on a runtime that runs it, and started', async () => {
     const r = ok(await call('simulator', { action: 'create', name: 'iPhone SE (3rd generation)' }));
     made = r.data.serial;
-    expect(await simctl.state(made!)).toBe('Booted');
+    assert(made);
+    expect(await simctl.state(made)).toBe('Booted');
     expect(ok(await call('device_info')).data.serial).toBe(made);
     expect(r.text).toContain(`xcrun simctl delete ${made}`);
     const none = await call('simulator', { action: 'create', name: 'Nokia 3310' });

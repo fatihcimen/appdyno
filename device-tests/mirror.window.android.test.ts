@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
   decodePng,
   MirrorSession,
@@ -22,7 +22,7 @@ import { untilWithin } from './until.js';
  * window kept off every screen, driven by its own events, with each step read back from the phone itself. A screenshot
  * goes to a folder of this test's, and nothing reaches this Mac's pasteboard.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';
 const MS = 20_000;
 
@@ -34,13 +34,13 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
   'a phone through its window',
   () => {
     const adb = new Adb();
-    const device = new AndroidDevice(serial!, adb);
+    const device = new AndroidDevice(serial, adb);
     const told: Record<string, unknown>[] = [];
     let session: MirrorSession;
     let screen: { w: number; h: number };
     let binary: string;
 
-    const sh = (command: string) => adb.exec(serial!, command);
+    const sh = (command: string) => adb.exec(serial, command);
     const focus = () => sh(FOCUS_READ);
     const show = async (name: string) => {
       await sh(`am force-stop ${APP}`);
@@ -53,9 +53,13 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       if (!found) throw new Error('nothing like that on the screen');
       return found;
     };
-    const centre = ({ b: [l, top, r, bottom] }: { b: readonly number[] }) => ({
-      x: (l! + r!) / 2 / screen.w,
-      y: (top! + bottom!) / 2 / screen.h,
+    const centre = ({
+      b: [l, top, r, bottom],
+    }: {
+      b: readonly [number, number, number, number];
+    }) => ({
+      x: (l + r) / 2 / screen.w,
+      y: (top + bottom) / 2 / screen.h,
     });
     const poke = (m: Record<string, unknown>) => session.tell({ op: 'poke', ...m });
     const control = (name: string) => poke({ control: name });
@@ -66,12 +70,15 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       const controls = windowControls(device, hardware, () => session, measures);
       session = new MirrorSession({
         mirror: device.mirror,
-        viewer: async () => new ViewerProcess(binary, ['--behind']),
+        viewer: () =>
+          new Promise((resolve) => {
+            resolve(new ViewerProcess(binary, ['--behind']));
+          }),
         options: { quality: 'auto' },
         title: 'a window under test',
         look: windowLook(hardware),
-        press: controls.press,
-        onWindow: controls.onWindow,
+        press: (name) => controls.press(name),
+        onWindow: (m) => controls.onWindow(m),
       });
       const tell = session.tell.bind(session);
       session.tell = (m) => {
@@ -91,13 +98,16 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
     }, 180_000);
 
     afterAll(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
       await session?.stop('the test ended');
       await device.setOrientation(0).catch(() => undefined);
       device.close();
     });
 
     it('shows the phone, in a window the system draws', async () => {
-      expect(session.status.picture!.h).toBeGreaterThan(session.status.picture!.w);
+      const { picture } = session.status;
+      assert(picture);
+      expect(picture.h).toBeGreaterThan(picture.w);
       const file = join(mkdtempSync(join(tmpdir(), 'appdyno-window-')), 'window.png');
       session.tell({ op: 'snapshot', file });
       await until('a picture of the window', () => {
@@ -107,9 +117,10 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
           return false;
         }
       });
-      const png = decodePng(readFileSync(file))!;
+      const png = decodePng(readFileSync(file));
+      assert(png);
       expect(png.width).toBeGreaterThan(100);
-      const own = execFileSync('adb', ['-s', serial!, 'exec-out', 'screencap', '-p'], {
+      const own = execFileSync('adb', ['-s', serial, 'exec-out', 'screencap', '-p'], {
         maxBuffer: 1 << 26,
       });
       expectSamePicture(await shownByWindow(session), own);
@@ -161,8 +172,10 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
     it('Home leaves the app, and Recents and Back answer', async () => {
       let now = '';
       const focusIs = async (what: string, test: (f: string) => boolean) =>
-        until(what, async () => test((now = await focus()))).catch((e: Error) => {
-          throw new Error(`${e.message}: the focus reads ${now.trim()}`);
+        until(what, async () => test((now = await focus()))).catch((e: unknown) => {
+          throw new Error(
+            `${e instanceof Error ? e.message : String(e)}: the focus reads ${now.trim()}`,
+          );
         });
       await show('form');
       await focusIs('the form', (f) => f.includes('FormActivity'));
@@ -186,22 +199,26 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
 
     it('turns the phone and back, and the picture stands up each way', async () => {
       await show('gestures');
-      const upright = session.status.picture!;
+      const upright = session.status.picture;
+      assert(upright);
+      /** The picture now, which a live stream always has. */
+      const picture = () => {
+        const p = session.status.picture;
+        assert(p);
+        return p;
+      };
       control('rotateLeft');
-      await until(
-        'a turned picture',
-        () => session.status.picture!.w > session.status.picture!.h,
-        30_000,
-      );
+      await until('a turned picture', () => picture().w > picture().h, 30_000);
       expect(session.status.state).toBe('live');
       control('rotateRight');
-      await until('an upright picture', () => session.status.picture!.h === upright.h, 30_000);
+      await until('an upright picture', () => picture().h === upright.h, 30_000);
     }, 90_000);
 
     it('says so when the app in front does not turn', async () => {
       await sh('input keyevent KEYCODE_HOME');
       await until('the launcher', async () => !(await focus()).includes(APP));
-      const upright = session.status.picture!;
+      const upright = session.status.picture;
+      assert(upright);
       control('rotateLeft');
       await until(
         'a word from the window',
@@ -219,9 +236,12 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       try {
         control('screenshot');
         await until('a file', () => readdirSync(join(home, 'Desktop')).length > 0);
-        const saved = join(home, 'Desktop', readdirSync(join(home, 'Desktop'))[0]!);
+        const [name] = readdirSync(join(home, 'Desktop'));
+        assert(name);
+        const saved = join(home, 'Desktop', name);
         await until('its bytes', () => statSync(saved).size > 0);
-        const png = decodePng(readFileSync(saved))!;
+        const png = decodePng(readFileSync(saved));
+        assert(png);
         expect([png.width, png.height]).toEqual([screen.w, screen.h]);
       } finally {
         process.env.HOME = was;
@@ -250,9 +270,9 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
         agentMayGo();
         await sh(`kill -9 ${pids.join(' ')}`);
         await until('the loss', () => seen.includes('reconnecting'), 40_000).catch(
-          async (e: Error) => {
+          async (e: unknown) => {
             throw new Error(
-              `${e.message}: it read ${[...new Set(seen)].join(', ')}; agents ${pids.join(' ')} became ${(await agents()).join(' ')}`,
+              `${e instanceof Error ? e.message : String(e)}: it read ${[...new Set(seen)].join(', ')}; agents ${pids.join(' ')} became ${(await agents()).join(' ')}`,
             );
           },
         );

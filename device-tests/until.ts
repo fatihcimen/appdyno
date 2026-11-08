@@ -61,7 +61,7 @@ async function stateOf(id: string) {
         .map((line) => line.trim())
         .filter((line) => line && about(line))
         .join(', '),
-    (e: Error) => `no answer: ${e.message}`,
+    (e: unknown) => `no answer: ${e instanceof Error ? e.message : String(e)}`,
   );
   return `${id}: ${said.slice(0, SAID) || 'not listed'}`;
 }

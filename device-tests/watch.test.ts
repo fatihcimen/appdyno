@@ -17,8 +17,8 @@ import type { ServerContext } from '../packages/ops/src/context.js';
 
 /** The fixture's marquee, smooth and with each fault, read from the stream, on the devices the variables name. */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 const WATCH_MS = 3_000;
 
 const ok = <A extends Answer>(r: A) => {
@@ -102,13 +102,13 @@ describe.skipIf(!ANDROID)('a watch on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-watch-')));
-    o = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    o = opsOn(androidProvider(new Adb()), ANDROID, APP);
   });
   afterAll(() => o.ctx.close());
   watchOf(
     () => o.call,
     () => o.ctx,
-    ANDROID!,
+    ANDROID,
   );
 });
 
@@ -129,7 +129,7 @@ describe.skipIf(!IPHONE)('a watch on an iPhone', () => {
   watchOf(
     () => o.call,
     () => o.ctx,
-    IPHONE!,
+    IPHONE,
   );
 });
 
@@ -137,13 +137,13 @@ describe.skipIf(!SIMULATOR)('a watch on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-watch-')));
-    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+    o = opsOn(simulatorProvider(), SIMULATOR, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
   watchOf(
     () => o.call,
     () => o.ctx,
-    SIMULATOR!,
+    SIMULATOR,
   );
 });

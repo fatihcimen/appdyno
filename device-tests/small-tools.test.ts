@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
@@ -11,9 +11,9 @@ import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './
  * goes back in a `finally`, an iPhone's accessibility is only read, and the assistant is left to emulators and simulators.
  */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const EMULATOR = ANDROID?.startsWith('emulator-');
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const EMULATOR = ANDROID.startsWith('emulator-');
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -22,7 +22,7 @@ const ok = <A extends Answer>(r: A) => {
 
 describe.skipIf(!ANDROID)('small tools on Android', () => {
   const shell = (...words: string[]) =>
-    execFileSync('adb', ['-s', ANDROID!, 'shell', ...words], {
+    execFileSync('adb', ['-s', ANDROID, 'shell', ...words], {
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     }).trim();
@@ -30,7 +30,7 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
   let call: Call;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
-    o = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    o = opsOn(androidProvider(new Adb()), ANDROID, APP);
     call = o.call;
     ok(await call('launch_app'));
   });
@@ -97,7 +97,8 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
 /** The language the fixture says it was launched in. */
 const language = async (call: Call) => {
   ok(await call('open_link', { url: 'appdyno-fixture://open/locale' }));
-  const seen = ok(await call('find', { id: 'result' })).data.matches[0]!;
+  const [seen] = ok(await call('find', { id: 'result' })).data.matches;
+  assert(seen);
   return seen.label;
 };
 
@@ -120,7 +121,11 @@ const atWidth = async (call: Call) => {
 const turns = async (call: Call) => {
   await call('terminate_app');
   ok(await call('launch_app'));
-  const y = async () => ok(await call('find', { text: 'Permission' })).data.matches[0]!.y;
+  const y = async () => {
+    const [row] = ok(await call('find', { text: 'Permission' })).data.matches;
+    assert(row);
+    return row.y;
+  };
   const upright = await y();
   try {
     ok(await call('set_orientation', { orientation: 'landscape_right', read: 'none' }));
@@ -143,7 +148,7 @@ const byName = async (call: Call) => {
 
 describe.skipIf(!ANDROID)('a language on Android', () => {
   it('stays with the app until it is put back', async () => {
-    const { call, ctx } = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    const { call, ctx } = opsOn(androidProvider(new Adb()), ANDROID, APP);
     ok(await call('launch_app', { language: 'de-DE' }));
     expect(await language(call)).toContain('de-DE');
     ok(await call('device_setting', { name: 'restore' }));
@@ -157,10 +162,10 @@ describe.skipIf(!ANDROID)('a language on Android', () => {
 describe.skipIf(!ANDROID)('accessibility on Android', () => {
   let call: Call;
   const shell = (...words: string[]) =>
-    execFileSync('adb', ['-s', ANDROID!, 'shell', ...words], { encoding: 'utf8' }).trim();
+    execFileSync('adb', ['-s', ANDROID, 'shell', ...words], { encoding: 'utf8' }).trim();
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
-    call = opsOn(androidProvider(new Adb()), ANDROID!, APP).call;
+    call = opsOn(androidProvider(new Adb()), ANDROID, APP).call;
   });
 
   it('turns on high contrast text, and it goes back', async () => {
@@ -189,8 +194,8 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   let call: Call;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
-    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+    o = opsOn(simulatorProvider(), SIMULATOR, APP);
     call = o.call;
     ok(await call('launch_app'));
   }, 300_000);
@@ -221,7 +226,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     const ring = () =>
       execFileSync(
         'xcrun',
-        ['simctl', 'spawn', SIMULATOR!, 'notifyutil', '-g', 'com.apple.springboard.ringerstate'],
+        ['simctl', 'spawn', SIMULATOR, 'notifyutil', '-g', 'com.apple.springboard.ringerstate'],
         {
           encoding: 'utf8',
         },
@@ -276,7 +281,9 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
       }),
     );
     expect(Date.now() - at).toBeGreaterThan(1_500);
-    expect(ok(await call('find', { id: 'travel' })).data.matches[0]!.label).not.toBe('travel: 0');
+    const [travel] = ok(await call('find', { id: 'travel' })).data.matches;
+    assert(travel);
+    expect(travel.label).not.toBe('travel: 0');
     ok(await call('launch_app'));
   });
 
@@ -357,7 +364,9 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
       }),
     );
     expect(Date.now() - at).toBeGreaterThan(1_500);
-    expect(ok(await call('find', { id: 'travel' })).data.matches[0]!.label).not.toBe('travel: 0');
+    const [travel] = ok(await call('find', { id: 'travel' })).data.matches;
+    assert(travel);
+    expect(travel.label).not.toBe('travel: 0');
     ok(await call('launch_app'));
   });
 

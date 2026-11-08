@@ -14,11 +14,11 @@ import { untilWithin } from './until.js';
  * no screen lock: the tool gives it both, and takes both away at restore.
  */
 const APP = 'dev.appdyno.fixture';
-const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
-const SIMULATOR = process.env.APPDYNO_IOS_UDID;
+const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const adb = (...words: string[]) =>
-  execFileSync('adb', ['-s', ANDROID!, 'shell', ...words], { encoding: 'utf8' }).trim();
+  execFileSync('adb', ['-s', ANDROID, 'shell', ...words], { encoding: 'utf8' }).trim();
 /** The emulator's way to this Mac, as a device reaches it: no route, no answer. */
 const reaches = () => {
   try {
@@ -42,11 +42,12 @@ const result = async (call: Call, text: string) =>
 
 describe.skipIf(!ANDROID)('conditions on an emulator', () => {
   let call: Call;
-  beforeAll(async () => {
-    const o = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+  beforeAll(() => {
+    const o = opsOn(androidProvider(new Adb()), ANDROID, APP);
     call = o.call;
   });
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     await call?.('device_setting', { name: 'restore' });
   });
 
@@ -139,7 +140,7 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     await call('open_link', { settings: 'general' });
     expect((await call('wait_for', { text: 'Ayarlar', timeoutMs: 8_000 })).data.met).toBe(true);
     const back = await call('device_setting', { name: 'restore' });
-    expect(back.text).toContain(`locale: ${was}`);
+    expect(back.text).toContain(`locale: ${String(was)}`);
     expect(adb('getprop', 'persist.sys.locale')).toBe(was);
     await call('press_key', { key: 'home' });
   });
@@ -172,7 +173,7 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
       const start = Date.now();
       const { stdout } = await promisify(execFile)('adb', [
         '-s',
-        ANDROID!,
+        ANDROID,
         'shell',
         `nc 10.0.2.2 ${port} | wc -c`,
       ]);
@@ -205,8 +206,8 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
 
 describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
   let call: Call;
-  beforeAll(async () => {
-    const o = opsOn(simulatorProvider(), SIMULATOR!, APP);
+  beforeAll(() => {
+    const o = opsOn(simulatorProvider(), SIMULATOR, APP);
     call = o.call;
   });
 
@@ -243,7 +244,7 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     const global = () =>
       execFileSync(
         'xcrun',
-        ['simctl', 'spawn', SIMULATOR!, 'defaults', 'read', '-g', 'AppleLocale'],
+        ['simctl', 'spawn', SIMULATOR, 'defaults', 'read', '-g', 'AppleLocale'],
         {
           encoding: 'utf8',
         },

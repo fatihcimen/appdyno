@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 
@@ -14,14 +14,14 @@ import { opsOn, type Call } from './helpers.js';
  * compiles nothing, where Android 17 refuses the install. The debug build goes back at the end.
  */
 const APP = 'dev.appdyno.fixture';
-const SERIAL = process.env.APPDYNO_ANDROID_SERIAL;
+const SERIAL = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const OUT = join(import.meta.dirname, '../android/fixture/build/outputs/apk');
 const RELEASE = join(OUT, 'release/fixture-release.apk');
 const DM_FOR_THIS_API = join(OUT, 'release/baselineProfiles/0/fixture-release.dm');
 const DM_FOR_OLDER = join(OUT, 'release/baselineProfiles/1/fixture-release.dm');
 
 const adb = (...words: string[]) =>
-  execFileSync('adb', ['-s', SERIAL!, ...words], { encoding: 'utf8' });
+  execFileSync('adb', ['-s', SERIAL, ...words], { encoding: 'utf8' });
 const installed = (...files: string[]) => {
   adb('uninstall', APP);
   adb(files.length > 1 ? 'install-multiple' : 'install', '-g', ...files);
@@ -38,7 +38,7 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   };
 
   beforeAll(() => {
-    call = opsOn(androidProvider(new Adb()), SERIAL!, APP).call;
+    call = opsOn(androidProvider(new Adb()), SERIAL, APP).call;
   });
   afterAll(() => installed(join(OUT, 'debug/fixture-debug.apk')));
 
@@ -53,7 +53,8 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
     installed(RELEASE);
     const before = state();
     const r = await profile();
-    const b = r.data.baselineProfile!;
+    const b = r.data.baselineProfile;
+    assert(b);
     expect(b.present).toBe(true);
     expect(b.applied).toBe(false);
     expect(b.state).toBe('status=verify reason=install');
@@ -71,7 +72,8 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
     installed(RELEASE, DM_FOR_THIS_API);
     expect(state()).toContain('status=speed-profile');
     const r = await profile();
-    const b = r.data.baselineProfile!;
+    const b = r.data.baselineProfile;
+    assert(b);
     expect(b.applied).toBe(true);
     expect(b.state).toBe('status=speed-profile reason=install-dm');
     expect(b.verdict).toBe('worth-it');
@@ -88,14 +90,14 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
     installed(RELEASE, DM_FOR_OLDER);
     expect(state()).toContain('reason=install-dm');
     const r = await call('perf_launch', { baselineProfile: true, repeats: 1 });
-    expect(r.data.baselineProfile!.applied).toBe(false);
+    expect(r.data.baselineProfile?.applied).toBe(false);
     expect(r.text).toContain('delivered, and it compiled nothing');
   });
 
   it('says an APK has no profile, on an app that has none', async () => {
     const r = await profile('com.android.shell');
-    expect(r.data.baselineProfile!.present).toBe(false);
+    expect(r.data.baselineProfile?.present).toBe(false);
     expect(r.text).toContain('none in the APK');
-    expect(r.data.baselineProfile!.withoutMs).toEqual([]);
+    expect(r.data.baselineProfile?.withoutMs).toEqual([]);
   });
 });

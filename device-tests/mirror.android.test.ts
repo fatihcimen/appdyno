@@ -2,7 +2,7 @@ import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { agentMayGo } from './one-agent.js';
 import {
   decodePng,
@@ -28,12 +28,25 @@ import { untilWithin } from './until.js';
  * A mirror on an Android device we hold (APPDYNO_ANDROID_SERIAL; never a default), headless. On an emulator
  * the picture comes by gRPC, and a second part runs the agent's stream, which is the phone's path.
  */
-const serial = process.env.APPDYNO_ANDROID_SERIAL;
-const emulator = serial?.startsWith('emulator-') ?? false;
+const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+const emulator = serial.startsWith('emulator-');
 
 const until = untilWithin(60_000);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** The picture a live session shows. */
+const pictureOf = (session: MirrorSession) => {
+  const { picture } = session.status;
+  assert(picture, 'a picture');
+  return picture;
+};
+/** A byte of a frame, within it. */
+const byte = (bytes: Uint8Array, i: number) => {
+  const b = bytes[i];
+  assert(b !== undefined, String(i));
+  return b;
+};
 
 /** A phone's launcher holds its screen upright whatever is asked: a turn only shows over an app. */
 const overAnApp = async (adb: Adb, serial: string, turn: () => Promise<void>) => {
@@ -76,8 +89,8 @@ function start(mirror: Mirror) {
 
 describe.runIf(serial)('the agent stream', () => {
   const adb = new Adb();
-  const launcher = new AndroidAgentLauncher(adb, serial!);
-  const stream = new AndroidMirror(adb, serial!, launcher);
+  const launcher = new AndroidAgentLauncher(adb, serial);
+  const stream = new AndroidMirror(adb, serial, launcher);
 
   /** The mirror with something added to what a stream asks of the agent. */
   const asking = (start: Record<string, unknown>): Mirror =>
@@ -88,7 +101,7 @@ describe.runIf(serial)('the agent stream', () => {
   beforeAll(async () => {
     await viewerBinary();
     await adb.exec(
-      serial!,
+      serial,
       'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/frames dev.appdyno.fixture',
     );
   }, 300_000);
@@ -105,7 +118,7 @@ describe.runIf(serial)('the agent stream', () => {
     // an agent keeps the size its last stream settled on
     expect(String(session.status.stats?.mode)).toMatch(/top|smaller/);
     await session.stop('the test ended');
-    await noneLeft(adb, serial!);
+    await noneLeft(adb, serial);
   }, 120_000);
 
   it('a person tap reaches the device, in fractions of its screen', async () => {
@@ -137,7 +150,7 @@ describe.runIf(serial)('the agent stream', () => {
     const status = await Promise.race([session.stopped, sleep(90_000).then(() => undefined)]);
     expect(status).toMatchObject({ state: 'stopped' });
     expect((status as { why: string }).why).toContain('no encoder took this display');
-    await noneLeft(adb, serial!);
+    await noneLeft(adb, serial);
   }, 120_000);
 
   it('HEVC at the user word', async () => {
@@ -155,9 +168,9 @@ describe.runIf(serial)('the agent stream', () => {
     const { session } = start(asking({ maxSize: 800 }));
     await session.start();
     await until('picture', () => session.status.state === 'live');
-    const { picture } = session.status;
-    expect(Math.max(picture!.w, picture!.h)).toBeLessThanOrEqual(800);
-    expect(picture!.w % 8).toBe(0);
+    const picture = pictureOf(session);
+    expect(Math.max(picture.w, picture.h)).toBeLessThanOrEqual(800);
+    expect(picture.w % 8).toBe(0);
     await session.stop('the test ended');
   }, 120_000);
 
@@ -165,7 +178,8 @@ describe.runIf(serial)('the agent stream', () => {
     const { session, seen, viewerPid } = start(stream);
     await session.start();
     await until('picture', () => session.status.state === 'live');
-    const pid = viewerPid()!;
+    const pid = viewerPid();
+    assert(pid !== undefined);
     const before = seen.length;
     process.kill(pid, 'SIGKILL');
     await until('a new picture', () => seen.slice(before).some((s) => s.state === 'live'));
@@ -177,11 +191,13 @@ describe.runIf(serial)('the agent stream', () => {
     const { session, viewerPid } = start(stream);
     await session.start();
     await until('picture', () => session.status.state === 'live');
-    expect(await displaysOf(adb, serial!)).toBeGreaterThan(0);
+    expect(await displaysOf(adb, serial)).toBeGreaterThan(0);
     // what a dying parent leaves: its viewer sees its stdin end, and goes; with it the connection
-    process.kill(viewerPid()!, 'SIGKILL');
+    const pid = viewerPid();
+    assert(pid !== undefined);
+    process.kill(pid, 'SIGKILL');
     await session.stop('the test ended');
-    await noneLeft(adb, serial!);
+    await noneLeft(adb, serial);
   }, 120_000);
 
   it('the agent stopped: reconnects by the existing path', async () => {
@@ -207,17 +223,17 @@ describe.runIf(serial)('the agent stream', () => {
     await until('picture', () => session.status.state === 'live');
     const before = seen.length;
     try {
-      await adb.exec(serial!, 'input keyevent KEYCODE_SLEEP');
+      await adb.exec(serial, 'input keyevent KEYCODE_SLEEP');
       await until(
         'its need',
         () => session.status.state === 'waiting' && session.status.need === 'asleep',
         20_000,
       );
     } finally {
-      await adb.exec(serial!, 'input keyevent KEYCODE_WAKEUP');
+      await adb.exec(serial, 'input keyevent KEYCODE_WAKEUP');
     }
     await until('a new picture', () => seen.slice(before).some((s) => s.state === 'live'), 40_000);
-    await adb.exec(serial!, 'wm dismiss-keyguard');
+    await adb.exec(serial, 'wm dismiss-keyguard');
     await session.stop('the test ended');
   }, 120_000);
 
@@ -239,7 +255,7 @@ describe.runIf(serial)('the agent stream', () => {
         home = !home
       ) {
         await adb.exec(
-          serial!,
+          serial,
           home ? 'input keyevent KEYCODE_HOME' : 'am start -a android.settings.SETTINGS',
         );
         await sleep(1_200);
@@ -249,25 +265,25 @@ describe.runIf(serial)('the agent stream', () => {
       expect(Math.min(...seen.map((s) => longest(s.picture) || 9999))).toBeGreaterThanOrEqual(1024);
     } finally {
       await session.stop('the test ended');
-      await adb.exec(serial!, 'input keyevent KEYCODE_HOME');
+      await adb.exec(serial, 'input keyevent KEYCODE_HOME');
     }
   }, 240_000);
 
   it('rotation: the picture restarts at the new size, with no new session', async () => {
-    const device = new AndroidDevice(serial!, adb);
+    const device = new AndroidDevice(serial, adb);
     await device.open();
     const { session } = start(stream);
     await session.start();
     await until('picture', () => session.status.state === 'live');
     // by shape: `--quality auto` may settle on another size while it turns, 1080x2400 to 360x800 on an emulator
-    const tall = () => session.status.picture!.h > session.status.picture!.w;
+    const tall = () => pictureOf(session).h > pictureOf(session).w;
     try {
-      await overAnApp(adb, serial!, async () => {
+      await overAnApp(adb, serial, async () => {
         await device.setOrientation(1);
         await until('landscape', () => !tall(), 30_000);
         expect(session.status.state).toBe('live');
         // whatever the size settled on, a person can still read it
-        expect(session.status.picture!.w).toBeGreaterThanOrEqual(1024);
+        expect(session.status.picture?.w).toBeGreaterThanOrEqual(1024);
         await device.setOrientation(0);
         await until('portrait', tall, 30_000);
       });
@@ -283,9 +299,9 @@ describe.runIf(serial)('the agent stream', () => {
 describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real window', () => {
   it('shows what the device shows, where it shows it', async () => {
     const adb = new Adb();
-    const device = new AndroidDevice(serial!, adb);
+    const device = new AndroidDevice(serial, adb);
     await adb.exec(
-      serial!,
+      serial,
       'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/list dev.appdyno.fixture',
     );
     const session = new MirrorSession({
@@ -298,7 +314,7 @@ describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one rea
     try {
       await until('picture', () => session.status.state === 'live');
       await sleep(3_000);
-      const own = execFileSync('adb', ['-s', serial!, 'exec-out', 'screencap', '-p'], {
+      const own = execFileSync('adb', ['-s', serial, 'exec-out', 'screencap', '-p'], {
         maxBuffer: 1 << 26,
       });
       expectSamePicture(await shownByWindow(session), own);
@@ -310,11 +326,11 @@ describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one rea
 
   it('shows the agent stream by its layer, and a click on the picture moves the fixture', async () => {
     const adb = new Adb();
-    const device = new AndroidDevice(serial!, adb);
+    const device = new AndroidDevice(serial, adb);
     const { screen } = await device.open();
-    await adb.exec(serial!, 'am force-stop dev.appdyno.fixture');
+    await adb.exec(serial, 'am force-stop dev.appdyno.fixture');
     await adb.exec(
-      serial!,
+      serial,
       'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/frames dev.appdyno.fixture',
     );
     let node;
@@ -323,8 +339,8 @@ describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one rea
       if (!node) await sleep(500);
     }
     device.close();
-    expect(node).toBeDefined();
-    const [left, top, right, bottom] = node!.b;
+    assert(node);
+    const [left, top, right, bottom] = node.b;
     const session = new MirrorSession({
       mirror: device.mirror,
       viewer: async () => new ViewerProcess(await viewerBinary(), ['--behind']),
@@ -357,8 +373,8 @@ const MAIN = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
 
 describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () => {
   const adb = new Adb();
-  const launcher = new AndroidAgentLauncher(adb, serial!);
-  const stateFile = deviceStateFile('mirror', serial!);
+  const launcher = new AndroidAgentLauncher(adb, serial);
+  const stateFile = deviceStateFile('mirror', serial);
   const pidsOf = (pattern: string) =>
     spawnSync('pgrep', ['-f', pattern]).stdout.toString().trim().split('\n').filter(Boolean);
 
@@ -376,7 +392,7 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
   });
 
   const parent = () => {
-    const child = spawn(process.execPath, [MAIN, 'mirror', '--device', serial!, '--headless'], {
+    const child = spawn(process.execPath, [MAIN, 'mirror', '--device', serial, '--headless'], {
       stdio: 'ignore',
     });
     parents.push(child);
@@ -388,7 +404,7 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
     await until('its file', () => existsSync(stateFile), 60_000);
     await until('a stream', () => stateText().includes('"state":"live"'), 120_000);
     // an emulator's picture comes by its own port, with no display of ours
-    if (!emulator) expect(await displaysOf(adb, serial!)).toBeGreaterThan(0);
+    if (!emulator) expect(await displaysOf(adb, serial)).toBeGreaterThan(0);
     const viewer = spawnSync('pgrep', ['-P', String(child.pid)])
       .stdout.toString()
       .trim();
@@ -404,23 +420,19 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
     }
     expect(active).toBe(0);
     rpc.close();
-    await noneLeft(adb, serial!);
+    await noneLeft(adb, serial);
     // its file is left, and is no mirror: the next start does not take it for one
     expect(existsSync(stateFile)).toBe(true);
     const next = parent();
-    await until('the next start', () => stateText().includes(`"pid":${next.pid}`), 60_000);
+    await until('the next start', () => stateText().includes(`"pid":${String(next.pid)}`), 60_000);
     await until('its picture', () => stateText().includes('"state":"live"'), 120_000);
     // a second window on the device: refused, naming the first
-    const second = spawnSync(
-      process.execPath,
-      [MAIN, 'mirror', '--device', serial!, '--headless'],
-      {
-        encoding: 'utf8',
-        timeout: 60_000,
-      },
-    );
+    const second = spawnSync(process.execPath, [MAIN, 'mirror', '--device', serial, '--headless'], {
+      encoding: 'utf8',
+      timeout: 60_000,
+    });
     expect(second.status).toBe(1);
-    expect(second.stdout).toContain(`already has a window: pid ${next.pid}`);
+    expect(second.stdout).toContain(`already has a window: pid ${String(next.pid)}`);
     // asked to end, it ends what it opened, and leaves no file
     const status = spawnSync(process.execPath, [MAIN, 'mirror', 'status'], {
       encoding: 'utf8',
@@ -433,7 +445,7 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
       'mirror',
       'close',
       '--device',
-      serial!,
+      serial,
     ]);
     expect(closed.stdout + closed.stderr).toContain('closed the mirror');
     await until('its file gone', () => !existsSync(stateFile), 20_000);
@@ -442,7 +454,7 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
 
 describe.runIf(emulator)('an emulator picture by gRPC', () => {
   const adb = new Adb();
-  const device = new AndroidDevice(serial!, adb);
+  const device = new AndroidDevice(serial, adb);
 
   afterAll(() => device.close());
 
@@ -454,10 +466,11 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
     expect(session.status.picture?.codec).toBe('pixels');
     expect(session.status.note).toBeUndefined();
     await sleep(3_000);
-    const { w, h } = session.status.picture!;
-    const file = deviceStateFile('mirror', serial!).replace(/\.json$/, `-${process.pid}.rgba`);
+    const { w, h } = pictureOf(session);
+    const file = deviceStateFile('mirror', serial).replace(/\.json$/, `-${process.pid}.rgba`);
     const pixels = readFileSync(file).subarray(0, w * h * 4);
-    const png = decodePng(await adb.execBuffer(serial!, 'screencap -p'))!;
+    const png = decodePng(await adb.execBuffer(serial, 'screencap -p'));
+    assert(png);
     expect([png.width, png.height]).toEqual([w, h]);
     // a still screen: every row of the file's frame is the same row of the device's own screenshot
     let far = 0;
@@ -468,9 +481,9 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
         const a = (y * w + x) * 4;
         const b = (y * w + x) * channels;
         const d =
-          Math.abs(pixels[a]! - png.data[b]!) +
-          Math.abs(pixels[a + 1]! - png.data[b + 1]!) +
-          Math.abs(pixels[a + 2]! - png.data[b + 2]!);
+          Math.abs(byte(pixels, a) - byte(png.data, b)) +
+          Math.abs(byte(pixels, a + 1) - byte(png.data, b + 1)) +
+          Math.abs(byte(pixels, a + 2) - byte(png.data, b + 2));
         if (d > 24) far++;
       }
     const samples = Math.ceil((h - statusBar) / 7) * Math.ceil(w / 7);
@@ -483,16 +496,16 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
     const { session } = start(device.mirror);
     await session.start();
     await until('picture', () => session.status.state === 'live');
-    const { w, h } = session.status.picture!;
+    const { w, h } = pictureOf(session);
     await device.open();
     try {
-      await overAnApp(adb, serial!, async () => {
+      await overAnApp(adb, serial, async () => {
         await device.setOrientation(1);
-        await until('a turned picture', () => session.status.picture!.w === h, 30_000);
-        expect(session.status.picture!.h).toBe(w);
+        await until('a turned picture', () => pictureOf(session).w === h, 30_000);
+        expect(session.status.picture?.h).toBe(w);
         expect(session.status.state).toBe('live');
         await device.setOrientation(0);
-        await until('upright again', () => session.status.picture!.w === w, 30_000);
+        await until('upright again', () => pictureOf(session).w === w, 30_000);
       });
     } finally {
       await device.setOrientation(0);
@@ -504,7 +517,8 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
     const { session, seen, viewerPid } = start(device.mirror);
     await session.start();
     await until('picture', () => session.status.state === 'live');
-    const pid = viewerPid()!;
+    const pid = viewerPid();
+    assert(pid !== undefined);
     const before = seen.length;
     process.kill(pid, 'SIGKILL');
     await until('a new picture', () => seen.slice(before).some((s) => s.state === 'live'));
@@ -514,7 +528,7 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
 
   it('ticks follow the fixture while it moves, and stop when it stops', async () => {
     await adb.exec(
-      serial!,
+      serial,
       'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/ticker dev.appdyno.fixture',
     );
     const { session, seen } = start(device.mirror);
@@ -531,23 +545,23 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
  * Unplugged, as near as an emulator comes: it is killed under the stream and booted again by `simulator`'s own
  * path, so that this also runs its gRPC flags. Names our own AVD; it costs a whole boot.
  */
-const avd = process.env.APPDYNO_MIRROR_RESTART_AVD;
+const avd = process.env.APPDYNO_MIRROR_RESTART_AVD ?? '';
 
 describe.runIf(emulator && avd)('an emulator killed under its stream', () => {
   it('waits with its need, and is live again once it is back', async () => {
     const adb = new Adb();
-    const device = new AndroidDevice(serial!, adb);
+    const device = new AndroidDevice(serial, adb);
     const { session, seen } = start(device.mirror);
     await session.start();
     await until('picture', () => session.status.state === 'live', 120_000);
-    await adb.run(['-s', serial!, 'emu', 'kill'], 30_000);
+    await adb.run(['-s', serial, 'emu', 'kill'], 30_000);
     await until(
       'its need',
       () => session.status.state === 'waiting' && session.status.need === 'not-connected',
       60_000,
     );
     const back = seen.length;
-    await new AndroidEmulators(adb).boot(avd!);
+    await new AndroidEmulators(adb).boot(avd);
     await until('a new picture', () => seen.slice(back).some((s) => s.state === 'live'), 240_000);
     expect(session.status.picture?.codec).toBe('pixels');
     expect(session.status.note).toBeUndefined();

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import type { OpData, OpName } from '@appdyno/ops';
 import { Devicectl, IosSimulatorDevice } from './workspace.js';
 
@@ -48,11 +48,15 @@ const cli = (...args: string[]) =>
     );
   });
 
-const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP;
+const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
 const targets = [
-  { platform: 'android', serial: process.env.APPDYNO_ANDROID_SERIAL, form: 'FORM' },
-  { platform: 'ios', serial: process.env.APPDYNO_IOS_UDID, form: 'Form' },
-  { platform: 'iphone', serial: iphoneFixture && process.env.APPDYNO_IPHONE_UDID, form: 'Form' },
+  { platform: 'android', serial: process.env.APPDYNO_ANDROID_SERIAL ?? '', form: 'FORM' },
+  { platform: 'ios', serial: process.env.APPDYNO_IOS_UDID ?? '', form: 'Form' },
+  {
+    platform: 'iphone',
+    serial: iphoneFixture && (process.env.APPDYNO_IPHONE_UDID ?? ''),
+    form: 'Form',
+  },
 ];
 
 let androidRecording: string | undefined;
@@ -89,10 +93,10 @@ for (const { platform, serial, form } of targets)
       new RegExp(`(@[a-z0-9-]+) (?:\\w+ )?"${label}"`).exec(text)?.[1];
 
     beforeAll(async () => {
-      if (platform === 'iphone') await new Devicectl(serial!).install(iphoneFixture!);
+      if (platform === 'iphone') await new Devicectl(serial).install(iphoneFixture);
       const transport = new StdioClientTransport({
         command: process.execPath,
-        args: [CLI, 'mcp', '--device', serial!, '--app', APP, '--allow-devices', `^${serial}$`],
+        args: [CLI, 'mcp', '--device', serial, '--app', APP, '--allow-devices', `^${serial}$`],
         env,
         stderr: 'pipe',
       });
@@ -100,8 +104,9 @@ for (const { platform, serial, form } of targets)
       await client.connect(transport);
     }, 240_000);
     afterAll(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
       await client?.close();
-      if (platform === 'ios') await new IosSimulatorDevice(serial!).stopAgent();
+      if (platform === 'ios') await new IosSimulatorDevice(serial).stopAgent();
     }, 60_000);
 
     it(
@@ -126,7 +131,9 @@ for (const { platform, serial, form } of targets)
         const adds = (await call('find', { id: 'add_button' })).data.matches;
         // from the middle: the first rows of a scrolled iOS list lie under its navigation bar
         const middle = Math.floor(adds.length / 2);
-        await call('tap', { ref: adds[middle]!.ref });
+        const add = adds[middle];
+        assert(add);
+        await call('tap', { ref: add.ref });
         await call('assert', { text: 'In basket: 1', timeoutMs: 3_000 });
 
         await call('open_link', { url: 'appdyno-fixture://open/dialog' });
@@ -172,13 +179,14 @@ for (const { platform, serial, form } of targets)
         process.stderr.write(`--- ${platform} replay\n${r.text}\n---\n`);
         expect(secretsIn(r.text)).toEqual([]);
         expect(r.text).toMatch(/^passed: \d+ steps$/m);
-        const timings = r.data.timings!;
+        const { timings } = r.data;
+        assert(timings);
         const taps = timings.filter((t) => t.step.startsWith('tap'));
         expect(taps.length).toBeGreaterThan(3);
         for (const t of taps) {
           expect(t.settledMs).toBeGreaterThan(0);
           // the device's time from the action on leaves out the lookup before it
-          expect(t.settledMs!).toBeLessThanOrEqual(t.ms);
+          expect(t.settledMs).toBeLessThanOrEqual(t.ms);
         }
         // the app really is where the flow says it ended
         await call('assert', { id: 'result', check: 'text', equals: 'Confirmed' });
@@ -247,7 +255,7 @@ for (const { platform, serial, form } of targets)
           'test',
           tests,
           '--device',
-          serial!,
+          serial,
           '--share',
           '--artifacts',
           artifacts,
@@ -271,7 +279,7 @@ for (const { platform, serial, form } of targets)
           '1',
         ]);
         const cases = [...xml.matchAll(/<testcase name="([^"]+)"[^>]*>([\s\S]*?)<\/testcase>/g)];
-        expect(cases.map((c) => [c[1], c[2]!.includes('<failure')])).toEqual([
+        expect(cases.map(([, name, body]) => [name, body?.includes('<failure')])).toEqual([
           ['a-recorded.flow', false],
           ['b-fails.flow', true],
           ['c-after.flow', false],
@@ -281,14 +289,14 @@ for (const { platform, serial, form } of targets)
         expect(secretsIn(xml)).toEqual([]);
         expect(xml).not.toContain('kod-sifre-1');
 
-        const kept = join(artifacts, serial!.replace(/[^\w.-]/g, '_'), 'b-fails.flow');
+        const kept = join(artifacts, serial.replace(/[^\w.-]/g, '_'), 'b-fails.flow');
         const shot = readFileSync(join(kept, 'screen.jpg'));
         expect(shot.subarray(0, 2).toString('hex')).toBe('ffd8');
         const tree = JSON.parse(readFileSync(join(kept, 'tree.json'), 'utf8')) as {
           nodes: unknown[];
         };
         expect(tree.nodes.length).toBeGreaterThan(0);
-        expect(existsSync(join(artifacts, serial!, 'a-recorded.flow'))).toBe(false);
+        expect(existsSync(join(artifacts, serial, 'a-recorded.flow'))).toBe(false);
       },
       LONG_MS,
     );
@@ -298,7 +306,7 @@ for (const { platform, serial, form } of targets)
       async () => {
         const flow = join(dir, `${platform}-cli.flow`);
         const run = async (...args: string[]) => {
-          const r = await cli(...args, '--device', serial!, '--share');
+          const r = await cli(...args, '--device', serial, '--share');
           expect(r.err && r.code ? r.err : '').toBe('');
           expect(r.code).toBe(0);
           return r;

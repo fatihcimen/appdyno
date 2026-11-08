@@ -17,8 +17,8 @@ const LONG_MS = 300_000;
 const PASSWORD = 'p4ss-w0rd-7788';
 
 const targets = [
-  ['android', process.env.APPDYNO_ANDROID_SERIAL],
-  ['ios', process.env.APPDYNO_IOS_UDID],
+  ['android', process.env.APPDYNO_ANDROID_SERIAL ?? ''],
+  ['ios', process.env.APPDYNO_IOS_UDID ?? ''],
 ] as const;
 
 for (const [platform, serial] of targets)
@@ -48,7 +48,7 @@ for (const [platform, serial] of targets)
       const artifacts = join(dir, name);
       const junit = join(artifacts, 'junit.xml');
       const r = await appdyno(
-        ...['test', '--device', serial!, '--artifacts', artifacts, '--junit', junit],
+        ...['test', '--device', serial, '--artifacts', artifacts, '--junit', junit],
         ...args,
       );
       process.stderr.write(`--- ${platform} ${name}, exit ${r.code}\n${r.out}\n---\n`);
@@ -111,7 +111,7 @@ for (const [platform, serial] of targets)
         expect(r.junit).not.toContain('z-nightly');
         expect(r.junit).not.toContain(PASSWORD);
         expect(r.junit).toContain('Sent: ${WHO}');
-        const failed = join(r.artifacts, serial!.replace(/[^\w.-]/g, '_'), 'c-counts.flow');
+        const failed = join(r.artifacts, serial.replace(/[^\w.-]/g, '_'), 'c-counts.flow');
         expect(existsSync(join(failed, 'screen.jpg'))).toBe(true);
       },
       LONG_MS,

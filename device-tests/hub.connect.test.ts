@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { CLIENTS } from '../packages/cli/src/index.js';
 import {
@@ -62,7 +62,9 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     heard.length = 0;
     link.send({ op: 'snapshot', file: join(home, 'look.png') });
     await until('a look', () => heard.some((m) => m.op === 'snapped'));
-    const { parts } = heard.find((m) => m.op === 'snapped')! as unknown as {
+    const snapped = heard.find((m) => m.op === 'snapped');
+    assert(snapped, 'snapped');
+    const { parts } = snapped as unknown as {
       parts: { text: string }[];
     };
     return parts.map((p) => p.text).join('|');
@@ -104,7 +106,9 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
         return run?.name === name && run.code !== undefined;
       })?.run as { code: number; file?: string } | undefined;
     await until(`${name} to end`, () => end() !== undefined, ms);
-    return end()!;
+    const run = end();
+    assert(run, name);
+    return run;
   };
 
   beforeAll(async () => {
@@ -120,11 +124,11 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     const stand = join(home, 'ioreg');
     writeFileSync(stand, `#!/bin/sh\ncat "${bus}"\n`);
     chmodSync(stand, 0o755);
-    process.env.PATH = `${home}:${path}`;
+    process.env.PATH = `${home}:${String(path)}`;
     const staged = (real: DeviceProvider, mine: (p: ListedPhone) => boolean): DeviceProvider => ({
       ...real,
-      list: async () => phones.filter(mine),
-      need: async (d) => phones.find((p) => p.serial === d.serial)?.need,
+      list: () => Promise.resolve(phones.filter(mine)),
+      need: (d) => Promise.resolve(phones.find((p) => p.serial === d.serial)?.need),
     });
     const providers = [
       staged(androidProvider(), (p) => p.state !== 'usb'),
@@ -140,7 +144,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, main, 'mcp'],
-        doctor: async () => tools,
+        doctor: () => Promise.resolve(tools),
         self: [process.execPath, main],
         providers,
         measurements: join(home, 'measurements'),
@@ -167,6 +171,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
   });
 
   afterAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.send({ op: 'quit' });
     await done;
     process.env.PATH = path;
@@ -202,7 +207,9 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     ];
     await seeing(language === 'tr' ? 'Güven' : 'Trust');
     await picture('connect-trust');
-    phones = [{ ...phones[0]!, need: 'developer-mode-off' }];
+    const [phone] = phones;
+    assert(phone);
+    phones = [{ ...phone, need: 'developer-mode-off' }];
     await seeing(language === 'tr' ? 'yeniden başlar' : 'restarts');
     await picture('connect-developer-mode');
   });
@@ -222,8 +229,11 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     await clickRow('Tools');
     await picture('tools');
     // a client in this home alone: a real one is never near this
-    const client = CLIENTS.find((c) => c.format === 'json' && !c.ownFile)!;
-    const file = join(home, client.files[0]!);
+    const client = CLIENTS.find((c) => c.format === 'json' && !c.ownFile);
+    assert(client);
+    const [own] = client.files;
+    assert(own);
+    const file = join(home, own);
     mkdirSync(dirname(file), { recursive: true });
     await click('run:clients-preview');
     expect((await ended('clients-preview')).code).toBe(0);

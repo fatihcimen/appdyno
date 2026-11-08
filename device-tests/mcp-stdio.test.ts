@@ -14,8 +14,8 @@ import { IosSimulatorDevice } from './workspace.js';
 const APP = 'dev.appdyno.fixture';
 const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 const targets = [
-  { platform: 'android', serial: process.env.APPDYNO_ANDROID_SERIAL, form: 'FORM' },
-  { platform: 'ios', serial: process.env.APPDYNO_IOS_UDID, form: 'Form' },
+  { platform: 'android', serial: process.env.APPDYNO_ANDROID_SERIAL ?? '', form: 'FORM' },
+  { platform: 'ios', serial: process.env.APPDYNO_IOS_UDID ?? '', form: 'Form' },
 ];
 
 for (const revision of REVISIONS)
@@ -33,7 +33,7 @@ for (const revision of REVISIONS)
             MAIN,
             'mcp',
             '--device',
-            serial!,
+            serial,
             '--app',
             APP,
             '--allow-devices',
@@ -53,9 +53,10 @@ for (const revision of REVISIONS)
         expect(client.getNegotiatedProtocolVersion()).toBe(revision);
       });
       afterAll(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
         await client?.close();
         // the iOS runner does not stay on a shared simulator after the run
-        if (platform === 'ios') await new IosSimulatorDevice(serial!).stopAgent();
+        if (platform === 'ios') await new IosSimulatorDevice(serial).stopAgent();
       });
 
       it('says how far a long call has got, as it goes', async () => {
