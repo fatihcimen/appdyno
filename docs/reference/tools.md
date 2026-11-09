@@ -56,7 +56,7 @@ its module and `configuration` as its variant. `device_setting` holds `dark_mode
 
 `launch_app` says whether it started the app or brought a running one to the front, on the screen it was on, and `app` `launch` whether it started the app or restarted a running one, as it stops one first. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `app` `list` in its hint.
 
-Each change is read back: the answer says `changed` only when the device then reads otherwise than before, and `restore` says restored only of what reads as it was. `text_size` on iOS is one of its sizes, from `extra-small` to `accessibility-extra-extra-extra-large`, and on Android a scale from 0.25 to 5 or `default`: another is refused, with what it takes.
+Each change is read back: the answer says `changed` only when the device then reads otherwise than before, and `restore` says restored only of what reads as it was. `text_size` on iOS is one of its sizes, from `extra-small` to `accessibility-extra-extra-extra-large`, and on Android a scale from 0.25 to 5 or `default`: another is refused, with what it takes. A location `set_location` fixes is written down as a condition is, so `restore` and the session's end take it back to the real one.
 
 ## What asks the person first
 

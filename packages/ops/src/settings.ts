@@ -154,12 +154,37 @@ export async function turning(s: Session, turn: (kept: boolean) => Promise<void>
   });
 }
 
+/** A fixed location is written down as a condition, so that it ends as one does: it has nothing to read, and was the real one. */
+const LOCATION = 'location';
+const REAL_PLACE = 'the real one';
+
+export function fixLocation(s: Session, lat: number, lon: number) {
+  return s.conditions.run(async () => {
+    conditions.update(s.device.serial, (now = {}) =>
+      now[LOCATION] ? now : { ...now, [LOCATION]: { was: REAL_PLACE, owner: s.owner } },
+    );
+    await s.device.setLocation(lat, lon);
+  });
+}
+
+export function endLocation(s: Session) {
+  return s.conditions.run(async () => {
+    await s.device.clearLocation();
+    forget(s, LOCATION);
+  });
+}
+
 /** Puts `was` back and reads it: what the device reads where that is not `was`, which then stays written down. */
 async function putBack(
   s: Session,
-  name: SettingName,
+  name: SettingName | typeof LOCATION,
   c: { was: string; app?: string | undefined },
 ) {
+  if (name === LOCATION) {
+    await s.device.clearLocation();
+    forget(s, name);
+    return undefined;
+  }
   await s.device.settings.set(name, c.was, c.app);
   const now = await s.device.settings.get(name, c.app);
   if (!same(now, c.was)) return now;

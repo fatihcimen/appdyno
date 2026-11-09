@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
-import { turning } from './settings.js';
+import { endLocation, fixLocation, turning } from './settings.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
 
@@ -145,12 +145,13 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       run: async ({ lat, lon, clear }) => {
         const s = await ctx.session();
         if (clear) {
-          await s.device.clearLocation();
+          await endLocation(s);
           return reply('the location is the real one', { done: 'the location is the real one' });
         }
         if (lat === undefined || lon === undefined)
           throw new ToolError('give lat and lon, or clear: true', 'INVALID_ARGUMENT');
-        await s.device.setLocation(lat, lon);
+        // written down as a condition: it ends with the session, and at restore
+        await fixLocation(s, lat, lon);
         const done = `location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         return reply(done, { done });
       },

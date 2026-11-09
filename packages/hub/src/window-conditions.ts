@@ -149,12 +149,14 @@ export function conditionSends(
 
   const given = (m: ViewerMessage) =>
     m.args && typeof m.args === 'object' ? (m.args as Record<string, unknown>) : {};
+  /** A location has nothing to read: only whether one fixed here is written down to go back. */
+  const location = () => ({ name: 'location', ...(changed('location') && { changed: true }) });
 
   return {
     deviceList: async () =>
       tell('device', {
         platform: device.platform,
-        conditions: [...(await rows()), ...events(), { name: 'location' }],
+        conditions: [...(await rows()), ...events(), location()],
       }),
 
     /** One condition or event, by the op's own arguments; a condition comes back as the device then reads it. */
@@ -179,12 +181,15 @@ export function conditionSends(
     },
 
     deviceLocation: async (m: ViewerMessage) =>
-      tell('device', (await call('device', 'set_location', given(m))).answer),
+      tell('device', {
+        ...(await call('device', 'set_location', given(m))).answer,
+        conditions: [location()],
+      }),
 
-    /** Put Back All: what `device_setting restore` puts back, and what it leaves to a process still running. */
+    /** Put Back All: what `device_setting restore` puts back, a location among them, and what it leaves to a process still running. */
     deviceRestore: async () => {
       const { answer } = await call('device', 'device_setting', { name: 'restore' }, '');
-      tell('device', { ...answer, conditions: await rows() });
+      tell('device', { ...answer, conditions: [...(await rows()), location()] });
     },
   };
 }

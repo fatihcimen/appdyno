@@ -1086,6 +1086,24 @@ describe('gestures, keys, clipboard', () => {
     expect((await call('set_location', { lat: 1 })).error).toBe(true);
   });
 
+  it('puts a fixed location back as a condition: at restore, and at the session end', async () => {
+    const d = new FakeDevice();
+    const { call, ctx } = await connect(d);
+    const cleared = () => d.calls.filter((c) => c.name === 'clearLocation').length;
+    await call('set_location', { lat: 41, lon: 29 });
+    expect((await call('device_setting', { name: 'restore' })).text).toContain(
+      'restored location: the real one',
+    );
+    expect(cleared()).toBe(1);
+    // one ended by hand is not ended again
+    await call('set_location', { lat: 41, lon: 29 });
+    await call('set_location', { clear: true });
+    expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
+    await call('set_location', { lat: 41, lon: 29 });
+    expect(await ctx.end()).toEqual([]);
+    expect(cleared()).toBe(3);
+  });
+
   it('asks for an image of the screen in tap units', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);

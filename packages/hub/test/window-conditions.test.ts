@@ -133,6 +133,25 @@ describe("a window's Device pane", () => {
     ]);
   });
 
+  it('marks a location fixed here, and puts it back with the rest and as the window closes', async () => {
+    const { device } = deviceWith({});
+    const { sends, said, rowOf } = paneOn(device);
+    // the session opens first, as the pane reads the device as it shows
+    expect(rowOf(await said('deviceList'), 'location')).toEqual({ name: 'location' });
+    const set = await said('deviceLocation', { args: { lat: 41.0082, lon: 28.9784 } });
+    expect(rowOf(set, 'location')).toEqual({ name: 'location', changed: true });
+    const back = await said('deviceRestore');
+    expect(back.text).toContain('location: the real one');
+    expect(rowOf(back, 'location')).toEqual({ name: 'location' });
+    await said('deviceLocation', { args: { lat: 41.0082, lon: 28.9784 } });
+    expect(rowOf(await said('deviceList'), 'location')).toEqual({
+      name: 'location',
+      changed: true,
+    });
+    expect(await sends.end()).toEqual([]);
+    expect(device.calls.filter((c) => c.name === 'clearLocation')).toHaveLength(2);
+  });
+
   it("on a phone, keeps to itself what could cut the hub's link to it", async () => {
     const { device, sets } = deviceWith({ wifi: 'on' });
     device.virtual = false;
