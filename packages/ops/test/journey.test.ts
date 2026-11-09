@@ -353,7 +353,7 @@ describe('a measure during a recording', () => {
     call: ReturnType<typeof phone>['call'],
     actions: () => Promise<unknown>,
   ) => {
-    const file = join(fresh(), 'a.flow');
+    const file = join(must(process.env.APPDYNO_STATE_DIR, 'the state folder'), 'a.flow');
     await call('flow', { action: 'start' });
     await actions();
     await call('flow', { action: 'stop' });

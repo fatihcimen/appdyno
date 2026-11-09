@@ -12,6 +12,7 @@ import {
   FLOW_FILE,
   envValues,
   flagged,
+  inside,
   keepRecording,
   loadRecording,
   readFlow,
@@ -144,7 +145,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
               throw new ToolError('no recording to save: flow start begins one', 'NOT_FOUND');
             if (held.state.steps.length === 0)
               throw new ToolError('nothing was recorded yet', 'NOT_FOUND');
-            const path = need();
+            const path = inside(need());
             const named = nameParams(held, params, true);
             const notes = saveRecording(held, path, overwrite);
             keepRecording(held);

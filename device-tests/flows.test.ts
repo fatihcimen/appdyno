@@ -64,7 +64,8 @@ let androidRecording: string | undefined;
 for (const { platform, serial, form } of targets)
   describe.skipIf(!serial)(`flows on ${platform}`, () => {
     let client: Client;
-    const file = join(dir, `${platform}.flow`);
+    // the server writes a flow inside its own folder or its state folder
+    const file = join(dir, 'state', `${platform}.flow`);
     const params = [`PASSWORD_INPUT=${PASSWORD}`, `SECRET_1=${LISTED_SECRET}`];
 
     const raw = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {

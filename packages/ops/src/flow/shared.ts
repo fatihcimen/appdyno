@@ -92,16 +92,22 @@ export const flagged = (flow: Flow) =>
     return why.length > 0 ? [`step ${i + 1}: ${why.join(', ')}`] : [];
   });
 
-/** A recording as its file: what is there stays unless `overwrite`. */
-export function saveRecording(r: Recording, path: string, overwrite: boolean | undefined) {
+/** A file and its folders: what is there stays unless `overwrite`. */
+function writeNew(path: string, text: string, overwrite: boolean | undefined) {
   try {
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, r.text(), { flag: overwrite ? 'w' : 'wx' });
+    writeFileSync(path, text, { flag: overwrite ? 'w' : 'wx' });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'EEXIST')
       throw new ToolError(`${path} exists: overwrite true replaces it`, 'INVALID_ARGUMENT');
     throw new ToolError(`cannot write ${path}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
   }
+  return path;
+}
+
+/** A recording as its file: what is there stays unless `overwrite`. */
+export function saveRecording(r: Recording, path: string, overwrite: boolean | undefined) {
+  writeNew(path, r.text(), overwrite);
   return flagged(r.flow());
 }
 
@@ -125,10 +131,11 @@ const real = (p: string) => {
 };
 
 /**
- * A file a client asked to have written, inside this server's project folder (where it runs) or its state folder, and
- * no other: the client names the path, and the server's own command line sets those two. A link that leads out is out.
+ * The path of a file a client asked to have written, inside this server's project folder (where it runs) or its state
+ * folder, and no other: the client names the path, and the server's own command line sets those two. A link that leads
+ * out is out.
  */
-export function writeInside(path: string, text: string, overwrite: boolean | undefined) {
+export function inside(path: string) {
   const to = resolve(path);
   const roots = [process.cwd(), stateDir()];
   const under = (p: string | undefined, root: string | undefined) => {
@@ -141,16 +148,11 @@ export function writeInside(path: string, text: string, overwrite: boolean | und
       'POLICY_DENIED',
       `give a path inside ${roots.join(' or ')}`,
     );
-  try {
-    mkdirSync(dirname(to), { recursive: true });
-    writeFileSync(to, text, { flag: overwrite ? 'w' : 'wx' });
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'EEXIST')
-      throw new ToolError(`${to} exists: overwrite true replaces it`, 'INVALID_ARGUMENT');
-    throw new ToolError(`cannot write ${to}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
-  }
   return to;
 }
+
+export const writeInside = (path: string, text: string, overwrite: boolean | undefined) =>
+  writeNew(inside(path), text, overwrite);
 
 export const defined = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as {

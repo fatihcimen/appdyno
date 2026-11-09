@@ -69,7 +69,7 @@ describe('flows', () => {
     await call('flow', { action: 'start' });
     await actions();
     await call('flow', { action: 'stop' });
-    const file = join(dir, name);
+    const file = join(dir, 'state', name);
     await call('flow', { action: 'save', file });
     return { file, text: readFileSync(file, 'utf8') };
   };
@@ -392,12 +392,21 @@ assert id=result check=text equals="Gönderildi"
       ).toContain('stop the recording');
     });
 
-    it('does not replace a saved flow unless told to', async () => {
+    it('saves inside the state or project folder alone, and replaces a saved flow only when told to', async () => {
       const call = callerOf(context());
       const { file, text } = await recorded(call, () => call('launch_app'));
       expect((await refusal(call('flow', { action: 'save', file }))).message).toContain('exists');
       expect(readFileSync(file, 'utf8')).toBe(text);
       await call('flow', { action: 'save', file, overwrite: true });
+      const outside = await refusal(call('flow', { action: 'save', file: join(dir, 'a.flow') }));
+      expect(outside.code).toBe('POLICY_DENIED');
+      expect(existsSync(join(dir, 'a.flow'))).toBe(false);
+      symlinkSync(dir, join(dir, 'state', 'out'));
+      const linked = await refusal(
+        call('flow', { action: 'save', file: join(dir, 'state', 'out', 'a.flow') }),
+      );
+      expect(linked.code).toBe('POLICY_DENIED');
+      expect(existsSync(join(dir, 'a.flow'))).toBe(false);
     });
   });
 
@@ -457,7 +466,7 @@ tap id=greeting
       await call('tap', { selector: { text: 'Form' } });
       await call('type_text', { text: 'Grace', selector: { id: 'name' } });
       await call('flow', { action: 'stop' });
-      const file = join(dir, 'named.flow');
+      const file = join(dir, 'state', 'named.flow');
       const none = await refusal(call('flow', { action: 'save', file, params: ['OTHER=Hopper'] }));
       expect(none.message).toContain('no recorded step holds the value of OTHER');
       expect(existsSync(file)).toBe(false);

@@ -56,7 +56,7 @@ Android's own ids (`android:id/button1`) are not kept. An action with no step (a
 is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. `flow stop` and
 `flow save` list every step to look at.
 
-A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): wherever it was or is typed or read, it is `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`, and `save` answers with the file it wrote.
+A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): wherever it was or is typed or read, it is `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
 
 ## Secrets
 
