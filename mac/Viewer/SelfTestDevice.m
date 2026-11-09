@@ -17,11 +17,11 @@ static NSDictionary *listSaid(void) {
              @{@"name": @"text_size",
                @"value": @"1.3",
                @"changed": @YES},
-             @{@"name": @"reduce_transparency", @"why": @"Android has no reduce_transparency switch: its blurs are a developer option"},
+             @{@"name": @"reduce_transparency", @"why": @"Android has no Reduce Transparency setting."},
              @{@"name": @"network", @"value": @"full (-1)"},
              @{@"name": @"battery", @"value": @"default (now 85)"},
              @{@"name": @"proxy", @"value": @"none"},
-             @{@"name": @"call", @"why": @"a phone has no calls: only an emulator console has"},
+             @{@"name": @"call", @"why": @"Only an emulator takes a call from here."},
              @{@"name": @"location"},
            ]};
 }
@@ -48,7 +48,7 @@ void MVCheckDevice(void) {
   MVPump(0.1);
   MVCheck(@"device: each row stands as the device reads it, a scale and a level as a person reads them", [[pane shown:@"dark_mode"] isEqual:@"off"] && [[pane shown:@"text_size"] isEqual:@"1.3"] && [[pane shown:@"network"] isEqual:@"full"] && [[pane shown:@"battery"] isEqual:@"85"] && [[pane shown:@"proxy"] isEqual:@""], [@[[pane shown:@"dark_mode"], [pane shown:@"text_size"], [pane shown:@"network"], [pane shown:@"battery"]] componentsJoinedByString:@"|"]);
   NSString *why = [pane shown:@"reduce_transparency"];
-  MVCheck(@"device: what the device cannot do stands disabled, with its reason begun as a sentence", [why isEqual:[@"disabled: " stringByAppendingString:MVWord(@"Android has no reduce_transparency switch: its blurs are a developer option")]] && [[pane shown:@"call"] hasPrefix:@"disabled: "], why);
+  MVCheck(@"device: what the device cannot do stands disabled, with its reason begun as a sentence", [why isEqual:[@"disabled: " stringByAppendingString:MVWord(@"Android has no Reduce Transparency setting.")]] && [[pane shown:@"call"] hasPrefix:@"disabled: "], why);
   MVCheck(@"device: a location has nothing to read, and can be set", ![[pane shown:@"location"] hasPrefix:@"disabled"], [pane shown:@"location"]);
   MVCheck(@"device: Put Back All stands ready where something was changed here", MVFindControl(window.nsWindow.contentView, @"deviceBack").enabled, nil);
   [sent removeAllObjects];
@@ -75,8 +75,8 @@ void MVCheckDevice(void) {
   [pane show:@{@"op": @"answer",
                @"name": @"device",
                @"ok": @NO,
-               @"text": @"on a phone, this can cut the link to it: change it on the phone"}];
-  MVCheck(@"device: a refusal is shown whole, in the Mac's language", [pane.answer.said isEqual:MVWord(@"on a phone, this can cut the link to it: change it on the phone")], pane.answer.said);
+               @"text": @"On a phone, this could cut its connection to this Mac. Change it on the phone."}];
+  MVCheck(@"device: a refusal is shown whole, in the Mac's language", [pane.answer.said isEqual:MVWord(@"On a phone, this could cut its connection to this Mac. Change it on the phone.")], pane.answer.said);
   [sent removeAllObjects];
   [pane set:@"location" to:@"41.0082, 28.9784"];
   NSDictionary *place = sent.firstObject[@"args"];

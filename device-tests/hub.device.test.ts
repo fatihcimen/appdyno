@@ -126,11 +126,13 @@ describe.runIf(serial)("the hub's Device pane", () => {
         why?: string;
       }[];
       expect(rows.find((r) => r.name === 'dark_mode')).not.toHaveProperty('why');
-      // what the platform has not got says why, as device_setting does
+      // what the platform has not got says why, as device_setting does, in a person's words
       expect(
         rows.find((r) => r.name === (android ? 'reduce_transparency' : 'animations'))?.why,
-      ).toMatch(
-        android ? /^Android has no reduce_transparency switch/ : /^iOS has no animations setting/,
+      ).toBe(
+        android
+          ? 'Android has no Reduce Transparency setting.'
+          : 'iOS has no animation speed setting. Use Reduce Motion.',
       );
       await quiet(1_000);
       await picture('device');
@@ -165,7 +167,7 @@ describe.runIf(serial)("the hub's Device pane", () => {
         }
       } else {
         for (const name of ['call', 'sms'])
-          expect(rows.find((r) => r.name === name)?.why).toMatch(/^a simulator has no telephony/);
+          expect(rows.find((r) => r.name === name)?.why).toMatch(/^A simulator cannot take/);
       }
       from = sent.length;
       // a real click, which brings the row it is on into view

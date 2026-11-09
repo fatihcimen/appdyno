@@ -6,7 +6,9 @@ import { must, startOf, type DeviceEvents } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { conditions, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { windowSends } from '../src/window-sends.js';
-import { CUTS_WHY, switchOf } from '../src/window-conditions.js';
+import { Adb, AndroidDevice } from '@appdyno/driver-android';
+import { IosPhoneDevice, IosSimulatorDevice } from '@appdyno/driver-apple';
+import { CUTS_WHY, personal, switchOf } from '../src/window-conditions.js';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 
 /** A device that reads back what was set, and refuses what its platform has not got. */
@@ -71,9 +73,10 @@ describe("a window's Device pane", () => {
     });
     expect(rowOf(list, 'animations')).toMatchObject({ on: true });
     expect(rowOf(list, 'reduce_motion')).toMatchObject({ on: true });
+    // in a person's words, where the driver's are an agent's
     expect(rowOf(list, 'thermal')).toEqual({
       name: 'thermal',
-      why: 'this tool sets no thermal state on Android',
+      why: 'Android has no thermal state to set. Only an iPhone has one.',
     });
     expect(rowOf(list, 'call')).toEqual({ name: 'call', why: 'a simulator has no telephony' });
     expect(rowOf(list, 'biometric')).toEqual({ name: 'biometric' });
@@ -154,5 +157,49 @@ describe("a window's Device pane", () => {
     expect(switchOf('animations', '0,0.0,0')).toBe(false);
     expect(switchOf('reduce_motion', '1,1,1')).toBe(false);
     expect(switchOf('dark_mode', 'auto')).toBeUndefined();
+  });
+
+  it("says each reason a driver gives for what the pane shows in a person's words, with no setting id", async () => {
+    const refusal = (asked: Promise<unknown>) =>
+      asked.then(
+        () => '',
+        (e: unknown) => (e instanceof Error ? e.message : String(e)),
+      );
+    const simulator = new IosSimulatorDevice('00000000-0000-4000-8000-000000000001');
+    const iphone = new IosPhoneDevice('00008110-0011223344556677');
+    const emulator = new AndroidDevice('emulator-5999', new Adb());
+    const phone = new AndroidDevice('R5PHONE0SERIAL', new Adb());
+    const said = [
+      ...(await Promise.all(
+        (['animations', 'network', 'battery', 'wifi', 'fold', 'thermal'] as const).map((name) =>
+          refusal(simulator.settings.get(name)),
+        ),
+      )),
+      must(await simulator.settings.cannotSet('proxy'), 'the proxy'),
+      ...(await Promise.all(
+        (['reduce_transparency', 'thermal'] as const).map((name) =>
+          refusal(emulator.settings.get(name)),
+        ),
+      )),
+      ...(await Promise.all(
+        (['animations', 'battery', 'fold', 'locale'] as const).map((name) =>
+          refusal(iphone.settings.get(name)),
+        ),
+      )),
+      ...(['call', 'sms'] as const).map((e) => simulator.events.cannot(e)),
+      ...(['biometric', 'call', 'sms'] as const).map((e) => phone.events.cannot(e)),
+      ...(['biometric', 'call', 'sms'] as const).map((e) => iphone.events.cannot(e)),
+      'this device does not fold: its states are default',
+      CUTS_WHY,
+    ].map((why) => must(why, 'a reason'));
+    iphone.close();
+    emulator.close();
+    phone.close();
+    simulator.close();
+    expect(said.filter((why) => !why)).toEqual([]);
+    // CUTS_WHY is the window's own, a person's already
+    expect(said.filter((why) => why !== CUTS_WHY && personal(why) === why)).toEqual([]);
+    expect(said.map(personal).filter((words) => /_|^(?!iOS)[a-z]/.test(words))).toEqual([]);
+    expect(personal('the device did something else')).toBe('the device did something else');
   });
 });

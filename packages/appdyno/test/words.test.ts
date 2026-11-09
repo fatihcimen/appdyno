@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { must, NEEDS } from '@appdyno/core';
-import { PERSON_HINTS } from '@appdyno/hub';
+import { PERSON_HINTS, PERSON_REASONS } from '@appdyno/hub';
 import { TRIED } from '../src/hub-services.js';
 
 const viewer = join(import.meta.dirname, '../../../mac/Viewer');
@@ -73,6 +73,10 @@ describe('the table of words', () => {
 
   it('has what the Performance pane says to do after a measure is refused, in the words it says it in', () => {
     expect([...PERSON_HINTS.values()].filter((w) => !known(w))).toEqual([]);
+  });
+
+  it('has why the Device pane cannot change a condition, in the words it says it in', () => {
+    expect(PERSON_REASONS.map(([, words]) => words).filter((w) => !known(w))).toEqual([]);
   });
 
   it('has what a live reading says of a number it has not got', () => {

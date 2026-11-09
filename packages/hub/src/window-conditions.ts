@@ -10,7 +10,8 @@ import { conditions, readCondition, type Session } from '@appdyno/ops';
 
 /** What a phone's way to this Mac may go through: its Wi-Fi, adb over Wi-Fi, a proxy between. */
 const CUTS: readonly string[] = ['wifi', 'airplane', 'mobile_data', 'proxy'];
-export const CUTS_WHY = 'on a phone, this can cut the link to it: change it on the phone';
+export const CUTS_WHY =
+  'On a phone, this could cut its connection to this Mac. Change it on the phone.';
 const EVENTS: readonly DeviceEvent[] = ['biometric', 'call', 'sms'];
 const SWITCHES: readonly string[] = [
   'dark_mode',
@@ -36,6 +37,62 @@ export function switchOf(name: string, value: string) {
   const still = scales.every((x) => Number(x) === 0);
   return name === 'reduce_motion' ? still : !still;
 }
+
+/**
+ * Why a device cannot change a condition, in a person's words: a driver says it to whoever calls its tool, and here that
+ * is a person at a window. What none of these takes is said in the op's own words; an MCP answer is never changed.
+ */
+export const PERSON_REASONS: readonly (readonly [RegExp, string])[] = [
+  [/^iOS has no animations setting/, 'iOS has no animation speed setting. Use Reduce Motion.'],
+  [
+    /^a simulator uses the Mac's network/,
+    "A simulator uses the Mac's network. Slow it down with Network Link Conditioner on the Mac.",
+  ],
+  [/^a simulator has no battery/, 'A simulator has no battery to set.'],
+  [/^a simulator has no radios/, "A simulator has no radios. It uses the Mac's network."],
+  [/^simctl has no fold pose/, 'A simulator does not fold.'],
+  [
+    /^a simulator has no thermal state/,
+    'A simulator has no thermal state. Only an iPhone has one.',
+  ],
+  [
+    /^a simulator follows the Mac's proxy/,
+    "A simulator uses the Mac's proxy. Change it on the Mac.",
+  ],
+  [/^a simulator has no telephony: it cannot take a call/, 'A simulator cannot take calls.'],
+  [
+    /^a simulator has no telephony: it cannot take an SMS/,
+    'A simulator cannot take text messages.',
+  ],
+  [/^Android has no reduce_transparency switch/, 'Android has no Reduce Transparency setting.'],
+  [
+    /^this tool sets no thermal state on Android/,
+    'Android has no thermal state to set. Only an iPhone has one.',
+  ],
+  [/^this device (does not fold|has no fold states)/, 'This device does not fold.'],
+  [/^this phone has Android below 13/, 'A phone needs Android 13 or later to slow its network.'],
+  [/^a phone has no calls/, 'Only an emulator takes a call from here.'],
+  [/^a phone has no SMS/, 'Only an emulator takes a text message from here.'],
+  [
+    /^an Android phone takes a fingerprint only from a person/,
+    'Only an emulator takes a fingerprint from here. On a phone, use your own finger.',
+  ],
+  [/^an iPhone has no \w+ switch/, "This can't be changed on an iPhone from here."],
+  [/^an iPhone folds only/, 'An iPhone does not fold.'],
+  [/^an iPhone's language is set on the phone/, "Set an iPhone's language on the phone itself."],
+  [
+    /^an iPhone takes biometrics only from a person/,
+    'An iPhone takes Face ID or Touch ID only from a person.',
+  ],
+  [/^an iPhone takes calls only/, 'An iPhone takes calls only from its carrier.'],
+  [/^an iPhone takes messages only/, 'An iPhone takes text messages only from its carrier.'],
+  [/^this build has no phone stream/, "This build can't set an iPhone's network or thermal state."],
+  [/^this iPhone offers no \w+ condition/, 'This iPhone does not offer this condition.'],
+];
+
+/** A reason as a person reads it, where it is one of those; else as the op said it. */
+export const personal = (why: string) =>
+  PERSON_REASONS.find(([said]) => said.test(why))?.[1] ?? why;
 
 /** What an op answered, and its data where it gave any. */
 type Called = { answer: { ok: boolean; text: string; hint?: string }; data: unknown };
@@ -67,9 +124,15 @@ export function conditionSends(
       const on = SWITCHES.includes(name) ? switchOf(name, value) : undefined;
       // read, and yet not set from here: a simulator follows the Mac's proxy
       const why = await s.device.settings.cannotSet?.(name);
-      return { name, value, ...(on !== undefined && { on }), ...(why && { why }), ...also };
+      return {
+        name,
+        value,
+        ...(on !== undefined && { on }),
+        ...(why && { why: personal(why) }),
+        ...also,
+      };
     } catch (e) {
-      return { name, why: e instanceof Error ? e.message : String(e), ...also };
+      return { name, why: personal(e instanceof Error ? e.message : String(e)), ...also };
     }
   };
 
@@ -81,7 +144,7 @@ export function conditionSends(
   const events = () =>
     EVENTS.map((name) => {
       const why = device.events.cannot?.(name);
-      return { name, ...(why && { why }) };
+      return { name, ...(why && { why: personal(why) }) };
     });
 
   const given = (m: ViewerMessage) =>
@@ -109,6 +172,8 @@ export function conditionSends(
       const moved = answer.ok && !!(data as { changed?: unknown } | undefined)?.changed;
       tell('device', {
         ...answer,
+        // a refusal the pane has words for is said in them
+        text: personal(answer.text),
         ...(setting && { moved, conditions: await rows([setting]) }),
       });
     },

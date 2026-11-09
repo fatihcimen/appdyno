@@ -1,5 +1,5 @@
-// The Device pane's words: its rows, its choices, its answers, and why a device cannot change a condition, as each driver
-// says it, begun as a sentence. The same table as `WordsTable.m`, in a file of its own for its size.
+// The Device pane's words: its rows, its choices, its answers, and why a device cannot change a condition, in a person's
+// words. The same table as `WordsTable.m`, in a file of its own for its size.
 #import "Words.h"
 
 const MVWordRow MVWordTableDevice[] = {
@@ -18,7 +18,7 @@ const MVWordRow MVWordTableDevice[] = {
     {"Wi-Fi", "Wi-Fi"},
     {"Mobile Data", "Mobil Veri"},
     {"Airplane Mode", "Uçak Modu"},
-    {"Proxy", "Vekil Sunucu"},
+    {"Proxy", "Proxy"},
     {"Battery Level", "Pil Düzeyi"},
     {"Thermal State", "Isıl Durum"},
     {"Fold", "Katlama"},
@@ -72,32 +72,32 @@ const MVWordRow MVWordTableDevice[] = {
     {"Setting the location", "Konum ayarlanıyor"},
     {"Putting back what changed", "Değişenler geri alınıyor"},
     {"Give a latitude and a longitude, such as 41.0082, 28.9784", "41.0082, 28.9784 gibi bir enlem ve boylam verin"},
-    // why a device cannot change a condition, as its driver says it, begun as a sentence
-    {"On a phone, this can cut the link to it: change it on the phone", "Bir telefonda bu, ona giden bağlantıyı kesebilir: telefonun kendisinde değiştirin"},
-    {"iOS has no animations setting: use reduce_motion", "iOS'ta animasyon ayarı yok: reduce_motion kullanın"},
-    {"A simulator uses the Mac's network: shape it with the Network Link Conditioner on the Mac", "Simülatör Mac'in ağını kullanır: ağı Mac'teki Network Link Conditioner ile biçimlendirin"},
-    {"A simulator has no battery to set: simctl status_bar only draws one", "Simülatörün ayarlanacak bir pili yok: simctl status_bar yalnızca pil çizer"},
-    {"A simulator has no radios: it uses the Mac's network", "Simülatörün telsizleri yok: Mac'in ağını kullanır"},
-    {"Simctl has no fold pose (its ui and io options name none)", "simctl'de katlama duruşu yok (ui ve io seçenekleri hiçbirini adlandırmaz)"},
-    {"A simulator has no thermal state of its own: Xcode's conditions are a phone's", "Simülatörün kendine ait ısıl durumu yok: Xcode'un koşulları telefonlar içindir"},
-    {"A simulator follows the Mac's proxy, now %@: set it on the Mac (in the proxy's own settings)", "Simülatör Mac'in vekil sunucusunu izler, şu an %@: onu Mac'te ayarlayın (vekil sunucunun kendi ayarlarında)"},
-    {"A simulator has no telephony: it cannot take a call", "Simülatörün telefon hattı yok: arama alamaz"},
-    {"A simulator has no telephony: it cannot take an SMS", "Simülatörün telefon hattı yok: SMS alamaz"},
-    {"Android has no reduce_transparency switch: its blurs are a developer option", "Android'de reduce_transparency anahtarı yok: bulanıklıkları bir geliştirici seçeneğidir"},
-    {"This tool sets no thermal state on Android: only an iPhone's, through Xcode's conditions", "Bu araç Android'de ısıl durum ayarlamaz: yalnızca bir iPhone'unkini, Xcode'un koşullarıyla"},
-    {"This device does not fold: its states are %@", "Bu cihaz katlanmaz: durumları %@"},
-    {"This device has no fold states (cmd device_state, API 31+): %@", "Bu cihazın katlama durumları yok (cmd device_state, API 31+): %@"},
-    {"This phone has Android below 13: it has no network shaping, which only an emulator's console and a cap of Android 13's give", "Bu telefonda Android 13'ten eski bir sürüm var: ağ biçimlendirmesi yok; bunu yalnızca bir emülatörün konsolu ve Android 13'ün sınırı verir"},
-    {"A phone has no calls: only an emulator console has", "Telefona arama gönderilemez: bunu yalnızca bir emülatörün konsolu yapar"},
-    {"A phone has no SMS: only an emulator console has", "Telefona SMS gönderilemez: bunu yalnızca bir emülatörün konsolu yapar"},
-    {"An Android phone takes a fingerprint only from a person: only an emulator has a sensor to touch", "Bir Android telefon parmak izini yalnızca bir kişiden alır: dokunulacak sensör yalnızca emülatörde var"},
-    {"An iPhone has no %@ switch this tool can reach", "Bir iPhone'da bu aracın ulaşabileceği bir %@ anahtarı yok"},
-    {"An iPhone folds only in a hand", "Bir iPhone yalnızca elde katlanır"},
-    {"An iPhone's language is set on the phone: give app, held for its launches by this tool", "Bir iPhone'un dili telefonda ayarlanır: app verin; bu aracın açılışlarında tutulur"},
-    {"An iPhone takes biometrics only from a person: devicectl reads it as supporting no simulation", "Bir iPhone biyometriyi yalnızca bir kişiden alır: devicectl onu benzetimi desteklemiyor olarak okur"},
-    {"An iPhone takes calls only from the network", "Bir iPhone aramaları yalnızca şebekeden alır"},
-    {"An iPhone takes messages only from the network", "Bir iPhone mesajları yalnızca şebekeden alır"},
-    {"This build has no phone stream, which an iPhone's network and thermal conditions go through", "Bu derlemede telefon akışı yok; bir iPhone'un ağ ve ısıl koşulları ondan geçer"},
+    // why a device cannot change a condition, in a person's words: the hub's PERSON_REASONS, and its own for a phone
+    {"On a phone, this could cut its connection to this Mac. Change it on the phone.", "Bir telefonda bu, telefonun bu Mac'e bağlantısını kesebilir. Telefonun kendisinde değiştirin."},
+    {"iOS has no animation speed setting. Use Reduce Motion.", "iOS'ta animasyon hızı ayarı yok. Hareketi Azalt'ı kullanın."},
+    {"A simulator uses the Mac's network. Slow it down with Network Link Conditioner on the Mac.", "Simülatör Mac'in ağını kullanır. Mac'te Network Link Conditioner ile yavaşlatın."},
+    {"A simulator has no battery to set.", "Simülatörün ayarlanacak bir pili yok."},
+    {"A simulator has no radios. It uses the Mac's network.", "Simülatörün telsizleri yok. Mac'in ağını kullanır."},
+    {"A simulator does not fold.", "Simülatör katlanmaz."},
+    {"A simulator has no thermal state. Only an iPhone has one.", "Simülatörün ısıl durumu yok. Yalnızca iPhone'da olur."},
+    {"A simulator uses the Mac's proxy. Change it on the Mac.", "Simülatör Mac'in proxy'sini kullanır. Mac'te değiştirin."},
+    {"A simulator cannot take calls.", "Simülatör arama alamaz."},
+    {"A simulator cannot take text messages.", "Simülatör kısa mesaj alamaz."},
+    {"Android has no Reduce Transparency setting.", "Android'de Saydamlığı Azalt ayarı yok."},
+    {"Android has no thermal state to set. Only an iPhone has one.", "Android'de ayarlanacak bir ısıl durum yok. Yalnızca iPhone'da olur."},
+    {"This device does not fold.", "Bu cihaz katlanmaz."},
+    {"A phone needs Android 13 or later to slow its network.", "Bir telefonun ağını yavaşlatmak için Android 13 ya da sonrası gerekir."},
+    {"Only an emulator takes a call from here.", "Buradan yalnızca bir emülatör arama alır."},
+    {"Only an emulator takes a text message from here.", "Buradan yalnızca bir emülatör kısa mesaj alır."},
+    {"Only an emulator takes a fingerprint from here. On a phone, use your own finger.", "Buradan yalnızca bir emülatör parmak izi alır. Telefonda kendi parmağınızı kullanın."},
+    {"This can't be changed on an iPhone from here.", "Bu, bir iPhone'da buradan değiştirilemez."},
+    {"An iPhone does not fold.", "iPhone katlanmaz."},
+    {"Set an iPhone's language on the phone itself.", "iPhone'un dilini telefonun kendisinde ayarlayın."},
+    {"An iPhone takes Face ID or Touch ID only from a person.", "iPhone, Face ID ya da Touch ID'yi yalnızca bir kişiden alır."},
+    {"An iPhone takes calls only from its carrier.", "iPhone aramaları yalnızca operatöründen alır."},
+    {"An iPhone takes text messages only from its carrier.", "iPhone kısa mesajları yalnızca operatöründen alır."},
+    {"This build can't set an iPhone's network or thermal state.", "Bu derleme bir iPhone'un ağını ya da ısıl durumunu ayarlayamaz."},
+    {"This iPhone does not offer this condition.", "Bu iPhone bu koşulu sunmuyor."},
 };
 
 const size_t MVWordCountDevice = sizeof MVWordTableDevice / sizeof MVWordTableDevice[0];
