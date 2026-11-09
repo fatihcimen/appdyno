@@ -117,6 +117,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
   NSLayoutConstraint *_fit;
   NSNumber *_pictureRate;
   double _held, _heldSince;
+  NSString *_heldApp;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target {
@@ -193,6 +194,9 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
   // a reading sent as a measure began is of before it, and the measure has the device to itself
   if (_measuring) return;
   NSDictionary *sample = message[@"sample"];
+  // another app in front holds a rate of its own: how long the last one held says nothing of it
+  if (![(sample[@"app"] ?: @"") isEqual:_heldApp ?: @""]) _heldSince = 0;
+  _heldApp = sample[@"app"];
   for (MVTrend *trend in _trends) {
     NSNumber *value = MVReadingOf(sample, trend.field, _pictureRate);
     // a person's words: what a tool names by its id is here only the app in front

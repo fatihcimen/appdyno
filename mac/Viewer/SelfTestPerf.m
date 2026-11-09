@@ -19,6 +19,18 @@ static void checkDisplayRate(void) {
   MVCheck(@"performance: an iPhone's display rate is called no app's", [title.stringValue isEqual:@"Frame rate"], title.stringValue);
 }
 
+/// The fixture opened 4 s before read Steady at 19 fps for 231 s, the home screen's time before it.
+static void checkHeldByApp(void) {
+  NSWindow *window;
+  MVPerfPane *pane = tallPane(&window);
+  NSTextField *sentence = [pane valueForKey:@"_sentence"];
+  [pane show:@{@"sample": @{@"at": @4, @"fps": @19, @"app": @"com.apple.springboard"}}];
+  [pane setValue:@(MVNowMs() - 231000) forKey:@"_heldSince"];
+  [pane show:@{@"sample": @{@"at": @5, @"fps": @19, @"app": @"dev.appdyno.fixture"}}];
+  MVCheck(@"performance: an app just come to the front has held its rate for no time yet", [sentence.stringValue isEqual:@"Moving at 19 fps"], sentence.stringValue);
+}
+
 void MVCheckPerfPane(void) {
   checkDisplayRate();
+  checkHeldByApp();
 }
