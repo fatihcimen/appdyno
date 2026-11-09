@@ -293,6 +293,7 @@ static NSString *stateWords(NSDictionary *device) {
   _name.stringValue = device ? MVNamedParts(device[@"name"] ?: @"")[0] : @"";
   _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : @"";
   _start.title = MVWord(elsewhere ? @"Close That Window" : @"Start");
+  [((MVRoomView *)_room).slot sayEmpty:elsewhere ? @"Its numbers are in its own window." : @"Choose a running device to see its numbers."];
   if (device) [_bare setName:MVDeviceRow(device).title about:MVDeviceRow(device).detail];
   else [_bare setName:@"appdyno" about:nil];
   _start.hidden = !device || (running && !elsewhere) || [device[@"kind"] isEqual:@"phone"];

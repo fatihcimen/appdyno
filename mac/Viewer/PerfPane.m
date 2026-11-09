@@ -114,6 +114,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
   NSArray<NSDictionary *> *_past;
   BOOL _measured, _measuring;
   MVList *_results;
+  NSLayoutConstraint *_fit;
   NSNumber *_pictureRate;
   double _held, _heldSince;
 }
@@ -155,6 +156,8 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     [stack setCustomSpacing:kBetween afterView:_app];
     [stack setCustomSpacing:kBetween afterView:_hint];
     [_resultsCard setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+    _fit = [_resultsCard.heightAnchor constraintLessThanOrEqualToConstant:kRowHeight];
+    _fit.active = YES;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
     [NSLayoutConstraint activateConstraints:@[
@@ -253,7 +256,9 @@ static MVRow *rowOfResult(NSDictionary *result) {
   _results.rows = rows;
   _none.hidden = _results.rows.count > 0;
   _resultsCard.hidden = !_none.hidden;
-  _slack.hidden = _none.hidden;
+  // the card as tall as its rows and no taller: what is left stands under it, not empty inside it
+  NSTableView *table = (NSTableView *)_results.documentView;
+  _fit.constant = (table.numberOfRows ? NSMaxY([table rectOfRow:table.numberOfRows - 1]) : 0) + 4;
   // only what was just measured is news: a window opening on old results shows them
   if (first && _none.hidden && _measured) MVSlideIn(_resultsCard, kFirstFrom);
 }

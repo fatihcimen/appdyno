@@ -273,6 +273,8 @@ static const double MVInspectorWidth = 320;
 - (void)hold:(nullable NSView *)pane onMove:(nullable void (^)(void))onMove;
 /// A window under `least` wide goes without it, and has it back when it is wide enough again.
 - (void)fitWindow:(double)wide least:(double)least;
+/// What stands in it with no device's panes: why, in words.
+- (void)sayEmpty:(NSString *)words;
 @end
 
 /// A side of a window closes while the window is too narrow for it, and opens again only if that is what closed it.
@@ -340,6 +342,9 @@ MVShow MVShowOf(BOOL focus, BOOL behind);
 void MVPresent(MVOffscreenWindow *window, MVShow how);
 
 /// The sheet that makes a new simulator or emulator, from what the parent says can be made.
+/// A system a new device may run, as a person reads it.
+NSString *MVSystemName(NSDictionary *row);
+
 @interface MVNewDevice : NSObject
 - (void)askIn:(NSWindow *)window kind:(NSString *)kind choices:(NSDictionary *)choices;
 - (void)create:(nullable id)sender;

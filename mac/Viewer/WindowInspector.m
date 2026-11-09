@@ -49,6 +49,10 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay) {
   if (_onMove) _onMove();
 }
 
+- (void)sayEmpty:(NSString *)words {
+  _empty.stringValue = words;
+}
+
 - (void)fitWindow:(double)wide least:(double)least {
   MVGiveWay(_item, wide < least, &_gaveWay);
 }

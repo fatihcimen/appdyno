@@ -190,6 +190,23 @@ static void checkRates(void) {
   MVCheck(@"performance: one it does not is the picture's, as the capsule's is", [title.stringValue isEqual:@"Picture frame rate"] && [[pane shownFor:@"fps"] isEqual:@"29 fps"], title.stringValue);
 }
 
+/// w30, e16 and w29: a sheet's raw system names, a card with room under one row, and an Inspector that said to choose a
+/// device standing in a window of its own.
+static void checkSheetAndCard(void) {
+  NSString *system = MVSystemName(@{@"id": @"system-images;android-36;google_apis_playstore;arm64-v8a", @"name": @"API 36, google apis playstore"});
+  MVCheck(@"new device: an Android system says its version, its API and what it comes with", [system isEqual:@"Android 16 (API 36), Google Play"], system);
+  MVCheck(@"new device: an iOS runtime keeps its name", [MVSystemName(@{@"id": @"com.apple.CoreSimulator.SimRuntime.iOS-27-2", @"name": @"iOS 27.2"}) isEqual:@"iOS 27.2"], nil);
+  NSWindow *holder;
+  MVPerfPane *pane = newPane();
+  NSView *card = resultsCardOf(pane, &holder);
+  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms"}];
+  [holder layoutIfNeeded];
+  MVCheck(@"performance: a card of one result is as tall as its row", card.frame.size.height < 80, [NSString stringWithFormat:@"%.0f", card.frame.size.height]);
+  MVInspectorSlot *slot = [MVInspectorSlot new];
+  [slot sayEmpty:@"Its numbers are in its own window."];
+  MVCheck(@"inspector: it says where a device's numbers are", [[[slot valueForKey:@"_empty"] stringValue] isEqual:@"Its numbers are in its own window."], nil);
+}
+
 static void checkPair(void) {
   MVStatusLine *line = [MVStatusLine new];
   line.name = @"Phone";
@@ -373,6 +390,7 @@ void MVCheckFrame(void) {
   checkFirstResult();
   checkHeldSentence();
   checkRates();
+  checkSheetAndCard();
   checkPair();
   checkClicks();
   checkMenus();

@@ -205,6 +205,7 @@ const MVWordRow MVWordTable[] = {
     {"Not verified yet: may open in the browser", "Henüz doğrulanmadı: tarayıcıda açılabilir"},
     {"Failed verification: opens in the browser", "Doğrulanamadı: tarayıcıda açılır"},
     {"Verification: %@", "Doğrulama: %@"},
+    {"Its numbers are in its own window.", "Sayıları kendi penceresinde."},
     {"Launched %@", "%@ başlatıldı"},
     {"Quit %@", "%@ kapatıldı"},
     {"An iPhone's installed app is not read from here: list the links of its build on a simulator", "Bir iPhone'a kurulu uygulama buradan okunmaz: derlemesinin bağlantılarını bir simülatörde listeleyin"},
