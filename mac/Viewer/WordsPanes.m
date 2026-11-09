@@ -16,7 +16,6 @@ const MVWordRow MVWordTablePanes[] = {
     {"Search the log", "Logda ara"},
     {"Pause", "Duraklat"},
     {"Resume", "Sürdür"},
-    {"Clear", "Temizle"},
     {"Copies the lines chosen, or all that show", "Seçilen satırları, seçim yoksa görünenlerin hepsini kopyalar"},
     {"Empties this view: the device keeps its log", "Yalnızca bu görünümü boşaltır: cihaz logunu saklar"},
     {"The app's log", "Uygulamanın logu"},
@@ -35,7 +34,6 @@ const MVWordRow MVWordTablePanes[] = {
     {"left out %@ of another simulator, and %@ that name no simulator, so none could be told to be this one's", "başka bir simülatörün %1$@ raporu ve simülatör adı geçmeyen %2$@ rapor dışarıda bırakıldı: bunların hiçbirinin bu simülatöre ait olduğu söylenemez"},
     // Network
     {"Probe", "Sonda"},
-    {"Proxy", "Vekil sunucu"},
     {"Bytes", "Baytlar"},
     {"Packets", "Paketler"},
     {"Restarts the app with a probe in it, then lists each request it makes through URLSession: method, address, status, time and size.", "Uygulamayı içinde bir sondayla yeniden başlatır, sonra URLSession ile yaptığı her isteği listeler: yöntem, adres, durum, süre ve boyut."},
