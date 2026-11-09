@@ -130,6 +130,12 @@ The window shows what is pressed most, and the rest is a click away in **More Co
 
 The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, and gives way by itself under 1,100 points wide, and the sidebar under 860, each back when the window is wide again. Its panes stand as symbols in a row of their own across its top, each named under the pointer and to a screen reader, and the chosen one's name stands on a line under them. It stands open in the hub, and closed in a window of its own, which grows to take it. **Performance** says in one sentence how the screen is, then the frame rate, CPU and memory with a minute of each, the measures, and **Results**: what was measured on this device before, for the app in front, each judged by the gate's method against what the gate would hold as a reference: the clean runs before it, of the same kind of build. It reads as `Regression +553 ms` or `Could not judge: 3 of 5 samples`. A run taken from a window has its encoder at work on the device, so it enters no reference, and one that reads worse says `Could not judge: measured with a mirror running`; a regression is found in runs with no window open. It reads files only, so a phone is not touched for it. **Flows** records what a person does, and says what is under the pointer. **Apps** lists, launches, quits and removes, the last after a sheet that says what goes with it. On iOS the list holds the system's apps, as a new simulator has no other; on Android, only what was installed. **Activity** tells what an agent did as runs of work, `Worked for 40 s · 23 calls`, opening to `Tapped Sign in`.
 
+**Logs** shows the log of the app in front as it comes, the lines `logs` reads, with the same redaction: a token, a password or a key in a line is hidden. It follows the app as Performance does, asking every 5 s what is in front, and starts over for another app; one that is not a person's own, or not on the server's list of apps, is said by name and nothing is read. It has a level from Verbose to Errors, a search, Pause and Resume, which reads on from where it stopped, Copy, which takes the whole lines a selection touches, and Clear, which empties the view and never the device's log. **Crashes**, beside it, lists the app's last 5 reports as `crashes` gives them, each opening to its first lines and the path of the whole report on this Mac. The log is read every 2 s only while the pane shows and is not paused, and nothing is left running: an iPhone's running app has no log this Mac can read, and the pane says so, with what can.
+
+**Network** shows the app's requests as `network` gives them, by the capture that op keeps for the device, so that a capture an agent started shows here and one started here shows to an agent, redacted alike: method, address, status, time and size, and the whole of one chosen. It offers only the ways this device has: on a simulator the probe, which restarts the app and so is refused while a recording or a measure runs, and on Android bytes, and packets from Android 14 where the build registers them, both counting with no addresses. A proxy is offered only where the device already goes through one, and its list is read where Proxyman runs it: no window sets a proxy, on any device. Where nothing lists requests, on an iPhone or an Android with no proxy, the pane says what a person needs. A probe's list is read every 3 s while the pane shows, and any other on Read Again. A capture started here stops as the window closes.
+
+**Accessibility** shows what `audit` finds on the screen shown, by kind, each kind counted. It is the audit that names an element's contrast under the pointer, of every kind while the pane shows: one audit, never two. The screen is read while the pane shows, and audited once it has stayed the same for a second, as an audit holds the device's queue for seconds; a new screen is audited again, and **Check Again** audits the one shown. No audit runs during a recording, as a click would then be named by the screen it made, and the pane says so. An issue chosen is marked on the device's picture, as the element under the pointer is.
+
 **Links** opens a link on the device by `open_link`, the tool an agent calls, under the same policy: a web link, a universal link or App Link, or an app's own scheme. **Open Link…** (⌘O), in the File menu and in More Controls, shows it with its field ready, and Return sends. A second field names the app to open it in, filled with the app in front where the device says it is a person's own, and checked against the server's list of apps: an iPhone opens a link only in a named app, and elsewhere an empty field leaves the choice to the system. Its answer comes as it goes, and a refusal is shown whole, with what to do. The links opened stay for that device, the last eight, newest first, and under them stand the links the app in the app field opens, as `open_link` `links` lists them, with each kind and a domain's state. One chosen stands in the field, a filter's `*` left for a person to fill. A link a person sends is no agent's: the capsule does not say an AI client drives, and Activity does not list it. The first one opens a session on the device, as an agent's first call does. A simulator asks before an app's scheme first opens it, and the answer says so, as nothing has opened until a person answers it in the window. Run from a window kept behind on an iPhone 17 Pro simulator with iOS 27.2 and an API 34 emulator, at loads of 7 to 57: `appdyno-fixture://open/form` opened the fixture at its form, and `javascript:alert(1)` was refused, with nothing opened. The same on an iPhone 13 Pro Max with iOS 27.2, the fixture named in the app field, and on a Samsung Galaxy A52 with Android 14 over USB, at loads of 6 to 11.
 
 **Push** sends a push to an app by `push`, the tool an agent calls. **Send Push…** (⇧⌘P), in the File menu and in More Controls, shows it, and it asks the op each time what this device takes. Each type the op lists is offered, and one the device does not take stands with why, and cannot be chosen. The fields follow the type, as the op lists them, and **Payload** starts from the op's own template for it, sent in place of the fields. The app is the one in front where the device says it is a person's own, or the one typed, and the types are those of that app, asked again once a person is done typing one, as an Android app's build may take another route. Return in a field sends, and the answer comes as a link's does, a refusal whole. Once a person has set APNs or FCM up with `appdyno push setup`, a route by it takes a token the app does not print: a field under the route, unseen as it is typed, with the kinds of token the routes go by, the kind of the chosen type first, keeps one for the app in the pane for this session only, as the pane says, by no tool an agent calls, and nothing says it back, logs it or writes it down; a push of that kind then goes by it. Run from a window kept behind on an iPhone 17 Pro simulator with iOS 27.2 at loads of 5 to 12, with made-up APNs credentials and the push sent to the test in Apple's place: the field stood with them and was gone without, and a rich push went by the token typed. Run from a window kept behind at loads of 40 to 52: on an iPhone 17 Pro simulator with iOS 27.2, just erased, an alert with a title and one data key reached the fixture's code once a person had allowed its notifications in the window; on an API 34 emulator and on the Samsung a tapped push opened the fixture with its two data keys as extras, which it showed. On the iPhone the pane listed each type with the iPhone's own reason, and so offered none to send.
@@ -388,40 +394,44 @@ A viewer and its parent speak one JSON object a line, on the viewer's stdin and 
 
 What it takes:
 
-| Name         | What it asks                                       |
-| ------------ | -------------------------------------------------- |
-| `activity`   | A line for the Activity pane.                      |
-| `agent`      | Who drives the device now, and by what tool.       |
-| `answer`     | What came of a link or a push sent from a pane.    |
-| `apps`       | What the Apps pane lists.                          |
-| `attach`     | Show this source.                                  |
-| `banner`     | Ask a person for something, or stop asking.        |
-| `clients`    | What the AI Clients pane shows.                    |
-| `copied`     | Put this image on the pasteboard.                  |
-| `copyText`   | Put this text on the pasteboard.                   |
-| `detach`     | Let the source go; the window stays.               |
-| `element`    | What is under the pointer.                         |
-| `flow`       | The steps of the recording.                        |
-| `hub`        | The hub's list and what the chosen device shows.   |
-| `mark`       | Time from now to the next changed frame.           |
-| `measured`   | The result of a measure.                           |
-| `measuring`  | A line on a measure under way.                     |
-| `note`       | A line for a person.                               |
-| `pair`       | The other device of a pair.                        |
-| `perf`       | Live numbers.                                      |
-| `poke`       | What a test does to the window, as a person would. |
-| `quit`       | Close and exit.                                    |
-| `raise`      | Come to the front, at a person's word.             |
-| `record`     | Record the picture to this file.                   |
-| `recording`  | Show that a recording runs.                        |
-| `recordStop` | End the recording.                                 |
-| `results`    | What was measured on this device before.           |
-| `snapshot`   | Write the window to this file.                     |
-| `status`     | The state to show.                                 |
-| `tick`       | A new frame in the shared file.                    |
-| `touchAt`    | Show where a touch landed.                         |
-| `turns`      | Quarter turns that stand the picture up.           |
-| `watch`      | Read the motion of the next frames.                |
+| Name         | What it asks                                                  |
+| ------------ | ------------------------------------------------------------- |
+| `activity`   | A line for the Activity pane.                                 |
+| `agent`      | Who drives the device now, and by what tool.                  |
+| `answer`     | What came of a link, a push or a capture asked for in a pane. |
+| `apps`       | What the Apps pane lists.                                     |
+| `attach`     | Show this source.                                             |
+| `audit`      | What an audit found on the screen shown, or where it stands.  |
+| `banner`     | Ask a person for something, or stop asking.                   |
+| `clients`    | What the AI Clients pane shows.                               |
+| `copied`     | Put this image on the pasteboard.                             |
+| `copyText`   | Put this text on the pasteboard.                              |
+| `crashes`    | The app's crash reports, for the Logs pane.                   |
+| `detach`     | Let the source go; the window stays.                          |
+| `element`    | What is under the pointer.                                    |
+| `flow`       | The steps of the recording.                                   |
+| `hub`        | The hub's list and what the chosen device shows.              |
+| `logs`       | New lines of the app's log, or a new start.                   |
+| `mark`       | Time from now to the next changed frame.                      |
+| `measured`   | The result of a measure.                                      |
+| `measuring`  | A line on a measure under way.                                |
+| `network`    | The capture, what it saw and the ways the device has.         |
+| `note`       | A line for a person.                                          |
+| `pair`       | The other device of a pair.                                   |
+| `perf`       | Live numbers.                                                 |
+| `poke`       | What a test does to the window, as a person would.            |
+| `quit`       | Close and exit.                                               |
+| `raise`      | Come to the front, at a person's word.                        |
+| `record`     | Record the picture to this file.                              |
+| `recording`  | Show that a recording runs.                                   |
+| `recordStop` | End the recording.                                            |
+| `results`    | What was measured on this device before.                      |
+| `snapshot`   | Write the window to this file.                                |
+| `status`     | The state to show.                                            |
+| `tick`       | A new frame in the shared file.                               |
+| `touchAt`    | Show where a touch landed.                                    |
+| `turns`      | Quarter turns that stand the picture up.                      |
+| `watch`      | Read the motion of the next frames.                           |
 
 What it says:
 
@@ -443,6 +453,7 @@ What it says:
 | `lost`      | The stream was lost, and if it can come back.      |
 | `marked`    | The answer to `mark`.                              |
 | `needKey`   | The decoder wants a keyframe.                      |
+| `paneWatch` | A pane that reads the device shows, or no longer.  |
 | `perfWatch` | The numbers are wanted, or no longer.              |
 | `pick`      | A click on an element, in the inspector.           |
 | `ready`     | The process is up.                                 |

@@ -130,6 +130,12 @@ Pencere en çok basılanları gösterir; geri kalanı **Diğer Denetimler** içi
 
 Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve kenardan kenaradır; pencere 1.100 noktanın altına daralınca kendiliğinden çekilir, kenar çubuğu da 860'ın altında; pencere yeniden genişleyince ikisi de geri gelir. Bölmeleri üst kenarında kendi satırlarında simgeler olarak durur; her biri imlecin altında ve ekran okuyucuya adıyla söylenir, seçilenin adı da altlarında kendi satırında durur. Hub'da açık, kendi penceresinde kapalı durur; o pencere de Denetçi'ye yer açmak için büyür. **Performans** ekranın nasıl olduğunu tek cümleyle söyler, sonra kare hızını, CPU'yu ve belleği her birinin bir dakikasıyla, ölçümleri ve **Sonuçlar**'ı gösterir: bu cihazda öndeki uygulama için daha önce ölçülenler; her biri kapının yöntemiyle, kapının referans olarak tutacağı şeye karşı değerlendirilir: aynı türde build'in kendisinden önceki temiz çalıştırmaları. `Regression +553 ms` ya da `Could not judge: 3 of 5 samples` diye okunur. Bir pencereden alınan bir çalıştırmada kodlayıcı cihazda çalışmaktadır, bu yüzden hiçbir referansa girmez; daha kötü okunan böyle bir çalıştırma `Could not judge: measured with a mirror running` der; bir gerileme, pencere açık olmayan çalıştırmalarda bulunur. Yalnızca dosya okur, bu yüzden bunun için bir telefona dokunulmaz. **Akışlar**, bir kişinin yaptığını kaydeder ve imlecin altında ne olduğunu söyler. **Uygulamalar** listeler, açar, kapatır ve kaldırır; sonuncusunu, onunla birlikte neyin gittiğini söyleyen bir sayfadan sonra yapar. iOS'ta liste sistemin uygulamalarını içerir, çünkü yeni bir simülatörde başkası yoktur; Android'de yalnızca kurulmuş olanları. **Etkinlik**, bir ajanın yaptığını iş parçaları halinde anlatır, `Worked for 40 s · 23 calls`, açılınca `Tapped Sign in`.
 
+**Loglar**, öndeki uygulamanın logunu geldikçe gösterir: `logs` aracının okuduğu satırları, aynı gizlemeyle; bir satırdaki belirteç, parola ya da anahtar gizlenir. Uygulamayı Performans gibi izler, öndekini her 5 sn'de bir sorar ve başka bir uygulama için baştan başlar; kişinin kendi uygulaması olmayan ya da sunucunun uygulama listesinde bulunmayan bir uygulama adıyla söylenir ve hiçbir şey okunmaz. Ayrıntılı'dan Hatalar'a bir düzeyi, bir araması, durduğu yerden okumayı sürdüren Duraklat ve Sürdür'ü, bir seçimin dokunduğu satırların tamamını alan Kopyala'sı ve görünümü boşaltıp cihazın logunu asla silmeyen Temizle'si vardır. Yanındaki **Çökmeler**, uygulamanın son 5 raporunu `crashes` aracının verdiği gibi listeler; her biri ilk satırlarına ve raporun tamamının bu Mac'teki yoluna açılır. Log yalnızca panel görünürken ve duraklatılmamışken 2 sn'de bir okunur, arkada çalışır bir şey bırakılmaz: bir iPhone'da çalışan uygulamanın bu Mac'in okuyabileceği bir logu yoktur, panel bunu neyin okunabildiğiyle birlikte söyler.
+
+**Ağ**, uygulamanın isteklerini `network` aracının verdiği gibi, o aracın cihaz için tuttuğu yakalamayla gösterir; böylece bir ajanın başlattığı yakalama burada, burada başlatılan da ajana görünür ve ikisi de aynı biçimde gizlenir: yöntem, adres, durum, süre ve boyut, seçilenin de tamamı. Yalnızca bu cihazın sahip olduğu yolları sunar: simülatörde uygulamayı yeniden başlatan, bu yüzden kayıt ya da ölçüm sürerken reddedilen sonda; Android'de baytlar ve derlemenin kaydettiği yerlerde Android 14'ten itibaren paketler; ikisi de adres olmadan sayar. Vekil sunucu yalnızca cihaz zaten birinden geçiyorsa sunulur ve listesi, onu Proxyman çalıştırıyorsa okunur: hiçbir pencere, hiçbir cihazda vekil sunucu ayarlamaz. Hiçbir yolun istekleri listelemediği yerde, bir iPhone'da ya da vekil sunucusu olmayan bir Android'de, panel kişinin neye ihtiyacı olduğunu söyler. Sondanın listesi panel görünürken 3 sn'de bir, diğerleri Yeniden Oku ile okunur. Burada başlatılan bir yakalama pencere kapanınca durur.
+
+**Erişilebilirlik**, `audit` aracının gösterilen ekranda bulduklarını türlerine göre, her türü sayarak gösterir. Bu, imlecin altındaki öğenin kontrastını söyleyen denetimin ta kendisidir, panel görünürken her türüyle: tek denetim, asla iki. Ekran panel görünürken okunur ve bir saniye aynı kaldığında denetlenir, çünkü bir denetim cihazın sırasını saniyelerce tutar; yeni bir ekran yeniden denetlenir, **Yeniden Denetle** de gösterileni denetler. Kayıt sürerken hiçbir denetim çalışmaz, çünkü bir tıklama o zaman kendi yaptığı ekranla adlandırılırdı; panel bunu söyler. Seçilen bir sorun, imlecin altındaki öğe gibi cihazın görüntüsünde işaretlenir.
+
 **Bağlantılar**, bir bağlantıyı cihazda, bir ajanın çağırdığı araç olan `open_link` ile, aynı politika altında açar: bir web bağlantısı, bir evrensel bağlantı ya da App Link veya bir uygulamanın kendi şeması. Dosya menüsünde ve Diğer Denetimler içinde bulunan **Bağlantı Aç…** (⌘O), onu alanı hazır halde gösterir ve Return gönderir. İkinci bir alan, bağlantının açılacağı uygulamayı belirtir; cihaz öndeki uygulamanın bir kişinin kendi uygulaması olduğunu söylüyorsa onunla doldurulur ve sunucunun uygulama listesine karşı denetlenir: bir iPhone bir bağlantıyı yalnızca adı verilmiş bir uygulamada açar, başka yerlerde boş bir alan seçimi sisteme bırakır. Yanıtı iş ilerledikçe gelir ve bir ret, yapılacak şeyle birlikte tam olarak gösterilir. Açılan bağlantılar o cihaz için saklanır, son sekizi, en yenisi önce; altlarında, uygulama alanındaki uygulamanın açtığı bağlantılar, `open_link` `links`'in listelediği gibi, her birinin türü ve bir alan adının durumuyla durur. Seçilen biri alana yerleşir; bir filtrenin `*` kısmı bir kişinin doldurması için bırakılır. Bir kişinin gönderdiği bağlantı hiçbir ajanın değildir: kapsül bir yapay zekâ istemcisinin yönettiğini söylemez ve Etkinlik onu listelemez. İlki, bir ajanın ilk çağrısı gibi, cihazda bir oturum açar. Bir simülatör, bir uygulamanın şeması onu ilk kez açmadan önce sorar ve yanıt bunu söyler, çünkü bir kişi pencerede yanıtlayana kadar hiçbir şey açılmamıştır. Arkada tutulan bir pencereden, iOS 27.2'li bir iPhone 17 Pro simülatöründe ve bir API 34 emülatöründe, 7 ile 57 arası yüklerde çalıştırıldı: `appdyno-fixture://open/form` fixture'ı formunda açtı ve `javascript:alert(1)` reddedildi, hiçbir şey açılmadı. Aynısı iOS 27.2'li bir iPhone 13 Pro Max'te (fixture uygulama alanında adıyla verildi) ve USB üzerinden Android 14'lü bir Samsung Galaxy A52'de, 6 ile 11 arası yüklerde.
 
 **Bildirim**, bir ajanın çağırdığı araç olan `push` ile bir uygulamaya push gönderir. Dosya menüsünde ve Diğer Denetimler içinde bulunan **Bildirim Gönder…** (⇧⌘P) onu gösterir ve her seferinde op'a bu cihazın neleri aldığını sorar. Op'un listelediği her tür sunulur; cihazın almadığı bir tür nedeniyle birlikte durur ve seçilemez. Alanlar, op'un listelediği gibi türü izler; **Yük** de op'un o tür için kendi şablonundan başlar ve alanların yerine gönderilir. Uygulama, cihazın bir kişinin kendi uygulaması olduğunu söylediği öndeki uygulamadır ya da yazılan uygulamadır; türler de o uygulamanınkilerdir ve bir kişi birini yazmayı bitirince yeniden sorulur, çünkü bir Android uygulamasının build'i başka bir yol izleyebilir. Bir alanda Return gönderir ve yanıt bir bağlantınınki gibi gelir, bir ret tam olarak. Bir kişi APNs ya da FCM'yi `appdyno push setup` ile kurduktan sonra, onun üzerinden giden bir rota uygulamanın yazdırmadığı bir token alır: rotanın altında, yazılırken görünmeyen, rotaların kullandığı token türlerini seçilen türün token türü başta olmak üzere sunan bir alan, paneldeki uygulama için yalnızca bu oturum boyunca bir token saklar, panelin söylediği gibi; bunu bir ajanın çağırdığı hiçbir araç üzerinden yapmaz ve hiçbir şey onu geri söylemez, loglamaz ya da bir yere yazmaz; o türden bir push sonra onunla gider. Arkada tutulan bir pencereden, iOS 27.2'li bir iPhone 17 Pro simülatöründe 5 ile 12 arası yüklerde, uydurma APNs kimlik bilgileriyle ve push Apple'ın yerine teste gönderilerek çalıştırıldı: alan bu bilgilerle göründü, onlarsız yok oldu ve zengin bir push yazılan token ile gitti. Arkada tutulan bir pencereden 40 ile 52 arası yüklerde çalıştırıldı: iOS 27.2'li, yeni silinmiş bir iPhone 17 Pro simülatöründe başlığı ve bir veri anahtarı olan bir uyarı, bir kişi pencerede uygulamanın bildirimlerine izin verdikten sonra fixture'ın koduna ulaştı; bir API 34 emülatöründe ve Samsung'da dokunulan bir push, fixture'ı iki veri anahtarı extras olarak verilmiş halde açtı ve fixture bunları gösterdi. iPhone'da panel her türü iPhone'un kendi nedeniyle listeledi ve bu yüzden gönderilecek hiçbirini sunmadı.
@@ -388,74 +394,79 @@ Bir viewer ve üst süreci, viewer'ın stdin ve stdout'unda satır başına bir 
 
 Aldıkları:
 
-| Ad           | Ne ister                                                      |
-| ------------ | ------------------------------------------------------------- |
-| `activity`   | Etkinlik paneli için bir satır.                               |
-| `agent`      | Cihazı şimdi kimin, hangi araçla yönettiği.                   |
-| `answer`     | Bir panelden gönderilen bir bağlantının ya da push'un sonucu. |
-| `apps`       | Uygulamalar panelinin listelediği.                            |
-| `attach`     | Bu kaynağı göster.                                            |
-| `banner`     | Bir kişiden bir şey iste ya da istemeyi bırak.                |
-| `clients`    | Yapay Zekâ İstemcileri panelinin gösterdiği.                  |
-| `copied`     | Bu görüntüyü panoya koy.                                      |
-| `copyText`   | Bu metni panoya koy.                                          |
-| `detach`     | Kaynağı bırak; pencere kalır.                                 |
-| `element`    | İmlecin altında ne olduğu.                                    |
-| `flow`       | Kaydın adımları.                                              |
-| `hub`        | Hub'ın listesi ve seçilen cihazın gösterdiği.                 |
-| `mark`       | Şimdiden bir sonraki değişen kareye kadar geçen süre.         |
-| `measured`   | Bir ölçümün sonucu.                                           |
-| `measuring`  | Süren bir ölçüm hakkında bir satır.                           |
-| `note`       | Bir kişi için bir satır.                                      |
-| `pair`       | Bir çiftin diğer cihazı.                                      |
-| `perf`       | Canlı sayılar.                                                |
-| `poke`       | Bir testin pencereye, bir kişinin yapacağı gibi yaptığı.      |
-| `quit`       | Kapan ve çık.                                                 |
-| `raise`      | Bir kişinin isteğiyle öne gel.                                |
-| `record`     | Görüntüyü bu dosyaya kaydet.                                  |
-| `recording`  | Bir kaydın sürdüğünü göster.                                  |
-| `recordStop` | Kaydı bitir.                                                  |
-| `results`    | Bu cihazda daha önce ölçülenler.                              |
-| `snapshot`   | Pencereyi bu dosyaya yaz.                                     |
-| `status`     | Gösterilecek durum.                                           |
-| `tick`       | Paylaşılan dosyada yeni bir kare.                             |
-| `touchAt`    | Bir dokunuşun nereye indiğini göster.                         |
-| `turns`      | Görüntüyü dik çeviren çeyrek dönüşler.                        |
-| `watch`      | Sonraki karelerin hareketini oku.                             |
+| Ad           | Ne ister                                                                |
+| ------------ | ----------------------------------------------------------------------- |
+| `activity`   | Etkinlik paneli için bir satır.                                         |
+| `agent`      | Cihazı şimdi kimin, hangi araçla yönettiği.                             |
+| `answer`     | Bir panelden istenen bir bağlantının, push'un ya da yakalamanın sonucu. |
+| `apps`       | Uygulamalar panelinin listelediği.                                      |
+| `attach`     | Bu kaynağı göster.                                                      |
+| `audit`      | Denetimin gösterilen ekranda bulduğu ya da nerede olduğu.               |
+| `banner`     | Bir kişiden bir şey iste ya da istemeyi bırak.                          |
+| `clients`    | Yapay Zekâ İstemcileri panelinin gösterdiği.                            |
+| `copied`     | Bu görüntüyü panoya koy.                                                |
+| `copyText`   | Bu metni panoya koy.                                                    |
+| `crashes`    | Loglar paneli için uygulamanın çökme raporları.                         |
+| `detach`     | Kaynağı bırak; pencere kalır.                                           |
+| `element`    | İmlecin altında ne olduğu.                                              |
+| `flow`       | Kaydın adımları.                                                        |
+| `hub`        | Hub'ın listesi ve seçilen cihazın gösterdiği.                           |
+| `logs`       | Uygulama logunun yeni satırları ya da yeni bir başlangıç.               |
+| `mark`       | Şimdiden bir sonraki değişen kareye kadar geçen süre.                   |
+| `measured`   | Bir ölçümün sonucu.                                                     |
+| `measuring`  | Süren bir ölçüm hakkında bir satır.                                     |
+| `network`    | Yakalama, gördükleri ve cihazın sahip olduğu yollar.                    |
+| `note`       | Bir kişi için bir satır.                                                |
+| `pair`       | Bir çiftin diğer cihazı.                                                |
+| `perf`       | Canlı sayılar.                                                          |
+| `poke`       | Bir testin pencereye, bir kişinin yapacağı gibi yaptığı.                |
+| `quit`       | Kapan ve çık.                                                           |
+| `raise`      | Bir kişinin isteğiyle öne gel.                                          |
+| `record`     | Görüntüyü bu dosyaya kaydet.                                            |
+| `recording`  | Bir kaydın sürdüğünü göster.                                            |
+| `recordStop` | Kaydı bitir.                                                            |
+| `results`    | Bu cihazda daha önce ölçülenler.                                        |
+| `snapshot`   | Pencereyi bu dosyaya yaz.                                               |
+| `status`     | Gösterilecek durum.                                                     |
+| `tick`       | Paylaşılan dosyada yeni bir kare.                                       |
+| `touchAt`    | Bir dokunuşun nereye indiğini göster.                                   |
+| `turns`      | Görüntüyü dik çeviren çeyrek dönüşler.                                  |
+| `watch`      | Sonraki karelerin hareketini oku.                                       |
 
 Söyledikleri:
 
-| Ad          | Anlamı                                      |
-| ----------- | ------------------------------------------- |
-| `app`       | Uygulamalar panelinden bir işlem.           |
-| `board`     | Bir testin kendi panosunu okumasına yanıt.  |
-| `button`    | Bir cihaz düğmesine basıldı.                |
-| `clicked`   | Bir testin tıklamasına yanıt.               |
-| `closed`    | Pencere kapandı.                            |
-| `control`   | Girdi olmayan bir denetim.                  |
-| `done`      | Bir kişi bir uyarı bandını yanıtladı.       |
-| `fired`     | Bir testin menü öğesine yanıt.              |
-| `first`     | Bir kaynağın ilk görüntüsü.                 |
-| `hover`     | İmleç burada duruyor.                       |
-| `hub`       | `action`'ın adını verdiği bir hub işlemi.   |
-| `inspect`   | Öğe denetçisi açıldı ya da kapandı.         |
-| `key`       | Bir tuşa basıldı ya da tuş bırakıldı.       |
-| `lost`      | Yayın kayboldu ve geri gelip gelemeyeceği.  |
-| `marked`    | `mark`'a yanıt.                             |
-| `needKey`   | Çözücü bir anahtar kare istiyor.            |
-| `perfWatch` | Sayılar isteniyor ya da artık istenmiyor.   |
-| `pick`      | Denetçide bir öğeye tıklama.                |
-| `ready`     | Süreç ayakta.                               |
-| `recorded`  | `recordStop`'a yanıt.                       |
-| `refused`   | Açılamıyor ve neye ihtiyacı olduğu.         |
-| `sleep`     | Mac uykuya geçiyor.                         |
-| `snapped`   | `snapshot`'a yanıt.                         |
-| `stats`     | Yayının sayıları, saniyede bir.             |
-| `text`      | Yazılan metin.                              |
-| `touch`     | Bir parmak indi, hareket etti ya da kalktı. |
-| `wake`      | Mac uyandı.                                 |
-| `watched`   | `watch`'a yanıt.                            |
-| `zoom`      | Pencerenin ölçeği değişti.                  |
+| Ad          | Anlamı                                                    |
+| ----------- | --------------------------------------------------------- |
+| `app`       | Uygulamalar panelinden bir işlem.                         |
+| `board`     | Bir testin kendi panosunu okumasına yanıt.                |
+| `button`    | Bir cihaz düğmesine basıldı.                              |
+| `clicked`   | Bir testin tıklamasına yanıt.                             |
+| `closed`    | Pencere kapandı.                                          |
+| `control`   | Girdi olmayan bir denetim.                                |
+| `done`      | Bir kişi bir uyarı bandını yanıtladı.                     |
+| `fired`     | Bir testin menü öğesine yanıt.                            |
+| `first`     | Bir kaynağın ilk görüntüsü.                               |
+| `hover`     | İmleç burada duruyor.                                     |
+| `hub`       | `action`'ın adını verdiği bir hub işlemi.                 |
+| `inspect`   | Öğe denetçisi açıldı ya da kapandı.                       |
+| `key`       | Bir tuşa basıldı ya da tuş bırakıldı.                     |
+| `lost`      | Yayın kayboldu ve geri gelip gelemeyeceği.                |
+| `marked`    | `mark`'a yanıt.                                           |
+| `needKey`   | Çözücü bir anahtar kare istiyor.                          |
+| `paneWatch` | Cihazı okuyan bir panel görünüyor ya da artık görünmüyor. |
+| `perfWatch` | Sayılar isteniyor ya da artık istenmiyor.                 |
+| `pick`      | Denetçide bir öğeye tıklama.                              |
+| `ready`     | Süreç ayakta.                                             |
+| `recorded`  | `recordStop`'a yanıt.                                     |
+| `refused`   | Açılamıyor ve neye ihtiyacı olduğu.                       |
+| `sleep`     | Mac uykuya geçiyor.                                       |
+| `snapped`   | `snapshot`'a yanıt.                                       |
+| `stats`     | Yayının sayıları, saniyede bir.                           |
+| `text`      | Yazılan metin.                                            |
+| `touch`     | Bir parmak indi, hareket etti ya da kalktı.               |
+| `wake`      | Mac uyandı.                                               |
+| `watched`   | `watch`'a yanıt.                                          |
+| `zoom`      | Pencerenin ölçeği değişti.                                |
 
 ## Belirtilen sınırlar
 
