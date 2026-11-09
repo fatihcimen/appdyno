@@ -143,6 +143,17 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   });
 
+  it('types into the field it tapped while another one holds the focus', async () => {
+    const s = await open('Form');
+    expect((await d.typeText('Ada', { at: foundId(s, 'name_input') })).verified).toBe(true);
+    // the field and its text come from the snapshot that found the focus, which must be the new field's
+    const phone = await d.typeText('5551234567', { at: foundId(await d.read(APP), 'phone_input') });
+    expect(phone.verified).toBe(true);
+    const { nodes } = await d.tree();
+    const text = (id: string) => nodes.find((n) => n.id === id)?.t;
+    expect([text('name_input'), text('phone_input')]).toEqual(['Ada', '5551234567']);
+  });
+
   it('gives no verdict on a secure field (it cannot be read back)', async () => {
     const s = await open('Form');
     const r = await d.typeText('Gizli123!', { at: foundId(s, 'password_input'), replace: true });

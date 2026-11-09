@@ -4,23 +4,28 @@ import XCTest
 extension Device {
     /**
      * The field with the keyboard focus, held by a query that still finds it after the focus moves on (a
-     * code entry submits itself when it is full): its identifier when it has one, else the focus query.
+     * code entry submits itself when it is full): its identifier when it has one, else the focus query. With
+     * the snapshot that found it, as each query costs a snapshot of the app.
      */
-    func focusedField(_ app: XCUIApplication) -> XCUIElement? {
+    func focusedField(_ app: XCUIApplication) -> (field: XCUIElement, snap: XCUIElementSnapshot)? {
         let f = app.descendants(matching: .any).matching(NSPredicate(format: "hasKeyboardFocus == true")).firstMatch
         // `exists` answers at once; a snapshot of a missing element waits for it to appear, as before a tap
         guard f.exists, let snap = try? f.snapshot() else { return nil }
         if !snap.identifier.isEmpty {
-            return app.descendants(matching: snap.elementType).matching(identifier: snap.identifier).firstMatch
+            return (app.descendants(matching: snap.elementType).matching(identifier: snap.identifier).firstMatch, snap)
         }
-        return f
+        return (f, snap)
     }
 
-    /// The field's text from a snapshot (nil when it is gone); a field showing its placeholder is empty.
-    private func currentText(_ f: XCUIElement) -> String? {
-        guard let snap = try? f.snapshot() else { return nil }
+    /// A field's text in a snapshot; a field showing its placeholder is empty.
+    private func textIn(_ snap: XCUIElementSnapshot) -> String {
         let value = (snap.value as? String) ?? ""
         return value == snap.placeholderValue ? "" : value
+    }
+
+    /// The field's text from a snapshot (nil when it is gone).
+    private func currentText(_ f: XCUIElement) -> String? {
+        (try? f.snapshot()).map(textIn)
     }
 
     /// Reading what another app put on the pasteboard asks the user, whom this thread would wait for
@@ -35,23 +40,26 @@ extension Device {
         let app = front().0
         if let (x, y) = request.at {
             // a field that already has the focus there is not tapped again (each event costs about 350 ms)
-            let focused = try? focusedField(app)?.snapshot()
-            if focused?.frame.contains(CGPoint(x: x, y: y)) != true {
+            if focusedField(app)?.snap.frame.contains(CGPoint(x: x, y: y)) != true {
                 _ = animationsOver(x, y)
+                // XCUI's own, which returns once the app is idle: keys typed after a synthesized tap went in while the
+                // keyboard came up, and a formatting field lost some ("(599) 999" of 5999999900, 3 of 3)
                 point(x, y).tap()
             }
         }
         let timeout = Double(request.focusTimeoutMs) / 1000
-        var field = focusedField(app)
-        while field == nil, Date().timeIntervalSince(start) < timeout, !job.over {
+        var found = focusedField(app)
+        while found == nil, Date().timeIntervalSince(start) < timeout, !job.over {
             Thread.sleep(forTimeInterval: 0.08)
-            field = focusedField(app)
+            found = focusedField(app)
         }
         let focusMs = Int(Date().timeIntervalSince(start) * 1000)
-        guard let field else { return try typeUnfocused(request, into: app, job: job, focusMs: focusMs) }
+        guard let (field, snap) = found else {
+            return try typeUnfocused(request, into: app, job: job, focusMs: focusMs)
+        }
         let replace = request.replace
-        let secure = (try? field.snapshot())?.elementType == .secureTextField
-        let before = currentText(field) ?? ""
+        let secure = snap.elementType == .secureTextField
+        let before = textIn(snap)
         // nil: the field is gone (a code entry that submitted itself took the text)
         func check() -> Bool? {
             currentText(field).map { holdsText($0, before: before, text: text, replace: replace) }
@@ -60,10 +68,12 @@ extension Device {
         // answers here and which holds the text up (a timeout, or text doubled once it goes)
         keyboardUp(app, job: job)
         var verified: Bool? = false
-        if verified == false, field.exists {
-            makeRoom(in: field, before: before, text: text, replace: replace)
+        if field.exists {
+            if replace { clear(field) }
             // shortcut: with the synthesizer gone XCUI's typing writes plain text into the test's log and result bundle
-            if field.exists, !EventShim.type(text, orientation: Device.interfaceOrientation()) { field.typeText(text) }
+            if !replace || field.exists, !EventShim.type(text, orientation: Device.interfaceOrientation()) {
+                field.typeText(text)
+            }
             verified = check()
             // the keys are sent, not yet handled, and a field that formats what is typed takes a moment more
             let echoEnd = Date().addingTimeInterval(Device.echoWaitS)
@@ -96,19 +106,14 @@ extension Device {
         return out.merging(textWire(focusMs: focusMs, verified: nil)) { $1 }
     }
 
-    /// Clears what the text replaces, or what a paste that went in half added.
-    private func makeRoom(in field: XCUIElement, before: String, text: String, replace: Bool) {
-        if replace {
-            // all of it selected and deleted at once: deleting a formatting field's characters one by one
-            // moves its cursor and scrambles what is typed after (live: a phone number typed out of order)
-            field.typeKey("a", modifierFlags: .command)
-            field.typeText(XCUIKeyboardKey.delete.rawValue)
-            if let left = currentText(field), !left.isEmpty {
-                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count))
-            }
-        } else if let now = currentText(field), now.count > before.count, !now.hasPrefix(before + text) {
-            // a paste that went in half: what it added is taken back
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: now.count - before.count))
+    /// Clears what the text replaces: all of it selected and deleted at once, as deleting a formatting field's
+    /// characters one by one moves its cursor and scrambles what is typed after (live: a phone number typed out of
+    /// order).
+    private func clear(_ field: XCUIElement) {
+        field.typeKey("a", modifierFlags: .command)
+        field.typeText(XCUIKeyboardKey.delete.rawValue)
+        if let left = currentText(field), !left.isEmpty {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count))
         }
     }
 
@@ -129,7 +134,7 @@ extension Device {
         if let (x, y) = request.into {
             let app = front().0
             let end = start.addingTimeInterval(Double(request.focusTimeoutMs) / 1000)
-            while (try? focusedField(app)?.snapshot())?.frame.contains(CGPoint(x: x, y: y)) != true {
+            while focusedField(app)?.snap.frame.contains(CGPoint(x: x, y: y)) != true {
                 guard Date() < end, !job.over else {
                     throw AgentError("NO_FOCUS", "the field there did not take the focus", hint: "tap the field first")
                 }
