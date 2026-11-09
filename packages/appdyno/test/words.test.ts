@@ -117,6 +117,18 @@ describe('the table of words', () => {
     expect(said.filter((w) => !known(w))).toEqual([]);
   });
 
+  it('has what a recording says in the bar, as it comes', () => {
+    const said = [
+      'Saved to the Desktop: 4 steps',
+      'Saved to the Desktop: 4 steps, 1 to look at',
+      'com.apple.springboard is in front: a replay must start there',
+      'What is in front has no name: a replay must start there',
+      'A measure restarts the app: stop the recording first',
+      'Nothing was recorded',
+    ];
+    expect(said.filter((w) => !known(w))).toEqual([]);
+  });
+
   it('has every sentence of the client and help panes, in whatever shape they are kept', () => {
     const missed = ['HubClients.m', 'HubHelp.m', 'HubConnect.m', 'HubTools.m'].flatMap((file) =>
       [...source(file).matchAll(/@"([A-Z][^"]* [^"]*)"/g)]

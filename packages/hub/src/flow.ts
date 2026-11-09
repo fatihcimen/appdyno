@@ -39,6 +39,16 @@ export function shownSize(own: Size | undefined, window: Size | undefined) {
   return wide === own.w > own.h ? { w: own.w, h: own.h } : { w: own.h, h: own.w };
 }
 
+/** Where a replay of a recording begun on another device must start. */
+const frontNote = (app: string | undefined) =>
+  app
+    ? `${app} is in front: a replay must start there`
+    : 'What is in front has no name: a replay must start there';
+
+/** A save in the bar's capsule, which has room for few words: none to look at is no news. */
+const savedNote = (steps: number, notes: number) =>
+  `Saved to the Desktop: ${steps} steps${notes ? `, ${notes} to look at` : ''}`;
+
 /**
  * A window's flow: what a person does on it, written as a flow's steps, and what is under the pointer. It reads the
  * screen only while one of them is in use, as a read costs the device. The recording is the one `flow` keeps, on disk,
@@ -130,7 +140,7 @@ export function windowFlow(
       const r = must(loadRecording(own, serial), 'the recording');
       // to the front if it runs: on another device, the way to where this one is
       if (mine) addSteps(r, stepOf('launch', {}));
-      else say(`${app ?? 'Nothing named'} is in front: a replay must start there`);
+      else say(frontNote(app));
       recording = ours = true;
       wanted();
       tellFlow(r);
@@ -161,7 +171,7 @@ export function windowFlow(
     }
     const file = join(homedir(), 'Desktop', `${fileName(device, hardware)} ${stamp()}.flow`);
     const notes = saveRecording(r, file, false);
-    say(`Saved to the Desktop: ${r.state.steps.length} steps, ${notes.length} to look at`);
+    say(savedNote(r.state.steps.length, notes.length));
     tellFlow(r, { file });
   };
 
