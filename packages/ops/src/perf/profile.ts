@@ -10,6 +10,12 @@ const SHOWN = 15;
 const shortList = (entries: ProfileEntry[]) =>
   entries.slice(0, SHOWN).map((e) => ({ percent: e.percent, symbol: e.symbol }));
 
+/** What a trace of a phone holds of an app's own frames is their addresses: its build's symbols are on this Mac, if anywhere. */
+const UNNAMED =
+  "the app's own functions are addresses: no symbols of this build were found on this Mac. dsym, the build's .dSYM, names them: Xcode writes one where DEBUG_INFORMATION_FORMAT is dwarf-with-dsym, a Release build's default and not a Debug build's, beside the .app in its build folder or in its archive";
+const unnamed = (entries: ProfileEntry[] | undefined) =>
+  !!entries?.length && entries.every((e) => /^0x[0-9a-f]+$/i.test(e.symbol));
+
 export function perfProfileOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, scroller } = perfTools(ctx);
   return defineOp({
@@ -47,6 +53,7 @@ export function perfProfileOp(ctx: ServerContext) {
                 ...m.value.appTop.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
               ]
             : []),
+          ...(s.device.measure.symbolFiles && !dsym && unnamed(m.value.appTop) ? [UNNAMED] : []),
           `raw output: ${saved.txt}`,
         ].join('\n'),
         {

@@ -548,6 +548,30 @@ describe('perf tools', () => {
     );
   });
 
+  it('profile: says why an iPhone app’s own functions are addresses, and what names them', async () => {
+    const dev = new FakeDevice();
+    const profile = {
+      durationMs: 1000,
+      samples: 9,
+      top: [{ percent: 90, samples: 8, symbol: '0x24785fec1' }],
+      appTop: [{ percent: 99, samples: 9, symbol: '0x1045377c7' }],
+    };
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        symbolFiles: true,
+        cpuProfile: () =>
+          Promise.resolve({ value: profile, raw: '', at: new Date().toISOString() }),
+      },
+    });
+    const t = await connect({}, dev);
+    const bare = (await t.textOf('perf_profile', { seconds: 1 })).text;
+    expect(bare).toContain("the app's own functions are addresses: no symbols of this build");
+    expect(bare).toContain('DEBUG_INFORMATION_FORMAT is dwarf-with-dsym');
+    const given = await t.textOf('perf_profile', { seconds: 1, dsym: '/b/App.app.dSYM' });
+    expect(given.text).not.toContain('are addresses');
+  });
+
   it('trace: the frame timeline summary', async () => {
     const t = await connect();
     const r = await t.textOf('perf_trace', { seconds: 2 });
