@@ -121,7 +121,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [self showSide];
   if (_window.toolbar != _toolbar) return;
   _window.title = _line.name ?: @"";
-  [_bar setName:_line.name ?: @"" about:_line.about];
+  // the model beneath the name, said once where it is the name, as an iPhone's is
+  [_bar setName:_line.name ?: @"" about:[_line.about isEqual:_line.name] ? nil : _line.about];
   [_bar.capsule show:_line];
 }
 

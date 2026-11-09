@@ -253,7 +253,18 @@ static void checkMotion(void) {
   MVCheck(@"motion: otherwise it fades, and ends where it was told", [layer animationForKey:@"fade"] && layer.opacity == 0, nil);
 }
 
+/// After a viewer came back, an iPhone's bar said iPhone 13 Pro Max twice, its model under its name.
+static void checkOneName(void) {
+  MVWindow *window = [MVWindow new];
+  window.behind = YES;
+  [window configure:@{@"title": @"00001234-0123456789ABCDEF",
+                      @"look": @{@"name": @"iPhone 13 Pro Max", @"frame": @{@"model": @"iPhone 13 Pro Max", @"platform": @"ios"}, @"controls": @[@"home"]}}];
+  NSTextField *about = [[window valueForKey:@"_bar"] valueForKey:@"_about"];
+  MVCheck(@"bar: a model that is the device's name is said once", about.hidden, about.stringValue);
+}
+
 void MVCheckShell(void) {
+  checkOneName();
   checkMotion();
   checkStateMoves();
   checkLine();
