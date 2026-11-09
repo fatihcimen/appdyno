@@ -7,6 +7,7 @@ import {
   type DeviceSettings,
   type SettingName,
 } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { approve } from './approval.js';
@@ -128,6 +129,25 @@ export async function holdingCondition<T>(s: Session, name: SettingName, during:
   } finally {
     if (first) forget(s, name);
   }
+}
+
+/**
+ * `turn` turns the screen, which sets the rotation lock: what it found is written down first and put back as any
+ * condition, at restore and the session's end. A device that has none to read (iOS) turns all the same.
+ */
+export async function turning(s: Session, turn: () => Promise<void>) {
+  await s.conditions.run(async () => {
+    const held = await writeDown(s, s.device.settings, 'orientation').catch((e: unknown) => {
+      if (e instanceof DeviceError && e.code === 'UNSUPPORTED') return undefined;
+      throw e;
+    });
+    try {
+      await turn();
+    } catch (e) {
+      if (held?.first && (await readsAsItWas(s, 'orientation'))) forget(s, 'orientation');
+      throw e;
+    }
+  });
 }
 
 /** Puts `was` back and reads it: what the device reads where that is not `was`, which then stays written down. */

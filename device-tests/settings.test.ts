@@ -50,17 +50,25 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     return () => call('device_setting', { name: 'restore' });
   });
 
-  it('puts the rotation lock and the user rotation back once turned back, and when its connection ends', async () => {
+  it('writes the rotation lock a turn sets down, keeps it past its connection, and puts it back at restore and the session end', async () => {
     const lock = () =>
       ['accelerometer_rotation', 'user_rotation'].map((k) => adb('settings', 'get', 'system', k));
     const was = lock();
     await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
-    expect(lock()).toEqual(['0', '1']);
     await call('set_orientation', { orientation: 'portrait', read: 'none' });
+    expect(lock()).toEqual(['0', '0']);
+    // a command line's next command finds it as this one left it
+    (await ctx.session()).device.close();
+    await new Promise((r) => setTimeout(r, 3_000));
+    expect(lock()).toEqual(['0', '0']);
+    const back = await call('device_setting', { name: 'restore' });
+    expect(back.text).toContain(
+      `orientation: auto-rotate ${String(was[0])}, rotation ${String(was[1])}`,
+    );
     expect(lock()).toEqual(was);
     await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
-    (await ctx.session()).device.close();
-    await until('the lock back', () => lock().join() === was.join());
+    expect(await ctx.end()).toEqual([]);
+    expect(lock()).toEqual(was);
   });
 
   it('puts text_size back as the device had it, unset or 1.0, and the languages the system writes beside it', async () => {

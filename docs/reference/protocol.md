@@ -302,11 +302,11 @@ value read and written down, so neither restores over the other.
 
 ### Orientation
 
-`orientation.set {rotation}` freezes the screen at that rotation, which turns the rotation lock on. The lock and the
-user rotation the first turn found (`accelerometer_rotation`, `user_rotation`) come back as they were once the screen
-is turned back to the rotation it had then, when the last connection that turned it has gone, and if the agent dies
-first, by a separate shell process watching it. A command line connects for each command, so a turn by
-`set-orientation` goes back as that command ends.
+`orientation.set {rotation}` freezes the screen at that rotation, which turns the rotation lock on. A host writes the
+lock and the user rotation it found (`accelerometer_rotation`, `user_rotation`) down as a condition, put back at
+`device_setting restore` and at the session's end, a command line's at restore only. The system puts back the rotation
+it found when UI automation connected once the agent lets it go between hosts, so the agent writes the turn back
+after that.
 
 ### Accessibility audit
 

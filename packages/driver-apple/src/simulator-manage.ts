@@ -244,6 +244,8 @@ export class SimulatorSettings implements DeviceSettings {
         throw new DeviceError('UNSUPPORTED', SIM_CANNOT.radio);
       case 'screen_lock':
         throw new DeviceError('UNSUPPORTED', 'a simulator has no screen lock to set');
+      case 'orientation':
+        throw new DeviceError('UNSUPPORTED', 'a simulator has no rotation lock to set');
       case 'fold':
         throw new DeviceError('UNSUPPORTED', SIM_CANNOT.fold);
       case 'thermal':

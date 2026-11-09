@@ -12,7 +12,7 @@ class SettingsScriptTest {
     }
 
     @Test
-    fun theRotationLockComesBackWithItsUserRotation() {
+    fun aKeyOfAnotherNamespaceComesBackThere() {
         val script = SettingsScript.restore("system", listOf("user_rotation" to "0", "accelerometer_rotation" to "1"))
         assertEquals("settings put system user_rotation 0; settings put system accelerometer_rotation 1", script)
     }

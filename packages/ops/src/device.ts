@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
+import { turning } from './settings.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
 
@@ -119,7 +120,9 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       annotations: ACT,
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
-        await s.device.setOrientation(ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3);
+        await turning(s, () =>
+          s.device.setOrientation(ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3),
+        );
         return afterChange(s, `orientation: ${orientation}`, read);
       },
     }),

@@ -302,11 +302,11 @@ okunup not edilir, böylece hiçbiri diğerinin üstüne geri yükleme yapmaz.
 
 ### Yön
 
-`orientation.set {rotation}` ekranı o dönüşte sabitler, bu da döndürme kilidini etkinleştirir. İlk dönüşün bulduğu kilit
-ve kullanıcı dönüşü (`accelerometer_rotation`, `user_rotation`), ekran o zamanki dönüşüne geri çevrildiğinde, onu
-çeviren son bağlantı gittiğinde ve ajan önce ölürse onu izleyen ayrı bir shell süreciyle eski hallerine
-döner. Komut satırı her komut için bağlanır, bu yüzden
-`set-orientation` ile yapılan bir dönüş o komut biterken geri alınır.
+`orientation.set {rotation}` ekranı o dönüşte sabitler, bu da döndürme kilidini etkinleştirir. Bir host bulduğu kilidi
+ve kullanıcı dönüşünü (`accelerometer_rotation`, `user_rotation`) bir koşul olarak not eder; bunlar
+`device_setting restore` ile ve oturum sonunda, komut satırınınki yalnızca restore ile geri konur. Sistem, ajan UI
+automation'ı host'lar arasında bıraktığında onun bağlandığında bulduğu dönüşü geri koyar, bu yüzden ajan dönüşü
+ondan sonra yeniden yazar.
 
 ### Erişilebilirlik denetimi
 

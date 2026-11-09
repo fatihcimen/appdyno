@@ -26,9 +26,6 @@ class Server(private val opts: Options, private val handlers: Handlers) {
     /** The connections that asked for the animations off. */
     private val animationsOff = HashSet<LocalSocket>()
 
-    /** The connections that turned the screen. */
-    private val turned = HashSet<LocalSocket>()
-
     @Volatile
     private var lastActivity = SystemClock.uptimeMillis()
 
@@ -128,7 +125,6 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                             drives = true
                             synchronized(this) { drivers++ }
                         }
-                        if (method == "orientation.set") synchronized(turned) { turned += socket }
                         submit(id, method, params, writer, jobs)
                     }
                 }
@@ -145,9 +141,6 @@ class Server(private val opts: Options, private val handlers: Handlers) {
             // the host that wanted them off is gone, however it went
             if (synchronized(animationsOff) { animationsOff.remove(socket) && animationsOff.isEmpty() }) {
                 actions.submit(Job(-1), 60_000, {}) { handlers.restoreAnimations() }
-            }
-            if (synchronized(turned) { turned.remove(socket) && turned.isEmpty() }) {
-                actions.submit(Job(-1), 60_000, {}) { handlers.restoreRotation() }
             }
             synchronized(this) {
                 connections--

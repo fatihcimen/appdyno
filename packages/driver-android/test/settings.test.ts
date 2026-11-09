@@ -528,6 +528,30 @@ describe('dark mode', () => {
   });
 });
 
+describe('the rotation lock', () => {
+  it('reads as a turn found it and goes back the same way, an unset user rotation deleted', async () => {
+    const held: Record<string, string> = { accelerometer_rotation: '1', user_rotation: 'null' };
+    const one = (command: string) => {
+      const [, verb, key = '', v = ''] =
+        /^settings (get|put|delete) system (\w+) ?(\S*)/.exec(command) ?? [];
+      if (verb === 'get') return held[key] ?? 'null';
+      held[key] = verb === 'put' ? v : 'null';
+      return '';
+    };
+    const exec = (_serial: string, command: string) =>
+      Promise.resolve(command.split('; ').map(one).join('\n'));
+    const settings = new AndroidSettings({ exec } as unknown as Adb, 'emulator-5554');
+    const was = await settings.get('orientation');
+    // what a turn to landscape sets
+    Object.assign(held, { accelerometer_rotation: '0', user_rotation: '1' });
+    await settings.set('orientation', was);
+    expect([was, held]).toEqual([
+      'auto-rotate 1, rotation null',
+      { accelerometer_rotation: '1', user_rotation: 'null' },
+    ]);
+  });
+});
+
 describe('high contrast text', () => {
   it('goes back to 0 where the device had 0, and to unset where it had none', async () => {
     for (const start of ['0', 'null']) {

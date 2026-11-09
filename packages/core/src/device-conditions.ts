@@ -17,8 +17,11 @@ export const SETTINGS = [
   'thermal',
 ] as const;
 
-/** What the tool changes only on its way to something asked, written down and put back as the rest: an emulator's PIN, which a fingerprint needs. */
-export const HELD = ['screen_lock'] as const;
+/**
+ * What the tool changes only on its way to something asked, written down and put back as the rest: an emulator's PIN,
+ * which a fingerprint needs, and the rotation lock a turn of the screen sets.
+ */
+export const HELD = ['screen_lock', 'orientation'] as const;
 
 export type SettingName = (typeof SETTINGS)[number] | (typeof HELD)[number];
 

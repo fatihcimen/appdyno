@@ -97,11 +97,15 @@ class Automation private constructor(private val looper: Looper) {
     fun release() = synchronized(this) {
         val ua = current ?: return@synchronized
         current = null
+        // the system puts back the rotation it found when the automation connected: a turn a host asked for stays, and
+        // the host that wrote it down puts it back
+        val turn = ROTATION.map { sh("settings", "get", "system", it).trim() }
         try {
             UiAutomation::class.java.getDeclaredMethod("disconnect").apply { isAccessible = true }.invoke(ua)
         } catch (e: Throwable) {
             System.err.println("UI automation did not disconnect: $e")
         }
+        sh("sh", "-c", SettingsScript.restore("system", ROTATION.zip(turn)))
     }
 
     private fun open(): UiAutomation {
@@ -267,6 +271,9 @@ class Automation private constructor(private val looper: Looper) {
     companion object {
         /** InputManager's INJECT_INPUT_EVENT_MODE_ASYNC. */
         private const val INJECT_ASYNC = 0
+
+        /** A turn of the screen, the user rotation before the lock, which turns the screen to it. */
+        private val ROTATION = listOf("user_rotation", "accelerometer_rotation")
 
         /** The longest a new connection is given to learn the windows on screen and go quiet. */
         const val WINDOWS_WAIT_MS = 2_000L

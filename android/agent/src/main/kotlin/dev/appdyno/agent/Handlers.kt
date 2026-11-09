@@ -13,7 +13,6 @@ class Handlers(private val automation: Automation, private val token: String) {
     private val input = Input(automation)
     private val clipboard = Clipboard()
     private val animations = Animations()
-    private val rotation = Rotation(automation)
     private val text = TextInput(automation, input, clipboard)
     private val settling = Settling(automation, capture)
     private val a11y = AccessibilityRead(capture, settling)
@@ -24,8 +23,6 @@ class Handlers(private val automation: Automation, private val token: String) {
     fun release() = automation.release()
 
     fun restoreAnimations() = animations.restore()
-
-    fun restoreRotation() = rotation.restore()
 
     fun tokenMatches(given: String) = sameToken(given, token)
 
@@ -89,7 +86,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         "locales" -> Reply(JSONObject().put("tags", OneValue.tags(p)?.let(Locales::set) ?: Locales.get()))
 
         "orientation.set" -> {
-            rotation.set(OneValue.rotation(p))
+            automation.ua.setRotation(OneValue.rotation(p))
             Reply(JSONObject())
         }
 

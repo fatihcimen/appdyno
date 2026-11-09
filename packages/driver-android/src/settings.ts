@@ -3,6 +3,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { type Adb, shq } from './adb.js';
 import { AndroidFold } from './fold.js';
 import { AndroidLocale } from './locale.js';
+import { AndroidScale } from './scale.js';
 import { AndroidShaping } from './shaping.js';
 
 const ANIMATION_SCALES = [
@@ -19,6 +20,9 @@ const NIGHT_KEYS = [
   'dark_theme_custom_end_time',
 ];
 const NIGHT_WORDS: Partial<Record<string, string>> = { yes: 'on', no: 'off' };
+
+/** What a turn of the screen sets, the rotation lock (`1` turns by the sensor) and the user rotation. */
+const ROTATION_KEYS = ['accelerometer_rotation', 'user_rotation'];
 
 /** Android's own: high contrast text, the nearest it has to increasing contrast. */
 const HIGH_CONTRAST = 'high_text_contrast_enabled';
@@ -46,13 +50,6 @@ const RADIOS = {
 /** How long a radio has to read as asked: a change takes under a second on a calm emulator. */
 const RADIO_MS = 10_000;
 const READ_AGAIN_MS = 200;
-/** The text scales Android's settings take, on API 34: 0.24 and 5.1 are refused. */
-const SCALES = { min: 0.25, max: 5 };
-/**
- * The system writes the scale back after each change, and the write of one just before can land after the next: on an
- * API 34 emulator, within 0.2 s of it.
- */
-const SCALE_HOLDS_MS = 500;
 /** `adb connect`, or wireless debugging: a device whose radio is also the way to it. */
 const OVER_ITS_NETWORK = /:\d+$|_adb-tls-connect/;
 
@@ -92,7 +89,7 @@ export class AndroidSettings implements DeviceSettings {
     this.locale = new AndroidLocale(this.sh, async (set) => {
       if (!set) return deviceLocales();
       // the system writes the text scale beside the languages: neither stays written where the device had it unset
-      const back = await this.keepingUnset(['font_scale', 'system_locales']);
+      const back = await this.scale.keepingUnset(['font_scale', 'system_locales']);
       const was = await deviceLocales();
       const tags = await deviceLocales(set);
       await back(tags !== was);
@@ -104,6 +101,7 @@ export class AndroidSettings implements DeviceSettings {
 
   private sh = (c: string) => shellOf(this.adb, this.serial)(c);
   private readonly locale: AndroidLocale;
+  private readonly scale = new AndroidScale(this.sh);
   private readonly fold: AndroidFold;
   private readonly shaping: AndroidShaping;
 
@@ -147,10 +145,8 @@ export class AndroidSettings implements DeviceSettings {
         const unset = (await this.sh('settings get secure ui_night_mode')).trim() === 'null';
         return unset ? `default (now ${NIGHT_WORDS[mode] ?? mode})` : mode;
       }
-      case 'text_size': {
-        const v = (await this.sh('settings get system font_scale')).trim();
-        return v === 'null' ? 'default' : v;
-      }
+      case 'text_size':
+        return this.scale.get();
       case 'reduce_motion':
       case 'animations':
         return this.getAnimations();
@@ -187,6 +183,11 @@ export class AndroidSettings implements DeviceSettings {
       case 'screen_lock':
         // which emulator had none: a serial is reused, and another's lock is not this tool's to clear
         return (await this.unlocked()) ? `none on ${await this.avd()}` : 'pin';
+      case 'orientation': {
+        const out = await this.sh(ROTATION_KEYS.map((k) => `settings get system ${k}`).join('; '));
+        const [lock = '', turn = ''] = out.split('\n').map((l) => l.trim());
+        return `auto-rotate ${lock}, rotation ${turn}`;
+      }
     }
   }
 
@@ -287,73 +288,6 @@ export class AndroidSettings implements DeviceSettings {
       );
   }
 
-  /**
-   * Which of `keys` (of `system`) read unset now, and what deletes them again once a change has gone: the system writes
-   * the text scale and the languages together when either changes (`Settings.System.putConfigurationForUser`).
-   * `moved`: the change moved the configuration, so that write is coming, and is waited for: an emulator's came more
-   * than a second after a change.
-   */
-  private async keepingUnset(keys: string[]) {
-    const unset = async () => {
-      const out = await this.sh(keys.map((k) => `settings get system ${k}`).join('; '));
-      const lines = out.split('\n').map((l) => l.trim());
-      return keys.filter((_, i) => lines[i] === 'null');
-    };
-    const were = await unset();
-    return async (moved: boolean) => {
-      if (were.length === 0) return;
-      const end = Date.now() + (moved ? RADIO_MS : SCALE_HOLDS_MS);
-      let seen = false;
-      for (;;) {
-        await sleep(SCALE_HOLDS_MS);
-        const now = await unset();
-        const written = were.filter((k) => !now.includes(k));
-        if (written.length > 0) {
-          seen = true;
-          await this.sh(written.map((k) => `settings delete system ${k}`).join('; '));
-        }
-        if ((written.length === 0 && (seen || !moved)) || Date.now() >= end) return;
-      }
-    };
-  }
-
-  /**
-   * A text scale, asked again until it reads as asked once the system's own write has come; `default` is the scale
-   * unset, as a device that never set one has it, and a delete the system answers with 1.0 is asked again. The languages
-   * the system writes beside it stay unset where they were.
-   */
-  private async setScale(value: string) {
-    const scale = value === 'default' ? 1 : Number(value);
-    if (!/^(\d+(\.\d+)?|default)$/.test(value) || scale < SCALES.min || scale > SCALES.max)
-      throw new DeviceError(
-        'INVALID_ARGUMENT',
-        `text_size on Android is a scale, not ${value}`,
-        `from ${SCALES.min} to ${SCALES.max}, such as 1.3, or default`,
-      );
-    const languagesBack = await this.keepingUnset(['system_locales']);
-    const was = await this.get('text_size');
-    const end = Date.now() + RADIO_MS;
-    for (;;) {
-      const said = await this.sh(
-        value === 'default'
-          ? 'settings delete system font_scale'
-          : `settings put system font_scale ${value}`,
-      );
-      const refused = /\w+Exception: (.*)/.exec(said)?.[1];
-      if (refused)
-        throw new DeviceError('UNSUPPORTED', `this device refused text_size ${value}: ${refused}`);
-      await sleep(SCALE_HOLDS_MS);
-      const now = await this.get('text_size');
-      if (value === 'default' ? now === 'default' : Number(now) === scale) break;
-      if (Date.now() >= end)
-        throw new DeviceError(
-          'UNSUPPORTED',
-          `asked for text_size ${value} and it still reads ${now} after ${RADIO_MS / 1000} s`,
-        );
-    }
-    await languagesBack((was === 'default' ? 1 : Number(was)) !== scale);
-  }
-
   async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {
     switch (name) {
       case 'dark_mode': {
@@ -368,7 +302,7 @@ export class AndroidSettings implements DeviceSettings {
         return;
       }
       case 'text_size':
-        await this.setScale(value);
+        await this.scale.set(value);
         return;
       case 'reduce_motion':
         await this.setAnimations({ on: 'off', off: 'on' }[value] ?? value);
@@ -411,6 +345,17 @@ export class AndroidSettings implements DeviceSettings {
       case 'screen_lock':
         await this.setScreenLock(value);
         return;
+      case 'orientation': {
+        const was = /^auto-rotate (\d+|null), rotation (\d+|null)$/.exec(value);
+        if (!was)
+          throw new DeviceError('INVALID_ARGUMENT', `orientation: as get reads it, not ${value}`);
+        // the user rotation first: the lock's return turns the screen by the sensor, or to it
+        const [, lock, turn] = was;
+        const put = (k: string, v = '') =>
+          v === 'null' ? `settings delete system ${k}` : `settings put system ${k} ${v}`;
+        await this.sh(`${put('user_rotation', turn)}; ${put('accelerometer_rotation', lock)}`);
+        return;
+      }
       case 'fold':
         await this.fold.set(value);
         return;
