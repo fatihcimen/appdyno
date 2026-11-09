@@ -982,6 +982,33 @@ describe('gestures, keys, clipboard', () => {
     );
   });
 
+  it('opens a link to Settings under an app allow list only when Settings is on it, as its own pages do', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
+    for (const url of [
+      'App-prefs:root=General',
+      'prefs:root=WIFI',
+      'app-settings:',
+      'settings-navigation://com.apple.Settings.Apps',
+      'package:dev.app',
+      'android.settings.settings:',
+    ]) {
+      const r = await call('open_link', { url, read: 'none' });
+      expect(r.text, url).toBe(
+        'POLICY_DENIED: Settings is an app of its own, com.android.settings, and not an allowed one (dev.app)\nhint: the person who runs this server allows it by adding com.android.settings to --allow-apps, and no call can',
+      );
+    }
+    expect(d.calls.filter((c) => c.name === 'openUrl')).toEqual([]);
+    // a link of the app's own, or a page's, is no way into Settings
+    expect(
+      (await call('open_link', { url: 'https://example.test/prefs:x', read: 'none' })).text,
+    ).toBe('opened https://example.test/prefs:x');
+    const allowed = await connect(d, { policy: { apps: ['dev.app', 'com.android.settings'] } });
+    expect((await allowed.call('open_link', { url: 'package:dev.app', read: 'none' })).text).toBe(
+      'opened package:dev.app',
+    );
+  });
+
   it('holds a drag at its start for as long as it is told', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);

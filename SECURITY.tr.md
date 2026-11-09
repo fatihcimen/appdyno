@@ -38,7 +38,7 @@ Sizin koyduğunuz sınırlar:
 - `--allow-devices`, `--allow-apps` ve `--allow-urls` sunucunun nerede iş yapacağını sınırlar.
   `--allow-devices` bir cihazın seri numarasıyla ya da UDID'siyle eşleştirilir. `simulator` `boot` ve `shutdown` bir simülatörün ya da emülatörün adıyla da eşleştirir, durmuş bir emülatörü de bu araç onu kapattığında çalıştığı seri numarasıyla: biri için izin verilen bir cihaza öbürü için de izin verilir. O varken `simulator create` ve hub'ın Yeni Simülatör'ü kapalıdır: yeni bir simülatör listede olamaz, sunucunun yaptığı biri de kişinin hiç adlandırmadığı bir cihaz olurdu.
 - `--allow-apps` ile Ayarlar da her uygulama gibidir: `open_link` `settings` onu, hangi sayfada olursa olsun, yalnızca
-  kimliği listedeyken açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`. `app install` yalnızca
+  kimliği listedeyken açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`; ona giden bir bağlantı da öyle, `App-prefs:` ya da `prefs:`, `package:`. `app install` yalnızca
   listenin adlandırdığı bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar; `build_and_run` reddedilir.
 - `--no-home` ana ekran tuşunu engeller.
 - `APPDYNO_SECRETS=a,b` değerleri hiçbir zaman geri gösterilmez ve panoya konmaz. Loglardan ve çökme

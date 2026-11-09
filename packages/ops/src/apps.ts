@@ -1,15 +1,8 @@
-import {
-  fold,
-  INSTALLED_APPS,
-  must,
-  reportProgress,
-  SETTINGS_APP,
-  type Screen,
-} from '@appdyno/core';
+import { fold, INSTALLED_APPS, must, reportProgress, type Screen } from '@appdyno/core';
 import { z } from 'zod';
 import { systemAsks, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
-import { byPerson, checkApp, checkUrl, noApp } from './policy.js';
+import { byPerson, checkApp, checkSettings, checkUrl, noApp } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import type { Session } from './session.js';
 import { setCondition } from './settings.js';
@@ -106,13 +99,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       ? undefined
       : checkApp(policy, settings === 'app' ? (s.appId ?? '') : settings);
     if (!page && !app) throw noApp();
-    const settingsApp = SETTINGS_APP[s.device.platform];
-    if (policy.apps.length > 0 && !policy.apps.includes(settingsApp))
-      throw new ToolError(
-        `Settings is an app of its own, ${settingsApp}, and not an allowed one (${policy.apps.join(', ')})`,
-        'POLICY_DENIED',
-        byPerson(`by adding ${settingsApp} to --allow-apps`),
-      );
+    checkSettings(policy, s.device.platform);
     s.leftApp = true;
     const { row } = await s.device.openSettings(
       page ? { page } : { app: must(app, "the app's id") },
@@ -157,7 +144,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
           return reply(t, { done: t, screen: 'none', warnings: [], links: found });
         }
         if (settings) return openSettings(s, settings, read);
-        const href = checkUrl(policy, must(url, 'url'));
+        const href = checkUrl(policy, must(url, 'url'), s.device.platform);
         await s.device.openUrl(href, s.appId);
         return afterChange(s, linkSaid(s, href), read);
       },

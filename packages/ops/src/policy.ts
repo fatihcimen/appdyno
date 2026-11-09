@@ -1,4 +1,5 @@
-import { must } from '@appdyno/core';
+import { must, SETTINGS_APP } from '@appdyno/core';
+import type { Platform } from '@appdyno/protocol';
 import { ToolError } from './tool.js';
 
 /** What this server may do; set by its command line, never by a tool call. */
@@ -24,11 +25,29 @@ export const DEFAULT_POLICY: Policy = { apps: [], allowHome: true, secrets: [] }
 /** Schemes that reach the device's files, other components or code, not a page or an app screen. */
 const UNSAFE_SCHEME = /^(file|content|intent|javascript|data|android-app|jar):/i;
 
+/**
+ * Links that open Settings, at a page or at an app's: iOS's prefs and App-prefs (a simulator opens App-prefs), and what
+ * Android's VIEW could take to it. Each is Settings, an app of its own, whatever the page.
+ */
+const SETTINGS_LINK =
+  /^((app-)?prefs|app-settings|settings-navigation|package|android\.settings\.[\w.]*):/i;
+
 /** What a person does to allow what this server refuses by its flag: no call changes one. */
 export const byPerson = (how: string) =>
   `the person who runs this server allows it ${how}, and no call can`;
 
-export function checkUrl(policy: Policy, url: string): string {
+/** Under --allow-apps Settings is an app like any other: it opens, by any route, only with its own id on the list. */
+export function checkSettings(policy: Policy, platform: Platform) {
+  const settings = SETTINGS_APP[platform];
+  if (policy.apps.length > 0 && !policy.apps.includes(settings))
+    throw new ToolError(
+      `Settings is an app of its own, ${settings}, and not an allowed one (${policy.apps.join(', ')})`,
+      'POLICY_DENIED',
+      byPerson(`by adding ${settings} to --allow-apps`),
+    );
+}
+
+export function checkUrl(policy: Policy, url: string, platform: Platform): string {
   const u = url.trim();
   if (!/^[a-z][a-z0-9+.-]*:/i.test(u))
     throw new ToolError('give a link with its scheme (https://… or app://…)', 'INVALID_ARGUMENT');
@@ -43,6 +62,7 @@ export function checkUrl(policy: Policy, url: string): string {
       'POLICY_DENIED',
       byPerson('by --allow-urls'),
     );
+  if (SETTINGS_LINK.test(u)) checkSettings(policy, platform);
   return u;
 }
 
