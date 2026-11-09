@@ -14,6 +14,8 @@ const APP = 'dev.appdyno.fixture';
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const EMULATOR = ANDROID.startsWith('emulator-');
 const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
+/** One for the file: a describe in a folder of its own finds no agent there, and the one it starts ends the last. */
+const STATE = mkdtempSync(join(tmpdir(), 'appdyno-small-'));
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -29,7 +31,7 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
   let o: ReturnType<typeof opsOn>;
   let call: Call;
   beforeAll(async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
+    vi.stubEnv('APPDYNO_STATE_DIR', STATE);
     o = opsOn(androidProvider(new Adb()), ANDROID, APP);
     call = o.call;
     ok(await call('launch_app'));
@@ -162,7 +164,7 @@ describe.skipIf(!ANDROID)('accessibility on Android', () => {
   const shell = (...words: string[]) =>
     execFileSync('adb', ['-s', ANDROID, 'shell', ...words], { encoding: 'utf8' }).trim();
   beforeAll(() => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
+    vi.stubEnv('APPDYNO_STATE_DIR', STATE);
     call = opsOn(androidProvider(new Adb()), ANDROID, APP).call;
   });
 
@@ -191,7 +193,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   let call: Call;
   beforeAll(async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
+    vi.stubEnv('APPDYNO_STATE_DIR', STATE);
     await new Simctl().install(SIMULATOR, SIM_FIXTURE);
     o = opsOn(simulatorProvider(), SIMULATOR, APP);
     call = o.call;
@@ -292,7 +294,7 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
   let o: Awaited<ReturnType<typeof onIphone>>;
   let call: Call;
   beforeAll(async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
+    vi.stubEnv('APPDYNO_STATE_DIR', STATE);
     o = await onIphone(APP);
     call = o.call;
     ok(await call('launch_app'));
