@@ -50,5 +50,6 @@ export { ServerContext } from './context.js';
 export { Session } from './session.js';
 export * from './policy.js';
 export { DATA_LOSS, DATA_LOSS_WORDS, type DataLoss } from './approval.js';
+export { powerControlAt } from './power.js';
 export * from './tool.js';
 export { inCall } from '@appdyno/core';

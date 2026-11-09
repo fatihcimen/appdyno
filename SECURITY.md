@@ -53,6 +53,21 @@ No tool reboots, erases or resets a device or a simulator, and none deletes a si
 `packages/appdyno/test/device-reset.test.ts` fails if any source gains a way to. `simulator create` says how a person
 removes what it made, and runs none of it.
 
+A device's own controls do it too, and an agent can reach them as a person does: one restarted a phone by its quick
+panel's power button, Restart and the confirmation. So every input the server sends a device passes one guard first,
+`packages/ops/src/power.ts`: a tap, gesture, swipe, long press, typing or key, from any tool, `steps` or a flow replayed.
+It reads the screen, and one that would act on the system's power, emergency or erase controls asks the person: Android's
+power menu (Power off, Restart, Emergency), its button in quick settings and a lock screen's emergency call, a Samsung's
+and a Xiaomi's power menu, Settings' resets and its erase-all-data screen and confirmation; iOS's slide to power off and
+Emergency SOS, and Settings' Reset and Erase All Content and Settings. It knows them by the system app that shows them,
+by the power menu's and the erase screen's ids in any language, and by their words in English and Turkish, however the
+touch is aimed, by ref, selector or x,y. A third press of the power or side key in 5 seconds asks too, as presses in a
+row call for help on many phones. Reading such a screen asks nothing, nor back and home, which leave it. The answer says
+that appdyno does not restart, power off, reset or erase a device, and that the person does it. It is asked and refused
+as what loses data is, below, and only `--allow-power virtual` (simulators and emulators) or `all` lets it go ahead
+with nothing asked: `--allow-data-loss` does not, as a run that clears an app's data on an emulator must not find it
+restarted. A window's own input is the person at it, and passes no guard.
+
 What loses data a person may want asks the person first: [the list](docs/reference/tools.md#what-asks-the-person-first).
 The client shows the question, the model cannot answer it, and a no does nothing. A client may answer no by itself, so the answer says the question got no yes, never that the person declined, and every refusal says how a person allows it ahead. Where the client cannot ask, and over
 `--http`, it is refused, unless the person started the server with `--allow-data-loss virtual` (simulators and

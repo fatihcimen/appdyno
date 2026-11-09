@@ -229,7 +229,11 @@ export class FakeDevice extends DeviceActions implements Device {
   listEnd = Number.POSITIVE_INFINITY;
   private swiped = 0;
 
+  /** A recorded screen, shown as it is in place of the fake app's. */
+  fixture: Tree | undefined;
+
   current(): Tree {
+    if (this.fixture) return structuredClone(this.fixture);
     const t = tree(must(SCREENS[this.screen], `the screen ${this.screen}`));
     if (this.swiped > 0) {
       t.nodes.push({

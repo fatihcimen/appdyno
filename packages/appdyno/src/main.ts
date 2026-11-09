@@ -87,6 +87,9 @@ function contextFrom(values: ServerFlags, remember?: string) {
   const loss = values['allow-data-loss'] ?? env.APPDYNO_ALLOW_DATA_LOSS;
   if (loss !== undefined && loss !== 'virtual' && loss !== 'all')
     throw new Error(`--allow-data-loss takes virtual or all, not ${loss}`);
+  const power = values['allow-power'] ?? env.APPDYNO_ALLOW_POWER;
+  if (power !== undefined && power !== 'virtual' && power !== 'all')
+    throw new Error(`--allow-power takes virtual or all, not ${power}`);
   const policy: Policy = {
     ...DEFAULT_POLICY,
     ...(devices && { devices }),
@@ -95,6 +98,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
     allowHome: !values['no-home'],
     secrets: list(env.APPDYNO_SECRETS),
     ...(loss && { allowDataLoss: loss }),
+    ...(power && { allowPower: power }),
   };
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;

@@ -17,34 +17,35 @@ Perfetto trace processor), `bench`, `push setup apns|fcm [--forget]` (see [Tools
 device and the diff baseline between CLI processes are kept in a small file in the state directory, one per working
 directory, so two terminals in two folders do not share a device. A command that loses data asks on its terminal first,
 as [Tools](tools.md#what-asks-the-person-first) lists; `--yes` is the answer, and with no terminal and no `--yes` it is
-refused unless `APPDYNO_ALLOW_DATA_LOSS` allows it.
+refused unless `APPDYNO_ALLOW_DATA_LOSS` allows it, or `APPDYNO_ALLOW_POWER` one on the system's power controls.
 
 ## Server options
 
 `appdyno mcp [flags]`. Each flag has an environment variable.
 
-| flag                        | environment                         | what                                                                                                                        |
-| --------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `--device S`                | `APPDYNO_SERIAL`                    | adb serial, simulator id or iPhone UDID                                                                                     |
-| `--app A`                   | `APPDYNO_APP`                       | default app (bundle or package id)                                                                                          |
-| `--allow-devices RE`        | `APPDYNO_ALLOW_DEVICES`             | only devices whose id matches                                                                                               |
-| `--allow-apps a,b`          | `APPDYNO_ALLOW_APPS`                | only these apps                                                                                                             |
-| `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | only links that match                                                                                                       |
-| `--allow-data-loss V`       | `APPDYNO_ALLOW_DATA_LOSS`           | what loses data goes ahead with nothing asked: `virtual` on simulators and emulators, `all` on every device                 |
-| `--no-home`                 |                                     | block the home key                                                                                                          |
-| `--silent`                  | `APPDYNO_SILENT=1`                  | `hand_off` plays no sound and posts no macOS notification, for CI and a shared Mac: a window shows its banner with no sound |
-| `--measurements dir`        |                                     | where measurements are stored (default: the state directory)                                                                |
-| `--takeover`                |                                     | stop another tool that holds UI automation on Android                                                                       |
-| `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all                                                     |
-| `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` passes a Play Protect warning, and always says so and quotes it                                               |
-| `--share`                   | `APPDYNO_SHARE=1`                   | use a device another process holds                                                                                          |
-| `--animations V`            | `APPDYNO_ANIMATIONS`                | `off` sets an Android device's animation scales to 0 while it is driven                                                     |
-| `--trace-limit-gb N`        | `APPDYNO_TRACE_LIMIT_GB`            | what kept traces and heap dumps may take, 10 by default; older ones go, never what a baseline or a recent run names         |
-| `--http 127.0.0.1:PORT`     |                                     | Streamable HTTP on this Mac's loopback, not stdio: see below. Off unless given, and no variable turns it on                 |
-|                             | `APPDYNO_HTTP_TOKEN`                | the token `--http` asks for, 32 characters or more: generated and printed if not set                                        |
-|                             | `APPDYNO_TOOLS_DIR`                 | where fetched tools are kept, whatever the state directory: `~/Library/Caches/appdyno/tools` by default                     |
-|                             | `APPDYNO_TRACE_PROCESSOR`           | a `trace_processor_shell` to read Android's traces with, in place of the app's and the pinned one fetched                   |
-|                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                                                                             |
+| flag                        | environment                         | what                                                                                                                                                        |
+| --------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--device S`                | `APPDYNO_SERIAL`                    | adb serial, simulator id or iPhone UDID                                                                                                                     |
+| `--app A`                   | `APPDYNO_APP`                       | default app (bundle or package id)                                                                                                                          |
+| `--allow-devices RE`        | `APPDYNO_ALLOW_DEVICES`             | only devices whose id matches                                                                                                                               |
+| `--allow-apps a,b`          | `APPDYNO_ALLOW_APPS`                | only these apps                                                                                                                                             |
+| `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | only links that match                                                                                                                                       |
+| `--allow-data-loss V`       | `APPDYNO_ALLOW_DATA_LOSS`           | what loses data goes ahead with nothing asked: `virtual` on simulators and emulators, `all` on every device                                                 |
+| `--allow-power V`           | `APPDYNO_ALLOW_POWER`               | an input on the system's own power, emergency or erase controls goes ahead with nothing asked: `virtual` on simulators and emulators, `all` on every device |
+| `--no-home`                 |                                     | block the home key                                                                                                                                          |
+| `--silent`                  | `APPDYNO_SILENT=1`                  | `hand_off` plays no sound and posts no macOS notification, for CI and a shared Mac: a window shows its banner with no sound                                 |
+| `--measurements dir`        |                                     | where measurements are stored (default: the state directory)                                                                                                |
+| `--takeover`                |                                     | stop another tool that holds UI automation on Android                                                                                                       |
+| `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all                                                                                     |
+| `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` passes a Play Protect warning, and always says so and quotes it                                                                               |
+| `--share`                   | `APPDYNO_SHARE=1`                   | use a device another process holds                                                                                                                          |
+| `--animations V`            | `APPDYNO_ANIMATIONS`                | `off` sets an Android device's animation scales to 0 while it is driven                                                                                     |
+| `--trace-limit-gb N`        | `APPDYNO_TRACE_LIMIT_GB`            | what kept traces and heap dumps may take, 10 by default; older ones go, never what a baseline or a recent run names                                         |
+| `--http 127.0.0.1:PORT`     |                                     | Streamable HTTP on this Mac's loopback, not stdio: see below. Off unless given, and no variable turns it on                                                 |
+|                             | `APPDYNO_HTTP_TOKEN`                | the token `--http` asks for, 32 characters or more: generated and printed if not set                                                                        |
+|                             | `APPDYNO_TOOLS_DIR`                 | where fetched tools are kept, whatever the state directory: `~/Library/Caches/appdyno/tools` by default                                                     |
+|                             | `APPDYNO_TRACE_PROCESSOR`           | a `trace_processor_shell` to read Android's traces with, in place of the app's and the pinned one fetched                                                   |
+|                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                                                                                                             |
 
 Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
 the holder by its pid and command line and gives the exact command to stop it.

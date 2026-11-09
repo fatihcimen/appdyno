@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
 import { endSession, sweep, type Taken } from './leftovers.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
+import { powerGuard } from './power.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
 
@@ -224,6 +225,7 @@ export class ServerContext {
       }),
       app ?? this.defaults.app ?? saved?.app,
       owner,
+      powerGuard(this.policy),
     );
     s.shown = saved?.shown;
     s.lastActionAt = saved?.lastActionAt;

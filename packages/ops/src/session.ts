@@ -16,6 +16,7 @@ import {
   type ScreenElement,
 } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
+import { guardInputs, type InputGuard } from './power.js';
 import type { RunningFlight } from './timeline/flight.js';
 import type { RunningTimeline } from './timeline/run.js';
 
@@ -97,7 +98,11 @@ export class Session {
     public appId: string | undefined,
     /** Who answers for what this session leaves on the device; a command line's stays until asked. */
     readonly owner?: Owner,
-  ) {}
+    /** What every input passes on its way to the device, whichever tool, step or replay sent it. */
+    guard?: InputGuard,
+  ) {
+    if (guard) this.device = guardInputs(device, (input) => guard(this, input));
+  }
 
   screenOf(tree: Tree): Screen {
     return buildScreen(tree, {

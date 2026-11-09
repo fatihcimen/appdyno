@@ -1,0 +1,113 @@
+{
+  "windows": [
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 0,
+      "b": [0, 0, 1080, 2400],
+      "active": true,
+      "focused": true
+    }
+  ],
+  "nodes": [
+    { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 17 },
+    { "p": 0, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 4113 },
+    {
+      "p": 1,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 0, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "id": "com.android.systemui:id/global_actions_container",
+      "b": [0, 0, 1080, 2400],
+      "f": 17
+    },
+    {
+      "p": 3,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/global_actions_view",
+      "b": [194, 782, 887, 1619],
+      "f": 23
+    },
+    {
+      "p": 4,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "id": "android:id/list",
+      "b": [194, 782, 887, 1619],
+      "f": 4113
+    },
+    {
+      "p": 5,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "com.android.systemui:id/list_flow",
+      "b": [257, 845, 824, 1556],
+      "f": 4113
+    },
+    { "p": 5, "w": 0, "c": "android.widget.LinearLayout", "b": [257, 845, 509, 1169], "f": 23 },
+    { "p": 5, "w": 0, "c": "android.widget.LinearLayout", "b": [572, 845, 824, 1169], "f": 2071 },
+    { "p": 5, "w": 0, "c": "android.widget.LinearLayout", "b": [415, 1232, 667, 1556], "f": 2071 },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [257, 845, 509, 1097],
+      "f": 4113
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/message",
+      "t": "Acil durum",
+      "b": [257, 1118, 509, 1169],
+      "f": 81
+    },
+    {
+      "p": 8,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [572, 845, 824, 1097],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/message",
+      "t": "Kapat",
+      "b": [572, 1118, 824, 1169],
+      "f": 81
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [415, 1232, 667, 1484],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/message",
+      "t": "Yeniden başlat",
+      "b": [415, 1505, 667, 1556],
+      "f": 81
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 2158,
+  "hash": "cbf29ce484222325"
+}

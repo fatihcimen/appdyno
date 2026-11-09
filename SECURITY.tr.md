@@ -53,6 +53,21 @@ Hiçbir araç bir cihazı ya da simülatörü yeniden başlatmaz, içeriğini si
 herhangi bir kaynak bunun bir yolunu kazanırsa `packages/appdyno/test/device-reset.test.ts` başarısız olur. `simulator create`, oluşturduğunu bir kişinin
 nasıl kaldıracağını söyler ve bunların hiçbirini çalıştırmaz.
 
+Cihazın kendi denetimleri de bunu yapar ve bir ajan onlara bir kişi gibi ulaşabilir: biri bir telefonu hızlı panelin güç düğmesi,
+Yeniden başlat ve onayla yeniden başlattı. Bu yüzden sunucunun bir cihaza gönderdiği her girdi önce tek bir korumadan geçer,
+`packages/ops/src/power.ts`: herhangi bir araçtan, `steps`'ten ya da yeniden oynatılan bir akıştan gelen bir dokunma, hareket,
+kaydırma, uzun basma, yazma ya da tuş. Koruma ekranı okur ve sistemin güç, acil durum ya da silme denetimlerine dokunacak olan girdi
+kişiye sorar: Android'in güç menüsü (Kapat, Yeniden başlat, Acil durum), hızlı ayarlardaki düğmesi ve kilit ekranının acil arama
+düğmesi, bir Samsung'un ve bir Xiaomi'nin güç menüsü, Ayarlar'ın sıfırlamaları ile tüm verileri silme ekranı ve onayı; iOS'un kapatmak
+için kaydırın ve Acil SOS'u, Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'i. Onları gösteren sistem uygulamasından, güç
+menüsünün ve silme ekranının her dilde aynı kimliklerinden ve İngilizce ve Türkçe sözlerinden tanır; dokunma ref, seçici ya da x,y ile,
+nasıl hedeflenirse hedeflensin. Güç ya da yan tuşa 5 saniye içinde üçüncü basış da sorar, çünkü arka arkaya basışlar birçok telefonda
+yardım çağırır. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları da. Yanıt, appdyno'nun bir cihazı
+yeniden başlatmadığını, kapatmadığını, sıfırlamadığını ya da silmediğini ve bunu kişinin yaptığını söyler. Aşağıda veri kaybettiren işlem
+nasıl sorulup reddediliyorsa öyle sorulur ve reddedilir; hiçbir şey sorulmadan yapılmasına yalnızca `--allow-power virtual` (simülatörler
+ve emülatörler) ya da `all` izin verir: `--allow-data-loss` vermez, çünkü bir emülatörde bir uygulamanın verisini temizleyen bir çalışma
+onu yeniden başlamış bulmamalıdır. Bir pencerenin kendi girdisi başındaki kişidir ve hiçbir korumadan geçmez.
+
 Bir kişinin isteyebileceği veriyi kaybettiren işlem önce o kişiye sorar: [liste](docs/reference/tools.tr.md#önce-kişiye-sorulanlar).
 Soruyu istemci gösterir, model onu yanıtlayamaz ve bir hayır hiçbir şey yaptırmaz. Bir istemci kendi kendine hayır diyebilir, bu yüzden yanıt soruya evet gelmediğini söyler, asla kişinin reddettiğini değil; her ret de bir kişinin buna önceden nasıl izin vereceğini söyler. İstemcinin soramadığı yerde ve
 `--http` üzerinden işlem reddedilir; ancak kişi sunucuyu `--allow-data-loss virtual` (simülatörler ve

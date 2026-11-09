@@ -17,7 +17,7 @@ Perfetto trace processor'ı indirir), `bench`, `push setup apns|fcm [--forget]` 
 arasında seçili cihaz ve diff baseline'ı, durum klasöründe çalışma klasörü başına bir tane olan küçük bir dosyada
 tutulur, böylece iki klasördeki iki terminal bir cihazı paylaşmaz. Veri kaybettiren bir komut önce kendi terminalinde sorar,
 [Araçlar](tools.tr.md#önce-kişiye-sorulanlar) sayfasının listelediği gibi; yanıt `--yes`'tir, terminal ve `--yes` yoksa da
-`APPDYNO_ALLOW_DATA_LOSS` izin vermedikçe reddedilir.
+`APPDYNO_ALLOW_DATA_LOSS`, sistemin güç denetimlerine olanına da `APPDYNO_ALLOW_POWER` izin vermedikçe reddedilir.
 
 ## Sunucu seçenekleri
 
@@ -31,6 +31,7 @@ tutulur, böylece iki klasördeki iki terminal bir cihazı paylaşmaz. Veri kayb
 | `--allow-apps a,b`          | `APPDYNO_ALLOW_APPS`                | yalnızca bu uygulamalar                                                                                                                                           |
 | `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | yalnızca eşleşen bağlantılar                                                                                                                                      |
 | `--allow-data-loss V`       | `APPDYNO_ALLOW_DATA_LOSS`           | veri kaybettiren işlem hiçbir şey sorulmadan yapılır: simülatörlerde ve emülatörlerde `virtual`, her cihazda `all`                                                |
+| `--allow-power V`           | `APPDYNO_ALLOW_POWER`               | sistemin kendi güç, acil durum ya da silme denetimlerine bir girdi hiçbir şey sorulmadan yapılır: simülatörlerde ve emülatörlerde `virtual`, her cihazda `all`    |
 | `--no-home`                 |                                     | ana ekran tuşunu engeller                                                                                                                                         |
 | `--silent`                  | `APPDYNO_SILENT=1`                  | `hand_off` ses çalmaz ve macOS bildirimi göstermez, CI ve paylaşılan bir Mac için: bir pencere bandını sessiz gösterir                                            |
 | `--measurements dir`        |                                     | ölçümlerin saklandığı yer (varsayılan: durum klasörü)                                                                                                             |

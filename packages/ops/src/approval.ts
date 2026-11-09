@@ -47,24 +47,48 @@ const AHEAD =
 
 /** Returns once the person said yes, or the policy allows it on this device; else refuses, with nothing done. */
 export async function approve(policy: Policy, s: Session, action: DataLoss, app = '', also = '') {
-  const flag = policy.allowDataLoss;
-  if (flag === 'all' || (flag === 'virtual' && s.device.virtual)) return;
+  if (allows(policy.allowDataLoss, s)) return;
+  await askPerson(s, action, DATA_LOSS[action](app, also), AHEAD);
+}
+
+/** As SECURITY.md has it: no tool does any of this, so a person does it, and a touch that would is asked of them. */
+const POWER_AHEAD =
+  "appdyno does not restart, power off, reset or erase a device, nor call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: --allow-power virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_POWER)";
+
+/** As `approve`, for an input that would act on the system's own power, emergency or erase controls: `what` names it. */
+export async function approvePower(policy: Policy, s: Session, what: string) {
+  if (allows(policy.allowPower, s)) return;
+  await askPerson(
+    s,
+    what,
+    [
+      `Let appdyno act on ${what}`,
+      'The device may power off, restart, call for help, or lose all it holds',
+    ],
+    POWER_AHEAD,
+  );
+}
+
+const allows = (flag: Policy['allowDataLoss'], s: Session) =>
+  flag === 'all' || (flag === 'virtual' && s.device.virtual);
+
+/** The person's yes to `name`, asked as `doing` on this device and what is `lost`; else a refusal, with nothing done. */
+async function askPerson(s: Session, name: string, [doing, lost]: [string, string], ahead: string) {
   // as a person names it, iPhone 17 and not iPhone18,3
   const model = (await s.device.hardware().catch(() => undefined))?.model ?? s.device.hello?.model;
   const device = model ? `${model} (${s.device.serial})` : s.device.serial;
-  const [doing, lost] = DATA_LOSS[action](app, also);
   const ask = callAsk();
   if (!ask)
     throw new ToolError(
-      `${action} asks the person first, and this client cannot ask: nothing was done`,
+      `${name} asks the person first, and this client cannot ask: nothing was done`,
       'PERMISSION_REQUIRED',
-      `${AHEAD}; on the command line, --yes`,
+      `${ahead}; on the command line, --yes`,
     );
   // a prompt closed, or one that never came back, is no yes: and a client may answer one itself, with no person shown it
   if (!(await ask(`${doing} on ${device}? ${lost}.`).catch(() => false)))
     throw new ToolError(
-      `${action} on ${device} was not allowed: its question got no yes, and nothing was done`,
+      `${name} on ${device} was not allowed: its question got no yes, and nothing was done`,
       'PERMISSION_REQUIRED',
-      `a client may answer no by itself, with no person shown the question; ${AHEAD}; ask again only if the person asks for it`,
+      `a client may answer no by itself, with no person shown the question; ${ahead}; ask again only if the person asks for it`,
     );
 }

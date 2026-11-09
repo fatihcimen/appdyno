@@ -31,7 +31,8 @@ describe('a device warmed before its first call', () => {
     ctx.warm('one');
     ctx.warm('other');
     const s = await ctx.session('one');
-    expect([opened.length, s.device === opened[0], warmed]).toEqual([1, true, 2]);
+    // the session's device is that one behind the guard of its inputs, which reads it as it is
+    expect([opened.length, s.device.hello === opened[0]?.hello, warmed]).toEqual([1, true, 2]);
   });
 });
 

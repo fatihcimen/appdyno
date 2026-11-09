@@ -69,6 +69,14 @@ Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri k
 - `app grant`: yalnızca bir iPhone'da; orada grant izni sorulacak hale sıfırlar: kaybolan, kişinin verdiği yanıttır. Bir simülatörünki
   ve Android'inki hiçbir şey kaybettirmez ve hiçbir şey sormaz
 - `device_setting keychain`: uygulamaların anahtar zincirinde tuttuğu her öğe
+- sistemin kendi güç, acil durum ya da silme denetimlerine, yani cihazın kendisine bir girdi: herhangi bir araçtan, `steps`'ten ya
+  da bir akıştan, Android'in güç menüsüne (Kapat, Yeniden başlat, Acil durum) ya da hızlı ayarlardaki düğmesine, bir kilit ekranının
+  acil aramasına, Ayarlar'ın sıfırlamalarına ve tüm verileri silme ekranına, iOS'un kapatmak için kaydırın ve Acil SOS'una ya da
+  Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'ine bir dokunma, hareket, kaydırma, uzun basma, yazma ya da tuş; dokunma nereye
+  düşerse düşsün sistem uygulamasından, her dilde aynı kimliklerden ve İngilizce ve Türkçe sözlerden tanınır; bir de güç ya da yan tuşa
+  5 saniye içinde üçüncü basış, bu birçok telefonda yardım çağırır. appdyno hiçbir cihazı yeniden başlatmaz, kapatmaz, sıfırlamaz ya
+  da silmez ve yanıt bunu kişinin yaptığını söyler. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları
+  da. Bunların hiçbir şey sorulmadan yapılmasına yalnızca `--allow-power virtual` ya da `all` izin verir, asla `--allow-data-loss` değil
 
 Sunucu, istemcinin bunu yapabildiğini bildirdiği yerde istemcinin kendi sorusuyla, yani MCP elicitation ile sorar; istemci bunu bir 2025
 revizyonunda `initialize`'da, 2026-07-28'de ise her istekte bildirir; soru cihazı, uygulamayı ve neyin kaybolacağını söyler. Model onu yanıtlayamaz.

@@ -69,6 +69,14 @@ These lose what a person may want, so each waits for the person's yes:
 - `app grant`: on an iPhone only, whose grant resets the permission to ask: the answer the person gave. A simulator's
   and Android's lose nothing and ask nothing
 - `device_setting keychain`: every item apps keep in the keychain
+- an input on the system's own power, emergency or erase controls, the device itself: a tap, gesture, swipe, long press,
+  typing or key from any tool, `steps` or a flow, on Android's power menu (Power off, Restart, Emergency) or its button in
+  quick settings, a lock screen's emergency call, Settings' resets and its erase-all-data screen, iOS's slide to power off
+  and Emergency SOS, or Settings' Reset and Erase All Content and Settings, known by the system app, the ids in any
+  language and the words in English and Turkish wherever the touch lands; and a third press of the power or side key in
+  5 seconds, which calls for help on many phones. appdyno restarts, powers off, resets and erases no device, and the
+  answer says the person does it. Reading such a screen asks nothing, nor back and home, which leave it. Only
+  `--allow-power virtual` or `all` lets these go ahead with nothing asked, never `--allow-data-loss`
 
 The server asks by the client's own prompt, MCP elicitation, where the client declared it can, at `initialize` on a 2025
 revision and on each request on 2026-07-28, and names the device, the app and what is lost. The model cannot answer it.

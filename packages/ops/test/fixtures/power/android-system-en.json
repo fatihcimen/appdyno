@@ -1,0 +1,762 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "com.android.settings",
+      "layer": 0,
+      "b": [0, 0, 1080, 2400],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 1,
+      "b": [0, 0, 1080, 63],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 17 },
+    { "p": -1, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 63], "f": 17 },
+    { "p": 0, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 0, 1080, 2400], "f": 4113 },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_launch_animation_container",
+      "b": [0, 0, 1080, 63],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/container",
+      "b": [0, 0, 1080, 63],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_container",
+      "b": [0, 0, 1080, 63],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 0, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 5,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar",
+      "b": [0, 0, 1080, 63],
+      "f": 17
+    },
+    {
+      "p": 6,
+      "w": 0,
+      "c": "android.widget.ScrollView",
+      "id": "com.android.settings:id/content_parent",
+      "b": [0, 0, 1080, 2400],
+      "f": 273
+    },
+    {
+      "p": 7,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_contents",
+      "b": [0, 0, 1027, 63],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/app_bar",
+      "b": [0, 0, 1080, 533],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.settings:id/content_frame",
+      "b": [0, 533, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_container",
+      "b": [21, 0, 513, 63],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_container",
+      "b": [513, 0, 1006, 63],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.settings:id/collapsing_toolbar",
+      "d": "System",
+      "b": [0, 0, 1080, 533],
+      "f": 17
+    },
+    { "p": 11, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 533, 1080, 2400], "f": 4113 },
+    {
+      "p": 12,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_content",
+      "b": [21, 0, 186, 63],
+      "f": 4113
+    },
+    {
+      "p": 13,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_content",
+      "b": [885, 0, 1006, 63],
+      "f": 4113
+    },
+    {
+      "p": 14,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "id": "com.android.settings:id/action_bar",
+      "b": [0, 63, 1080, 210],
+      "f": 4113
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.settings:id/main_content",
+      "b": [0, 533, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 16,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_except_heads_up",
+      "b": [21, 0, 186, 63],
+      "f": 4113
+    },
+    {
+      "p": 17,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/system_icons",
+      "b": [885, 0, 1006, 63],
+      "f": 4113
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.ImageButton",
+      "d": "Navigate up",
+      "b": [0, 63, 147, 210],
+      "f": 23
+    },
+    { "p": 18, "w": 0, "c": "android.view.View", "b": [189, 63, 1080, 210], "f": 4113 },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "System",
+      "b": [189, 101, 189, 172],
+      "f": 16
+    },
+    { "p": 18, "w": 0, "c": "android.widget.LinearLayout", "b": [1080, 63, 1080, 210], "f": 4112 },
+    {
+      "p": 19,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/container_material",
+      "b": [0, 533, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 20,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.android.systemui:id/clock",
+      "t": "11:16 ",
+      "d": "11:16 AM",
+      "b": [21, 0, 128, 63],
+      "f": 17
+    },
+    {
+      "p": 20,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/notification_icon_area",
+      "b": [128, 0, 186, 63],
+      "f": 4113
+    },
+    {
+      "p": 21,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/statusIcons",
+      "b": [885, 0, 986, 63],
+      "f": 4113
+    },
+    {
+      "p": 21,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/battery",
+      "d": "Battery charging, 100 percent.",
+      "b": [986, 0, 1006, 63],
+      "f": 17
+    },
+    {
+      "p": 26,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/list_container",
+      "b": [0, 533, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 28,
+      "w": 1,
+      "c": "android.view.ViewGroup",
+      "id": "com.android.systemui:id/notificationIcons",
+      "b": [128, 0, 186, 63],
+      "f": 4113
+    },
+    {
+      "p": 29,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [885, 2, 931, 60],
+      "f": 4113
+    },
+    {
+      "p": 29,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/mobile_combo",
+      "d": "Phone signal full.",
+      "b": [931, 2, 970, 60],
+      "f": 17
+    },
+    { "p": 30, "w": 1, "c": "android.widget.ImageView", "b": [986, 14, 1006, 48], "f": 4113 },
+    {
+      "p": 31,
+      "w": 0,
+      "c": "androidx.recyclerview.widget.RecyclerView",
+      "id": "com.android.settings:id/recycler_view",
+      "b": [0, 533, 1080, 2400],
+      "f": 21
+    },
+    {
+      "p": 32,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "d": "Android System notification: ",
+      "b": [128, 0, 186, 63],
+      "f": 17
+    },
+    {
+      "p": 33,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/wifi_group",
+      "b": [892, 2, 931, 60],
+      "f": 4113
+    },
+    {
+      "p": 34,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/mobile_group",
+      "b": [931, 2, 970, 60],
+      "f": 4113
+    },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 533, 1080, 739], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 739, 1080, 945], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 945, 1080, 1151], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1151, 1080, 1357], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1357, 1080, 1512], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1512, 1080, 1718], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1718, 1080, 1873], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1873, 1080, 2079], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 2079, 1080, 2285], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 2285, 1080, 2400], "f": 23 },
+    { "p": 36, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 2491, 1080, 2491], "f": 22 },
+    {
+      "p": 38,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [892, 11, 931, 50],
+      "f": 4113
+    },
+    { "p": 39, "w": 1, "c": "android.widget.FrameLayout", "b": [931, 11, 970, 50], "f": 4113 },
+    {
+      "p": 40,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 593, 189, 678],
+      "f": 4113
+    },
+    {
+      "p": 40,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 533, 1038, 739],
+      "f": 4113
+    },
+    {
+      "p": 41,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 799, 189, 884],
+      "f": 4113
+    },
+    {
+      "p": 41,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 739, 1038, 945],
+      "f": 4113
+    },
+    {
+      "p": 42,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 1005, 189, 1090],
+      "f": 4113
+    },
+    {
+      "p": 42,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 945, 1038, 1151],
+      "f": 4113
+    },
+    {
+      "p": 43,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 1211, 189, 1296],
+      "f": 4113
+    },
+    {
+      "p": 43,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 1151, 1038, 1357],
+      "f": 4113
+    },
+    {
+      "p": 44,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 1392, 189, 1477],
+      "f": 4113
+    },
+    {
+      "p": 44,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 1357, 1038, 1512],
+      "f": 4113
+    },
+    {
+      "p": 45,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 1572, 189, 1657],
+      "f": 4113
+    },
+    {
+      "p": 45,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 1512, 1038, 1718],
+      "f": 4113
+    },
+    {
+      "p": 46,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 1753, 189, 1838],
+      "f": 4113
+    },
+    {
+      "p": 46,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 1718, 1038, 1873],
+      "f": 4113
+    },
+    {
+      "p": 47,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 1933, 189, 2018],
+      "f": 4113
+    },
+    {
+      "p": 47,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 1873, 1038, 2079],
+      "f": 4113
+    },
+    {
+      "p": 48,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 2139, 189, 2224],
+      "f": 4113
+    },
+    {
+      "p": 48,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 2079, 1038, 2285],
+      "f": 4113
+    },
+    {
+      "p": 49,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 2345, 189, 2400],
+      "f": 4113
+    },
+    {
+      "p": 49,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 2285, 1038, 2400],
+      "f": 4113
+    },
+    {
+      "p": 50,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.settings:id/icon_frame",
+      "b": [63, 2526, 189, 2526],
+      "f": 4112
+    },
+    {
+      "p": 50,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "b": [189, 2491, 1038, 2491],
+      "f": 4112
+    },
+    {
+      "p": 51,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/wifi_signal",
+      "d": "Wifi signal full.",
+      "b": [892, 11, 931, 50],
+      "f": 17
+    },
+    {
+      "p": 52,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/mobile_signal",
+      "b": [931, 11, 970, 50],
+      "f": 4113
+    },
+    {
+      "p": 53,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 604, 126, 667],
+      "f": 4113
+    },
+    {
+      "p": 54,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Languages",
+      "b": [189, 575, 449, 646],
+      "f": 17
+    },
+    {
+      "p": 54,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "System languages, app languages, speech",
+      "b": [189, 646, 883, 697],
+      "f": 17
+    },
+    {
+      "p": 55,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 810, 126, 873],
+      "f": 4113
+    },
+    {
+      "p": 56,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Keyboard",
+      "b": [189, 781, 411, 852],
+      "f": 17
+    },
+    {
+      "p": 56,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "On-screen keyboard, physical keyboard, tools",
+      "b": [189, 852, 926, 903],
+      "f": 17
+    },
+    {
+      "p": 57,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 1016, 126, 1079],
+      "f": 4113
+    },
+    {
+      "p": 58,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Live Translate",
+      "b": [189, 987, 517, 1058],
+      "f": 17
+    },
+    {
+      "p": 58,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "On",
+      "b": [189, 1058, 234, 1109],
+      "f": 17
+    },
+    {
+      "p": 59,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 1222, 126, 1285],
+      "f": 4113
+    },
+    {
+      "p": 60,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Navigation mode",
+      "b": [189, 1193, 590, 1264],
+      "f": 17
+    },
+    {
+      "p": 60,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "Gesture navigation",
+      "b": [189, 1264, 497, 1315],
+      "f": 17
+    },
+    {
+      "p": 61,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 1403, 126, 1466],
+      "f": 4113
+    },
+    {
+      "p": 62,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Gestures",
+      "b": [189, 1399, 399, 1470],
+      "f": 17
+    },
+    {
+      "p": 63,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 1583, 126, 1646],
+      "f": 4113
+    },
+    {
+      "p": 64,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Date & time",
+      "b": [189, 1554, 461, 1625],
+      "f": 17
+    },
+    {
+      "p": 64,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "GMT+03:00",
+      "b": [189, 1625, 382, 1676],
+      "f": 17
+    },
+    {
+      "p": 65,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 1764, 126, 1827],
+      "f": 4113
+    },
+    {
+      "p": 66,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Backup",
+      "b": [189, 1760, 365, 1831],
+      "f": 17
+    },
+    {
+      "p": 67,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 1944, 126, 2007],
+      "f": 4113
+    },
+    {
+      "p": 68,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "System update",
+      "b": [189, 1915, 539, 1986],
+      "f": 17
+    },
+    {
+      "p": 68,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "Updated to Android 14",
+      "b": [189, 1986, 559, 2037],
+      "f": 17
+    },
+    {
+      "p": 69,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 2150, 126, 2213],
+      "f": 4113
+    },
+    {
+      "p": 70,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Rules",
+      "b": [189, 2121, 319, 2192],
+      "f": 17
+    },
+    {
+      "p": 70,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "0 rules",
+      "b": [189, 2192, 300, 2243],
+      "f": 17
+    },
+    {
+      "p": 71,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 2356, 126, 2400],
+      "f": 4113
+    },
+    {
+      "p": 72,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Multiple users",
+      "b": [189, 2327, 520, 2398],
+      "f": 17
+    },
+    {
+      "p": 72,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/summary",
+      "t": "Signed in as Owner",
+      "b": [189, 2398, 503, 2400],
+      "f": 17
+    },
+    {
+      "p": 73,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "android:id/icon",
+      "b": [63, 2537, 126, 2537],
+      "f": 4112
+    },
+    {
+      "p": 74,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "android:id/title",
+      "t": "Reset options",
+      "b": [189, 2533, 511, 2533],
+      "f": 16
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 392,
+  "hash": "9bc21a0158ae3e1b"
+}

@@ -15,6 +15,8 @@ export type Policy = {
   secrets: string[];
   /** What loses data goes ahead with no question asked: on simulators and emulators, or on every device. */
   allowDataLoss?: 'virtual' | 'all';
+  /** An input on the system's own power, emergency or erase controls goes ahead with no question asked, as above. */
+  allowPower?: 'virtual' | 'all';
 };
 
 export const DEFAULT_POLICY: Policy = { apps: [], allowHome: true, secrets: [] };
