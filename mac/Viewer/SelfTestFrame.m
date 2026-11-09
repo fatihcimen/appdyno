@@ -1,6 +1,7 @@
 // The maths of a window, with no window: frames, zoom, the controls' table, gestures and composed text.
 #import "SelfTest.h"
 #import "Window.h"
+#import "WindowParts.h"
 
 static BOOL near(double a, double b) {
   return fabs(a - b) < 0.01;
@@ -207,6 +208,28 @@ static void checkSheetAndCard(void) {
   MVCheck(@"inspector: it says where a device's numbers are", [[[slot valueForKey:@"_empty"] stringValue] isEqual:@"Its numbers are in its own window."], nil);
 }
 
+/// w27 and w28: two devices in the hub's room, its bar on the second and its sidebar on the first, neither picture named,
+/// and a touch that failed on one said nowhere.
+static void checkRoomPair(void) {
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  [hub show:@{@"devices": @[@{@"id": @"a", @"serial": @"a", @"kind": @"emulator", @"state": @"running", @"name": @"First"},
+                             @{@"id": @"b", @"serial": @"b", @"kind": @"simulator", @"state": @"running", @"name": @"Second"}]}];
+  MVWindow *one = [[MVWindow alloc] initInRoom:hub.room], *two = [[MVWindow alloc] initInRoom:hub.room];
+  one.behind = two.behind = YES;
+  [one configure:@{@"title": @"First", @"stage": @"a", @"look": @{}}];
+  [two configure:@{@"title": @"Second", @"stage": @"b", @"look": @{}}];
+  MVList *list = [hub valueForKey:@"_list"];
+  MVCheck(@"room pair: the sidebar chooses the device whose bar is up", [list.selected.key isEqual:@"b"], list.selected.key);
+  [one setPair:@{@"both": @YES, @"with": @"Second"}];
+  [two setPair:@{@"both": @YES, @"with": @"First", @"failing": @"No Add here"}];
+  NSTextField *first = [one valueForKey:@"_sideName"], *second = [two valueForKey:@"_sideName"];
+  MVCheck(@"room pair: each picture says whose it is and where a touch goes", !first.hidden && [first.stringValue isEqual:@"First · To both"], first.stringValue);
+  MVCheck(@"room pair: a touch that failed on one says why under it, in red, though the bar is the other's", !second.hidden && [second.stringValue isEqual:@"Second · No Add here"] && ![second.textColor isEqual:first.textColor], second.stringValue);
+  [one leave];
+  [two showSide];
+  MVCheck(@"room pair: a device alone says nothing of a side", second.hidden, nil);
+}
+
 static void checkPair(void) {
   MVStatusLine *line = [MVStatusLine new];
   line.name = @"Phone";
@@ -391,6 +414,7 @@ void MVCheckFrame(void) {
   checkHeldSentence();
   checkRates();
   checkSheetAndCard();
+  checkRoomPair();
   checkPair();
   checkClicks();
   checkMenus();

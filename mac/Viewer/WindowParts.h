@@ -15,6 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
   MVToolbar *_bar;
   NSToolbar *_toolbar;
   MVHud *_hud;
+  NSTextField *_sideName;
   BOOL _hudding, _reading, _recording, _waitingForPerson;
   __weak MVRoomView *_room;
   MVRootView *_root;
@@ -37,6 +38,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)watchReadings;
 - (void)toggleHud;
 - (void)showState;
+/// Under each picture of two in a room: whose it is, and where a touch goes or why it failed there.
+- (void)showSide;
 @end
 
 @interface MVWindow (Inspector)

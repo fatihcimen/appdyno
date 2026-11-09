@@ -1,6 +1,7 @@
 // Two windows side by side: what this one says of the other, where it stands, and the flow both are to run.
 #import "Viewer.h"
 #import "Window.h"
+#import "WindowParts.h"
 #import "Words.h"
 
 static const double kBetween = 12, kFromTop = 24;
@@ -24,6 +25,23 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   [self.bar paint:@"both" symbol:@"link" color:both ? MVAccent() : MVInkColor()];
   button.toolTip = MVWord(ended ? @"The other window has closed" : [NSString stringWithFormat:both ? @"Touches go here and to %@" : @"Touches stay here, and do not reach %@", with]);
   [self showState];
+}
+
+- (void)showSide {
+  _side = _room ? [_room sideOf:_root] : -1;
+  _sideName.hidden = _side < 0;
+  if (_side < 0) return;
+  if (!_sideName) {
+    _sideName = MVText(@"", MVStyleCallout);
+    _sideName.alignment = NSTextAlignmentCenter;
+    _sideName.lineBreakMode = NSLineBreakByTruncatingTail;
+    [_stage addSubview:_sideName];
+  }
+  // the room's bar speaks of one side: each says its own, a failure where the person looks, in red
+  NSString *how = _line.failing ?: _line.pairing;
+  _sideName.stringValue = how.length ? [NSString stringWithFormat:@"%@ · %@", _line.name ?: @"", how] : _line.name ?: @"";
+  _sideName.textColor = _line.failing ? MVRed() : MVInkColor();
+  _sideName.frame = NSMakeRect(8, MAX(2, NSMinY(_frame.frame) - 24), _stage.bounds.size.width - 16, 20);
 }
 
 - (void)placeBeside {

@@ -22,6 +22,7 @@
   if (!_toolbar) _toolbar = _bar.toolbar;
   [self holdInspector];
   if (_window.toolbar == _toolbar) return;
+  if (_room.tookBar) _room.tookBar(_root.stage ?: @"");
   _window.toolbar = _toolbar;
   _window.toolbarStyle = NSWindowToolbarStyleUnified;
   _window.titleVisibility = NSWindowTitleHidden;

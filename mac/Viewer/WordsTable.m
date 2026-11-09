@@ -350,6 +350,8 @@ const MVWordRow MVWordTable[] = {
     {"The other window has closed", "Diğer pencere kapandı"},
     {"Its screen was not read: sent to the same place", "Ekranı okunamadı: aynı yere gönderildi"},
     {"That did not land", "Dokunuş yerine ulaşmadı"},
+    {"No %@ here", "Burada %@ yok"},
+    {"%@ is not live", "%@ canlı değil"},
     {"The journey failed here", "Yolculuk burada başarısız oldu"},
     {"No clear difference", "Belirgin fark yok"},
     {"Nothing to compare", "Karşılaştırılacak bir şey yok"},

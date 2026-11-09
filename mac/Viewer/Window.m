@@ -114,6 +114,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
                                                       : _line.both          ? MVAccent()
                                                                             : nil;
   [_frame setEdge:edge];
+  [self showSide];
   if (_window.toolbar != _toolbar) return;
   _window.title = _line.name ?: @"";
   [_bar setName:_line.name ?: @"" about:_line.about];
@@ -174,6 +175,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   double bottom = kBottom + (room.height - drawn.height) / 2;
   NSRect place = NSMakeRect(round((_stage.frame.size.width - drawn.width) / 2), round(bottom), drawn.width, drawn.height);
   [_frame layOutScreen:screen in:place];
+  [self showSide];
   // a simulator's picture has its island in it and no notch, and an emulator's has what its device has
   BOOL drawsItsOwn = [_kind isEqual:@"pixels"] || ([_kind isEqual:@"surface"] && _frame.spec.cutout == MVCutoutIsland);
   CGSize portrait = screen.width > screen.height ? CGSizeMake(screen.height, screen.width) : screen;

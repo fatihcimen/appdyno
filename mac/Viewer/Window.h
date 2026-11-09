@@ -291,6 +291,8 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 @property(nonatomic) NSToolbar *bare;
 /// What the sidebar says of a device.
 @property(nonatomic, copy, nullable) NSDictionary *_Nullable (^rowOf)(NSString *serial);
+/// A stage took the bar and the Inspector: the sidebar says it is the one they speak of.
+@property(nonatomic, copy, nullable) void (^tookBar)(NSString *serial);
 /// What takes the room in place of a device.
 @property(nonatomic, nullable) NSView *place;
 /// What lies over a device for a moment.

@@ -113,6 +113,9 @@ static NSString *stateWords(NSDictionary *device) {
     room.rowOf = ^(NSString *serial) {
       return [weak rowFor:serial];
     };
+    room.tookBar = ^(NSString *serial) {
+      [weak barTakenBy:serial];
+    };
     _window.toolbar = room.bare;
     _window.toolbarStyle = NSWindowToolbarStyleUnified;
     [self addOwnPlaces];
@@ -315,6 +318,16 @@ static NSString *stateWords(NSDictionary *device) {
   for (NSDictionary *device in _devices)
     if ([device[@"id"] isEqual:key]) return device;
   return nil;
+}
+
+/// Of two standing here, the one whose bar and Inspector are up is the one chosen: the parent was told of both already.
+- (void)barTakenBy:(NSString *)serial {
+  for (NSDictionary *device in _devices)
+    if ([(device[@"serial"] ?: device[@"id"]) isEqual:serial]) {
+      _shown = device;
+      _chosen = serial;
+      [_list selectKey:device[@"id"]];
+    }
 }
 
 /// The row a person's secondary click is on, beside the device shown.
