@@ -44,6 +44,7 @@ export { perfLaunchOp } from './perf/launch.js';
 export { perfScrollOp } from './perf/scroll.js';
 export { keyName } from './step-schemas.js';
 export { conditions, readCondition } from './settings.js';
+export { captures } from './network.js';
 export { answerWatches } from './watch.js';
 export { swipeLine, pinchPaths } from './gesture-paths.js';
 export { SETTLE } from './answers.js';

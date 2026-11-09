@@ -147,6 +147,9 @@ export function windowSends(
     name.startsWith('push') ? 'push' : name.startsWith('device') ? 'device' : 'openLink';
 
   return {
+    /** One op's call by a pane, on the session these sends open: a second would be a second session on the device. */
+    call,
+
     /** What is a send of what the window says; false: it is another's. */
     onWindow(m: ViewerMessage): boolean {
       if (m.op !== 'control') return false;

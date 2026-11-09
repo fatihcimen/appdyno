@@ -21,6 +21,7 @@ import {
   keepRecording,
   loadRecording,
   saveRecording,
+  redact,
   type ServerContext,
   type Session,
   type Size,
@@ -57,6 +58,7 @@ export function windowFlow(
   let starting = false;
   let stopping = false;
   let inspecting = false;
+  let auditing = false;
   let ours = false;
   let failing: string | undefined;
 
@@ -75,7 +77,7 @@ export function windowFlow(
       failing = e.message;
     },
   });
-  const wanted = () => follow.want(recording || inspecting);
+  const wanted = () => follow.want(recording || inspecting || auditing);
   const sizeOf = (screen: Screen) => shownSize(device.hello?.screen, screen.window);
 
   /** What the pane shows of the recording. */
@@ -112,6 +114,8 @@ export function windowFlow(
       return true;
     },
     recording: () => recording,
+    may: () => session().status.state === 'live' && !measuring(),
+    clean: (text) => redact(ctx.policy, text),
   });
 
   const start = async () => {
@@ -180,15 +184,26 @@ export function windowFlow(
       follow.touched(e);
     },
 
+    /** A recording runs: a step that restarts the app is refused by name. */
+    recording: () => recording,
+
     /** What is the flow's of what the window says; false: it is another's. */
     onWindow(m: ViewerMessage): boolean {
-      if (m.op === 'inspect') {
-        inspecting = m.on === true;
-        if (inspecting)
+      const accessibility = m.op === 'paneWatch' && m.pane === 'accessibility';
+      if (m.op === 'inspect' || accessibility) {
+        if (accessibility) {
+          auditing = m.on === true;
+          inspector.audits(auditing);
+        } else inspecting = m.on === true;
+        if (m.on === true)
           trying(async () => {
             await readerSession();
           });
         wanted();
+        return true;
+      }
+      if (m.op === 'control' && m.name === 'auditAgain') {
+        inspector.again();
         return true;
       }
       if (m.op === 'hover') {
@@ -227,7 +242,7 @@ export function windowFlow(
     async end() {
       inspector.end();
       if (ours) await stop().catch(() => undefined);
-      inspecting = recording = false;
+      inspecting = recording = auditing = false;
       wanted();
     },
   };

@@ -747,3 +747,89 @@ describe('the element under the pointer', () => {
     expect(t.notes().at(-1)).toBe('Nothing is named there');
   });
 });
+
+describe('the Accessibility pane', () => {
+  beforeEach(() => void vi.useFakeTimers());
+  afterEach(() => void vi.useRealTimers());
+
+  const found: AuditResult = {
+    engine: 'rules',
+    truncated: false,
+    elapsedMs: 3,
+    issues: [
+      {
+        type: 'contrast',
+        rule: 'android.textContrast',
+        message: 'text contrast 2.1:1',
+        b: [0, 300, 1080, 400],
+        element: { c: 'android.widget.Button', t: 'Form' },
+      },
+      { type: 'hitRegion', rule: 'android.touchTarget', message: 'touch target 30x30 dp' },
+    ],
+  };
+  const shown = () => {
+    const t = setup();
+    const audit = vi.fn((_o?: { types?: string[] }) => Promise.resolve(found));
+    t.device.audit = audit;
+    t.flow.onWindow({ op: 'paneWatch', pane: 'accessibility', on: true });
+    return { ...t, audit, audits: () => t.told.filter((m) => m.op === 'audit') };
+  };
+
+  it('audits the screen shown once it has settled, of every kind, with where each issue stands', async () => {
+    const t = shown();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(t.audit).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(t.audit).toHaveBeenCalledTimes(1);
+    expect(t.audit.mock.calls[0]?.[0]?.types).toBeUndefined();
+    expect(t.audits().map((m) => m.state)).toEqual(['waiting', 'reading', 'done']);
+    expect(t.audits().at(-1)).toMatchObject({
+      issues: [
+        {
+          type: 'contrast',
+          message: 'text contrast 2.1:1',
+          label: 'Form',
+          rect: { x: 0, y: 300 / 2400, w: 1, h: 100 / 2400 },
+        },
+        { type: 'hitRegion', message: 'touch target 30x30 dp' },
+      ],
+    });
+    // the same screen is not audited again
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(t.audit).toHaveBeenCalledTimes(1);
+  });
+
+  it('audits a new screen, and the one shown again when a person asks', async () => {
+    const t = shown();
+    await vi.advanceTimersByTimeAsync(2_000);
+    t.device.screen = 'form';
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(t.audit).toHaveBeenCalledTimes(2);
+    t.flow.onWindow({ op: 'control', name: 'auditAgain' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(t.audit).toHaveBeenCalledTimes(3);
+  });
+
+  it('audits nothing while a recording runs, and says so', async () => {
+    const t = shown();
+    await t.toggle();
+    await vi.advanceTimersByTimeAsync(3_000);
+    t.flow.onWindow({ op: 'control', name: 'auditAgain' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(t.audit).not.toHaveBeenCalled();
+    expect(t.audits().at(-1)).toMatchObject({ state: 'recording', issues: [] });
+    await t.toggle();
+  });
+
+  it('reads nothing once it hides', async () => {
+    const t = shown();
+    await vi.advanceTimersByTimeAsync(2_000);
+    t.flow.onWindow({ op: 'paneWatch', pane: 'accessibility', on: false });
+    await vi.advanceTimersByTimeAsync(500);
+    const calls = t.device.calls.length;
+    t.device.screen = 'form';
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(t.device.calls.length).toBe(calls);
+    expect(t.audit).toHaveBeenCalledTimes(1);
+  });
+});

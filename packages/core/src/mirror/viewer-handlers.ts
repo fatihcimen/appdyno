@@ -57,6 +57,7 @@ export function handleViewerMessage(m: ViewerMessage, on: ViewerHandlers) {
     case 'control':
     case 'app':
     case 'perfWatch':
+    case 'paneWatch':
     case 'inspect':
     case 'hover':
     case 'pick':

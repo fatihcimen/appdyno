@@ -12,6 +12,8 @@ import { windowFlow } from './flow.js';
 import { followDevice } from './follow.js';
 import { windowMeasures } from './measures.js';
 import { pairWindows, type PairSide, type WindowPair } from './pair.js';
+import { windowLogs } from './window-logs.js';
+import { windowNetwork } from './window-network.js';
 import { windowSends } from './window-sends.js';
 import {
   answerWatches,
@@ -125,6 +127,13 @@ export class Parent {
     );
     const flow = windowFlow(this.ctx, device, hardware, () => session, controls.measuring);
     const sends = windowSends(this.ctx, device, () => session);
+    const logs = windowLogs(this.ctx, device, () => session);
+    const network = windowNetwork(device, () => session, sends.call, {
+      recording: flow.recording,
+      measuring: controls.measuring,
+    });
+    /** Each part takes what is its own, and the controls what is left. */
+    const parts = [flow, sends, logs, network];
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
       viewer: this.o.viewer?.(serial) ?? startViewer(this.o.headless, undefined, this.o.behind),
@@ -135,7 +144,7 @@ export class Parent {
       press: controls.press,
       takeInput: (e) => this.pair?.input(serial, e) ?? false,
       onWindow: (m) => {
-        if (!this.pair?.control(m) && !flow.onWindow(m) && !sends.onWindow(m)) controls.onWindow(m);
+        if (!this.pair?.control(m) && !parts.some((p) => p.onWindow(m))) controls.onWindow(m);
       },
       onInput: flow.input,
       options: this.o.options,
@@ -173,6 +182,8 @@ export class Parent {
       session.stopped.then(async (status) => {
         unfollow();
         await flow.end();
+        logs.end();
+        await network.end();
         this.pair?.end(serial);
         this.pair = undefined;
         this.sides.length = 0;
