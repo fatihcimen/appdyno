@@ -17,6 +17,7 @@ import {
   readFlow,
   saveRecording,
   startRecording,
+  writeInside,
 } from './shared.js';
 
 /** `NAME=value` words as a record. */
@@ -66,11 +67,12 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'flow',
       title: 'Flow',
       description:
-        'Record your actions as a repeatable test; replay them with no model. params NAME=value: on start, stop or save, makes that recorded value the parameter ${NAME}; on run, its value. run (from: a step; iterations: a journey timed by step, kept for perf_compare), export (to Maestro YAML).',
+        'Record your actions as a repeatable test; replay them with no model. params NAME=value: on start, stop or save, makes that recorded value the parameter ${NAME}; on run, its value. run (from: a step; iterations: a journey timed by step, kept for perf_compare), export (Maestro YAML; to: a .yaml path to write it to).',
       input: z
         .object({
           action: z.enum(['start', 'stop', 'save', 'run', 'export']),
           file: z.string().max(1_000).optional(),
+          to: z.string().max(1_000).optional(),
           from: z.number().refine(Number.isInteger, 'a step number').optional(),
           params: z.array(z.string().max(2_000)).optional(),
           envFile: z.string().max(1_000).optional(),
@@ -81,7 +83,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
         .strict(),
       output: FlowOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, file, from, params, envFile, overwrite, iterations, scenario }) => {
+      run: async ({ action, file, to, from, params, envFile, overwrite, iterations, scenario }) => {
         const need = () => {
           if (!file)
             throw new ToolError(`${action} needs file: a path ending in .flow`, 'INVALID_ARGUMENT');
@@ -95,9 +97,13 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
               'export takes no params: a flow holds its names, and a run takes their values',
               'INVALID_ARGUMENT',
             );
+          if (to !== undefined && !/\.ya?ml$/.test(to))
+            throw new ToolError(`to is a .yaml file: ${to}`, 'INVALID_ARGUMENT');
           try {
             const yaml = toMaestro(readFlow(need()));
-            return reply(yaml, { done: 'exported' });
+            if (to === undefined) return reply(yaml, { done: 'exported' });
+            const written = writeInside(to, yaml, overwrite);
+            return reply(`${yaml}\nwritten to ${written}`, { done: 'exported', file: written });
           } catch (e) {
             if (e instanceof FlowError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
             throw e;

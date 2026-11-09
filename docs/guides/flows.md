@@ -104,6 +104,8 @@ coordinates, a role with no id or text). A role beside a text is left out, becau
 says so in a comment. Maestro's text matches a whole label where ours also takes a part of one. There is no
 import.
 
+The tool answers with the YAML, and `to` (`--to` on the command line) writes it to a `.yaml` file as well, inside the folder the server runs in or its state folder, as a client may have no other way to write a file. A path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`.
+
 ## A journey, measured and gated
 
 `appdyno test login.flow --measure [--iterations 5]`, or `flow` `run` with `iterations`, runs a flow as a performance scenario: a first run left out as a warm-up, then each iteration with a time and what the device reads in a moment for each step. All of it is one kept run of the scenario `journey-login`, and the gate is the usual one:

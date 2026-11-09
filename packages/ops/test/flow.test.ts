@@ -1,4 +1,11 @@
-import { mkdtempSync, readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must, type AppManager, type DeviceProvider } from '@appdyno/core';
@@ -833,6 +840,33 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       writeFileSync(no, 'app dev.app\nlaunch\nalert allow\n');
       const e = await refusal(call('flow', { action: 'export', file: no }));
       expect(e.message).toContain('step 2');
+    });
+
+    it('writes the YAML inside the state or project folder, and refuses a path elsewhere', async () => {
+      const call = callerOf(new ServerContext(DEFAULT_POLICY, []));
+      const file = join(dir, 'ok.flow');
+      writeFileSync(file, 'app dev.app\nlaunch\ntap id=x\n');
+      const to = join(dir, 'state', 'flows', 'list.yaml');
+      const out = await call('flow', { action: 'export', file, to });
+      expect(out.data.file).toBe(to);
+      expect(out.text).toBe(`${readFileSync(to, 'utf8')}\nwritten to ${to}`);
+      expect(out.text).toContain('tapOn:');
+      expect((await refusal(call('flow', { action: 'export', file, to }))).message).toContain(
+        'exists',
+      );
+      await call('flow', { action: 'export', file, to, overwrite: true });
+      const outside = await refusal(
+        call('flow', { action: 'export', file, to: join(dir, 'list.yaml') }),
+      );
+      expect(outside.code).toBe('POLICY_DENIED');
+      expect(existsSync(join(dir, 'list.yaml'))).toBe(false);
+      symlinkSync(dir, join(dir, 'state', 'out'));
+      const linked = await refusal(
+        call('flow', { action: 'export', file, to: join(dir, 'state', 'out', 'list.yaml') }),
+      );
+      expect(linked.code).toBe('POLICY_DENIED');
+      const named = refusal(call('flow', { action: 'export', file, to: join(dir, 'state', 'a') }));
+      expect((await named).message).toContain('.yaml');
     });
   });
 

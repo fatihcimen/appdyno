@@ -234,6 +234,8 @@ export const HandOffOut = z.object({
 
 export const FlowOut = z.object({
   done: z.string(),
+  /** `export` with `to`: the file it wrote. */
+  file: z.string().optional(),
   steps: z.number().int().optional(),
   flagged: z.array(z.string()).optional(),
   timings: z

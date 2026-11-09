@@ -330,6 +330,14 @@ describe('flow on the command line', () => {
       'a.flow',
       '--overwrite',
     ]);
+    expect(flowWords(['export', 'a.flow', '--to', 'a.yaml'])).toEqual([
+      '--action',
+      'export',
+      '--file',
+      'a.flow',
+      '--to',
+      'a.yaml',
+    ]);
     expect(flowWords(['--action', 'start'])).toEqual(['--action', 'start']);
     expect(
       flowWords(['run', 'a.flow', '--env-file', 'ci.env', '--iterations', '5', '--scenario', 'x']),

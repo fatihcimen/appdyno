@@ -1,7 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { parseEnv } from 'node:util';
-import { deviceState, Owner } from '@appdyno/core';
+import { deviceState, Owner, stateDir } from '@appdyno/core';
 import {
   Recording,
   type RecordingState,
@@ -103,6 +103,53 @@ export function saveRecording(r: Recording, path: string, overwrite: boolean | u
     throw new ToolError(`cannot write ${path}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
   }
   return flagged(r.flow());
+}
+
+/** What exists of a path, a link at its end included: what lies past it has no link in it. */
+const nearest = (p: string): string => {
+  try {
+    lstatSync(p);
+    return p;
+  } catch {
+    return dirname(p) === p ? p : nearest(dirname(p));
+  }
+};
+
+const real = (p: string) => {
+  const at = nearest(p);
+  try {
+    return join(realpathSync(at), relative(at, p));
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * A file a client asked to have written, inside this server's project folder (where it runs) or its state folder, and
+ * no other: the client names the path, and the server's own command line sets those two. A link that leads out is out.
+ */
+export function writeInside(path: string, text: string, overwrite: boolean | undefined) {
+  const to = resolve(path);
+  const roots = [process.cwd(), stateDir()];
+  const under = (p: string | undefined, root: string | undefined) => {
+    const r = p !== undefined && root !== undefined ? relative(root, p) : '';
+    return r !== '' && !r.startsWith('..') && !isAbsolute(r);
+  };
+  if (!roots.some((root) => under(to, root) && under(real(to), real(root))))
+    throw new ToolError(
+      `${to} is outside the folders this server writes to`,
+      'POLICY_DENIED',
+      `give a path inside ${roots.join(' or ')}`,
+    );
+  try {
+    mkdirSync(dirname(to), { recursive: true });
+    writeFileSync(to, text, { flag: overwrite ? 'w' : 'wx' });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST')
+      throw new ToolError(`${to} exists: overwrite true replaces it`, 'INVALID_ARGUMENT');
+    throw new ToolError(`cannot write ${to}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
+  }
+  return to;
 }
 
 export const defined = <T extends object>(o: T) =>

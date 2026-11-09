@@ -104,6 +104,8 @@ koordinatlar, id'si ya da metni olmayan bir rol). Bir metnin yanındaki rol dı�
 bunu bir yorumda söyler. Maestro'nun metni bütün bir etiketle eşleşir, bizimki ise bir etiketin bir parçasını da kabul eder. İçe
 aktarma yoktur.
 
+Araç YAML ile yanıt verir; `to` (komut satırında `--to`) onu ayrıca bir `.yaml` dosyasına yazar, sunucunun çalıştığı klasörün ya da durum klasörünün içine, çünkü bir istemcinin bir dosya yazmanın başka yolu olmayabilir. Başka bir yerdeki bir yol ya da bir bağlantının onların dışına çıkardığı bir yol reddedilir; `overwrite` verilmedikçe var olan bir dosya da reddedilir.
+
 ## Ölçülen ve kapıdan geçen bir yolculuk
 
 `appdyno test login.flow --measure [--iterations 5]` ya da `iterations` ile `flow` `run`, bir akışı bir performans senaryosu olarak çalıştırır: ısınma olarak dışarıda bırakılan ilk çalıştırma, sonra her adım için bir süreyle ve cihazın bir anda okuduklarıyla her yineleme. Hepsi `journey-login` senaryosunun saklanan tek bir çalıştırmasıdır ve kapı her zamankidir:

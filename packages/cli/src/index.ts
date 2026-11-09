@@ -175,6 +175,7 @@ const FLOW_VALUES = new Set([
   '--action',
   '--app',
   '--file',
+  '--to',
   '--from',
   '--params',
   '--env-file',
