@@ -8,13 +8,14 @@ import {
   type Startable,
   type VirtualDevices,
 } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { approve } from './approval.js';
 import { launchSaid } from './apps.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
-import { byPerson, checkApp, checkDevice, noApp } from './policy.js';
+import { byPerson, checkApp, noApp } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
@@ -271,16 +272,31 @@ async function createVirtual(ctx: ServerContext, device: string | undefined) {
       'UNSUPPORTED',
       'an Android emulator is made with avdmanager or in Android Studio',
     );
+  // the allow list names devices, and a new one's id is not known before it is made: none is made only to be refused
+  if (ctx.policy.devices)
+    throw new ToolError(
+      'create is off while this server has a device allow list',
+      'POLICY_DENIED',
+      byPerson('by starting it without --allow-devices'),
+    );
   reportProgress(`creating a ${device}`);
   const id = await maker.create({ name: device, model: device, system: '' });
-  checkDevice(ctx.policy, id);
-  reportProgress(`starting ${device}`);
-  const serial = await maker.boot(id);
-  updateState(startedFile(), Started, (ids = []) => [...ids, id]);
-  await ctx.use(serial);
   const removal = maker.removedBy ? `: ${maker.removedBy(id)} removes it` : '';
-  const t = `a new ${device} is up and selected as ${serial}${removal}`;
-  return reply(t, { done: t, serial });
+  try {
+    reportProgress(`starting ${device}`);
+    const serial = await maker.boot(id);
+    updateState(startedFile(), Started, (ids = []) => [...ids, id]);
+    await ctx.use(serial);
+    const t = `a new ${device} is up and selected as ${serial}${removal}`;
+    return reply(t, { done: t, serial });
+  } catch (e) {
+    // nothing here deletes a simulator: what failed says how a person removes the one it made
+    throw new ToolError(
+      `the new ${device} ${id} did not start: ${e instanceof Error ? e.message : String(e)}`,
+      e instanceof ToolError || e instanceof DeviceError ? e.code : 'INTERNAL',
+      `it stays on this Mac${removal}`,
+    );
+  }
 }
 
 async function bootVirtual(ctx: ServerContext, device: string | undefined) {

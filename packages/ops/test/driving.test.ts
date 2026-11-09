@@ -1552,6 +1552,28 @@ describe('simulators and emulators', () => {
     expect(ctx.selected).toBe('C');
   });
 
+  it('makes none while an allow list names devices, as a new one could not be on it', async () => {
+    const fleet = new Fleet();
+    const { call } = await connect(new FakeDevice(), {
+      virtual: fleet,
+      policy: { devices: /^B$/ },
+    });
+    const r = await call('simulator', { action: 'create', name: 'iPhone 17' });
+    expect(r.data.code).toBe('POLICY_DENIED');
+    expect(fleet.all.map((d) => d.id)).toEqual(['A', 'B']);
+  });
+
+  it('says how a person removes one it made that did not start', async () => {
+    class Stuck extends Fleet {
+      removedBy = (id: string) => `remove ${id}`;
+      boot = () => Promise.reject(new DeviceError('TIMEOUT', 'it did not boot'));
+    }
+    const { call } = await connect(new FakeDevice(), { virtual: new Stuck() });
+    const r = await call('simulator', { action: 'create', name: 'iPhone 17' });
+    expect(r.data.code).toBe('TIMEOUT');
+    expect(r.data.hint).toBe('it stays on this Mac: remove C removes it');
+  });
+
   it('says what goes with the selected device as it shuts it down, and selects it no more', async () => {
     const fleet = new Fleet();
     const { call, ctx } = await connect(new FakeDevice(), { virtual: fleet });

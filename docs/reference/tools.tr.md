@@ -266,6 +266,8 @@ yalnızca bu aracın başlattıklarına dokunur. `APPDYNO_EMULATOR_ARGS` emülat
 
 Seçili cihazın `shutdown`'ı üzerindeki oturumu ve uygulamalarının bellekte tuttuğunu bitirir ve kimseye sormaz, çünkü cihazın diskinde tuttuğu hiçbir şey gitmez: ilerlemesi bunu başlamadan önce söyler, yanıtı da bittiğinde. Yeniden başlatma yoktur: SECURITY.md'nin dediği gibi bir `shutdown` ile bir `boot` iki çağrıdır.
 
+`--allow-devices` varken `create` kapalıdır, hiçbir şey yapılmadan reddedilir: yeni bir simülatörün UDID'si yapılmadan önce bilinmez, bu yüzden hiçbir liste onu adlandırmaz; yalnızca reddetmek için bir tane yapan bir sunucu da onu geride bırakıyordu. Yapılıp başlamayan biri, bir kişinin onu nasıl kaldıracağını söyler, çünkü burada hiçbir şey birini silmez.
+
 ## Bir işlem ne yanıtlar
 
 Bir işlem durulmuş ekranla yanıt verir. `settled`, ekranın bekleme süresi boyunca durgun kaldığı anlamına gelir.
