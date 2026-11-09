@@ -327,15 +327,23 @@ async function shutDownVirtual(ctx: ServerContext, device: string | undefined, m
     ...was,
     ...Object.fromEntries(targets.flatMap(({ d }) => (d.serial ? [[d.name, d.serial]] : []))),
   }));
+  // the selected device's session and its apps' state go with it: said before, as the description says it to the model
+  const selected = targets
+    .filter(({ d }) => (d.serial ?? d.id) === ctx.selected)
+    .map(({ d }) => d.name);
   for (const { d, on } of targets) {
-    reportProgress(`shutting down ${d.name}`);
+    const loses = selected.includes(d.name)
+      ? ': the session on it ends, and what its apps hold'
+      : '';
+    reportProgress(`shutting down ${d.name}${loses}`);
     await ctx.forget(d.serial ?? d.id);
     await on.shutdown(d.id);
   }
   updateState(startedFile(), Started, (ids = []) =>
     ids.filter((id) => !targets.some((x) => x.d.id === id || x.d.name === id)),
   );
-  const t = `shut down ${targets.map((x) => x.d.name).join(', ')}`;
+  const lost = selected.join(', ');
+  const t = `shut down ${targets.map((x) => x.d.name).join(', ')}${lost && `: the session on ${lost} ended, and what its apps held with it`}`;
   return reply(t, { done: t });
 }
 
@@ -344,7 +352,7 @@ function simulatorOp(ctx: ServerContext) {
     name: 'simulator',
     title: 'Simulators and emulators',
     description:
-      'Start or stop an iOS simulator or Android emulator, only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts and selects it), shutdown (name; none: those this tool started).',
+      'Start or stop an iOS simulator or Android emulator, only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts and selects it), shutdown (name; none: those this tool started; ends its session and app state).',
     input: z
       .object({
         action: z.enum(['list', 'boot', 'create', 'shutdown']),

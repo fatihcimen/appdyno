@@ -69,6 +69,8 @@ as what loses data is, below, and only `--allow-power virtual` (simulators and e
 with nothing asked: `--allow-data-loss` does not, as a run that clears an app's data on an emulator must not find it
 restarted. A window's own input is the person at it, and passes no guard.
 
+`simulator` starts and stops a simulator or emulator, as its own tools do, and offers no reboot: a `shutdown` and a `boot` are two calls, and neither its description nor its answer puts them together as one. A `shutdown` asks no one: it loses nothing a device keeps on its disk, only the session on it and what its apps held in memory, as `terminate_app` does, which asks no one either. So its description says that before any call, and its answer says it once it shut down the selected device.
+
 What loses data a person may want asks the person first: [the list](docs/reference/tools.md#what-asks-the-person-first).
 The client shows the question, the model cannot answer it, and a no does nothing. A client may answer no by itself, so the answer says the question got no yes, never that the person declined, and every refusal says how a person allows it ahead. Where the client cannot ask, and over
 `--http`, it is refused, unless the person started the server with `--allow-data-loss virtual` (simulators and

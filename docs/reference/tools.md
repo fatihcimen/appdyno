@@ -264,6 +264,8 @@ touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulat
 
 `--allow-devices` takes a simulator or emulator here by its id, its serial or its name, as `name` does, so one allowed for `shutdown` is allowed for the `boot` after it. A stopped emulator has no serial of its own: it answers to the one it ran as when this tool shut it down, and comes back on that port while it is free. A `shutdown` that the `boot` after it would refuse is refused first, and the device stays on.
 
+A `shutdown` of the selected device ends the session on it and what its apps held in memory, and asks no one, as nothing the device keeps on its disk goes: its progress says so before it begins, and its answer once it is done. There is no reboot: a `shutdown` and a `boot` are two calls, as SECURITY.md has it.
+
 ## What an action answers
 
 An action answers with the settled screen. `settled` means the screen was still for the window.

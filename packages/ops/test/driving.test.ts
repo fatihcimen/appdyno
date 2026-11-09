@@ -1552,6 +1552,16 @@ describe('simulators and emulators', () => {
     expect(ctx.selected).toBe('C');
   });
 
+  it('says what goes with the selected device as it shuts it down, and selects it no more', async () => {
+    const fleet = new Fleet();
+    const { call, ctx } = await connect(new FakeDevice(), { virtual: fleet });
+    await ctx.use('B');
+    const r = await call('simulator', { action: 'shutdown', name: 'B' });
+    expect(r.text).toBe('shut down two: the session on two ended, and what its apps held with it');
+    expect(ctx.selected).toBeUndefined();
+    expect((await call('simulator', { action: 'shutdown', name: 'A' })).text).toBe('shut down one');
+  });
+
   it('boots only on request, and shuts down only what it started unless named', async () => {
     const fleet = new Fleet();
     const { call } = await connect(new FakeDevice(), { virtual: fleet });

@@ -69,6 +69,8 @@ nasıl sorulup reddediliyorsa öyle sorulur ve reddedilir; hiçbir şey sorulmad
 ve emülatörler) ya da `all` izin verir: `--allow-data-loss` vermez, çünkü bir emülatörde bir uygulamanın verisini temizleyen bir çalışma
 onu yeniden başlamış bulmamalıdır. Bir pencerenin kendi girdisi başındaki kişidir ve hiçbir korumadan geçmez.
 
+`simulator` bir simülatörü ya da emülatörü kendi araçlarının yaptığı gibi başlatır ve durdurur, yeniden başlatma sunmaz: bir `shutdown` ile bir `boot` iki çağrıdır, ne açıklaması ne yanıtı onları tek bir iş gibi bir araya getirir. Bir `shutdown` kimseye sormaz: bir cihazın diskinde tuttuğu hiçbir şeyi kaybettirmez, yalnızca üzerindeki oturumu ve uygulamalarının bellekte tuttuğunu, `terminate_app`'in yaptığı gibi; o da kimseye sormaz. Bu yüzden açıklaması bunu her çağrıdan önce söyler, yanıtı da seçili cihazı kapattığında söyler.
+
 Bir kişinin isteyebileceği veriyi kaybettiren işlem önce o kişiye sorar: [liste](docs/reference/tools.tr.md#önce-kişiye-sorulanlar).
 Soruyu istemci gösterir, model onu yanıtlayamaz ve bir hayır hiçbir şey yaptırmaz. Bir istemci kendi kendine hayır diyebilir, bu yüzden yanıt soruya evet gelmediğini söyler, asla kişinin reddettiğini değil; her ret de bir kişinin buna önceden nasıl izin vereceğini söyler. İstemcinin soramadığı yerde ve
 `--http` üzerinden işlem reddedilir; ancak kişi sunucuyu `--allow-data-loss virtual` (simülatörler ve
