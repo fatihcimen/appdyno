@@ -28,6 +28,7 @@ import {
   traceDigest,
 } from './trace-parse.js';
 import { exporting, traceTable } from './trace-read.js';
+import { noteWatcher } from './trace-processes.js';
 import { watchKtraces } from './trace-temp.js';
 
 export { traceDetail, traceTable } from './trace-read.js';
@@ -43,6 +44,8 @@ const CAP_MS = 240_000;
 
 /** How long the tool may take to say it has started before `during` runs without it. */
 const START_MS = 90_000;
+/** What waits for that word ends by itself a little after, whoever is left to end it. */
+const NOTE_CAP_S = START_MS / 1000 + 10;
 const KILL_MS = 30_000;
 
 /** A recording attached to a process leaves the tool blind to it for a while: 189 and 196 s, measured, on iOS 27.2. */
@@ -137,9 +140,9 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   );
   const temp = await watchKtraces({ spanMs: CAP_MS + KILL_MS });
   const note = `dev.appdyno.trace.${randomBytes(6).toString('hex')}`;
-  const watcher = spawn('notifyutil', ['-w', note], { stdio: ['ignore', 'pipe', 'ignore'] });
+  const watcher = noteWatcher(note, NOTE_CAP_S);
   const started = new Promise<void>((resolve) => {
-    // it prints the name when the note comes, and goes on waiting
+    // it prints the name when the note comes, and ends
     watcher.stdout.once('data', () => resolve());
     watcher.once('exit', () => resolve());
     watcher.once('error', () => resolve());

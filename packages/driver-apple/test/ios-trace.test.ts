@@ -1,3 +1,6 @@
+import { execFileSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -16,8 +19,36 @@ import {
   traceDigest,
 } from '../src/trace-parse.js';
 import { queryTraceFile } from '../src/trace.js';
+import { noteWatcher } from '../src/trace-processes.js';
 
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
+
+describe("the wait for the trace tool's word that it started", () => {
+  const note = () => `dev.appdyno.test.${randomBytes(6).toString('hex')}`;
+
+  it('ends at the word', async () => {
+    const name = note();
+    const watcher = noteWatcher(name, 60);
+    const heard = once(watcher.stdout, 'data');
+    const exited = once(watcher, 'exit');
+    // posted until it is heard: notifyutil says nothing of when it has registered
+    const post = setInterval(() => execFileSync('/usr/bin/notifyutil', ['-p', name]), 200);
+    try {
+      expect(String((await heard)[0])).toContain(name);
+    } finally {
+      clearInterval(post);
+    }
+    expect(await exited).toEqual([0, null]);
+  });
+
+  // a server killed mid-recording runs no `finally`: nothing but the watcher itself can end it
+  it('ends by itself at its cap, with no word and no one to end it', async () => {
+    const watcher = noteWatcher(note(), 1);
+    const started = Date.now();
+    expect(await once(watcher, 'exit')).toEqual([null, 'SIGALRM']);
+    expect(Date.now() - started).toBeLessThan(10_000);
+  });
+});
 
 describe('iOS trace export', () => {
   it('tells a table with no rows from one the trace does not hold, as an export of a phone’s trace does', () => {
