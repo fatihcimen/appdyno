@@ -70,6 +70,15 @@ describe('which suites a device can take', () => {
     expect(ungated).toEqual([]);
   });
 
+  it('is counted in the docs as it lists them', () => {
+    const said = /(\d+) on Android, (\d+) on a simulator, (\d+) on an iPhone/.exec(
+      readFileSync(join(root, 'docs/reference/ci.md'), 'utf8'),
+    );
+    expect(said?.slice(1).map(Number)).toEqual(
+      ['emulator-5612', SIMULATOR, IPHONE].map((serial) => on(serial).files.length),
+    );
+  });
+
   it('refuses a call with nothing to go by', () => {
     expect(run('of').status).toBe(2);
     expect(run().status).toBe(2);
