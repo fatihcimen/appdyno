@@ -97,16 +97,20 @@ void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
 - (void)fill:(NSDictionary<NSString *, NSString *> *)fields;
 @end
 
-/// The panes of the Inspector, by the index `showPane:` takes.
+/// The panes of the Inspector, by the index `showPane:` takes, in the order their symbols stand.
 enum { MVPanePerf,
        MVPaneFlow,
        MVPaneApps,
        MVPaneActivity,
+       MVPaneLogs,
+       MVPaneNetwork,
+       MVPaneAccessibility,
+       MVPaneDevice,
        MVPaneLinks,
        MVPanePush,
        MVPanes };
 
-/// What goes in the Inspector: Performance, Flows, Apps, Activity, Links and Push, by their symbols and the name of the one chosen.
+/// What goes in the Inspector: a row of symbols, one to a pane, and the name of the one chosen on a line of its own.
 @interface MVInspector : NSView <MVStaged>
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target;
 /// The device's own views, which name its stage: in the hub the Inspector stands apart from them, in the room's slot.

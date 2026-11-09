@@ -4,7 +4,8 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kUsualRate = 60, kSparkHeight = 56, kTab = 28, kInset = 16;
+// ten symbols share the Inspector's width, as the system's own Inspectors set them out: a row of their own, edge to edge
+static const double kUsualRate = 60, kSparkHeight = 56, kTabHigh = 26, kTabRound = 6, kTabsInset = 10, kInset = 16;
 
 /// The panes in the order their symbols stand, by the index `showPane:` takes.
 static const struct {
@@ -14,6 +15,10 @@ static const struct {
     {"tabFlows", "Flows", "point.topleft.down.to.point.bottomright.curvepath"},
     {"tabApps", "Apps", "square.grid.2x2"},
     {"tabActivity", "Activity", "clock.arrow.circlepath"},
+    {"tabLogs", "Logs", "text.alignleft"},
+    {"tabNetwork", "Network", "network"},
+    {"tabAccessibility", "Accessibility", "accessibility"},
+    {"tabDevice", "Device", "slider.horizontal.3"},
     {"tabLinks", "Links", "link"},
     {"tabPush", "Push", "bell.badge"},
 };
@@ -65,23 +70,26 @@ static NSString *ms(id v) {
       NSButton *tab = [MVBarButton buttonWithImage:[NSImage new] target:self action:@selector(tabChosen:)];
       tab.bordered = NO;
       tab.wantsLayer = YES;
-      tab.layer.cornerRadius = kTab / 2;
+      tab.layer.cornerRadius = kTabRound;
+      tab.layer.cornerCurve = kCACornerCurveContinuous;
       tab.tag = i;
       tab.identifier = @(kTabs[i].identifier);
       tab.toolTip = MVWord(@(kTabs[i].title));
       tab.accessibilityLabel = tab.toolTip;
-      [tab.widthAnchor constraintEqualToConstant:kTab].active = YES;
-      [tab.heightAnchor constraintEqualToConstant:kTab].active = YES;
+      [tab.heightAnchor constraintEqualToConstant:kTabHigh].active = YES;
       [tabs addObject:tab];
     }
     _tabs = tabs;
+    NSStackView *row = [NSStackView stackViewWithViews:tabs];
+    row.distribution = NSStackViewDistributionFillEqually;
+    row.spacing = 2;
+    NSView *rule = MVSeparator();
     _paneName = MVText(@"", MVStyleTitle);
-    NSView *gap = [NSView new];
-    [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
-    NSStackView *head = [NSStackView stackViewWithViews:[@[_paneName, gap] arrayByAddingObjectsFromArray:tabs]];
-    head.spacing = 2;
-    head.translatesAutoresizingMaskIntoConstraints = NO;
-    [self addSubview:head];
+    for (NSView *part in @[row, rule, _paneName]) {
+      part.translatesAutoresizingMaskIntoConstraints = NO;
+      [self addSubview:part];
+    }
+    NSView *head = _paneName;
     _numbers = [self statsPane];
     _panes[MVPaneActivity] = [self activityPane];
     _panes[MVPaneApps] = [self appsPane];
@@ -93,8 +101,19 @@ static NSString *ms(id v) {
     _panes[MVPanePerf] = _perf;
     _flow = [[MVFlowPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPaneFlow] = _flow;
+    for (int i = MVPaneLogs; i <= MVPaneDevice; i++) _panes[i] = [self comingPane:@(kTabs[i].symbol)];
     NSMutableArray *rules = [NSMutableArray arrayWithArray:@[
-      [head.topAnchor constraintEqualToAnchor:self.topAnchor
+      [row.topAnchor constraintEqualToAnchor:self.topAnchor
+                                    constant:8],
+      [row.leadingAnchor constraintEqualToAnchor:self.leadingAnchor
+                                        constant:kTabsInset],
+      [row.trailingAnchor constraintEqualToAnchor:self.trailingAnchor
+                                         constant:-kTabsInset],
+      [rule.topAnchor constraintEqualToAnchor:row.bottomAnchor
+                                     constant:8],
+      [rule.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
+      [rule.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
+      [head.topAnchor constraintEqualToAnchor:rule.bottomAnchor
                                      constant:12],
       [head.leadingAnchor constraintEqualToAnchor:self.leadingAnchor
                                          constant:kInset],
@@ -199,6 +218,16 @@ static NSString *ms(id v) {
   return pane;
 }
 
+/// A pane with nothing in it yet: its symbol and a word, at its top.
+- (NSView *)comingPane:(NSString *)symbol {
+  NSView *gap = [NSView new];
+  [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+  NSStackView *stack = [NSStackView stackViewWithViews:@[MVEmptyCard(symbol, @"Nothing here yet."), gap]];
+  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+  stack.alignment = NSLayoutAttributeWidth;
+  return stack;
+}
+
 - (NSView *)activityPane {
   _activity = [MVActivityPane new];
   return _activity;
@@ -258,10 +287,10 @@ static NSString *ms(id v) {
   for (NSButton *tab in _tabs) {
     BOOL chosen = tab.tag == pane;
     tab.layer.backgroundColor = chosen ? [MVAccent() colorWithAlphaComponent:0.22].CGColor : NSColor.clearColor.CGColor;
-    tab.image = MVSymbol(@(kTabs[tab.tag].symbol), chosen ? MVAccent() : MVQuietColor(), 14, chosen ? NSFontWeightSemibold : NSFontWeightRegular);
+    tab.image = MVSymbol(@(kTabs[tab.tag].symbol), chosen ? MVAccent() : MVQuietColor(), 13, chosen ? NSFontWeightSemibold : NSFontWeightRegular);
     tab.accessibilityValue = chosen ? MVWord(@"selected") : nil;
   }
-  _paneName.stringValue = @(kTabs[pane].title);
+  _paneName.stringValue = MVWord(@(kTabs[pane].title));
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
   _chosen = pane;
   if (self.onPane) self.onPane();

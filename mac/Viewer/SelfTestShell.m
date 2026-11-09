@@ -35,6 +35,24 @@ void MVCheckRowClick(NSString *name, BOOL ok, NSString *_Nullable detail) {
   else MVSkip(name, @"before macOS 27 a table takes no click a test sends, only a person's");
 }
 
+/// Ten symbols in a row of their own, each whole and apart in the Inspector's width, and the pane's name on a line under them.
+static void checkHeader(MVWindow *window) {
+  NSRect inspector = window.inspectorInWindow;
+  NSMutableArray<NSString *> *wrong = [NSMutableArray array];
+  double right = NSMinX(inspector), bottom = NSMaxY(inspector);
+  for (int i = 0; i < MVPanes; i++) {
+    NSButton *tab = MVFindControl(window.inspector, @[@"tabPerformance", @"tabFlows", @"tabApps", @"tabActivity", @"tabLogs", @"tabNetwork", @"tabAccessibility", @"tabDevice", @"tabLinks", @"tabPush"][i]);
+    NSRect at = [tab convertRect:tab.bounds toView:nil];
+    if (!tab || !NSContainsRect(inspector, at) || NSMinX(at) < right || at.size.width < 24 || !tab.accessibilityLabel.length) [wrong addObject:tab.identifier ?: @"none"];
+    right = NSMaxX(at);
+    bottom = MIN(bottom, NSMinY(at));
+  }
+  MVCheck(@"inspector: ten symbols stand in its width, each whole, apart and named", wrong.count == 0, [wrong componentsJoinedByString:@" "]);
+  NSTextField *name = [window.inspector valueForKey:@"_paneName"];
+  NSRect title = [name convertRect:name.bounds toView:nil];
+  MVCheck(@"inspector: the pane's name stands whole on a line under them", NSMaxY(title) <= bottom && name.intrinsicContentSize.width <= title.size.width && [name.stringValue isEqual:MVWord(@"Performance")], NSStringFromRect(title));
+}
+
 static void checkTabs(void) {
   MVWindow *window = [MVWindow new];
   window.behind = YES;
@@ -52,10 +70,15 @@ static void checkTabs(void) {
   [window openInspector:YES];
   MVPump(0.5);
   MVCheck(@"inspector: nothing stands over the device, as the ground runs on under it", NSMaxX(window.deviceInWindow) <= NSMinX(window.inspectorInWindow), [NSString stringWithFormat:@"device to %.0f, Inspector from %.0f", NSMaxX(window.deviceInWindow), NSMinX(window.inspectorInWindow)]);
+  checkHeader(window);
   NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow),
                          @"tabApps": @(MVPaneApps),
                          @"tabActivity": @(MVPaneActivity),
                          @"tabPerformance": @(MVPanePerf),
+                         @"tabLogs": @(MVPaneLogs),
+                         @"tabNetwork": @(MVPaneNetwork),
+                         @"tabAccessibility": @(MVPaneAccessibility),
+                         @"tabDevice": @(MVPaneDevice),
                          @"tabLinks": @(MVPaneLinks),
                          @"tabPush": @(MVPanePush)};
   for (NSString *tab in tabs) {
