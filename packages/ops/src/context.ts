@@ -286,7 +286,12 @@ export class ServerContext {
   deviceFor(serial: string): Device {
     checkDevice(this.policy, serial);
     const provider = this.providers.findLast((p) => p.handles(serial));
-    if (!provider) throw new ToolError(`no driver takes the device ${serial}`, 'NOT_FOUND');
+    if (!provider)
+      throw new ToolError(
+        `no driver takes the device ${serial}`,
+        'NOT_FOUND',
+        'list_devices names the devices',
+      );
     return provider.open(serial);
   }
 
@@ -310,6 +315,7 @@ export class ServerContext {
       throw new ToolError(
         'no connected device this server may drive (list_devices)',
         'DEVICE_GONE',
+        'simulator action list names the simulators and emulators it can start, and boot starts one; a phone is joined by its cable',
       );
     throw new ToolError(
       `more than one device this server may drive: ${ready.map((d) => `${d.serial} (${[kindOf(d), d.model].filter(Boolean).join(', ')})`).join('; ')}`,

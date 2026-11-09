@@ -1,4 +1,5 @@
 import {
+  INSTALLED_APPS,
   must,
   PushRate,
   type Push,
@@ -114,7 +115,7 @@ export class FcmPush {
     if (!key || !BY_TYPE[push.type])
       throw new DeviceError('UNSUPPORTED', `FCM takes no ${push.type} push here`);
     if (!(await this.target.installed(app)))
-      throw new DeviceError('NOT_FOUND', `${app} is not installed on this device`);
+      throw new DeviceError('NOT_FOUND', `${app} is not installed on this device`, INSTALLED_APPS);
     const message = checkMessage(messageOf(push));
     const now = this.use.now();
     this.rate.check(now);

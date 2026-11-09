@@ -23,6 +23,7 @@ import {
   type SystemSwipe,
   type SystemView,
   must,
+  INSTALLED_APPS,
 } from '@appdyno/core';
 import { APPLE_CONTROLS } from './mirror-press.js';
 import {
@@ -274,7 +275,8 @@ export abstract class IosDevice extends RpcDevice implements Device {
 
   private async appName(app: string) {
     const entry = (await this.apps.listApps(true)).find((a) => a.id === app);
-    if (!entry?.name) throw new DeviceError('NOT_FOUND', `${app} is not on ${this.ops.name}`);
+    if (!entry?.name)
+      throw new DeviceError('NOT_FOUND', `${app} is not on ${this.ops.name}`, INSTALLED_APPS);
     return entry.name;
   }
 

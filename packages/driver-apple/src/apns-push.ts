@@ -1,4 +1,5 @@
 import {
+  INSTALLED_APPS,
   PUSH_PLACEHOLDERS,
   PushRate,
   type Push,
@@ -142,7 +143,11 @@ export class ApnsPush {
     const t = BY_TYPE[push.type];
     if (!key || !t) throw new DeviceError('UNSUPPORTED', `APNs takes no ${push.type} push here`);
     if (!(await this.target.installed(app)))
-      throw new DeviceError('NOT_FOUND', `${app} is not installed on this ${this.target.name}`);
+      throw new DeviceError(
+        'NOT_FOUND',
+        `${app} is not installed on this ${this.target.name}`,
+        INSTALLED_APPS,
+      );
     await this.allowed(app, push.type);
     const payload = apnsPayload(push, this.use.now());
     const environment = await this.environment(app, key);

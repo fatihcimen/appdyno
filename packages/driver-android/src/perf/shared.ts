@@ -17,7 +17,7 @@ export async function pidOf(d: PerfDevice, pkg: string): Promise<number> {
   const out = (await sh(d, `pidof ${assertPkg(pkg)}`)).trim();
   const pid = Number(out.split(/\s+/)[0]);
   if (!out || !Number.isInteger(pid))
-    throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
+    throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`, 'launch it, then ask again');
   return pid;
 }
 

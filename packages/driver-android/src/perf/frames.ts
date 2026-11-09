@@ -52,7 +52,7 @@ export async function frames(
     `dumpsys gfxinfo ${pkg} framestats${opts.reset === false ? '' : `; dumpsys gfxinfo ${pkg} reset > /dev/null`}`,
   );
   if (/No process found/i.test(raw))
-    throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
+    throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`, 'launch it, then ask again');
   // a process up for a broadcast or a job has no window, and prints no summary: it drew nothing
   if (!raw.includes('Total frames rendered')) return { value: NOTHING_DRAWN, raw, at: at() };
   return { value: parseFrameStats(raw, opts.after), raw, at: at() };

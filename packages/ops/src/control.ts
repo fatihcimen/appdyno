@@ -14,7 +14,7 @@ import { approve } from './approval.js';
 import { launchSaid } from './apps.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
-import { checkApp, checkDevice, noApp } from './policy.js';
+import { byPerson, checkApp, checkDevice, noApp } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
@@ -152,6 +152,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
             throw new ToolError(
               'build_and_run is off while this server has an app allowlist',
               'POLICY_DENIED',
+              byPerson('by starting it without --allow-apps'),
             );
           reportProgress(`building ${path}`);
           const pkg = await apps.buildAndInstall({

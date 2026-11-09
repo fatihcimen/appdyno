@@ -112,7 +112,11 @@ export class AndroidEmulators implements VirtualDevices {
       p.stdout.on('data', (b: Buffer) => (out += b.toString()));
       p.on('error', (e) =>
         reject(
-          new DeviceError('UNSUPPORTED', `the Android emulator is not installed: ${e.message}`),
+          new DeviceError(
+            'UNSUPPORTED',
+            `the Android emulator is not installed: ${e.message}`,
+            "Android Studio's SDK Manager installs it, under SDK Tools",
+          ),
         ),
       );
       p.on('close', () => resolve(out));

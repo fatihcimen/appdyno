@@ -16,11 +16,14 @@ import { noteTouch } from './activity.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
+import { byPerson } from './policy.js';
 import { Check, NAME_AN_ELEMENT, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 const STALE = 'stale ref, read the screen again';
+/** A wait that read nothing: screen says why the device refuses it. */
+const UNREAD = 'screen reads it once more and says what the device answered';
 
 /** These leave the app, as the home key does. */
 const LEAVES_APP = new Set(['home', 'appSwitch', 'power', 'lock', 'siri']);
@@ -108,7 +111,7 @@ export function stepsFor(
       (x) => selectIn(x.list, sel).length > 0,
       NO_MATCH_WAIT_MS,
     );
-    if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND');
+    if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
     if (!met)
       throw new ToolError(
         `no element matches ${showSelector(sel)} after ${NO_MATCH_WAIT_MS} ms${offer(screen.list, sel.text ?? sel.id)}`,
@@ -249,7 +252,7 @@ export function stepsFor(
     if (!a.ref && !selectorOf(a))
       throw new ToolError('give a ref, text, id or role', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
     const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
-    if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND');
+    if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
     const v = judge(screen, a);
     if (!v.pass) throw new ToolError(`check failed: ${v.why}`, 'CHECK_FAILED');
     return { screen, done: `check passed: ${v.why}` };
@@ -374,6 +377,7 @@ export function stepsFor(
             throw new ToolError(
               `${st.key} is off on this server: the app may not be left`,
               'POLICY_DENIED',
+              byPerson('by starting it without --no-home'),
             );
           s.leftApp = true;
           await s.device.openView(view);
@@ -388,6 +392,7 @@ export function stepsFor(
           throw new ToolError(
             `${st.key} is off on this server: the app may not be left`,
             'POLICY_DENIED',
+            byPerson('by starting it without --no-home'),
           );
         if (leaves) s.leftApp = true;
         const dark = NOTHING_TO_READ.has(key);

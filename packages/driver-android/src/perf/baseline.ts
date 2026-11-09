@@ -1,4 +1,4 @@
-import { must, type BaselineReading, type Measured } from '@appdyno/core';
+import { INSTALLED_APPS, must, type BaselineReading, type Measured } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from '../adb.js';
 import { buildType } from './app.js';
@@ -45,7 +45,7 @@ export async function baselineProfile(
       `${pkg} is debuggable, which stays at verify whatever is asked: measure a release build`,
     );
   const apk = /package:(\S+\.apk)/.exec(await sh(d, `pm path ${pkg}`))?.[1];
-  if (!apk) throw new DeviceError('NOT_FOUND', `${pkg} is not installed`);
+  if (!apk) throw new DeviceError('NOT_FOUND', `${pkg} is not installed`, INSTALLED_APPS);
   const listing = await sh(d, `unzip -l ${shq(apk)} ${shq(PROFILE)}`);
   if (!listing.includes('Archive:'))
     throw new DeviceError(

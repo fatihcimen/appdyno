@@ -42,7 +42,12 @@ export async function buildScheme(req: BuildRequest, destination: string) {
       : undefined;
   if (!kind || !existsSync(project))
     throw new DeviceError('INVALID_ARGUMENT', `not an Xcode project: ${project}`);
-  if (!req.scheme) throw new DeviceError('INVALID_ARGUMENT', 'an Xcode project needs scheme');
+  if (!req.scheme)
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      'an Xcode project needs scheme',
+      `xcodebuild -list ${kind} ${project} names its schemes`,
+    );
   const folder = createHash('sha256').update(project).digest('hex').slice(0, 16);
   const args = [
     kind,

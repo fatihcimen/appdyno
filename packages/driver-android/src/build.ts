@@ -30,7 +30,11 @@ export function builtApk(outputs: string, variant: string) {
 export async function buildVariant(req: BuildRequest) {
   const project = resolve(req.project);
   if (!existsSync(join(project, 'gradlew')))
-    throw new DeviceError('INVALID_ARGUMENT', `no gradlew in ${project}`);
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      `no gradlew in ${project}`,
+      "give the Gradle project's own folder, the one that holds gradlew",
+    );
   const module = req.scheme ?? 'app';
   const variant = req.configuration ?? 'debug';
   const task = `:${module}:assemble${must(variant[0], 'a variant').toUpperCase()}${variant.slice(1)}`;

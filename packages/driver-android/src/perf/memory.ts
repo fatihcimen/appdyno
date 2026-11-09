@@ -42,7 +42,7 @@ export async function memory(
   assertPkg(pkg);
   const raw = await sh(d, `dumpsys meminfo ${pkg}`);
   if (/No process found/i.test(raw))
-    throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
+    throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`, 'launch it, then ask again');
   const stats = parseMeminfo(raw);
   return { value: { ...stats, kb: stats.pssKb, kind: 'pss' }, raw, at: at() };
 }

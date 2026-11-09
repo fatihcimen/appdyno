@@ -22,6 +22,10 @@ export const DEFAULT_POLICY: Policy = { apps: [], allowHome: true, secrets: [] }
 /** Schemes that reach the device's files, other components or code, not a page or an app screen. */
 const UNSAFE_SCHEME = /^(file|content|intent|javascript|data|android-app|jar):/i;
 
+/** What a person does to allow what this server refuses by its flag: no call changes one. */
+export const byPerson = (how: string) =>
+  `the person who runs this server allows it ${how}, and no call can`;
+
 export function checkUrl(policy: Policy, url: string): string {
   const u = url.trim();
   if (!/^[a-z][a-z0-9+.-]*:/i.test(u))
@@ -32,7 +36,11 @@ export function checkUrl(policy: Policy, url: string): string {
       'POLICY_DENIED',
     );
   if (policy.urls && !policy.urls.test(u))
-    throw new ToolError("this link is not on this server's allow list", 'POLICY_DENIED');
+    throw new ToolError(
+      "this link is not on this server's allow list",
+      'POLICY_DENIED',
+      byPerson('by --allow-urls'),
+    );
   return u;
 }
 
@@ -48,13 +56,18 @@ export function checkApp(policy: Policy, pkg: string): string {
     throw new ToolError(
       `${pkg} is not an allowed app (${policy.apps.join(', ')})`,
       'POLICY_DENIED',
+      byPerson('by --allow-apps'),
     );
   return pkg;
 }
 
 export function checkDevice(policy: Policy, serial: string): string {
   if (policy.devices && !policy.devices.test(serial))
-    throw new ToolError(`${serial} is not allowed on this server`, 'POLICY_DENIED');
+    throw new ToolError(
+      `${serial} is not allowed on this server`,
+      'POLICY_DENIED',
+      byPerson('by --allow-devices'),
+    );
   return serial;
 }
 

@@ -1,7 +1,7 @@
 import { DeviceError } from '@appdyno/protocol';
 import { run } from '@appdyno/core';
 import { launchLanguage } from './manage.js';
-import { xcodeEnv, xcodeTool, assertBundle } from './simctl.js';
+import { xcodeEnv, xcodeTool, assertBundle, notRunning } from './simctl.js';
 
 /** An app's own arguments: what starts with a dash is the app's, not this tool's. */
 const andArgs = (args: string[]) => (args.length > 0 ? ['--', ...args] : []);
@@ -213,7 +213,7 @@ export class Devicectl {
   /** The newest process of the app (right after a relaunch the old one may still be listed). */
   async pid(bundle: string): Promise<number> {
     const pid = Math.max(0, ...(await this.pids(bundle)));
-    if (!pid) throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
+    if (!pid) throw notRunning(bundle);
     return pid;
   }
 

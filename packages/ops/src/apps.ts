@@ -1,8 +1,8 @@
-import { fold, must, reportProgress, type Screen } from '@appdyno/core';
+import { fold, INSTALLED_APPS, must, reportProgress, type Screen } from '@appdyno/core';
 import { z } from 'zod';
 import { systemAsks, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
-import { checkApp, checkUrl, noApp } from './policy.js';
+import { byPerson, checkApp, checkUrl, noApp } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import type { Session } from './session.js';
 import { setCondition } from './settings.js';
@@ -71,7 +71,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       throw new ToolError(
         `${pkg} is not installed on ${s.device.serial}`,
         'NOT_FOUND',
-        'app action list names the installed apps',
+        INSTALLED_APPS,
       );
     throw e;
   };
@@ -87,6 +87,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       throw new ToolError(
         'Settings is off on this server: the app may not be left',
         'POLICY_DENIED',
+        byPerson('by starting it without --no-home'),
       );
     const page = s.device.settingsPages.find((p) => p === settings);
     const app = page

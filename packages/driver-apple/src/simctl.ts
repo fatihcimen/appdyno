@@ -5,6 +5,10 @@ import { sleep, run, callSignal, cancelled, must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { launchLanguage } from './manage.js';
 
+/** An app with no process, where one was to be read. */
+export const notRunning = (bundle: string) =>
+  new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`, 'launch it, then ask again');
+
 /**
  * The developer folder for Xcode's tools without DEVELOPER_DIR: the selected one when it is a full
  * Xcode (it may be the command line tools, which have no simulator tool), else the newest installed.
@@ -133,7 +137,7 @@ export class Simctl {
       .filter(listed)
       .map((l) => Number(l.trim().split(/\s+/)[0]))
       .find((n) => Number.isInteger(n) && n > 0);
-    if (!pid) throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
+    if (!pid) throw notRunning(bundle);
     return pid;
   }
 

@@ -2,6 +2,9 @@ export type AppEntry = { id: string; name?: string; version?: string };
 
 export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
 
+/** What to do about an app a device does not have, as each platform refuses one. */
+export const INSTALLED_APPS = 'app action list names the installed apps';
+
 export type LaunchOptions = { args?: string[]; env?: Record<string, string>; language?: string };
 
 /**
