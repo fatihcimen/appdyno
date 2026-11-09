@@ -443,6 +443,52 @@ tap id=greeting
     });
   });
 
+  describe('params', () => {
+    it('names a recorded value at save, which a run takes; a value no step holds is refused', async () => {
+      const call = callerOf(context());
+      await call('flow', { action: 'start' });
+      await call('tap', { selector: { text: 'Form' } });
+      await call('type_text', { text: 'Grace', selector: { id: 'name' } });
+      await call('flow', { action: 'stop' });
+      const file = join(dir, 'named.flow');
+      const none = await refusal(call('flow', { action: 'save', file, params: ['OTHER=Hopper'] }));
+      expect(none.message).toContain('no recorded step holds the value of OTHER');
+      expect(existsSync(file)).toBe(false);
+      const saved = await call('flow', { action: 'save', file, params: ['NAME=Grace'] });
+      const text = `app dev.app
+param NAME
+
+tap role=button text="Form"
+type "\${NAME}" id=name
+`;
+      expect(readFileSync(file, 'utf8')).toBe(text);
+      expect(saved.text).toContain(text);
+      expect(saved.text).toContain('param NAME: step 2');
+      device.screen = 'home';
+      await call('flow', { action: 'run', file, params: ['NAME=Hopper'] });
+      expect(device.typed).toEqual(['Grace', 'Hopper']);
+    });
+
+    it('names at start what is typed later, and refuses a name a placeholder cannot have', async () => {
+      const call = callerOf(context());
+      const bad = await refusal(call('flow', { action: 'start', params: ['name=Ada'] }));
+      expect(bad.message).toContain("a param's name is like MY_NAME");
+      expect((await refusal(call('flow', { action: 'stop' }))).message).toContain('no recording');
+      await call('flow', { action: 'start', params: ['NAME=Ada'] });
+      await call('tap', { selector: { text: 'Form' } });
+      await call('type_text', { text: 'Ada', selector: { id: 'name' } });
+      const stop = await call('flow', { action: 'stop' });
+      expect(stop.text).toContain('param NAME\n');
+      expect(stop.text).toContain('type "${NAME}" id=name');
+      expect(stop.text).not.toContain('secret');
+      writeFileSync(join(dir, 'e.flow'), 'app dev.app\nlaunch\n');
+      const exported = refusal(
+        call('flow', { action: 'export', file: join(dir, 'e.flow'), params: ['NAME=Ada'] }),
+      );
+      expect((await exported).message).toContain('export takes no params');
+    });
+  });
+
   describe('replay', () => {
     const flowFile = (body: string, name = 'r.flow') => {
       const file = join(dir, name);

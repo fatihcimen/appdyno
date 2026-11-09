@@ -356,10 +356,10 @@ const fill = (value: string, values: Record<string, string>) =>
     name === undefined ? '${' : (values[name] ?? m),
   );
 
-/** A step with its placeholders filled. */
-export function fillStep(st: FlowStep, values: Record<string, string>): FlowStep {
+/** A step with each string of its arguments and its selector through `f`. */
+export function mapStrings(st: FlowStep, f: (value: string) => string): FlowStep {
   const args = Object.fromEntries(
-    Object.entries(st.args).map(([k, v]) => [k, typeof v === 'string' ? fill(v, values) : v]),
+    Object.entries(st.args).map(([k, v]) => [k, typeof v === 'string' ? f(v) : v]),
   );
   const s = st.selector;
   return {
@@ -367,14 +367,21 @@ export function fillStep(st: FlowStep, values: Record<string, string>): FlowStep
     args,
     ...(s && {
       selector: {
-        ...(s.id !== undefined && { id: fill(s.id, values) }),
-        ...(s.role !== undefined && { role: fill(s.role, values) }),
-        ...(s.text !== undefined && { text: fill(s.text, values) }),
+        ...(s.id !== undefined && { id: f(s.id) }),
+        ...(s.role !== undefined && { role: f(s.role) }),
+        ...(s.text !== undefined && { text: f(s.text) }),
         ...(s.index !== undefined && { index: s.index }),
       },
     }),
   };
 }
+
+/** A step with its placeholders filled. */
+export const fillStep = (st: FlowStep, values: Record<string, string>) =>
+  mapStrings(st, (v) => fill(v, values));
+
+/** A name a placeholder may have: `param` and `secret` take only these. */
+export const isName = (name: string) => NAME.test(name);
 
 /** The app's id with its placeholders filled. */
 export const fillApp = (app: string, values: Record<string, string>) => fill(app, values);

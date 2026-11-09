@@ -56,6 +56,8 @@ Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir i�
 `unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `flow stop` ve
 `flow save` bakılması gereken her adımı listeler.
 
+Ajanın yazdığı ya da okuduğu bir değer, `flow start`, `stop` ya da `save` üzerinde `params` ile bir parametre olur (komut satırında `--param NAME=Grace`): yazıldığı ya da okunduğu her yerde, önce ya da sonra, `${NAME}` olur, `param NAME` olarak bildirilir ve `flow run` değerini `params` içinde alır. Hiçbir kaydedilmiş adımın tutmadığı bir ad `stop` ve `save`'de reddedilir; `save` yazdığı dosyayla yanıt verir.
+
 ## Gizli değerler
 
 Bir parola alanına yazılan metin ve `APPDYNO_SECRETS` içindeki metin, adıyla bir `secret` olur:

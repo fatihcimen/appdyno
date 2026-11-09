@@ -1,9 +1,18 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Owner } from '@appdyno/core';
-import { escapeLiteral, flowText, namesOf, type Flow, type FlowStep } from './format.js';
+import {
+  escapeLiteral,
+  flowText,
+  FlowError,
+  isName,
+  mapStrings,
+  namesOf,
+  type Flow,
+  type FlowStep,
+} from './format.js';
 
-/** A secret by its salted digest: the recording, on disk and in memory, never holds the value. */
-type Known = { name: string; length: number; salt: string; digest: string };
+/** A secret, or a param an agent named, by its salted digest: the recording, on disk and in memory, never holds the value. */
+type Known = { name: string; length: number; salt: string; digest: string; param?: boolean };
 
 /** A recording as it is kept between the commands that make it. */
 export type RecordingState = {
@@ -18,6 +27,14 @@ export type RecordingState = {
 
 const digestOf = (salt: string, value: string) =>
   createHash('sha256').update(salt).update(value).digest('hex');
+
+const knownAs = (name: string, value: string): Known => {
+  const salt = randomBytes(16).toString('hex');
+  return { name, length: value.length, salt, digest: digestOf(salt, value) };
+};
+
+/** A recorded string's literal parts apart from its placeholders and escapes, which stand between them. */
+const PARTS = /(\$\$\{|\$\{[^}]*\})/;
 
 const paramName = (field: string | undefined) =>
   field
@@ -69,34 +86,37 @@ export class Recording {
     const taken = (n: string) => this.state.known.some((k) => k.name === n);
     let name = base;
     for (let i = 2; taken(name); i++) name = `${base}_${i}`;
-    const salt = randomBytes(16).toString('hex');
-    this.state.known.push({
-      name,
-      length: value.length,
-      salt,
-      digest: digestOf(salt, value),
-    });
+    this.state.known.push(knownAs(name, value));
+  }
+
+  /**
+   * A value the agent names: from now on, and in the steps held already, it is `${name}`, a param a run is given. A
+   * secret's name is refused, as one name is one thing.
+   */
+  nameParam(name: string, value: string) {
+    if (!isName(name)) throw new FlowError(`a param's name is like MY_NAME: ${name}`, 0);
+    if (!value) throw new FlowError(`${name} has no value to name`, 0);
+    if (this.state.known.some((k) => k.name === name && !k.param))
+      throw new FlowError(`${name} is a secret's name in this recording`, 0);
+    this.state.known = [
+      ...this.state.known.filter((k) => k.name !== name),
+      { ...knownAs(name, value), param: true },
+    ];
+    // shortcut: a value with "${" in it is not found in the steps held before it was named
+    const named = (s: string) =>
+      s
+        .split(PARTS)
+        .map((part, i) => (i % 2 ? part : part.split(value).join(`\${${name}}`)))
+        .join('');
+    this.state.steps = this.state.steps.map((st) => mapStrings(st, named));
   }
 
   add(step: FlowStep) {
-    const clean = (v: string | number | boolean) => (typeof v === 'string' ? this.scrub(v) : v);
-    const s = step.selector;
     // the first app named is the flow's, when the session had none selected; a step need not repeat it
     const { app, ...rest } = step.args;
     if (typeof app === 'string') this.state.app ??= app;
     const args = app === undefined || app === this.state.app ? rest : step.args;
-    this.state.steps.push({
-      ...step,
-      args: Object.fromEntries(Object.entries(args).map(([k, v]) => [k, clean(v)])),
-      ...(s && {
-        selector: {
-          ...(s.id !== undefined && { id: this.scrub(s.id) }),
-          ...(s.role !== undefined && { role: this.scrub(s.role) }),
-          ...(s.text !== undefined && { text: this.scrub(s.text) }),
-          ...(s.index !== undefined && { index: s.index }),
-        },
-      }),
-    });
+    this.state.steps.push(mapStrings({ ...step, args }, (v) => this.scrub(v)));
   }
 
   /** The last steps turn out to have been this one, as a second tap makes two taps a double tap. */
@@ -105,13 +125,15 @@ export class Recording {
     this.add(step);
   }
 
-  /** The flow so far, each name it uses declared. */
+  /** The flow so far, each name it uses declared: what the agent named as a param, the rest as a secret. */
   flow(): Flow {
+    const names = [...new Set(this.state.steps.flatMap(namesOf))];
+    const param = (n: string) => this.state.known.some((k) => k.name === n && k.param);
     return {
       ...(this.state.app && { app: this.state.app }),
       tags: [],
-      params: [],
-      secrets: [...new Set(this.state.steps.flatMap(namesOf))],
+      params: names.filter(param),
+      secrets: names.filter((n) => !param(n)),
       steps: this.state.steps,
     };
   }

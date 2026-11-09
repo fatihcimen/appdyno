@@ -1,5 +1,5 @@
 import { must } from '@appdyno/core';
-import { toMaestro, FlowError } from '@appdyno/flows';
+import { toMaestro, FlowError, namesOf, type Recording } from '@appdyno/flows';
 import type { ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
@@ -34,6 +34,31 @@ export function paramsOf(words: string[] = []): Record<string, string> {
   );
 }
 
+/**
+ * `params` on start, stop or save: each value named in the recording, as a param. At stop and save a name no step holds
+ * is refused, as it would name nothing; what it says is where each is.
+ */
+function nameParams(r: Recording, params: string[] | undefined, held: boolean): string[] {
+  const named = Object.entries(paramsOf(params));
+  try {
+    for (const [name, value] of named) r.nameParam(name, value);
+  } catch (e) {
+    if (e instanceof FlowError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
+    throw e;
+  }
+  if (!held) return [];
+  return named.map(([name]) => {
+    const at = r.state.steps.flatMap((st, i) => (namesOf(st).includes(name) ? [i + 1] : []));
+    if (at.length === 0)
+      throw new ToolError(
+        `no recorded step holds the value of ${name}: it would name nothing`,
+        'INVALID_ARGUMENT',
+        'give the value as it was typed or read, NAME=value',
+      );
+    return `param ${name}: step${at.length > 1 ? 's' : ''} ${at.join(', ')}`;
+  });
+}
+
 export function flowOps(ctx: ServerContext, runner: FlowRunner) {
   const done = (t: string, data: Record<string, unknown> = {}) => reply(t, { done: t, ...data });
   return [
@@ -41,7 +66,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'flow',
       title: 'Flow',
       description:
-        'Record your actions as a repeatable test; replay them with no model. run (from: a step; params: NAME=value; iterations: a journey timed by step, kept for perf_compare), export (to Maestro YAML).',
+        'Record your actions as a repeatable test; replay them with no model. params NAME=value: on start, stop or save, makes that recorded value the parameter ${NAME}; on run, its value. run (from: a step; iterations: a journey timed by step, kept for perf_compare), export (to Maestro YAML).',
       input: z
         .object({
           action: z.enum(['start', 'stop', 'save', 'run', 'export']),
@@ -65,6 +90,11 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           return file;
         };
         if (action === 'export') {
+          if (params)
+            throw new ToolError(
+              'export takes no params: a flow holds its names, and a run takes their values',
+              'INVALID_ARGUMENT',
+            );
           try {
             const yaml = toMaestro(readFlow(need()));
             return reply(yaml, { done: 'exported' });
@@ -84,18 +114,20 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
                 'INVALID_ARGUMENT',
               );
             const pkg = s.appId;
-            startRecording(ctx, serial, pkg, s.owner);
+            startRecording(ctx, serial, pkg, s.owner, (r) => nameParams(r, params, false));
             return done(`recording on ${serial}${pkg ? ` (${pkg})` : ''}`);
           }
           case 'stop': {
             if (!held)
               throw new ToolError('no recording to stop: flow start begins one', 'NOT_FOUND');
+            const named = nameParams(held, params, true);
             held.state.running = false;
             keepRecording(held);
             const notes = flagged(held.flow());
             return reply(
               [
                 held.state.steps.length > 0 ? held.text() : 'nothing was recorded',
+                ...named,
                 ...notes.map((n) => `look at ${n}`),
               ].join('\n'),
               { done: 'stopped', steps: held.state.steps.length, flagged: notes },
@@ -107,13 +139,19 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
             if (held.state.steps.length === 0)
               throw new ToolError('nothing was recorded yet', 'NOT_FOUND');
             const path = need();
+            const named = nameParams(held, params, true);
             const notes = saveRecording(held, path, overwrite);
+            keepRecording(held);
             const t = `saved ${held.state.steps.length} steps to ${path}`;
-            return reply([t, ...notes.map((n) => `look at ${n}`)].join('\n'), {
-              done: t,
-              steps: held.state.steps.length,
-              flagged: notes,
-            });
+            // a client with no file tools reads the file here, or nowhere
+            return reply(
+              [t, '', held.text(), ...named, ...notes.map((n) => `look at ${n}`)].join('\n'),
+              {
+                done: t,
+                steps: held.state.steps.length,
+                flagged: notes,
+              },
+            );
           }
           case 'run': {
             const path = need();

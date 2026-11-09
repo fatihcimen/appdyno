@@ -23,7 +23,13 @@ const Kept: z.ZodType<RecordingState> = z.object({
   running: z.boolean(),
   steps: z.array(z.custom<FlowStep>()),
   known: z.array(
-    z.object({ name: z.string(), length: z.number(), salt: z.string(), digest: z.string() }),
+    z.object({
+      name: z.string(),
+      length: z.number(),
+      salt: z.string(),
+      digest: z.string(),
+      param: z.boolean().optional(),
+    }),
   ),
   owner: Owner.optional(),
 });
@@ -44,18 +50,21 @@ export const activeRecording = (ctx: ServerContext, serial: string | undefined) 
   return r?.state.running ? r : undefined;
 };
 
+/** A new recording, kept once `named` has named what the agent asked: a refusal there starts none. */
 export const startRecording = (
   ctx: ServerContext,
   serial: string,
   app: string | undefined,
   owner: Owner | undefined,
-) =>
-  keepRecording(
-    new Recording(
-      { serial, running: true, steps: [], known: [], ...(app && { app }), owner },
-      ctx.policy.secrets,
-    ),
+  named: (r: Recording) => void = () => undefined,
+) => {
+  const r = new Recording(
+    { serial, running: true, steps: [], known: [], ...(app && { app }), owner },
+    ctx.policy.secrets,
   );
+  named(r);
+  keepRecording(r);
+};
 
 export const addSteps = (r: Recording, step: FlowStep | FlowStep[] | undefined) => {
   const steps = [step ?? []].flat();
