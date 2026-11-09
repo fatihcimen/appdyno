@@ -94,7 +94,7 @@ verisi hayırda ve hiçbir şeyin soramadığı yerde yerinde kalır.
 
 `app install` ve `build_and_run` bunların arasında değildir: ikisi de önce bir uygulamayı kaldırmaz; bir simülatörde fixture'ın
 tuttuğu bir dosya, fixture kendi üstüne kurulduktan sonra da yerindeydi. `--allow-apps` ile `app install` yalnızca listenin adlandırdığı
-bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar, başkasını da adlandırarak reddeder; `build_and_run` reddedilir, çünkü bir projenin ne derlediği derlenmeden bilinmez.
+bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar, başkasını da adlandırarak reddeder; `build_and_run` reddedilir, çünkü bir projenin ne derlediği derlenmeden bilinmez. Android'de cihazın reddettiği bir kurulum nedenini ve bir kişinin ne yapabileceğini söyler: başka bir anahtarla imzalanmış bir uygulama `PERMISSION_REQUIRED`'dır, çünkü ona yer açan yalnızca uygulamanın tuttuğu her şeyi kaybettiren ve bu yüzden bir kişiye soran `app uninstall`'dır; daha eski bir sürüm `INVALID_ARGUMENT`'tır; yer kalmaması, uygulamanın minSdk'sından eski bir Android ya da başka bir işlemcinin native kütüphaneleri `UNSUPPORTED`'dır.
 
 ## Her platform neyi yapabilir
 

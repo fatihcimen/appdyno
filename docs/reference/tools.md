@@ -94,7 +94,7 @@ data stays on the no and where nothing could ask.
 
 `app install` and `build_and_run` are not among them: neither removes an app first, and on a simulator a file the
 fixture kept was still there after its install over itself. Under `--allow-apps`, `app install` installs only an app the list
-names, by the id the file holds, read before anything reaches the device, and refuses another, naming it; `build_and_run` is refused, as what a project builds is not known before it is built.
+names, by the id the file holds, read before anything reaches the device, and refuses another, naming it; `build_and_run` is refused, as what a project builds is not known before it is built. On Android an install the device refuses says why and what a person can do: an app signed with another key is `PERMISSION_REQUIRED`, as only `app uninstall`, which loses all the app keeps and so asks a person, makes room for it; an older version is `INVALID_ARGUMENT`; no room, an Android older than the app's minSdk, or native libraries for another processor are `UNSUPPORTED`.
 
 ## What each platform can do
 

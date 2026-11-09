@@ -10,7 +10,7 @@ import {
   run,
   TIMEOUTS,
 } from '@appdyno/core';
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { type Adb, amStartError, assertPkg, shq } from './adb.js';
 import { apkNames } from './apk-names.js';
 import { buildVariant } from './build.js';
@@ -30,6 +30,38 @@ const success = (out: string, what: string) => {
 };
 
 const DATA_MS = 600_000;
+
+const UNINSTALL_FIRST =
+  'app uninstall first takes the installed app away with all it keeps on the device, so it asks a person; nothing uninstalls it by itself';
+
+/** `adb install`'s refusals a person can act on, by the reason it names: the code, what it means and what to do. */
+const REFUSED: Record<string, [ErrorCode, string, string]> = {
+  INSTALL_FAILED_UPDATE_INCOMPATIBLE: [
+    'PERMISSION_REQUIRED',
+    'the app on the device is signed with another key',
+    `install a build signed with the installed app's key; or ${UNINSTALL_FIRST}`,
+  ],
+  INSTALL_FAILED_VERSION_DOWNGRADE: [
+    'INVALID_ARGUMENT',
+    'the file is an older version than the app on the device',
+    `install a build whose versionCode is at least the installed one's; or ${UNINSTALL_FIRST}`,
+  ],
+  INSTALL_FAILED_INSUFFICIENT_STORAGE: [
+    'UNSUPPORTED',
+    'the device has no room for it',
+    'a person frees space on the device (Settings, Storage), then install again',
+  ],
+  INSTALL_FAILED_OLDER_SDK: [
+    'UNSUPPORTED',
+    "the device's Android is older than the app's minSdk",
+    'install it on a device with a newer Android, or build it with a lower minSdk',
+  ],
+  INSTALL_FAILED_NO_MATCHING_ABIS: [
+    'UNSUPPORTED',
+    "its native libraries are for another processor than the device's",
+    "build it for the device's ABI (adb shell getprop ro.product.cpu.abilist), or install it on another device",
+  ],
+};
 
 const PERMISSIONS: Record<string, string> = {
   camera: 'CAMERA',
@@ -89,7 +121,9 @@ export class AndroidApps implements AppManager {
     } catch (e) {
       stop.abort();
       const also = said.length > 0 ? `. ${said.join('. ')}` : '';
-      if ((e as Error).message.includes('INSTALL_FAILED_USER_RESTRICTED'))
+      const { message, cause } = e as Error;
+      const adbSaid = `${message} ${typeof cause === 'string' ? cause : ''}`;
+      if (adbSaid.includes('INSTALL_FAILED_USER_RESTRICTED'))
         throw said.some((s) => s.includes(CONSENT_TAPPED))
           ? new DeviceError(
               'PERMISSION_REQUIRED',
@@ -101,6 +135,14 @@ export class AndroidApps implements AppManager {
               `the phone asked on its screen whether to install over USB, and no one said yes in time${also}`,
               'install again and answer it on the phone within 10 s; ticking its remember box stops it asking',
             );
+      const reason = /\bINSTALL_FAILED_\w+/.exec(adbSaid)?.[0];
+      const refused = reason && REFUSED[reason];
+      if (refused)
+        throw new DeviceError(
+          refused[0],
+          `${path} was not installed: ${refused[1]} (${reason})${also}`,
+          refused[2],
+        );
       if (e instanceof DeviceError) throw new DeviceError(e.code, `${e.message}${also}`, e.hint);
       throw e;
     }

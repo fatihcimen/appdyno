@@ -1,10 +1,11 @@
 import { must } from '@appdyno/core';
-import { readFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Point, Tree } from '@appdyno/protocol';
 import { DeviceError } from '@appdyno/protocol';
 import { assert, describe, expect, it, vi } from 'vitest';
-import type { Adb } from '../src/adb.js';
+import { Adb } from '../src/adb.js';
 import { AndroidApps } from '../src/apps.js';
 import {
   answerInstallPrompts,
@@ -407,6 +408,74 @@ describe('install', () => {
       'the phone asked on its screen whether to install over USB, and no one said yes in time',
     );
     expect((e as DeviceError).hint).toContain('within 10 s');
+  });
+
+  it.each([
+    [
+      'INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package dev.appdyno.fixture signatures do not match newer version; ignoring!',
+      'PERMISSION_REQUIRED',
+      'signed with another key',
+    ],
+    [
+      'INSTALL_FAILED_VERSION_DOWNGRADE: Downgrade detected: Update version code 1 is older than current 2',
+      'INVALID_ARGUMENT',
+      'an older version',
+    ],
+    ['INSTALL_FAILED_INSUFFICIENT_STORAGE', 'UNSUPPORTED', 'no room'],
+    [
+      'INSTALL_FAILED_OLDER_SDK: Failed parse during installPackageLI: Requires newer sdk version #36 (current version is #34)',
+      'UNSUPPORTED',
+      'older than',
+    ],
+    [
+      'INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113',
+      'UNSUPPORTED',
+      'another processor',
+    ],
+  ])('names what %s means and what a person can do', async (reason, code, means) => {
+    // as adb says it, with the exit status 1 the adb client gives it as
+    const said = `Performing Streamed Install\nadb: failed to install ${APK}: Failure [${reason}]`;
+    const refused = () => Promise.reject(new DeviceError('INTERNAL', `adb: ${said}`));
+    const apps = new AndroidApps(adb(refused), 'phone', phone([]), {
+      prompts: false,
+      warnings: false,
+    });
+    const e = (await apps.install(APK).catch((x: unknown) => x)) as DeviceError;
+    expect(e.code).toBe(code);
+    expect(e.message).toContain(means);
+    expect(e.message).not.toContain('Performing Streamed Install');
+    expect(e.hint).toBeTruthy();
+  });
+
+  it('finds the reason past the start of what adb said, which its message keeps', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-install-'));
+    const bin = join(dir, 'adb');
+    const deep = `/${'deep/'.repeat(60)}app.apk`;
+    writeFileSync(
+      bin,
+      `#!/bin/sh\necho "Performing Streamed Install"\necho "adb: failed to install ${deep}: Failure [INSTALL_FAILED_VERSION_DOWNGRADE: Downgrade detected]"\nexit 1\n`,
+    );
+    chmodSync(bin, 0o755);
+    const real = Object.assign(new Adb({ bin }), { exec: () => Promise.resolve('') });
+    const apps = new AndroidApps(real, 'phone', phone([]), { prompts: false, warnings: false });
+    const e = (await apps.install(APK).catch((x: unknown) => x)) as DeviceError;
+    expect(e.code).toBe('INVALID_ARGUMENT');
+    rmSync(dir, { recursive: true });
+  });
+
+  it('says an uninstall to replace an app of another key loses its data, and asks a person', async () => {
+    const said = `adb: failed to install ${APK}: Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package dev.appdyno.fixture signatures do not match newer version; ignoring!]`;
+    const uninstall = vi.fn();
+    const apps = new AndroidApps(
+      adb(() => Promise.reject(new DeviceError('INTERNAL', said))),
+      'phone',
+      phone([]),
+      { prompts: false, warnings: false },
+    );
+    Object.assign(apps, { uninstall });
+    const e = (await apps.install(APK).catch((x: unknown) => x)) as DeviceError;
+    expect(e.hint).toContain('all it keeps on the device, so it asks a person');
+    expect(uninstall).not.toHaveBeenCalled();
   });
 
   it('asks whether the app the file holds may go in, by its package, before the phone is reached', async () => {

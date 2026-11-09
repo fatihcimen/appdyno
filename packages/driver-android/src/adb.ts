@@ -266,7 +266,8 @@ export class Adb {
       p.on('close', (code) => {
         clearTimeout(timer);
         if (code === 0) resolve(out);
-        else reject(gone(out, args.join(' ')));
+        // all it said, where the message keeps its start: a reason may come after it
+        else reject(Object.assign(gone(out, args.join(' ')), { cause: out }));
       });
     });
   }
