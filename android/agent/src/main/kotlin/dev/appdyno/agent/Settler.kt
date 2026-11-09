@@ -83,7 +83,6 @@ class Settler(
         var last: S? = before
         var changedAt = actionAt
         var lastReadAt = actionAt
-        var held = false
         // with the caller's layout known, a read before the window ends can only say "the same"
         var nextRead = if (before != null) actionAt + quietMs else actionAt
         while (true) {
@@ -98,15 +97,10 @@ class Settler(
                 changedAt = clock()
                 nextRead = changedAt
                 pause(minOf(POLL_MS, deadline - changedAt).coerceAtLeast(1))
-                held = true
                 continue
             }
-            // a new window's first layout passes are still landing; a read of them costs more than it tells
-            if (held && clock() < deadline) {
-                val until = minOf(clock() + AFTER_HOLD_MS, deadline)
-                while (clock() < until) sleep(until - clock())
-            }
-            held = false
+            // read as soon as the hold ends: a new window's first layout passes that land after this read show in the
+            // next, POLL_MS later, and the window counts from the last change either way
             val readStart = clock()
             val next = read()
             reads++
@@ -142,6 +136,5 @@ class Settler(
 
     companion object {
         const val POLL_MS = 40L
-        const val AFTER_HOLD_MS = 90L
     }
 }

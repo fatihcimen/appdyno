@@ -237,8 +237,8 @@ or a window transition runs and has not shown its new window, none at all (the t
 a read runs on the app's UI thread after a click it was busy with; this keeps an old window that has no events
 yet from passing for a still screen); after a read that saw a change another 40 ms later, as a move without
 events shows only in reads; else when the window would be over, or sooner if a layout-moving event arrives.
-With `before` known the first read is at the end of the window; after a hold it comes 90 ms later, as a new
-window's first layout passes are still landing. A window only changing its bounds is not a layout-moving event
+With `before` known the first read is at the end of the window; after a hold it comes at once, and a new window's
+first layout passes that land after it show in the next. A window only changing its bounds is not a layout-moving event
 on API 34+.
 
 **Answers during a slide.** On API 34+ an application window of the display's size comes to rest filling the

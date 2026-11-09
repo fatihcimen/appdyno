@@ -153,10 +153,13 @@ class SettlerTest {
 
     @Test
     fun nothingIsReadOrProvenWhileHeld() {
-        // between two screens for 500 ms: no read of the empty screen, and the window starts after it
+        // between two screens for 500 ms: no read of the empty screen, and the window starts after it, with the first
+        // read as the hold ends
         val start = now
+        val at = mutableListOf<Long>()
         val o = Settler({ now }, { now += it }, { lastEvent }).run(
             start, 200, 3_000, R("A"), {
+                at += now - start
                 now += 10
                 R("B")
             }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
@@ -165,7 +168,24 @@ class SettlerTest {
         assertTrue(o.settled)
         assertEquals("B", o.last.hash)
         assertEquals(3, o.reads)
-        assertTrue("settled ${o.elapsedMs}", o.elapsedMs in 700..900)
+        assertTrue("reads at $at", at.first() in 500..500 + Settler.POLL_MS)
+        assertTrue("settled ${o.elapsedMs}", o.elapsedMs in 700..760)
+    }
+
+    @Test
+    fun aNewWindowStillLayingOutAfterTheHoldIsFollowedUntilItIsStill() {
+        // the hold ends at 300 ms and the new window's layout passes land until 400: the window counts from the last
+        val start = now
+        val o = Settler({ now }, { now += it }, { lastEvent }).run(
+            start, 200, 3_000, R("A"), {
+                now += 10
+                R(if (now - start < 400) "pass${(now - start) / 40}" else "B")
+            }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            hold = { now - start < 300 },
+        )
+        assertTrue(o.settled)
+        assertEquals("B", o.last.hash)
+        assertTrue("settled ${o.elapsedMs}", o.elapsedMs >= 600)
     }
 
     @Test

@@ -237,8 +237,8 @@ ya da bir pencere geçişi sürüp yeni penceresini henüz göstermemişken hiç
 bir okuma, uygulamanın meşgul olduğu bir tıklamadan sonra onun UI thread'inde çalışır; bu, henüz olayı olmayan eski bir pencerenin
 durgun bir ekran sayılmasını önler); bir değişiklik gören bir okumadan 40 ms sonra bir tane daha, çünkü olaysız bir hareket
 yalnızca okumalarda görünür; değilse bekleme süresinin biteceği anda ya da yerleşimi oynatan bir olay gelirse daha erken.
-`before` biliniyorsa ilk okuma bekleme süresinin sonundadır; bir bekletmenin ardından 90 ms sonra gelir, çünkü yeni bir
-pencerenin ilk yerleşim geçişleri hâlâ gelmektedir. Bir pencerenin yalnızca sınırlarını değiştirmesi,
+`before` biliniyorsa ilk okuma bekleme süresinin sonundadır; bir bekletmenin ardından hemen gelir, yeni bir pencerenin
+ondan sonra gelen ilk yerleşim geçişleri bir sonrakinde görünür. Bir pencerenin yalnızca sınırlarını değiştirmesi,
 API 34+'ta yerleşimi oynatan bir olay değildir.
 
 **Kayma sırasında yanıtlar.** API 34+'ta ekran boyutundaki bir uygulama penceresi ekranı dolduracak şekilde
