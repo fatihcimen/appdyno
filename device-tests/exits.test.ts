@@ -57,6 +57,9 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
   });
 
   it('reads a permission taken away while it ran', async () => {
+    // held first: a suite before this one may have installed the app again, with nothing granted, and a revoke of what
+    // the app does not hold ends nothing
+    shell('pm', 'grant', APP, PERMISSION);
     const { exits } = await after(() => shell('pm', 'revoke', APP, PERMISSION));
     shell('pm', 'grant', APP, PERMISSION);
     expect(reasons(exits)).toContain('PERMISSION CHANGE');
