@@ -58,11 +58,11 @@ static NSString *nowOf(NSString *value) {
   return [value substringWithRange:NSMakeRange(13, value.length - 14)];
 }
 
-/// A choice the device reads: as named, by its head (`full (-1)`), as a number (1.0 for 1), or by how its name ends (an
-/// iPhone's thermal profile).
-static BOOL sameChoice(NSString *choice, NSString *read) {
+/// A choice the device reads: as named, by its head (`full (-1)`), as a number (1.0 for 1), or, loosely, by how its name
+/// ends (an iPhone's thermal profile).
+static BOOL sameChoice(NSString *choice, NSString *read, BOOL loose) {
   NSString *head = [nowOf(read) componentsSeparatedByString:@" ("].firstObject;
-  return [choice isEqual:head] || (choice.doubleValue > 0 && choice.doubleValue == head.doubleValue) || [head.lowercaseString hasSuffix:choice];
+  return [choice isEqual:head] || (choice.doubleValue > 0 && choice.doubleValue == head.doubleValue) || (loose && [head.lowercaseString hasSuffix:choice]);
 }
 
 /// A reason begun as a sentence, where its first word is no name that keeps its own case, as iOS does.
@@ -204,8 +204,10 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   if (_kind == MVRowField) _field.stringValue = [_name isEqual:@"proxy"] && [value isEqual:@"none"] ? @"" : nowOf(value);
   if (_kind != MVRowChoice) return;
   NSPopUpButton *choice = (NSPopUpButton *)_control;
-  for (NSInteger i = 0; i < choice.numberOfItems; i++)
-    if (sameChoice([choice itemAtIndex:i].representedObject, value)) return [choice selectItemAtIndex:i];
+  // by its name before by how a name ends, which extra-extra-large shares with large
+  for (NSNumber *loose in @[@NO, @YES])
+    for (NSInteger i = 0; i < choice.numberOfItems; i++)
+      if (sameChoice([choice itemAtIndex:i].representedObject, value, loose.boolValue)) return [choice selectItemAtIndex:i];
   // what the device reads that no choice is, as it reads it
   [choice addItemWithTitle:nowOf(value)];
   choice.lastItem.representedObject = nowOf(value);

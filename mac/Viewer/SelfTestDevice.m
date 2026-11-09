@@ -119,4 +119,9 @@ void MVCheckDevice(void) {
                              .firstObject;
   NSView *page = scroll.documentView;
   MVCheck(@"device: its rows scroll in the room the pane has, as wide as it", scroll && page.frame.size.height > 0 && fabs(page.frame.size.width - scroll.contentView.bounds.size.width) < 1, NSStringFromRect(page.frame));
+  [pane show:@{@"op": @"answer",
+               @"name": @"device",
+               @"platform": @"ios",
+               @"conditions": @[@{@"name": @"text_size", @"value": @"extra-extra-large"}, @{@"name": @"thermal", @"value": @"ThermalStateFair"}]}];
+  MVCheck(@"device: an iPhone's text size stands as read, not as the first size its name ends like", [[pane shown:@"text_size"] isEqual:@"extra-extra-large"] && [[pane shown:@"thermal"] isEqual:@"fair"], [pane shown:@"text_size"]);
 }
