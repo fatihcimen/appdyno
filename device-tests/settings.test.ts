@@ -63,6 +63,22 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     await until('the lock back', () => lock().join() === was.join());
   });
 
+  it('puts text_size back as the device had it, unset or 1.0, and the languages the system writes beside it', async () => {
+    const read = () =>
+      ['font_scale', 'system_locales'].map((k) => adb('settings', 'get', 'system', k));
+    const unset = read();
+    for (const start of ['unset', '1.0']) {
+      if (start === '1.0') adb('settings', 'put', 'system', 'font_scale', '1.0');
+      const was = read();
+      await set(call, 'text_size', '1.3');
+      expect(read()[0]).toBe('1.3');
+      await call('device_setting', { name: 'restore' });
+      expect(read(), start).toEqual(was);
+    }
+    adb('settings', 'delete', 'system', 'font_scale');
+    expect(read()).toEqual(unset);
+  });
+
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {
     await set(call, 'wifi', 'on');
     expect(await value(call, 'mobile_data')).toBe('on');

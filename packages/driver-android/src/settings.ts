@@ -129,8 +129,7 @@ export class AndroidSettings implements DeviceSettings {
         return /Night mode: (\w+)/.exec(await this.sh('cmd uimode night'))?.[1] ?? 'no';
       case 'text_size': {
         const v = (await this.sh('settings get system font_scale')).trim();
-        // a scale deleted is written back by the system as 1.0
-        return v === 'null' || Number(v) === 1 ? 'default' : v;
+        return v === 'null' ? 'default' : v;
       }
       case 'reduce_motion':
       case 'animations':
@@ -268,7 +267,35 @@ export class AndroidSettings implements DeviceSettings {
       );
   }
 
-  /** A text scale, asked again until it reads as asked once the system's own write has come. */
+  /**
+   * Which of `keys` (of `system`) read unset now, and what deletes them again once a change has gone: the system writes
+   * the text scale and the languages together when either changes (`Settings.System.putConfigurationForUser`), within
+   * `SCALE_HOLDS_MS` of it.
+   */
+  private async keepingUnset(keys: string[]) {
+    const unset = async () => {
+      const out = await this.sh(keys.map((k) => `settings get system ${k}`).join('; '));
+      const lines = out.split('\n').map((l) => l.trim());
+      return keys.filter((_, i) => lines[i] === 'null');
+    };
+    const were = await unset();
+    return async () => {
+      const end = Date.now() + RADIO_MS;
+      for (;;) {
+        await sleep(SCALE_HOLDS_MS);
+        const now = await unset();
+        const written = were.filter((k) => !now.includes(k));
+        if (written.length === 0 || Date.now() >= end) return;
+        await this.sh(written.map((k) => `settings delete system ${k}`).join('; '));
+      }
+    };
+  }
+
+  /**
+   * A text scale, asked again until it reads as asked once the system's own write has come; `default` is the scale
+   * unset, as a device that never set one has it, and a delete the system answers with 1.0 is asked again. The languages
+   * the system writes beside it stay unset where they were.
+   */
   private async setScale(value: string) {
     const scale = value === 'default' ? 1 : Number(value);
     if (!/^(\d+(\.\d+)?|default)$/.test(value) || scale < SCALES.min || scale > SCALES.max)
@@ -277,6 +304,7 @@ export class AndroidSettings implements DeviceSettings {
         `text_size on Android is a scale, not ${value}`,
         `from ${SCALES.min} to ${SCALES.max}, such as 1.3, or default`,
       );
+    const languagesBack = await this.keepingUnset(['system_locales']);
     const end = Date.now() + RADIO_MS;
     for (;;) {
       const said = await this.sh(
@@ -289,13 +317,14 @@ export class AndroidSettings implements DeviceSettings {
         throw new DeviceError('UNSUPPORTED', `this device refused text_size ${value}: ${refused}`);
       await sleep(SCALE_HOLDS_MS);
       const now = await this.get('text_size');
-      if ((now === 'default' ? 1 : Number(now)) === scale) return;
+      if (value === 'default' ? now === 'default' : Number(now) === scale) break;
       if (Date.now() >= end)
         throw new DeviceError(
           'UNSUPPORTED',
           `asked for text_size ${value} and it still reads ${now} after ${RADIO_MS / 1000} s`,
         );
     }
+    await languagesBack();
   }
 
   async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {

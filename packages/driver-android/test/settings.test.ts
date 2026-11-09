@@ -373,18 +373,39 @@ describe('a fingerprint', () => {
 });
 
 describe('a text size', () => {
-  /** A scale the system writes back once a change has gone, the one before first `stale` times, as API 34 did. */
-  const scaled = (scale: string, stale = 0) => {
-    let held = scale;
+  /**
+   * A device as API 34 is: a scale that changes the configuration is written back by the system with the languages beside
+   * it, a scale deleted counting as 1.0 there. With `late`, the write of a 1.3 set just before lands after the next write.
+   */
+  const scaled = (scale: string, late = false) => {
+    const held: Record<string, string> = { font_scale: scale, system_locales: 'null' };
+    let config = scale === 'null' ? 1 : Number(scale);
+    const systemWrite = (to: number) => () => {
+      held.font_scale = to.toFixed(1);
+      held.system_locales = 'en-US';
+    };
+    let pending = late ? systemWrite(config) : undefined;
     const asked: string[] = [];
+    const one = (command: string) => {
+      const [, verb, key = '', v = ''] =
+        /^settings (get|put|delete) system (\w+) ?(\S*)/.exec(command) ?? [];
+      if (verb === 'get') return held[key] ?? 'null';
+      held[key] = verb === 'put' ? v : 'null';
+      pending?.();
+      pending = undefined;
+      const now = held.font_scale === 'null' ? 1 : Number(held.font_scale);
+      if (key === 'font_scale' && now !== config) {
+        config = now;
+        systemWrite(now)();
+      }
+      return '';
+    };
     const exec = (_serial: string, command: string) => {
       asked.push(command);
-      if (command.startsWith('settings get')) return Promise.resolve(held);
-      const put = /^settings put system font_scale (\S+)/.exec(command)?.[1] ?? '1.0';
-      if (stale-- <= 0) held = put;
-      return Promise.resolve('');
+      return Promise.resolve(command.split('; ').map(one).join('\n'));
     };
-    return { settings: new AndroidSettings({ exec } as unknown as Adb, 'emulator-5554'), asked };
+    const settings = new AndroidSettings({ exec } as unknown as Adb, 'emulator-5554');
+    return { settings, asked, held };
   };
 
   it('is a scale Android takes, from 0.25 to 5, or default, and nothing else is asked of the device', async () => {
@@ -400,22 +421,48 @@ describe('a text size', () => {
     }
   });
 
-  it('reads the 1.0 Android writes back after a delete as default', async () => {
+  it('reads a scale the device never set as default, and one of 1.0 as 1.0', async () => {
     const read = (v: string) =>
       device('emulator-5554', [[/font_scale/, v]]).settings.get('text_size');
     expect([await read('null'), await read('1.0'), await read('1.3')]).toEqual([
       'default',
-      'default',
+      '1.0',
       '1.3',
     ]);
   });
 
-  it('asks again while the write of the scale before lands after it, and is done once it holds', async () => {
-    const { settings, asked } = scaled('1.3', 1);
-    await settings.set('text_size', 'default');
-    expect(asked.filter((c) => c.includes('delete'))).toHaveLength(2);
-    expect(await settings.get('text_size')).toBe('default');
+  it(
+    'puts back a scale the device never set by deleting it until it holds, and the languages the system wrote beside it',
+    { timeout: 15_000 },
+    async () => {
+      const { settings, held } = scaled('null');
+      await settings.set('text_size', '1.3');
+      expect(held).toEqual({ font_scale: '1.3', system_locales: 'null' });
+      await settings.set('text_size', 'default');
+      expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
+    },
+  );
+
+  it('puts back a scale of 1.0 as 1.0', { timeout: 15_000 }, async () => {
+    const { settings, held } = scaled('1.0');
+    const was = await settings.get('text_size');
+    await settings.set('text_size', '1.3');
+    await settings.set('text_size', was);
+    expect([was, held.font_scale]).toEqual(['1.0', '1.0']);
   });
+
+  it(
+    'asks again while the write of the scale before lands after it, and is done once it holds',
+    { timeout: 15_000 },
+    async () => {
+      const { settings, asked, held } = scaled('1.3', true);
+      await settings.set('text_size', 'default');
+      expect(asked.filter((c) => c.startsWith('settings delete system font_scale'))).toHaveLength(
+        3,
+      );
+      expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
+    },
+  );
 
   it('says what the device said when it refuses a scale', async () => {
     const { settings } = device('emulator-5554', [
