@@ -609,6 +609,20 @@ assert id=result check=text equals="Gönderildi"
       expect(keyboard.up).toBe(false);
     });
 
+    it('closes the keyboard at once where the window it shrank leaves out what a step taps, before the wait for it', async () => {
+      const keyboard = new WithKeyboard();
+      keyboard.hides = 'Gönder';
+      keyboard.screen = 'form';
+      device = keyboard;
+      const call = callerOf(context());
+      const file = flowFile('app dev.app\ntap text="Gönder"\nassert id=result\n');
+      const started = Date.now();
+      expect((await call('flow', { action: 'run', file })).text).toContain('passed: 2 steps');
+      // a replayed step waits 10 s for its target, which only the keyboard's going brings
+      expect(Date.now() - started).toBeLessThan(5_000);
+      expect(keyboard.up).toBe(false);
+    });
+
     it('touches a target only once it has stopped moving', async () => {
       device.screen = 'form';
       const send = must(
@@ -900,8 +914,9 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
     it('says a device failure while a step waits for its target, with no op around it', async () => {
       const real = device.tree.bind(device);
       let reads = 0;
+      // the first read is the look for a keyboard over the target, the second finds it, the third waits for it to hold still
       device.tree = async () => {
-        if (++reads === 2) throw new DeviceError('TIMEOUT', 'tree.get did not answer');
+        if (++reads === 3) throw new DeviceError('TIMEOUT', 'tree.get did not answer');
         return real();
       };
       const r = await flowsFor(context()).replay(flowFile('tap text="Form"\n'));

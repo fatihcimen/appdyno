@@ -1,4 +1,4 @@
-import type { Screen, Selector } from '@appdyno/core';
+import { selectIn, type Screen, type Selector } from '@appdyno/core';
 import type { Point } from '@appdyno/protocol';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
@@ -12,6 +12,18 @@ export async function hideKeyboard(s: Session) {
   s.acted();
   const open = (x: Screen) => s.device.platformScreen.keyboardOpen(x.tree);
   return (await s.until((x) => !open(x), KEYBOARD_GONE_MS)).met;
+}
+
+/**
+ * A selector with no match on the screen, with the keyboard up: the keyboard is closed at once, as the element may be
+ * under it, before any wait for the element, which would see only the keyboard for all of its time. The last read
+ * says so, and one of the moment then: what closes a keyboard on Android is the back key, which leaves the screen
+ * where the app has closed it since.
+ */
+export async function keyboardFirst(s: Session, selector: Selector) {
+  const covered = (x: Screen) =>
+    !selectIn(x.list, selector).length && s.device.platformScreen.keyboardOpen(x.tree);
+  if (covered(await s.current()) && covered(await s.justNow())) await hideKeyboard(s);
 }
 
 /** Whether an element is the keyboard's own, as iOS lists its keys: a touch on it is meant for the keyboard. */
@@ -35,6 +47,7 @@ export async function pastKeyboard(
   patient: boolean,
 ): Promise<Aimed> {
   const platform = s.device.platformScreen;
+  if (a.selector) await keyboardFirst(s, a.selector);
   const aimed = await aim(patient).catch(async (e: unknown) => {
     const leftOut = a.selector && e instanceof ToolError && e.code === 'NOT_FOUND';
     if (leftOut && platform.keyboardOpen((await s.current()).tree) && (await hideKeyboard(s)))

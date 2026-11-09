@@ -1297,6 +1297,26 @@ describe('keyboard', () => {
     expect(d.up).toBe(false);
   });
 
+  it('closes no keyboard the app has closed since the last read, as the back key would leave the screen', async () => {
+    const d = new WithKeyboard();
+    d.hides = 'Gönder';
+    d.screen = 'form';
+    let closes = 0;
+    const close = d.dismissKeyboard;
+    d.dismissKeyboard = () => {
+      closes++;
+      return close();
+    };
+    const { call } = await connect(d);
+    await call('screen');
+    d.up = false;
+    // older than a read a touch aims by
+    await new Promise((r) => setTimeout(r, 200));
+    expect((await call('tap', { selector: { text: 'Gönder' } })).error).toBe(false);
+    expect(closes).toBe(0);
+    expect(d.screen).toBe('sent');
+  });
+
   it('touches a key of the keyboard itself, as iOS lists its keys, with no closing first', async () => {
     class IosKeyboard extends FakeDevice {
       closed = 0;
@@ -1326,17 +1346,8 @@ describe('keyboard', () => {
   });
 
   it('closes it when the window it shrank leaves the element out, and finds it then', async () => {
-    class Shrunk extends WithKeyboard {
-      override current(): Tree {
-        const t = super.current();
-        if (this.up) {
-          t.nodes = t.nodes.filter((n) => n.t !== 'Gönder');
-          t.hash = `${t.hash}+shrunk`;
-        }
-        return t;
-      }
-    }
-    const d = new Shrunk();
+    const d = new WithKeyboard();
+    d.hides = 'Gönder';
     d.screen = 'form';
     const { call } = await connect(d);
     const r = await call('tap', { selector: { text: 'Gönder' } });

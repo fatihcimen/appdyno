@@ -546,17 +546,23 @@ export class WithKeyboard extends FakeDevice {
   closes = true;
   /** Where the keyboard's window begins: 0 is a full-screen one, as a phone shows in landscape. */
   top = 1500;
+  /** Words the window the keyboard shrank leaves out while it is up. */
+  hides: string | undefined;
   override current(): Tree {
     const t = super.current();
-    if (this.up)
-      t.windows.push({
-        type: 2,
-        pkg: 'ime',
-        layer: 3,
-        b: [0, this.top, 1080, 2400],
-        active: false,
-        focused: false,
-      });
+    if (!this.up) return t;
+    t.windows.push({
+      type: 2,
+      pkg: 'ime',
+      layer: 3,
+      b: [0, this.top, 1080, 2400],
+      active: false,
+      focused: false,
+    });
+    if (this.hides) {
+      t.nodes = t.nodes.filter((n) => n.t !== this.hides);
+      t.hash = `${t.hash}+shrunk`;
+    }
     return t;
   }
   dismissKeyboard = () => {

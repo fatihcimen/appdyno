@@ -22,6 +22,7 @@ import { checkApp } from '../policy.js';
 import type { ActionOut } from '../schemas.js';
 import type { Session } from '../session.js';
 import type { Steps } from '../steps.js';
+import { keyboardFirst } from '../keyboard.js';
 import { refused, ToolError, type Op } from '../tool.js';
 import { defined, loadRecording } from './shared.js';
 
@@ -178,6 +179,7 @@ export function flowRunner(
         );
     }
     if (!st.selector || READS_ONLY.has(st.action) || st.action === 'scroll_to') return;
+    await keyboardFirst(s, st.selector);
     // no error here: if it never comes, the op itself refuses, with the nearest candidates
     await steps.waitFor(s, { ...st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
     await steps.holdsStill(s, st.selector);

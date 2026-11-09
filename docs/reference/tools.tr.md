@@ -35,7 +35,7 @@ Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyle
 Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce
 taze bir okumada çözülür. Metin, `find`'daki gibi büyük-küçük harfe ve aksanlara bakmadan eşleşir ("İstanbul", "istanbul") ve
 tam eşleşme kısmi eşleşmeden üstündür. Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir; eşleşme yoksa
-bir an beklenir, sonra en yakın etiketlerle reddedilir. Ekran klavyesinin altında kalan bir ref ya da selector, ki ona dokunmak yazı yazar, ya da klavyenin küçülttüğü pencerenin dışarıda bıraktığı bir selector, klavyeyi kapatır ve bir kez daha aranır; yatay tutulan bir telefon tüm uygulamanın üstünde tam ekran bir klavye gösterir. Klavyenin kendi bir tuşuna, iOS'un listelediği gibi, klavye açıkken dokunulur.
+bir an beklenir, sonra en yakın etiketlerle reddedilir. Ekran klavyesinin altında kalan bir ref ya da selector, ki ona dokunmak yazı yazar, ya da klavyenin küçülttüğü pencerenin dışarıda bıraktığı bir selector, klavyeyi kapatır ve bir kez daha aranır, ikincisi onun beklenmesinden önce, hemen, yeniden oynatılan bir akışın adımı da kendi beklemesinden önce; yatay tutulan bir telefon tüm uygulamanın üstünde tam ekran bir klavye gösterir. Klavyenin kendi bir tuşuna, iOS'un listelediği gibi, klavye açıkken dokunulur.
 
 ## Adımlar, hareketler, uygulamalar ve ayarlar
 

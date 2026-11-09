@@ -35,7 +35,7 @@ A screenshot's answer says where its pixel is tapped: its x and y times its scal
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
 just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),
 and an exact match beats a partial one. Several matches refuse and list them with their refs; no match
-waits a moment, then refuses with the nearest labels. A ref or selector under the on-screen keyboard, where a touch would type, or a selector the window the keyboard shrank leaves out, closes the keyboard and is looked for once more; a phone in landscape shows a full-screen keyboard over the whole app. A key of the keyboard itself, as iOS lists them, is touched with the keyboard open.
+waits a moment, then refuses with the nearest labels. A ref or selector under the on-screen keyboard, where a touch would type, or a selector the window the keyboard shrank leaves out, closes the keyboard and is looked for once more, the second at once, before the wait for it, and a replayed flow's step before its own; a phone in landscape shows a full-screen keyboard over the whole app. A key of the keyboard itself, as iOS lists them, is touched with the keyboard open.
 
 ## Steps, gestures, apps and settings
 
