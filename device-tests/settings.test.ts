@@ -255,7 +255,7 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
       const full = await download();
       const capped = await set(call, 'network', '100000');
       expect(capped.text).toBe(
-        'network: 100000; a download cap alone: no delay, and uploads go at full speed, at 100 kB/s',
+        'network: 100000; a download cap alone: no delay, and uploads go at full speed, at 100 kB/s; put back when this session ends, or by restore; it cannot be kept past the session',
       );
       const slow = await download();
       expect(slow).toBeGreaterThan(Math.max(5_000, full * 4));
