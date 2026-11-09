@@ -130,6 +130,24 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     }
   });
 
+  it('puts back the :0 proxy and the -1 download cap a device held for none', async () => {
+    const read = () =>
+      ['http_proxy', 'ingress_rate_limit_bytes_per_second'].map((k) =>
+        adb('settings', 'get', 'global', k),
+      );
+    adb('settings', 'put', 'global', 'http_proxy', ':0');
+    adb('settings', 'put', 'global', 'ingress_rate_limit_bytes_per_second', '-1');
+    try {
+      await set(call, 'proxy', '127.0.0.1:18089');
+      await set(call, 'network', '100000');
+      await call('device_setting', { name: 'restore' });
+      expect(read()).toEqual([':0', '-1']);
+    } finally {
+      adb('settings', 'delete', 'global', 'http_proxy');
+      adb('settings', 'delete', 'global', 'ingress_rate_limit_bytes_per_second');
+    }
+  });
+
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {
     await set(call, 'wifi', 'on');
     expect(await value(call, 'mobile_data')).toBe('on');

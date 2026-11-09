@@ -528,6 +528,28 @@ describe('dark mode', () => {
   });
 });
 
+describe('a proxy', () => {
+  it('reads the :0 a device held for none as it, and puts it back, where none deletes the setting', async () => {
+    let held = ':0';
+    const adb = {
+      exec: (_serial: string, command: string) => {
+        const put = /^settings put global http_proxy '?([^' ]*)'?/.exec(command)?.[1];
+        if (put !== undefined) held = put;
+        if (command.startsWith('settings delete global http_proxy')) held = 'null';
+        return Promise.resolve(command.startsWith('settings get') ? held : '');
+      },
+      run: () => Promise.resolve(''),
+    };
+    const proxied = new AndroidSettings(adb as unknown as Adb, 'emulator-5554');
+    const was = await proxied.get('proxy');
+    await proxied.set('proxy', 'example.com:8080');
+    await proxied.set('proxy', was);
+    expect([was, held]).toEqual([':0', ':0']);
+    await proxied.set('proxy', 'none');
+    expect(held).toBe('null');
+  });
+});
+
 describe('the rotation lock', () => {
   it('reads as a turn found it and goes back the same way, an unset user rotation deleted', async () => {
     const held: Record<string, string> = { accelerometer_rotation: '1', user_rotation: 'null' };

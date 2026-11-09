@@ -16,7 +16,7 @@ const on = (serial: string, sdk: number, cap = 'null') => {
     (c) => {
       asked.push(c);
       if (c.startsWith('getprop')) return Promise.resolve(`${sdk}\n`);
-      const put = /settings put global ingress_rate_limit_bytes_per_second (\d+)/.exec(c)?.[1];
+      const put = /settings put global ingress_rate_limit_bytes_per_second (-?\d+)/.exec(c)?.[1];
       if (put) cap = put;
       if (c.startsWith('settings delete')) cap = 'null';
       return Promise.resolve(c.startsWith('settings get') ? `${cap}\n` : '');
@@ -31,6 +31,19 @@ const on = (serial: string, sdk: number, cap = 'null') => {
 };
 
 describe('a slow network', () => {
+  it('puts back the -1 or 0 a device held for no cap as it, where full deletes the cap', async () => {
+    for (const [serial, held] of [
+      ['R68T', '-1'],
+      ['emulator-5554', '0'],
+    ] as const) {
+      const { shaping } = on(serial, 34, held);
+      const was = await shaping.get();
+      await shaping.set('100000');
+      await shaping.set(was);
+      expect([was, await shaping.get()]).toEqual([`full (${held})`, `full (${held})`]);
+    }
+  });
+
   it('is a download cap on a phone with Android 13, which the answer says, and goes at full', async () => {
     const { shaping, asked } = on('R68T', 34);
     expect(await shaping.get()).toBe('full');

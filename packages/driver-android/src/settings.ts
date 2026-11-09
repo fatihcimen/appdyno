@@ -167,7 +167,8 @@ export class AndroidSettings implements DeviceSettings {
       }
       case 'proxy': {
         const v = (await this.sh('settings get global http_proxy')).trim();
-        return v === 'null' || v === ':0' || v === '' ? 'none' : v;
+        // `:0` is a value a device may hold, as none, which goes back as it
+        return v === 'null' || v === '' ? 'none' : v;
       }
       case 'airplane':
         return this.switchOf('airplane_mode_on', name);
@@ -372,7 +373,7 @@ export class AndroidSettings implements DeviceSettings {
   private async setProxy(value: string) {
     const was = await this.get('proxy');
     const loopback = (v: string) => /^(127\.0\.0\.1|localhost):(\d+)$/.exec(v)?.[2];
-    if (value !== 'none' && !/^[\w.-]+:\d+$/.test(value))
+    if (value !== 'none' && value !== ':0' && !/^[\w.-]+:\d+$/.test(value))
       throw new DeviceError('INVALID_ARGUMENT', `proxy: host:port or none, not ${value}`);
     const port = loopback(value);
     if (port) await this.adb.run(['-s', this.serial, 'reverse', `tcp:${port}`, `tcp:${port}`]);

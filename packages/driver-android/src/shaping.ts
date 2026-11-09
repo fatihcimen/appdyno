@@ -36,29 +36,35 @@ export class AndroidShaping {
     );
   }
 
+  /** `full (-1)`: no cap, by a value the device holds (Developer options write -1), which goes back as it. */
   async get() {
+    let full = 'full';
     if (await this.capped()) {
       const cap = (await this.sh(`settings get global ${INGRESS}`)).trim();
       if (/^\d+$/.test(cap) && cap !== '0') return cap;
+      if (/^-?\d+$/.test(cap)) full = `full (${cap})`;
     } else if (!this.emulator) throw this.noShaping();
-    if (!this.emulator) return 'full';
+    if (!this.emulator) return full;
     const status = await this.emu('network shaping', 'network', 'status');
     // shortcut: any shaping of the console reads as slow, a speed by its name (gsm) too; read its numbers when one is needed
     return /download speed:\s+0 bits/.test(status) && /maximum latency:\s+0 ms/.test(status)
-      ? 'full'
+      ? full
       : 'slow';
   }
 
   /** What the answer says of it, where it is only a cap. */
   async set(value: string): Promise<string | undefined> {
-    const bytes = value === 'slow' && !this.emulator ? String(SLOW_BYTES) : value;
+    const held = /^full \((-?\d+)\)$/.exec(value)?.[1];
+    const bytes = held ? 'full' : value === 'slow' && !this.emulator ? String(SLOW_BYTES) : value;
     if (/^\d+$/.test(bytes)) {
       if (!(await this.capped())) throw this.noShaping();
       await this.sh(`settings put global ${INGRESS} ${bytes}`);
       return `${CAP_SAYS}, at ${Math.round(Number(bytes) / 1000)} kB/s`;
     }
     if (bytes === 'full' && (await this.capped()))
-      await this.sh(`settings delete global ${INGRESS}`);
+      await this.sh(
+        held ? `settings put global ${INGRESS} ${held}` : `settings delete global ${INGRESS}`,
+      );
     if (!this.emulator) {
       if (bytes === 'full') return;
       throw new DeviceError(
