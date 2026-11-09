@@ -99,9 +99,9 @@ static NSString *stateWords(NSDictionary *m, NSUInteger issues) {
     if (![issue[@"type"] isEqual:kind]) return;
     MVRow *row = [MVRow new];
     row.title = MVWord([issue[@"message"] description] ?: @"");
-    // the element's own words; the rule that found it is an engine's name, for a look closer
+    // the element's own words, not the rule that found it, which is an engine's name; the whole message under the pointer
     row.detail = [issue[@"label"] length] ? issue[@"label"] : @"";
-    row.help = [issue[@"rule"] description];
+    row.help = row.title;
     row.symbol = issue[@"rect"] ? @"scope" : @"exclamationmark.triangle";
     row.tint = MVOrange();
     row.key = @(at).stringValue;

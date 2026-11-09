@@ -256,8 +256,10 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   }];
   _crashes.rows = rows;
   NSString *note = [m[@"note"] isKindOfClass:NSString.class] ? m[@"note"] : @"";
-  if (!note.length) note = rows.count ? @"Choose a report to read it." : @"No crash reports of this app.";
+  // the newest stands open: a list with reports needs no word of its own
+  if (!note.length && !rows.count) note = @"No crash reports of this app.";
   _crashNote.stringValue = note;
+  _crashNote.hidden = !note.length;
   NSString *label = rows.count ? [NSString stringWithFormat:@"Crashes: %lu", (unsigned long)rows.count] : @"Crashes";
   _sections[1].title = MVWord(label);
   [self showReport:nil];

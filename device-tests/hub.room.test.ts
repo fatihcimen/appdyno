@@ -30,6 +30,8 @@ const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
 const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
 /** Where the fixture's Fetch stands on a simulator's network screen, under its address field, as a share of the screen. */
 const FETCH_AT = { x: 0.09, y: 0.184 };
+/** Where the fixture's Crash stands on an Android screen of 1080 by 2400. */
+const CRASH_AT = { x: 0.5, y: 295 / 2400 };
 /** Where a simulator's Open stands on the "Open in …?" it asks each time a link from simctl opens the fixture. */
 const OPEN_AT = { x: 0.685, y: 0.5425 };
 
@@ -240,7 +242,10 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       const looked = async (name: string) => {
         if (!shots) return;
         await quiet(1_500);
-        const file = join(shots, `room-${name}-${look}-${language}.png`);
+        const file = join(
+          shots,
+          `room-${name}-${simulator ? 'simulator' : 'android'}-${look}-${language}.png`,
+        );
         const from = told.length;
         link.send({ op: 'snapshot', file });
         await until('a picture', () => told.slice(from).some((m) => m.op === 'snapped'));
@@ -263,9 +268,13 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
           process.kill(Number(/: (\d+)/.exec(started)?.[1]), 'SIGABRT');
           await quiet(6_000);
         } else {
-          await open('list');
-          execFileSync('adb', ['-s', shown, 'shell', 'am', 'crash', 'dev.appdyno.fixture']);
+          await open('crash');
           await quiet(2_000);
+          link.send({ op: 'poke', stage: shown, ...CRASH_AT });
+          await quiet(3_000);
+          // a crash a second time in a while stands as a dialog over what comes next, and Back closes it
+          link.send({ op: 'poke', stage: shown, button: 'back' });
+          await quiet(1_000);
         }
         await open('list');
         sent.length = 0;

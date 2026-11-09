@@ -185,8 +185,11 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     _state.stringValue = [NSString stringWithFormat:kCapturing[chosen], [clock stringFromDate:_since ?: NSDate.date]];
   } else _state.stringValue = @"Not capturing";
   NSString *about = chosen >= 0 ? kWays[chosen][2] : @"";
-  if (!_capturing && _needs) about = _needs;
   if (_note.length) about = _note;
+  // what lists no requests says what would, while it counts too
+  BOOL counts = _capturing && ![@[@"probe", @"proxy"] containsObject:_capturing];
+  if (_needs && !_capturing) about = _needs;
+  else if (_needs && counts) about = [NSString stringWithFormat:@"%@\n%@", MVWord(about), MVWord(_needs)];
   _about.stringValue = about;
   _about.hidden = !about.length;
   _way.hidden = _capturing || !_ways.count;

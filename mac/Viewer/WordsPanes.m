@@ -27,7 +27,6 @@ const MVWordRow MVWordTablePanes[] = {
     {"devicectl cannot read a running app's log on an iPhone. It can restart the app and follow what it prints: `xcrun devicectl device process launch --console --terminate-existing --device <udid> <bundle>`. The system log is in Console.app; crashes works here. A person can collect the phone's log with `sudo log collect --device-udid <udid> --last 5m --output x.logarchive`: it needs root, so this tool does not.", "devicectl, iPhone'da çalışan bir uygulamanın logunu okuyamaz. Uygulamayı yeniden başlatıp yazdıklarını izleyebilir: `xcrun devicectl device process launch --console --terminate-existing --device <udid> <bundle>`. Sistem logu Console.app'tedir; çökmeler burada da okunur. Telefonun logunu bir kişi `sudo log collect --device-udid <udid> --last 5m --output x.logarchive` ile toplayabilir: root gerektirdiği için bu araç toplamaz."},
     {"Crash reports", "Çökme raporları"},
     {"The crash report", "Çökme raporu"},
-    {"Choose a report to read it.", "Okumak için bir rapor seçin."},
     {"No crash reports of this app.", "Bu uygulamanın çökme raporu yok."},
     {"The whole report: %@", "Raporun tamamı: %@"},
     {"Named by its symbols: %@", "Sembolleriyle adlandırılmış hâli: %@"},
