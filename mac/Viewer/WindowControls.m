@@ -96,7 +96,7 @@
   if ([name isEqual:@"journey"]) return [self askJourney];
   if ([name isEqual:@"openLink"] || [name isEqual:@"push"]) {
     [self showPane:[name isEqual:@"push"] ? MVPanePush : MVPaneLinks];
-    return [[_inspector answering:name] focus];
+    return [name isEqual:@"push"] ? [_inspector.push focus] : [_inspector.links focus];
   }
   [_view pressButton:name];
 }

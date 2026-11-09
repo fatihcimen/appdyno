@@ -1,5 +1,6 @@
-// The pane beside the device: the stream's numbers, what an agent has called, the device's apps, and a link or a push to send. The
-// numbers come from this process; the rest from the parent, by messages.
+// The pane beside the device: the stream's numbers, what an agent has called, the device's apps, the app's log, its requests
+// and what an audit finds, and a link or a push to send. The numbers come from this process; the rest from the parent, by
+// messages.
 #import "Place.h"
 #import "Window.h"
 #import "Words.h"
@@ -57,6 +58,7 @@ static NSString *ms(id v) {
   NSTextField *_appsNote;
   NSButton *_launch, *_quit, *_remove;
   BOOL _asked;
+  BOOL _open;
 }
 
 - (nullable NSString *)stage {
@@ -97,11 +99,16 @@ static NSString *ms(id v) {
     _panes[MVPaneLinks] = _links;
     _push = [MVPushPane new];
     _panes[MVPanePush] = _push;
+    _logs = [MVLogPane new];
+    _panes[MVPaneLogs] = _logs;
+    _network = [MVNetworkPane new];
+    _panes[MVPaneNetwork] = _network;
+    _audit = [MVAuditPane new];
+    _panes[MVPaneAccessibility] = _audit;
     _perf = [[MVPerfPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPanePerf] = _perf;
     _flow = [[MVFlowPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPaneFlow] = _flow;
-    for (int i = MVPaneLogs; i < MVPaneDevice; i++) _panes[i] = [self comingPane:@(kTabs[i].symbol)];
     _device = [MVDevicePane new];
     _panes[MVPaneDevice] = _device;
     NSMutableArray *rules = [NSMutableArray arrayWithArray:@[
@@ -220,13 +227,6 @@ static NSString *ms(id v) {
   return pane;
 }
 
-/// A pane with nothing in it yet: its symbol and a word, at its top.
-- (NSView *)comingPane:(NSString *)symbol {
-  NSView *gap = [NSView new];
-  [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-  return MVPlaceColumn(@[MVEmptyCard(symbol, @"Nothing here yet."), gap], 0);
-}
-
 - (NSView *)activityPane {
   _activity = [MVActivityPane new];
   return _activity;
@@ -266,9 +266,26 @@ static NSString *ms(id v) {
   _launch.enabled = _quit.enabled = _remove.enabled = on;
 }
 
-- (id<MVSendPane>)answering:(NSString *)name {
+- (id<MVAsks>)answering:(NSString *)name {
   if ([name isEqual:@"device"]) return _device;
+  if ([name isEqual:@"network"]) return _network;
   return [name isEqual:@"push"] ? _push : _links;
+}
+
+- (BOOL)open {
+  return _open;
+}
+
+- (void)setOpen:(BOOL)open {
+  _open = open;
+  [self watchPanes];
+}
+
+/// What reads the device runs while its pane shows, and stops when it hides.
+- (void)watchPanes {
+  _logs.watching = _open && _chosen == MVPaneLogs;
+  _network.watching = _open && _chosen == MVPaneNetwork;
+  _audit.watching = _open && _chosen == MVPaneAccessibility;
 }
 
 - (BOOL)readings {
@@ -293,6 +310,7 @@ static NSString *ms(id v) {
   _paneName.stringValue = MVWord(@(kTabs[pane].title));
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
   _chosen = pane;
+  [self watchPanes];
   if (self.onPane) self.onPane();
   if (pane == MVPaneLinks || pane == MVPanePush || pane == MVPaneDevice) [(id<MVSendPane>)_panes[pane] ask];
   if (pane == MVPaneApps && !_asked) {

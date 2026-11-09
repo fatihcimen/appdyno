@@ -380,9 +380,8 @@ const MVWordRow MVWordTable[] = {
     {"No recording: %@", "Kayıt yok: %@"},
     {"The screen could not be read: %@", "Ekran okunamadı: %@"},
     // the Inspector's panes past the first four
-    {"Logs", "Günlükler"},
+    {"Logs", "Loglar"},
     {"Accessibility", "Erişilebilirlik"},
-    {"Nothing here yet.", "Burada henüz bir şey yok."},
 };
 
 const size_t MVWordCount = sizeof MVWordTable / sizeof MVWordTable[0];

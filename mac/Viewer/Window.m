@@ -99,6 +99,10 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _inspector.flow.onClick = ^{
       [weak watchElements];
     };
+    // an issue chosen is marked where it stands, as the element under the pointer is
+    _inspector.audit.onMark = ^(NSDictionary *rect) {
+      [(MVView *)weak.screenView showMark:rect];
+    };
     _hud = [[MVHud alloc] initWithFrame:NSZeroRect];
     _hud.hidden = YES;
     [root addSubview:_hud];
@@ -330,6 +334,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 /// A source runs only while something shows it: what it reads costs the device.
 - (void)watchReadings {
+  _inspector.open = self.inspecting;
   BOOL wanted = _hudding || (self.inspecting && _inspector.readings);
   if (wanted == _reading) return;
   _reading = wanted;

@@ -124,6 +124,10 @@
   if ([op isEqual:@"element"]) return [_window showElement:m];
   if ([op isEqual:@"measuring"] || [op isEqual:@"measured"]) return [_window showMeasure:m];
   if ([op isEqual:@"results"]) return [_window.inspector.perf showHistory:m];
+  if ([op isEqual:@"logs"]) return [_window.inspector.logs show:m];
+  if ([op isEqual:@"crashes"]) return [_window.inspector.logs showCrashes:m];
+  if ([op isEqual:@"network"]) return [_window.inspector.network show:m];
+  if ([op isEqual:@"audit"]) return [_window.inspector.audit show:m];
   if ([op isEqual:@"answer"]) return [[_window.inspector answering:m[@"name"] ?: @""] show:m];
   if ([op isEqual:@"note"]) return [_window sayNote:m[@"text"] ?: @""];
   if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];

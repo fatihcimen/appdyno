@@ -9,7 +9,14 @@ const viewer = join(import.meta.dirname, '../../../mac/Viewer');
 const source = (file: string) => readFileSync(join(viewer, file), 'utf8');
 
 const unquote = (s: string) => s.replace(/\\(.)/g, '$1');
-const rows = ['WordsTable.m', 'WordsClients.m', 'WordsHelp.m', 'WordsConnect.m', 'WordsDevice.m']
+const rows = [
+  'WordsTable.m',
+  'WordsClients.m',
+  'WordsHelp.m',
+  'WordsConnect.m',
+  'WordsDevice.m',
+  'WordsPanes.m',
+]
   .flatMap((file) => [
     ...source(file).matchAll(/^\s*\{"((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\},$/gm),
   ])
@@ -91,6 +98,23 @@ describe('the table of words', () => {
     // the Performance pane begins a sentence with it; the cards say it as one goes on, and are found so too
     const begun = notes.map((n) => n.charAt(0).toUpperCase() + n.slice(1));
     expect(begun.filter((w) => !english.has(w))).toEqual([]);
+  });
+
+  it('has what the Logs and Network panes are told, and what a device says of a log and a capture', () => {
+    const packages = join(import.meta.dirname, '../..');
+    const quoted = (file: string, pattern: RegExp) =>
+      [...readFileSync(join(packages, file), 'utf8').matchAll(pattern)].map((m) =>
+        must(m[1] ?? m[2], file),
+      );
+    const sentence = /'([A-Z][^']* [^']*)'|"([A-Z][^"]* [^"]*)"/g;
+    const said = [
+      ...quoted('hub/src/window-logs.ts', sentence),
+      ...quoted('hub/src/window-network.ts', sentence),
+      ...quoted('driver-apple/src/network.ts', /note: '([^']+)'/g),
+      ...quoted('driver-apple/src/logs.ts', /PHONE_LOGS_NOTE =\s*"([^"]+)"/g),
+    ];
+    expect(said.length).toBeGreaterThanOrEqual(10);
+    expect(said.filter((w) => !known(w))).toEqual([]);
   });
 
   it('has every sentence of the client and help panes, in whatever shape they are kept', () => {

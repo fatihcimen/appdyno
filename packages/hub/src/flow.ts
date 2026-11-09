@@ -191,14 +191,10 @@ export function windowFlow(
     onWindow(m: ViewerMessage): boolean {
       const accessibility = m.op === 'paneWatch' && m.pane === 'accessibility';
       if (m.op === 'inspect' || accessibility) {
-        if (accessibility) {
-          auditing = m.on === true;
-          inspector.audits(auditing);
-        } else inspecting = m.on === true;
-        if (m.on === true)
-          trying(async () => {
-            await readerSession();
-          });
+        if (accessibility) auditing = m.on === true;
+        else inspecting = m.on === true;
+        inspector.audits(auditing);
+        if (m.on === true) trying(() => readerSession().then(() => undefined));
         wanted();
         return true;
       }

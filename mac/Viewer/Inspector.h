@@ -64,12 +64,16 @@ NSTextField *MVPaneHeading(NSString *text);
 @property(nonatomic, readonly) NSString *said, *hint;
 @end
 
-/// A pane that sends to the device by an op an agent calls, and shows what came of it.
-@protocol MVSendPane <NSObject>
+/// A pane that asks the parent for what it shows.
+@protocol MVAsks <NSObject>
 /// Where what it asks goes; none: to the parent.
 @property(nonatomic, copy, nullable) void (^onSend)(NSDictionary *message);
 /// The parent's answer, and what the pane lists.
 - (void)show:(NSDictionary *)message;
+@end
+
+/// A pane that sends to the device by an op an agent calls, and shows what came of it.
+@protocol MVSendPane <MVAsks>
 /// Its first field takes the keyboard, for a person who asked for the pane.
 - (void)focus;
 /// What it lists, asked of the parent as it shows.
@@ -82,7 +86,7 @@ NSTextField *MVSendField(NSString *name, NSString *placeholder, NSString *label,
 /// The same, unseen as it is typed and never copied out of: for a token.
 NSSecureTextField *MVSecretField(NSString *name, NSString *placeholder, NSString *label, id target, SEL action);
 /// What a send pane asks: to its `onSend` where a test set one, else to the parent.
-void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
+void MVPaneSend(NSView<MVAsks> *pane, NSDictionary *message);
 
 /// A link to open on the device by `open_link`, what came of it, the links opened here before and those the app named opens.
 @interface MVLinkPane : NSView <MVSendPane>
@@ -143,6 +147,44 @@ typedef NS_ENUM(NSInteger, MVRowKind) { MVRowSwitch,
 - (NSString *)shown:(NSString *)name;
 @end
 
+/// A pane that reads the device only while it shows: it says so to the parent, as its reads cost the device.
+@protocol MVWatches <MVAsks>
+/// It shows, as the Inspector says.
+@property(nonatomic) BOOL watching;
+@end
+/// Text to read, select and copy, on a card that scrolls, by the name a click finds it by: a log, a report, a request.
+NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonnull card);
+/// Views one under another, each as wide as the column; and the same filling a pane, edge to edge.
+NSStackView *MVPaneStack(NSArray<NSView *> *views, CGFloat spacing);
+NSStackView *MVPaneFill(NSView *pane, NSArray<NSView *> *views, CGFloat spacing);
+/// Tells the parent that a pane, by its name, reads the device or has stopped, at a level where it has one.
+void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nullable level);
+
+/// The log of the app in front as `logs` reads it, as it comes, and the app's crash reports as `crashes` gives them.
+@interface MVLogPane : NSView <MVWatches>
+/// The parent's `crashes`.
+- (void)showCrashes:(NSDictionary *)message;
+/// What it shows now: its lines as a person reads them, and its crash reports.
+@property(nonatomic, readonly) NSArray<NSString *> *shownLines;
+@property(nonatomic, readonly) NSArray<MVRow *> *crashRows;
+@end
+
+/// The app's requests as `network` gives them, the ways this device has to see them, and what a person needs where none.
+@interface MVNetworkPane : NSView <MVWatches>
+@property(nonatomic, readonly) MVAnswerView *answer;
+@property(nonatomic, readonly) NSArray<MVRow *> *rows;
+/// What it says of the capture, and of the request chosen.
+@property(nonatomic, readonly) NSString *said, *detail;
+@end
+
+/// What `audit` finds on the screen shown, by kind; one chosen is marked on the device's picture.
+@interface MVAuditPane : NSView <MVWatches>
+/// An issue was chosen, with where it stands on the picture; nil: none.
+@property(nonatomic, copy, nullable) void (^onMark)(NSDictionary *_Nullable rect);
+@property(nonatomic, readonly) NSArray<MVRow *> *rows;
+@property(nonatomic, readonly) NSString *said;
+@end
+
 /// The panes of the Inspector, by the index `showPane:` takes, in the order their symbols stand.
 enum { MVPanePerf,
        MVPaneFlow,
@@ -169,8 +211,13 @@ enum { MVPanePerf,
 @property(nonatomic, readonly) MVLinkPane *links;
 @property(nonatomic, readonly) MVPushPane *push;
 @property(nonatomic, readonly) MVDevicePane *device;
+@property(nonatomic, readonly) MVLogPane *logs;
+@property(nonatomic, readonly) MVNetworkPane *network;
+@property(nonatomic, readonly) MVAuditPane *audit;
 /// The pane an `answer` is for, by its name.
-- (id<MVSendPane>)answering:(NSString *)name;
+- (id<MVAsks>)answering:(NSString *)name;
+/// Whether it shows at all, as its window says: a pane that reads the device does so only while it shows.
+@property(nonatomic) BOOL open;
 /// The pane chosen, by the index `showPane:` takes.
 @property(nonatomic, readonly) NSInteger chosen;
 /// Whether Performance is the pane chosen.

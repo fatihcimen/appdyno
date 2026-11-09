@@ -37,9 +37,38 @@ NSSecureTextField *MVSecretField(NSString *name, NSString *placeholder, NSString
   return (NSSecureTextField *)sendField(NSSecureTextField.class, name, placeholder, label, target, action);
 }
 
-void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message) {
+void MVPaneSend(NSView<MVAsks> *pane, NSDictionary *message) {
   if (pane.onSend) return pane.onSend(message);
   MVEmitFrom(pane, message);
+}
+
+void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nullable level) {
+  NSMutableDictionary *message = [@{@"op": @"paneWatch",
+                                    @"pane": name,
+                                    @"on": @(on)} mutableCopy];
+  if (level) message[@"level"] = level;
+  MVPaneSend(pane, message);
+}
+
+NSStackView *MVPaneStack(NSArray<NSView *> *views, CGFloat spacing) {
+  NSStackView *stack = [NSStackView stackViewWithViews:views];
+  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+  stack.alignment = NSLayoutAttributeWidth;
+  stack.spacing = spacing;
+  return stack;
+}
+
+NSStackView *MVPaneFill(NSView *pane, NSArray<NSView *> *views, CGFloat spacing) {
+  NSStackView *stack = MVPaneStack(views, spacing);
+  stack.translatesAutoresizingMaskIntoConstraints = NO;
+  [pane addSubview:stack];
+  [NSLayoutConstraint activateConstraints:@[
+    [stack.topAnchor constraintEqualToAnchor:pane.topAnchor],
+    [stack.bottomAnchor constraintEqualToAnchor:pane.bottomAnchor],
+    [stack.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
+    [stack.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor],
+  ]];
+  return stack;
 }
 
 @implementation MVAnswerView {
