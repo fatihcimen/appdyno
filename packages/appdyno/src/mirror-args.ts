@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { STOP_MS } from './lifetime.js';
 import { COMMANDS, usage } from './usage.js';
 
 const USAGE = usage('mirror');
@@ -95,12 +96,16 @@ export async function hubCommand<Context extends { close(): void }>(
     ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
   });
   try {
-    return await use.hub(ctx, {
+    const code = await use.hub(ctx, {
       focus: values.focus ?? false,
       behind: values.behind ?? false,
       ...(values.appearance && { appearance: values.appearance }),
       log: (line) => console.log(line),
     });
+    // what was still under way as the window closed, as a device's agent still starting when it closed while connecting,
+    // answers no one: it has a moment to end its own way, and then the hub ends whatever is left
+    setTimeout(() => process.exit(code), STOP_MS).unref();
+    return code;
   } finally {
     ctx.close();
   }
