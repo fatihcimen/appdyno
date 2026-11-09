@@ -17,7 +17,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import type { Session } from './session.js';
-import { Read, Selector, WaitStep } from './step-schemas.js';
+import { NAME_AN_ELEMENT, Read, Selector, WaitStep } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
 import { webLines } from './web.js';
@@ -108,7 +108,7 @@ export function readOps(
       annotations: READ,
       run: async ({ index, ...sel }) => {
         if (!sel.text && !sel.id && !sel.role)
-          throw new ToolError('give text, id or role', 'INVALID_ARGUMENT');
+          throw new ToolError('give text, id or role', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
         const s = await ctx.session();
         const screen = await s.read();
         const all = selectIn(screen.list, sel);

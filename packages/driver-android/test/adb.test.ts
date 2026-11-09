@@ -52,8 +52,12 @@ describe('an agent reached', () => {
     Object.assign(device, {
       launcher: { connect: () => Promise.resolve({ rpc, hello: {}, started: false }) },
     });
-    await expect(device.tree()).rejects.toMatchObject({ code: 'NOT_FOUND', message: said });
-    await expect(device.tree({ asItIs: true })).rejects.toMatchObject({ message: said });
+    // with what to do, which the agent does not say
+    const hint = expect.stringMatching(
+      /^its main thread is busy: read again in a moment/,
+    ) as unknown;
+    await expect(device.tree()).rejects.toMatchObject({ code: 'NOT_FOUND', message: said, hint });
+    await expect(device.tree({ asItIs: true })).rejects.toMatchObject({ message: said, hint });
   });
 
   it('asks nothing of one found running with animations on', async () => {

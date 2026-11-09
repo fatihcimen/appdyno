@@ -13,13 +13,11 @@ import type { Answers } from './answers.js';
 import { approve } from './approval.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
-import { checkApp, checkDevice } from './policy.js';
+import { checkApp, checkDevice, noApp } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
-
-const NO_APP = 'give app (or select one with use_device)';
 
 /** App data can hold secrets, and a copy must not land among a person's files: a new or empty folder, for this user alone. */
 function emptyFolder(path: string | undefined) {
@@ -73,7 +71,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
   const { policy } = ctx;
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(policy, app ?? s.appId ?? '');
-    if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
+    if (!pkg) throw noApp();
     return pkg;
   };
   return defineOp({

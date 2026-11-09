@@ -2,7 +2,7 @@ import { PUSH_TYPES, type PushType } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
-import { checkApp } from './policy.js';
+import { checkApp, noApp } from './policy.js';
 import { ActionOut } from './schemas.js';
 
 /** The answer, and with no type the types this device takes: each with its route and template, or why not. */
@@ -107,8 +107,7 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
             'payload replaces the fields: give one or the other',
             'INVALID_ARGUMENT',
           );
-        if (!pkg)
-          throw new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT');
+        if (!pkg) throw noApp();
         const said = await s.device.events.push(pkg, {
           type: type as PushType,
           ...(title && { title }),

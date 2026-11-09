@@ -277,7 +277,10 @@ describe('commands from the operations', () => {
     expect(r).toEqual({
       code: 1,
       out: [],
-      err: ['INVALID_ARGUMENT: give a ref, a selector, or x and y'],
+      err: [
+        'INVALID_ARGUMENT: give a ref, a selector, or x and y',
+        '  screen lists the elements, each by its ref, role and words',
+      ],
     });
   });
 

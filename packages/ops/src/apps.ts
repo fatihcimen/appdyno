@@ -2,7 +2,7 @@ import { fold, must, reportProgress, type Screen } from '@appdyno/core';
 import { z } from 'zod';
 import { systemAsks, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
-import { checkApp, checkUrl } from './policy.js';
+import { checkApp, checkUrl, noApp } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import type { Session } from './session.js';
 import { setCondition } from './settings.js';
@@ -10,7 +10,6 @@ import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
-const NO_APP = 'give app (or select one with use_device)';
 /** With `links`, each link the app opens, as its lines say. */
 const LinkOut = ActionOut.extend({
   links: z
@@ -80,7 +79,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
     const app = page
       ? undefined
       : checkApp(policy, settings === 'app' ? (s.appId ?? '') : settings);
-    if (!page && !app) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
+    if (!page && !app) throw noApp();
     if (!page && settings !== 'app' && !settings.includes('.'))
       throw new ToolError(
         `settings: an app's id, app, or a page of this device's Settings: ${s.device.settingsPages.join(', ')}`,
@@ -153,7 +152,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const named = app !== undefined && !APP_ID.test(app);
         const s = await (named ? ctx.session() : ctx.sessionToLaunch(app));
         const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
-        if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
+        if (!pkg) throw noApp();
         reportProgress(`launching ${pkg}`);
         s.leftApp = pkg !== s.appId;
         if (!language) {
@@ -186,7 +185,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       run: async ({ app }) => {
         const s = await ctx.session();
         const pkg = checkApp(policy, app ?? s.appId ?? '');
-        if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
+        if (!pkg) throw noApp();
         await s.device.terminate(pkg);
         if (pkg === s.appId) s.leftApp = true;
         s.acted();

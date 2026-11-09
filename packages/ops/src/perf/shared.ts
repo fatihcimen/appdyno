@@ -28,7 +28,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { liveMirror } from '../mirror-state.js';
-import { checkApp } from '../policy.js';
+import { checkApp, noApp } from '../policy.js';
 import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
 import { ToolError } from '../tool.js';
@@ -272,7 +272,7 @@ export function perfTools(ctx: ServerContext) {
   };
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
-    if (!pkg) throw new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT');
+    if (!pkg) throw noApp();
     return pkg;
   };
   const virtualNote = (s: Session) =>

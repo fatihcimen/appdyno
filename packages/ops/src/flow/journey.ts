@@ -13,7 +13,7 @@ import {
 } from '@appdyno/perf';
 import type { ServerContext } from '../context.js';
 import { keepRun } from '../perf/shared.js';
-import { checkApp } from '../policy.js';
+import { checkApp, NO_APP_HINT } from '../policy.js';
 import type { FlowOut } from '../schemas.js';
 import type { Session } from '../session.js';
 import { ToolError } from '../tool.js';
@@ -102,6 +102,7 @@ export async function measureJourney(
     throw new ToolError(
       `${file} names no app and none is selected: its numbers would have no owner`,
       'INVALID_ARGUMENT',
+      NO_APP_HINT,
     );
   const { iterations, scenario, ...replay } = o;
   const warmUp = await runner.run(s, flow, file, replay);

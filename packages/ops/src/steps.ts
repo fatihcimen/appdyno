@@ -16,7 +16,7 @@ import { noteTouch } from './activity.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
-import { Check, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
+import { Check, NAME_AN_ELEMENT, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
@@ -137,7 +137,11 @@ export function stepsFor(
       return { point: { x: e.x, y: e.y }, name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
     }
     if (a.x === undefined || a.y === undefined)
-      throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT');
+      throw new ToolError(
+        'give a ref, a selector, or x and y',
+        'INVALID_ARGUMENT',
+        NAME_AN_ELEMENT,
+      );
     return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
   };
 
@@ -243,7 +247,7 @@ export function stepsFor(
   const checkNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
     if (a.check === 'moves') return movesNow(s, a);
     if (!a.ref && !selectorOf(a))
-      throw new ToolError('give a ref, text, id or role', 'INVALID_ARGUMENT');
+      throw new ToolError('give a ref, text, id or role', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
     const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
     if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND');
     const v = judge(screen, a);
@@ -257,7 +261,8 @@ export function stepsFor(
     a: SelectorOf & { ref?: string; gone: boolean; timeoutMs: number },
   ) => {
     const sel = selectorOf(a);
-    if (!a.ref && !sel) throw new ToolError('give text, id, role or ref', 'INVALID_ARGUMENT');
+    if (!a.ref && !sel)
+      throw new ToolError('give text, id, role or ref', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
     const found = (x: Screen) =>
       (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, must(sel, 'a selector')))[
         sel?.index ?? 0

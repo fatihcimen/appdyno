@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { safeName, stateDir } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { checkApp } from './policy.js';
+import { checkApp, NO_APP_HINT } from './policy.js';
 import { journaled } from './report-journal.js';
 import { openReports } from './report-state.js';
 import { writeReport } from './report-write.js';
@@ -27,7 +27,8 @@ function stayingApp(ctx: ServerContext, s: Session, command: 'timeline' | 'fligh
       'UNSUPPORTED',
     );
   const app = checkApp(ctx.policy, s.appId ?? '');
-  if (!app) throw new ToolError('select an app with use_device first', 'INVALID_ARGUMENT');
+  if (!app)
+    throw new ToolError('select an app with use_device first', 'INVALID_ARGUMENT', NO_APP_HINT);
   return app;
 }
 

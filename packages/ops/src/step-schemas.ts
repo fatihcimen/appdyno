@@ -23,6 +23,9 @@ export const Selector = z
   })
   .strict();
 
+/** What a call that names no element is to do: where the words it may name are. */
+export const NAME_AN_ELEMENT = 'screen lists the elements, each by its ref, role and words';
+
 // a selector made by hand may hold a key set to undefined
 export const showSelector = (sel: z.infer<typeof Selector>) =>
   Object.entries<unknown>(sel)

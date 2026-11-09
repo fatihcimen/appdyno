@@ -3,7 +3,7 @@ import { AUDIT_TYPES } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
-import { checkApp, redactLog } from './policy.js';
+import { checkApp, noApp, redactLog } from './policy.js';
 import { AuditOut, CrashesOut, LogsOut } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
@@ -18,7 +18,7 @@ const Since = z.string().max(40).optional().describe('ISO time; default: since t
 
 function appOf(s: Session, ctx: ServerContext, app?: string) {
   const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
-  if (!pkg) throw new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT');
+  if (!pkg) throw noApp();
   return pkg;
 }
 

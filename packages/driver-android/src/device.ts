@@ -45,7 +45,7 @@ import { androidScreen } from './platform-screen.js';
 import { AndroidRecorder } from './record.js';
 import { ANDROID_PAGES, openSearch, openSettingsAt } from './settings-pages.js';
 import { AndroidWeb } from './web.js';
-import { FOCUS_READ, KEYGUARD_READ } from './window-dump.js';
+import { FOCUS_READ, KEYGUARD_READ, noWindowHint } from './window-dump.js';
 
 /** Read-only requests are retried once on a fresh connection when the agent went away. */
 const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
@@ -262,7 +262,8 @@ export class AndroidDevice extends RpcDevice implements Device {
   }
 
   async tree({ asItIs, ...limits }: TreeOptions = {}): Promise<Tree> {
-    const read = async () => (await this.call('tree.get', limits, TIMEOUTS.read)).result;
+    const read = async () =>
+      (await this.call('tree.get', limits, TIMEOUTS.read).catch(noWindowHint)).result;
     // what the agent found goes with the refusal: an app that does not answer is told from a dark screen by it
     let refusal = new DeviceError('NOT_FOUND', 'no window to read');
     const t = await read().catch((e: unknown) => {

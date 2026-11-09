@@ -36,6 +36,13 @@ export function checkUrl(policy: Policy, url: string): string {
   return u;
 }
 
+/** Where an app's id is found, and how one is held: what a call that names no app, with none selected, is to do. */
+export const NO_APP_HINT =
+  'app action list names the installed apps by id; use_device with app selects one for the calls after';
+
+export const noApp = () =>
+  new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT', NO_APP_HINT);
+
 export function checkApp(policy: Policy, pkg: string): string {
   if (policy.apps.length > 0 && !policy.apps.includes(pkg))
     throw new ToolError(
