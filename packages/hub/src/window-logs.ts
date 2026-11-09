@@ -12,6 +12,11 @@ const LONGEST = 2_000;
 const CRASHES = 5;
 const LEVELS: readonly LogLevel[] = ['verbose', 'debug', 'info', 'warn', 'error'];
 export const OPEN_AN_APP = 'Open an app of yours to read its log';
+/** What an iPhone's driver tells an agent of a running app's log, its commands and tool names left out. */
+export const NO_PHONE_LOG =
+  "An iPhone gives this Mac no log of an app while it runs. Its crash reports are under Crashes, and Console on this Mac shows the phone's own log.";
+const personal = (said: string) =>
+  said.startsWith("devicectl cannot read a running app's log") ? NO_PHONE_LOG : said;
 
 type Front = { id?: string; name?: string; why?: string };
 
@@ -135,7 +140,7 @@ export function windowLogs(
       text: redactLog(ctx.policy, text).slice(0, LONGEST),
       ...(mark?.level && { level: mark.level }),
     }));
-    const noted = note(r.note ?? '');
+    const noted = note(personal(r.note ?? ''));
     if (lines.length || 'note' in noted) tell({ lines, ...noted });
   };
 

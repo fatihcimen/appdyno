@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LogsQuery, NetworkHandle, NetworkSource } from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '@appdyno/ops';
-import { OPEN_AN_APP, windowLogs } from '../src/window-logs.js';
+import { NO_PHONE_LOG, OPEN_AN_APP, windowLogs } from '../src/window-logs.js';
 import { ANDROID_NEEDS, IPHONE_NEEDS, PROBE_WHILE, windowNetwork } from '../src/window-network.js';
 import { windowSends } from '../src/window-sends.js';
 import { FakeDevice } from '../../ops/test/fake-device.js';
@@ -123,7 +123,9 @@ describe("a window's Logs pane", () => {
     const three = windowLogs(phone.ctx, phone.device, phone.session);
     three.onWindow({ op: 'paneWatch', pane: 'logs', on: true });
     await vi.advanceTimersByTimeAsync(5_000);
-    expect(phone.of('logs').filter((m) => m.note === phone.device.logNote)).toHaveLength(1);
+    // what the driver tells an agent, with its commands, is said to a person in a person's words, once
+    expect(phone.of('logs').filter((m) => m.note === NO_PHONE_LOG)).toHaveLength(1);
+    expect(phone.of('logs').some((m) => m.note === phone.device.logNote)).toBe(false);
     three.end();
   });
 
