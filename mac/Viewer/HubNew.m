@@ -23,7 +23,18 @@ NSString *MVSystemName(NSDictionary *row) {
   NSArray<NSString *> *parts = [[row[@"id"] description] componentsSeparatedByString:@";"];
   if (parts.count < 3 || ![parts[1] hasPrefix:@"android-"]) return row[@"name"] ?: @"";
   NSInteger api = [parts[1] substringFromIndex:8].integerValue;
-  NSDictionary<NSNumber *, NSString *> *versions = @{@26: @"8.0", @27: @"8.1", @28: @"9", @29: @"10", @30: @"11", @31: @"12", @32: @"12L", @33: @"13", @34: @"14", @35: @"15", @36: @"16"};
+  NSDictionary<NSNumber *, NSString *> *versions = @{@26: @"8.0",
+                                                     @27: @"8.1",
+                                                     @28: @"9",
+                                                     @29: @"10",
+                                                     @30: @"11",
+                                                     @31: @"12",
+                                                     @32: @"12L",
+                                                     @33: @"13",
+                                                     @34: @"14",
+                                                     @35: @"15",
+                                                     @36: @"16",
+                                                     @37: @"17"};
   NSDictionary<NSString *, NSString *> *tags = @{@"google_apis_playstore": @"Google Play", @"google_apis": @"Google APIs", @"default": @"AOSP", @"google_atd": @"Google ATD", @"aosp_atd": @"AOSP ATD"};
   NSString *tag = tags[parts[2]] ?: parts[2], *version = versions[@(api)];
   return version ? [NSString stringWithFormat:@"Android %@ (API %ld), %@", version, (long)api, tag] : [NSString stringWithFormat:@"API %ld, %@", (long)api, tag];
