@@ -30,7 +30,32 @@ static void checkHeldByApp(void) {
   MVCheck(@"performance: an app just come to the front has held its rate for no time yet", [sentence.stringValue isEqual:@"Moving at 19 fps"], sentence.stringValue);
 }
 
+/// On an iPhone the card stood bare after Measure Launch, as the room under it went to the space below.
+static void checkKeptResult(void) {
+  NSWindow *window;
+  MVPerfPane *pane = tallPane(&window);
+  [pane showHistory:@{@"results": @[],
+                      @"app": @"appdyno fixture"}];
+  [window display];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"1754 ms",
+                       @"kept": @YES}];
+  [pane showHistory:@{@"results": @[@{@"ok": @YES,
+                                      @"title": @"Cold launch",
+                                      @"value": @"1754 ms",
+                                      @"detail": @"1 second ago"}],
+                      @"app": @"appdyno fixture"}];
+  MVPump(0.5);
+  [window display];
+  MVList *list = [pane valueForKey:@"_results"];
+  NSView *row = [(NSTableView *)list.documentView rowViewAtRow:0 makeIfNecessary:NO];
+  MVCheck(@"performance: a result the Mac kept stands whole in its card", row && NSWidth(row.frame) > 100 && NSContainsRect(list.documentVisibleRect, row.frame),
+          [NSString stringWithFormat:@"row %@ shown %@", NSStringFromRect(row.frame), NSStringFromRect(list.documentVisibleRect)]);
+}
+
 void MVCheckPerfPane(void) {
   checkDisplayRate();
   checkHeldByApp();
+  checkKeptResult();
 }

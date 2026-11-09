@@ -157,7 +157,10 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     [stack setCustomSpacing:kBetween afterView:_app];
     [stack setCustomSpacing:kBetween afterView:_hint];
     [_resultsCard setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-    _fit = [_resultsCard.heightAnchor constraintLessThanOrEqualToConstant:kRowHeight];
+    // as tall as its rows, where the slack under it would take the room as well as it and leave the card bare; and shorter, its
+    // rows scrolling, before anything over it gives way
+    _fit = [_resultsCard.heightAnchor constraintEqualToConstant:kRowHeight];
+    _fit.priority = 300;
     _fit.active = YES;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
@@ -262,9 +265,10 @@ static MVRow *rowOfResult(NSDictionary *result) {
   _results.rows = rows;
   _none.hidden = _results.rows.count > 0;
   _resultsCard.hidden = !_none.hidden;
-  // the card as tall as its rows and no taller: what is left stands under it, not empty inside it
+  // the card as tall as its rows and no taller: what is left stands under it, not empty inside it. Its style keeps a margin
+  // over the first row, and as much under the last
   NSTableView *table = (NSTableView *)_results.documentView;
-  _fit.constant = (table.numberOfRows ? NSMaxY([table rectOfRow:table.numberOfRows - 1]) : 0) + 4;
+  _fit.constant = (table.numberOfRows ? NSMaxY([table rectOfRow:table.numberOfRows - 1]) + NSMinY([table rectOfRow:0]) : 0) + 4;
   // only what was just measured is news: a window opening on old results shows them
   if (first && _none.hidden && _measured) MVSlideIn(_resultsCard, kFirstFrom);
 }
