@@ -43,6 +43,7 @@ waits a moment, then refuses with the nearest labels.
 stops at the first failure, says which step and why, and shows the screen. `wait_for` and selectors
 wait on the device, so the tree crosses the wire only when the screen changed. A step whose app died, of an app
 that was in front when the step began, ends it too, naming the step, with the `appDied` and words that action alone gives.
+`wait_for` waits 15000 ms at most a call, as its description says, and a number past an argument's limit is refused with the limit in the hint.
 
 `gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the
 hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,

@@ -43,6 +43,7 @@ bir an beklenir, sonra en yakın etiketlerle reddedilir.
 İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı gösterir. `wait_for` ve seçiciler
 cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir. Uygulaması, adım başladığında
 önde olan bir uygulamaysa, ölen bir adım da onu bitirir; adımı adlandırır, o işlemin tek başına verdiği `appDied` ve sözcüklerle.
+`wait_for`, açıklamasının söylediği gibi, bir çağrıda en fazla 15000 ms bekler; bir argümanın sınırını aşan bir sayı, ipucunda sınırıyla reddedilir.
 
 `gesture`; `double_tap`, `long_press`, `drag`, `pinch` ve serbest bir `plan` içerir. `press_key` donanım
 düğmelerini içerir. `app`; `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,

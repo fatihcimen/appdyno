@@ -20,6 +20,7 @@ import {
 import type { Steps } from './steps.js';
 import {
   ACT,
+  argumentsHint,
   defineOp,
   READ,
   refusedAction,
@@ -66,13 +67,14 @@ export function actOps(
   const planned = (x: { action: string } & Record<string, unknown>, i: number): Planned => {
     const { action, ...args } = x;
     const op = tools()[action];
-    const fail = (why: string) => new ToolError(`step ${i + 1}: ${why}`, 'INVALID_ARGUMENT');
+    const fail = (why: string, hint?: string) =>
+      new ToolError(`step ${i + 1}: ${why}`, 'INVALID_ARGUMENT', hint);
     if (Step.options.some((o) => o.shape.action.value === action)) {
       const { read: own, ...rest } = x;
       const reads = StepRead.safeParse(own);
       if (!reads.success) throw fail(z.prettifyError(reads.error));
       const p = Step.safeParse(rest);
-      if (!p.success) throw fail(z.prettifyError(p.error));
+      if (!p.success) throw fail(z.prettifyError(p.error), argumentsHint(p.error.issues));
       return { st: p.data, ...(reads.data && { read: reads.data }) };
     }
     if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);

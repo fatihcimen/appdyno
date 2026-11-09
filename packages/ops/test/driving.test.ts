@@ -18,6 +18,7 @@ import { DeviceError, KEYS, type ActParams, type ErrorCode, type Tree } from '@a
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import {
   DEFAULT_POLICY,
+  opsFor,
   ServerContext,
   type OpData,
   type OpName,
@@ -361,6 +362,19 @@ describe('steps across screens', () => {
 });
 
 describe('waiting on the device', () => {
+  it('says its longest wait in its description, and in the hint of a refusal of a longer one', async () => {
+    const { call, ctx } = await connect(new FakeDevice());
+    expect(must(opsFor(ctx).wait_for, 'wait_for').description).toContain('at most 15000');
+    const r = await call('wait_for', { text: 'Loaded', timeoutMs: 30000 });
+    expect(r.text).toBe(
+      'INVALID_ARGUMENT: timeoutMs: Too big: expected number to be <=15000\nhint: timeoutMs is at most 15000: change that and call again: nothing was done',
+    );
+    const step = await call('steps', {
+      steps: [{ action: 'wait_for', text: 'L', timeoutMs: 20000 }],
+    });
+    expect(step.text).toMatch(/\nhint: timeoutMs is at most 15000: change that and call again/);
+  });
+
   class Waiting extends FakeDevice {
     waits: (string | undefined)[] = [];
     next: Tree | undefined;

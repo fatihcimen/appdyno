@@ -17,7 +17,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import type { Session } from './session.js';
-import { NAME_AN_ELEMENT, Read, Selector, WaitStep } from './step-schemas.js';
+import { MAX_WAIT_MS, NAME_AN_ELEMENT, Read, Selector, WaitStep } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
 import { webLines } from './web.js';
@@ -144,7 +144,7 @@ export function readOps(
     defineOp({
       name: 'wait_for',
       title: 'Wait for',
-      description: `Wait until an element shows (gone: until it is gone).`,
+      description: `Wait until an element shows (gone: until it is gone), timeoutMs at most ${MAX_WAIT_MS}: call again to wait longer.`,
       input: z.object({ ...WaitStep.omit({ action: true }).shape, read: Read }).strict(),
       output: WaitOut,
       annotations: READ,

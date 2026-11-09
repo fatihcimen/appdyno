@@ -164,6 +164,17 @@ export function inputSchemaOf(op: Pick<Tool, 'input'>) {
 /** What a transport holds a call to: nothing, as `argumentsFor` does it, with a code and a hint. */
 export const ANY_ARGUMENTS = z.looseObject({});
 
+/** What to do about arguments refused: a number past its limit is told the limit, as a client's catalog has none. */
+export const argumentsHint = (issues: z.core.$ZodIssue[], flag = '') =>
+  [
+    ...issues.flatMap((x) =>
+      x.code === 'too_big' && x.origin === 'number'
+        ? [`${flag}${x.path.join('.')} is at most ${String(x.maximum)}`]
+        : [],
+    ),
+    'change that and call again: nothing was done',
+  ].join(': ');
+
 /** A call's arguments as its op takes them, or a refusal naming each one wrong; `flag`: how the caller writes a name. */
 export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') {
   const checked = op.input.safeParse(args);
@@ -173,7 +184,7 @@ export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') 
       .map((x) => `${x.path.length ? `${flag}${x.path.join('.')}: ` : ''}${x.message}`)
       .join('; '),
     'INVALID_ARGUMENT',
-    'change that and call again: nothing was done',
+    argumentsHint(checked.error.issues, flag),
     false,
   );
 }
