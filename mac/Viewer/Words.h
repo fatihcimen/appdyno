@@ -8,8 +8,8 @@ typedef struct {
 } MVWordRow;
 
 /// One table, in a file for each of the larger parts.
-extern const MVWordRow MVWordTable[], MVWordTableClients[], MVWordTableHelp[], MVWordTableConnect[];
-extern const size_t MVWordCount, MVWordCountClients, MVWordCountHelp, MVWordCountConnect;
+extern const MVWordRow MVWordTable[], MVWordTableClients[], MVWordTableHelp[], MVWordTableConnect[], MVWordTableDevice[];
+extern const size_t MVWordCount, MVWordCountClients, MVWordCountHelp, MVWordCountConnect, MVWordCountDevice;
 
 /// Words in the Mac's language: English comes back as it went in, and so does anything the table does not have, such as a name.
 NSString *MVWord(NSString *english);

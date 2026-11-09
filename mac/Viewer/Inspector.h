@@ -97,6 +97,44 @@ void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
 - (void)fill:(NSDictionary<NSString *, NSString *> *)fields;
 @end
 
+/// What a row of the Device pane holds: a switch, a choice, a field, or the controls of what happens once.
+typedef NS_ENUM(NSInteger, MVRowKind) { MVRowSwitch,
+                                        MVRowChoice,
+                                        MVRowField,
+                                        MVRowLocation,
+                                        MVRowBiometric,
+                                        MVRowCall,
+                                        MVRowSms };
+
+/// Where a row's controls send what a person does with them.
+@protocol MVConditionTarget <NSObject>
+- (void)switched:(NSSwitch *)sender;
+- (void)chosen:(NSPopUpButton *)sender;
+- (void)typed:(NSTextField *)sender;
+- (void)pressed:(NSButton *)sender;
+@end
+
+/// One row of the Device pane: a condition by the op's name for it, its controls, and what the parent last said of it.
+@interface MVConditionRow : NSObject
+/// Every row, in the order they stand.
++ (NSArray<MVConditionRow *> *)rowsFor:(id<MVConditionTarget>)target;
+@property(nonatomic, readonly, copy) NSString *name, *title;
+/// The heading the row opens, where it opens one.
+@property(nonatomic, readonly, copy, nullable) NSString *heading;
+@property(nonatomic, readonly) MVRowKind kind;
+@property(nonatomic, readonly) NSView *view;
+@property(nonatomic, readonly, nullable) NSTextField *field, *from;
+@property(nonatomic, readonly, nullable) NSControl *control;
+@property(nonatomic, copy, nullable) NSDictionary *said;
+/// It can be changed, and was changed here, as the parent last said.
+@property(nonatomic, readonly) BOOL can, changed;
+- (void)offerChoices:(BOOL)android;
+- (void)fill;
+- (void)enable:(BOOL)on;
+/// Its state in a person's words, and for a test in the op's.
+@property(nonatomic, readonly) NSString *state, *shown;
+@end
+
 /// The device's conditions as it reads them, each changed by `device_setting`, the op an agent calls, and put back with
 /// the rest of what this session changed; what the device cannot do stands disabled, with why.
 @interface MVDevicePane : NSView <MVSendPane>

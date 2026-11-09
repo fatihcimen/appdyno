@@ -30,6 +30,7 @@ static NSDictionary<NSString *, NSString *> *exact(void) {
     take(MVWordTableClients, MVWordCountClients);
     take(MVWordTableHelp, MVWordCountHelp);
     take(MVWordTableConnect, MVWordCountConnect);
+    take(MVWordTableDevice, MVWordCountDevice);
     words = all;
   });
   return words;
@@ -65,6 +66,7 @@ static NSArray<NSArray *> *patterns(void) {
     take(MVWordTable, MVWordCount);
     take(MVWordTableClients, MVWordCountClients);
     take(MVWordTableConnect, MVWordCountConnect);
+    take(MVWordTableDevice, MVWordCountDevice);
     rows = all;
   });
   return rows;

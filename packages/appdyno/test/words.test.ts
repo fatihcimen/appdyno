@@ -9,7 +9,7 @@ const viewer = join(import.meta.dirname, '../../../mac/Viewer');
 const source = (file: string) => readFileSync(join(viewer, file), 'utf8');
 
 const unquote = (s: string) => s.replace(/\\(.)/g, '$1');
-const rows = ['WordsTable.m', 'WordsClients.m', 'WordsHelp.m', 'WordsConnect.m']
+const rows = ['WordsTable.m', 'WordsClients.m', 'WordsHelp.m', 'WordsConnect.m', 'WordsDevice.m']
   .flatMap((file) => [
     ...source(file).matchAll(/^\s*\{"((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\},$/gm),
   ])
