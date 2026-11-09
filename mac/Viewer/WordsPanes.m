@@ -111,6 +111,7 @@ const MVWordRow MVWordTablePanes[] = {
     {"%@ controls are read as \"%@\"", "%1$@ denetim \"%2$@\" diye okunuyor"},
     // what an iPhone's and a simulator's own audit says, in its words
     {"Contrast failed", "Kontrast yetersiz"},
+    {"Contrast nearly passed", "Kontrast az farkla geçti"},
     {"Hit area is too small", "Dokunma alanı çok küçük"},
     {"Element has no description", "Öğenin açıklaması yok"},
     {"Dynamic Type font sizes are unsupported", "Dinamik Yazı Boyutu desteklenmiyor"},

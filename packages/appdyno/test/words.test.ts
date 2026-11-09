@@ -117,6 +117,16 @@ describe('the table of words', () => {
     expect(said.filter((w) => !known(w))).toEqual([]);
   });
 
+  it("has what an iPhone's and a simulator's own audit says, as each has been seen", () => {
+    const said = [
+      'Contrast failed',
+      'Contrast nearly passed',
+      'Hit area is too small',
+      'Text clipped',
+    ];
+    expect(said.filter((w) => !known(w))).toEqual([]);
+  });
+
   it('has what a recording says in the bar, as it comes', () => {
     const said = [
       'Saved to the Desktop: 4 steps',
