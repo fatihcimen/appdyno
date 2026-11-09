@@ -72,7 +72,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   NSDate *_since;
   NSArray<NSDictionary *> *_entries;
   MVList *_list;
-  NSView *_none, *_detailCard;
+  NSView *_none, *_detailCard, *_slack;
   NSTextView *_detail;
 }
 
@@ -109,7 +109,11 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     _detailCard = card;
     [_detailCard.heightAnchor constraintEqualToConstant:kDetailHeight].active = YES;
     _detailCard.hidden = YES;
-    MVPaneFill(self, @[_state, controls, _about, _answer, _none, _list, _detailCard], 8);
+    // with no list, what is left goes under it all, where it went to the empty row of controls and stood the note at the
+    // pane's foot
+    _slack = [NSView new];
+    [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+    MVPaneFill(self, @[_state, controls, _about, _answer, _none, _list, _detailCard, _slack], 8);
     [self layOut];
   }
   return self;
@@ -198,6 +202,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   _again.hidden = !_capturing || [_capturing isEqual:@"probe"];
   _list.hidden = !_list.rows.count;
   _none.hidden = !_list.hidden;
+  _slack.hidden = !_list.hidden;
 }
 
 /// The request chosen, whole: its address, what came back, when, and what failed.

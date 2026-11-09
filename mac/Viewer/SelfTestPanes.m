@@ -114,8 +114,12 @@ static void checkNetwork(MVWindow *window) {
   [pane show:@{@"op": @"network",
                @"capturing": @NO,
                @"ways": @[],
-               @"needs": @"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings. This window changes no setting on a phone; the network tool reads the proxy's HAR export."}];
-  MVCheck(@"network: where nothing lists requests it says what a person needs, and offers nothing to press", [pane.said containsString:MVWord(@"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings. This window changes no setting on a phone; the network tool reads the proxy's HAR export.")] && [[pane valueForKey:@"_go"] isHidden], pane.said);
+               @"needs": @"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone."}];
+  MVCheck(@"network: where nothing lists requests it says what a person needs, and offers nothing to press", [pane.said containsString:MVWord(@"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone.")] && [[pane valueForKey:@"_go"] isHidden], pane.said);
+  [window.nsWindow layoutIfNeeded];
+  NSView *state = [pane valueForKey:@"_state"], *about = [pane valueForKey:@"_about"];
+  double gap = NSMinY([state convertRect:state.bounds toView:nil]) - NSMaxY([about convertRect:about.bounds toView:nil]);
+  MVCheck(@"network: what a person needs stands under the state, not at the pane's foot", gap > 0 && gap < 30, [NSString stringWithFormat:@"%.0f", gap]);
   [pane show:@{@"op": @"network",
                @"capturing": @NO,
                @"ways": @[@"probe", @"proxy"],

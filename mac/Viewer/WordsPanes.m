@@ -64,7 +64,7 @@ const MVWordRow MVWordTablePanes[] = {
     {"Received", "Alınan"},
     {"Transmitted", "Gönderilen"},
     {"%@ port %@", "%1$@ bağlantı noktası %2$@"},
-    {"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings. This window changes no setting on a phone; the network tool reads the proxy's HAR export.", "Bir iPhone'un istekleri yalnızca sizin çalıştırdığınız ve iPhone'un Wi-Fi ayarlarında belirlediğiniz bir proxy, örneğin Proxyman üzerinden görünür. Bu pencere bir telefonda hiçbir ayarı değiştirmez; network aracı proxy'nin HAR dışa aktarımını okur."},
+    {"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone.", "Bir iPhone'un istekleri yalnızca sizin çalıştırdığınız ve iPhone'un Wi-Fi ayarlarında belirlediğiniz bir proxy, örneğin Proxyman üzerinden görünür; o zaman burada da görünürler. Bu pencere bir telefonda hiçbir ayarı değiştirmez."},
     {"Requests show only through a proxy you run, such as Proxyman, set on this device. This window changes no proxy: without one it counts what the app sends and receives.", "İstekler yalnızca sizin çalıştırdığınız ve bu cihazda belirlediğiniz bir proxy, örneğin Proxyman üzerinden görünür. Bu pencere proxy'yi değiştirmez: proxy olmadan uygulamanın gönderdiğini ve aldığını sayar."},
     {"The probe restarts the app: stop the recording first, or wait for the measure to end", "Sonda uygulamayı yeniden başlatır: önce kaydı durdurun ya da ölçümün bitmesini bekleyin"},
     {"Open an app of yours to capture its requests", "İsteklerini yakalamak için kendi uygulamalarınızdan birini açın"},
