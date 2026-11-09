@@ -72,7 +72,8 @@ NSNumber *MVReadingOf(NSDictionary *sample, NSString *field, NSNumber *pictureRa
 
 NSString *MVReadingWords(double v, NSString *unit) {
   if ([unit isEqual:@"%"]) return MVPercent(v);
-  return v >= 100 || v == round(v) ? [NSString stringWithFormat:@"%.0f %@", v, unit] : [NSString stringWithFormat:@"%.1f %@", v, unit];
+  // a decimal in the window's language, as a percent is: 29,6 MB in Turkish beside %1,8
+  return v >= 100 || v == round(v) ? [NSString stringWithFormat:@"%.0f %@", v, unit] : [NSString stringWithFormat:@"%@ %@", MVDecimal(v), unit];
 }
 
 NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
