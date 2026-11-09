@@ -109,6 +109,19 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     expect(read()).toEqual(was);
   });
 
+  it('turns high contrast text on and puts back the 0 or the nothing the device had', async () => {
+    const contrast = () => adb('settings', 'get', 'secure', 'high_text_contrast_enabled');
+    const unset = contrast();
+    for (const start of ['0', unset]) {
+      if (start === '0') adb('settings', 'put', 'secure', 'high_text_contrast_enabled', '0');
+      else adb('settings', 'delete', 'secure', 'high_text_contrast_enabled');
+      await set(call, 'increase_contrast', 'on');
+      expect(contrast()).toBe('1');
+      await call('device_setting', { name: 'restore' });
+      expect(contrast()).toBe(start);
+    }
+  });
+
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {
     await set(call, 'wifi', 'on');
     expect(await value(call, 'mobile_data')).toBe('on');

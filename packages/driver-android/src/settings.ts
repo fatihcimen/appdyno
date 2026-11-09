@@ -155,7 +155,7 @@ export class AndroidSettings implements DeviceSettings {
         return this.getAnimations();
       case 'increase_contrast': {
         const v = (await this.sh(`settings get secure ${HIGH_CONTRAST}`)).trim();
-        return v === '1' ? 'on' : 'off';
+        return v === '1' ? 'on' : v === 'null' ? 'default (now off)' : 'off';
       }
       case 'reduce_transparency':
         throw new DeviceError('UNSUPPORTED', NO_TRANSPARENCY);
@@ -369,13 +369,15 @@ export class AndroidSettings implements DeviceSettings {
         await this.setAnimations(value);
         return;
       case 'increase_contrast':
-        if (value !== 'on' && value !== 'off')
+        if (value !== 'on' && value !== 'off' && value !== 'default (now off)')
           throw new DeviceError('INVALID_ARGUMENT', `${name}: on or off, not ${value}`);
-        // off is the key gone, as a device that never had it left it
+        // the device's own is the key gone, as a device that never had it left it
         await this.sh(
           value === 'on'
             ? `settings put secure ${HIGH_CONTRAST} 1`
-            : `settings delete secure ${HIGH_CONTRAST}`,
+            : value === 'off'
+              ? `settings put secure ${HIGH_CONTRAST} 0`
+              : `settings delete secure ${HIGH_CONTRAST}`,
         );
         return;
       case 'reduce_transparency':

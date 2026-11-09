@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `increase_contrast` on Android puts back a `high_text_contrast_enabled` of 0 as 0, where `restore` deleted it, and reads `default (now off)` where the device never set it, which goes back by deleting it. Run on an API 34 emulator.
 - `dark_mode` on Android reads `default (now off)` on a device that never set it, and goes back there by deleting what `cmd uimode night` writes, where `restore` left `ui_night_mode` 1, and the three keys of its schedule with it, on an emulator that had none of them. Run on an API 34 emulator.
 - `locale` for the whole Android device leaves `font_scale` and `system_locales`, which Android writes with every change of the languages, unset where the device had them unset: a change and its `restore` left `font_scale` 1.0 and `system_locales` en-US on an emulator that had neither. `persist.sys.locale`, which the system sets with the languages, cannot be unset by a shell, so an emulator that had none reads the language put back there. Run on an API 34 emulator.
 - `text_size` on Android puts back the scale the device had: one it never set is deleted again until it reads unset, as Android answers the first delete by writing 1.0, and a scale of 1.0 reads as 1.0 and goes back as it, where `restore` left 1.0 on an emulator that had none and none on a Xiaomi that had 1.0. The languages Android writes beside a scale, `system_locales`, are deleted again where they were unset. Run on an API 34 emulator.

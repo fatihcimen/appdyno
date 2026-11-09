@@ -515,6 +515,27 @@ describe('dark mode', () => {
   });
 });
 
+describe('high contrast text', () => {
+  it('goes back to 0 where the device had 0, and to unset where it had none', async () => {
+    for (const start of ['0', 'null']) {
+      let held = start;
+      const exec = (_serial: string, command: string) => {
+        const [, verb, v = ''] =
+          /^settings (get|put|delete) secure high_text_contrast_enabled ?(\d*)/.exec(command) ?? [];
+        if (verb === 'put') held = v;
+        if (verb === 'delete') held = 'null';
+        return Promise.resolve(verb === 'get' ? held : '');
+      };
+      const settings = new AndroidSettings({ exec } as unknown as Adb, 'emulator-5554');
+      const was = await settings.get('increase_contrast');
+      await settings.set('increase_contrast', 'on');
+      expect(await settings.get('increase_contrast')).toBe('on');
+      await settings.set('increase_contrast', was);
+      expect([was, held]).toEqual([start === '0' ? 'off' : 'default (now off)', start]);
+    }
+  });
+});
+
 describe("the whole device's languages", () => {
   it(
     'leave the text scale and the languages the device had unset still unset, when set and when put back',

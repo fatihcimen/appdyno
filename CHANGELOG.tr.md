@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Android'de `increase_contrast`, 0 olan bir `high_text_contrast_enabled` değerini 0 olarak geri koyar, `restore` onu siliyordu; cihazın onu hiç ayarlamadığı yerde `default (now off)` okunur ve silinerek geri döner. Bir API 34 emülatöründe çalıştırıldı.
 - Android'de `dark_mode` onu hiç ayarlamamış bir cihazda `default (now off)` okunur ve oraya `cmd uimode night`'ın yazdıklarını silerek döner; `restore`, hiçbiri olmayan bir emülatörde `ui_night_mode` 1'i ve onunla birlikte programının üç anahtarını bırakıyordu. Bir API 34 emülatöründe çalıştırıldı.
 - Android cihazın tamamı için `locale`, Android'in dillerin her değişikliğinde yazdığı `font_scale` ve `system_locales` değerlerini cihazın ayarlanmamış bıraktığı yerde ayarlanmamış bırakır: bir değişiklik ve onun `restore`'u, ikisi de olmayan bir emülatörde `font_scale` 1,0 ve `system_locales` en-US bırakıyordu. Sistemin dillerle birlikte ayarladığı `persist.sys.locale` bir shell tarafından boşaltılamaz, bu yüzden hiç olmayan bir emülatör orada geri konan dili okur. Bir API 34 emülatöründe çalıştırıldı.
 - Android'de `text_size` cihazın sahip olduğu ölçeği geri koyar: hiç ayarlamadığı bir ölçek, ayarlanmamış okunana kadar yeniden silinir, çünkü Android ilk silmeye 1,0 yazarak karşılık verir; 1,0'lık bir ölçek de 1,0 okunur ve öyle geri konur: `restore` hiç ölçeği olmayan bir emülatörde 1,0, 1,0'ı olan bir Xiaomi'de ise hiçbir şey bırakıyordu. Android'in bir ölçeğin yanına yazdığı diller, `system_locales`, ayarlanmamış oldukları yerde yeniden silinir. Bir API 34 emülatöründe çalıştırıldı.
