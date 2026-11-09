@@ -449,6 +449,19 @@ describe('perf tools', () => {
     expect(readFileSync(join(MEASUREMENTS, `${id}.txt`), 'utf8')).toContain('TOTAL PSS');
   });
 
+  it('scroll: says the median of an even count of rounds to a tenth, as each round says its own', async () => {
+    const dev = new FakeDevice();
+    const shares = [98.13, 98.2];
+    // each round's frames read the next share
+    Object.defineProperty(dev, 'jank', {
+      get: () => shares[dev.calls.filter((c) => c.name === 'perf.frames').length % 2],
+    });
+    const t = await connect({}, dev);
+    const r = await t.textOf('perf_scroll', { swipes: 1, repeats: 2 });
+    expect(r.text).toContain('median jank: 98.2%');
+    expect(r.text).toContain('high jank: median 98.2% (threshold 10%)');
+  });
+
   it('scroll: each round resets frames, swipes, reads; jank over the threshold and memory growth are said', async () => {
     const dev = new FakeDevice();
     dev.jank = 25;

@@ -6,6 +6,7 @@ import {
   pause,
   reportProgress,
   median,
+  round1,
   must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
@@ -145,7 +146,7 @@ export function perfScrollOp(ctx: ServerContext) {
       }
       s.acted();
       const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
-      const jank = counted.length ? median(counted.map((x) => x.jankyPercent)) : undefined;
+      const jank = counted.length ? round1(median(counted.map((x) => x.jankyPercent))) : undefined;
       const frozen = rounds.reduce((a, x) => a + x.frozen, 0);
       // steady state: the second round's end to the last one's (the first loads images and caches)
       const [, second] = rounds;

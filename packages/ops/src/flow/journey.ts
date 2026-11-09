@@ -1,5 +1,5 @@
 import { basename, resolve } from 'node:path';
-import { median, must, type Capability, type Measured } from '@appdyno/core';
+import { median, must, round1, type Capability, type Measured } from '@appdyno/core';
 import type { Flow, RunResult, StepEvent } from '@appdyno/flows';
 import {
   JOURNEY_TOTAL,
@@ -80,7 +80,8 @@ function journeyReader(s: Session) {
 
 const medianOf = (held: Map<Kind, Held>, kind: Kind) => {
   const samples = held.get(kind)?.samples;
-  return samples?.length ? median(samples) : undefined;
+  // a median of an even count is a mean of two, which a float says as 98.16499999999999
+  return samples?.length ? round1(median(samples)) : undefined;
 };
 
 /**
