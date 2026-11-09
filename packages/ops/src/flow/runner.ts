@@ -40,8 +40,26 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
   };
   const flat = st.selector ?? {};
   switch (st.action) {
-    case 'launch':
-      return ['launch_app', defined({ app: a.app })];
+    case 'launch': {
+      // arguments and an environment are the app tool's; a language with them is refused by its schema
+      const arg = a.arg as string[] | undefined;
+      const env = a.env as string[] | undefined;
+      if (!arg && !env) return ['launch_app', defined({ app: a.app, language: a.language })];
+      const pairs = env?.map((e): [string, string] => [
+        e.slice(0, e.indexOf('=')),
+        e.slice(e.indexOf('=') + 1),
+      ]);
+      return [
+        'app',
+        defined({
+          action: 'launch',
+          app: a.app,
+          args: arg,
+          env: pairs && Object.fromEntries(pairs),
+          language: a.language,
+        }),
+      ];
+    }
     case 'stop':
       return ['terminate_app', defined({ app: a.app })];
     case 'tap':

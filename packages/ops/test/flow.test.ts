@@ -361,6 +361,36 @@ assert id=result check=text equals="Gönderildi"
       ]);
     });
 
+    it('launches a replay as the recording did: in its language, with the arguments and environment it names', async () => {
+      const launched: unknown[] = [];
+      device.apps = {
+        launchWith: (app: string, o: unknown) => {
+          launched.push([app, o]);
+          return Promise.resolve();
+        },
+      } as unknown as AppManager;
+      const call = callerOf(context());
+      const { file, text } = await recorded(call, () => call('launch_app', { language: 'tr' }));
+      expect(text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual([
+        'launch language=tr',
+      ]);
+      await call('flow', { action: 'run', file });
+      expect(launched).toEqual([
+        ['dev.app', { language: 'tr' }],
+        ['dev.app', { language: 'tr' }],
+      ]);
+      const named = join(dir, 'named.flow');
+      writeFileSync(
+        named,
+        'app dev.app\nlaunch arg=-UITests arg=YES env="API_URL=https://a.test/?a=b"\n',
+      );
+      await call('flow', { action: 'run', file: named });
+      expect(launched.at(-1)).toEqual([
+        'dev.app',
+        { args: ['-UITests', 'YES'], env: { API_URL: 'https://a.test/?a=b' } },
+      ]);
+    });
+
     it('holds across the processes of a command line, on the device it began on', async () => {
       await callerOf(context())('flow', { action: 'start' });
       await callerOf(context())('tap', { selector: { text: 'Form' } });

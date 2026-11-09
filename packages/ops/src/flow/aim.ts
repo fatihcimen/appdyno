@@ -47,7 +47,7 @@ export const fieldName = (el: UiElement) => el.identifier?.replace(/^[\w.]*:id\/
 export const stepOf = (
   action: FlowStep['action'],
   a: Aim,
-  args: Record<string, string | number | boolean | undefined> = {},
+  args: Record<string, string | number | boolean | string[] | undefined> = {},
 ): FlowStep => ({
   action,
   line: 0,

@@ -14,6 +14,7 @@
  *   tap role=button text="Send"
  *   assert id=result check=text equals="Sent: ${NAME}"
  *   tap id=add_button index=2 !ambiguous
+ *   launch language=tr arg=-UITests env=API_URL=https://staging.example
  *   run shared/logout.flow
  *
  * Values of `param` and `secret` come from `--param` or the environment and are never in the file. `$${`
@@ -37,7 +38,7 @@ export type FlowStep = {
   /** The file it was written in, when another flow runs it: see `composeFlow`. */
   file?: string;
   selector?: FlowSelector;
-  args: Record<string, Scalar>;
+  args: Record<string, Scalar | string[]>;
   flags: Flag[];
 };
 
@@ -68,10 +69,12 @@ type Spec = {
   text?: string[];
   number?: string[];
   bool?: string[];
+  /** Keys that may repeat, each a string, kept in order. */
+  list?: string[];
 };
 
 const SPECS = {
-  launch: { words: ['app?'] },
+  launch: { words: ['app?'], text: ['language'], list: ['arg', 'env'] },
   stop: { words: ['app?'] },
   tap: { target: 'point-needed' },
   long_press: { target: 'point-needed', number: ['durationMs'] },
@@ -208,6 +211,10 @@ function parseStep(action: string, rest: ReturnType<typeof tokens>, line: number
       step.args[k] = numberOf(t.value, k, line);
     } else if (point && k === 'screen') {
       step.args.screen = t.value;
+    } else if (spec.list?.includes(k)) {
+      if (k === 'env' && t.value.indexOf('=') < 1)
+        throw new FlowError(`env is NAME=value: ${t.value}`, line);
+      step.args[k] = [...((step.args[k] as string[] | undefined) ?? []), t.value];
     } else if (spec.text?.includes(k)) {
       step.args[k] = t.value;
     } else if (spec.number?.includes(k)) {
@@ -244,7 +251,9 @@ const namesIn = (value: string, line: number) =>
   });
 
 const stringsOf = (st: FlowStep) => [
-  ...Object.values(st.args).filter((v) => typeof v === 'string'),
+  ...Object.values(st.args)
+    .flat()
+    .filter((v) => typeof v === 'string'),
   ...SELECTOR_KEYS.flatMap((k) => st.selector?.[k] ?? []),
 ];
 
@@ -322,13 +331,15 @@ export function stepLine(st: FlowStep): string {
   const words = (spec.words ?? []).flatMap((w): (string | number | boolean)[] => {
     const name = w.replace('?', '');
     const v = st.args[name];
-    if (v === undefined) return [];
+    // a list is never a word
+    if (v === undefined || Array.isArray(v)) return [];
     return typeof v === 'string' ? [name === 'key' || name === 'direction' ? v : quote(v)] : [v];
   });
   const named = new Set((spec.words ?? []).map((w) => w.replace('?', '')));
   const rest = Object.entries(st.args)
     .filter(([k]) => !named.has(k))
-    .map(([k, v]) => {
+    .flatMap(([k, v]) => {
+      if (Array.isArray(v)) return v.map((x) => `${k}=${show(x)}`);
       if (typeof v === 'boolean') return v ? k : `${k}=false`;
       return typeof v === 'number' ? `${k}=${v}` : `${k}=${show(v)}`;
     });
@@ -359,7 +370,10 @@ const fill = (value: string, values: Record<string, string>) =>
 /** A step with each string of its arguments and its selector through `f`. */
 export function mapStrings(st: FlowStep, f: (value: string) => string): FlowStep {
   const args = Object.fromEntries(
-    Object.entries(st.args).map(([k, v]) => [k, typeof v === 'string' ? f(v) : v]),
+    Object.entries(st.args).map(([k, v]) => [
+      k,
+      typeof v === 'string' ? f(v) : Array.isArray(v) ? v.map((x) => f(x)) : v,
+    ]),
   );
   const s = st.selector;
   return {

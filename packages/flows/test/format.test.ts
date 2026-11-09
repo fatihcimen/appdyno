@@ -31,6 +31,8 @@ open_link "appdyno-fixture://open/form?a=1&b=2"
 set_location 41.0082 28.9784
 alert allow
 hide_keyboard
+launch language=pt-BR
+launch arg=-UITests arg=YES env="API_URL=https://a.example/x y"
 stop
 `;
 
@@ -52,6 +54,11 @@ describe('the flow format', () => {
       lon: 28.9784,
     });
     expect(f.steps.find((s) => s.flags.includes('ambiguous'))?.selector?.index).toBe(2);
+    expect(f.steps.filter((s) => s.action === 'launch').map((s) => s.args)).toEqual([
+      {},
+      { language: 'pt-BR' },
+      { arg: ['-UITests', 'YES'], env: ['API_URL=https://a.example/x y'] },
+    ]);
   });
 
   it('writes what it reads back, step for step', () => {
@@ -113,6 +120,7 @@ describe('the flow format', () => {
     bad('tap index=1', /an index needs/, 1);
     bad('tap id=a nope=1', /tap has no nope/, 1);
     bad('tap id=a !huh', /no flag !huh/, 1);
+    bad('launch env=API_URL', /env is NAME=value/, 1);
     bad('type', /type needs text/, 1);
     bad('set_location 41 east', /lon needs a number/, 1);
     bad('tap text="open', /not closed/, 1);

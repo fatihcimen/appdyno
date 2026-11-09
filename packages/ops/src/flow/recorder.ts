@@ -207,9 +207,12 @@ const swipes = (a: Record<string, unknown>, count: number) =>
   Array.from({ length: count }, () =>
     stepOf('swipe', {}, { direction: (a.direction ?? a.scroll) as string }),
   );
-const restarts = (a: Record<string, unknown>) => [
+const restarts = (
+  a: Record<string, unknown>,
+  how: Record<string, string | string[] | undefined> = {},
+) => [
   stepOf('stop', {}, { app: a.app as string | undefined }),
-  stepOf('launch', {}, { app: a.app as string | undefined }),
+  stepOf('launch', {}, { app: a.app as string | undefined, ...how }),
 ];
 const MEASURES: Record<string, ToStep> = {
   perf_launch: (a) =>
@@ -236,14 +239,16 @@ const MEASURES: Record<string, ToStep> = {
 const OPS: Record<string, ToStep> = {
   ...MEASURES,
   // a launch that started the app is a start in a replay too, where a plain launch brings a running app forward as it is
-  launch_app: (a, data) =>
-    data.wasRunning === false
-      ? restarts(a)
+  launch_app: (a, data) => {
+    const how = { language: a.language as string | undefined };
+    return data.wasRunning === false
+      ? restarts(a, how)
       : stepOf(
           'launch',
           { flags: data.wasRunning ? ['running'] : [] },
-          { app: a.app as string | undefined },
-        ),
+          { app: a.app as string | undefined, ...how },
+        );
+  },
   terminate_app: (a) => stepOf('stop', {}, { app: a.app as string | undefined }),
   // what an app opens is read, and nothing opened: no step
   open_link: (a) =>

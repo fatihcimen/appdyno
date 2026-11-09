@@ -56,9 +56,11 @@ const none = (st: FlowStep, ...args: string[]) => {
 };
 
 function commands(st: FlowStep): Yaml[] {
-  const a = st.args;
+  // a list is a launch's alone, and refused there
+  const a = st.args as Record<string, string | number | boolean>;
   switch (st.action) {
     case 'launch':
+      none(st, 'language', 'arg', 'env');
       // Maestro's launchApp stops the app first; our launch brings a running one forward as it is
       return [
         { launchApp: { ...(a.app ? { appId: plain(a.app as string) } : {}), stopApp: false } },

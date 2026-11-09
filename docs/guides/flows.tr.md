@@ -32,18 +32,18 @@ assert id=result check=text equals="Sent: ${NAME}"
 tap id=add_button index=1 !ambiguous
 ```
 
-| adım                                                                        | çalıştırdığı                  |
-| --------------------------------------------------------------------------- | ----------------------------- |
-| `launch`, `stop`                                                            | `launch_app`, `terminate_app` |
-| `tap`, `long_press durationMs=`, `double_tap`                               | `tap`, `gesture`              |
-| `type "text" [target] [replace] [submit]`                                   | `type_text`                   |
-| `press_key back`, `swipe up [target]`, `scroll_to <selector> [direction=]`  | o adı taşıyan araç            |
-| `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                    |
-| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                      |
-| `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | kendi araçları                |
-| `run shared/login.flow`                                                     | o dosyanın adımları, yerinde  |
+| adım                                                                        | çalıştırdığı                                                          |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `launch [language=] [arg=] [env=]`, `stop`                                  | `launch_app`, `arg=` ya da `env=` ile `app` `launch`, `terminate_app` |
+| `tap`, `long_press durationMs=`, `double_tap`                               | `tap`, `gesture`                                                      |
+| `type "text" [target] [replace] [submit]`                                   | `type_text`                                                           |
+| `press_key back`, `swipe up [target]`, `scroll_to <selector> [direction=]`  | o adı taşıyan araç                                                    |
+| `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                                                            |
+| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                                                              |
+| `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | kendi araçları                                                        |
+| `run shared/login.flow`                                                     | o dosyanın adımları, yerinde                                          |
 
-Bir seçici `id=`, `role=`, `text=`, `index=` alanlarından herhangi biridir; metin, araçlarda olduğu gibi eşleşir.
+Bir seçici `id=`, `role=`, `text=`, `index=` alanlarından herhangi biridir; metin, araçlarda olduğu gibi eşleşir. `launch`, `launch_app` gibi bir `language=` alır ya da `app` `launch` gibi uygulama aracının argümanlarını ve ortamını: her argüman için bir `arg=`, her değişken için bir `env=NAME=value`.
 
 ## Kaydetmek
 
@@ -53,7 +53,7 @@ bulamadığı hedef index'ini korur ve `!ambiguous` olarak işaretlenir. Yalnız
 alan koordinat olarak kalır ve geçerli olduğu ekran boyutuyla `!coordinates` olarak işaretlenir; başka boyuttaki bir
 ekran o adımı reddeder. Bir rol, iki platform onu aynı adla andığında korunur (`button`, `textField`...);
 Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir işlem (bir pinch, bir cihaz ayarı, bir web görünümünde bir tıklama)
-`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `flow stop` ve
+`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `language` ile bir `launch_app`, `launch language=tr` olur, böylece bir yeniden oynatma da uygulamayı o dilde başlatır; uygulamayı yeniden başlattığı için işaretlenmez. `flow stop` ve
 `flow save` bakılması gereken her adımı listeler.
 
 Ajanın yazdığı ya da okuduğu bir değer, `flow start`, `stop` ya da `save` üzerinde `params` ile bir parametre olur (komut satırında `--param NAME=Grace`): yazıldığı ya da okunduğu her yerde, önce ya da sonra, `${NAME}` olur, `param NAME` olarak bildirilir ve `flow run` değerini `params` içinde alır. Hiçbir kaydedilmiş adımın tutmadığı bir ad `stop` ve `save`'de reddedilir. `save` dosyayı, `export` `to` gibi, sunucunun çalıştığı klasörün ya da durum klasörünün içine yazar: başka bir yerdeki bir yol ya da bir bağlantının onların dışına çıkardığı bir yol reddedilir; `overwrite` verilmedikçe var olan bir dosya da reddedilir. Yazdığı dosyayla yanıt verir.

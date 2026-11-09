@@ -32,18 +32,18 @@ assert id=result check=text equals="Sent: ${NAME}"
 tap id=add_button index=1 !ambiguous
 ```
 
-| step                                                                        | runs                          |
-| --------------------------------------------------------------------------- | ----------------------------- |
-| `launch`, `stop`                                                            | `launch_app`, `terminate_app` |
-| `tap`, `long_press durationMs=`, `double_tap`                               | `tap`, `gesture`              |
-| `type "text" [target] [replace] [submit]`                                   | `type_text`                   |
-| `press_key back`, `swipe up [target]`, `scroll_to <selector> [direction=]`  | the tool of that name         |
-| `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                    |
-| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                      |
-| `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | their tools                   |
-| `run shared/login.flow`                                                     | that file's steps, in place   |
+| step                                                                        | runs                                                                |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `launch [language=] [arg=] [env=]`, `stop`                                  | `launch_app`, `app` `launch` with `arg=` or `env=`, `terminate_app` |
+| `tap`, `long_press durationMs=`, `double_tap`                               | `tap`, `gesture`                                                    |
+| `type "text" [target] [replace] [submit]`                                   | `type_text`                                                         |
+| `press_key back`, `swipe up [target]`, `scroll_to <selector> [direction=]`  | the tool of that name                                               |
+| `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                                                          |
+| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                                                            |
+| `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | their tools                                                         |
+| `run shared/login.flow`                                                     | that file's steps, in place                                         |
 
-A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools.
+A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, as `launch_app` does, or the app tool's arguments and environment, an `arg=` for each argument and an `env=NAME=value` for each variable, as `app` `launch` does.
 
 ## Recording
 
@@ -53,7 +53,7 @@ finds alone keeps its index and is flagged `!ambiguous`. Only a point on no elem
 area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
 size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
 Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting, a click in a web view)
-is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. `flow stop` and
+is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. `flow stop` and
 `flow save` list every step to look at.
 
 A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): wherever it was or is typed or read, it is `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.

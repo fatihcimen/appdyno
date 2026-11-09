@@ -213,6 +213,8 @@ stop`),
     fails('assert id=r check=moves', /step 1 .*what moves/);
     fails('assert text="x" check=moves', /step 1 .*what moves/);
     fails('unrecorded "gesture pinch"', /step 1 .*gesture pinch/);
+    fails('launch language=tr', /step 1 .*no language for launch/);
+    fails('launch arg=-UITests', /step 1 .*no arg for launch/);
     expect(() => yaml('alert allow\nlaunch\nunrecorded "x"')).toThrow(/step 1[^]*step 3/);
     expect(() => toMaestro(parseFlow('launch'))).toThrow(/needs an app/);
     expect(toMaestro(parseFlow('app dev.x\ntag smoke login\nlaunch\n'))).toContain(
