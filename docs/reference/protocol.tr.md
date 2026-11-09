@@ -300,6 +300,14 @@ sırasında yeniden başlatma onları öyle bırakır).
 yalnızca biri tutar: önce seçenek bırakır, ajan ölçekleri geri koyar ve eski değer ancak ondan sonra
 okunup not edilir, böylece hiçbiri diğerinin üstüne geri yükleme yapmaz.
 
+### Yön
+
+`orientation.set {rotation}` ekranı o dönüşte sabitler, bu da döndürme kilidini etkinleştirir. İlk dönüşün bulduğu kilit
+ve kullanıcı dönüşü (`accelerometer_rotation`, `user_rotation`), ekran o zamanki dönüşüne geri çevrildiğinde, onu
+çeviren son bağlantı gittiğinde ve ajan önce ölürse onu izleyen ayrı bir shell süreciyle eski hallerine
+döner. Komut satırı her komut için bağlanır, bu yüzden
+`set-orientation` ile yapılan bir dönüş o komut biterken geri alınır.
+
 ### Erişilebilirlik denetimi
 
 `audit` (host API'si `device.audit()`) ekranın erişilebilirlik sorunlarını yanıtlar; her birinde `type`, motorun

@@ -42,10 +42,25 @@ const result = async (call: Call, text: string) =>
 
 describe.skipIf(!ANDROID)('conditions on an emulator', () => {
   let call: Call;
+  let ctx: ReturnType<typeof opsOn>['ctx'];
   beforeAll(() => {
     const o = opsOn(androidProvider(new Adb()), ANDROID, APP);
     call = o.call;
+    ctx = o.ctx;
     return () => call('device_setting', { name: 'restore' });
+  });
+
+  it('puts the rotation lock and the user rotation back once turned back, and when its connection ends', async () => {
+    const lock = () =>
+      ['accelerometer_rotation', 'user_rotation'].map((k) => adb('settings', 'get', 'system', k));
+    const was = lock();
+    await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
+    expect(lock()).toEqual(['0', '1']);
+    await call('set_orientation', { orientation: 'portrait', read: 'none' });
+    expect(lock()).toEqual(was);
+    await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
+    (await ctx.session()).device.close();
+    await until('the lock back', () => lock().join() === was.join());
   });
 
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {
