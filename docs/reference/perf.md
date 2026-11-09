@@ -588,32 +588,32 @@ hangs and a launch of Settings; a cost-known check of them needs an app signed f
 
 Run it yourself: `node scripts/speed.mjs <device id> [runs]` times the calls an MCP client makes most, on the fixture app (`dev.appdyno.fixture`, from `android/fixture` or `ios/`), on any device. `pnpm build` first. Each run starts a new server over stdio, as a client does, sends `initialize` and `tools/list`, then the calls below. Every call is proved by its answer: a tap has to reach the next screen, a typed field has to hold the text, and a refusal or a missing proof stops the run. The fixture is stopped before each `launch_app`, so each launch is cold. A run before the measured ones starts what the device needs, the iOS runner's build and start or the Android agent's, and only its first read is kept. At the end the script stops the iOS runner it started and waits for it to end, as xcodebuild writes the session's results into the script's state folder as it ends, and then removes that folder.
 
-Medians and the worst of 5 runs, in ms, each through the MCP server over stdio, on 2026-11-07, on an M5 Pro with 15 cores and macOS 27.0.1, with the commit and the host's load beside each device. A tap or a swipe is timed two ways. The touch alone, with `read: none`, answers once the touch has gone, with no settle and no read, and proves nothing by itself: the script proves it by a wait after it, not timed. With the settled screen, the default, the call also waits until the screen has been still for 200 ms and answers with what changed, which is its proof. A tap elsewhere is often the touch alone, so compare it with that row:
+Medians and the worst of 5 runs, in ms, each through the MCP server over stdio, on 2026-11-09 (the iOS simulator and the Xiaomi on 2026-11-07), on an M5 Pro with 15 cores and macOS 27.0.1, with the commit and the host's load beside each device. A tap or a swipe is timed two ways. The touch alone, with `read: none`, answers once the touch has gone, with no settle and no read, and proves nothing by itself: the script proves it by a wait after it, not timed. With the settled screen, the default, the call also waits until the screen has been still for 200 ms and answers with what changed, which is its proof. A tap elsewhere is often the touch alone, so compare it with that row:
 
 | call                                                | iOS simulator | Android emulator | iPhone        | Samsung       | Xiaomi        |
 | --------------------------------------------------- | ------------- | ---------------- | ------------- | ------------- | ------------- |
-| `list_devices`                                      | 593 / 648     | 502 / 517        | 474 / 510     | 500 / 601     | 476 / 568     |
-| `screen`, first of a server                         | 689 / 892     | 67 / 72          | 526 / 569     | 194 / 209     | 136 / 159     |
-| `initialize`                                        | 114 / 146     | 105 / 112        | 108 / 120     | 103 / 109     | 104 / 115     |
-| `tools/list`                                        | 7 / 9         | 6 / 6            | 6 / 7         | 6 / 7         | 6 / 7         |
-| `launch_app` of the fixture, cold                   | 2,307 / 3,072 | 780 / 1,019      | 1,745 / 2,870 | 1,547 / 1,601 | 1,890 / 2,063 |
-| `screen`                                            | 16 / 20       | 40 / 42          | 954 / 1,057   | 54 / 60       | 58 / 68       |
-| `swipe`, the touch alone (`read: none`)             | 312 / 313     | not run          | 942 / 1,081   | 541 / 780     | 679 / 717     |
-| `swipe`, with the settled screen                    | 2,412 / 2,490 | 1,448 / 1,496    | 3,740 / 3,768 | 2,513 / 2,869 | 2,512 / 2,560 |
-| `find`                                              | 72 / 139      | 43 / 58          | 181 / 192     | 152 / 162     | 42 / 44       |
-| `tap` by coordinate, the touch alone (`read: none`) | 127 / 133     | not run          | 318 / 323     | 104 / 112     | 142 / 144     |
-| `tap` by coordinate, with the settled screen        | 904 / 916     | 797 / 812        | 1,139 / 1,140 | 949 / 1,180   | 810 / 858     |
-| back                                                | 331 / 375     | 480 / 782        | 1,327 / 1,536 | 991 / 1,123   | 624 / 805     |
-| `tap` by selector, with the settled screen          | 1,134 / 1,146 | 847 / 915        | 1,069 / 1,337 | 1,073 / 1,664 | 825 / 879     |
-| `type_text` into a field by selector                | 1,271 / 1,686 | 635 / 648        | 2,287 / 2,466 | 1,023 / 1,099 | 1,199 / 1,351 |
-| `wait_for` an element on the screen                 | 61 / 79       | 64 / 66          | 631 / 638     | 164 / 219     | 130 / 144     |
-| `screenshot`                                        | 90 / 189      | 24 / 47          | 183 / 227     | 184 / 334     | 111 / 119     |
-| `logs`, 20 lines                                    | 1,179 / 1,350 | 20 / 22          | 1 / 2         | 446 / 450     | 233 / 246     |
+| `list_devices`                                      | 593 / 648     | 163 / 204        | 220 / 258     | 118 / 148     | 476 / 568     |
+| `screen`, first of a server                         | 689 / 892     | 62 / 74          | 591 / 624     | 147 / 181     | 136 / 159     |
+| `initialize`                                        | 114 / 146     | 120 / 143        | 134 / 137     | 120 / 131     | 104 / 115     |
+| `tools/list`                                        | 7 / 9         | 6 / 8            | 6 / 7         | 6 / 6         | 6 / 7         |
+| `launch_app` of the fixture, cold                   | 2,307 / 3,072 | 1,053 / 1,063    | 2,636 / 2,654 | 1,548 / 1,615 | 1,890 / 2,063 |
+| `screen`                                            | 16 / 20       | 53 / 56          | 308 / 317     | 49 / 59       | 58 / 68       |
+| `swipe`, the touch alone (`read: none`)             | 312 / 313     | 579 / 583        | 913 / 1,044   | 380 / 432     | 679 / 717     |
+| `swipe`, with the settled screen                    | 2,412 / 2,490 | 1,470 / 1,740    | 3,965 / 4,233 | 2,344 / 2,350 | 2,512 / 2,560 |
+| `find`                                              | 72 / 139      | 45 / 56          | 139 / 140     | 123 / 151     | 42 / 44       |
+| `tap` by coordinate, the touch alone (`read: none`) | 127 / 133     | 87 / 122         | 310 / 314     | 80 / 108      | 142 / 144     |
+| `tap` by coordinate, with the settled screen        | 904 / 916     | 844 / 860        | 970 / 1,101   | 711 / 1,517   | 810 / 858     |
+| back                                                | 331 / 375     | 454 / 663        | 1,123 / 1,133 | 768 / 803     | 624 / 805     |
+| `tap` by selector, with the settled screen          | 1,134 / 1,146 | 862 / 901        | 918 / 925     | 989 / 1,075   | 825 / 879     |
+| `type_text` into a field by selector                | 1,271 / 1,686 | 636 / 652        | 1,934 / 2,076 | 930 / 949     | 1,199 / 1,351 |
+| `wait_for` an element on the screen                 | 61 / 79       | 64 / 68          | 163 / 281     | 160 / 162     | 130 / 144     |
+| `screenshot`                                        | 90 / 189      | 25 / 52          | 184 / 223     | 166 / 284     | 111 / 119     |
+| `logs`, 20 lines                                    | 1,179 / 1,350 | 21 / 29          | 1 / 2         | 717 / 747     | 233 / 246     |
 
 - iOS simulator: an iPhone 17 Pro with iOS 27.2, at `8991f574`, which has the text fix and not the screenshot one (a simulator's look past the app is its helper's, a few ms), host load 5.4-8.0.
-- Android emulator: a Pixel 6 AVD with API 34 (`google_apis`, arm64), `-gpu host`, at `ab96deed`, before the script timed the touch alone, host load 7.9-9.7.
-- iPhone: an iPhone 13 Pro Max with iOS 27.2, by USB, at `b9c2bbf0`, host load 5.1-6.5. Its `logs` says at once that `devicectl` cannot read an app's log.
-- Samsung: an SM-A525F with Android 14, by USB, at `b9c2bbf0`, host load 5.1-7.3.
+- Android emulator: a Pixel 6 AVD with API 34 (`google_apis`, arm64), `-gpu host`, at `97aa4b06`, host load 4.0-5.0. On another boot of the same AVD a read took 8-13 ms and a settled tap 540-860: a boot moves these more than any commit since `ab96deed` did.
+- iPhone: an iPhone 13 Pro Max with iOS 27.2, by USB, at `97aa4b06`, host load 3.9-4.9. Its `logs` says at once that `devicectl` cannot read an app's log. Its cold `launch_app` took 1,558-2,636 ms between runs of the same hour, and the build the table had before took 2,199 between them: the phone's, not the code's.
+- Samsung: an SM-A525F with Android 14, by USB, at `97aa4b06`, host load 4.8-5.1. Its `logs` took 717-764 ms on this commit and on the build the table had before alike, where it took 446 then: what the phone's log holds, not the code.
 - Xiaomi: a 25078RA3EY with Android 16 in Turkish, by USB, at `b9c2bbf0`, host load 5.4-6.2.
 
 With the settled screen, a call's time is mostly the app's own: the script's settle column says how much. `back` is the key on Android and the screen's own control on iOS. `find` and `wait_for` come after a screen changed, so each reads it afresh. A number is relative to this Mac at this load.
