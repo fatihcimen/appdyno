@@ -179,7 +179,7 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
           // the frame probe goes in by a relaunch, after the launches took it out: the app is on its first screen, so the
           // measure stops, and says what a person does next, as they then do
           expect(said).toMatchObject({ title: 'No measure' });
-          expect(String(said.hint)).toContain('open the screen to measure again');
+          expect(String(said.hint)).toContain('Go back to the screen to measure');
           await picture('refused');
           await fixtureInFront();
           said = await measure(name);
