@@ -571,6 +571,31 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(await wide(false)).toBe(true);
   });
 
+  it("reaches the form's Send button in landscape by scrolling, where a small screen leaves it out", async () => {
+    await open('FORM');
+    const send = async () => find(await screen(), 'SEND');
+    try {
+      await d.setOrientation(1);
+      const turned = async () => {
+        for (let i = 0; i < 20; i++) {
+          const s = await screen();
+          if (s.window && s.window.w > s.window.h && find(s, 'Enter your details')) return s;
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        throw new Error('the form did not turn');
+      };
+      const { window } = await turned();
+      assert(window, 'the window');
+      // the screen this was seen on: a phone of 720 pixels across, whose landscape is too short for the form
+      if (await send()) return;
+      const x = window.w / 2;
+      await d.swipe({ x, y: window.h * 0.8 }, { x, y: window.h * 0.2 }, 400, { settle: SETTLE });
+      expect(await send()).toBeDefined();
+    } finally {
+      await d.setOrientation(0);
+    }
+  });
+
   it('opens a deep link in the app', async () => {
     await d.openUrl('appdyno-fixture://open/form', APP);
     let ok = false;

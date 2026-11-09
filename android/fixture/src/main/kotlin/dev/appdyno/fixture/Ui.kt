@@ -5,14 +5,16 @@ import android.content.Context
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import java.io.File
 
-internal fun Activity.column(build: LinearLayout.() -> Unit): LinearLayout = LinearLayout(this).apply {
+/** The screen's views, one under another; `scroll`: in a ScrollView, so that what a small or turned screen leaves out is reached. */
+internal fun Activity.column(scroll: Boolean = false, build: LinearLayout.() -> Unit): LinearLayout = LinearLayout(this).apply {
     orientation = LinearLayout.VERTICAL
     setPadding(32, 96, 32, 32)
     build()
-    setContentView(this)
+    setContentView(if (scroll) ScrollView(context).also { it.addView(this) } else this)
 }
 
 internal fun LinearLayout.label(text: String, viewId: Int = View.NO_ID) = TextView(context).apply {

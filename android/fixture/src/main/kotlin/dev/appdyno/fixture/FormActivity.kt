@@ -16,7 +16,8 @@ class FormActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        column {
+        // a phone in landscape has its Send button past the window's edge
+        column(scroll = true) {
             label("Enter your details")
             val name = EditText(context).apply {
                 id = R.id.name_input
