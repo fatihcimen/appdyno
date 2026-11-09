@@ -317,7 +317,7 @@ export class IosRunnerLauncher {
    * before it connects. Found by the test alone, as the arguments between the device and the test change; `kill` keeps
    * to this device's.
    */
-  private async killServing() {
+  async killServing() {
     const serving = await run('pgrep', ['-f', `only-testing:${RUNNER_TEST}`]).then(
       (r) => r.stdout,
       () => '',

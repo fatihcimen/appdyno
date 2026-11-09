@@ -1,5 +1,6 @@
 import type { NewDevice, Startable, VirtualDevices } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { IosRunnerLauncher } from './runner.js';
 import type { Simctl } from './simctl.js';
 
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
@@ -23,7 +24,10 @@ export class Simulators implements VirtualDevices {
   readonly kind = 'simulator';
   readonly platform = 'ios';
 
-  constructor(private readonly simctl: Simctl) {}
+  constructor(
+    private readonly simctl: Simctl,
+    private readonly endRunner = (udid: string) => new IosRunnerLauncher(udid).killServing(),
+  ) {}
 
   async catalog() {
     const { devicetypes, runtimes } = JSON.parse(
@@ -70,7 +74,12 @@ export class Simulators implements VirtualDevices {
     return id;
   }
 
-  shutdown(id: string) {
-    return this.simctl.shutdown(id);
+  /**
+   * Its runner ends first, whoever started it: one alive as its simulator shut down booted it again 1 to 3 s later, and
+   * shut it down once more about 30 s after, so a boot just after it answered up and the simulator was off again.
+   */
+  async shutdown(id: string) {
+    await this.endRunner(id);
+    await this.simctl.shutdown(id);
   }
 }
