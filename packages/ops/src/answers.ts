@@ -182,9 +182,14 @@ type Aftermath = {
   settleMs?: number | undefined;
   /** What a `scroll_to` looked for is there: it compares with its own last swipe, not with before the call. */
   found?: boolean;
-  /** A launch of what is in front expects no change. */
-  launched?: boolean;
+  /** The app a launch started: a launch of what is in front expects no change. */
+  launched?: string | undefined;
+  /** The app was in front on the last read before the action, or the action launched it. */
+  ran: boolean;
 };
+
+/** Whether the selected app was in front on the last read before an action: what it ran as when the action began. */
+const inFront = (s: Session) => !!s.appId && s.fresh?.foreground === s.appId;
 
 const headerOf = (screen: Screen, clean: Clean) =>
   `${screen.foreground ? `foreground: ${screen.foreground}\n` : ''}${renderFolded(screen.list, clean)}`;
@@ -203,7 +208,7 @@ async function afterAction(
   const diff = d && diffText(d, screen.list.length, clean);
   const changed = o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined;
   const fg = await noticed(s, screen, changed === false || !!o.launched);
-  const appDied = await appDeath(s, screen, o.pid, o.started, clean);
+  const appDied = await appDeath(s, screen, o.pid, o.started, clean, o.ran);
   const busy = o.settled === false ? o.busy : [];
   const moving =
     o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
@@ -254,6 +259,7 @@ async function act(
   // the last read before the action, which a ref's lookup may have just made
   const base = s.fresh?.list ?? before;
   const aimed = s.fresh?.hash;
+  const ran = inFront(s);
   s.acted();
   if (read === 'none') s.unsettled = { at: Date.now(), hash: aimed };
   const said = typeof done === 'string' ? done : done(r);
@@ -274,6 +280,7 @@ async function act(
     started,
     settleMs: r.settle?.ms,
     found: isFound,
+    ran,
   });
 }
 
@@ -281,7 +288,14 @@ async function act(
 type Said = string | ((screen: Screen | undefined) => string);
 const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said : said(screen));
 
-async function afterChange(clean: Clean, s: Session, said: Said, read: ReadMode, launched = false) {
+async function afterChange(
+  clean: Clean,
+  s: Session,
+  said: Said,
+  read: ReadMode,
+  launched?: string,
+) {
+  const ran = inFront(s) || (!!launched && launched === s.appId);
   const started = Date.now();
   const before = s.shown;
   const base = s.fresh?.list ?? before;
@@ -300,6 +314,7 @@ async function afterChange(clean: Clean, s: Session, said: Said, read: ReadMode,
     started,
     pid: undefined,
     launched,
+    ran,
   });
 }
 
@@ -321,7 +336,7 @@ export function answersFor(ctx: ServerContext) {
       found?: () => boolean,
     ) => act(clean, s, read, run, done, found),
     settleRead,
-    afterChange: (s: Session, said: Said, read: ReadMode, launched?: boolean) =>
+    afterChange: (s: Session, said: Said, read: ReadMode, launched?: string) =>
       afterChange(clean, s, said, read, launched),
   };
 }

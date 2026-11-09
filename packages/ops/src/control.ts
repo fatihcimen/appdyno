@@ -163,7 +163,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
           });
           reportProgress(`launching ${pkg}`);
           await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
-          return afterChange(s, `built and launched ${pkg}`, read, true);
+          return afterChange(s, `built and launched ${pkg}`, read, pkg);
         }
         case 'launch': {
           const pkg = appOf(s, app);
@@ -171,7 +171,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
           await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
           // every platform's launch with args stops a running app first
-          return afterChange(s, launchSaid(pkg, ran, true), read, true);
+          return afterChange(s, launchSaid(pkg, ran, true), read, pkg);
         }
         case 'grant':
         case 'revoke': {

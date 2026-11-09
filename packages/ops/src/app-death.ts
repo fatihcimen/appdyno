@@ -24,7 +24,9 @@ async function reportOf(s: Session, since: number, clean: Clean) {
 
 /**
  * The app's end during an action: its process is gone from the front, or another one has taken over
- * (Android restarts a crashed app at once, so the screen alone would not tell).
+ * (Android restarts a crashed app at once, so the screen alone would not tell). `ran`: it was in front on the read
+ * before the action, or the action launched it; an app not running then, with no process before either, did not die
+ * in it, as one a link never opened.
  */
 export async function appDeath(
   s: Session,
@@ -32,6 +34,7 @@ export async function appDeath(
   wasPid: string | undefined,
   since: number,
   clean: Clean,
+  ran: boolean,
 ) {
   if (!s.appId) return undefined;
   if (s.device.appPid) {
@@ -42,7 +45,7 @@ export async function appDeath(
       return reportOf(s, since, clean);
     }
   }
-  if (!screen.foreground || screen.foreground === s.appId) return undefined;
+  if (!screen.foreground || screen.foreground === s.appId || !(ran || wasPid)) return undefined;
   if (await s.device.appRunning(s.appId).catch(() => true)) return undefined;
   reportProgress('the app is gone: looking for its crash report');
   return (

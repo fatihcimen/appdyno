@@ -485,22 +485,54 @@ describe('crashes', () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
     await call('screen');
+    const read = device.current.bind(device);
+    let gone = true;
+    device.current = () => {
+      const t = read();
+      if (gone) t.windows = t.windows.filter((w) => w.pkg !== 'dev.app');
+      return t;
+    };
     device.running = false;
     device.permissionUp = true; // another window in front, the app's process gone
-    device.current = ((orig) => () => {
-      const t = orig();
-      t.windows = t.windows.filter((w) => w.pkg !== 'dev.app');
-      return t;
-    })(device.current.bind(device));
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' }];
     const r = await call('tap', { x: 5, y: 2390 });
     expect(r.text).toContain('the app died: APP CRASH(EXCEPTION) (/tmp/report.txt)');
     expect(r.structuredContent).toMatchObject({
       appDied: { reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' },
     });
+    // it died once: an action after that, with it still gone, says nothing more of it
     device.crashReports = [];
+    expect((await call('tap', { x: 5, y: 2390 })).text).not.toContain('the app died');
+    // back in front, then gone with no report
+    gone = false;
+    device.running = true;
+    device.permissionUp = false;
+    await call('screen');
+    gone = true;
+    device.running = false;
+    device.permissionUp = true;
     const again = await call('tap', { x: 5, y: 2390 });
     expect(again.text).toContain('the app died: its process is gone and no crash report says why');
+  });
+
+  it('says no app died of one a link opened another app over, where it never ran', async () => {
+    const device = new FakeDevice();
+    device.running = false;
+    device.current = ((orig) => () => {
+      const t = orig();
+      t.windows = t.windows.filter((w) => w.pkg !== 'dev.app');
+      return t;
+    })(device.current.bind(device));
+    device.permissionUp = true; // another app in front, and the selected one never started
+    const { call } = await connect(device);
+    const r = await call('open_link', { url: 'https://example.com' });
+    expect(r.text).not.toContain('the app died');
+    expect(r.structuredContent).not.toHaveProperty('appDied');
+    // a launch of it that leaves it gone, with no report, is a death at its start
+    const launched = await call('launch_app');
+    expect(launched.text).toContain(
+      'the app died: its process is gone and no crash report says why',
+    );
   });
 
   it('says so when the system restarted the app at once, only with a report to go by', async () => {

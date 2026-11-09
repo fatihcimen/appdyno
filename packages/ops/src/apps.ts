@@ -171,7 +171,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         if (!language) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
           await s.device.launch(pkg).catch(notThere(s, pkg));
-          return afterChange(s, launchSaid(pkg, ran), read, true);
+          return afterChange(s, launchSaid(pkg, ran), read, pkg);
         }
         const { apps } = s.device;
         const held = apps.languageStays
@@ -179,7 +179,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
           : undefined;
         await apps.launchWith(pkg, { language }).catch(notThere(s, pkg));
         const done = [`started ${pkg} in ${language}`, held].filter(Boolean).join('; ');
-        return afterChange(s, done, read, true);
+        return afterChange(s, done, read, pkg);
       },
     }),
     defineOp({
