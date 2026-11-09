@@ -269,8 +269,8 @@ export abstract class RpcDevice extends DeviceActions {
   }
 
   /** 0 portrait, 1 landscape (90°), 2 upside down, 3 landscape (270°); the rotation stays frozen. */
-  async setOrientation(rotation: 0 | 1 | 2 | 3) {
-    await this.call('orientation.set', { rotation }, TIMEOUTS.action);
+  async setOrientation(rotation: 0 | 1 | 2 | 3, kept = false) {
+    await this.call('orientation.set', { rotation, ...(kept && { kept }) }, TIMEOUTS.action);
   }
 
   /** Closes the connection; what runs on the device stays for the next host. */

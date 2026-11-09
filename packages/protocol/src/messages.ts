@@ -322,6 +322,8 @@ export const METHODS = {
   'orientation.set': {
     params: z.object({
       rotation: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+      /** The host wrote the lock down as a condition: the agent keeps the turn past its release of UI automation. */
+      kept: z.boolean().optional(),
     }),
     result: z.object({}),
   },

@@ -773,7 +773,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
     await other.read(APP);
     other.close();
     vi.unstubAllEnvs();
-    await new Promise((r) => setTimeout(r, 3_000));
+    // past the grace an agent its host may still wait for has, 60 s from its start
+    await new Promise((r) => setTimeout(r, 62_000));
     await d.read(APP);
     const { pid } = helloOf(d);
     const agents = await d.shell(`pgrep -f '^app_process .*[d]ev.appdyno.agent.Main'; true`);
@@ -783,7 +784,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(line).toMatch(/--token-file \S+\.token/);
     expect(line).not.toMatch(/--token /);
     expect((await d.shell('ls /data/local/tmp/appdyno | grep -c token; true')).trim()).toBe('0');
-  });
+  }, 180_000);
 
   it('takes UI automation over from an agent killed a moment ago, which the system keeps for about 2 s', async () => {
     await d.read(APP);

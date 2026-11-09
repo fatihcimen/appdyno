@@ -86,6 +86,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         "locales" -> Reply(JSONObject().put("tags", OneValue.tags(p)?.let(Locales::set) ?: Locales.get()))
 
         "orientation.set" -> {
+            automation.turning(OneValue.kept(p))
             automation.ua.setRotation(OneValue.rotation(p))
             Reply(JSONObject())
         }

@@ -61,7 +61,7 @@ kendisi başarısız sayar ve `cancel {id}` gönderir. Cihaz işi tek bir thread
 | `app.target` (iOS)                                       | `pkg` (bundle id)                                                                                       | –                                                                                    |
 | `app.labels` (Android)                                   | –                                                                                                       | `apps`: bir launcher'ın gösterdiği her uygulamanın `id`, `name`'i                    |
 | `clipboard.set` / `clipboard.get`                        | `text` / –                                                                                              | – / `text?`                                                                          |
-| `orientation.set`                                        | `rotation` 0–3 (sabitlenir)                                                                             | –                                                                                    |
+| `orientation.set`                                        | `rotation` 0–3 (sabitlenir), `kept?`                                                                    | –                                                                                    |
 | `animations.set`                                         | `off`                                                                                                   | –                                                                                    |
 | `rest.wait`                                              | –                                                                                                       | –                                                                                    |
 | `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                              | `issues`, `truncated`, `elapsedMs`                                                   |
@@ -305,8 +305,8 @@ okunup not edilir, böylece hiçbiri diğerinin üstüne geri yükleme yapmaz.
 `orientation.set {rotation}` ekranı o dönüşte sabitler, bu da döndürme kilidini etkinleştirir. Bir host bulduğu kilidi
 ve kullanıcı dönüşünü (`accelerometer_rotation`, `user_rotation`) bir koşul olarak not eder; bunlar
 `device_setting restore` ile ve oturum sonunda, komut satırınınki yalnızca restore ile geri konur. Sistem, ajan UI
-automation'ı host'lar arasında bıraktığında onun bağlandığında bulduğu dönüşü geri koyar, bu yüzden ajan dönüşü
-ondan sonra yeniden yazar.
+automation'ı bıraktığında onun son bağlandığında bulduğu dönüşü geri koyar, bu yüzden ajan host'un not ettiği,
+`kept` ile gelen bir dönüşü ondan sonra yeniden yazar; başka biri, bir penceredeki kişinin dönüşü gibi, önceki haline döner.
 
 ### Erişilebilirlik denetimi
 
@@ -444,7 +444,7 @@ yalnızca komut satırı ajanınkiyse) ve değiştirilir; ancak bu Mac'in başka
 host'ları tek bir ajanı paylaşır, çünkü bir cihazın verebileceği tek bir UI automation bağlantısı vardır ve birbirinin ajanını değiştiren
 iki build, ikisi çalıştığı sürece cihazı birbirinden alırdı; bir güncellemenin bıraktığı da budur: zaten yeni sürüme geçmiş bir istemcinin
 yanında açık bir hub. Bu yüzden ajan kalır, daha yeni host da onu kullanır ve bu kendisine söylenir; bu, ajanın son host'u
-gidene kadar sürer; durum klasöründeki `agent-hosts/<serial>.json` onları listeler ve bir sürecin bitişi onu listeden çıkarır. Başlayan bir ajan, bağlı hiçbir host olmadan dinleyen diğer her ajanımızı sonlandırır, çünkü başka bir durum klasöründen gelen bir host geride bir tane bırakır; shell soket tablosunu okuyamadığında hiçbirini sonlandırmaz. O ajanın
+gidene kadar sürer; durum klasöründeki `agent-hosts/<serial>.json` onları listeler ve bir sürecin bitişi onu listeden çıkarır. Başlayan bir ajan, bağlı hiçbir host olmadan dinleyen ve 60 s çalışmış, yani bir host'un yeni bir ajana yanıt için verdiği süreyi doldurmuş diğer her ajanımızı sonlandırır, çünkü başka bir durum klasöründen gelen bir host geride bir tane bırakır; shell soket tablosunu okuyamadığında hiçbirini sonlandırmaz. O ajanın
 protokolünü konuşamayan bir host, onu kullananın pid'iyle reddedilir. Bir iOS runner'ı da aynı
 kurala uyar ve onu bir seferde tek bir host, durum klasöründeki `ios-<udid>.starting` ile başlatır: bir cihaz tek bir runner'a hizmet eder ve
 runner'ın durumu ancak yanıt verdiğinde yazılır; bu yüzden iki host'un aynı anda başlattığı iki runner telefonu birbirinden aldı ve kaybeden

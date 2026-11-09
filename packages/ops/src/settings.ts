@@ -135,14 +135,14 @@ export async function holdingCondition<T>(s: Session, name: SettingName, during:
  * `turn` turns the screen, which sets the rotation lock: what it found is written down first and put back as any
  * condition, at restore and the session's end. A device that has none to read (iOS) turns all the same.
  */
-export async function turning(s: Session, turn: () => Promise<void>) {
+export async function turning(s: Session, turn: (kept: boolean) => Promise<void>) {
   await s.conditions.run(async () => {
     const held = await writeDown(s, s.device.settings, 'orientation').catch((e: unknown) => {
       if (e instanceof DeviceError && e.code === 'UNSUPPORTED') return undefined;
       throw e;
     });
     try {
-      await turn();
+      await turn(held !== undefined);
     } catch (e) {
       if (held?.first && (await readsAsItWas(s, 'orientation'))) forget(s, 'orientation');
       throw e;

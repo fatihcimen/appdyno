@@ -71,6 +71,18 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     expect(lock()).toEqual(was);
   });
 
+  it('leaves a turn no condition wrote down to UI automation, which puts the rotation back when it is let go', async () => {
+    const lock = () =>
+      ['accelerometer_rotation', 'user_rotation'].map((k) => adb('settings', 'get', 'system', k));
+    const was = lock();
+    // as the hub's Rotate turns it: straight to the device, nothing written down
+    const { device } = await ctx.session();
+    await device.setOrientation(1);
+    expect(lock()).toEqual(['0', '1']);
+    device.close();
+    await until('the rotation back', () => lock().join() === was.join());
+  });
+
   it('puts text_size back as the device had it, unset or 1.0, and the languages the system writes beside it', async () => {
     const read = () =>
       ['font_scale', 'system_locales'].map((k) => adb('settings', 'get', 'system', k));

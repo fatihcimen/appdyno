@@ -61,7 +61,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `app.target` (iOS)                                       | `pkg` (bundle id)                                                                                        | –                                                                                    |
 | `app.labels` (Android)                                   | –                                                                                                        | `apps`: `id`, `name` of each app a launcher shows                                    |
 | `clipboard.set` / `clipboard.get`                        | `text` / –                                                                                               | – / `text?`                                                                          |
-| `orientation.set`                                        | `rotation` 0–3 (frozen)                                                                                  | –                                                                                    |
+| `orientation.set`                                        | `rotation` 0–3 (frozen), `kept?`                                                                         | –                                                                                    |
 | `animations.set`                                         | `off`                                                                                                    | –                                                                                    |
 | `rest.wait`                                              | –                                                                                                        | –                                                                                    |
 | `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                                   |
@@ -305,8 +305,8 @@ value read and written down, so neither restores over the other.
 `orientation.set {rotation}` freezes the screen at that rotation, which turns the rotation lock on. A host writes the
 lock and the user rotation it found (`accelerometer_rotation`, `user_rotation`) down as a condition, put back at
 `device_setting restore` and at the session's end, a command line's at restore only. The system puts back the rotation
-it found when UI automation connected once the agent lets it go between hosts, so the agent writes the turn back
-after that.
+it found when UI automation last connected once the agent lets it go, so the agent writes back a turn sent with
+`kept`, which the host wrote down; any other goes back to how it was before it, as a person's turn in a window.
 
 ### Accessibility audit
 
@@ -444,7 +444,7 @@ only when its command line is the agent's) and replaced, unless another live pro
 of a device share one agent, as a device has one UI automation connection to give, and two builds replacing each other's
 agent would take the device from each other for as long as both run, which is what an update leaves: a hub open
 beside a client that has already moved on. So the agent stays, and the newer host uses it and is told, until its last host
-has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. An agent that starts ends every other agent of ours that listens with no host connected, as a host from another state folder leaves one; where the shell cannot read the table of sockets, it ends none. A host
+has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. An agent that starts ends every other agent of ours that listens with no host connected and has run 60 s, the time a host gives a new agent to answer, as a host from another state folder leaves one; where the shell cannot read the table of sockets, it ends none. A host
 that cannot speak that agent's protocol is refused with the pid of the one that uses it. An iOS runner keeps to the same
 rule, and one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its
 state is written only once it answers, so two runners that two hosts started at once took the phone from each other and the one that lost heard

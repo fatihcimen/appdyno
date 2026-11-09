@@ -144,7 +144,8 @@ export type Device = {
   frontApp?(): Promise<string | undefined>;
   setClipboard(text: string): Promise<void>;
   getClipboard(): Promise<string | undefined>;
-  setOrientation(rotation: 0 | 1 | 2 | 3): Promise<void>;
+  /** `kept`: the host wrote the rotation lock down, and puts it back itself. */
+  setOrientation(rotation: 0 | 1 | 2 | 3, kept?: boolean): Promise<void>;
   openUrl(url: string, pkg?: string): Promise<void>;
   launch(pkg: string): Promise<void>;
   /** Before `open`, when a first call is to launch this app: `launch` then takes up what began here. */

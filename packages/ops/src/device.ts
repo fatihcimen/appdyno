@@ -120,8 +120,8 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       annotations: ACT,
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
-        await turning(s, () =>
-          s.device.setOrientation(ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3),
+        await turning(s, (kept) =>
+          s.device.setOrientation(ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3, kept),
         );
         return afterChange(s, `orientation: ${orientation}`, read);
       },

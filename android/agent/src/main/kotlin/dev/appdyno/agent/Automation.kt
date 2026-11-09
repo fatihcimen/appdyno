@@ -94,18 +94,36 @@ class Automation private constructor(private val looper: Looper) {
     }
 
     /** Closes the connection (accessibility goes off in the apps); the next use opens it again. */
+    /** The last turn of the screen was one its host wrote down. */
+    @Volatile
+    private var keepTurn = false
+
+    /** The rotation before the first turn no host wrote down, which goes back when the automation is let go. */
+    private var beforeTurn: List<String>? = null
+
+    private fun rotation() = ROTATION.map { sh("settings", "get", "system", it).trim() }
+
+    /** Before a turn: `kept`, its host wrote the lock down and puts it back itself. */
+    @Synchronized
+    fun turning(kept: Boolean) {
+        keepTurn = kept
+        beforeTurn = if (kept) null else beforeTurn ?: rotation()
+    }
+
     fun release() = synchronized(this) {
         val ua = current ?: return@synchronized
         current = null
-        // the system puts back the rotation it found when the automation connected: a turn a host asked for stays, and
-        // the host that wrote it down puts it back
-        val turn = ROTATION.map { sh("settings", "get", "system", it).trim() }
+        // the system puts back the rotation it found when the automation last connected, which may be a turn: a turn a
+        // host wrote down stays, and that host puts it back; any other goes back to how it was before, as a person's turn
+        // in a window does
+        val turn = if (keepTurn) rotation() else beforeTurn
+        beforeTurn = null
         try {
             UiAutomation::class.java.getDeclaredMethod("disconnect").apply { isAccessible = true }.invoke(ua)
         } catch (e: Throwable) {
             System.err.println("UI automation did not disconnect: $e")
         }
-        sh("sh", "-c", SettingsScript.restore("system", ROTATION.zip(turn)))
+        if (turn != null) sh("sh", "-c", SettingsScript.restore("system", ROTATION.zip(turn)))
     }
 
     private fun open(): UiAutomation {

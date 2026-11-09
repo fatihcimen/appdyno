@@ -125,6 +125,9 @@ object OneValue {
 
     fun rotation(p: JSONObject) = p.getInt("rotation")
 
+    /** The host wrote the rotation lock down, and puts it back itself. */
+    fun kept(p: JSONObject) = p.optBoolean("kept")
+
     fun maxNodes(p: JSONObject) = p.getInt("maxNodes")
 
     fun id(p: JSONObject) = p.getInt("id")

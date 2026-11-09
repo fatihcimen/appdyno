@@ -23,13 +23,21 @@ class StraysTest {
         line("03", 5),
     ).joinToString("\n")
 
+    private val old = { _: Int -> Strays.GRACE_MS }
+
     @Test
     fun anAgentListeningWithNoHostIsEndedAndNoOtherProcess() {
-        assertEquals(listOf(11), Strays.of(10, procs, unix))
+        assertEquals(listOf(11), Strays.of(10, procs, unix, old))
     }
 
     @Test
     fun nothingIsEndedWhereTheTableOfSocketsCannotBeRead() {
-        assertEquals(emptyList<Int>(), Strays.of(10, procs, ""))
+        assertEquals(emptyList<Int>(), Strays.of(10, procs, "", old))
+    }
+
+    @Test
+    fun anAgentItsHostMayStillWaitForIsLeftAndOneWhoseAgeIsUnknown() {
+        assertEquals(emptyList<Int>(), Strays.of(10, procs, unix) { Strays.GRACE_MS - 1 })
+        assertEquals(emptyList<Int>(), Strays.of(10, procs, unix) { null })
     }
 }
