@@ -13,7 +13,9 @@ export function guideFor(
   providers: DeviceProvider[],
   o: { usb: PhoneLook['usb']; phones: ListedPhone[]; has: PhoneLook['has'] },
 ): Guide {
-  const phone = o.phones.find((p) => p.need || !p.ready) ?? o.phones[0];
+  // a phone this server may not drive is no one's to guide
+  const phones = o.phones.filter((p) => p.allowed !== false);
+  const phone = phones.find((p) => p.need || !p.ready) ?? phones[0];
   const owner = phone && providers.findLast((p) => p.handles(phone.serial));
   for (const provider of owner ? [owner] : providers) {
     const made = provider.guide?.({ ...o, ...(phone && { phone }) });
@@ -37,6 +39,7 @@ const isPhone = (d: { serial: string; state: string }) =>
 export async function listedPhones(
   providers: DeviceProvider[],
   switches: (serial: string) => Promise<ListedPhone['switches']>,
+  allowed: (serial: string) => boolean = () => true,
 ): Promise<ListedPhone[]> {
   const listed = (await Promise.all(providers.map((p) => p.list().catch(() => [])))).flat();
   const twins = new Set(listed.flatMap((d) => d.sameAs ?? []));
@@ -46,6 +49,8 @@ export async function listedPhones(
       // the phone is its row on a cable, and what is on the network says so of it
       .filter((d) => !(d.sameAs && listed.some((other) => other.serial === d.sameAs)))
       .map(async (d) => {
+        // what the allow list leaves out is asked nothing, as list_devices asks it nothing
+        if (!allowed(d.serial)) return { ...d, allowed: false as const };
         const provider = providers.findLast((p) => p.handles(d.serial));
         const need = await provider?.need?.(d).catch(() => undefined);
         const own =

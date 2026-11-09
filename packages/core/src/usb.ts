@@ -52,6 +52,8 @@ export type ListedPhone = ListedDevice & {
   switches?: { input: string; install: string };
   /** It is also there by the network. */
   onWifi?: boolean;
+  /** This server may not drive it, by its allow list: nothing is asked of it. */
+  allowed?: false;
 };
 
 /** What a driver asks of a person for a phone of its kind, and what is said in place of a step. */

@@ -145,7 +145,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
 }
 
 /** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
-const servicesOfHub = (measurements: string) => {
+const servicesOfHub = (ctx: ServerContext) => {
   const server = serverOf(root, manifestOf(root).name);
   return hubServices({
     home: homedir(),
@@ -155,7 +155,8 @@ const servicesOfHub = (measurements: string) => {
     doctor: async () => [installCheck(root), ...(await doctor({ providers: providers() }))],
     self: [process.execPath, fileURLToPath(import.meta.url)],
     providers: providers(),
-    measurements,
+    measurements: ctx.measurementsDir,
+    allowed: (serial) => ctx.allowed(serial),
   });
 };
 
@@ -228,7 +229,7 @@ async function main(): Promise<number> {
     case 'hub':
       return hubCommand(rest, {
         context: contextFrom,
-        hub: (ctx, run) => runHub(ctx, { ...run, services: servicesOfHub(ctx.measurementsDir) }),
+        hub: (ctx, run) => runHub(ctx, { ...run, services: servicesOfHub(ctx) }),
       });
     case 'pair':
       return pairCommand(rest);

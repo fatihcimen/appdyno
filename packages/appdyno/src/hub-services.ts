@@ -95,6 +95,8 @@ export type ServicesOptions = {
   self?: string[];
   /** Who to ask of phones; none, for what has no phones to speak of. */
   providers?: DeviceProvider[];
+  /** Which devices this hub may drive: one its allow list leaves out is asked nothing. */
+  allowed?: (serial: string) => boolean;
   /** Where kept runs are, for the apps they were made of. */
   measurements?: string;
 };
@@ -178,7 +180,7 @@ export function hubServices(o: ServicesOptions): HubServices {
   const look = async (fresh: boolean) => {
     const known = await found(fresh);
     const adb = new Adb();
-    const phones = await listedPhones(o.providers ?? [], (serial) => ownSwitches(adb, serial));
+    const phones = await listedPhones(o.providers ?? [], (s) => ownSwitches(adb, s), o.allowed);
     const has = (tool: string) => !known.some((c) => c.name === tool && !c.ok);
     const rows = clientRows(where);
     const guide = guideFor(o.providers ?? [], { usb: await usbPhones(), phones, has });

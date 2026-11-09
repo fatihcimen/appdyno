@@ -74,6 +74,33 @@ describe('going without a cable', () => {
     );
     expect(seen.map((p) => p.serial)).toEqual(['R68']);
   });
+
+  it('asks nothing of a phone the allow list leaves out, lists it as not allowed, and guides none to it', async () => {
+    const list = () =>
+      Promise.resolve([
+        { serial: 'R5C', state: 'unauthorized', ready: false, link: 'USB' as const },
+        { serial: 'R68', state: 'device', ready: true, link: 'USB' as const },
+      ]);
+    const asked: string[] = [];
+    const need = (d: { serial: string }) => {
+      asked.push(`need ${d.serial}`);
+      return Promise.resolve(undefined);
+    };
+    const seen = await listedPhones(
+      [{ list, need, handles: () => true, open: () => undefined }] as never,
+      (serial) => {
+        asked.push(`switches ${serial}`);
+        return Promise.resolve(undefined);
+      },
+      (serial) => serial === 'R68',
+    );
+    expect(asked).toEqual(['need R68', 'switches R68']);
+    expect(seen).toEqual([
+      expect.objectContaining({ serial: 'R5C', allowed: false }),
+      expect.not.objectContaining({ allowed: false }),
+    ]);
+    expect(guideFor({ usb: [samsung], phones: seen, has: all }).serial).toBe('R68');
+  });
 });
 
 describe('the phone in a person hand', () => {
