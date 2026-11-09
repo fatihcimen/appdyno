@@ -10,7 +10,7 @@ static const double kBetween = 10;
 @end
 
 @implementation MVLinkPane {
-  NSTextField *_field, *_app;
+  NSTextField *_field, *_app, *_why;
   NSString *_suggested, *_linksWhy;
   NSArray *_recentLinks, *_appLinks;
   MVAccentButton *_open;
@@ -34,7 +34,11 @@ static const double kBetween = 10;
     ask.spacing = 8;
     _answer = [MVAnswerView new];
     _none = MVEmptyCard(@"clock.arrow.circlepath", @"Links opened here stay, for this device.");
-    NSStackView *stack = [NSStackView stackViewWithViews:@[ask, MVFieldPlate(_app, nil), MVPaneNote(@"Any scheme: a web link, a universal link or App Link, or the app's own."), _answer, _none]];
+    // why the device cannot tell an app's links, whole: a row of the list has one line, and cut it
+    _why = MVPaneNote(@"");
+    _why.maximumNumberOfLines = 0;
+    _why.hidden = YES;
+    NSStackView *stack = [NSStackView stackViewWithViews:@[ask, MVFieldPlate(_app, nil), MVPaneNote(@"Any scheme: a web link, a universal link or App Link, or the app's own."), _answer, _why, _none]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeWidth;
     stack.spacing = 6;
@@ -136,13 +140,10 @@ static MVRow *linkRow(NSString *url, NSString *detail, NSString *symbol) {
     if (![link isKindOfClass:NSDictionary.class] || ![link[@"url"] isKindOfClass:NSString.class]) continue;
     [rows addObject:linkRow(link[@"url"], linkDetail(link), @"arrow.up.forward.app")];
   }
-  // where the device cannot tell them, it says why, where they would stand
-  if (rows.count == before && _linksWhy.length) {
-    MVRow *why = [MVRow new];
-    why.title = MVWord([[_linksWhy substringToIndex:1].uppercaseString stringByAppendingString:[_linksWhy substringFromIndex:1]]);
-    why.symbol = @"info.circle";
-    [rows addObject:why];
-  }
+  // where the device cannot tell them, it says why, over where they would stand
+  BOOL why = rows.count == before && _linksWhy.length;
+  _why.stringValue = why ? MVWord([[_linksWhy substringToIndex:1].uppercaseString stringByAppendingString:[_linksWhy substringFromIndex:1]]) : @"";
+  _why.hidden = !why;
   if (rows.count > before) [rows insertObject:[MVRow headerNamed:MVWord(@"This app's links")] atIndex:before];
   _recent.rows = rows;
   [_recent selectKey:nil];
@@ -152,6 +153,10 @@ static MVRow *linkRow(NSString *url, NSString *detail, NSString *symbol) {
 
 - (NSArray<MVRow *> *)rows {
   return _recent.rows;
+}
+
+- (NSString *)why {
+  return _why.hidden ? @"" : _why.stringValue;
 }
 
 @end

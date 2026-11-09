@@ -93,6 +93,8 @@ void MVPaneSend(NSView<MVAsks> *pane, NSDictionary *message);
 /// A link in the field, as typed, and the app where one is given.
 - (void)fill:(NSString *)url app:(nullable NSString *)app;
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
+/// Why the device cannot tell the app's links, where it says so.
+@property(nonatomic, readonly) NSString *why;
 @end
 
 /// A push to an app by `push`: the types this device takes, the fields of the one chosen or its payload, and what came of it.

@@ -60,11 +60,15 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
                @"name": @"openLink",
                @"suggested": @[],
                @"linksWhy": @"an iPhone's installed app is not read from here: list the links of its build on a simulator"}];
-  MVCheck(@"links: a device that cannot tell an app's links says why where they would stand", [pane.rows.lastObject.title hasPrefix:@"An iPhone's installed app"], pane.rows.lastObject.title);
-  // drawn, as the pane on an iPhone with an app of a person's in front: a row with no line beneath ended the window
-  [pane.window displayIfNeeded];
+  MVCheck(@"links: a device that cannot tell an app's links says why, whole, over where they would stand", [pane.why hasPrefix:@"An iPhone's installed app"] && ![[pane.rows valueForKey:@"title"] containsObject:MVWord(@"This app's links")], pane.why);
+  // a list's row with no line beneath, as that note stood, ended the window as it was drawn
   NSTableView *table = [[pane valueForKey:@"_recent"] documentView];
-  MVCheck(@"links: and that row is drawn, with no line beneath it", [table viewAtColumn:0 row:table.numberOfRows - 1 makeIfNecessary:NO] != nil, nil);
+  MVRow *bare = [MVRow new];
+  bare.title = @"A row with no line beneath";
+  [(MVList *)[pane valueForKey:@"_recent"] setRows:@[bare]];
+  [(NSView *)[pane valueForKey:@"_recent"] setHidden:NO];
+  [pane.window displayIfNeeded];
+  MVCheck(@"links: and a row with no line beneath is drawn", [table viewAtColumn:0 row:0 makeIfNecessary:NO] != nil, nil);
   [pane show:@{@"op": @"answer",
                @"name": @"openLink",
                @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
