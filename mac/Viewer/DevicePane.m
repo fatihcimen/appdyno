@@ -5,7 +5,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kBetween = 10, kControlWide = 132, kFromWide = 96, kMark = 6, kHeadingGap = 18;
+static const double kBetween = 10, kControlWide = 132, kChoiceWide = 164, kFromWide = 96, kMark = 6, kHeadingGap = 18;
 
 typedef NS_ENUM(NSInteger, MVRowKind) { MVRowSwitch,
                                         MVRowChoice,
@@ -222,7 +222,7 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
       NSPopUpButton *choice = [NSPopUpButton new];
       choice.target = self;
       choice.action = @selector(chosen:);
-      [choice.widthAnchor constraintEqualToConstant:kControlWide].active = YES;
+      [choice.widthAnchor constraintEqualToConstant:kChoiceWide].active = YES;
       row.control = choice;
       break;
     }
