@@ -30,6 +30,8 @@ static NSTextField *caption(NSString *text) {
 
 static NSTextField *value(void) {
   NSTextField *field = MVText(@"–", MVStyleSub);
+  // a stream's values are the device's: its encoder's name and how it mirrors, as the agent says them
+  MVHoldContent(field);
   field.font = [NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightMedium];
   field.textColor = MVInkColor();
   field.alignment = NSTextAlignmentRight;
