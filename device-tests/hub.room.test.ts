@@ -30,9 +30,6 @@ const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
 const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
 /** Where the fixture's Fetch stands on a simulator's network screen, under its address field, as a share of the screen. */
 const FETCH_AT = { x: 0.09, y: 0.184 };
-/** Where the fixture's accessibility screen has its button labelled Small on a simulator, and its Continue on Android. */
-const SMALL_AT = { x: 0.06, y: 0.24 };
-const CONTINUE_AT = { x: 0.5, y: 0.57 };
 /** Where the fixture's Crash stands on an Android screen of 1080 by 2400. */
 const CRASH_AT = { x: 0.5, y: 295 / 2400 };
 /** Where a simulator's Open stands on the "Open in …?" it asks each time a link from simctl opens the fixture. */
@@ -346,7 +343,7 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
           2 * LIVE_MS,
         );
         const { issues } = ofIt('audit', (m) => m.state === 'done').at(-1) as {
-          issues: { rect?: unknown }[];
+          issues: { label?: string; rect?: { x: number; y: number; w: number; h: number } }[];
         };
         expect(issues.length).toBeGreaterThan(0);
         // one chosen is marked where it stands on the picture
@@ -363,18 +360,20 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
         await looked('apps');
         tab('tabFlows');
         await quiet(2_000);
+        // the fixture's button labelled Small, where its audit found it
+        const small = issues.find((i) => i.label === 'Small' && i.rect)?.rect;
+        expect(small).toBeDefined();
+        const at = {
+          x: (small?.x ?? 0) + (small?.w ?? 0) / 2,
+          y: (small?.y ?? 0) + (small?.h ?? 0) / 2,
+        };
         for (let i = 0; i < 3; i++) {
-          link.send({
-            op: 'poke',
-            stage: shown,
-            ...(simulator ? SMALL_AT : CONTINUE_AT),
-            hover: true,
-          });
+          link.send({ op: 'poke', stage: shown, ...at, hover: true });
           await quiet(700);
         }
         await until(
           'the element under the pointer',
-          () => ofIt('element', (m) => typeof m.role === 'string').length > 0,
+          () => ofIt('element', (m) => m.label === 'Small').length > 0,
           60_000,
         );
         await looked('flows');
