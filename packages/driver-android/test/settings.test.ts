@@ -479,6 +479,42 @@ describe('a text size', () => {
   });
 });
 
+describe('dark mode', () => {
+  it("reads as the device's own where it never set it, and goes back there by deleting what a change wrote", async () => {
+    const held: Record<string, string> = {};
+    let mode = 'no';
+    const one = (command: string) => {
+      const asked = /^cmd uimode night (yes|no|auto)/.exec(command)?.[1];
+      if (asked) {
+        mode = asked;
+        Object.assign(held, {
+          ui_night_mode: mode === 'yes' ? '2' : '1',
+          ui_night_mode_custom_type: '-1',
+          dark_theme_custom_start_time: '79200000000',
+          dark_theme_custom_end_time: '21600000000',
+        });
+      }
+      if (command.startsWith('cmd uimode night')) return `Night mode: ${mode}`;
+      const [, verb, key = ''] = /^settings (get|delete) secure (\w+)/.exec(command) ?? [];
+      if (verb === 'delete') held[key] = 'null';
+      return held[key] ?? 'null';
+    };
+    const exec = (_serial: string, command: string) =>
+      Promise.resolve(command.split('; ').map(one).join('\n'));
+    const settings = new AndroidSettings({ exec } as unknown as Adb, 'emulator-5554');
+    const was = await settings.get('dark_mode');
+    await settings.set('dark_mode', 'on');
+    const on = await settings.get('dark_mode');
+    await settings.set('dark_mode', was);
+    expect([was, on, await settings.get('dark_mode')]).toEqual([
+      'default (now off)',
+      'yes',
+      'default (now off)',
+    ]);
+    expect(Object.values(held).every((v) => v === 'null')).toBe(true);
+  });
+});
+
 describe("the whole device's languages", () => {
   it(
     'leave the text scale and the languages the device had unset still unset, when set and when put back',

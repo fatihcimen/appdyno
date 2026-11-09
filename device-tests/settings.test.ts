@@ -91,6 +91,24 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     expect(read()).toEqual(was);
   });
 
+  it('turns dark mode on and puts back what the device had, unset too', async () => {
+    const keys = [
+      'ui_night_mode',
+      'ui_night_mode_custom_type',
+      'dark_theme_custom_start_time',
+      'dark_theme_custom_end_time',
+    ];
+    const read = () => [
+      adb('cmd', 'uimode', 'night'),
+      ...keys.map((k) => adb('settings', 'get', 'secure', k)),
+    ];
+    const was = read();
+    await set(call, 'dark_mode', 'on');
+    expect(read()[0]).toBe('Night mode: yes');
+    await call('device_setting', { name: 'restore' });
+    expect(read()).toEqual(was);
+  });
+
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {
     await set(call, 'wifi', 'on');
     expect(await value(call, 'mobile_data')).toBe('on');

@@ -11,6 +11,15 @@ const ANIMATION_SCALES = [
   'animator_duration_scale',
 ];
 
+/** What `cmd uimode night` writes, of `secure`: a device that never set dark mode has none of them. */
+const NIGHT_KEYS = [
+  'ui_night_mode',
+  'ui_night_mode_custom_type',
+  'dark_theme_custom_start_time',
+  'dark_theme_custom_end_time',
+];
+const NIGHT_WORDS: Partial<Record<string, string>> = { yes: 'on', no: 'off' };
+
 /** Android's own: high contrast text, the nearest it has to increasing contrast. */
 const HIGH_CONTRAST = 'high_text_contrast_enabled';
 const NO_THERMAL =
@@ -132,8 +141,11 @@ export class AndroidSettings implements DeviceSettings {
 
   async get(name: SettingName, app?: string): Promise<string> {
     switch (name) {
-      case 'dark_mode':
-        return /Night mode: (\w+)/.exec(await this.sh('cmd uimode night'))?.[1] ?? 'no';
+      case 'dark_mode': {
+        const mode = /Night mode: (\w+)/.exec(await this.sh('cmd uimode night'))?.[1] ?? 'no';
+        const unset = (await this.sh('settings get secure ui_night_mode')).trim() === 'null';
+        return unset ? `default (now ${NIGHT_WORDS[mode] ?? mode})` : mode;
+      }
       case 'text_size': {
         const v = (await this.sh('settings get system font_scale')).trim();
         return v === 'null' ? 'default' : v;
@@ -337,10 +349,14 @@ export class AndroidSettings implements DeviceSettings {
   async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {
     switch (name) {
       case 'dark_mode': {
-        const mode = { on: 'yes', off: 'no' }[value] ?? value;
+        // `default (now off)`: the device's own, put back by deleting what the command writes
+        const unset = /^default \(now (\w+)\)$/.exec(value)?.[1];
+        const word = unset ?? value;
+        const mode = { on: 'yes', off: 'no' }[word] ?? word;
         if (!['yes', 'no', 'auto'].includes(mode))
           throw new DeviceError('INVALID_ARGUMENT', `dark_mode: on or off, not ${value}`);
         await this.sh(`cmd uimode night ${mode}`);
+        if (unset) await this.sh(NIGHT_KEYS.map((k) => `settings delete secure ${k}`).join('; '));
         return;
       }
       case 'text_size':
