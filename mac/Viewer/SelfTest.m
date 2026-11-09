@@ -372,6 +372,7 @@ int MVSelfTest(NSString *fixtures) {
   MVCheckConnect();
   MVCheckLinks();
   MVCheckPush();
+  MVCheckDevice();
   checkBroken();
   checkCodec(NO);
   checkCodec(YES);

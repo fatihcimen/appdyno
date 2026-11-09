@@ -101,7 +101,9 @@ static NSString *ms(id v) {
     _panes[MVPanePerf] = _perf;
     _flow = [[MVFlowPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPaneFlow] = _flow;
-    for (int i = MVPaneLogs; i <= MVPaneDevice; i++) _panes[i] = [self comingPane:@(kTabs[i].symbol)];
+    for (int i = MVPaneLogs; i < MVPaneDevice; i++) _panes[i] = [self comingPane:@(kTabs[i].symbol)];
+    _device = [MVDevicePane new];
+    _panes[MVPaneDevice] = _device;
     NSMutableArray *rules = [NSMutableArray arrayWithArray:@[
       [row.topAnchor constraintEqualToAnchor:self.topAnchor
                                     constant:8],
@@ -268,6 +270,7 @@ static NSString *ms(id v) {
 }
 
 - (id<MVSendPane>)answering:(NSString *)name {
+  if ([name isEqual:@"device"]) return _device;
   return [name isEqual:@"push"] ? _push : _links;
 }
 
@@ -294,7 +297,7 @@ static NSString *ms(id v) {
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
   _chosen = pane;
   if (self.onPane) self.onPane();
-  if (pane == MVPaneLinks || pane == MVPanePush) [[self answering:pane == MVPanePush ? @"push" : @"openLink"] ask];
+  if (pane == MVPaneLinks || pane == MVPanePush || pane == MVPaneDevice) [(id<MVSendPane>)_panes[pane] ask];
   if (pane == MVPaneApps && !_asked) {
     _asked = YES;
     MVEmitFrom(self, @{@"op": @"app", @"action": @"list"});

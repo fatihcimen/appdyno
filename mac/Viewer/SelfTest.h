@@ -47,6 +47,7 @@ void MVCheckPlaces(void);
 void MVCheckConnect(void);
 void MVCheckLinks(void);
 void MVCheckPush(void);
+void MVCheckDevice(void);
 void MVCheckHevc444(NSString *_Nullable fixtures);
 /// Lets what was sent reach a window kept behind.
 void MVPump(double seconds);

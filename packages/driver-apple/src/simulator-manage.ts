@@ -312,14 +312,18 @@ export class SimulatorSettings implements DeviceSettings {
         }
         return "the whole simulator: app for one app's launches";
       case 'proxy':
-        throw new DeviceError(
-          'UNSUPPORTED',
-          `a simulator follows the Mac's proxy, now ${await macProxy()}: set it on the Mac (in the proxy's own settings)`,
-        );
+        throw new DeviceError('UNSUPPORTED', await this.followsMac());
       default:
         await this.get(name);
     }
   }
+
+  async cannotSet(name: SettingName) {
+    return name === 'proxy' ? this.followsMac() : undefined;
+  }
+
+  private followsMac = async () =>
+    `a simulator follows the Mac's proxy, now ${await macProxy()}: set it on the Mac (in the proxy's own settings)`;
 }
 
 /** A simulator's one-time events; what it has no way to take says so. */

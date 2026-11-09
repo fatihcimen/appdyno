@@ -8,6 +8,7 @@ NSArray<NSArray<NSString *> *> *MVHelpMeanings(void) {
     @[MVWord(@"Flows"), MVWord(@"Records what you do on the device as steps that an AI client or a test can run again.")],
     @[MVWord(@"Apps"), MVWord(@"Lists, launches, quits and removes the apps on the device.")],
     @[MVWord(@"Activity"), MVWord(@"What an AI client did on this device, as runs of work that open to each step.")],
+    @[MVWord(@"Device"), MVWord(@"Sets the device's conditions, such as dark mode, text size, its network and where it is, and puts them back when the device leaves the window.")],
     @[MVWord(@"Frame rate"), MVWord(@"New pictures the device sends each second. A still screen sends none, and that is no fault.")],
     @[MVWord(@"CPU"), MVWord(@"What the app in front uses of the device's processor, read with a stream running, which costs the device too.")],
     @[MVWord(@"Memory"), MVWord(@"What the app in front holds on the device.")],

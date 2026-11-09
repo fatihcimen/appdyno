@@ -83,6 +83,8 @@ export type DeviceSettings = {
   get(name: SettingName, app?: string): Promise<string>;
   /** What the answer should add, where the change is less than its name says. */
   set(name: SettingName, value: string, app?: string): Promise<string | undefined>;
+  /** Why a condition this device reads cannot be changed here, in the words `set` refuses with; none: it can. */
+  cannotSet?(name: SettingName): Promise<string | undefined>;
 };
 
 /**

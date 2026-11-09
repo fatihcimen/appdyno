@@ -317,7 +317,7 @@ static NSString *readable(NSString *json) {
     args[name] = [name isEqual:@"data"] ? dataOf(value) : value;
   }
   _send.enabled = NO;
-  [_answer sending:MVFormat(@"Sending %@", @[_type.titleOfSelectedItem ?: @""])];
+  [_answer sending:MVWord([NSString stringWithFormat:@"Sending %@", _type.titleOfSelectedItem ?: @""])];
   MVPaneSend(self, @{@"op": @"control", @"name": @"push", @"args": args});
 }
 

@@ -65,7 +65,9 @@ export function conditionSends(
     try {
       const value = await readCondition(s, name);
       const on = SWITCHES.includes(name) ? switchOf(name, value) : undefined;
-      return { name, value, ...(on !== undefined && { on }), ...also };
+      // read, and yet not set from here: a simulator follows the Mac's proxy
+      const why = await s.device.settings.cannotSet?.(name);
+      return { name, value, ...(on !== undefined && { on }), ...(why && { why }), ...also };
     } catch (e) {
       return { name, why: e instanceof Error ? e.message : String(e), ...also };
     }
@@ -101,9 +103,14 @@ export function conditionSends(
         return;
       }
       // the whole device's: the app another pane named is no app of this one
-      const { answer } = await call('device', 'device_setting', args, '');
+      const { answer, data } = await call('device', 'device_setting', args, '');
       const setting = SETTINGS.find((n) => n === name);
-      tell('device', { ...answer, ...(setting && { conditions: await rows([setting]) }) });
+      // what reads as it did is no change, and the answer says so
+      const moved = answer.ok && !!(data as { changed?: unknown } | undefined)?.changed;
+      tell('device', {
+        ...answer,
+        ...(setting && { moved, conditions: await rows([setting]) }),
+      });
     },
 
     deviceLocation: async (m: ViewerMessage) =>

@@ -79,6 +79,13 @@ const MVWordRow MVWordTableHelp[] = {
     {"No token, or the wrong one.", "Token yok ya da yanlış."},
     {"409 on the HTTP server", "HTTP sunucusunda 409"},
     {"Another client holds the server. Wait 10 minutes from its last call, or stop the server.", "Sunucuyu başka bir istemci tutuyor. Son çağrısından sonra 10 dakika bekleyin ya da sunucuyu durdurun."},
+    // the Device pane's answers, filled by MVFormat
+    {"Setting %@", "%@ ayarlanıyor"},
+    {"Put back: %@", "Geri alındı: %@"},
+    {"%@ is now %@", "%1$@ artık %2$@"},
+    {"%@ already reads %@", "%1$@ zaten %2$@"},
+    {"A call from %@ is coming in", "%@ numarasından arama geliyor"},
+    {"The call from %@ ended", "%@ numarasından gelen arama bitti"},
 };
 
 const size_t MVWordCountHelp = sizeof MVWordTableHelp / sizeof MVWordTableHelp[0];

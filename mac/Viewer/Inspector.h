@@ -97,6 +97,14 @@ void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
 - (void)fill:(NSDictionary<NSString *, NSString *> *)fields;
 @end
 
+/// The device's conditions as it reads them, each changed by `device_setting`, the op an agent calls, and put back with
+/// the rest of what this session changed; what the device cannot do stands disabled, with why.
+@interface MVDevicePane : NSView <MVSendPane>
+/// For a test: a condition set as a person sets its control, by the op's names; what it shows, or why it cannot.
+- (void)set:(NSString *)name to:(NSString *)value;
+- (NSString *)shown:(NSString *)name;
+@end
+
 /// The panes of the Inspector, by the index `showPane:` takes, in the order their symbols stand.
 enum { MVPanePerf,
        MVPaneFlow,
@@ -122,6 +130,7 @@ enum { MVPanePerf,
 @property(nonatomic, readonly) MVActivityPane *activity;
 @property(nonatomic, readonly) MVLinkPane *links;
 @property(nonatomic, readonly) MVPushPane *push;
+@property(nonatomic, readonly) MVDevicePane *device;
 /// The pane an `answer` is for, by its name.
 - (id<MVSendPane>)answering:(NSString *)name;
 /// The pane chosen, by the index `showPane:` takes.
