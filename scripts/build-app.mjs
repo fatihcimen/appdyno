@@ -30,6 +30,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildGlassIcon, buildIcns, buildMenuGlyph } from './build-icons.mjs';
+import { download } from './download.mjs';
 
 /** The runtime, as nodejs.org publishes its digest: the long-term release in active support, which asks no newer macOS. */
 const NODE = {
@@ -109,13 +110,13 @@ function sizeOf(path) {
 }
 
 /** The pinned runtime, stripped: its symbols are a fifth of it, and nothing here reads them. */
-function runtime() {
+async function runtime() {
   const name = `node-${NODE.version}-darwin-arm64`;
   const archive = join(out, 'cache', `${name}.tar.xz`);
   if (!existsSync(archive)) {
     mkdirSync(dirname(archive), { recursive: true });
     const url = `https://nodejs.org/dist/${NODE.version}/${name}.tar.xz`;
-    sh('curl', '-sSfL', '--retry', '3', '-o', archive, url);
+    await download(url, archive);
   }
   if (sha256(archive) !== NODE.sha256) throw new Error(`${archive} is not the pinned runtime`);
   const unpacked = mkdtempSync(join(tmpdir(), 'appdyno-node-'));
@@ -152,7 +153,7 @@ async function traceProcessorBinary() {
   if (!existsSync(archive)) {
     mkdirSync(dirname(archive), { recursive: true });
     const url = `https://github.com/google/perfetto/releases/download/${PERFETTO.version}/${asset.name}`;
-    sh('curl', '-sSfL', '--retry', '3', '-o', archive, url);
+    await download(url, archive);
   }
   if (sha256(archive) !== asset.sha256) throw new Error(`${archive} is not the pinned release`);
   const unpacked = mkdtempSync(join(tmpdir(), 'appdyno-perfetto-'));
@@ -361,7 +362,7 @@ mkdirSync(out, { recursive: true });
 // a build with no key has no appcast, and must not leave one of an earlier build
 for (const file of ['appcast.json', 'appcast.json.sig']) rmSync(join(out, file), { force: true });
 assemble();
-runtime();
+await runtime();
 await helperBinaries();
 await traceProcessorBinary();
 icon();
