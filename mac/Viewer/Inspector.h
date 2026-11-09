@@ -234,6 +234,8 @@ enum { MVPanePerf,
 - (void)showStats:(NSDictionary *)stats;
 - (void)addActivity:(NSDictionary *)call;
 - (void)showApps:(NSDictionary *)message;
+/// For a test, as a person: the app's id typed into Filter, and its row clicked where it stands.
+- (void)pokeApp:(NSString *)app;
 @end
 
 NS_ASSUME_NONNULL_END

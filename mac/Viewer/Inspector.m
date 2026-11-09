@@ -370,6 +370,16 @@ static NSString *ms(id v) {
   [self enableAppButtons:NO];
 }
 
+- (void)pokeApp:(NSString *)app {
+  _filter.stringValue = app;
+  [self filterChanged:nil];
+  [self.window layoutIfNeeded];
+  [self.window displayIfNeeded];
+  BOOL found = _apps.rows.count > 0 && self.window;
+  if (found) MVRealClick(self.window, [_apps pointOfRow:0]);
+  MVEmitFrom(self, @{@"op": @"clicked", @"name": app, @"found": @(found)});
+}
+
 - (void)launchApp:(id)sender {
   MVEmitFrom(self, @{@"op": @"app", @"action": @"launch", @"id": _apps.selected.key ?: @""});
 }

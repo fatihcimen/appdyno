@@ -78,6 +78,7 @@
   if (m[@"push"]) return [_window.inspector.push fill:m[@"push"]];
   if (m[@"condition"]) return [_window.inspector.device set:m[@"condition"] to:m[@"value"] ?: @""];
   if (m[@"issue"]) return [_window.inspector.audit choose:[m[@"issue"] description]];
+  if (m[@"app"]) return [_window.inspector pokeApp:[m[@"app"] description]];
   if (m[@"click"]) return [_window chooseClick:m[@"click"]];
   double x = [m[@"x"] doubleValue], y = [m[@"y"] doubleValue];
   if ([m[@"hover"] boolValue]) return [_window pokeHoverX:x y:y];

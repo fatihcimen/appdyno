@@ -126,8 +126,10 @@ static const double kNoteSeconds = 12;
 
 /// A control where it stands, for a test: scrolled to, then clicked through the window's own hit testing, as a mouse's.
 - (void)pokeClick:(NSString *)name {
-  NSButton *button = MVFindControl(_window.contentView, name);
-  MVEmit(MVClickControl(_window, button, name));
+  // a sheet holds the window's clicks while it stands, as it does a person's
+  NSWindow *window = _window.attachedSheet ?: _window;
+  NSButton *button = MVFindControl(window.contentView, name);
+  MVEmit(MVClickControl(window, button, name));
 }
 
 /// What a copy left: a window kept behind for a test copies to a board of its own, which only this can read.
