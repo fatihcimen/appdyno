@@ -39,7 +39,11 @@ const op = (name: string, run: () => Promise<void> = () => Promise.resolve(undef
   },
 });
 
-function context(hash: () => string = () => 'same', alertPerson?: (reason: string) => void) {
+function context(
+  hash: () => string = () => 'same',
+  alertPerson?: (reason: string) => void,
+  silent = false,
+) {
   const device = {
     serial: 'guarded',
     open: () => Promise.resolve({}),
@@ -54,6 +58,7 @@ function context(hash: () => string = () => 'same', alertPerson?: (reason: strin
   return new ServerContext({ ...DEFAULT_POLICY, secrets: ['hunter2'] }, [provider], {
     device: 'guarded',
     ...(alertPerson && { alertPerson }),
+    ...(silent && { silent }),
   });
 }
 
@@ -168,6 +173,22 @@ describe('hand_off', () => {
     expect(alert).toHaveBeenCalledWith('the passcode');
     hash = 'after';
     await expect(asked).resolves.toMatchObject({ data: { by: 'screen' } });
+  }, 30_000);
+
+  it('on a server run --silent, tells the window to show it with no sound', async () => {
+    const quiet = context(undefined, undefined, true);
+    const asked = handOff(quiet).handler({ reason: 'Face ID', timeoutS: 1 });
+    const end = Date.now() + 5_000;
+    while (!handoffRequest('guarded') && Date.now() < end)
+      await new Promise((r) => setTimeout(r, 20));
+    expect(handoffRequest('guarded')).toMatchObject({ reason: 'Face ID', silent: true });
+    await asked;
+    const loud = context();
+    const again = handOff(loud).handler({ reason: 'Face ID', timeoutS: 1 });
+    while (!handoffRequest('guarded') && Date.now() < end)
+      await new Promise((r) => setTimeout(r, 20));
+    expect(handoffRequest('guarded')).not.toHaveProperty('silent');
+    await again;
   }, 30_000);
 
   it('at the time it was given it says no one came, and takes the request down', async () => {

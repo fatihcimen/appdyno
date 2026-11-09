@@ -128,7 +128,8 @@ function contextFrom(values: ServerFlags, remember?: string) {
     claims: true,
     tool: remember ? 'appdyno cli' : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
-    ...(alertPerson && { alertPerson }),
+    // a silent server sounds nowhere: a window that shows its request is told so
+    ...(alertPerson ? { alertPerson } : { silent: true }),
     clientNamed,
     mirrorCommand: [
       process.execPath,

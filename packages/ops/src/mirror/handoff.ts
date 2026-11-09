@@ -12,7 +12,8 @@ const PROGRESS_MS = 5_000;
 const DEFAULT_S = 300;
 const MAX_S = 3_600;
 
-const Request = z.object({ id: z.string(), reason: z.string() });
+/** `silent`: the server that asks is run --silent, so a window shows it with no sound. */
+const Request = z.object({ id: z.string(), reason: z.string(), silent: z.boolean().optional() });
 const Done = z.object({ id: z.string() });
 
 const requestFile = (serial: string) => deviceStateFile('handoff', serial);
@@ -30,7 +31,7 @@ export function handoffOps(ctx: ServerContext) {
       name: 'hand_off',
       title: 'Ask a person',
       description:
-        'Asks your person to do what you cannot (Face ID, a passcode, a permission) and waits until they say done or, with no window, the screen changes. On this Mac: a banner and a sound in a window; with none, a sound and a macOS notification of reason, unless the server runs --silent.',
+        'Asks your person to do what you cannot (Face ID, a passcode, a permission) and waits until they say done or, with no window, the screen changes. On this Mac: a banner and a sound in a window, else a sound and a macOS notification of reason; --silent: no sound, no notification.',
       input: z
         .object({
           reason: z.string().min(1).max(500),
@@ -43,9 +44,9 @@ export function handoffOps(ctx: ServerContext) {
         const serial = await ctx.defaultSerial();
         const id = randomBytes(4).toString('hex');
         rmSync(doneFile(serial), { force: true });
-        writeState(requestFile(serial), { id, reason });
+        writeState(requestFile(serial), { id, reason, ...(ctx.silent && { silent: true }) });
         const window = liveMirror(serial) !== undefined;
-        // with a window, its parent shows the banner and sounds it; with none, a sound and a notification
+        // with a window, its parent shows the banner and sounds it, unless silent; with none, a sound and a notification
         if (!window) ctx.alertPerson?.(reason);
         const before = window ? undefined : await screenSign(ctx);
         const started = Date.now();

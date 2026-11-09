@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A server run with `--silent` (`APPDYNO_SILENT=1`) keeps a window's `hand_off` banner quiet too, with no sound and no Dock bounce: its request says so, and the hub or mirror that shows it, which runs with no such flag, played the sound as before.
 - `perf_scroll` says its median jank to a tenth, as each round says its own: the median of an even count of rounds is the mean of two, and it said `98.16499999999999%`. A measured flow's steps say their medians of frames and memory so too.
 - `app` `launch` says whether it started the app or restarted a running one, in the words `launch_app` uses for what it does: it said "launched" for both, and it stops a running app first on every platform.
 - A call that names no app, with none selected, says in its hint that `app` `list` names the installed apps by id and that `use_device` with `app` selects one; `find` with nothing to look for, and a tap, an `assert` or a `wait_for` with no target, say that `screen` lists the elements by their refs, roles and words; and an Android read that finds the app in front not answering says to read again in a moment, and how to end a hang: none of them had a hint.

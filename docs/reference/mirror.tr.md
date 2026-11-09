@@ -329,8 +329,8 @@ yazılan metin uzunluğuyla, gizli değerler gizlenmiş olarak, `report`'un kull
 `activity/<serial>.jsonl` dosyasını okur: soket yok, süreçler arasında.
 
 Yalnızca bir kişinin yanıtlayabileceği bir uyarı (Face ID, Touch ID, bir parola, bir Apple Hesabı, Yapıştırmaya İzin Ver, bir VPN, bir profil, bir
-satın alma), ekranı okuyan yanıtta söylenir: `needs a person: Face ID`. `hand_off {reason, timeoutS}`, pencereye bir sesle, Dock'ta bir sıçramayla ve "Bitti" ile bir uyarı bandı koyar. Pencere
-yoksa bir ses ve elden geldiğince nedeni gösteren bir bildirim verir, `--silent` ile çalışan bir sunucuda hiçbirini vermez, ve ekranın değişmesini bekler. Beklemeyi kimin bitirdiğini
+satın alma), ekranı okuyan yanıtta söylenir: `needs a person: Face ID`. `hand_off {reason, timeoutS}`, pencereye bir sesle, Dock'ta bir sıçramayla ve "Bitti" ile bir uyarı bandı koyar, `--silent` ile çalışan bir sunucuda ses ve sıçrama olmadan. Pencere
+yoksa bir ses ve elden geldiğince nedeni gösteren bir bildirim verir, böyle bir sunucuda hiçbirini vermez, ve ekranın değişmesini bekler. Beklemeyi kimin bitirdiğini
 ya da kimsenin bitirmediğini yanıtlar.
 
 Yansıtılan bir cihazda `perf_*`, gürültü işareti `mirrored`'ı alır; bu, yüksek yükün yaptığı gibi bir çalıştırmayı kapının dışında tutar:

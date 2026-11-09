@@ -85,4 +85,23 @@ describe('what a window is told', () => {
       vi.useRealTimers();
     }
   });
+
+  it('puts up the request of a server run --silent with no sound', async () => {
+    vi.useFakeTimers();
+    try {
+      const file = join(dir, 'handoff/guarded.json');
+      const told: Record<string, unknown>[] = [];
+      const off = followDevice('guarded', { tell: (m) => told.push(m) });
+      mkdirSync(join(dir, 'handoff'), { recursive: true });
+      writeFileSync(file, JSON.stringify({ id: 'r2', reason: 'Face ID', silent: true }));
+      await vi.advanceTimersByTimeAsync(600);
+      expect(told.filter((m) => m.op === 'banner')).toEqual([
+        { op: 'banner', id: 'r2', text: 'Face ID', needsDone: true, sound: false },
+      ]);
+      rmSync(file);
+      off();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

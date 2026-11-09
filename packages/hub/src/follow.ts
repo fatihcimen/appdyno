@@ -62,7 +62,13 @@ export function followDevice(
       banner = request?.id;
       session.tell(
         request
-          ? { op: 'banner', id: request.id, text: request.reason, needsDone: true, sound: true }
+          ? {
+              op: 'banner',
+              id: request.id,
+              text: request.reason,
+              needsDone: true,
+              sound: request.silent !== true,
+            }
           : { op: 'banner' },
       );
     }

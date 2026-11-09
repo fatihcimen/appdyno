@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `--silent` (`APPDYNO_SILENT=1`) ile çalışan bir sunucu, bir penceredeki `hand_off` bandını da sessiz tutar, ses ve Dock sıçraması olmadan: isteği bunu söyler; onu gösteren, böyle bir bayrakla çalışmayan hub ya da ayna sesi eskisi gibi çalıyordu.
 - `perf_scroll` ortanca takılmasını, her turun kendininkini söylediği gibi, onda bire yuvarlayarak söyler: çift sayıda turun ortancası ikisinin ortalamasıdır ve `98.16499999999999%` diyordu. Ölçülen bir akışın adımları da kare ve bellek ortancalarını böyle söyler.
 - `app` `launch`, uygulamayı başlattığını mı, yoksa çalışan birini yeniden mi başlattığını `launch_app`'in kendi yaptığı için kullandığı sözlerle söyler: ikisine de "launched" diyordu; her platformda da önce çalışan uygulamayı durdurur.
 - Hiçbir uygulama adlandırmayan ve seçili uygulaması da olmayan bir çağrı, ipucunda yüklü uygulamaları kimlikleriyle `app` `list`'in adlandırdığını ve `use_device`'ın `app` ile birini seçtiğini söyler; arayacak bir şey vermeyen `find` ile hedefi olmayan bir dokunma, `assert` ya da `wait_for`, öğeleri ref'leri, rolleri ve sözcükleriyle `screen`'in listelediğini söyler; öndeki uygulamanın yanıt vermediğini bulan bir Android okuması da biraz sonra yeniden okumayı ve bir donmanın nasıl bitirileceğini söyler: hiçbirinin ipucu yoktu.

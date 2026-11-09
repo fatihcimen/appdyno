@@ -60,6 +60,8 @@ export class ServerContext {
       share?: boolean;
       /** How to run this tool again, for a window that outlives the call that opened it. */
       mirrorCommand?: string[];
+      /** A server run --silent: a request for a person sounds nowhere, in a window or out of one. */
+      silent?: boolean;
       /** Reaches a person when there is no window to show a request in. */
       alertPerson?: (reason: string) => void;
       /** What a person calls the client that named itself this. */
@@ -270,6 +272,10 @@ export class ServerContext {
 
   clientNamed(said: string) {
     return this.defaults.clientNamed?.(said) ?? said;
+  }
+
+  get silent() {
+    return this.defaults.silent === true;
   }
 
   get alertPerson() {
