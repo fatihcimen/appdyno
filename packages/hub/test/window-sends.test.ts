@@ -144,6 +144,38 @@ describe('what a window sends to its device', () => {
     expect(pushed).toHaveLength(1);
   });
 
+  it("says why an iPhone takes no push in a person's words, and the driver's where it has none", async () => {
+    const device = new FakeDevice();
+    const routes = [
+      {
+        type: 'alert',
+        why: "a real iPhone takes a push only from Apple's servers, once a person sets APNs up with `appdyno push setup apns`: else open the app's deep link, or push to a simulator",
+      },
+      { type: 'tapped', why: 'nothing taps a push on an iPhone but a person: push an alert' },
+      { type: 'voip', why: 'no words of ours' },
+    ];
+    device.events = {
+      pushRoutes: () => Promise.resolve(routes),
+    } as unknown as DeviceEvents;
+    const { sends, told } = sendsOn(device);
+    sends.onWindow({ op: 'control', name: 'pushes' });
+    await expect
+      .poll(
+        () => (told.find((m) => 'types' in m) as { types?: { why: string }[] } | undefined)?.types,
+      )
+      .toEqual([
+        {
+          type: 'alert',
+          why: "An iPhone takes a push only from Apple's servers, once APNs is set up with appdyno push setup apns in Terminal. Until then, open the app's link in Links, or send the push to a simulator.",
+        },
+        {
+          type: 'tapped',
+          why: 'Only a person taps a push on an iPhone: send an alert, then tap it on the phone.',
+        },
+        { type: 'voip', why: 'no words of ours' },
+      ]);
+  });
+
   it('says where the links of an app would stand why a device cannot tell them', async () => {
     const device = new FakeDevice();
     const front = await device.foreground();

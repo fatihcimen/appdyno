@@ -107,6 +107,8 @@ static NSString *readable(NSString *json) {
     _type.action = @selector(typeChosen:);
     _type.accessibilityLabel = MVWord(@"Type of push");
     _how = MVPaneNote(@"Asking the device what it takes");
+    // why a type cannot go may take more lines than a note's three, in Turkish the more
+    _how.maximumNumberOfLines = 0;
     NSMutableArray<MVAccentButton *> *modes = [NSMutableArray array];
     [@[@"Fields", @"Payload"] enumerateObjectsUsingBlock:^(NSString *word, NSUInteger at, __unused BOOL *stop) {
       MVAccentButton *mode = (MVAccentButton *)MVPlaceButton(word, [NSString stringWithFormat:@"pushMode:%lu", (unsigned long)at], self, @selector(modeChosen:));

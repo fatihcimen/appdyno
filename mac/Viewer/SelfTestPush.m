@@ -164,5 +164,13 @@ void MVCheckPush(void) {
   [MVFindControl(window.nsWindow.contentView, @"pushGo") performClick:nil];
   MVCheck(@"push: a payload goes alone, as the op takes it", [sent.lastObject[@"args"][@"payload"] isEqual:payload.string] && !sent.lastObject[@"args"][@"title"], [sent.lastObject description]);
   checkToken(window, pane, sent);
+  // an iPhone takes none: why, whole, where the note stopped at three lines and cut its end
+  NSString *why = @"An iPhone takes a push only from Apple's servers, once APNs is set up with appdyno push setup apns in Terminal. Until then, open the app's link in Links, or send the push to a simulator.";
+  [pane show:@{@"op": @"answer",
+               @"name": @"push",
+               @"types": @[@{@"type": @"alert", @"why": why}, @{@"type": @"tapped", @"why": why}]}];
+  [window.nsWindow layoutIfNeeded];
+  NSRect needed = [how.attributedStringValue boundingRectWithSize:NSMakeSize(NSWidth(how.frame) - 4, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin];
+  MVCheck(@"push: why an iPhone takes none is said whole, and nothing can be sent", [how.stringValue isEqual:MVWord(why)] && NSHeight(how.frame) >= NSHeight(needed) - 1 && !MVFindControl(window.nsWindow.contentView, @"pushGo").enabled, [NSString stringWithFormat:@"%.0f for %.0f", NSHeight(how.frame), NSHeight(needed)]);
   checkInHub();
 }

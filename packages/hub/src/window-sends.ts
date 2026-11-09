@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { frontApp, type WindowSession } from './controls.js';
 import { spokenDone } from './follow.js';
 import { PERSON_HINTS, WINDOW, windowContext } from './measures.js';
-import { conditionSends } from './window-conditions.js';
+import { conditionSends, personal } from './window-conditions.js';
 
 /** A device's links a person opened, newest first. */
 const RECENT = 8;
@@ -93,7 +93,11 @@ export function windowSends(
     const front = await ownFront();
     const app = named || front.app;
     const { answer, data } = await call('push', 'push', app ? { app } : {});
-    tell('push', data ? { types: data.types, ...front } : answer);
+    // why a type cannot go, in a person's words where the pane has them: the op's are an agent's
+    const types = (data?.types as { why?: string }[] | undefined)?.map((t) =>
+      t.why ? { ...t, why: personal(t.why) } : t,
+    );
+    tell('push', types ? { types, ...front } : answer);
   };
 
   /** What the pane filled in, as the op takes it: the op refuses what does not fit. */

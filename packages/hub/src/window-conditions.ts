@@ -88,6 +88,14 @@ export const PERSON_REASONS: readonly (readonly [RegExp, string])[] = [
   [/^an iPhone takes messages only/, 'An iPhone takes text messages only from its carrier.'],
   [/^this build has no phone stream/, "This build can't set an iPhone's network or thermal state."],
   [/^this iPhone offers no \w+ condition/, 'This iPhone does not offer this condition.'],
+  [
+    /^a real iPhone takes a push only from Apple's servers/,
+    "An iPhone takes a push only from Apple's servers, once APNs is set up with appdyno push setup apns in Terminal. Until then, open the app's link in Links, or send the push to a simulator.",
+  ],
+  [
+    /^nothing taps a push on an iPhone but a person/,
+    'Only a person taps a push on an iPhone: send an alert, then tap it on the phone.',
+  ],
 ];
 
 /** A reason as a person reads it, where it is one of those; else as the op said it. */
