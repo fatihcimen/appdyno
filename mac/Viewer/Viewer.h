@@ -242,6 +242,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)placeBeside;
 /// A flow to measure, from a person.
 - (void)askJourney;
+/// Under each picture of two in a room: whose it is, and where a touch goes or why it failed there.
+- (void)showSide;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -38,8 +38,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)watchReadings;
 - (void)toggleHud;
 - (void)showState;
-/// Under each picture of two in a room: whose it is, and where a touch goes or why it failed there.
-- (void)showSide;
 @end
 
 @interface MVWindow (Inspector)
