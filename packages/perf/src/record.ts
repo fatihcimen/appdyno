@@ -157,6 +157,11 @@ export type Kind =
 
 export const isPhase = (kind: string) => kind.startsWith('launch.phase.');
 
+/** A kind a run may keep, as `Kind` has it: what a budget is set on. */
+export const isKind = (kind: string) =>
+  Object.hasOwn(KINDS, kind) ||
+  /^(launch\.phase\..+_ms|journey\..+|xct\..+|memory\.(anon_swap|bitmap)\..+)$/.test(kind);
+
 /** A start's phase as it is kept. */
 export const phaseKind = (phase: string): Kind =>
   `launch.phase.${phase.replace(/\W+/g, '_').toLowerCase()}_ms`;

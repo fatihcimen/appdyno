@@ -104,6 +104,38 @@ describe('the gate', () => {
     expect(budget.data.exitCode).toBe(1);
   });
 
+  it('sets a budget with no run measured, in place of the one it replaces, and holds the next run to it', async () => {
+    const project = fresh();
+    const ops = context({ ms: 900 }, fresh(), project);
+    const rule = { action: 'budget', format: 'text', last: 1, kind: 'launch.ttid_ms' } as const;
+    const scope = { app: 'dev.appdyno.fixture', scenario: 'launch-cold' };
+    await ops.perf_compare.handler({ ...rule, ...scope, max: 150 });
+    const set = await ops.perf_compare.handler({ ...rule, ...scope, max: 200 });
+    expect(text(set)).toBe(
+      `budget launch.ttid_ms max 200 for dev.appdyno.fixture, launch-cold, in ${join(project, 'budgets.json')}\nno run is kept yet to hold to it: it holds from the next one`,
+    );
+    expect(set.data.exitCode).toBe(0);
+    expect(JSON.parse(readFileSync(join(project, 'budgets.json'), 'utf8'))).toEqual([
+      { kind: 'launch.ttid_ms', max: 200, ...scope },
+    ]);
+    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    const over = await ops.perf_compare.handler({ action: 'budget', format: 'text', last: 1 });
+    expect(text(over)).toMatch(/over budget launch\.ttid_ms: 902.5 \(max 200\)/);
+    expect(over.data.exitCode).toBe(1);
+    const other = await ops.perf_compare.handler({ ...rule, kind: 'frames.p95_ms', max: 20 });
+    expect(text(other)).toContain('no run kept here has frames.p95_ms: they have launch.ttid_ms');
+    await expect(
+      ops.perf_compare.handler({ ...rule, kind: 'launch.cold_ms', max: 200 }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+      message: 'no kind launch.cold_ms',
+      hint: expect.stringContaining('launch.ttid_ms') as unknown,
+    });
+    await expect(
+      ops.perf_compare.handler({ action: 'compare', format: 'text', last: 1, max: 9 }),
+    ).rejects.toThrow('kind, max and min set a budget');
+  });
+
   it('counts a run once, however often it is asked for', async () => {
     const ops = context({ ms: 500 }, fresh(), fresh());
     const runs = (b: { data: { baselines?: string[] } }) =>

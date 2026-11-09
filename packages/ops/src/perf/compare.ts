@@ -12,6 +12,10 @@ import {
   addToBaseline,
   loadBaseline,
   loadBudgets,
+  isKind,
+  KINDS,
+  saveBudget,
+  type BudgetRule,
   MIN_BASELINE_RUNS,
   MIN_SAMPLES,
   mostSamples,
@@ -27,6 +31,7 @@ import {
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import type { FlowRunner } from '../flow/runner.js';
+import { defined } from '../flow/shared.js';
 import { CompareOut } from './schemas.js';
 import { DESTRUCTIVE, defineOp, reply, ToolError } from '../tool.js';
 import { Scenario, pruneNow, rewriteDashboard } from './shared.js';
@@ -96,12 +101,92 @@ export async function keepBaseline(
   return { lines, file, ready };
 }
 
+/**
+ * `budget` with `max` or `min`: the rule kept in the project's budgets.json, which needs no run measured; a run's kinds
+ * are where the kind's name is checked, as a misspelt one would hold nothing to it and never say so.
+ */
+async function keepBudget(
+  project: string,
+  action: string,
+  rule: { [K in keyof BudgetRule]?: BudgetRule[K] | undefined },
+) {
+  const { kind, max, min } = rule;
+  if (action !== 'budget' && (kind ?? max ?? min) !== undefined)
+    throw new ToolError('kind, max and min set a budget: action budget', 'INVALID_ARGUMENT');
+  if (max === undefined && min === undefined) {
+    if (kind) throw new ToolError('kind sets a budget with max or min', 'INVALID_ARGUMENT');
+    return undefined;
+  }
+  if (!kind)
+    throw new ToolError('a budget needs kind: launch.ttid_ms, for one', 'INVALID_ARGUMENT');
+  if (!isKind(kind)) {
+    const head = kind.split('.')[0] ?? '';
+    const near = Object.keys(KINDS).filter((k) => k.startsWith(`${head}.`));
+    throw new ToolError(
+      `no kind ${kind}`,
+      'INVALID_ARGUMENT',
+      `a kind is as a run keeps it: ${(near.length ? near : Object.keys(KINDS)).join(', ')}`,
+    );
+  }
+  const file = await saveBudget(project, { ...defined(rule), kind });
+  const scope = [rule.app, rule.scenario, rule.deviceClass].filter(Boolean).join(', ');
+  const limit = [max !== undefined && `max ${max}`, min !== undefined && `min ${min}`]
+    .filter(Boolean)
+    .join(', ');
+  return { kind, file, line: `budget ${kind} ${limit}${scope ? ` for ${scope}` : ''}, in ${file}` };
+}
+
+/** `prune`: traces and heap dumps brought down to the limit, and what went. */
+async function pruneReply(
+  ctx: ServerContext,
+  limitGb: number | undefined,
+  dryRun: boolean | undefined,
+) {
+  const r = await pruneNow(ctx, limitGb ?? ctx.traceLimitGb, dryRun);
+  const gb = (bytes: number) => `${(bytes / 2 ** 30).toFixed(2)} GB`;
+  const verb = dryRun ? 'would remove' : 'removed';
+  return reply(
+    [
+      `traces and heap dumps: ${gb(r.beforeBytes)} of a limit of ${gb(r.limitBytes)}; ${verb} ${r.removed.length}, ${gb(r.beforeBytes - r.afterBytes)}; ${gb(r.afterBytes)} left`,
+      ...(r.stopped ? [`nothing was removed: ${r.stopped}`] : []),
+      ...(r.over && !r.stopped
+        ? [
+            'still over the limit: what is left is named by a baseline or a recent run, or is under a day old',
+          ]
+        : []),
+      ...r.removed.map((x) => `${verb}: ${x.name} (${x.bytes} bytes)`),
+      ...(r.removed.length && !dryRun ? [`log: ${r.log}`] : []),
+    ].join('\n'),
+    {
+      failed: false,
+      exitCode: 0,
+      reports: [],
+      prune: {
+        limitBytes: r.limitBytes,
+        beforeBytes: r.beforeBytes,
+        afterBytes: r.afterBytes,
+        removed: r.removed.length,
+        over: r.over,
+        ...(r.stopped && { stopped: r.stopped }),
+      },
+    },
+  );
+}
+/** A budget kept where no run is yet, which the next one is held to. */
+const heldToNothing = (set: { line: string; file: string }) =>
+  reply(`${set.line}\nno run is kept yet to hold to it: it holds from the next one`, {
+    failed: false,
+    exitCode: 0,
+    reports: [],
+    file: set.file,
+  });
+
 export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
   return defineOp({
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      "Performance regression gate: the `last` newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: finds a regression's cause on device; reference: its other side, on baseline's build; baseline: adds the `last` newest runs (3 needed), `replace` resets; functions: two perf_profile ids; prune: traces.",
+      "Performance regression gate: `last` newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: a regression's cause on device; reference: its other side; baseline: adds the `last` newest runs (3 needed), `replace` resets; budget: kind, max or min set one in budgets.json, unmeasured; functions: two perf_profile ids; prune: traces.",
     input: z
       .object({
         action: z
@@ -125,6 +210,9 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         deviceClass: z.string().max(200).optional(),
         last: z.number().int().min(1).max(20).default(1),
         replace: z.boolean().optional(),
+        kind: z.string().max(200).optional(),
+        max: z.number().optional(),
+        min: z.number().optional(),
         format: z.enum(['text', 'json', 'junit']).default('text'),
         dsym: z.string().max(1_000).optional(),
       })
@@ -143,43 +231,16 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
       deviceClass,
       last,
       replace,
+      kind,
+      max,
+      min,
       format,
       dsym,
     }) => {
       const looks = gateLooks(ctx, runner, dsym);
       const dir = ctx.measurementsDir;
       const project = ctx.perfDir;
-      if (action === 'prune') {
-        const r = await pruneNow(ctx, limitGb ?? ctx.traceLimitGb, dryRun);
-        const gb = (bytes: number) => `${(bytes / 2 ** 30).toFixed(2)} GB`;
-        const verb = dryRun ? 'would remove' : 'removed';
-        return reply(
-          [
-            `traces and heap dumps: ${gb(r.beforeBytes)} of a limit of ${gb(r.limitBytes)}; ${verb} ${r.removed.length}, ${gb(r.beforeBytes - r.afterBytes)}; ${gb(r.afterBytes)} left`,
-            ...(r.stopped ? [`nothing was removed: ${r.stopped}`] : []),
-            ...(r.over && !r.stopped
-              ? [
-                  'still over the limit: what is left is named by a baseline or a recent run, or is under a day old',
-                ]
-              : []),
-            ...r.removed.map((x) => `${verb}: ${x.name} (${x.bytes} bytes)`),
-            ...(r.removed.length && !dryRun ? [`log: ${r.log}`] : []),
-          ].join('\n'),
-          {
-            failed: false,
-            exitCode: 0,
-            reports: [],
-            prune: {
-              limitBytes: r.limitBytes,
-              beforeBytes: r.beforeBytes,
-              afterBytes: r.afterBytes,
-              removed: r.removed.length,
-              over: r.over,
-              ...(r.stopped && { stopped: r.stopped }),
-            },
-          },
-        );
-      }
+      if (action === 'prune') return pruneReply(ctx, limitGb, dryRun);
       if (action === 'functions') {
         const profile = async (id: string | undefined) => {
           const held = id ? await loadMeasurement(dir, id) : undefined;
@@ -210,11 +271,13 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         const file = await writeDashboard(dir, project, app ? { app } : {});
         return reply(`dashboard: ${file}`, { failed: false, exitCode: 0, reports: [], file });
       }
+      const set = await keepBudget(project, action, { kind, max, min, app, scenario, deviceClass });
       const keys = await runKeys(dir, {
         ...(app && { app }),
         ...(scenario && { scenario }),
         ...(deviceClass && { deviceClass }),
       });
+      if (keys.length === 0 && set) return heldToNothing(set);
       if (keys.length === 0) {
         const others = deviceClass
           ? await runKeys(dir, { ...(app && { app }), ...(scenario && { scenario }) })
@@ -256,6 +319,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         });
       }
       const rules = await loadBudgets(project);
+      const kinds = new Set<string>();
       const reports: KeyReport[] = await Promise.all(
         keys.map(async (k) => {
           const r = reportKey(
@@ -264,6 +328,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
             await loadBaseline(project, k),
             rules,
           );
+          for (const c of r.comparisons) kinds.add(c.kind);
           return action === 'budget' ? { ...r, comparisons: [] } : r;
         }),
       );
@@ -290,7 +355,16 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
           : format === 'junit'
             ? toJUnit(reports)
             : toText(reports);
-      return reply(out, { failed: code !== 0, exitCode: code, reports });
+      if (!set) return reply(out, { failed: code !== 0, exitCode: code, reports });
+      const held = kinds.has(set.kind)
+        ? []
+        : [`no run kept here has ${set.kind}: they have ${[...kinds].join(', ')}`];
+      return reply([set.line, ...held, out].join('\n'), {
+        failed: code !== 0,
+        exitCode: code,
+        reports,
+        file: set.file,
+      });
     },
   });
 }

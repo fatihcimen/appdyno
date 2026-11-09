@@ -120,7 +120,7 @@ dosyası, cihaz ve işletim sistemi, sanal ya da fiziksel, build türü, derleme
 zaman. Bir çalıştırma `<measurements dir>/runs/<app>/<scenario>/<device class>/` altına gider. Bir baseline
 `.appdyno/perf/baselines/<app>/<scenario>/<device class>.json` dosyasına gider (`APPDYNO_PERF_DIR` onu taşır) ve commit edilebilir. Sınırlar
 `.appdyno/perf/budgets.json` dosyasına girer: `{ "kind": "launch.ttid_ms", "max": 2000 }` biçiminde bir liste; `app`, `scenario`, `deviceClass`
-ve `min` isteğe bağlıdır.
+ve `min` isteğe bağlıdır. `kind` ve `max` ya da `min` ile `perf_compare` `budget` oraya bir tane yazar, aynı tür ve kapsamdaki bir kuralın yerine, ve ölçülmüş bir çalıştırma istemez (`appdyno perf budget --app A --kind launch.ttid_ms --max 200`): hiçbir ölçümün tutmadığı bir tür, kastedebileceklerini adlandırarak reddedilir; uygulamanın saklanan çalıştırmalarında olmayan bir tür de söylenir, çünkü ona hiçbir şeyi tutmazdı.
 
 ```text
 appdyno perf-launch --app A --mode cold --repeats 6      a measured run, kept

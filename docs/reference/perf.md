@@ -120,7 +120,7 @@ file, device and OS, virtual or physical, build type, compile state, host and de
 time. A run goes to `<measurements dir>/runs/<app>/<scenario>/<device class>/`. A baseline goes to
 `.appdyno/perf/baselines/<app>/<scenario>/<device class>.json` (`APPDYNO_PERF_DIR` moves it), which can be committed. Limits
 go in `.appdyno/perf/budgets.json`: a list of `{ "kind": "launch.ttid_ms", "max": 2000 }`, with `app`, `scenario`, `deviceClass`
-and `min` optional.
+and `min` optional. `perf_compare` `budget` with `kind` and `max` or `min` writes one there, in place of a rule of the same kind and scope, and needs no run measured (`appdyno perf budget --app A --kind launch.ttid_ms --max 200`): a kind no measure keeps is refused, naming those it could mean, and one the app's kept runs lack is said, as it would hold nothing to it.
 
 ```text
 appdyno perf-launch --app A --mode cold --repeats 6      a measured run, kept

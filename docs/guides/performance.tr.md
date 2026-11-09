@@ -39,6 +39,8 @@ Baseline `.appdyno/perf/baselines/` altına gider. Onu commit edin. Kendi sını
 [{ "kind": "launch.ttid_ms", "max": 2000 }]
 ```
 
+Ajanınız üzerinden "soğuk açılışı 200 ms'nin altında tut", `kind` ve `max` ile `perf_compare` `budget`'tır; ölçülmüş bir çalıştırma olsun ya da olmasın o dosyayı yazar: Android'de `launch.ttid_ms`, bir iPhone'da ya da simülatörde `launch.until_ms`.
+
 ## Kapı nasıl karar verir
 
 <picture>

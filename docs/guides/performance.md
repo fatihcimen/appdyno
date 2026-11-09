@@ -39,6 +39,8 @@ The baseline goes to `.appdyno/perf/baselines/`. Commit it. Limits of your own g
 [{ "kind": "launch.ttid_ms", "max": 2000 }]
 ```
 
+Through your agent, "keep the cold launch under 200 ms" is `perf_compare` `budget` with `kind` and `max`, which writes that file, with or without a run measured: `launch.ttid_ms` on Android, `launch.until_ms` on an iPhone or a simulator.
+
 ## How the gate decides
 
 <picture>

@@ -166,3 +166,17 @@ export async function loadBudgets(projectDir: string): Promise<BudgetRule[]> {
     throw new Error(`${file}: expected a list of rules, each with a "kind"`);
   return rules as BudgetRule[];
 }
+
+/** A rule kept in `budgets.json` in place of one of the same kind and scope, as a person would write it by hand. */
+export async function saveBudget(projectDir: string, rule: BudgetRule): Promise<string> {
+  const same = (b: BudgetRule) =>
+    b.kind === rule.kind &&
+    b.app === rule.app &&
+    b.scenario === rule.scenario &&
+    b.deviceClass === rule.deviceClass;
+  const rules = [...(await loadBudgets(projectDir)).filter((b) => !same(b)), rule];
+  await mkdir(projectDir, { recursive: true });
+  const file = join(projectDir, 'budgets.json');
+  await writeFile(file, `${JSON.stringify(rules, null, 2)}\n`);
+  return file;
+}
