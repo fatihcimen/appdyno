@@ -262,7 +262,7 @@ Seçili bir cihaz yokken bu sunucunun sürebileceği birden fazla cihaz varsa, c
 `simulator` simülatörleri ve emülatörleri yalnızca istek üzerine başlatır ve kapatır. Ad verilmezse kapatma
 yalnızca bu aracın başlattıklarına dokunur. `APPDYNO_EMULATOR_ARGS` emülatörün varsayılan bayraklarının yerini alır, `APPDYNO_EMULATOR_FIRST_PORT` da boş bir port aramasının başladığı yerdir.
 
-`--allow-devices` burada bir simülatörü ya da emülatörü kimliğiyle, seri numarasıyla ya da adıyla alır, `name` gibi; böylece `shutdown` için izin verilene ondan sonraki `boot` için de izin verilir. Durmuş bir emülatörün kendi seri numarası yoktur: bu araç onu kapattığında çalıştığı seri numarasıyla anılır ve o port boşken o porttan geri gelir. Ondan sonraki `boot`'un reddedeceği bir `shutdown` önce reddedilir ve cihaz açık kalır.
+`--allow-devices` burada bir simülatörü ya da emülatörü kimliğiyle, seri numarasıyla ya da adıyla alır, `name` gibi; böylece `shutdown` için izin verilene ondan sonraki `boot` için de izin verilir. Durmuş bir emülatörün kendi seri numarası yoktur: bu araç onu kapattığında çalıştığı seri numarasıyla anılır ve o port boşken o porttan geri gelir; hub'ın yeniden başlattığı biri de en son listelendiği porttan geri gelir, penceresi de onu orada bekler. Ondan sonraki `boot`'un reddedeceği bir `shutdown` önce reddedilir ve cihaz açık kalır.
 
 Seçili cihazın `shutdown`'ı üzerindeki oturumu ve uygulamalarının bellekte tuttuğunu bitirir ve kimseye sormaz, çünkü cihazın diskinde tuttuğu hiçbir şey gitmez: ilerlemesi bunu başlamadan önce söyler, yanıtı da bittiğinde. Yeniden başlatma yoktur: SECURITY.md'nin dediği gibi bir `shutdown` ile bir `boot` iki çağrıdır.
 

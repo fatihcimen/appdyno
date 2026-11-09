@@ -74,6 +74,9 @@ export class AndroidEmulators implements VirtualDevices {
 
   constructor(private readonly adb: Adb) {}
 
+  /** The serial each AVD was last listed running as: a window, like an allow list, knows it by that serial. */
+  private readonly lastSerial = new Map<string, string>();
+
   async catalog() {
     const root = join(sdkDir(), 'system-images');
     if (!existsSync(avdmanager()) || !existsSync(root)) return undefined;
@@ -153,6 +156,7 @@ export class AndroidEmulators implements VirtualDevices {
       .split(/\r?\n/)
       .filter((l) => /^[\w.-]+$/.test(l));
     const running = await this.running();
+    for (const [serial, avd] of running) this.lastSerial.set(avd, serial);
     const withModel = (avd: string) => {
       const model = avdModel(avd);
       return { name: avd, ...(model && { model }) };
@@ -170,7 +174,7 @@ export class AndroidEmulators implements VirtualDevices {
     return [...up, ...idle];
   }
 
-  async boot(id: string, ranAs?: string): Promise<string> {
+  async boot(id: string, ranAs = this.lastSerial.get(id)): Promise<string> {
     if (id.startsWith('emulator-')) return id;
     const port = portFor(new Set((await this.adb.devices()).map((d) => d.serial)), ranAs);
     const serial = `emulator-${port}`;
