@@ -142,6 +142,21 @@ describe("a device's numbers each second", () => {
     expect(fourth).toMatchObject({ framesDrawn: 60, jankyFrames: 59, frozenFrames: 0 });
   });
 
+  it('count each frame once where the summary counts it twice, by the rows since the last read', async () => {
+    let read = 0;
+    const frames = vi.fn(() => {
+      read++;
+      return reading({
+        totalFrames: 50 * read,
+        jankyFrames: 20 * read,
+        frozenFrames: 0,
+        frames: { worstMs: 41, count: 25, newestNs: read },
+      });
+    });
+    const second = (await samples(device({ frames }), 2))[1];
+    expect(second).toMatchObject({ framesDrawn: 25, jankyFrames: 20 });
+  });
+
   it('count frames over the time since the last count, however long the reading took', async () => {
     const slow = () =>
       new Promise((r) => setTimeout(r, 1_500)).then(() => ({

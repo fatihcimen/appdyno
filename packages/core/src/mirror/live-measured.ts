@@ -116,8 +116,11 @@ async function sampleOf(
         // a counter lower than before was reset in this second, and what came before that is lost to it
         if (drawn < 0 || janky < 0 || frozen < 0)
           return void Object.assign(absent, allAbsent(FRAME_FIELDS, COUNTED_AGAIN));
-        sample.fps = Math.round(drawn / ((now - since) / SECOND_MS));
-        sample.framesDrawn = drawn;
+        // a Xiaomi's summary counts each frame twice and its janky ones once, where its rows since the last read are each once
+        const count = v.frames?.count;
+        const once = count && drawn >= 1.8 * count ? count : drawn;
+        sample.fps = Math.round(once / ((now - since) / SECOND_MS));
+        sample.framesDrawn = once;
         sample.jankyFrames = janky;
         sample.frozenFrames = frozen;
         if (v.frames) sample.worstFrameMs = v.frames.worstMs;
