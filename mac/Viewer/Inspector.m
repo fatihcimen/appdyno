@@ -224,10 +224,7 @@ static NSString *ms(id v) {
 - (NSView *)comingPane:(NSString *)symbol {
   NSView *gap = [NSView new];
   [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-  NSStackView *stack = [NSStackView stackViewWithViews:@[MVEmptyCard(symbol, @"Nothing here yet."), gap]];
-  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
-  stack.alignment = NSLayoutAttributeWidth;
-  return stack;
+  return MVPlaceColumn(@[MVEmptyCard(symbol, @"Nothing here yet."), gap], 0);
 }
 
 - (NSView *)activityPane {

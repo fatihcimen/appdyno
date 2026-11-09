@@ -74,6 +74,13 @@ static BOOL sameChoice(NSString *choice, NSString *read) {
   return [choice isEqual:head] || (choice.doubleValue > 0 && choice.doubleValue == head.doubleValue) || [head.lowercaseString hasSuffix:choice];
 }
 
+/// What takes the room a line has left.
+static NSView *gap(void) {
+  NSView *gap = [NSView new];
+  [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+  return gap;
+}
+
 /// A reason begun as a sentence, where its first word is no name that keeps its own case, as iOS does.
 static NSString *capitalized(NSString *words) {
   NSString *first = [words componentsSeparatedByString:@" "].firstObject;
@@ -123,16 +130,15 @@ static NSString *capitalized(NSString *words) {
   if ((self = [super initWithFrame:frame])) {
     _rows = [NSMutableDictionary dictionary];
     _reading = MVPaneNote(@"Reading the device");
-    NSStackView *column = [NSStackView stackViewWithViews:@[_reading]];
-    column.orientation = NSUserInterfaceLayoutOrientationVertical;
-    column.alignment = NSLayoutAttributeWidth;
-    column.spacing = 8;
+    NSTextField *back = MVPaneNote(@"What you change here goes back when the device leaves this window.");
+    NSStackView *column = MVPlaceColumn(@[back, _reading], 8);
+    [column setCustomSpacing:kHeadingGap afterView:back];
     for (int i = 0; i < kRowCount; i++) {
       MVConditionRow *row = [self rowAt:i];
       _rows[row.name] = row;
       if (kRows[i].heading) {
         // a heading stands nearer what it heads than what went before
-        if (i > 0) [column setCustomSpacing:kHeadingGap afterView:column.arrangedSubviews.lastObject];
+        [column setCustomSpacing:kHeadingGap afterView:column.arrangedSubviews.lastObject];
         NSTextField *heading = MVPaneHeading(@(kRows[i].heading));
         [column addArrangedSubview:heading];
         [column setCustomSpacing:6 afterView:heading];
@@ -142,15 +148,8 @@ static NSString *capitalized(NSString *words) {
     NSScrollView *scroll = [self scrolling:column];
     _answer = [MVAnswerView new];
     _back = MVPlaceButton(@"Put Back All", @"deviceBack", self, @selector(putBack:));
-    NSTextField *back = MVPaneNote(@"What you change here goes back when the device leaves this window.");
-    [back setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
-    NSStackView *line = [NSStackView stackViewWithViews:@[back, _back]];
-    line.alignment = NSLayoutAttributeCenterY;
-    line.spacing = 8;
-    NSStackView *foot = [NSStackView stackViewWithViews:@[MVSeparator(), _answer, line]];
-    foot.orientation = NSUserInterfaceLayoutOrientationVertical;
-    foot.alignment = NSLayoutAttributeWidth;
-    foot.spacing = 8;
+    // the pane's one button, at its trailing edge, as a sheet's are
+    NSStackView *foot = MVPlaceColumn(@[MVSeparator(), _answer, [NSStackView stackViewWithViews:@[gap(), _back]]], 8);
     for (NSView *part in @[scroll, foot]) {
       part.translatesAutoresizingMaskIntoConstraints = NO;
       [self addSubview:part];
@@ -214,7 +213,6 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   switch (row.kind) {
     case MVRowSwitch: {
       NSSwitch *toggle = [NSSwitch new];
-      toggle.controlSize = NSControlSizeSmall;
       toggle.target = self;
       toggle.action = @selector(switched:);
       row.control = toggle;
@@ -222,8 +220,6 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     }
     case MVRowChoice: {
       NSPopUpButton *choice = [NSPopUpButton new];
-      choice.controlSize = NSControlSizeSmall;
-      choice.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
       choice.target = self;
       choice.action = @selector(chosen:);
       [choice.widthAnchor constraintEqualToConstant:kControlWide].active = YES;
@@ -270,7 +266,6 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   row.title = MVWord(@(kRows[i].title));
   row.kind = kRows[i].kind;
   row.label = MVText(@(kRows[i].title), MVStyleBody);
-  [row.label setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
   [row.label setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
   row.mark = [[MVInk alloc] initWithSymbol:@"circle.fill" color:MVAccent() size:kMark];
   row.mark.toolTip = MVWord(@"Changed here: it goes back when the device leaves this window");
@@ -278,7 +273,8 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   [row.mark.widthAnchor constraintEqualToConstant:kMark + 2].active = YES;
   NSArray<NSView *> *ends = [self controlsOf:row];
   BOOL own = row.kind >= MVRowLocation;
-  NSStackView *line = [NSStackView stackViewWithViews:[@[row.label, row.mark] arrayByAddingObjectsFromArray:own ? @[] : ends]];
+  // the mark stands right after the words it marks, and the control at the line's end
+  NSStackView *line = [NSStackView stackViewWithViews:[@[row.label, row.mark, gap()] arrayByAddingObjectsFromArray:own ? @[] : ends]];
   line.spacing = 6;
   row.note = MVPaneNote(@"");
   row.note.hidden = YES;
@@ -289,11 +285,7 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     [parts addObject:under];
   }
   [parts addObject:row.note];
-  NSStackView *stack = [NSStackView stackViewWithViews:parts];
-  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
-  stack.alignment = NSLayoutAttributeWidth;
-  stack.spacing = 4;
-  row.view = stack;
+  row.view = MVPlaceColumn(parts, 4);
   return row;
 }
 

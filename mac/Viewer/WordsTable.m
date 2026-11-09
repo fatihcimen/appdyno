@@ -465,6 +465,8 @@ const MVWordRow MVWordTable[] = {
     {"A simulator has no telephony: it cannot take an SMS", "Simülatörün telefon hattı yok: SMS alamaz"},
     {"Android has no reduce_transparency switch: its blurs are a developer option", "Android'de reduce_transparency anahtarı yok: bulanıklıkları bir geliştirici seçeneğidir"},
     {"This tool sets no thermal state on Android: only an iPhone's, through Xcode's conditions", "Bu araç Android'de ısıl durum ayarlamaz: yalnızca bir iPhone'unkini, Xcode'un koşullarıyla"},
+    {"This device does not fold: its states are %@", "Bu cihaz katlanmaz: durumları %@"},
+    {"This device has no fold states (cmd device_state, API 31+): %@", "Bu cihazın katlama durumları yok (cmd device_state, API 31+): %@"},
     {"This phone has Android below 13: it has no network shaping, which only an emulator's console and a cap of Android 13's give", "Bu telefonda Android 13'ten eski bir sürüm var: ağ biçimlendirmesi yok; bunu yalnızca bir emülatörün konsolu ve Android 13'ün sınırı verir"},
     {"A phone has no calls: only an emulator console has", "Telefona arama gönderilemez: bunu yalnızca bir emülatörün konsolu yapar"},
     {"A phone has no SMS: only an emulator console has", "Telefona SMS gönderilemez: bunu yalnızca bir emülatörün konsolu yapar"},
