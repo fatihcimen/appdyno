@@ -135,7 +135,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   [self showSection:sender.tag == 1];
 }
 
-/// The log, or the crash reports, the newest of them open to its text.
+/// The log, or the crash reports, the first `crashes` lists open to its text.
 - (void)showSection:(BOOL)crashes {
   for (MVAccentButton *section in _sections) {
     BOOL chosen = (section.tag == 1) == crashes;
@@ -256,7 +256,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   }];
   _crashes.rows = rows;
   NSString *note = [m[@"note"] isKindOfClass:NSString.class] ? m[@"note"] : @"";
-  // the newest stands open: a list with reports needs no word of its own
+  // one report stands open: a list with reports needs no word of its own
   if (!note.length && !rows.count) note = @"No crash reports of this app.";
   _crashNote.stringValue = note;
   _crashNote.hidden = !note.length;
