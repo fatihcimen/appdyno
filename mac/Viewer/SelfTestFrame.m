@@ -165,6 +165,20 @@ static void checkFirstResult(void) {
   MVCheck(@"performance: the first result just measured comes in", [card.layer animationForKey:@"fade"] != nil, nil);
 }
 
+/// e16: a measure that restarted the app six times, and then the pane said nothing had moved for 282 s.
+static void checkHeldSentence(void) {
+  MVPerfPane *pane = newPane();
+  NSTextField *sentence = [pane valueForKey:@"_sentence"];
+  [pane show:@{@"sample": @{@"at": @1, @"fps": @0}}];
+  [pane setValue:@(MVNowMs() - 282000) forKey:@"_heldSince"];
+  [pane showMeasuring:@"launch 1 of 5"];
+  [pane show:@{@"sample": @{@"at": @2, @"fps": @2}}];
+  MVCheck(@"performance: while a measure runs the pane holds its sentence, and no figure of before stands as now", [sentence.stringValue isEqual:@"Readings wait while a measure runs"] && [[pane shownFor:@"fps"] isEqual:@"\u2013"], sentence.stringValue);
+  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms"}];
+  [pane show:@{@"sample": @{@"at": @3, @"fps": @0}}];
+  MVCheck(@"performance: after it, how long nothing has moved is counted from then", [sentence.stringValue isEqual:@"Nothing moving"], sentence.stringValue);
+}
+
 static void checkPair(void) {
   MVStatusLine *line = [MVStatusLine new];
   line.name = @"Phone";
@@ -346,6 +360,7 @@ void MVCheckFrame(void) {
   checkLive();
   checkMeasures();
   checkFirstResult();
+  checkHeldSentence();
   checkPair();
   checkClicks();
   checkMenus();

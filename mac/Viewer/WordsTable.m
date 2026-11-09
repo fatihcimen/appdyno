@@ -234,6 +234,7 @@ const MVWordRow MVWordTable[] = {
     // Performance
     {"Frame rate", "Kare hızı"},
     {"Waiting for the first readings", "İlk ölçümler bekleniyor"},
+    {"Readings wait while a measure runs", "Bir ölçüm sürerken okumalar bekler"},
     {"Still", "Durgun"},
     {"Nothing moving", "Hareket yok"},
     {"Nothing has moved for %@ s", "%@ saniyedir hareket yok"},

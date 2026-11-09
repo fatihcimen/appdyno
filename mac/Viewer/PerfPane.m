@@ -111,7 +111,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
   NSArray<NSButton *> *_measures;
   NSMutableArray<NSDictionary *> *_kept;
   NSArray<NSDictionary *> *_past;
-  BOOL _measured;
+  BOOL _measured, _measuring;
   MVList *_results;
   NSNumber *_pictureRate;
   double _held, _heldSince;
@@ -186,6 +186,8 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
 }
 
 - (void)show:(NSDictionary *)message {
+  // a reading sent as a measure began is of before it, and the measure has the device to itself
+  if (_measuring) return;
   NSDictionary *sample = message[@"sample"];
   for (MVTrend *trend in _trends) {
     NSNumber *value = MVReadingOf(sample, trend.field, _pictureRate);
@@ -208,6 +210,15 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
 /// What it is at is the capsule's to say: here the measures only wait for it.
 - (void)showMeasuring:(NSString *)line {
   _hint.hidden = YES;
+  // nothing is read while it runs, so nothing read before stands as now, and how long a rate held starts again after
+  _measuring = YES;
+  _heldSince = 0;
+  _sentence.stringValue = @"Readings wait while a measure runs";
+  for (MVTrend *trend in _trends) {
+    trend.now.stringValue = @"–";
+    trend.line.hidden = YES;
+    trend.reason.hidden = YES;
+  }
   for (NSButton *measure in _measures) {
     measure.enabled = NO;
     measure.alphaValue = kWaiting;
@@ -248,6 +259,9 @@ static MVRow *rowOfResult(NSDictionary *result) {
   }
   [_kept insertObject:result atIndex:0];
   _measured = YES;
+  _measuring = NO;
+  _heldSince = 0;
+  _sentence.stringValue = @"Waiting for the first readings";
   NSString *hint = [result[@"hint"] isKindOfClass:NSString.class] ? result[@"hint"] : @"";
   _hint.stringValue = hint.length ? [[hint substringToIndex:1].uppercaseString stringByAppendingString:[hint substringFromIndex:1]] : @"";
   _hint.hidden = !hint.length;
