@@ -217,12 +217,20 @@ describe('a compile state', () => {
   });
 });
 
+/** A simulator whose app runs as `pid` among this Mac's processes, by the folder `simctl` says it is installed in. */
+const running = (udid: string, pid: number) => {
+  const folder = `/Devices/${udid}/data/Containers/Bundle/Application/A1/Fixture.app`;
+  return Object.assign(new Simctl(), {
+    exec: () => Promise.resolve(`${folder}\n`),
+    processes: () => Promise.resolve(`    1 /sbin/launchd\n ${pid} ${folder}/Fixture\n`),
+  });
+};
+
 describe('frames on a simulator', () => {
-  const UDID = 'FRAMES-DEFAULT';
+  const UDID = 'F7A3E1C2-0000-4000-8000-000000000001';
   const file = () => join(stateDir(), 'probes', `${UDID}-${APP}.jsonl`);
   const perf = () => {
-    const list = `4242\t0\tUIKitApplication:${APP}[cd34][rb-legacy]`;
-    const simctl = Object.assign(new Simctl(), { exec: () => Promise.resolve(list) });
+    const simctl = running(UDID, 4242);
     return new IosSimulatorPerf(
       UDID,
       simctl,
@@ -245,15 +253,11 @@ describe('frames on a simulator', () => {
 });
 
 describe('an app on a simulator', () => {
-  it('is the process that runs, past one just ended that stays listed', async () => {
-    const list = [
-      `-\t0\tUIKitApplication:${APP}[ab12][rb-legacy]`,
-      `4242\t0\tUIKitApplication:${APP}[cd34][rb-legacy]`,
-    ].join('\n');
-    const simctl = Object.assign(new Simctl(), { exec: () => Promise.resolve(list) });
+  it("is the process that runs, from this Mac's own list", async () => {
+    const udid = 'F7A3E1C2-0000-4000-8000-000000000002';
     const perf = new IosSimulatorPerf(
-      'U',
-      simctl,
+      udid,
+      running(udid, 4242),
       () => Promise.resolve(true),
       cannot("XCTest's metrics"),
     );

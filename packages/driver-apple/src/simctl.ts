@@ -98,6 +98,20 @@ export type Simulator = {
 
 const HOME_SCREEN = 'com.apple.springboard';
 
+/**
+ * The app's own process in the Mac's list (`ps -o pid=,command=`), by the folder its app is installed in on this Mac:
+ * the executable right in that folder, not an extension's further in.
+ */
+export function pidOfApp(processes: string, app: string): number | undefined {
+  for (const line of processes.split('\n')) {
+    const [, pid, command] = /^\s*(\d+) (.*)$/.exec(line) ?? [];
+    const executable =
+      command?.startsWith(`${app}/`) && command.slice(app.length + 1).split(' ')[0];
+    if (pid && executable && !executable.includes('/')) return Number(pid);
+  }
+  return undefined;
+}
+
 type Runtime = {
   identifier: string;
   version: string;
@@ -122,23 +136,36 @@ export const newestRuntimeOf = (runtimes: Runtime[], model: string) =>
 export class Simctl {
   constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
 
-  /** The process id of a running app. */
+  /**
+   * The process id of a running app. A simulator's apps are this Mac's processes, and the Mac's list is a fraction of
+   * launchctl's in the simulator, which spawns into it: 90 against 340 ms at load 22.
+   */
   async pid(udid: string, bundle: string): Promise<number> {
     assertBundle(bundle);
+    if (bundle !== HOME_SCREEN) {
+      const app = await this.appContainer(udid, bundle);
+      const pid = pidOfApp(await this.processes(), app);
+      if (!pid) throw notRunning(bundle);
+      return pid;
+    }
     const out = await this.exec(['spawn', udid, 'launchctl', 'list']);
-    // the home screen is a system service: it has a label of its own, with capitals its bundle id has not
-    const listed = (l: string) =>
-      bundle === HOME_SCREEN
-        ? l.endsWith('\tcom.apple.SpringBoard')
-        : l.includes(`UIKitApplication:${bundle}[`);
-    // a process just ended stays listed for a while, with no pid, beside the one that runs now
+    // the home screen is a system service: it has a label of its own, with capitals its bundle id has not; a process
+    // just ended stays listed for a while, with no pid, beside the one that runs now
     const pid = out
       .split('\n')
-      .filter(listed)
+      .filter((l) => l.endsWith('\tcom.apple.SpringBoard'))
       .map((l) => Number(l.trim().split(/\s+/)[0]))
       .find((n) => Number.isInteger(n) && n > 0);
     if (!pid) throw notRunning(bundle);
     return pid;
+  }
+
+  /** This Mac's processes, each with its whole command line. */
+  async processes(): Promise<string> {
+    const { stdout } = await run('/bin/ps', ['-axww', '-o', 'pid=,command='], {
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return stdout;
   }
 
   /** What people call each kind of device: an id says less, and these do not change as a Mac runs. */

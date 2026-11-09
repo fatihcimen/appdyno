@@ -4,11 +4,21 @@ import { Simctl } from '../src/simctl.js';
 
 const UDID = 'C8F701E7-9A02-4465-AC91-F4C85FBA788D';
 
+/** An app's folder on this Mac, as `simctl get_app_container` says it. */
+const folder = (bundle: string) =>
+  `/Users/me/Library/Developer/CoreSimulator/Devices/${UDID}/data/Containers/Bundle/Application/${bundle}/App.app`;
+
+/** A simulator with this launchctl list, and this Mac with these processes. */
 class Listed extends Simctl {
-  constructor(private readonly listing: string) {
+  constructor(
+    private readonly listing: string,
+    private readonly running = '',
+  ) {
     super({});
   }
-  override exec = () => Promise.resolve(this.listing);
+  override exec = (args: string[]) =>
+    Promise.resolve(args[0] === 'get_app_container' ? `${folder(args[2] ?? '')}\n` : this.listing);
+  override processes = () => Promise.resolve(this.running);
 }
 
 const LISTING = [
@@ -18,9 +28,11 @@ const LISTING = [
   '29658\t0\tUIKitApplication:dev.app[b202][rb-legacy]',
 ].join('\n');
 
+const RUNNING = `  412 /sbin/launchd\n29658 ${folder('dev.app')}/App\n`;
+
 describe('a running app on a simulator', () => {
-  it('is found by its label, past a process just ended', async () => {
-    expect(await new Listed(LISTING).pid(UDID, 'dev.app')).toBe(29658);
+  it("is found among this Mac's processes by the folder it is installed in", async () => {
+    expect(await new Listed(LISTING, RUNNING).pid(UDID, 'dev.app')).toBe(29658);
   });
 
   it('includes the home screen, which is a service with a label of its own', async () => {
@@ -28,7 +40,7 @@ describe('a running app on a simulator', () => {
   });
 
   it('says what is not running, by name', async () => {
-    await expect(new Listed(LISTING).pid(UDID, 'dev.other')).rejects.toThrow(
+    await expect(new Listed(LISTING, RUNNING).pid(UDID, 'dev.other')).rejects.toThrow(
       'dev.other is not running',
     );
   });
