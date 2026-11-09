@@ -80,7 +80,14 @@ export class AndroidSettings implements DeviceSettings {
     deviceLocales: (set?: string) => Promise<string> = () =>
       Promise.reject(new DeviceError('UNSUPPORTED', 'no agent to reach the device languages')),
   ) {
-    this.locale = new AndroidLocale(this.sh, deviceLocales);
+    this.locale = new AndroidLocale(this.sh, async (set) => {
+      if (!set) return deviceLocales();
+      // the system writes the text scale beside the languages: neither stays written where the device had it unset
+      const back = await this.keepingUnset(['font_scale', 'system_locales']);
+      const tags = await deviceLocales(set);
+      await back();
+      return tags;
+    });
     this.fold = new AndroidFold(this.sh);
     this.shaping = new AndroidShaping(serial, this.sh, this.emu);
   }

@@ -479,6 +479,44 @@ describe('a text size', () => {
   });
 });
 
+describe("the whole device's languages", () => {
+  it(
+    'leave the text scale and the languages the device had unset still unset, when set and when put back',
+    { timeout: 15_000 },
+    async () => {
+      const held: Record<string, string> = { font_scale: 'null', system_locales: 'null' };
+      let tags = 'en-US';
+      const one = (command: string) => {
+        const [, verb, key = ''] = /^settings (get|delete) system (\w+)/.exec(command) ?? [];
+        if (verb === 'get') return held[key] ?? 'null';
+        if (verb === 'delete') held[key] = 'null';
+        return '';
+      };
+      const exec = (_serial: string, command: string) =>
+        Promise.resolve(command.split('; ').map(one).join('\n'));
+      // the agent's change, and the configuration the system writes for it
+      const deviceLocales = (set?: string) => {
+        if (set) {
+          tags = set;
+          Object.assign(held, { font_scale: '1.0', system_locales: set });
+        }
+        return Promise.resolve(tags);
+      };
+      const settings = new AndroidSettings(
+        { exec } as unknown as Adb,
+        'emulator-5554',
+        undefined,
+        deviceLocales,
+      );
+      const unset = { font_scale: 'null', system_locales: 'null' };
+      await settings.set('locale', 'tr-TR');
+      expect([await settings.get('locale'), held]).toEqual(['tr-TR', unset]);
+      await settings.set('locale', 'en-US');
+      expect([await settings.get('locale'), held]).toEqual(['en-US', unset]);
+    },
+  );
+});
+
 it('says Android has no keychain', async () => {
   const { events } = device('emulator-5554', []);
   expect((await refusal(events.resetKeychain())).code).toBe('UNSUPPORTED');

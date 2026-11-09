@@ -79,6 +79,18 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     expect(read()).toEqual(unset);
   });
 
+  it('sets the whole device in Turkish and puts it back, with the scale and the languages it had unset still unset', async () => {
+    const read = () =>
+      ['font_scale', 'system_locales'].map((k) => adb('settings', 'get', 'system', k));
+    const was = read();
+    const tr = await call('device_setting', { name: 'locale', value: 'tr-TR', app: '' });
+    expect(tr.error ? tr.text : '').toBe('');
+    expect(adb('getprop', 'persist.sys.locale')).toBe('tr-TR');
+    expect(read()).toEqual(was);
+    expect((await call('device_setting', { name: 'restore' })).text).toMatch(/locale: en/);
+    expect(read()).toEqual(was);
+  });
+
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {
     await set(call, 'wifi', 'on');
     expect(await value(call, 'mobile_data')).toBe('on');
