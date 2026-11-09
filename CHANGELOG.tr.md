@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir pencere, canlı bir okumanın neden sayısı olmadığını Türkçe söyler: bir okumanın sayının yerine verdiği altı not, aralarında `Waiting for the app in front` ve `Counting begins`, sözcük tablosundadır; bir kartın söylediği gibi cümlenin ortasında gelen bir not da cümle başı olarak bulunur. Türkçe Performans bölmesi `the app in front bekleniyor` diyordu, öbür notlar da İngilizce kalıyordu.
 - Hub'ın Yeni Emülatör sayfası bir API 37 imajını ötekiler gibi adlandırır, `API 37, Google Play` yerine `Android 17 (API 37), Google Play`.
 - Bunun Yanında Göster her tarafı adlandırır: hub penceresinde her görüntünün altında adı ve bir dokunuşun nereye gittiği, `To both` ya da `Here only`, ya da orada neyin başarısız olduğu, `No Add here`, kırmızıyla durur; pencerenin tek çubuğu bir tarafı anlattığından öbür taraftaki bir başarısızlık hiçbir yerde görünmüyordu. Kenar çubuğu, çubuğu ve Denetçisi açık olan cihazı seçer; onlar ikinciyi gösterirken birinciyi seçili tutuyordu. API 34 bir emülatörün yanında bir iPhone 17 Pro simülatöründe görüldü.
 - Hub'ın Yeni Emülatör sayfası sistemin kendi sayfaları gibi durur: her başlık denetiminin sözleriyle aynı satırda, aralıklar eşit, İptal ve varsayılan Oluştur sağ kenarda, bir sistem de `API 36, google apis playstore` yerine `Android 16 (API 36), Google Play` olarak söylenir. Performans bölmesinin Sonuçlar kartı satırları kadar uzundur, boş bir kartın üstünde tek satır duruyordu; bir cihaz kendi penceresindeyken hub'ın Denetçisi sayılarının orada olduğunu söyler, çalışan bir cihaz seçmeyi söylüyordu.

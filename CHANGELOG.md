@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A window says in Turkish why a live reading has no number: the six notes a reading gives in its place, `Waiting for the app in front` and `Counting begins` among them, are in the table of words, and one that comes as a sentence goes on, as a card says it, is found as the sentence begun. The Turkish Performance pane said `the app in front bekleniyor`, and the other notes stood in English.
 - The hub's New Emulator sheet names an API 37 image as it does the others, `Android 17 (API 37), Google Play`, where it said `API 37, Google Play`.
 - Show Beside This One names each side: under each picture in the hub's window stand its name and where a touch goes, `To both` or `Here only`, or what failed there, `No Add here`, in red, as the window's one bar speaks of one side and a failure on the other showed nowhere. The sidebar chooses the device whose bar and Inspector are up, where it kept the first while they showed the second. Seen on an iPhone 17 Pro simulator beside an API 34 emulator.
 - The hub's New Emulator sheet stands as the system's own: each caption on the line of its control's words, even gaps, Cancel and the default Create at its trailing edge, and a system said as `Android 16 (API 36), Google Play` where it said `API 36, google apis playstore`. The Performance pane's Results card is as tall as its rows, where one row stood over an empty card, and with a device in a window of its own the hub's Inspector says its numbers are there, where it said to choose a running device.

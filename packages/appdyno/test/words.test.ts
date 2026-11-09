@@ -70,6 +70,20 @@ describe('the table of words', () => {
     expect(fixes.filter((w) => !known(w))).toEqual([]);
   });
 
+  it('has what a live reading says of a number it has not got', () => {
+    const live = readFileSync(
+      join(import.meta.dirname, '../../core/src/mirror/live-measured.ts'),
+      'utf8',
+    );
+    const notes = [...live.matchAll(/(?:^const [A-Z_]+ = |allAbsent\([^,]+, )'([^']+)'/gm)].map(
+      (m) => must(m[1], 'its note'),
+    );
+    expect(notes.length).toBeGreaterThanOrEqual(6);
+    // the Performance pane begins a sentence with it; the cards say it as one goes on, and are found so too
+    const begun = notes.map((n) => n.charAt(0).toUpperCase() + n.slice(1));
+    expect(begun.filter((w) => !english.has(w))).toEqual([]);
+  });
+
   it('has every sentence of the client and help panes, in whatever shape they are kept', () => {
     const missed = ['HubClients.m', 'HubHelp.m', 'HubConnect.m', 'HubTools.m'].flatMap((file) =>
       [...source(file).matchAll(/@"([A-Z][^"]* [^"]*)"/g)]

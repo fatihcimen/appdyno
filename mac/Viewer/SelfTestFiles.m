@@ -187,6 +187,8 @@ void MVCheckRecorder(void) {
 static void checkWords(void) {
   MVCheck(@"words: a word of the table", [MVInTurkish(@"Live") isEqual:@"Canlı"], nil);
   MVCheck(@"words: what the table has not got stands as it came", [MVInTurkish(@"iPhone 17 Pro") isEqual:@"iPhone 17 Pro"], nil);
+  MVCheck(@"words: a source's note, as a sentence goes on, is found as one begins", [MVInTurkish(@"waiting for the app in front") isEqual:@"öndeki uygulama bekleniyor"], MVInTurkish(@"waiting for the app in front"));
+  MVCheck(@"words: and the pane's, which begins one, is said whole", [MVInTurkish(@"Waiting for the app in front") isEqual:@"Öndeki uygulama bekleniyor"], MVInTurkish(@"Waiting for the app in front"));
   MVCheck(@"words: what changes keeps its place, in Turkish order", [MVInTurkish(@"Steady at 60 fps for 30 s") isEqual:@"30 saniyedir 60 fps'de sabit"], MVInTurkish(@"Steady at 60 fps for 30 s"));
   MVCheck(@"words: what a word holds is said in its turn", [MVInTurkish(@"Measuring launch 3 of 6") isEqual:@"Açılış ölçülüyor: 3/6"], MVInTurkish(@"Measuring launch 3 of 6"));
   MVCheck(@"words: what is joined up is said a part at a time", [MVInTurkish(@"Live · Picture 60 fps") isEqual:@"Canlı · Görüntü 60 fps"] && [MVInTurkish(@"median of 5, stream running") isEqual:@"5 ölçümün ortancası, yayın açık"], MVInTurkish(@"median of 5, stream running"));

@@ -82,14 +82,29 @@ static NSString *filled(NSString *turkishWords, NSTextCheckingResult *found, NSS
   return out;
 }
 
-NSString *MVInTurkish(NSString *english) {
-  if (!english.length) return english;
+/// A row's Turkish for the whole of it, by its words or by a pattern, or nil.
+static NSString *_Nullable rowFor(NSString *english) {
   NSString *known = exact()[english];
   if (known) return known;
   NSRange all = NSMakeRange(0, english.length);
   for (NSArray *row in patterns()) {
     NSTextCheckingResult *found = [row[0] firstMatchInString:english options:0 range:all];
     if (found) return filled(row[1], found, english);
+  }
+  return nil;
+}
+
+NSString *MVInTurkish(NSString *english) {
+  if (!english.length) return english;
+  NSString *whole = rowFor(english);
+  if (whole) return whole;
+  // a source's note comes as a sentence goes on, and the table holds it as one begins
+  NSRange first = [english rangeOfComposedCharacterSequenceAtIndex:0];
+  NSString *head = [english substringWithRange:first];
+  NSString *begun = [head isEqual:head.uppercaseString] ? nil : rowFor([head.uppercaseString stringByAppendingString:[english substringFromIndex:NSMaxRange(first)]]);
+  if (begun) {
+    NSRange its = [begun rangeOfComposedCharacterSequenceAtIndex:0];
+    return [[[begun substringWithRange:its] lowercaseStringWithLocale:locale()] stringByAppendingString:[begun substringFromIndex:NSMaxRange(its)]];
   }
   // what is joined up is said a part at a time
   for (NSString *join in @[@" · ", @", "]) {
