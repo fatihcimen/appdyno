@@ -70,6 +70,18 @@ describe('what a window measures', () => {
     expect(words.flagged).toBe(true);
   });
 
+  it('says of a list that stopped moving how many of the rounds asked for it ran', async () => {
+    const device = new FakeDevice();
+    // a screen that does not scroll: the first round is counted as it is, and no other moves it
+    device.listEnd = 0;
+    const said: string[] = [];
+    const words = await measuresOn(device).scroll('dev.app', (line) => said.push(line));
+    expect(said).toContain('scroll round 2 of 3');
+    expect(words.detail).toMatch(/^1 of 3 rounds/);
+    const full = await measuresOn(new FakeDevice()).scroll('dev.app', () => undefined);
+    expect(full.detail).toMatch(/^3 rounds/);
+  });
+
   it('says a journey with no whole as not measured, for a person to look at', async () => {
     const device = new FakeDevice();
     device.settles = false;

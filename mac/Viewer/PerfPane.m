@@ -105,7 +105,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
 
 @implementation MVPerfPane {
   NSMutableArray<MVTrend *> *_trends;
-  NSTextField *_sentence, *_app;
+  NSTextField *_sentence, *_app, *_hint;
   NSString *_shownApp;
   NSView *_slack, *_none, *_resultsCard;
   NSArray<NSButton *> *_measures;
@@ -129,6 +129,10 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     }
     _sentence = MVText(@"Waiting for the first readings", MVStyleStrong);
     _app = MVPaneNote(@"Open an app, then measure it. It restarts.");
+    // what a refusal says to do next, where a person reads before the next measure
+    _hint = MVPaneNote(@"");
+    _hint.textColor = MVOrange();
+    _hint.hidden = YES;
     _measures = @[rowButton(@"measureLaunch", 0, target), rowButton(@"measureScroll", 1, target), rowButton(@"journey", 2, target)];
     _none = MVEmptyCard(@"chart.bar.xaxis", @"No results yet. A measure gives you a number to compare against.");
     _results = [MVList new];
@@ -139,7 +143,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     NSView *measures = grouped(_measures);
     NSMutableArray<NSView *> *all = [NSMutableArray arrayWithObject:_sentence];
     [all addObjectsFromArray:lines];
-    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), measures, _app, MVPaneHeading(@"Results"), _none, _resultsCard, _slack, grouped(@[rowButton(@"dashboard", 3, target)])]];
+    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), measures, _app, _hint, MVPaneHeading(@"Results"), _none, _resultsCard, _slack, grouped(@[rowButton(@"dashboard", 3, target)])]];
     NSStackView *stack = [NSStackView stackViewWithViews:all];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
@@ -148,6 +152,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     [stack setCustomSpacing:kBetween afterView:_sentence];
     [stack setCustomSpacing:kBetween afterView:lines.lastObject];
     [stack setCustomSpacing:kBetween afterView:_app];
+    [stack setCustomSpacing:kBetween afterView:_hint];
     [_resultsCard setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
@@ -202,6 +207,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
 
 /// What it is at is the capsule's to say: here the measures only wait for it.
 - (void)showMeasuring:(NSString *)line {
+  _hint.hidden = YES;
   for (NSButton *measure in _measures) {
     measure.enabled = NO;
     measure.alphaValue = kWaiting;
@@ -242,6 +248,9 @@ static MVRow *rowOfResult(NSDictionary *result) {
   }
   [_kept insertObject:result atIndex:0];
   _measured = YES;
+  NSString *hint = [result[@"hint"] isKindOfClass:NSString.class] ? result[@"hint"] : @"";
+  _hint.stringValue = hint.length ? [[hint substringToIndex:1].uppercaseString stringByAppendingString:[hint substringFromIndex:1]] : @"";
+  _hint.hidden = !hint.length;
   if (_kept.count > kResults) [_kept removeLastObject];
   [self listResults];
 }
@@ -251,10 +260,13 @@ static MVRow *rowOfResult(NSDictionary *result) {
   _past = [message[@"results"] isKindOfClass:NSArray.class] ? message[@"results"] : @[];
   NSString *app = [message[@"app"] length] ? message[@"app"] : nil;
   // what was measured of the app before stays with it: another app in front starts from its own
-  if (!(app == _shownApp || [app isEqual:_shownApp])) [_kept removeAllObjects];
+  if (!(app == _shownApp || [app isEqual:_shownApp])) {
+    [_kept removeAllObjects];
+    _hint.hidden = YES;
+  }
   _shownApp = app;
-  // a kept line stands in for this session's own, and none kept takes nothing away
-  if (_past.count) [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"ok != YES"]];
+  // a line the Mac kept stands in for this session's own: one it has no number of to keep stays
+  [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"NOT (ok == YES AND kept == YES)"]];
   _app.stringValue = app ? [NSString stringWithFormat:@"A measure restarts %@.", app] : @"Open an app, then measure it. It restarts.";
   if (app) MVNoteFrontApp(app);
   [self listResults];

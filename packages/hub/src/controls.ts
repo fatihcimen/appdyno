@@ -260,7 +260,9 @@ export function windowControls(
       await ready();
       return await work();
     } catch (e) {
-      tellMeasured({ title: 'No measure', detail: (e as Error).message });
+      // a refusal says what to do next, which is the person's to do here
+      const { message, hint } = e as Error & { hint?: string };
+      tellMeasured({ title: 'No measure', detail: message, ...(hint && { hint }) });
       return undefined;
     } finally {
       measuring = false;
@@ -280,7 +282,11 @@ export function windowControls(
         });
         return;
       }
-      tellMeasured({ ok: true, ...(await work(app, saying)) });
+      const newest = async () => (await measures.history(app).catch(() => []))[0]?.why;
+      const was = await newest();
+      const said = await work(app, saying);
+      // a line the Mac keeps stands in for this one in the pane, and one with no number to keep stays as it is
+      tellMeasured({ ok: true, ...said, kept: (await newest()) !== was });
       await tellHistory(app);
     });
 

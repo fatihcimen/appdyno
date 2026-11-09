@@ -355,6 +355,34 @@ describe("a window's measures", () => {
     expect(answer(told)).toMatchObject({ ok: true });
   });
 
+  it('say whether the Mac kept a line of it, which stands in for it, or none, and it stays', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    const line = { title: 'Scroll', value: '1% jank', detail: '', why: '2026-11-09T08:00:00Z' };
+    measures.history.mockResolvedValueOnce([]).mockResolvedValue([line] as never);
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toMatchObject({ ok: true, kept: true }), WAIT);
+    told.length = 0;
+    // too few frames: nothing new is kept, and the answer is all there is of it
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toMatchObject({ ok: true, kept: false }), WAIT);
+  });
+
+  it('pass on what a refusal says to do next, for the person who is to do it', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    measures.scroll.mockRejectedValueOnce(
+      Object.assign(new Error('relaunched with the frame probe'), {
+        hint: 'open the screen again',
+      }),
+    );
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(answer(told)).toMatchObject({
+      title: 'No measure',
+      detail: 'relaunched with the frame probe',
+      hint: 'open the screen again',
+    });
+  });
+
   it('run a journey as any other, and hand back what it ran', async () => {
     const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
     expect(await controls.journey('x.flow')).toEqual({ totalMs: 412 });

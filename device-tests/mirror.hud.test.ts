@@ -161,16 +161,29 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
       // as a person does: a measure is of what the pane says is in front
       const fixtureRead = () => (perf().at(-1)?.sample as LiveSample | undefined)?.app === FIXTURE;
       await until('the fixture in the pane', fixtureRead, READING_MS);
-      for (const [name, value] of [
-        ['measureLaunch', /\d+ ms/],
-        ['measureScroll', /jank|too few frames/],
-      ] as const) {
+      const measure = async (name: string) => {
         const before = answers().length;
         control(name);
         await until(name, () => answers().length > before, MEASURE_MS);
         const said = answers().at(-1);
         assert(said, name);
         console.log(`measured: ${JSON.stringify(said)}`);
+        return said;
+      };
+      for (const [name, value] of [
+        ['measureLaunch', /\d+ ms/],
+        ['measureScroll', /jank|too few frames/],
+      ] as const) {
+        let said = await measure(name);
+        if (udid && name === 'measureScroll') {
+          // the frame probe goes in by a relaunch, after the launches took it out: the app is on its first screen, so the
+          // measure stops, and says what a person does next, as they then do
+          expect(said).toMatchObject({ title: 'No measure' });
+          expect(String(said.hint)).toContain('open the screen to measure again');
+          await picture('refused');
+          await fixtureInFront();
+          said = await measure(name);
+        }
         expect(said.ok).toBe(true);
         expect(String(said.value)).toMatch(value);
         expect(String(said.detail)).toContain('stream running');

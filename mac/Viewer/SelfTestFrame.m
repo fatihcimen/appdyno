@@ -123,6 +123,18 @@ static void checkMeasures(void) {
   MVCheck(@"performance: the pane names the app in front, which a measure restarts", [app.stringValue containsString:@"Fixture"] && pane.lastResult.length, app.stringValue);
   [pane showHistory:@{@"results": @[]}];
   MVCheck(@"performance: with no app of a person's in front it asks for one, and what was measured of another goes", [app.stringValue hasPrefix:@"Open an app"] && !pane.lastResult.length, app.stringValue);
+  NSArray *before = @[@{@"title": @"Cold launch", @"value": @"400 ms"}];
+  [pane showMeasured:@{@"ok": @YES, @"flagged": @YES, @"kept": @NO, @"title": @"Scroll", @"value": @"too few frames", @"detail": @"1 of 3 rounds"}];
+  [pane showHistory:@{@"results": before}];
+  MVCheck(@"performance: a result the Mac kept no number of stays over what it kept before", [pane.lastResult containsString:@"too few frames"], pane.lastResult);
+  [pane showMeasured:@{@"ok": @YES, @"kept": @YES, @"title": @"Cold launch", @"value": @"412 ms"}];
+  [pane showHistory:@{@"results": @[@{@"title": @"Cold launch", @"value": @"412 ms"}, before[0]]}];
+  MVCheck(@"performance: one it kept is shown once, as the Mac keeps it", ((NSTableView *)((MVList *)[pane valueForKey:@"_results"]).documentView).numberOfRows == 3, nil);
+  NSTextField *hint = [pane valueForKey:@"_hint"];
+  [pane showMeasured:@{@"title": @"No measure", @"detail": @"relaunched with the frame probe", @"hint": @"open the screen to measure again"}];
+  MVCheck(@"performance: a refusal says under the measures what to do next", !hint.hidden && [hint.stringValue isEqual:@"Open the screen to measure again"], hint.stringValue);
+  [pane showMeasuring:@"round 1 of 3"];
+  MVCheck(@"performance: and stops saying it once the next measure starts", hint.hidden, nil);
 }
 
 /// In a window that has been drawn, as a view with no window has no layer to give an animation to.

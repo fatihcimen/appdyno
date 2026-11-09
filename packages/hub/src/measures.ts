@@ -110,12 +110,17 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       const data = await held(say, () => scroll.handler(input));
       const out = scroll.output.parse(data);
       const jank = out.jankMedianPercent;
+      const ran = out.rounds.length;
+      // a list that stopped moving ends the rounds early, after progress said each one asked for
+      const asked = typeof input.repeats === 'number' ? input.repeats : ran;
+      const rounds =
+        ran < asked ? `${ran} of ${asked} rounds` : `${ran} round${ran === 1 ? '' : 's'}`;
       return {
         title: 'Scroll',
         value:
           jank === undefined ? 'too few frames' : `${Math.round(jank)}% jank, ${out.frozen} frozen`,
         flagged: out.findings.length > 0,
-        ...judged(app, `${out.rounds.length} rounds`, out),
+        ...judged(app, rounds, out),
       };
     },
     journey: async (file, app, say) => {
