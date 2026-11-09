@@ -158,6 +158,22 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(shown[0]?.b[0]).toBeGreaterThan(Math.min(...nodes.map((n) => n.b[0])));
   });
 
+  it("keeps the copy out of sight in the runner's reads after a list's, which have no copy to ask of", async () => {
+    const byRunner = async () => (await IosDevice.prototype.tree.call(d, { maxNodes: 5000 })).nodes;
+    const shownCopies = async () =>
+      (await byRunner()).filter((n) => n.id === 'dup_close' && n.f & 1);
+    await open('Form');
+    expect(await shownCopies()).toHaveLength(1);
+    expect((await open('List')).list.some((e) => e.label.startsWith('Product'))).toBe(true);
+    // each a layout of its own, more than the runner keeps
+    for (let i = 0; i < 10; i++) {
+      await d.swipe({ x: 200, y: 600 }, { x: 200, y: 560 - 10 * i }, 300, { settle: false });
+      await byRunner();
+    }
+    await open('Form');
+    expect(await shownCopies()).toHaveLength(1);
+  });
+
   // asked of the runner itself: a simulator's own touches go past it, and a phone's are all it has
   it('watches for a system alert after a button that changes nothing, with a copy on the screen or not', async () => {
     await home();

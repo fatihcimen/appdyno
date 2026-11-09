@@ -78,6 +78,10 @@ extension Device {
             }
             return
         }
+        // a layout with no copy asks nothing, and keeps no place among those that did: the reads of a list
+        // scrolling pushed out the screen with copies, which then asked again, 144 to 203 ms on a simulator
+        let repeated = repeatedControls(c.nodes)
+        if repeated.isEmpty { return }
         let app = front().0
         // the home screen's copies are a widget and its icon, or a keyboard on its way: asking of them went to a
         // widget's process, and on an iPhone took 7 s and then did not answer
@@ -88,7 +92,7 @@ extension Device {
             unreachable.append((key, hidden))
             if unreachable.count > 8 { unreachable.removeFirst() }
         }
-        for idxs in repeatedControls(c.nodes).prefix(4) {
+        for idxs in repeated.prefix(4) {
             guard let id = c.nodes[idxs[0]].id else { continue }
             let query = app.descendants(matching: .any).matching(identifier: id)
             for index in 0 ..< min(query.count, 8) {
