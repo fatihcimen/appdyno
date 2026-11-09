@@ -5,6 +5,7 @@ import { appDeath, DIED_HINT, diedLine, diedUnder } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
+import { hideKeyboard } from './keyboard.js';
 import {
   AssertStep,
   Coord,
@@ -35,7 +36,6 @@ import {
 // 30 took 13 s on an emulator and 21 s on a simulator at load 12, and up to 56 s on a loaded Mac, near a client's usual 60 s: each step says its progress
 const MAX_STEPS = 30;
 const PINCH_MS = 400;
-const KEYBOARD_GONE_MS = 1_500;
 
 /** What cannot be a step: `steps` in itself, and a flow's own sequence. */
 const NOT_A_STEP = new Set(['steps', 'flow']);
@@ -226,13 +226,7 @@ export function actOps(
           return reply(t, { ...summary(t), open });
         }
         if (!open) return reply('no keyboard is open', summary('no keyboard is open'));
-        await s.device.dismissKeyboard();
-        s.acted();
-        const gone = await s.until(
-          (x) => !s.device.platformScreen.keyboardOpen(x.tree),
-          KEYBOARD_GONE_MS,
-        );
-        if (!gone.met)
+        if (!(await hideKeyboard(s)))
           throw new ToolError(
             'the keyboard stayed open: the app keeps it there',
             'UNSUPPORTED',

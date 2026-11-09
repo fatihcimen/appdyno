@@ -19,6 +19,7 @@ import { ToolError } from './tool.js';
 import { byPerson } from './policy.js';
 import { Check, NAME_AN_ELEMENT, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
+import { pastKeyboard } from './keyboard.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 const STALE = 'stale ref, read the screen again';
@@ -122,10 +123,10 @@ export function stepsFor(
   };
 
   /** The point of a ref (on the device's current screen), a selector or x,y. */
-  const target = async (
+  const aim = async (
     s: Session,
     a: { ref?: string; x?: number; y?: number; selector?: SelectorOf },
-    patient = false,
+    patient: boolean,
   ) => {
     if (a.ref) {
       const has = (x: Screen | undefined) => x?.list.find((e) => e.ref === a.ref);
@@ -147,6 +148,8 @@ export function stepsFor(
       );
     return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
   };
+  const target = (s: Session, a: Parameters<typeof aim>[1], patient = false) =>
+    pastKeyboard(s, a, (p) => aim(s, a, p), patient);
 
   const windowSize = async (s: Session) => {
     const w =

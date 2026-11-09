@@ -544,6 +544,8 @@ export class FakeDevice extends DeviceActions implements Device {
 export class WithKeyboard extends FakeDevice {
   up = true;
   closes = true;
+  /** Where the keyboard's window begins: 0 is a full-screen one, as a phone shows in landscape. */
+  top = 1500;
   override current(): Tree {
     const t = super.current();
     if (this.up)
@@ -551,7 +553,7 @@ export class WithKeyboard extends FakeDevice {
         type: 2,
         pkg: 'ime',
         layer: 3,
-        b: [0, 1500, 1080, 2400],
+        b: [0, this.top, 1080, 2400],
         active: false,
         focused: false,
       });

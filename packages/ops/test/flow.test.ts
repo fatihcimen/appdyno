@@ -598,6 +598,17 @@ assert id=result check=text equals="Gönderildi"
       expect(timings[0]?.settledMs).toBeGreaterThanOrEqual(0);
     });
 
+    it('closes a full-screen keyboard over the button a step taps, which the touch would type on', async () => {
+      const keyboard = new WithKeyboard();
+      keyboard.top = 0;
+      keyboard.screen = 'form';
+      device = keyboard;
+      const call = callerOf(context());
+      const file = flowFile('app dev.app\ntap text="Gönder"\nassert id=result\n');
+      expect((await call('flow', { action: 'run', file })).text).toContain('passed: 2 steps');
+      expect(keyboard.up).toBe(false);
+    });
+
     it('touches a target only once it has stopped moving', async () => {
       device.screen = 'form';
       const send = must(

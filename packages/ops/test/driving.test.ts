@@ -14,6 +14,7 @@ import {
   type Startable,
   type VirtualDevices,
 } from '@appdyno/core';
+import { iosScreen } from '@appdyno/driver-apple';
 import { DeviceError, KEYS, type ActParams, type ErrorCode, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import {
@@ -1274,6 +1275,77 @@ describe('keyboard', () => {
     const r = await call('keyboard', { action: 'dismiss' });
     expect(r.error).toBe(true);
     expect(r.text).toContain('stayed open');
+  });
+
+  // as a landscape phone's full-screen keyboard, or a pan, leaves the app's window: whole, under the keyboard
+  it('closes it before a touch on an element under it, which would type, by selector or ref', async () => {
+    withScreen('low', [
+      { c: 'android.widget.Button', t: 'Send', b: [0, 1700, 1080, 1800], f: 19, go: 'sent' },
+    ]);
+    const d = new WithKeyboard();
+    d.screen = 'low';
+    const { call } = await connect(d);
+    const r = await call('tap', { selector: { text: 'Send' } });
+    expect(r.error).toBe(false);
+    expect(d.up).toBe(false);
+    expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 540, y: 1750 });
+    expect(d.screen).toBe('sent');
+    d.screen = 'low';
+    d.up = true;
+    const ref = /(@\w+) button "Send"/.exec((await call('screen')).text)?.[1];
+    expect((await call('tap', { ref })).error).toBe(false);
+    expect(d.up).toBe(false);
+  });
+
+  it('touches a key of the keyboard itself, as iOS lists its keys, with no closing first', async () => {
+    class IosKeyboard extends FakeDevice {
+      closed = 0;
+      constructor() {
+        super();
+        Object.defineProperty(this, 'platformScreen', { value: iosScreen });
+      }
+      override current(): Tree {
+        const t = super.current();
+        const keyboard = t.nodes.length;
+        t.nodes.push(
+          { p: 0, w: 0, c: 'Keyboard', b: [0, 1500, 1080, 2400], f: 17 },
+          { p: keyboard, w: 0, c: 'Button', d: 'Return', b: [800, 2200, 1080, 2400], f: 19 },
+        );
+        return t;
+      }
+      dismissKeyboard = () => {
+        this.closed++;
+        return Promise.resolve();
+      };
+    }
+    const d = new IosKeyboard();
+    const { call } = await connect(d);
+    expect((await call('tap', { selector: { text: 'Return' } })).error).toBe(false);
+    expect(d.closed).toBe(0);
+    expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 940, y: 2300 });
+  });
+
+  it('closes it when the window it shrank leaves the element out, and finds it then', async () => {
+    class Shrunk extends WithKeyboard {
+      override current(): Tree {
+        const t = super.current();
+        if (this.up) {
+          t.nodes = t.nodes.filter((n) => n.t !== 'Gönder');
+          t.hash = `${t.hash}+shrunk`;
+        }
+        return t;
+      }
+    }
+    const d = new Shrunk();
+    d.screen = 'form';
+    const { call } = await connect(d);
+    const r = await call('tap', { selector: { text: 'Gönder' } });
+    expect(r.error).toBe(false);
+    expect(d.screen).toBe('sent');
+    d.screen = 'form';
+    d.up = true;
+    const missing = await call('tap', { selector: { text: 'Nowhere' } });
+    expect(missing.data.code).toBe('NOT_FOUND');
   });
 });
 
