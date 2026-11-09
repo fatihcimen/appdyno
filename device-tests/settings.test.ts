@@ -247,9 +247,12 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
         },
       ).trim();
     const before = global();
+    // what a session changes goes back when it ends, and the answer says so
+    const back =
+      'put back when this session ends, or by restore; it cannot be kept past the session';
     const one = await call('device_setting', { name: 'locale', value: 'tr-TR', app: PREFS });
     expect(one.text).toBe(
-      `locale: tr-TR; ${PREFS}'s launches by this tool, not the system's own text: app "" for the whole simulator`,
+      `locale: tr-TR; ${PREFS}'s launches by this tool, not the system's own text: app "" for the whole simulator; ${back}`,
     );
     expect(global()).toBe(before);
     await call('launch_app', { app: PREFS });
@@ -259,7 +262,9 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     expect((await call('wait_for', { text: 'Settings', timeoutMs: 10_000 })).data.met).toBe(true);
 
     const whole = await call('device_setting', { name: 'locale', value: 'tr-TR', app: '' });
-    expect(whole.text).toBe("locale: tr-TR; the whole simulator: app for one app's launches");
+    expect(whole.text).toBe(
+      `locale: tr-TR; the whole simulator: app for one app's launches; ${back}`,
+    );
     expect(global()).toBe('tr_TR');
     await call('device_setting', { name: 'restore' });
     expect(global()).toBe(before);
