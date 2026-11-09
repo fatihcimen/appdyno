@@ -98,7 +98,7 @@ Dönen bir telefon, uygulama yan yatmış halde aynı biçimde bir görüntü g�
 
 ## Pencere
 
-Cihaz, sistemin araç çubuğunun altında, hub'ın paletinden boyanmış bir zeminde durur. Sistemin camının kendine ait bir rengi yoktur, bu yüzden bir pencere arkasında duran kadar zengindir. Görüntünün üstüne hiçbir şey konmaz ve hiçbir şey onu renklendirmez: renk onun çevresinde yaşar. Oradaki tek bir kapsül, cihazın içinde bulunduğu her şeyi söyler: `Live · 60 fps · USB`, `Reconnecting`, onu neyin beklettiği, alt kenarında bir çubukla `Measuring launch 3 of 6` ya da bir yapay zekâ istemcisinin yönettiği. Ona tıklamak yayının sayılarını gösterir. Bir durum asla yalnızca bir renk değildir: her birinin bir simgesi ve sözleri vardır.
+Cihaz, sistemin araç çubuğunun altında, hub'ın paletinden boyanmış bir zeminde durur. Sistemin camının kendine ait bir rengi yoktur, bu yüzden bir pencere arkasında duran kadar zengindir. Görüntünün üstüne hiçbir şey konmaz ve hiçbir şey onu renklendirmez: renk onun çevresinde yaşar. Oradaki tek bir kapsül, cihazın içinde bulunduğu her şeyi söyler: `Live · Picture 60 fps · USB`, `Reconnecting`, onu neyin beklettiği, alt kenarında bir çubukla `Measuring launch 3 of 6` ya da bir yapay zekâ istemcisinin yönettiği. Ona tıklamak yayının sayılarını gösterir. Bir durum asla yalnızca bir renk değildir: her birinin bir simgesi ve sözleri vardır. Oradaki hız, görüntünün bu Mac'e ulaştığı hızdır: Performans bölmesindeki **Uygulamanın kare hızı** uygulamanın çizdiğidir, ikisinin tutması gerekmez, çünkü duran bir uygulama bir kez çizilir, yayın da değişeni gönderir.
 
 Pencere çoğu zaman bir kişinin yazdığı pencerenin arkasındadır, bu yüzden söyledikleri orada da gücünü koruyacak biçimde yapılmıştır. AppKit, anahtar (key) olmayan bir pencerenin çubuğundaki sistem renklerini ve her görüntüyü soldurur: kendi başlığını 2:1'e kadar. Bu yüzden çubuktaki ad bize ait bir etikettir, renkler düz renklere çözülür ve simgeleri bize ait bir görünüm çizer. Gerçek pencerenin pikselleri koyu ve açık olarak, bir simülatörde, hub'ın her yerinde, kullanımdaymış gibi ve diğerlerinin arkasındaymış gibi çizilmiş halleriyle okundu: her iki biçimde 854 sözcük ve simgeden her sözcük 4,5:1 ya da üstünde, her simge 3:1'de; Reduce Transparency, Increase Contrast ve Differentiate Without Color açıkken de, Liquid Glass ayarının iki ucunda da öyle. Arkada tutulan bir pencere anahtar yapılamaz; bu yüzden kullanımdaki hal, pencerenin öyle çizilmiş halidir ve gerçek bir anahtar pencere okunmadı.
 
@@ -512,7 +512,7 @@ bilgisayarları temizlenene kadar tutar; bir Android telefonun eşleştirmesi is
 
 Bir telefon tek bir satırdır, çünkü tek bir kodlayıcısı vardır. Kablodayken kablodan gider ve adb'nin ağda bulduğu bir ad, o telefon
 kablosundayken dışarıda bırakılır. Kablo yokken aynı telefon listede Wi-Fi ile durur ve üstündeki çubuk bunu söyler:
-`Live · 60 fps · Wi-Fi`. Bir adres kime ait olduğunu söylemez, bu yüzden `adb connect` ile ulaşılan bir telefon kendine ait bir
+`Live · Picture 60 fps · Wi-Fi`. Bir adres kime ait olduğunu söylemez, bu yüzden `adb connect` ile ulaşılan bir telefon kendine ait bir
 satır tutar. Wi-Fi için eşleştirilmiş bir iPhone, bu Mac'te olana dayanarak ve ağa hiç bakmadan, kablo takılı olmadan listede
 durur; telefon orada değilse penceresi bunu söyler. `--wifi` olmadan da ağ üzerinden gider, çünkü başka bir yolu yoktur.
 

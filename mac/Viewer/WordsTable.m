@@ -233,6 +233,9 @@ const MVWordRow MVWordTable[] = {
     {"The app and everything it keeps on this device go with it. This cannot be undone.", "Uygulama ve bu cihazda sakladığı her şey silinir. Bu işlem geri alınamaz."},
     // Performance
     {"Frame rate", "Kare hızı"},
+    {"App frame rate", "Uygulamanın kare hızı"},
+    {"Picture frame rate", "Görüntünün kare hızı"},
+    {"Picture %@ fps", "Görüntü %@ fps"},
     {"Waiting for the first readings", "İlk ölçümler bekleniyor"},
     {"Readings wait while a measure runs", "Bir ölçüm sürerken okumalar bekler"},
     {"Still", "Durgun"},

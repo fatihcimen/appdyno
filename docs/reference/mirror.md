@@ -98,7 +98,7 @@ A phone that turns keeps sending a picture of the same shape with the app on its
 
 ## The window
 
-The device stands on a ground painted from the hub's palette, under the system's toolbar. The system's glass has no colour of its own, so a window is as rich as what stands behind it. Nothing is laid over the picture, and nothing tints it: colour lives around it. One capsule there says everything a device is at: `Live · 60 fps · USB`, `Reconnecting`, what holds it up, `Measuring launch 3 of 6` with a bar along its foot, or that an AI client is driving. A click on it shows the stream's numbers. A state is never a colour alone: each has a symbol and words.
+The device stands on a ground painted from the hub's palette, under the system's toolbar. The system's glass has no colour of its own, so a window is as rich as what stands behind it. Nothing is laid over the picture, and nothing tints it: colour lives around it. One capsule there says everything a device is at: `Live · Picture 60 fps · USB`, `Reconnecting`, what holds it up, `Measuring launch 3 of 6` with a bar along its foot, or that an AI client is driving. A click on it shows the stream's numbers. A state is never a colour alone: each has a symbol and words. Its rate is the picture's as it reaches this Mac: the Performance pane's **App frame rate** is what the app drew, and the two need not agree, as a still app is drawn once and a stream sends what changed.
 
 The window is usually behind the one a person types in, so what it says is built to hold its strength there. AppKit fades the system's colours and every image in the bar of a window that is not key: its own title to 2:1. So the name in the bar is a label of ours, colours are resolved to plain ones, and symbols are drawn by a view of ours. Read off the pixels of the real window, dark and light, on a simulator, in each place of the hub, drawn as in use and as behind others: of 854 words and symbols each way, every word is at 4.5:1 or more and every symbol at 3:1, as they are with Reduce Transparency, Increase Contrast and Differentiate Without Color, and at both ends of the Liquid Glass setting. A window kept behind cannot be made key, so in use is how it is drawn, and no real key window was read.
 
@@ -512,7 +512,7 @@ trusted computers are cleared, and an Android phone's pairing is forgotten under
 
 One phone is one row, as it has one encoder. On a cable it goes by the cable, and a name adb found on the network is left
 out while that phone has its cable. Without one the same phone stands in the list by Wi-Fi, and the bar over it says so:
-`Live · 60 fps · Wi-Fi`. An address says nothing of whose it is, so a phone reached by `adb connect` keeps a row of its
+`Live · Picture 60 fps · Wi-Fi`. An address says nothing of whose it is, so a phone reached by `adb connect` keeps a row of its
 own. An iPhone paired for Wi-Fi stands in the list with no cable, from what is on this Mac and with no look at the
 network, and its window says if the phone is not there. It goes by the network with no `--wifi`, as it has nothing else.
 

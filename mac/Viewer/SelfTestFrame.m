@@ -179,6 +179,17 @@ static void checkHeldSentence(void) {
   MVCheck(@"performance: after it, how long nothing has moved is counted from then", [sentence.stringValue isEqual:@"Nothing moving"], sentence.stringValue);
 }
 
+/// e06 and w24: the capsule said 1 fps and the pane 3, the one the picture's rate and the other the app's.
+static void checkRates(void) {
+  MVPerfPane *pane = newPane();
+  NSTextField *title = [[[pane valueForKey:@"_trends"] firstObject] valueForKey:@"title"];
+  [pane show:@{@"sample": @{@"at": @1, @"fps": @33}}];
+  MVCheck(@"performance: a rate the device counts is the app's, and says so", [title.stringValue isEqual:@"App frame rate"], title.stringValue);
+  [pane setPictureRate:29];
+  [pane show:@{@"sample": @{@"at": @2}}];
+  MVCheck(@"performance: one it does not is the picture's, as the capsule's is", [title.stringValue isEqual:@"Picture frame rate"] && [[pane shownFor:@"fps"] isEqual:@"29 fps"], title.stringValue);
+}
+
 static void checkPair(void) {
   MVStatusLine *line = [MVStatusLine new];
   line.name = @"Phone";
@@ -361,6 +372,7 @@ void MVCheckFrame(void) {
   checkMeasures();
   checkFirstResult();
   checkHeldSentence();
+  checkRates();
   checkPair();
   checkClicks();
   checkMenus();

@@ -61,7 +61,7 @@ static NSView *grouped(NSArray<NSView *> *rows) {
 }
 
 @interface MVTrend : NSObject
-@property(nonatomic) NSTextField *now, *why;
+@property(nonatomic) NSTextField *now, *why, *title;
 @property(nonatomic) NSView *reason;
 @property(nonatomic) MVSpark *line;
 @property(nonatomic, copy) NSString *field, *unit;
@@ -80,7 +80,8 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
   trend.now.font = MVRoundedFont(kFigure, NSFontWeightSemibold);
   trend.now.alignment = NSTextAlignmentRight;
   MVInk *dot = [[MVInk alloc] initWithSymbol:@"circle.fill" color:MVHue(hue) size:8];
-  NSStackView *name = [NSStackView stackViewWithViews:@[dot, MVText(@(row->title), MVStyleCallout)]];
+  trend.title = MVText(@(row->title), MVStyleCallout);
+  NSStackView *name = [NSStackView stackViewWithViews:@[dot, trend.title]];
   name.spacing = 6;
   NSView *top = MVPlaceRow(name, @[trend.now]);
   trend.line = [MVSpark new];
@@ -200,7 +201,11 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     BOOL still = [trend.field isEqual:@"fps"] && value && value.doubleValue <= 0;
     trend.now.stringValue = still ? @"Still" : value ? MVReadingWords(value.doubleValue, trend.unit)
                                                      : @"–";
-    if ([trend.field isEqual:@"fps"]) _sentence.stringValue = [self sentenceFor:value];
+    if ([trend.field isEqual:@"fps"]) {
+      _sentence.stringValue = [self sentenceFor:value];
+      // the capsule counts the picture that reaches this Mac, and a device that counts its app's frames is read here
+      if (value) trend.title.stringValue = [sample[@"fps"] isKindOfClass:NSNumber.class] ? @"App frame rate" : @"Picture frame rate";
+    }
     if (!value) continue;
     [trend.line pass];
     [trend.line add:value.doubleValue];

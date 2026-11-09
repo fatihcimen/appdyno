@@ -110,7 +110,7 @@ static void checkLine(void) {
   line.live = YES;
   line.rate = 60;
   line.link = @"USB";
-  MVCheck(@"capsule: live says its rate and how it is joined", [line.stringValue isEqual:@"Live · 60 fps · USB"], line.stringValue);
+  MVCheck(@"capsule: live says its rate and how it is joined", [line.stringValue isEqual:@"Live · Picture 60 fps · USB"], line.stringValue);
   line.tool = @"tap";
   MVCheck(@"capsule: an agent with no name is still said, in purple", [line.stringValue isEqual:@"AI client driving"] && line.tone == MVToneAgent, line.stringValue);
   line.client = @"Some Client";

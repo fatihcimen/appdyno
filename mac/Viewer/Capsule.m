@@ -27,7 +27,8 @@ static const double kHigh = 28, kMark = 12, kDotMark = 8, kBar = 2, kStepSeconds
 
 - (NSString *)liveWords {
   NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObject:self.state ?: @"Connecting"];
-  if (self.rate > 0) [parts addObject:[NSString stringWithFormat:@"%.0f fps", self.rate]];
+  // the picture's own rate, which an app's frames in the Performance pane need not match
+  if (self.rate > 0) [parts addObject:[NSString stringWithFormat:@"Picture %.0f fps", self.rate]];
   if (self.link.length) [parts addObject:self.link];
   return [parts componentsJoinedByString:@" · "];
 }
