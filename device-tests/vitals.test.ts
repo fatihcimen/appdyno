@@ -69,6 +69,8 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
   beforeEach(() => d.ensureAwake());
   afterAll(async () => {
     await costs('startup_ms').catch(() => undefined);
+    // a phone keeps its ANR dialog over the app until someone answers it, and the next suite would read that
+    await d.shell(`am force-stop ${APP}`).catch(() => undefined);
     t.ctx.close();
   });
 
