@@ -207,8 +207,10 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
                                                      : @"–";
     if ([trend.field isEqual:@"fps"]) {
       _sentence.stringValue = [self sentenceFor:value];
-      // the capsule counts the picture that reaches this Mac, and a device that counts its app's frames is read here
-      if (value) trend.title.stringValue = [sample[@"fps"] isKindOfClass:NSNumber.class] ? @"App frame rate" : @"Picture frame rate";
+      // the capsule counts the picture that reaches this Mac, and a device that counts its app's frames is read here; a
+      // rate the device counts with a note beside it is its display's, as an iPhone's is, and is no app's
+      if (value) trend.title.stringValue = ![sample[@"fps"] isKindOfClass:NSNumber.class] ? @"Picture frame rate" : why.length ? @"Frame rate"
+                                                                                                                               : @"App frame rate";
     }
     if (!value) continue;
     [trend.line pass];

@@ -41,6 +41,7 @@ void MVCheckPipe(void);
 void MVCheckRecorder(void);
 void MVCheckKeyboard(void);
 void MVCheckFrame(void);
+void MVCheckPerfPane(void);
 void MVCheckFlow(void);
 void MVCheckShell(void);
 void MVCheckPlaces(void);

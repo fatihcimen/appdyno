@@ -366,6 +366,7 @@ int MVSelfTest(NSString *fixtures) {
   MVCheckRecorder();
   MVCheckKeyboard();
   MVCheckFrame();
+  MVCheckPerfPane();
   MVCheckFlow();
   MVCheckShell();
   MVCheckPlaces();
