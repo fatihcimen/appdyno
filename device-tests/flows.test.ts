@@ -66,6 +66,7 @@ for (const { platform, serial, form } of targets)
     let client: Client;
     // the server writes a flow inside its own folder or its state folder
     const file = join(dir, 'state', `${platform}.flow`);
+    const cliFile = join(dir, 'state', `${platform}-cli.flow`);
     const params = [`PASSWORD_INPUT=${PASSWORD}`, `SECRET_1=${LISTED_SECRET}`];
 
     const raw = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
@@ -304,7 +305,7 @@ for (const { platform, serial, form } of targets)
     it(
       'records and replays from the command line, each command its own process',
       async () => {
-        const flow = join(dir, `${platform}-cli.flow`);
+        const flow = cliFile;
         const run = async (...args: string[]) => {
           const r = await cli(...args, '--device', serial, '--share');
           expect(r.err && r.code ? r.err : '').toBe('');
@@ -333,7 +334,7 @@ for (const { platform, serial, form } of targets)
     it('exports to Maestro, or names the step it has no form for', async () => {
       const yaml = await call('flow', {
         action: 'export',
-        file: join(dir, `${platform}-cli.flow`),
+        file: cliFile,
       });
       expect(yaml.text).toContain(`appId: "${APP}"`);
       expect(yaml.text).toContain('tapOn:');
