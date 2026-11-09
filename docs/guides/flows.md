@@ -53,7 +53,7 @@ finds alone keeps its index and is flagged `!ambiguous`. Only a point on no elem
 area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
 size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
 Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting, a click in a web view)
-is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. `flow stop` and
+is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. `flow stop` and
 `flow save` list every step to look at.
 
 ## Secrets

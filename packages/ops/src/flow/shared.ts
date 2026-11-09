@@ -59,7 +59,13 @@ export const startRecording = (
 
 export const addSteps = (r: Recording, step: FlowStep | FlowStep[] | undefined) => {
   const steps = [step ?? []].flat();
-  for (const st of steps) r.add(st);
+  const app = (st: FlowStep | undefined) => st?.args.app ?? r.state.app;
+  for (const st of steps) {
+    const last = r.state.steps.at(-1);
+    // a stop of an app just stopped changes nothing, as a launch that starts it writes one after terminate_app's
+    if (st.action === 'stop' && last?.action === 'stop' && app(last) === app(st)) continue;
+    r.add(st);
+  }
   if (steps.length) keepRecording(r);
 };
 
@@ -67,7 +73,11 @@ export const addSteps = (r: Recording, step: FlowStep | FlowStep[] | undefined) 
 export const flagged = (flow: Flow) =>
   flow.steps.flatMap((st, i) => {
     const why = [
-      ...st.flags,
+      ...st.flags.map((f) =>
+        f === 'running'
+          ? 'running: the app was running, and a replay goes on from the screen it is on then; stop before it starts it anew'
+          : f,
+      ),
       ...(st.action === 'unrecorded' ? [`not recorded: ${String(st.args.what)}`] : []),
     ];
     return why.length > 0 ? [`step ${i + 1}: ${why.join(', ')}`] : [];

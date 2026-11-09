@@ -53,7 +53,7 @@ bulamadığı hedef index'ini korur ve `!ambiguous` olarak işaretlenir. Yalnız
 alan koordinat olarak kalır ve geçerli olduğu ekran boyutuyla `!coordinates` olarak işaretlenir; başka boyuttaki bir
 ekran o adımı reddeder. Bir rol, iki platform onu aynı adla andığında korunur (`button`, `textField`...);
 Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir işlem (bir pinch, bir cihaz ayarı, bir web görünümünde bir tıklama)
-`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. `flow stop` ve
+`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `flow stop` ve
 `flow save` bakılması gereken her adımı listeler.
 
 ## Gizli değerler

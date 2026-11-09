@@ -22,8 +22,11 @@
 
 export type FlowSelector = { id?: string; role?: string; text?: string; index?: number };
 
-/** `ambiguous`: picked by its index among several. `coordinates`: nothing named it. */
-export type Flag = 'ambiguous' | 'coordinates';
+/**
+ * `ambiguous`: picked by its index among several. `coordinates`: nothing named it. `running`: a launch that found the
+ * app running, on a screen a replay goes on from only if the app is on it then.
+ */
+export type Flag = 'ambiguous' | 'coordinates' | 'running';
 
 type Scalar = string | number | boolean;
 
@@ -107,7 +110,7 @@ export type Action = keyof typeof SPECS;
 
 const NUMERIC_WORDS = new Set(['lat', 'lon']);
 const SELECTOR_KEYS = ['id', 'role', 'text'] as const;
-const FLAGS: readonly string[] = ['ambiguous', 'coordinates'] satisfies Flag[];
+const FLAGS: readonly string[] = ['ambiguous', 'coordinates', 'running'] satisfies Flag[];
 const NAME = /^[A-Z_][A-Z0-9_]*$/;
 const WORD = /^[\w.:/@+-]+$/;
 /** A placeholder, or the escape of one. */

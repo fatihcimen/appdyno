@@ -466,6 +466,6 @@ describe('a measure during a recording', () => {
       await call('perf_profile', { seconds: 1 });
       await call('launch_app');
     });
-    expect(stepsOf(text)).toEqual(['launch']);
+    expect(stepsOf(text)).toEqual(['launch !running']);
   });
 });

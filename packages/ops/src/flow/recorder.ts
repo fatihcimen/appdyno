@@ -235,7 +235,15 @@ const MEASURES: Record<string, ToStep> = {
 /** An op with no step of its own, as a flow step; a refused action is none, and any other op stops a replay. */
 const OPS: Record<string, ToStep> = {
   ...MEASURES,
-  launch_app: (a) => stepOf('launch', {}, { app: a.app as string | undefined }),
+  // a launch that started the app is a start in a replay too, where a plain launch brings a running app forward as it is
+  launch_app: (a, data) =>
+    data.wasRunning === false
+      ? restarts(a)
+      : stepOf(
+          'launch',
+          { flags: data.wasRunning ? ['running'] : [] },
+          { app: a.app as string | undefined },
+        ),
   terminate_app: (a) => stepOf('stop', {}, { app: a.app as string | undefined }),
   // what an app opens is read, and nothing opened: no step
   open_link: (a) =>

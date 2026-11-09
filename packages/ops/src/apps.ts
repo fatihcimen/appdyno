@@ -186,7 +186,9 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         if (!language) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
           await s.device.launch(pkg).catch(notThere(s, pkg));
-          return afterChange(s, launchSaid(pkg, ran), read, pkg);
+          const out = await afterChange(s, launchSaid(pkg, ran), read, pkg);
+          // a recording writes a start as a start, so that its replay starts where this did
+          return ran === undefined ? out : { ...out, data: { ...out.data, wasRunning: ran } };
         }
         const { apps } = s.device;
         const held = apps.languageStays

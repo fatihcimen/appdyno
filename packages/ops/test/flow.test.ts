@@ -120,7 +120,7 @@ describe('flows', () => {
       });
       expect(text).toBe(`app dev.app
 
-launch
+launch !running
 tap role=button text="Form"
 type "Ayşe" id=name
 press_key back
@@ -322,7 +322,36 @@ assert id=result check=text equals="Gönderildi"
         await call('app', { action: 'state' }).catch(() => undefined);
         await call('launch_app');
       });
-      expect(text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual(['launch']);
+      expect(text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual([
+        'launch !running',
+      ]);
+    });
+
+    it('writes a launch that started the app as a start, and flags one that found it running', async () => {
+      const call = callerOf(context());
+      device.running = false;
+      const started = await recorded(call, () => call('launch_app'), 'started.flow');
+      expect(started.text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual([
+        'stop',
+        'launch',
+      ]);
+      const stopped = await recorded(
+        call,
+        async () => {
+          await call('terminate_app');
+          await call('launch_app');
+        },
+        'stopped.flow',
+      );
+      expect(stopped.text).toBe(started.text);
+      device.running = true;
+      await call('flow', { action: 'start' });
+      await call('launch_app');
+      const stop = await call('flow', { action: 'stop' });
+      expect(stop.text).toContain('\nlaunch !running\n');
+      expect(stop.data.flagged).toEqual([
+        expect.stringMatching(/^step 1: running: the app was running, and a replay goes on/),
+      ]);
     });
 
     it('holds across the processes of a command line, on the device it began on', async () => {

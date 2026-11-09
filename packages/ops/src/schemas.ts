@@ -45,6 +45,8 @@ export const ActionOut = z.object({
   closed: z.boolean().optional(),
   /** `scroll_to`: what it looked for is on the screen. */
   found: z.boolean().optional(),
+  /** `launch_app`: the app ran before, and came to the front on the screen it was on; absent when unknown. */
+  wasRunning: z.boolean().optional(),
   moving: z.boolean().optional(),
   warnings: z.array(z.string()),
   code: z.string().optional(),
