@@ -15,6 +15,8 @@ import { untilWithin } from './until.js';
  */
 const APP = 'dev.appdyno.fixture';
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+/** A phone's radios, lock and fingerprint are a person's: never a suite's to change. */
+const EMULATOR = ANDROID.startsWith('emulator-');
 const SIMULATOR = process.env.APPDYNO_IOS_UDID ?? '';
 
 const adb = (...words: string[]) =>
@@ -40,7 +42,7 @@ const set = async (call: Call, name: string, to: string) => {
 const result = async (call: Call, text: string) =>
   (await call('wait_for', { id: 'result', text, timeoutMs: 8_000 })).data.met;
 
-describe.skipIf(!ANDROID)('conditions on an emulator', () => {
+describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
   let call: Call;
   let ctx: ReturnType<typeof opsOn>['ctx'];
   beforeAll(() => {

@@ -58,6 +58,18 @@ describe('which suites a device can take', () => {
     expect(all.filter((f) => !taken.has(f)).sort()).toEqual(OWN_GATE);
   });
 
+  it("gives a phone's radios, lock and fingerprint to an emulator alone, as a phone named on Android is a person's", () => {
+    const ungated = readdirSync(suites).filter((f) => {
+      const text = readFileSync(join(suites, f), 'utf8');
+      return (
+        text.includes('APPDYNO_ANDROID_SERIAL') &&
+        /'(airplane|mobile_data)'|'enroll'|set-pin/.test(text) &&
+        !text.includes("startsWith('emulator-')")
+      );
+    });
+    expect(ungated).toEqual([]);
+  });
+
   it('refuses a call with nothing to go by', () => {
     expect(run('of').status).toBe(2);
     expect(run().status).toBe(2);
