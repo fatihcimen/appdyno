@@ -51,7 +51,7 @@ argümanlar ve ortam değişkenleriyle `launch`, yeni ya da boş bir klasöre `d
 varyantı `configuration` olan bir Gradle klasörü. `device_setting`; `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` ve `keychain` içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`.
 
-`launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `app` `list` vardır.
+`launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler; `app` `launch` da uygulamayı başlattığını mı, yoksa çalışan birini, önce durdurduğu için, yeniden mi başlattığını söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `app` `list` vardır.
 
 Her değişiklik geri okunur: yanıt `changed`'i yalnızca cihaz sonra öncekinden başka okunduğunda söyler, `restore` da yalnızca eskisi gibi okunanı geri koyduğunu söyler. `text_size` iOS'ta kendi boyutlarından biridir, `extra-small`'dan `accessibility-extra-extra-extra-large`'a kadar; Android'de 0,25 ile 5 arasında bir ölçek ya da `default`: başkası, aldıklarıyla birlikte reddedilir.
 

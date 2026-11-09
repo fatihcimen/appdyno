@@ -22,6 +22,19 @@ const LinkOut = ActionOut.extend({
     )
     .optional(),
 });
+/**
+ * What a launch did, by whether the app ran before it (undefined: not known). `restarts`: the launch stops a running
+ * app first, where another brings it to the front as it was.
+ */
+export const launchSaid = (pkg: string, ran: boolean | undefined, restarts = false) =>
+  ran === undefined
+    ? `launched ${pkg}`
+    : !ran
+      ? `started ${pkg}`
+      : restarts
+        ? `restarted ${pkg}, which was running`
+        : `brought ${pkg} to the front, on the screen it was on`;
+
 /** An app's id; anything else is what a person calls it. */
 const APP_ID = /^[\w-]+(\.[\w-]+)+$/;
 
@@ -158,13 +171,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         if (!language) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
           await s.device.launch(pkg).catch(notThere(s, pkg));
-          const said =
-            ran === undefined
-              ? `launched ${pkg}`
-              : ran
-                ? `brought ${pkg} to the front, on the screen it was on`
-                : `started ${pkg}`;
-          return afterChange(s, said, read, true);
+          return afterChange(s, launchSaid(pkg, ran), read, true);
         }
         const { apps } = s.device;
         const held = apps.languageStays

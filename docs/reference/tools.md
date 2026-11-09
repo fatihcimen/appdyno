@@ -51,7 +51,7 @@ project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gr
 its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` and `keychain`. `dark_mode` reads as it is set, `on` or `off`, on both platforms.
 
-`launch_app` says whether it started the app or brought a running one to the front, on the screen it was on. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `app` `list` in its hint.
+`launch_app` says whether it started the app or brought a running one to the front, on the screen it was on, and `app` `launch` whether it started the app or restarted a running one, as it stops one first. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `app` `list` in its hint.
 
 Each change is read back: the answer says `changed` only when the device then reads otherwise than before, and `restore` says restored only of what reads as it was. `text_size` on iOS is one of its sizes, from `extra-small` to `accessibility-extra-extra-extra-large`, and on Android a scale from 0.25 to 5 or `default`: another is refused, with what it takes.
 

@@ -11,6 +11,7 @@ import {
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { approve } from './approval.js';
+import { launchSaid } from './apps.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkApp, checkDevice, noApp } from './policy.js';
@@ -167,8 +168,10 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
         case 'launch': {
           const pkg = appOf(s, app);
           reportProgress(`launching ${pkg}`);
+          const ran = await ctx.ranBeforeLaunch(s, pkg);
           await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
-          return afterChange(s, `launched ${pkg}`, read, true);
+          // every platform's launch with args stops a running app first
+          return afterChange(s, launchSaid(pkg, ran, true), read, true);
         }
         case 'grant':
         case 'revoke': {

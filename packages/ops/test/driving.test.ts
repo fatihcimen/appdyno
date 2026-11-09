@@ -1206,6 +1206,16 @@ describe('app management', () => {
   /** A person's yes in advance, by the server's flag: what asks first is `approval.test.ts`'s. */
   const allowed = { policy: { allowDataLoss: 'virtual' as const } };
 
+  it('says whether launch started the app or restarted a running one, in the words launch_app uses', async () => {
+    const d = Object.assign(new FakeDevice(), { apps: manager() });
+    const { call } = await connect(d);
+    expect((await call('app', { action: 'launch' })).text).toMatch(
+      /^restarted dev\.app, which was running\n/,
+    );
+    d.running = false;
+    expect((await call('app', { action: 'launch' })).data.done).toBe('started dev.app');
+  });
+
   it('does each action, with the selected app by default', async () => {
     const apps = manager();
     const d = Object.assign(new FakeDevice(), { apps });
