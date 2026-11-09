@@ -19,6 +19,8 @@ static const NSUInteger kCodeDigits = 6;
   if ((self = [super init])) {
     _say = MVParagraph(@"", MVStyleCallout);
     _said = MVParagraph(@"", MVStyleSub);
+    // what pairing says names a phone and its address as they are
+    MVHoldContent(_said);
     _address = [NSTextField textFieldWithString:@""];
     _address.identifier = @"wifiAddress";
     _address.placeholderString = MVWord(@"Address and port");
@@ -72,7 +74,7 @@ static const NSUInteger kCodeDigits = 6;
     _said.stringValue = @"";
   }
   for (NSString *line in [run[@"text"] componentsSeparatedByCharactersInSet:NSCharacterSet.newlineCharacterSet])
-    if (line.length) _said.stringValue = MVWord(line);
+    if (line.length) _said.stringValue = MVSentence(line);
   if (run[@"code"]) {
     _pairing = NO;
     if ([run[@"code"] intValue] == 0) _said.stringValue = _code.stringValue = @"";

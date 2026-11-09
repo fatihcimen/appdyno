@@ -90,6 +90,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   _about = MVPaneNote(@"");
   _about.maximumNumberOfLines = 0;
   _about.hidden = YES;
+  MVHoldContent(_about);
   NSView *card;
   _text = MVReadText(@"logText", @"The app's log", &card);
   NSStackView *part = MVPaneStack(@[find, buttons, _about, card], 8);
@@ -100,6 +101,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
 - (NSView *)crashPart {
   _crashNote = MVPaneNote(@"");
   _crashNote.maximumNumberOfLines = 0;
+  MVHoldContent(_crashNote);
   _crashes = [MVList new];
   _crashes.accessibilityLabel = MVWord(@"Crash reports");
   [_crashes.heightAnchor constraintEqualToConstant:kCrashList].active = YES;
@@ -234,8 +236,9 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
     [self render];
   }
   if ([m[@"note"] isKindOfClass:NSString.class]) _note = m[@"note"];
-  NSString *about = _app.length ? [NSString stringWithFormat:@"The log of %@, as it comes", _app] : @"";
-  _about.stringValue = _note.length ? _note : about;
+  // the app's name, and what a device says of its log, keep its words as they are
+  NSString *about = _app.length ? MVFormat(@"The log of %@, as it comes", @[_app]) : @"";
+  _about.stringValue = _note.length ? MVSentence(_note) : about;
   _about.hidden = !_about.stringValue.length;
   NSArray *lines = [m[@"lines"] isKindOfClass:NSArray.class] ? m[@"lines"] : @[];
   if (_paused) [_held addObjectsFromArray:lines];
@@ -258,7 +261,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   NSString *note = [m[@"note"] isKindOfClass:NSString.class] ? m[@"note"] : @"";
   // one report stands open: a list with reports needs no word of its own
   if (!note.length && !rows.count) note = @"No crash reports of this app.";
-  _crashNote.stringValue = note;
+  _crashNote.stringValue = MVSentence(note);
   _crashNote.hidden = !note.length;
   NSString *label = rows.count ? [NSString stringWithFormat:@"Crashes: %lu", (unsigned long)rows.count] : @"Crashes";
   _sections[1].title = MVWord(label);
@@ -271,8 +274,8 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   NSMutableArray<NSString *> *parts = [NSMutableArray array];
   for (NSString *field in @[@"reason", @"at", @"detail"])
     if ([report[field] length]) [parts addObject:report[field]];
-  if ([report[@"file"] length]) [parts addObject:MVWord([@"The whole report: " stringByAppendingString:report[@"file"]])];
-  if ([report[@"symbolicated"] length]) [parts addObject:MVWord([@"Named by its symbols: " stringByAppendingString:report[@"symbolicated"]])];
+  if ([report[@"file"] length]) [parts addObject:MVFormat(@"The whole report: %@", @[report[@"file"]])];
+  if ([report[@"symbolicated"] length]) [parts addObject:MVFormat(@"Named by its symbols: %@", @[report[@"symbolicated"]])];
   _report.string = [parts componentsJoinedByString:@"\n\n"];
   _report.textColor = MVInkColor();
 }

@@ -247,6 +247,7 @@ static NSString *ms(id v) {
   _appsNote = caption(@"");
   _appsNote.lineBreakMode = NSLineBreakByWordWrapping;
   _appsNote.maximumNumberOfLines = 3;
+  MVHoldContent(_appsNote);
   _launch = MVPlaceButton(@"Launch", @"appLaunch", self, @selector(launchApp:));
   _quit = MVPlaceButton(@"Quit", @"appQuit", self, @selector(quitApp:));
   _remove = MVPlaceButton(@"Remove…", @"appRemove", self, @selector(removeApp:));
@@ -346,7 +347,8 @@ static NSString *ms(id v) {
 
 - (void)showApps:(NSDictionary *)message {
   _appList = [message[@"apps"] isKindOfClass:NSArray.class] ? message[@"apps"] : @[];
-  _appsNote.stringValue = message[@"note"] ?: @"";
+  // `Launched Settings` keeps the app's name as it is
+  _appsNote.stringValue = MVSentence(message[@"note"] ?: @"");
   [self filterChanged:nil];
 }
 

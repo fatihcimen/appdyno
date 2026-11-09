@@ -82,8 +82,9 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
 }
 
 - (NSToolbarItem *)titleItem {
-  _name = MVText(@"", MVStyleStrong);
-  _about = MVText(@"", MVStyleSub);
+  // a device's name and what it is are its own
+  _name = MVContentText(@"", MVStyleStrong);
+  _about = MVContentText(@"", MVStyleSub);
   NSStackView *lines = [NSStackView stackViewWithViews:@[_name, _about]];
   lines.orientation = NSUserInterfaceLayoutOrientationVertical;
   lines.alignment = NSLayoutAttributeLeading;

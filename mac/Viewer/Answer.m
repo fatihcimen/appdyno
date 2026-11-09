@@ -15,6 +15,8 @@ static NSTextField *wrapped(MVStyle style) {
   field.maximumNumberOfLines = 0;
   field.preferredMaxLayoutWidth = kWordsWide;
   field.selectable = YES;
+  // an answer names a link, an app or a token's kind as the op does: its words are said by what is shown, and kept
+  MVHoldContent(field);
   return field;
 }
 
@@ -126,12 +128,12 @@ NSStackView *MVPaneFill(NSView *pane, NSArray<NSView *> *views, CGFloat spacing)
 }
 
 - (void)show:(NSDictionary *)m {
-  if (m[@"line"] && _waiting) [self say:MVWord(m[@"line"]) what:@"" symbol:kSending color:MVQuietColor()];
+  if (m[@"line"] && _waiting) [self say:MVSentence(m[@"line"]) what:@"" symbol:kSending color:MVQuietColor()];
   if (!m[@"ok"]) return;
   _waiting = NO;
   BOOL ok = [m[@"ok"] boolValue];
   // a state has its symbol and its words as well as its colour
-  [self say:MVWord(m[@"text"] ?: @"") what:MVWord(m[@"hint"] ?: @"") symbol:ok ? @"checkmark.circle.fill" : @"exclamationmark.triangle.fill" color:ok ? MVGreen() : MVRed()];
+  [self say:MVSentence(m[@"text"] ?: @"") what:MVSentence(m[@"hint"] ?: @"") symbol:ok ? @"checkmark.circle.fill" : @"exclamationmark.triangle.fill" color:ok ? MVGreen() : MVRed()];
   MVSlideIn(self, kSlide);
   MVAnnounce(_what.stringValue.length ? [NSString stringWithFormat:@"%@. %@", _words.stringValue, _what.stringValue] : _words.stringValue);
 }

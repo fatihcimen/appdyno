@@ -25,7 +25,8 @@ static NSString *tookWords(MVRun *run) {
 static MVRow *rowOfCall(NSDictionary *call) {
   BOOL ok = [call[@"ok"] boolValue];
   MVRow *row = [MVRow new];
-  row.title = [call[@"done"] length] ? call[@"done"] : [[call[@"tool"] ?: @"" stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString];
+  // what was done names what it touched as the app does: `Tapped Settings` keeps its Settings
+  row.title = [call[@"done"] length] ? MVSentence(call[@"done"]) : MVWord([[call[@"tool"] ?: @"" stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString]);
   row.detail = [NSString stringWithFormat:@"%@ · %@ ms", call[@"time"] ?: @"", call[@"ms"] ?: @0];
   row.help = call[@"args"];
   // only what failed gets a mark: a run of ticks says nothing
@@ -79,7 +80,7 @@ static MVRow *rowOfCall(NSDictionary *call) {
   [_runs enumerateObjectsWithOptions:NSEnumerationReverse
                           usingBlock:^(MVRun *run, NSUInteger at, __unused BOOL *stop) {
                             MVRow *head = [MVRow new];
-                            head.title = tookWords(run);
+                            head.title = MVWord(tookWords(run));
                             head.detail = run.calls.firstObject[@"time"] ?: @"";
                             head.symbol = run.open ? @"chevron.down" : @"chevron.right";
                             head.key = [NSString stringWithFormat:@"run%lu", (unsigned long)at];

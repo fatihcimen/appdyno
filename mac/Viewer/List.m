@@ -1,4 +1,5 @@
-// Rows of a title and a line beneath, with a symbol: the Inspector's lists and a sidebar.
+// Rows of a title and a line beneath, with a symbol: the Inspector's lists and a sidebar. A row's words stand as given: an
+// app's, a device's or an element's name is never put in another language, and a row's builder says the window's own.
 #import "Place.h"
 #import "Window.h"
 
@@ -195,7 +196,7 @@ static NSString *identityOf(MVRow *row) {
 }
 
 - (NSView *)headerCell:(NSString *)text in:(NSTableCellView *)cell {
-  NSTextField *title = MVText(text, MVStyleHeading);
+  NSTextField *title = MVContentText(text, MVStyleHeading);
   title.translatesAutoresizingMaskIntoConstraints = NO;
   [cell addSubview:title];
   [NSLayoutConstraint activateConstraints:@[
@@ -215,10 +216,10 @@ static NSString *identityOf(MVRow *row) {
   NSView *icon = row.tile ? MVTile(row.symbol, row.tile, kTileSide) : row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: MVInkColor() size:15]
                                                                                  : [NSView new];
   // a row may have no line beneath, as a note where a list would stand has none: a label of nothing is refused
-  NSTextField *title = MVText(row.title ?: @"", MVStyleBody);
+  NSTextField *title = MVContentText(row.title ?: @"", MVStyleBody);
   cell.title = title;
   // and one line beneath at most: a second, as a tool's failure brings, stood over the next row
-  NSTextField *detail = MVText([row.detail ?: @"" stringByReplacingOccurrencesOfString:@"\n" withString:@" "], MVStyleSub);
+  NSTextField *detail = MVContentText([row.detail ?: @"" stringByReplacingOccurrencesOfString:@"\n" withString:@" "], MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
   detail.hidden = !row.detail.length;
   NSStackView *lines = [NSStackView stackViewWithViews:@[title, detail]];

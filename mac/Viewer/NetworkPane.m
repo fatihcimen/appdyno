@@ -39,7 +39,7 @@ static NSString *figures(NSDictionary *e) {
   if (e[@"ms"]) [parts addObject:[NSString stringWithFormat:@"%@ ms", e[@"ms"]]];
   if (e[@"packets"]) [parts addObject:MVWord([NSString stringWithFormat:@"%@ packets", e[@"packets"]])];
   if (e[@"bytes"]) [parts addObject:sized(e[@"bytes"])];
-  if ([e[@"error"] length]) [parts addObject:MVWord([@"Failed: " stringByAppendingString:e[@"error"]])];
+  if ([e[@"error"] length]) [parts addObject:MVFormat(@"Failed: %@", @[e[@"error"]])];
   return [parts componentsJoinedByString:@" · "];
 }
 
@@ -49,7 +49,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   row.detail = figures(e);
   NSString *url = [e[@"url"] isKindOfClass:NSString.class] ? e[@"url"] : nil;
   if (!url) {
-    row.title = [NSString stringWithFormat:@"%@ · %@", MVWord([e[@"direction"] description] ?: @""), MVWord([e[@"host"] description] ?: @"")];
+    row.title = [NSString stringWithFormat:@"%@ · %@", MVWord([e[@"direction"] description] ?: @""), MVSentence([e[@"host"] description] ?: @"")];
     row.symbol = @"chart.bar";
     return row;
   }
@@ -95,6 +95,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     controls.spacing = 8;
     _about = MVPaneNote(@"");
     _about.maximumNumberOfLines = 0;
+    MVHoldContent(_about);
     _answer = [MVAnswerView new];
     _none = MVEmptyCard(@"network", @"Requests show here while a capture runs.");
     _list = [MVList new];
@@ -188,12 +189,13 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     clock.timeStyle = NSDateFormatterShortStyle;
     _state.stringValue = [NSString stringWithFormat:kCapturing[chosen], [clock stringFromDate:_since ?: NSDate.date]];
   } else _state.stringValue = @"Not capturing";
-  NSString *about = chosen >= 0 ? kWays[chosen][2] : @"";
-  if (_note.length) about = _note;
+  // what a capture says of itself keeps an address or an app as it came
+  NSString *about = chosen >= 0 ? MVWord(kWays[chosen][2]) : @"";
+  if (_note.length) about = MVSentence(_note);
   // what lists no requests says what would, while it counts too
   BOOL counts = _capturing && ![@[@"probe", @"proxy"] containsObject:_capturing];
-  if (_needs && !_capturing) about = _needs;
-  else if (_needs && counts) about = [NSString stringWithFormat:@"%@\n%@", MVWord(about), MVWord(_needs)];
+  if (_needs && !_capturing) about = MVWord(_needs);
+  else if (_needs && counts) about = [NSString stringWithFormat:@"%@\n%@", about, MVWord(_needs)];
   _about.stringValue = about;
   _about.hidden = !about.length;
   _way.hidden = _capturing || !_ways.count;
@@ -214,7 +216,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   if ([e[@"url"] length]) [lines addObject:[NSString stringWithFormat:@"%@ %@", e[@"method"] ?: @"GET", e[@"url"]]];
   else [lines addObject:entryRow(e, 0).title];
   [lines addObject:figures(e)];
-  if ([e[@"at"] length]) [lines addObject:MVWord([@"At " stringByAppendingString:e[@"at"]])];
+  if ([e[@"at"] length]) [lines addObject:MVFormat(@"At %@", @[e[@"at"]])];
   if ([e[@"body"] boolValue]) [lines addObject:MVWord(@"Its body is in the proxy's export")];
   _detail.string = [lines componentsJoinedByString:@"\n"];
   _detail.textColor = MVInkColor();

@@ -159,6 +159,8 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   NSView *folderPlate = MVFieldPlate(_folder, nil);
   [folderPlate.widthAnchor constraintEqualToConstant:kFieldWide - 86].active = YES;
   _device = MVText(@"No device chosen", MVStyleBody);
+  // a device's name is its own
+  MVHoldContent(_device);
   NSStackView *folder = [NSStackView stackViewWithViews:@[folderPlate, MVPlaceButton(@"Choose…", @"chooseFolder", self, @selector(chooseFolder:))]];
   NSGridView *grid = [NSGridView gridViewWithViews:@[@[MVText(@"App", MVStyleStrong), appPlate], @[MVText(@"Device", MVStyleStrong), _device], @[MVText(@"Folder", MVStyleStrong), folder]]];
   grid.rowSpacing = 8;

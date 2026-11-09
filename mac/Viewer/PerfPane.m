@@ -3,6 +3,7 @@
 // it is told.
 #import "Place.h"
 #import "Window.h"
+#import "Words.h"
 
 enum { kSeconds = 60,
        kResults = 20 };
@@ -132,6 +133,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     }
     _sentence = MVText(@"Waiting for the first readings", MVStyleStrong);
     _app = MVPaneNote(@"Open an app, then measure it. It restarts.");
+    MVHoldContent(_app);
     // what a refusal says to do next, where a person reads before the next measure
     _hint = MVPaneNote(@"");
     _hint.textColor = MVOrange();
@@ -247,9 +249,11 @@ static MVRow *rowOfResult(NSDictionary *result) {
   MVRow *row = [MVRow new];
   // that it ran is no verdict: only what its tool found in it, or that it did not run, gets a mark of its own
   BOOL plain = [result[@"ok"] boolValue] && ![result[@"flagged"] boolValue], regression = [result[@"verdict"] isEqual:@"regression"];
-  row.title = [result[@"value"] length] ? [NSString stringWithFormat:@"%@  %@", result[@"title"], result[@"value"]] : result[@"title"] ?
-                                                                                                                                       : @"";
-  row.detail = result[@"detail"] ?: @"";
+  NSString *title = result[@"title"] ?: @"";
+  if ([result[@"value"] length]) title = [NSString stringWithFormat:@"%@  %@", title, result[@"value"]];
+  row.title = MVWord(title);
+  // a refusal names the app in front as it is
+  row.detail = MVSentence(result[@"detail"] ?: @"");
   row.help = result[@"why"];
   row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar"
                                                             : @"exclamationmark.triangle.fill";
@@ -302,7 +306,8 @@ static MVRow *rowOfResult(NSDictionary *result) {
   _shownApp = app;
   // a line the Mac kept stands in for this session's own: one it has no number of to keep stays
   [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"NOT (ok == YES AND kept == YES)"]];
-  _app.stringValue = app ? [NSString stringWithFormat:@"A measure restarts %@.", app] : @"Open an app, then measure it. It restarts.";
+  // the app's name is its own, in any language
+  _app.stringValue = app ? MVFormat(@"A measure restarts %@.", @[app]) : MVWord(@"Open an app, then measure it. It restarts.");
   if (app) MVNoteFrontApp(app);
   [self listResults];
   // only a measure just made is news: a window opening on an old regression has nothing to announce

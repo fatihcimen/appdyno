@@ -9,6 +9,8 @@ static const double kPaneWordsWide = 288;
 static const double kPulseSeconds = 0.16, kPulseBounce = 0.2;
 
 @interface MVLabel : NSTextField
+/// What it shows is an app's or a device's, or words a caller already put in the Mac's language: it stands as given.
+@property(nonatomic) BOOL content;
 @end
 
 @implementation MVLabel
@@ -16,9 +18,9 @@ static const double kPulseSeconds = 0.16, kPulseBounce = 0.2;
   return NO;
 }
 
-/// Words are put in the Mac's language here, where every word on a pane passes, whoever said it.
+/// The window's own words are put in the Mac's language here, where every word on a pane passes; content never is.
 - (void)setStringValue:(NSString *)value {
-  [super setStringValue:MVWord(value)];
+  [super setStringValue:self.content ? value : MVWord(value)];
 }
 @end
 
@@ -65,6 +67,17 @@ NSTextField *MVText(NSString *text, MVStyle style) {
   NSTextField *field = [MVLabel labelWithString:MVWord(text)];
   field.lineBreakMode = NSLineBreakByTruncatingTail;
   dress(field, style);
+  return field;
+}
+
+void MVHoldContent(NSTextField *field) {
+  if ([field isKindOfClass:MVLabel.class]) ((MVLabel *)field).content = YES;
+}
+
+NSTextField *MVContentText(NSString *text, MVStyle style) {
+  NSTextField *field = MVText(@"", style);
+  MVHoldContent(field);
+  field.stringValue = text;
   return field;
 }
 
@@ -138,7 +151,7 @@ NSString *MVNeedSymbol(NSString *_Nullable need) {
 }
 
 void MVAnnounce(NSString *words) {
-  NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification, @{NSAccessibilityAnnouncementKey: MVWord(words),
+  NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification, @{NSAccessibilityAnnouncementKey: MVSentence(words),
                                                                                                          NSAccessibilityPriorityKey: @(NSAccessibilityPriorityHigh)});
 }
 

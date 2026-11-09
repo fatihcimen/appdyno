@@ -249,6 +249,7 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
     }
     _noise = small(@"Read with a stream running");
     _noise.lineBreakMode = NSLineBreakByTruncatingMiddle;
+    MVHoldContent(_noise);
     [_noise setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
     NSStackView *stack = [NSStackView stackViewWithViews:panes];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
@@ -325,8 +326,10 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   // whose numbers these are, and that a stream ran beside them
   BOOL mirrored = [message[@"noise"] containsObject:@"mirrored"];
   NSString *app = [sample[@"app"] isKindOfClass:NSString.class] ? sample[@"app"] : nil;
-  _noise.stringValue = app ? (mirrored ? [app stringByAppendingString:@", with a stream running"] : app) : mirrored ? @"Read with a stream running"
-                                                                                                                    : @"";
+  // the app's name is its own: only the words beside it are said in the Mac's language
+  NSString *noise = mirrored ? MVWord(@"Read with a stream running") : @"";
+  if (app) noise = mirrored ? MVFormat(@"%@, with a stream running", @[app]) : app;
+  _noise.stringValue = noise;
   _noise.hidden = _noise.stringValue.length == 0;
 }
 

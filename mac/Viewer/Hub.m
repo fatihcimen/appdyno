@@ -190,6 +190,9 @@ static NSString *stateWords(NSDictionary *device) {
   ((MVRoomView *)_room).backdrop = [[MVBackdrop alloc] initInView:_room window:_window];
   _name = MVText(@"", MVStyleTitle);
   _about = MVWrappedText(@"", MVStyleBody);
+  // a device's name is its own, and a note names an app or a device as it is: each is said where it is set
+  MVHoldContent(_name);
+  MVHoldContent(_about);
   _about.alignment = NSTextAlignmentCenter;
   _about.preferredMaxLayoutWidth = kWordsWide;
   _start = MVPlacePrimary(@"Start", @"start", self, @selector(togglePower:));
@@ -294,7 +297,7 @@ static NSString *stateWords(NSDictionary *device) {
   _again.hidden = YES;
   [_mark paint:device ? MVDeviceSymbol(device) : @"iphone.gen3" color:MVQuietColor()];
   _name.stringValue = device ? MVNamedParts(device[@"name"] ?: @"")[0] : @"";
-  _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : @"";
+  _about.stringValue = device ? MVWord(elsewhere ? @"In a window of its own" : stateWords(device)) : @"";
   _start.title = MVWord(elsewhere ? @"Close That Window" : @"Start");
   [((MVRoomView *)_room).slot sayEmpty:elsewhere ? @"Its numbers are in its own window." : @"Choose a running device to see its numbers."];
   if (device) [_bare setName:MVDeviceRow(device).title about:MVDeviceRow(device).detail];
@@ -381,13 +384,13 @@ static NSString *stateWords(NSDictionary *device) {
 }
 
 - (void)sayNote:(NSString *)note {
-  _about.stringValue = note;
+  _about.stringValue = MVSentence(note);
 }
 
 - (void)showStatus:(NSDictionary *)message {
   BOOL stuck = [message[@"state"] isEqual:@"waiting"] || [message[@"state"] isEqual:@"stopped"];
-  if ([message[@"title"] length]) _name.stringValue = message[@"title"];
-  _about.stringValue = message[@"fix"] ?: @"";
+  if ([message[@"title"] length]) _name.stringValue = MVWord(message[@"title"]);
+  _about.stringValue = MVWord(message[@"fix"] ?: @"");
   [_mark paint:MVNeedSymbol(message[@"need"]) color:stuck ? MVOrange() : MVQuietColor()];
   _held = message[@"stage"];
   _again.hidden = !stuck;

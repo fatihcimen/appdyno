@@ -104,7 +104,7 @@ static NSColor *colorOf(MVTone tone) {
     self.identifier = @"status";
     self.wantsLayer = YES;
     _mark = [[MVInk alloc] initWithSymbol:symbolOf(MVToneBusy) color:colorOf(MVToneBusy) size:kMark];
-    _words = MVText(@"", MVStyleCallout);
+    _words = MVContentText(@"", MVStyleCallout);
     _words.wantsLayer = YES;
     _row = [NSStackView stackViewWithViews:@[_mark, _words]];
     _row.spacing = 6;
@@ -141,7 +141,8 @@ static NSColor *colorOf(MVTone tone) {
 }
 
 - (void)show:(MVStatusLine *)line {
-  NSString *words = line.stringValue;
+  // a client's name, and what a note names, such as an app or an element, keep their words
+  NSString *words = MVSentence(line.stringValue);
   MVTone tone = line.tone;
   BOOL turned = _shown && tone != _tone;
   if (!_shown || tone != _tone) {

@@ -38,6 +38,8 @@ static NSString *clickNamed(NSInteger segment) {
     _contrast = MVPaneNote(@"");
     _contrast.lineBreakMode = NSLineBreakByWordWrapping;
     _contrast.preferredMaxLayoutWidth = kWordsWide;
+    // what is under the pointer is the app's, and a saved flow's name a person's: each is said by what sets it
+    for (NSTextField *said in @[_state, _what, _ids, _writes, _contrast]) MVHoldContent(said);
     NSMutableArray<MVAccentButton *> *clicks = [NSMutableArray array];
     [@[@"Touches", @"Copies", @"Asserts"] enumerateObjectsUsingBlock:^(NSString *word, NSUInteger at, __unused BOOL *stop) {
       MVAccentButton *click = (MVAccentButton *)MVPlaceButton(word, [NSString stringWithFormat:@"clickDoes:%lu", (unsigned long)at], self, @selector(clickChosen:));
@@ -130,16 +132,17 @@ static NSString *clickNamed(NSInteger segment) {
   _record.needsDisplay = YES;
   NSArray<NSString *> *lines = [m[@"lines"] isKindOfClass:NSArray.class] ? m[@"lines"] : @[];
   _look = [m[@"look"] isKindOfClass:NSArray.class] ? m[@"look"] : @[];
-  _state.stringValue = starting     ? @"Reading the screen. The first time, this starts the device agent."
-                       : on         ? [NSString stringWithFormat:@"Recording: %lu steps, %lu to look at", (unsigned long)lines.count, (unsigned long)_look.count]
-                       : m[@"file"] ? [NSString stringWithFormat:@"Saved %@", [m[@"file"] lastPathComponent]]
-                                    : @"Each click is written by the element it touched.";
+  NSString *state = MVWord(@"Each click is written by the element it touched.");
+  if (m[@"file"]) state = MVFormat(@"Saved %@", @[[m[@"file"] lastPathComponent]]);
+  if (on) state = MVWord([NSString stringWithFormat:@"Recording: %lu steps, %lu to look at", (unsigned long)lines.count, (unsigned long)_look.count]);
+  if (starting) state = MVWord(@"Reading the screen. The first time, this starts the device agent.");
+  _state.stringValue = state;
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   [lines enumerateObjectsUsingBlock:^(NSString *line, NSUInteger i, __unused BOOL *stop) {
     NSString *why = [self lookAt:i + 1];
     MVRow *row = [MVRow new];
     row.title = line;
-    row.detail = why ?: [NSString stringWithFormat:@"Step %lu", (unsigned long)i + 1];
+    row.detail = why ? MVSentence(why) : MVWord([NSString stringWithFormat:@"Step %lu", (unsigned long)i + 1]);
     row.help = line;
     row.symbol = why ? @"exclamationmark.triangle.fill" : @"checkmark.circle.fill";
     row.tint = why ? MVOrange() : MVGreen();
@@ -151,14 +154,18 @@ static NSString *clickNamed(NSInteger segment) {
 
 - (void)showElement:(NSDictionary *)m {
   BOOL named = m[@"role"] != nil;
-  _what.stringValue = named ? [NSString stringWithFormat:@"%@ %@", m[@"role"], [m[@"label"] length] ? m[@"label"] : @"with no words"] : @"Nothing named here";
+  // its role, label, ref and id are the app's, as a tool reads them: only the words around them are said
+  NSString *label = [m[@"label"] length] ? m[@"label"] : MVWord(@"with no words");
+  _what.stringValue = named ? [NSString stringWithFormat:@"%@ %@", m[@"role"], label] : MVWord(@"Nothing named here");
   NSString *ids = m[@"id"] ? [NSString stringWithFormat:@"%@  ·  id %@", m[@"ref"], m[@"id"]] : m[@"ref"];
-  _ids.stringValue = named ? ids : @"A click here is written as coordinates.";
+  _ids.stringValue = named ? ids : MVWord(@"A click here is written as coordinates.");
   _writes.stringValue = m[@"tap"] ?: @"";
   NSArray *issues = [m[@"contrast"] isKindOfClass:NSArray.class] ? m[@"contrast"] : @[];
-  _contrast.stringValue = !named ? @"" : issues.count     ? [issues componentsJoinedByString:@"\n"]
-                                     : m[@"contrastNote"] ?
-                                                          : @"No contrast issue";
+  NSMutableArray<NSString *> *said = [NSMutableArray array];
+  for (NSString *issue in issues) [said addObject:MVSentence(issue)];
+  NSString *contrast = m[@"contrastNote"] ? MVSentence(m[@"contrastNote"]) : MVWord(@"No contrast issue");
+  if (said.count) contrast = [said componentsJoinedByString:@"\n"];
+  _contrast.stringValue = named ? contrast : @"";
   _contrast.textColor = issues.count ? MVOrange() : MVQuietColor();
 }
 

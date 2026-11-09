@@ -87,6 +87,7 @@ static NSString *readable(NSString *json) {
   NSStackView *field = [NSStackView stackViewWithViews:@[MVFieldPlate(_token, nil), keep]];
   field.spacing = 8;
   _tokenNote = MVPaneNote(@"");
+  MVHoldContent(_tokenNote);
   NSStackView *card = [NSStackView stackViewWithViews:@[_kind, field, _tokenNote]];
   card.orientation = NSUserInterfaceLayoutOrientationVertical;
   card.alignment = NSLayoutAttributeLeading;
@@ -277,7 +278,8 @@ static NSString *readable(NSString *json) {
 /// What becomes of a token typed here, said before it is: whose it is, which, and for how long.
 - (void)sayToken {
   NSString *app = self.appNamed, *kind = _kind.selectedItem.representedObject;
-  _tokenNote.stringValue = app.length && kind ? MVWord([NSString stringWithFormat:@"Kept for this session only, as %@'s %@ token", app, kindTitle(kind)]) : MVWord(@"Kept for this session only, for the app above");
+  // the app's id is its own
+  _tokenNote.stringValue = app.length && kind ? MVFormat(@"Kept for this session only, as %@'s %@ token", @[app, MVWord(kindTitle(kind))]) : MVWord(@"Kept for this session only, for the app above");
 }
 
 /// To the parent alone, and out of the field as it goes: a token is never shown back.
@@ -319,7 +321,7 @@ static NSString *readable(NSString *json) {
     args[name] = [name isEqual:@"data"] ? dataOf(value) : value;
   }
   _send.enabled = NO;
-  [_answer sending:MVWord([NSString stringWithFormat:@"Sending %@", _type.titleOfSelectedItem ?: @""])];
+  [_answer sending:MVFormat(@"Sending %@", @[_type.titleOfSelectedItem ?: @""])];
   MVPaneSend(self, @{@"op": @"control", @"name": @"push", @"args": args});
 }
 

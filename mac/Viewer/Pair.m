@@ -32,7 +32,7 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   _sideName.hidden = _side < 0;
   if (_side < 0) return;
   if (!_sideName) {
-    _sideName = MVText(@"", MVStyleCallout);
+    _sideName = MVContentText(@"", MVStyleCallout);
     _sideName.alignment = NSTextAlignmentCenter;
     _sideName.lineBreakMode = NSLineBreakByTruncatingTail;
     [_stage addSubview:_sideName];
@@ -40,7 +40,8 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   // the room's bar speaks of one side: each says its own, a failure where the person looks, in red
   NSString *how = _line.failing ?: _line.pairing;
   NSString *name = _line.name ?: @"";
-  _sideName.stringValue = how.length ? [NSString stringWithFormat:@"%@ · %@", name, how] : name;
+  // the device's name is its own, and what is said of it names the other device as it is
+  _sideName.stringValue = how.length ? [NSString stringWithFormat:@"%@ · %@", name, MVSentence(how)] : name;
   _sideName.textColor = _line.failing ? MVRed() : MVInkColor();
   _sideName.frame = NSMakeRect(8, MAX(2, NSMinY(_frame.frame) - 24), _stage.bounds.size.width - 16, 20);
 }

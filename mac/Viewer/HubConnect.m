@@ -129,6 +129,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
 
 - (NSView *)runnerCard {
   _runnerLines = MVParagraph(@"", MVStyleSub);
+  // what the runner's checks found, as a tool says it
+  MVHoldContent(_runnerLines);
   _build = MVPlacePrimary(@"Build Runner", @"run:runner", self, @selector(buildRunner:));
   NSView *head = MVPlaceRow(MVText(@"An iPhone Runner", MVStyleStrong), @[_build]);
   _runnerCard = MVCard(MVPlaceColumn(@[head, MVParagraph(@"To drive an iPhone by its screen, appdyno puts a small runner on it. That takes Xcode and a signing team.", MVStyleCallout), _runnerLines], 6), 12);
@@ -189,7 +191,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSDictionary *need = _guide[@"needWords"];
   NSString *maker = _guide[@"maker"];
   if (need) return @[_guide[@"need"], @[need[@"title"], need[@"fix"], @"", @""]];
-  if ([self phoneReady]) return @[@"ready", @[[NSString stringWithFormat:@"%@ is ready", _guide[@"name"] ?: MVWord(@"Your phone")], @"Ask your AI app what is on its screen.", @"", @""]];
+  // a phone's name is its own: the sentence is said here, and passes through what says the rest as it is
+  if ([self phoneReady]) return @[@"ready", @[MVFormat(@"%@ is ready", @[_guide[@"name"] ?: MVWord(@"Your phone")]), @"Ask your AI app what is on its screen.", @"", @""]];
   NSString *step = [self stepLeft][@"id"] ?: @"plug";
   return @[step, wordsOf(step, maker)];
 }

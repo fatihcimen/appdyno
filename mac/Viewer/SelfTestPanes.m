@@ -223,6 +223,59 @@ static void checkApps(MVWindow *window) {
   MVCheck(@"apps: and stays chosen as the list comes again after a launch", quit.enabled, nil);
 }
 
+/// The words a list draws in its rows, as a person reads them.
+static NSArray<NSString *> *drawn(MVList *list) {
+  NSTableView *table = list.documentView;
+  [table reloadData];
+  NSMutableArray<NSString *> *words = [NSMutableArray array];
+  for (NSInteger at = 0; at < table.numberOfRows; at++) {
+    NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObject:[table viewAtColumn:0 row:at makeIfNecessary:YES]];
+    while (views.count) {
+      NSView *view = views.lastObject;
+      [views removeLastObject];
+      if ([view isKindOfClass:NSTextField.class] && ((NSTextField *)view).stringValue.length) [words addObject:((NSTextField *)view).stringValue];
+      [views addObjectsFromArray:view.subviews];
+    }
+  }
+  return words;
+}
+
+/// What an app or a device names stands as it came in Turkish too, where the window's own words around it are said.
+static void checkContent(MVWindow *window) {
+  MVTestTurkish(YES);
+  NSArray<NSString *> *names = @[@"Small", @"Settings", @"Continue"];
+  NSTextField *field = MVContentText(@"", MVStyleBody);
+  NSMutableArray<NSString *> *shown = [NSMutableArray array];
+  for (NSString *name in names) {
+    field.stringValue = name;
+    [shown addObject:field.stringValue];
+  }
+  BOOL ours = [MVWord(@"Small") isEqual:@"Küçük"] && [MVText(@"Search", MVStyleBody).stringValue isEqual:@"Ara"];
+  MVCheck(@"content: a field of the app's shows Small, Settings and Continue as they are in Turkish, where the window's own words are said", [shown isEqual:names] && ours, [shown componentsJoinedByString:@"|"]);
+  [window.inspector.audit show:@{@"op": @"audit",
+                                 @"state": @"done",
+                                 @"issues": @[@{@"type": @"hitRegion", @"rule": @"touchTarget", @"message": @"Hit area is too small", @"label": @"Small"}]}];
+  NSArray<NSString *> *issue = drawn([window.inspector.audit valueForKey:@"_list"]);
+  MVCheck(@"content: an issue is said in Turkish, and the element it names stands as the app names it", [issue containsObject:@"Dokunma alanı çok küçük"] && [issue containsObject:@"Small"] && ![issue containsObject:@"Küçük"], [issue componentsJoinedByString:@"|"]);
+  [window.inspector showApps:@{@"op": @"apps",
+                               @"apps": @[@{@"id": @"com.example.small", @"name": @"Small"}],
+                               @"note": @"Launched Small"}];
+  NSArray<NSString *> *apps = drawn([window.inspector valueForKey:@"_apps"]);
+  NSTextField *note = [window.inspector valueForKey:@"_appsNote"];
+  MVCheck(@"content: an app's name stands as it is in the list and in what was done to it", [apps containsObject:@"Small"] && [note.stringValue isEqual:@"Small başlatıldı"], [NSString stringWithFormat:@"%@ / %@", [apps componentsJoinedByString:@"|"], note.stringValue]);
+  [window.inspector.flow showElement:@{@"role": @"button", @"label": @"Continue", @"ref": @"@e3", @"tap": @"tap text=\"Settings\""}];
+  MVCheck(@"content: the element under the pointer stands as the app names it", [window.inspector.flow.elementShown hasPrefix:@"button Continue | @e3 | tap text=\"Settings\""], window.inspector.flow.elementShown);
+  [window addActivity:@{@"at": @0,
+                        @"tool": @"tap",
+                        @"ok": @YES,
+                        @"ms": @3,
+                        @"time": @"12:00",
+                        @"done": @"Tapped Settings"}];
+  NSArray<NSString *> *calls = drawn([window.inspector.activity valueForKey:@"_list"]);
+  MVCheck(@"content: what an agent did is said, and what it touched kept", [calls containsObject:@"Settings öğesine dokunuldu"], [calls componentsJoinedByString:@"|"]);
+  MVTestTurkish(NO);
+}
+
 void MVCheckPanes(void) {
   MVWindow *window = paneWindow(@"panes");
   [window showPane:MVPanePerf];
@@ -231,6 +284,7 @@ void MVCheckPanes(void) {
   checkLogs(window);
   checkNetwork(window);
   checkAudit(window);
+  checkContent(window);
   [window openInspector:NO];
   MVPump(0.3);
   MVCheck(@"panes: a closed Inspector reads nothing", !window.inspector.logs.watching && !window.inspector.network.watching && !window.inspector.audit.watching, nil);

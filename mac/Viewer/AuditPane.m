@@ -21,14 +21,15 @@ enum { kKindCount = sizeof kKinds / sizeof kKinds[0] };
 /// What the pane says of where an audit stands, by the parent's word for it.
 static NSString *stateWords(NSDictionary *m, NSUInteger issues) {
   NSString *state = [m[@"state"] description] ?: @"";
-  if ([state isEqual:@"failed"]) return [m[@"why"] description] ?: @"";
+  // why it failed names what the device named as it did
+  if ([state isEqual:@"failed"]) return MVSentence([m[@"why"] description] ?: @"");
   if (![state isEqual:@"done"]) {
     NSDictionary *said = @{@"waiting": @"Waiting for the screen to settle", @"reading": @"Auditing the screen shown", @"recording": @"Not read while recording", @"held": @"Waits for the picture, and for a measure to end"};
-    return said[state] ?: @"";
+    return MVWord(said[state] ?: @"");
   }
-  if (!issues) return @"No issue on this screen";
-  if ([m[@"truncated"] boolValue]) return [NSString stringWithFormat:@"The first %lu issues on this screen", (unsigned long)issues];
-  return issues == 1 ? @"1 issue on this screen" : [NSString stringWithFormat:@"%lu issues on this screen", (unsigned long)issues];
+  if (!issues) return MVWord(@"No issue on this screen");
+  if ([m[@"truncated"] boolValue]) return MVWord([NSString stringWithFormat:@"The first %lu issues on this screen", (unsigned long)issues]);
+  return MVWord(issues == 1 ? @"1 issue on this screen" : [NSString stringWithFormat:@"%lu issues on this screen", (unsigned long)issues]);
 }
 
 @implementation MVAuditPane {
@@ -47,6 +48,7 @@ static NSString *stateWords(NSDictionary *m, NSUInteger issues) {
     _issues = @[];
     _state = MVPaneNote(@"Waiting for the screen to settle");
     _state.maximumNumberOfLines = 0;
+    MVHoldContent(_state);
     [_state setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
     _again = MVPlaceButton(@"Check Again", @"auditAgain", self, @selector(again:));
     _again.toolTip = MVWord(@"Audits the screen shown once more");
@@ -98,7 +100,8 @@ static NSString *stateWords(NSDictionary *m, NSUInteger issues) {
   [_issues enumerateObjectsUsingBlock:^(NSDictionary *issue, NSUInteger at, __unused BOOL *stop) {
     if (![issue[@"type"] isEqual:kind]) return;
     MVRow *row = [MVRow new];
-    row.title = MVWord([issue[@"message"] description] ?: @"");
+    // an audit's words are said, and what it quotes of the app, such as a label read twice, kept
+    row.title = MVSentence([issue[@"message"] description] ?: @"");
     // the element's own words, not the rule that found it, which is an engine's name; the whole message under the pointer
     row.detail = [issue[@"label"] length] ? issue[@"label"] : @"";
     row.help = row.title;

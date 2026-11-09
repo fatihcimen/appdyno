@@ -76,7 +76,7 @@ static NSString *durationOf(double seconds) {
     _resultLine = [NSStackView stackViewWithViews:@[_turning, _mark, _result]];
     _resultLine.spacing = 4;
     _resultLine.hidden = YES;
-    _meta = MVText(@"", MVStyleSub);
+    _meta = MVContentText(@"", MVStyleSub);
     _meta.hidden = YES;
     _lackChip = MVChip(@"circle.dashed", @"", MVQuietColor());
     _lackChip.hidden = YES;

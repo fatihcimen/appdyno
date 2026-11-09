@@ -25,8 +25,9 @@ static NSImageView *symbol(NSString *name, NSColor *tint) {
   return view;
 }
 
+/// Words as they are given: the window's own come said by their caller, and what an agent asks a person stands as it wrote it.
 static NSTextField *words(NSString *text, CGFloat size, NSFontWeight weight, NSColor *color) {
-  NSTextField *field = [NSTextField wrappingLabelWithString:MVWord(text)];
+  NSTextField *field = [NSTextField wrappingLabelWithString:text];
   field.font = [NSFont systemFontOfSize:size weight:weight];
   field.textColor = color;
   field.alignment = NSTextAlignmentCenter;
@@ -126,8 +127,8 @@ static NSString *symbolOf(NSString *state) {
   } else {
     [parts addObject:symbol(symbolOf(state), NSColor.whiteColor)];
   }
-  [parts addObject:words(title ?: state, 14, NSFontWeightSemibold, MVInkColor())];
-  if (fix.length) [parts addObject:words(fix, 12, NSFontWeightRegular, MVInkColor())];
+  [parts addObject:words(MVWord(title ?: state), 14, NSFontWeightSemibold, MVInkColor())];
+  if (fix.length) [parts addObject:words(MVWord(fix), 12, NSFontWeightRegular, MVInkColor())];
   // what no one can wait out alone gets a step of its own
   if ([state isEqual:@"waiting"] || [state isEqual:@"stopped"]) {
     [parts addObject:MVPlacePrimary(@"Try Again", @"tryAgain", self, @selector(tryAgain:))];
@@ -147,8 +148,8 @@ static NSString *symbolOf(NSString *state) {
   _bannerId = m[@"id"];
   NSMutableArray<NSView *> *parts = [NSMutableArray arrayWithArray:@[
     symbol(@"hand.raised", MVOrange()),
-    words(m[@"title"] ?: @"Needs you", 14, NSFontWeightSemibold, MVInkColor()),
-    words(m[@"text"] ?: @"A person is needed", 12, NSFontWeightRegular, MVInkColor()),
+    words(m[@"title"] ?: MVWord(@"Needs you"), 14, NSFontWeightSemibold, MVInkColor()),
+    words(m[@"text"] ?: MVWord(@"A person is needed"), 12, NSFontWeightRegular, MVInkColor()),
   ]];
   if ([m[@"needsDone"] boolValue]) {
     NSButton *done = MVPlacePrimary(@"I'm Done", @"done", self, @selector(done:));

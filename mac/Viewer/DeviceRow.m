@@ -117,6 +117,8 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     NSStackView *line = [NSStackView stackViewWithViews:[@[_label, _mark, gap] arrayByAddingObjectsFromArray:[ends subarrayWithRange:NSMakeRange(0, onLine)]]];
     line.spacing = 6;
     _note = MVPaneNote(@"");
+    // why it cannot names a value, such as a proxy's address, as the device has it
+    MVHoldContent(_note);
     _note.hidden = YES;
     NSMutableArray<NSView *> *parts = [NSMutableArray arrayWithObject:line];
     if (onLine < ends.count) {
@@ -195,7 +197,7 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   NSString *why = [_said[@"why"] isKindOfClass:NSString.class] ? _said[@"why"] : @"";
   NSString *value = [_said[@"value"] isKindOfClass:NSString.class] ? _said[@"value"] : nil;
   _can = !why.length && (_kind >= MVRowLocation || value);
-  _note.stringValue = MVWord(capitalized(why));
+  _note.stringValue = MVSentence(capitalized(why));
   _note.hidden = !why.length;
   _label.textColor = _can ? MVInkColor() : MVQuietColor();
   _mark.hidden = !self.changed;

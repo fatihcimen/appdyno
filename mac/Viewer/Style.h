@@ -16,6 +16,12 @@ typedef NS_ENUM(NSInteger, MVStyle) { MVStyleHero,
                                       MVStyleSub };
 NSTextField *MVText(NSString *text, MVStyle style);
 NSTextField *MVWrappedText(NSString *text, MVStyle style);
+/// Words that came from an app or a device, such as an element's label, an app's or a device's name, an address or a log
+/// line, shown as they came: never put in the Mac's language, as "Settings" or "Small" there is a name, not a word of ours.
+NSTextField *MVContentText(NSString *text, MVStyle style);
+/// Makes a label of the two above show what it is given as it is: content, or words its caller already put in the Mac's
+/// language with content in them.
+void MVHoldContent(NSTextField *field);
 /// A colour as it is, by its look: the system's own fade to 2:1 in the bar of a window behind others, and this does not.
 NSColor *MVSolid(NSColor *color);
 /// Main words.

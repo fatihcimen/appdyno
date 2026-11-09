@@ -71,7 +71,7 @@ static BOOL hereAnotherWay(NSDictionary *gone, NSArray<NSDictionary *> *devices)
 /// A phone that left: dimmed and said in words, for as long as it stays the one chosen.
 static MVRow *goneRow(NSDictionary *device) {
   MVRow *row = MVDeviceRow(device);
-  row.detail = @"Unplugged";
+  row.detail = MVWord(@"Unplugged");
   row.dot = nil;
   row.symbol = @"cable.connector.slash";
   row.tile = nil;
@@ -94,15 +94,15 @@ static MVRow *goneRow(NSDictionary *device) {
   }
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   BOOL gone = _left && !hereAnotherWay(_left, _devices);
-  if (needs.count || gone) [rows addObject:[MVRow headerNamed:@"Needs You"]];
+  if (needs.count || gone) [rows addObject:[MVRow headerNamed:MVWord(@"Needs You")]];
   if (gone) [rows addObject:goneRow(_left)];
   [rows addObjectsFromArray:needs];
   [running insertObjects:phones atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, phones.count)]];
-  if (running.count) [rows addObject:[MVRow headerNamed:@"Running"]];
+  if (running.count) [rows addObject:[MVRow headerNamed:MVWord(@"Running")]];
   [rows addObjectsFromArray:running];
   if (off.count) {
     BOOL open = _unfolded || words.length;
-    MVRow *fold = [MVRow headerNamed:[NSString stringWithFormat:@"%@ Shut Down (%lu)", open ? @"▾" : @"▸", (unsigned long)off.count]];
+    MVRow *fold = [MVRow headerNamed:MVWord([NSString stringWithFormat:@"%@ Shut Down (%lu)", open ? @"▾" : @"▸", (unsigned long)off.count])];
     fold.key = MVFoldKey;
     [rows addObject:fold];
     if (open) [rows addObjectsFromArray:off];

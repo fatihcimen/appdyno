@@ -92,7 +92,7 @@ static const double kBetween = 10;
   NSString *url = [_field.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
   if (!url.length || _answer.waiting) return;
   _open.enabled = NO;
-  [_answer sending:MVWord([NSString stringWithFormat:@"Opening %@", url])];
+  [_answer sending:MVFormat(@"Opening %@", @[url])];
   NSString *app = [_app.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
   MVPaneSend(self, @{@"op": @"control", @"name": @"openLink", @"url": url, @"app": app});
 }

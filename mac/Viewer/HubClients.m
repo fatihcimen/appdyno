@@ -71,6 +71,8 @@ static NSString *shownName(NSDictionary *row) {
     _rows = @[];
     _here = MVPlaceColumn(@[], 0);
     _awayNames = MVParagraph(@"", MVStyleBody);
+    // a client's name is its own
+    MVHoldContent(_awayNames);
     _browser = MVPlaceColumn(@[], 0);
     _awayGroup = MVPlaceColumn(@[MVText(@"Not on This Mac", MVStyleHeading), MVCard(MVPlaceColumn(@[_awayNames, MVParagraph(@"Open one once, and it comes up above.", MVStyleSub)], 2), 10)], 6);
     _hereGroup = [self group:@"On This Mac" rows:_here];
@@ -107,7 +109,7 @@ static NSString *shownName(NSDictionary *row) {
 }
 
 - (void)show:(NSDictionary *)message {
-  if (message[@"serverFailed"]) _failure = [NSString stringWithFormat:@"The server could not start: %@", message[@"serverFailed"]];
+  if (message[@"serverFailed"]) _failure = MVFormat(@"The server could not start: %@", @[message[@"serverFailed"]]);
   if (message[@"rows"]) {
     _rows = message[@"rows"];
     _browserNames = message[@"browser"] ?: @[];
@@ -220,7 +222,8 @@ static NSString *shownName(NSDictionary *row) {
   _stateLines[name] = MVText(stateWords(row), MVStyleSub);
   NSStackView *stateLine = [NSStackView stackViewWithViews:@[state, _stateLines[name]]];
   stateLine.spacing = 4;
-  NSStackView *words = [NSStackView stackViewWithViews:@[MVText(shownName(row), MVStyleStrong), stateLine]];
+  // a client's name is its own, or the one the parent gives in Turkish
+  NSStackView *words = [NSStackView stackViewWithViews:@[MVContentText(shownName(row), MVStyleStrong), stateLine]];
   words.orientation = NSUserInterfaceLayoutOrientationVertical;
   words.alignment = NSLayoutAttributeLeading;
   words.spacing = 1;
@@ -311,6 +314,8 @@ static NSString *shownName(NSDictionary *row) {
 - (NSView *)serverCard {
   _serverMark = [[MVInk alloc] initWithSymbol:@"circle" color:MVQuietColor() size:12];
   _listening = MVText(@"Off", MVStyleBody);
+  // an address, and what failed, as they are
+  MVHoldContent(_listening);
   _power = MVPlaceButton(@"Start Server", @"serverPower", self, @selector(powerClicked:));
   NSStackView *state = [NSStackView stackViewWithViews:@[_serverMark, _listening]];
   state.spacing = 8;
@@ -338,8 +343,9 @@ static NSString *shownName(NSDictionary *row) {
   BOOL on = _address.length > 0;
   [_serverMark paint:on ? @"circle.fill" : @"circle" color:on ? MVGreen() : MVQuietColor()];
   if (on) _failure = nil;
-  _listening.stringValue = on ? [NSString stringWithFormat:@"Listening on %@", _address] : _failure ?
-                                                                                                    : @"Off";
+  NSString *listening = _failure ?: MVWord(@"Off");
+  if (on) listening = MVFormat(@"Listening on %@", @[_address]);
+  _listening.stringValue = listening;
   BOOL starting = [server[@"starting"] boolValue];
   _power.title = MVWord(on ? @"Stop Server" : starting ? @"Starting…"
                                                        : @"Start Server");

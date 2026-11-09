@@ -30,6 +30,9 @@ const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
 const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
 /** Where the fixture's Fetch stands on a simulator's network screen, under its address field, as a share of the screen. */
 const FETCH_AT = { x: 0.09, y: 0.184 };
+/** Where the fixture's accessibility screen has its button labelled Small on a simulator, and its Continue on Android. */
+const SMALL_AT = { x: 0.06, y: 0.24 };
+const CONTINUE_AT = { x: 0.5, y: 0.57 };
 /** Where the fixture's Crash stands on an Android screen of 1080 by 2400. */
 const CRASH_AT = { x: 0.5, y: 295 / 2400 };
 /** Where a simulator's Open stands on the "Open in …?" it asks each time a link from simctl opens the fixture. */
@@ -353,6 +356,28 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
         const audits = ofIt('audit').length;
         link.send({ op: 'poke', stage: shown, clickOn: 'auditAgain' });
         await until('another audit', () => ofIt('audit').length > audits, 30_000);
+
+        // the apps, and the element under the pointer, are named as the app names them, in any language
+        tab('tabApps');
+        await until('the apps', () => ofIt('apps').length > 0, 60_000);
+        await looked('apps');
+        tab('tabFlows');
+        await quiet(2_000);
+        for (let i = 0; i < 3; i++) {
+          link.send({
+            op: 'poke',
+            stage: shown,
+            ...(simulator ? SMALL_AT : CONTINUE_AT),
+            hover: true,
+          });
+          await quiet(700);
+        }
+        await until(
+          'the element under the pointer',
+          () => ofIt('element', (m) => typeof m.role === 'string').length > 0,
+          60_000,
+        );
+        await looked('flows');
 
         tab('tabPerformance');
         await until('the audit to stop', watching('accessibility', false), 10_000);

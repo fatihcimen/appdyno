@@ -115,6 +115,8 @@ static NSArray<NSDictionary *> *cards(void) {
   [head addView:[NSView new] inGravity:NSStackViewGravityTrailing];
   [head addView:copy inGravity:NSStackViewGravityTrailing];
   NSTextField *prompt = MVParagraph(@"", MVStyleBody);
+  // a prompt is said whole where it is made, with the device's and the app's names as they are
+  MVHoldContent(prompt);
   prompt.selectable = YES;
   [_prompts addObject:prompt];
   NSStackView *notes = MVPlaceColumn(@[], 2);

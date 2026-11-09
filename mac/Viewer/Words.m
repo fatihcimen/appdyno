@@ -3,13 +3,19 @@
 // second name, and a word is looked up at the label that shows it: one the table has not got stands in English.
 #import "Words.h"
 
+static BOOL gTestTurkish;
+
 static BOOL turkish(void) {
   static BOOL is;
   static dispatch_once_t once;
   dispatch_once(&once, ^{
     is = [NSLocale.preferredLanguages.firstObject hasPrefix:@"tr"];
   });
-  return is;
+  return is || gTestTurkish;
+}
+
+void MVTestTurkish(BOOL on) {
+  gTestTurkish = on;
 }
 
 static NSLocale *locale(void) {
@@ -74,11 +80,38 @@ static NSArray<NSArray *> *patterns(void) {
   return rows;
 }
 
-/// What a pattern's `%@` stood for, each in its Turkish place.
-static NSString *filled(NSString *turkishWords, NSTextCheckingResult *found, NSString *english) {
+/// Every row with a `%@`, by its English: a template whose values a caller puts in as they are.
+static NSDictionary<NSString *, NSString *> *templates(void) {
+  static NSDictionary *words;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    NSMutableDictionary *all = [NSMutableDictionary dictionary];
+    void (^take)(const MVWordRow *, size_t) = ^(const MVWordRow *table, size_t count) {
+      for (size_t i = 0; i < count; i++)
+        if (strstr(table[i].en, "%@")) all[@(table[i].en)] = @(table[i].tr);
+    };
+    take(MVWordTable, MVWordCount);
+    take(MVWordTableClients, MVWordCountClients);
+    take(MVWordTableConnect, MVWordCountConnect);
+    take(MVWordTableDevice, MVWordCountDevice);
+    take(MVWordTablePanes, MVWordCountPanes);
+    [all addEntriesFromDictionary:forms()];
+    words = all;
+  });
+  return words;
+}
+
+static NSString *_Nullable patternFor(NSString *english, BOOL keep);
+
+/// What a pattern's `%@` stood for, each in its Turkish place. Kept, a part stays as it came unless it has the shape of a
+/// sentence of the table itself, such as a count: what an app or a device names is never turned into a word that looks
+/// the same.
+static NSString *filled(NSString *turkishWords, NSTextCheckingResult *found, NSString *english, BOOL keep) {
   NSMutableString *out = [turkishWords mutableCopy];
   for (NSUInteger i = 1; i < found.numberOfRanges; i++) {
-    NSString *part = MVInTurkish([english substringWithRange:[found rangeAtIndex:i]]);
+    NSString *given = [english substringWithRange:[found rangeAtIndex:i]];
+    NSString *part = keep ? patternFor(given, YES) : MVInTurkish(given);
+    if (!part) part = given;
     NSString *named = [NSString stringWithFormat:@"%%%lu$@", (unsigned long)i];
     if ([out containsString:named]) [out replaceOccurrencesOfString:named withString:part options:0 range:NSMakeRange(0, out.length)];
     else [out replaceOccurrencesOfString:@"%@" withString:part options:0 range:NSMakeRange(0, out.length)];
@@ -86,26 +119,28 @@ static NSString *filled(NSString *turkishWords, NSTextCheckingResult *found, NSS
   return out;
 }
 
-/// A row's Turkish for the whole of it, by its words or by a pattern, or nil.
-static NSString *_Nullable rowFor(NSString *english) {
-  NSString *known = exact()[english];
-  if (known) return known;
+static NSString *_Nullable patternFor(NSString *english, BOOL keep) {
   NSRange all = NSMakeRange(0, english.length);
   for (NSArray *row in patterns()) {
     NSTextCheckingResult *found = [row[0] firstMatchInString:english options:0 range:all];
-    if (found) return filled(row[1], found, english);
+    if (found) return filled(row[1], found, english, keep);
   }
   return nil;
 }
 
-NSString *MVInTurkish(NSString *english) {
+/// A row's Turkish for the whole of it, by its words or by a pattern, or nil.
+static NSString *_Nullable rowFor(NSString *english, BOOL keep) {
+  return exact()[english] ?: patternFor(english, keep);
+}
+
+static NSString *say(NSString *english, BOOL keep) {
   if (!english.length) return english;
-  NSString *whole = rowFor(english);
+  NSString *whole = rowFor(english, keep);
   if (whole) return whole;
   // a source's note comes as a sentence goes on, and the table holds it as one begins
   NSRange first = [english rangeOfComposedCharacterSequenceAtIndex:0];
   NSString *head = [english substringWithRange:first];
-  NSString *begun = [head isEqual:head.uppercaseString] ? nil : rowFor([head.uppercaseString stringByAppendingString:[english substringFromIndex:NSMaxRange(first)]]);
+  NSString *begun = [head isEqual:head.uppercaseString] ? nil : rowFor([head.uppercaseString stringByAppendingString:[english substringFromIndex:NSMaxRange(first)]], keep);
   if (begun) {
     NSRange its = [begun rangeOfComposedCharacterSequenceAtIndex:0];
     return [[[begun substringWithRange:its] lowercaseStringWithLocale:locale()] stringByAppendingString:[begun substringFromIndex:NSMaxRange(its)]];
@@ -115,18 +150,26 @@ NSString *MVInTurkish(NSString *english) {
     NSArray<NSString *> *parts = [english componentsSeparatedByString:join];
     if (parts.count < 2) continue;
     NSMutableArray<NSString *> *said = [NSMutableArray array];
-    for (NSString *part in parts) [said addObject:MVInTurkish(part)];
+    for (NSString *part in parts) [said addObject:say(part, keep)];
     return [said componentsJoinedByString:join];
   }
   return english;
+}
+
+NSString *MVInTurkish(NSString *english) {
+  return say(english, NO);
 }
 
 NSString *MVWord(NSString *english) {
   return turkish() ? MVInTurkish(english) : english;
 }
 
+NSString *MVSentence(NSString *english) {
+  return turkish() ? say(english, YES) : english;
+}
+
 NSString *MVFormat(NSString *english, NSArray<NSString *> *values) {
-  NSMutableString *out = [(turkish() ? forms()[english] ?: english : english) mutableCopy];
+  NSMutableString *out = [(turkish() ? templates()[english] ?: english : english) mutableCopy];
   [values enumerateObjectsUsingBlock:^(NSString *value, NSUInteger at, __unused BOOL *stop) {
     NSRange place = [out rangeOfString:[NSString stringWithFormat:@"%%%lu$@", (unsigned long)at + 1]];
     if (place.location == NSNotFound) place = [out rangeOfString:@"%@"];

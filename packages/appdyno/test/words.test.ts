@@ -139,6 +139,19 @@ describe('the table of words', () => {
     expect(said.filter((w) => !known(w))).toEqual([]);
   });
 
+  it('keeps what an app or a device names as it came: no word of theirs passes through the table', () => {
+    // a list draws a row's words as its builder gives them, an app's name and an element's label among them
+    expect(source('List.m')).toMatch(/MVContentText\(row\.title \?: @"",/);
+    expect(source('List.m')).toMatch(/MVContentText\(\[row\.detail /);
+    // what the parent sends under these keys is an app's, a device's or an op's, with names in it
+    const content =
+      /MVWord\(\[?\w*\[@"(label|app|url|done|reason|detail|symbolicated|file|host|client|serial|model|name|error|at|message|note|line|text|hint|why)"\]/g;
+    const files = readdirSync(viewer).filter((f) => f.endsWith('.m') && !f.startsWith('SelfTest'));
+    expect(
+      files.flatMap((f) => [...source(f).matchAll(content)].map((m) => `${f}: ${m[0]}`)),
+    ).toEqual([]);
+  });
+
   it('has every sentence of the client and help panes, in whatever shape they are kept', () => {
     const missed = ['HubClients.m', 'HubHelp.m', 'HubConnect.m', 'HubTools.m'].flatMap((file) =>
       [...source(file).matchAll(/@"([A-Z][^"]* [^"]*)"/g)]
