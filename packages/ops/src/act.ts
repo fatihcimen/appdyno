@@ -12,6 +12,7 @@ import {
   MAX_TYPED,
   Read,
   ScrollStep,
+  Selector,
   Step,
   SwipeStep,
   Target,
@@ -69,13 +70,24 @@ export function actOps(
     const op = tools()[action];
     const fail = (why: string, hint?: string) =>
       new ToolError(`step ${i + 1}: ${why}`, 'INVALID_ARGUMENT', hint);
-    if (Step.options.some((o) => o.shape.action.value === action)) {
+    const takes = Step.options.find((o) => o.shape.action.value === action);
+    if (takes) {
       const { read: own, ...rest } = x;
       const reads = StepRead.safeParse(own);
       if (!reads.success) throw fail(z.prettifyError(reads.error));
       const p = Step.safeParse(rest);
-      if (!p.success) throw fail(z.prettifyError(p.error), argumentsHint(p.error.issues));
-      return { st: p.data, ...(reads.data && { read: reads.data }) };
+      if (p.success) return { st: p.data, ...(reads.data && { read: reads.data }) };
+      // a selector's words at the top, as wait_for takes them: shown where a touch takes them
+      const words = (yes: boolean) =>
+        Object.fromEntries(Object.entries(rest).filter(([k]) => k in Selector.shape === yes));
+      const right =
+        'selector' in takes.shape && Object.keys(words(true)).length > 0
+          ? JSON.stringify({ ...words(false), selector: words(true) })
+          : undefined;
+      throw fail(
+        z.prettifyError(p.error),
+        right ? `a target goes in selector: ${right}` : argumentsHint(p.error.issues),
+      );
     }
     if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);
     const p = op.input.safeParse(args);
@@ -239,7 +251,7 @@ export function actOps(
     defineOp({
       name: 'steps',
       title: 'Steps',
-      description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a touch reads the screen only with read on its step, or last.`,
+      description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }, as { action: tap, selector: { text: OK } }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a touch reads the screen only with read on its step, or last.`,
       input: z
         .object({
           steps: z

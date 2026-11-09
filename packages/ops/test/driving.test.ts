@@ -281,6 +281,22 @@ describe('steps across screens', () => {
     expect(r.text).toContain('2. image');
   });
 
+  it("says a touch's target goes in selector, and shows a step that put it at the top in the right shape", async () => {
+    const { call, ctx } = await connect(new FakeDevice());
+    expect(must(opsFor(ctx).steps, 'steps').description).toContain(
+      '{ action: tap, selector: { text: OK } }',
+    );
+    const r = await call('steps', {
+      steps: [
+        { action: 'wait_for', text: 'Form' },
+        { action: 'tap', text: 'Crash', read: 'full' },
+      ],
+    });
+    expect(r.text).toBe(
+      'INVALID_ARGUMENT: step 2: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"action":"tap","selector":{"text":"Crash"}}',
+    );
+  });
+
   it('reads a touch at its own step when the step says so, and refuses what is no step', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
