@@ -93,7 +93,6 @@ class Automation private constructor(private val looper: Looper) {
         }
     }
 
-    /** Closes the connection (accessibility goes off in the apps); the next use opens it again. */
     /** The last turn of the screen was one its host wrote down. */
     @Volatile
     private var keepTurn = false
@@ -110,6 +109,7 @@ class Automation private constructor(private val looper: Looper) {
         beforeTurn = if (kept) null else beforeTurn ?: rotation()
     }
 
+    /** Closes the connection (accessibility goes off in the apps); the next use opens it again. */
     fun release() = synchronized(this) {
         val ua = current ?: return@synchronized
         current = null
