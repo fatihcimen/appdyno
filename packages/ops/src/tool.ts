@@ -176,25 +176,51 @@ export const argumentsHint = (issues: z.core.$ZodIssue[], flag = '') =>
     'change that and call again: nothing was done',
   ].join(': ');
 
+/** A field's object, through an optional. */
+const objectOf = (field: unknown) => {
+  const f = field instanceof z.ZodOptional ? field.unwrap() : field;
+  return f instanceof z.ZodObject ? f : undefined;
+};
+
+const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object';
+
 /**
- * Where words put at the top of a call go, by the schema's own selector: `text` beside a tap's target is its
- * selector's. The call as it would be taken, or undefined where the schema's selector takes none of them.
+ * Where words put beside a target go, by the schema's own selector: `text` beside a tap's target, or in a drag's `to`, is
+ * its selector's, and a drag's `from` is the target at its top, as `to` is its end. The call as it would be taken, or
+ * undefined where no selector takes any of them.
  */
 export function inSelector(schema: z.ZodObject, args: unknown, issues: z.core.$ZodIssue[]) {
-  const field: unknown = schema.shape.selector;
-  const selector: unknown = field instanceof z.ZodOptional ? field.unwrap() : field;
-  if (!(selector instanceof z.ZodObject) || !args || typeof args !== 'object') return undefined;
-  const words = issues.flatMap((x) =>
-    x.code === 'unrecognized_keys' && x.path.length === 0
-      ? x.keys.filter((k) => k in selector.shape)
-      : [],
-  );
-  if (words.length === 0) return undefined;
-  const given = args as Record<string, unknown>;
-  const part = (moved: boolean) =>
-    Object.fromEntries(Object.entries(given).filter(([k]) => words.includes(k) === moved));
-  const own = typeof given.selector === 'object' ? given.selector : {};
-  return `a target goes in selector: ${JSON.stringify({ ...part(false), selector: { ...own, ...part(true) } })}`;
+  if (!isRecord(args)) return undefined;
+  const call = structuredClone(args);
+  let moved = false;
+  for (const x of issues) {
+    if (x.code !== 'unrecognized_keys') continue;
+    let at: z.ZodObject | undefined = schema;
+    let here: unknown = call;
+    for (const p of x.path) {
+      at = objectOf(at?.shape[String(p)]);
+      here = isRecord(here) ? here[String(p)] : undefined;
+    }
+    const selector = objectOf(at?.shape.selector);
+    if (!at || !selector || !isRecord(here)) continue;
+    for (const k of x.keys) {
+      const value = here[k];
+      const words =
+        k === 'from' && 'to' in at.shape && isRecord(value)
+          ? value
+          : k in selector.shape
+            ? { [k]: value }
+            : undefined;
+      if (!words) continue;
+      Reflect.deleteProperty(here, k);
+      moved = true;
+      for (const [w, v] of Object.entries(words))
+        if (w in selector.shape)
+          here.selector = { ...(isRecord(here.selector) && here.selector), [w]: v };
+        else here[w] = v;
+    }
+  }
+  return moved ? `a target goes in selector: ${JSON.stringify(call)}` : undefined;
 }
 
 /** A call's arguments as its op takes them, or a refusal naming each one wrong; `flag`: how the caller writes a name. */

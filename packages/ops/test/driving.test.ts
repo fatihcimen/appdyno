@@ -313,6 +313,23 @@ describe('steps across screens', () => {
     expect((await call('type_text', { text: 'hi', id: 'email' })).text).toMatch(
       /hint: a target goes in selector: \{"text":"hi","selector":\{"id":"email"\}\}$/,
     );
+    // in a drag's end, and its start named as from, which is the target at its top
+    expect(
+      (await call('gesture', { kind: 'drag', selector: { text: 'A' }, to: { text: 'B' } })).text,
+    ).toMatch(
+      /hint: a target goes in selector: \{"kind":"drag","selector":\{"text":"A"\},"to":\{"selector":\{"text":"B"\}\}\}$/,
+    );
+    expect(
+      (await call('gesture', { kind: 'drag', from: { text: 'A', index: 1 }, to: { id: 'b' } }))
+        .text,
+    ).toMatch(
+      /hint: a target goes in selector: \{"kind":"drag","to":\{"selector":\{"id":"b"\}\},"selector":\{"text":"A","index":1\}\}$/,
+    );
+    expect(
+      (await call('steps', { steps: [{ action: 'drag', ref: '@a1', to: { text: 'B' } }] })).text,
+    ).toMatch(
+      /hint: a target goes in selector: \{"action":"drag","ref":"@a1","to":\{"selector":\{"text":"B"\}\}\}$/,
+    );
     // what no selector takes is said as before
     expect((await call('tap', { label: 'OK' })).data.hint).toBe(
       'change that and call again: nothing was done',
