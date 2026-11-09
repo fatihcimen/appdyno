@@ -144,6 +144,24 @@ describe('commands from the operations', () => {
     }
   });
 
+  it("says where a selector's words go, as the MCP answer does, and what to do about any words it refuses", async () => {
+    const before = device.calls.length;
+    const r = await run('tap', '--text', 'OK', '--read', 'none');
+    expect(r.code).toBe(2);
+    expect(r.err).toEqual([
+      'tap: Unrecognized key: "text"',
+      '  a target goes in selector: {"read":"none","selector":{"text":"OK"}}',
+    ]);
+    expect(
+      (await run('gesture', '--kind', 'double_tap', '--index', '1', '--selector', '{"text":"A"}'))
+        .err[1],
+    ).toBe('  a target goes in selector: {"kind":"double_tap","selector":{"text":"A","index":1}}');
+    expect((await run('tap', '--x', 'left')).err[1]).toBe(
+      '  change that and call again: nothing was done',
+    );
+    expect(device.calls).toHaveLength(before);
+  });
+
   it('calls only what has no default required', async () => {
     const help = (await run('wait-for', '--help')).out.join('\n');
     expect(help).not.toContain('required; default');

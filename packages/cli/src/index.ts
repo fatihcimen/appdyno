@@ -52,6 +52,7 @@ const dashed = (key: string) => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()
 
 type FlagSchema = {
   type?: string;
+  properties?: Record<string, FlagSchema>;
   enum?: unknown[];
   description?: string;
   default?: unknown;
@@ -119,6 +120,8 @@ const camel = (flag: string) => flag.replace(/-([a-z])/g, (_, c: string) => c.to
 /** `--flag value` and `--json '{...}'` as the op's arguments, typed by its input schema. */
 function parse(op: Op, argv: string[]) {
   const { properties = {} } = schemaOf(op);
+  // a selector's words as flags: taken, so that the op refuses them as it does over MCP, saying where they go
+  const words = properties.selector?.properties ?? {};
   const json = (flag: string, word: string) => {
     try {
       return JSON.parse(word) as unknown;
@@ -144,13 +147,14 @@ function parse(op: Op, argv: string[]) {
       continue;
     }
     const key = camel(flag);
-    const type = properties[key]?.type;
+    const known = properties[key] ?? words[key];
+    const type = known?.type;
     if (type === 'boolean') {
       const next = argv[i + 1];
       args[key] = next === 'true' || next === 'false' ? argv[++i] === 'true' : true;
       continue;
     }
-    if (flag !== 'json' && flag !== 'out' && !properties[key])
+    if (flag !== 'json' && flag !== 'out' && !known)
       throw new ToolError(
         `no --${flag} here; flags: ${Object.keys(properties)
           .map((k) => `--${dashed(k)}`)
@@ -222,6 +226,7 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
           io.err(`${name}: ${e.message}`);
+          if (e.hint) io.err(`  ${e.hint}`);
           return 2;
         }
         const ask = call.yes ? () => Promise.resolve(true) : io.ask;
