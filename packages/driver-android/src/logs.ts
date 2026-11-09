@@ -1,5 +1,6 @@
 import { must, type LogLevel, type LogMark, type LogsAnswer, type LogsQuery } from '@appdyno/core';
 import { type Adb, shq } from './adb.js';
+import { parseExitInfo } from './crashes.js';
 
 const LEVEL: Record<LogLevel, string> = {
   verbose: 'V',
@@ -30,16 +31,34 @@ export const markOfLine = (line: string): LogMark | undefined => {
 };
 
 export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promise<LogsAnswer> {
-  const pid = q.pid ?? (await adb.exec(serial, `pidof ${shq(q.app)}`)).trim().split(/\s+/)[0];
-  if (!pid)
+  const live = q.pid ?? (await adb.exec(serial, `pidof ${shq(q.app)}`)).trim().split(/\s+/)[0];
+  // a phone ends a crashed process at once, where an emulator's dialog holds it, and may start the app anew: what it
+  // wrote as it died is under the pid that died
+  const died = q.pid
+    ? undefined
+    : parseExitInfo(await adb.exec(serial, `dumpsys activity exit-info ${shq(q.app)}`))[0]?.pid;
+  const ended = died !== live ? died : undefined;
+  if (!live && !ended)
     return {
       lines: [],
       source: 'logcat',
       note: `${q.app} is not running, so it has no log to read by process; crashes says why it ended`,
     };
-  const out = await adb.exec(serial, logcatCommand(pid, q));
+  // shortcut: an ended pid the system gave another process is left out only while that one runs; `since` keeps the
+  // rest to the time after the last action
+  const out = await adb.exec(
+    serial,
+    [
+      ...(ended ? [`[ -e /proc/${ended} ] || ${logcatCommand(ended, q)}`] : []),
+      ...(live ? [logcatCommand(live, q)] : []),
+    ].join('; '),
+  );
+  const source = `logcat --pid=${[ended, live].filter(Boolean).join(',')}`;
+  const note = live
+    ? undefined
+    : `${q.app} is not running: these are the lines of its process that ended; crashes says why it ended`;
   const lines = out.split(/\r?\n/).filter((l) => l && !l.startsWith('--------- beginning of'));
-  if (!q.timed) return { lines, source: `logcat --pid=${pid}` };
+  if (!q.timed) return { lines, source, ...(note && { note }) };
   const placed = lines.flatMap((line) => {
     const mark = markOfLine(line);
     // its time is in its mark, and stands on the page's clock: here it would be a long number to read past
@@ -48,6 +67,7 @@ export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promi
   return {
     lines: placed.map((p) => p.line),
     marks: placed.map((p) => p.mark),
-    source: `logcat --pid=${pid}`,
+    source,
+    ...(note && { note }),
   };
 }

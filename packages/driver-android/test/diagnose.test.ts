@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { crashReports, parseDropbox, parseExitInfo } from '../src/crashes.js';
 import { conflictHint, holdersIn, PROCESS_LIST } from '../src/holders.js';
-import { logcatCommand, markOfLine } from '../src/logs.js';
+import type { Adb } from '../src/adb.js';
+import { androidLogs, logcatCommand, markOfLine } from '../src/logs.js';
 
 const line = (pid: number, command: string, user = 'shell') =>
   `${String(pid).padStart(6)} ${user} ${command}`;
@@ -137,6 +138,48 @@ describe('logs', () => {
   it('gives no place to what is not a line', () => {
     expect(markOfLine('--------- beginning of main')).toBeUndefined();
     expect(markOfLine('11-05 04:16:06.022  6178  6260 I OpenGLRenderer: Davey!')).toBeUndefined();
+  });
+
+  // a phone ends a crashed process at once (an emulator's dialog holds it), and may start the app anew
+  const FATAL = '11-02 23:59:33.010  6374  6374 E AndroidRuntime: FATAL EXCEPTION: main';
+  const afterCrash = (running: string) => {
+    const asked: string[] = [];
+    const adb = {
+      exec: (_serial: string, c: string) => {
+        asked.push(c);
+        return Promise.resolve(
+          c.startsWith('pidof') ? running : c.includes('exit-info') ? EXIT_INFO : `${FATAL}\n`,
+        );
+      },
+    } as unknown as Adb;
+    return { adb, asked };
+  };
+  const query = { app: 'dev.appdyno.fixture', level: 'info' as const, maxLines: 50 };
+
+  it('reads what a process wrote as it died, by the pid the system says ended', async () => {
+    const { adb, asked } = afterCrash('');
+    const r = await androidLogs(adb, 'R1', query);
+    expect(r.lines).toEqual([FATAL]);
+    expect(r.source).toBe('logcat --pid=6374');
+    expect(r.note).toContain('not running');
+    expect(asked.at(-1)).toBe(`[ -e /proc/6374 ] || ${logcatCommand('6374', query)}`);
+  });
+
+  it('reads the process that died before the one started after it', async () => {
+    const { adb, asked } = afterCrash('7001\n');
+    const r = await androidLogs(adb, 'R1', query);
+    expect(r.source).toBe('logcat --pid=6374,7001');
+    expect(r.note).toBeUndefined();
+    expect(asked.at(-1)).toBe(
+      `[ -e /proc/6374 ] || ${logcatCommand('6374', query)}; ${logcatCommand('7001', query)}`,
+    );
+  });
+
+  it('reads only the process asked for', async () => {
+    const { adb, asked } = afterCrash('');
+    const r = await androidLogs(adb, 'R1', { ...query, pid: '42' });
+    expect(r.source).toBe('logcat --pid=42');
+    expect(asked).toEqual([logcatCommand('42', query)]);
   });
 });
 

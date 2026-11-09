@@ -279,7 +279,7 @@ cihaza ulaşır ve uzun işlemler ilerleme bildirir. Bir yanıt, uygulama önden
 ## Loglar ve çökmeler
 
 `logs` Android'de uygulamanın logcat'ini, bir simülatörde simülatör logunu okur. Bir iPhone için
-`devicectl` çalışan bir uygulamanın logunu okuyamaz ve yanıt bunu söyler. `since` verilmezse son eylemin başladığı andan okur, çünkü bir push'un ya da bir dokunuşun tetiklediği şey o sürerken loglanır. `crashes`, sistemin uygulama için
+`devicectl` çalışan bir uygulamanın logunu okuyamaz ve yanıt bunu söyler. `since` verilmezse son eylemin başladığı andan okur, çünkü bir push'un ya da bir dokunuşun tetiklediği şey o sürerken loglanır. Android'de uygulamanın sürecini ve ölen son sürecini, exit info'nun verdiği pid ile okur: bir telefon çöken süreci hemen bitirir, bir emülatörün çökme penceresi ise onu tutar, ve uygulamayı yeniden başlatabilir; böylece çökmenin kendi satırları ondan sonra da okunur. `crashes`, sistemin uygulama için
 tuttuğu çökme kayıtlarını (Android exit info ve dropbox, simülatörün DiagnosticReports'u,
 bir iPhone'un sistem çökme logları) sınırlı bir özet ve bir dosya yolu olarak toplar. Her simülatörün raporları tek bir klasördedir, bu yüzden bir simülatörünkiler yalnızca onu adlandıranlardır: uygulamanın yolundan ya da sürecinin içinde çalıştığı coalition'dan, ki bir sistem uygulamasınınkinde de vardır; not kaçının neden dışarıda bırakıldığını söyler. Gizli değerler çıkarılır. Android'de sistemin tuttuğu her çıkışı da nedenini eksiksiz yazarak sayar, çünkü kendiliğinden çıkan ya da öldürülen bir uygulama çökmemiştir: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
 

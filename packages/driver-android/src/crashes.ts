@@ -19,6 +19,7 @@ const TAGS = ['data_app_crash', 'data_app_native_crash', 'data_app_anr'];
 type Exit = {
   at: string;
   time: number;
+  pid?: string;
   reason: string;
   detail?: string;
   /** Who stopped it (`FORCE STOP`, `KILL BACKGROUND`): the reason alone says only a user asked. */
@@ -47,11 +48,13 @@ export function allExits(text: string): Exit[] {
       const description = /description=(.*?)(?: state=| trace=|$)/m.exec(block)?.[1]?.trim();
       const subreason = /\bsubreason=\d+ \((.*?)\)/.exec(block)?.[1];
       const status = /\bstatus=(\d+)/.exec(block)?.[1];
+      const pid = /\bpid=(\d+)/.exec(block)?.[1];
       const [pss, rss] = [/\bpss=(\S+)/, /\brss=(\S+)/].map((re) => re.exec(block)?.[1]);
       return [
         {
           at,
           time: stampTime(at),
+          ...(pid && { pid }),
           reason,
           ...(description && description !== 'null' && { detail: description }),
           ...(subreason && subreason !== 'UNKNOWN' && { subreason }),

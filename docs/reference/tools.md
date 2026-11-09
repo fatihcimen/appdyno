@@ -279,7 +279,7 @@ reaches the device, and long operations report progress. An answer warns that th
 ## Logs and crashes
 
 `logs` reads logcat for the app on Android and the simulator log on a simulator. For an iPhone,
-`devicectl` cannot read the log of a running app, and the answer says so. With no `since` it reads from when the last action began, as what a push or a tap sets off is logged while it runs. `crashes` collects the
+`devicectl` cannot read the log of a running app, and the answer says so. With no `since` it reads from when the last action began, as what a push or a tap sets off is logged while it runs. On Android it reads the app's process and the last one that died, by the pid exit info gives: a phone ends a crashed process at once, where an emulator's crash dialog holds it, and may start the app anew, so the crash's own lines are read after it. `crashes` collects the
 system's crash records for the app (Android exit info and dropbox, the simulator's DiagnosticReports,
 an iPhone's system crash logs) as a bounded summary and a file path. Every simulator's reports are in one folder, so a simulator's are only those that name it, by the app's path or by the coalition its process ran in, which a system app's has too; the note says how many were left out and why. Secrets are redacted. On Android it also counts every exit the system keeps, by its reason in full, because an app that left by itself or was killed did not crash: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
 
