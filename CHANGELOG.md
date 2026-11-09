@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Under `--allow-apps`, `app install` installs an app the list names, by the id the file holds, an `.apk`'s package or an `.app`'s `CFBundleIdentifier`, read before anything reaches the device, and refuses another as `POLICY_DENIED`, naming the id it found: it refused every install while the server had a list.
 - An action says the app died only of an app that ran when it began, in front on the read before it or launched by it, or of one a crash report names: `open_link` to a page, with the selected app never launched, said on a simulator "the app died: its process is gone and no crash report says why", and every action after a death said it again. Run on an iPhone 17 Pro simulator with iOS 27.2.
 - Every answer that reads the screen names any system alert over it by its words and buttons, an Android app's crash dialog among them, and says to answer it with `alert`: it said only a permission prompt, so a screen with "Calendar has stopped" on it, with "App info" and "Close app", said nothing of it, its app gone from behind. Run on an API 34 emulator, crashing Calendar and Clock with `am crash`.
 - A server run with `--silent` (`APPDYNO_SILENT=1`) keeps a window's `hand_off` banner quiet too, with no sound and no Dock bounce: its request says so, and the hub or mirror that shows it, which runs with no such flag, played the sound as before.

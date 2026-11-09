@@ -19,8 +19,11 @@ export type AppManager = {
   readonly languageStays?: boolean;
   /** A grant resets the permission to ask, as a revoke does, and so takes away the answer the person gave. */
   readonly grantResets?: boolean;
-  /** Installs the file; what it answered on the device along the way, for the caller to keep in its answer. */
-  install(path: string): Promise<string[]>;
+  /**
+   * Installs the file; what it answered on the device along the way, for the caller to keep in its answer. `allowed`
+   * refuses an app by the id the file holds, read from it before anything reaches the device.
+   */
+  install(path: string, allowed?: (app: string) => void): Promise<string[]>;
   /** Builds a project for this device and installs it; the app's id. */
   buildAndInstall(request: BuildRequest): Promise<string>;
   uninstall(app: string): Promise<void>;

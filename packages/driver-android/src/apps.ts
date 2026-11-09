@@ -57,9 +57,11 @@ export class AndroidApps implements AppManager {
     this.adb.exec(this.serial, `${c} 2>&1`, { timeoutMs: ms });
 
   /** Installs the file; what it answered on the phone along the way, in words for the caller to keep. */
-  async install(path: string): Promise<string[]> {
+  async install(path: string, allowed?: (app: string) => void): Promise<string[]> {
     if (!path.endsWith('.apk') || !existsSync(path))
       throw new DeviceError('INVALID_ARGUMENT', `not a local .apk file: ${path}`);
+    // shortcut: the file is read for its id and then installed, so one swapped in between goes in; copy it first if that matters
+    if (allowed) allowed((await apkNames(path)).id);
     const { screen, answers } = this;
     if (answers.prompts) await readyForInstall(screen);
     // a Xiaomi asks on its screen, and asleep it would not say no by itself

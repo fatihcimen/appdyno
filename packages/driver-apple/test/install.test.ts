@@ -7,6 +7,7 @@ import { installingApp } from '../src/manage.js';
 
 const plist = (platform: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>dev.thing</string>
 <key>CFBundleSupportedPlatforms</key><array><string>${platform}</string></array>
 </dict></plist>`;
 
@@ -42,6 +43,24 @@ describe('what an iOS device installs', () => {
     });
     expect(inside).toMatch(/Payload\/Thing\.app$/);
     expect(() => execFileSync('ls', [inside], { stdio: 'ignore' })).toThrow();
+  });
+
+  it('asks whether the app may go in, by its bundle id, before it is installed', async () => {
+    const { dir } = appFor('iPhoneOS');
+    const asked: string[] = [];
+    const given: string[] = [];
+    const install = (a: string) => Promise.resolve(given.push(a));
+    const no = (id: string) => {
+      asked.push(id);
+      throw new Error(`${id} is not allowed`);
+    };
+    await expect(installingApp(ipaOf(dir), 'iPhoneOS', install, no)).rejects.toThrow(
+      'dev.thing is not allowed',
+    );
+    expect(given).toEqual([]);
+    await installingApp(ipaOf(dir), 'iPhoneOS', install, (id) => asked.push(id));
+    expect(asked).toEqual(['dev.thing', 'dev.thing']);
+    expect(given).toHaveLength(1);
   });
 
   it('refuses a build for another kind of device, saying which it is for', async () => {

@@ -61,13 +61,18 @@ export class PhoneApps implements AppManager {
       Promise.reject(new DeviceError('UNSUPPORTED', 'no runner to reset a permission')),
   ) {}
 
-  async install(path: string) {
-    await installingApp(path, 'iPhoneOS', async (app) => {
-      // an installed app's signing is not read on an iPhone: only the build's, here
-      const read = await readBuild(app).catch(() => undefined);
-      await this.ctl.install(app);
-      if (read) this.builds.set(...read);
-    });
+  async install(path: string, allowed?: (app: string) => void) {
+    await installingApp(
+      path,
+      'iPhoneOS',
+      async (app) => {
+        // an installed app's signing is not read on an iPhone: only the build's, here
+        const read = await readBuild(app).catch(() => undefined);
+        await this.ctl.install(app);
+        if (read) this.builds.set(...read);
+      },
+      allowed,
+    );
     return [];
   }
 

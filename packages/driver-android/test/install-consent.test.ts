@@ -409,6 +409,22 @@ describe('install', () => {
     expect((e as DeviceError).hint).toContain('within 10 s');
   });
 
+  it('asks whether the app the file holds may go in, by its package, before the phone is reached', async () => {
+    const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }]);
+    const run = vi.fn(() => Promise.resolve('Success'));
+    const apps = new AndroidApps(adb(run), 'phone', screen, { prompts: false, warnings: false });
+    const asked: string[] = [];
+    const no = (id: string) => {
+      asked.push(id);
+      throw new Error(`${id} is not allowed`);
+    };
+    await expect(apps.install(APK, no)).rejects.toThrow('dev.appdyno.fixture is not allowed');
+    expect(asked).toEqual(['dev.appdyno.fixture']);
+    expect(run).not.toHaveBeenCalled();
+    await apps.install(APK, (id) => asked.push(id));
+    expect(run).toHaveBeenCalledOnce();
+  });
+
   it("refuses a prompt already open: it is an earlier install's, and nothing is touched or started", async () => {
     const screen = phone([{ focus: PROTECT_WINDOW, tree: real('warning') }]);
     const run = vi.fn(() => Promise.resolve('Success'));

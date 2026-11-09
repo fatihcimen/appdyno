@@ -135,14 +135,12 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
         }
         case 'install': {
           if (!path) throw new ToolError('install needs path', 'INVALID_ARGUMENT');
-          // the allowlist names apps, and a file's app is not known before it is installed
-          if (policy.apps.length > 0)
-            throw new ToolError(
-              'install is off while this server has an app allowlist',
-              'POLICY_DENIED',
-            );
           reportProgress(`installing ${path}`);
-          const said = await apps.install(path);
+          // the allowlist names apps: the driver reads the file's own before it installs anything
+          const said = await apps.install(
+            path,
+            policy.apps.length > 0 ? (id) => void checkApp(policy, id) : undefined,
+          );
           if (said.length > 0) s.acted();
           // what it answered on the device is part of what happened: no read mode shortens this
           return done([`installed ${path}`, ...said].join('\n'));

@@ -8,18 +8,13 @@ import { z } from 'zod';
 /** What an iOS app owns in its container; the rest there is the system's. */
 export const DATA_FOLDERS = ['Documents', 'Library', 'tmp'];
 
+/** A key of an app's Info.plist, as plutil writes it: `json`, or `raw` for a string. */
+const plistKey = async (app: string, key: string, as: 'json' | 'raw') =>
+  (await run('plutil', ['-extract', key, as, '-o', '-', join(app, 'Info.plist')])).stdout;
+
 /** The platforms an app was built for, as its bundle says: `iPhoneOS`, `iPhoneSimulator`. */
-async function platformsOf(app: string) {
-  const { stdout } = await run('plutil', [
-    '-extract',
-    'CFBundleSupportedPlatforms',
-    'json',
-    '-o',
-    '-',
-    join(app, 'Info.plist'),
-  ]);
-  return JSON.parse(stdout) as string[];
-}
+const platformsOf = async (app: string) =>
+  JSON.parse(await plistKey(app, 'CFBundleSupportedPlatforms', 'json')) as string[];
 
 /**
  * Installs an `.app`, or the one an `.ipa` holds under `Payload`, where it goes in as any other. What this kind of
@@ -29,6 +24,7 @@ export async function installingApp(
   path: string,
   platform: 'iPhoneOS' | 'iPhoneSimulator',
   install: (app: string) => Promise<unknown>,
+  allowed?: (app: string) => void,
 ) {
   if (!/\.(app|ipa)$/.test(path) || !existsSync(path))
     throw new DeviceError('INVALID_ARGUMENT', `not a local .app bundle or .ipa: ${path}`);
@@ -50,6 +46,7 @@ export async function installingApp(
           ? 'install a build for a device, signed for this phone'
           : 'install a build for a simulator',
       );
+    if (allowed) allowed((await plistKey(app, 'CFBundleIdentifier', 'raw')).trim());
     await install(app);
   } finally {
     if (dir) rmSync(dir, { recursive: true, force: true });

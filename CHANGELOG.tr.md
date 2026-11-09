@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `--allow-apps` ile `app install`, listenin adlandırdığı bir uygulamayı, dosyanın taşıdığı kimlikle, bir `.apk`'nın paketi ya da bir `.app`'in `CFBundleIdentifier`'ı ile, cihaza bir şey ulaşmadan önce okuyarak kurar; başkasını bulduğu kimliği söyleyerek `POLICY_DENIED` olarak reddeder: sunucunun bir listesi varken her kurulumu reddediyordu.
 - Bir eylem, uygulamanın öldüğünü yalnızca başladığında çalışan, yani ondan önceki okumada önde olan ya da onun başlattığı bir uygulama için, ya da bir çökme raporunun adlandırdığı biri için söyler: seçili uygulama hiç başlatılmamışken bir sayfaya `open_link`, bir simülatörde "the app died: its process is gone and no crash report says why" diyordu, bir ölümden sonraki her eylem de bunu yeniden söylüyordu. iOS 27.2'li bir iPhone 17 Pro simülatöründe çalıştırıldı.
 - Ekranı okuyan her yanıt, üstündeki herhangi bir sistem uyarısını, bir Android uygulamasının çökme penceresi de dahil, kendi sözleri ve düğmeleriyle adlandırır ve `alert` ile yanıtlanmasını söyler: yalnızca bir izin sorusunu söylüyordu; üstünde "App info" ve "Close app" ile "Calendar has stopped" olan, uygulaması arkasından gitmiş bir ekran bundan hiç söz etmiyordu. Bir API 34 emülatöründe, Calendar ve Clock `am crash` ile çökertilerek çalıştırıldı.
 - `--silent` (`APPDYNO_SILENT=1`) ile çalışan bir sunucu, bir penceredeki `hand_off` bandını da sessiz tutar, ses ve Dock sıçraması olmadan: isteği bunu söyler; onu gösteren, böyle bir bayrakla çalışmayan hub ya da ayna sesi eskisi gibi çalıyordu.

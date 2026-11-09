@@ -47,8 +47,13 @@ export class SimulatorApps implements AppManager {
     private readonly udid: string,
   ) {}
 
-  async install(path: string) {
-    await installingApp(path, 'iPhoneSimulator', (app) => this.simctl.install(this.udid, app));
+  async install(path: string, allowed?: (app: string) => void) {
+    await installingApp(
+      path,
+      'iPhoneSimulator',
+      (app) => this.simctl.install(this.udid, app),
+      allowed,
+    );
     return [];
   }
 

@@ -1197,8 +1197,8 @@ describe('app management', () => {
       };
     return {
       log,
-      install: (...a: unknown[]) => {
-        log.push(['install', ...a]);
+      install: (path: string) => {
+        log.push(['install', path]);
         return Promise.resolve([]);
       },
       uninstall: rec('uninstall'),
@@ -1268,6 +1268,29 @@ describe('app management', () => {
       expect(r.text).toContain('passed a Play Protect warning for dev.app: "Unsafe app blocked"');
       expect(r.data.done).toContain('Unsafe app blocked');
     }
+  });
+
+  it('installs under an allowlist only an app on it, by the id the file holds, and names the one refused', async () => {
+    /** A device whose file holds `id`: it asks the check before it installs. */
+    const holding = (id: string) =>
+      manager({
+        install: (_path: string, allowed?: (app: string) => void) => {
+          allowed?.(id);
+          return Promise.resolve([]);
+        },
+      });
+    const policy = { apps: ['dev.app'] };
+    const ok = await connect(Object.assign(new FakeDevice(), { apps: holding('dev.app') }), {
+      policy,
+    });
+    expect((await ok.call('app', { action: 'install', path: '/tmp/a.apk' })).data.done).toBe(
+      'installed /tmp/a.apk',
+    );
+    const other = await connect(Object.assign(new FakeDevice(), { apps: holding('dev.other') }), {
+      policy,
+    });
+    const refused = await other.call('app', { action: 'install', path: '/tmp/b.apk' });
+    expect(refused.text).toBe('POLICY_DENIED: dev.other is not an allowed app (dev.app)');
   });
 
   it('builds, installs and launches what a project makes, and only with no allowlist', async () => {
@@ -1366,6 +1389,11 @@ describe('app management', () => {
 
   it('refuses what the policy forbids and passes on a driver’s reason', async () => {
     const apps = manager({
+      // the file holds an app the allowlist does not name
+      install: (_path: string, allowed?: (app: string) => void) => {
+        allowed?.('dev.other');
+        return Promise.resolve([]);
+      },
       clearData: () => Promise.reject(new DeviceError('UNSUPPORTED', 'an iPhone cannot')),
     });
     const d = Object.assign(new FakeDevice(), { apps });

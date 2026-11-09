@@ -367,7 +367,7 @@ A screen that has only dimmed is awake, and no refusal stops a touch there. Yet 
 
 `app install` watches the phone's focused window with a plain `dumpsys` while `adb install` runs, and does nothing else until one of two windows has the
 focus, so where no prompt comes it starts no agent and adds no wait. Only during that call, on that device, and only for the app in the file: its names
-are read from the `.apk`, and a prompt that names another is left alone. With `--allow-apps`, `app install` is refused altogether (`POLICY_DENIED`), as it always was. Neither option is a
+are read from the `.apk`, and a prompt that names another is left alone. With `--allow-apps`, `app install` installs only an app the list names, by the id the file holds (an `.apk`'s package, an `.app`'s `CFBundleIdentifier`), read before anything reaches the device, and refuses another as `POLICY_DENIED`, naming it. Neither option is a
 tool argument: only the person who runs the server sets them. Seen on a Xiaomi 25078RA3EY (HyperOS 3, Android 16, tr-TR, Play Store 53.8):
 
 | window                                                                      | what it is                         | what is read                                                                   | answer                                            |

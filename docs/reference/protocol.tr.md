@@ -367,7 +367,7 @@ Yalnızca kararmış bir ekran uyanıktır ve orada hiçbir ret bir dokunuşu du
 
 `app install`, `adb install` çalışırken telefonun odaklı penceresini düz bir `dumpsys` ile izler ve iki pencereden biri odağı alana kadar
 başka hiçbir şey yapmaz, böylece soru gelmeyen yerde hiçbir ajan başlatmaz ve bekleme eklemez. Yalnızca o çağrı sırasında, o cihazda ve yalnızca dosyadaki uygulama için: adları
-`.apk`'den okunur, başka birini adlandıran bir soruya dokunulmaz. `--allow-apps` ile `app install`, her zaman olduğu gibi, tamamen reddedilir (`POLICY_DENIED`). İki seçenek de bir
+`.apk`'den okunur, başka birini adlandıran bir soruya dokunulmaz. `--allow-apps` ile `app install` yalnızca listenin adlandırdığı bir uygulamayı, dosyanın taşıdığı kimlikle (bir `.apk`'nın paketi, bir `.app`'in `CFBundleIdentifier`'ı), cihaza bir şey ulaşmadan önce okuyarak kurar; başkasını adını söyleyerek `POLICY_DENIED` olarak reddeder. İki seçenek de bir
 araç argümanı değildir: onları yalnızca sunucuyu çalıştıran kişi ayarlar. Bir Xiaomi 25078RA3EY'de görüldü (HyperOS 3, Android 16, tr-TR, Play Store 53.8):
 
 | pencere                                                                     | ne olduğu                             | ne okunur                                                                            | yanıt                                               |
