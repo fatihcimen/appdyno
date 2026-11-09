@@ -1,30 +1,26 @@
-import { motionText, movedIn, watchScreen } from './watch.js';
 import {
   type Selector as SelectorOf,
   type ScreenElement,
   nearest,
   selectIn,
   type Screen,
-  attributesOf,
   must,
   type ActOptions,
 } from '@appdyno/core';
 import type { ActResult, Point, TextResult } from '@appdyno/protocol';
-import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
 import { noteTouch } from './activity.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 import { byPerson } from './policy.js';
-import { Check, NAME_AN_ELEMENT, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
+import { NAME_AN_ELEMENT, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
+import { checksFor, selectorOf, UNREAD } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 const STALE = 'stale ref, read the screen again';
-/** A wait that read nothing: screen says why the device refuses it. */
-const UNREAD = 'screen reads it once more and says what the device answered';
 
 /** These leave the app, as the home key does. */
 const LEAVES_APP = new Set(['home', 'appSwitch', 'power', 'lock', 'siri']);
@@ -46,31 +42,11 @@ export const NO_MATCH_WAIT_MS = 1_500;
 
 const DRAG_HOLD_MS = 150;
 
-/** The selector in flat arguments (the tools that only look at the screen take it that way). */
-const selectorOf = (a: SelectorOf): SelectorOf | undefined =>
-  a.text || a.id || a.role
-    ? {
-        ...(a.text && { text: a.text }),
-        ...(a.id && { id: a.id }),
-        ...(a.role && { role: a.role }),
-        ...(a.index !== undefined && { index: a.index }),
-      }
-    : undefined;
-
-type Judged = SelectorOf & {
-  ref?: string;
-  check: z.infer<typeof Check>;
-  equals?: string;
-  expect: boolean;
-};
-
 /** What every step passes through on its way to the device (the recorder). */
 export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promise<T>;
 
 /** Only these touch nothing. */
 const LOOKS_ONLY = new Set<Step['action']>(['wait_for', 'assert']);
-/** How long an `assert` watches with no time of its own. */
-const WATCH_CHECK_MS = 2_000;
 
 /** One step's device call and the action around it, shared by the tools that act on a target. */
 export function stepsFor(
@@ -184,102 +160,8 @@ export function stepsFor(
       );
   };
 
-  /** Whether a check holds on this screen, and why or why not in words. */
-  const judge = (screen: Screen, a: Judged): { pass: boolean; why: string } => {
-    const sel = selectorOf(a) ?? {};
-    const what = a.ref ?? showSelector(sel);
-    const all = a.ref ? screen.list.filter((e) => e.ref === a.ref) : selectIn(screen.list, sel);
-    const hits = sel.index === undefined ? all : all.slice(sel.index, sel.index + 1);
-    const missing = `${what} is not on the screen${offer(screen.list, sel.text ?? sel.id)}`;
-    if (a.check === 'exists' || a.check === 'absent') {
-      const want = a.check === 'absent' ? !a.expect : a.expect;
-      if (hits.length > 0 === want)
-        return { pass: true, why: `${what} is ${want ? 'on' : 'not on'} the screen` };
-      return {
-        pass: false,
-        why: want ? missing : `${what} is on the screen: ${hits.slice(0, 5).map(line).join('; ')}`,
-      };
-    }
-    if (hits.length !== 1)
-      return {
-        pass: false,
-        why:
-          hits.length === 0
-            ? missing
-            : `${hits.length} elements match ${what}: ${hits.slice(0, 5).map(line).join('; ')}`,
-      };
-    const at = attributesOf(screen.elements, must(hits[0], 'the one match'));
-    if (a.check === 'text') {
-      if (a.equals === undefined)
-        throw new ToolError('check text needs equals', 'INVALID_ARGUMENT');
-      return at.text === a.equals || at.value === a.equals
-        ? { pass: true, why: `${what} reads ${JSON.stringify(clean(a.equals))}` }
-        : {
-            pass: false,
-            why: `${what} reads ${JSON.stringify(clean(at.value ?? at.text))}, not ${JSON.stringify(clean(a.equals))}`,
-          };
-    }
-    const state = a.check as 'enabled' | 'checked' | 'focused';
-    return {
-      pass: at[state] === a.expect,
-      why: `${what} is ${at[state] ? '' : 'not '}${state}`,
-    };
-  };
-
-  /** Over `timeoutMs`, in the element named or anywhere; `expect: false` says it must keep still. */
-  const movesNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
-    const m = await watchScreen(ctx, s, a.timeoutMs || WATCH_CHECK_MS, false);
-    const screen = await s.current();
-    const sel = selectorOf(a);
-    const element = a.ref
-      ? screen.list.find((e) => e.ref === a.ref)
-      : sel && selectIn(screen.list, sel)[sel.index ?? 0];
-    if ((a.ref || sel) && !element)
-      throw new ToolError('check failed: nothing to watch by those words', 'CHECK_FAILED');
-    const box = element && {
-      x: element.rect.x,
-      y: element.rect.y,
-      w: element.rect.width,
-      h: element.rect.height,
-    };
-    const { screen: size } = must(s.device.hello, "the agent's hello");
-    const moved = movedIn(m, size, box, !a.expect);
-    const said = motionText(m, size);
-    if (moved !== a.expect) throw new ToolError(`check failed: ${said}`, 'CHECK_FAILED');
-    return { screen, done: `check passed: ${said}` };
-  };
-
-  /** A check on a fresh read, given `timeoutMs` to come true; a refusal when it does not. */
-  const checkNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
-    if (a.check === 'moves') return movesNow(s, a);
-    if (!a.ref && !selectorOf(a))
-      throw new ToolError('give a ref, text, id or role', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
-    const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
-    if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
-    const v = judge(screen, a);
-    if (!v.pass) throw new ToolError(`check failed: ${v.why}`, 'CHECK_FAILED');
-    return { screen, done: `check passed: ${v.why}` };
-  };
-
-  /** Waits for an element to show or go, on the device where its agent can. */
-  const waitFor = async (
-    s: Session,
-    a: SelectorOf & { ref?: string; gone: boolean; timeoutMs: number },
-  ) => {
-    const sel = selectorOf(a);
-    if (!a.ref && !sel)
-      throw new ToolError('give text, id, role or ref', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
-    const found = (x: Screen) =>
-      (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, must(sel, 'a selector')))[
-        sel?.index ?? 0
-      ];
-    const { screen, met } = await s.until((x) => !!found(x) !== a.gone, a.timeoutMs);
-    if (!screen)
-      throw new ToolError('the screen could not be read: nothing to look in', 'NOT_FOUND');
-    return { screen, met, found: found(screen) };
-  };
-
   const { holdsStill, scrollTo, scrollBy } = scrollingFor({ windowSize, line, pick, offer });
+  const { checkNow, waitFor } = checksFor({ ctx, clean, line, offer });
 
   /** One step's device call. `patient`: in a sequence, a ref may need a moment to come. */
   const step = (s: Session, st: Step, opts: ActOptions, patient = false) =>
