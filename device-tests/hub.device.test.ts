@@ -159,7 +159,8 @@ describe.runIf(serial)("the hub's Device pane", () => {
         for (const asked of [
           { condition: 'call', value: '5551234' },
           { clickOn: 'call:end' },
-          { condition: 'sms', value: 'Sent from the window' },
+          // an empty message sends the one its field shows, in the window's language
+          { condition: 'sms', value: '' },
         ]) {
           from = sent.length;
           poke(asked);

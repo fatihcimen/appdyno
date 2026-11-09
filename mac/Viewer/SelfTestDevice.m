@@ -78,6 +78,14 @@ void MVCheckDevice(void) {
                @"text": @"On a phone, this could cut its connection to this Mac. Change it on the phone."}];
   MVCheck(@"device: a refusal is shown whole, in the Mac's language", [pane.answer.said isEqual:MVWord(@"On a phone, this could cut its connection to this Mac. Change it on the phone.")], pane.answer.said);
   [sent removeAllObjects];
+  [pane set:@"sms" to:@""];
+  NSString *body = sent.firstObject[@"args"][@"value"];
+  MVCheck(@"device: an empty message sends the one its field shows, in the window's language", [body isEqual:MVWord(@"Sent from the window")] && [MVInTurkish(@"Sent from the window") isEqual:@"Pencereden gönderildi"], body);
+  [pane show:@{@"op": @"answer",
+               @"name": @"device",
+               @"ok": @YES,
+               @"text": @"an SMS came from +15551234567"}];
+  [sent removeAllObjects];
   [pane set:@"location" to:@"41.0082, 28.9784"];
   NSDictionary *place = sent.firstObject[@"args"];
   MVCheck(@"device: a location goes by set_location, as numbers", [sent.firstObject[@"name"] isEqual:@"deviceLocation"] && [place[@"lat"] doubleValue] == 41.0082 && [place[@"lon"] doubleValue] == 28.9784, sent.description);

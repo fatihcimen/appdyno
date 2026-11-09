@@ -240,7 +240,9 @@ static const double kBetween = 10, kHeadingGap = 18;
 - (void)message {
   MVConditionRow *row = _rows[@"sms"];
   NSString *from = [row.from.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
-  NSMutableDictionary *args = [NSMutableDictionary dictionaryWithDictionary:@{@"name": @"sms", @"value": row.field.stringValue}];
+  // an empty field sends what it shows greyed, in the window's language
+  NSString *words = row.field.stringValue.length ? row.field.stringValue : MVWord(@"Sent from the window");
+  NSMutableDictionary *args = [NSMutableDictionary dictionaryWithDictionary:@{@"name": @"sms", @"value": words}];
   if (from.length) args[@"title"] = from;
   [self send:@"deviceSet" args:args asked:@{@"name": @"sms"} saying:MVWord([NSString stringWithFormat:@"Sending %@", row.title])];
 }

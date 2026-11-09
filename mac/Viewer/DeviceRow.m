@@ -162,7 +162,8 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     button(@"End", @"end");
   } else {
     _from = plated(MVSendField([named stringByAppendingString:@":from"], @"From", @"From", target, @selector(typed:)), kControlWide, views, controls);
-    _field = plated(MVSendField(named, @"Message", @"Message", target, @selector(typed:)), 0, views, controls);
+    // what an empty field sends, in the window's language
+    _field = plated(MVSendField(named, @"Sent from the window", @"Message", target, @selector(typed:)), 0, views, controls);
     button(@"Send", @"send");
   }
   if (_control) {
