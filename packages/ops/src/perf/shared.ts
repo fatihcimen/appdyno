@@ -169,9 +169,9 @@ export function pruneNow(ctx: ServerContext, limitGb: number, dryRun = false) {
 /**
  * At most hourly across processes, by a file's time, and only where the entry point asked (`autoPrune`): the server and
  * the command line of a user. Nothing else that makes a context ever prunes by itself. A number is kept whatever becomes
- * of this.
+ * of this. After what writes a trace: a kept run, a measurement kept with none, a flight recorder's page.
  */
-async function pruneWhenDue(ctx: ServerContext) {
+export async function pruneWhenDue(ctx: ServerContext) {
   if (!ctx.autoPrune) return;
   const stamp = join(stateDir(), 'traces-pruned');
   try {
@@ -283,8 +283,16 @@ export function perfTools(ctx: ServerContext) {
     s.device.virtual
       ? ' (virtual device: relative, compare only with the same kind of device)'
       : '';
-  const save = async (kind: string, m: Measured<unknown>[], value: unknown) =>
-    store(ctx.measurementsDir, kind, value, m.map((x) => `## ${x.at}\n${x.raw}`).join('\n\n'));
+  const save = async (kind: string, m: Measured<unknown>[], value: unknown) => {
+    const saved = await store(
+      ctx.measurementsDir,
+      kind,
+      value,
+      m.map((x) => `## ${x.at}\n${x.raw}`).join('\n\n'),
+    );
+    await pruneWhenDue(ctx);
+    return saved;
+  };
   const keep = (s: Session, run: KeptRun) => keepRun(ctx, s, run);
   const noisy = (noise: string[]) => (noise.length ? [`noise: ${noise.join(', ')}`] : []);
   /**

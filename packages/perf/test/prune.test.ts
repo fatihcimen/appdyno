@@ -122,6 +122,16 @@ describe('kept traces pruned', () => {
     expect([existsSync(old), existsSync(young), existsSync(other)]).toEqual([false, true, true]);
   });
 
+  it("counts a simulator's frame probe reads as it counts a trace, and keeps one a run names", async () => {
+    const s = store();
+    const old = s.trace('probe-1.jsonl', 4, 5);
+    const named = s.trace('probe-2.jsonl', 4, 5);
+    await s.run('pm-90909090', 2, 'probe-2.jsonl');
+    const r = await s.prune(1);
+    expect(r.removed.map((x) => x.name)).toEqual(['probe-1.jsonl']);
+    expect([existsSync(old), existsSync(named)]).toEqual([false, true]);
+  });
+
   it('never takes a trace a recent run names, by either of its files', async () => {
     const s = store();
     const named = s.trace('named.pftrace', 4, 9);

@@ -13,10 +13,10 @@ const RECENT_RUNS = 30;
 /** Nothing younger goes: `perf_query` may be about to read it, and it may not be a run's yet. */
 const GRACE_MS = 86_400_000;
 
-/** A flight recorder's saved pages go by the same rules: a person kept none of them by name. */
-const TRACE = /\.(?:pftrace|perfetto-trace|trace|xcresult|timeline\.html)$/;
+/** A flight recorder's saved pages, and a simulator's frame probe's reads, go by the same rules: nobody named them. */
+const TRACE = /\.(?:pftrace|perfetto-trace|trace|xcresult|timeline\.html|jsonl)$/;
 const HEAP = /\.(?:hprof|memgraph)$/;
-const NAMED = /[\w.-]+\.(?:pftrace|perfetto-trace|trace|xcresult|hprof|memgraph)\b/g;
+const NAMED = /[\w.-]+\.(?:pftrace|perfetto-trace|trace|xcresult|jsonl|hprof|memgraph)\b/g;
 
 export type PruneOptions = {
   /**

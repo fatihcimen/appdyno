@@ -15,6 +15,7 @@ import {
   type LiveSample,
 } from '@appdyno/core';
 import type { ServerContext } from '../context.js';
+import { pruneWhenDue } from '../perf/shared.js';
 import { filming } from '../record.js';
 import type { Session } from '../session.js';
 import { ToolError } from '../tool.js';
@@ -235,6 +236,8 @@ export async function startFlight(
     clear();
     saved.push(page.file);
     lastSave = Date.now();
+    // behind the page: a walk of the traces holds no save of the recorder
+    void pruneWhenDue(ctx);
     return page.file;
   };
 

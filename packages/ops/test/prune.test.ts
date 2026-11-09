@@ -68,6 +68,15 @@ describe('a kept run and the traces of a state folder', () => {
     expect(existsSync(again)).toBe(true);
   });
 
+  it('asked, prunes after a measurement kept with no run too, as a CPU profile is', async () => {
+    // a run of before, kept where nothing pruned, which a prune goes by
+    await kept(context({ traceLimitGb: 0 }));
+    const trace = oldTrace();
+    const ctx = context({ traceLimitGb: 0, autoPrune: true });
+    await callerOf(ctx)('perf_profile', { seconds: 1 });
+    expect(existsSync(trace)).toBe(false);
+  });
+
   it('does not fail a number that was kept, whatever the prune finds', async () => {
     mkdirSync(join(stateDir(), 'traces'), { recursive: true });
     writeFileSync(join(stateDir(), 'traces-pinned.json'), 'not json');
