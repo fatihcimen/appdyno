@@ -249,6 +249,15 @@ const OPS: Record<string, ToStep> = {
           { app: a.app as string | undefined, ...how },
         );
   },
+  // the app tool's launch stops a running app first on every platform: a start, whether it ran or not
+  app: (a) => {
+    if (a.action !== 'launch') return unknownOp('app')(a);
+    const env = a.env as Record<string, string> | undefined;
+    return restarts(a, {
+      arg: a.args as string[] | undefined,
+      env: env && Object.entries(env).map(([k, v]) => `${k}=${v}`),
+    });
+  },
   terminate_app: (a) => stepOf('stop', {}, { app: a.app as string | undefined }),
   // what an app opens is read, and nothing opened: no step
   open_link: (a) =>

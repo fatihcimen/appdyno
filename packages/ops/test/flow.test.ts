@@ -391,6 +391,35 @@ assert id=result check=text equals="Gönderildi"
       ]);
     });
 
+    it("writes the app tool's launch as a start, whether the app ran or not, with its arguments and environment", async () => {
+      const launched: unknown[] = [];
+      device.apps = {
+        launchWith: (app: string, o: unknown) => {
+          launched.push([app, o]);
+          return Promise.resolve();
+        },
+      } as unknown as AppManager;
+      const call = callerOf(context());
+      const stepsOf = (text: string) => text.split('\n').filter((l) => l && !l.startsWith('app '));
+      const how = { args: ['-UITests', 'YES'], env: { API_URL: 'https://a.test/' } };
+      const launch = () => call('app', { action: 'launch', ...how });
+      device.running = false;
+      const started = await recorded(call, launch, 'started.flow');
+      expect(stepsOf(started.text)).toEqual([
+        'stop',
+        'launch arg=-UITests arg=YES env="API_URL=https://a.test/"',
+      ]);
+      device.running = true;
+      const restarted = await recorded(call, launch, 'restarted.flow');
+      expect(restarted.text).toBe(started.text);
+      device.calls = [];
+      await call('flow', { action: 'run', file: restarted.file });
+      expect(device.calls.map((c) => c.name)).toContain('terminate');
+      expect(launched.at(-1)).toEqual(['dev.app', how]);
+      const plain = await recorded(call, () => call('app', { action: 'launch' }), 'plain.flow');
+      expect(stepsOf(plain.text)).toEqual(['stop', 'launch']);
+    });
+
     it('holds across the processes of a command line, on the device it began on', async () => {
       await callerOf(context())('flow', { action: 'start' });
       await callerOf(context())('tap', { selector: { text: 'Form' } });
