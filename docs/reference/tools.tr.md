@@ -41,7 +41,8 @@ bir an beklenir, sonra en yakın etiketlerle reddedilir.
 
 `steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir.
 İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı gösterir. `wait_for` ve seçiciler
-cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir.
+cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir. Uygulaması, adım başladığında
+önde olan bir uygulamaysa, ölen bir adım da onu bitirir; adımı adlandırır, o işlemin tek başına verdiği `appDied` ve sözcüklerle.
 
 `gesture`; `double_tap`, `long_press`, `drag`, `pinch` ve serbest bir `plan` içerir. `press_key` donanım
 düğmelerini içerir. `app`; `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,

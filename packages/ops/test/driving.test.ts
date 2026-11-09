@@ -310,6 +310,54 @@ describe('steps across screens', () => {
     expect(r.error).toBe(true);
     expect(r.text).toContain('step 2');
   });
+
+  /** A device whose app is gone, with the launcher in front, once `gone` says so. */
+  const dying = (gone: (d: FakeDevice) => boolean) => {
+    const d = new FakeDevice();
+    d.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' }];
+    d.current = ((own) => () => {
+      const t = own();
+      if (!gone(d)) return t;
+      d.running = false;
+      t.windows = t.windows.map((w) => ({ ...w, pkg: 'com.android.launcher3' }));
+      return t;
+    })(d.current.bind(d));
+    return d;
+  };
+
+  it('stops at a step whose app died, saying so as that action alone does', async () => {
+    for (const read of [undefined, 'diff']) {
+      const d = dying((x) => x.screen === 'form');
+      const { call } = await connect(d);
+      const r = await call('steps', {
+        steps: [
+          { action: 'wait_for', text: 'Form' },
+          { action: 'tap', selector: { text: 'Form' }, ...(read && { read }) },
+          { action: 'tap', selector: { text: 'Gönder' } },
+          { action: 'type_text', text: 'Ada' },
+        ],
+      });
+      expect(r.error, read).toBe(false);
+      expect(r.text).toMatch(
+        /^1\. text="Form" shown\n2\. tapped @\w+ "Form"\nWARNING: the app is not in the foreground \(com\.android\.launcher3\)[^\n]*\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\)\n/,
+      );
+      expect(r.text).toContain('foreground: com.android.launcher3');
+      expect(r.text.split('\n').at(-1)).toBe('the app died in step 2, tap: the rest were not run');
+      expect(r.data.appDied).toEqual({ reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' });
+      expect(act(d)).toHaveLength(1);
+    }
+    // an app that was not in front when a step began has no death to tell
+    const d = dying(() => true);
+    const { call } = await connect(d);
+    const r = await call('steps', {
+      steps: [
+        { action: 'tap', x: 5, y: 5, read: 'diff' },
+        { action: 'tap', x: 5, y: 5 },
+      ],
+    });
+    expect(r.text).not.toContain('the rest were not run');
+    expect(act(d)).toHaveLength(2);
+  });
 });
 
 describe('waiting on the device', () => {

@@ -41,7 +41,8 @@ waits a moment, then refuses with the nearest labels.
 
 `steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It
 stops at the first failure, says which step and why, and shows the screen. `wait_for` and selectors
-wait on the device, so the tree crosses the wire only when the screen changed.
+wait on the device, so the tree crosses the wire only when the screen changed. A step whose app died, of an app
+that was in front when the step began, ends it too, naming the step, with the `appDied` and words that action alone gives.
 
 `gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the
 hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,

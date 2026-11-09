@@ -1,4 +1,5 @@
-import { pause, reportProgress, type Screen } from '@appdyno/core';
+import { pause, reportProgress } from '@appdyno/core';
+import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
 
 /** A report can be stamped a moment before the host's clock says the action began. */
@@ -22,6 +23,10 @@ async function reportOf(s: Session, since: number, clean: Clean) {
   return undefined;
 }
 
+/** An answer's line of the app's end. */
+export const diedLine = ({ reason, file }: NonNullable<ActionOut['appDied']>) =>
+  `the app died: ${reason}${file ? ` (${file})` : ''}`;
+
 /**
  * The app's end during an action: its process is gone from the front, or another one has taken over
  * (Android restarts a crashed app at once, so the screen alone would not tell). `ran`: it was in front on the read
@@ -30,7 +35,7 @@ async function reportOf(s: Session, since: number, clean: Clean) {
  */
 export async function appDeath(
   s: Session,
-  screen: Screen,
+  foreground: string | undefined,
   wasPid: string | undefined,
   since: number,
   clean: Clean,
@@ -45,7 +50,7 @@ export async function appDeath(
       return reportOf(s, since, clean);
     }
   }
-  if (!screen.foreground || screen.foreground === s.appId || !(ran || wasPid)) return undefined;
+  if (!foreground || foreground === s.appId || !(ran || wasPid)) return undefined;
   if (await s.device.appRunning(s.appId).catch(() => true)) return undefined;
   reportProgress('the app is gone: looking for its crash report');
   return (

@@ -1,6 +1,7 @@
 import { alertAnswer, reportProgress, throwIfCancelled, type ActOptions } from '@appdyno/core';
 import { z } from 'zod';
 import { SETTLE, type Answers, type ReadMode } from './answers.js';
+import { appDeath, diedLine } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
@@ -58,7 +59,7 @@ const readsScreen = (st: Step | undefined) =>
 
 export function actOps(
   ctx: ServerContext,
-  { act, summary, header, show, clean, afterChange }: Answers,
+  { act, summary, header, show, clean, afterChange, noticed }: Answers,
   { one, step, windowSize, onTheScreen, checkNow }: Steps,
   tools: () => Record<string, Op>,
 ) {
@@ -254,6 +255,19 @@ export function actOps(
         const done: string[] = [];
         const images: Block[] = [];
         let ending: ToolResult<ActionOut> | undefined;
+        /** What was in front after the last step, where it was told. */
+        let front: string | undefined;
+        const inFront = () => s.device.foreground().catch(() => undefined);
+        /** A step whose app died ends the sequence, with what that step alone would answer. */
+        const died = (i: number, name: string, data: ActionOut) => {
+          const all = [
+            ...done,
+            ...(i < plan.length - 1
+              ? [`the app died in step ${i + 1}, ${name}: the rest were not run`]
+              : []),
+          ].join('\n');
+          return reply(all, { ...data, done: clean(all) }, images);
+        };
         for (const [i, p] of plan.entries()) {
           const last = i === plan.length - 1;
           const name = p.op ? p.op.name : p.st.action;
@@ -268,6 +282,9 @@ export function actOps(
               images.push(...r.blocks.filter((b) => b.type === 'image'));
               // it may have selected another device
               s = await ctx.session();
+              const said = r.data as Partial<ActionOut>;
+              front = said.foreground;
+              if (said.appDied) return died(i, name, r.data as ActionOut);
               continue;
             }
             const st = p.st;
@@ -286,10 +303,30 @@ export function actOps(
                     ...(s.fresh && { before: s.fresh.hash }),
                   } as const)
                 : ({ settle: false, read: 'none' } as const);
+              // a death is told only of an app that was in front: one that never ran has none
+              const app = s.appId;
+              const up = app !== undefined && (front ?? (await inFront())) === app;
+              const pid = up
+                ? (s.appPid ?? (await s.device.appPid?.(app).catch(() => undefined)))
+                : undefined;
+              const started = Date.now();
               const x = await attempt(opts);
               s.acted();
-              done.push(`${i + 1}. ${x.done}`);
-              continue;
+              front = up ? await inFront() : undefined;
+              const appDied = up ? await appDeath(s, front, pid, started, clean, true) : undefined;
+              if (!appDied) {
+                done.push(`${i + 1}. ${x.done}`);
+                continue;
+              }
+              // as an action that reads says it, with the screen the app left
+              const screen = await s.read().catch(() => undefined);
+              if (screen) show(s, screen);
+              const fg = screen ? await noticed(s, screen, false) : '';
+              const notes = [diedLine(appDied)];
+              done.push(
+                `${i + 1}. ${[x.done + fg, ...notes, ...(screen ? [header(screen)] : [])].join('\n')}`,
+              );
+              return died(i, name, summary(x.done, screen, { appDied, notes, fg }));
             }
             let stepDone = '';
             const r = await act(
@@ -304,6 +341,8 @@ export function actOps(
             );
             done.push(`${i + 1}. ${answerText(r)}`);
             if (last) ending = r;
+            front = r.data.foreground;
+            if (r.data.appDied) return died(i, name, r.data);
           } catch (e) {
             if (!(e instanceof ToolError)) throw e;
             const screen = await s.read().catch(() => undefined);

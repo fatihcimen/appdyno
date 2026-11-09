@@ -15,7 +15,7 @@ import {
   type SystemAlert,
 } from '@appdyno/core';
 import type { ActResult, TextResult } from '@appdyno/protocol';
-import { appDeath } from './app-death.js';
+import { appDeath, diedLine } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { redact } from './policy.js';
 import type { ActionOut } from './schemas.js';
@@ -208,14 +208,12 @@ async function afterAction(
   const diff = d && diffText(d, screen.list.length, clean);
   const changed = o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined;
   const fg = await noticed(s, screen, changed === false || !!o.launched);
-  const appDied = await appDeath(s, screen, o.pid, o.started, clean, o.ran);
+  const appDied = await appDeath(s, screen.foreground, o.pid, o.started, clean, o.ran);
   const busy = o.settled === false ? o.busy : [];
   const moving =
     o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
   const notes = [
-    ...(appDied
-      ? [`the app died: ${appDied.reason}${appDied.file ? ` (${appDied.file})` : ''}`]
-      : []),
+    ...(appDied ? [diedLine(appDied)] : []),
     ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs)] : []),
   ];
   return reply(
