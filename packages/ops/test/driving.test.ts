@@ -297,6 +297,28 @@ describe('steps across screens', () => {
     );
   });
 
+  it("says where a tool's target goes by its own selector, as a tap with text at the top has it", async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    expect((await call('tap', { text: 'OK', read: 'none' })).text).toBe(
+      'INVALID_ARGUMENT: Unrecognized key: "text"\nhint: a target goes in selector: {"read":"none","selector":{"text":"OK"}}',
+    );
+    // beside a selector it has, and on the tools that share a tap's target
+    expect(
+      (await call('gesture', { kind: 'long_press', index: 1, selector: { text: 'A' } })).text,
+    ).toMatch(
+      /hint: a target goes in selector: \{"kind":"long_press","selector":\{"text":"A","index":1\}\}$/,
+    );
+    expect((await call('type_text', { text: 'hi', id: 'email' })).text).toMatch(
+      /hint: a target goes in selector: \{"text":"hi","selector":\{"id":"email"\}\}$/,
+    );
+    // what no selector takes is said as before
+    expect((await call('tap', { label: 'OK' })).data.hint).toBe(
+      'change that and call again: nothing was done',
+    );
+    expect(act(d)).toEqual([]);
+  });
+
   it('reads a touch at its own step when the step says so, and refuses what is no step', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);

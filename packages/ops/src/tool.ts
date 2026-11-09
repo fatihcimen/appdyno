@@ -175,16 +175,38 @@ export const argumentsHint = (issues: z.core.$ZodIssue[], flag = '') =>
     'change that and call again: nothing was done',
   ].join(': ');
 
+/**
+ * Where words put at the top of a call go, by the schema's own selector: `text` beside a tap's target is its
+ * selector's. The call as it would be taken, or undefined where the schema's selector takes none of them.
+ */
+export function inSelector(schema: z.ZodObject, args: unknown, issues: z.core.$ZodIssue[]) {
+  const field: unknown = schema.shape.selector;
+  const selector: unknown = field instanceof z.ZodOptional ? field.unwrap() : field;
+  if (!(selector instanceof z.ZodObject) || !args || typeof args !== 'object') return undefined;
+  const words = issues.flatMap((x) =>
+    x.code === 'unrecognized_keys' && x.path.length === 0
+      ? x.keys.filter((k) => k in selector.shape)
+      : [],
+  );
+  if (words.length === 0) return undefined;
+  const given = args as Record<string, unknown>;
+  const part = (moved: boolean) =>
+    Object.fromEntries(Object.entries(given).filter(([k]) => words.includes(k) === moved));
+  const own = typeof given.selector === 'object' ? given.selector : {};
+  return `a target goes in selector: ${JSON.stringify({ ...part(false), selector: { ...own, ...part(true) } })}`;
+}
+
 /** A call's arguments as its op takes them, or a refusal naming each one wrong; `flag`: how the caller writes a name. */
 export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') {
   const checked = op.input.safeParse(args);
   if (checked.success) return checked.data;
+  const { issues } = checked.error;
   throw new ToolError(
-    checked.error.issues
+    issues
       .map((x) => `${x.path.length ? `${flag}${x.path.join('.')}: ` : ''}${x.message}`)
       .join('; '),
     'INVALID_ARGUMENT',
-    argumentsHint(checked.error.issues, flag),
+    inSelector(op.input, args, issues) ?? argumentsHint(issues, flag),
     false,
   );
 }

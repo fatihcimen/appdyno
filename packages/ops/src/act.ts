@@ -12,7 +12,6 @@ import {
   MAX_TYPED,
   Read,
   ScrollStep,
-  Selector,
   Step,
   SwipeStep,
   Target,
@@ -23,6 +22,7 @@ import {
   ACT,
   argumentsHint,
   defineOp,
+  inSelector,
   READ,
   refusedAction,
   reply,
@@ -78,15 +78,9 @@ export function actOps(
       const p = Step.safeParse(rest);
       if (p.success) return { st: p.data, ...(reads.data && { read: reads.data }) };
       // a selector's words at the top, as wait_for takes them: shown where a touch takes them
-      const words = (yes: boolean) =>
-        Object.fromEntries(Object.entries(rest).filter(([k]) => k in Selector.shape === yes));
-      const right =
-        'selector' in takes.shape && Object.keys(words(true)).length > 0
-          ? JSON.stringify({ ...words(false), selector: words(true) })
-          : undefined;
       throw fail(
         z.prettifyError(p.error),
-        right ? `a target goes in selector: ${right}` : argumentsHint(p.error.issues),
+        inSelector(takes, rest, p.error.issues) ?? argumentsHint(p.error.issues),
       );
     }
     if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);
