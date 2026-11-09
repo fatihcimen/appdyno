@@ -213,8 +213,13 @@ export class AndroidEmulators implements VirtualDevices {
     throw new DeviceError('TIMEOUT', `the emulator ${id} did not finish booting in ${BOOT_MS} ms`);
   }
 
+  /**
+   * A kill loses what the system's settings took within the last 2 s, which it writes to disk only then: a setting put
+   * back just before, an emulator booted again with it changed. Its writes are let through, and synced, first.
+   */
   async shutdown(id: string) {
     if (!id.startsWith('emulator-')) return;
+    await this.adb.exec(id, 'sleep 3; sync').catch(() => undefined);
     await this.adb.run(['-s', id, 'emu', 'kill'], 30_000);
     const end = Date.now() + 60_000;
     while (Date.now() < end) {

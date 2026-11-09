@@ -456,6 +456,30 @@ describe('a text size', () => {
     },
   );
 
+  it(
+    'leaves the scale and the languages unset after a put-back, the system writing 1.0 beside them late',
+    { timeout: 20_000 },
+    async () => {
+      const { settings, held } = scaled('null', false, 1_200);
+      await settings.set('text_size', '1.3');
+      await settings.set('text_size', 'default');
+      await sleep(1_500);
+      expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
+    },
+  );
+
+  it(
+    'puts the languages back unset as they were first, after a write of them that came once their watch was over',
+    { timeout: 15_000 },
+    async () => {
+      const { settings, held } = scaled('null');
+      await settings.set('text_size', '1.3');
+      held.system_locales = 'en-US';
+      await settings.set('text_size', 'default');
+      expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
+    },
+  );
+
   it('puts back a scale of 1.0 as 1.0', { timeout: 15_000 }, async () => {
     const { settings, held } = scaled('1.0');
     const was = await settings.get('text_size');

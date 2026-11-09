@@ -44,3 +44,24 @@ describe('an emulator started', () => {
     expect(await emulators.boot('Pixel_34')).toBe('emulator-5642');
   });
 });
+
+describe('an emulator shut down', () => {
+  it('lets the system write its settings to disk first, as a put-back just before was lost to the kill', async () => {
+    const calls: string[] = [];
+    let up = true;
+    const adb = {
+      exec: (serial: string, command: string) => {
+        calls.push(`${serial}: ${command}`);
+        return Promise.resolve('');
+      },
+      run: (args: string[]) => {
+        calls.push(args.join(' '));
+        up = false;
+        return Promise.resolve('OK');
+      },
+      devices: () => Promise.resolve(up ? [{ serial: 'emulator-5730', state: 'device' }] : []),
+    };
+    await new AndroidEmulators(adb as unknown as Adb).shutdown('emulator-5730');
+    expect(calls).toEqual(['emulator-5730: sleep 3; sync', '-s emulator-5730 emu kill']);
+  });
+});

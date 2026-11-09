@@ -15,6 +15,16 @@ const READ_BACK_MS = 10_000;
 export class AndroidScale {
   constructor(private readonly sh: (command: string) => Promise<string>) {}
 
+  /** The languages, unset or not, before this tool first changed the scale: a write the system made late is no one's. */
+  private languagesFirst?: string[];
+
+  /** Which of `keys` (of `system`) read unset now. */
+  private async unset(keys: string[]) {
+    const out = await this.sh(keys.map((k) => `settings get system ${k}`).join('; '));
+    const lines = out.split('\n').map((l) => l.trim());
+    return keys.filter((_, i) => lines[i] === 'null');
+  }
+
   /** `default` where the device never set one. */
   async get() {
     const v = (await this.sh('settings get system font_scale')).trim();
@@ -22,18 +32,14 @@ export class AndroidScale {
   }
 
   /**
-   * Which of `keys` (of `system`) read unset now, and what deletes them again once a change has gone: the system writes
-   * the text scale and the languages together when either changes (`Settings.System.putConfigurationForUser`).
-   * `moved`: the change moved the configuration, so that write is coming, and is waited for: an emulator's came more
-   * than a second after a change.
+   * Which of `keys` (of `system`) read unset now, with `unsetAfter` as unset whatever they read, and what deletes them
+   * again once a change has gone: the system writes the text scale and the languages together when either changes
+   * (`Settings.System.putConfigurationForUser`). `moved`: the change moved the configuration, so that write is coming,
+   * and is waited for: an emulator's came more than a second after a change.
    */
-  async keepingUnset(keys: string[]) {
-    const unset = async () => {
-      const out = await this.sh(keys.map((k) => `settings get system ${k}`).join('; '));
-      const lines = out.split('\n').map((l) => l.trim());
-      return keys.filter((_, i) => lines[i] === 'null');
-    };
-    const were = await unset();
+  async keepingUnset(keys: string[], unsetAfter: string[] = []) {
+    const were = [...new Set([...unsetAfter, ...(await this.unset(keys))])];
+    const unset = () => this.unset(were);
     return async (moved: boolean) => {
       if (were.length === 0) return;
       const end = Date.now() + (moved ? READ_BACK_MS : SCALE_HOLDS_MS);
@@ -64,7 +70,12 @@ export class AndroidScale {
         `text_size on Android is a scale, not ${value}`,
         `from ${SCALES.min} to ${SCALES.max}, such as 1.3, or default`,
       );
-    const languagesBack = await this.keepingUnset(['system_locales']);
+    this.languagesFirst ??= await this.unset(['system_locales']);
+    // a scale put back unset stays so, and the languages as they were first, after the system's write of 1.0 with them
+    const languagesBack = await this.keepingUnset(
+      ['system_locales'],
+      value === 'default' ? ['font_scale', ...this.languagesFirst] : [],
+    );
     const was = await this.get();
     const end = Date.now() + READ_BACK_MS;
     for (;;) {
