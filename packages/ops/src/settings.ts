@@ -40,6 +40,10 @@ const SWITCH_WORDS: Partial<Record<string, string>> = {
 const wordOf = (name: string, value: string) =>
   name === 'dark_mode' ? (SWITCH_WORDS[value] ?? value) : value;
 
+/** What a device reads of a condition, as an answer says it: what refuses it says why, as a refusal. */
+export const readCondition = async (s: Session, name: SettingName, app?: string) =>
+  wordOf(name, await s.device.settings.get(name, app));
+
 /** Whose entries a restore takes, by their owner. */
 export type Whose = (owner: Owner | undefined) => boolean;
 
@@ -223,7 +227,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       annotations: DESTRUCTIVE,
       run: async ({ name, value, title, app }) => {
         const s = await ctx.session();
-        const { settings, events } = s.device;
+        const { events } = s.device;
         if (name === 'restore') {
           const { restored, failed, left } = await restoreConditions(
             s,
@@ -291,7 +295,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         const pkg = app ?? (name === 'locale' ? s.appId : undefined);
         if (pkg) checkApp(policy, pkg);
         if (value === undefined) {
-          const now = wordOf(name, await settings.get(name, pkg));
+          const now = await readCondition(s, name, pkg);
           const t = `${name}: ${now}`;
           return reply(clean(t), { done: clean(t), value: now });
         }

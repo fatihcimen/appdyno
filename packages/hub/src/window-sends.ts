@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { frontApp, type WindowSession } from './controls.js';
 import { spokenDone } from './follow.js';
 import { WINDOW, windowContext } from './measures.js';
+import { conditionSends } from './window-conditions.js';
 
 /** A device's links a person opened, newest first. */
 const RECENT = 8;
@@ -27,8 +28,9 @@ const recentLinks = deviceState('links', z.array(z.string()));
 type Answer = { ok: boolean; text: string; hint?: string };
 
 /**
- * What a window sends to its device by the ops an agent calls, with the same arguments: a link and a push. Each line of
- * progress goes back as it comes, then what the op did, or its refusal with its hint. A push token goes by no op.
+ * What a window sends to its device by the ops an agent calls, with the same arguments: a link, a push and the device's
+ * conditions. Each line of progress goes back as it comes, then what the op did, or its refusal with its hint. A push
+ * token goes by no op.
  */
 export function windowSends(
   ctx: ServerContext,
@@ -43,18 +45,18 @@ export function windowSends(
   const recent = () => recentLinks.read(serial) ?? [];
   /** A field the pane sent, as text: the window sends each as a string, and what is none is empty. */
   const field = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  // the first call opens a session, which starts the device agent, as an agent's first call does
+  const context = () => (own ??= windowContext(ctx, device));
 
   /**
    * One op's call, by the pane it answers: its answer, and what it said whole where it said it. `app`, where given, is
    * the session's, as an agent's `use_device` sets it, through the same policy: an iPhone opens a link only in one.
    */
   const call = async (name: string, op: string, args: Record<string, unknown>, app?: string) => {
-    // the first call opens a session, which starts the device agent, as an agent's first call does
-    const context = (own ??= windowContext(ctx, device));
-    const tool = must((ops ??= opsFor(context))[op], `the op ${op}`);
+    const tool = must((ops ??= opsFor(context()))[op], `the op ${op}`);
     try {
       if (app !== undefined)
-        (await context.session()).appId = app ? checkApp(context.policy, app) : undefined;
+        (await context().session()).appId = app ? checkApp(ctx.policy, app) : undefined;
       const progress = (line: string) => tell(name, { line: spokenDone(line) });
       const { data } = await inCall({ client: WINDOW, progress }, () =>
         tool.handler(argumentsFor(tool, args)),
@@ -139,8 +141,10 @@ export function windowSends(
     pushes: (m) => pushes(field(m.app)),
     push: (m) => push(m.args),
     pushToken,
+    ...conditionSends(device, () => context().session(), call, tell),
   };
-  const answering = (name: string) => (name.startsWith('push') ? 'push' : 'openLink');
+  const answering = (name: string) =>
+    name.startsWith('push') ? 'push' : name.startsWith('device') ? 'device' : 'openLink';
 
   return {
     /** What is a send of what the window says; false: it is another's. */
@@ -153,5 +157,9 @@ export function windowSends(
       );
       return true;
     },
+
+    /** The window closed: what it changed on the device goes back first, as a session's end puts it back. */
+    end: async () =>
+      (await own?.end().catch((e: unknown) => [e instanceof Error ? e.message : String(e)])) ?? [],
   };
 }

@@ -161,6 +161,9 @@ export type PushTokenKind = (typeof PUSH_TOKEN_KINDS)[number];
 /** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */
 export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
 
+/** What happens to a device once that a window offers a person beside its conditions. */
+export type DeviceEvent = 'biometric' | 'call' | 'sms';
+
 /** What happens to a device once: a condition holds and is put back, an event is over when it is said. */
 export type DeviceEvents = {
   /** Each type, by how this device takes it, for `app` where it is named: an app's build may take another route. */
@@ -182,4 +185,6 @@ export type DeviceEvents = {
   /** A call coming in from `number`, or that call ended. */
   call(number: string, end: boolean): Promise<void>;
   sms(from: string, text: string): Promise<void>;
+  /** Why this device takes no `event`, in the words the event refuses with; none: it may take one. */
+  cannot?(event: DeviceEvent): string | undefined;
 };

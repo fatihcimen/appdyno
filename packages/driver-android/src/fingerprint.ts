@@ -18,6 +18,8 @@ const STEP_MS = 2_000;
 const ENROLLING = 1;
 const APPLICATION_WINDOW = 1;
 const NO_FINGERPRINT = 'no fingerprint is enrolled here: biometric enroll takes one';
+export const PHONE_FINGERPRINT =
+  'an Android phone takes a fingerprint only from a person: only an emulator has a sensor to touch';
 
 type Step = { kind: 'pin' | 'tap'; x: number; y: number };
 
@@ -83,10 +85,7 @@ export class EmulatorFingerprint {
     setUp?: (name: SettingName, value: string) => Promise<void>,
   ) {
     if (!this.serial.startsWith('emulator-'))
-      throw new DeviceError(
-        'UNSUPPORTED',
-        'an Android phone takes a fingerprint only from a person: only an emulator has a sensor to touch',
-      );
+      throw new DeviceError('UNSUPPORTED', PHONE_FINGERPRINT);
     const before = await this.prints();
     if (answer === 'enroll')
       return before.enrolled > 0 ? undefined : this.enrol(before.enrolling, setUp);

@@ -1,12 +1,12 @@
-import type { BiometricAnswer, DeviceEvents, Push, SettingName } from '@appdyno/core';
+import type { BiometricAnswer, DeviceEvent, DeviceEvents, Push, SettingName } from '@appdyno/core';
 import { LocalFcm } from './fcm-local.js';
 import { BY_TYPE, FcmPush } from './fcm-push.js';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { shq, type Adb } from './adb.js';
-import { EmulatorFingerprint } from './fingerprint.js';
+import { EmulatorFingerprint, PHONE_FINGERPRINT } from './fingerprint.js';
 import { ANDROID_PUSHES, AndroidPush } from './push.js';
 import { logcatCommand } from './logs.js';
-import { emulatorConsole, shellOf } from './settings.js';
+import { emulatorConsole, noConsole, shellOf } from './settings.js';
 
 export class AndroidEvents implements DeviceEvents {
   private readonly sh: (command: string) => Promise<string>;
@@ -20,7 +20,7 @@ export class AndroidEvents implements DeviceEvents {
 
   constructor(
     adb: Adb,
-    serial: string,
+    private readonly serial: string,
     /** The screen as the agent reads it, for the steps of Settings' enrolment. */
     screen: () => Promise<Tree> = () => Promise.reject(new Error('no screen to read')),
   ) {
@@ -41,6 +41,13 @@ export class AndroidEvents implements DeviceEvents {
         ).split('\n');
       },
     });
+  }
+
+  cannot(event: DeviceEvent) {
+    if (this.serial.startsWith('emulator-')) return undefined;
+    return event === 'biometric'
+      ? PHONE_FINGERPRINT
+      : noConsole(event === 'call' ? 'calls' : 'SMS');
   }
 
   async call(number: string, end: boolean) {

@@ -11,6 +11,7 @@ import {
   type Push,
   type PushRoute,
   type PushTokenKind,
+  type DeviceEvent,
   type DeviceEvents,
   type DeviceSettings,
   type SettingName,
@@ -374,6 +375,10 @@ export class SimulatorEvents implements DeviceEvents {
     if (left > 0)
       throw new DeviceError('INTERNAL', `apps still hold ${left} keychain items after a reset`);
     return held;
+  }
+
+  cannot(event: DeviceEvent) {
+    return event === 'biometric' ? undefined : SIM_CANNOT[event];
   }
 
   call(): Promise<void> {

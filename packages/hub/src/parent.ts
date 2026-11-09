@@ -177,6 +177,7 @@ export class Parent {
         this.pair = undefined;
         this.sides.length = 0;
         await controls.end();
+        for (const f of await sends.end()) this.o.log(`${serial}: not put back: ${f}`);
         removeMirrorFile(serial);
         device.close();
         this.sessions.delete(serial);

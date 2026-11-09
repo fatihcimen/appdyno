@@ -11,6 +11,7 @@ import type {
   AppEntry,
   BiometricAnswer,
   LaunchOptions,
+  DeviceEvent,
   DeviceEvents,
   DeviceSettings,
   SettingName,
@@ -331,6 +332,10 @@ export class PhoneEvents implements DeviceEvents {
 
   resetKeychain(): Promise<number> {
     return Promise.reject(new DeviceError('UNSUPPORTED', PHONE_CANNOT.keychain));
+  }
+
+  cannot(event: DeviceEvent) {
+    return PHONE_CANNOT[event];
   }
 
   call(): Promise<void> {

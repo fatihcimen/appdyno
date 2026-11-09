@@ -61,10 +61,12 @@ const NOT_A_PHONE_LOCK = "a screen lock is set only on an emulator: a phone's is
 export const shellOf = (adb: Adb, serial: string) => (command: string) =>
   adb.exec(serial, `${command} 2>&1`, { timeoutMs: TIMEOUTS.app });
 
+/** Why a phone takes nothing by the emulator's console, which `what` names. */
+export const noConsole = (what: string) => `a phone has no ${what}: only an emulator console has`;
+
 /** The emulator's console; `what` names it in a refusal. */
 export async function emulatorConsole(adb: Adb, serial: string, what: string, words: string[]) {
-  if (!serial.startsWith('emulator-'))
-    throw new DeviceError('UNSUPPORTED', `a phone has no ${what}: only an emulator console has`);
+  if (!serial.startsWith('emulator-')) throw new DeviceError('UNSUPPORTED', noConsole(what));
   const out = await adb.run(['-s', serial, 'emu', ...words], 30_000);
   // the console answers OK or KO; adb says nothing of it in its exit code
   const ko = /^KO:?\s*(.*)$/m.exec(out);
