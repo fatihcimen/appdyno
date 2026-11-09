@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Android'de `text_size` ve cihazın tamamının `locale`'i, ayarlanmamış olanı yeniden silmeden önce bir değişikliğin yaptığı `font_scale` ve `system_locales` yazımını bekler; 0,5 s sonra bir kez bakıyorlardı: bir emülatör onları bir `restore`'dan bir saniyeden fazla sonra yazdı ve ayarlı bıraktı. Bir API 34 emülatöründe çalıştırıldı.
 - Android'de `increase_contrast`, 0 olan bir `high_text_contrast_enabled` değerini 0 olarak geri koyar, `restore` onu siliyordu; cihazın onu hiç ayarlamadığı yerde `default (now off)` okunur ve silinerek geri döner. Bir API 34 emülatöründe çalıştırıldı.
 - Android'de `dark_mode` onu hiç ayarlamamış bir cihazda `default (now off)` okunur ve oraya `cmd uimode night`'ın yazdıklarını silerek döner; `restore`, hiçbiri olmayan bir emülatörde `ui_night_mode` 1'i ve onunla birlikte programının üç anahtarını bırakıyordu. Bir API 34 emülatöründe çalıştırıldı.
 - Android cihazın tamamı için `locale`, Android'in dillerin her değişikliğinde yazdığı `font_scale` ve `system_locales` değerlerini cihazın ayarlanmamış bıraktığı yerde ayarlanmamış bırakır: bir değişiklik ve onun `restore`'u, ikisi de olmayan bir emülatörde `font_scale` 1,0 ve `system_locales` en-US bırakıyordu. Sistemin dillerle birlikte ayarladığı `persist.sys.locale` bir shell tarafından boşaltılamaz, bu yüzden hiç olmayan bir emülatör orada geri konan dili okur. Bir API 34 emülatöründe çalıştırıldı.

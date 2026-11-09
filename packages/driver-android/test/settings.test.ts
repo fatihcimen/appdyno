@@ -1,4 +1,4 @@
-import { must } from '@appdyno/core';
+import { must, sleep } from '@appdyno/core';
 import { DeviceError, NODE_FLAGS, type Tree } from '@appdyno/protocol';
 import { assert, describe, expect, it, vi } from 'vitest';
 import type { Adb } from '../src/adb.js';
@@ -375,9 +375,10 @@ describe('a fingerprint', () => {
 describe('a text size', () => {
   /**
    * A device as API 34 is: a scale that changes the configuration is written back by the system with the languages beside
-   * it, a scale deleted counting as 1.0 there. With `late`, the write of a 1.3 set just before lands after the next write.
+   * it, a scale deleted counting as 1.0 there. With `late`, the write of a 1.3 set just before lands after the next write;
+   * with `lag`, each write that many ms after its change.
    */
-  const scaled = (scale: string, late = false) => {
+  const scaled = (scale: string, late = false, lag = 0) => {
     const held: Record<string, string> = { font_scale: scale, system_locales: 'null' };
     let config = scale === 'null' ? 1 : Number(scale);
     const systemWrite = (to: number) => () => {
@@ -396,7 +397,8 @@ describe('a text size', () => {
       const now = held.font_scale === 'null' ? 1 : Number(held.font_scale);
       if (key === 'font_scale' && now !== config) {
         config = now;
-        systemWrite(now)();
+        if (lag) setTimeout(systemWrite(now), lag);
+        else systemWrite(now)();
       }
       return '';
     };
@@ -440,6 +442,17 @@ describe('a text size', () => {
       expect(held).toEqual({ font_scale: '1.3', system_locales: 'null' });
       await settings.set('text_size', 'default');
       expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
+    },
+  );
+
+  it(
+    'waits for the languages the system writes late beside a scale, and deletes them again',
+    { timeout: 15_000 },
+    async () => {
+      const { settings, held } = scaled('null', false, 1_200);
+      await settings.set('text_size', '1.3');
+      await sleep(1_500);
+      expect(held).toEqual({ font_scale: '1.3', system_locales: 'null' });
     },
   );
 
@@ -538,38 +551,44 @@ describe('high contrast text', () => {
 
 describe("the whole device's languages", () => {
   it(
-    'leave the text scale and the languages the device had unset still unset, when set and when put back',
-    { timeout: 15_000 },
+    'leave the text scale and the languages the device had unset still unset, when set and when put back, however late the system writes them',
+    { timeout: 20_000 },
     async () => {
-      const held: Record<string, string> = { font_scale: 'null', system_locales: 'null' };
-      let tags = 'en-US';
-      const one = (command: string) => {
-        const [, verb, key = ''] = /^settings (get|delete) system (\w+)/.exec(command) ?? [];
-        if (verb === 'get') return held[key] ?? 'null';
-        if (verb === 'delete') held[key] = 'null';
-        return '';
-      };
-      const exec = (_serial: string, command: string) =>
-        Promise.resolve(command.split('; ').map(one).join('\n'));
-      // the agent's change, and the configuration the system writes for it
-      const deviceLocales = (set?: string) => {
-        if (set) {
-          tags = set;
-          Object.assign(held, { font_scale: '1.0', system_locales: set });
-        }
-        return Promise.resolve(tags);
-      };
-      const settings = new AndroidSettings(
-        { exec } as unknown as Adb,
-        'emulator-5554',
-        undefined,
-        deviceLocales,
-      );
-      const unset = { font_scale: 'null', system_locales: 'null' };
-      await settings.set('locale', 'tr-TR');
-      expect([await settings.get('locale'), held]).toEqual(['tr-TR', unset]);
-      await settings.set('locale', 'en-US');
-      expect([await settings.get('locale'), held]).toEqual(['en-US', unset]);
+      for (const lag of [0, 1_200]) {
+        const held: Record<string, string> = { font_scale: 'null', system_locales: 'null' };
+        let tags = 'en-US';
+        const one = (command: string) => {
+          const [, verb, key = ''] = /^settings (get|delete) system (\w+)/.exec(command) ?? [];
+          if (verb === 'get') return held[key] ?? 'null';
+          if (verb === 'delete') held[key] = 'null';
+          return '';
+        };
+        const exec = (_serial: string, command: string) =>
+          Promise.resolve(command.split('; ').map(one).join('\n'));
+        // the agent's change, and the configuration the system writes for it
+        const deviceLocales = (set?: string) => {
+          if (set) {
+            tags = set;
+            const write = () => Object.assign(held, { font_scale: '1.0', system_locales: set });
+            if (lag) setTimeout(write, lag);
+            else write();
+          }
+          return Promise.resolve(tags);
+        };
+        const settings = new AndroidSettings(
+          { exec } as unknown as Adb,
+          'emulator-5554',
+          undefined,
+          deviceLocales,
+        );
+        const unset = { font_scale: 'null', system_locales: 'null' };
+        await settings.set('locale', 'tr-TR');
+        await sleep(lag);
+        expect([await settings.get('locale'), held]).toEqual(['tr-TR', unset]);
+        await settings.set('locale', 'en-US');
+        await sleep(lag);
+        expect([await settings.get('locale'), held]).toEqual(['en-US', unset]);
+      }
     },
   );
 });

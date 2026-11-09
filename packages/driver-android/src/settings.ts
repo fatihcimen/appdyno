@@ -93,8 +93,9 @@ export class AndroidSettings implements DeviceSettings {
       if (!set) return deviceLocales();
       // the system writes the text scale beside the languages: neither stays written where the device had it unset
       const back = await this.keepingUnset(['font_scale', 'system_locales']);
+      const was = await deviceLocales();
       const tags = await deviceLocales(set);
-      await back();
+      await back(tags !== was);
       return tags;
     });
     this.fold = new AndroidFold(this.sh);
@@ -288,8 +289,9 @@ export class AndroidSettings implements DeviceSettings {
 
   /**
    * Which of `keys` (of `system`) read unset now, and what deletes them again once a change has gone: the system writes
-   * the text scale and the languages together when either changes (`Settings.System.putConfigurationForUser`), within
-   * `SCALE_HOLDS_MS` of it.
+   * the text scale and the languages together when either changes (`Settings.System.putConfigurationForUser`).
+   * `moved`: the change moved the configuration, so that write is coming, and is waited for: an emulator's came more
+   * than a second after a change.
    */
   private async keepingUnset(keys: string[]) {
     const unset = async () => {
@@ -298,14 +300,19 @@ export class AndroidSettings implements DeviceSettings {
       return keys.filter((_, i) => lines[i] === 'null');
     };
     const were = await unset();
-    return async () => {
-      const end = Date.now() + RADIO_MS;
+    return async (moved: boolean) => {
+      if (were.length === 0) return;
+      const end = Date.now() + (moved ? RADIO_MS : SCALE_HOLDS_MS);
+      let seen = false;
       for (;;) {
         await sleep(SCALE_HOLDS_MS);
         const now = await unset();
         const written = were.filter((k) => !now.includes(k));
-        if (written.length === 0 || Date.now() >= end) return;
-        await this.sh(written.map((k) => `settings delete system ${k}`).join('; '));
+        if (written.length > 0) {
+          seen = true;
+          await this.sh(written.map((k) => `settings delete system ${k}`).join('; '));
+        }
+        if ((written.length === 0 && (seen || !moved)) || Date.now() >= end) return;
       }
     };
   }
@@ -324,6 +331,7 @@ export class AndroidSettings implements DeviceSettings {
         `from ${SCALES.min} to ${SCALES.max}, such as 1.3, or default`,
       );
     const languagesBack = await this.keepingUnset(['system_locales']);
+    const was = await this.get('text_size');
     const end = Date.now() + RADIO_MS;
     for (;;) {
       const said = await this.sh(
@@ -343,7 +351,7 @@ export class AndroidSettings implements DeviceSettings {
           `asked for text_size ${value} and it still reads ${now} after ${RADIO_MS / 1000} s`,
         );
     }
-    await languagesBack();
+    await languagesBack((was === 'default' ? 1 : Number(was)) !== scale);
   }
 
   async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {
