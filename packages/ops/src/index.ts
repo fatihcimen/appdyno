@@ -4,7 +4,7 @@ export type { ReplayOptions } from './flow/runner.js';
 export { envValues } from './flow/shared.js';
 export { flowFiles, flowsTagged, type TestOptions } from './flow/test-run.js';
 export { JOURNEY_ITERATIONS } from './flow/journey.js';
-export { keepRun } from './perf/shared.js';
+export { keepRun, PROBE_HINT } from './perf/shared.js';
 export { survey } from './survey.js';
 // what the hub, a package of its own, takes from the operations
 export { activityFollower, appendActivity, type ActivityLine } from './activity.js';

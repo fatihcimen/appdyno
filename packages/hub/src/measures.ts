@@ -4,11 +4,14 @@ import { loud, writeDashboard, type Noise } from '@appdyno/perf';
 import { measureHistory, type PastMeasure } from './history.js';
 import {
   claim,
+  CONNECTION_HINT,
   JOURNEY_ITERATIONS,
   type JourneyAnswer,
+  NO_ANSWER_HINT,
   opsFor,
   perfLaunchOp,
   perfScrollOp,
+  PROBE_HINT,
   release,
   ServerContext,
   type ToolResult,
@@ -38,6 +41,19 @@ export type WindowMeasures = {
   /** What was measured here before, for an app. */
   history: (app: string) => Promise<PastMeasure[]>;
 };
+
+/**
+ * What a refusal of a measure says to do, in a person's words: a tool's hint is said to whoever calls it, and here that
+ * is a person at a button. A hint not here is not shown, and the refusal's own words stand alone.
+ */
+export const PERSON_HINTS = new Map([
+  [
+    PROBE_HINT,
+    'Go back to the screen to measure, then measure once more: the frame probe stays in the app until it quits',
+  ],
+  [NO_ANSWER_HINT, 'The device did not answer. Try again.'],
+  [CONNECTION_HINT, 'The device is not connected, or stopped answering. Try once more.'],
+]);
 
 /** What may stand behind a number, as the dashboard marks it. */
 const NOISE: Record<string, string> = {

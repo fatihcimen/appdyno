@@ -16,7 +16,7 @@ import type {
   SystemSwipe,
   ViewerMessage,
 } from '@appdyno/core';
-import type { WindowMeasures } from './measures.js';
+import { PERSON_HINTS, type WindowMeasures } from './measures.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
 const RECORD_MAX_S = 3_600;
@@ -267,9 +267,10 @@ export function windowControls(
       await ready();
       return await work();
     } catch (e) {
-      // a refusal says what to do next, which is the person's to do here
+      // a refusal says what to do next, which is the person's to do here, in their words
       const { message, hint } = e as Error & { hint?: string };
-      tellMeasured({ title: 'No measure', detail: message, ...(hint && { hint }) });
+      const said = hint && PERSON_HINTS.get(hint);
+      tellMeasured({ title: 'No measure', detail: message, ...(said && { hint: said }) });
       return undefined;
     } finally {
       measuring = false;

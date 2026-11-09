@@ -33,6 +33,10 @@ import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
 import { ToolError } from '../tool.js';
 
+/** What to do after the frame probe's relaunch, which left the app on its first screen. */
+export const PROBE_HINT =
+  'open the screen to measure again and call once more: the probe stays in until the app stops';
+
 export const App = z.string().max(200).optional();
 
 export const Scenario = z
@@ -293,7 +297,7 @@ export function perfTools(ctx: ServerContext) {
     throw new ToolError(
       `${pkg} was relaunched with the frame probe in it, and shows its first screen: nothing was measured`,
       'CHECK_FAILED',
-      'open the screen to measure again and call once more: the probe stays in until the app stops',
+      PROBE_HINT,
     );
   };
   /** Swipes after `waitMs`, for a measure that records during a scroll. */

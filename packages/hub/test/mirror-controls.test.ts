@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { must, type Device, type InputEvent } from '@appdyno/core';
 import { afterAll, describe, expect, it, vi, type Mock } from 'vitest';
 import { stamp, windowControls, windowLook, type WindowSession } from '../src/controls.js';
-import { type JourneyAnswer } from '@appdyno/ops';
+import { PROBE_HINT, type JourneyAnswer } from '@appdyno/ops';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
 vi.mock('node:os', async (real) => ({
@@ -394,19 +394,31 @@ describe("a window's measures", () => {
     expect(told).toContainEqual({ op: 'measuring', line: 'Starting the device agent' });
   });
 
-  it('pass on what a refusal says to do next, for the person who is to do it', async () => {
+  it("say what a refusal says to do next in the person's words, and a tool's hint they have none for not at all", async () => {
     const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
     measures.scroll.mockRejectedValueOnce(
-      Object.assign(new Error('relaunched with the frame probe'), {
-        hint: 'open the screen again',
+      Object.assign(new Error('relaunched with the frame probe'), { hint: PROBE_HINT }),
+    );
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(answer(told)).toEqual({
+      op: 'measured',
+      title: 'No measure',
+      detail: 'relaunched with the frame probe',
+      hint: 'Go back to the screen to measure, then measure once more: the frame probe stays in the app until it quits',
+    });
+    told.length = 0;
+    measures.scroll.mockRejectedValueOnce(
+      Object.assign(new Error('no text "Send" on the screen'), {
+        hint: 'screen lists the elements, each by its ref, role and words',
       }),
     );
     controls.onWindow({ op: 'control', name: 'measureScroll' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
-    expect(answer(told)).toMatchObject({
+    expect(answer(told)).toEqual({
+      op: 'measured',
       title: 'No measure',
-      detail: 'relaunched with the frame probe',
-      hint: 'open the screen again',
+      detail: 'no text "Send" on the screen',
     });
   });
 
