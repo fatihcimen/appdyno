@@ -25,6 +25,8 @@ import {
 } from '@appdyno/ops';
 
 export type MirrorRun = {
+  /** What the hub's sidebar calls a device, where it has one: the name its files and window go by. */
+  nameOf?: (serial: string) => string | undefined;
   /** Named devices; none: the default device. */
   serials: string[];
   /** Every device, and with `watch` new ones as they come. */
@@ -112,7 +114,9 @@ export class Parent {
     };
     let said = '';
     let live = false;
-    const hardware = await device.hardware().catch(() => undefined);
+    const own = await device.hardware().catch(() => undefined);
+    const named = this.o.nameOf?.(serial);
+    const hardware = own && named ? { ...own, name: named } : own;
     const controls = windowControls(
       device,
       hardware,

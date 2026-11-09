@@ -245,7 +245,14 @@ export function windowControls(
       ...(name && { app: name }),
     });
   };
-  const saying = (line: string) => session().tell({ op: 'measuring', line });
+  // a tool's progress names the device by its id, as `connecting to <udid>`: a person reads its name
+  const person = hardware?.name ?? hardware?.model;
+  const id = new RegExp(
+    `(?<![\\w-])${device.serial.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`,
+    'g',
+  );
+  const saying = (line: string) =>
+    session().tell({ op: 'measuring', line: person ? line.replace(id, person) : line });
 
   /** A measure has the device to itself: nothing reads over what it counts, and no second one starts. */
   const alone = async <T>(work: () => Promise<T>) => {
@@ -303,18 +310,23 @@ export function windowControls(
       return ran;
     });
 
-  const listApps = async () => {
-    session().tell({ op: 'apps', apps: await device.apps.listApps(hardware?.systemApps === true) });
+  /** The Apps pane's list, and what was just done to one of them, by its name. */
+  const listApps = async (done?: { id: string; what: string }) => {
+    const apps = await device.apps.listApps(hardware?.systemApps === true);
+    const name = done ? (apps.find((a) => a.id === done.id)?.name ?? done.id) : undefined;
+    session().tell({ op: 'apps', apps, ...(done && name && { note: `${done.what} ${name}` }) });
   };
 
   const appActions: Record<string, (id: string) => Promise<unknown>> = {
     launch: async (id) => {
       await ready();
       await device.launch(id);
+      await listApps({ id, what: 'Launched' });
     },
     quit: async (id) => {
       await ready();
       await device.terminate(id);
+      await listApps({ id, what: 'Quit' });
     },
     remove: async (id) => {
       await device.apps.uninstall(id);
@@ -354,7 +366,7 @@ export function windowControls(
       }
       if (m.op === 'app') {
         const act = appActions[String(m.action)];
-        trying(act ? () => act(String(m.id)).then(() => undefined) : listApps);
+        trying(act ? () => act(String(m.id)).then(() => undefined) : () => listApps());
         return;
       }
       if (m.name === 'reconnect') session().askAgain();

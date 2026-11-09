@@ -126,11 +126,13 @@ export function windowSends(
       const front = await ownFront();
       // the app the pane names, else the one in front: what it opens, as `open_link` lists it
       const app = field(m.app) || front.app;
-      const { data } = app ? await call('openLink', 'open_link', { links: app }) : {};
+      const listed = app ? await call('openLink', 'open_link', { links: app }) : undefined;
       tell('openLink', {
         recent: recent(),
         ...front,
-        ...(app && { suggested: data?.links ?? [] }),
+        ...(listed && { suggested: listed.data?.links ?? [] }),
+        // a device that cannot tell an app's links says why, where they would stand
+        ...(listed && !listed.answer.ok && { linksWhy: listed.answer.text }),
       });
     },
     openLink: (m) => openLink(field(m.url), field(m.app)),

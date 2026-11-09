@@ -80,6 +80,6 @@ export class AndroidPush {
         'NOT_FOUND',
         `the app did not open: ${must(out.trim().split('\n').at(-1), 'a line')}`,
       );
-    return `opened ${pkg} as a tapped push, with ${data.length} data keys as extras`;
+    return `opened ${pkg} as a tapped push, with ${data.length} data key${data.length === 1 ? '' : 's'} as extras`;
   }
 }

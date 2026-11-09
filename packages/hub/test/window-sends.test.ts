@@ -133,6 +133,23 @@ describe('what a window sends to its device', () => {
     expect(pushed).toHaveLength(1);
   });
 
+  it('says where the links of an app would stand why a device cannot tell them', async () => {
+    const device = new FakeDevice();
+    const front = await device.foreground();
+    device.apps = {
+      listApps: () => Promise.resolve([{ id: front }]),
+      links: () => Promise.reject(new Error("an iPhone's installed app is not read from here")),
+    } as unknown as AppManager;
+    const { sends, told } = sendsOn(device, DEFAULT_POLICY);
+    sends.onWindow({ op: 'control', name: 'links' });
+    await expect
+      .poll(() => told.find((m) => 'recent' in m))
+      .toMatchObject({
+        suggested: [],
+        linksWhy: "an iPhone's installed app is not read from here",
+      });
+  });
+
   it('opens a link in the app the pane names, the app in front first, through the policy', async () => {
     const device = new FakeDevice();
     const front = await device.foreground();

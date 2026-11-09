@@ -308,6 +308,21 @@ describe("a window's Apps pane", () => {
     expect(mocks(device).open).toHaveBeenCalledOnce();
   });
 
+  it('says what became of a launch or a quit, by the name of the app', async () => {
+    const { controls, told } = fixture('ios', { apps } as unknown as Partial<Device>);
+    controls.onWindow({ op: 'app', action: 'launch', id: 'a.b' });
+    await vi.waitFor(
+      () =>
+        expect(told).toContainEqual(expect.objectContaining({ op: 'apps', note: 'Launched App' })),
+      WAIT,
+    );
+    controls.onWindow({ op: 'app', action: 'quit', id: 'a.b' });
+    await vi.waitFor(
+      () => expect(told).toContainEqual(expect.objectContaining({ op: 'apps', note: 'Quit App' })),
+      WAIT,
+    );
+  });
+
   it('removes an app and shows the list without it', async () => {
     apps.uninstall.mockClear();
     const { controls, told } = fixture('ios', { apps } as unknown as Partial<Device>);
@@ -365,6 +380,18 @@ describe("a window's measures", () => {
     // too few frames: nothing new is kept, and the answer is all there is of it
     controls.onWindow({ op: 'control', name: 'measureScroll' });
     await vi.waitFor(() => expect(answer(told)).toMatchObject({ ok: true, kept: false }), WAIT);
+  });
+
+  it('name the device in what a measure says as it goes, as a person does', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    measures.scroll.mockImplementationOnce(((_app: string, say: (line: string) => void) => {
+      say('connecting to S');
+      return Promise.resolve({ title: 'Scroll', value: '1%', detail: '', why: '', flagged: false });
+    }) as never);
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(told).toContainEqual({ op: 'measuring', line: 'connecting to Test Phone' });
+    expect(told).toContainEqual({ op: 'measuring', line: 'Starting the device agent' });
   });
 
   it('pass on what a refusal says to do next, for the person who is to do it', async () => {

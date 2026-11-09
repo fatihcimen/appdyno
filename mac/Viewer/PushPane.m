@@ -17,6 +17,20 @@ static NSString *typeTitle(NSString *type) {
   return MVWord([type stringByReplacingOccurrencesOfString:@"_" withString:@" "].capitalizedString);
 }
 
+/// What a type does, as a person reads it: the op says how it goes on this device, in its own words, under the pointer.
+static NSString *typeWords(NSString *type) {
+  NSDictionary<NSString *, NSString *> *words = @{
+    @"alert": @"A notification a person sees, with a title and a body",
+    @"background": @"No notification: the data goes to the app's own code",
+    @"rich": @"A notification with an image",
+    @"live_activity": @"Starts, updates or ends a Live Activity",
+    @"tapped": @"As if a notification was tapped: the app opens with its data",
+    @"voip": @"A call coming in, for an app that rings",
+    @"widgets": @"Asks the app's widgets to load again",
+  };
+  return words[type] ?: @"";
+}
+
 /// A kind of token in English, where the table has it.
 static NSString *kindTitle(NSString *kind) {
   for (size_t i = 0; i < sizeof kKinds / sizeof kKinds[0]; i++)
@@ -220,8 +234,10 @@ static NSString *readable(NSString *json) {
 /// The fields the type takes, how it goes or why not, and its payload to start from where a person has not changed it.
 - (void)typeChosen:(nullable id)sender {
   NSDictionary *entry = self.chosen;
-  _how.stringValue = MVWord(entry[@"route"] ?: entry[@"why"] ?
-                                                             : @"");
+  NSString *words = entry[@"route"] ? typeWords(entry[@"type"]) : @"";
+  _how.stringValue = MVWord(words.length ? words : entry[@"route"] ?: entry[@"why"] ?
+                                                                                  : @"");
+  _how.toolTip = words.length ? entry[@"route"] : nil;
   NSArray *takes = [entry[@"fields"] isKindOfClass:NSArray.class] ? entry[@"fields"] : @[];
   for (int i = 0; i < kFieldCount; i++) [_fields rowAtIndex:i].hidden = ![takes containsObject:kFields[i]];
   if ([entry[@"template"] isKindOfClass:NSString.class] && (!_payload.string.length || [_payload.string isEqual:_template])) _payload.string = _template = readable(entry[@"template"]);

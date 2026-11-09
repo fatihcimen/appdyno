@@ -121,6 +121,8 @@ void MVCheckPush(void) {
   NSPopUpButton *type = [pane valueForKey:@"_type"];
   NSTextField *app = [pane valueForKey:@"_app"];
   MVCheck(@"push: the window's app stands in its field", [app.stringValue isEqual:@"dev.app"], app.stringValue);
+  NSTextField *how = [pane valueForKey:@"_how"];
+  MVCheck(@"push: a type says what it does in words of its own, and how it goes on this device under the pointer", [how.stringValue isEqual:@"A notification a person sees, with a title and a body"] && [how.toolTip isEqual:@"simctl push"], how.stringValue);
   [window.nsWindow makeFirstResponder:app];
   [app.currentEditor selectAll:nil];
   [app.currentEditor insertText:@"dev.other"];

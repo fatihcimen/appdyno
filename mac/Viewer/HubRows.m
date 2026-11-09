@@ -39,10 +39,12 @@ MVRow *MVDeviceRow(NSDictionary *device) {
   NSArray<NSString *> *parts = MVNamedParts(device[@"name"] ?: @"");
   NSString *model = device[@"model"], *own = parts[0];
   BOOL named = model.length && ![model isEqual:own];
-  row.title = named ? model : own;
+  // a phone goes by what it is sold as, its model's code beneath; a simulator by its model, what this Mac calls it beneath
+  BOOL phone = [device[@"kind"] isEqual:@"phone"];
+  row.title = named && !phone ? model : own;
   NSMutableArray<NSString *> *about = [NSMutableArray array];
   if ([parts[1] length]) [about addObject:parts[1]];
-  if (named) [about addObject:own];
+  if (named) [about addObject:phone ? model : own];
   if ([device[@"detail"] length] && ![device[@"detail"] isEqual:model]) [about addObject:device[@"detail"]];
   row.detail = [about componentsJoinedByString:@" · "];
   row.symbol = MVDeviceSymbol(device);

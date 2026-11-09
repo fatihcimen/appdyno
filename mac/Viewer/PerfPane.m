@@ -194,7 +194,8 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     NSNumber *value = MVReadingOf(sample, trend.field, _pictureRate);
     // a person's words: what a tool names by its id is here only the app in front
     NSString *why = [sample[@"app"] length] ? [sample[@"absent"][trend.field] stringByReplacingOccurrencesOfString:sample[@"app"] withString:@"This app"] : sample[@"absent"][trend.field];
-    trend.why.stringValue = why ?: @"";
+    // a source's note starts a sentence here, as a person reads it
+    trend.why.stringValue = why.length ? [[why substringToIndex:1].uppercaseString stringByAppendingString:[why substringFromIndex:1]] : @"";
     trend.reason.hidden = !why.length;
     // with no number there is nothing to draw, and with one the line says what the words cannot
     trend.line.hidden = !value;

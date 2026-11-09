@@ -110,6 +110,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     focus: false,
     inputOnClick: false,
     log: o.log,
+    nameOf: (serial): string | undefined => list.nameOf(serial),
   });
   const note = (e: Error) => link.send({ op: 'note', text: e.message });
   const room = new HubRoom(ctx, parent, o.behind === true, note);

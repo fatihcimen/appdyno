@@ -109,6 +109,7 @@ export class HubList {
   private readonly known = new Map<string, DeviceHardware | undefined>();
   private readonly choices: Promise<Record<string, unknown>>;
   private told = '';
+  private readonly names = new Map<string, string>();
 
   constructor(
     private readonly ctx: ServerContext,
@@ -135,6 +136,11 @@ export class HubList {
     return this.known.get(serial);
   };
 
+  /** What the sidebar calls a device: an emulator by its AVD's name, which its own hardware does not know. */
+  nameOf(serial: string) {
+    return this.names.get(serial);
+  }
+
   /** A new window has been told nothing. */
   forgetTold() {
     this.told = '';
@@ -142,6 +148,7 @@ export class HubList {
 
   async refresh() {
     const devices = await hubDevices(this.ctx, this.hardware);
+    for (const d of devices) this.names.set(d.serial ?? d.id, d.name);
     for (const d of devices) if (d.mirrored) this.hooks.windowUp(d.serial ?? d.id);
     const text = JSON.stringify(devices);
     if (text === this.told) return;

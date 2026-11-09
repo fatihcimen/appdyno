@@ -339,8 +339,11 @@ static NSString *ms(id v) {
   alert.messageText = MVWord([NSString stringWithFormat:@"Remove %@?", row.title]);
   alert.informativeText = MVWord(@"The app and everything it keeps on this device go with it. This cannot be undone.");
   alert.alertStyle = NSAlertStyleWarning;
-  [alert addButtonWithTitle:MVWord(@"Remove")].hasDestructiveAction = YES;
-  [alert addButtonWithTitle:MVWord(@"Cancel")];
+  NSButton *remove = [alert addButtonWithTitle:MVWord(@"Remove")];
+  remove.hasDestructiveAction = YES;
+  // by name, as a person's own run and a test press them
+  remove.identifier = @"appRemoveConfirm";
+  [alert addButtonWithTitle:MVWord(@"Cancel")].identifier = @"appRemoveCancel";
   NSString *key = row.key;
   [alert beginSheetModalForWindow:self.window
                 completionHandler:^(NSModalResponse answer) {

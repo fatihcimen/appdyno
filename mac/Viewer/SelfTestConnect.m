@@ -1,5 +1,6 @@
 // Connect a Phone with no parent: what a phone cannot stage is stood in for by what the parent would say of it,
 // and every control is pressed by a real click through the window's hit testing. A device run has the parent.
+#import "HubParts.h"
 #import "Place.h"
 #import "SelfTest.h"
 #import "Words.h"
@@ -326,6 +327,14 @@ static void checkWays(MVHub *hub) {
   MVPump(0.3);
 }
 
+/// A phone's row said its model's code and the name it is sold as beneath: 25078RA3EY over REDMI 15C.
+static void checkPhoneName(void) {
+  MVRow *phone = MVDeviceRow(@{@"id": @"X", @"kind": @"phone", @"state": @"running", @"name": @"REDMI 15C", @"model": @"25078RA3EY"});
+  MVRow *sim = MVDeviceRow(@{@"id": @"Y", @"kind": @"simulator", @"state": @"running", @"name": @"Test Sim", @"model": @"iPhone 17 Pro"});
+  MVCheck(@"rows: a phone goes by what it is sold as, its model's code beneath", [phone.title isEqual:@"REDMI 15C"] && [phone.detail containsString:@"25078RA3EY"], phone.title);
+  MVCheck(@"rows: a simulator by its model, what this Mac calls it beneath", [sim.title isEqual:@"iPhone 17 Pro"] && [sim.detail containsString:@"Test Sim"], sim.title);
+}
+
 static void checkNeedsYou(MVHub *hub) {
   NSDictionary *held = @{@"id": @"H", @"serial": @"H", @"kind": @"phone", @"state": @"running", @"name": @"Held Phone", @"need": @"not-trusted"};
   [hub show:@{@"devices": @[held]}];
@@ -367,6 +376,7 @@ void MVCheckConnect(void) {
   checkPictureMoves(hub);
   checkWays(hub);
   checkNeedsYou(hub);
+  checkPhoneName();
   MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.2);
   MVCheck(@"connect: it stays reachable later", [hub.placeShown isKindOfClass:MVConnectPane.class], nil);

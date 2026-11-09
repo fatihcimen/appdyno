@@ -11,7 +11,7 @@ static const double kBetween = 10;
 
 @implementation MVLinkPane {
   NSTextField *_field, *_app;
-  NSString *_suggested;
+  NSString *_suggested, *_linksWhy;
   NSArray *_recentLinks, *_appLinks;
   MVAccentButton *_open;
   MVList *_recent;
@@ -98,9 +98,21 @@ static const double kBetween = 10;
   if ([m[@"app"] isKindOfClass:NSString.class] && (!_app.stringValue.length || [_app.stringValue isEqual:_suggested])) _app.stringValue = _suggested = m[@"app"];
   if ([m[@"recent"] isKindOfClass:NSArray.class]) _recentLinks = m[@"recent"];
   if ([m[@"suggested"] isKindOfClass:NSArray.class]) _appLinks = m[@"suggested"];
+  if (m[@"suggested"]) _linksWhy = [m[@"linksWhy"] isKindOfClass:NSString.class] ? m[@"linksWhy"] : nil;
   if (m[@"recent"] || m[@"suggested"]) [self list];
   [_answer show:m];
   _open.enabled = !_answer.waiting;
+}
+
+/// A link's kind, and an App Link's verification as Android names it, in words: a verified one opens in the app.
+static NSString *linkDetail(NSDictionary *link) {
+  NSString *kind = MVWord([link[@"kind"] description] ?: @""), *state = [link[@"state"] isKindOfClass:NSString.class] ? link[@"state"] : nil;
+  if (!state) return kind;
+  if ([@[@"verified", @"approved", @"migrated", @"restored", @"system_configured"] containsObject:state]) return MVWord(@"Verified: opens in the app");
+  if ([state isEqual:@"none"]) return MVWord(@"Not verified yet: may open in the browser");
+  // a failure has a word, or a number of 1024 and up
+  if ([state isEqual:@"legacy_failure"] || state.integerValue >= 1024) return MVWord(@"Failed verification: opens in the browser");
+  return MVWord([NSString stringWithFormat:@"Verification: %@", state]);
 }
 
 /// A row a click puts in the field: a filter's `*` stands for what a person writes there.
@@ -122,8 +134,14 @@ static MVRow *linkRow(NSString *url, NSString *detail, NSString *symbol) {
   NSUInteger before = rows.count;
   for (NSDictionary *link in _appLinks) {
     if (![link isKindOfClass:NSDictionary.class] || ![link[@"url"] isKindOfClass:NSString.class]) continue;
-    NSString *kind = MVWord([link[@"kind"] description] ?: @"");
-    [rows addObject:linkRow(link[@"url"], link[@"state"] ? [NSString stringWithFormat:@"%@ · %@", kind, link[@"state"]] : kind, @"arrow.up.forward.app")];
+    [rows addObject:linkRow(link[@"url"], linkDetail(link), @"arrow.up.forward.app")];
+  }
+  // where the device cannot tell them, it says why, where they would stand
+  if (rows.count == before && _linksWhy.length) {
+    MVRow *why = [MVRow new];
+    why.title = MVWord([[_linksWhy substringToIndex:1].uppercaseString stringByAppendingString:[_linksWhy substringFromIndex:1]]);
+    why.symbol = @"info.circle";
+    [rows addObject:why];
   }
   if (rows.count > before) [rows insertObject:[MVRow headerNamed:MVWord(@"This app's links")] atIndex:before];
   _recent.rows = rows;
