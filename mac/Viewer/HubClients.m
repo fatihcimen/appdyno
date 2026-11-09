@@ -214,8 +214,8 @@ static NSString *shownName(NSDictionary *row) {
 - (NSView *)rowFor:(NSDictionary *)row {
   NSString *name = row[@"name"];
   BOOL browser = [_browserNames containsObject:name];
-  // a hue of the palette's, by its name: no client's own colour stands here
-  NSView *mark = MVLetterTile(letterOf(shownName(row)), MVHueTile((NSInteger)(shownName(row).hash % 6)), kTileSide);
+  // a letter and a hue of the palette's by the client's own name, which no language changes: no client's own colour stands here
+  NSView *mark = MVLetterTile(letterOf(name), MVHueTile((NSInteger)(name.hash % 6)), kTileSide);
   MVInk *state = [[MVInk alloc] initWithSymbol:symbolOf(row[@"state"]) color:colorOf(row[@"state"]) size:11];
   _stateLines[name] = MVText(stateWords(row), MVStyleSub);
   NSStackView *stateLine = [NSStackView stackViewWithViews:@[state, _stateLines[name]]];
