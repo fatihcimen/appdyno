@@ -42,7 +42,7 @@ waits a moment, then refuses with the nearest labels.
 `steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It
 stops at the first failure, says which step and why, and shows the screen. `wait_for` and selectors
 wait on the device, so the tree crosses the wire only when the screen changed. A step whose app died, of an app
-that was in front when the step began, ends it too, naming the step, with the `appDied` and words that action alone gives.
+that was in front when the step began, ends it too, naming the step, with the `appDied` and words that action alone gives. A step that fails as the app is gone, as a crash in the step before left it, says so after its own words, with `APP_NOT_RUNNING` and what to do, and so does a flow's step.
 `wait_for` waits 15000 ms at most a call, as its description says, and a number past an argument's limit is refused with the limit in the hint.
 A touch's target in a step goes in `selector`, as `{"action":"tap","selector":{"text":"OK"}}`, where `wait_for` takes `text` at its top: a touch given it there is refused with its step in that shape in the hint.
 

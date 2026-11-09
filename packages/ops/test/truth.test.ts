@@ -553,6 +553,40 @@ describe('crashes', () => {
     expect((await call('tap', { x: 5, y: 2390 })).text).not.toContain('the app died');
   });
 
+  it('tells a crash the first action after a launch that read nothing set off, where a read of the process beside it saw the restart', async () => {
+    const device = new FakeDevice();
+    device.pid = '100';
+    // as adb's: the read of the process answers once the tap it ran beside has crashed the app and the system restarted it
+    device.appPid = () => new Promise((r) => setTimeout(() => r(device.pid), 50));
+    const act = device.act.bind(device);
+    device.act = (a, o) => {
+      device.pid = '200';
+      return act(a, o);
+    };
+    device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)' }];
+    const { call } = await connect(device);
+    await call('launch_app', { read: 'none' });
+    const r = await call('tap', { x: 5, y: 2390 });
+    expect(r.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(EXCEPTION)' } });
+  });
+
+  it('says so when the app has no process left after an action, though its screen is still the one in front', async () => {
+    const device = new FakeDevice();
+    device.pid = '100';
+    device.appPid = device.fakePid;
+    const { call } = await connect(device);
+    await call('screen');
+    // the tap crashes it: the system's "keeps stopping" stands over the app's last screen, its process gone
+    const act = device.act.bind(device);
+    device.act = (a, o) => {
+      device.pid = undefined;
+      return act(a, o);
+    };
+    device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)' }];
+    const r = await call('tap', { x: 5, y: 2390 });
+    expect(r.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(EXCEPTION)' } });
+  });
+
   it('says nothing of the sort when the app only went to the background', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);

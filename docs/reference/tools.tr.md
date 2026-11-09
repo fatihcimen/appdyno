@@ -42,7 +42,7 @@ bir an beklenir, sonra en yakın etiketlerle reddedilir.
 `steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir.
 İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı gösterir. `wait_for` ve seçiciler
 cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir. Uygulaması, adım başladığında
-önde olan bir uygulamaysa, ölen bir adım da onu bitirir; adımı adlandırır, o işlemin tek başına verdiği `appDied` ve sözcüklerle.
+önde olan bir uygulamaysa, ölen bir adım da onu bitirir; adımı adlandırır, o işlemin tek başına verdiği `appDied` ve sözcüklerle. Uygulama gittiği için, önceki adımdaki bir çökmenin bıraktığı gibi, başarısız olan bir adım bunu kendi sözlerinden sonra `APP_NOT_RUNNING` ve ne yapılacağıyla söyler; bir akışın adımı da öyle.
 `wait_for`, açıklamasının söylediği gibi, bir çağrıda en fazla 15000 ms bekler; bir argümanın sınırını aşan bir sayı, ipucunda sınırıyla reddedilir.
 Bir adımdaki dokunuşun hedefi `selector`'a girer, `{"action":"tap","selector":{"text":"OK"}}` gibi; `wait_for` ise `text`'i en üstte alır: onu orada alan bir dokunuş, ipucunda adımı bu biçimde gösterilerek reddedilir.
 

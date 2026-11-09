@@ -863,6 +863,29 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       expect(e.message).toContain('the app died: NullPointerException');
     });
 
+    it('fails a step that finds the app gone with its death, where the step before could not tell it', async () => {
+      // the system restarted the app in front, and nothing knew its process before: only the report tells
+      device.crashReports = [{ at: 'now', reason: 'IllegalStateException: fixture crash' }];
+      const e = await refusal(
+        callerOf(context())('flow', {
+          action: 'run',
+          file: flowFile('tap text="Form"\ntap text="Kaydet"\n'),
+        }),
+      );
+      expect([e.code, e.hint]).toEqual([
+        'APP_NOT_RUNNING',
+        'launch_app starts it again, and crashes says why it died',
+      ]);
+      expect(e.message).toContain(
+        '\nthe app died: IllegalStateException: fixture crash, by step 2\n',
+      );
+      device.crashReports = [];
+      const plain = await refusal(
+        callerOf(context())('flow', { action: 'run', file: flowFile('tap text="Kaydet"\n') }),
+      );
+      expect(plain.code).toBe('NOT_FOUND');
+    });
+
     it('says a device failure while a step waits for its target, with no op around it', async () => {
       const real = device.tree.bind(device);
       let reads = 0;

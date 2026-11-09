@@ -16,6 +16,7 @@ import {
 } from '@appdyno/flows';
 import { z } from 'zod';
 import type { Answers } from '../answers.js';
+import { DIED_HINT, diedLine, diedUnder } from '../app-death.js';
 import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
 import type { ActionOut } from '../schemas.js';
@@ -201,11 +202,7 @@ export function flowRunner(
     const data = (answered?.data ?? {}) as Partial<ActionOut>;
     const whole = Date.now() - t0;
     const died = data.appDied;
-    if (died)
-      throw new ToolError(
-        `the app died: ${died.reason}${died.file ? ` (${died.file})` : ''}`,
-        'APP_NOT_RUNNING',
-      );
+    if (died) throw new ToolError(diedLine(died), 'APP_NOT_RUNNING', DIED_HINT);
     const settledMs = WHOLE_STEP.has(st.action)
       ? whole
       : READS_ONLY.has(st.action)
@@ -220,9 +217,20 @@ export function flowRunner(
     };
   };
 
+  /** The app as the step began, and when the step before it began: a step that fails as the app is gone failed for its death. */
+  type Was = { up: boolean; pid: string | undefined; since: number; began: number };
+
   // the run's failure is read from what these throw, and a replay from code has no op around it
-  const executor = (s: Session): Executor => ({
-    prepare: (st) => prepare(s, st).catch(refused),
+  const executor = (s: Session, was: Was): Executor => ({
+    prepare: (st) => {
+      Object.assign(was, {
+        up: !!s.appId && s.fresh?.foreground === s.appId,
+        pid: s.appPid,
+        since: was.began,
+        began: Date.now(),
+      });
+      return prepare(s, st).catch(refused);
+    },
     act: (st) => act(s, st).catch(refused),
   });
 
@@ -284,8 +292,9 @@ export function flowRunner(
       s.appPid = undefined;
     }
     const undo = ctx.hide(flow.secrets.flatMap((n) => values[n] ?? []));
+    const was: Was = { up: false, pid: undefined, since: Date.now(), began: Date.now() };
     try {
-      const result = await runSteps(flow, executor(s), {
+      const result = await runSteps(flow, executor(s, was), {
         from,
         values,
         ...(o.onStep && { onStep: o.onStep }),
@@ -302,6 +311,16 @@ export function flowRunner(
           show(s, screen);
           f.screen = header(screen);
         }
+        const appDied =
+          f.code === 'APP_NOT_RUNNING'
+            ? undefined
+            : await diedUnder(s, screen?.foreground, was.pid, was.since, clean, was.up);
+        if (appDied)
+          Object.assign(f, {
+            message: `${f.message}\n${diedLine(appDied)}, by step ${f.n}`,
+            code: 'APP_NOT_RUNNING',
+            hint: DIED_HINT,
+          });
         if (o.evidence) f.saved = await keepEvidence(s, o.evidence);
       }
       return result;

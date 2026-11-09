@@ -397,6 +397,40 @@ describe('steps across screens', () => {
     expect(r.text).not.toContain('the rest were not run');
     expect(act(d)).toHaveLength(2);
   });
+
+  /** A batch whose third step looks for what the form never has: as a crash leaves it, or the app running still. */
+  const cutShort = (call: Awaited<ReturnType<typeof connect>>['call']) =>
+    call('steps', {
+      steps: [
+        { action: 'wait_for', text: 'Form' },
+        { action: 'tap', selector: { text: 'Form' }, read: 'none' },
+        { action: 'tap', selector: { text: 'Kaydet' } },
+        { action: 'type_text', text: 'Ada' },
+      ],
+    });
+
+  it('says the app died when a step fails as it is gone, where no step before had looked', async () => {
+    const d = dying((x) => x.screen === 'form');
+    const { call } = await connect(d);
+    const r = await cutShort(call);
+    expect([r.data.code, r.data.hint]).toEqual([
+      'APP_NOT_RUNNING',
+      'launch_app starts it again, and crashes says why it died',
+    ]);
+    expect(r.text).toMatch(
+      /\n3\. tap failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,
+    );
+    expect(act(d)).toHaveLength(1);
+  });
+
+  it('tells no death in a step that fails while the app still runs', async () => {
+    const d = dying(() => false);
+    d.crashReports = [];
+    const r = await cutShort((await connect(d)).call);
+    expect(r.data.code).toBe('NOT_FOUND');
+    expect(r.text).toContain('3. tap failed, the rest were not run: ');
+    expect(r.text).not.toContain('the app died');
+  });
 });
 
 describe('waiting on the device', () => {

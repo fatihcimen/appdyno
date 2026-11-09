@@ -249,10 +249,12 @@ async function act(
     read === 'none'
       ? { settle: false, read: 'none' }
       : { settle: SETTLE, read: 'tree', ...(s.fresh && { before: s.fresh.hash }) };
-  // alongside the action, so that it costs the answer no time
-  const pidNow =
+  // before the action, where not known: one read beside it took the process a crash had already restarted as the app's
+  const pid =
     s.appPid ??
-    (read !== 'none' && s.appId ? s.device.appPid?.(s.appId).catch(() => undefined) : undefined);
+    (read !== 'none' && s.appId
+      ? await s.device.appPid?.(s.appId).catch(() => undefined)
+      : undefined);
   const r: ActResult = await run(opts).catch(refusedAction);
   // the last read before the action, which a ref's lookup may have just made
   const base = s.fresh?.list ?? before;
@@ -261,7 +263,6 @@ async function act(
   s.acted();
   if (read === 'none') s.unsettled = { at: Date.now(), hash: aimed };
   const said = typeof done === 'string' ? done : done(r);
-  const pid = await pidNow;
   const isFound = found();
   if (read === 'none' || !r.tree)
     return reply(said, summaryOf(clean, said, undefined, { found: isFound }));

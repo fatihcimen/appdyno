@@ -11,8 +11,8 @@ const REPORT_GAP_MS = 700;
 type Clean = (s: string) => string;
 
 /** What a report says of the app's end since `since`; a new process with no report is no death. */
-async function reportOf(s: Session, since: number, clean: Clean) {
-  for (let i = 0; s.appId && i < REPORT_TRIES; i++) {
+async function reportOf(s: Session, since: number, clean: Clean, tries = REPORT_TRIES) {
+  for (let i = 0; s.appId && i < tries; i++) {
     const { reports } = await s.device
       .crashes({ app: s.appId, since: since - CLOCK_SLACK_MS, limit: 1 })
       .catch(() => ({ reports: [] }));
@@ -22,6 +22,9 @@ async function reportOf(s: Session, since: number, clean: Clean) {
   }
   return undefined;
 }
+
+/** What to do once the app died under a call that failed for it. */
+export const DIED_HINT = 'launch_app starts it again, and crashes says why it died';
 
 /** An answer's line of the app's end. */
 export const diedLine = ({ reason, file }: NonNullable<ActionOut['appDied']>) =>
@@ -45,9 +48,17 @@ export async function appDeath(
   if (s.device.appPid) {
     const pid = await s.device.appPid(s.appId).catch(() => wasPid);
     s.appPid = pid;
-    if (wasPid && pid && pid !== wasPid) {
-      reportProgress('the app has a new process: looking for its crash report');
-      return reportOf(s, since, clean);
+    if (wasPid && pid !== wasPid) {
+      reportProgress(
+        pid
+          ? 'the app has a new process: looking for its crash report'
+          : 'the app has no process: looking for its crash report',
+      );
+      // a new process with no report is no death, as a link may start one; none at all is one, a crash dialog over it
+      const report = await reportOf(s, since, clean);
+      return (
+        report ?? (pid ? undefined : { reason: 'its process is gone and no crash report says why' })
+      );
     }
   }
   if (!foreground || foreground === s.appId || !(ran || wasPid)) return undefined;
@@ -58,4 +69,21 @@ export async function appDeath(
       reason: 'its process is gone and no crash report says why',
     }
   );
+}
+
+/**
+ * The app's end under a call that failed: as `appDeath` for an app that `ran`, else a crash report since `since`, read
+ * once, as the failure has waited already. The system restarts a crashed app, and where nothing knew its process before,
+ * only the report tells.
+ */
+export async function diedUnder(
+  s: Session,
+  foreground: string | undefined,
+  wasPid: string | undefined,
+  since: number,
+  clean: Clean,
+  ran: boolean,
+) {
+  const gone = ran ? await appDeath(s, foreground, wasPid, since, clean, true) : undefined;
+  return gone ?? reportOf(s, since, clean, 1);
 }

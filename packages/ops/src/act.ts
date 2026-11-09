@@ -1,7 +1,7 @@
 import { alertAnswer, reportProgress, throwIfCancelled, type ActOptions } from '@appdyno/core';
 import { z } from 'zod';
 import { SETTLE, type Answers, type ReadMode } from './answers.js';
-import { appDeath, diedLine } from './app-death.js';
+import { appDeath, DIED_HINT, diedLine, diedUnder } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
@@ -276,9 +276,18 @@ export function actOps(
           ].join('\n');
           return reply(all, { ...data, done: clean(all) }, images);
         };
+        /** When the step before this one began: a crash a step failed for came in it, or in this one. */
+        let since = Date.now();
+        let began = since;
+        /** What was last known in front, through the steps that read nothing. */
+        let seen = s.fresh?.foreground;
         for (const [i, p] of plan.entries()) {
           const last = i === plan.length - 1;
           const name = p.op ? p.op.name : p.st.action;
+          seen = front ?? s.fresh?.foreground ?? seen;
+          // the app as the step began: one that fails as it is gone failed for its death, told after this step's own words
+          const was = { up: !!s.appId && seen === s.appId, pid: s.appPid };
+          [since, began] = [began, Date.now()];
           try {
             throwIfCancelled('steps');
             reportProgress(`step ${i + 1} of ${plan.length}: ${name}`);
@@ -355,14 +364,16 @@ export function actOps(
             if (!(e instanceof ToolError)) throw e;
             const screen = await s.read().catch(() => undefined);
             if (screen) show(s, screen);
+            const appDied = await diedUnder(s, screen?.foreground, was.pid, since, clean, was.up);
             throw new ToolError(
               [
                 ...done,
                 `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
+                ...(appDied ? [`${diedLine(appDied)}, by step ${i + 1}`] : []),
                 ...(screen ? [header(screen)] : []),
               ].join('\n'),
-              e.code,
-              e.hint,
+              appDied ? 'APP_NOT_RUNNING' : e.code,
+              appDied ? DIED_HINT : e.hint,
               e.dispatched,
             );
           }
