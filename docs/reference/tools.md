@@ -266,7 +266,7 @@ touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulat
 
 A `shutdown` of the selected device ends the session on it and what its apps held in memory, and asks no one, as nothing the device keeps on its disk goes: its progress says so before it begins, and its answer once it is done. There is no reboot: a `shutdown` and a `boot` are two calls, as SECURITY.md has it.
 
-With `--allow-devices`, `create` is off, refused before anything is made: a new simulator's UDID is not known before it is made, so no list names it, and a server that made one only to refuse it left it behind. One made that does not start says how a person removes it, as nothing here deletes one.
+With `--allow-devices`, `create` is off, and the hub's New Simulator with it, refused before anything is made: a new simulator's UDID is not known before it is made, so no list names it, and a server that made one only to refuse it left it behind. One made that does not start says how a person removes it, as nothing here deletes one.
 
 ## What an action answers
 

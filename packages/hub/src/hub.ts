@@ -8,7 +8,7 @@ import {
 import { HubList } from './hub-list.js';
 import { HubRoom } from './hub-room.js';
 import { Parent } from './parent.js';
-import { FOCUS_SIGNAL, type ServerContext, ToolError } from '@appdyno/ops';
+import { checkCreate, FOCUS_SIGNAL, type ServerContext, ToolError } from '@appdyno/ops';
 
 export type HubRun = {
   /** A person asked for the keyboard. */
@@ -125,10 +125,12 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     close: (m) => room.close(m),
     start: async (m) => (await ownerOf(ctx, String(m.id))).boot(String(m.id)),
     stop: async (m) => (await ownerOf(ctx, String(m.id))).shutdown(String(m.id)),
-    new: (m) =>
-      ctx.providers
+    new: (m) => {
+      checkCreate(ctx.policy);
+      return ctx.providers
         .find((p) => p.virtual?.kind === m.kind)
-        ?.virtual?.create?.(m as unknown as NewDevice),
+        ?.virtual?.create?.(m as unknown as NewDevice);
+    },
     clients: (m) => o.services?.act(m, (said) => link.send({ op: 'clients', ...said })),
   };
   let leaving = false;

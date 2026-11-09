@@ -15,7 +15,7 @@ import { approve } from './approval.js';
 import { launchSaid } from './apps.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
-import { byPerson, checkApp, noApp } from './policy.js';
+import { byPerson, checkApp, checkCreate, noApp } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
@@ -272,13 +272,7 @@ async function createVirtual(ctx: ServerContext, device: string | undefined) {
       'UNSUPPORTED',
       'an Android emulator is made with avdmanager or in Android Studio',
     );
-  // the allow list names devices, and a new one's id is not known before it is made: none is made only to be refused
-  if (ctx.policy.devices)
-    throw new ToolError(
-      'create is off while this server has a device allow list',
-      'POLICY_DENIED',
-      byPerson('by starting it without --allow-devices'),
-    );
+  checkCreate(ctx.policy);
   reportProgress(`creating a ${device}`);
   const id = await maker.create({ name: device, model: device, system: '' });
   const removal = maker.removedBy ? `: ${maker.removedBy(id)} removes it` : '';

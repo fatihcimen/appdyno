@@ -39,7 +39,12 @@ class Simulated implements VirtualDevices {
 
 const phone = { serial: 'R58M', state: 'device', ready: true, model: 'SM-S918B' };
 
-function context(virtual: VirtualDevices, connected = [phone], mirrorCommand?: string[]) {
+function context(
+  virtual: VirtualDevices,
+  connected = [phone],
+  mirrorCommand?: string[],
+  policy = DEFAULT_POLICY,
+) {
   const provider: DeviceProvider = {
     list: () => Promise.resolve(connected),
     handles: () => true,
@@ -55,7 +60,7 @@ function context(virtual: VirtualDevices, connected = [phone], mirrorCommand?: s
       }) as unknown as Device,
     virtual,
   };
-  return new ServerContext(DEFAULT_POLICY, [provider], { ...(mirrorCommand && { mirrorCommand }) });
+  return new ServerContext(policy, [provider], { ...(mirrorCommand && { mirrorCommand }) });
 }
 
 /** A hub's window, as a test holds it. */
@@ -218,6 +223,28 @@ describe('the hub', () => {
     await vi.waitFor(() => expect(virtual.shutdown).toHaveBeenCalledWith('B'));
     say({ op: 'hub', action: 'new', kind: 'simulator', name: 'n', model: 'm', system: 's' });
     await vi.waitFor(() => expect(virtual.create).toHaveBeenCalledOnce());
+    close();
+    expect(await done).toBe(0);
+  });
+
+  it('makes no simulator under an allow list, as a new one could not be on it, and says why', async () => {
+    const virtual = new Simulated();
+    const { link, told, say, close } = window();
+    const done = runHub(
+      context(virtual, [phone], undefined, { ...DEFAULT_POLICY, devices: /^emulator-5554$/ }),
+      { focus: false, log: () => undefined, viewer: () => link },
+    );
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    say({ op: 'hub', action: 'new', kind: 'simulator', name: 'n', model: 'm', system: 's' });
+    await vi.waitFor(() =>
+      expect(told).toContainEqual(
+        expect.objectContaining({
+          op: 'note',
+          text: 'create is off while this server has a device allow list',
+        }),
+      ),
+    );
+    expect(virtual.create).not.toHaveBeenCalled();
     close();
     expect(await done).toBe(0);
   });

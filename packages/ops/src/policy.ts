@@ -73,6 +73,19 @@ export function checkDevice(policy: Policy, serial: string): string {
   return serial;
 }
 
+/**
+ * A new simulator's id is not known before it is made, so no allow list names it: none is made only to be refused, by
+ * `simulator create` or the hub's New Simulator alike.
+ */
+export function checkCreate(policy: Policy) {
+  if (policy.devices)
+    throw new ToolError(
+      'create is off while this server has a device allow list',
+      'POLICY_DENIED',
+      byPerson('by starting it without --allow-devices'),
+    );
+}
+
 /** What a log may hold that nobody listed: tokens by their shape or by the word in front of them. */
 const LOG_SECRETS: [RegExp, string][] = [
   [/\b(authorization\s*[:=]\s*)(?:bearer\s+|basic\s+)?[^\s,;"']+/gi, '$1•••'],
