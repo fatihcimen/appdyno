@@ -20,7 +20,8 @@ import {
   traceDigest,
 } from '../src/trace-parse.js';
 import { queryTraceFile } from '../src/trace.js';
-import { childrenNamed, endLeftBehind, noteWatcher } from '../src/trace-processes.js';
+import { childrenNamed, endLeftBehind } from '../src/left-behind.js';
+import { noteWatcher } from '../src/trace-processes.js';
 
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
 

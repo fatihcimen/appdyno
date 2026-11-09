@@ -21,6 +21,7 @@ import {
   type Owner,
   type RpcClient,
 } from '@appdyno/core';
+import { childrenNamed, endLeftBehind, HUB } from './left-behind.js';
 import { runnerBuild } from './runner-build.js';
 import { assertUdid, Simctl, xcodeEnv } from './simctl.js';
 import { recordXctMetrics } from './trace.js';
@@ -336,18 +337,24 @@ export class IosRunnerLauncher {
       () => '',
     );
     if (!cmd.includes(RUNNER_TEST) || !cmd.includes(this.udid)) return;
+    // what it started, which a kill leaves to launchd
+    const left = await childrenNamed(pid, HUB);
     // an iPhone's keeps SIGTERM first, as before: a kill is not yet tried on a phone, none was at hand
     const signals: NodeJS.Signals[] =
       this.transport.stop === 'kill' ? ['SIGKILL'] : ['SIGTERM', 'SIGKILL'];
-    for (const signal of signals) {
-      try {
-        process.kill(pid, signal);
-      } catch {
-        return; // gone already
+    try {
+      for (const signal of signals) {
+        try {
+          process.kill(pid, signal);
+        } catch {
+          return; // gone already
+        }
+        const end = Date.now() + ENDS_MS;
+        while (processAlive(pid) && Date.now() < end) await sleep(ENDS_POLL_MS);
+        if (!processAlive(pid)) return;
       }
-      const end = Date.now() + ENDS_MS;
-      while (processAlive(pid) && Date.now() < end) await sleep(ENDS_POLL_MS);
-      if (!processAlive(pid)) return;
+    } finally {
+      await endLeftBehind(left, HUB);
     }
   }
 

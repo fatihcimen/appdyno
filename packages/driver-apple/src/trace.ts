@@ -28,7 +28,8 @@ import {
   traceDigest,
 } from './trace-parse.js';
 import { exporting, traceTable } from './trace-read.js';
-import { childrenNamed, endLeftBehind, startWord } from './trace-processes.js';
+import { childrenNamed, endLeftBehind, HUB } from './left-behind.js';
+import { startWord } from './trace-processes.js';
 import { watchKtraces } from './trace-temp.js';
 
 export { traceDetail, traceTable } from './trace-read.js';
@@ -45,8 +46,6 @@ const CAP_MS = 240_000;
 /** How long the tool may take to say it has started before `during` runs without it. */
 const START_MS = 90_000;
 const KILL_MS = 30_000;
-/** What the tool starts and does not end: launchd holds it after any end, minutes after one, days after a kill. */
-const HUB = 'DTServiceHub';
 
 /** A recording attached to a process leaves the tool blind to it for a while: 189 and 196 s, measured, on iOS 27.2. */
 const FIND_PROCESS_MS = 240_000;

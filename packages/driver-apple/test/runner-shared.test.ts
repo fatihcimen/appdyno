@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -12,7 +13,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Socket } from 'node:net';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { deviceStateFile, processAlive, startOf, thisOwner, must } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '../../core/test/fake-agent.js';
 import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
@@ -185,6 +186,38 @@ describe('a start that cannot come', () => {
     await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow());
     await second.stop(rpc);
     rmSync(own, { recursive: true, force: true });
+  });
+
+  it("ends the DTServiceHub a simulator's killed xcodebuild left to launchd, and no other process", async () => {
+    // a DTServiceHub by its name: sleep under that name, which the runner's xcodebuild starts and a kill leaves, and
+    // which takes no SIGTERM, as the real one takes none
+    const hub = join(state, 'DTServiceHub');
+    copyFileSync('/bin/sleep', hub);
+    const pidFile = join(state, 'hub.pid');
+    writeFileSync(
+      join(state, 'xcodebuild'),
+      `#!${process.execPath}
+const { spawn } = require('node:child_process');
+const child = spawn('/bin/sh', ['-c', 'trap "" TERM; exec "$0" 60', ${JSON.stringify(hub)}], { stdio: 'ignore' });
+require('node:fs').writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+setTimeout(() => {}, 30000);
+`,
+    );
+    // one of this process's own under the same name, which nobody left behind
+    const own = spawn(hub, ['60'], { stdio: 'ignore' });
+    onTestFinished(() => void own.kill('SIGKILL'));
+    const udid = randomUUID().toUpperCase();
+    const runner = new IosRunnerLauncher(udid, { ...through(2), stop: simulatorTransport.stop });
+    const { rpc } = await runner.connect();
+    await vi.waitFor(() => expect(existsSync(pidFile)).toBe(true));
+    const left = Number(readFileSync(pidFile, 'utf8'));
+    onTestFinished(() => {
+      if (processAlive(left)) process.kill(left, 'SIGKILL');
+    });
+    expect(processAlive(left)).toBe(true);
+    await runner.stop(rpc);
+    await vi.waitFor(() => expect(processAlive(left)).toBe(false), { timeout: 5_000 });
+    expect(processAlive(must(own.pid, 'its pid'))).toBe(true);
   });
 
   it('makes its folder for what xcodebuild keeps once the xcodebuild that kept it there has ended', async () => {
