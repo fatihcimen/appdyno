@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { must, run } from '@appdyno/core';
@@ -68,13 +68,44 @@ export function namedFrames(out: string) {
   return { frames, otherBuilds: [...new Set(other)] };
 }
 
+/** An ELF note's type and owner for a GNU build id: Android's ABIs are all little-endian. */
+const BUILD_ID_NOTE = Buffer.from('03000000474e5500', 'hex');
+
+/** The build id an ELF library carries, as a tombstone prints it. */
+export function buildIdOf(elf: Buffer) {
+  for (let at = elf.indexOf(BUILD_ID_NOTE); at >= 8; at = elf.indexOf(BUILD_ID_NOTE, at + 1))
+    if (elf.readUInt32LE(at - 8) === 4)
+      return elf.toString('hex', at + 8, at + 8 + elf.readUInt32LE(at - 4));
+  return undefined;
+}
+
+/**
+ * Each library of the tombstone's frames whose file in `dir` is of another build. NDK 30's `ndk-stack` passes over such
+ * a file with no word, where an older one warned, so the ids are compared here.
+ */
+export function otherBuildsIn(tombstone: string, dir: string) {
+  const crashed = new Map(
+    [...tombstone.matchAll(/[/!]([^/!\s]+\.so)\b[^\n]*\(BuildId: (\w+)\)/g)].map(
+      ([, lib, id]) => [must(lib, 'a library'), must(id, 'a build')] as const,
+    ),
+  );
+  return [...crashed].flatMap(([lib, id]) => {
+    const file = join(dir, lib);
+    const found = existsSync(file) ? buildIdOf(readFileSync(file)) : undefined;
+    return found && found !== id
+      ? [`${lib}: the crash is of build ${id}, these symbols of ${found}`]
+      : [];
+  });
+}
+
 /**
  * A tombstone with its frames named from the libraries with symbols at `path`, kept in `file`. What
  * named nothing gives no detail: a library of another build is the caller's to say.
  */
 export async function namedTombstone(tombstone: string, path: string, file: string) {
   await writeFile(file, tombstone, { mode: 0o600 });
-  const { stdout } = await run(ndkStack(), ['-sym', symbolFolder(path, tombstone), '-dump', file], {
+  const dir = symbolFolder(path, tombstone);
+  const { stdout } = await run(ndkStack(), ['-sym', dir, '-dump', file], {
     maxBuffer: 1 << 24,
   });
   await writeFile(file, stdout, { mode: 0o600 });
@@ -82,6 +113,6 @@ export async function namedTombstone(tombstone: string, path: string, file: stri
   const signal = /^signal .*$/m.exec(tombstone)?.[0];
   return {
     detail: [...(signal ? [signal] : []), ...frames.slice(0, FRAMES)].join('\n'),
-    otherBuilds,
+    otherBuilds: [...new Set([...otherBuilds, ...otherBuildsIn(tombstone, dir)])],
   };
 }

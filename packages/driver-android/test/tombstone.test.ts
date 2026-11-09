@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assert, describe, expect, it, vi } from 'vitest';
@@ -10,7 +10,13 @@ import {
   exitCounts,
   parseExitInfo,
 } from '../src/crashes.js';
-import { namedFrames, namedTombstone, shortFrame } from '../src/tombstone.js';
+import {
+  buildIdOf,
+  namedFrames,
+  namedTombstone,
+  otherBuildsIn,
+  shortFrame,
+} from '../src/tombstone.js';
 
 const PC =
   '      #00 pc 0000000000000660  /data/app/~~QX==/dev.appdyno.fixture-Bo==/base.apk!libfixture_native.so (offset 0x7d4000) (BuildId: d775acdaccea)';
@@ -90,6 +96,25 @@ describe('a tombstone', () => {
         'libfixture_native.so: the crash is of build 1dd276e8da54, these symbols of ab7cc72d1337',
       ],
     });
+  });
+
+  it("says a library of another build by its own id, as NDK 30's ndk-stack says nothing of it", () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-tomb-'));
+    // an ELF note of a GNU build id, among other bytes: name size 4, id size 6, type 3, "GNU\0"
+    const elf = (id: string) =>
+      Buffer.concat([
+        Buffer.from('7f454c46', 'hex'),
+        Buffer.alloc(60),
+        Buffer.from(`040000000600000003000000474e5500${id}`, 'hex'),
+      ]);
+    writeFileSync(join(dir, 'libfixture_native.so'), elf('ab7cc72d1337'));
+    writeFileSync(join(dir, 'libart.so'), elf('b10f5696fea1'));
+    expect(buildIdOf(elf('d775acdaccea'))).toBe('d775acdaccea');
+    expect(otherBuildsIn(dropbox, dir)).toEqual([
+      'libfixture_native.so: the crash is of build d775acdaccea, these symbols of ab7cc72d1337',
+    ]);
+    writeFileSync(join(dir, 'libfixture_native.so'), elf('d775acdaccea'));
+    expect(otherBuildsIn(dropbox, dir)).toEqual([]);
   });
 
   describe('asked for with none to be had', () => {
