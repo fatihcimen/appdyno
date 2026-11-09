@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 760" width="960" height="760" role="img" aria-labelledby="title desc">
   <title id="title">Performans kapısı nasıl karar verir</title>
-  <desc id="desc">Bir çalıştırmanın her ölçümü sırayla değerlendirilir. Baseline yoksa new olur. Başka bir build ya da derleme durumuyla refused olur. Tabanını aşacak kadar oynamadıysa ok olur. Çok az çalıştırma ya da örnekle few-samples olur. Sıra testi bir değişiklik bulmazsa ok olur. Daha iyi bir değişiklik improvement’tır. Yük, ısı ya da açık bir yansıtma altında ölçülen daha kötü bir değişiklik noisy’dir, değilse regression’dır. ok, improvement ve new 0 ile çıkar. Geri kalan her şey ve aşılan bir bütçe 1 ile çıkar.</desc>
+  <desc id="desc">Bir çalıştırmanın her ölçümü sırayla değerlendirilir. Baseline yoksa new olur. Başka bir build ya da derleme durumuyla refused olur. Tabanını aşacak kadar oynamadıysa ok olur. Çok az çalıştırma ya da örnekle few-samples olur. Daha iyi bir değişiklik, sıra testi de aynı şeyi söylüyorsa improvement’tır, değilse ok. Sıra testinin doğrulamadığı daha kötü bir değişiklik noisy’dir, p 0,05 ya da üstündeyse ok; yük, ısı ya da açık bir yansıtma altında ölçülen de noisy’dir; değilse regression’dır. ok, improvement ve new 0 ile çıkar. Geri kalan her şey ve aşılan bir bütçe 1 ile çıkar.</desc>
   <style>
     svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -59,12 +59,12 @@
   <text class="text" x="52" y="389">3 baseline çalıştırması ve her iki yanda 5 örnek</text>
 
   <rect class="card s-h" x="32" y="426" width="560" height="62" rx="12"/>
-  <text class="name" x="52" y="454">Bir sıra testi de aynı şeyi söylüyor mu?</text>
-  <text class="text" x="52" y="475">p &lt; 0,01, permütasyonla, bütün baseline örnekleri çalıştırmaya karşı</text>
+  <text class="name" x="52" y="454">Daha mı kötü?</text>
+  <text class="text" x="52" y="475">hangi yönün sayıldığını ölçümün kendisi belirler</text>
 
   <rect class="card s-h" x="32" y="512" width="560" height="62" rx="12"/>
-  <text class="name" x="52" y="540">Daha mı kötü?</text>
-  <text class="text" x="52" y="561">hangi yönün sayıldığını ölçümün kendisi belirler</text>
+  <text class="name" x="52" y="540">Bir sıra testi de aynı şeyi söylüyor mu?</text>
+  <text class="text" x="52" y="561">p &lt; 0,01, bütün baseline örnekleri çalıştırmaya karşı; 0,05 ya da üstünde ok</text>
 
   <rect class="card s-h" x="32" y="598" width="560" height="62" rx="12"/>
   <text class="name" x="52" y="626">Çalıştırma ya da baseline gürültülü müydü?</text>
@@ -90,7 +90,7 @@
   <path class="line s-d" marker-end="url(#ad)" d="M592 274H656"/>
   <path class="line s-p" marker-end="url(#ap)" d="M592 371H656"/>
   <path class="line s-d" marker-end="url(#ad)" d="M592 457H656"/>
-  <path class="line s-d" marker-end="url(#ad)" d="M592 543H656"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M592 543H656"/>
   <path class="line s-p" marker-end="url(#ap)" d="M592 629H656"/>
   <text class="text mid" x="622" y="84">hayır</text>
   <text class="text mid" x="622" y="170">hayır</text>
@@ -114,11 +114,11 @@
   <text class="name on-p" x="678" y="377">few-samples</text>
   <text class="text end" x="912" y="377">geçmez</text>
   <rect class="card s-d" x="658" y="438" width="270" height="38" rx="19"/>
-  <text class="name on-d" x="678" y="463">ok</text>
+  <text class="name on-d" x="678" y="463">improvement ya da ok</text>
   <text class="text end" x="912" y="463">geçer</text>
-  <rect class="card s-d" x="658" y="524" width="270" height="38" rx="19"/>
-  <text class="name on-d" x="678" y="549">improvement</text>
-  <text class="text end" x="912" y="549">geçer</text>
+  <rect class="card s-p" x="658" y="524" width="270" height="38" rx="19"/>
+  <text class="name on-p" x="678" y="549">noisy</text>
+  <text class="text end" x="912" y="549">yeniden ölçün</text>
   <rect class="card s-p" x="658" y="610" width="270" height="38" rx="19"/>
   <text class="name on-p" x="678" y="635">noisy</text>
   <text class="text end" x="912" y="635">yeniden ölçün</text>

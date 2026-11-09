@@ -62,6 +62,12 @@ export type Comparison = {
 /** Under this a rank test cannot reach ALPHA: 5 against 5 is at best p = 0.0079, 4 against 4 is 0.029. */
 export const MIN_SAMPLES = 5;
 export const ALPHA = 0.01;
+/**
+ * From ALPHA to this, a worse shift past the floor is one the gate can neither call nor rule out, and stops it as `noisy`:
+ * a simulator's start 600 ms slower read p 0.033 against slow launches of the baseline's own, and passed as `ok`. Past
+ * it, the samples say nothing moved. scripts/perf-floor-sim.mjs has what each costs.
+ */
+export const SUSPECT = 0.05;
 /** Fewer baseline runs say nothing of how far a run moves by itself. */
 export const MIN_BASELINE_RUNS = 3;
 /**
@@ -97,7 +103,8 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
  * A change counts when it passes all of three: a rank test (p < ALPHA, current run against every baseline
  * sample), a practical floor by unit, and the baseline's own run-to-run movement. The last is what a rank
  * test on samples cannot see: samples of one run share its load and heat, so two runs of an unchanged app
- * differ "significantly" (docs/reference/perf.md has the rates with and without it).
+ * differ "significantly" (docs/reference/perf.md has the rates with and without it). A worse shift past both floors
+ * with p from ALPHA to SUSPECT is no pass either: it is `noisy`, as the gate can neither call it nor rule it out.
  */
 export function compareMetric(
   kind: string,
@@ -183,17 +190,26 @@ export function compareMetric(
       note: `${n.current} against ${n.baseline} samples: at least ${MIN_SAMPLES} each are needed to call it`,
     };
   const p = rankTest(samples, current.samples);
-  if (p >= ALPHA) return { ...stats, p: Math.round(p * 1e5) / 1e5, verdict: 'ok' };
+  const tested = { ...stats, p: Math.round(p * 1e5) / 1e5 };
   const worse = better === 'lower' ? moved > 0 : moved < 0;
-  const loud = [...blocks(current.noise), ...base.runs.flatMap((r) => blocks(r.noise))];
-  if (worse && loud.length)
+  if (!worse) return { ...tested, verdict: p < ALPHA ? 'improvement' : 'ok' };
+  if (p >= SUSPECT) return { ...tested, verdict: 'ok' };
+  // past the floor, which the runs' medians set, while the samples overlap: a few slow launches in the baseline hide a
+  // real shift from the rank test, so this is a change the gate cannot call either way, not a pass
+  if (p >= ALPHA)
     return {
-      ...stats,
-      p: Math.round(p * 1e5) / 1e5,
+      ...tested,
+      verdict: 'noisy',
+      note: `past the floor, but the samples overlap too much to call it (p ${tested.p}, under ${ALPHA} needed): measure again, with more repeats`,
+    };
+  const loud = [...blocks(current.noise), ...base.runs.flatMap((r) => blocks(r.noise))];
+  if (loud.length)
+    return {
+      ...tested,
       verdict: 'noisy',
       note: `measured with ${[...new Set(loud)].join(', ')}: measure again`,
     };
-  return { ...stats, p: Math.round(p * 1e5) / 1e5, verdict: worse ? 'regression' : 'improvement' };
+  return { ...tested, verdict: 'regression' };
 }
 
 /**

@@ -132,3 +132,68 @@ for (const n of [1, 5]) {
     }
   }
 }
+
+// The gate itself on launches, by verdict: an unchanged run, and one 20 % and 40 % slower. `tail` is a launch's chance of
+// taking 1.5 to 3 times as long, as a simulator's do now and then. ok and improvement pass; noisy and regression stop.
+/**
+ * @param {number} c
+ * @param {number} runSd
+ * @param {number} tail
+ */
+const launches = (c, runSd, tail) =>
+  run(c, 6, runSd, 0.05).map((x) => (r() < tail ? Math.round(x * (1.5 + 1.5 * r())) : x));
+/** @type {[number, number, number][]} */
+const GATED = [
+  [0.02, 3, 0],
+  [0.06, 3, 0],
+  [0.1, 3, 0],
+  [0.06, 5, 0],
+  [0.06, 8, 0],
+  [0.06, 3, 0.1],
+  [0.06, 5, 0.1],
+];
+/** @type {[string, number][]} */
+const SLOWER = [
+  ['unchanged', 1000],
+  ['+20%', 1200],
+  ['+40%', 1400],
+];
+/** @type {import('@appdyno/perf').Verdict[]} */
+const CALLED = ['ok', 'noisy', 'regression', 'improvement'];
+for (const [runSd, k, tail] of GATED) {
+  /** @type {string[]} */
+  const row = [];
+  for (const [title, c] of SLOWER) {
+    /** @type {Record<import('@appdyno/perf').Verdict, number>} */
+    const seen = {
+      ok: 0,
+      'few-samples': 0,
+      regression: 0,
+      improvement: 0,
+      noisy: 0,
+      refused: 0,
+      new: 0,
+    };
+    const build = /** @type {const} */ ('release');
+    for (let i = 0; i < trials; i++) {
+      /** @param {number} j */
+      const kept = (j) => ({
+        at: String(j),
+        samples: launches(1000, runSd, tail),
+        build,
+        noise: [],
+      });
+      const base = {
+        unit: /** @type {const} */ ('ms'),
+        better: /** @type {const} */ ('lower'),
+        runs: Array.from({ length: k }, (_, j) => kept(j)),
+      };
+      const now = { samples: launches(c, runSd, tail), build, noise: [] };
+      seen[compareMetric('launch', now, base, 'ms', 'lower').verdict]++;
+    }
+    /** @param {import('@appdyno/perf').Verdict} v */
+    const of = (v) => `${v.charAt(0)} ${((seen[v] / trials) * 100).toFixed(1)}%`;
+    row.push(`${title}: ${CALLED.map(of).join(' ')}`);
+  }
+  console.log(`launches, runSd ${runSd} k ${k} tail ${tail} | ${row.join(' | ')}`);
+}

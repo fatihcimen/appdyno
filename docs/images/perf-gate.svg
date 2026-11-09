@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 760" width="960" height="760" role="img" aria-labelledby="title desc">
   <title id="title">How the performance gate decides</title>
-  <desc id="desc">Each measure of a run is judged in order. With no baseline it is new. With another build or compile state it is refused. If it did not move past its floor it is ok. With too few runs or samples it is few-samples. If the rank test finds no change it is ok. A better change is an improvement. A worse change measured under load, heat or a mirror is noisy, and otherwise it is a regression. ok, improvement and new exit 0. Everything else, and a broken budget, exits 1.</desc>
+  <desc id="desc">Each measure of a run is judged in order. With no baseline it is new. With another build or compile state it is refused. If it did not move past its floor it is ok. With too few runs or samples it is few-samples. A better change is an improvement where the rank test agrees, and otherwise ok. A worse change the rank test does not confirm is noisy, or ok at p 0.05 or more, and one measured under load, heat or a mirror is noisy too; otherwise it is a regression. ok, improvement and new exit 0. Everything else, and a broken budget, exits 1.</desc>
   <style>
     svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -59,12 +59,12 @@
   <text class="text" x="52" y="389">3 baseline runs, and 5 samples on each side</text>
 
   <rect class="card s-h" x="32" y="426" width="560" height="62" rx="12"/>
-  <text class="name" x="52" y="454">Does a rank test agree?</text>
-  <text class="text" x="52" y="475">p &lt; 0.01, by permutation, all baseline samples against the run</text>
+  <text class="name" x="52" y="454">Is it worse?</text>
+  <text class="text" x="52" y="475">which way counts is the measure's own</text>
 
   <rect class="card s-h" x="32" y="512" width="560" height="62" rx="12"/>
-  <text class="name" x="52" y="540">Is it worse?</text>
-  <text class="text" x="52" y="561">which way counts is the measure's own</text>
+  <text class="name" x="52" y="540">Does a rank test agree?</text>
+  <text class="text" x="52" y="561">p &lt; 0.01, all baseline samples against the run; at 0.05 or more, ok</text>
 
   <rect class="card s-h" x="32" y="598" width="560" height="62" rx="12"/>
   <text class="name" x="52" y="626">Was the run or the baseline loud?</text>
@@ -90,7 +90,7 @@
   <path class="line s-d" marker-end="url(#ad)" d="M592 274H656"/>
   <path class="line s-p" marker-end="url(#ap)" d="M592 371H656"/>
   <path class="line s-d" marker-end="url(#ad)" d="M592 457H656"/>
-  <path class="line s-d" marker-end="url(#ad)" d="M592 543H656"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M592 543H656"/>
   <path class="line s-p" marker-end="url(#ap)" d="M592 629H656"/>
   <text class="text mid" x="622" y="84">no</text>
   <text class="text mid" x="622" y="170">no</text>
@@ -114,11 +114,11 @@
   <text class="name on-p" x="678" y="377">few-samples</text>
   <text class="text end" x="912" y="377">no pass</text>
   <rect class="card s-d" x="658" y="438" width="270" height="38" rx="19"/>
-  <text class="name on-d" x="678" y="463">ok</text>
+  <text class="name on-d" x="678" y="463">improvement or ok</text>
   <text class="text end" x="912" y="463">passes</text>
-  <rect class="card s-d" x="658" y="524" width="270" height="38" rx="19"/>
-  <text class="name on-d" x="678" y="549">improvement</text>
-  <text class="text end" x="912" y="549">passes</text>
+  <rect class="card s-p" x="658" y="524" width="270" height="38" rx="19"/>
+  <text class="name on-p" x="678" y="549">noisy</text>
+  <text class="text end" x="912" y="549">measure again</text>
   <rect class="card s-p" x="658" y="610" width="270" height="38" rx="19"/>
   <text class="name on-p" x="678" y="635">noisy</text>
   <text class="text end" x="912" y="635">measure again</text>

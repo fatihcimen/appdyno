@@ -64,9 +64,28 @@ describe('compare', () => {
     for (let i = 0; i < 300; i++) {
       const base = metric([run(r, 500, 8), run(r, 500, 8), run(r, 500, 8)]);
       const c = compareMetric('launch', current(run(r, 500, 8)), base, 'ms', 'lower');
-      if (c.verdict === 'regression' || c.verdict === 'improvement') alarms++;
+      if (c.verdict !== 'ok') alarms++;
     }
     expect(alarms).toBe(0);
+  });
+
+  it('a worse shift past the floor that the samples do not confirm is noisy, never ok', () => {
+    // a simulator's cold launches with 600 ms put into the start, against a baseline with slow launches of its own
+    const base = metric([
+      [1809, 1898, 1726, 1921, 1950],
+      [1682, 1768, 2059, 6363, 2542],
+      [2091, 2092, 1992, 2920, 3913],
+    ]);
+    const slower = current([3410, 2652, 3216, 2666, 2657]);
+    const c = compareMetric('launch.until_ms', slower, base, 'ms', 'lower');
+    expect(c.shift).toBe(754);
+    expect(c.floor).toBeCloseTo(415.2, 1);
+    expect(c.p).toBeGreaterThan(0.01);
+    expect(c.verdict).toBe('noisy');
+    expect(c.note).toMatch(
+      /^past the floor, but the samples overlap too much to call it \(p 0\.0\d+/,
+    );
+    expect(compareMetric('fps', slower, base, 'ms', 'higher').verdict).toBe('ok');
   });
 
   it(
