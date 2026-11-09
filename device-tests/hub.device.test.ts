@@ -51,7 +51,10 @@ describe.runIf(serial)("the hub's Device pane", () => {
   const quiet = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const picture = async (name: string) => {
     if (!shots) return;
-    link.send({ op: 'snapshot', file: join(shots, `hub-${name}-${look}-${language}.png`) });
+    link.send({
+      op: 'snapshot',
+      file: join(shots, `hub-${android ? 'android' : 'ios'}-${name}-${look}-${language}.png`),
+    });
     await quiet(1_000);
   };
   const poke = (m: Record<string, unknown>) => link.send({ op: 'poke', stage: serial, ...m });
