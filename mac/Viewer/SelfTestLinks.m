@@ -61,6 +61,10 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
                @"suggested": @[],
                @"linksWhy": @"an iPhone's installed app is not read from here: list the links of its build on a simulator"}];
   MVCheck(@"links: a device that cannot tell an app's links says why where they would stand", [pane.rows.lastObject.title hasPrefix:@"An iPhone's installed app"], pane.rows.lastObject.title);
+  // drawn, as the pane on an iPhone with an app of a person's in front: a row with no line beneath ended the window
+  [pane.window displayIfNeeded];
+  NSTableView *table = [[pane valueForKey:@"_recent"] documentView];
+  MVCheck(@"links: and that row is drawn, with no line beneath it", [table viewAtColumn:0 row:table.numberOfRows - 1 makeIfNecessary:NO] != nil, nil);
   [pane show:@{@"op": @"answer",
                @"name": @"openLink",
                @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];

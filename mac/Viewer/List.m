@@ -214,9 +214,10 @@ static NSString *identityOf(MVRow *row) {
   if (row.header) return [self headerCell:row.title in:cell];
   NSView *icon = row.tile ? MVTile(row.symbol, row.tile, kTileSide) : row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: MVInkColor() size:15]
                                                                                  : [NSView new];
-  NSTextField *title = MVText(row.title, MVStyleBody);
+  // a row may have no line beneath, as a note where a list would stand has none: a label of nothing is refused
+  NSTextField *title = MVText(row.title ?: @"", MVStyleBody);
   cell.title = title;
-  NSTextField *detail = MVText(row.detail, MVStyleSub);
+  NSTextField *detail = MVText(row.detail ?: @"", MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
   detail.hidden = !row.detail.length;
   NSStackView *lines = [NSStackView stackViewWithViews:@[title, detail]];
