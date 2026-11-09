@@ -1269,6 +1269,49 @@ describe('gestures, keys, clipboard', () => {
   });
 });
 
+describe('a turn of the screen', () => {
+  /** As a phone turns: the call returns at once, the old screen stays a moment, then a window with nothing on it. */
+  class Turning extends FakeDevice {
+    turnedAt = 0;
+    rotation = 0;
+    override setOrientation(r: 0 | 1 | 2 | 3) {
+      this.turnedAt = Date.now();
+      this.rotation = r;
+      return super.setOrientation(r);
+    }
+    override current(): Tree {
+      const t = super.current();
+      const since = Date.now() - this.turnedAt;
+      if (this.rotation === 0 || since < 500) return t;
+      if (since < 900) {
+        t.nodes = t.nodes.slice(0, 1);
+        t.hash = `${t.hash}+turning`;
+        return t;
+      }
+      // wide, and what was on it laid out across it
+      for (const n of [...t.windows, ...t.nodes])
+        n.b = [n.b[0], n.b[1], n.b[2] + 1320, Math.min(n.b[3], 1080)];
+      t.hash = `${t.hash}+turned`;
+      return t;
+    }
+  }
+
+  it('answers with the screen turned and settled, as the call returns before the screen turns', async () => {
+    const d = new Turning();
+    const { call } = await connect(d);
+    const r = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
+    expect(r.error).toBe(false);
+    expect(r.text).toMatch(/"Ana sayfa" 1200,150/);
+  });
+
+  it('is turned for the next read where its own answer reads nothing', async () => {
+    const d = new Turning();
+    const { call } = await connect(d);
+    await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
+    expect((await call('screen')).text).toMatch(/"Ana sayfa" 1200,150/);
+  });
+});
+
 describe('keyboard', () => {
   it('says whether it is open and closes it', async () => {
     const d = new WithKeyboard();

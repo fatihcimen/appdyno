@@ -1,4 +1,4 @@
-import { kindOf, must, osName, type ListedDevice } from '@appdyno/core';
+import { kindOf, must, osName, type ListedDevice, type Screen } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -9,6 +9,10 @@ import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
 
 /** In the order of the device's own rotations, a quarter turn each. */
 const ROTATIONS = ['portrait', 'landscape_left', 'upside_down', 'landscape_right'] as const;
+
+/** The app's window as a turn leaves it: wide in landscape, tall else, with something on it. */
+const turnedTo = (rotation: number) => (x: Screen) =>
+  !!x.window && x.window.w > x.window.h === (rotation % 2 === 1) && x.list.length > 0;
 
 export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
   return [
@@ -120,10 +124,9 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       annotations: ACT,
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
-        await turning(s, (kept) =>
-          s.device.setOrientation(ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3, kept),
-        );
-        return afterChange(s, `orientation: ${orientation}`, read);
+        const rotation = ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3;
+        await turning(s, (kept) => s.device.setOrientation(rotation, kept));
+        return afterChange(s, `orientation: ${orientation}`, read, undefined, turnedTo(rotation));
       },
     }),
     defineOp({

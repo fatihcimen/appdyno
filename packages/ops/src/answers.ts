@@ -293,6 +293,7 @@ async function afterChange(
   said: Said,
   read: ReadMode,
   launched?: string,
+  ready?: (x: Screen) => boolean,
 ) {
   const ran = inFront(s) || (!!launched && launched === s.appId);
   const started = Date.now();
@@ -301,6 +302,9 @@ async function afterChange(
   s.acted();
   // a launch or a link may start a new process on purpose
   s.appPid = undefined;
+  // what the screen shows once the change has reached it, as a turn's call returns before the screen turns: what a read
+  // gets meanwhile is the screen before, or a window with nothing on it yet
+  if (ready) await s.until(ready, SETTLE.maxMs);
   if (read === 'none') return reply(saidOf(said), summaryOf(clean, saidOf(said)));
   reportProgress('waiting for the screen to settle');
   const { screen, settled } = await settleRead(s);
@@ -335,8 +339,13 @@ export function answersFor(ctx: ServerContext) {
       found?: () => boolean,
     ) => act(clean, s, read, run, done, found),
     settleRead,
-    afterChange: (s: Session, said: Said, read: ReadMode, launched?: string) =>
-      afterChange(clean, s, said, read, launched),
+    afterChange: (
+      s: Session,
+      said: Said,
+      read: ReadMode,
+      launched?: string,
+      ready?: (x: Screen) => boolean,
+    ) => afterChange(clean, s, said, read, launched, ready),
   };
 }
 
