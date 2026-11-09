@@ -5,7 +5,7 @@ import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DeviceError } from '@appdyno/protocol';
-import { inCheckout, inPackage, reportProgress, stateDir, must } from '@appdyno/core';
+import { inCheckout, inPackage, reportProgress, run, stateDir, must } from '@appdyno/core';
 import { brandSimulatorRunner } from './brand.js';
 import { xcodeEnv } from './simctl.js';
 
@@ -76,9 +76,7 @@ export async function iosProducts(kind: Kind, build = true): Promise<string | un
   }
   const src = inPackage('ios');
   if (!src || !existsSync(join(src, 'Appdyno.xcodeproj'))) return undefined;
-  const id = (await readFile(join(src, 'sources.sha256'), 'utf8').catch(() => 'unknown'))
-    .trim()
-    .slice(0, 16);
+  const id = await sourcesId(src);
   const out = join(stateDir(), 'ios-build', id, kind);
   const products = join(out, 'Build/Products');
   if (has(products) || !build) return has(products) ? products : undefined;
@@ -101,11 +99,21 @@ export async function iosProducts(kind: Kind, build = true): Promise<string | un
           : []),
       ],
       `building the iOS runner for the ${kind} once (a few minutes)`,
-    ).finally(() => builds.delete(out));
+    )
+      // what other sources built goes once this one is there; a build that stays is no failure of this one
+      .then(() => pruneIosBuilds(id).catch(() => 0))
+      .then(() => undefined)
+      .finally(() => builds.delete(out));
     builds.set(out, building);
   }
   await building;
   return products;
+}
+
+/** What a build in the state folder is kept by: the first 16 of its sources' sha256, which each change of them moves. */
+async function sourcesId(src = inPackage('ios')) {
+  const sha = src ? await readFile(join(src, 'sources.sha256'), 'utf8').catch(() => '') : '';
+  return sha.trim().slice(0, 16) || 'unknown';
 }
 
 const builds = new Map<string, Promise<void>>();
@@ -171,15 +179,23 @@ export function xcodebuildTelling(args: string[], what: string): Promise<void> {
   }).finally(() => clearInterval(beat));
 }
 
-/** Removes the runner builds of other packaged sources than the installed ones; how many were removed. */
-export async function pruneIosBuilds(): Promise<number> {
-  const sources = inPackage('ios', 'sources.sha256');
-  const id = sources ? (await readFile(sources, 'utf8')).trim().slice(0, 16) : '';
+/**
+ * Removes the runner builds in the state folder of other sources than `keep`, the ones in use here, after each build
+ * and by `ios build`, in a package and in a checkout alike, where each change of the runner's sources builds anew. A
+ * build a process names on its command line, as xcodebuild runs a runner from one or builds it, stays, and so does
+ * all of it where the processes cannot be read. How many were removed.
+ */
+export async function pruneIosBuilds(keep?: string): Promise<number> {
   const root = join(stateDir(), 'ios-build');
-  if (!id || !existsSync(root)) return 0;
+  if (!existsSync(root)) return 0;
+  const kept = keep ?? (await sourcesId());
+  const { stdout } = await run('ps', ['-Axww', '-o', 'command='], {
+    maxBuffer: 64 * 1024 * 1024,
+  }).catch(() => ({ stdout: undefined }));
+  if (stdout === undefined) return 0;
   let n = 0;
   for (const d of readdirSync(root))
-    if (d !== id && /^[0-9a-f]{16}$/.test(d)) {
+    if (d !== kept && /^[0-9a-f]{16}$/.test(d) && !stdout.includes(join(root, d, '/'))) {
       await rm(join(root, d), { recursive: true, force: true });
       n++;
     }

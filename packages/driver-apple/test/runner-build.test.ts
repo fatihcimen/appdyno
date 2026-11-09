@@ -1,10 +1,18 @@
-import { chmodSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { inCall } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { BUILD_LINE, buildPhase, checkoutBehind, xcodebuildTelling } from '../src/runner-build.js';
+import {
+  BUILD_LINE,
+  buildPhase,
+  checkoutBehind,
+  pruneIosBuilds,
+  xcodebuildTelling,
+} from '../src/runner-build.js';
 
 describe("a checkout's runner products", () => {
   /** An ios folder with the runner's sources and a build of them, each file made at `at` seconds from now. */
@@ -41,6 +49,35 @@ describe("a checkout's runner products", () => {
     const elsewhere = join(ios, 'elsewhere');
     at('elsewhere/Runner_iphoneos27.1-arm64.xctestrun', 0);
     expect(checkoutBehind('device', elsewhere, ios)).toBeUndefined();
+  });
+});
+
+describe("the runner's builds in the state folder", () => {
+  it("go, a checkout's as a package's, but for the current sources' and one a process runs from", async () => {
+    const state = mkdtempSync(join(tmpdir(), 'appdyno-builds-'));
+    vi.stubEnv('APPDYNO_STATE_DIR', state);
+    onTestFinished(() => void vi.unstubAllEnvs());
+    const built = (id: string) => {
+      mkdirSync(join(state, 'ios-build', id, 'simulator/Build/Products'), { recursive: true });
+      return join(state, 'ios-build', id);
+    };
+    const current = built('0123456789abcdef');
+    const stale = built('fedcba9876543210');
+    const running = built('00112233445566aa');
+    // as xcodebuild names the products it runs a runner from
+    const runner = spawn(process.execPath, [
+      '-e',
+      'setTimeout(() => {}, 30_000)',
+      join(running, 'simulator/Build/Products/Runner_iphonesimulator27.2-arm64.xctestrun'),
+    ]);
+    onTestFinished(() => void runner.kill());
+    await once(runner, 'spawn');
+    expect(await pruneIosBuilds('0123456789abcdef')).toBe(1);
+    expect([existsSync(current), existsSync(stale), existsSync(running)]).toEqual([
+      true,
+      false,
+      true,
+    ]);
   });
 });
 

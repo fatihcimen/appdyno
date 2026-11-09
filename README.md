@@ -148,7 +148,7 @@ It changes the one entry of appdyno's, keeps a backup beside the file, and `appd
 
 **4. Get a device ready**
 
-- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helper ahead, as the first action would, which takes a few minutes.
+- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helper ahead, as the first action would, which takes a few minutes. A build of other sources than the current ones goes once a new one is there, unless a process runs from it.
 - **Android emulator**: create one in Android Studio's Device Manager and start it.
 - **Android phone**: turn on Developer options (Settings, About phone, tap Build number seven times), then USB debugging in them. Connect the cable and answer Allow on the phone. For Wi-Fi, pair once under Wireless debugging, Pair device with pairing code: `appdyno pair <address> <code>`.
 - **iPhone**: connect the cable and answer Trust, turn on Developer Mode, and give it a development signing identity with a profile: [An iPhone or a simulator](docs/guides/clients.md#an-iphone-or-a-simulator) takes you through it. For Wi-Fi, pair once on the cable: `appdyno pair --device <udid>`.
