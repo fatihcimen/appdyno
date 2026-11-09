@@ -8,6 +8,8 @@ export type Startable = {
   serial?: string;
   /** The hardware it stands for, as people name it. */
   model?: string;
+  /** Once stopped, this Mac's tools could not start it again: an emulator of another SDK or AVD folder. */
+  bootable?: false;
 };
 
 /** What a new virtual device is made from, by the ids a driver's own tools take. */
@@ -23,8 +25,8 @@ export type VirtualDevices = {
   readonly kind: 'simulator' | 'emulator';
   readonly platform: Platform;
   startable(): Promise<Startable[]>;
-  /** Starts it and answers its serial once it can be driven. */
-  boot(id: string): Promise<string>;
+  /** Starts it and answers its serial once it can be driven; `serial`: the one it ran as, taken again where it is free. */
+  boot(id: string, serial?: string): Promise<string>;
   shutdown(id: string): Promise<void>;
   /** What can be made; none where the tools that make one are missing. */
   catalog?(): Promise<VirtualCatalog | undefined>;

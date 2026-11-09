@@ -36,6 +36,7 @@ her şey istemciye görünür, bu yüzden modelin onu gördüğünü varsayın.
 Sizin koyduğunuz sınırlar:
 
 - `--allow-devices`, `--allow-apps` ve `--allow-urls` sunucunun nerede iş yapacağını sınırlar.
+  `--allow-devices` bir cihazın seri numarasıyla ya da UDID'siyle eşleştirilir. `simulator` `boot` ve `shutdown` bir simülatörün ya da emülatörün adıyla da eşleştirir, durmuş bir emülatörü de bu araç onu kapattığında çalıştığı seri numarasıyla: biri için izin verilen bir cihaza öbürü için de izin verilir.
 - `--allow-apps` ile Ayarlar da her uygulama gibidir: `open_link` `settings` onu, hangi sayfada olursa olsun, yalnızca
   kimliği listedeyken açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`. `app install` yalnızca
   listenin adlandırdığı bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar; `build_and_run` reddedilir.

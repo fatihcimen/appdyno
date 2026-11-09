@@ -1567,6 +1567,64 @@ describe('simulators and emulators', () => {
     expect(fleet.log.at(-1)).toBe('shutdown B');
     expect((await call('simulator', { action: 'boot', name: 'nope' })).data.code).toBe('NOT_FOUND');
   });
+
+  /** One emulator running, listed by its serial; stopped, by its AVD's name alone. */
+  class Emulators implements VirtualDevices {
+    log: string[] = [];
+    all: Startable[] = [
+      { id: 'emulator-5682', name: 'Pixel_34', state: 'running', serial: 'emulator-5682' },
+    ];
+    readonly kind = 'emulator';
+    readonly platform = 'android';
+    startable = () => Promise.resolve(this.all);
+    shutdown = (id: string) => {
+      this.log.push(`shutdown ${id}`);
+      this.all = this.all.map((d) =>
+        d.id === id ? { id: d.name, name: d.name, state: 'stopped' } : d,
+      );
+      return Promise.resolve();
+    };
+    boot = (id: string, ranAs?: string) => {
+      this.log.push(`boot ${id} as ${ranAs ?? 'any'}`);
+      const serial = ranAs ?? 'emulator-5554';
+      this.all = this.all.map((d) =>
+        d.id === id ? { id: serial, name: d.name, state: 'running', serial } : d,
+      );
+      return Promise.resolve(serial);
+    };
+  }
+
+  it('shuts down and boots an emulator allowed by its serial or its name alike, and it comes back as the serial it ran as', async () => {
+    for (const devices of [/^emulator-5682$/, /^Pixel_34$/])
+      for (const again of ['emulator-5682', 'Pixel_34']) {
+        const fleet = new Emulators();
+        const { call } = await connect(new FakeDevice(), { virtual: fleet, policy: { devices } });
+        expect((await call('simulator', { action: 'shutdown', name: 'emulator-5682' })).error).toBe(
+          false,
+        );
+        const up = await call('simulator', { action: 'boot', name: again });
+        expect(up.data.serial, `${String(devices)} ${again}`).toBe('emulator-5682');
+        expect(fleet.log).toEqual(['shutdown emulator-5682', 'boot Pixel_34 as emulator-5682']);
+      }
+  });
+
+  it('refuses a shutdown that boot would refuse, and leaves the device on', async () => {
+    const fleet = new Emulators();
+    const { call } = await connect(new FakeDevice(), {
+      virtual: fleet,
+      policy: { devices: /^emulator-5554$/ },
+    });
+    const denied = await call('simulator', { action: 'shutdown', name: 'emulator-5682' });
+    expect(denied.data.code).toBe('POLICY_DENIED');
+    expect(denied.data.hint).toContain('emulator-5682, Pixel_34');
+    const other = new Emulators();
+    other.all = other.all.map((d) => ({ ...d, bootable: false }));
+    const lost = await connect(new FakeDevice(), { virtual: other });
+    expect(
+      (await lost.call('simulator', { action: 'shutdown', name: 'emulator-5682' })).data.code,
+    ).toBe('NOT_FOUND');
+    expect([...fleet.log, ...other.log]).toEqual([]);
+  });
 });
 
 describe('device conditions', () => {

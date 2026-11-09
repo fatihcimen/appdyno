@@ -262,6 +262,8 @@ With no device selected and more than one this server may drive, a call that nee
 `simulator` boots and shuts down simulators and emulators, on request only. With no name, shutdown
 touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulator's default flags, and `APPDYNO_EMULATOR_FIRST_PORT` is where the search for a free port starts.
 
+`--allow-devices` takes a simulator or emulator here by its id, its serial or its name, as `name` does, so one allowed for `shutdown` is allowed for the `boot` after it. A stopped emulator has no serial of its own: it answers to the one it ran as when this tool shut it down, and comes back on that port while it is free. A `shutdown` that the `boot` after it would refuse is refused first, and the device stays on.
+
 ## What an action answers
 
 An action answers with the settled screen. `settled` means the screen was still for the window.

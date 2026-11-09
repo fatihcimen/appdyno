@@ -26,6 +26,18 @@ const firstPort = () => Number(process.env.APPDYNO_EMULATOR_FIRST_PORT ?? 5554);
 
 const LAST_PORT = 5680;
 
+/**
+ * The console port an emulator starts on: the one it ran as, so that the serial an allow list names comes back, else the
+ * first free one. shortcut: one taken since it stopped gives it another serial, which boot's answer names.
+ */
+export function portFor(taken: Set<string>, ranAs?: string) {
+  const was = Number(/^emulator-(\d+)$/.exec(ranAs ?? '')?.[1]);
+  if (Number.isInteger(was) && !taken.has(`emulator-${was}`)) return was;
+  let port = firstPort();
+  while (taken.has(`emulator-${port}`) && port < LAST_PORT) port += 2;
+  return port;
+}
+
 /** A port nothing here listens on now; the emulator takes it a moment later. */
 const freePort = () =>
   new Promise<number>((resolve, reject) => {
@@ -150,6 +162,7 @@ export class AndroidEmulators implements VirtualDevices {
       ...withModel(avd),
       state: 'running' as const,
       serial,
+      ...(!names.includes(avd) && { bootable: false as const }),
     }));
     const idle = names
       .filter((n) => ![...running.values()].includes(n))
@@ -157,11 +170,9 @@ export class AndroidEmulators implements VirtualDevices {
     return [...up, ...idle];
   }
 
-  async boot(id: string): Promise<string> {
+  async boot(id: string, ranAs?: string): Promise<string> {
     if (id.startsWith('emulator-')) return id;
-    const taken = new Set((await this.adb.devices()).map((d) => d.serial));
-    let port = firstPort();
-    while (taken.has(`emulator-${port}`) && port < LAST_PORT) port += 2;
+    const port = portFor(new Set((await this.adb.devices()).map((d) => d.serial)), ranAs);
     const serial = `emulator-${port}`;
     // APPDYNO_EMULATOR_ARGS: for instance -no-window on a machine with no screen to spare
     const extra = process.env.APPDYNO_EMULATOR_ARGS?.split(/\s+/).filter(Boolean) ?? [

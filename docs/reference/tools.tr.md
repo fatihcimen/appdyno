@@ -262,6 +262,8 @@ Seçili bir cihaz yokken bu sunucunun sürebileceği birden fazla cihaz varsa, c
 `simulator` simülatörleri ve emülatörleri yalnızca istek üzerine başlatır ve kapatır. Ad verilmezse kapatma
 yalnızca bu aracın başlattıklarına dokunur. `APPDYNO_EMULATOR_ARGS` emülatörün varsayılan bayraklarının yerini alır, `APPDYNO_EMULATOR_FIRST_PORT` da boş bir port aramasının başladığı yerdir.
 
+`--allow-devices` burada bir simülatörü ya da emülatörü kimliğiyle, seri numarasıyla ya da adıyla alır, `name` gibi; böylece `shutdown` için izin verilene ondan sonraki `boot` için de izin verilir. Durmuş bir emülatörün kendi seri numarası yoktur: bu araç onu kapattığında çalıştığı seri numarasıyla anılır ve o port boşken o porttan geri gelir. Ondan sonraki `boot`'un reddedeceği bir `shutdown` önce reddedilir ve cihaz açık kalır.
+
 ## Bir işlem ne yanıtlar
 
 Bir işlem durulmuş ekranla yanıt verir. `settled`, ekranın bekleme süresi boyunca durgun kaldığı anlamına gelir.

@@ -36,6 +36,7 @@ screen is visible to the client, so assume the model sees it.
 Limits you set:
 
 - `--allow-devices`, `--allow-apps` and `--allow-urls` restrict where the server acts.
+  `--allow-devices` is matched against a device's serial or UDID. `simulator` `boot` and `shutdown` match a simulator's or emulator's name too, and a stopped emulator by the serial it ran as when this tool shut it down: a device allowed for the one is allowed for the other.
 - Under `--allow-apps`, Settings is an app like any other: `open_link` `settings` opens it, at any page, only with its
   id in the list, `com.apple.Preferences` on iOS and `com.android.settings` on Android. `app install` installs only
   an app the list names, by the id the file holds, read before anything reaches the device; `build_and_run` is refused.

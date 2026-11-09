@@ -40,24 +40,57 @@ function dataFolder(path: string | undefined) {
 
 const Started = z.array(z.string());
 const startedFile = () => join(stateDir(), 'started.json');
+/** The serial each one this tool shut down ran as, by its name: a stopped emulator has none of its own. */
+const RanAs = z.record(z.string(), z.string());
+const ranAsFile = () => join(stateDir(), 'ran-as.json');
 
-/** Every virtual device of every driver, with the driver that has it. */
+type Virtual = { d: Startable; on: VirtualDevices; ranAs?: string };
+
+/** Every virtual device of every driver, with the driver that has it, and the serial a stopped one ran as. */
 async function virtuals(ctx: ServerContext) {
-  const out: { d: Startable; on: VirtualDevices }[] = [];
+  const ranAs = readState(ranAsFile(), RanAs) ?? {};
+  const out: Virtual[] = [];
   for (const p of ctx.providers) {
     const on = p.virtual;
     if (!on) continue;
     const found = await on.startable().catch(() => [] as Startable[]);
-    out.push(...found.map((d) => ({ d, on })));
+    out.push(
+      ...found.map((d) => {
+        const was = d.serial ? undefined : ranAs[d.name];
+        return { d, on, ...(was && { ranAs: was }) };
+      }),
+    );
   }
   return out;
 }
 
+/**
+ * What a virtual device answers to, by `name` and in the allow list alike: its id, its serial (a stopped one's, the one it
+ * ran as), its name, and a simulator's without its runtime.
+ */
+const namesOf = ({ d, ranAs }: Virtual) => [
+  ...new Set(
+    [d.id, d.serial ?? ranAs, d.name, d.name.replace(/ \([^()]*\)$/, '')].filter(
+      (n): n is string => n !== undefined,
+    ),
+  ),
+];
+
+/** As `checkDevice`, by every name it answers to, so that a boot is allowed where the shutdown before it was. */
+function checkVirtual(ctx: ServerContext, x: Virtual) {
+  const { devices } = ctx.policy;
+  const names = namesOf(x);
+  if (devices && !names.some((n) => devices.test(n)))
+    throw new ToolError(
+      `${x.d.name} is not allowed on this server`,
+      'POLICY_DENIED',
+      `${byPerson('by --allow-devices')}: it is matched against ${names.join(', ')}`,
+    );
+}
+
 async function namedVirtual(ctx: ServerContext, id: string) {
   const all = await virtuals(ctx);
-  const hits = all.filter(
-    (x) => x.d.id === id || x.d.serial === id || x.d.name === id || x.d.name.startsWith(`${id} (`),
-  );
+  const hits = all.filter((x) => namesOf(x).includes(id));
   const [only, other] = hits;
   if (only && !other) return only;
   throw new ToolError(
@@ -253,11 +286,12 @@ async function createVirtual(ctx: ServerContext, device: string | undefined) {
 async function bootVirtual(ctx: ServerContext, device: string | undefined) {
   if (!device)
     throw new ToolError('boot needs name: its id or name (action list)', 'INVALID_ARGUMENT');
-  const { d, on } = await namedVirtual(ctx, device);
-  checkDevice(ctx.policy, d.id);
+  const x = await namedVirtual(ctx, device);
+  const { d, on } = x;
+  checkVirtual(ctx, x);
   reportProgress(`starting ${d.name}`);
   const wasStopped = d.state === 'stopped';
-  const serial = await on.boot(d.id);
+  const serial = await on.boot(d.id, x.ranAs);
   // an emulator is listed by its serial once it runs
   if (wasStopped) updateState(startedFile(), Started, (ids = []) => [...ids, d.id, serial]);
   const t = `${d.name} is up as ${serial}`;
@@ -272,14 +306,28 @@ async function shutDownVirtual(ctx: ServerContext, device: string | undefined, m
     const t = 'none to shut down: this tool started none that still runs';
     return reply(t, { done: t });
   }
-  for (const { d, on } of targets) {
-    checkDevice(ctx.policy, d.id);
+  // what a boot would refuse is refused here, all of it before any goes off: none is left off that cannot come back
+  for (const x of targets) {
+    const { d } = x;
+    checkVirtual(ctx, x);
+    if (d.bootable === false)
+      throw new ToolError(
+        `${d.id} runs ${d.name}, which this Mac's emulator does not list, so boot could not start it again: it stays on`,
+        'NOT_FOUND',
+        'start the server with ANDROID_HOME and ANDROID_AVD_HOME naming the SDK and AVD folder it runs from',
+      );
     const h = holder(d.serial ?? d.id);
     if (h && h.pid !== process.pid)
       throw new ToolError(
         `${d.id} is held by pid ${h.pid} (${h.tool}) since ${h.since}`,
         'DEVICE_CLAIMED',
       );
+  }
+  updateState(ranAsFile(), RanAs, (was = {}) => ({
+    ...was,
+    ...Object.fromEntries(targets.flatMap(({ d }) => (d.serial ? [[d.name, d.serial]] : []))),
+  }));
+  for (const { d, on } of targets) {
     reportProgress(`shutting down ${d.name}`);
     await ctx.forget(d.serial ?? d.id);
     await on.shutdown(d.id);
