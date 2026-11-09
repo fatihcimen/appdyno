@@ -30,6 +30,16 @@ static BOOL turning(NSView *view) {
   return NO;
 }
 
+/// The label that says these words, under a view.
+static NSView *labelSaying(NSView *view, NSString *words) {
+  if ([view isKindOfClass:NSTextField.class] && !((NSTextField *)view).editable && [((NSTextField *)view).stringValue isEqual:words]) return view;
+  for (NSView *sub in view.subviews) {
+    NSView *found = labelSaying(sub, words);
+    if (found) return found;
+  }
+  return nil;
+}
+
 @interface MVToolsPane (Picked)
 - (void)appPicked:(NSMenuItem *)item;
 @end
@@ -46,6 +56,11 @@ void MVCheckTools(MVHub *hub) {
   MVCheckRowClick(@"tools: a real click on its row takes the room", hub.placeShown == tools, nil);
   [tools chooseApp:@"" folder:@""];
   [tools fillDevice:nil];
+  NSView *top = hub.room.window.contentView;
+  [top layoutSubtreeIfNeeded];
+  NSView *appName = labelSaying(top, MVWord(@"App")), *appList = MVFindControl(top, @"appList");
+  double nameMid = NSMidY([appName convertRect:appName.bounds toView:nil]), listMid = NSMidY([appList convertRect:appList.bounds toView:nil]);
+  MVCheck(@"tools: App stands on the line of its field", appName && appList && fabs(nameMid - listMid) < 1.5, [NSString stringWithFormat:@"%.1f, %.1f", nameMid, listMid]);
   MVCheck(@"tools: a row says what it lacks where its button stood", says(hub, @"Needs an app") && !MVFindControl(hub.room.window.contentView, @"run:baseline").enabled, wordsOf(hub));
   MVCheck(@"tools: a row that lacks something asks nothing", clicked(hub, @"run:baseline") == nil, nil);
   [hub pokeClick:@"index:4"];

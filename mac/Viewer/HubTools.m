@@ -164,6 +164,8 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   grid.rowSpacing = 8;
   grid.columnSpacing = 12;
   [grid columnAtIndex:0].xPlacement = NSGridCellPlacementTrailing;
+  // a name on the line of its field's words, where the top would stand it above them
+  grid.yPlacement = NSGridCellPlacementCenter;
   [self fillDevice:_shownDevice];
   // its own width: stretched to a column, what it does with the rest differs from one launch to the next
   NSView *held = [NSView new];
