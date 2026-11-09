@@ -44,9 +44,10 @@ export function windowNetwork(
   const ways = async () => {
     const own: NetworkPath[] = (await device.network?.paths().catch(() => [])) ?? [];
     const proxy = await device.settings.get('proxy').catch(() => 'none');
+    // the device's own first: a proxy the Mac or the device goes through is a person's, and is offered last
     const usable = [
-      ...(proxy === 'none' ? [] : (['proxy'] as const)),
       ...own.filter((p) => !p.refused).map((p) => p.via),
+      ...(proxy === 'none' ? [] : (['proxy'] as const)),
     ];
     // a device with no way of its own is an iPhone; one that only counts is an Android
     const needs = usable.some((v) => REQUESTS.includes(v))

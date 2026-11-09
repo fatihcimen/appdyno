@@ -25,8 +25,11 @@ static NSInteger wayAt(NSString *via) {
   return -1;
 }
 
+/// A size in the Mac's language: the system's formatter says bytes in English whatever the window's language.
 static NSString *sized(id bytes) {
-  return [NSByteCountFormatter stringFromByteCount:[bytes longLongValue] countStyle:NSByteCountFormatterCountStyleFile];
+  double n = [bytes doubleValue];
+  if (n < 1000) return MVWord([NSString stringWithFormat:@"%.0f bytes", n]);
+  return n < 1e6 ? [MVDecimal(n / 1e3) stringByAppendingString:@" KB"] : [MVDecimal(n / 1e6) stringByAppendingString:@" MB"];
 }
 
 /// A request's figures, or a count's, joined as a line reads them.

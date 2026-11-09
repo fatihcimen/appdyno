@@ -28,9 +28,10 @@ const LIVE_MS = 180_000;
 const main = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
 const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
 const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
-const FIXTURE = 'dev.appdyno.fixture';
 /** Where the fixture's Fetch stands on a simulator's network screen, under its address field, as a share of the screen. */
-const FETCH_AT = { x: 0.1, y: 0.205 };
+const FETCH_AT = { x: 0.09, y: 0.184 };
+/** Where a simulator's Open stands on the "Open in …?" it asks each time a link from simctl opens the fixture. */
+const OPEN_AT = { x: 0.685, y: 0.5425 };
 
 const until = untilWithin(30_000);
 
@@ -41,6 +42,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   const shots = process.env.APPDYNO_SHOTS;
   let link: ViewerProcess;
   let done: Promise<number>;
+  /** A page for the fixture to fetch, on this Mac, by the port it listens on. */
+  const server = createServer((_, res) => res.end('fetched by the fixture'));
+  let port = 0;
   const live = (stage: string) => told.some((m) => m.op === 'first' && m.stage === stage);
   const quiet = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const picture = async (name: string) => {
@@ -53,6 +57,10 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   };
 
   beforeAll(async () => {
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    ({ port } = server.address() as AddressInfo);
+    // what simctl starts the fixture with, the probe's restart too, as its tools take this process's environment
+    process.env.SIMCTL_CHILD_APPDYNO_FIXTURE_FETCH_URL = `http://127.0.0.1:${port}/order?token=s3cr3t`;
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^(${serials.join('|')})$`) };
     const ctx = new ServerContext(
@@ -89,6 +97,7 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.send({ op: 'quit' });
     await done;
+    server.close();
   }, 60_000);
 
   it(
@@ -187,29 +196,39 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   it(
     'reads the app in front in Logs, Network and Accessibility only while each shows, and stops as it hides',
     async () => {
-      if (!told.some((m) => m.op === 'first')) link.send({ op: 'poke', id: serials[0] });
+      // run by itself, the device is chosen once the hub has listed it
+      for (let tries = 0; !told.some((m) => m.op === 'first') && tries < 18; tries++) {
+        link.send({ op: 'poke', id: serials[0] });
+        await quiet(10_000);
+      }
       await until('a device in the room', () => told.some((m) => m.op === 'first'), LIVE_MS);
       const shown = String(told.findLast((m) => m.op === 'first')?.stage);
       const simulator = /^[0-9A-F]{8}-/.test(shown);
-      // a page to fetch, on this Mac: an emulator reaches it at 10.0.2.2
-      const server = createServer((_, res) => res.end('fetched by the fixture'));
-      await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-      const { port } = server.address() as AddressInfo;
+      // an emulator reaches this Mac at 10.0.2.2
       const page = `http://${simulator ? '127.0.0.1' : '10.0.2.2'}:${port}/order?token=s3cr3t`;
-      const open = (screen: string) =>
-        simulator
-          ? execFileSync('xcrun', ['simctl', 'openurl', shown, `appdyno-fixture://open/${screen}`])
-          : execFileSync('adb', [
-              '-s',
-              shown,
-              'shell',
-              'am',
-              'start',
-              '-a',
-              'android.intent.action.VIEW',
-              '-d',
-              `'appdyno-fixture://open/${screen}'`,
-            ]);
+      const open = async (screen: string) => {
+        if (!simulator) {
+          openOnAndroid(screen);
+          return;
+        }
+        execFileSync('xcrun', ['simctl', 'openurl', shown, `appdyno-fixture://open/${screen}`]);
+        // a simulator asks before a link from outside opens the fixture, and a person answers it in the window
+        await quiet(2_000);
+        link.send({ op: 'poke', stage: shown, ...OPEN_AT });
+        await quiet(1_000);
+      };
+      const openOnAndroid = (screen: string) =>
+        execFileSync('adb', [
+          '-s',
+          shown,
+          'shell',
+          'am',
+          'start',
+          '-a',
+          'android.intent.action.VIEW',
+          '-d',
+          `'appdyno-fixture://open/${screen}'`,
+        ]);
       const ofIt = (op: string, more: (m: Record<string, unknown>) => boolean = () => true) =>
         sent.filter((m) => m.op === op && m.stage === shown && more(m));
       const watching = (pane: string, on: boolean) => () =>
@@ -231,11 +250,24 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
         writeFileSync(file.replace('.png', '.json'), JSON.stringify(parts));
       };
       try {
+        // a crash of the fixture's own, for its reports to hold one of this device's
         if (simulator) {
-          // the probe's restart takes what this process gives simctl: the address stands in the fixture's field
-          process.env.SIMCTL_CHILD_APPDYNO_FIXTURE_FETCH_URL = page;
-          execFileSync('xcrun', ['simctl', 'launch', shown, FIXTURE]);
-        } else open('list');
+          // a simulator's app is a process of this Mac, started here: its report is the system's, as for any crash
+          const started = execFileSync(
+            'xcrun',
+            ['simctl', 'launch', shown, 'dev.appdyno.fixture'],
+            {
+              encoding: 'utf8',
+            },
+          );
+          process.kill(Number(/: (\d+)/.exec(started)?.[1]), 'SIGABRT');
+          await quiet(6_000);
+        } else {
+          await open('list');
+          execFileSync('adb', ['-s', shown, 'shell', 'am', 'crash', 'dev.appdyno.fixture']);
+          await quiet(2_000);
+        }
+        await open('list');
         sent.length = 0;
         told.length = 0;
         tab('tabLogs');
@@ -249,8 +281,15 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
           () => ofIt('logs', (m) => Array.isArray(m.lines) && m.lines.length > 0).length > 0,
           60_000,
         );
-        await until('its crash reports', () => ofIt('crashes').length > 0, 60_000);
+        await until(
+          'its crash reports',
+          () => ofIt('crashes', (m) => Array.isArray(m.reports) && m.reports.length > 0).length > 0,
+          60_000,
+        );
         await looked('logs');
+        tab('logShowCrashes');
+        await looked('crashes');
+        tab('logShowLog');
 
         tab('tabNetwork');
         await until('the log to stop', watching('logs', false), 10_000);
@@ -269,10 +308,10 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
           120_000,
         );
         if (simulator) {
-          open('network');
+          await open('network');
           await quiet(2_000);
           link.send({ op: 'poke', stage: shown, ...FETCH_AT });
-        } else open(`network?url=${encodeURIComponent(page)}`);
+        } else await open(`network?url=${encodeURIComponent(page)}`);
         await quiet(3_000);
         if (!simulator) tab('networkRead');
         await until(
@@ -287,17 +326,24 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
         if (simulator) expect(entries.map((e) => e.url)).toContain(page.replace('s3cr3t', '•••'));
         await looked('network');
 
-        open('a11y');
+        await open('a11y');
         tab('tabAccessibility');
         await until(
           'an audit of the screen shown',
           () => ofIt('audit', (m) => m.state === 'done').length > 0,
-          LIVE_MS,
+          2 * LIVE_MS,
         );
-        const { issues } = ofIt('audit', (m) => m.state === 'done').at(-1) as { issues: unknown[] };
+        const { issues } = ofIt('audit', (m) => m.state === 'done').at(-1) as {
+          issues: { rect?: unknown }[];
+        };
         expect(issues.length).toBeGreaterThan(0);
-        link.send({ op: 'poke', stage: shown, clickOn: 'auditAgain' });
+        // one chosen is marked where it stands on the picture
+        const placed = issues.findIndex((i) => i.rect);
+        if (placed >= 0) link.send({ op: 'poke', stage: shown, issue: String(placed) });
         await looked('accessibility');
+        const audits = ofIt('audit').length;
+        link.send({ op: 'poke', stage: shown, clickOn: 'auditAgain' });
+        await until('another audit', () => ofIt('audit').length > audits, 30_000);
 
         tab('tabPerformance');
         await until('the audit to stop', watching('accessibility', false), 10_000);
@@ -306,15 +352,13 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
         await quiet(8_000);
         expect(reads()).toBe(before);
       } finally {
-        delete process.env.SIMCTL_CHILD_APPDYNO_FIXTURE_FETCH_URL;
         tab('tabNetwork');
         await quiet(1_000);
         if (ofIt('network').at(-1)?.capturing) tab('networkGo');
         await quiet(2_000);
-        server.close();
       }
     },
-    3 * LIVE_MS,
+    5 * LIVE_MS,
   );
 
   it(

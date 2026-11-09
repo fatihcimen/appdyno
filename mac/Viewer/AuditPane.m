@@ -74,6 +74,10 @@ static NSString *stateWords(NSDictionary *m, NSUInteger issues) {
   if (!watching) [self mark:nil];
 }
 
+- (void)choose:(NSString *)key {
+  [_list selectKey:key];
+}
+
 - (void)again:(id)sender {
   MVPaneSend(self, @{@"op": @"control", @"name": @"auditAgain"});
 }
@@ -95,10 +99,9 @@ static NSString *stateWords(NSDictionary *m, NSUInteger issues) {
     if (![issue[@"type"] isEqual:kind]) return;
     MVRow *row = [MVRow new];
     row.title = MVWord([issue[@"message"] description] ?: @"");
-    // the element's own words, else the rule that found it
-    row.detail = [issue[@"rule"] description] ?: @"";
-    if ([issue[@"label"] length]) row.detail = issue[@"label"];
-    row.help = row.title;
+    // the element's own words; the rule that found it is an engine's name, for a look closer
+    row.detail = [issue[@"label"] length] ? issue[@"label"] : @"";
+    row.help = [issue[@"rule"] description];
     row.symbol = issue[@"rect"] ? @"scope" : @"exclamationmark.triangle";
     row.tint = MVOrange();
     row.key = @(at).stringValue;

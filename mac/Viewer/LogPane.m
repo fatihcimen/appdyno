@@ -32,7 +32,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
 }
 
 @implementation MVLogPane {
-  NSSegmentedControl *_section;
+  NSArray<MVAccentButton *> *_sections;
   NSView *_logPart, *_crashPart;
   NSPopUpButton *_level;
   NSSearchField *_search;
@@ -52,14 +52,14 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   if ((self = [super initWithFrame:frame])) {
     _lines = [NSMutableArray array];
     _held = [NSMutableArray array];
-    _section = [NSSegmentedControl segmentedControlWithLabels:@[MVWord(@"Log"), MVWord(@"Crashes")] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(sectionChosen:)];
-    _section.identifier = @"logSection";
-    _section.segmentDistribution = NSSegmentDistributionFillEqually;
-    _section.selectedSegment = 0;
+    // capsules as Flows has them, which hold their strength in a window behind others, as a segmented control does not
+    _sections = @[(MVAccentButton *)MVPlaceButton(@"Log", @"logShowLog", self, @selector(sectionChosen:)), (MVAccentButton *)MVPlaceButton(@"Crashes", @"logShowCrashes", self, @selector(sectionChosen:))];
+    _sections[1].tag = 1;
+    NSStackView *sections = MVPaneRow(_sections);
     _logPart = [self logPart];
     _crashPart = [self crashPart];
-    _crashPart.hidden = YES;
-    MVPaneFill(self, @[_section, _logPart, _crashPart], 10);
+    MVPaneFill(self, @[sections, _logPart, _crashPart], 10);
+    [self showSection:NO];
   }
   return self;
 }
@@ -75,7 +75,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   [_level setContentHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
   _search = [NSSearchField new];
   _search.identifier = @"logSearch";
-  _search.placeholderString = MVWord(@"Search the log");
+  _search.placeholderString = MVWord(@"Search");
   _search.accessibilityLabel = MVWord(@"Search the log");
   _search.target = self;
   _search.action = @selector(searched:);
@@ -86,9 +86,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   _copy.toolTip = MVWord(@"Copies the lines chosen, or all that show");
   NSButton *clear = MVPlaceButton(@"Clear", @"logClear", self, @selector(clear:));
   clear.toolTip = MVWord(@"Empties this view: the device keeps its log");
-  NSStackView *buttons = [NSStackView stackViewWithViews:@[_pause, _copy, clear]];
-  buttons.distribution = NSStackViewDistributionFillEqually;
-  buttons.spacing = 8;
+  NSStackView *buttons = MVPaneRow(@[_pause, _copy, clear]);
   _about = MVPaneNote(@"");
   _about.maximumNumberOfLines = 0;
   _about.hidden = YES;
@@ -133,10 +131,20 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   [self say];
 }
 
-- (void)sectionChosen:(id)sender {
-  BOOL crashes = _section.selectedSegment == 1;
+- (void)sectionChosen:(NSButton *)sender {
+  [self showSection:sender.tag == 1];
+}
+
+/// The log, or the crash reports, the newest of them open to its text.
+- (void)showSection:(BOOL)crashes {
+  for (MVAccentButton *section in _sections) {
+    BOOL chosen = (section.tag == 1) == crashes;
+    section.hue = chosen ? MVAccent() : nil;
+    section.accessibilityValue = chosen ? MVWord(@"selected") : nil;
+  }
   _logPart.hidden = crashes;
   _crashPart.hidden = !crashes;
+  if (crashes && !_crashes.selected && _crashes.rows.count) [_crashes selectKey:_crashes.rows.firstObject.key];
 }
 
 - (void)levelChosen:(id)sender {
@@ -251,7 +259,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   if (!note.length) note = rows.count ? @"Choose a report to read it." : @"No crash reports of this app.";
   _crashNote.stringValue = note;
   NSString *label = rows.count ? [NSString stringWithFormat:@"Crashes: %lu", (unsigned long)rows.count] : @"Crashes";
-  [_section setLabel:MVWord(label) forSegment:1];
+  _sections[1].title = MVWord(label);
   [self showReport:nil];
 }
 

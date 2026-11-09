@@ -55,7 +55,23 @@ NSStackView *MVPaneStack(NSArray<NSView *> *views, CGFloat spacing) {
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;
   stack.alignment = NSLayoutAttributeWidth;
   stack.spacing = spacing;
+  // each takes the column's width, words and a control too, which keep to their own and stand off its edge otherwise; as a
+  // view's own priority, it outlasts a hidden view's leaving the column and coming back
+  for (NSView *view in views) {
+    [view setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    // a row of its own hugs by the stack's priority, not the view's
+    if ([view isKindOfClass:NSStackView.class]) [(NSStackView *)view setHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+  }
   return stack;
+}
+
+NSStackView *MVPaneRow(NSArray<NSView *> *views) {
+  NSStackView *row = [NSStackView stackViewWithViews:views];
+  row.distribution = NSStackViewDistributionFillEqually;
+  row.spacing = 6;
+  // a capsule keeps to its words otherwise, and the row stands short of the pane's edge
+  for (NSView *view in views) [view setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+  return row;
 }
 
 NSStackView *MVPaneFill(NSView *pane, NSArray<NSView *> *views, CGFloat spacing) {

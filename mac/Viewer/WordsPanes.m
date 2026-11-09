@@ -54,6 +54,7 @@ const MVWordRow MVWordTablePanes[] = {
     {"Requests", "İstekler"},
     {"The request chosen", "Seçilen istek"},
     {"%@ packets", "%@ paket"},
+    {"%@ bytes", "%@ bayt"},
     {"Failed: %@", "Başarısız: %@"},
     {"At %@", "Zamanı: %@"},
     {"Its body is in the proxy's export", "Gövdesi vekil sunucunun dışa aktarımında"},
@@ -110,6 +111,12 @@ const MVWordRow MVWordTablePanes[] = {
     {"icon contrast %@:1 (%@ on %@), under %@:1", "simge kontrastı %1$@:1 (%3$@ üzerinde %2$@), %4$@:1 altında"},
     {"%@ of %@ characters are not shown", "%2$@ karakterin %1$@ tanesi görünmüyor"},
     {"%@ controls are read as \"%@\"", "%1$@ denetim \"%2$@\" diye okunuyor"},
+    // what an iPhone's and a simulator's own audit says, in its words
+    {"Contrast failed", "Kontrast yetersiz"},
+    {"Hit area is too small", "Dokunma alanı çok küçük"},
+    {"Element has no description", "Öğenin açıklaması yok"},
+    {"Dynamic Type font sizes are unsupported", "Dinamik Yazı Boyutu desteklenmiyor"},
+    {"Text clipped", "Yazı kırpılmış"},
 };
 
 const size_t MVWordCountPanes = sizeof MVWordTablePanes / sizeof MVWordTablePanes[0];

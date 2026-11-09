@@ -157,6 +157,8 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
 /// Views one under another, each as wide as the column; and the same filling a pane, edge to edge.
 NSStackView *MVPaneStack(NSArray<NSView *> *views, CGFloat spacing);
 NSStackView *MVPaneFill(NSView *pane, NSArray<NSView *> *views, CGFloat spacing);
+/// Buttons side by side, each as wide as the next, across the pane.
+NSStackView *MVPaneRow(NSArray<NSView *> *views);
 /// Tells the parent that a pane, by its name, reads the device or has stopped, at a level where it has one.
 void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nullable level);
 
@@ -181,6 +183,8 @@ void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nulla
 @interface MVAuditPane : NSView <MVWatches>
 /// An issue was chosen, with where it stands on the picture; nil: none.
 @property(nonatomic, copy, nullable) void (^onMark)(NSDictionary *_Nullable rect);
+/// An issue chosen, by its place in what the parent sent, as a person's click chooses it.
+- (void)choose:(NSString *)key;
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
 @property(nonatomic, readonly) NSString *said;
 @end

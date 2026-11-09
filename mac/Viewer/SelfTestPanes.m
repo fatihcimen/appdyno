@@ -80,16 +80,17 @@ static void checkLogs(MVWindow *window) {
   MVCheck(@"logs: Clear empties the view and asks nothing of the device", pane.shownLines.count == 0 && sent.count == 0, sent.description);
   [window.nsWindow layoutIfNeeded];
   MVCheck(@"logs: its controls stand whole in the Inspector", within(level, pane) && within([pane valueForKey:@"_copy"], pane) && within(search, pane), nil);
+  NSView *pause = MVFindControl(pane, @"logPause"), *clear = MVFindControl(pane, @"logClear");
+  NSRect from = [pause convertRect:pause.bounds toView:pane], to = [clear convertRect:clear.bounds toView:pane];
+  MVCheck(@"logs: its buttons take the pane's width, edge to edge", NSMinX(from) < 1 && NSMaxX(to) > NSWidth(pane.bounds) - 1, [NSString stringWithFormat:@"%@ to %@ of %.0f", NSStringFromRect(from), NSStringFromRect(to), NSWidth(pane.bounds)]);
   [pane showCrashes:@{@"op": @"crashes",
                       @"reports": @[@{@"at": @"2026-11-09 12:00", @"reason": @"SIGABRT", @"detail": @"0 libsystem abort\n1 Dev main", @"file": @"/tmp/dev.ips"}]}];
-  NSSegmentedControl *section = [pane valueForKey:@"_section"];
-  section.selectedSegment = 1;
-  [NSApp sendAction:section.action to:section.target from:section];
-  MVPokeListRow([pane valueForKey:@"_crashes"], @"SIGABRT");
+  NSButton *crashes = [pane valueForKey:@"_sections"][1];
+  [window pokeClick:@"logShowCrashes"];
   MVPump(0.1);
   NSTextView *report = [pane valueForKey:@"_report"];
   MVCheck(@"logs: a crash report opens to its text and where the whole of it is", pane.crashRows.count == 1 && [report.string containsString:@"1 Dev main"] && [report.string containsString:@"/tmp/dev.ips"], report.string);
-  MVCheck(@"logs: its section counts the reports", [[section labelForSegment:1] isEqual:MVWord(@"Crashes: 1")], [section labelForSegment:1]);
+  MVCheck(@"logs: its section counts the reports, and says it is the one chosen", [crashes.title isEqual:MVWord(@"Crashes: 1")] && [crashes.accessibilityValue isEqual:MVWord(@"selected")], crashes.title);
   [sent removeAllObjects];
   [window pokeClick:@"tabNetwork"];
   MVPump(0.1);
