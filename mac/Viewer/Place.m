@@ -274,10 +274,16 @@ NSView *MVFieldPlate(NSTextField *field, NSView *_Nullable end) {
 }
 
 NSView *MVEmptyCard(NSString *symbol, NSString *words) {
+  static const double kMarkWide = 22, kMarkGap = 10, kPaneInset = 16;
   MVInk *mark = [[MVInk alloc] initWithSymbol:symbol color:MVQuietColor() size:16];
-  [mark.widthAnchor constraintEqualToConstant:22].active = YES;
-  NSStackView *line = [NSStackView stackViewWithViews:@[mark, MVPaneNote(words)]];
-  line.spacing = 10;
+  [mark.widthAnchor constraintEqualToConstant:kMarkWide].active = YES;
+  NSTextField *note = MVPaneNote(words);
+  // the room beside the mark in a pane of the Inspector: words measured wider than that lose their last line
+  note.preferredMaxLayoutWidth = MVInspectorWidth - 2 * kPaneInset - 2 * kCardInset - kMarkWide - kMarkGap;
+  // and the card as wide as the pane, however short its words
+  [note setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+  NSStackView *line = [NSStackView stackViewWithViews:@[mark, note]];
+  line.spacing = kMarkGap;
   return MVCard(line, 10);
 }
 
