@@ -3,11 +3,14 @@ import { inCall, must, type Device } from '@appdyno/core';
 import { loud, writeDashboard, type Noise } from '@appdyno/perf';
 import { measureHistory, type PastMeasure } from './history.js';
 import {
+  byPerson,
+  CHANGE_HINT,
   claim,
   CONNECTION_HINT,
   JOURNEY_ITERATIONS,
   type JourneyAnswer,
   NO_ANSWER_HINT,
+  NO_APP_HINT,
   opsFor,
   perfLaunchOp,
   perfScrollOp,
@@ -43,8 +46,9 @@ export type WindowMeasures = {
 };
 
 /**
- * What a refusal of a measure says to do, in a person's words: a tool's hint is said to whoever calls it, and here that
- * is a person at a button. A hint not here is not shown, and the refusal's own words stand alone.
+ * What a refusal of a measure, a link, a push or a condition says to do, in a person's words: a tool's hint is said to
+ * whoever calls it, and here that is a person at a button. A hint not here is not shown, and the refusal's own words
+ * stand alone.
  */
 export const PERSON_HINTS = new Map([
   [
@@ -53,6 +57,16 @@ export const PERSON_HINTS = new Map([
   ],
   [NO_ANSWER_HINT, 'The device did not answer. Try again.'],
   [CONNECTION_HINT, 'The device is not connected, or stopped answering. Try once more.'],
+  [CHANGE_HINT, 'Nothing was done. Change it and try again.'],
+  [NO_APP_HINT, "Give the app's id, as the Apps pane lists it."],
+  [
+    byPerson('by --allow-apps'),
+    'The hub was started with a list of allowed apps that leaves this one out.',
+  ],
+  [
+    byPerson('by --allow-urls'),
+    'The hub was started with a list of allowed links that leaves this one out.',
+  ],
 ]);
 
 /** What may stand behind a number, as the dashboard marks it. */

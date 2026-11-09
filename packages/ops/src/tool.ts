@@ -165,6 +165,9 @@ export function inputSchemaOf(op: Pick<Tool, 'input'>) {
 /** What a transport holds a call to: nothing, as `argumentsFor` does it, with a code and a hint. */
 export const ANY_ARGUMENTS = z.looseObject({});
 
+/** What to do about arguments refused, where no limit is to be told. */
+export const CHANGE_HINT = 'change that and call again: nothing was done';
+
 /** What to do about arguments refused: a number past its limit is told the limit, as a client's catalog has none. */
 export const argumentsHint = (issues: z.core.$ZodIssue[], flag = '') =>
   [
@@ -173,7 +176,7 @@ export const argumentsHint = (issues: z.core.$ZodIssue[], flag = '') =>
         ? [`${flag}${x.path.join('.')} is at most ${String(x.maximum)}`]
         : [],
     ),
-    'change that and call again: nothing was done',
+    CHANGE_HINT,
   ].join(': ');
 
 /** A field's object, through an optional. */

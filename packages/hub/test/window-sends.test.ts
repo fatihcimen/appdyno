@@ -64,18 +64,19 @@ describe('what a window sends to its device', () => {
       ]);
   });
 
-  it('says a refusal as the op does, with what to do, and opens nothing', async () => {
+  it("says a refusal as the op does, with what to do in a person's words, and opens nothing", async () => {
     const device = new FakeDevice();
     const { open } = sendsOn(device, { ...DEFAULT_POLICY, urls: /^https:\/\/example\.test\// });
     expect(await open('https://elsewhere.test/')).toMatchObject({
       ok: false,
       text: "this link is not on this server's allow list",
+      hint: 'The hub was started with a list of allowed links that leaves this one out.',
       recent: [],
     });
     expect(await open('ab')).toMatchObject({
       ok: false,
       text: expect.stringContaining('url') as unknown,
-      hint: 'change that and call again: nothing was done',
+      hint: 'Nothing was done. Change it and try again.',
     });
     expect(device.calls.some((c) => c.name === 'openUrl')).toBe(false);
   });
@@ -129,6 +130,16 @@ describe('what a window sends to its device', () => {
     expect(await answer()).toMatchObject({
       ok: false,
       text: 'payload replaces the fields: give one or the other',
+    });
+    // what the op tells an agent to do, where the pane has no words for it, is not shown
+    told.length = 0;
+    sends.onWindow({ op: 'control', name: 'push', args: { app: 'dev.app', type: 'tapped' } });
+    expect(await answer()).toEqual({ op: 'answer', name: 'push', ok: false, text: 'no hand' });
+    told.length = 0;
+    sends.onWindow({ op: 'control', name: 'push', args: { type: 'alert', title: 'Order 42' } });
+    expect(await answer()).toMatchObject({
+      ok: false,
+      hint: "Give the app's id, as the Apps pane lists it.",
     });
     expect(pushed).toHaveLength(1);
   });

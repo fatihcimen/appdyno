@@ -17,20 +17,20 @@ import {
 import { z } from 'zod';
 import { frontApp, type WindowSession } from './controls.js';
 import { spokenDone } from './follow.js';
-import { WINDOW, windowContext } from './measures.js';
+import { PERSON_HINTS, WINDOW, windowContext } from './measures.js';
 import { conditionSends } from './window-conditions.js';
 
 /** A device's links a person opened, newest first. */
 const RECENT = 8;
 const recentLinks = deviceState('links', z.array(z.string()));
 
-/** What an op answered, as a pane shows it: what it did, or why not and what to do, as a command line prints it. */
+/** What an op answered, as a pane shows it: what it did, or why not and what a person can do about it. */
 type Answer = { ok: boolean; text: string; hint?: string };
 
 /**
  * What a window sends to its device by the ops an agent calls, with the same arguments: a link, a push and the device's
- * conditions. Each line of progress goes back as it comes, then what the op did, or its refusal with its hint. A push
- * token goes by no op.
+ * conditions. Each line of progress goes back as it comes, then what the op did, or its refusal with what a person can
+ * do. A push token goes by no op.
  */
 export function windowSends(
   ctx: ServerContext,
@@ -65,12 +65,9 @@ export function windowSends(
       return { answer, data };
     } catch (e) {
       const { message } = e as Error;
-      const hint = e instanceof ToolError ? e.hint : undefined;
-      const answer: Answer = {
-        ok: false,
-        text: message,
-        ...(hint && !message.includes(hint) && { hint }),
-      };
+      // what to do is the person's here: said in their words, or not at all
+      const hint = e instanceof ToolError && e.hint ? PERSON_HINTS.get(e.hint) : undefined;
+      const answer: Answer = { ok: false, text: message, ...(hint && { hint }) };
       return { answer, data: undefined };
     }
   };

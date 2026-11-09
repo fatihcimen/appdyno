@@ -28,7 +28,7 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   MVCheck(@"links: what the op did is said, with no move for a person who asked for less", [pane.answer.said isEqual:@"Opened app://screen/form"] && ![answer.layer animationForKey:@"slide"], pane.answer.said);
   MVHoldStill(NO);
   MVCheck(@"links: the recent links stand under a heading", pane.rows.count == 3 && pane.rows[0].header && [pane.rows[2].key isEqual:@"https://example.test/item/7"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
-  NSString *refusal = @"this link is not on this server's allow list", *hint = @"change that and call again: nothing was done";
+  NSString *refusal = @"this link is not on this server's allow list", *hint = @"The hub was started with a list of allowed links that leaves this one out.";
   [pane fill:@"https://elsewhere.test/" app:nil];
   MVPressReturn(pane.window);
   [pane show:@{@"op": @"answer",
