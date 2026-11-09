@@ -204,6 +204,7 @@ describe("a window's Network pane", () => {
 
   it('says what a person needs where nothing lists requests, and offers a proxy only where one is set', async () => {
     const android = on();
+    Object.assign(android.device, { network: { ...probe(), paths: () => Promise.resolve([]) } });
     const pane = open(android);
     pane.onWindow({ op: 'paneWatch', pane: 'network', on: true });
     await expect
@@ -215,7 +216,6 @@ describe("a window's Network pane", () => {
         needs: ANDROID_NEEDS,
       });
     const iphone = on();
-    Object.assign(iphone.device, { platform: 'ios' });
     iphone.device.settings = {
       get: () => Promise.reject(new Error('an iPhone has no proxy switch this tool can reach')),
       set: () => Promise.reject(new Error('no')),

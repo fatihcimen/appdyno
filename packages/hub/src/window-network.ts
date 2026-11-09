@@ -48,11 +48,12 @@ export function windowNetwork(
       ...(proxy === 'none' ? [] : (['proxy'] as const)),
       ...own.filter((p) => !p.refused).map((p) => p.via),
     ];
+    // a device with no way of its own is an iPhone; one that only counts is an Android
     const needs = usable.some((v) => REQUESTS.includes(v))
       ? undefined
-      : device.platform === 'ios'
-        ? IPHONE_NEEDS
-        : ANDROID_NEEDS;
+      : device.network
+        ? ANDROID_NEEDS
+        : IPHONE_NEEDS;
     return { ways: usable, ...(proxy !== 'none' && { proxy }), ...(needs && { needs }) };
   };
 

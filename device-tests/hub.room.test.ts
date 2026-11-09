@@ -1,4 +1,7 @@
-import { appendFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -16,12 +19,18 @@ import { untilWithin } from './until.js';
 
 /**
  * The hub as one window, on devices we hold (APPDYNO_HUB_DEVICES=A,B; never a default, and only those are listed): its
- * real window kept off every screen, with the device chosen live in it. APPDYNO_SHOTS names a folder for pictures. An
- * iPhone cannot stand here: its stream's thread starts only from built files, and this runs from sources.
+ * real window kept off every screen, with the device chosen live in it. APPDYNO_SHOTS names a folder for pictures,
+ * APPDYNO_HUB_LOOK and APPDYNO_HUB_LANGUAGE how they look. An iPhone cannot stand here: its stream's thread starts only
+ * from built files, and this runs from sources. The panes' check drives the fixture, installed on the device.
  */
 const serials = process.env.APPDYNO_HUB_DEVICES?.split(',') ?? [];
 const LIVE_MS = 180_000;
 const main = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
+const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
+const language = process.env.APPDYNO_HUB_LANGUAGE ?? 'en';
+const FIXTURE = 'dev.appdyno.fixture';
+/** Where the fixture's Fetch stands on a simulator's network screen, under its address field, as a share of the screen. */
+const FETCH_AT = { x: 0.1, y: 0.205 };
 
 const until = untilWithin(30_000);
 
@@ -44,7 +53,6 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   };
 
   beforeAll(async () => {
-    const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^(${serials.join('|')})$`) };
     const ctx = new ServerContext(
@@ -59,7 +67,13 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       behind: true,
       log: measured,
       viewer: () => {
-        link = new ViewerProcess(binary, ['--hub', '--behind', '--appearance', look]);
+        link = new ViewerProcess(binary, [
+          '--hub',
+          '--behind',
+          '--appearance',
+          look,
+          ...(language === 'tr' ? ['-AppleLanguages', '(tr)'] : []),
+        ]);
         link.onMessage((m) => told.push(m));
         const send = link.send.bind(link);
         link.send = (m) => {
@@ -168,6 +182,139 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       expect(said((m) => m.op === 'app' && m.action === 'list')).toMatchObject({ stage: shown });
     },
     LIVE_MS,
+  );
+
+  it(
+    'reads the app in front in Logs, Network and Accessibility only while each shows, and stops as it hides',
+    async () => {
+      if (!told.some((m) => m.op === 'first')) link.send({ op: 'poke', id: serials[0] });
+      await until('a device in the room', () => told.some((m) => m.op === 'first'), LIVE_MS);
+      const shown = String(told.findLast((m) => m.op === 'first')?.stage);
+      const simulator = /^[0-9A-F]{8}-/.test(shown);
+      // a page to fetch, on this Mac: an emulator reaches it at 10.0.2.2
+      const server = createServer((_, res) => res.end('fetched by the fixture'));
+      await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+      const { port } = server.address() as AddressInfo;
+      const page = `http://${simulator ? '127.0.0.1' : '10.0.2.2'}:${port}/order?token=s3cr3t`;
+      const open = (screen: string) =>
+        simulator
+          ? execFileSync('xcrun', ['simctl', 'openurl', shown, `appdyno-fixture://open/${screen}`])
+          : execFileSync('adb', [
+              '-s',
+              shown,
+              'shell',
+              'am',
+              'start',
+              '-a',
+              'android.intent.action.VIEW',
+              '-d',
+              `'appdyno-fixture://open/${screen}'`,
+            ]);
+      const ofIt = (op: string, more: (m: Record<string, unknown>) => boolean = () => true) =>
+        sent.filter((m) => m.op === op && m.stage === shown && more(m));
+      const watching = (pane: string, on: boolean) => () =>
+        told.some(
+          (m) => m.op === 'paneWatch' && m.pane === pane && m.on === on && m.stage === shown,
+        );
+      const tab = (name: string) => link.send({ op: 'poke', stage: shown, clickOn: name });
+      /** The whole window, and every word it shows, for a person to read and a test to search. */
+      const looked = async (name: string) => {
+        if (!shots) return;
+        await quiet(1_500);
+        const file = join(shots, `room-${name}-${look}-${language}.png`);
+        const from = told.length;
+        link.send({ op: 'snapshot', file });
+        await until('a picture', () => told.slice(from).some((m) => m.op === 'snapped'));
+        const { parts } = told.slice(from).find((m) => m.op === 'snapped') as unknown as {
+          parts: unknown;
+        };
+        writeFileSync(file.replace('.png', '.json'), JSON.stringify(parts));
+      };
+      try {
+        if (simulator) {
+          // the probe's restart takes what this process gives simctl: the address stands in the fixture's field
+          process.env.SIMCTL_CHILD_APPDYNO_FIXTURE_FETCH_URL = page;
+          execFileSync('xcrun', ['simctl', 'launch', shown, FIXTURE]);
+        } else open('list');
+        sent.length = 0;
+        told.length = 0;
+        tab('tabLogs');
+        await until(
+          'the log of the fixture',
+          () => ofIt('logs', (m) => m.app !== undefined).length > 0,
+          60_000,
+        );
+        await until(
+          'a line of it',
+          () => ofIt('logs', (m) => Array.isArray(m.lines) && m.lines.length > 0).length > 0,
+          60_000,
+        );
+        await until('its crash reports', () => ofIt('crashes').length > 0, 60_000);
+        await looked('logs');
+
+        tab('tabNetwork');
+        await until('the log to stop', watching('logs', false), 10_000);
+        await until(
+          'the ways it has',
+          () => ofIt('network', (m) => Array.isArray(m.ways)).length > 0,
+          60_000,
+        );
+        const { ways } = ofIt('network', (m) => Array.isArray(m.ways)).at(-1) as { ways: string[] };
+        // a device that lists no requests has a way to count them, and says what a person needs
+        expect(ways).toContain(simulator ? 'probe' : 'bytes');
+        tab('networkGo');
+        await until(
+          'a capture',
+          () => ofIt('network', (m) => typeof m.capturing === 'string').length > 0,
+          120_000,
+        );
+        if (simulator) {
+          open('network');
+          await quiet(2_000);
+          link.send({ op: 'poke', stage: shown, ...FETCH_AT });
+        } else open(`network?url=${encodeURIComponent(page)}`);
+        await quiet(3_000);
+        if (!simulator) tab('networkRead');
+        await until(
+          'what it saw',
+          () => ofIt('network', (m) => Array.isArray(m.entries) && m.entries.length > 0).length > 0,
+          60_000,
+        );
+        const { entries } = ofIt('network', (m) => Array.isArray(m.entries)).at(-1) as {
+          entries: { url?: string; bytes?: number }[];
+        };
+        // redacted as the op redacts it
+        if (simulator) expect(entries.map((e) => e.url)).toContain(page.replace('s3cr3t', '•••'));
+        await looked('network');
+
+        open('a11y');
+        tab('tabAccessibility');
+        await until(
+          'an audit of the screen shown',
+          () => ofIt('audit', (m) => m.state === 'done').length > 0,
+          LIVE_MS,
+        );
+        const { issues } = ofIt('audit', (m) => m.state === 'done').at(-1) as { issues: unknown[] };
+        expect(issues.length).toBeGreaterThan(0);
+        link.send({ op: 'poke', stage: shown, clickOn: 'auditAgain' });
+        await looked('accessibility');
+
+        tab('tabPerformance');
+        await until('the audit to stop', watching('accessibility', false), 10_000);
+        const reads = () => ofIt('logs').length + ofIt('audit').length;
+        const before = reads();
+        await quiet(8_000);
+        expect(reads()).toBe(before);
+      } finally {
+        delete process.env.SIMCTL_CHILD_APPDYNO_FIXTURE_FETCH_URL;
+        tab('tabNetwork');
+        await quiet(1_000);
+        if (ofIt('network').at(-1)?.capturing) tab('networkGo');
+        await quiet(2_000);
+        server.close();
+      }
+    },
+    3 * LIVE_MS,
   );
 
   it(
