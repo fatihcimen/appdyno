@@ -1,4 +1,4 @@
-import { PUSH_TYPES, type PushType } from '@appdyno/core';
+import { PUSH_TYPES } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -74,32 +74,43 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
         const named = app ?? s.appId;
         const pkg = named ? checkApp(ctx.policy, named) : undefined;
         const routes = await s.device.events.pushRoutes(pkg);
-        if (!type) {
+        const given = Object.entries({ title, body, image, data }).flatMap(([k, v]) =>
+          v ? [k] : [],
+        );
+        if (!type && given.length === 0 && !payload) {
           const t = routes
             .map((r) => `${r.type}: ${'route' in r ? r.route : `no: ${r.why}`}`)
             .join('\n');
           return reply(t, { done: t, screen: 'none', warnings: [], types: routes });
         }
-        const route = routes.find((r) => r.type === type);
-        if (!route)
-          throw new ToolError(`type: ${PUSH_TYPES.join(', ')}, not ${type}`, 'INVALID_ARGUMENT');
-        if ('why' in route) {
-          const works = routes.flatMap((r) => ('route' in r ? [r.type] : []));
+        const works = routes.flatMap((r) => ('route' in r ? [r.type] : []));
+        const goHere =
+          works.length > 0
+            ? `type ${works.join(', ')} still ${works.length === 1 ? 'works' : 'work'} here`
+            : undefined;
+        // a title or body is what an alert shows: a message is never dropped for the list of types
+        const kind = type ?? (title || body ? 'alert' : undefined);
+        if (!kind)
           throw new ToolError(
-            route.why,
-            'UNSUPPORTED',
-            works.length > 0
-              ? `type ${works.join(', ')} still ${works.length === 1 ? 'works' : 'work'} here`
-              : undefined,
+            `${[...given, ...(payload ? ['payload'] : [])].join(', ')} with no type: give one, as only a title or body goes as alert by itself`,
+            'INVALID_ARGUMENT',
+            goHere,
           );
-        }
-        const given = Object.entries({ title, body, image, data }).flatMap(([k, v]) =>
-          v ? [k] : [],
-        );
+        const route = routes.find((r) => r.type === kind);
+        if (!route)
+          throw new ToolError(`type: ${PUSH_TYPES.join(', ')}, not ${kind}`, 'INVALID_ARGUMENT');
+        if ('why' in route)
+          throw new ToolError(
+            type
+              ? route.why
+              : `a title or body with no type goes as alert, and alert cannot go here: ${route.why}`,
+            'UNSUPPORTED',
+            goHere,
+          );
         const extra = given.filter((f) => !(route.fields as string[]).includes(f));
         if (extra.length > 0)
           throw new ToolError(
-            `${type} here takes ${route.fields.join(', ') || 'payload alone'}: not ${extra.join(', ')}`,
+            `${kind} here takes ${route.fields.join(', ') || 'payload alone'}: not ${extra.join(', ')}`,
             'INVALID_ARGUMENT',
           );
         if (payload && given.length > 0)
@@ -109,14 +120,14 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
           );
         if (!pkg) throw noApp();
         const said = await s.device.events.push(pkg, {
-          type: type as PushType,
+          type: route.type,
           ...(title && { title }),
           ...(body && { body }),
           ...(image && { image }),
           ...(data && { data }),
           ...(payload && { payload: payloadOf(payload) }),
         });
-        return afterChange(s, said, read);
+        return afterChange(s, type ? said : `${said} (as alert: no type was given)`, read);
       },
     }),
   ];

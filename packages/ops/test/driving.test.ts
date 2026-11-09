@@ -1737,6 +1737,30 @@ describe('device conditions', () => {
     expect((await call('push', { app: 'dev.other' })).data.code).toBe('POLICY_DENIED');
     expect(settings.routesFor).toEqual([]);
   });
+
+  it('sends a title or body with no type as an alert, saying so, and never drops it for the list of types', async () => {
+    const settings = new Settings();
+    const d = Object.assign(new FakeDevice(), { settings, events: settings });
+    const { call } = await connect(d);
+    const sent = await call('push', { title: 'Order 42 shipped', read: 'none' });
+    expect(sent.text).toBe('pushed to dev.app (as alert: no type was given)');
+    expect(settings.pushed).toEqual([['dev.app', { type: 'alert', title: 'Order 42 shipped' }]]);
+    // what no alert takes with no type is refused, naming the types that go
+    const data = await call('push', { data: { k: 'v' } });
+    expect(data.text).toBe(
+      'INVALID_ARGUMENT: data with no type: give one, as only a title or body goes as alert by itself\nhint: type alert, widgets still work here',
+    );
+    expect((await call('push')).text).toBe('alert: by hand\ntapped: no: no hand\nwidgets: by APNs');
+    settings.pushRoutes = () =>
+      Promise.resolve([
+        { type: 'alert', why: 'the app has no Firebase Messaging' },
+        { type: 'background', route: 'by hand', fields: ['data'], template: '{}' },
+      ]);
+    expect((await call('push', { body: 'Order 42 shipped' })).text).toBe(
+      'UNSUPPORTED: a title or body with no type goes as alert, and alert cannot go here: the app has no Firebase Messaging\nhint: type background still works here',
+    );
+    expect(settings.pushed).toHaveLength(1);
+  });
 });
 
 describe('device claims', () => {
