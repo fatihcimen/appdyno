@@ -1,5 +1,8 @@
-import { assert, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { assert, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PROTOCOL } from '@appdyno/protocol';
 import { agentMayGo } from './one-agent.js';
 import {
@@ -752,12 +755,34 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('a second automation server on the device is refused with a typed reason', async () => {
     await d.read(APP); // ours holds the connection
     const out = await d.shell(
-      'cd /data/local/tmp/appdyno && CLASSPATH=$(ls agent-*.apk | head -1) app_process / dev.appdyno.agent.Main ' +
-        '--socket appdyno_conflict --token 0123456789abcdef0123 2>&1; echo exit=$?',
+      'cd /data/local/tmp/appdyno && echo 0123456789abcdef0123 > appdyno_conflict.token && ' +
+        'CLASSPATH=$(ls agent-*.apk | head -1) app_process / dev.appdyno.agent.Main ' +
+        '--socket appdyno_conflict --token-file appdyno_conflict.token 2>&1; echo exit=$?',
       20_000,
     );
     expect(out).toMatch(/AGENT_CONFLICT/);
     expect(out).toMatch(/exit=3/);
+  });
+
+  it('ends the agent of a host gone from another state folder when one starts, and has no token on its command line', async () => {
+    agentMayGo();
+    await d.stopAgent();
+    // its host connected and left, so it let UI automation go, and stays for its idle time
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-other-')));
+    const other = new AndroidDevice(serial);
+    await other.read(APP);
+    other.close();
+    vi.unstubAllEnvs();
+    await new Promise((r) => setTimeout(r, 3_000));
+    await d.read(APP);
+    const { pid } = helloOf(d);
+    const agents = await d.shell(`pgrep -f '^app_process .*[d]ev.appdyno.agent.Main'; true`);
+    expect(agents.trim().split(/\s+/)).toEqual([String(pid)]);
+    assert(pid, "the agent's pid");
+    const line = await d.shell(`tr '\\0' ' ' < /proc/${pid}/cmdline`);
+    expect(line).toMatch(/--token-file \S+\.token/);
+    expect(line).not.toMatch(/--token /);
+    expect((await d.shell('ls /data/local/tmp/appdyno | grep -c token; true')).trim()).toBe('0');
   });
 
   it('takes UI automation over from an agent killed a moment ago, which the system keeps for about 2 s', async () => {

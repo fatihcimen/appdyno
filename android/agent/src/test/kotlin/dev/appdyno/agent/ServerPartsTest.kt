@@ -14,20 +14,29 @@ import java.lang.reflect.InvocationTargetException
 class ServerPartsTest {
     private val token = "0123456789abcdef"
 
+    private val files = mapOf("t" to "$token\n", "short" to "short")
+    private fun parse(vararg args: String) = Options.parse(arrayOf(*args)) { files[it] ?: throw java.io.FileNotFoundException(it) }
+
     @Test
-    fun theOptionsNameASafeSocketAndALongToken() {
-        val o = Options.parse(arrayOf("--socket", "appdyno_1", "--token", token, "--idle-exit-ms", "5"))
+    fun theOptionsNameASafeSocketAndALongTokenInAFile() {
+        val o = parse("--socket", "appdyno_1", "--token-file", "t", "--idle-exit-ms", "5")
         assertEquals("appdyno_1", o.socket)
         assertEquals(token, o.token)
         assertEquals(5L, o.idleExitMs)
-        assertEquals(30 * 60_000L, Options.parse(arrayOf("--socket", "a", "--token", token)).idleExitMs)
+        assertEquals(30 * 60_000L, parse("--socket", "a", "--token-file", "t").idleExitMs)
     }
 
     @Test
     fun badOptionsAreRefused() {
-        for (args in listOf(arrayOf("--token", token), arrayOf("--socket", "a"), arrayOf("--socket", "a b", "--token", token), arrayOf("--socket", "a", "--token", "short"))) {
-            assertThrows(IllegalArgumentException::class.java) { Options.parse(args) }
-        }
+        val bad = listOf(
+            arrayOf("--token-file", "t"),
+            arrayOf("--socket", "a"),
+            arrayOf("--socket", "a b", "--token-file", "t"),
+            arrayOf("--socket", "a", "--token-file", "short"),
+            arrayOf("--socket", "a", "--token-file", "gone"),
+            arrayOf("--socket", "a", "--token", token),
+        )
+        for (args in bad) assertThrows(IllegalArgumentException::class.java) { parse(*args) }
     }
 
     @Test

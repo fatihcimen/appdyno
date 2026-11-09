@@ -203,6 +203,19 @@ export class Adb {
     });
   }
 
+  /** Runs `command` with `input` on its standard input, where no other process reads it, and waits for it to end. */
+  async execIn(serial: string, command: string, input: string): Promise<void> {
+    const { socket } = await this.open(serial, `exec:${command}`);
+    await new Promise<void>((resolve) => {
+      socket.on('close', () => {
+        resolve();
+      });
+      socket.on('error', () => undefined);
+      socket.resume();
+      socket.end(input);
+    });
+  }
+
   /**
    * Starts `command` on the device in the background. The start session is kept open (the device kills
    * a just-started background process when its session ends at once) until the caller closes it, once

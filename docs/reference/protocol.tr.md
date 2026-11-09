@@ -28,7 +28,7 @@ hata kodlarını, düğüm bayraklarını ve sürümü karşılaştırır.
 ## El sıkışma
 
 Bir bağlantıdaki ilk istek, ajanın açılışta aldığı başlatma token'ını taşıyan bir `hello` olmalıdır
-(`--token`, en az 16 karakter, sabit sürede karşılaştırılır). Başka her şey bağlantıyı kapatır.
+(yalnızca shell kullanıcısının okuyabildiği, ajanın okuyunca sildiği `--token-file` dosyasından; en az 16 karakter, sabit sürede karşılaştırılır). Başka her şey bağlantıyı kapatır.
 
 ```json
 { "jsonrpc": "2.0", "id": 1, "method": "hello", "params": { "token": "…", "protocol": 2 } }
@@ -434,7 +434,7 @@ Host ajan APK'sını cihaza gönderir (`/data/local/tmp/appdyno/agent-<sha256 pr
 build orada değilse) ve onu shell kullanıcısı olarak başlatır:
 
 ```
-CLASSPATH=<apk> app_process / dev.appdyno.agent.Main --socket appdyno_<random> --token <random>
+CLASSPATH=<apk> app_process / dev.appdyno.agent.Main --socket appdyno_<random> --token-file /data/local/tmp/appdyno/appdyno_<random>.token
 ```
 
 Soket adı ve token yalnızca kullanıcının okuyabildiği bir durum dosyasında tutulur
@@ -444,7 +444,7 @@ yalnızca komut satırı ajanınkiyse) ve değiştirilir; ancak bu Mac'in başka
 host'ları tek bir ajanı paylaşır, çünkü bir cihazın verebileceği tek bir UI automation bağlantısı vardır ve birbirinin ajanını değiştiren
 iki build, ikisi çalıştığı sürece cihazı birbirinden alırdı; bir güncellemenin bıraktığı da budur: zaten yeni sürüme geçmiş bir istemcinin
 yanında açık bir hub. Bu yüzden ajan kalır, daha yeni host da onu kullanır ve bu kendisine söylenir; bu, ajanın son host'u
-gidene kadar sürer; durum klasöründeki `agent-hosts/<serial>.json` onları listeler ve bir sürecin bitişi onu listeden çıkarır. O ajanın
+gidene kadar sürer; durum klasöründeki `agent-hosts/<serial>.json` onları listeler ve bir sürecin bitişi onu listeden çıkarır. Başlayan bir ajan, bağlı hiçbir host olmadan dinleyen diğer her ajanımızı sonlandırır, çünkü başka bir durum klasöründen gelen bir host geride bir tane bırakır; shell soket tablosunu okuyamadığında hiçbirini sonlandırmaz. O ajanın
 protokolünü konuşamayan bir host, onu kullananın pid'iyle reddedilir. Bir iOS runner'ı da aynı
 kurala uyar ve onu bir seferde tek bir host, durum klasöründeki `ios-<udid>.starting` ile başlatır: bir cihaz tek bir runner'a hizmet eder ve
 runner'ın durumu ancak yanıt verdiğinde yazılır; bu yüzden iki host'un aynı anda başlattığı iki runner telefonu birbirinden aldı ve kaybeden

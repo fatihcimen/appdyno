@@ -28,7 +28,7 @@ A frame larger than 64 MiB, an unknown type or a JSON frame that does not parse 
 ## Handshake
 
 The first request on a connection must be `hello` with the launch token the agent was started with
-(`--token`, at least 16 characters, compared in constant time). Anything else closes the connection.
+(from `--token-file`, a file only the shell user reads, which the agent deletes once read; at least 16 characters, compared in constant time). Anything else closes the connection.
 
 ```json
 { "jsonrpc": "2.0", "id": 1, "method": "hello", "params": { "token": "…", "protocol": 2 } }
@@ -434,7 +434,7 @@ The host pushes the agent APK (`/data/local/tmp/appdyno/agent-<sha256 prefix>.ap
 build is not there) and starts it as the shell user:
 
 ```
-CLASSPATH=<apk> app_process / dev.appdyno.agent.Main --socket appdyno_<random> --token <random>
+CLASSPATH=<apk> app_process / dev.appdyno.agent.Main --socket appdyno_<random> --token-file /data/local/tmp/appdyno/appdyno_<random>.token
 ```
 
 The socket name and token are kept in a state file readable only by the user
@@ -444,7 +444,7 @@ only when its command line is the agent's) and replaced, unless another live pro
 of a device share one agent, as a device has one UI automation connection to give, and two builds replacing each other's
 agent would take the device from each other for as long as both run, which is what an update leaves: a hub open
 beside a client that has already moved on. So the agent stays, and the newer host uses it and is told, until its last host
-has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. A host
+has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. An agent that starts ends every other agent of ours that listens with no host connected, as a host from another state folder leaves one; where the shell cannot read the table of sockets, it ends none. A host
 that cannot speak that agent's protocol is refused with the pid of the one that uses it. An iOS runner keeps to the same
 rule, and one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its
 state is written only once it answers, so two runners that two hosts started at once took the phone from each other and the one that lost heard

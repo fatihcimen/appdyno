@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
@@ -54,13 +55,35 @@ describe('an agent that holds a device and that this host has no state of', () =
         if (command.startsWith('pgrep')) return Promise.resolve('1234\n');
         return Promise.resolve('');
       },
-      startDetached: () => Promise.resolve({ close: () => undefined }),
+      execIn: (_: string, command: string, input: string) => {
+        ran.push(`${command} <<< ${input}`);
+        return Promise.resolve();
+      },
+      startDetached: (_: string, command: string) => {
+        ran.push(command);
+        return Promise.resolve({ close: () => undefined });
+      },
       open: () => {
         return Promise.reject(answer);
       },
     } as unknown as Adb;
     return { launcher: new AndroidAgentLauncher(adb, SERIAL), ran };
   };
+
+  it('gives the agent its token in a file only the shell user reads, never on a command line', async () => {
+    const { launcher, ran } = await device('');
+    await launcher.connect().catch(() => undefined);
+    const written = ran.find((c) => c.startsWith('umask 077; cat > '));
+    const token = must(/<<< (\w+)$/.exec(must(written, 'the token written'))?.[1], 'the token');
+    const started = must(
+      ran.find((c) => c.includes('app_process')),
+      'the start',
+    );
+    expect(started).toContain(
+      `--token-file ${must(/cat > (\S+)/.exec(written ?? '')?.[1], 'its file')}`,
+    );
+    expect(ran.filter((c) => c !== written && c.includes(token))).toEqual([]);
+  });
   const killed = (ran: string[]) => ran.filter((c) => c.includes('&& kill 1234'));
 
   it('ends at an agent of another version, which no wait would change', async () => {

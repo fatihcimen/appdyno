@@ -4,7 +4,7 @@ import android.os.Looper
 import kotlin.system.exitProcess
 
 /**
- * Entry point of `app_process / dev.appdyno.agent.Main --socket <name> --token <secret>`, run as the
+ * Entry point of `app_process / dev.appdyno.agent.Main --socket <name> --token-file <path>`, run as the
  * shell user with this APK as its class path. Exit codes: 2 bad arguments, 3 the automation connection
  * could not be opened (the reason on stderr, starting with the error code).
  */
@@ -18,6 +18,7 @@ object Main {
             System.err.println("INVALID_ARGUMENT: ${e.message}")
             exitProcess(2)
         }
+        Strays.end()
         Platform.exemptHiddenApis()
         if (Looper.getMainLooper() == null) Looper.prepareMainLooper()
         val automation = try {

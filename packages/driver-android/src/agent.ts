@@ -166,10 +166,13 @@ export class AndroidAgentLauncher {
     const socket = `appdyno_${randomBytes(8).toString('hex')}`;
     const token = randomBytes(24).toString('hex');
     const log = `${REMOTE_DIR}/agent.log`;
+    // a command line is any process's to read: the token goes in a file only the shell user reads, which the agent deletes
+    const tokenFile = `${REMOTE_DIR}/${socket}.token`;
+    await this.adb.execIn(this.serial, `umask 077; cat > ${tokenFile}`, token);
     const session = await this.adb.startDetached(
       this.serial,
       `cd ${REMOTE_DIR} && CLASSPATH=${shq(remote)} setsid nohup app_process / ${AGENT_MAIN} ` +
-        `--socket ${socket} --token ${token} > ${log} 2>&1 < /dev/null &`,
+        `--socket ${socket} --token-file ${tokenFile} > ${log} 2>&1 < /dev/null &`,
       START_MS + 2_000,
     );
     try {
