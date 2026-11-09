@@ -1,9 +1,10 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
+import { must } from '@appdyno/core';
 import {
   heldTable,
   hitchFrames,
@@ -19,7 +20,7 @@ import {
   traceDigest,
 } from '../src/trace-parse.js';
 import { queryTraceFile } from '../src/trace.js';
-import { noteWatcher } from '../src/trace-processes.js';
+import { childrenNamed, endLeftBehind, noteWatcher } from '../src/trace-processes.js';
 
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
 
@@ -47,6 +48,46 @@ describe("the wait for the trace tool's word that it started", () => {
     const started = Date.now();
     expect(await once(watcher, 'exit')).toEqual([null, 'SIGALRM']);
     expect(Date.now() - started).toBeLessThan(10_000);
+  });
+});
+
+describe('what the trace tool leaves behind', () => {
+  const alive = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // as the tool's DTServiceHub, which launchd holds after the tool ends, for minutes, and for days after a kill
+  it('ends a child its parent left behind when it ended, and no process that is not one of them', async () => {
+    const parent = spawn(process.execPath, [
+      '-e',
+      "require('node:child_process').spawn('/bin/sleep', ['60'], { stdio: 'ignore' }); setTimeout(() => {}, 60_000)",
+    ]);
+    let kids: number[] = [];
+    for (let i = 0; i < 100 && kids.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      kids = await childrenNamed(must(parent.pid, 'the parent'), 'sleep');
+    }
+    expect(kids).toHaveLength(1);
+    const kid = must(kids[0], 'the child');
+    onTestFinished(() => {
+      if (alive(kid)) process.kill(kid);
+    });
+    // a sleep of this process's own, which nobody left behind
+    const own = spawn('/bin/sleep', ['60']);
+    onTestFinished(() => void own.kill());
+    await endLeftBehind([kid, must(own.pid, 'its pid')], 'sleep');
+    expect(alive(kid)).toBe(true);
+    parent.kill('SIGKILL');
+    await once(parent, 'exit');
+    await endLeftBehind([kid, must(own.pid, 'its pid')], 'sleep');
+    for (let i = 0; i < 50 && alive(kid); i++) await new Promise((r) => setTimeout(r, 100));
+    expect(alive(kid)).toBe(false);
+    expect(alive(must(own.pid, 'its pid'))).toBe(true);
   });
 });
 

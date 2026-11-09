@@ -28,7 +28,7 @@ import {
   traceDigest,
 } from './trace-parse.js';
 import { exporting, traceTable } from './trace-read.js';
-import { noteWatcher } from './trace-processes.js';
+import { childrenNamed, endLeftBehind, startWord } from './trace-processes.js';
 import { watchKtraces } from './trace-temp.js';
 
 export { traceDetail, traceTable } from './trace-read.js';
@@ -44,9 +44,9 @@ const CAP_MS = 240_000;
 
 /** How long the tool may take to say it has started before `during` runs without it. */
 const START_MS = 90_000;
-/** What waits for that word ends by itself a little after, whoever is left to end it. */
-const NOTE_CAP_S = START_MS / 1000 + 10;
 const KILL_MS = 30_000;
+/** What the tool starts and does not end: launchd holds it after any end, minutes after one, days after a kill. */
+const HUB = 'DTServiceHub';
 
 /** A recording attached to a process leaves the tool blind to it for a while: 189 and 196 s, measured, on iOS 27.2. */
 const FIND_PROCESS_MS = 240_000;
@@ -140,15 +140,8 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   );
   const temp = await watchKtraces({ spanMs: CAP_MS + KILL_MS });
   const note = `dev.appdyno.trace.${randomBytes(6).toString('hex')}`;
-  const watcher = noteWatcher(note, NOTE_CAP_S);
-  const started = new Promise<void>((resolve) => {
-    // it prints the name when the note comes, and ends
-    watcher.stdout.once('data', () => resolve());
-    watcher.once('exit', () => resolve());
-    watcher.once('error', () => resolve());
-    // a tool that never says: `during` runs anyway, and the result shows what it caught
-    setTimeout(resolve, START_MS).unref();
-  });
+  const word = startWord(note, START_MS);
+  const { started } = word;
   const signal = callSignal();
   const rec = spawn(
     'xcrun',
@@ -181,6 +174,10 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     { env: xcodeEnv(), ...(signal && { signal }) },
   );
   if (rec.pid) temp.follow(rec.pid);
+  const left = new Set<number>();
+  const helpers = async () => {
+    for (const pid of rec.pid ? await childrenNamed(rec.pid, HUB) : []) left.add(pid);
+  };
   let log = '';
   rec.stdout.on('data', (b: Buffer) => (log += String(b)));
   rec.stderr.on('data', (b: Buffer) => (log += String(b)));
@@ -194,6 +191,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   let over = false;
   void started.then(() => {
     if (over) return;
+    void helpers();
     const limit = Math.min(r.seconds * 1000 + STOP_MS, CAP_MS);
     clearTimeout(stop);
     clearTimeout(end);
@@ -203,7 +201,10 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   try {
     const atOnce = await Promise.race([started.then(() => false), exited.then(() => true)]);
     if (r.during && !atOnce) await r.during();
-    if (r.endWithDuring) rec.kill('SIGINT');
+    if (r.endWithDuring) {
+      await helpers();
+      rec.kill('SIGINT');
+    }
     const code = await exited;
     throwIfCancelled('the recording');
     // another tool's recording: the trace it leaves is empty, whatever the exit code says
@@ -231,14 +232,16 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     over = true;
     clearTimeout(stop);
     clearTimeout(end);
-    watcher.kill();
+    word.end();
     // `during` failed with the tool at work: it must end before what it holds can go
     if (rec.exitCode === null && rec.signalCode === null) {
+      await helpers();
       rec.kill('SIGINT');
       end = setTimeout(() => rec.kill('SIGKILL'), KILL_MS);
     }
     await exited;
     clearTimeout(end);
+    await endLeftBehind(left, HUB);
     // behind the result: what wrote the files holds them for some seconds more
     void temp.done().catch(() => undefined);
   }
