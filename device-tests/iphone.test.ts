@@ -184,6 +184,17 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     expect(data.subarray(0, 2).toString('hex')).toBe('ffd8');
   });
 
+  // a runner no app was named to read the home screen app, whose tree is then the switcher's card of the app in front
+  it('reads the app in front when no app was named, as the screen shows it', async () => {
+    await d.stopAgent();
+    await new Devicectl(udid).launch(APP);
+    d = new IosPhoneDevice(udid);
+    const t = await d.tree();
+    expect(t.windows[0]?.pkg).toBe(APP);
+    expect(t.nodes.some((n) => n.id === 'AppSwitcherContentView')).toBe(false);
+    expect(await d.foreground()).toBe(APP);
+  }, 240_000);
+
   it('reconnects to the running runner without starting it again', async () => {
     d.close();
     d = new IosPhoneDevice(udid);

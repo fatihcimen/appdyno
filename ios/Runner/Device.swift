@@ -45,9 +45,22 @@ import XCTest
         target = XCUIApplication(bundleIdentifier: id)
     }
 
-    /// The app on screen: the target when it is in front, else the home screen.
+    /// The app on screen: the target when it is in front, else the app iOS has there, else the home screen. Read in
+    /// place of another app in front, the home screen app is only that app's card in the switcher.
     func front() -> (XCUIApplication, String) {
         if let target, let targetId, target.state == .runningForeground { return (target, targetId) }
-        return (springboard, Device.springboardId)
+        return inFront() ?? (springboard, Device.springboardId)
+    }
+
+    /// The app in front by XCTest's private list, as public XCUI tells only of an app it is named; with an alert the
+    /// home screen app may come along, and the app under it is what is read.
+    private func inFront() -> (XCUIApplication, String)? {
+        guard let client = KeyedSnapshot.ask(XCUIDevice.shared, "accessibilityInterface"),
+              let apps = KeyedSnapshot.ask(client, "activeForegroundApplications") as? [XCUIApplication]
+        else { return nil }
+        for app in apps {
+            if let id = KeyedSnapshot.ask(app, "bundleID") as? String, id != Device.springboardId { return (app, id) }
+        }
+        return nil
     }
 }

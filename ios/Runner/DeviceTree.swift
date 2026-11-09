@@ -131,7 +131,7 @@ extension Device {
                                                 UnsafeMutablePointer<NSError?>?) -> AnyObject?
     private static let selRequest = NSSelectorFromString("requestSnapshotForElement:attributes:parameters:error:")
 
-    private static func ask(_ object: AnyObject, _ name: String) -> AnyObject? {
+    static func ask(_ object: AnyObject, _ name: String) -> AnyObject? {
         let sel = NSSelectorFromString(name)
         return object.responds(to: sel) ? object.perform(sel)?.takeUnretainedValue() : nil
     }
