@@ -779,10 +779,14 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('a second automation server on the device is refused with a typed reason', async () => {
     await d.read(APP); // ours holds the connection
+    // the running agent's own build: a phone keeps every build any appdyno pushed, and the first by name may be an old one
+    const pid = String(helloOf(d).pid);
     const out = await d.shell(
       'cd /data/local/tmp/appdyno && echo 0123456789abcdef0123 > appdyno_conflict.token && ' +
-        'CLASSPATH=$(ls agent-*.apk | head -1) app_process / dev.appdyno.agent.Main ' +
-        '--socket appdyno_conflict --token-file appdyno_conflict.token 2>&1; echo exit=$?',
+        `CLASSPATH=$(tr '\\0' '\\n' < /proc/${pid}/environ | sed -n 's/^CLASSPATH=//p') ` +
+        'app_process / dev.appdyno.agent.Main ' +
+        '--socket appdyno_conflict --token-file appdyno_conflict.token 2>&1; echo exit=$?; ' +
+        'rm -f appdyno_conflict.token',
       20_000,
     );
     expect(out).toMatch(/AGENT_CONFLICT/);
