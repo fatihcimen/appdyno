@@ -4,7 +4,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kControlWide = 132, kChoiceWide = 164, kFromWide = 96, kMark = 6;
+static const double kControlWide = 132, kChoiceWide = 164, kMark = 6;
 
 /// Each row by the op's name for it, under the heading it opens where it opens one.
 static const struct {
@@ -108,17 +108,19 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     _mark.hidden = YES;
     [_mark.widthAnchor constraintEqualToConstant:kMark + 2].active = YES;
     NSArray<NSView *> *ends = [self controlsFor:target];
-    BOOL own = _kind >= MVRowLocation;
+    // what takes more than one control has a line of its own under the label, but a message's sender, on the label's line
+    NSUInteger onLine = _kind < MVRowLocation ? ends.count : _kind == MVRowSms ? 1
+                                                                               : 0;
     NSView *gap = [NSView new];
     [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
     // the mark stands right after the words it marks, and the control at the line's end
-    NSStackView *line = [NSStackView stackViewWithViews:[@[_label, _mark, gap] arrayByAddingObjectsFromArray:own ? @[] : ends]];
+    NSStackView *line = [NSStackView stackViewWithViews:[@[_label, _mark, gap] arrayByAddingObjectsFromArray:[ends subarrayWithRange:NSMakeRange(0, onLine)]]];
     line.spacing = 6;
     _note = MVPaneNote(@"");
     _note.hidden = YES;
     NSMutableArray<NSView *> *parts = [NSMutableArray arrayWithObject:line];
-    if (own) {
-      NSStackView *under = [NSStackView stackViewWithViews:ends];
+    if (onLine < ends.count) {
+      NSStackView *under = [NSStackView stackViewWithViews:[ends subarrayWithRange:NSMakeRange(onLine, ends.count - onLine)]];
       under.spacing = 6;
       [parts addObject:under];
     }
@@ -159,7 +161,7 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     button(@"Call", @"call");
     button(@"End", @"end");
   } else {
-    _from = plated(MVSendField([named stringByAppendingString:@":from"], @"From", @"From", target, @selector(typed:)), kFromWide, views, controls);
+    _from = plated(MVSendField([named stringByAppendingString:@":from"], @"From", @"From", target, @selector(typed:)), kControlWide, views, controls);
     _field = plated(MVSendField(named, @"Message", @"Message", target, @selector(typed:)), 0, views, controls);
     button(@"Send", @"send");
   }
