@@ -37,7 +37,8 @@ Limits you set:
 
 - `--allow-devices`, `--allow-apps` and `--allow-urls` restrict where the server acts.
 - Under `--allow-apps`, Settings is an app like any other: `open_link` `settings` opens it, at any page, only with its
-  id in the list, `com.apple.Preferences` on iOS and `com.android.settings` on Android.
+  id in the list, `com.apple.Preferences` on iOS and `com.android.settings` on Android. `app install` installs only
+  an app the list names, by the id the file holds, read before anything reaches the device; `build_and_run` is refused.
 - `--no-home` blocks the home key.
 - `APPDYNO_SECRETS=a,b` values are never shown back and never put on the clipboard. Logs and crash
   summaries are redacted of them.

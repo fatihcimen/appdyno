@@ -83,7 +83,8 @@ runs a yes, a no, a client that cannot ask and the flag over stdio on a simulato
 data stays on the no and where nothing could ask.
 
 `app install` and `build_and_run` are not among them: neither removes an app first, and on a simulator a file the
-fixture kept was still there after its install over itself.
+fixture kept was still there after its install over itself. Under `--allow-apps`, `app install` installs only an app the list
+names, by the id the file holds, read before anything reaches the device, and refuses another, naming it; `build_and_run` is refused, as what a project builds is not known before it is built.
 
 ## What each platform can do
 

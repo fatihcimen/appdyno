@@ -37,7 +37,8 @@ Sizin koyduğunuz sınırlar:
 
 - `--allow-devices`, `--allow-apps` ve `--allow-urls` sunucunun nerede iş yapacağını sınırlar.
 - `--allow-apps` ile Ayarlar da her uygulama gibidir: `open_link` `settings` onu, hangi sayfada olursa olsun, yalnızca
-  kimliği listedeyken açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`.
+  kimliği listedeyken açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`. `app install` yalnızca
+  listenin adlandırdığı bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar; `build_and_run` reddedilir.
 - `--no-home` ana ekran tuşunu engeller.
 - `APPDYNO_SECRETS=a,b` değerleri hiçbir zaman geri gösterilmez ve panoya konmaz. Loglardan ve çökme
   özetlerinden bu değerler çıkarılır.
