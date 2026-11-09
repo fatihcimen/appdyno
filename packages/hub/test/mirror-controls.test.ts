@@ -500,6 +500,56 @@ describe("a window's measures", () => {
     }
   });
 
+  it('tell the pane of the app in front as it changes, where the measures ask each turn', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      const foreground = vi.fn(() => Promise.resolve('dev.app'));
+      // the numbers are not what this is about: each read says it has none
+      const measure = new Proxy(
+        { slowReads: [] },
+        {
+          get: (t, k) =>
+            k === 'slowReads' ? t.slowReads : () => Promise.reject(new Error('none')),
+        },
+      );
+      const { controls, told, measures } = fixture('android', {
+        measure,
+        apps: {
+          listApps: () =>
+            Promise.resolve([
+              { id: 'dev.app', name: 'App' },
+              { id: 'dev.other', name: 'Other' },
+            ]),
+        },
+        foreground,
+      } as unknown as Partial<Device>);
+      const results = () => told.filter((m) => m.op === 'results');
+      controls.onWindow({ op: 'perfWatch', on: true });
+      await vi.waitFor(
+        () => expect(results()).toEqual([{ op: 'results', results: [], app: 'App' }]),
+        WAIT,
+      );
+      foreground.mockResolvedValue('dev.other');
+      vi.advanceTimersByTime(5_000);
+      await vi.waitFor(() => expect(results().at(-1)).toMatchObject({ app: 'Other' }), WAIT);
+      expect(measures.history).toHaveBeenLastCalledWith('dev.other');
+      // what is the system's has no name: the pane asks for an app again
+      foreground.mockResolvedValue('com.android.launcher');
+      vi.advanceTimersByTime(5_000);
+      await vi.waitFor(
+        () => expect(results().at(-1)).toEqual({ op: 'results', results: [] }),
+        WAIT,
+      );
+      controls.onWindow({ op: 'perfWatch', on: false });
+      await controls.end();
+      foreground.mockClear();
+      vi.advanceTimersByTime(20_000);
+      expect(foreground).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('open the page of every kept run', async () => {
     const { controls, measures } = fixture('ios');
     controls.onWindow({ op: 'control', name: 'dashboard' });

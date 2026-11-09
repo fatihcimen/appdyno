@@ -106,6 +106,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
 @implementation MVPerfPane {
   NSMutableArray<MVTrend *> *_trends;
   NSTextField *_sentence, *_app;
+  NSString *_shownApp;
   NSView *_slack, *_none, *_resultsCard;
   NSArray<NSButton *> *_measures;
   NSMutableArray<NSDictionary *> *_kept;
@@ -248,12 +249,14 @@ static MVRow *rowOfResult(NSDictionary *result) {
 /// What was measured here before, newest first: what is kept on the Mac stands in for this session's own lines of the same.
 - (void)showHistory:(NSDictionary *)message {
   _past = [message[@"results"] isKindOfClass:NSArray.class] ? message[@"results"] : @[];
+  NSString *app = [message[@"app"] length] ? message[@"app"] : nil;
+  // what was measured of the app before stays with it: another app in front starts from its own
+  if (!(app == _shownApp || [app isEqual:_shownApp])) [_kept removeAllObjects];
+  _shownApp = app;
   // a kept line stands in for this session's own, and none kept takes nothing away
   if (_past.count) [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"ok != YES"]];
-  if ([message[@"app"] length]) {
-    _app.stringValue = [NSString stringWithFormat:@"A measure restarts %@.", message[@"app"]];
-    MVNoteFrontApp(message[@"app"]);
-  }
+  _app.stringValue = app ? [NSString stringWithFormat:@"A measure restarts %@.", app] : @"Open an app, then measure it. It restarts.";
+  if (app) MVNoteFrontApp(app);
   [self listResults];
   // only a measure just made is news: a window opening on an old regression has nothing to announce
   if (_measured && [_past.firstObject[@"verdict"] isEqual:@"regression"]) {

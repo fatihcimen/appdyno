@@ -208,17 +208,23 @@ export function windowControls(
       own ? front : undefined,
     );
     void tellHistory(front).catch(() => undefined);
-    const looking = own ? setInterval(() => void lookAgain(front), APP_LOOK_MS) : undefined;
+    // a person moves on, and the numbers go with them: a device's own source starts again on the new app, and the
+    // pane's measures and results follow either way
+    const looking = setInterval(() => {
+      void inFront()
+        .catch(() => front)
+        .then((now) => {
+          if (now === front || !stopPerf) return;
+          if (own) return turnReadings();
+          front = now;
+          return tellHistory(now);
+        })
+        .catch(() => undefined);
+    }, APP_LOOK_MS);
     stopPerf = () => {
       clearInterval(looking);
       return stop();
     };
-  };
-
-  /** A person moves on, and the numbers go with them. */
-  const lookAgain = async (front: string | undefined) => {
-    const now = await inFront().catch(() => front);
-    if (now !== front && stopPerf) await turnReadings();
   };
 
   /** One at a time: a window quickly closed must not leave a source that started late running. */
@@ -226,14 +232,16 @@ export function windowControls(
 
   const tellMeasured = (m: Record<string, unknown>) => session().tell({ op: 'measured', ...m });
 
-  /** What was measured here before, with the app's own name: a person never reads its id. */
+  /**
+   * What was measured here before, with the app's own name: a person never reads its id. What is not an app of theirs
+   * has no name, and the pane goes back to asking for one.
+   */
   const tellHistory = async (app: string | undefined) => {
-    if (!app) return;
-    const known = await device.apps.listApps(false).catch(() => []);
+    const known = app ? await device.apps.listApps(false).catch(() => []) : [];
     const name = known.find((a) => a.id === app)?.name;
     session().tell({
       op: 'results',
-      results: await measures.history(app),
+      results: app ? await measures.history(app) : [],
       ...(name && { app: name }),
     });
   };

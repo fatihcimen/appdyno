@@ -117,6 +117,12 @@ static void checkMeasures(void) {
                        @"detail": @"3 rounds"}];
   MVCheck(@"performance: that a measure ran is no verdict, and what its tool found is marked", pane.lastMarked, nil);
   MVCheck(@"performance: a second result reaches the list, not only its rows", ((NSTableView *)((MVList *)[pane valueForKey:@"_results"]).documentView).numberOfRows == 2, nil);
+  NSTextField *app = [pane valueForKey:@"_app"];
+  [pane showHistory:@{@"results": @[], @"app": @"Fixture"}];
+  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms", @"detail": @"median of 5"}];
+  MVCheck(@"performance: the pane names the app in front, which a measure restarts", [app.stringValue containsString:@"Fixture"] && pane.lastResult.length, app.stringValue);
+  [pane showHistory:@{@"results": @[]}];
+  MVCheck(@"performance: with no app of a person's in front it asks for one, and what was measured of another goes", [app.stringValue hasPrefix:@"Open an app"] && !pane.lastResult.length, app.stringValue);
 }
 
 /// In a window that has been drawn, as a view with no window has no layer to give an animation to.
