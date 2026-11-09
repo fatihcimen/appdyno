@@ -290,8 +290,15 @@ static void checkNoteLeaves(MVHub *hub) {
   [hub show:@{@"devices": @[]}];
 }
 
+/// Where each field and menu of a view ends on the right, in its window.
+static void addEdges(NSView *view, NSMutableSet<NSNumber *> *edges) {
+  BOOL field = [view isKindOfClass:NSTextField.class] && ((NSTextField *)view).editable;
+  if (field || [view isKindOfClass:NSPopUpButton.class]) [edges addObject:@(round(NSMaxX([view convertRect:view.bounds toView:nil])))];
+  for (NSView *sub in view.subviews) addEdges(sub, edges);
+}
+
 static void checkWays(MVHub *hub) {
-  NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17", @"id": @"m"}],
+  NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17 Pro Max with a long name", @"id": @"m"}],
                           @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]};
   NSDictionary *choices = @{@"simulator": kinds, @"emulator": kinds};
   [hub show:@{@"devices": @[],
@@ -318,6 +325,10 @@ static void checkWays(MVHub *hub) {
   [hub pokeClick:@"newSimulator"];
   MVPump(0.3);
   MVCheck(@"started: New Simulator asks what to make", window.attachedSheet != nil, nil);
+  NSMutableSet<NSNumber *> *edges = [NSMutableSet set];
+  [window.attachedSheet.contentView layoutSubtreeIfNeeded];
+  addEdges(window.attachedSheet.contentView, edges);
+  MVCheck(@"started: its name, model and system end on one edge", edges.count == 1, edges.description);
   if (window.attachedSheet) [window endSheet:window.attachedSheet];
   MVPump(0.3);
   [hub pokeClick:@"newEmulator"];

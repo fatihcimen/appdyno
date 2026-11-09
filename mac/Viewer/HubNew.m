@@ -61,6 +61,8 @@ NSString *MVSystemName(NSDictionary *row) {
   // a caption on the line its control's words stand on, as a form of the system's has it
   grid.rowAlignment = NSGridRowAlignmentFirstBaseline;
   [grid columnAtIndex:0].xPlacement = NSGridCellPlacementTrailing;
+  // one edge for the field and both menus, as wide as the widest of them
+  [grid columnAtIndex:1].xPlacement = NSGridCellPlacementFill;
   NSButton *cancel = [NSButton buttonWithTitle:MVWord(@"Cancel") target:self action:@selector(cancel:)];
   cancel.keyEquivalent = @"\e";
   NSButton *create = [NSButton buttonWithTitle:MVWord(@"Create") target:self action:@selector(create:)];
@@ -78,7 +80,7 @@ NSString *MVSystemName(NSDictionary *row) {
   stack.spacing = 16;
   stack.edgeInsets = NSEdgeInsetsMake(20, 20, 20, 20);
   [buttons.trailingAnchor constraintEqualToAnchor:grid.trailingAnchor].active = YES;
-  [_name.widthAnchor constraintEqualToConstant:260].active = YES;
+  [_name.widthAnchor constraintGreaterThanOrEqualToConstant:260].active = YES;
   _sheet = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 380, 220) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
   _sheet.contentView = stack;
   // as tall as its rows: room left over would stand between two of them
