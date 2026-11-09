@@ -65,11 +65,12 @@ function appCheck(s: Session, screen: Screen) {
     return `\nno words in the tree, and none from the picture: ${s.pictureFailed}`;
   const person = s.device.platformScreen.personPrompt(screen.tree, screen.elements);
   if (person) return needsPerson(person);
+  // any the system shows over the app, a permission's or an app's crash ("keeps stopping"), by its words and buttons
+  const asks = s.device.platformScreen.systemAlert(screen.tree, screen.elements);
+  if (asks) return `\n${systemAsks(asks)}`;
   // an iOS alert of two buttons has an allow by its place, the one a link's "Open in …?" asks with too
-  if (s.device.platformScreen.alertButton(screen.elements, 'allow')) {
-    const asks = s.device.platformScreen.systemAlert(screen.tree, screen.elements);
-    return `\n${asks ? systemAsks(asks) : 'a system alert is open: answer it with alert'}`;
-  }
+  if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
+    return '\na system alert is open: answer it with alert';
   if (!s.appId || !screen.foreground || screen.foreground === s.appId || s.leftApp) return '';
   return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
 }

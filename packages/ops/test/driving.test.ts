@@ -1144,6 +1144,20 @@ describe('system alerts', () => {
     expect((await call('alert')).text).toContain('no system alert');
   });
 
+  it("says in the screen's answer that an app's crash dialog asks, by its words and buttons", async () => {
+    const d = new WithDialog();
+    // as an API 34 emulator reads it: the system's window, the app's own gone from behind it
+    d.add = dialog('android', 3);
+    const { call } = await connect(d);
+    const r = await call('screen');
+    expect(r.text).toContain(
+      '\nthe system asks: Pixel keeps stopping (Close app, App info): answer it with alert',
+    );
+    expect(r.data.warnings).toEqual([
+      'the system asks: Pixel keeps stopping (Close app, App info): answer it with alert',
+    ]);
+  });
+
   it('says of a link the system asks about first that nothing opened yet, and how to answer', async () => {
     const d = new WithDialog();
     const { call } = await connect(d);

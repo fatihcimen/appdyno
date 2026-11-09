@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Ekranı okuyan her yanıt, üstündeki herhangi bir sistem uyarısını, bir Android uygulamasının çökme penceresi de dahil, kendi sözleri ve düğmeleriyle adlandırır ve `alert` ile yanıtlanmasını söyler: yalnızca bir izin sorusunu söylüyordu; üstünde "App info" ve "Close app" ile "Calendar has stopped" olan, uygulaması arkasından gitmiş bir ekran bundan hiç söz etmiyordu. Bir API 34 emülatöründe, Calendar ve Clock `am crash` ile çökertilerek çalıştırıldı.
 - `--silent` (`APPDYNO_SILENT=1`) ile çalışan bir sunucu, bir penceredeki `hand_off` bandını da sessiz tutar, ses ve Dock sıçraması olmadan: isteği bunu söyler; onu gösteren, böyle bir bayrakla çalışmayan hub ya da ayna sesi eskisi gibi çalıyordu.
 - `perf_scroll` ortanca takılmasını, her turun kendininkini söylediği gibi, onda bire yuvarlayarak söyler: çift sayıda turun ortancası ikisinin ortalamasıdır ve `98.16499999999999%` diyordu. Ölçülen bir akışın adımları da kare ve bellek ortancalarını böyle söyler.
 - `app` `launch`, uygulamayı başlattığını mı, yoksa çalışan birini yeniden mi başlattığını `launch_app`'in kendi yaptığı için kullandığı sözlerle söyler: ikisine de "launched" diyordu; her platformda da önce çalışan uygulamayı durdurur.
