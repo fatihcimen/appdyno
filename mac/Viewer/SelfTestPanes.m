@@ -210,10 +210,24 @@ static void checkAudit(MVWindow *window) {
   MVCheck(@"audit: hidden, it stops and takes its mark away", [sent.lastObject[@"on"] isEqual:@NO] && marked.lastObject == NSNull.null, [marked description]);
 }
 
+/// w-iphone: Launch listed the apps again, and the app just launched was no longer chosen, so Quit took a second click on it.
+static void checkApps(MVWindow *window) {
+  [window showPane:MVPaneApps];
+  NSArray *apps = @[@{@"id": @"dev.appdyno.fixture", @"name": @"appdyno fixture"}, @{@"id": @"com.apple.Preferences", @"name": @"Settings"}];
+  [window.inspector showApps:@{@"apps": apps}];
+  [window.inspector pokeApp:@"dev.appdyno.fixture"];
+  MVPump(0.2);
+  NSButton *quit = MVFindControl(window.nsWindow.contentView, @"appQuit");
+  MVCheck(@"apps: an app chosen by a real click can be quit", quit.enabled, nil);
+  [window.inspector showApps:@{@"apps": apps, @"note": @"Launched appdyno fixture"}];
+  MVCheck(@"apps: and stays chosen as the list comes again after a launch", quit.enabled, nil);
+}
+
 void MVCheckPanes(void) {
   MVWindow *window = paneWindow(@"panes");
   [window showPane:MVPanePerf];
   MVPump(0.3);
+  checkApps(window);
   checkLogs(window);
   checkNetwork(window);
   checkAudit(window);

@@ -351,6 +351,8 @@ static NSString *ms(id v) {
 }
 
 - (void)filterChanged:(id)sender {
+  // the app chosen stays chosen while it is listed: Launch lists the apps again, and Quit comes next
+  NSString *chosen = _apps.selected.key;
   NSString *needle = _filter.stringValue;
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   for (NSDictionary *app in _appList) {
@@ -367,7 +369,8 @@ static NSString *ms(id v) {
   _apps.rows = rows;
   _apps.hidden = rows.count == 0;
   _noApps.hidden = rows.count > 0;
-  [self enableAppButtons:NO];
+  [_apps selectKey:chosen];
+  [self enableAppButtons:_apps.selected != nil];
 }
 
 - (void)pokeApp:(NSString *)app {
