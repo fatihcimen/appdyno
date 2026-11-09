@@ -69,6 +69,20 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   [(NSView *)[pane valueForKey:@"_recent"] setHidden:NO];
   [pane.window displayIfNeeded];
   MVCheck(@"links: and a row with no line beneath is drawn", [table viewAtColumn:0 row:0 makeIfNecessary:NO] != nil, nil);
+  MVRow *lines = [MVRow new];
+  lines.title = @"No measure";
+  lines.detail = @"step 2 failed: tap id=open_form\nno element matches";
+  [(MVList *)[pane valueForKey:@"_recent"] setRows:@[lines]];
+  [pane.window displayIfNeeded];
+  NSMutableArray<NSString *> *said = [NSMutableArray array];
+  NSMutableArray<NSView *> *under = [NSMutableArray arrayWithObject:[table viewAtColumn:0 row:0 makeIfNecessary:NO] ?: [NSView new]];
+  while (under.count) {
+    NSView *view = under.lastObject;
+    [under removeLastObject];
+    if ([view isKindOfClass:NSTextField.class]) [said addObject:((NSTextField *)view).stringValue];
+    [under addObjectsFromArray:view.subviews];
+  }
+  MVCheck(@"list: a row's line beneath stands on one line, where a second stood over the next row", [said containsObject:@"No measure"] && ![[said componentsJoinedByString:@""] containsString:@"\n"], [said componentsJoinedByString:@"|"]);
   [pane show:@{@"op": @"answer",
                @"name": @"openLink",
                @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];

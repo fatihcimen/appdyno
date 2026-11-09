@@ -445,6 +445,15 @@ describe("a window's measures", () => {
       title: 'No measure',
       detail: 'no text "Send" on the screen',
     });
+    told.length = 0;
+    // a flow's failure as a journey's run gives it: its file, the step, and what the screen held, each a line
+    measures.journey.mockRejectedValueOnce(
+      new Error(
+        '/Users/me/flows/sign in.flow:4: step 2 failed: tap id=open_form\nno element matches id="open_form" after 1500 ms; nearest: @v181 button "Back" 38,84',
+      ),
+    );
+    expect(await controls.journey('sign in.flow')).toBeUndefined();
+    expect(answer(told)).toMatchObject({ detail: 'step 2 failed: tap id=open_form' });
   });
 
   it('take a journey from the window with the file a person chose', async () => {

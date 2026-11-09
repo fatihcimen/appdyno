@@ -217,7 +217,8 @@ static NSString *identityOf(MVRow *row) {
   // a row may have no line beneath, as a note where a list would stand has none: a label of nothing is refused
   NSTextField *title = MVText(row.title ?: @"", MVStyleBody);
   cell.title = title;
-  NSTextField *detail = MVText(row.detail ?: @"", MVStyleSub);
+  // and one line beneath at most: a second, as a tool's failure brings, stood over the next row
+  NSTextField *detail = MVText([row.detail ?: @"" stringByReplacingOccurrencesOfString:@"\n" withString:@" "], MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
   detail.hidden = !row.detail.length;
   NSStackView *lines = [NSStackView stackViewWithViews:@[title, detail]];

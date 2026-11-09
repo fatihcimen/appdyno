@@ -270,7 +270,9 @@ export function windowControls(
       // a refusal says what to do next, which is the person's to do here, in their words
       const { message, hint } = e as Error & { hint?: string };
       const said = hint && PERSON_HINTS.get(hint);
-      tellMeasured({ title: 'No measure', detail: message, ...(said && { hint: said }) });
+      // what failed is the first line: a flow's names its file first, which the person chose, and then what the screen held
+      const detail = (message.split('\n')[0] ?? '').replace(/^.*\.flow:\d+: /, '');
+      tellMeasured({ title: 'No measure', detail, ...(said && { hint: said }) });
       return undefined;
     } finally {
       measuring = false;
