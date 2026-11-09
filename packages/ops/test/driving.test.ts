@@ -859,6 +859,29 @@ describe('gestures, keys, clipboard', () => {
     expect((await locked.call('open_link', { settings: 'about' })).data.code).toBe('POLICY_DENIED');
   });
 
+  it('opens Settings under an app allow list only when Settings is on it, as it is an app of its own', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
+    for (const settings of ['wifi', 'app', 'dev.app']) {
+      const r = await call('open_link', { settings });
+      expect(r.text).toBe(
+        'POLICY_DENIED: Settings is an app of its own, com.android.settings, and not an allowed one (dev.app)\nhint: the person who runs this server allows it by adding com.android.settings to --allow-apps, and no call can',
+      );
+    }
+    // a page this device lacks is a wrong word, never an app
+    const theirs = await call('open_link', { settings: 'game_center' });
+    expect(theirs.data.code).toBe('INVALID_ARGUMENT');
+    expect(theirs.text).toContain("a page of this device's Settings: ");
+    expect((await call('open_link', { settings: 'com.example.other' })).text).toMatch(
+      /^POLICY_DENIED: com\.example\.other is not an allowed app/,
+    );
+    expect(d.calls.filter((c) => c.name === 'openSettings')).toEqual([]);
+    const allowed = await connect(d, { policy: { apps: ['dev.app', 'com.android.settings'] } });
+    expect((await allowed.call('open_link', { settings: 'wifi' })).text).toMatch(
+      /^opened Settings: wifi/,
+    );
+  });
+
   it('holds a drag at its start for as long as it is told', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);

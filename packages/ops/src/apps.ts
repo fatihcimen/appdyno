@@ -1,4 +1,11 @@
-import { fold, INSTALLED_APPS, must, reportProgress, type Screen } from '@appdyno/core';
+import {
+  fold,
+  INSTALLED_APPS,
+  must,
+  reportProgress,
+  SETTINGS_APP,
+  type Screen,
+} from '@appdyno/core';
 import { z } from 'zod';
 import { systemAsks, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -90,14 +97,21 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         byPerson('by starting it without --no-home'),
       );
     const page = s.device.settingsPages.find((p) => p === settings);
-    const app = page
-      ? undefined
-      : checkApp(policy, settings === 'app' ? (s.appId ?? '') : settings);
-    if (!page && !app) throw noApp();
     if (!page && settings !== 'app' && !settings.includes('.'))
       throw new ToolError(
         `settings: an app's id, app, or a page of this device's Settings: ${s.device.settingsPages.join(', ')}`,
         'INVALID_ARGUMENT',
+      );
+    const app = page
+      ? undefined
+      : checkApp(policy, settings === 'app' ? (s.appId ?? '') : settings);
+    if (!page && !app) throw noApp();
+    const settingsApp = SETTINGS_APP[s.device.platform];
+    if (policy.apps.length > 0 && !policy.apps.includes(settingsApp))
+      throw new ToolError(
+        `Settings is an app of its own, ${settingsApp}, and not an allowed one (${policy.apps.join(', ')})`,
+        'POLICY_DENIED',
+        byPerson(`by adding ${settingsApp} to --allow-apps`),
       );
     s.leftApp = true;
     const { row } = await s.device.openSettings(

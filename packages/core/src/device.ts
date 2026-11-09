@@ -37,6 +37,12 @@ export const TRANSITION_MS = 650;
 /** Whether a touch during a slide is lost, as UIKit drops it: Android's agent waits for rest before each action. */
 export const SLIDE_DROPS_TOUCH: Record<Platform, boolean> = { android: false, ios: true };
 
+/** The system's Settings, an app of its own, at whatever page it opens. */
+export const SETTINGS_APP: Record<Platform, string> = {
+  android: 'com.android.settings',
+  ios: 'com.apple.Preferences',
+};
+
 /** Per-command limits (ms); the settle cap is added to an action's. */
 export const TIMEOUTS = {
   hello: 10_000,

@@ -36,6 +36,8 @@ screen is visible to the client, so assume the model sees it.
 Limits you set:
 
 - `--allow-devices`, `--allow-apps` and `--allow-urls` restrict where the server acts.
+- Under `--allow-apps`, Settings is an app like any other: `open_link` `settings` opens it, at any page, only with its
+  id in the list, `com.apple.Preferences` on iOS and `com.android.settings` on Android.
 - `--no-home` blocks the home key.
 - `APPDYNO_SECRETS=a,b` values are never shown back and never put on the clipboard. Logs and crash
   summaries are redacted of them.
