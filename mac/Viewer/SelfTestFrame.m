@@ -119,16 +119,28 @@ static void checkMeasures(void) {
   MVCheck(@"performance: that a measure ran is no verdict, and what its tool found is marked", pane.lastMarked, nil);
   MVCheck(@"performance: a second result reaches the list, not only its rows", ((NSTableView *)((MVList *)[pane valueForKey:@"_results"]).documentView).numberOfRows == 2, nil);
   NSTextField *app = [pane valueForKey:@"_app"];
-  [pane showHistory:@{@"results": @[], @"app": @"Fixture"}];
-  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms", @"detail": @"median of 5"}];
+  [pane showHistory:@{@"results": @[],
+                      @"app": @"Fixture"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"412 ms",
+                       @"detail": @"median of 5"}];
   MVCheck(@"performance: the pane names the app in front, which a measure restarts", [app.stringValue containsString:@"Fixture"] && pane.lastResult.length, app.stringValue);
   [pane showHistory:@{@"results": @[]}];
   MVCheck(@"performance: with no app of a person's in front it asks for one, and what was measured of another goes", [app.stringValue hasPrefix:@"Open an app"] && !pane.lastResult.length, app.stringValue);
   NSArray *before = @[@{@"title": @"Cold launch", @"value": @"400 ms"}];
-  [pane showMeasured:@{@"ok": @YES, @"flagged": @YES, @"kept": @NO, @"title": @"Scroll", @"value": @"too few frames", @"detail": @"1 of 3 rounds"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"flagged": @YES,
+                       @"kept": @NO,
+                       @"title": @"Scroll",
+                       @"value": @"too few frames",
+                       @"detail": @"1 of 3 rounds"}];
   [pane showHistory:@{@"results": before}];
   MVCheck(@"performance: a result the Mac kept no number of stays over what it kept before", [pane.lastResult containsString:@"too few frames"], pane.lastResult);
-  [pane showMeasured:@{@"ok": @YES, @"kept": @YES, @"title": @"Cold launch", @"value": @"412 ms"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"kept": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"412 ms"}];
   [pane showHistory:@{@"results": @[@{@"title": @"Cold launch", @"value": @"412 ms"}, before[0]]}];
   MVCheck(@"performance: one it kept is shown once, as the Mac keeps it", ((NSTableView *)((MVList *)[pane valueForKey:@"_results"]).documentView).numberOfRows == 3, nil);
   NSTextField *hint = [pane valueForKey:@"_hint"];
@@ -175,7 +187,9 @@ static void checkHeldSentence(void) {
   [pane showMeasuring:@"launch 1 of 5"];
   [pane show:@{@"sample": @{@"at": @2, @"fps": @2}}];
   MVCheck(@"performance: while a measure runs the pane holds its sentence, and no figure of before stands as now", [sentence.stringValue isEqual:@"Readings wait while a measure runs"] && [[pane shownFor:@"fps"] isEqual:@"\u2013"], sentence.stringValue);
-  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"412 ms"}];
   [pane show:@{@"sample": @{@"at": @3, @"fps": @0}}];
   MVCheck(@"performance: after it, how long nothing has moved is counted from then", [sentence.stringValue isEqual:@"Nothing moving"], sentence.stringValue);
 }
@@ -200,7 +214,9 @@ static void checkSheetAndCard(void) {
   NSWindow *holder;
   MVPerfPane *pane = newPane();
   NSView *card = resultsCardOf(pane, &holder);
-  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms"}];
+  [pane showMeasured:@{@"ok": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"412 ms"}];
   [holder layoutIfNeeded];
   MVCheck(@"performance: a card of one result is as tall as its row", card.frame.size.height < 80, [NSString stringWithFormat:@"%.0f", card.frame.size.height]);
   MVInspectorSlot *slot = [MVInspectorSlot new];
@@ -213,15 +229,22 @@ static void checkSheetAndCard(void) {
 static void checkRoomPair(void) {
   MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
   [hub show:@{@"devices": @[@{@"id": @"a", @"serial": @"a", @"kind": @"emulator", @"state": @"running", @"name": @"First"},
-                             @{@"id": @"b", @"serial": @"b", @"kind": @"simulator", @"state": @"running", @"name": @"Second"}]}];
+                            @{@"id": @"b", @"serial": @"b", @"kind": @"simulator", @"state": @"running", @"name": @"Second"}]}];
   MVWindow *one = [[MVWindow alloc] initInRoom:hub.room], *two = [[MVWindow alloc] initInRoom:hub.room];
   one.behind = two.behind = YES;
-  [one configure:@{@"title": @"First", @"stage": @"a", @"look": @{}}];
-  [two configure:@{@"title": @"Second", @"stage": @"b", @"look": @{}}];
+  [one configure:@{@"title": @"First",
+                   @"stage": @"a",
+                   @"look": @{}}];
+  [two configure:@{@"title": @"Second",
+                   @"stage": @"b",
+                   @"look": @{}}];
   MVList *list = [hub valueForKey:@"_list"];
   MVCheck(@"room pair: the sidebar chooses the device whose bar is up", [list.selected.key isEqual:@"b"], list.selected.key);
-  [one setPair:@{@"both": @YES, @"with": @"Second"}];
-  [two setPair:@{@"both": @YES, @"with": @"First", @"failing": @"No Add here"}];
+  [one setPair:@{@"both": @YES,
+                 @"with": @"Second"}];
+  [two setPair:@{@"both": @YES,
+                 @"with": @"First",
+                 @"failing": @"No Add here"}];
   NSTextField *first = [one valueForKey:@"_sideName"], *second = [two valueForKey:@"_sideName"];
   MVCheck(@"room pair: each picture says whose it is and where a touch goes", !first.hidden && [first.stringValue isEqual:@"First · To both"], first.stringValue);
   MVCheck(@"room pair: a touch that failed on one says why under it, in red, though the bar is the other's", !second.hidden && [second.stringValue isEqual:@"Second · No Add here"] && ![second.textColor isEqual:first.textColor], second.stringValue);

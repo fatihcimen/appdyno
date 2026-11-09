@@ -39,7 +39,8 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   }
   // the room's bar speaks of one side: each says its own, a failure where the person looks, in red
   NSString *how = _line.failing ?: _line.pairing;
-  _sideName.stringValue = how.length ? [NSString stringWithFormat:@"%@ · %@", _line.name ?: @"", how] : _line.name ?: @"";
+  NSString *name = _line.name ?: @"";
+  _sideName.stringValue = how.length ? [NSString stringWithFormat:@"%@ · %@", name, how] : name;
   _sideName.textColor = _line.failing ? MVRed() : MVInkColor();
   _sideName.frame = NSMakeRect(8, MAX(2, NSMinY(_frame.frame) - 24), _stage.bounds.size.width - 16, 20);
 }

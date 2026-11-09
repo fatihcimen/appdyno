@@ -235,8 +235,8 @@ static NSString *readable(NSString *json) {
 - (void)typeChosen:(nullable id)sender {
   NSDictionary *entry = self.chosen;
   NSString *words = entry[@"route"] ? typeWords(entry[@"type"]) : @"";
-  _how.stringValue = MVWord(words.length ? words : entry[@"route"] ?: entry[@"why"] ?
-                                                                                  : @"");
+  NSString *plain = entry[@"route"] ?: (entry[@"why"] ?: @"");
+  _how.stringValue = MVWord(words.length ? words : plain);
   _how.toolTip = words.length ? entry[@"route"] : nil;
   NSArray *takes = [entry[@"fields"] isKindOfClass:NSArray.class] ? entry[@"fields"] : @[];
   for (int i = 0; i < kFieldCount; i++) [_fields rowAtIndex:i].hidden = ![takes containsObject:kFields[i]];

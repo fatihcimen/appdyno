@@ -52,11 +52,18 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
                @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
   NSArray<NSString *> *titles = [pane.rows valueForKey:@"title"];
   MVCheck(@"links: the links the app opens stand under their own heading, after the recent ones", titles.count == 7 && [titles[3] isEqual:MVWord(@"This app's links")] && [pane.rows.lastObject.detail isEqual:MVWord(@"Verified: opens in the app")], [titles componentsJoinedByString:@"|"]);
-  [pane show:@{@"op": @"answer", @"name": @"openLink", @"suggested": @[@{@"url": @"https://example.test", @"kind": @"domain", @"state": @"legacy_failure"}]}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"openLink",
+               @"suggested": @[@{@"url": @"https://example.test", @"kind": @"domain", @"state": @"legacy_failure"}]}];
   MVCheck(@"links: an App Link that failed verification says so plainly", [pane.rows.lastObject.detail isEqual:MVWord(@"Failed verification: opens in the browser")], pane.rows.lastObject.detail);
-  [pane show:@{@"op": @"answer", @"name": @"openLink", @"suggested": @[], @"linksWhy": @"an iPhone's installed app is not read from here: list the links of its build on a simulator"}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"openLink",
+               @"suggested": @[],
+               @"linksWhy": @"an iPhone's installed app is not read from here: list the links of its build on a simulator"}];
   MVCheck(@"links: a device that cannot tell an app's links says why where they would stand", [pane.rows.lastObject.title hasPrefix:@"An iPhone's installed app"], pane.rows.lastObject.title);
-  [pane show:@{@"op": @"answer", @"name": @"openLink", @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
+  [pane show:@{@"op": @"answer",
+               @"name": @"openLink",
+               @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
   MVPokeListRow([pane valueForKey:@"_recent"], @"https://example.test/order*");
   MVPump(0.2);
   NSTextField *field = [pane valueForKey:@"_field"];
