@@ -404,7 +404,9 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
         const named = symbols?.dsym ? await nameFrames(xml, symbols.dsym) : xml;
         return { trace, profile: parseTimeProfile(named) };
       },
-      () => undefined,
+      // another recording is no reason to sample, which would answer as empty as the trace: it is said
+      (e: unknown) =>
+        e instanceof DeviceError && e.code === 'DEVICE_CLAIMED' ? Promise.reject(e) : undefined,
     );
     if (traced && traced.profile.samples > 0)
       return {

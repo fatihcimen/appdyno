@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { Cannot, cannot, stateDir } from '@appdyno/core';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { Cannot, cannot, deviceStateFile, stateDir, thisOwner } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IosSimulatorPerf } from '../src/perf.js';
@@ -249,6 +250,28 @@ describe('frames on a simulator', () => {
     expect(resets()).toBe(1);
     await perf().frames(APP, { reset: true });
     expect(resets()).toBe(2);
+  });
+});
+
+describe('a CPU profile on a simulator', () => {
+  it('refuses while another recording holds the device, where sample would answer with no samples', async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-profile-')));
+    const udid = 'F7A3E1C2-0000-4000-8000-000000000003';
+    const held = deviceStateFile('traces-recording', udid);
+    mkdirSync(dirname(held), { recursive: true });
+    writeFileSync(held, JSON.stringify(thisOwner('Time Profiler')));
+    // a pid no process has: a sample of it would fail by itself
+    const perf = new IosSimulatorPerf(
+      udid,
+      running(udid, 999999),
+      () => Promise.resolve(true),
+      cannot("XCTest's metrics"),
+    );
+    await expect(perf.cpuProfile(APP, 1_000)).rejects.toMatchObject({
+      code: 'DEVICE_CLAIMED',
+      message: expect.stringContaining('a second would come back empty') as unknown,
+    });
+    vi.unstubAllEnvs();
   });
 });
 
