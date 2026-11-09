@@ -1868,6 +1868,39 @@ describe('device conditions', () => {
     });
   });
 
+  it('puts back what the session changed before its device shuts down, while it still answers, and says so', async () => {
+    const settings = new Settings();
+    const off: string[] = [];
+    const fleet: VirtualDevices = {
+      kind: 'simulator',
+      platform: 'ios',
+      startable: () => Promise.resolve([{ id: 'B', name: 'two', state: 'running', serial: 'B' }]),
+      boot: (id) => Promise.resolve(id),
+      shutdown: (id) => {
+        off.push(`${id} with ${JSON.stringify(settings.values)}`);
+        return Promise.resolve();
+      },
+    };
+    const d = Object.assign(new FakeDevice(), { settings });
+    const { call, ctx } = await connect(d, { virtual: fleet });
+    await ctx.use('B');
+    await call('device_setting', { name: 'dark_mode', value: 'on' });
+    await call('device_setting', { name: 'text_size', value: '1.3' });
+    const r = await call('simulator', { action: 'shutdown', name: 'B' });
+    expect(r.text).toBe(
+      'shut down two: the session on two ended, and what its apps held with it; what the session changed went back first: text_size: 1.0; dark_mode: off',
+    );
+    expect(off).toEqual(['B with {"dark_mode":"no","text_size":"1.0"}']);
+    // what went back is no longer written down: the next session has nothing of it to put back
+    expect(await ctx.end()).toEqual([]);
+    await ctx.use('B');
+    await call('device_setting', { name: 'dark_mode', value: 'on' });
+    settings.failing = true;
+    expect((await call('simulator', { action: 'shutdown', name: 'B' })).text).toMatch(
+      /; could not put back dark_mode \(was no\): broke$/,
+    );
+  });
+
   it("refuses a condition held for another app, as that app's could not be put back", async () => {
     const settings = new Settings();
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));

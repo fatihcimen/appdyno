@@ -250,17 +250,22 @@ export class ServerContext {
     return failed;
   }
 
-  /** Its device is going away: the agent stops first, as a runner left alive would boot a simulator again. */
-  async forget(serial: string) {
+  /**
+   * Its device is going away: what its session changed goes back while the device still answers, as at the session's
+   * end, and its agent stops, as a runner left alive would boot a simulator again. What went back, or could not.
+   */
+  async forget(serial: string): Promise<Taken | undefined> {
     this.warmed.get(serial)?.close();
     this.warmed.delete(serial);
     const s = this.sessions.get(serial);
-    if (!s) return;
+    if (!s) return undefined;
+    const taken = this.defaults.remember ? undefined : await endSession(this, s);
     await s.device.stopAgent().catch(() => undefined);
     s.device.close();
     this.sessions.delete(serial);
     if (this.defaults.claims) release(serial);
     if (this.currentSerial === serial) this.currentSerial = undefined;
+    return taken;
   }
 
   /** The device in use or named, known with nothing opened. */

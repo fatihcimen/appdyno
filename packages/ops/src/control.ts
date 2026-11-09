@@ -341,19 +341,29 @@ async function shutDownVirtual(ctx: ServerContext, device: string | undefined, m
   const selected = targets
     .filter(({ d }) => (d.serial ?? d.id) === ctx.selected)
     .map(({ d }) => d.name);
+  const restored: string[] = [];
+  const failed: string[] = [];
   for (const { d, on } of targets) {
     const loses = selected.includes(d.name)
       ? ': the session on it ends, and what its apps hold'
       : '';
     reportProgress(`shutting down ${d.name}${loses}`);
-    await ctx.forget(d.serial ?? d.id);
+    const back = await ctx.forget(d.serial ?? d.id);
+    restored.push(...(back?.restored ?? []));
+    failed.push(...(back?.failed ?? []));
     await on.shutdown(d.id);
   }
   updateState(startedFile(), Started, (ids = []) =>
     ids.filter((id) => !targets.some((x) => x.d.id === id || x.d.name === id)),
   );
   const lost = selected.join(', ');
-  const t = `shut down ${targets.map((x) => x.d.name).join(', ')}${lost && `: the session on ${lost} ended, and what its apps held with it`}`;
+  const t = [
+    `shut down ${targets.map((x) => x.d.name).join(', ')}${lost && `: the session on ${lost} ended, and what its apps held with it`}`,
+    ...(restored.length > 0
+      ? [`what the session changed went back first: ${restored.join('; ')}`]
+      : []),
+    ...(failed.length > 0 ? [`could not put back ${failed.join('; ')}`] : []),
+  ].join('; ');
   return reply(t, { done: t });
 }
 
