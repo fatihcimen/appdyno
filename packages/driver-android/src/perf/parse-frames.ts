@@ -110,6 +110,16 @@ export function parseFrameStats(text: string, afterNs = -Infinity): FrameStats {
   return out;
 }
 
+/**
+ * The summary's janky share of the `rows` frames there were: a Xiaomi with Android 16 counts each frame twice or more
+ * in its total and its janky ones once (406 rendered and 174 janky for 203 rows; 2 janky of 216 for two stalls of
+ * 800 ms in 61 rows), which halved the share. A total under twice the rows is one a ring that lost rows could give.
+ */
+export function jankyShare(s: FrameSummary, rows: number): number {
+  if (rows === 0 || s.totalFrames < 1.8 * rows) return s.jankyPercent;
+  return Math.min(100, Math.round((s.jankyFrames / rows) * 10_000) / 100);
+}
+
 /** The one-second window (by vsync time) with the most slow frames, ties by the longer average. */
 export function worstWindow(
   rows: FrameRow[],

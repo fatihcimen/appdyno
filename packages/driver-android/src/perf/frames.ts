@@ -15,6 +15,7 @@ import { logcatCommand, markOfLine } from '../logs.js';
 import { traceProcessor } from '../tools.js';
 import { frameCauseSql, parseFrameCauses } from './frame-cause.js';
 import {
+  jankyShare,
   parseFrameStats,
   parseFramestats,
   parseAndroidFrameStats,
@@ -114,7 +115,15 @@ export async function framesDuring(
     over700: frozenFrames,
     ...(rows.size > 0 && { rowFrames: rows.size }),
   };
-  return { ...m, value: { ...m.value, frozenFrames, ...(histogram && { histogram }) } };
+  return {
+    ...m,
+    value: {
+      ...m.value,
+      jankyPercent: jankyShare(m.value, rows.size),
+      frozenFrames,
+      ...(histogram && { histogram }),
+    },
+  };
 }
 
 /**

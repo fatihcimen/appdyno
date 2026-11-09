@@ -62,6 +62,19 @@ describe('frames of what ran, on Android', () => {
     expect(value.frozenFrames).toBe(2);
   });
 
+  it('takes the janky share of the frames there were, where the summary counts each twice', async () => {
+    const rows = [row(0, 40), row(40, 40), row(80, 40), row(120, 8)];
+    const summary = (total: number, janky: string) =>
+      [`Total frames rendered: ${total}`, `Janky frames: ${janky}`, '---PROFILEDATA---', HEAD]
+        .concat(rows, '---PROFILEDATA---')
+        .join('\n');
+    const share = async (text: string) =>
+      (await framesDuring(device(['', text]), 'dev.app', 0, () => Promise.resolve())).value
+        .jankyPercent;
+    expect(await share(summary(8, '3 (37.50%)'))).toBe(75);
+    expect(await share(summary(4, '3 (75.00%)'))).toBe(75);
+  });
+
   it('reads a plain list as none, and at least one where only the summary saw it', async () => {
     const plain = await framesDuring(device(['', dump(5, 0, [row(0, 8)])]), 'dev.app', 0, () =>
       Promise.resolve(),
