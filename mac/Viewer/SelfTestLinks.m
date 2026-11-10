@@ -52,6 +52,9 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
                @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
   NSArray<NSString *> *titles = [pane.rows valueForKey:@"title"];
   MVCheck(@"links: the links the app opens stand under their own heading, after the recent ones", titles.count == 7 && [titles[3] isEqual:MVWord(@"This app's links")] && [pane.rows.lastObject.detail isEqual:MVWord(@"Verified: opens in the app")], [titles componentsJoinedByString:@"|"]);
+  // a Samsung's read `filter` under each link of the app's manifest, the op's word for its kind
+  NSArray<NSString *> *kinds = @[pane.rows[4].detail ?: @"", pane.rows[5].detail ?: @""];
+  MVCheck(@"links: each kind of link says what it is in a person's words", [kinds isEqual:@[MVWord(@"The app's own scheme"), MVWord(@"Named in the app's manifest")]], [kinds componentsJoinedByString:@"|"]);
   [pane show:@{@"op": @"answer",
                @"name": @"openLink",
                @"suggested": @[@{@"url": @"https://example.test", @"kind": @"domain", @"state": @"legacy_failure"}]}];

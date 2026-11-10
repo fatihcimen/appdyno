@@ -110,7 +110,10 @@ static const double kBetween = 10;
 
 /// A link's kind, and an App Link's verification as Android names it, in words: a verified one opens in the app.
 static NSString *linkDetail(NSDictionary *link) {
-  NSString *kind = MVWord([link[@"kind"] description] ?: @""), *state = [link[@"state"] isKindOfClass:NSString.class] ? link[@"state"] : nil;
+  // the op's word for each kind, `filter` for one an Android manifest's intent filter names, is no person's
+  NSString *named = [link[@"kind"] description] ?: @"";
+  NSString *kind = MVWord(@{@"scheme": @"The app's own scheme", @"domain": @"A web address the app claims", @"filter": @"Named in the app's manifest"}[named] ?: named);
+  NSString *state = [link[@"state"] isKindOfClass:NSString.class] ? link[@"state"] : nil;
   if (!state) return kind;
   if ([@[@"verified", @"approved", @"migrated", @"restored", @"system_configured"] containsObject:state]) return MVWord(@"Verified: opens in the app");
   if ([state isEqual:@"none"]) return MVWord(@"Not verified yet: may open in the browser");
