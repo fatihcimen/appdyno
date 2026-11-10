@@ -24,6 +24,13 @@ public final class Job: @unchecked Sendable {
 
     /// True once the caller no longer waits (cancelled, or past its deadline).
     public var over: Bool { cancelled || Date() >= deadline }
+
+    /// What the caller was told once it no longer waits, thrown for work that must not begin after that: it may ask
+    /// again.
+    public func stillWaited(before what: String) throws {
+        if cancelled { throw AgentError("CANCELLED", "cancelled before \(what)") }
+        if over { throw AgentError("TIMEOUT", "the deadline passed before \(what)") }
+    }
 }
 
 /// The requests one connection has in flight, kept on the server's one queue. A host's ids start at 1 on each

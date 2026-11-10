@@ -1,5 +1,18 @@
 import Foundation
 
+/// The interface's turn that synthesized touches take (UIInterfaceOrientation: portrait 1, upside down 2, landscape
+/// right 3, left 4), of a device turned so (UIDeviceOrientation's raw value). Nil lying flat, face up or down, or
+/// unknown: the device then does not say how its screen stands, and an app in landscape is no portrait.
+public func interfaceTurn(device: Int) -> Int? {
+    switch device {
+    case 1: return 1
+    case 2: return 2
+    case 3: return 4 // the device turned left shows the interface turned right
+    case 4: return 3
+    default: return nil
+    }
+}
+
 /// A point of a finger's path; `t` in the host's milliseconds, or in seconds from the down once on a timeline.
 public struct GesturePoint {
     public let x: Double, y: Double, t: Double

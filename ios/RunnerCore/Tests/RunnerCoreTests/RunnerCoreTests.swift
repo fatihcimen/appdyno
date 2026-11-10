@@ -144,6 +144,12 @@ final class WaitTests: XCTestCase {
 final class GestureTimelineTests: XCTestCase {
     private func sample(_ x: Double, _ y: Double, _ t: Double) -> GesturePoint { GesturePoint(x: x, y: y, t: t) }
 
+    func testADeviceLyingFlatSaysNoTurnAndATurnedOneItsInterfacesTurn() {
+        XCTAssertEqual([1, 2, 3, 4].map { interfaceTurn(device: $0) }, [1, 2, 4, 3])
+        // unknown, face up, face down: an app may stand in landscape on a phone lying on a desk
+        XCTAssertEqual([0, 5, 6].map { interfaceTurn(device: $0) }, [nil, nil, nil])
+    }
+
     func testFingersGoDownTogetherAndLiftAfterTheLastSampleOfAny() throws {
         let plan = try gestureTimeline([
             [sample(10, 10, 100), sample(20, 10, 200), sample(30, 10, 300)],
@@ -189,5 +195,11 @@ final class ErrorTests: XCTestCase {
         XCTAssertTrue(sameToken("abcdefghijklmnop", "abcdefghijklmnop"))
         XCTAssertFalse(sameToken("abcdefghijklmnop", "abcdefghijklmnoq"))
         XCTAssertFalse(sameToken("abc", "abcd"))
+    }
+
+    func testOnlyARefusedSynthesizedEventIsDoneAgainAndOneWithNoAnswerIsATimeout() throws {
+        XCTAssertTrue(try synthesized(true, "a tap"))
+        XCTAssertFalse(try synthesized(false, "a tap"))
+        XCTAssertThrowsError(try synthesized(nil, "a tap")) { XCTAssertEqual(($0 as? AgentError)?.code, "TIMEOUT") }
     }
 }

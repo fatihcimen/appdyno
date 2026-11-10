@@ -74,8 +74,8 @@ import XCTest
         unsafeBitCast(class_getMethodImplementation(object_getClass(obj), sel), to: T.self)
     }
 
-    /// Taps at `p` (screen points); false when the synthesizer refused it.
-    static func tap(_ p: CGPoint, orientation: Int) -> Bool {
+    /// Taps at `p` (screen points); false when the synthesizer refused it, TIMEOUT when it did not answer.
+    static func tap(_ p: CGPoint, orientation: Int) throws -> Bool {
         guard available, let recordType = recordClass, let pathType = pathClass else { return false }
         let rawRecord = recordType.alloc() as AnyObject
         let initRecord = imp(rawRecord, selInitRecord, InitRecord.self)
@@ -84,11 +84,11 @@ import XCTest
         let path = imp(rawPath, selInitPath, InitPath.self)(rawPath, selInitPath, p, 0)
         imp(path, selLift, Lift.self)(path, selLift, 0.05)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
-        return synthesize(record, within: 5)
+        return try synthesize(record, within: 5, "a tap")
     }
 
-    /// One path per finger on a `gestureTimeline`, all in one record; false when the synthesizer refused it.
-    static func gesture(_ fingers: [[GesturePoint]], liftAt: Double, orientation: Int) -> Bool {
+    /// One path per finger on a `gestureTimeline`, all in one record; false or TIMEOUT as for a tap.
+    static func gesture(_ fingers: [[GesturePoint]], liftAt: Double, orientation: Int) throws -> Bool {
         guard gestureAvailable, let recordType = recordClass, let pathType = pathClass else { return false }
         let rawRecord = recordType.alloc() as AnyObject
         let initRecord = imp(rawRecord, selInitRecord, InitRecord.self)
@@ -103,12 +103,12 @@ import XCTest
             imp(path, selLift, Lift.self)(path, selLift, liftAt)
             imp(record, selAdd, AddPath.self)(record, selAdd, path)
         }
-        return synthesize(record, within: 5 + liftAt)
+        return try synthesize(record, within: 5 + liftAt, "a gesture")
     }
 
-    /// Types `text` as key events, `perSecond` of them a second (the synthesizer spaces them itself); false
-    /// when the synthesizer refused it.
-    static func type(_ text: String, orientation: Int, perSecond: UInt64 = 60) -> Bool {
+    /// Types `text` as key events, `perSecond` of them a second (the synthesizer spaces them itself); false or
+    /// TIMEOUT as for a tap.
+    static func type(_ text: String, orientation: Int, perSecond: UInt64 = 60) throws -> Bool {
         guard textAvailable, let recordType = recordClass, let pathType = pathClass else { return false }
         let rawRecord = recordType.alloc() as AnyObject
         let initRecord = imp(rawRecord, selInitRecord, InitRecord.self)
@@ -117,10 +117,10 @@ import XCTest
         let path = imp(rawPath, selInitText, InitText.self)(rawPath, selInitText)
         imp(path, selTypeText, TypeText.self)(path, selTypeText, text as NSString, 0, perSecond, true)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
-        return synthesize(record, within: 5 + Double(text.count) / Double(max(1, perSecond)))
+        return try synthesize(record, within: 5 + Double(text.count) / Double(max(1, perSecond)), "typing")
     }
 
-    private static func synthesize(_ record: AnyObject, within seconds: Double) -> Bool {
+    private static func synthesize(_ record: AnyObject, within seconds: Double, _ what: String) throws -> Bool {
         guard let synth = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue() else { return false }
         let result = OSAllocatedUnfairLock<Bool?>(initialState: nil)
         // Sendable, as it may come on another thread
@@ -133,6 +133,6 @@ import XCTest
         while result.withLock({ $0 }) == nil, Date() < end {
             RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005))
         }
-        return result.withLock { $0 } ?? false
+        return try synthesized(result.withLock { $0 }, what)
     }
 }

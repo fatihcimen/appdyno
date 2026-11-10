@@ -30,15 +30,13 @@ extension Device {
         return ["pkg": id]
     }
 
-    /// UIInterfaceOrientation of the device now (portrait 1, upside down 2, landscape right 3, left 4).
-    static func interfaceOrientation() -> Int {
-        switch XCUIDevice.shared.orientation {
-        case .portraitUpsideDown: return 2
-        case .landscapeLeft: return 4 // the device turned left shows the interface turned right
-        case .landscapeRight: return 3
-        default: return 1
-        }
+    /// UIInterfaceOrientation of the device now (`interfaceTurn`); nil while it lies flat.
+    static func interfaceOrientation() -> Int? {
+        interfaceTurn(device: XCUIDevice.shared.orientation.rawValue)
     }
+
+    /// The turn synthesized keys go with: a key has no place on the screen, so a device lying flat may say none.
+    static func keysOrientation() -> Int { interfaceOrientation() ?? 1 }
 
     func orientation(_ rotation: Int) {
         XCUIDevice.shared.orientation = [.portrait, .landscapeLeft, .portraitUpsideDown, .landscapeRight][rotation & 3]

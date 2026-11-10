@@ -36,6 +36,19 @@ final class JobTableTests: XCTestCase {
         XCTAssertTrue(try Job(id: 2, method: "act", params: ["_deadlineMs": 0]).over)
         XCTAssertThrowsError(try Job(id: 3, method: "act", params: [:]))
     }
+
+    func testWorkThatBeginsOnceItsCallerStoppedWaitingFailsAsTheCallerWasTold() throws {
+        XCTAssertNoThrow(try job().stillWaited(before: "typing"))
+        let cancelled = try job()
+        cancelled.cancelled = true
+        XCTAssertThrowsError(try cancelled.stillWaited(before: "typing")) {
+            XCTAssertEqual(($0 as? AgentError)?.code, "CANCELLED")
+        }
+        let late = try Job(id: 2, method: "act", params: ["_deadlineMs": 0])
+        XCTAssertThrowsError(try late.stillWaited(before: "typing")) {
+            XCTAssertEqual(($0 as? AgentError)?.code, "TIMEOUT")
+        }
+    }
 }
 
 final class TextCheckTests: XCTestCase {

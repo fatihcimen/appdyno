@@ -32,6 +32,16 @@ public struct AgentError: Error {
 
 public func unknownMethod(_ method: String) -> AgentError { AgentError("UNSUPPORTED", "unknown method \(method)") }
 
+/// Whether XCTest's event synthesizer did `what`: false where it refused, for XCUI to do instead. With no answer it may
+/// have gone through late, and XCUI's would do it twice: TIMEOUT, for the host to read the screen first.
+public func synthesized(_ answer: Bool?, _ what: String) throws -> Bool {
+    guard let answer else {
+        throw AgentError("TIMEOUT", "XCTest's event synthesizer did not answer \(what), which may have gone through",
+                         hint: "read the screen to see whether it did before doing it again")
+    }
+    return answer
+}
+
 /// Constant-time comparison of the launch token.
 public func sameToken(_ given: String, _ expected: String) -> Bool {
     let x = Array(given.utf8), y = Array(expected.utf8)

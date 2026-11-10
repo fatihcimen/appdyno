@@ -24,9 +24,10 @@ extension Device {
         switch action {
         case let .tap(x, y):
             let waited = animationsOver(x, y)
-            // the synthesizer's tap missed on a turned screen, where XCUI's own coordinate knows the way
+            // the synthesizer's tap missed on a turned screen, where XCUI's own coordinate knows the way, as it does
+            // on a phone lying flat, which does not say how its screen stands
             let upright = Device.interfaceOrientation() == 1
-            if !upright || !EventShim.tap(CGPoint(x: x, y: y), orientation: 1) { point(x, y).tap() }
+            if try !upright || !EventShim.tap(CGPoint(x: x, y: y), orientation: 1) { point(x, y).tap() }
             return waited
         case let .doubleTap(x, y):
             let waited = animationsOver(x, y)
@@ -66,7 +67,10 @@ extension Device {
         let plan = try gestureTimeline(pointers)
         guard EventShim.gestureAvailable else { throw Self.noSynthesizer(pointers, path) }
         let waited = animationsOver(fromX, fromY)
-        guard EventShim.gesture(plan.fingers, liftAt: plan.liftAt, orientation: Device.interfaceOrientation()) else {
+        // shortcut: a phone lying flat says no turn, and its gesture goes as portrait; XCUI has no gesture of many
+        // fingers to fall back on, so a landscape app on a desk misses until the app's own turn is read
+        let turn = Device.interfaceOrientation() ?? 1
+        guard try EventShim.gesture(plan.fingers, liftAt: plan.liftAt, orientation: turn) else {
             throw AgentError(
                 "UNSUPPORTED",
                 "XCTest's event synthesizer refused a gesture of \(pointers.count) fingers and \(path.count) samples"
@@ -109,7 +113,7 @@ extension Device {
         switch name {
         case "enter":
             // synthesized: XCUI's typing refuses when no element reports the focus
-            if !EventShim.type("\n", orientation: Device.interfaceOrientation()) { front().0.typeText("\n") }
+            if try !EventShim.type("\n", orientation: Device.keysOrientation()) { front().0.typeText("\n") }
         case "delete": front().0.typeText(XCUIKeyboardKey.delete.rawValue)
         case "tab": front().0.typeText("\t")
         default: try press(name)

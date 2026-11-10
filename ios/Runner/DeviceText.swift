@@ -54,6 +54,8 @@ extension Device {
             found = focusedField(app)
         }
         let focusMs = Int(Date().timeIntervalSince(start) * 1000)
+        // a caller told TIMEOUT or CANCELLED may ask again: its text must not land after that
+        try job.stillWaited(before: "the text was typed")
         guard let (field, snap) = found else {
             return try typeUnfocused(request, into: app, job: job, focusMs: focusMs)
         }
@@ -64,10 +66,11 @@ extension Device {
         // keys, not a paste: a paste the user did not make brings up iOS's "Allow Paste" alert, which no one
         // answers here and which holds the text up (a timeout, or text doubled once it goes)
         keyboardUp(app, job: job)
+        try job.stillWaited(before: "the text was typed")
         var verified: Bool? = false
         if field.exists {
             if replace { clear(field) }
-            if !replace || field.exists { type(text, into: field, perSecond: 60) }
+            if !replace || field.exists { try type(text, into: field, perSecond: 60) }
             // a secure field reads back as dots: waiting for it to hold the text took the whole echo wait, 1.5 s
             // a field that formats what is typed (a phone number) drops a key that comes while it rewrites itself,
             // one of ten at 60 a second: where what it must hold is known, it is typed again, slower
@@ -75,20 +78,20 @@ extension Device {
             verified = secure ? nil : echoed(field, job: job, givesUp: known, holds: holds)
             if verified == false, known, field.exists, !job.over {
                 clear(field)
-                type(text, into: field, perSecond: 15)
+                try type(text, into: field, perSecond: 15)
                 verified = echoed(field, job: job, givesUp: false, holds: holds)
             }
         }
         // a field that is gone has taken the text and submitted it already
-        if request.submit, field.exists { field.typeText("\n") }
+        if request.submit, field.exists, !job.over { field.typeText("\n") }
         let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         // no verdict when the field cannot be read back: gone (it took the text and submitted), or secure
         return out.merging(textWire(focusMs: focusMs, verified: secure ? nil : verified)) { $1 }
     }
 
     /// shortcut: with the synthesizer gone XCUI's typing writes plain text into the test's log and result bundle
-    private func type(_ text: String, into field: XCUIElement, perSecond: UInt64) {
-        if !EventShim.type(text, orientation: Device.interfaceOrientation(), perSecond: perSecond) {
+    private func type(_ text: String, into field: XCUIElement, perSecond: UInt64) throws {
+        if try !EventShim.type(text, orientation: Device.keysOrientation(), perSecond: perSecond) {
             field.typeText(text)
         }
     }
@@ -116,15 +119,14 @@ extension Device {
     /// person's would (XCUI's own typing refuses without a focused element); the text cannot be read back.
     private func typeUnfocused(_ request: TextRequest, into app: XCUIApplication, job: Job,
                                focusMs: Int) throws -> [String: Any] {
-        let orientation = Device.interfaceOrientation()
-        let typed = EventShim.type(request.text, orientation: orientation)
-        if !typed {
+        let orientation = Device.keysOrientation()
+        if try !EventShim.type(request.text, orientation: orientation) {
             guard app.keyboards.firstMatch.exists else {
                 throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first")
             }
             app.typeText(request.text)
         }
-        if request.submit, !EventShim.type("\n", orientation: orientation) { app.typeText("\n") }
+        if request.submit, try !EventShim.type("\n", orientation: orientation) { app.typeText("\n") }
         let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         return out.merging(textWire(focusMs: focusMs, verified: nil)) { $1 }
     }
@@ -166,7 +168,7 @@ extension Device {
             keyboardUp(app, job: job)
         }
         let focusMs = Int(Date().timeIntervalSince(start) * 1000)
-        guard EventShim.type(request.text, orientation: Device.interfaceOrientation()) else {
+        guard try EventShim.type(request.text, orientation: Device.keysOrientation()) else {
             throw AgentError("UNSUPPORTED", "this Xcode's event synthesizer takes no text")
         }
         return ["focusMs": focusMs]
