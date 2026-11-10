@@ -79,15 +79,21 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   if (_hub.running) [_hub terminate];
 }
 
+/// The hub's window is a process this one starts, not one a person opened: from macOS 14 it comes to the front only
+/// where the app in front lets it, and as this app was just opened, it is that app.
 - (void)openHub {
   if (_hub.running) {
     pid_t children[8];
     if (proc_listchildpids(_hub.processIdentifier, children, sizeof children) > 0) {
-      [[NSRunningApplication runningApplicationWithProcessIdentifier:children[0]]
-          activateWithOptions:NSApplicationActivateAllWindows];
+      NSRunningApplication *window = [NSRunningApplication runningApplicationWithProcessIdentifier:children[0]];
+      if (!window) return;
+      if (@available(macOS 14, *)) [NSApp yieldActivationToApplication:window];
+      [window activateWithOptions:NSApplicationActivateAllWindows];
     }
     return;
   }
+  if (@available(macOS 14, *))
+    if (!_behind) [NSApp yieldActivationToApplicationWithBundleIdentifier:@"dev.appdyno.window"];
   _hub = Start(@[@"hub", _behind ? @"--behind" : @"--focus"], NSFileHandle.fileHandleWithNullDevice);
 }
 
