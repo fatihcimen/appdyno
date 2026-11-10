@@ -156,6 +156,9 @@ void MVCheckPush(void) {
                @"ok": @NO,
                @"text": refusal}];
   MVCheck(@"push: a refusal is shown whole", [pane.answer.said isEqual:MVWord(refusal)], pane.answer.said);
+  // an emulator's tapped push read Açıldı: and went on in English after it
+  NSString *tapped = MVInTurkish(@"Opened dev.app as a tapped push, with 2 data keys as extras");
+  MVCheck(@"push: what an Android device says of a tapped push is said whole in Turkish", [tapped isEqual:@"dev.app bir bildirime dokunulmuş gibi açıldı, ek olarak 2 veri anahtarıyla"], tapped);
   [window pokeClick:@"pushMode:1"];
   MVPump(0.1);
   NSTextView *payload = [pane valueForKey:@"_payload"];

@@ -102,6 +102,9 @@ const MVWordRow MVWordTableDevice[] = {
     // why a push cannot go to an iPhone, for the Push pane
     {"An iPhone takes a push only from Apple's servers, once APNs is set up with appdyno push setup apns in Terminal. Until then, open the app's link in Links, or send the push to a simulator.", "iPhone bir bildirimi yalnızca Apple'ın sunucularından, APNs Terminal'de appdyno push setup apns ile kurulduktan sonra alır. O zamana dek uygulamanın bağlantısını Bağlantılar'da açın ya da bildirimi bir simülatöre gönderin."},
     {"Only a person taps a push on an iPhone: send an alert, then tap it on the phone.", "Bir iPhone'da bir bildirime yalnızca bir kişi dokunur: bir uyarı gönderin, sonra telefonda ona dokunun."},
+    // what an Android device says of a tapped push, whole: its comma kept "Opened %@" to its first half
+    {"Opened %@ as a tapped push, with %@ data keys as extras", "%1$@ bir bildirime dokunulmuş gibi açıldı, ek olarak %2$@ veri anahtarıyla"},
+    {"Opened %@ as a tapped push, with %@ data key as extras", "%1$@ bir bildirime dokunulmuş gibi açıldı, ek olarak %2$@ veri anahtarıyla"},
 };
 
 const size_t MVWordCountDevice = sizeof MVWordTableDevice / sizeof MVWordTableDevice[0];
