@@ -203,8 +203,6 @@ export function flowRunner(
     });
     const data = (answered?.data ?? {}) as Partial<ActionOut>;
     const whole = Date.now() - t0;
-    const died = data.appDied;
-    if (died) throw new ToolError(diedLine(died), 'APP_NOT_RUNNING', DIED_HINT);
     const settledMs = WHOLE_STEP.has(st.action)
       ? whole
       : READS_ONLY.has(st.action)
@@ -316,7 +314,7 @@ export function flowRunner(
         const appDied =
           f.code === 'APP_NOT_RUNNING'
             ? undefined
-            : await diedUnder(s, screen?.foreground, was.pid, was.since, clean, was.up);
+            : await diedUnder(s, s.appId, screen?.foreground, was.pid, was.since, clean, was.up);
         if (appDied)
           Object.assign(f, {
             message: `${f.message}\n${diedLine(appDied)}, by step ${f.n}`,

@@ -421,6 +421,8 @@ export class FakeDevice extends DeviceActions implements Device {
   /** Set: the fake reports this process id, as Android does. */
   pid: string | undefined;
   appPid: FakeDevice['fakePid'] | undefined;
+  /** Set: the system holds the app's process for its crash dialog, as Android's "keeps stopping" does. */
+  appCrashing: ((app: string) => Promise<boolean>) | undefined;
   fakePid = () => Promise.resolve(this.pid);
   close = () => undefined;
 

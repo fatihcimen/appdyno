@@ -14,7 +14,7 @@ import {
   type SystemAlert,
 } from '@appdyno/core';
 import type { ActResult, TextResult } from '@appdyno/protocol';
-import { appDeath, diedLine, pidInAnswer, watched } from './app-death.js';
+import { aimedApp, appDeath, diedRefusal, pidInAnswer, watched } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
@@ -116,7 +116,6 @@ type Findings = {
   settled?: boolean | undefined;
   changed?: boolean | undefined;
   busy?: string[];
-  appDied?: ActionOut['appDied'];
   notes?: string[];
   settleMs?: number | undefined;
   moving?: boolean | undefined;
@@ -147,7 +146,6 @@ const summaryOf = (clean: Clean, done: string, screen?: Screen, o: Findings = {}
   ...(o.settleMs !== undefined && { settleMs: o.settleMs }),
   ...(o.changed !== undefined && { changed: o.changed }),
   ...(o.busy?.length && { busy: o.busy }),
-  ...(o.appDied && { appDied: o.appDied }),
   ...(o.found && { found: true }),
   warnings: [
     ...(o.fg ? [o.fg.trim()] : []),
@@ -177,6 +175,8 @@ type Aftermath = {
   launched?: string | undefined;
   /** The app was in front on the last read before the action, or the action launched it. */
   ran: boolean;
+  /** The app a death is looked for in: `aimedApp`, or the one a launch started with none selected. */
+  app: string | undefined;
 };
 
 /** Whether the selected app was in front on the last read before an action: what it ran as when the action began. */
@@ -185,9 +185,13 @@ const inFront = (s: Session) => !!s.appId && s.fresh?.foreground === s.appId;
 const headerOf = (screen: Screen, clean: Clean) =>
   `${screen.foreground ? `foreground: ${screen.foreground}\n` : ''}${renderFolded(screen.list, clean)}`;
 
-/** What every action says of the screen after it: changed or not, what kept it busy, the app's fate. */
+/**
+ * What every action says of the screen after it: changed or not, what kept it busy. An app that died under it refuses
+ * it with `APP_NOT_RUNNING`, as the watch during the action does.
+ */
 async function afterAction(
   clean: Clean,
+  cleanLog: Clean,
   s: Session,
   done: string,
   read: ReadMode,
@@ -198,15 +202,28 @@ async function afterAction(
   const d = read === 'diff' && o.before ? diffScreens(o.before, screen.list) : undefined;
   const diff = d && diffText(d, screen.list.length, clean);
   const changed = o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined;
+  const appDied = await appDeath(
+    s,
+    o.app,
+    screen.foreground,
+    o.pid,
+    o.started,
+    clean,
+    o.ran,
+    o.pidNow,
+  );
+  if (appDied && o.app)
+    throw await diedRefusal(s, o.app, done, appDied, {
+      wasPid: o.pid,
+      since: o.started,
+      clean,
+      cleanLog,
+    });
   const fg = await noticed(s, screen, changed === false || !!o.launched);
-  const appDied = await appDeath(s, screen.foreground, o.pid, o.started, clean, o.ran, o.pidNow);
   const busy = o.settled === false ? o.busy : [];
   const moving =
     o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
-  const notes = [
-    ...(appDied ? [diedLine(appDied)] : []),
-    ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs)] : []),
-  ];
+  const notes = changed === false && !o.launched ? [noChange(o.ms, o.idleMs)] : [];
   return reply(
     [`${done}${fg}${moving}`, ...notes, diff ?? headerOf(screen, clean)].join('\n'),
     summaryOf(clean, done, screen, {
@@ -217,7 +234,6 @@ async function afterAction(
       moving: o.moving,
       changed,
       busy,
-      appDied,
       notes,
       settleMs: o.settleMs,
       found: o.found,
@@ -259,6 +275,7 @@ async function act(
   const r: ActResult =
     read !== 'none' && s.appId && (pid || inFront(s))
       ? await watched(s, action, {
+          app: s.appId,
           wasPid: pid,
           since: started,
           done: typeof done === 'string' ? done : '',
@@ -269,7 +286,8 @@ async function act(
   // the last read before the action, which a ref's lookup may have just made
   const base = s.fresh?.list ?? before;
   const aimed = s.fresh?.hash;
-  const ran = inFront(s);
+  const app = aimedApp(s);
+  const ran = !!app && s.fresh?.foreground === app;
   s.acted();
   if (read === 'none') s.unsettled = { at: Date.now(), hash: aimed };
   const said = typeof done === 'string' ? done : done(r);
@@ -277,7 +295,8 @@ async function act(
   if (read === 'none' || !r.tree)
     return reply(said, summaryOf(clean, said, undefined, { found: isFound }));
   const screen = await s.seen(r.tree);
-  return afterAction(clean, s, said, read, screen, {
+  return afterAction(clean, cleanLog, s, said, read, screen, {
+    app,
     pid,
     // an older agent says nothing of it, and is asked after the action as before
     pidNow: pidInAnswer(pidOf, r),
@@ -301,6 +320,7 @@ const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said
 
 async function afterChange(
   clean: Clean,
+  cleanLog: Clean,
   s: Session,
   said: Said,
   read: ReadMode,
@@ -308,7 +328,9 @@ async function afterChange(
   ready?: (x: Screen) => boolean,
   maxMs: number = SETTLE.maxMs,
 ) {
-  const ran = inFront(s) || (!!launched && launched === s.appId);
+  // with no app selected, the one launched is the one whose death is looked for
+  const app = s.appId ?? launched;
+  const ran = inFront(s) || (!!launched && launched === app);
   const started = Date.now();
   const before = s.shown;
   const base = s.fresh?.list ?? before;
@@ -321,7 +343,8 @@ async function afterChange(
   if (read === 'none') return reply(saidOf(said), summaryOf(clean, saidOf(said)));
   reportProgress('waiting for the screen to settle');
   const { screen, settled } = await settleRead(s, maxMs);
-  return afterAction(clean, s, saidOf(said, screen), read, screen, {
+  return afterAction(clean, cleanLog, s, saidOf(said, screen), read, screen, {
+    app,
     before,
     base,
     settled,
@@ -337,8 +360,10 @@ async function afterChange(
 /** How actions run and answer: the settle, the read it asks for, the screen and what changed on it. */
 export function answersFor(ctx: ServerContext) {
   const clean = (s: string) => redact(ctx.policy, s);
+  const cleanLog = (l: string) => redactLog(ctx.policy, l);
   return {
     clean,
+    cleanLog,
     header: (screen: Screen) => headerOf(screen, clean),
     noticed,
     info,
@@ -350,7 +375,7 @@ export function answersFor(ctx: ServerContext) {
       run: (o: ActOptions) => Promise<ActResult | TextResult>,
       done: string | ((r: ActResult | TextResult) => string),
       found?: () => boolean,
-    ) => act(clean, (l) => redactLog(ctx.policy, l), s, read, run, done, found),
+    ) => act(clean, cleanLog, s, read, run, done, found),
     settleRead,
     afterChange: (
       s: Session,
@@ -359,7 +384,7 @@ export function answersFor(ctx: ServerContext) {
       launched?: string,
       ready?: (x: Screen) => boolean,
       maxMs?: number,
-    ) => afterChange(clean, s, said, read, launched, ready, maxMs),
+    ) => afterChange(clean, cleanLog, s, said, read, launched, ready, maxMs),
   };
 }
 

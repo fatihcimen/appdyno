@@ -174,6 +174,8 @@ export type Device = {
   appRunning(app: string): Promise<boolean>;
   /** Its process id, where reading it is cheap enough to do on every action. */
   appPid?(app: string): Promise<string | undefined>;
+  /** Whether the system holds the app's process for a crash dialog it shows, alive until that is answered. */
+  appCrashing?(app: string): Promise<boolean>;
   readonly measure: MeasureSource;
 };
 

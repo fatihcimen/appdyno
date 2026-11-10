@@ -1,5 +1,4 @@
 import { pause, reportProgress } from '@appdyno/core';
-import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 
@@ -20,11 +19,26 @@ const REPORT_GAP_MS = 700;
 
 type Clean = (s: string) => string;
 
+/** Why the app ended, and the report that says so. */
+export type Died = { reason: string; file?: string };
+
+/**
+ * The app a death is looked for in: the one selected, else the one in front as the action aimed, which a launch or a
+ * link earlier in a batch opened with no app selected.
+ */
+export const aimedApp = (s: Session) => s.appId ?? s.fresh?.foreground;
+
 /** What a report says of the app's end since `since`; a new process with no report is no death. */
-async function reportOf(s: Session, since: number, clean: Clean, tries = REPORT_TRIES) {
-  for (let i = 0; s.appId && i < tries; i++) {
+async function reportOf(
+  s: Session,
+  app: string | undefined,
+  since: number,
+  clean: Clean,
+  tries = REPORT_TRIES,
+) {
+  for (let i = 0; app && i < tries; i++) {
     const { reports } = await s.device
-      .crashes({ app: s.appId, since: since - CLOCK_SLACK_MS, limit: 1 })
+      .crashes({ app, since: since - CLOCK_SLACK_MS, limit: 1 })
       .catch(() => ({ reports: [] }));
     const r = reports[0];
     if (r) return { reason: clean(r.reason), ...(r.file && { file: r.file }) };
@@ -41,8 +55,11 @@ export const pidInAnswer = (asked: string | undefined, r: { pid?: number | undef
 export const DIED_HINT = 'launch_app starts it again, and crashes says why it died';
 
 /** An answer's line of the app's end. */
-export const diedLine = ({ reason, file }: NonNullable<ActionOut['appDied']>) =>
+export const diedLine = ({ reason, file }: Died) =>
   `the app died: ${reason}${file ? ` (${file})` : ''}`;
+
+/** An action whose app died under it, refused with what it did, why the app died and its last lines. */
+export class AppDied extends ToolError {}
 
 /**
  * The app's end during an action: its process is gone from the front, or another one has taken over
@@ -52,6 +69,7 @@ export const diedLine = ({ reason, file }: NonNullable<ActionOut['appDied']>) =>
  */
 export async function appDeath(
   s: Session,
+  app: string | undefined,
   foreground: string | undefined,
   wasPid: string | undefined,
   since: number,
@@ -59,29 +77,44 @@ export async function appDeath(
   ran: boolean,
   now?: { pid: string | undefined },
 ) {
-  if (!s.appId) return undefined;
+  if (!app) return undefined;
   if (s.device.appPid) {
-    const pid = now ? now.pid : await s.device.appPid(s.appId).catch(() => wasPid);
-    s.appPid = pid;
-    if (wasPid && pid !== wasPid) {
+    // what the device could not tell is the process known before
+    const asked =
+      now ??
+      (await s.device.appPid(app).then(
+        (p) => ({ pid: p }),
+        () => undefined,
+      ));
+    const pid = asked ? asked.pid : wasPid;
+    if (app === s.appId) s.appPid = pid;
+    // another process than before, or none of an app that ran where none was known before, as one a touch aimed at
+    // with no app selected: the system's "keeps stopping" over its screen leaves it the one in front
+    if (wasPid ? pid !== wasPid : !!asked && ran && !pid) {
       reportProgress(
         pid
           ? 'the app has a new process: looking for its crash report'
           : 'the app has no process: looking for its crash report',
       );
       // a new process with no report is no death, as a link may start one; none at all is one, a crash dialog over it
-      const report = await reportOf(s, since, clean);
+      const report = await reportOf(s, app, since, clean);
       return (
         report ?? (pid ? undefined : { reason: 'its process is gone and no crash report says why' })
       );
     }
   }
-  if (!foreground || foreground === s.appId || !(ran || wasPid)) return undefined;
-  if (await s.device.appRunning(s.appId).catch(() => true)) return undefined;
+  if (foreground === app || !(ran || wasPid)) return undefined;
+  // a crash Android shows as "keeps stopping" holds its process alive until the dialog is answered, and over the app's
+  // screen, which then has no app in front: no report is written meanwhile, and none if dropbox's rate limit drops it
+  const held = await s.device.appCrashing?.(app).catch(() => false);
+  if (!held && (!foreground || (await s.device.appRunning(app).catch(() => true))))
+    return undefined;
   reportProgress('the app is gone: looking for its crash report');
   return (
-    (await reportOf(s, since, clean)) ?? {
-      reason: 'its process is gone and no crash report says why',
+    (await reportOf(s, app, since, clean, held ? 1 : REPORT_TRIES)) ?? {
+      reason: held
+        ? 'the system holds its process for its crash dialog, and no crash report says why yet'
+        : 'its process is gone and no crash report says why',
     }
   );
 }
@@ -93,23 +126,28 @@ export async function appDeath(
  */
 export async function diedUnder(
   s: Session,
+  app: string | undefined,
   foreground: string | undefined,
   wasPid: string | undefined,
   since: number,
   clean: Clean,
   ran: boolean,
 ) {
-  const gone = ran ? await appDeath(s, foreground, wasPid, since, clean, true) : undefined;
-  return gone ?? reportOf(s, since, clean, 1);
+  const gone = ran ? await appDeath(s, app, foreground, wasPid, since, clean, true) : undefined;
+  return gone ?? reportOf(s, app, since, clean, 1);
 }
 
 /**
  * The app's end while an action is still under way: its process gone, or another one in its place with a crash report.
  * A new process with no report is no death, as a link may start one.
  */
-async function deathWhile(s: Session, wasPid: string | undefined, since: number, clean: Clean) {
-  const app = s.appId;
-  if (!app) return undefined;
+async function deathWhile(
+  s: Session,
+  app: string,
+  wasPid: string | undefined,
+  since: number,
+  clean: Clean,
+) {
   const pid = s.device.appPid ? await s.device.appPid(app).catch(() => wasPid) : undefined;
   // a process not known before the action is only looked for: none is an end, any one is the app's
   const gone = !s.device.appPid
@@ -120,7 +158,7 @@ async function deathWhile(s: Session, wasPid: string | undefined, since: number,
   if (!gone) return undefined;
   s.appPid = pid;
   reportProgress('the app went away during the action: looking for its crash report');
-  const report = await reportOf(s, since, clean);
+  const report = await reportOf(s, app, since, clean);
   return (
     report ?? (pid ? undefined : { reason: 'its process is gone and no crash report says why' })
   );
@@ -134,62 +172,83 @@ const WHY = [
 ];
 
 /**
- * The app's last log lines, a dead process's own where the device can read them: from the first that says why among
- * the newest, else the newest.
+ * The app's last log lines, a dead process's own where the device can read them: from the newest that says why, else
+ * the newest.
  */
-async function lastLines(s: Session, pid: string | undefined, cleanLog: Clean) {
-  if (!s.appId) return [];
+async function lastLines(s: Session, app: string, pid: string | undefined, cleanLog: Clean) {
   const { lines } = await s.device
-    .logs({ app: s.appId, level: 'info', maxLines: LOOKED_AT, ...(pid && { pid }) })
+    .logs({ app, level: 'info', maxLines: LOOKED_AT, ...(pid && { pid }) })
     .catch(() => ({ lines: [] as string[] }));
   const newest = lines.slice(-LOOKED_AT);
-  const why = WHY.map((p) => newest.findIndex((l) => p.test(l))).find((i) => i >= 0) ?? -1;
+  // the newest: an earlier crash of the app may still be among these lines
+  const why = WHY.map((p) => newest.findLastIndex((l) => p.test(l))).find((i) => i >= 0) ?? -1;
   const shown = why < 0 ? newest.slice(-LAST_LINES) : newest.slice(why, why + LAST_LINES);
   return shown.map((l) => cleanLog(l).slice(0, LINE_CHARS));
 }
 
 /**
- * Watches the app's process while `action` runs, from a second in: a crash under a touch held an iPhone simulator's
- * answer for its whole 15 s, which then read as a stuck agent. Its end refuses at once with `APP_NOT_RUNNING`, the crash
- * report's reason and the app's last log lines; the action's own answer, when it comes, goes unread.
+ * The refusal of an action whose app died under it: what the action did, why, and the app's last log lines. A report
+ * not written yet is looked for once more after them, as a simulator writes its own seconds after the end.
+ */
+export async function diedRefusal(
+  s: Session,
+  app: string,
+  done: string,
+  d: Died,
+  o: { wasPid: string | undefined; since: number; clean: Clean; cleanLog: Clean },
+) {
+  const lines = await lastLines(s, app, o.wasPid, o.cleanLog);
+  const said = d.file ? d : ((await reportOf(s, app, o.since, o.clean, 1)) ?? d);
+  return new AppDied(
+    [
+      `${done ? `${done}; ` : ''}${diedLine(said)}`,
+      ...(lines.length ? ['its last log lines:', ...lines] : []),
+    ].join('\n'),
+    'APP_NOT_RUNNING',
+    DIED_HINT,
+    true,
+  );
+}
+
+/**
+ * Watches the selected app's process while `action` runs, from a second in: a crash under a touch held an iPhone
+ * simulator's answer for its whole 15 s, which then read as a stuck agent. An end it finds before the action answers
+ * refuses with `APP_NOT_RUNNING`, the crash report's reason and the app's last log lines, however long those take to
+ * read; the action's own answer, when it comes, goes unread.
  */
 export async function watched<T>(
   s: Session,
   action: Promise<T>,
-  o: { wasPid: string | undefined; since: number; done: string; clean: Clean; cleanLog: Clean },
+  o: {
+    app: string;
+    wasPid: string | undefined;
+    since: number;
+    done: string;
+    clean: Clean;
+    cleanLog: Clean;
+  },
 ): Promise<T> {
   let over = false;
-  const watch = async (): Promise<NonNullable<ActionOut['appDied']>> => {
+  const watch = async (): Promise<Died> => {
     await pause(WATCH_AFTER_MS);
     while (!over) {
-      const died = await deathWhile(s, o.wasPid, o.since, o.clean);
+      const died = await deathWhile(s, o.app, o.wasPid, o.since, o.clean);
       if (died) return died;
       await pause(WATCH_GAP_MS);
     }
     // the action answered first: this watch has nothing to say
     return new Promise<never>(() => undefined);
   };
-  const refusal = watch().then(async (d) => {
-    // the action answered while the death was being read: its answer has been given
-    if (over) return new Promise<never>(() => undefined);
+  try {
+    // the race is to the death being known, not to its whole answer: one that took the log's seconds lost to the
+    // action's answer, and what was read before it was dropped, so that its own check found no app that ran
+    const first = await Promise.race([action.then((r) => ({ r })), watch().then((d) => ({ d }))]);
+    if ('r' in first) return first.r;
+    over = true;
     action.catch(() => undefined);
     // the touch went out, and what was read before it says nothing of the screen now
     s.acted();
-    const lines = await lastLines(s, o.wasPid, o.cleanLog);
-    throw new ToolError(
-      [
-        `${o.done ? `${o.done}; ` : ''}${diedLine(d)}`,
-        ...(lines.length ? ['its last log lines:', ...lines] : []),
-      ].join('\n'),
-      'APP_NOT_RUNNING',
-      DIED_HINT,
-      true,
-    );
-  });
-  // read by the race alone: once the action has answered, nothing waits for it
-  refusal.catch(() => undefined);
-  try {
-    return await Promise.race([action, refusal]);
+    throw await diedRefusal(s, o.app, o.done, first.d, o);
   } finally {
     over = true;
   }

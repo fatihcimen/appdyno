@@ -28,8 +28,6 @@ export const ActionOut = z.object({
   changed: z.boolean().optional(),
   /** What is known to keep the screen busy, when it did not settle. */
   busy: z.array(z.string()).optional(),
-  /** The app's process ended during the action. */
-  appDied: z.object({ reason: z.string(), file: z.string().optional() }).optional(),
   /** `keyboard status`. */
   open: z.boolean().optional(),
   /** `alert` with no answer. */

@@ -8,7 +8,7 @@ import {
   type CrashReport,
   type ExitCount,
 } from '@appdyno/core';
-import { type Adb, shq } from './adb.js';
+import { type Adb, assertPkg, shq } from './adb.js';
 import { namedTombstone, shortFrame } from './tombstone.js';
 
 /** Reasons that are the app's end as nobody asked for it; the rest (a user's stop, a new install) are left out. */
@@ -210,4 +210,10 @@ export async function androidCrashes(
         note: reports.some((r) => r.reason.includes('NATIVE')) ? NO_TOMBSTONE : NOT_NATIVE,
       }),
   };
+}
+
+/** "keeps stopping": the system marks the process crashing while its dialog is up (`crashing=true` before API 31). */
+export async function androidCrashing(adb: Adb, serial: string, app: string) {
+  const out = await adb.exec(serial, `dumpsys activity processes ${shq(assertPkg(app))}`);
+  return /\b(mC|c)rashing=true\b/.test(out);
 }

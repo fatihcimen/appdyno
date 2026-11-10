@@ -17,6 +17,7 @@ import {
 import {
   DEFAULT_POLICY,
   ServerContext,
+  ToolError,
   type OpData,
   type OpName,
   type ToolResult,
@@ -148,11 +149,10 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
     try {
       await call('launch_app', { read: 'none' });
       await call('screen');
-      const r = await call('press_key', { key: 'enter', read: 'diff' });
-      expect(textOf(r)).toMatch(/the app died: /);
-      expect(r.data.appDied).toMatchObject({
-        reason: expect.stringMatching(/CRASH|EXCESSIVE/) as unknown,
-      });
+      // refused: the key went out, and the app it was for is gone
+      const r = await call('press_key', { key: 'enter', read: 'diff' }).catch((e: unknown) => e);
+      expect(r).toMatchObject({ code: 'APP_NOT_RUNNING', dispatched: true });
+      expect((r as Error).message).toMatch(/the app died: .*(CRASH|EXCESSIVE)/);
     } finally {
       s.device.key = key;
     }
@@ -232,12 +232,10 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
     process.kill(found, 'SIGSEGV');
     await pause(1_000);
     const r = await call('press_key', { key: 'enter', read: 'diff' }).catch((e: unknown) => e);
-    const text = r instanceof Error ? r.message : textOf(r as ToolResult);
-    // the runner aimed at a dead app may refuse the key: then the screen says the rest
-    if (!(r instanceof Error)) {
-      expect(text).toMatch(/the app died: /);
-      expect((r as ToolResult).data.appDied).toBeDefined();
-    }
+    // refused: for the app's death, or by the runner aimed at a dead app, when the reports say the rest
+    expect(r).toBeInstanceOf(ToolError);
+    if ((r as ToolError).dispatched === true)
+      expect((r as Error).message).toMatch(/the app died: /);
     let reports: { reason: string; file?: string }[] = [];
     for (let i = 0; i < 20 && reports.length === 0; i++) {
       const c = await call('crashes', {
@@ -302,7 +300,9 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
     ]);
     await pause(1_000);
     const r = await call('press_key', { key: 'enter', read: 'diff' }).catch((e: unknown) => e);
-    if (!(r instanceof Error)) expect(textOf(r as ToolResult)).toMatch(/the app died: /);
+    expect(r).toBeInstanceOf(ToolError);
+    if ((r as ToolError).dispatched === true)
+      expect((r as Error).message).toMatch(/the app died: /);
     let reports: { reason: string; file?: string }[] = [];
     // the phone writes the report a moment after the death
     for (let i = 0; i < 20 && reports.length === 0; i++) {

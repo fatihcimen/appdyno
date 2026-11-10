@@ -394,8 +394,11 @@ describe('steps across screens', () => {
         d.appPid = d.fakePid;
       }
       d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
-      // the lines shown start at the one that says why, past a weaker one before it and a stack's tail after it
+      // the lines shown start at the newest that says why, past an earlier crash, a weaker one before it and a stack's
+      // tail after it
       d.logLines = [
+        'E AndroidRuntime: FATAL EXCEPTION: main, an earlier crash',
+        'IllegalStateException: an earlier crash',
         'I Fixture: Did post notification. error:0',
         'E OpenGLRenderer: Unable to match the desired swap behavior, an error',
         'E AndroidRuntime: FATAL EXCEPTION: main',
@@ -427,10 +430,114 @@ describe('steps across screens', () => {
     }
   });
 
-  it('stops at a step whose app died, saying so as that action alone does', async () => {
-    for (const read of [undefined, 'diff']) {
-      const d = dying((x) => x.screen === 'form');
+  it('refuses a touch whose app died under it however the device answers, with its last lines', async () => {
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    // the answer at once, and once the watch has found the death but is still reading the log
+    for (const answerMs of [0, 1_800]) {
+      let tapped = false;
+      const d = dying(() => tapped);
+      d.logLines = ['E AndroidRuntime: FATAL EXCEPTION: main'];
+      // as long as a loaded simulator's log read takes: an answer that came meanwhile won the race, unsaid
+      const logs = d.logs.bind(d);
+      d.logs = async (q) => {
+        await wait(2_000);
+        return logs(q);
+      };
+      const own = d.act.bind(d);
+      d.act = async (a, o) => {
+        if (a.kind !== 'tap') return own(a, o);
+        tapped = true;
+        await wait(answerMs);
+        return own(a, o);
+      };
       const { call } = await connect(d);
+      await call('screen');
+      const r = await call('tap', { selector: { text: 'Form' } });
+      expect([r.data.code, r.data.dispatched], String(answerMs)).toEqual(['APP_NOT_RUNNING', true]);
+      expect(r.text).toMatch(
+        /^APP_NOT_RUNNING: (tapped @\w+ "Form"; )?the app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\)\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main\n/,
+      );
+    }
+  });
+
+  it('says a step with no app selected killed the one it aimed at, gone or started again under the same screen', async () => {
+    // as an emulator's "keeps stopping" stands over the app's last screen: its process gone, or a new one in its place
+    for (const after of [undefined, '200']) {
+      const d = new FakeDevice();
+      d.pid = '100';
+      d.appPid = d.fakePid;
+      d.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' }];
+      const own = d.act.bind(d);
+      d.act = (a, o) => {
+        if (a.kind === 'tap') d.pid = after;
+        return own(a, o);
+      };
+      const { call } = await connect(d, { defaults: { app: undefined } });
+      const r = await call('steps', {
+        steps: [
+          { action: 'tap', selector: { text: 'Form' } },
+          { action: 'tap', selector: { text: 'Gönder' } },
+        ],
+      });
+      expect([r.data.code, r.data.dispatched], after).toEqual(['APP_NOT_RUNNING', true]);
+      expect(r.text).toContain('the app died: APP CRASH(EXCEPTION) (/tmp/report.txt)');
+      expect(r.text).toContain('the app died in step 1, tap: the rest were not run');
+      expect(act(d)).toHaveLength(1);
+    }
+  });
+
+  it('says the app died whose process the system holds for its "keeps stopping", alone or in a batch', async () => {
+    // a repeated crash: the process lives on, held by the system's dialog, which takes the front; no report is written
+    for (const [tool, app] of [
+      ['tap', 'dev.app'],
+      ['steps', undefined],
+    ] as const) {
+      const d = new FakeDevice();
+      d.pid = '100';
+      d.appPid = d.fakePid;
+      let crashing = false;
+      d.appCrashing = () => Promise.resolve(crashing);
+      d.logLines = ['E AndroidRuntime: FATAL EXCEPTION: main'];
+      d.current = ((own) => () => {
+        const t = own();
+        if (crashing) t.windows = t.windows.map((w) => ({ ...w, pkg: 'android' }));
+        return t;
+      })(d.current.bind(d));
+      const act0 = d.act.bind(d);
+      d.act = (a, o) => {
+        if (a.kind === 'tap') crashing = true;
+        return act0(a, o);
+      };
+      const { call } = await connect(d, { defaults: { app } });
+      await call('screen');
+      const tap = { selector: { text: 'Form' } };
+      const r =
+        tool === 'tap'
+          ? await call('tap', tap)
+          : await call('steps', {
+              steps: [
+                { action: 'tap', ...tap },
+                { action: 'tap', selector: { text: 'Gönder' } },
+              ],
+            });
+      expect([r.data.code, r.data.dispatched], tool).toEqual(['APP_NOT_RUNNING', true]);
+      expect(r.text).toContain(
+        'the app died: the system holds its process for its crash dialog, and no crash report says why yet\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main',
+      );
+      expect(act(d)).toHaveLength(1);
+    }
+  });
+
+  it('stops at a step whose app died, refused as that action alone is, with no app selected too', async () => {
+    // with none selected, the app is the one in front as the touch aimed, as a launch or a link in the batch opened it
+    for (const [read, app] of [
+      [undefined, 'dev.app'],
+      ['diff', 'dev.app'],
+      [undefined, undefined],
+      ['diff', undefined],
+    ] as const) {
+      const d = dying((x) => x.screen === 'form');
+      const { call } = await connect(d, { defaults: { app } });
       const r = await call('steps', {
         steps: [
           { action: 'wait_for', text: 'Form' },
@@ -439,13 +546,17 @@ describe('steps across screens', () => {
           { action: 'type_text', text: 'Ada' },
         ],
       });
-      expect(r.error, read).toBe(false);
+      expect([r.error, r.data.code, r.data.dispatched], `${String(read)} ${String(app)}`).toEqual([
+        true,
+        'APP_NOT_RUNNING',
+        true,
+      ]);
       expect(r.text).toMatch(
-        /^1\. text="Form" shown\n2\. tapped @\w+ "Form"\nWARNING: the app is not in the foreground \(com\.android\.launcher3\)[^\n]*\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\)\n/,
+        /^APP_NOT_RUNNING: 1\. text="Form" shown\n2\. tapped @\w+ "Form"; the app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\)\n/,
       );
-      expect(r.text).toContain('foreground: com.android.launcher3');
-      expect(r.text.split('\n').at(-1)).toBe('the app died in step 2, tap: the rest were not run');
-      expect(r.data.appDied).toEqual({ reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' });
+      expect(r.text).toContain(
+        'the app died in step 2, tap: the rest were not run\nforeground: com.android.launcher3',
+      );
       expect(act(d)).toHaveLength(1);
     }
     // an app that was not in front when a step began has no death to tell
@@ -473,17 +584,20 @@ describe('steps across screens', () => {
     });
 
   it('says the app died when a step fails as it is gone, where no step before had looked', async () => {
-    const d = dying((x) => x.screen === 'form');
-    const { call } = await connect(d);
-    const r = await cutShort(call);
-    expect([r.data.code, r.data.hint]).toEqual([
-      'APP_NOT_RUNNING',
-      'launch_app starts it again, and crashes says why it died',
-    ]);
-    expect(r.text).toMatch(
-      /\n3\. tap failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,
-    );
-    expect(act(d)).toHaveLength(1);
+    // with no app selected, the one in front as the step began
+    for (const app of ['dev.app', undefined]) {
+      const d = dying((x) => x.screen === 'form');
+      const { call } = await connect(d, { defaults: { app } });
+      const r = await cutShort(call);
+      expect([r.data.code, r.data.hint], app).toEqual([
+        'APP_NOT_RUNNING',
+        'launch_app starts it again, and crashes says why it died',
+      ]);
+      expect(r.text).toMatch(
+        /\n3\. tap failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,
+      );
+      expect(act(d)).toHaveLength(1);
+    }
   });
 
   it('tells no death in a step that fails while the app still runs', async () => {

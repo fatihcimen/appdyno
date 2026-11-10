@@ -531,8 +531,10 @@ describe('crashes', () => {
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' }];
     const r = await call('tap', { x: 5, y: 2390 });
     expect(r.text).toContain('the app died: APP CRASH(EXCEPTION) (/tmp/report.txt)');
-    expect(r.structuredContent).toMatchObject({
-      appDied: { reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' },
+    // refused: the touch went out, and the app it was for is gone
+    expect(r).toMatchObject({
+      isError: true,
+      structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
     });
     // it died once: an action after that, with it still gone, says nothing more of it
     device.crashReports = [];
@@ -561,7 +563,7 @@ describe('crashes', () => {
     const { call } = await connect(device);
     const r = await call('open_link', { url: 'https://example.com' });
     expect(r.text).not.toContain('the app died');
-    expect(r.structuredContent).not.toHaveProperty('appDied');
+    expect(r.isError).toBeFalsy();
     // a launch of it that leaves it gone, with no report, is a death at its start
     const launched = await call('launch_app');
     expect(launched.text).toContain(
@@ -579,7 +581,10 @@ describe('crashes', () => {
     device.pid = '200';
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(NATIVE)' }];
     const r = await call('tap', { x: 5, y: 2390 });
-    expect(r.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(NATIVE)' } });
+    expect(r).toMatchObject({
+      isError: true,
+      structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
+    });
     // a launch starts a new process on purpose, and no report means no death
     device.crashReports = [];
     await call('launch_app');
@@ -601,7 +606,10 @@ describe('crashes', () => {
     const { call } = await connect(device);
     await call('launch_app', { read: 'none' });
     const r = await call('tap', { x: 5, y: 2390 });
-    expect(r.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(EXCEPTION)' } });
+    expect(r).toMatchObject({
+      isError: true,
+      structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
+    });
   });
 
   it("takes the app's process after an action from the action's own answer, and asks for it only where an agent has none", async () => {
@@ -630,7 +638,10 @@ describe('crashes', () => {
     device.pid = '200';
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(NATIVE)' }];
     const died = await call('tap', { x: 5, y: 2390 });
-    expect(died.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(NATIVE)' } });
+    expect(died).toMatchObject({
+      isError: true,
+      structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
+    });
     expect(asked).toBe(1);
     device.crashReports = [];
     // a batch's steps that read nothing take it from their answers too
@@ -662,7 +673,10 @@ describe('crashes', () => {
     };
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)' }];
     const r = await call('tap', { x: 5, y: 2390 });
-    expect(r.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(EXCEPTION)' } });
+    expect(r).toMatchObject({
+      isError: true,
+      structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
+    });
   });
 
   it('says nothing of the sort when the app only went to the background', async () => {

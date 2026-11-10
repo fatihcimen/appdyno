@@ -1,7 +1,16 @@
 import { alertAnswer, reportProgress, throwIfCancelled, type ActOptions } from '@appdyno/core';
 import { z } from 'zod';
 import { SETTLE, type Answers, type ReadMode } from './answers.js';
-import { appDeath, DIED_HINT, diedLine, diedUnder, pidInAnswer } from './app-death.js';
+import {
+  aimedApp,
+  AppDied,
+  appDeath,
+  DIED_HINT,
+  diedLine,
+  diedRefusal,
+  diedUnder,
+  pidInAnswer,
+} from './app-death.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
@@ -61,7 +70,7 @@ const readsScreen = (st: Step | undefined) =>
 
 export function actOps(
   ctx: ServerContext,
-  { act, summary, header, show, clean, afterChange, noticed }: Answers,
+  { act, summary, header, show, clean, cleanLog, afterChange }: Answers,
   { one, step, windowSize, onTheScreen, checkNow }: Steps,
   tools: () => Record<string, Op>,
 ) {
@@ -260,16 +269,6 @@ export function actOps(
         /** What was in front after the last step, where it was told. */
         let front: string | undefined;
         const inFront = () => s.device.foreground().catch(() => undefined);
-        /** A step whose app died ends the sequence, with what that step alone would answer. */
-        const died = (i: number, name: string, data: ActionOut) => {
-          const all = [
-            ...done,
-            ...(i < plan.length - 1
-              ? [`the app died in step ${i + 1}, ${name}: the rest were not run`]
-              : []),
-          ].join('\n');
-          return reply(all, { ...data, done: clean(all) }, images);
-        };
         /** When the step before this one began: a crash a step failed for came in it, or in this one. */
         let since = Date.now();
         let began = since;
@@ -279,8 +278,9 @@ export function actOps(
           const last = i === plan.length - 1;
           const name = p.op ? p.op.name : p.st.action;
           seen = front ?? s.fresh?.foreground ?? seen;
-          // the app as the step began: one that fails as it is gone failed for its death, told after this step's own words
-          const was = { up: !!s.appId && seen === s.appId, pid: s.appPid };
+          // the app as the step began (none selected: the one in front): a step that fails as it is gone failed for that
+          const at = s.appId ?? seen;
+          const was = { app: at, up: !!at && seen === at, pid: s.appPid };
           [since, began] = [began, Date.now()];
           try {
             throwIfCancelled('steps');
@@ -293,9 +293,7 @@ export function actOps(
               images.push(...r.blocks.filter((b) => b.type === 'image'));
               // it may have selected another device
               s = await ctx.session();
-              const said = r.data as Partial<ActionOut>;
-              front = said.foreground;
-              if (said.appDied) return died(i, name, r.data as ActionOut);
+              front = (r.data as Partial<ActionOut>).foreground;
               continue;
             }
             const st = p.st;
@@ -303,13 +301,13 @@ export function actOps(
             const attempt = (o: ActOptions) => step(s, st, o, true).catch(refusedAction);
             const reads = p.read ?? (last ? read : undefined);
             if (!reads) {
-              // only typing into a field stays on its screen: a key after a tap that opened a
-              // screen must reach that screen, not the transition
+              // only typing stays on its screen: a key after a tap that opened one must reach it, not the transition
               const stays =
                 st.action === 'type_text' && !st.submit && !readsScreen(plan[i + 1]?.st);
-              // a death is told only of an app that was in front: one that never ran has none
-              const app = s.appId;
-              const up = app !== undefined && (front ?? (await inFront())) === app;
+              // a death is told only of an app that was in front; none selected: the one in front as the step began
+              const fg = front ?? (await inFront());
+              const app = s.appId ?? fg;
+              const up = app !== undefined && fg === app;
               const pidOf = up && s.device.appPid ? app : undefined;
               const opts = !stays
                 ? ({
@@ -320,28 +318,36 @@ export function actOps(
                   } as const)
                 : ({ settle: false, read: 'none', ...(pidOf && { pidOf }) } as const);
               const pid = up
-                ? (s.appPid ?? (await s.device.appPid?.(app).catch(() => undefined)))
+                ? ((app === s.appId ? s.appPid : undefined) ??
+                  (await s.device.appPid?.(app).catch(() => undefined)))
                 : undefined;
               const started = Date.now();
               const x = await attempt(opts);
+              const aimed = aimedApp(s);
               s.acted();
-              front = up ? await inFront() : undefined;
-              const appDied = up
-                ? await appDeath(s, front, pid, started, clean, true, pidInAnswer(pidOf, x.r))
+              const looks = s.appId ? up : aimed !== undefined;
+              front = looks ? await inFront() : undefined;
+              const appDied = looks
+                ? await appDeath(
+                    s,
+                    aimed,
+                    front,
+                    aimed === app ? pid : undefined,
+                    started,
+                    clean,
+                    true,
+                    aimed === app ? pidInAnswer(pidOf, x.r) : undefined,
+                  )
                 : undefined;
-              if (!appDied) {
-                done.push(`${i + 1}. ${x.done}`);
-                continue;
-              }
-              // as an action that reads says it, with the screen the app left
-              const screen = await s.read().catch(() => undefined);
-              if (screen) show(s, screen);
-              const fg = screen ? await noticed(s, screen, false) : '';
-              const notes = [diedLine(appDied)];
-              done.push(
-                `${i + 1}. ${[x.done + fg, ...notes, ...(screen ? [header(screen)] : [])].join('\n')}`,
-              );
-              return died(i, name, summary(x.done, screen, { appDied, notes, fg }));
+              if (appDied && aimed)
+                throw await diedRefusal(s, aimed, x.done, appDied, {
+                  wasPid: aimed === app ? pid : undefined,
+                  since: started,
+                  clean,
+                  cleanLog,
+                });
+              done.push(`${i + 1}. ${x.done}`);
+              continue;
             }
             let stepDone = '';
             const r = await act(
@@ -357,21 +363,25 @@ export function actOps(
             done.push(`${i + 1}. ${answerText(r)}`);
             if (last) ending = r;
             front = r.data.foreground;
-            if (r.data.appDied) return died(i, name, r.data);
           } catch (e) {
             if (!(e instanceof ToolError)) throw e;
             const screen = await s.read().catch(() => undefined);
             if (screen) show(s, screen);
-            const appDied = await diedUnder(s, screen?.foreground, was.pid, since, clean, was.up);
+            const own = e instanceof AppDied;
+            const appDied = own
+              ? undefined
+              : await diedUnder(s, was.app, screen?.foreground, was.pid, since, clean, was.up);
             throw new ToolError(
               [
                 ...done,
-                `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
+                own
+                  ? `${i + 1}. ${e.message}\nthe app died in step ${i + 1}, ${name}: the rest were not run`
+                  : `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
                 ...(appDied ? [`${diedLine(appDied)}, by step ${i + 1}`] : []),
                 ...(screen ? [header(screen)] : []),
               ].join('\n'),
-              appDied ? 'APP_NOT_RUNNING' : e.code,
-              appDied ? DIED_HINT : e.hint,
+              own || appDied ? 'APP_NOT_RUNNING' : e.code,
+              own || appDied ? DIED_HINT : e.hint,
               e.dispatched,
             );
           }
