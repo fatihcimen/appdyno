@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { z } from 'zod';
 import { readState } from './state.js';
@@ -65,6 +65,43 @@ export function ownerIn(file: string): Owner | undefined {
   return o && isAlive(o) ? o : undefined;
 }
 
+/** `file` made with this owner in it, whole from its first byte, unless it is there: a file half written read as no owner. */
+function claim(file: string, tool: string) {
+  const mine = `${file}.${process.pid}.new`;
+  writeFileSync(mine, JSON.stringify(thisOwner(tool)), { mode: 0o600 });
+  try {
+    linkSync(mine, file);
+    return true;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST') return false;
+    throw e;
+  } finally {
+    rmSync(mine, { force: true });
+  }
+}
+
+/**
+ * A dead holder's file moved aside, which one process alone can do to it: what moved is read back, and a live one, which
+ * another process had put there meanwhile, goes back. Two processes that each removed it took it over both.
+ */
+// shortcut: a third process may claim it in the moment a live one is aside, and both hold; a lock of the system's
+// (flock) closes that if three ever race for one dead holder's file
+function putAside(file: string) {
+  const aside = `${file}.${process.pid}.old`;
+  try {
+    renameSync(file, aside);
+  } catch {
+    return; // another process moved it first
+  }
+  try {
+    if (ownerIn(aside)) linkSync(aside, file);
+  } catch {
+    // a third process claimed it in that moment: the shortcut above
+  } finally {
+    rmSync(aside, { force: true });
+  }
+}
+
 /**
  * `body` with `file` held, one holder at a time across processes and within this one; `busy` makes the refusal from who
  * holds it. A file left by a dead process is taken over.
@@ -76,15 +113,11 @@ export async function exclusively<T>(
   body: () => Promise<T>,
 ): Promise<T> {
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-  const take = () =>
-    writeFileSync(file, JSON.stringify(thisOwner(tool)), { flag: 'wx', mode: 0o600 });
-  try {
-    take();
-  } catch {
+  for (let tries = 1; !claim(file, tool); tries++) {
     const holder = ownerIn(file);
     if (holder) throw busy(holder);
-    rmSync(file, { force: true });
-    take();
+    if (tries === 3) throw new Error(`${file} was left by a dead process again and again`);
+    putAside(file);
   }
   try {
     return await body();

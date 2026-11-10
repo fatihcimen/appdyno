@@ -2,7 +2,7 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { must } from '../src/must.js';
 import {
   exclusively,
@@ -14,6 +14,22 @@ import {
   ownerIn,
   thisOwner,
 } from '../src/index.js';
+
+/** What another process does to a lock file just before this one first removes or moves it. */
+const meanwhile = vi.hoisted(() => ({ file: '', act: undefined as (() => void) | undefined }));
+
+vi.mock('node:fs', async (original) => {
+  const real = await original<typeof import('node:fs')>();
+  const first =
+    <A extends unknown[], R>(f: (path: string, ...rest: A) => R) =>
+    (path: string, ...rest: A) => {
+      const act = path === meanwhile.file ? meanwhile.act : undefined;
+      if (act) meanwhile.act = undefined;
+      act?.();
+      return f(path, ...rest);
+    };
+  return { ...real, rmSync: first(real.rmSync), renameSync: first(real.renameSync) };
+});
 
 const file = () => join(mkdtempSync(join(tmpdir(), 'appdyno-owner-')), 'a', 'held.json');
 const busy = (o: { tool: string }) => new Error(`held by ${o.tool}`);
@@ -52,6 +68,23 @@ describe('one at a time', () => {
     });
     writeFileSync(f, JSON.stringify({ ...thisOwner('old'), pid: dead }));
     await expect(exclusively(f, 'new', busy, () => Promise.resolve('ran'))).resolves.toBe('ran');
+  });
+
+  it('is taken over from a dead process by one process alone, where another took it over first', async () => {
+    const f = file();
+    mkdirSync(dirname(f), { recursive: true });
+    writeFileSync(f, JSON.stringify({ ...thisOwner('old'), pid: spawnSync('true').pid }));
+    const other = otherProcess();
+    // after this one read the dead holder, and before it acts on that, the other process takes the file over
+    Object.assign(meanwhile, {
+      file: f,
+      act: () => writeFileSync(f, JSON.stringify(other.owner)),
+    });
+    await expect(exclusively(f, 'late', busy, () => Promise.resolve('ran'))).rejects.toThrow(
+      'held by other',
+    );
+    expect(ownerIn(f)).toEqual(other.owner);
+    await other.kill();
   });
 
   it('reads a broken file as no owner', async () => {
