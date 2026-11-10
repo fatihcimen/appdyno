@@ -43,6 +43,9 @@ Sizin koyduğunuz sınırlar:
 - `--no-home` ana ekran tuşunu engeller.
 - `APPDYNO_SECRETS=a,b` değerleri hiçbir zaman geri gösterilmez ve panoya konmaz. Loglardan ve çökme
   özetlerinden bu değerler çıkarılır.
+- Bir zaman çizelgesi bir isteği method, host ve yoluyla tutar. `--full-urls` (`APPDYNO_FULL_URLS=1`) bir token'ın
+  taşınabildiği sorgusunu da tutar; listelenen bir sır ve kimlik bilgisine benzeyen yine gizlenir. Bu, sunucuyu
+  başlatan kişinin bayrağıdır, bir ajanın geçebileceği bir argüman değil.
 - Sunucu, Android'de başka bir aracın UI otomasyonunu yalnızca `--takeover` ile durdurur. Bu seçenek olmadan
   cihazı tutanın adını söyler ve hiçbir şey yapmaz.
 

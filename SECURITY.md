@@ -43,6 +43,9 @@ Limits you set:
 - `--no-home` blocks the home key.
 - `APPDYNO_SECRETS=a,b` values are never shown back and never put on the clipboard. Logs and crash
   summaries are redacted of them.
+- A timeline keeps a request by its method, host and path. `--full-urls` (`APPDYNO_FULL_URLS=1`) keeps its query too,
+  where a token can ride, with a listed secret and what looks like a credential still hidden. It is a flag of the
+  person who starts the server, and no argument an agent can pass.
 - The server stops another tool's UI automation on Android only with `--takeover`. Without it, it names
   the holder and does nothing.
 
