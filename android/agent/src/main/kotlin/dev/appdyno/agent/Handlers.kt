@@ -112,6 +112,7 @@ class Handlers(private val automation: Automation, private val token: String) {
             }
         }
         val then = settling.appWindows()
+        job.goOn()
         when (a) {
             is Action.Tap -> input.tap(a.x, a.y)
             is Action.DoubleTap -> input.doubleTap(a.x, a.y)
@@ -138,9 +139,13 @@ class Handlers(private val automation: Automation, private val token: String) {
         val then = settling.appWindows()
         val cancelled = { job.cancelled }
         val tapAt = r.at?.let { (x, y) -> { input.tap(x, y) } }
+        job.goOn()
         tapAt?.invoke()
         val o = text.set(r.text, r.replace, r.focusTimeoutMs, cancelled, tapAt, r.at)
-        if (r.submit) input.key(android.view.KeyEvent.KEYCODE_ENTER)
+        if (r.submit) {
+            job.goOn()
+            input.key(android.view.KeyEvent.KEYCODE_ENTER)
+        }
         val at = SystemClock.uptimeMillis()
         return settling.after(r.after, at, job, Results.text(o), then)
     }

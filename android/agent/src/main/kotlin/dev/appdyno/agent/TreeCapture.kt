@@ -9,6 +9,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 class CWindow(
     /** The platform's window id (-1: not known): a new activity or dialog is a new window. */
@@ -137,9 +138,6 @@ class TreeCapture(private val automation: Automation) {
         Thread(r, "appdyno-tree").apply { isDaemon = true }
     }
 
-    @Volatile
-    private var failedReads = 0
-
     /**
      * `yielding`: the app did not go quiet before this read (starting, animating): the prefetch then yields to
      * its own work, as one that never yields can hold a starting app's UI thread against its input (ANRs at
@@ -194,9 +192,10 @@ class TreeCapture(private val automation: Automation) {
             roots += root to 0
         }
 
-        failedReads = 0
-        inWindow.clear()
-        tagged.clear()
+        // all the walk's own: a lane given up goes on with its capture beside the next lane's
+        val failedReads = AtomicInteger()
+        val inWindow = ArrayList<Rect?>()
+        val tagged = ArrayList<Pair<Int, AccessibilityNodeInfo>>()
         val nodes = ArrayList<CNode>(512)
         var truncated = false
         var level: List<Triple<AccessibilityNodeInfo, Int, Int>> = roots.map { (n, w) -> Triple(n, -1, w) }
@@ -211,16 +210,16 @@ class TreeCapture(private val automation: Automation) {
                 indices[i] = nodes.size
                 onNode?.invoke(nodes.size, item.first)
                 if (item.first.viewIdResourceName == null && TEST_TAG in item.first.availableExtraData) tagged += nodes.size to item.first
-                nodes += copy(item.first, item.second, item.third, windows[item.third])
+                nodes += copy(item.first, item.second, item.third, windows[item.third], inWindow)
             }
             if (truncated || ++depth >= maxDepth || SystemClock.uptimeMillis() - start > budgetMs) {
                 truncated = truncated || level.any { it.first.childCount > 0 }
                 break
             }
-            level = children(level, indices, prefetch)
+            level = children(level, indices, prefetch, failedReads)
         }
-        val unplaced = toRest(windows, nodes, display)
-        return Capture(windows, nodes, truncated || failedReads > 0, SystemClock.uptimeMillis() - start, display, unplaced, tagged.toList())
+        val unplaced = toRest(windows, nodes, display, inWindow)
+        return Capture(windows, nodes, truncated || failedReads.get() > 0, SystemClock.uptimeMillis() - start, display, unplaced, tagged)
     }
 
     private class Want(val node: AccessibilityNodeInfo, val child: Int, val parent: Int, val window: Int)
@@ -229,6 +228,7 @@ class TreeCapture(private val automation: Automation) {
         level: List<Triple<AccessibilityNodeInfo, Int, Int>>,
         indices: IntArray,
         prefetch: Int,
+        failedReads: AtomicInteger,
     ): List<Triple<AccessibilityNodeInfo, Int, Int>> {
         val wanted = ArrayList<Want>()
         for ((i, item) in level.withIndex()) {
@@ -239,7 +239,7 @@ class TreeCapture(private val automation: Automation) {
             try {
                 if (Build.VERSION.SDK_INT >= 33) w.node.getChild(w.child, prefetch) else w.node.getChild(w.child)
             } catch (_: RuntimeException) {
-                failedReads++
+                failedReads.incrementAndGet()
                 null
             }
         }
@@ -255,16 +255,12 @@ class TreeCapture(private val automation: Automation) {
         return out
     }
 
-    private val tagged = ArrayList<Pair<Int, AccessibilityNodeInfo>>()
-
-    /** The walk's nodes' places in their windows, by index (null: their window does not fill the display). */
-    private val inWindow = ArrayList<Rect?>()
-
     /**
-     * Sliding windows' nodes, from where they are now to where they come to rest: the place in the window, and the
-     * visibility the rest will give. How many visible nodes have no such place (virtual ones: Compose, a web view).
+     * Sliding windows' nodes, from where they are now to where they come to rest: the place in the window (`inWindow`,
+     * by index; null: their window does not fill the display), and the visibility the rest will give. How many visible
+     * nodes have no such place (virtual ones: Compose, a web view).
      */
-    private fun toRest(windows: List<CWindow>, nodes: List<CNode>, d: DisplayInfo): Int {
+    private fun toRest(windows: List<CWindow>, nodes: List<CNode>, d: DisplayInfo, inWindow: List<Rect?>): Int {
         // a keyboard panning the window moves it up with no transition running
         if (windows.any { it.type == TYPE_IME }) for (w in windows) if (w.offsetX == 0) w.offsetY = 0
         if (windows.none { it.sliding }) return 0
@@ -296,7 +292,7 @@ class TreeCapture(private val automation: Automation) {
         return unplaced
     }
 
-    private fun copy(n: AccessibilityNodeInfo, parent: Int, windowIndex: Int, w: CWindow): CNode {
+    private fun copy(n: AccessibilityNodeInfo, parent: Int, windowIndex: Int, w: CWindow, inWindow: MutableList<Rect?>): CNode {
         // a node below or beside the screen comes back with its far edge clipped to the screen, before its
         // near one (top 2453, bottom 2400): it is sent as empty there, never with a negative size
         val r = Rect().also { n.getBoundsInScreen(it) }

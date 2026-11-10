@@ -6,6 +6,14 @@ import java.util.concurrent.ConcurrentHashMap
 class Job(val id: Int) {
     @Volatile
     var cancelled = false
+
+    /**
+     * Before a touch or text, and after one: the host no longer waits, told TIMEOUT or CANCELLED, so that it never lands
+     * after all, and a job whose lane was given up does not go on beside the next lane's.
+     */
+    fun goOn() {
+        if (cancelled) throw AgentFailure("CANCELLED", "the host no longer waits for it")
+    }
 }
 
 /**

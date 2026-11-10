@@ -68,6 +68,15 @@ class ServerPartsTest {
     }
 
     @Test
+    fun aJobTheHostNoLongerWaitsForGoesNoFurther() {
+        val job = Job(1)
+        job.goOn()
+        job.cancelled = true
+        // what it would still do stops there: a touch, text, or the settle after them
+        assertEquals("CANCELLED", assertThrows(AgentFailure::class.java) { job.goOn() }.code)
+    }
+
+    @Test
     fun aFailureTellsTheHostWhoseItIs() {
         val typed = AgentFailure("NO_FOCUS", "no field")
         assertSame(typed, failureOf(typed))

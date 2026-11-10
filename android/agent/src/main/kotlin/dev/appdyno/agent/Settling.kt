@@ -26,6 +26,7 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
 
     /** The settle and the read an action asked for, into its result. `then`: the app's windows before it. */
     fun after(r: AfterRequest, at: Long, job: Job, out: JSONObject, windowsBefore: Set<Int>, inert: Boolean = false): Reply {
+        job.goOn()
         var last: Capture? = null
         if (r.settle != null) {
             val quiet = r.settle.quietMs.let { if (inert) minOf(it, INERT_QUIET_MS) else it }
