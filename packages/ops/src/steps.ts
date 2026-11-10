@@ -235,7 +235,8 @@ export function stepsFor(
           st.ref || st.selector || st.x !== undefined
             ? (await target(s, st, patient)).point
             : undefined;
-        // a simulator's helper takes touches but not text: typing waits for its runner if that is still starting
+        // a simulator types a US keyboard's text by its helper's keys, anything else by its runner, which it may wait
+        // for: a typing by keys that the runner's start ended meanwhile is no wait, and takes no 3 s
         const waited = s.device.agentUp ? undefined : Date.now();
         const r = await s.device.typeText(st.text, {
           ...(at && { at }),
@@ -244,7 +245,7 @@ export function stepsFor(
           ...opts,
         });
         const started =
-          waited !== undefined && s.device.agentUp
+          waited !== undefined && s.device.agentUp && Date.now() - waited >= 3_000
             ? `, after the runner's start: ${((Date.now() - waited) / 1000).toFixed(1)} s`
             : '';
         // iOS takes keys with no field reporting the focus (a hidden field does not): with no keyboard, nothing took them

@@ -75,3 +75,22 @@ export async function untilOpened(app: string, name: string, looks: LinkLooks, m
   }
   return undefined;
 }
+
+const HOME_FRONT_MS = 3_000;
+
+/**
+ * Whether the helper sees `app` come in front within `ms`. During a launch no app is primary, for seconds on a loaded
+ * Mac; the home screen stays so under a system alert over the app, which only the runner can tell apart.
+ */
+export async function helperSeesFront(direct: DirectSim, app: string, ms: number) {
+  const end = Date.now() + ms;
+  let homeSince: number | undefined;
+  while (direct.reads && Date.now() < end) {
+    const front = await direct.front().catch(() => undefined);
+    if (front === app) return true;
+    homeSince = front === HOME_SCREEN_APP ? (homeSince ?? Date.now()) : undefined;
+    if (homeSince !== undefined && Date.now() - homeSince > HOME_FRONT_MS) return false;
+    await sleep(20);
+  }
+  return false;
+}

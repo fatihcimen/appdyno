@@ -12,7 +12,8 @@ import {
   must,
 } from '@appdyno/core';
 import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
-import { typeName } from './simulators.js';
+import { modelOf } from './simulators.js';
+import { typeByKeys, typesByKeys } from './sim-keys.js';
 import {
   type Hello,
   type Tree,
@@ -31,7 +32,7 @@ import { DirectSim } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
 import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
-import { looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
+import { helperSeesFront, looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
 import { pasteOnMac, setSimClipboard } from './sim-clipboard.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
@@ -60,8 +61,6 @@ const FRONT_AGAIN_MS = 250;
 const LATE_TOUCH_MS = 4_000;
 
 const LAUNCH_FRONT_MS = 15_000;
-
-const HOME_FRONT_MS = 3_000;
 
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
@@ -109,6 +108,11 @@ export class IosSimulatorDevice extends IosDevice {
     return this.agentUp;
   }
 
+  /** Whether touches and keys go by the helper. */
+  private get helperInput() {
+    return !this.direct.status().input.startsWith('runner');
+  }
+
   /** Only a runner waits on the device: the helper is read. */
   protected override get waits() {
     return this.runnerUp;
@@ -120,10 +124,7 @@ export class IosSimulatorDevice extends IosDevice {
     if (app) this.simctl.appContainer(this.serial, app).catch(() => undefined);
   }
 
-  /**
-   * The runner, started behind the helper at the first read or touch of a simulator it opened, once: its start was the
-   * seconds of a first touch (9 to 28 s at load). Started as the device was chosen it slowed the next launch by 3.4 s.
-   */
+  /** The runner, started behind the helper at the first read or touch: at the choice it slowed a launch 3.4 s. */
   private startBehind() {
     if (this.behind || !this.helloInfo) return;
     this.behind = true;
@@ -260,31 +261,19 @@ export class IosSimulatorDevice extends IosDevice {
     this.startBehind();
     await this.wake();
     return this.queue.run(async () => {
-      if (!this.direct.status().input.startsWith('runner') && !this.direct.screenKnown)
-        await this.readDirect(true);
+      if (this.helperInput && !this.direct.screenKnown) await this.readDirect(true);
       const touch = action.kind !== 'key';
       const at = touch ? firstPoint(action) : undefined;
-      const armed =
-        !this.direct.status().input.startsWith('runner') &&
-        !!at &&
-        (await this.direct.arm().catch(() => false));
+      const armed = this.helperInput && !!at && (await this.direct.arm().catch(() => false));
       const waited =
-        at && !this.direct.status().input.startsWith('runner')
+        at && this.helperInput
           ? await this.direct.animationsOver().catch(() => undefined)
           : undefined;
       if (at) await sleep(Math.max(0, this.transitionEnds - Date.now()));
       const touchesBefore = this.direct.touchesEnded;
       const touchedAt = Date.now();
       if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
-      const on = {
-        read: (final: boolean) => this.readNow(final),
-        remember: (t: Tree) => this.remember(t),
-        recent: this.recent,
-        width: this.hello?.screen.w ?? Infinity,
-        clock: () => Date.now() - this.startingMs,
-        handled: () => this.direct.touchHandled().catch(() => undefined),
-      };
-      const settled = () => settleAfter(on, action, opts).catch(failedAfterSending);
+      const settled = () => settleAfter(this.settleOn(), action, opts).catch(failedAfterSending);
       let out = await settled();
       // nothing moved and the app has not seen the touch finish: it never got it, or a loaded Mac has it far behind
       const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at.x, at.y);
@@ -362,10 +351,7 @@ export class IosSimulatorDevice extends IosDevice {
     );
   }
 
-  /**
-   * A link in a scheme of the app's own returns once the app is in front, where a cold app was answered as the home
-   * screen; the "Open in …?" iOS asks before a scheme first opens an app is answered on its way, if it names this app.
-   */
+  /** A link in a scheme of the app's own returns once the app is in front: `untilOpened`, which answers its prompt. */
   override async openUrl(url: string, pkg?: string) {
     await this.wake();
     const app = pkg && this.direct.reads ? await this.opener(pkg) : undefined;
@@ -394,20 +380,9 @@ export class IosSimulatorDevice extends IosDevice {
    * alert over the app, and only the runner can tell that apart.
    */
   protected override async untilFront(pkg: string) {
-    const end = Date.now() + LAUNCH_FRONT_MS;
-    let homeSince: number | undefined;
-    while (this.direct.reads && Date.now() < end) {
-      const front = await this.direct.front().catch(() => undefined);
-      if (front === pkg) {
-        // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot
-        this.transitionEnds = Date.now() + TRANSITION_MS;
-        return;
-      }
-      homeSince = front === HOME_SCREEN_APP ? (homeSince ?? Date.now()) : undefined;
-      if (homeSince !== undefined && Date.now() - homeSince > HOME_FRONT_MS) break;
-      await sleep(20);
-    }
-    await super.untilFront(pkg);
+    if (!(await helperSeesFront(this.direct, pkg, LAUNCH_FRONT_MS))) return super.untilFront(pkg);
+    // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot
+    this.transitionEnds = Date.now() + TRANSITION_MS;
   }
 
   protected override async frontNow() {
@@ -415,15 +390,38 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   override async hardware() {
-    const me = (await this.simctl.list()).find((d) => d.udid === this.serial);
+    const model = await modelOf(this.simctl, this.serial);
+    return { ...(await super.hardware()), ...(model && { model }) };
+  }
+
+  /** What a settle after an action reads and remembers, on the clock that leaves out waits for the runner. */
+  private settleOn() {
     return {
-      ...(await super.hardware()),
-      ...(me?.deviceType && {
-        model:
-          (await this.simctl.typeNames().catch(() => undefined))?.get(me.deviceType) ??
-          typeName(me.deviceType),
-      }),
+      read: (final: boolean) => this.readNow(final),
+      remember: (t: Tree) => this.remember(t),
+      recent: this.recent,
+      width: this.hello?.screen.w ?? Infinity,
+      clock: () => Date.now() - this.startingMs,
+      handled: () => this.direct.touchHandled().catch(() => undefined),
     };
+  }
+
+  /** A US keyboard's text by the helper's keys, as touches go (`typeByKeys`); anything else by the runner. */
+  override async typeText(text: string, opts: Parameters<IosDevice['typeText']>[1] = {}) {
+    if (this.direct.reads && this.helperInput && typesByKeys(text)) {
+      await this.wake();
+      const typed = await this.queue.run(async () => {
+        const r = await typeByKeys(text, opts, {
+          read: () => this.readFront().then((x) => ('refused' in x ? undefined : x.tree)),
+          send: (a) => this.direct.send(a),
+          keyboardOpen: (t) => this.platformScreen.keyboardOpen(t),
+        });
+        const key = { kind: 'key', key: 'a' } as const; // the settle tells touches apart, and keys are none
+        return r && { ...r, ...(await settleAfter(this.settleOn(), key, opts)).result };
+      });
+      if (typed) return typed;
+    }
+    return super.typeText(text, opts);
   }
 
   override async setOrientation(rotation: 0 | 1 | 2 | 3) {

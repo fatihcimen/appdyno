@@ -213,7 +213,7 @@ export class Session {
     this.unsettled = undefined;
     // UIKit drops a touch during a slide, which no read nor the app's idle reports show: its remainder is the only sign
     if (SLIDE_DROPS_TOUCH[this.device.platform] && slid && slid.hash !== this.fresh?.hash)
-      await pause(slid.at + TRANSITION_MS - Date.now());
+      await pause(Math.max(0, slid.at + TRANSITION_MS - Date.now()));
   }
 
   /** The last touch skipped its settle: when it ended, and the screen it was aimed at. */

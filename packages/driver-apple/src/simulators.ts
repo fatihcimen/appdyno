@@ -19,6 +19,15 @@ const runtimeName = (runtime: string) =>
 export const typeName = (deviceType: string) =>
   deviceType.replace(/^.*SimDeviceType\./, '').replaceAll('-', ' ');
 
+/** A simulator's model as Xcode names its device type. */
+export async function modelOf(simctl: Simctl, udid: string) {
+  const me = (await simctl.list()).find((d) => d.udid === udid);
+  if (!me?.deviceType) return undefined;
+  return (
+    (await simctl.typeNames().catch(() => undefined))?.get(me.deviceType) ?? typeName(me.deviceType)
+  );
+}
+
 /** This Mac's simulators. */
 export class Simulators implements VirtualDevices {
   readonly kind = 'simulator';

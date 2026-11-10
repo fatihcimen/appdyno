@@ -176,13 +176,19 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   });
 
-  it('types a phone number whole into an empty field that formats it, after a secure field', async () => {
+  it('types a phone number whole into an empty field that formats it, after a secure field, by keys alone', async () => {
     const s = await open('Form');
-    const secure = await d.typeText('hunter2', { at: foundId(s, 'password_input') });
-    expect(secure.verified).toBeUndefined();
-    // keys at 60 a second lost one of ten here, as the field rewrote itself
-    const r = await d.typeText('5999999900', { at: foundId(s, 'gsm_input') });
-    expect(r.verified).toBe(true);
+    let secure: Awaited<ReturnType<IosSimulatorDevice['typeText']>> | undefined;
+    let r: typeof secure;
+    // a US keyboard's text goes by the helper's keys, as touches go: nothing of it waits for the runner
+    const asked = await askedOfRunner(async () => {
+      secure = await d.typeText('hunter2', { at: foundId(s, 'password_input') });
+      // keys with no gap lost one of ten here, as the field rewrote itself
+      r = await d.typeText('5999999900', { at: foundId(s, 'gsm_input') });
+    });
+    expect(asked).toBe(0);
+    expect(secure?.verified).toBeUndefined();
+    expect(r?.verified).toBe(true);
     const field = (await d.tree()).nodes.find((x) => x.id === 'gsm_input');
     expect(field?.t).toBe('(599) 999-9900');
   });

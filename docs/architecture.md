@@ -61,11 +61,11 @@ What an agent does most is look, act, and look again. Most of the design serves 
 
 Each platform has its own way in. All of them speak the same protocol, except where a simulator needs no agent at all.
 
-| device    | what runs there                                       | how the Mac reaches it                                   |
-| --------- | ----------------------------------------------------- | -------------------------------------------------------- |
-| Android   | the agent, an `app_process` running as the shell user | an abstract socket, through the adb server, with a token |
-| simulator | nothing at first: helpers on the Mac read and touch   | helpers; the runner starts behind them once it is chosen |
-| iPhone    | the runner, an XCTest bundle                          | `usbmuxd`                                                |
+| device    | what runs there                                           | how the Mac reaches it                                   |
+| --------- | --------------------------------------------------------- | -------------------------------------------------------- |
+| Android   | the agent, an `app_process` running as the shell user     | an abstract socket, through the adb server, with a token |
+| simulator | nothing at first: helpers on the Mac read, touch and type | helpers; the runner starts behind them at the first read |
+| iPhone    | the runner, an XCTest bundle                              | `usbmuxd`                                                |
 
 ## A window
 

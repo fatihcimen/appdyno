@@ -61,11 +61,11 @@ Bir ajanın en çok yaptığı şey bakmak, işlem yapmak ve yeniden bakmaktır.
 
 Her platformun kendi giriş yolu vardır. Bir simülatörün hiç ajana ihtiyaç duymadığı yer dışında hepsi aynı protokolü konuşur.
 
-| cihaz     | orada ne çalışır                                         | Mac ona nasıl ulaşır                                      |
-| --------- | -------------------------------------------------------- | --------------------------------------------------------- |
-| Android   | ajan: shell kullanıcısı olarak çalışan bir `app_process` | adb sunucusu üzerinden, token ile bir abstract soket      |
-| simülatör | başta hiçbir şey: Mac'teki yardımcılar okur ve dokunur   | yardımcılar; runner seçildiğinde onların arkasında başlar |
-| iPhone    | runner, bir XCTest paketi                                | `usbmuxd`                                                 |
+| cihaz     | orada ne çalışır                                              | Mac ona nasıl ulaşır                                     |
+| --------- | ------------------------------------------------------------- | -------------------------------------------------------- |
+| Android   | ajan: shell kullanıcısı olarak çalışan bir `app_process`      | adb sunucusu üzerinden, token ile bir abstract soket     |
+| simülatör | başta hiçbir şey: Mac'teki yardımcılar okur, dokunur ve yazar | yardımcılar; runner ilk okumada onların arkasında başlar |
+| iPhone    | runner, bir XCTest paketi                                     | `usbmuxd`                                                |
 
 ## Bir pencere
 
