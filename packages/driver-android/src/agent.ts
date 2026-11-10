@@ -54,6 +54,21 @@ export async function agentApk(): Promise<{ path: string; sha256: string }> {
   return { path, sha256 };
 }
 
+/** How long a recording's folder stands untouched before it is one nobody will take: a segment is written within 180 s. */
+const LEFT_MINUTES = 60;
+
+/**
+ * Takes away in `dir` what earlier starts left, as each build pushes its own and a host that died leaves its recording:
+ * every agent build but `keep` and those an agent still runs from, and each recording no file of which was written in
+ * the last hour.
+ */
+export const leftovers = (keep: string, dir = REMOTE_DIR) =>
+  `cd ${shq(dir)} || exit 0; used=" ${keep} "; ` +
+  `for p in $(pgrep -f '[d]ev.appdyno.agent.Main'); do ` +
+  `used="$used$(tr '\\0' '\\n' < /proc/$p/environ 2>/dev/null | sed -n 's|^CLASSPATH=.*/||p') "; done; ` +
+  `for f in agent-*.apk; do case "$used" in *" $f "*) ;; *) rm -f "$f" ;; esac; done; ` +
+  `for d in video-*; do [ -d "$d" ] && [ -z "$(find "$d" -mmin -${String(LEFT_MINUTES)})" ] && rm -rf "$d"; done; true`;
+
 const State = z.object({
   socket: z.string(),
   token: z.string(),
@@ -157,12 +172,14 @@ export class AndroidAgentLauncher {
 
   private async start(apk: { path: string; sha256: string }) {
     reportProgress('starting the Android agent');
-    const remote = `${REMOTE_DIR}/agent-${apk.sha256.slice(0, 16)}.apk`;
+    const name = `agent-${apk.sha256.slice(0, 16)}.apk`;
+    const remote = `${REMOTE_DIR}/${name}`;
     const have = await this.adb.exec(this.serial, `sha256sum ${shq(remote)} 2>/dev/null`);
     if (!have.startsWith(apk.sha256)) {
       await this.adb.exec(this.serial, `mkdir -p ${REMOTE_DIR}`);
       await this.adb.run(['-s', this.serial, 'push', apk.path, remote]);
     }
+    await this.adb.exec(this.serial, leftovers(name)).catch(() => undefined);
     const socket = `appdyno_${randomBytes(8).toString('hex')}`;
     const token = randomBytes(24).toString('hex');
     const log = `${REMOTE_DIR}/agent.log`;

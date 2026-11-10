@@ -1,11 +1,12 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
-import { AndroidAgentLauncher, agentApk } from '../src/agent.js';
+import { AndroidAgentLauncher, agentApk, leftovers } from '../src/agent.js';
 
 const SERIAL = 'emulator-5640';
 const LISTENING = '0000: 00000002 00000000 00010000 0001 01 138017 @appdyno_f40fc8831e0ed474\n';
@@ -116,5 +117,39 @@ describe('an agent that holds a device and that this host has no state of', () =
     const { launcher, ran } = await device('');
     await expect(launcher.connect()).rejects.toMatchObject({ code: 'AGENT_CONFLICT' });
     expect(killed(ran)).toHaveLength(1);
+  });
+
+  it('takes away what earlier starts left before it starts', async () => {
+    const { launcher, ran } = await device('');
+    await launcher.connect().catch(() => undefined);
+    const { sha256 } = await agentApk();
+    const left = ran.findIndex((c) => c === leftovers(`agent-${sha256.slice(0, 16)}.apk`));
+    expect(left).toBeGreaterThan(-1);
+    expect(left).toBeLessThan(ran.findIndex((c) => c.includes('app_process')));
+  });
+});
+
+describe('what earlier starts left on a device', () => {
+  it('goes, but for this build and a recording written to within the hour', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-left-'));
+    for (const f of ['agent-0000000000000001.apk', 'agent-0000000000000002.apk', 'agent.log'])
+      writeFileSync(join(dir, f), 'x');
+    for (const d of ['video-old', 'video-now']) {
+      mkdirSync(join(dir, d));
+      writeFileSync(join(dir, d, 'seg1.mp4'), 'x');
+    }
+    const hoursAgo = new Date(Date.now() - 2 * 3_600_000);
+    for (const p of ['video-old/seg1.mp4', 'video-old'])
+      utimesSync(join(dir, p), hoursAgo, hoursAgo);
+    const run = spawnSync('sh', ['-c', leftovers('agent-0000000000000001.apk', dir)]);
+    expect(run.status).toBe(0);
+    expect(readdirSync(dir).sort()).toEqual([
+      'agent-0000000000000001.apk',
+      'agent.log',
+      'video-now',
+    ]);
+    // a folder that is not there takes nothing away elsewhere
+    rmSync(dir, { recursive: true });
+    expect(spawnSync('sh', ['-c', leftovers('agent-1.apk', dir)]).status).toBe(0);
   });
 });
