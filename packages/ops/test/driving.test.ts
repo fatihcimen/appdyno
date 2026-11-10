@@ -1536,6 +1536,26 @@ describe('a turn of the screen', () => {
     const r = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
     expect(r.error).toBe(false);
     expect(r.text).toMatch(/"Ana sayfa" 1200,150/);
+    expect(r.text).not.toContain('stayed');
+  });
+
+  it('says so where the window kept its shape, as an app held to portrait does, with a read or none', async () => {
+    for (const read of ['full', 'none'] as const) {
+      const { call } = await connect(new FakeDevice());
+      const r = await call('set_orientation', { orientation: 'landscape_left', read });
+      const kept = 'the window stayed tall: the app may keep to one orientation';
+      expect(r.text, read).toContain(kept);
+      expect(r.data.warnings, read).toContain(kept);
+    }
+  });
+
+  it('waits for no turn the window already has, and says nothing of one', async () => {
+    const { call } = await connect(new FakeDevice());
+    await call('screen');
+    const at = Date.now();
+    const r = await call('set_orientation', { orientation: 'upside_down', read: 'none' });
+    expect(Date.now() - at).toBeLessThan(2_000);
+    expect(r.text).toBe('orientation: upside_down');
   });
 
   it('is turned for the next read where its own answer reads nothing', async () => {

@@ -12,8 +12,8 @@ import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
 const ROTATIONS = ['portrait', 'landscape_left', 'upside_down', 'landscape_right'] as const;
 
 /** The app's window as a turn leaves it: wide in landscape, tall else, with something on it. */
-const turnedTo = (rotation: number) => (x: Screen) =>
-  !!x.window && x.window.w > x.window.h === (rotation % 2 === 1) && x.list.length > 0;
+const turnedTo = (wide: boolean) => (x: Screen) =>
+  !!x.window && x.window.w > x.window.h === wide && x.list.length > 0;
 
 export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
   return [
@@ -127,8 +127,24 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
         const rotation = ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3;
+        const wide = rotation % 2 === 1;
+        // a window of that shape already, upside down or a tablet wide as it stands, has no turn to wait for
+        const was = (
+          s.fresh ??
+          (await s.device.tree().then(
+            (t) => s.screenOf(t),
+            () => undefined,
+          ))
+        )?.window;
         await turning(s, (kept) => s.device.setOrientation(rotation, kept));
-        return afterChange(s, `orientation: ${orientation}`, read, undefined, turnedTo(rotation));
+        const otherwise = `the window stayed ${wide ? 'tall' : 'wide'}: the app may keep to one orientation`;
+        return afterChange(
+          s,
+          `orientation: ${orientation}`,
+          read,
+          undefined,
+          was && was.w > was.h === wide ? undefined : { met: turnedTo(wide), otherwise },
+        );
       },
     }),
     defineOp({

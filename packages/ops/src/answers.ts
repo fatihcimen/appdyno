@@ -177,6 +177,8 @@ type Aftermath = {
   ran: boolean;
   /** The app a death is looked for in: `aimedApp`, or the one a launch started with none selected. */
   app: string | undefined;
+  /** What the change itself says beside the screen: a turn the window did not take. */
+  notes?: string[];
 };
 
 /** Whether the selected app was in front on the last read before an action: what it ran as when the action began. */
@@ -223,7 +225,10 @@ async function afterAction(
   const busy = o.settled === false ? o.busy : [];
   const moving =
     o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
-  const notes = changed === false && !o.launched ? [noChange(o.ms, o.idleMs)] : [];
+  const notes = [
+    ...(o.notes ?? []),
+    ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs)] : []),
+  ];
   return reply(
     [`${done}${fg}${moving}`, ...notes, diff ?? headerOf(screen, clean)].join('\n'),
     summaryOf(clean, done, screen, {
@@ -314,6 +319,9 @@ async function act(
   });
 }
 
+/** What a change waits for once the device has taken it, and what its answer says if that never came. */
+type Ready = { met: (x: Screen) => boolean; otherwise: string };
+
 /** What a change did, said once the screen it left is known: none with no read. */
 type Said = string | ((screen: Screen | undefined) => string);
 const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said : said(screen));
@@ -325,7 +333,7 @@ async function afterChange(
   said: Said,
   read: ReadMode,
   launched?: string,
-  ready?: (x: Screen) => boolean,
+  ready?: Ready,
   maxMs: number = SETTLE.maxMs,
 ) {
   // with no app selected, the one launched is the one whose death is looked for
@@ -339,8 +347,12 @@ async function afterChange(
   s.forgetProcess();
   // what the screen shows once the change has reached it, as a turn's call returns before the screen turns: what a read
   // gets meanwhile is the screen before, or a window with nothing on it yet
-  if (ready) await s.until(ready, SETTLE.maxMs);
-  if (read === 'none') return reply(saidOf(said), summaryOf(clean, saidOf(said)));
+  const notes = ready && !(await s.until(ready.met, SETTLE.maxMs)).met ? [ready.otherwise] : [];
+  if (read === 'none')
+    return reply(
+      [saidOf(said), ...notes].join('\n'),
+      summaryOf(clean, saidOf(said), undefined, { notes }),
+    );
   reportProgress('waiting for the screen to settle');
   const { screen, settled } = await settleRead(s, maxMs);
   return afterAction(clean, cleanLog, s, saidOf(said, screen), read, screen, {
@@ -354,6 +366,7 @@ async function afterChange(
     pid: undefined,
     launched,
     ran,
+    notes,
   });
 }
 
@@ -382,7 +395,7 @@ export function answersFor(ctx: ServerContext) {
       said: Said,
       read: ReadMode,
       launched?: string,
-      ready?: (x: Screen) => boolean,
+      ready?: Ready,
       maxMs?: number,
     ) => afterChange(clean, cleanLog, s, said, read, launched, ready, maxMs),
   };
