@@ -96,14 +96,21 @@ export function checkCreate(policy: Policy) {
     );
 }
 
-/** What a log may hold that nobody listed: tokens by their shape or by the word in front of them. */
+/**
+ * What a log may hold that nobody listed: tokens by their shape or by the word in front of them, which may end a longer
+ * key (`access_token`, `accessToken`, `client_secret`), all but a bare `pass`, which `bypass` and `compass` end too. A
+ * quoted value is hidden to its closing quote; a header's unquoted value to the end of its line, as a Cookie holds many.
+ */
 const LOG_SECRETS: [RegExp, string][] = [
-  [/\b(authorization\s*[:=]\s*)(?:bearer\s+|basic\s+)?[^\s,;"']+/gi, '$1•••'],
+  [
+    /((?:authorization|cookie)["']?\s*[:=]\s*)(?:(["'])(?:(?!\2)[^\r\n])*\2?|[^\r\n]*)/gi,
+    '$1$2•••$2',
+  ],
   [/\bbearer\s+[A-Za-z0-9._~+/-]{8,}=*/gi, 'Bearer •••'],
   [/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]+/g, '•••'],
   [
-    /\b(pass(?:word|wd)?|secret|token|api[_-]?key|access[_-]?key|session[_-]?id|cookie)(["']?\s*[:=]\s*["']?)[^\s,;&"']+/gi,
-    '$1$2•••',
+    /((?<![a-z])pass|pass(?:word|wd)|secret|token|api[_-]?key|access[_-]?key|session[_-]?id)(["']?\s*[:=]\s*)(?:(["'])(?:(?!\3)[^\r\n])*\3?|[^\s,;&"']+)/gi,
+    '$1$2$3•••$3',
   ],
 ];
 

@@ -494,6 +494,39 @@ describe('logs', () => {
     expect(clean('cookie: a=b; c=d')).not.toContain('a=b');
     expect(clean('count=3 tokens left')).toBe('count=3 tokens left');
   });
+
+  it('hides a credential whose key ends in a word of one, and a header to its end', () => {
+    const clean = (s: string) => redactLog(DEFAULT_POLICY, s);
+    const hidden = {
+      'GET https://api.example/cb?access_token=ya29.a0AfB_byC1x2&state=ok 200':
+        'GET https://api.example/cb?access_token=•••&state=ok 200',
+      '{"access_token":"ya29.a0AfB_byC1x2","expires_in":3599}':
+        '{"access_token":"•••","expires_in":3599}',
+      '{"accessToken":"abcSECRET123"}': '{"accessToken":"•••"}',
+      'refresh_token: 1//0gSECRETVALUE': 'refresh_token: •••',
+      'client_secret=GOCSPX-SECRET99&grant_type=authorization_code':
+        'client_secret=•••&grant_type=authorization_code',
+      'X-Api-Key: SECRETVALUE99': 'X-Api-Key: •••',
+      'jsessionid=SECRETVALUE99': 'jsessionid=•••',
+      'db_pass=hunter2 host=db': 'db_pass=••• host=db',
+      'password="hunter2 with space" user=bob': 'password="•••" user=bob',
+      '{"Authorization": "Basic dXNlcjpwYXNz", "Accept": "*/*"}':
+        '{"Authorization": "•••", "Accept": "*/*"}',
+      'Authorization: Token SECRETVALUE99': 'Authorization: •••',
+      'Cookie: a=1; sid=SECRETSESSION; csrftoken=SECRETCSRF\nnext line': 'Cookie: •••\nnext line',
+      'Set-Cookie: sessionid=SECRETSESSION; Path=/; HttpOnly': 'Set-Cookie: •••',
+    };
+    for (const [line, shown] of Object.entries(hidden)) expect(clean(line)).toBe(shown);
+    const ordinary = [
+      'bypass=true compass: 270',
+      'Cookie consent shown, 3 cookies kept',
+      'authorization failed for user bob',
+      'tokenizer ready: 512 tokens',
+      'password field focused',
+      'GET https://api.example/items?page=2&sort=asc 200 31 ms',
+    ];
+    for (const line of ordinary) expect(clean(line)).toBe(line);
+  });
 });
 
 describe('crashes', () => {
