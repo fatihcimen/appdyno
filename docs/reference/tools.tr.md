@@ -255,7 +255,8 @@ Bir kayıt, bir ağ yakalaması, açık bir rapor ve bir akış kaydı da aynı 
 Bir cihazı yöneten süreç onu tutar: durum klasöründe pid'ini ve başlangıç zamanını taşıyan bir dosya.
 Ölü bir sahibin talebi geçersizdir. İkinci bir süreç, paylaşmak istemedikçe sahibin pid'i ve adıyla reddedilir:
 `share: true` ile `use_device`, iki komut satırından birinde `--share` ya da `APPDYNO_SHARE=1`.
-`list_devices` kimin neyi tuttuğunu gösterir. Daemon yoktur.
+`list_devices` kimin neyi tuttuğunu gösterir. Daemon yoktur. Bitmiş bir sunucunun bıraktığını geri koyan süreç, bunu yaparken
+cihazı `appdyno put-back` olarak tutar; bu arada başlayan bir oturum onu en çok 40 sn bekler, oysa başka her tutucu onu hemen reddettirir.
 
 Seçili bir cihaz yokken bu sunucunun sürebileceği birden fazla cihaz varsa, cihaz gerektiren bir çağrı reddedilir ve her birini seri numarası, türü ve modeliyle adlandırır; `use_device` birini seçer, seri numarası ya da UDID'si, bir simülatörün ya da bir AVD'nin adı ya da modeliyle, izin listesi her birine karşı denetlenerek; süremeyeceği bir cihaz, sürebilecekleri adlarıyla söylenerek reddedilir. `list_devices` her cihazın `kind`'ını verir: `phone`, `simulator` ya da `emulator`; bir emülatörün `link`'i yoktur, çünkü onu hiçbir kablo bağlamaz.
 

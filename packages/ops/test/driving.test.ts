@@ -19,8 +19,10 @@ import { iosScreen } from '@appdyno/driver-apple';
 import { DeviceError, KEYS, type ActParams, type ErrorCode, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import {
+  claim,
   DEFAULT_POLICY,
   opsFor,
+  PUT_BACK_TOOL,
   ServerContext,
   type OpData,
   type OpName,
@@ -2500,7 +2502,7 @@ describe('device conditions', () => {
 });
 
 describe('device claims', () => {
-  const claimOf = (pid: number) => {
+  const claimOf = (pid: number, tool = 'other agent') => {
     const started = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
       encoding: 'utf8',
     }).trim();
@@ -2508,7 +2510,7 @@ describe('device claims', () => {
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       join(dir, 'emulator-5580.json'),
-      JSON.stringify({ pid, started, tool: 'other agent', since: '2026-11-03T00:00:00Z' }),
+      JSON.stringify({ pid, started, tool, since: '2026-11-03T00:00:00Z' }),
     );
   };
 
@@ -2527,6 +2529,38 @@ describe('device claims', () => {
       expect((await call('list_devices')).data.devices?.[0]?.heldBy?.pid).toBe(pid);
       expect((await call('use_device', { device: d.serial, share: true })).error).toBe(false);
       ctx.close();
+    } finally {
+      child.kill('SIGKILL');
+    }
+  });
+
+  it('waits out the hold of what puts back a server that has gone, and then takes the device', async () => {
+    const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+    claimOf(must(child.pid, "the child's pid"), PUT_BACK_TOOL);
+    let done: NodeJS.Timeout | undefined;
+    try {
+      const d = new FakeDevice();
+      const { call, ctx } = await connect(d, { defaults: { claims: true } });
+      const started = Date.now();
+      done = setTimeout(() => child.kill('SIGKILL'), 500);
+      expect((await call('use_device', { device: d.serial })).error).toBe(false);
+      expect(Date.now() - started).toBeGreaterThanOrEqual(400);
+      ctx.close();
+    } finally {
+      clearTimeout(done);
+      child.kill('SIGKILL');
+    }
+  });
+
+  it('refuses that hold too once it outlasts the wait', async () => {
+    const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+    const pid = must(child.pid, "the child's pid");
+    try {
+      claimOf(pid, PUT_BACK_TOOL);
+      await expect(claim('emulator-5580', 'appdyno mcp', 300)).rejects.toMatchObject({
+        code: 'DEVICE_CLAIMED',
+        message: expect.stringContaining(`pid ${pid} (${PUT_BACK_TOOL})`) as unknown,
+      });
     } finally {
       child.kill('SIGKILL');
     }

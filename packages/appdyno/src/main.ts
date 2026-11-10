@@ -38,9 +38,10 @@ import {
   opsFor,
   paramsOf,
   survey,
+  PUT_BACK_TOOL,
 } from '@appdyno/ops';
 import { runHub, runMirrors } from '@appdyno/hub';
-import { endWithHub } from './lifetime.js';
+import { endWithHub, PUT_BACK_AFTER } from './lifetime.js';
 import { alertOf } from './alert.js';
 import { benchmark, appdynoDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
@@ -105,7 +106,8 @@ function contextFrom(values: ServerFlags, remember?: string) {
     ...(!values.measurements && { autoPrune: true }),
     ...(remember && { remember }),
     claims: true,
-    tool: remember ? 'appdyno cli' : 'appdyno mcp',
+    // a put-back's hold is one a server started meanwhile waits out
+    tool: remember ? 'appdyno cli' : values[PUT_BACK_AFTER] ? PUT_BACK_TOOL : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
     // a silent server sounds nowhere: a window that shows its request is told so
     ...(alertPerson ? { alertPerson } : { silent: true }),

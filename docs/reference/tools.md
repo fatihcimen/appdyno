@@ -255,7 +255,8 @@ live one runs, and leaves what a command line started for its next command.
 A process that drives a device holds it: a file in the state directory with its pid and start time.
 A dead owner's claim is free. A second process is refused with the owner's pid and name unless it asks
 to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
-`list_devices` shows who holds what. There is no daemon.
+`list_devices` shows who holds what. There is no daemon. The process that puts back what an ended server left holds
+the device as `appdyno put-back` while it does, and a session that starts meanwhile waits for it, up to 40 s, where it is refused at once by any other holder.
 
 With no device selected and more than one this server may drive, a call that needs one is refused, naming each by serial, kind and model, and `use_device` picks one, by its serial or UDID, a simulator's or an AVD's name, or its model, the allow list matched against each; a device it may not drive is refused with the ones it may, by name. `list_devices` gives each device's `kind`: `phone`, `simulator` or `emulator`; an emulator has no `link`, as no cable joins it.
 

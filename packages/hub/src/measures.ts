@@ -119,7 +119,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
   const scroll = perfScrollOp(own);
 
   const held = async <T>(say: (line: string) => void, work: () => Promise<ToolResult<T>>) => {
-    claim(serial, 'appdyno window');
+    await claim(serial, 'appdyno window');
     try {
       return (await inCall({ progress: say }, work)).data;
     } finally {
