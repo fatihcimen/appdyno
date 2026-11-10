@@ -85,9 +85,9 @@ revision and on each request on 2026-07-28, and names the device, the app and wh
 A no or a closed prompt does nothing, and the answer says its question got no yes, never that a person declined: a client may answer by itself, as one run headless answered no in 9 ms, with no person shown the question. Each refusal's hint says how a person allows it ahead, by the flag below, the hint of a no too. On 2026-07-28 no request goes back to a
 client, so the call ends its round with the question and the client brings the answer back with the call: the call waits
 where it stopped, so a step before it in the same `steps` is not done again, and an answer that does not come in 5
-minutes is a no. A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person allows it, and so is a
-2025 client over `--http`, whose server lasts one POST and never saw its `initialize`; a 2026-07-28 one is asked within
-the call. `--allow-data-loss virtual` on the
+minutes is a no. A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person allows it, and so is
+every client over `--http`, a 2026-07-28 one too: whoever holds the token would answer the question it is asked, so
+nothing a caller answers there is a person's yes, and only the server's own flags let these go ahead. `--allow-data-loss virtual` on the
 server's command line lets these go ahead with nothing asked on simulators and emulators, and `all` on phones too. Only a
 person's registration of the server sets it: no argument, step or file of a tool stands for a yes. A command asks on its
 terminal and takes `--yes` for the answer; with neither, only the flag lets it go ahead. `device-tests/ask-person.test.ts`

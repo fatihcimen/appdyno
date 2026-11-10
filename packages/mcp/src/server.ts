@@ -25,7 +25,7 @@ import {
 
 /**
  * Who calls, and whether its person can be asked: a 2026-07-28 request says so itself. Over `--http` a 2025 client never
- * can be, as a server lasts one POST and never saw its `initialize`.
+ * can be, as a server lasts one POST and never saw its `initialize`, and `createServer` asks none there at all.
  */
 function callerOf(server: McpServer, ctx: ServerContext) {
   // the published type of the envelope is empty: these are its keys
@@ -94,13 +94,15 @@ function slim(schema: unknown): unknown {
  * The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. No
  * output schemas in the catalog: 16,000 characters that a client's validator would also hold against a
  * failed answer's code and hint. Structured content goes out all the same, the answer's text in it beside the
- * summary, as a client may show it in place of the text. `held` is the client over HTTP, where a server lasts one
- * POST and the `initialize` that named it came in another.
+ * summary, as a client may show it in place of the text. `http` says the server serves `--http`, where a server lasts
+ * one POST and the `initialize` that named its client, `client`, came in another. There no one is asked: whoever holds
+ * the token answers what it is asked, so what loses data or acts on a device's power goes ahead only by the person's
+ * own flag, as SECURITY.md has it.
  */
 export function createServer(
   ops: Record<string, Op>,
   log: (line: object) => void,
-  held?: string,
+  http?: { client: string | undefined },
 ): McpServer {
   const server = new McpServer(SERVER_INFO, {
     instructions: INSTRUCTIONS,
@@ -118,9 +120,9 @@ export function createServer(
       },
       async (args, ctx) => {
         const caller = callerOf(server, ctx);
-        const client = held ? { name: held } : caller.info;
+        const client = http?.client ? { name: http.client } : caller.info;
         // what earns a client its word in the hub: a call that got here, whatever came of it
-        if (client) noteClientCall(client, held ? 'http' : 'stdio');
+        if (client) noteClientCall(client, http ? 'http' : 'stdio');
         const started = Date.now();
         const said = (outcome: string, more?: object) =>
           log({ tool: name, ms: Date.now() - started, outcome, ...more });
@@ -134,7 +136,7 @@ export function createServer(
                   signal,
                   progress,
                   ...(client && { client: client.name }),
-                  ...(caller.canAsk && { ask }),
+                  ...(caller.canAsk && !http && { ask }),
                 },
                 () => t.handler(argumentsFor(t, args)),
               );

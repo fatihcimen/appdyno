@@ -86,8 +86,8 @@ Hayır yanıtında ya da kapatılan bir soruda hiçbir şey yapılmaz; yanıt, s
 istemciye geri gitmez, bu yüzden çağrı turunu soruyla bitirir ve istemci yanıtı çağrıyla geri getirir: çağrı durduğu yerde
 bekler, böylece aynı `steps` içinde ondan önceki bir adım yeniden yapılmaz; 5 dakika içinde gelmeyen
 bir yanıt hayır sayılır. Soramayan bir istemci `PERMISSION_REQUIRED` ve bir kişinin buna nasıl izin vereceğiyle reddedilir;
-`--http` üzerinden bir 2025 istemcisi de öyle, çünkü onun sunucusu tek bir POST sürer ve `initialize`'ını hiç görmemiştir; bir 2026-07-28 istemcisine
-çağrının içinde sorulur. Sunucunun komut satırındaki `--allow-data-loss virtual`
+`--http` üzerinden her istemci de öyle, bir 2026-07-28 istemcisi de: belirteci elinde tutan, kendisine sorulan soruyu kendisi yanıtlardı, bu yüzden
+orada bir çağıranın verdiği hiçbir yanıt bir kişinin evet'i değildir ve bunların yapılmasına yalnızca sunucunun kendi bayrakları izin verir. Sunucunun komut satırındaki `--allow-data-loss virtual`
 bunların simülatörlerde ve emülatörlerde hiçbir şey sorulmadan yapılmasına izin verir, `all` ise telefonlarda da. Bunu yalnızca
 bir kişinin sunucuyu kaydetmesi ayarlar: bir aracın hiçbir argümanı, adımı ya da dosyası evet yerine geçmez. Bir komut kendi
 terminalinde sorar ve yanıt olarak `--yes` alır; ikisi de yoksa yalnızca bayrak onun yapılmasına izin verir. `device-tests/ask-person.test.ts`,

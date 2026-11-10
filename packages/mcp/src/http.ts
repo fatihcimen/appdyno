@@ -144,7 +144,7 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
     let server: McpServer | undefined;
     // either revision, by the request: a 2025 one served stateless, as before, a 2026-07-28 one as it comes
     const serve = toNodeHandler(
-      createMcpHandler(() => (server = createServer(seat.ops, log, seat.client))),
+      createMcpHandler(() => (server = createServer(seat.ops, log, { client: seat.client }))),
     );
     if (isInitializeRequest(body) && client !== undefined)
       res.setHeader(SESSION, Buffer.from(client).toString('base64url'));

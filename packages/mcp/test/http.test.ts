@@ -20,7 +20,7 @@ const bearer = { authorization: `Bearer ${TOKEN}` };
 const stops: (() => Promise<void>)[] = [];
 
 /** A server with one fake device; the settings show whether a client's conditions went back. */
-async function serving(idleMs?: number) {
+async function serving(idleMs?: number, policy = DEFAULT_POLICY) {
   const dark = { value: 'no' };
   const settings = {
     get: () => Promise.resolve(dark.value),
@@ -42,7 +42,7 @@ async function serving(idleMs?: number) {
     port: 0,
     token: TOKEN,
     open: () => {
-      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { claims: true });
+      const ctx = new ServerContext(policy, [provider], { claims: true });
       contexts.push(ctx);
       return { ops: opsFor(ctx), end: () => ctx.end().then(() => ctx.close()) };
     },
@@ -261,17 +261,27 @@ describe('asking the person over HTTP', () => {
     expect(asked).not.toHaveBeenCalled();
   });
 
-  it('asks within the call itself on 2026-07-28, and goes on with the yes', async () => {
+  it('nor on 2026-07-28: whoever holds the token would answer its own question, so nothing it answers is a yes', async () => {
     const { url, device, log } = await serving();
+    const resets = vi.fn(() => Promise.resolve(3));
+    Object.assign(device, { events: { ...device.events, resetKeychain: resets } });
+    const client = await clientOf(url, 'asks', bearer, '2026-07-28', { elicitation: {} });
+    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
+    expect(text(await client.callTool(reset))).toMatch(
+      /^PERMISSION_REQUIRED: device_setting keychain asks the person first, and this client cannot ask: nothing was done\nhint: .*--allow-data-loss/,
+    );
+    expect(resets).not.toHaveBeenCalled();
+    expect(log).not.toHaveBeenCalledWith(expect.objectContaining({ outcome: 'asked' }));
+  });
+
+  it("goes ahead by the person's own flag, with nothing asked", async () => {
+    const { url, device } = await serving(undefined, { ...DEFAULT_POLICY, allowDataLoss: 'all' });
     const resets = vi.fn(() => Promise.resolve(3));
     Object.assign(device, { events: { ...device.events, resetKeychain: resets } });
     const client = await clientOf(url, 'asks', bearer, '2026-07-28', { elicitation: {} });
     const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
     expect(text(await client.callTool(reset))).toBe('the keychain is empty: it held 3 items');
     expect(resets).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith(
-      expect.objectContaining({ tool: 'device_setting', outcome: 'asked' }),
-    );
   });
 });
 
