@@ -21,6 +21,9 @@ import { frameVitals } from './vitals.js';
 /** Jank above this share of frames is worth a finding: this tool's own line, and none of Play's (`vitals.ts`). */
 const JANK_PERCENT = 10;
 
+/** The rounds a run kept under a scenario has, for the median a baseline or a compare takes. */
+const BASELINE_ROUNDS = 3;
+
 /** What a recording around the swipes gives each, and the list's coasting after them. */
 const SECONDS_A_SWIPE = 1.5;
 const COAST_SECONDS = 2;
@@ -30,6 +33,20 @@ const OBJECTS = [
   ['appContexts', 'AppContexts'],
   ['viewRootImpl', 'ViewRootImpl'],
 ] as const;
+
+/** A round's reading. */
+type Round = {
+  rewound?: boolean;
+  jankyPercent: number;
+  frozen: number;
+  frames: number;
+  p95Ms?: number;
+  memStartKb: number;
+  memEndKb: number;
+  activities?: number;
+  appContexts?: number;
+  viewRootImpl?: number;
+};
 
 /** Live objects that rise every round with nothing new on screen are not being freed. */
 export function leakSignal(
@@ -50,20 +67,22 @@ export function perfScrollOp(ctx: ServerContext) {
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Scroll jank: frames, frozen frames and memory while scrolling a list, in rounds of `swipes` swipes into new rows, read once the list stops. A list at its end is brought back for a round, which the answer says.',
+      'Scroll jank: frames, frozen frames and memory of a list, in rounds of `swipes` swipes into new rows, read once it stops: one, three under a scenario. A list at its end comes back for a round. Jank names its top function.',
     input: z
       .object({
         app: App,
         direction: z.enum(['up', 'down']).default('up'),
         swipes: z.number().int().min(1).max(10).default(5),
-        repeats: z.number().int().min(1).max(10).default(3),
+        repeats: z.number().int().min(1).max(10).optional(),
         probe: Probe,
         scenario: Scenario,
       })
       .strict(),
     output: ScrollOut,
     annotations: ACT,
-    run: async ({ app, direction, swipes, repeats, probe, scenario }) => {
+    run: async ({ app, direction, swipes, repeats: asked, probe, scenario }) => {
+      // a reading is one round; what is kept under a name, for a baseline or a compare, has three to take a median of
+      const repeats = asked ?? (scenario ? BASELINE_ROUNDS : 1);
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
@@ -72,30 +91,15 @@ export function perfScrollOp(ctx: ServerContext) {
       const row = probe === false ? false : 'frames';
       const readMemory = measure(s, 'memory');
       const all: Measured<unknown>[] = [];
-      const rounds: {
-        rewound?: boolean;
-        jankyPercent: number;
-        frozen: number;
-        frames: number;
-        p95Ms?: number;
-        memStartKb: number;
-        memEndKb: number;
-        activities?: number;
-        appContexts?: number;
-        viewRootImpl?: number;
-      }[] = [];
+      const rounds: Round[] = [];
       let limits: string | undefined;
       const stalls: number[] = [];
       const hitches: number[] = [];
       const histograms: FrameHistogram[] = [];
       const swipeAll = await scroller(s, direction, 0, swipes);
       const swipeBack = await scroller(s, direction === 'up' ? 'down' : 'up', 0, swipes);
-      const framesOfRound = () =>
-        measure(s, 'framesDuring', row)(
-          pkg,
-          Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS,
-          swipeAll,
-        );
+      const roundSeconds = Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS;
+      const framesOfRound = () => measure(s, 'framesDuring', row)(pkg, roundSeconds, swipeAll);
       /**
        * A round that moved the list, read from the screen: past its end a phone draws frames of nothing, which read as
        * smooth, or refuses a round that has none.
@@ -144,9 +148,18 @@ export function perfScrollOp(ctx: ServerContext) {
         if (f.value.totalFrames > 0 && f.value.worstHitchMs !== undefined)
           hitches.push(f.value.worstHitchMs);
       }
-      s.acted();
       const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
       const jank = counted.length ? round1(median(counted.map((x) => x.jankyPercent))) : undefined;
+      // what the app spent its time on as it janked: one scroll more, under the profiler, where the device has one; it
+      // counts in no round, as the profiler costs the frames something
+      const busiest =
+        jank !== undefined && jank > JANK_PERCENT
+          ? await measure(s, 'cpuProfile', false)(pkg, roundSeconds * 1_000, swipeAll).then(
+              (p) => p.value.appTop?.[0] ?? p.value.top[0],
+              () => undefined,
+            )
+          : undefined;
+      s.acted();
       const frozen = rounds.reduce((a, x) => a + x.frozen, 0);
       // steady state: the second round's end to the last one's (the first loads images and caches)
       const [, second] = rounds;
@@ -171,6 +184,11 @@ export function perfScrollOp(ctx: ServerContext) {
         ...(frozen > 0 ? [`frozen frames: ${frozen} (of ${FROZEN_FRAME_MS} ms or longer)`] : []),
         ...(growth !== undefined && growth > 0.3
           ? [`memory grows: ${Math.round(growth * 100)}% (from round 2 to the last)`]
+          : []),
+        ...(busiest
+          ? [
+              `the app's top function as it scrolled: ${busiest.symbol}, ${busiest.percent}% of its samples`,
+            ]
           : []),
         ...leakSignal(rounds),
         ...rounds.flatMap((x, i) =>

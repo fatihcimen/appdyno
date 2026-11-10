@@ -449,6 +449,31 @@ describe('perf tools', () => {
     expect(readFileSync(join(MEASUREMENTS, `${id}.txt`), 'utf8')).toContain('TOTAL PSS');
   });
 
+  it('scroll: reads one round where it is asked for a reading, and three for a scenario a baseline is kept under', async () => {
+    const t = await connect({}, new FakeDevice());
+    const rounds = async (args: Record<string, unknown>) =>
+      (((await t.call('perf_scroll', args)).structuredContent ?? {}) as { rounds?: unknown[] })
+        .rounds;
+    expect(await rounds({ swipes: 1 })).toHaveLength(1);
+    expect(await rounds({ swipes: 1, scenario: 'feed' })).toHaveLength(3);
+    expect(await rounds({ swipes: 1, repeats: 2 })).toHaveLength(2);
+  });
+
+  it("scroll: names the app's top function where it janked, from one scroll more under the profiler", async () => {
+    const dev = new FakeDevice();
+    const t = await connect({}, dev);
+    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).not.toContain('top function');
+    dev.jank = 40;
+    const r = (await t.call('perf_scroll', { swipes: 1 })).structuredContent as {
+      findings: string[];
+      rounds: unknown[];
+    };
+    expect(r.findings).toContain(
+      "the app's top function as it scrolled: dev.app.Busy.loop, 62.1% of its samples",
+    );
+    expect(r.rounds).toHaveLength(1);
+  });
+
   it('scroll: says the median of an even count of rounds to a tenth, as each round says its own', async () => {
     const dev = new FakeDevice();
     const shares = [98.13, 98.2];

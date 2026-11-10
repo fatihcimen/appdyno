@@ -541,6 +541,10 @@ On a Xiaomi with Android 16 at 60 Hz, host load 24-59, the same three read 33.3,
 | jank          | median janky share of the scroll rounds (rounds under 60 frames left out) above 10 %          | this project's default |
 | memory growth | over 30 % from the second round's end to the last's (the first round loads images and caches) | this project's default |
 
+`perf_scroll` reads one round, and three where it keeps the run under a `scenario`, for the median a baseline or a
+compare takes; `repeats` asks for others. Over the jank threshold it scrolls once more under the CPU profiler, which no
+round counts, and names the app's top function in that scroll: on an API 34 emulator, the fixture's heavy list read 94.4 % janky in one round and named `dev.appdyno.fixture.HeavyListActivity.heavyFrame`, 84 % of the samples, in 25 s.
+
 An emulator's numbers depend on the host's load and GPU mode: they are relative and only compared with
 the same kind of device (the tools say "virtual device: relative, compare only with the same kind of device").
 

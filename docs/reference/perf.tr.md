@@ -541,6 +541,10 @@ Tetiklenmiş bir ANR, `device-tests/vitals.test.ts` ile: sistemin sınırının 
 | takılma       | kaydırma turlarının medyan takılan payı (60 karenin altındaki turlar dışarıda) %10'un üstünde | bu projenin varsayılanı |
 | bellek artışı | ikinci turun sonundan sonuncununkine %30'un üstü (ilk tur görselleri ve önbellekleri yükler)  | bu projenin varsayılanı |
 
+`perf_scroll` bir tur okur, çalıştırmayı bir `scenario` altında sakladığında ise bir temel çizginin ya da bir
+karşılaştırmanın aldığı medyan için üç; `repeats` başka sayılar ister. Takılma eşiğinin üstünde, hiçbir turun saymadığı
+bir kez daha CPU profil oluşturucusu altında kaydırır ve uygulamanın o kaydırmadaki en üst fonksiyonunu adlandırır: API 34 bir emülatörde fixture'ın ağır listesi bir turda %94,4 takılmalı okundu ve 25 sn'de örneklerin %84'üyle `dev.appdyno.fixture.HeavyListActivity.heavyFrame` adlandırıldı.
+
 Bir emülatörün sayıları host'un yüküne ve GPU kipine bağlıdır: görelidirler ve yalnızca
 aynı türden bir cihazla karşılaştırılırlar (araçlar şunu söyler: "virtual device: relative, compare only with the same kind of device").
 

@@ -136,7 +136,8 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       };
     },
     scroll: async (app, say) => {
-      const input = scroll.input.parse({ app });
+      // the window keeps what it measures to judge the next one by, as a baseline is kept
+      const input = scroll.input.parse({ app, repeats: 3 });
       const data = await held(say, () => scroll.handler(input));
       const out = scroll.output.parse(data);
       const jank = out.jankMedianPercent;
