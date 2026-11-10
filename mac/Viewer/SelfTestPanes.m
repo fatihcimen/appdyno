@@ -257,6 +257,8 @@ static void checkContent(MVWindow *window) {
                                  @"issues": @[@{@"type": @"hitRegion", @"rule": @"touchTarget", @"message": @"Hit area is too small", @"label": @"Small"}]}];
   NSArray<NSString *> *issue = drawn([window.inspector.audit valueForKey:@"_list"]);
   MVCheck(@"content: an issue is said in Turkish, and the element it names stands as the app names it", [issue containsObject:@"Dokunma alanı çok küçük"] && [issue containsObject:@"Small"] && ![issue containsObject:@"Küçük"], [issue componentsJoinedByString:@"|"]);
+  // the apps' check before chose one by typing its id in the filter
+  ((NSSearchField *)[window.inspector valueForKey:@"_filter"]).stringValue = @"";
   [window.inspector showApps:@{@"op": @"apps",
                                @"apps": @[@{@"id": @"com.example.small", @"name": @"Small"}],
                                @"note": @"Launched Small"}];
