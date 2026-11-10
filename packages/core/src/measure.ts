@@ -106,8 +106,9 @@ export type AnonMemory = {
 
 export type LaunchMode = 'cold' | 'warm' | 'hot';
 
-/** How the app's code is compiled for a launch (Android). */
-export type CompileMode = 'speed' | 'speed-profile' | 'verify';
+/** How the app's code is compiled for a launch (Android): the compiler filters a launch asks for, and no other. */
+export const COMPILE_MODES = ['speed', 'speed-profile', 'verify'] as const;
+export type CompileMode = (typeof COMPILE_MODES)[number];
 
 /** Why a start took what it took, from a Perfetto startup trace. */
 export type StartupAnalysis = {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { packetEntries, registersPackets, uidBytes } from '../src/network.js';
+import type { Adb } from '../src/adb.js';
+import { AndroidNetwork, packetEntries, registersPackets, uidBytes } from '../src/network.js';
 
 describe('Android counts', () => {
   it('adds up a uid in the UID section only, untagged', () => {
@@ -42,5 +43,29 @@ InterfaceMapUpdater:
       { direction: 'Received', host: 'TCP port 18765', packets: 141, bytes: 205771 },
       { direction: 'Transmitted', host: 'UDP port 53', packets: 1, bytes: 40 },
     ]);
+  });
+});
+
+describe('a packet capture that stops', () => {
+  it('sends the device no pid or trace but the forms its start names, as a state file may hold any', async () => {
+    const asked: string[] = [];
+    const net = new AndroidNetwork(
+      {
+        exec: (_serial: string, command: string) => {
+          asked.push(command);
+          return Promise.resolve('');
+        },
+      } as unknown as Adb,
+      'R58M',
+    );
+    const trace = '/data/misc/perfetto-traces/appdyno-0123abcd.pftrace';
+    for (const h of [
+      { pid: '1; reboot', remote: trace },
+      { pid: '42', remote: `${trace}; rm -rf /sdcard` },
+    ])
+      await expect(net.stop({ via: 'packets', uid: 10_193, ...h })).rejects.toMatchObject({
+        code: 'INVALID_ARGUMENT',
+      });
+    expect(asked).toEqual([]);
   });
 });

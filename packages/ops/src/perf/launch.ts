@@ -1,4 +1,10 @@
-import { must, reportProgress, type LaunchMode } from '@appdyno/core';
+import {
+  COMPILE_MODES,
+  must,
+  reportProgress,
+  type CompileMode,
+  type LaunchMode,
+} from '@appdyno/core';
 import {
   deviceClass,
   loadBaseline,
@@ -31,7 +37,7 @@ async function launchRun(
   o: {
     mode: LaunchMode;
     repeats: number;
-    compile?: 'speed' | 'speed-profile' | 'verify' | undefined;
+    compile?: CompileMode | undefined;
     trace?: boolean | undefined;
     probe?: boolean | undefined;
   },
@@ -176,7 +182,7 @@ export function perfLaunchOp(ctx: ServerContext) {
         app: App,
         mode: z.enum(['cold', 'warm', 'hot']).default('cold'),
         repeats: z.number().int().min(1).max(10).default(5),
-        compile: z.enum(['speed', 'speed-profile', 'verify']).optional(),
+        compile: z.enum(COMPILE_MODES).optional(),
         trace: z.boolean().optional(),
         baselineProfile: z
           .boolean()

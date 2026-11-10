@@ -2,6 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { COMPILE_MODES } from '@appdyno/core';
+import { z } from 'zod';
 import type { GateAnswer, Reference } from './answer.js';
 import type { Baseline, BudgetRule } from './compare.js';
 import { keyName, type MeasureId, type PerfRecord } from './record.js';
@@ -68,8 +70,39 @@ export async function runKeys(dir: string, f: Partial<RunKey> = {}): Promise<Run
 export const runFiles = async (dir: string, k: RunKey) =>
   (await list(runsDir(dir, k))).filter((f) => f.endsWith('.json'));
 
-export const readRun = async (dir: string, k: RunKey, file: string) =>
-  JSON.parse(await readFile(join(runsDir(dir, k), file), 'utf8')) as PerfRecord[];
+/**
+ * A kept run as it is read back, a file anyone may have written: what goes to a device again is held to its forms, and
+ * what another version wrote that this one does not name is kept as it is.
+ */
+const RunFile = z.array(
+  z.looseObject({
+    schema: z.literal(1),
+    run: z.string(),
+    kind: z.string(),
+    value: z.number(),
+    samples: z.array(z.number()),
+    app: z.string(),
+    scenario: z.string(),
+    at: z.string(),
+    compile: z.enum(COMPILE_MODES).optional(),
+  }) satisfies z.ZodType<Pick<PerfRecord, 'schema' | 'run' | 'kind' | 'compile'>>,
+);
+
+/** A run's records; a file that is not one is refused by its path. */
+export async function readRun(dir: string, k: RunKey, file: string): Promise<PerfRecord[]> {
+  const path = join(runsDir(dir, k), file);
+  const refused = (why: string) => new Error(`${path} is not a run this tool kept: ${why}`);
+  const text = await readFile(path, 'utf8');
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw refused((e as Error).message);
+  }
+  const read = RunFile.safeParse(data);
+  if (!read.success) throw refused(z.prettifyError(read.error));
+  return read.data as PerfRecord[];
+}
 
 /** The newest `last` runs of a key, newest first. */
 export async function latestRuns(dir: string, k: RunKey, last = 1): Promise<PerfRecord[][]> {

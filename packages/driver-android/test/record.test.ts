@@ -42,3 +42,26 @@ describe('a recording that starts', () => {
     }
   });
 });
+
+describe('a recording that stops', () => {
+  it('sends the device no folder but the form its start names, as a state file may hold any', async () => {
+    const asked: string[] = [];
+    const r = new AndroidRecorder(
+      {
+        exec: (_serial: string, command: string) => {
+          asked.push(command);
+          return Promise.resolve('no-dir');
+        },
+      } as unknown as Adb,
+      'R58M',
+    );
+    await expect(
+      r.stop({ dir: '/data/local/tmp/appdyno/video-1; reboot #', file: 'out.mp4' }),
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    expect(asked).toEqual([]);
+    await expect(
+      r.stop({ dir: '/data/local/tmp/appdyno/video-0123abcd', file: 'out.mp4' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(asked[0]).toMatch(/^cd \/data\/local\/tmp\/appdyno\/video-0123abcd \|\|/);
+  });
+});

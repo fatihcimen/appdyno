@@ -22,6 +22,9 @@ const PACKETS_SDK = 34;
 /** A capture no one stops ends by itself. */
 const PACKETS_MS = 600_000;
 const NO_BODIES = 'no URLs, no bodies';
+const PACKET_DIR = '/data/misc/perfetto-traces';
+/** A packet trace on the device, as `start` names it. */
+const PACKET_TRACE = new RegExp(`^${PACKET_DIR}/appdyno-[0-9a-f]{8}\\.pftrace$`);
 
 /** What a uid has sent and received since `dumpsys netstats` began counting, from its UID section. */
 export function uidBytes(dump: string, uid: string) {
@@ -124,7 +127,7 @@ export class AndroidNetwork implements NetworkSource {
     const refused = (await this.paths()).find((p) => p.via === via)?.refused;
     if (refused) throw new DeviceError('UNSUPPORTED', refused);
     await traceProcessor();
-    const remote = `/data/misc/perfetto-traces/appdyno-${randomBytes(4).toString('hex')}.pftrace`;
+    const remote = `${PACKET_DIR}/appdyno-${randomBytes(4).toString('hex')}.pftrace`;
     const config = [
       'buffers { size_kb: 8192 }',
       'data_sources { config { name: "android.network_packets" network_packet_trace_config { poll_ms: 250 } } }',
@@ -158,6 +161,12 @@ export class AndroidNetwork implements NetworkSource {
     if (h.via !== 'packets') return this.read(h);
     const pid = String(h.pid);
     const remote = String(h.remote);
+    // both go into the device's shell, from a state file: only the forms `start` writes
+    if (!/^\d+$/.test(pid) || !PACKET_TRACE.test(remote))
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `not a packet trace of this tool: ${pid} ${remote}`,
+      );
     await this.sh(`kill ${pid}`);
     const end = Date.now() + 15_000;
     while (Date.now() < end && (await this.sh(`[ -d /proc/${pid} ] && echo up`)).includes('up'))

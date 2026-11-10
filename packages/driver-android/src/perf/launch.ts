@@ -1,4 +1,5 @@
 import {
+  COMPILE_MODES,
   must,
   sleep,
   type LaunchReading,
@@ -82,6 +83,12 @@ export async function launch(
   pkg: string,
   opts: { mode?: LaunchMode; repeats?: number; compile?: CompileMode; trace?: boolean } = {},
 ): Promise<Measured<LaunchStats>> {
+  // it goes into the device's shell, and may have come from a kept run's file
+  if (opts.compile && !COMPILE_MODES.includes(opts.compile))
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      `compile is one of ${COMPILE_MODES.join(', ')}, not ${JSON.stringify(opts.compile)}`,
+    );
   await d.readyToMeasure();
   assertPkg(pkg);
   const mode = opts.mode ?? 'cold';

@@ -27,6 +27,9 @@ const FIRST_FRAME_MS = 2_000;
 const PULL_MS = 600_000;
 
 /** The state folder may be on another volume than the video. */
+/** A recording's folder on the device, as `start` names it. */
+const VIDEO_DIR = new RegExp(`^${REMOTE_DIR}/video-[0-9a-f]{8}$`);
+
 const move = (from: string, to: string) =>
   rename(from, to).catch(async (e: unknown) => {
     if (!(e instanceof Error && 'code' in e && e.code === 'EXDEV')) throw e;
@@ -98,6 +101,9 @@ export class AndroidRecorder implements ScreenRecorder {
 
   async stop(h: RecordingHandle): Promise<RecordingFiles> {
     const { dir, file } = h as { dir: string; file: string };
+    // it goes into the device's shell, from a state file: only the form `start` writes
+    if (!VIDEO_DIR.test(dir))
+      throw new DeviceError('INVALID_ARGUMENT', `not a recording's folder: ${dir}`);
     // one signal per process; a second only if it is still there 20 s on, as a signal that came before
     // it had its handler is lost
     const out = await this.sh(

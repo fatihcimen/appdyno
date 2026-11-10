@@ -148,7 +148,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
     app: string,
     seen: Seen,
     mode: LaunchMode,
-    compile?: string,
+    compile?: CompileMode,
   ) => {
     s.forgetProcess();
     const m = await attempt(into(seen), 'a start trace', () =>
@@ -160,7 +160,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
         mode,
         repeats: 1,
         trace: true,
-        ...(compile && { compile: compile as CompileMode }),
+        ...(compile && { compile }),
       }),
     );
     s.acted();

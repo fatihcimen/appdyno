@@ -2,10 +2,12 @@ import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { assert, describe, expect, it, vi } from 'vitest';
-import { quantile } from '@appdyno/core';
+import { quantile, type CompileMode } from '@appdyno/core';
 import { parseExitInfo } from '../src/crashes.js';
 import { THERMAL_READ } from '../src/perf/app.js';
 import { AndroidPerf } from '../src/perf/index.js';
+import { launch } from '../src/perf/launch.js';
+import type { PerfDevice } from '../src/perf/shared.js';
 import { assertReadOnlySql, queryTrace, recordTrace } from '../src/perf/perfetto.js';
 import {
   parseAmStart,
@@ -657,5 +659,22 @@ describe('the measures of a device', () => {
     expect(ready).not.toHaveBeenCalled();
     await new AndroidPerf(device).frames('dev.app');
     expect(ready).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a launch in a compile state', () => {
+  it('sends the device no compile filter but those a launch asks for, as a kept run may name any', async () => {
+    const asked: string[] = [];
+    const d = {
+      readyToMeasure: () => Promise.resolve(),
+      shell: (command: string) => {
+        asked.push(command);
+        return Promise.resolve('');
+      },
+    } as unknown as PerfDevice;
+    await expect(
+      launch(d, 'com.example.app', { compile: 'speed; reboot #' as CompileMode }),
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    expect(asked).toEqual([]);
   });
 });

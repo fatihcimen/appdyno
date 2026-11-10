@@ -1,3 +1,4 @@
+import type { CompileMode } from '@appdyno/core';
 import type { Platform } from '@appdyno/protocol';
 import { median, spread, type Spread } from './stats.js';
 
@@ -42,8 +43,8 @@ export type PerfRecord = {
   device: DeviceInfo;
   deviceClass: string;
   build: Build;
-  /** Android's compile state, or what else makes launches comparable. */
-  compile?: string;
+  /** Android's compile state, as a launch asked for it. */
+  compile?: CompileMode;
   /** The newest start this run read of the device, as the device stamped it: no start is kept twice. */
   startedNs?: number;
   load: {

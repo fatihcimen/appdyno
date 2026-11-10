@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
   Cannot,
   type Capability,
+  type CompileMode,
   type MeasureSource,
   type Measured,
   must,
@@ -196,7 +197,7 @@ export type KeptRun = {
   /** The file with what the device said. */
   raw: string;
   metrics: Metric[];
-  compile?: string | undefined;
+  compile?: CompileMode | undefined;
   startedNs?: number | undefined;
 };
 
