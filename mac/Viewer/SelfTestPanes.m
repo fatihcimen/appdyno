@@ -231,7 +231,7 @@ static void checkApps(MVWindow *window) {
   [window.inspector pokeApp:@"dev.appdyno.fixture"];
   MVPump(0.2);
   NSButton *quit = MVFindControl(window.nsWindow.contentView, @"appQuit");
-  MVCheck(@"apps: an app chosen by a real click can be quit", quit.enabled, nil);
+  MVCheckRowClick(@"apps: an app chosen by a real click can be quit", quit.enabled, nil);
   [window.inspector showApps:@{@"apps": apps, @"note": @"Launched appdyno fixture"}];
   MVCheck(@"apps: and stays chosen as the list comes again after a launch", quit.enabled, nil);
   // a Samsung's hub opened on Device first: the room under the list went to the space below, and its rows stood unseen

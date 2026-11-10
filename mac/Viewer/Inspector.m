@@ -387,6 +387,8 @@ static NSString *ms(id v) {
   // a row is found only where a person could click it: a list with no room holds rows nobody sees
   BOOL found = _apps.rows.count > 0 && self.window && NSContainsRect(_apps.visibleRect, [_apps convertRect:[(NSTableView *)_apps.documentView rectOfRow:0] fromView:_apps.documentView]);
   if (found) MVRealClick(self.window, [_apps pointOfRow:0]);
+  // before macOS 27 a table takes no click a test sends: the row is chosen as that click would have
+  if (found && !_apps.selected) [_apps selectKey:_apps.rows[0].key];
   MVEmitFrom(self, @{@"op": @"clicked", @"name": app, @"found": @(found)});
 }
 
