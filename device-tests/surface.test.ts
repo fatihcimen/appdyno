@@ -1,15 +1,35 @@
+import { execFileSync } from 'node:child_process';
 import { assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 
 /**
  * Frames that `gfxinfo` never sees: the fixture's `SurfaceView`, drawn from its own thread every `ms` of its
- * link, on the device APPDYNO_ANDROID_SERIAL names, which is taken to refresh at 60 Hz. There a surface's
- * frames land on whole refreshes: 30 ms is a frame every 33.3, 40 ms gaps of 33.3 and two in five of 50, and
- * 60 ms gaps of 50 and 66.7, all of them slow by Play's bars.
+ * link, on the device APPDYNO_ANDROID_SERIAL names, at the refresh its display reads. A surface's frames land on
+ * whole refreshes: at 60 Hz 30 ms is a frame every 33.3, 40 ms gaps of 33.3 and two in five of 50, and 60 ms gaps
+ * of 50 and 66.7, all of them slow by Play's bars; at 90 Hz 40 ms is gaps of 33.3 and 44.4, none of them 50.
  */
 const APP = 'dev.appdyno.fixture';
 const SERIAL = process.env.APPDYNO_ANDROID_SERIAL ?? '';
+
+/** The display's own refresh, as a phone may run at 90 or 120 Hz. */
+const refreshOf = () => {
+  const said = execFileSync('adb', ['-s', SERIAL, 'shell', 'dumpsys display'], {
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  const hz = Number(/renderFrameRate ([\d.]+)/.exec(said)?.[1]);
+  assert(hz > 0, 'the display refresh');
+  return 1000 / hz;
+};
+
+/** A draw every `ms` lands on the two whole refreshes either side of it, by its share: those of `bar` ms or more. */
+const shareFrom = (ms: number, refresh: number, bar: number) => {
+  const fewer = Math.floor(ms / refresh) * refresh;
+  const later = (ms - fewer) / refresh;
+  // a gap of whole refreshes is the bar when it comes within half a millisecond, as 3 of 16.67 is 50
+  return 100 * ((fewer >= bar - 0.5 ? 1 - later : 0) + (fewer + refresh >= bar - 0.5 ? later : 0));
+};
 
 describe.skipIf(!SERIAL)('frames of a surface', () => {
   let call: Call;
@@ -32,7 +52,7 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
     const { data, text } = await surface(30);
     const s = data.surface;
     assert(s);
-    expect(s.refreshMs).toBeCloseTo(16.7, 0);
+    expect(s.refreshMs).toBeCloseTo(refreshOf(), 0);
     expect(s.fps).toBeGreaterThan(28);
     expect(s.fps).toBeLessThan(35);
     expect(s.slow34Percent).toBeLessThan(25);
@@ -48,8 +68,7 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
     assert(s);
     expect(s.fps).toBeGreaterThan(22.5);
     expect(s.fps).toBeLessThan(27.5);
-    expect(s.slow50Percent).toBeGreaterThan(25);
-    expect(s.slow50Percent).toBeLessThan(55);
+    expect(Math.abs(s.slow50Percent - shareFrom(40, refreshOf(), 50))).toBeLessThan(15);
     expect(text).toContain('would count');
   });
 
