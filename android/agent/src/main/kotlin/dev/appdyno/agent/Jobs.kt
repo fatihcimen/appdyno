@@ -4,8 +4,16 @@ import java.util.concurrent.ConcurrentHashMap
 
 /** A request in flight; `cancelled` is polled by every loop that can run long. */
 class Job(val id: Int) {
+    /** Told once the job is cancelled, by its host, its connection's end or its deadline: its lane lets it go. */
+    @Volatile
+    var onCancel: (() -> Unit)? = null
+
     @Volatile
     var cancelled = false
+        set(value) {
+            field = value
+            if (value) onCancel?.invoke()
+        }
 
     /**
      * Before a touch or text, and after one: the host no longer waits, told TIMEOUT or CANCELLED, so that it never lands

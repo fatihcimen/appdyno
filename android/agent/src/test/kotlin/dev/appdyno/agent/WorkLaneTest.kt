@@ -47,6 +47,29 @@ class WorkLaneTest {
     }
 
     @Test
+    fun aCancelledJobStuckInACallLetsTheJobsBehindItGoAtOnce() {
+        // a stroke whose injection waits on an app held for its crash dialog, which its host has refused and cancelled
+        val lane = WorkLane(timers, graceMs = 100)
+        val release = CountDownLatch(1)
+        val started = CountDownLatch(1)
+        val next = CountDownLatch(1)
+        val stroke = Job(1)
+        lane.submit(stroke, 60_000, {}) {
+            started.countDown()
+            stuckUntil(release)
+        }
+        lane.submit(Job(2), 60_000, {}) { next.countDown() }
+        assertTrue(started.await(10, TimeUnit.SECONDS))
+        val cancelledAt = System.nanoTime()
+        stroke.cancelled = true
+        // without the cancel freeing the lane, the read behind it waited for the stroke's deadline, a minute here
+        assertTrue("the job behind it ran", next.await(5, TimeUnit.SECONDS))
+        assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - cancelledAt) < 2_000)
+        assertEquals(1, lane.replaced.get())
+        release.countDown()
+    }
+
+    @Test
     fun aJobThatEndsInTimeKeepsItsThread() {
         val lane = WorkLane(timers, graceMs = 50)
         val ran = CountDownLatch(3)

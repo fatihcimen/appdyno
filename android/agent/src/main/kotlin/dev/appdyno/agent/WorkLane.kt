@@ -9,12 +9,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The agent's device work: one thread, jobs in order. When a job is still running `graceMs` after its
- * deadline (a stuck accessibility or input call), its thread is given up (interrupted) and the jobs
- * behind it go on, in order, on a new thread: one stuck call never turns every later request into a
- * TIMEOUT. The given-up thread finishes on its own, if ever; its job's answer was the TIMEOUT.
+ * The agent's device work: one thread, jobs in order. When a job is still running `graceMs` after no one waits for it
+ * any more, cancelled or past its deadline (a stuck accessibility or input call: a touch's injection waits on an app
+ * held for its crash dialog), its thread is given up (interrupted) and the jobs behind it go on, in order, on a new
+ * thread: one stuck call never turns every later request into a TIMEOUT. The given-up thread finishes on its own, if
+ * ever; its job's answer was the TIMEOUT or the cancel, and it makes no touch after it (Job.goOn).
  */
-class WorkLane(private val timers: ScheduledExecutorService, private val graceMs: Long = 1_000) {
+class WorkLane(private val timers: ScheduledExecutorService, private val graceMs: Long = 200) {
     @Volatile
     private var lane: ExecutorService = newLane()
 
@@ -28,13 +29,15 @@ class WorkLane(private val timers: ScheduledExecutorService, private val graceMs
         val finished = AtomicBoolean(false)
         // the thread's lane, taken when the job starts (it may have moved to a new lane while it waited)
         val ranOn = AtomicReference<ExecutorService?>()
-        val timeout = timers.schedule({
-            job.cancelled = true
-            onTimeout()
+        job.onCancel = {
             timers.schedule({
                 val on = ranOn.get()
                 if (on != null && !finished.get()) giveUp(on)
             }, graceMs, TimeUnit.MILLISECONDS)
+        }
+        val timeout = timers.schedule({
+            job.cancelled = true
+            onTimeout()
         }, deadlineMs, TimeUnit.MILLISECONDS)
         // never onto a lane being given up (its executor refuses new work)
         synchronized(this) {
