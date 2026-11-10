@@ -51,7 +51,10 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
       await sleep(1_000);
       shell('am', 'kill', APP);
     });
-    expect(reasons(exits)).toContain('USER REQUESTED KILL BACKGROUND');
+    // a Xiaomi with Android 16 names no subreason for it: it is a user's request all the same, and no force stop
+    expect(reasons(exits)).toContainEqual(
+      expect.stringMatching(/^USER REQUESTED( KILL BACKGROUND)?$/),
+    );
     const stopped = await after(() => shell('am', 'force-stop', APP));
     expect(reasons(stopped.exits)).toContain('USER REQUESTED FORCE STOP');
   });

@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `exits` cihaz paketi hiçbir alt neden adlandırmayan bir arka plan öldürmesini olduğu gibi, kullanıcının isteği olarak alır: Android 16'lı bir Xiaomi `am kill`'i alt nedeni 0 olan `USER REQUESTED` diye yazar, diğerleri `KILL BACKGROUND` yazar, ve yine de bir zorla durdurmadan ayrılır. Orada çalıştırıldı: 5 testi geçer.
 - `build-and-run` cihaz paketi bir iPhone için yalnızca `XCODE_XCCONFIG_FILE` bir takım adlandırdığında derler, başlığının gerektiğini söylediği gibi: hiçbiri yokken Xcode onu ad hoc imzalamayı reddediyor ve test başarısız oluyordu. Bir iPhone 13 Pro Max'te çalıştırıldı: hiçbiri yokken atlanır, BKXMF846AT takımının bir xcconfig'iyle fixture'ı derler ve kurar.
 - `driving` cihaz paketi artık bir iPhone'da `device_setting`'ten bir push istemez, çünkü push kendi başına bir araçtır ve ayarın şeması bu adı reddeder; bu da testi kendi denetimlerinden önce bütünüyle başarısız kılıyordu. Bir iPhone 13 Pro Max'te çalıştırıldı: geçer.
 - Android'de `crashes`, `since`'ten hemen sonra gelen bir bitişi cihazın kendi saatini bu Mac'inkiyle karşılaştırarak okur: cihazın damgalarını bu Mac'in zamanıyla olduğu gibi karşılaştırıyordu ve saati 190 ms geride olan Android 16'lı bir Xiaomi, `since`'ten 100 ms sonra gelen bir öldürmeyi ondan önce damgaladı; bu yüzden çıkış dışarıda kaldı ve `exits` hiçbirini okumadı. Cihazın saati çıkış bilgisiyle birlikte okunur, bu da başka bir saat dilimindeki bir telefonu da karşılar. Orada çalıştırıldı: `exits` cihaz paketi 5 bitişinin 4'ünü okudu, hiçbirini okumuyordu.

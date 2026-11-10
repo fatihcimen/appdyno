@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The device suite `exits` takes a background kill that names no subreason for the user's request it is: a Xiaomi with Android 16 writes `am kill` as `USER REQUESTED` with subreason 0, where others write `KILL BACKGROUND`, and it is still told from a force stop. Run there: its 5 tests pass.
 - The device suite `build-and-run` builds for an iPhone only where `XCODE_XCCONFIG_FILE` names a team, as its header says it needs: with none Xcode refused to sign it ad hoc and the test failed. Run on an iPhone 13 Pro Max: it skips with none, and with an xcconfig of team BKXMF846AT builds the fixture and installs it.
 - The device suite `driving` no longer asks `device_setting` for a push on an iPhone, as push is a tool of its own and the setting's schema refuses the name, which failed the whole test before its own checks. Run on an iPhone 13 Pro Max: it passes.
 - `crashes` on Android reads an end that came just after `since` by the device's own clock against this Mac's: it compared the device's stamps with this Mac's time as they were, and a Xiaomi with Android 16, its clock 190 ms behind, stamped a kill 100 ms after `since` before it, so the exit was left out and `exits` read none. The device's clock is read with the exit info, which takes a phone in another zone too. Run there, the device suite `exits` read 4 of its 5 ends, where it read none of them.
