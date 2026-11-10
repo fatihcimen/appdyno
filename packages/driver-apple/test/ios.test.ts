@@ -278,6 +278,22 @@ describe('home on a simulator', () => {
   });
 });
 
+describe("whether an iPhone's app runs", () => {
+  const phone = (pid: () => Promise<number>) => {
+    const d = new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' });
+    Object.assign((d as unknown as { ops: object }).ops, { pid });
+    return d;
+  };
+
+  it('is no only where the phone lists no process of it, and unknown where it could not be asked', async () => {
+    expect(await phone(() => Promise.resolve(812)).appRunning('dev.app')).toBe(true);
+    const none = new DeviceError('APP_NOT_RUNNING', 'dev.app is not running');
+    expect(await phone(() => Promise.reject(none)).appRunning('dev.app')).toBe(false);
+    const busy = new DeviceError('TIMEOUT', 'devicectl device info processes took over 60000 ms');
+    await expect(phone(() => Promise.reject(busy)).appRunning('dev.app')).rejects.toBe(busy);
+  });
+});
+
 describe('the kind of device', () => {
   it('calls a simulator virtual, and a phone not', () => {
     expect(new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951').virtual).toBe(true);

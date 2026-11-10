@@ -9,6 +9,16 @@ import { launchLanguage } from './manage.js';
 export const notRunning = (bundle: string) =>
   new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`, 'launch it, then ask again');
 
+/** Whether a look for an app's process found one: false only where it found none, as a look that failed tells nothing. */
+export const runsBy = (pid: Promise<number>) =>
+  pid.then(
+    () => true,
+    (e: unknown) => {
+      if (e instanceof DeviceError && e.code === 'APP_NOT_RUNNING') return false;
+      throw e;
+    },
+  );
+
 /**
  * The developer folder for Xcode's tools without DEVELOPER_DIR: the selected one when it is a full
  * Xcode (it may be the command line tools, which have no simulator tool), else the newest installed.
@@ -171,13 +181,7 @@ export class Simctl {
 
   /** Whether the app runs now, by `pid`'s rules; what cannot be told is thrown. */
   running(udid: string, bundle: string): Promise<boolean> {
-    return this.pid(udid, bundle).then(
-      () => true,
-      (e: unknown) => {
-        if (e instanceof DeviceError && e.code === 'APP_NOT_RUNNING') return false;
-        throw e;
-      },
-    );
+    return runsBy(this.pid(udid, bundle));
   }
 
   /** This Mac's processes, each with its state and its whole command line. */

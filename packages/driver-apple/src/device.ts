@@ -50,7 +50,7 @@ import {
   staticTexts,
 } from './platform-screen.js';
 import type { SettingsLinks } from './settings-pages.js';
-import { assertBundle } from './simctl.js';
+import { assertBundle, runsBy } from './simctl.js';
 
 const SETTINGS_APP = 'com.apple.Preferences';
 const ANOTHER_SECTION = 'prefs:root=SCREEN_TIME';
@@ -128,11 +128,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
 
   logs = (q: LogsQuery) => this.ops.logs(q);
   crashes = (q: CrashesQuery) => this.ops.crashes(q);
-  appRunning = (app: string) =>
-    this.ops.pid(app).then(
-      () => true,
-      () => false,
-    );
+  appRunning = (app: string) => runsBy(this.ops.pid(app));
 
   /**
    * iOS has no call to close a keyboard: its own hide key where it shows one, else a touch on a place
