@@ -64,7 +64,7 @@ Yeniden başlat ve onayla yeniden başlattı. Bu yüzden sunucunun bir cihaza g�
 kaydırma, uzun basma, yazma ya da tuş. Koruma ekranı okur ve sistemin güç, acil durum ya da silme denetimlerine dokunacak olan girdi
 kişiye sorar: Android'in güç menüsü (Kapat, Yeniden başlat, Acil durum), hızlı ayarlardaki düğmesi ve kilit ekranının acil arama
 düğmesi, bir Samsung'un ve bir Xiaomi'nin güç menüsü, Ayarlar'ın sıfırlamaları ile tüm verileri silme ekranı ve onayı; iOS'un kapatmak
-için kaydırın ve Acil SOS'u, Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'i. Onları gösteren sistem uygulamasından, güç
+için kaydırın ve Acil SOS'u, herhangi bir uygulamanın üstündeki Denetim Merkezi'nin güç düğmesi, Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'i. Onları gösteren sistem uygulamasından, güç
 menüsünün ve silme ekranının her dilde aynı kimliklerinden ve İngilizce ve Türkçe sözlerinden tanır; dokunma ref, seçici ya da x,y ile,
 nasıl hedeflenirse hedeflensin. Güç ya da yan tuşa 5 saniye içinde üçüncü basış da sorar, çünkü arka arkaya basışlar birçok telefonda
 yardım çağırır. Arama yapan bir bağlantı, `tel:`, `telprompt:`, `facetime:` ya da `facetime-audio:`, ve bir telefon uygulamasında, bir çeviricide, onun arama ekranında ya da FaceTime'da bir dokunuş da sorar. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları da. Yanıt, appdyno'nun bir cihazı

@@ -63,12 +63,13 @@ const CONTROL_IDS =
 
 /**
  * A control by its words, in English and Turkish, as `plain` writes them: the power menu's keys and the button that opens
- * it, a lock screen's emergency call, iOS's sliders, and Settings' resets and erases, from what lists them to what does it.
+ * it, iOS Control Center's power button, a lock screen's emergency call, iOS's sliders, and Settings' resets and erases,
+ * from what lists them to what does it.
  * shortcut: other languages are known by the ids above, which the power menu and the screen before an erase have; the
  * final confirmation has no id of its own, but the way to it passes that screen.
  */
 const WORDS = [
-  /^(power( off| menu| options)?|restart|reboot|shut ?down|emergency( call| mode| sos)?|sos|slide to (power off|reboot|restart|shut down)|kapat|gucu kapat|yeniden baslat|acil (durum( modu| sos| aramasi)?|arama|sos)|guc menusu|(kapatmak|yeniden baslatmak) icin kaydirin)$/,
+  /^(power( off| menu| options)?|restart|reboot|shut ?down|emergency( call| mode| sos)?|sos|slide to (power off|reboot|restart|shut down)|kapat|gucu kapat|yeniden baslat|acil (durum( modu| sos| aramasi)?|arama|sos)|guc( menusu)?|(kapatmak|yeniden baslatmak) icin kaydirin)$/,
   /^(erase|reset|factory|delete all)\b|\berase all\b|\bsifirla\b|\b(tum verileri|tum icerikleri ve ayarlari|tumunu|iphone'u|simdi) sil\b|\bfabrika\b/,
 ];
 
@@ -201,15 +202,23 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
   if (input.key && LEAVES.has(input.key)) return undefined;
   // shortcut: the read a touch was aimed by, which may be up to 20 s old when nothing acted since (Session.beforeTouch);
   // a dialog a person opens by hand in that time is not seen: read again here if a person's hand must be allowed for
-  const { tree } = s.fresh ?? (await s.current());
-  const call = input.points.map((p) => phoneAt(tree, p)).find(Boolean);
+  const read = (s.fresh ?? (await s.current())).tree;
+  const call = input.points.map((p) => phoneAt(read, p)).find(Boolean);
   if (call) return `a touch on the phone app ${call}, which may place a call`;
-  const found = controls(tree);
-  const touched = input.points.map((p) => found.at(p)).find(Boolean);
-  const what = touched ?? (input.key || input.types ? found.focused() : undefined);
+  let what = actsOn(controls(read), input);
+  // iOS's Control Center and power-off screen over an app may be in no read of it: the home screen app's read has them
+  if (!what && s.device.systemTree && !read.windows.some((w) => SYSTEM.test(w.pkg ?? ''))) {
+    const over = await s.device.systemTree().catch(() => undefined);
+    what = over && actsOn(controls(over), input);
+  }
   const how = input.types ? 'typing into' : input.key ? `the ${input.key} key on` : 'a touch on';
   return what && `${how} ${what}, the system's own power, emergency or erase control`;
 }
+
+/** What of such controls in a read an input acts on: where a finger comes down, else what a key or text reaches. */
+const actsOn = (found: ReturnType<typeof controls>, input: Input) =>
+  input.points.map((p) => found.at(p)).find(Boolean) ??
+  (input.key || input.types ? found.focused() : undefined);
 
 /** The guard of every input of a session: one on the system's power, emergency or erase controls asks the person. */
 export const powerGuard =

@@ -125,6 +125,9 @@ describe('the system power, emergency and erase controls', () => {
       ['Tüm verileri sil (fabrika ayarlarına sıfırla)', 'Uygulama tercihlerini sıfırla'],
     ],
     ['android-quick-settings-tr', ['Güç menüsü']],
+    // Control Center over the fixture on an iPhone with iOS 27.2 in Turkish, a window of the home screen app's in the
+    // runner's read: its power button
+    ['ios-control-center-tr', ['Güç']],
   ])('are found on %s, by a touch at their x,y', (name, labels) => {
     const tree = recorded(name);
     for (const label of labels)
@@ -196,6 +199,7 @@ describe('the system power, emergency and erase controls', () => {
       ['android-reset-options-tr', ['Yukarı git']],
       ['android-system-en', ['Navigate up', 'Languages', 'System update']],
       ['ios-general-en', ['About', 'Keyboard']],
+      ['ios-control-center-tr', ['Denetim Ekle', 'El Feneri', 'Wi-Fi', 'Parlaklık']],
       [APP, ['Restart', 'Reset', 'Power off']],
     ];
     for (const [screen, labels] of cases) {
@@ -394,5 +398,45 @@ describe('an input on them', () => {
     const started = performance.now();
     for (let i = 0; i < 200; i++) powerControlAt(qs, { x: 540, y: 1200 });
     expect((performance.now() - started) / 200).toBeLessThan(1);
+  });
+});
+
+describe("iOS's own views over an app, where a read of the app has none of them", () => {
+  /** The fixture app under Control Center, as a runner read it; the home screen app's read, with `over` up. */
+  const under = async (over: string) => {
+    const o = await onDevice('ios-control-center-app', { answer: 'decline' });
+    const tree = recorded(over);
+    Object.assign(o.device, { systemTree: () => Promise.resolve(tree) });
+    return { ...o, over: tree };
+  };
+
+  it("asks before a touch on Control Center's power button, a window of the home screen app's in an iPhone's read", async () => {
+    const { call, sent, asked, tree } = await onDevice('ios-control-center-tr', {
+      answer: 'decline',
+    });
+    const r = await call('tap', middle(tree, 'Güç'));
+    expect(r.code).toBe('PERMISSION_REQUIRED');
+    expect(asked[0]).toContain('a touch on "Güç"');
+    expect(sent()).toEqual([]);
+  });
+
+  it("asks before a touch on Control Center's power button or the power-off slider, read from the home screen app", async () => {
+    for (const [over, label] of [
+      ['ios-control-center-springboard', 'Power'],
+      ['ios-power-off-springboard', 'slide to power off'],
+    ] as const) {
+      const { call, sent, asked, over: t } = await under(over);
+      const r = await call('tap', middle(t, label));
+      expect(r.code, over).toBe('PERMISSION_REQUIRED');
+      expect(asked[0], over).toContain(`a touch on "${label}"`);
+      expect(sent(), over).toEqual([]);
+    }
+  });
+
+  it('lets a touch elsewhere on them go with nothing asked', async () => {
+    const { call, sent, asked, over } = await under('ios-control-center-springboard');
+    expect((await call('tap', middle(over, 'Add Controls'))).error).toBe(false);
+    expect(asked).toEqual([]);
+    expect(sent()).toHaveLength(1);
   });
 });

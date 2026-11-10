@@ -2,6 +2,11 @@ import UIKit
 import XCTest
 
 extension Device {
+    /// What the home screen app draws over the app in front, and no read of that app has: a system alert, Control
+    /// Center (its module grid) and the power-off screen (its slider), by the identifiers iOS 27 gives them.
+    static let overTheApp = NSPredicate(format: "elementType == %lu OR identifier IN %@",
+                                        XCUIElement.ElementType.alert.rawValue, ["cc-root-folder-view", "actionSlider"])
+
     struct Capture {
         var windows: [[String: Any]]
         var nodes: [Node]
@@ -46,14 +51,19 @@ extension Device {
         windows.append(["type": 1, "pkg": id, "layer": 0, "b": box(snap.frame), "active": true, "focused": true])
         add(snap, window: 0)
         // `exists` answers at once; a snapshot of a missing element waits for it to appear
-        let alertQuery = springboard.alerts.firstMatch
+        let overQuery = springboard.descendants(matching: .any).matching(Device.overTheApp).firstMatch
         alertFrame = nil
-        if app !== springboard, alertQuery.exists, let alert = try? alertQuery.snapshot() {
-            alertFrame = alert.frame
-            // a system alert (permission, notification prompt) over the app
-            windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": box(alert.frame),
-                            "active": false, "focused": false])
-            add(alert, window: 1)
+        if app !== springboard, overQuery.exists, let over = try? overQuery.snapshot() {
+            // a system alert (permission, notification prompt) alone; Control Center or the power-off screen as all the
+            // home screen app shows, as their power and emergency controls lie outside what the query finds
+            let alert = over.elementType == .alert
+            let shown = alert ? over : try? KeyedSnapshot.of(springboard) ?? springboard.snapshot()
+            if let shown, alert || id != Device.springboardId {
+                alertFrame = shown.frame
+                windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": box(shown.frame),
+                                "active": false, "focused": false])
+                add(shown, window: 1)
+            }
         }
         // a scroll view's bars are no control: shown only while it scrolls, they would name the screen's
         // nameless controls differently than the app's own elements do

@@ -64,7 +64,7 @@ panel's power button, Restart and the confirmation. So every input the server se
 It reads the screen, and one that would act on the system's power, emergency or erase controls asks the person: Android's
 power menu (Power off, Restart, Emergency), its button in quick settings and a lock screen's emergency call, a Samsung's
 and a Xiaomi's power menu, Settings' resets and its erase-all-data screen and confirmation; iOS's slide to power off and
-Emergency SOS, and Settings' Reset and Erase All Content and Settings. It knows them by the system app that shows them,
+Emergency SOS, Control Center's power button over any app, and Settings' Reset and Erase All Content and Settings. It knows them by the system app that shows them,
 by the power menu's and the erase screen's ids in any language, and by their words in English and Turkish, however the
 touch is aimed, by ref, selector or x,y. A third press of the power or side key in 5 seconds asks too, as presses in a
 row call for help on many phones. A link that places a call, `tel:`, `telprompt:`, `facetime:` or `facetime-audio:`, and a touch in a phone app, a dialer, its call screen or FaceTime, ask too. Reading such a screen asks nothing, nor back and home, which leave it. The answer says
