@@ -234,7 +234,8 @@ Maliyet, hiçbir pencere açık değilken bir iOS 27.2 simülatöründe ve bir A
 - `quietMs` boyunca yerleşimi oynatan erişilebilirlik olayı yok (odak ve yalnızca metin olayları sayılmaz; olaylar
   tek başlarına durulmayı en çok `quietMs`'in iki katı kadar tutar, çünkü sonsuz bir animasyon hiç sessizleşmez);
 - meşgul bir şey yok: bir ekran var (iki ekran arasında 100 ile 500 ms boyunca yalnızca durum çubuğu vardır), görünür
-  bir ilerleme göstergesi yok ve duracağı yer bilinmeyen, ekran dışında bir uygulama penceresi yok.
+  ve aralığı olmayan bir ilerleme çubuğu yok (bir döner simge, bir yükleme çubuğu: aralığı olan biri yerinde
+  durabilir) ve duracağı yer bilinmeyen, ekran dışında bir uygulama penceresi yok.
 
 Okumalar uygulamaya yük bindirir, bu yüzden bir okuma ancak bir şeye karar verebildiğinde yapılır. Android'de: ekran yokken
 ya da bir pencere geçişi sürüp yeni penceresini henüz göstermemişken hiç yapılmaz (geçiş WMS'ten gelir,

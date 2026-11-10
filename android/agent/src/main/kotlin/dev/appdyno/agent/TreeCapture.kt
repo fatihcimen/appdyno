@@ -89,12 +89,12 @@ class Capture(
     fun sameLayout(other: Capture) = LayoutHash.same(appNodes, other.appNodes)
 
     /**
-     * The screen is not done: no app window, a progress indicator shows (a spinner, a loading bar), or an
+     * The screen is not done: no app window, an indeterminate progress bar shows (a spinner, a loading bar), or an
      * app window sticks out of the display and its nodes' resting places are not known (a window sliding in
      * or out: its reported place stays at a midway point until the animation ends).
      */
     val busy: Boolean by lazy {
-        noApp || unplaced > 0 || nodes.any { it.flags and Flags.VISIBLE != 0 && it.cls.endsWith("ProgressBar") } ||
+        noApp || unplaced > 0 || nodes.any { it.flags and Flags.VISIBLE != 0 && it.indeterminate } ||
             windows.any { w -> w.type == AccessibilityWindowInfo.TYPE_APPLICATION && Slide.outside(w.bounds.left, w.bounds.top, w.bounds.right, w.bounds.bottom, display) }
     }
 }
@@ -330,9 +330,12 @@ class TreeCapture(private val automation: Automation) {
         val hint = n.hintText?.toString()
         // a field showing its hint reports the hint as its text: it has no text of its own
         val text = if (n.isShowingHintText) null else n.text?.toString()
+        val cls = n.className?.toString() ?: ""
         return CNode(
-            parent, windowIndex, n.className?.toString() ?: "", n.viewIdResourceName, text,
+            parent, windowIndex, cls, n.viewIdResourceName, text,
             n.contentDescription?.toString(), hint, r.left, r.top, maxOf(r.right, r.left), maxOf(r.bottom, r.top), f,
+            // a bar with no range has no progress to show: a spinner, a loading bar; one with a range may stand still
+            indeterminate = cls.endsWith("ProgressBar") && n.rangeInfo == null,
         )
     }
 

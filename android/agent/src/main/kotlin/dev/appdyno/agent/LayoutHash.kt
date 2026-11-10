@@ -14,6 +14,8 @@ class CNode(
     var right: Int,
     var bottom: Int,
     var flags: Int,
+    /** A progress bar with no range: busy while it shows. Not on the wire, where flags go. */
+    val indeterminate: Boolean = false,
 )
 
 object Flags {

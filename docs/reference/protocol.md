@@ -234,7 +234,8 @@ has been still for `quietMs`:
 - no layout-moving accessibility event for `quietMs` (focus and text-only events do not count; events
   alone hold the settle for at most twice `quietMs`, as an endless animation never goes quiet);
 - nothing busy: there is a screen (between two screens only the status bar exists, for 100 to 500 ms), no
-  visible progress indicator, and no application window off the display whose resting place is not known.
+  visible progress bar with no range (a spinner, a loading bar: one with a range may stand still), and no
+  application window off the display whose resting place is not known.
 
 Reads load the app, so one happens only when it can decide something. On Android: while there is no screen,
 or a window transition runs and has not shown its new window, none at all (the transition comes from WMS,

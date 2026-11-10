@@ -1,5 +1,6 @@
 package dev.appdyno.agent
 
+import android.graphics.Rect
 import android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION
 import android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
 import android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM
@@ -9,6 +10,25 @@ import org.junit.Test
 
 class SlideTest {
     private val d = DisplayInfo(1080, 2400, 420, 0)
+
+    @Test
+    fun onlyAProgressBarWithNoRangeKeepsTheScreenBusy() {
+        val screen = Rect().apply {
+            right = 1080
+            bottom = 2400
+        }
+        val app = CWindow(1, TYPE_APPLICATION, "app", 0, screen, true, true)
+        fun bar(indeterminate: Boolean) = Capture(
+            listOf(app),
+            listOf(CNode(-1, 0, "android.widget.ProgressBar", null, null, null, null, 40, 400, 1040, 440, Flags.VISIBLE, indeterminate)),
+            false,
+            0,
+            d,
+        )
+        assertTrue(bar(indeterminate = true).busy)
+        // a step bar, an order's progress: it stands still
+        assertFalse(bar(indeterminate = false).busy)
+    }
 
     @Test
     fun theStatusBarIsNoScreen() {
