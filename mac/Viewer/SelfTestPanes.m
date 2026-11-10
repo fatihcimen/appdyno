@@ -221,6 +221,20 @@ static void checkApps(MVWindow *window) {
   MVCheck(@"apps: an app chosen by a real click can be quit", quit.enabled, nil);
   [window.inspector showApps:@{@"apps": apps, @"note": @"Launched appdyno fixture"}];
   MVCheck(@"apps: and stays chosen as the list comes again after a launch", quit.enabled, nil);
+  // a Samsung's hub opened on Device first: the room under the list went to the space below, and its rows stood unseen
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  MVWindow *other = [[MVWindow alloc] initInRoom:hub.room];
+  [other configure:@{@"title": @"apps after device",
+                     @"stage": @"EXAMPLE0SERIAL",
+                     @"look": @{@"controls": @[@"home"]}}];
+  [other showPane:MVPaneDevice];
+  MVPump(0.3);
+  [other showPane:MVPaneApps];
+  [other.inspector showApps:@{@"apps": apps}];
+  [other.inspector.window layoutIfNeeded];
+  NSView *list = [other.inspector valueForKey:@"_apps"];
+  MVCheck(@"apps: its rows stand in sight whichever pane came first", NSHeight(list.frame) > 40 && !list.hasAmbiguousLayout, [NSString stringWithFormat:@"%@ ambiguous %d", NSStringFromRect(list.frame), list.hasAmbiguousLayout]);
+  [other leave];
 }
 
 /// The words a list draws in its rows, as a person reads them.

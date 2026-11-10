@@ -54,7 +54,7 @@ static NSString *ms(id v) {
   NSDictionary<NSString *, NSTextField *> *_values;
   MVActivityPane *_activity;
   MVList *_apps;
-  NSView *_noApps;
+  NSView *_noApps, *_appsGap;
   NSArray<NSDictionary *> *_appList;
   NSSearchField *_filter;
   NSTextField *_appsNote;
@@ -256,9 +256,11 @@ static NSString *ms(id v) {
   NSStackView *buttons = [NSStackView stackViewWithViews:@[_launch, _quit, _remove]];
   buttons.distribution = NSStackViewDistributionFillEqually;
   [self enableAppButtons:NO];
-  NSView *gap = [NSView new];
-  [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-  NSStackView *stack = [NSStackView stackViewWithViews:@[_filter, _noApps, _apps, gap, _appsNote, buttons]];
+  // the room under the list is the list's while it has rows, and the gap's while it has none: both at once, either took it
+  _appsGap = [NSView new];
+  [_appsGap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+  [_apps setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+  NSStackView *stack = [NSStackView stackViewWithViews:@[_filter, _noApps, _apps, _appsGap, _appsNote, buttons]];
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;
   stack.alignment = NSLayoutAttributeWidth;
   stack.spacing = 8;
@@ -372,7 +374,7 @@ static NSString *ms(id v) {
   }
   _apps.rows = rows;
   _apps.hidden = rows.count == 0;
-  _noApps.hidden = rows.count > 0;
+  _noApps.hidden = _appsGap.hidden = rows.count > 0;
   [_apps selectKey:chosen];
   [self enableAppButtons:_apps.selected != nil];
 }
@@ -382,7 +384,8 @@ static NSString *ms(id v) {
   [self filterChanged:nil];
   [self.window layoutIfNeeded];
   [self.window displayIfNeeded];
-  BOOL found = _apps.rows.count > 0 && self.window;
+  // a row is found only where a person could click it: a list with no room holds rows nobody sees
+  BOOL found = _apps.rows.count > 0 && self.window && NSContainsRect(_apps.visibleRect, [_apps convertRect:[(NSTableView *)_apps.documentView rectOfRow:0] fromView:_apps.documentView]);
   if (found) MVRealClick(self.window, [_apps pointOfRow:0]);
   MVEmitFrom(self, @{@"op": @"clicked", @"name": app, @"found": @(found)});
 }
