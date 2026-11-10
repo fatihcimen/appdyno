@@ -48,6 +48,11 @@ tutulur, böylece iki klasördeki iki terminal bir cihazı paylaşmaz. Veri kayb
 |                             | `APPDYNO_TOOLS_DIR`                 | indirilen araçların tutulduğu yer, durum klasörü ne olursa olsun: varsayılan `~/Library/Caches/appdyno/tools`                                                             |
 |                             | `APPDYNO_TRACE_PROCESSOR`           | Android'in trace'lerini okumak için, uygulamanınkinin ve indirilen sabit olanın yerine bir `trace_processor_shell`                                                        |
 |                             | `APPDYNO_SECRETS=a,b`               | hiçbir zaman geri gösterilmeyen ve panoya konmayan değerler                                                                                                               |
+|                             | `APPDYNO_FAST_TAP=0`                | iOS runner'ı XCTest'in olay sentezleyicisi yerine, yaklaşık iki kat uzun süren XCUI'nin kendi dokunuşuyla dokunur                                                         |
+|                             | `APPDYNO_ANIMATION_WAIT=0`          | bir iOS dokunuşu uygulamanın animasyonlarının bitmesini beklemeden gider                                                                                                  |
+|                             | `APPDYNO_ANDROID_AGENT`             | bu checkout'un derlemesi ya da paketinki yerine kurulacak bir Android ajanı `.apk` dosyası                                                                                |
+|                             | `APPDYNO_IOS_PRODUCTS`              | bu checkout'un derlemesi ya da ilk kullanımda yapılan yerine, bir simülatör için derlenmiş iOS runner'ını ve onun `.xctestrun` dosyasını tutan bir klasör                 |
+|                             | `APPDYNO_IOS_DEVICE_PRODUCTS`       | aynısı, bir telefon için                                                                                                                                                  |
 
 `--takeover` olmadan, Android'de UI otomasyonunu tutan ikinci bir araç asla durdurulmaz. Hata, onu tutanı
 pid'i ve komut satırıyla adlandırır ve onu durduracak komutun tam halini verir.

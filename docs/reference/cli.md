@@ -48,6 +48,11 @@ refused unless `APPDYNO_ALLOW_DATA_LOSS` allows it, or `APPDYNO_ALLOW_POWER` one
 |                             | `APPDYNO_TOOLS_DIR`                 | where fetched tools are kept, whatever the state directory: `~/Library/Caches/appdyno/tools` by default                                                     |
 |                             | `APPDYNO_TRACE_PROCESSOR`           | a `trace_processor_shell` to read Android's traces with, in place of the app's and the pinned one fetched                                                   |
 |                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                                                                                                             |
+|                             | `APPDYNO_FAST_TAP=0`                | the iOS runner taps by XCUI's own tap, which takes about twice as long, in place of XCTest's event synthesizer                                              |
+|                             | `APPDYNO_ANIMATION_WAIT=0`          | an iOS touch goes out with no wait for the app's animations to end                                                                                          |
+|                             | `APPDYNO_ANDROID_AGENT`             | an Android agent `.apk` to install, in place of this checkout's build or the package's                                                                      |
+|                             | `APPDYNO_IOS_PRODUCTS`              | a folder with the iOS runner built for a simulator and its `.xctestrun`, in place of this checkout's build or one made on first use                         |
+|                             | `APPDYNO_IOS_DEVICE_PRODUCTS`       | the same for a phone                                                                                                                                        |
 
 Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
 the holder by its pid and command line and gives the exact command to stop it.

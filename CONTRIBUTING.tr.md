@@ -81,6 +81,21 @@ tek bir ajana yer vardır. Bir hub bir suite'in ajanını kullanımda bulursa `A
 bir suite de öyle. Bir hub çalışan bir emülatörü ya da simülatörü kendiliğinden alır, bu yüzden iki bağlantı arasındaki bir suite ajanını
 açık bırakılmış birine yine kaptırabilir, bir telefon da kimin bağlı olduğunu gösteren tabloyu bir shell'den saklayabilir.
 
+## Kendine ait değişkenler
+
+Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#sunucu-seçenekleri) ve onun yönlendirdiği
+sayfalardadır. Aşağıdaki değişkenler appdyno'nun kendinedir: süreçlerinden biri onları bir başkasına verir ya da bir test
+ayarlar. Başka hiçbir şey onları ayarlamamalıdır ve herhangi biri değişebilir. `packages/appdyno/test/environment.test.ts`,
+kaynaklardaki her `APPDYNO_` adını belgelere ya da bu tabloya bağlı tutar.
+
+| değişken                   | ayarlayan                               | ne için                                                                                                     |
+| -------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `APPDYNO_HELPERS`          | Mac uygulamasının `appdyno` komutu      | uygulamanın hazır derlenmiş görüntüleyicisinin ve yardımcılarının yeri: ilk kullanımda hiçbir şey derlenmez |
+| `APPDYNO_NATIVE_DIR`       | testler ve `scripts/build-app.mjs`      | görüntüleyicinin ve yardımcıların `~/Library/Caches/appdyno/native` yerine derlendiği yer                   |
+| `APPDYNO_HELD_BY_HUB`      | hub, çalıştırdığı bir komut için        | komut hub ile birlikte biter                                                                                |
+| `APPDYNO_PROBE_OUT`        | kare ölçerin başlatılışı, uygulama için | uygulamadaki ölçerin karelerini yazdığı dosya                                                               |
+| `APPDYNO_RECORD_SEGMENT_S` | `device-tests/evidence.test.ts`         | bir Android kaydının parçası, yoksa 180 sn; böylece uzun bir kaydın testi kısa sürer                        |
+
 ## Modüller
 
 `packages/` altındaki her paket yalnızca kendi kuralının izin verdiği paketleri içe aktarabilir. Örneğin `core`

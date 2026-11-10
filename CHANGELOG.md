@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Every `APPDYNO_` variable the sources name is in the CLI reference or in CONTRIBUTING's table of appdyno's own, and `packages/appdyno/test/environment.test.ts` holds it so: `APPDYNO_FAST_TAP`, `APPDYNO_ANIMATION_WAIT`, `APPDYNO_ANDROID_AGENT`, `APPDYNO_IOS_PRODUCTS` and `APPDYNO_IOS_DEVICE_PRODUCTS` were in no page, and `APPDYNO_HELPERS`, `APPDYNO_NATIVE_DIR`, `APPDYNO_HELD_BY_HUB`, `APPDYNO_PROBE_OUT` and `APPDYNO_RECORD_SEGMENT_S` are said to be its own, for nothing else to set.
 - The CLI reference lists `--full-urls` and `--flight-seconds` with the server's other flags, and SECURITY says what `--full-urls` keeps: a timeline's request with its query. The changelog's line on `steps` says what a step whose app died answers, `APP_NOT_RUNNING`, where it said `appDied`.
 - VoiceOver hears whether each step of Connect a Phone and Get Started is done, the current one or not yet, which only its mark showed, and a call that failed in Activity says so in its words, which only a red mark said.
 - What follows a comma or `·` in a sentence a window is sent stays as it came on a Turkish Mac, as an app's label may hold one: the iOS Settings cell `Bluetooth, On` read `Bluetooth öğesine dokunuldu, Açık` in Activity, and reads `Bluetooth öğesine dokunuldu, On`. The words a window joins of its own, in the capsule and in a measure's line, are said a part at a time, in Turkish as before. Remove's question names the app as it is: the iPhone's Watch app was asked as `Dikkat kaldırılsın mı?`, and is `Watch kaldırılsın mı?`.
