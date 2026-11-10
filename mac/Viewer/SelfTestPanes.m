@@ -83,6 +83,19 @@ static void checkLogs(MVWindow *window) {
   NSView *pause = MVFindControl(pane, @"logPause"), *clear = MVFindControl(pane, @"logClear");
   NSRect from = [pause convertRect:pause.bounds toView:pane], to = [clear convertRect:clear.bounds toView:pane];
   MVCheck(@"logs: its buttons take the pane's width, edge to edge", NSMinX(from) < 1 && NSMaxX(to) > NSWidth(pane.bounds) - 1, [NSString stringWithFormat:@"%@ to %@ of %.0f", NSStringFromRect(from), NSStringFromRect(to), NSWidth(pane.bounds)]);
+  // an iPhone gives no log: a level, a search, Pause, Copy, Clear and a big empty box stood over a note that said so
+  NSString *noLog = @"An iPhone gives this Mac no log of an app while it runs. Its crash reports are under Crashes, and Console on this Mac shows the phone's own log.";
+  [pane show:@{@"op": @"logs",
+               @"lines": @[],
+               @"note": noLog,
+               @"none": @YES}];
+  [window.nsWindow layoutIfNeeded];
+  NSView *logCard = [pane valueForKey:@"_logCard"];
+  MVCheck(@"logs: where no log comes, only its note stands, and Crashes", level.isHiddenOrHasHiddenAncestor && pause.isHiddenOrHasHiddenAncestor && logCard.isHiddenOrHasHiddenAncestor && !about.hidden && [about.stringValue isEqual:MVWord(noLog)] && !MVFindControl(pane, @"logShowCrashes").isHiddenOrHasHiddenAncestor, about.stringValue);
+  [pane show:@{@"op": @"logs",
+               @"lines": @[],
+               @"note": @""}];
+  MVCheck(@"logs: and they come back with a log to read", !level.isHiddenOrHasHiddenAncestor && !logCard.isHiddenOrHasHiddenAncestor, nil);
   [pane showCrashes:@{@"op": @"crashes",
                       @"reports": @[@{@"at": @"2026-11-09 12:00", @"reason": @"SIGABRT", @"detail": @"0 libsystem abort\n1 Dev main", @"file": @"/tmp/dev.ips"}]}];
   NSButton *crashes = [pane valueForKey:@"_sections"][1];

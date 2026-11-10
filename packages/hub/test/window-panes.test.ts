@@ -126,6 +126,9 @@ describe("a window's Logs pane", () => {
     // what the driver tells an agent, with its commands, is said to a person in a person's words, once
     expect(phone.of('logs').filter((m) => m.note === NO_PHONE_LOG)).toHaveLength(1);
     expect(phone.of('logs').some((m) => m.note === phone.device.logNote)).toBe(false);
+    // and with it the pane hides the level, search, Pause, Copy, Clear and the empty log, which no log fills here
+    expect(phone.of('logs').find((m) => m.note === NO_PHONE_LOG)).toMatchObject({ none: true });
+    expect(barred.of('logs').some((m) => m.none)).toBe(false);
     three.end();
   });
 

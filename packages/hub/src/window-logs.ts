@@ -141,7 +141,9 @@ export function windowLogs(
       ...(mark?.level && { level: mark.level }),
     }));
     const noted = note(personal(r.note ?? ''));
-    if (lines.length || 'note' in noted) tell({ lines, ...noted });
+    // `none`: no log comes here at all, so the pane hides what works on one
+    if (lines.length || 'note' in noted)
+      tell({ lines, ...noted, ...(noted.note === NO_PHONE_LOG && { none: true }) });
   };
 
   const loop = async () => {

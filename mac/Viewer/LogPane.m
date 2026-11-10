@@ -33,7 +33,7 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
 
 @implementation MVLogPane {
   NSArray<MVAccentButton *> *_sections;
-  NSView *_logPart, *_crashPart;
+  NSView *_logPart, *_crashPart, *_find, *_buttons, *_logCard, *_slack;
   NSPopUpButton *_level;
   NSSearchField *_search;
   NSButton *_pause, *_copy;
@@ -81,19 +81,25 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
   _search.action = @selector(searched:);
   NSStackView *find = [NSStackView stackViewWithViews:@[_level, _search]];
   find.spacing = 8;
+  _find = find;
   _pause = MVPlaceButton(@"Pause", @"logPause", self, @selector(pause:));
   _copy = MVPlaceButton(@"Copy", @"logCopy", self, @selector(copyLines:));
   _copy.toolTip = MVWord(@"Copies the lines chosen, or all that show");
   NSButton *clear = MVPlaceButton(@"Clear", @"logClear", self, @selector(clear:));
   clear.toolTip = MVWord(@"Empties this view: the device keeps its log");
-  NSStackView *buttons = MVPaneRow(@[_pause, _copy, clear]);
+  _buttons = MVPaneRow(@[_pause, _copy, clear]);
   _about = MVPaneNote(@"");
   _about.maximumNumberOfLines = 0;
   _about.hidden = YES;
   MVHoldContent(_about);
   NSView *card;
   _text = MVReadText(@"logText", @"The app's log", &card);
-  NSStackView *part = MVPaneStack(@[find, buttons, _about, card], 8);
+  _logCard = card;
+  // what takes the room where no log comes, as the log's card does where one does
+  _slack = [NSView new];
+  _slack.hidden = YES;
+  [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+  NSStackView *part = MVPaneStack(@[find, _buttons, _about, card, _slack], 8);
   [card setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
   return part;
 }
@@ -235,7 +241,13 @@ NSTextView *MVReadText(NSString *name, NSString *label, NSView *_Nullable *_Nonn
     [_held removeAllObjects];
     [self render];
   }
-  if ([m[@"note"] isKindOfClass:NSString.class]) _note = m[@"note"];
+  if ([m[@"note"] isKindOfClass:NSString.class]) {
+    _note = m[@"note"];
+    // a device that gives no log at all: its note alone, and what works on a log hidden, until another note comes
+    BOOL none = [m[@"none"] boolValue];
+    _find.hidden = _buttons.hidden = _logCard.hidden = none;
+    _slack.hidden = !none;
+  }
   // the app's name, and what a device says of its log, keep its words as they are
   NSString *about = _app.length ? MVFormat(@"The log of %@, as it comes", @[_app]) : @"";
   _about.stringValue = _note.length ? MVSentence(_note) : about;
