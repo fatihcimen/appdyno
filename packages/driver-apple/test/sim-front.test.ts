@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { IosSimulatorDevice } from '../src/index.js';
 import { Simctl } from '../src/simctl.js';
+import { SimulatorApps } from '../src/simulator-manage.js';
 
 const UDID = 'C8F701E7-9A02-4465-AC91-F4C85FBA788D';
 
@@ -18,13 +19,13 @@ const folder = (bundle: string) =>
 class Listed extends Simctl {
   constructor(
     private readonly listing: string,
-    private readonly running = '',
+    private readonly ps = '',
   ) {
     super({});
   }
   override exec = (args: string[]) =>
     Promise.resolve(args[0] === 'get_app_container' ? `${folder(args[2] ?? '')}\n` : this.listing);
-  override processes = () => Promise.resolve(this.running);
+  override processes = () => Promise.resolve(this.ps);
 }
 
 const LISTING = [
@@ -61,6 +62,63 @@ describe('a running app on a simulator', () => {
     await expect(new Listed(LISTING, RUNNING).pid(UDID, 'dev.other')).rejects.toThrow(
       'dev.other is not running',
     );
+  });
+});
+
+/** What a simulator's launchctl said with Settings up, and at once after `simctl terminate` of it: its line goes. */
+const SETTINGS_UP = [
+  'PID\tStatus\tLabel',
+  '-\t0\tcom.apple.progressd',
+  '60574\t0\tcom.apple.SpringBoard',
+  '-\t0\tcom.apple.merchantd',
+  '21254\t0\tUIKitApplication:com.apple.Preferences[5f2f][rb-legacy]',
+  '-\t0\tcom.apple.webkit.adattributiond',
+].join('\n');
+const SETTINGS_STOPPED = [
+  'PID\tStatus\tLabel',
+  '-\t0\tcom.apple.progressd',
+  '60574\t0\tcom.apple.SpringBoard',
+  '-\t0\tcom.apple.merchantd',
+  '-\t0\tcom.apple.webkit.adattributiond',
+].join('\n');
+/** The fixture's line in ps while it runs, in this test's folder; at once after a terminate it has none. */
+const FIXTURE_UP = `23561 Ss   ${folder('dev.appdyno.fixture')}/Fixture`;
+
+describe('an app just stopped on a simulator', () => {
+  const apps = (listing: string, running = '') =>
+    new SimulatorApps(new Listed(listing, running), UDID);
+
+  it('is stopped once launchctl no longer lists it, which is at once', async () => {
+    expect(await apps(SETTINGS_UP).appState('com.apple.Preferences')).toBe('running');
+    expect(await apps(SETTINGS_STOPPED).appState('com.apple.Preferences')).toBe('stopped');
+  });
+
+  it('is stopped while launchctl lists it with no pid, as it does a job that is not running', async () => {
+    const left = SETTINGS_UP.replace('21254\t', '-\t');
+    expect(await apps(left).appState('com.apple.Preferences')).toBe('stopped');
+  });
+
+  it("is stopped once its process is gone from this Mac's", async () => {
+    expect(await apps('', FIXTURE_UP).appState('dev.appdyno.fixture')).toBe('running');
+    expect(await apps('').appState('dev.appdyno.fixture')).toBe('stopped');
+  });
+
+  /** The runner up with the fixture named to it, still naming it, and the helper seeing the home screen. */
+  const behind = (running: string) => {
+    const direct = { front: () => Promise.resolve('com.apple.springboard'), close: vi.fn() };
+    const device = new IosSimulatorDevice(UDID, new Listed('', running), direct as never);
+    Object.defineProperty(device, 'runnerUp', { value: true });
+    const call = () => Promise.resolve({ result: { pkg: 'dev.appdyno.fixture' } });
+    Object.assign(device, { targetApp: 'dev.appdyno.fixture', rpc: { closed: false, call } });
+    return device;
+  };
+
+  it('is not in front, though the runner names it a moment longer', async () => {
+    expect(await behind('').foreground()).toBe('com.apple.springboard');
+  });
+
+  it('is in front under an alert while its process runs', async () => {
+    expect(await behind(FIXTURE_UP).foreground()).toBe('dev.appdyno.fixture');
   });
 });
 

@@ -159,7 +159,7 @@ export class Simctl {
       bundle === HOME_SCREEN
         ? l.endsWith('\tcom.apple.SpringBoard')
         : l.includes(`UIKitApplication:${bundle}[`);
-    // a process just ended stays listed for a while, with no pid, beside the one that runs now
+    // a job that is not running is listed with - for its pid
     const pid = out
       .split('\n')
       .filter(listed)
@@ -167,6 +167,17 @@ export class Simctl {
       .find((n) => Number.isInteger(n) && n > 0);
     if (!pid) throw notRunning(bundle);
     return pid;
+  }
+
+  /** Whether the app runs now, by `pid`'s rules; what cannot be told is thrown. */
+  running(udid: string, bundle: string): Promise<boolean> {
+    return this.pid(udid, bundle).then(
+      () => true,
+      (e: unknown) => {
+        if (e instanceof DeviceError && e.code === 'APP_NOT_RUNNING') return false;
+        throw e;
+      },
+    );
   }
 
   /** This Mac's processes, each with its state and its whole command line. */

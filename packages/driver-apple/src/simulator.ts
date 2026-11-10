@@ -302,7 +302,11 @@ export class IosSimulatorDevice extends IosDevice {
     // was given. With no target, as in a window, it has nothing to tell, and says the home screen whatever is up
     const front = await this.direct.front().catch(() => undefined);
     if (!this.runnerUp || !this.targetApp) return front;
-    return front === this.targetApp ? front : super.foreground();
+    if (front === this.targetApp) return front;
+    const runner = await super.foreground();
+    if (runner !== this.targetApp) return runner;
+    // the runner names its app a moment after it stopped: one is under an alert only while its process runs
+    return (await this.simctl.running(this.serial, runner).catch(() => true)) ? runner : front;
   }
 
   /** A touch the app in front never reports is one `act` would take for lost and do again by the runner. */

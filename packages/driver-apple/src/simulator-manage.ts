@@ -141,8 +141,7 @@ export class SimulatorApps implements AppManager {
         () => false,
       );
     if (!installed) return 'not_installed';
-    const list = await this.simctl.exec(['spawn', this.udid, 'launchctl', 'list']);
-    return list.includes(`UIKitApplication:${app}[`) ? 'running' : 'stopped';
+    return (await this.simctl.running(this.udid, app)) ? 'running' : 'stopped';
   }
 
   async permission(app: string, grant: boolean, service: string): Promise<undefined> {
