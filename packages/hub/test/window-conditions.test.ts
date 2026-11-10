@@ -133,6 +133,28 @@ describe("a window's Device pane", () => {
     ]);
   });
 
+  it("shows a change as the op's own read-back found it, and after Put Back All only what went back, with no read of its own", async () => {
+    const { device } = deviceWith({ dark_mode: 'off', text_size: '1.0' });
+    const settings = device.settings;
+    const reads: string[] = [];
+    device.settings = {
+      ...settings,
+      get: (name, app) => (reads.push(name), settings.get(name, app)),
+    };
+    const { said, rowOf } = paneOn(device);
+    const done = await said('deviceSet', { args: { name: 'dark_mode', value: 'on' } });
+    expect(rowOf(done, 'dark_mode')).toMatchObject({ value: 'on', on: true, changed: true });
+    // the one before it, to write down, and the one after it, which tells whether it took: on a loaded Mac each is a second
+    expect(reads).toEqual(['dark_mode', 'dark_mode']);
+    reads.length = 0;
+    const back = await said('deviceRestore');
+    expect(back.conditions).toEqual([
+      { name: 'dark_mode', value: 'off', on: false },
+      { name: 'location' },
+    ]);
+    expect(reads).toEqual(['dark_mode']);
+  });
+
   it('marks a location fixed here, and puts it back with the rest and as the window closes', async () => {
     const { device } = deviceWith({});
     const { sends, said, rowOf } = paneOn(device);

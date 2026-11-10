@@ -87,6 +87,8 @@ const MVWordRow MVWordTableHelp[] = {
     {"Put back: %@", "Geri alındı: %@"},
     {"%@ is now %@", "%1$@ artık %2$@"},
     {"%@ already reads %@", "%1$@ zaten %2$@"},
+    {"%@ did not change: the device reads %@", "%1$@ değişmedi: cihaz %2$@ okuyor"},
+    {"The device reads %@, not %@", "Cihaz %1$@ okuyor, %2$@ değil"},
     {"A call from %@ is coming in", "%@ numarasından arama geliyor"},
     {"The call from %@ ended", "%@ numarasından gelen arama bitti"},
 };

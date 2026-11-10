@@ -104,6 +104,8 @@ export const personal = (why: string) =>
 
 /** What an op answered, and its data where it gave any. */
 type Called = { answer: { ok: boolean; text: string; hint?: string }; data: unknown };
+/** What a device read, by condition. */
+type Reads = Partial<Record<string, string>>;
 
 /**
  * The Device pane: each condition as the device reads it, or why it cannot be, and a change by `device_setting`, the op
@@ -122,13 +124,14 @@ export function conditionSends(
     return !!held && !heldElsewhere(held.owner);
   };
 
-  const row = async (s: Session, name: SettingName) => {
+  /** A condition's row: as `read` says it where an op just read it back, else as the device reads it now. */
+  const row = async (s: Session, name: SettingName, read?: string) => {
     const also = {
       ...(changed(name) && { changed: true }),
       ...(phone && CUTS.includes(name) && { why: CUTS_WHY }),
     };
     try {
-      const value = await readCondition(s, name);
+      const value = read ?? (await readCondition(s, name));
       const on = SWITCHES.includes(name) ? switchOf(name, value) : undefined;
       // read, and yet not set from here: a simulator follows the Mac's proxy
       const why = await s.device.settings.cannotSet?.(name);
@@ -145,10 +148,12 @@ export function conditionSends(
   };
 
   /** Every condition, read at once, then the events and a location, which have nothing to read. */
-  const rows = async (names: readonly SettingName[] = SETTINGS) => {
+  const rows = async (names: readonly SettingName[] = SETTINGS, reads: Reads = {}) => {
     const s = await session();
-    return Promise.all(names.map((name) => row(s, name)));
+    return Promise.all(names.map((name) => row(s, name, reads[name])));
   };
+  /** What an op's answer read back, by condition: the rows it changed, which need no read of their own. */
+  const readBack = (data: unknown): Reads => (data as { reads?: Reads } | undefined)?.reads ?? {};
   const events = () =>
     EVENTS.map((name) => {
       const why = device.events.cannot?.(name);
@@ -184,7 +189,7 @@ export function conditionSends(
         ...answer,
         // a refusal the pane has words for is said in them
         text: personal(answer.text),
-        ...(setting && { moved, conditions: await rows([setting]) }),
+        ...(setting && { moved, conditions: await rows([setting], readBack(data)) }),
       });
     },
 
@@ -196,8 +201,11 @@ export function conditionSends(
 
     /** Put Back All: what `device_setting restore` puts back, a location among them, and what it leaves to a process still running. */
     deviceRestore: async () => {
-      const { answer } = await call('device', 'device_setting', { name: 'restore' }, '');
-      tell('device', { ...answer, conditions: [...(await rows()), location()] });
+      const { answer, data } = await call('device', 'device_setting', { name: 'restore' }, '');
+      // what went back is as the restore read it back, and nothing else moved: a refusal reads every row again
+      const reads = readBack(data);
+      const back = answer.ok ? SETTINGS.filter((n) => n in reads) : SETTINGS;
+      tell('device', { ...answer, conditions: [...(await rows(back, reads)), location()] });
     },
   };
 }

@@ -89,6 +89,7 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
 @interface MVConditionRow ()
 @property(nonatomic) NSTextField *label, *note;
 @property(nonatomic) MVInk *mark;
+@property(nonatomic) NSProgressIndicator *spin;
 @property(nonatomic) NSArray<NSControl *> *controls;
 @end
 
@@ -112,6 +113,11 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     _mark.toolTip = MVWord(@"Changed here: it goes back when the device leaves this window");
     _mark.hidden = YES;
     [_mark.widthAnchor constraintEqualToConstant:kMark + 2].active = YES;
+    _spin = [NSProgressIndicator new];
+    _spin.style = NSProgressIndicatorStyleSpinning;
+    _spin.controlSize = NSControlSizeSmall;
+    _spin.hidden = YES;
+    _spin.accessibilityLabel = MVWord(@"Changing");
     NSArray<NSView *> *ends = [self controlsFor:target];
     // what takes more than one control has a line of its own under the label, but a message's sender, on the label's line
     NSUInteger onLine = _kind < MVRowLocation ? ends.count : _kind == MVRowSms ? 1
@@ -119,7 +125,7 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
     NSView *gap = [NSView new];
     [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
     // the mark stands right after the words it marks, and the control at the line's end
-    NSStackView *line = [NSStackView stackViewWithViews:[@[_label, _mark, gap] arrayByAddingObjectsFromArray:[ends subarrayWithRange:NSMakeRange(0, onLine)]]];
+    NSStackView *line = [NSStackView stackViewWithViews:[@[_label, _mark, _spin, gap] arrayByAddingObjectsFromArray:[ends subarrayWithRange:NSMakeRange(0, onLine)]]];
     line.spacing = 6;
     _note = MVPaneNote(@"");
     // why it cannot names a value, such as a proxy's address, as the device has it
@@ -202,8 +208,11 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   NSString *why = [_said[@"why"] isKindOfClass:NSString.class] ? _said[@"why"] : @"";
   NSString *value = [_said[@"value"] isKindOfClass:NSString.class] ? _said[@"value"] : nil;
   _can = !why.length && (_kind >= MVRowLocation || value);
-  _note.stringValue = MVSentence(capitalized(why));
-  _note.hidden = !why.length;
+  // why it cannot be changed, else that the device did not take a change of it
+  _note.stringValue = why.length ? MVSentence(capitalized(why)) : _warning ?
+                                                                           : @"";
+  _note.textColor = why.length ? MVQuietColor() : MVOrange();
+  _note.hidden = !_note.stringValue.length;
   _label.textColor = _can ? MVInkColor() : MVQuietColor();
   _mark.hidden = !self.changed;
   if (!value) return;
@@ -230,6 +239,29 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   if (_kind == MVRowSwitch) return MVWord([(NSSwitch *)_control state] == NSControlStateValueOn ? @"On" : @"Off");
   if (_kind == MVRowChoice) return [(NSPopUpButton *)_control titleOfSelectedItem] ?: @"";
   return _field.stringValue;
+}
+
+- (void)setPending:(BOOL)pending {
+  _pending = pending;
+  _spin.hidden = !pending;
+  if (pending) [_spin startAnimation:nil];
+  else [_spin stopAnimation:nil];
+}
+
+- (BOOL)reads:(NSString *)value {
+  NSString *read = [_said[@"value"] isKindOfClass:NSString.class] ? _said[@"value"] : nil;
+  // a field's value is read in the device's own form (a locale, a level of the moment), so only a switch and a choice tell
+  if (!read || (_kind != MVRowSwitch && _kind != MVRowChoice)) return YES;
+  if (_kind == MVRowSwitch) return [_said[@"on"] boolValue] == [value isEqual:@"on"];
+  // an iPhone's thermal profile goes by how its name ends, which a text size cannot
+  return sameChoice(value, read, ![_name isEqual:@"text_size"]);
+}
+
+- (NSString *)titleFor:(NSString *)value {
+  if (_kind == MVRowSwitch) return MVWord([value isEqual:@"on"] ? @"On" : @"Off");
+  NSPopUpButton *choice = _kind == MVRowChoice ? (NSPopUpButton *)_control : nil;
+  NSInteger at = [choice indexOfItemWithRepresentedObject:value];
+  return choice && at >= 0 ? [choice itemAtIndex:at].title : value;
 }
 
 - (NSString *)shown {

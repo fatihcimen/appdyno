@@ -315,6 +315,8 @@ export const SettingOut = z.object({
   value: z.string().optional(),
   changed: z.record(z.string(), z.string()).optional(),
   notRestored: z.array(z.string()).optional(),
+  /** What the device reads, after it, of each condition the call set or put back. */
+  reads: z.record(z.string(), z.string()).optional(),
 });
 
 export const AuditOut = z.object({

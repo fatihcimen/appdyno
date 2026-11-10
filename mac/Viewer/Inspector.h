@@ -139,6 +139,13 @@ typedef NS_ENUM(NSInteger, MVRowKind) { MVRowSwitch,
 - (void)enable:(BOOL)on;
 /// Its state in a person's words, and for a test in the op's.
 @property(nonatomic, readonly) NSString *state, *shown;
+/// A change of it is on its way: the row turns a spinner of its own until the answer comes.
+@property(nonatomic) BOOL pending;
+/// A change the device did not take, in a person's words, under the row until it is changed again.
+@property(nonatomic, copy, nullable) NSString *warning;
+/// Whether the device reads `value` as the op names it, by the parent's last word; and how a person reads `value`.
+- (BOOL)reads:(NSString *)value;
+- (NSString *)titleFor:(NSString *)value;
 @end
 
 /// The device's conditions as it reads them, each changed by `device_setting`, the op an agent calls, and put back with

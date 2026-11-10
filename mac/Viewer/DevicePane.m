@@ -120,11 +120,20 @@ static const double kBetween = 10, kHeadingGap = 18;
   if ([m[@"platform"] isKindOfClass:NSString.class]) [self setPlatform:m[@"platform"]];
   for (NSDictionary *said in [m[@"conditions"] isKindOfClass:NSArray.class] ? m[@"conditions"] : @[])
     if ([said isKindOfClass:NSDictionary.class]) _rows[said[@"name"]].said = said;
+  NSDictionary *asked = _asked;
+  if (m[@"ok"]) {
+    _asked = nil;
+    for (MVConditionRow *row in _ordered) row.pending = NO;
+  }
   // every control back to what the device last read: one a person moved while another change was on its way too
   for (MVConditionRow *row in _ordered) [row fill];
+  // a change the device answered and did not take: the row says what it reads instead, where the change was made
+  MVConditionRow *changing = _rows[asked[@"name"]];
+  if ([m[@"ok"] boolValue] && [asked[@"what"] isEqual:@"deviceSet"] && asked[@"value"] && ![changing reads:asked[@"value"]]) {
+    changing.warning = MVFormat(@"The device reads %@, not %@", @[changing.state, [changing titleFor:asked[@"value"]]]);
+    [changing fill];
+  }
   if (m[@"conditions"]) _reading.hidden = YES;
-  NSDictionary *asked = _asked;
-  if (m[@"ok"]) _asked = nil;
   [_answer show:[m[@"ok"] boolValue] && asked ? [self done:asked said:m] : m];
   [self enable:!_answer.waiting];
 }
@@ -153,6 +162,8 @@ static const double kBetween = 10, kHeadingGap = 18;
     words = MVFormat([value hasPrefix:@"end "] ? @"The call from %@ ended" : @"A call from %@ is coming in", @[asked[@"number"] ?: @""]);
   else if (row.kind == MVRowSms)
     words = MVWord(@"The message came in");
+  else if (row.warning)
+    words = MVFormat(@"%@ did not change: the device reads %@", @[row.title, row.state]);
   else
     words = MVFormat([m[@"moved"] boolValue] ? @"%@ is now %@" : @"%@ already reads %@", @[row.title, row.state]);
   said[@"text"] = words;
@@ -177,6 +188,15 @@ static const double kBetween = 10, kHeadingGap = 18;
   _asked = all;
   [self enable:NO];
   [_answer sending:words];
+  // the row it is on its way for turns at once, where the answer comes in seconds on a loaded Mac; Put Back All, each changed
+  MVConditionRow *row = _rows[asked[@"name"]];
+  row.warning = nil;
+  row.pending = YES;
+  if ([what isEqual:@"deviceRestore"])
+    for (MVConditionRow *each in _ordered) {
+      each.warning = nil;
+      each.pending = each.changed;
+    }
   MVPaneSend(self, @{@"op": @"control", @"name": what, @"args": args});
 }
 

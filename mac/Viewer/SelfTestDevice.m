@@ -131,4 +131,28 @@ void MVCheckDevice(void) {
                @"conditions": @[@{@"name": @"text_size", @"value": @"1.1"}]}];
   NSPopUpButton *size = (NSPopUpButton *)MVFindControl(window.nsWindow.contentView, @"condition:text_size");
   MVCheck(@"device: an Android scale none of the menu's is a percent too, and each of the menu's a whole one", [size.titleOfSelectedItem isEqual:MVPercent(110)] && [[pane shown:@"text_size"] isEqual:@"1.1"] && [size.itemTitles containsObject:MVPercent(115)], [size.itemTitles componentsJoinedByString:@"|"]);
+  // a change took seconds to show on a loaded Mac, and one the device did not take only went back
+  MVConditionRow *row = [pane valueForKey:@"_rows"][@"text_size"];
+  NSView *spin = [row valueForKey:@"spin"];
+  [pane set:@"text_size" to:@"1.5"];
+  MVCheck(@"device: the row a change is on its way for turns at once, as chosen", !spin.hidden && [[pane shown:@"text_size"] isEqual:@"1.5"], nil);
+  [pane show:@{@"op": @"answer",
+               @"name": @"device",
+               @"ok": @YES,
+               @"text": @"text_size reads 1.1, as before: nothing changed",
+               @"moved": @NO,
+               @"conditions": @[@{@"name": @"text_size", @"value": @"1.1"}]}];
+  NSTextField *note = [row valueForKey:@"note"];
+  NSString *reads = MVFormat(@"The device reads %@, not %@", @[MVPercent(110), MVPercent(150)]);
+  MVCheck(@"device: one the device did not take says so on its row, and the answer that it did not change", spin.hidden && !note.hidden && [note.stringValue isEqual:reads] && [pane.answer.said isEqual:MVFormat(@"%@ did not change: the device reads %@", @[MVWord(@"Text Size"), MVPercent(110)])], note.stringValue);
+  [pane set:@"text_size" to:@"1.3"];
+  [pane show:@{@"op": @"answer",
+               @"name": @"device",
+               @"ok": @YES,
+               @"text": @"text_size: 1.3",
+               @"moved": @YES,
+               @"conditions": @[@{@"name": @"text_size",
+                                  @"value": @"1.3",
+                                  @"changed": @YES}]}];
+  MVCheck(@"device: and one it took clears it", note.hidden && spin.hidden, note.stringValue);
 }

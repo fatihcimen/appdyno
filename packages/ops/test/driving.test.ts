@@ -1960,9 +1960,12 @@ describe('device conditions', () => {
       undefined,
       'large',
     ]);
+    // what it read back, which a window shows as its row and need not read again
+    expect(r.data.reads).toEqual({ text_size: 'large' });
     expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
     const moved = await call('device_setting', { name: 'text_size', value: 'extra-large' });
     expect(moved.data.changed).toEqual({ text_size: 'extra-large' });
+    expect(moved.data.reads).toEqual({ text_size: 'extra-large' });
   });
 
   it('restores only what reads as it was, and keeps the rest written down with what it reads', async () => {
@@ -1975,10 +1978,10 @@ describe('device conditions', () => {
     const r = await call('device_setting', { name: 'restore' });
     expect(r.text).toBe('could not restore dark_mode (was no): it reads on');
     expect(r.data.notRestored).toHaveLength(1);
+    expect(r.data.reads).toEqual({ dark_mode: 'on' });
     settings.set = set;
-    expect((await call('device_setting', { name: 'restore' })).text).toBe(
-      'restored dark_mode: off',
-    );
+    const back = await call('device_setting', { name: 'restore' });
+    expect([back.text, back.data.reads]).toEqual(['restored dark_mode: off', { dark_mode: 'off' }]);
   });
 
   it("reads a battery back at default whatever its level, which is the moment's and no part of what is set", async () => {

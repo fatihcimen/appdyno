@@ -64,6 +64,7 @@ const MVWordRow MVWordTableDevice[] = {
     {"Put Back All", "Tümünü Geri Al"},
     {"What you change here goes back when the device leaves this window.", "Burada değiştirdikleriniz, cihaz bu pencereden ayrıldığında geri alınır."},
     {"Changed here: it goes back when the device leaves this window", "Burada değişti: cihaz bu pencereden ayrıldığında geri alınır"},
+    {"Changing", "Değiştiriliyor"},
     {"Nothing here was changed", "Burada hiçbir şey değiştirilmemişti"},
     {"The location is the real one again", "Konum yeniden gerçek konum"},
     {"The location is set", "Konum ayarlandı"},

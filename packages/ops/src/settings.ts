@@ -207,6 +207,8 @@ export function restoreConditions(s: Session, whose: Whose) {
     const restored: string[] = [];
     const failed: string[] = [];
     const left: string[] = [];
+    /** What each condition put back reads now, as its read-back found it. */
+    const now: Record<string, string> = {};
     const changes = conditions.read(s.device.serial) ?? {};
     // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
     for (const [name, c] of Object.entries(changes).reverse()) {
@@ -218,11 +220,12 @@ export function restoreConditions(s: Session, whose: Whose) {
         const reads = await putBack(s, name as SettingName, c);
         if (reads === undefined) restored.push(`${name}: ${wordOf(name, c.was)}`);
         else failed.push(`${name} (was ${c.was}): it reads ${reads}`);
+        if (name !== LOCATION) now[name] = wordOf(name, reads ?? c.was);
       } catch (e) {
         failed.push(`${name} (was ${c.was}): ${(e as Error).message}`);
       }
     }
-    return { restored, failed, left };
+    return { restored, failed, left, reads: now };
   });
 }
 
@@ -254,7 +257,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         const s = await ctx.session();
         const { events } = s.device;
         if (name === 'restore') {
-          const { restored, failed, left } = await restoreConditions(
+          const { restored, failed, left, reads } = await restoreConditions(
             s,
             (owner) => !heldElsewhere(owner),
           );
@@ -264,7 +267,11 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
               ...failed.map((f) => `could not restore ${f}`),
               ...left.map((l) => `left alone, as its process still runs: ${l}`),
             ].join('\n') || 'nothing was changed';
-          return reply(t, { done: t, ...(failed.length > 0 && { notRestored: failed }) });
+          return reply(t, {
+            done: t,
+            ...(failed.length > 0 && { notRestored: failed }),
+            ...(Object.keys(reads).length > 0 && { reads }),
+          });
         }
         if (name === 'biometric') {
           const answer = BIOMETRIC.find((b) => b === value);
@@ -326,13 +333,14 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         }
         const { also, moved, now } = await setCondition(s, name, value, pkg);
         s.acted();
+        // the read-back that tells whether it took, so that no one need read it again
+        const reads = wordOf(name, now);
         if (!moved) {
-          const reads = wordOf(name, now);
           const t = clean(`${name} reads ${reads}, as before: nothing changed`);
-          return reply(t, { done: t, value: reads });
+          return reply(t, { done: t, value: reads, reads: { [name]: reads } });
         }
         const t = [`${name}: ${value}`, also].filter(Boolean).join('; ');
-        return reply(t, { done: t, value, changed: { [name]: value } });
+        return reply(t, { done: t, value, changed: { [name]: value }, reads: { [name]: reads } });
       },
     }),
   ];
