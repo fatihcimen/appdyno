@@ -67,7 +67,7 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
     const open = async () => {
       const hardware = await device.hardware();
       const measures = windowMeasures(new ServerContext(DEFAULT_POLICY, []), device);
-      const controls = windowControls(device, hardware, () => session, measures);
+      const controls = windowControls(device, hardware, () => session, measures, DEFAULT_POLICY);
       session = new MirrorSession({
         mirror: device.mirror,
         viewer: () =>

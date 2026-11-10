@@ -84,7 +84,7 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     const hardware = await device.hardware();
     expect(hardware.model).toBeTruthy();
     const measures = windowMeasures(new ServerContext(DEFAULT_POLICY, []), device);
-    const controls = windowControls(device, hardware, () => session, measures);
+    const controls = windowControls(device, hardware, () => session, measures, DEFAULT_POLICY);
     const input = device.mirror.input.bind(device.mirror);
     device.mirror.input = async (e) => {
       inputs.push(e);

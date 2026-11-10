@@ -11,7 +11,7 @@ import {
   windowLook,
   type WindowSession,
 } from '../src/controls.js';
-import { PROBE_HINT, type JourneyAnswer } from '@appdyno/ops';
+import { DEFAULT_POLICY, PROBE_HINT, type JourneyAnswer, type Policy } from '@appdyno/ops';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
 vi.mock('node:os', async (real) => ({
@@ -29,7 +29,12 @@ const WAIT = { timeout: 10_000 };
 const mocks = (d: Device) =>
   d as unknown as Record<'open' | 'setOrientation' | 'launch' | 'terminate', Mock>;
 
-function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, streams = false) {
+function fixture(
+  platform: 'ios' | 'android',
+  device: Partial<Device> = {},
+  streams = false,
+  policy: Policy = DEFAULT_POLICY,
+) {
   const sent: InputEvent[] = [];
   const told: Record<string, unknown>[] = [];
   const recording = {
@@ -82,7 +87,7 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     dashboard: vi.fn(() => Promise.resolve(undefined)),
     history: vi.fn(() => Promise.resolve([])),
   };
-  const controls = windowControls(whole, hardware, () => session, measures);
+  const controls = windowControls(whole, hardware, () => session, measures, policy);
   return { controls, sent, told, device: whole, session, recording, measures };
 }
 
@@ -349,6 +354,31 @@ describe("a window's Apps pane", () => {
     expect(told.filter((m) => m.op === 'apps')).toEqual([]);
     for (const action of ['install', 'uninstall', 'build_and_run']) call('app', action);
     await vi.waitFor(() => expect(told.filter((m) => m.op === 'apps')).toHaveLength(3), WAIT);
+  });
+
+  it('keeps to --allow-apps, as the Links and Push panes do: another app is not launched, quit or removed', async () => {
+    apps.uninstall.mockClear();
+    const only = { ...DEFAULT_POLICY, apps: ['dev.app'] };
+    const { controls, device, told } = fixture(
+      'ios',
+      { apps } as unknown as Partial<Device>,
+      false,
+      only,
+    );
+    for (const action of ['launch', 'quit', 'remove'])
+      controls.onWindow({ op: 'app', action, id: 'a.b' });
+    await vi.waitFor(
+      () =>
+        expect(
+          told.filter(
+            (m) => m.op === 'note' && String(m.text).includes('a.b is not an allowed app'),
+          ),
+        ).toHaveLength(3),
+      WAIT,
+    );
+    expect(mocks(device).launch).not.toHaveBeenCalled();
+    expect(mocks(device).terminate).not.toHaveBeenCalled();
+    expect(apps.uninstall).not.toHaveBeenCalled();
   });
 });
 

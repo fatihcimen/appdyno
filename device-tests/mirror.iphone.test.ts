@@ -345,7 +345,13 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     process.env.HOME = home;
     try {
       const measures = windowMeasures(new ServerContext(DEFAULT_POLICY, []), device);
-      const controls = windowControls(device, await device.hardware(), () => session, measures);
+      const controls = windowControls(
+        device,
+        await device.hardware(),
+        () => session,
+        measures,
+        DEFAULT_POLICY,
+      );
       controls.onWindow({ op: 'control', name: 'screenshot' });
       await until('its file', () => readdirSync(desktop).some((f) => f.endsWith('.png')));
       const file = readdirSync(desktop).find((f) => f.endsWith('.png'));

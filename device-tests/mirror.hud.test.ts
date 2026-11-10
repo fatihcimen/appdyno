@@ -80,7 +80,7 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
       }),
       device,
     );
-    const controls = windowControls(device, hardware, () => session, measures);
+    const controls = windowControls(device, hardware, () => session, measures, DEFAULT_POLICY);
     session = new MirrorSession({
       mirror: device.mirror,
       viewer: () =>

@@ -16,7 +16,7 @@ import type {
   SystemSwipe,
   ViewerMessage,
 } from '@appdyno/core';
-import type { ActivityLine } from '@appdyno/ops';
+import { checkApp, type ActivityLine, type Policy } from '@appdyno/ops';
 import { PERSON_HINTS, type WindowMeasures } from './measures.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
@@ -71,12 +71,16 @@ export async function frontApp(device: Device) {
 export const fileName = (device: Device, hardware: DeviceHardware | undefined) =>
   safeName(hardware?.name ?? hardware?.model ?? device.serial);
 
-/** What a window's controls do that is not one key to one device: gestures, captures and the Apps pane. */
+/**
+ * What a window's controls do that is not one key to one device: gestures, captures and the Apps pane, which keeps to
+ * `policy`'s apps as the Links and Push panes do.
+ */
 export function windowControls(
   device: Device,
   hardware: DeviceHardware | undefined,
   session: () => WindowSession,
   measures: WindowMeasures,
+  policy: Policy,
 ) {
   const name = () => fileName(device, hardware);
   let opened: Promise<unknown> | undefined;
@@ -331,16 +335,19 @@ export function windowControls(
 
   const appActions: Record<string, (id: string) => Promise<unknown>> = {
     launch: async (id) => {
+      checkApp(policy, id);
       await ready();
       await device.launch(id);
       await listApps({ id, what: 'Launched' });
     },
     quit: async (id) => {
+      checkApp(policy, id);
       await ready();
       await device.terminate(id);
       await listApps({ id, what: 'Quit' });
     },
     remove: async (id) => {
+      checkApp(policy, id);
       await device.apps.uninstall(id);
       await listApps();
     },

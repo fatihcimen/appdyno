@@ -93,7 +93,7 @@ async function windowOn(device: Device) {
   const hardware = await device.hardware();
   const told: Record<string, unknown>[] = [];
   const measures = windowMeasures(ctx, device);
-  const controls = windowControls(device, hardware, () => session, measures);
+  const controls = windowControls(device, hardware, () => session, measures, DEFAULT_POLICY);
   const flow = windowFlow(ctx, device, hardware, () => session, controls.measuring);
   const session: MirrorSession = new MirrorSession({
     mirror: device.mirror,

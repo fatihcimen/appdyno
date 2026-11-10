@@ -125,6 +125,7 @@ export class Parent {
       hardware,
       () => session,
       windowMeasures(this.ctx, device),
+      this.ctx.policy,
     );
     const flow = windowFlow(this.ctx, device, hardware, () => session, controls.measuring);
     const sends = windowSends(this.ctx, device, () => session);
