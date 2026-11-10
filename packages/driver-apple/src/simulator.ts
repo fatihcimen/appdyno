@@ -38,7 +38,7 @@ import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
 import { IosDevice } from './device.js';
 import { simulatorOps } from './simulator-ops.js';
-import { HOME_SCREEN_APP, staticTexts } from './platform-screen.js';
+import { HOME_SCREEN_APP } from './platform-screen.js';
 
 type Node = Tree['nodes'][number];
 
@@ -295,13 +295,13 @@ export class IosSimulatorDevice extends IosDevice {
    * which hid seconds, or a first build, in a read. With anything over it the app is not in front, and the read before
    * this look has brought a runner up.
    */
-  override async systemWords() {
-    if (!this.targetApp || this.targetApp === HOME_SCREEN_APP) return [];
+  override async systemTree() {
+    if (!this.targetApp || this.targetApp === HOME_SCREEN_APP) return undefined;
     const r = await this.queue
       .run(() => this.direct.read(HOME_SCREEN_APP))
       .catch(() => ({ refused: 'failed' }));
-    if (!('refused' in r)) return staticTexts(r.tree);
-    return this.runnerUp && r.refused !== 'not-foreground' ? super.systemWords() : [];
+    if (!('refused' in r)) return r.tree;
+    return this.runnerUp && r.refused !== 'not-foreground' ? super.systemTree() : undefined;
   }
 
   override async foreground(): Promise<string | undefined> {

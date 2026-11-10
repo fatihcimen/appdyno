@@ -294,6 +294,29 @@ describe("whether an iPhone's app runs", () => {
   });
 });
 
+describe("a look at what the home screen app shows over an iPhone's app", () => {
+  it('reads it between its two targets with no other call between them, which would take it for the app', async () => {
+    const d = new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' });
+    const calls: string[] = [];
+    const empty: Tree = { windows: [], nodes: [], truncated: false, elapsedMs: 1, hash: 'h' };
+    const callNow = async (method: string, params: { pkg?: string }) => {
+      calls.push(params.pkg ? `${method} ${params.pkg}` : method);
+      await new Promise((r) => setTimeout(r, 5));
+      return { result: empty };
+    };
+    Object.assign(d, { callNow, keepDump: () => Promise.resolve(undefined) });
+    await d.target('dev.app');
+    calls.length = 0;
+    await Promise.all([d.systemWords(), d.tree()]);
+    expect(calls).toEqual([
+      'app.target com.apple.springboard',
+      'tree.get',
+      'app.target dev.app',
+      'tree.get',
+    ]);
+  });
+});
+
 describe('the kind of device', () => {
   it('calls a simulator virtual, and a phone not', () => {
     expect(new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951').virtual).toBe(true);

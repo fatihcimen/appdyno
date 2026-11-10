@@ -134,6 +134,8 @@ export type Device = {
   key(key: string, opts?: ActOptions, modifiers?: Modifier[]): Promise<ActResult>;
   /** The words of what the system shows over the app and no read of the app has: none where a read has them all. */
   systemWords?(): Promise<string[]>;
+  /** The read of the system's own app that draws over the app (iOS's home screen app), with what it shows there. */
+  systemTree?(): Promise<Tree | undefined>;
   /** One of the system's own views, over what is on the screen. */
   openView(view: SystemView): Promise<void>;
   /** The pages of Settings this device opens by name, and no other. */

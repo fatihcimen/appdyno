@@ -301,14 +301,25 @@ export abstract class IosDevice extends RpcDevice implements Device {
    * has an id: their words, as a read of that app has them. An app's name on its card is no such word.
    */
   async systemWords() {
+    const t = await this.systemTree();
+    return t ? staticTexts(t) : [];
+  }
+
+  /**
+   * The home screen app's read, with what it shows over the app: one run of the queue, as a call between its two
+   * targets would read or touch the home screen app for the app.
+   */
+  async systemTree(): Promise<Tree | undefined> {
     const app = this.targetApp;
-    if (!app || app === HOME_SCREEN_APP) return [];
-    await this.target(HOME_SCREEN_APP);
-    try {
-      return staticTexts(await this.tree());
-    } finally {
-      await this.target(app);
-    }
+    if (!app || app === HOME_SCREEN_APP) return undefined;
+    return this.queue.run(async () => {
+      await this.callNow('app.target', { pkg: HOME_SCREEN_APP }, TIMEOUTS.action);
+      try {
+        return (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
+      } finally {
+        await this.callNow('app.target', { pkg: app }, TIMEOUTS.action);
+      }
+    });
   }
 
   /** The app a view went over: home closes the view, and it is what is read again. */
