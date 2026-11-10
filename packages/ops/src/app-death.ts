@@ -1,4 +1,4 @@
-import { pause, reportProgress } from '@appdyno/core';
+import { pause, reportProgress, stoppable } from '@appdyno/core';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 
@@ -223,11 +223,12 @@ export async function diedRefusal(
  * Watches the selected app's process while `action` runs, from a second in: a crash under a touch held an iPhone
  * simulator's answer for its whole 15 s, which then read as a stuck agent. An end it finds before the action answers
  * refuses with `APP_NOT_RUNNING`, the crash report's reason and the app's last log lines, however long those take to
- * read; the action's own answer, when it comes, goes unread.
+ * read; the action is stopped there, so that a scroll's next stroke or a key's next press never reaches the device,
+ * and its own answer, when it comes, goes unread.
  */
 export async function watched<T>(
   s: Session,
-  action: Promise<T>,
+  action: () => Promise<T>,
   o: {
     app: string;
     wasPid: string | undefined;
@@ -238,6 +239,8 @@ export async function watched<T>(
   },
 ): Promise<T> {
   let over = false;
+  const stop = new AbortController();
+  const acting = stoppable(stop.signal, action);
   const watch = async (): Promise<Died> => {
     await pause(WATCH_AFTER_MS);
     while (!over) {
@@ -251,10 +254,12 @@ export async function watched<T>(
   try {
     // the race is to the death being known, not to its whole answer: one that took the log's seconds lost to the
     // action's answer, and what was read before it was dropped, so that its own check found no app that ran
-    const first = await Promise.race([action.then((r) => ({ r })), watch().then((d) => ({ d }))]);
+    const first = await Promise.race([acting.then((r) => ({ r })), watch().then((d) => ({ d }))]);
     if ('r' in first) return first.r;
     over = true;
-    action.catch(() => undefined);
+    // before the refusal's seconds of reading: the call that comes after it may be on the app started again
+    stop.abort();
+    acting.catch(() => undefined);
     // the touch went out, and what was read before it says nothing of the screen now
     s.acted();
     throw await diedRefusal(s, o.app, o.done, first.d, o);

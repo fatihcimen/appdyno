@@ -23,6 +23,16 @@ export const inCall = <T>(s: CallScope, fn: () => Promise<T>): Promise<T> => sco
 export const inOp = <T>(fn: () => Promise<T>): Promise<T> =>
   scope.run({ ...scope.getStore(), opStartedAt: Date.now() }, fn);
 
+/**
+ * `fn` within the call it serves, which `stop` ends as the client's cancel does: its device calls and waits end there,
+ * and it can no longer start one.
+ */
+export function stoppable<T>(stop: AbortSignal, fn: () => Promise<T>): Promise<T> {
+  const store = scope.getStore();
+  const signal = store?.signal ? AbortSignal.any([store.signal, stop]) : stop;
+  return scope.run({ ...store, signal }, fn);
+}
+
 /** When the op being served began, if one is. */
 export const opStartedAt = () => scope.getStore()?.opStartedAt;
 

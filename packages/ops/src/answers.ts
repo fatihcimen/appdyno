@@ -271,7 +271,7 @@ async function act(
       ? await s.device.appPid?.(s.appId).catch(() => undefined)
       : undefined);
   // a crash under the action is said once its process goes, where the device's answer could wait for long
-  const action = run(opts).catch(refusedAction);
+  const action = () => run(opts).catch(refusedAction);
   const r: ActResult =
     read !== 'none' && s.appId && (pid || inFront(s))
       ? await watched(s, action, {
@@ -282,7 +282,7 @@ async function act(
           clean,
           cleanLog,
         })
-      : await action;
+      : await action();
   // the last read before the action, which a ref's lookup may have just made
   const base = s.fresh?.list ?? before;
   const aimed = s.fresh?.hash;

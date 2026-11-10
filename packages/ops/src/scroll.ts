@@ -3,6 +3,7 @@ import {
   pause,
   reportProgress,
   selectIn,
+  throwIfCancelled,
   type Screen,
   type ScreenElement,
   type Selector as SelectorOf,
@@ -208,6 +209,8 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
         },
         { settle: SETTLE, read: 'tree', before: screen.hash },
       );
+      // a call refused meanwhile, as its app died, is over: no more strokes, and no read of it for the session
+      throwIfCancelled('scroll_to');
       s.acted();
       const next = last.tree ? s.screenOf(last.tree) : await s.read();
       s.remember(next);
@@ -271,6 +274,7 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
         { kind: 'gesture', pointers: [slowingPath(at(-1), at(1), STROKE_MS, STROKE_REST_MS)] },
         { settle: SETTLE, read: 'tree', before: screen.hash },
       );
+      throwIfCancelled('swipe');
       s.acted();
       strokes++;
       const next = await stopped(

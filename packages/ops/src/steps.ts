@@ -5,6 +5,7 @@ import {
   selectIn,
   type Screen,
   must,
+  throwIfCancelled,
   type ActOptions,
 } from '@appdyno/core';
 import type { ActResult, Point, TextResult } from '@appdyno/protocol';
@@ -294,7 +295,11 @@ export function stepsFor(
         const dark = NOTHING_TO_READ.has(key);
         const quiet = { settle: false, read: 'none' } as const;
         const count = st.count ?? 1;
-        for (let i = 1; i < count; i++) await s.device.key(key, quiet, modifiers);
+        for (let i = 1; i < count; i++) {
+          await s.device.key(key, quiet, modifiers);
+          // a call refused meanwhile, as its app died, presses no more
+          throwIfCancelled('press_key');
+        }
         return {
           r: await s.device.key(key, dark ? quiet : opts, modifiers),
           done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read)' : ''}`,

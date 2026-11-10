@@ -460,6 +460,36 @@ describe('steps across screens', () => {
     }
   });
 
+  it('stops a scroll or a key pressed again whose app died under it at its refusal: nothing reaches the device after it', async () => {
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    for (const [tool, args, kind] of [
+      ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture'],
+      ['press_key', { key: 'tab', count: 10 }, 'key'],
+    ] as const) {
+      const d = new ScrollingList();
+      d.pid = '4242';
+      d.appPid = d.fakePid;
+      d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
+      let sent = 0;
+      const own = d.act.bind(d);
+      // the second ends the app; each takes as long as a settled stroke does, so the watch finds it under way
+      d.act = async (a, o) => {
+        const r = await own(a, o);
+        if (a.kind === kind && ++sent === 2) d.pid = undefined;
+        if (a.kind === kind) await wait(400);
+        return r;
+      };
+      const { call } = await connect(d);
+      await call('screen');
+      const r = await call(tool, args);
+      const atRefusal = sent;
+      expect([r.data.code, r.data.dispatched], tool).toEqual(['APP_NOT_RUNNING', true]);
+      expect(r.text).toContain('the app died: fixture crash');
+      await wait(2_000);
+      expect(sent, tool).toBe(atRefusal);
+    }
+  });
+
   it('says a step with no app selected killed the one it aimed at, gone or started again under the same screen', async () => {
     // as an emulator's "keeps stopping" stands over the app's last screen: its process gone, or a new one in its place
     for (const after of [undefined, '200']) {
