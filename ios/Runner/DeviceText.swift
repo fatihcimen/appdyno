@@ -60,26 +60,23 @@ extension Device {
         let replace = request.replace
         let secure = snap.elementType == .secureTextField
         let before = textIn(snap)
-        // nil: the field is gone (a code entry that submitted itself took the text)
-        func check() -> Bool? {
-            currentText(field).map { holdsText($0, before: before, text: text, replace: replace) }
-        }
+        let holds = { (now: String) in holdsText(now, before: before, text: text, replace: replace) }
         // keys, not a paste: a paste the user did not make brings up iOS's "Allow Paste" alert, which no one
         // answers here and which holds the text up (a timeout, or text doubled once it goes)
         keyboardUp(app, job: job)
         var verified: Bool? = false
         if field.exists {
             if replace { clear(field) }
-            // shortcut: with the synthesizer gone XCUI's typing writes plain text into the test's log and result bundle
-            if !replace || field.exists, !EventShim.type(text, orientation: Device.interfaceOrientation()) {
-                field.typeText(text)
-            }
-            verified = check()
-            // the keys are sent, not yet handled, and a field that formats what is typed takes a moment more
-            let echoEnd = Date().addingTimeInterval(Device.echoWaitS)
-            while verified == false, Date() < echoEnd, !job.over {
-                Thread.sleep(forTimeInterval: 0.05)
-                verified = check()
+            if !replace || field.exists { type(text, into: field, perSecond: 60) }
+            // a secure field reads back as dots: waiting for it to hold the text took the whole echo wait, 1.5 s
+            // a field that formats what is typed (a phone number) drops a key that comes while it rewrites itself,
+            // one of ten at 60 a second: where what it must hold is known, it is typed again, slower
+            let known = replace || before.isEmpty
+            verified = secure ? nil : echoed(field, job: job, givesUp: known, holds: holds)
+            if verified == false, known, field.exists, !job.over {
+                clear(field)
+                type(text, into: field, perSecond: 15)
+                verified = echoed(field, job: job, givesUp: false, holds: holds)
             }
         }
         // a field that is gone has taken the text and submitted it already
@@ -87,6 +84,32 @@ extension Device {
         let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         // no verdict when the field cannot be read back: gone (it took the text and submitted), or secure
         return out.merging(textWire(focusMs: focusMs, verified: secure ? nil : verified)) { $1 }
+    }
+
+    /// shortcut: with the synthesizer gone XCUI's typing writes plain text into the test's log and result bundle
+    private func type(_ text: String, into field: XCUIElement, perSecond: UInt64) {
+        if !EventShim.type(text, orientation: Device.interfaceOrientation(), perSecond: perSecond) {
+            field.typeText(text)
+        }
+    }
+
+    /**
+     * Whether the field holds the text once the keys are handled, within the echo wait: a field that formats what is
+     * typed takes a moment more. `givesUp`: one whose text has held still for half a second will not; nil: the field is
+     * gone (a code entry that submitted itself took the text).
+     */
+    private func echoed(_ field: XCUIElement, job: Job, givesUp: Bool, holds: (String) -> Bool) -> Bool? {
+        let end = Date().addingTimeInterval(Device.echoWaitS)
+        var last = currentText(field)
+        var still = Date()
+        while let now = last, !holds(now), Date() < end, !job.over {
+            if givesUp, Date().timeIntervalSince(still) >= 0.5 { return false }
+            Thread.sleep(forTimeInterval: 0.05)
+            let next = currentText(field)
+            if next != last { still = Date() }
+            last = next
+        }
+        return last.map(holds)
     }
 
     /// No element reports the focus (a code entry's hidden field): the keys go to whatever has the keyboard, as a

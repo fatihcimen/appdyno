@@ -143,6 +143,17 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   });
 
+  it('types a phone number whole into an empty field that formats it, after a secure field', async () => {
+    const s = await open('Form');
+    const secure = await d.typeText('hunter2', { at: foundId(s, 'password_input') });
+    expect(secure.verified).toBeUndefined();
+    // keys at 60 a second lost one of ten here, as the field rewrote itself
+    const r = await d.typeText('5999999900', { at: foundId(s, 'gsm_input') });
+    expect(r.verified).toBe(true);
+    const field = (await d.tree()).nodes.find((x) => x.id === 'gsm_input');
+    expect(field?.t).toBe('(599) 999-9900');
+  });
+
   it('types into the field it tapped while another one holds the focus', async () => {
     const s = await open('Form');
     expect((await d.typeText('Ada', { at: foundId(s, 'name_input') })).verified).toBe(true);
