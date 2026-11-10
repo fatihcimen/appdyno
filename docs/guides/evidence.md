@@ -75,7 +75,7 @@ port, and call `ext.flutter.inspector.getRootWidgetSummaryTree` over its WebSock
 
 `react_native` talks to Metro on this Mac and needs no device: `targets`, `logs` (the JS console over the Hermes
 runtime's DevTools protocol, for `ms`, secrets hidden) and `reload` (Metro's route, else the runtime's). Tested against a stand-in for Metro only, not a real app. Left out: the
-component tree and JS profiles. On Android, a device reaches Metro through your own `adb reverse tcp:8081 tcp:8081`.
+component tree and JS profiles. On Android, a device reaches Metro through your own `adb reverse tcp:8081 tcp:8081`. `metro` is `localhost`, `127.0.0.1` or `[::1]` and a port, so this Mac calls no other host, and a runtime's socket that Metro names on another host or port is not opened.
 
 ## Visual comparison
 

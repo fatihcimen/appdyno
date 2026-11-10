@@ -75,7 +75,7 @@ yönlendirmek ve WebSocket'i üzerinden `ext.flutter.inspector.getRootWidgetSumm
 
 `react_native` bu Mac'teki Metro ile konuşur ve cihaz gerektirmez: `targets`, `logs` (Hermes çalışma zamanının DevTools
 protokolü üzerinden JS konsolu, `ms` boyunca, gizli değerler gizlenmiş) ve `reload` (Metro'nun yolu, yoksa çalışma zamanınınki). Yalnızca Metro'nun yerine geçen bir taklide karşı test edildi, gerçek bir uygulamaya karşı değil. Dışarıda kalanlar:
-bileşen ağacı ve JS profilleri. Android'de bir cihaz Metro'ya sizin kendi `adb reverse tcp:8081 tcp:8081` komutunuzla ulaşır.
+bileşen ağacı ve JS profilleri. Android'de bir cihaz Metro'ya sizin kendi `adb reverse tcp:8081 tcp:8081` komutunuzla ulaşır. `metro`, `localhost`, `127.0.0.1` ya da `[::1]` ve bir porttur; böylece bu Mac başka bir sunucuyu aramaz; Metro'nun başka bir sunucuda ya da portta adlandırdığı bir çalışma zamanı soketi açılmaz.
 
 ## Görsel karşılaştırma
 

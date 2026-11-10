@@ -11,6 +11,23 @@ const DEFAULT_LOG_MS = 3_000;
 const MAX_LOG_MS = 60_000;
 const MAX_LINES = 500;
 
+/** Metro on this Mac, by any of its names: a host elsewhere would have this Mac call it, and a name carry data out. */
+const LOOPBACK = ['localhost', '127.0.0.1', '[::1]'];
+
+/** A runtime's socket where Metro is, this Mac and its port, and nowhere else Metro's answer might send this Mac. */
+function onMetro(base: string, socket: string) {
+  // `URL.parse` came in Node 22.1, and engines lets 22.0 in
+  const at = URL.canParse(socket) ? new URL(socket) : undefined;
+  return (
+    !!at &&
+    ['ws:', 'wss:'].includes(at.protocol) &&
+    !at.username &&
+    !at.password &&
+    LOOPBACK.includes(at.hostname) &&
+    at.port === new URL(base).port
+  );
+}
+
 type Console = {
   type?: string;
   args?: { type?: string; value?: unknown; description?: string }[];
@@ -45,6 +62,11 @@ export function reactNativeOps(ctx: ServerContext) {
           : `no app is connected to the Metro at ${base}: open the app with Hermes on`,
         'NOT_FOUND',
       );
+    if (!onMetro(base, hit.webSocketDebuggerUrl))
+      throw new ToolError(
+        `the Metro at ${base} named ${hit.webSocketDebuggerUrl} for ${hit.id}, which is not on it: it was not opened`,
+        'POLICY_DENIED',
+      );
     return hit;
   };
 
@@ -58,7 +80,10 @@ export function reactNativeOps(ctx: ServerContext) {
           action: z.enum(['targets', 'logs', 'reload']),
           metro: z
             .string()
-            .regex(/^[\w.-]+:\d+$/)
+            .regex(
+              /^(localhost|127\.0\.0\.1|\[::1\]):\d{1,5}$/,
+              'Metro on this Mac: localhost:port',
+            )
             .default(DEFAULT_METRO),
           target: z.string().max(200).optional(),
           ms: z.number().int().min(100).max(MAX_LOG_MS).default(DEFAULT_LOG_MS),

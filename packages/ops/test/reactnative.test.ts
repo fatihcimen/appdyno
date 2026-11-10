@@ -34,14 +34,14 @@ const unmask = (b: Buffer) => {
 };
 
 /** A Metro as much as the op needs: its list, its reload route and a Hermes that logs on enable. */
-async function fakeMetro(opts: { reloadRoute: boolean; targets?: number }) {
+async function fakeMetro(opts: { reloadRoute: boolean; targets?: number; socket?: string }) {
   const calls: string[] = [];
   let port = 0;
   const targets = Array.from({ length: opts.targets ?? 1 }, (_, i) => ({
     id: `device-${i}`,
     title: 'Hermes React Native',
     description: 'dev.app',
-    webSocketDebuggerUrl: `ws://127.0.0.1:0/inspector/${i}`,
+    webSocketDebuggerUrl: opts.socket ?? `ws://localhost:0/inspector/${i}`,
   }));
   const server: Server = createServer((req, res) => {
     calls.push(`${String(req.method)} ${String(req.url)}`);
@@ -193,6 +193,38 @@ describe('react_native', () => {
       await call('react_native', { action: 'reload', metro: metro.metro });
       expect(opens).toBe(0);
     });
+  });
+
+  it('calls no Metro but on this Mac', () => {
+    for (const metro of ['10.0.0.5:8080', 'secret.example.com:80', 'localhost.example.com:80'])
+      expect(() => ops().react_native?.input.parse({ action: 'targets', metro })).toThrow(
+        /Metro on this Mac/,
+      );
+    for (const metro of ['localhost:8081', '127.0.0.1:8081', '[::1]:8081'])
+      expect(ops().react_native?.input.parse({ action: 'targets', metro })).toMatchObject({
+        metro,
+      });
+  });
+
+  it('opens no runtime socket a Metro names off its own host and port', async () => {
+    for (const socket of [
+      'ws://10.0.0.5:0/inspector/0',
+      'ws://localhost:0@evil.example/inspector/0',
+      'ws://localhost.evil.example:0/inspector/0',
+      'ws://localhost:1/inspector/0',
+      'http://localhost:0/inspector/0',
+    ]) {
+      metro = await fakeMetro({ reloadRoute: false, socket });
+      await expect(call({ action: 'logs', metro: metro.metro, ms: 100 })).rejects.toMatchObject({
+        code: 'POLICY_DENIED',
+      });
+      await expect(call({ action: 'reload', metro: metro.metro })).rejects.toThrow(
+        /which is not on it: it was not opened/,
+      );
+      expect(metro.calls.filter((c) => !c.includes('/'))).toEqual([]);
+      metro.close();
+    }
+    metro = undefined;
   });
 
   it('says when no app is connected', async () => {
