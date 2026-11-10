@@ -8,17 +8,28 @@ const OTHER = `${DEVICES}/FAC55233-3F44-498D-A3A6-9EE0DE3EAFFF/data/Containers/B
 describe("a simulator app's process in the Mac's list", () => {
   it('is the executable right in its folder, not an extension of it nor the same app on another simulator', () => {
     const ps = [
-      '    1 /sbin/launchd',
-      `  412 ${OTHER}/My App`,
-      `  513 ${APP}/PlugIns/My Widget.appex/My Widget`,
-      `80898 ${APP}/My App -NSDoubleLocalizedStrings YES`,
+      '    1 Ss   /sbin/launchd',
+      `  412 S    ${OTHER}/My App`,
+      `  513 S    ${APP}/PlugIns/My Widget.appex/My Widget`,
+      `80898 Ss   ${APP}/My App -NSDoubleLocalizedStrings YES`,
       '',
     ].join('\n');
     expect(pidOfApp(ps, APP)).toBe(80898);
   });
 
-  it('is none when only an extension of the app runs', () => {
-    expect(pidOfApp(`  513 ${APP}/PlugIns/W.appex/W\n`, APP)).toBeUndefined();
+  it('is the one that runs now, not one ending beside it nor the one stopped before it', () => {
+    const ps = [
+      `80898 S    ${APP}/My App`,
+      `80950 Z    ${APP}/My App`,
+      `81003 Ss   ${APP}/My App`,
+      `81020 E    ${APP}/My App`,
+    ].join('\n');
+    expect(pidOfApp(ps, APP)).toBe(81003);
+  });
+
+  it('is none when only an extension of the app runs, or the app is ending', () => {
+    expect(pidOfApp(`  513 S    ${APP}/PlugIns/W.appex/W\n`, APP)).toBeUndefined();
+    expect(pidOfApp(`  600 E    ${APP}/My App\n`, APP)).toBeUndefined();
     expect(pidOfApp('', APP)).toBeUndefined();
   });
 });

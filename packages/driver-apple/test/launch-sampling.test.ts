@@ -222,7 +222,7 @@ const running = (udid: string, pid: number) => {
   const folder = `/Devices/${udid}/data/Containers/Bundle/Application/A1/Fixture.app`;
   return Object.assign(new Simctl(), {
     exec: () => Promise.resolve(`${folder}\n`),
-    processes: () => Promise.resolve(`    1 /sbin/launchd\n ${pid} ${folder}/Fixture\n`),
+    processes: () => Promise.resolve(`    1 Ss   /sbin/launchd\n ${pid} Ss   ${folder}/Fixture\n`),
   });
 };
 

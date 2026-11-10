@@ -99,17 +99,20 @@ export type Simulator = {
 const HOME_SCREEN = 'com.apple.springboard';
 
 /**
- * The app's own process in the Mac's list (`ps -o pid=,command=`), by the folder its app is installed in on this Mac:
- * the executable right in that folder, not an extension's further in.
+ * The app's own process in the Mac's list (`ps -o pid=,stat=,command=`), by the folder its app is installed in on this
+ * Mac: the executable right in that folder, not an extension's further in. One that is ending (`E`, `Z`) is left out,
+ * and of two the newer is the one that runs now, as one just stopped is listed beside the one started after it.
  */
 export function pidOfApp(processes: string, app: string): number | undefined {
+  let found: number | undefined;
   for (const line of processes.split('\n')) {
-    const [, pid, command] = /^\s*(\d+) (.*)$/.exec(line) ?? [];
+    const [, pid, stat, command] = /^\s*(\d+)\s+(\S+)\s+(.*)$/.exec(line) ?? [];
     const executable =
       command?.startsWith(`${app}/`) && command.slice(app.length + 1).split(' ')[0];
-    if (pid && executable && !executable.includes('/')) return Number(pid);
+    if (pid && executable && !executable.includes('/') && !/[EZ]/.test(stat ?? ''))
+      found = Math.max(found ?? 0, Number(pid));
   }
-  return undefined;
+  return found;
 }
 
 type Runtime = {
@@ -138,31 +141,37 @@ export class Simctl {
 
   /**
    * The process id of a running app. A simulator's apps are this Mac's processes, and the Mac's list is a fraction of
-   * launchctl's in the simulator, which spawns into it: 90 against 340 ms at load 22.
+   * launchctl's in the simulator, which spawns into it: 90 against 340 ms at load 22. That list tells an app installed
+   * on this simulator by its folder in the simulator's own; a system app runs from the runtime's, as it does on every
+   * simulator of that runtime, so it is asked of the simulator.
    */
   async pid(udid: string, bundle: string): Promise<number> {
     assertBundle(bundle);
-    if (bundle !== HOME_SCREEN) {
-      const app = await this.appContainer(udid, bundle);
+    const app = bundle === HOME_SCREEN ? undefined : await this.appContainer(udid, bundle);
+    if (app?.includes(`/Devices/${udid}/`)) {
       const pid = pidOfApp(await this.processes(), app);
       if (!pid) throw notRunning(bundle);
       return pid;
     }
     const out = await this.exec(['spawn', udid, 'launchctl', 'list']);
-    // the home screen is a system service: it has a label of its own, with capitals its bundle id has not; a process
-    // just ended stays listed for a while, with no pid, beside the one that runs now
+    // the home screen is a system service: it has a label of its own, with capitals its bundle id has not
+    const listed = (l: string) =>
+      bundle === HOME_SCREEN
+        ? l.endsWith('\tcom.apple.SpringBoard')
+        : l.includes(`UIKitApplication:${bundle}[`);
+    // a process just ended stays listed for a while, with no pid, beside the one that runs now
     const pid = out
       .split('\n')
-      .filter((l) => l.endsWith('\tcom.apple.SpringBoard'))
+      .filter(listed)
       .map((l) => Number(l.trim().split(/\s+/)[0]))
       .find((n) => Number.isInteger(n) && n > 0);
     if (!pid) throw notRunning(bundle);
     return pid;
   }
 
-  /** This Mac's processes, each with its whole command line. */
+  /** This Mac's processes, each with its state and its whole command line. */
   async processes(): Promise<string> {
-    const { stdout } = await run('/bin/ps', ['-axww', '-o', 'pid=,command='], {
+    const { stdout } = await run('/bin/ps', ['-axww', '-o', 'pid=,stat=,command='], {
       maxBuffer: 64 * 1024 * 1024,
     });
     return stdout;

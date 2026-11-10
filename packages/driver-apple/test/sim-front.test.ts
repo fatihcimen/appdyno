@@ -4,9 +4,15 @@ import { Simctl } from '../src/simctl.js';
 
 const UDID = 'C8F701E7-9A02-4465-AC91-F4C85FBA788D';
 
-/** An app's folder on this Mac, as `simctl get_app_container` says it. */
+/** The runtime's own apps, which every simulator of that runtime runs from. */
+const RUNTIME =
+  '/private/var/run/mnt/iOS 27.2.simruntime/Contents/Resources/RuntimeRoot/Applications';
+
+/** An app's folder on this Mac, as `simctl get_app_container` says it: the system's in the runtime's. */
 const folder = (bundle: string) =>
-  `/Users/me/Library/Developer/CoreSimulator/Devices/${UDID}/data/Containers/Bundle/Application/${bundle}/App.app`;
+  bundle.startsWith('com.apple.')
+    ? `${RUNTIME}/${bundle}.app`
+    : `/Users/me/Library/Developer/CoreSimulator/Devices/${UDID}/data/Containers/Bundle/Application/${bundle}/App.app`;
 
 /** A simulator with this launchctl list, and this Mac with these processes. */
 class Listed extends Simctl {
@@ -26,13 +32,25 @@ const LISTING = [
   '5352\t0\tcom.apple.SpringBoard',
   '-\t0\tUIKitApplication:dev.app[a971][rb-legacy]',
   '29658\t0\tUIKitApplication:dev.app[b202][rb-legacy]',
+  '-\t0\tUIKitApplication:com.apple.Preferences[c303][rb-legacy]',
+  '7712\t0\tUIKitApplication:com.apple.Preferences[d404][rb-legacy]',
 ].join('\n');
 
-const RUNNING = `  412 /sbin/launchd\n29658 ${folder('dev.app')}/App\n`;
+// another simulator of the same runtime has Settings up, from the same folder
+const RUNNING = [
+  '  412 Ss   /sbin/launchd',
+  `29658 Ss   ${folder('dev.app')}/App`,
+  `  999 Ss   ${folder('com.apple.Preferences')}/Preferences`,
+  ` 7712 Ss   ${folder('com.apple.Preferences')}/Preferences`,
+].join('\n');
 
 describe('a running app on a simulator', () => {
   it("is found among this Mac's processes by the folder it is installed in", async () => {
     expect(await new Listed(LISTING, RUNNING).pid(UDID, 'dev.app')).toBe(29658);
+  });
+
+  it("is asked of the simulator when it is the system's, which every simulator of the runtime runs from one folder", async () => {
+    expect(await new Listed(LISTING, RUNNING).pid(UDID, 'com.apple.Preferences')).toBe(7712);
   });
 
   it('includes the home screen, which is a service with a label of its own', async () => {
