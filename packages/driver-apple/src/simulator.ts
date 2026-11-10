@@ -417,8 +417,10 @@ export class IosSimulatorDevice extends IosDevice {
           keyboardOpen: (t) => this.platformScreen.keyboardOpen(t),
         });
         const key = { kind: 'key', key: 'a' } as const; // the settle tells touches apart, and keys are none
-        return r && { ...r, ...(await settleAfter(this.settleOn(), key, opts)).result };
+        if (!r || r === 'retype') return r;
+        return { ...r, ...(await settleAfter(this.settleOn(), key, opts)).result };
       });
+      if (typed === 'retype') return super.typeText(text, { ...opts, replace: true });
       if (typed) return typed;
     }
     return super.typeText(text, opts);

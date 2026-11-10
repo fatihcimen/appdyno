@@ -23,9 +23,18 @@ const form = (text: string, focused: boolean, secure = false): Tree => ({
   hash: 'h',
 });
 
-/** A field that takes the focus when touched and types what its keys say; `drops`: the key numbers it loses. */
+/**
+ * A field that takes the focus when touched and types what its keys say; `drops`: the key numbers it loses; `layout`:
+ * the letters of keys another layout than US gives them.
+ */
 function field(
-  opts: { focused?: boolean; text?: string; secure?: boolean; drops?: number[] } = {},
+  opts: {
+    focused?: boolean;
+    text?: string;
+    secure?: boolean;
+    drops?: number[];
+    layout?: Record<string, string>;
+  } = {},
 ) {
   let focused = opts.focused ?? false;
   let text = opts.text ?? '';
@@ -40,7 +49,9 @@ function field(
       if (a.kind === 'key' && a.modifiers?.includes('command')) text = '';
       else if (a.kind === 'key' && a.key === 'delete') text = text.slice(0, -1);
       else if (a.kind === 'key' && a.key !== 'enter' && !opts.drops?.includes(keys++))
-        text += a.modifiers?.includes('shift') ? a.key.toUpperCase() : a.key;
+        text += a.modifiers?.includes('shift')
+          ? a.key.toUpperCase()
+          : (opts.layout?.[a.key] ?? a.key);
       return Promise.resolve(true);
     },
     keyboardOpen: (t: Tree) => t.nodes.some((n) => n.c === 'Keyboard'),
@@ -75,23 +86,36 @@ describe("typing by a simulator's keys", () => {
   it('types again, slower, what a field that formats lost, once it knows all it must hold', async () => {
     const f = field({ drops: [4] });
     const r = await typeByKeys('5999999900', { at: AT }, f.keyboard);
-    expect(r?.verified).toBe(true);
+    expect(r).toMatchObject({ verified: true });
     expect(f.text()).toBe('5999999900');
   });
 
   it('says a field holds other text where it held some before, and does not type it again', async () => {
     const f = field({ focused: true, text: 'x', drops: [1] });
     const r = await typeByKeys('abc', { at: AT }, f.keyboard);
-    expect(r?.verified).toBe(false);
+    expect(r).toMatchObject({ verified: false });
     expect(f.text()).toBe('xac');
   }, 5_000);
 
-  it('replaces by selecting all and deleting it first, and gives no verdict on a secure field', async () => {
-    const f = field({ focused: true, text: 'old', secure: true });
+  it('replaces by selecting all and deleting it first', async () => {
+    const f = field({ focused: true, text: 'old' });
     const r = await typeByKeys('hunter2', { at: AT, replace: true }, f.keyboard);
-    expect(r).not.toHaveProperty('verified');
+    expect(r).toMatchObject({ verified: true });
     expect(f.text()).toBe('hunter2');
   });
+
+  it('leaves a secure field to the runner, touching nothing, as its dots cannot be read back', async () => {
+    const f = field({ focused: true, text: 'old', secure: true });
+    expect(await typeByKeys('hunter2', { at: AT, replace: true }, f.keyboard)).toBeUndefined();
+    expect(f.sent).toEqual([]);
+  });
+
+  it('clears for the runner what keys of a layout that is not US typed twice, as a Turkish Q one types quick', async () => {
+    const f = field({ layout: { i: 'ı', '-': '*' } });
+    expect(await typeByKeys('quick-i', { at: AT }, f.keyboard)).toBe('retype');
+    expect(f.text()).toBe('');
+    expect(f.sent.filter((a) => a.kind === 'key' && a.key === 'enter')).toEqual([]);
+  }, 10_000);
 
   it('leaves to the runner a point with no field, or no field with the focus', async () => {
     expect(await typeByKeys('a', { at: { x: 300, y: 600 } }, field().keyboard)).toBeUndefined();

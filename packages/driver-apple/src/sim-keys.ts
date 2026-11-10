@@ -87,7 +87,9 @@ async function echoed(
 /**
  * Text typed by the simulator's keyboard keys, as a person's hardware keyboard types it, into the field at `at` (touched
  * first unless it has the focus) or the one with the focus, and read back. Undefined, with nothing typed: no field
- * there took the focus, for the runner to try.
+ * there took the focus, or a secure one, which cannot be read back, for the runner to type. `retype`: the field still
+ * held other text after a second try, as keys make on a simulator whose keyboard layout is not US, and was cleared for
+ * the runner, which types the text as it is in its place: the field held nothing before, or was to be replaced.
  */
 export async function typeByKeys(
   text: string,
@@ -98,7 +100,7 @@ export async function typeByKeys(
   const { at, replace = false } = opts;
   let t = await k.read();
   let field = fieldOf(t, at);
-  if (!field) return undefined;
+  if (!field || (field.f & F.password) !== 0) return undefined;
   if (!focused(field)) {
     if (!at || !(await k.send({ kind: 'tap', ...at }))) return undefined;
     // the keys wait for that field to have the focus, and its keyboard to be up
@@ -111,18 +113,21 @@ export async function typeByKeys(
   }
   const focusMs = Date.now() - start;
   const before = field?.t ?? '';
-  const secure = ((field?.f ?? 0) & F.password) !== 0;
   const holds = (now: string) => holdsText(now, before, text, replace);
   // a field that formats what is typed drops a key that comes while it rewrites itself: where what it must hold is
   // known, it is typed again, slower
   const known = replace || !before;
   if (replace) await clear(k);
   await press(k, text, KEY_GAP_MS);
-  let verified = secure ? undefined : await echoed(k, at, holds, known);
+  let verified = await echoed(k, at, holds, known);
   if (verified === false && known) {
     await clear(k);
     await press(k, text, SLOW_KEY_GAP_MS);
     verified = await echoed(k, at, holds, false);
+    if (verified === false) {
+      await clear(k);
+      return 'retype' as const;
+    }
   }
   if (opts.submit) await k.send({ kind: 'key', key: 'enter' });
   return { mode: 'keys' as const, focusMs, ...(verified !== undefined && { verified }) };
