@@ -7,10 +7,10 @@ import { join } from 'node:path';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import {
+  endPid,
   exclusively,
   sleep,
   greet,
-  processAlive,
   readStateFile,
   reportProgress,
   run,
@@ -343,16 +343,7 @@ export class IosRunnerLauncher {
     const signals: NodeJS.Signals[] =
       this.transport.stop === 'kill' ? ['SIGKILL'] : ['SIGTERM', 'SIGKILL'];
     try {
-      for (const signal of signals) {
-        try {
-          process.kill(pid, signal);
-        } catch {
-          return; // gone already
-        }
-        const end = Date.now() + ENDS_MS;
-        while (processAlive(pid) && Date.now() < end) await sleep(ENDS_POLL_MS);
-        if (!processAlive(pid)) return;
-      }
+      await endPid(pid, { signals, graceMs: ENDS_MS, pollMs: ENDS_POLL_MS });
     } finally {
       await endLeftBehind(left, HUB);
     }

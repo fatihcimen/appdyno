@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { describe, expect, it } from 'vitest';
-import { endChild } from '../src/index.js';
+import { endChild, endPid, must } from '../src/index.js';
 
 /** A process that has started, and so has its handlers, with what it has said by then. */
 async function started(body: string, detached = false) {
@@ -69,6 +69,32 @@ describe('ending a child', () => {
     const { child } = await started('');
     await once(child, 'close');
     await expect(endChild(child, { graceMs: 30_000 })).resolves.toBeUndefined();
+  });
+});
+
+describe('ending a process by its pid', () => {
+  it('goes through what it is asked by until it has gone, and adds no kill of its own', async () => {
+    const heard: string[] = [];
+    const { child } = await started(
+      `${STAYS}; process.on('SIGTERM', () => console.log('SIGTERM'))`,
+    );
+    child.stdout.on('data', (d) => heard.push(String(d).trim()));
+    const pid = must(child.pid, 'its pid');
+    await endPid(pid, { signals: ['SIGTERM'], graceMs: 300, pollMs: 20 });
+    expect(isAlive(pid)).toBe(true);
+    await endPid(pid, { signals: ['SIGTERM', 'SIGKILL'], graceMs: 2_000, pollMs: 20 });
+    expect(isAlive(pid)).toBe(false);
+    expect(child.signalCode).toBe('SIGKILL');
+    expect(heard).toEqual(['SIGTERM', 'SIGTERM']);
+  });
+
+  it('asks no more of one the first signal ended', async () => {
+    const { child } = await started(STAYS);
+    const pid = must(child.pid, 'its pid');
+    const at = Date.now();
+    await endPid(pid, { signals: ['SIGTERM', 'SIGKILL'], graceMs: 30_000, pollMs: 20 });
+    expect(Date.now() - at).toBeLessThan(15_000);
+    expect(child.signalCode).toBe('SIGTERM');
   });
 });
 

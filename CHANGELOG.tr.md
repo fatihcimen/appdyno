@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Pid'iyle bitirilen bir süreç, runner'ın xcodebuild'i ya da launchd'nin tuttuğu bir `DTServiceHub`, `endChild`'ın yanındaki tek bir `endPid` ile bitirilir: her sinyal sırayla, her birinden sonra bir süre, ve verilmeyen hiçbir öldürme yok. Her biri o döngünün kendi kopyasını tutuyordu; sinyalleri, süreleri ve her sinyalden önce launchd'ye bakışı oldukları gibidir.
 - Yalnızca bakan adımlar, `wait_for` ve `assert`, bir kez adlandırılır; bir toplu iş, bir yeniden oynatma ve bir raporun günlüğü her biri onların kendi adıyla kendi kümesini tutuyordu.
 - Süresi dolan bir cihaz çağrısı, dinleyicisini çağrının iptalinden kaldırır: her biri onu orada bırakıyordu, bu yüzden çağrının sonraki bir iptali, süresi dolmuş her çağrısı için ajana çoktan gitmiş kimliklere bir `cancel` daha yazıyordu.
 - Kaynakların adını andığı her `APPDYNO_` değişkeni CLI başvurusunda ya da CONTRIBUTING'in appdyno'ya ait olanlar tablosundadır ve `packages/appdyno/test/environment.test.ts` bunu böyle tutar: `APPDYNO_FAST_TAP`, `APPDYNO_ANIMATION_WAIT`, `APPDYNO_ANDROID_AGENT`, `APPDYNO_IOS_PRODUCTS` ve `APPDYNO_IOS_DEVICE_PRODUCTS` hiçbir sayfada yoktu; `APPDYNO_HELPERS`, `APPDYNO_NATIVE_DIR`, `APPDYNO_HELD_BY_HUB`, `APPDYNO_PROBE_OUT` ve `APPDYNO_RECORD_SEGMENT_S` ise başka hiçbir şeyin ayarlamaması için appdyno'nun kendine ait diye söylenir.

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A process ended by its pid, the runner's xcodebuild or a `DTServiceHub` launchd holds, is ended by one `endPid` beside `endChild`: each signal in turn, a grace after each, and no kill it was not given. Each kept its own copy of that loop; their signals, graces and the look at launchd before each signal are as they were.
 - The steps that only look, `wait_for` and `assert`, are named once, where a batch, a replay and a report's journal each kept their own set of them under a name of its own.
 - A device call that timed out takes its listener off the call's cancel: each one left it there, so a cancel of the call later wrote one more `cancel` to the agent for every call of it that had timed out, for ids long gone.
 - Every `APPDYNO_` variable the sources name is in the CLI reference or in CONTRIBUTING's table of appdyno's own, and `packages/appdyno/test/environment.test.ts` holds it so: `APPDYNO_FAST_TAP`, `APPDYNO_ANIMATION_WAIT`, `APPDYNO_ANDROID_AGENT`, `APPDYNO_IOS_PRODUCTS` and `APPDYNO_IOS_DEVICE_PRODUCTS` were in no page, and `APPDYNO_HELPERS`, `APPDYNO_NATIVE_DIR`, `APPDYNO_HELD_BY_HUB`, `APPDYNO_PROBE_OUT` and `APPDYNO_RECORD_SEGMENT_S` are said to be its own, for nothing else to set.

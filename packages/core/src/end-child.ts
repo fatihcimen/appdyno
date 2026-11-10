@@ -1,5 +1,7 @@
 import type { ChildProcess } from 'node:child_process';
+import { sleep } from './call.js';
 import { must } from './must.js';
+import { processAlive } from './owner.js';
 
 export type EndChild = {
   /** How long it has after each signal, and after the kill. */
@@ -48,4 +50,27 @@ export async function endChild(
   }
   child.stdout?.destroy();
   child.stderr?.destroy();
+}
+
+export type EndPid = {
+  /** What it is asked by, in turn: the last is the last word, as no SIGKILL is added. */
+  signals: NodeJS.Signals[];
+  /** How long it has to go after each. */
+  graceMs: number;
+  /** How often it is looked for meanwhile. */
+  pollMs: number;
+};
+
+/** Ends a process this one did not start, by its pid: each signal in turn, until it has gone. */
+export async function endPid(pid: number, { signals, graceMs, pollMs }: EndPid) {
+  for (const signal of signals) {
+    try {
+      process.kill(pid, signal);
+    } catch {
+      return; // gone already
+    }
+    const end = Date.now() + graceMs;
+    while (processAlive(pid) && Date.now() < end) await sleep(pollMs);
+    if (!processAlive(pid)) return;
+  }
 }

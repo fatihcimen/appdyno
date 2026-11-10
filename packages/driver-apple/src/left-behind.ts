@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import { processAlive, run, sleep } from '@appdyno/core';
+import { endPid, run } from '@appdyno/core';
 
 /**
  * What Xcode's tools start and do not end with them: the trace tool and the runner's xcodebuild each start one, which
@@ -30,15 +30,10 @@ async function leftBehind(pid: number, name: string) {
 /** Ends what a process left behind of its children, by their pids: SIGTERM, then SIGKILL for one that stays. */
 export async function endLeftBehind(pids: Iterable<number>, name: string) {
   for (const pid of pids) {
+    // looked at before each: a pid gone meanwhile may be another's by the kill
     for (const signal of ['SIGTERM', 'SIGKILL'] as const) {
       if (!(await leftBehind(pid, name))) break;
-      try {
-        process.kill(pid, signal);
-      } catch {
-        break; // gone meanwhile
-      }
-      const end = Date.now() + TERM_MS;
-      while (processAlive(pid) && Date.now() < end) await sleep(50);
+      await endPid(pid, { signals: [signal], graceMs: TERM_MS, pollMs: 50 });
     }
   }
 }
