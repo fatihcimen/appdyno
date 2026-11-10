@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The command line reference says that `--allow-devices` and `--allow-urls` match anywhere in the text unless anchored, as `https://staging.example.com` lets in `https://staging.example.com.evil.test/` and a link of another scheme that holds it, and shows them anchored.
 - A window's Apps pane keeps to `--allow-apps`, as its Links and Push panes do: Launch, Quit and Remove acted on any app the pane named, where the list allowed others only, and now each says the app is not an allowed one and does nothing.
 - Over `--http` no client is asked, a 2026-07-28 one too, as SECURITY.md has it: what loses data and an input on the power controls are refused with `PERMISSION_REQUIRED` there unless the person started the server with `--allow-data-loss` or `--allow-power`. A 2026-07-28 request that declared it can ask was asked within the call, and whoever held the token could answer the question itself with `accept` in the next POST, which went ahead as a person's yes: two POSTs uninstalled an app, or passed the power guard, with no flag.
 - The HTTP server the hub starts for a tunnel keeps to the hub's own devices and apps: `appdyno hub --allow-devices` reached the hub's window and lists but not the `appdyno mcp --http` it starts from AI Clients, which drove every device, a phone the hub showed as not allowed among them, unless the list came by `APPDYNO_ALLOW_DEVICES`. The hub now starts it with `--allow-devices` and `--allow-apps` as it keeps to them.

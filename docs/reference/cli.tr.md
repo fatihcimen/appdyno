@@ -54,6 +54,8 @@ tutulur, böylece iki klasördeki iki terminal bir cihazı paylaşmaz. Veri kayb
 |                             | `APPDYNO_IOS_PRODUCTS`              | bu checkout'un derlemesi ya da ilk kullanımda yapılan yerine, bir simülatör için derlenmiş iOS runner'ını ve onun `.xctestrun` dosyasını tutan bir klasör                 |
 |                             | `APPDYNO_IOS_DEVICE_PRODUCTS`       | aynısı, bir telefon için                                                                                                                                                  |
 
+`--allow-devices` ve `--allow-urls` JavaScript düzenli ifadeleridir ve sabitlenmedikçe metnin herhangi bir yerinde eşleşir: `--allow-urls 'https://staging.example.com'`, `https://staging.example.com.evil.test/` ve `evilapp://x?u=https://staging.example.com` bağlantılarını da içeri alır. Onu sabitleyin: `--allow-urls '^https://staging\.example\.com/'` (`/` ana makine adını bitirir) ve `--allow-devices '^emulator-5554$'`; `'^emulator-'` her emülatörü içeri alır. Bayrakla ya da değişkenle boş verilen bir liste, her şeyi içeri alacağından başlangıçta reddedilir.
+
 `--takeover` olmadan, Android'de UI otomasyonunu tutan ikinci bir araç asla durdurulmaz. Hata, onu tutanı
 pid'i ve komut satırıyla adlandırır ve onu durduracak komutun tam halini verir.
 

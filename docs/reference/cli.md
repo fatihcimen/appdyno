@@ -54,6 +54,8 @@ refused unless `APPDYNO_ALLOW_DATA_LOSS` allows it, or `APPDYNO_ALLOW_POWER` one
 |                             | `APPDYNO_IOS_PRODUCTS`              | a folder with the iOS runner built for a simulator and its `.xctestrun`, in place of this checkout's build or one made on first use                         |
 |                             | `APPDYNO_IOS_DEVICE_PRODUCTS`       | the same for a phone                                                                                                                                        |
 
+`--allow-devices` and `--allow-urls` are JavaScript regular expressions, matched anywhere in the text unless anchored: `--allow-urls 'https://staging.example.com'` lets in `https://staging.example.com.evil.test/` and `evilapp://x?u=https://staging.example.com` too. Anchor it: `--allow-urls '^https://staging\.example\.com/'`, where the `/` ends the host, and `--allow-devices '^emulator-5554$'`; `'^emulator-'` lets in every emulator. A list given empty, by flag or variable, is refused at the start, as it would let in every one.
+
 Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
 the holder by its pid and command line and gives the exact command to stop it.
 
