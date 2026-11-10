@@ -588,30 +588,30 @@ ve Ayarlar'ın bir açılışını okur; bunların maliyeti bilinen bir denetimi
 
 Kendiniz çalıştırın: `node scripts/speed.mjs <device id> [runs]`, bir MCP istemcisinin en sık yaptığı çağrıları fixture uygulamasında (`dev.appdyno.fixture`, `android/fixture` ya da `ios/` içinden), herhangi bir cihazda ölçer. Önce `pnpm build`. Her çalıştırma, bir istemcinin yaptığı gibi stdio üzerinden yeni bir sunucu başlatır, `initialize` ve `tools/list` gönderir, sonra aşağıdaki çağrıları. Her çağrı yanıtıyla kanıtlanır: bir dokunuş sonraki ekrana ulaşmalı, yazılan bir alan metni tutmalıdır; bir ret ya da eksik bir kanıt çalıştırmayı durdurur. Fixture her `launch_app`'ten önce durdurulur, bu yüzden her açılış soğuktur. Ölçülenlerden önceki bir çalıştırma cihazın ihtiyaç duyduğunu (iOS runner'ının derlenmesini ve başlatılmasını ya da Android ajanınınkini) başlatır ve yalnızca ilk okuması saklanır. Sonunda betik başlattığı iOS runner'ını durdurur ve bitmesini bekler, çünkü xcodebuild bitirirken oturumun sonuçlarını betiğin durum klasörüne yazar; sonra o klasörü siler.
 
-5 çalıştırmanın medyanları ve en kötüleri, ms olarak, her biri MCP sunucusu üzerinden stdio ile, 2026-11-09'da (iOS simülatörü ve Xiaomi 2026-11-07'de), 15 çekirdekli ve macOS 27.0.1'li bir M5 Pro'da, her cihazın yanında commit ve host yüküyle. Bir dokunuş ya da kaydırma iki biçimde ölçülür. Yalnızca dokunuş, `read: none` ile, dokunuş gidince, durulma ve okuma olmadan yanıt verir ve tek başına hiçbir şey kanıtlamaz: betik onu ardından gelen, ölçülmeyen bir beklemeyle kanıtlar. Durulmuş ekranla, yani varsayılanla, çağrı ekranın 200 ms boyunca durgun kalmasını da bekler ve neyin değiştiğiyle yanıt verir; bu onun kanıtıdır. Başka yerlerdeki bir dokunuş çoğu zaman yalnızca dokunuştur, bu yüzden onu o satırla karşılaştırın:
+5 çalıştırmanın medyanları ve en kötüleri, ms olarak, her biri MCP sunucusu üzerinden stdio ile, 2026-11-10'da (iPhone ve Samsung 2026-11-09'da, Xiaomi 2026-11-07'de), 15 çekirdekli ve macOS 27.0.1'li bir M5 Pro'da, her cihazın yanında commit ve host yüküyle. Bir dokunuş ya da kaydırma iki biçimde ölçülür. Yalnızca dokunuş, `read: none` ile, dokunuş gidince, durulma ve okuma olmadan yanıt verir ve tek başına hiçbir şey kanıtlamaz: betik onu ardından gelen, ölçülmeyen bir beklemeyle kanıtlar. Durulmuş ekranla, yani varsayılanla, çağrı ekranın 200 ms boyunca durgun kalmasını da bekler ve neyin değiştiğiyle yanıt verir; bu onun kanıtıdır. Başka yerlerdeki bir dokunuş çoğu zaman yalnızca dokunuştur, bu yüzden onu o satırla karşılaştırın:
 
 | çağrı                                              | iOS simülatörü | Android emülatörü | iPhone        | Samsung       | Xiaomi        |
 | -------------------------------------------------- | -------------- | ----------------- | ------------- | ------------- | ------------- |
-| `list_devices`                                     | 593 / 648      | 163 / 204         | 220 / 258     | 118 / 148     | 476 / 568     |
-| `screen`, bir sunucunun ilki                       | 689 / 892      | 62 / 74           | 591 / 624     | 147 / 181     | 136 / 159     |
-| `initialize`                                       | 114 / 146      | 120 / 143         | 134 / 137     | 120 / 131     | 104 / 115     |
-| `tools/list`                                       | 7 / 9          | 6 / 8             | 6 / 7         | 6 / 6         | 6 / 7         |
-| fixture'ın `launch_app`'i, soğuk                   | 2.307 / 3.072  | 1.053 / 1.063     | 2.636 / 2.654 | 1.548 / 1.615 | 1.890 / 2.063 |
-| `screen`                                           | 16 / 20        | 53 / 56           | 308 / 317     | 49 / 59       | 58 / 68       |
-| `swipe`, yalnızca dokunuş (`read: none`)           | 312 / 313      | 579 / 583         | 913 / 1.044   | 380 / 432     | 679 / 717     |
-| `swipe`, durulmuş ekranla                          | 2.412 / 2.490  | 1.470 / 1.740     | 3.965 / 4.233 | 2.344 / 2.350 | 2.512 / 2.560 |
-| `find`                                             | 72 / 139       | 45 / 56           | 139 / 140     | 123 / 151     | 42 / 44       |
-| koordinatla `tap`, yalnızca dokunuş (`read: none`) | 127 / 133      | 87 / 122          | 310 / 314     | 80 / 108      | 142 / 144     |
-| koordinatla `tap`, durulmuş ekranla                | 904 / 916      | 844 / 860         | 970 / 1.101   | 711 / 1.517   | 810 / 858     |
-| geri                                               | 331 / 375      | 454 / 663         | 1.123 / 1.133 | 768 / 803     | 624 / 805     |
-| seçiciyle `tap`, durulmuş ekranla                  | 1.134 / 1.146  | 862 / 901         | 918 / 925     | 989 / 1.075   | 825 / 879     |
-| seçiciyle bir alana `type_text`                    | 1.271 / 1.686  | 636 / 652         | 1.934 / 2.076 | 930 / 949     | 1.199 / 1.351 |
-| ekrandaki bir öğe için `wait_for`                  | 61 / 79        | 64 / 68           | 163 / 281     | 160 / 162     | 130 / 144     |
-| `screenshot`                                       | 90 / 189       | 25 / 52           | 184 / 223     | 166 / 284     | 111 / 119     |
-| `logs`, 20 satır                                   | 1.179 / 1.350  | 21 / 29           | 1 / 2         | 717 / 747     | 233 / 246     |
+| `list_devices`                                     | 112 / 123      | 119 / 175         | 220 / 258     | 118 / 148     | 476 / 568     |
+| `screen`, bir sunucunun ilki                       | 375 / 434      | 30 / 32           | 591 / 624     | 147 / 181     | 136 / 159     |
+| `initialize`                                       | 141 / 153      | 142 / 148         | 134 / 137     | 120 / 131     | 104 / 115     |
+| `tools/list`                                       | 7 / 7          | 8 / 9             | 6 / 7         | 6 / 6         | 6 / 7         |
+| fixture'ın `launch_app`'i, soğuk                   | 2.044 / 2.139  | 823 / 834         | 2.636 / 2.654 | 1.548 / 1.615 | 1.890 / 2.063 |
+| `screen`                                           | 18 / 27        | 11 / 14           | 308 / 317     | 49 / 59       | 58 / 68       |
+| `swipe`, yalnızca dokunuş (`read: none`)           | 313 / 315      | 647 / 710         | 913 / 1.044   | 380 / 432     | 679 / 717     |
+| `swipe`, durulmuş ekranla                          | 2.768 / 2.965  | 1.336 / 1.402     | 3.965 / 4.233 | 2.344 / 2.350 | 2.512 / 2.560 |
+| `find`                                             | 14 / 108       | 11 / 12           | 139 / 140     | 123 / 151     | 42 / 44       |
+| koordinatla `tap`, yalnızca dokunuş (`read: none`) | 168 / 311      | 260 / 294         | 310 / 314     | 80 / 108      | 142 / 144     |
+| koordinatla `tap`, durulmuş ekranla                | 890 / 993      | 469 / 599         | 970 / 1.101   | 711 / 1.517   | 810 / 858     |
+| geri                                               | 384 / 813      | 486 / 562         | 1.123 / 1.133 | 768 / 803     | 624 / 805     |
+| seçiciyle `tap`, durulmuş ekranla                  | 1.084 / 1.149  | 696 / 759         | 918 / 925     | 989 / 1.075   | 825 / 879     |
+| seçiciyle bir alana `type_text`                    | 1.137 / 1.333  | 648 / 690         | 1.934 / 2.076 | 930 / 949     | 1.199 / 1.351 |
+| ekrandaki bir öğe için `wait_for`                  | 49 / 52        | 23 / 26           | 163 / 281     | 160 / 162     | 130 / 144     |
+| `screenshot`                                       | 82 / 113       | 28 / 81           | 184 / 223     | 166 / 284     | 111 / 119     |
+| `logs`, 20 satır                                   | 1.128 / 1.205  | 45 / 47           | 1 / 2         | 717 / 747     | 233 / 246     |
 
-- iOS simülatörü: iOS 27.2'li bir iPhone 17 Pro, `8991f574`'te; bu commit'te metin düzeltmesi var, ekran görüntüsü düzeltmesi yok (bir simülatörün uygulamanın ötesine bakışı yardımcısınındır, birkaç ms), host yükü 5,4-8,0.
-- Android emülatörü: API 34'lü bir Pixel 6 AVD (`google_apis`, arm64), `-gpu host`, `97aa4b06`'da, host yükü 4,0-5,0. Aynı AVD'nin başka bir açılışında bir okuma 8-13 ms, durulmuş bir dokunuş 540-860 sürdü: bir açılış bunları `ab96deed`'den beri hiçbir commit'in değiştirmediği kadar değiştirir.
+- iOS simülatörü: iOS 27.2'li bir iPhone 17 Pro, `15497894`'te, host yükü 5,3-6,4; iki çalıştırmanın medyanlarının medyanı ve ikisinin en kötüsü.
+- Android emülatörü: API 34'lü bir Pixel 6 AVD (`google_apis`, arm64), `-gpu host`, `15497894`'te, host yükü 4,9-5,9; iki çalıştırmanın medyanlarının medyanı ve ikisinin en kötüsü. Aynı AVD'nin başka açılışlarında bir okuma 2026-11-09'da 8-55 ms sürdü: bir açılış onu bir commit'ten çok değiştirir.
 - iPhone: iOS 27.2'li bir iPhone 13 Pro Max, USB ile, `97aa4b06`'da, host yükü 3,9-4,9. `logs`'u, `devicectl`'in bir uygulamanın logunu okuyamadığını hemen söyler. Soğuk `launch_app`'i aynı saatin çalıştırmaları arasında 1.558-2.636 ms sürdü, tablonun önceki derlemesi ise aralarında 2.199: telefonun, kodun değil.
 - Samsung: Android 14'lü bir SM-A525F, USB ile, `97aa4b06`'da, host yükü 4,8-5,1. `logs`'u bu commit'te de tablonun önceki derlemesinde de 717-764 ms sürdü, o zaman 446 sürmüştü: telefonun logunda olan, kodun değil.
 - Xiaomi: Türkçe Android 16'lı bir 25078RA3EY, USB ile, `b9c2bbf0`'da, host yükü 5,4-6,2.

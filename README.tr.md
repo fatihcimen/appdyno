@@ -187,15 +187,15 @@ appdyno perf survey --app A    # bu cihazdaki her ölçüm, ardından hepsini g�
 
 ## Hız
 
-5 çalıştırmanın medyanı; MCP üzerinden stdio ile, fixture uygulamasında, bir M5 Pro'da, 2026-11-09'da. iPhone bir 13 Pro Max, Android telefon bir Samsung SM-A525F:
+5 çalıştırmanın medyanı; MCP üzerinden stdio ile, fixture uygulamasında, bir M5 Pro'da, 2026-11-10'da (telefonlar 2026-11-09'da). iPhone bir 13 Pro Max, Android telefon bir Samsung SM-A525F:
 
 | çağrı                | iOS simülatörü | Android emülatörü | iPhone   | Android telefon |
 | -------------------- | -------------- | ----------------- | -------- | --------------- |
-| ekranı okumak        | 20 ms          | 53 ms             | 308 ms   | 49 ms           |
-| koordinatla dokunmak | 1.045 ms       | 844 ms            | 970 ms   | 711 ms          |
-| seçiciyle dokunmak   | 1.100 ms       | 862 ms            | 918 ms   | 989 ms          |
-| bir alana yazmak     | 1.550 ms       | 636 ms            | 1.934 ms | 930 ms          |
-| ekran görüntüsü      | 93 ms          | 25 ms             | 184 ms   | 166 ms          |
+| ekranı okumak        | 18 ms          | 11 ms             | 308 ms   | 49 ms           |
+| koordinatla dokunmak | 890 ms         | 469 ms            | 970 ms   | 711 ms          |
+| seçiciyle dokunmak   | 1.084 ms       | 696 ms            | 918 ms   | 989 ms          |
+| bir alana yazmak     | 1.137 ms       | 648 ms            | 1.934 ms | 930 ms          |
+| ekran görüntüsü      | 82 ms          | 28 ms             | 184 ms   | 166 ms          |
 
 Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğini söyler; bu yüzden süresinin çoğu uygulamanın kendisine aittir. `node scripts/speed.mjs <device id>` aynı çağrıları sizin Mac'inizde çalıştırır. Her çağrı, sürenin nereye gittiği ve her birinin neyi kanıtladığı: [Hız](docs/reference/perf.tr.md#hız).
 

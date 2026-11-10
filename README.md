@@ -187,15 +187,15 @@ appdyno perf survey --app A    # every measure on this device, then a page of th
 
 ## Speed
 
-Medians of 5 runs, through MCP over stdio, on the fixture app, on an M5 Pro, on 2026-11-09. The iPhone is a 13 Pro Max, and the Android phone a Samsung SM-A525F:
+Medians of 5 runs, through MCP over stdio, on the fixture app, on an M5 Pro, on 2026-11-10 (the phones on 2026-11-09). The iPhone is a 13 Pro Max, and the Android phone a Samsung SM-A525F:
 
 | call              | iOS simulator | Android emulator | iPhone   | Android phone |
 | ----------------- | ------------- | ---------------- | -------- | ------------- |
-| read the screen   | 20 ms         | 53 ms            | 308 ms   | 49 ms         |
-| tap by coordinate | 1,045 ms      | 844 ms           | 970 ms   | 711 ms        |
-| tap by selector   | 1,100 ms      | 862 ms           | 918 ms   | 989 ms        |
-| type into a field | 1,550 ms      | 636 ms           | 1,934 ms | 930 ms        |
-| screenshot        | 93 ms         | 25 ms            | 184 ms   | 166 ms        |
+| read the screen   | 18 ms         | 11 ms            | 308 ms   | 49 ms         |
+| tap by coordinate | 890 ms        | 469 ms           | 970 ms   | 711 ms        |
+| tap by selector   | 1,084 ms      | 696 ms           | 918 ms   | 989 ms        |
+| type into a field | 1,137 ms      | 648 ms           | 1,934 ms | 930 ms        |
+| screenshot        | 82 ms         | 28 ms            | 184 ms   | 166 ms        |
 
 A tap waits until the screen has been still for 200 ms and answers with what changed, so most of its time is the app's own. `node scripts/speed.mjs <device id>` runs the same calls on your Mac. [Speed](docs/reference/perf.md#speed) has every call, where the time goes, and what each one proves.
 
