@@ -4,6 +4,7 @@ import type { ServerContext } from './context.js';
 import { redactLog } from './policy.js';
 import { journalOf, openReports, type Step } from './report-state.js';
 import { reportShot } from './report-write.js';
+import { LOOKS_ONLY } from './step-schemas.js';
 import type { Op, ToolResult } from './tool.js';
 
 const MAX_ANSWER = 20_000;
@@ -43,9 +44,6 @@ const NAMES = new Set([
   'what',
 ]);
 
-/** In `steps`: these only look, so their text is what they look for. */
-const LOOKING = new Set(['wait_for', 'assert']);
-
 /**
  * Any other string that goes into a device may be a password, so it is shown by its length: an op written later
  * cannot leave what it was given here. An op that only reads is given what is on the screen.
@@ -56,7 +54,7 @@ export function shownArgs(op: Op, args: unknown, clean: (s: string) => string): 
     if (Array.isArray(v)) return v.map((x) => walk(x, shown));
     if (!v || typeof v !== 'object') return v;
     const o = v as Record<string, unknown>;
-    const all = shown || LOOKING.has(String(o.action));
+    const all = shown || LOOKS_ONLY.has(String(o.action));
     return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, walk(x, all || NAMES.has(k))]));
   };
   return walk(args, op.annotations.readOnlyHint === true);

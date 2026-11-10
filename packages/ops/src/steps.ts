@@ -14,7 +14,14 @@ import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 import { byPerson } from './policy.js';
-import { NAME_AN_ELEMENT, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
+import {
+  LOOKS_ONLY,
+  NAME_AN_ELEMENT,
+  Step,
+  keyPress,
+  showSelector,
+  viewNamed,
+} from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
 import { checksFor, selectorOf, UNREAD } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
@@ -44,9 +51,6 @@ const DRAG_HOLD_MS = 150;
 
 /** What every step passes through on its way to the device (the recorder). */
 export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promise<T>;
-
-/** Only these touch nothing. */
-const LOOKS_ONLY = new Set<Step['action']>(['wait_for', 'assert']);
 
 /** One step's device call and the action around it, shared by the tools that act on a target. */
 export function stepsFor(

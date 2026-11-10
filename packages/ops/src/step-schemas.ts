@@ -192,3 +192,6 @@ export const Step = z.discriminatedUnion('action', [
 ]);
 
 export type Step = z.infer<typeof Step>;
+
+/** The steps that only look and touch nothing: what they are given is what they look for on the screen. */
+export const LOOKS_ONLY: ReadonlySet<string> = new Set<Step['action']>(['wait_for', 'assert']);

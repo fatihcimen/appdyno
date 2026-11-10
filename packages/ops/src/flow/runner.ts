@@ -19,6 +19,7 @@ import type { Answers } from '../answers.js';
 import { DIED_HINT, diedLine, diedUnder } from '../app-death.js';
 import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
+import { LOOKS_ONLY } from '../step-schemas.js';
 import type { ActionOut } from '../schemas.js';
 import type { Session } from '../session.js';
 import type { Steps } from '../steps.js';
@@ -132,8 +133,6 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
 /** They end on a settled screen with no time from the device (no lookup before, or several actions): all of the step is the time. */
 const WHOLE_STEP = new Set(['launch', 'open_link', 'scroll_to']);
 
-const READS_ONLY = new Set(['wait_for', 'assert']);
-
 /** What a step took: the device's own count from action to settled where it has one, else the action on this Mac's clock. */
 export const stepTime = (action: FlowStep['action'], r: StepResult) =>
   !WHOLE_STEP.has(action) && r.settledMs !== undefined
@@ -178,7 +177,7 @@ export function flowRunner(
           'INVALID_ARGUMENT',
         );
     }
-    if (!st.selector || READS_ONLY.has(st.action) || st.action === 'scroll_to') return;
+    if (!st.selector || LOOKS_ONLY.has(st.action) || st.action === 'scroll_to') return;
     await keyboardFirst(s, st.selector);
     // no error here: if it never comes, the op itself refuses, with the nearest candidates
     await steps.waitFor(s, { ...st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
@@ -205,7 +204,7 @@ export function flowRunner(
     const whole = Date.now() - t0;
     const settledMs = WHOLE_STEP.has(st.action)
       ? whole
-      : READS_ONLY.has(st.action)
+      : LOOKS_ONLY.has(st.action)
         ? undefined
         : data.settleMs;
     return {
