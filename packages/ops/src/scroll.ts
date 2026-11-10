@@ -20,9 +20,9 @@ import { ToolError } from './tool.js';
 const SCROLL_REACH = 0.35;
 
 /**
- * How long a target holds its place before it counts as still, and the most that is waited for that. A
- * list coasting after a scroll is not caught by the settle on a simulator (its content is the same, its
- * places within a tolerance), and UIKit takes a touch on a coasting list as "stop", not as a press:
+ * How long a target holds its place before it counts as still, and the most that is waited for that. The
+ * end of a list's coasting after a scroll is not caught by the settle on a simulator (its content is the same,
+ * its places within a tolerance for the settle's window), and UIKit takes a touch on a coasting list as "stop", not as a press:
  * measured, half of the taps right after a scroll were lost, none of 9 after 500 ms. Rects come in whole
  * points, so one equal pair of reads does not show it stopped.
  */

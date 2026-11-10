@@ -28,8 +28,8 @@ public struct SettleOutcome<S> {
 }
 
 /// After an action: read every `pollMs` and call the screen settled once its layout has been still for
-/// `quietMs` (no change between reads, nothing busy), at most `maxMs` after the action. The first read
-/// is compared with the layout the caller saw before. iOS gives no event stream: the reads decide alone.
+/// `quietMs` (every read the same as the layout at the last change, nothing busy), at most `maxMs` after the action.
+/// The first read is compared with the layout the caller saw before. iOS gives no event stream: the reads decide alone.
 public final class Settler {
     let clock: () -> Int
     let sleep: (Int) -> Void
@@ -43,21 +43,23 @@ public final class Settler {
     public func run<S>(actionAt: Int, quietMs: Int, maxMs: Int, before: S?, probe: SettleProbe<S>) -> SettleOutcome<S> {
         let deadline = actionAt + maxMs
         var reads = 0
-        var last = before
+        // the layout at the last change, not the last read: a motion under the tolerance per read adds up to a move
+        var anchor = before
         var changedAt = actionAt
         while true {
             let readStart = clock()
             let next = probe.read()
             reads += 1
             let now = clock()
+            let held = anchor != nil
             // a read shows the layout as it was when it began: stillness is proven up to its start only
-            if let prev = last, probe.same(next, prev), !probe.busy(next) {
+            if let prev = anchor, probe.same(next, prev), !probe.busy(next) {
                 // still
             } else {
                 changedAt = readStart
+                anchor = next
             }
-            let settled = last != nil && !probe.busy(next) && readStart - changedAt >= quietMs
-            last = next
+            let settled = held && !probe.busy(next) && readStart - changedAt >= quietMs
             if settled { return SettleOutcome(settled: true, reads: reads, last: next, elapsedMs: now - actionAt) }
             if probe.cancelled() || now >= deadline {
                 return SettleOutcome(settled: false, reads: reads, last: next, elapsedMs: now - actionAt)

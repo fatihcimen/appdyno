@@ -260,6 +260,37 @@ describe('the settle compare', () => {
     expect(r.settled).toBe(false);
     expect(r.elapsedMs).toBeGreaterThanOrEqual(500);
   });
+
+  it('takes a creep under the tolerance per read for a move, until it stops', async () => {
+    // a list's slow tail or a sheet easing in: 3 pt a read, where two layouts 4 pt apart are the same
+    const creep = (to: number) => {
+      let now = 0;
+      let at = 0;
+      return settle<number>({
+        actionAt: 0,
+        quietMs: 100,
+        firstMs: 100,
+        reactedMs: 100,
+        maxMs: 1_000,
+        pollMs: 20,
+        before: 0,
+        read: () => {
+          now += 10;
+          at = Math.min(at + 3, to);
+          return Promise.resolve(at);
+        },
+        same: (a, b) => Math.abs(a - b) <= 4,
+        busy: () => false,
+        clock: () => now,
+        sleep: (ms) => {
+          now += ms;
+          return Promise.resolve();
+        },
+      });
+    };
+    expect((await creep(Infinity)).settled).toBe(false);
+    expect(await creep(60)).toMatchObject({ settled: true, last: 60 });
+  });
 });
 
 describe('the digitizer events', () => {

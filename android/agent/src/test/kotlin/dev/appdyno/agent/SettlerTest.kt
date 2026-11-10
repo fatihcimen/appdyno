@@ -66,6 +66,24 @@ class SettlerTest {
     }
 
     @Test
+    fun aCreepUnderTheToleranceBetweenReadsIsStillAMove() {
+        // a list's slow tail: 6 px every 40 ms, read about every 50 ms (an event every 5 ms ends each sleep), under the
+        // 8 px two reads may differ by
+        fun creep(to: Long): SettleOutcome<Long> {
+            val start = now
+            return Settler({ now }, { now += minOf(it, 5) }, { now - 5 }).run(start, 200, 2_000, 0L, {
+                now += 10
+                minOf((now - start) * 6 / 40, to)
+            }, { a, b -> kotlin.math.abs(a - b) <= 8 }, { false }, { false })
+        }
+        val endless = creep(Long.MAX_VALUE)
+        assertFalse("settled at ${endless.elapsedMs} on ${endless.last}", endless.settled)
+        val stops = creep(90)
+        assertTrue(stops.settled)
+        assertEquals(90L, stops.last)
+    }
+
+    @Test
     fun aSpinnerKeepsTheScreenUnsettled() {
         val o = go(100, 3_000, "A", layoutAt = { t -> if (t < 700) r("S", true) else r("C") })
         assertTrue(o.settled)

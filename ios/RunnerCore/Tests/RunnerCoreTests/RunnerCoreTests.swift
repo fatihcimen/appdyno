@@ -50,6 +50,22 @@ final class SettlerTests: XCTestCase {
         XCTAssertEqual(outcome.last, 1)
     }
 
+    func testACreepUnderTheToleranceBetweenReadsIsStillAMove() {
+        // a sheet easing in: 3 pt a read, where two layouts 4 pt apart are the same
+        func creep(to: Int) -> SettleOutcome<Int> {
+            let c = Clock()
+            var at = 0
+            return Settler(clock: { c.now }, sleep: { c.now += $0 }).run(
+                actionAt: 0, quietMs: 200, maxMs: 2000, before: 0,
+                probe: SettleProbe(read: { at = min(at + 3, to); return at }, same: { abs($0 - $1) <= layoutTolerance },
+                                   busy: { _ in false }, cancelled: { false }))
+        }
+        XCTAssertFalse(creep(to: .max).settled)
+        let stops = creep(to: 30)
+        XCTAssertTrue(stops.settled)
+        XCTAssertEqual(stops.last, 30)
+    }
+
     func testABusyScreenRunsToTheLimit() {
         let c = Clock()
         let settler = Settler(clock: { c.now }, sleep: { c.now += $0 })

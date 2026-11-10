@@ -228,8 +228,9 @@ Cost, on an iOS 27.2 simulator and an API 34 emulator with no window open: a 3 s
 With `settle {quietMs (200), maxMs (3000)}` the agent, after the action, calls the screen settled once it
 has been still for `quietMs`:
 
-- no layout change between two reads ("the same layout": the same visible nodes, class and id, in the
-  same order, each within 8 pixels of its place; a plain text node vertically only);
+- every read the layout of the last change, not only of the read before it, so that a slow move adds up ("the same
+  layout": the same visible nodes, class and id, in the same order, each within 8 pixels of its place; a plain text
+  node vertically only);
 - no layout-moving accessibility event for `quietMs` (focus and text-only events do not count; events
   alone hold the settle for at most twice `quietMs`, as an endless animation never goes quiet);
 - nothing busy: there is a screen (between two screens only the status bar exists, for 100 to 500 ms), no

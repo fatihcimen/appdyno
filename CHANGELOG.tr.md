@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Durulma her okumayı bir öncekiyle değil, son değişikliğin yerleşimiyle karşılaştırır; bir simülatörde, iOS runner'ında ve Android ajanında: iki okuma arasında toleransın altında kalan bir hareket (4 pt, 8 px), bir fırlatmadan sonra bir listenin yavaş kuyruğu ya da yavaşça gelen bir sayfa gibi, hiç hareket sayılmıyordu ve bir eylem, yerleri çoktan eskimiş halde `settled: true` yanıtlanıyordu.
 - Öldürülen bir runner'ın bıraktığı `DTServiceHub` sınaması, onun yerine `sleep`'i kopyalamak yerine ona bir bağla koyar: macOS 27.2 bir sistem ikilisinin kopyasını başlarken öldürür ve sınama sonlandıracak bir şey bulamıyordu.
 - Bir akış çalıştırmasının bir hatanın bıraktığını kaydetmesi (`--evidence`), 200 satır sınırını aşan çalıştırıcının yanında kendi işlevidir.
 - Görüntüleyicinin öz sınaması, bir tablonun gönderdiği tıklamayı alıp almadığını macOS sürümüne bakmak yerine bir kez dener: macOS 27.2, 26'nın almadığı gibi bir tabloya böyle bir tıklamayı yine vermiyor; sınama o zaman hiçbir satır seçmiyor, yanlış yeri okuyor ve `-[MVConnectPane fillDevice:app:]` ile bitiyordu. Bir kişinin tıklaması hiç etkilenmedi.

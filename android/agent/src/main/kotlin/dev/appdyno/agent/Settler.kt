@@ -4,8 +4,8 @@ package dev.appdyno.agent
 class SettleOutcome<S>(val settled: Boolean, val reads: Int, val last: S, val elapsedMs: Long, val quietMs: Long = 0)
 
 /**
- * After an action: call the screen settled once it has been still for `quietMs` — no layout change between
- * reads, no progress indicator, and no layout-moving accessibility event (events alone hold it for at most
+ * After an action: call the screen settled once it has been still for `quietMs` — every read the layout of
+ * the last change, no progress indicator, and no layout-moving accessibility event (events alone hold it for at most
  * twice `quietMs`: an endless animation never goes quiet). The first read is compared with the layout the
  * caller saw before the action, so an action that changed nothing ends after `quietMs`. The window stretches
  * (up to 4×) while the device's own reads are slower than its recent best: a loaded device starts its reaction
@@ -79,8 +79,9 @@ class Settler(
     ): SettleOutcome<S> {
         val deadline = actionAt + maxMs
         var reads = 0
-        // the layout counts as changed at the action unless it is the one the caller saw
-        var last: S? = before
+        // the layout at the last change, not the last read: a motion slower than the tolerance per read adds up to a move;
+        // it counts as changed at the action unless it is the one the caller saw
+        var anchor: S? = before
         var changedAt = actionAt
         var lastReadAt = actionAt
         // with the caller's layout known, a read before the window ends can only say "the same"
@@ -108,11 +109,13 @@ class Settler(
             lastReadAt = now
             noteRead(now - readStart, size(next))
             val quiet = (quietMs * slowdown()).toLong()
-            val prev = last
+            val prev = anchor
             // a read shows the layout as it was when it began: stillness is proven up to its start only
             val moved = prev == null || !same(next, prev) || busy(next)
-            if (moved) changedAt = readStart
-            last = next
+            if (moved) {
+                changedAt = readStart
+                anchor = next
+            }
             val stillLayout = readStart - changedAt
             val quietEvents = now - maxOf(lastEventAt(), actionAt)
             // a read slower than the window could be all of the "still" time: one more, on a loaded device. Where reads

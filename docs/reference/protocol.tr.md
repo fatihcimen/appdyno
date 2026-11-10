@@ -228,8 +228,9 @@ Maliyet, hiçbir pencere açık değilken bir iOS 27.2 simülatöründe ve bir A
 `settle {quietMs (200), maxMs (3000)}` ile ajan, işlemden sonra ekran
 `quietMs` boyunca durgun kaldığında onu durulmuş sayar:
 
-- iki okuma arasında yerleşim değişikliği yok ("aynı yerleşim": aynı görünür düğümler, sınıf ve id, aynı
-  sırada, her biri yerinin 8 piksel yakınında; düz bir metin düğümü yalnızca dikey olarak);
+- her okuma yalnızca bir öncekinin değil, son değişikliğin yerleşimini gösterir; böylece yavaş bir hareket birikir
+  ("aynı yerleşim": aynı görünür düğümler, sınıf ve id, aynı sırada, her biri yerinin 8 piksel yakınında; düz bir
+  metin düğümü yalnızca dikey olarak);
 - `quietMs` boyunca yerleşimi oynatan erişilebilirlik olayı yok (odak ve yalnızca metin olayları sayılmaz; olaylar
   tek başlarına durulmayı en çok `quietMs`'in iki katı kadar tutar, çünkü sonsuz bir animasyon hiç sessizleşmez);
 - meşgul bir şey yok: bir ekran var (iki ekran arasında 100 ile 500 ms boyunca yalnızca durum çubuğu vardır), görünür

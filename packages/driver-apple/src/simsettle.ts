@@ -53,7 +53,8 @@ export async function settle<S>(o: {
   const sleep = o.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const deadline = o.actionAt + o.maxMs;
   let reads = 0;
-  let last = o.before;
+  // the layout at the last change, not the last read: a motion slower than the tolerance per read adds up to a move
+  let anchor = o.before;
   let changedAt = o.actionAt;
   let reacted = false;
   for (;;) {
@@ -62,14 +63,15 @@ export async function settle<S>(o: {
     reads++;
     const now = clock();
     const busy = o.busy(next);
+    const held = anchor !== undefined;
     // a read shows the layout as it was when it began: stillness is proven up to its start only
-    if (last === undefined || !o.same(next, last) || busy) {
+    if (anchor === undefined || !o.same(next, anchor) || busy) {
       changedAt = readStart;
-      reacted ||= last !== undefined;
+      reacted ||= held;
+      anchor = next;
     }
     const window = reacted ? Math.min(o.quietMs, o.reactedMs) : Math.max(o.quietMs, o.firstMs);
-    const settled = last !== undefined && !busy && readStart - changedAt >= window;
-    last = next;
+    const settled = held && !busy && readStart - changedAt >= window;
     if (settled || now >= deadline)
       return { settled, reads, last: next, elapsedMs: now - o.actionAt };
     await sleep(Math.max(1, Math.min(o.pollMs, deadline - now)));

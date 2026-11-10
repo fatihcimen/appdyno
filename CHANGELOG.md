@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The settle holds each read against the layout at the last change, not against the read before it, on a simulator, in the iOS runner and in the Android agent: a motion under the tolerance between two reads (4 pt, 8 px), as a list's slow tail after a fling or a sheet easing in, never counted as one, and an action answered `settled: true` with places already old.
 - The test of the `DTServiceHub` a killed runner leaves stands one in by a link to `sleep`, where it copied it: macOS 27.2 kills a system binary's copy as it starts, and the test found nothing left to end.
 - A flow run's saving of what a failure left (`--evidence`) is a function of its own beside the runner, which had grown past the 200-line cap.
 - The viewer's self test tries once whether a table takes the click it sends, where it went by the macOS version: macOS 27.2 gives a table no such click again, as 26 did not, and the test then chose no row, read the wrong place and ended on `-[MVConnectPane fillDevice:app:]`. A person's click was never affected.
