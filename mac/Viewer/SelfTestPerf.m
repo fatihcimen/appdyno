@@ -68,9 +68,35 @@ static void checkRefusedWhole(void) {
   MVCheck(@"performance: what to do when no app of yours is in front is said whole", !hint.hidden && [hint.stringValue isEqual:what] && NSHeight(hint.frame) >= NSHeight(needed) - 1, [NSString stringWithFormat:@"%.0f for %.0f", NSHeight(hint.frame), NSHeight(needed)]);
 }
 
+/// A label of `view` that says `words`, wherever it stands in it.
+static NSTextField *saying(NSView *view, NSString *words) {
+  if ([view isKindOfClass:NSTextField.class] && [((NSTextField *)view).stringValue isEqual:words]) return (NSTextField *)view;
+  for (NSView *sub in view.subviews)
+    if (saying(sub, words)) return saying(sub, words);
+  return nil;
+}
+
+/// An emulator's launcher in front: its row read `com.google.android…slauncher is in front`, cut in the middle.
+static void checkLongIdWhole(void) {
+  NSWindow *window;
+  MVPerfPane *pane = tallPane(&window);
+  NSString *front = @"com.google.android.apps.nexuslauncher is in front";
+  [pane showMeasured:@{@"title": @"Open an app first",
+                       @"detail": front,
+                       @"hint": @"A measure restarts the app it measures, so it measures only an app of yours: open one, then measure it."}];
+  [window layoutIfNeeded];
+  [window display];
+  MVList *list = [pane valueForKey:@"_results"];
+  NSTextField *line = saying(list, front);
+  // the words themselves, at the label's width: its own string keeps a middle cut that measures as one line
+  NSRect needed = [front boundingRectWithSize:NSMakeSize(NSWidth(line.frame), CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName: line.font ?: [NSFont systemFontOfSize:11]}];
+  MVCheck(@"performance: a refused measure's row reads its whole app id", line && NSHeight(line.frame) >= NSHeight(needed) - 1 && NSContainsRect(list.documentVisibleRect, [list.documentView convertRect:line.bounds fromView:line]), [NSString stringWithFormat:@"%.0f for %.0f", NSHeight(line.frame), NSHeight(needed)]);
+}
+
 void MVCheckPerfPane(void) {
   checkDisplayRate();
   checkHeldByApp();
   checkKeptResult();
+  checkLongIdWhole();
   checkRefusedWhole();
 }

@@ -4,6 +4,8 @@
 #import "Window.h"
 
 static const double kHeaderHeight = 30, kChangeSeconds = 0.2, kTileSide = 26, kChosenAlpha = 0.2, kChosenRound = 10, kChosenInset = 4;
+/// What an inset table's row keeps on each side, and the room a row's end keeps, all told.
+static const double kWrapMargins = 28;
 
 /// Its title is its own: as a cell's `textField` the table would take over its colour.
 @interface MVRowCell : NSTableCellView
@@ -173,8 +175,24 @@ static NSString *identityOf(MVRow *row) {
   return !self.onClick && (!_rows[at].header || _rows[at].key);
 }
 
+/// How wide a row's line beneath may wrap: the column's width, less the inset style's margins and what stands before it.
+static CGFloat wrapWidth(NSTableView *table, MVRow *row) {
+  return NSWidth([table rectOfColumn:0]) - kWrapMargins - (row.tile ? 8 + kTileSide + 10 : 6 + 18 + 8);
+}
+
+static NSDictionary *subLine(void) {
+  return @{NSFontAttributeName: [NSFont systemFontOfSize:11]};
+}
+
 - (CGFloat)tableView:(NSTableView *)table heightOfRow:(NSInteger)at {
-  return _rows[at].header ? kHeaderHeight : table.rowHeight;
+  MVRow *row = _rows[at];
+  if (row.header) return kHeaderHeight;
+  if (!row.wraps || !row.detail.length) return table.rowHeight;
+  // as many lines more as its line beneath takes past the first
+  NSDictionary *font = subLine();
+  CGFloat one = NSHeight([@"X" boundingRectWithSize:NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin attributes:font]);
+  CGFloat all = NSHeight([row.detail boundingRectWithSize:NSMakeSize(wrapWidth(table, row), CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin attributes:font]);
+  return table.rowHeight + MAX(0, ceil(all - one));
 }
 
 - (void)useSidebarStyle {
@@ -221,6 +239,11 @@ static NSString *identityOf(MVRow *row) {
   // and one line beneath at most: a second, as a tool's failure brings, stood over the next row
   NSTextField *detail = MVContentText([row.detail ?: @"" stringByReplacingOccurrencesOfString:@"\n" withString:@" "], MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
+  if (row.wraps) {
+    detail.lineBreakMode = NSLineBreakByWordWrapping;
+    detail.maximumNumberOfLines = 0;
+    detail.preferredMaxLayoutWidth = wrapWidth(table, row);
+  }
   detail.hidden = !row.detail.length;
   NSStackView *lines = [NSStackView stackViewWithViews:@[title, detail]];
   lines.orientation = NSUserInterfaceLayoutOrientationVertical;

@@ -252,8 +252,9 @@ static MVRow *rowOfResult(NSDictionary *result) {
   NSString *title = result[@"title"] ?: @"";
   if ([result[@"value"] length]) title = [NSString stringWithFormat:@"%@  %@", title, result[@"value"]];
   row.title = MVWord(title);
-  // a refusal names the app in front as it is
+  // a refusal names the app in front as it is, and whole: a launcher's id was cut in its middle
   row.detail = MVSentence(result[@"detail"] ?: @"");
+  row.wraps = !result[@"ok"];
   row.help = result[@"why"];
   row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar"
                                                             : @"exclamationmark.triangle.fill";

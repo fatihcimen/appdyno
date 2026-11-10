@@ -227,6 +227,8 @@ static const double MVHudWidth = 188;
 @property(nonatomic, copy, nullable) NSString *key;
 /// A heading over the rows beneath it, which cannot be chosen.
 @property(nonatomic) BOOL header;
+/// Its line beneath wraps whole, the row as tall as it needs, where one cut in the middle would leave a name unread.
+@property(nonatomic) BOOL wraps;
 + (instancetype)headerNamed:(NSString *)title;
 @end
 
