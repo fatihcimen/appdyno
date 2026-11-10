@@ -13,7 +13,7 @@ import type {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { must, startOf } from '@appdyno/core';
 import { runHub, stageLink } from '../src/hub.js';
-import { hubDevices, type HubDevice } from '../src/hub-list.js';
+import { CREATE_REFUSED, hubDevices, type HubDevice } from '../src/hub-list.js';
 import { Parent } from '../src/parent.js';
 import {
   DEFAULT_POLICY,
@@ -448,6 +448,22 @@ describe('the hub', () => {
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
     expect(told.find((m) => m.op === 'hub')?.choices).toMatchObject({
       simulator: { models: [{ id: 'm' }] },
+    });
+    close();
+    await done;
+  });
+
+  it('says in the sheet why it makes none under a device allow list, before Create is pressed', async () => {
+    const { link, told, close } = window();
+    const policy = { ...DEFAULT_POLICY, devices: /^B$/ };
+    const done = runHub(context(new Simulated(), [phone], undefined, policy), {
+      focus: false,
+      log: () => undefined,
+      viewer: () => link,
+    });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    expect(told.find((m) => m.op === 'hub')?.choices).toMatchObject({
+      simulator: { models: [{ id: 'm' }], refused: CREATE_REFUSED },
     });
     close();
     await done;

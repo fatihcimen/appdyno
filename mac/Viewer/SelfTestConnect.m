@@ -297,6 +297,13 @@ static void addEdges(NSView *view, NSMutableSet<NSNumber *> *edges) {
   for (NSView *sub in view.subviews) addEdges(sub, edges);
 }
 
+static NSView *viewNamed(NSView *view, NSString *name) {
+  if ([view.identifier isEqual:name]) return view;
+  for (NSView *sub in view.subviews)
+    if (viewNamed(sub, name)) return viewNamed(sub, name);
+  return nil;
+}
+
 static void checkWays(MVHub *hub) {
   NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17 Pro Max with a long name", @"id": @"m"}],
                           @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]};
@@ -334,6 +341,17 @@ static void checkWays(MVHub *hub) {
   [hub pokeClick:@"newEmulator"];
   MVPump(0.3);
   MVCheck(@"started: and so does New Emulator", window.attachedSheet != nil, nil);
+  if (window.attachedSheet) [window endSheet:window.attachedSheet];
+  MVPump(0.3);
+  // under a device allow list Create was refused, and the reason went to a line behind the sheet
+  NSString *why = @"The hub was started with a list of allowed devices, so it makes no new one: start it without --allow-devices to make one.";
+  [hub show:@{@"devices": @[],
+              @"choices": @{@"simulator": [kinds dictionaryWithValuesForKeys:@[@"models", @"systems"]], @"emulator": @{@"models": kinds[@"models"], @"systems": kinds[@"systems"], @"refused": why}}}];
+  [hub pokeClick:@"newEmulator"];
+  MVPump(0.3);
+  NSTextField *refused = (NSTextField *)viewNamed(window.attachedSheet.contentView, @"newRefused");
+  NSButton *create = (NSButton *)MVFindControl(window.attachedSheet.contentView, @"create");
+  MVCheck(@"started: a sheet that can make none says why, whole, and cannot be sent", [refused.stringValue isEqual:MVWord(why)] && !refused.hidden && NSHeight(refused.frame) > 20 && !create.enabled, refused.stringValue);
   if (window.attachedSheet) [window endSheet:window.attachedSheet];
   MVPump(0.3);
 }

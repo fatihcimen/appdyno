@@ -74,7 +74,15 @@ NSString *MVSystemName(NSDictionary *row) {
   [buttons setViews:@[cancel, create] inGravity:NSStackViewGravityTrailing];
   NSTextField *title = MVText([kind isEqual:@"simulator"] ? @"New Simulator" : @"New Emulator", MVStyleTitle);
   title.font = [NSFont systemFontOfSize:15 weight:NSFontWeightSemibold];
-  NSStackView *stack = [NSStackView stackViewWithViews:@[title, grid, buttons]];
+  // why the hub makes none, said before Create is pressed rather than after, behind the sheet
+  NSString *refused = [choices[@"refused"] isKindOfClass:NSString.class] ? choices[@"refused"] : @"";
+  NSTextField *why = MVWrappedText(refused, MVStyleSub);
+  why.identifier = @"newRefused";
+  why.maximumNumberOfLines = 0;
+  why.preferredMaxLayoutWidth = grid.fittingSize.width;
+  why.hidden = !refused.length;
+  create.enabled = !refused.length;
+  NSStackView *stack = [NSStackView stackViewWithViews:@[title, grid, why, buttons]];
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;
   stack.alignment = NSLayoutAttributeLeading;
   stack.spacing = 16;

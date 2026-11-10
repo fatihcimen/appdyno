@@ -1,6 +1,6 @@
 import type { DeviceHardware, Need, Startable, ViewerOrder } from '@appdyno/core';
 import type { Platform } from '@appdyno/protocol';
-import { liveMirrors, type ServerContext } from '@appdyno/ops';
+import { checkCreate, liveMirrors, type ServerContext } from '@appdyno/ops';
 
 /** One row of the sidebar. */
 export type HubDevice = {
@@ -94,12 +94,25 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
   return [...phones, ...virtual].filter((d) => ctx.allowed(d.serial ?? d.id));
 }
 
+/** Why the New sheet makes none, as `checkCreate` refuses it, said to a person. */
+export const CREATE_REFUSED =
+  'The hub was started with a list of allowed devices, so it makes no new one: start it without --allow-devices to make one.';
+
 /** What each kind can be made from: asked once, as each list is a tool's slow answer. */
 async function hubChoices(ctx: ServerContext) {
   const choices: Record<string, unknown> = {};
+  // said in the sheet before Create is pressed: the hub's `new` refuses it all the same
+  const refused = (() => {
+    try {
+      checkCreate(ctx.policy);
+      return undefined;
+    } catch {
+      return CREATE_REFUSED;
+    }
+  })();
   for (const { virtual } of ctx.providers) {
     const made = await virtual?.catalog?.().catch(() => undefined);
-    if (virtual && made) choices[virtual.kind] = made;
+    if (virtual && made) choices[virtual.kind] = { ...made, ...(refused && { refused }) };
   }
   return choices;
 }

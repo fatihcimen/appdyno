@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { must, NEEDS } from '@appdyno/core';
-import { PERSON_HINTS, PERSON_REASONS } from '@appdyno/hub';
+import { CREATE_REFUSED, PERSON_HINTS, PERSON_REASONS } from '@appdyno/hub';
 import { TRIED } from '../src/hub-services.js';
 
 const viewer = join(import.meta.dirname, '../../../mac/Viewer');
@@ -80,6 +80,10 @@ describe('the table of words', () => {
 
   it('has what the Performance pane says to do after a measure is refused, in the words it says it in', () => {
     expect([...PERSON_HINTS.values()].filter((w) => !known(w))).toEqual([]);
+  });
+
+  it('has why the New sheet makes no device, in the words it says it in', () => {
+    expect(known(CREATE_REFUSED)).toBe(true);
   });
 
   it('has why the Device pane cannot change a condition, in the words it says it in', () => {

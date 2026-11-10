@@ -291,6 +291,7 @@ const MVWordRow MVWordTable[] = {
     {"Give the app's id, as the Apps pane lists it.", "Uygulamanın kimliğini, Uygulamalar bölmesinin listelediği gibi verin."},
     {"The hub was started with a list of allowed apps that leaves this one out.", "Hub, bunu dışarıda bırakan bir izinli uygulamalar listesiyle başlatıldı."},
     {"The hub was started with a list of allowed links that leaves this one out.", "Hub, bunu dışarıda bırakan bir izinli bağlantılar listesiyle başlatıldı."},
+    {"The hub was started with a list of allowed devices, so it makes no new one: start it without --allow-devices to make one.", "Hub bir izinli cihazlar listesiyle başlatıldı, bu yüzden yeni cihaz yapmaz: yapmak için onu --allow-devices olmadan başlatın."},
     {"not measured", "ölçülmedi"},
     {"too few frames", "çok az kare"},
     {"%@% jank, %@ frozen", "%%1$@ takılma, %2$@ donma"},
