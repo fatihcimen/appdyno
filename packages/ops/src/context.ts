@@ -115,7 +115,20 @@ export class ServerContext {
   }
 
   allowed(serial: string) {
-    return !this.policy.devices || this.policy.devices.test(serial);
+    return !this.policy.devices || this.policy.devices.test(serial) || this.allowedAs.has(serial);
+  }
+
+  /** Devices the allow list names by another name than their serial: a simulator's or an AVD's, or a model. */
+  private readonly allowedAs = new Set<string>();
+
+  /** A device the allow list lets in by one of its names, which its serial is then let in as. */
+  allowAs(serial: string) {
+    this.allowedAs.add(serial);
+  }
+
+  /** As `checkDevice`, where a device let in by another of its names passes by its serial. */
+  private checkDevice(serial: string) {
+    if (!this.allowedAs.has(serial)) checkDevice(this.policy, serial);
   }
 
   /** The devices of every provider. */
@@ -188,7 +201,7 @@ export class ServerContext {
    * goes on to launch.
    */
   async use(serial: string, app?: string, share = false, launching?: string): Promise<Session> {
-    checkDevice(this.policy, serial);
+    this.checkDevice(serial);
     if (app) checkApp(this.policy, app);
     let s = this.sessions.get(serial);
     if (!s) {
@@ -291,7 +304,7 @@ export class ServerContext {
 
   /** A device's driver object, cold: nothing on the device has started. */
   deviceFor(serial: string): Device {
-    checkDevice(this.policy, serial);
+    this.checkDevice(serial);
     const provider = this.providers.findLast((p) => p.handles(serial));
     if (!provider)
       throw new ToolError(

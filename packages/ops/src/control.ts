@@ -1,13 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import {
-  readState,
-  reportProgress,
-  stateDir,
-  updateState,
-  type Startable,
-  type VirtualDevices,
-} from '@appdyno/core';
+import { readState, reportProgress, stateDir, updateState } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
@@ -15,6 +8,7 @@ import { approve } from './approval.js';
 import { launchSaid } from './apps.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
+import { checkVirtual, namedVirtual, RanAs, ranAsFile, virtuals } from './device-names.js';
 import { byPerson, checkApp, checkCreate, noApp } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
@@ -41,67 +35,6 @@ function dataFolder(path: string | undefined) {
 
 const Started = z.array(z.string());
 const startedFile = () => join(stateDir(), 'started.json');
-/** The serial each one this tool shut down ran as, by its name: a stopped emulator has none of its own. */
-const RanAs = z.record(z.string(), z.string());
-const ranAsFile = () => join(stateDir(), 'ran-as.json');
-
-type Virtual = { d: Startable; on: VirtualDevices; ranAs?: string };
-
-/** Every virtual device of every driver, with the driver that has it, and the serial a stopped one ran as. */
-async function virtuals(ctx: ServerContext) {
-  const ranAs = readState(ranAsFile(), RanAs) ?? {};
-  const out: Virtual[] = [];
-  for (const p of ctx.providers) {
-    const on = p.virtual;
-    if (!on) continue;
-    const found = await on.startable().catch(() => [] as Startable[]);
-    out.push(
-      ...found.map((d) => {
-        const was = d.serial ? undefined : ranAs[d.name];
-        return { d, on, ...(was && { ranAs: was }) };
-      }),
-    );
-  }
-  return out;
-}
-
-/**
- * What a virtual device answers to, by `name` and in the allow list alike: its id, its serial (a stopped one's, the one it
- * ran as), its name, and a simulator's without its runtime.
- */
-const namesOf = ({ d, ranAs }: Virtual) => [
-  ...new Set(
-    [d.id, d.serial ?? ranAs, d.name, d.name.replace(/ \([^()]*\)$/, '')].filter(
-      (n): n is string => n !== undefined,
-    ),
-  ),
-];
-
-/** As `checkDevice`, by every name it answers to, so that a boot is allowed where the shutdown before it was. */
-function checkVirtual(ctx: ServerContext, x: Virtual) {
-  const { devices } = ctx.policy;
-  const names = namesOf(x);
-  if (devices && !names.some((n) => devices.test(n)))
-    throw new ToolError(
-      `${x.d.name} is not allowed on this server`,
-      'POLICY_DENIED',
-      `${byPerson('by --allow-devices')}: it is matched against ${names.join(', ')}`,
-    );
-}
-
-async function namedVirtual(ctx: ServerContext, id: string) {
-  const all = await virtuals(ctx);
-  const hits = all.filter((x) => namesOf(x).includes(id));
-  const [only, other] = hits;
-  if (only && !other) return only;
-  throw new ToolError(
-    hits.length === 0
-      ? `no simulator or emulator is named ${id} (action list)`
-      : `more than one is named ${id}: ${hits.map((x) => x.d.id).join(', ')}`,
-    hits.length === 0 ? 'NOT_FOUND' : 'AMBIGUOUS',
-  );
-}
-
 function appOp(ctx: ServerContext, { afterChange }: Answers) {
   const { policy } = ctx;
   const appOf = (s: Session, app?: string) => {

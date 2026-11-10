@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
+import { deviceNamed } from './device-names.js';
 import { endLocation, fixLocation, turning } from './settings.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
@@ -71,8 +72,9 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       output: DeviceOut,
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
       run: async ({ device, app, share }) => {
-        const s = await ctx.use(device, app, share);
-        const left = ctx.leftovers.get(device);
+        const serial = await deviceNamed(ctx, device);
+        const s = await ctx.use(serial, app, share);
+        const left = ctx.leftovers.get(serial);
         const note = left
           ? [
               ...(left.restored.length > 0
@@ -83,7 +85,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
           : '';
         const h = must(s.device.hello, "the agent's hello");
         return reply(
-          `selected ${device}: ${h.model}, ${osName(s.device.platform, h.osVersion)}, screen ${h.screen.w}x${h.screen.h}` +
+          `selected ${serial === device ? device : `${device} (${serial})`}: ${h.model}, ${osName(s.device.platform, h.osVersion)}, screen ${h.screen.w}x${h.screen.h}` +
             `${s.device.lastStartWasCold ? ' (agent started)' : ''}${s.appId ? `; app ${s.appId}` : ''}${note}`,
           {
             ...info(s),
