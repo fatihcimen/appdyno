@@ -739,8 +739,8 @@ Three runs, host load 4-14. The read follows a back there, with the app still bu
 in the helper for 167 elements. No stale answer in any run.
 
 Answers against a read 1.5 s later: nothing moved, missing or extra in 20 answers (`device-tests/ios.test.ts` keeps this
-check). Opening an app waits for it to be in front, and with a screen it reads twice around the 200 ms `launch_app` waits
-for stillness in `packages/ops`.
+check). Opening an app waits for it to be in front, and with a screen it looks until the layout has held for 200 ms, as
+an action's settle does, in `packages/ops`.
 
 What each change did, the rest of the scenario held still:
 

@@ -3,7 +3,6 @@ import {
   osName,
   diffScreens,
   diffText,
-  pause,
   personNeeded,
   PICTURE_TEXT,
   renderFolded,
@@ -104,18 +103,8 @@ function show(s: Session, screen: Screen) {
   s.shown = screen.list;
 }
 
-/** Reads until two reads in a row have the same layout, at most `maxMs` (after a link or a launch). */
-async function settleRead(s: Session, maxMs: number = SETTLE.maxMs) {
-  const end = Date.now() + maxMs;
-  let screen = await s.read();
-  while (Date.now() < end) {
-    await pause(200);
-    const next = await s.read();
-    if (next.hash === screen.hash) return { screen: next, settled: true };
-    screen = next;
-  }
-  return { screen, settled: false };
-}
+/** Until the layout has held for the settle's quiet window, at most `maxMs` (after a link or a launch). */
+const settleRead = (s: Session, maxMs: number = SETTLE.maxMs) => s.settle(SETTLE.quietMs, maxMs);
 
 type Shown = Session['shown'];
 

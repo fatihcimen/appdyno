@@ -739,8 +739,8 @@ Ayarlar senaryosuyla bir iPhone 17 Pro simülatöründe, iOS 26.5, başka build'
 167 öğe için yardımcıda. Hiçbir çalıştırmada eski yanıt yok.
 
 1,5 s sonraki bir okumaya karşı yanıtlar: 20 yanıtta kıpırdayan, eksik ya da fazla hiçbir şey yoktu (`device-tests/ios.test.ts` bu denetimi
-tutar). Bir uygulamayı açmak onun öne gelmesini bekler ve ekranla birlikte, `packages/ops` içinde `launch_app`'in durgunluk için
-beklediği 200 ms'nin çevresinde iki kez okur.
+tutar). Bir uygulamayı açmak onun öne gelmesini bekler ve ekranla birlikte, `packages/ops` içinde bir eylemin durulması gibi,
+yerleşim 200 ms boyunca aynı kalana dek bakar.
 
 Her değişikliğin yaptığı, senaryonun geri kalanı sabit tutularak:
 
