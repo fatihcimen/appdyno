@@ -17,6 +17,7 @@ NSString *MVWord(NSString *english);
 NSString *MVInTurkish(NSString *english);
 /// A sentence the parent or a device sent whole, in the Mac's language, with what changes in it kept as it came: an app's
 /// name, an element's label, an address. A part with the shape of a sentence of the table, such as a count, is said too.
+/// What comes after a comma or ` · ` is said only so, as a label may hold one: words a window joins are its to say.
 NSString *MVSentence(NSString *english);
 /// A row, by its English, with what changes put in as it is: a name there may hold anything, a comma too, and is never
 /// itself said in another language.

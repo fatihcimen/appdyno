@@ -245,6 +245,29 @@ static void checkAudit(MVWindow *window) {
   MVCheck(@"audit: hidden, it stops and takes its mark away", [sent.lastObject[@"on"] isEqual:@NO] && marked.lastObject == NSNull.null, [marked description]);
 }
 
+/// Every label's words under a view.
+static void wordsIn(NSView *view, NSMutableArray<NSString *> *words) {
+  if ([view isKindOfClass:NSTextField.class]) [words addObject:((NSTextField *)view).stringValue];
+  for (NSView *sub in view.subviews) wordsIn(sub, words);
+}
+
+/// On a Turkish Mac the iPhone's Watch app was asked to be removed as `Dikkat kaldırılsın mı?`: Watch is a word of the table.
+static void checkRemoveSheet(MVWindow *window) {
+  MVTestTurkish(YES);
+  [window.inspector showApps:@{@"apps": @[@{@"id": @"com.apple.NanoWatch", @"name": @"Watch"}]}];
+  [window.inspector pokeApp:@"com.apple.NanoWatch"];
+  MVPump(0.2);
+  [window pokeClick:@"appRemove"];
+  MVPump(0.3);
+  NSWindow *sheet = window.nsWindow.attachedSheet;
+  NSMutableArray<NSString *> *words = [NSMutableArray array];
+  wordsIn(sheet.contentView, words);
+  if (sheet) [window.nsWindow endSheet:sheet returnCode:NSAlertSecondButtonReturn];
+  MVTestTurkish(NO);
+  ((NSSearchField *)[window.inspector valueForKey:@"_filter"]).stringValue = @"";
+  MVCheck(@"apps: Remove names the app as it is, in a question in Turkish", [words containsObject:@"Watch kaldırılsın mı?"], [words componentsJoinedByString:@"|"]);
+}
+
 /// w-iphone: Launch listed the apps again, and the app just launched was no longer chosen, so Quit took a second click on it.
 static void checkApps(MVWindow *window) {
   [window showPane:MVPaneApps];
@@ -337,6 +360,21 @@ static void checkContent(MVWindow *window) {
                         @"done": @"Tapped Settings"}];
   NSArray<NSString *> *calls = drawn([window.inspector.activity valueForKey:@"_list"]);
   MVCheck(@"content: what an agent did is said, and what it touched kept", [calls containsObject:@"Settings öğesine dokunuldu"], [calls componentsJoinedByString:@"|"]);
+  // iOS names a Settings cell and its value with a comma between: `Bluetooth, On` read `Bluetooth öğesine dokunuldu, Açık`
+  [window addActivity:@{@"at": @1,
+                        @"tool": @"tap",
+                        @"ok": @YES,
+                        @"ms": @3,
+                        @"time": @"12:00",
+                        @"done": @"Tapped Bluetooth, On"}];
+  [window addActivity:@{@"at": @2,
+                        @"tool": @"tap",
+                        @"ok": @YES,
+                        @"ms": @3,
+                        @"time": @"12:00",
+                        @"done": @"Tapped Wi-Fi, Off"}];
+  calls = drawn([window.inspector.activity valueForKey:@"_list"]);
+  MVCheck(@"content: a label's words after its comma stay as the app has them", [calls containsObject:@"Bluetooth öğesine dokunuldu, On"] && [calls containsObject:@"Wi-Fi öğesine dokunuldu, Off"], [calls componentsJoinedByString:@"|"]);
   MVTestTurkish(NO);
 }
 
@@ -345,6 +383,7 @@ void MVCheckPanes(void) {
   [window showPane:MVPanePerf];
   MVPump(0.3);
   checkApps(window);
+  checkRemoveSheet(window);
   checkLogs(window);
   checkNetwork(window);
   checkAudit(window);

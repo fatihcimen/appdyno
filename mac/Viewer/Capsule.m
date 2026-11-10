@@ -141,8 +141,11 @@ static NSColor *colorOf(MVTone tone) {
 }
 
 - (void)show:(MVStatusLine *)line {
-  // a client's name, and what a note names, such as an app or an element, keep their words
-  NSString *words = MVSentence(line.stringValue);
+  // a client's name, and what a note names, such as an app or an element, keep their words. The line joins its own with
+  // ` · `, and each is a sentence: a sentence keeps the parts it was sent joined as they came
+  NSMutableArray<NSString *> *said = [NSMutableArray array];
+  for (NSString *part in [line.stringValue componentsSeparatedByString:@" · "]) [said addObject:MVSentence(part)];
+  NSString *words = [said componentsJoinedByString:@" · "];
   MVTone tone = line.tone;
   BOOL turned = _shown && tone != _tone;
   if (!_shown || tone != _tone) {

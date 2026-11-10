@@ -252,8 +252,10 @@ static MVRow *rowOfResult(NSDictionary *result) {
   NSString *title = result[@"title"] ?: @"";
   if ([result[@"value"] length]) title = [NSString stringWithFormat:@"%@  %@", title, result[@"value"]];
   row.title = MVWord(title);
-  // a refusal names the app in front as it is, and whole: a launcher's id was cut in its middle
-  row.detail = MVSentence(result[@"detail"] ?: @"");
+  // a refusal names the app in front as it is, and whole: a launcher's id was cut in its middle. What was measured says
+  // the hub's own words, its runs and what stands behind the number, joined: no name is in it
+  NSString *detail = result[@"detail"] ?: @"";
+  row.detail = [result[@"ok"] boolValue] ? MVWord(detail) : MVSentence(detail);
   row.wraps = !result[@"ok"];
   row.help = result[@"why"];
   row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar"

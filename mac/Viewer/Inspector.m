@@ -406,7 +406,8 @@ static NSString *ms(id v) {
   MVRow *row = _apps.selected;
   if (!row || !self.window) return;
   NSAlert *alert = [NSAlert new];
-  alert.messageText = MVWord([NSString stringWithFormat:@"Remove %@?", row.title]);
+  // the app's name as it is: Watch is no word of the window's, and a comma in a name is the name's
+  alert.messageText = MVFormat(@"Remove %@?", @[row.title ?: @""]);
   alert.informativeText = MVWord(@"The app and everything it keeps on this device go with it. This cannot be undone.");
   alert.alertStyle = NSAlertStyleWarning;
   NSButton *remove = [alert addButtonWithTitle:MVWord(@"Remove")];

@@ -145,12 +145,13 @@ static NSString *say(NSString *english, BOOL keep) {
     NSRange its = [begun rangeOfComposedCharacterSequenceAtIndex:0];
     return [[[begun substringWithRange:its] lowercaseStringWithLocale:locale()] stringByAppendingString:[begun substringFromIndex:NSMaxRange(its)]];
   }
-  // what is joined up is said a part at a time
+  // what is joined up is said a part at a time. Kept, a part is said only by its shape, such as a count: a label may hold
+  // the join, as iOS joins a cell's name and its value in `Bluetooth, On`
   for (NSString *join in @[@" · ", @", "]) {
     NSArray<NSString *> *parts = [english componentsSeparatedByString:join];
     if (parts.count < 2) continue;
     NSMutableArray<NSString *> *said = [NSMutableArray array];
-    for (NSString *part in parts) [said addObject:say(part, keep)];
+    for (NSString *part in parts) [said addObject:keep ? patternFor(part, YES) ?: part : say(part, NO)];
     return [said componentsJoinedByString:join];
   }
   return english;

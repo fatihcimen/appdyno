@@ -1,6 +1,7 @@
 // The Performance pane as a phone's window showed it, in a pane as tall as an Inspector in the hub.
 #import "SelfTest.h"
 #import "Window.h"
+#import "Words.h"
 
 static MVPerfPane *tallPane(NSWindow **window) {
   MVPerfPane *pane = [[MVPerfPane alloc] initWithFrame:NSMakeRect(0, 0, 276, 1000) target:NSNull.null];
@@ -93,7 +94,22 @@ static void checkLongIdWhole(void) {
   MVCheck(@"performance: a refused measure's row reads its whole app id", line && NSHeight(line.frame) >= NSHeight(needed) - 1 && NSContainsRect(list.documentVisibleRect, [list.documentView convertRect:line.bounds fromView:line]), [NSString stringWithFormat:@"%.0f for %.0f", NSHeight(line.frame), NSHeight(needed)]);
 }
 
+/// What was measured is the hub's own words, joined, and said in Turkish each of them.
+static void checkSaidJoined(void) {
+  NSWindow *window;
+  MVPerfPane *pane = tallPane(&window);
+  MVTestTurkish(YES);
+  [pane showMeasured:@{@"ok": @YES,
+                       @"title": @"Cold launch",
+                       @"value": @"412 ms",
+                       @"detail": @"median of 5, stream running"}];
+  MVTestTurkish(NO);
+  MVRow *row = ((MVList *)[pane valueForKey:@"_results"]).rows.firstObject;
+  MVCheck(@"performance: a result's line is said in Turkish, each part of it", [row.detail isEqual:@"5 ölçümün ortancası, yayın açık"], row.detail);
+}
+
 void MVCheckPerfPane(void) {
+  checkSaidJoined();
   checkDisplayRate();
   checkHeldByApp();
   checkKeptResult();

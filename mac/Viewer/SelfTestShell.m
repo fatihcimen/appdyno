@@ -145,6 +145,17 @@ static void checkLine(void) {
   line.stuck = YES;
   line.state = @"The screen is off";
   MVCheck(@"capsule: what holds a device up comes before all but a failure", [line.stringValue isEqual:@"The screen is off"] && line.tone == MVToneNeedsYou, line.stringValue);
+  // the line joins its own words, and the capsule says each of them: a sentence keeps what is joined to it as it came
+  MVStatusLine *live = [MVStatusLine new];
+  live.state = @"Live";
+  live.live = YES;
+  live.rate = 60;
+  live.link = @"USB";
+  MVCapsule *capsule = [[MVCapsule alloc] initWithFrame:NSMakeRect(0, 0, 200, 28)];
+  MVTestTurkish(YES);
+  [capsule show:live];
+  MVTestTurkish(NO);
+  MVCheck(@"capsule: each of its own words is said in Turkish", [capsule.words isEqual:@"Canlı · Görüntü 60 fps · USB"], capsule.words);
 }
 
 static void checkActivity(void) {
