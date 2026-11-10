@@ -44,7 +44,8 @@ describe('build and run on a device', () => {
   );
 
   const iphone = process.env.APPDYNO_IPHONE_UDID ?? '';
-  it.runIf(iphone)(
+  // a phone's build signs with a team, which only an xcconfig names: with none Xcode refuses to sign it ad hoc
+  it.runIf(iphone && process.env.XCODE_XCCONFIG_FILE)(
     'a scheme on an iPhone',
     async () => {
       const apps = new PhoneApps(new Devicectl(iphone));
