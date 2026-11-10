@@ -124,4 +124,11 @@ void MVCheckDevice(void) {
                @"platform": @"ios",
                @"conditions": @[@{@"name": @"text_size", @"value": @"extra-extra-large"}, @{@"name": @"thermal", @"value": @"ThermalStateFair"}]}];
   MVCheck(@"device: an iPhone's text size stands as read, not as the first size its name ends like", [[pane shown:@"text_size"] isEqual:@"extra-extra-large"] && [[pane shown:@"thermal"] isEqual:@"fair"], [pane shown:@"text_size"]);
+  // a Samsung's own scale, none of the menu's, read 1.1 where the menu's read as percents
+  [pane show:@{@"op": @"answer",
+               @"name": @"device",
+               @"platform": @"android",
+               @"conditions": @[@{@"name": @"text_size", @"value": @"1.1"}]}];
+  NSPopUpButton *size = (NSPopUpButton *)MVFindControl(window.nsWindow.contentView, @"condition:text_size");
+  MVCheck(@"device: an Android scale none of the menu's is a percent too, and each of the menu's a whole one", [size.titleOfSelectedItem isEqual:MVPercent(110)] && [[pane shown:@"text_size"] isEqual:@"1.1"] && [size.itemTitles containsObject:MVPercent(115)], [size.itemTitles componentsJoinedByString:@"|"]);
 }

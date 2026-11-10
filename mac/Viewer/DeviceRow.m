@@ -34,6 +34,11 @@ static const struct {
 };
 enum { kRowCount = sizeof kRows / sizeof kRows[0] };
 
+/// An Android text scale as a percent: 1.15 is 115, where its double times 100 is 114.99999999999999.
+static NSString *scalePercent(NSString *scale) {
+  return MVPercent(round(scale.doubleValue * 1000) / 10);
+}
+
 /// What a choice offers, as the op takes it and as a person reads it: a text size is a size on iOS and a scale on Android.
 static NSArray<NSArray<NSString *> *> *choicesOf(NSString *name, BOOL android) {
   if ([name isEqual:@"network"]) return @[@[@"full", @"Full Speed"], @[@"slow", @"Slow (EDGE)"]];
@@ -41,7 +46,7 @@ static NSArray<NSArray<NSString *> *> *choicesOf(NSString *name, BOOL android) {
   if ([name isEqual:@"thermal"]) return @[@[@"nominal", @"Nominal"], @[@"fair", @"Fair"], @[@"serious", @"Serious"], @[@"critical", @"Critical"]];
   if (android) {
     NSMutableArray *scales = [NSMutableArray arrayWithObject:@[@"default", @"Default"]];
-    for (NSString *scale in @[@"0.85", @"1.0", @"1.15", @"1.3", @"1.5", @"1.8", @"2.0"]) [scales addObject:@[scale, MVPercent(scale.doubleValue * 100)]];
+    for (NSString *scale in @[@"0.85", @"1.0", @"1.15", @"1.3", @"1.5", @"1.8", @"2.0"]) [scales addObject:@[scale, scalePercent(scale)]];
     return scales;
   }
   return @[
@@ -210,8 +215,9 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   for (NSNumber *loose in @[@NO, @YES])
     for (NSInteger i = 0; i < choice.numberOfItems; i++)
       if (sameChoice([choice itemAtIndex:i].representedObject, value, loose.boolValue)) return [choice selectItemAtIndex:i];
-  // what the device reads that no choice is, as it reads it
-  [choice addItemWithTitle:nowOf(value)];
+  // what the device reads that no choice is, as it reads it: an Android scale as a percent, as the choices are
+  NSString *read = nowOf(value);
+  [choice addItemWithTitle:[_name isEqual:@"text_size"] && read.doubleValue > 0 ? scalePercent(read) : read];
   choice.lastItem.representedObject = nowOf(value);
   [choice selectItem:choice.lastItem];
 }
