@@ -401,8 +401,9 @@ export const isName = (name: string) => NAME.test(name);
 export const fillApp = (app: string, values: Record<string, string>) => fill(app, values);
 
 /**
- * Values for the names of a flow's steps from `--param`, then the environment. A missing one is refused
- * before anything runs, by name: a value in the message would be stored by whatever keeps the log.
+ * Values for the names of a flow's steps from `--param`, then `env`: an env file's, and a command line's own
+ * environment. A missing one is refused before anything runs, by name: a value in the message would be stored by
+ * whatever keeps the log.
  */
 export function valuesFor(
   flow: Flow,
@@ -424,7 +425,7 @@ export function valuesFor(
   const [first] = missing;
   if (first !== undefined)
     throw new FlowError(
-      `no value for ${missing.join(', ')}: give --param ${first}=... or set it in the environment`,
+      `no value for ${missing.join(', ')}: give --param ${first}=... (params), or it in an env file, or on the command line in the environment`,
       0,
     );
   return values;

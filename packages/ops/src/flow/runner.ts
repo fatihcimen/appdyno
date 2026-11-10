@@ -141,9 +141,18 @@ export const stepTime = (action: FlowStep['action'], r: StepResult) =>
 
 export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep'> & {
   params?: Record<string, string>;
+  /** An env file's values: under `params`, over the context's environment, and hidden as a secret is once used. */
+  fromFile?: Record<string, string>;
   /** Where a failure leaves its screenshot and tree. */
   evidence?: string;
 };
+
+/** The values a run took from an env file, the empty ones aside: what a param gave is not the file's. */
+const filedValues = (values: Record<string, string>, o: ReplayOptions) =>
+  Object.keys(values).flatMap((name) => {
+    const v = o.params?.[name] === undefined ? o.fromFile?.[name] : undefined;
+    return v ? [v] : [];
+  });
 
 /** Runs flows through the operations themselves, as an agent's calls would. */
 export function flowRunner(
@@ -281,10 +290,12 @@ export function flowRunner(
     validate(flow, file);
     let values: Record<string, string>;
     try {
-      values = valuesFor(flow, o.params ?? {}, process.env, from);
+      values = valuesFor(flow, o.params ?? {}, { ...ctx.env, ...o.fromFile }, from);
     } catch (e) {
       throw new ToolError(`${file}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
     }
+    // for good, not for this run: the screen it typed a value on is read after it
+    ctx.hide(filedValues(values, o));
     if (flow.app) {
       s.select(checkApp(ctx.policy, fillApp(flow.app, values)));
       s.forgetProcess();

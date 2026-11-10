@@ -64,7 +64,7 @@ Text typed into a password field, and text in `APPDYNO_SECRETS`, become a `secre
 the field's id, or `SECRET_1` for the first of `APPDYNO_SECRETS`. From then on the same text anywhere else,
 such as a label that shows it back, becomes that name too. The file never holds a value. Neither does the
 recording kept between commands, which holds a salted digest. `param` and `secret` values come from
-`--param` (`params` in the tool), then `--env-file` (`envFile`; `NAME=value` lines, as a `.env` file has them, kept out of the repository by you), then the environment variable of that name; `$${` is a literal `${`. A secret
+`--param` (`params` in the tool), then `--env-file` (`envFile`; `NAME=value` lines, as a `.env` file has them, kept out of the repository by you), then, on the command line and in the library, the environment variable of that name; `$${` is a literal `${`. A server takes nothing from its own environment, which is no flow's to type, and hides each value a run took from an env file, as a secret, from then on. A secret
 is hidden from a replay's answers, report and saved tree. A screenshot shows what the screen shows, so a
 secret typed into a plain field can be seen in it.
 

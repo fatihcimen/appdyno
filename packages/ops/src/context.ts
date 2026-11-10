@@ -70,6 +70,11 @@ export class ServerContext {
       alertPerson?: (reason: string) => void;
       /** What a person calls the client that named itself this. */
       clientNamed?: (said: string) => string;
+      /**
+       * Where a flow's names find a value no param and no env file gives: a person's own command line's environment. A
+       * server has none, as its own environment is no flow's to type.
+       */
+      env?: Record<string, string | undefined>;
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };
@@ -95,6 +100,10 @@ export class ServerContext {
 
   get flightSeconds(): number | undefined {
     return this.defaults.flightSeconds;
+  }
+
+  get env(): Record<string, string | undefined> {
+    return this.defaults.env ?? {};
   }
 
   get fullUrls(): boolean {

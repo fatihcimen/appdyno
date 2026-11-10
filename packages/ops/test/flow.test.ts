@@ -34,13 +34,20 @@ const SECRET = 's3cr3t-pass';
 describe('flows', () => {
   let dir: string;
   let device: FakeDevice;
-  const context = (secrets: string[] = [], app: string | null = 'dev.app') => {
+  /** A server's, or with `env` a command line's; `app: null` selects none. */
+  const context = (
+    secrets: string[] = [],
+    { app = 'dev.app', env }: { app?: string | null; env?: NodeJS.ProcessEnv } = {},
+  ) => {
     const provider: DeviceProvider = {
       list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
       handles: () => true,
       open: () => device,
     };
-    return new ServerContext({ ...DEFAULT_POLICY, secrets }, [provider], { app: app ?? undefined });
+    return new ServerContext({ ...DEFAULT_POLICY, secrets }, [provider], {
+      app: app ?? undefined,
+      ...(env && { env }),
+    });
   };
   const refusal = async (p: Promise<unknown>) => {
     try {
@@ -717,16 +724,32 @@ assert id=result check=text equals="Gönderildi"
       expect(out.message).toContain('steps 1 to 5');
     });
 
-    it('takes parameters from the call, then the environment; a missing one runs nothing', async () => {
+    it("takes parameters from the call, then a command line's environment and never a server's; a missing one runs nothing", async () => {
       device.screen = 'form';
       const file = flowFile(`app dev.app\nparam WHO\ntype "\${WHO}" id=name\n`);
+      vi.stubEnv('WHO', 'env-person');
       const missing = await refusal(callerOf(context())('flow', { action: 'run', file }));
       expect(missing.message).toContain('no value for WHO');
       expect(device.calls.filter((c) => c.name === 'typeText')).toEqual([]);
-      vi.stubEnv('WHO', 'env-person');
-      await callerOf(context())('flow', { action: 'run', file });
+      await callerOf(context([], { env: process.env }))('flow', { action: 'run', file });
       await callerOf(context())('flow', { action: 'run', file, params: ['WHO=param-person'] });
       expect(device.typed).toEqual(['env-person', 'param-person']);
+    });
+
+    it('hides for good each value a run took from an env file, and no other', async () => {
+      device.screen = 'login';
+      const file = flowFile(
+        'app dev.app\nparam CODE\nparam USER\ntype "${CODE}" id=user\ntype "${USER}" id=pass\n',
+      );
+      const envFile = join(dir, 'ci.env');
+      writeFileSync(envFile, `CODE=${SECRET}\nUSER=ada\nDEBUG=1\nEMPTY=\n`);
+      const call = callerOf(context());
+      await call('flow', { action: 'run', file, envFile, params: ['USER=Merhaba'] });
+      expect(device.typed).toEqual([SECRET, 'Merhaba']);
+      const { text } = await call('screen', {});
+      expect(text).toContain('Merhaba •••');
+      expect(text).not.toContain(SECRET);
+      expect(text).toContain('Merhaba');
     });
 
     it('takes values from an env file, under the call and over the environment', async () => {
@@ -914,7 +937,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
     it('tells that death by the app in front as the step began where none is selected, as a batch does', async () => {
       device.crashReports = [{ at: 'now', reason: 'IllegalStateException: fixture crash' }];
       const e = await refusal(
-        callerOf(context([], null))('flow', {
+        callerOf(context([], { app: null }))('flow', {
           action: 'run',
           file: flowFile('tap text="Form"\ntap text="Kaydet"\n'),
         }),

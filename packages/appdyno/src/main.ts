@@ -72,8 +72,11 @@ const mirrorTool = (ctx: ServerContext, words: string[]) =>
   });
 /** This package's own folder: `dist` and `src` both sit in it. */
 const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
-/** The operations' context, from flags and the environment. */
-function contextFrom(values: ServerFlags, remember?: string) {
+/**
+ * The operations' context, from flags and the environment. `flowEnv`: where a flow's names find a value, a person's own
+ * command line's; a server's is no flow's.
+ */
+function contextFrom(values: ServerFlags, remember?: string, flowEnv?: NodeJS.ProcessEnv) {
   const env = process.env;
   const policy = policyOf(values, env);
   const device = values.device ?? env.APPDYNO_SERIAL;
@@ -112,6 +115,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
     // a silent server sounds nowhere: a window that shows its request is told so
     ...(alertPerson ? { alertPerson } : { silent: true }),
     clientNamed,
+    ...(flowEnv && { env: flowEnv }),
     mirrorCommand: [
       process.execPath,
       fileURLToPath(import.meta.url),
@@ -120,6 +124,10 @@ function contextFrom(values: ServerFlags, remember?: string) {
     ],
   });
 }
+
+/** A person's own command: a flow's names find values in its environment, as no server's do. */
+const commandLine = (values: ServerFlags, remember?: string) =>
+  contextFrom(values, remember, process.env);
 
 /** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
 const servicesOfHub = (ctx: ServerContext) => {
@@ -279,7 +287,7 @@ async function main(): Promise<number> {
         return 2;
       }
       const artifacts = values.artifacts ?? 'appdyno-artifacts';
-      const ctx = contextFrom({
+      const ctx = commandLine({
         ...(values.share && { share: true }),
         ...(values.measurements && { measurements: values.measurements }),
       });
@@ -289,10 +297,8 @@ async function main(): Promise<number> {
           devices: values.device ?? [],
           artifacts,
           junit: values.junit ?? join(artifacts, 'junit.xml'),
-          params: {
-            ...(values['env-file'] && envValues(values['env-file'])),
-            ...paramsOf(values.param),
-          },
+          params: paramsOf(values.param),
+          ...(values['env-file'] && { fromFile: envValues(values['env-file']) }),
           retries,
           ...(values.measure && { iterations }),
           log: (line) => console.log(line),
@@ -356,7 +362,7 @@ async function main(): Promise<number> {
       const shareAt = command === 'use-device' ? -1 : rest.indexOf('--share');
       if (shareAt >= 0) rest.splice(shareAt, 1);
       const measurements = takeFlag(rest, 'measurements');
-      const ctx = contextFrom(
+      const ctx = commandLine(
         {
           ...(device && { device }),
           ...(shareAt >= 0 && { share: true }),

@@ -61,6 +61,8 @@ export type TestOptions = {
   artifacts: string;
   junit: string;
   params?: Record<string, string>;
+  /** An env file's values, as a replay takes them. */
+  fromFile?: Record<string, string>;
   /** Each file as a performance scenario, this many times: see `measureJourney`. */
   iterations?: number;
   /** How many times a file that failed on a step runs again, whole, from its first step. */
@@ -94,7 +96,11 @@ export async function runTests(
   const retries = o.retries ?? 0;
 
   const once = async (s: Session, file: string, evidence: string): Promise<Attempt> => {
-    const replay = { evidence, ...(o.params && { params: o.params }) };
+    const replay = {
+      evidence,
+      ...(o.params && { params: o.params }),
+      ...(o.fromFile && { fromFile: o.fromFile }),
+    };
     try {
       return o.iterations
         ? await measureJourney(ctx, runner, s, readFlow(file), file, {

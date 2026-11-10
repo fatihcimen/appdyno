@@ -82,7 +82,14 @@ export function connect(options: ConnectOptions = {}): Appdyno {
   const ctx = new ServerContext(
     { ...DEFAULT_POLICY, ...(allowDevices && { devices: allowDevices }) },
     deviceProviders(),
-    { ...(device && { device }), ...(app && { app }), claims: true, tool: 'appdyno library' },
+    // the program that calls this is the person's own, as a command line is
+    {
+      ...(device && { device }),
+      ...(app && { app }),
+      claims: true,
+      tool: 'appdyno library',
+      env: process.env,
+    },
   );
   const ops = opsFor(ctx);
   const flows = flowsFor(ctx);

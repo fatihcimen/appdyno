@@ -163,7 +163,8 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           case 'run': {
             const path = need();
             const replay = {
-              params: { ...(envFile && envValues(envFile)), ...paramsOf(params) },
+              params: paramsOf(params),
+              ...(envFile && { fromFile: envValues(envFile) }),
               ...(from !== undefined && { from }),
             };
             const { result, journey } = iterations

@@ -64,7 +64,7 @@ Bir parola alanına yazılan metin ve `APPDYNO_SECRETS` içindeki metin, adıyla
 alanın id'si ya da `APPDYNO_SECRETS`'in ilki için `SECRET_1`. O andan itibaren aynı metin başka her yerde,
 örneğin onu geri gösteren bir etikette, o ad olur. Dosya hiçbir zaman bir değer tutmaz. Komutlar arasında saklanan
 kayıt da tutmaz; o, tuzlanmış bir özet tutar. `param` ve `secret` değerleri önce
-`--param`'dan (araçta `params`), sonra `--env-file`'dan (`envFile`; bir `.env` dosyasındaki gibi `NAME=value` satırları, onları depo dışında tutmak size kalır), sonra o adı taşıyan ortam değişkeninden gelir; `$${`, düz bir `${` demektir. Bir gizli değer
+`--param`'dan (araçta `params`), sonra `--env-file`'dan (`envFile`; bir `.env` dosyasındaki gibi `NAME=value` satırları, onları depo dışında tutmak size kalır), sonra, komut satırında ve kütüphanede, o adı taşıyan ortam değişkeninden gelir; `$${`, düz bir `${` demektir. Bir sunucu kendi ortamından hiçbir şey almaz, çünkü o hiçbir akışın yazacağı şey değildir; bir çalıştırmanın bir ortam dosyasından aldığı her değeri de o andan sonra bir gizli değer gibi gizler. Bir gizli değer
 bir yeniden oynatmanın yanıtlarından, raporundan ve kaydedilen ağacından gizlenir. Bir ekran görüntüsü ekranın gösterdiğini gösterir, bu yüzden
 düz bir alana yazılmış bir gizli değer onda görülebilir.
 
