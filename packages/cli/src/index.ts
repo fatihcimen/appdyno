@@ -169,9 +169,14 @@ function parse(op: Op, argv: string[]) {
     else if (type === 'array' || type === 'object') args[key] = json(flag, value);
     else args[key] = value;
   }
-  // an op that saves by name itself takes the format from it; bytes written here would be its reply's
+  // an op that saves by name itself takes the format from it; bytes written here would be its reply's, and an image it
+  // shows beside the file would be written over it
   if (out && properties.file && properties.overwrite)
-    Object.assign(args, { file: out, overwrite: true });
+    Object.assign(args, {
+      file: out,
+      overwrite: true,
+      ...(properties.inline && { inline: false }),
+    });
   return { args: argumentsFor(op, args, '--'), out, yes };
 }
 

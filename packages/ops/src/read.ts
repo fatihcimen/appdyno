@@ -42,7 +42,11 @@ const scaleOf = (s: Session, w: number) => {
 };
 
 /** The whole picture in a file: a folder gets a new name, and what is there stays unless asked. */
-async function saveShot(s: Session, file: string, overwrite: boolean) {
+/**
+ * The screen at full size into a file, and the image as `screenshot` gives one beside it unless `inline` is false: a model
+ * that only has the file reads it back with a call of its own, where the image is a few tens of kB.
+ */
+async function saveShot(s: Session, file: string, overwrite: boolean, inline: boolean) {
   const given = resolve(file);
   const folder = existsSync(given) && statSync(given).isDirectory();
   const to = folder
@@ -58,16 +62,29 @@ async function saveShot(s: Session, file: string, overwrite: boolean) {
   mkdirSync(dirname(to), { recursive: true });
   writeFileSync(to, data, { flag: overwrite ? 'w' : 'wx' });
   const size = imageSize(data);
-  const scale = size && scaleOf(s, size.w);
+  if (!inline) {
+    const scale = size && scaleOf(s, size.w);
+    return reply(
+      `saved ${to}${size ? ` (${size.w}x${size.h} px${scale ? `; ${tapAt(scale)}` : ''})` : ''}`,
+      {
+        width: size?.w ?? 0,
+        height: size?.h ?? 0,
+        ...(scale && { scale }),
+        warnings: [],
+        file: to,
+      },
+    );
+  }
+  const shown = await s.device.screenshot({
+    format: 'jpeg',
+    quality: SHOT_QUALITY,
+    maxPx: SHOT_PX,
+  });
+  const scale = scaleOf(s, shown.meta.w);
   return reply(
-    `saved ${to}${size ? ` (${size.w}x${size.h} px${scale ? `; ${tapAt(scale)}` : ''})` : ''}`,
-    {
-      width: size?.w ?? 0,
-      height: size?.h ?? 0,
-      ...(scale && { scale }),
-      warnings: [],
-      file: to,
-    },
+    `saved ${to}${size ? ` (${size.w}x${size.h} px)` : ''}; the image here: ${shown.meta.w}x${shown.meta.h} px${scale ? `; ${tapAt(scale)}` : ''}`,
+    { width: shown.meta.w, height: shown.meta.h, ...(scale && { scale }), warnings: [], file: to },
+    [{ type: 'image', data: shown.data.toString('base64'), mimeType: 'image/jpeg' }],
   );
 }
 
@@ -181,7 +198,7 @@ export function readOps(
     defineOp({
       name: 'screenshot',
       title: 'Screenshot',
-      description: `An image of the screen (at most ${SHOT_PX} px unless width) and the scale from its pixels to tap units. The tree first, then watchMs (no image: what moved, way, speed, jumps; not intent), then a video. strip: 8 timed frames. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size to a .png, .jpg or folder; overwrite replaces.`,
+      description: `An image of the screen (at most ${SHOT_PX} px unless width) and its scale to tap units. Tree first, then watchMs (no image: what moved, way, speed, jumps; not intent), then video. strip: 8 timed frames. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size to a .png, .jpg or folder, shown too unless inline: false; overwrite replaces.`,
       input: z
         .object({
           points: z.boolean().optional(),
@@ -190,11 +207,12 @@ export function readOps(
           strip: z.boolean().optional(),
           file: z.string().max(1_000).optional(),
           overwrite: z.boolean().optional(),
+          inline: z.boolean().optional(),
         })
         .strict(),
       output: ScreenshotOut,
       annotations: READ,
-      run: async ({ points, width, watchMs, strip, file, overwrite }) => {
+      run: async ({ points, width, watchMs, strip, file, overwrite, inline }) => {
         const s = await ctx.session();
         if (watchMs) {
           const m = await watchScreen(ctx, s, watchMs, strip === true);
@@ -218,7 +236,7 @@ export function readOps(
             shown ? [{ type: 'image', data: shown.data, mimeType: 'image/png' }] : [],
           );
         }
-        if (file) return saveShot(s, file, overwrite === true);
+        if (file) return saveShot(s, file, overwrite === true, inline !== false);
         const layout = s.fresh
           ? `${String(!!points)} ${String(width)} ${screenStructure(s.fresh.list)}`
           : undefined;

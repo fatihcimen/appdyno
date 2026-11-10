@@ -1270,10 +1270,37 @@ describe('gestures, keys, clipboard', () => {
     png.writeUInt32BE(7200, 20);
     d.screenshot = () =>
       Promise.resolve({ meta: { w: 3240, h: 7200, format: 'png', bytes: 24 }, data: png });
-    const full = await call('screenshot', { file: join(dir, 'full.png') });
-    expect([full.text, full.data.scale]).toEqual([
+    const full = await call('screenshot', { file: join(dir, 'full.png'), inline: false });
+    expect([full.text, full.data.scale, full.images]).toEqual([
       `saved ${join(dir, 'full.png')} (3240x7200 px; its pixel x,y is tapped at x/3, y/3)`,
       0.333,
+      0,
+    ]);
+  });
+
+  it('shows the picture it saves as well, a small one, so that the file need not be read back', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
+    onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+    const d = new FakeDevice();
+    Object.defineProperty(d, 'mirror', { value: {} });
+    const asked: { format: string; maxPx?: number | undefined }[] = [];
+    const shot = d.screenshot.bind(d);
+    Object.assign(d, {
+      screenshot: (o: { format: string; maxPx?: number }) => {
+        asked.push(o);
+        return shot();
+      },
+    });
+    const { call } = await connect(d);
+    const file = join(dir, 'a.png');
+    const r = await call('screenshot', { file });
+    expect(r.images).toBe(1);
+    expect(r.text).toMatch(new RegExp(`^saved ${file}.*; the image here: \\d+x\\d+ px`));
+    expect(r.data.file).toBe(file);
+    // the file at full size, the image as large as a screenshot's
+    expect(asked.map((o) => [o.format, o.maxPx])).toEqual([
+      ['png', undefined],
+      ['jpeg', 800],
     ]);
   });
 

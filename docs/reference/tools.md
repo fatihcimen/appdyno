@@ -28,7 +28,7 @@ and what they say of themselves are the same, byte for byte, on each.
 
 A whole screen in an answer folds what repeats. A plain text or image inside a row whose label holds it gets no line, nor does a control of the row's name at the row's very place, and the first line counts them. Three or more rows alike in a row share one header (`cell x=201 clickable: ref "label" y`). A label given twice over is said once, and what tells alike elements apart only when another line shows the same name. Only the text is folded: `find`, selectors, refs, diffs, flows and `report` still reach every element.
 
-A screenshot's answer says where its pixel is tapped: its x and y times its scale to tap units, said as a division where that is a whole one, `x/3` for an iPhone's picture at full size.
+A screenshot's answer says where its pixel is tapped: its x and y times its scale to tap units, said as a division where that is a whole one, `x/3` for an iPhone's picture at full size. With `file` it saves the picture at full size and shows the image as a screenshot does beside it, whose size and scale the answer gives, so that the file need not be read back; `inline: false` saves the file alone.
 
 ## Targets
 

@@ -28,7 +28,7 @@ ve kendileri hakkında söyledikleri her birinde bayt bayt aynıdır.
 
 Bir yanıttaki bütün bir ekran, tekrar edeni katlar. Etiketi kendisini içeren bir satırın içindeki düz bir metin ya da görsel ayrı bir satır almaz; satırın tam yerinde duran, satırın adını taşıyan bir kontrol de almaz; ilk satır bunları sayar. Art arda gelen, birbirine benzeyen üç ya da daha fazla satır tek bir başlığı paylaşır (`cell x=201 clickable: ref "label" y`). İki kez verilen bir etiket bir kez söylenir; benzer öğeleri birbirinden ayıran şey de yalnızca başka bir satır aynı adı gösterdiğinde söylenir. Yalnızca metin katlanır: `find`, seçiciler, ref'ler, diff'ler, akışlar ve `report` yine her öğeye ulaşır.
 
-Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyler: x ve y'si, dokunma birimine ölçeğiyle çarpılır; bu bir tam sayıya bölmeyse bölme olarak söylenir, bir iPhone'un tam boyutlu resmi için `x/3`.
+Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyler: x ve y'si, dokunma birimine ölçeğiyle çarpılır; bu bir tam sayıya bölmeyse bölme olarak söylenir, bir iPhone'un tam boyutlu resmi için `x/3`. `file` ile resmi tam boyutta kaydeder ve yanında görüntüyü bir ekran görüntüsünün yaptığı gibi gösterir, yanıt onun boyutunu ve ölçeğini verir; böylece dosyanın geri okunması gerekmez; `inline: false` yalnızca dosyayı kaydeder.
 
 ## Hedefler
 
