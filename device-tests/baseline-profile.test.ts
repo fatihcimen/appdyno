@@ -57,15 +57,17 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
     assert(b);
     expect(b.present).toBe(true);
     expect(b.applied).toBe(false);
-    expect(b.state).toBe('status=verify reason=install');
+    // a Samsung names a fresh install's reason install-speg: its filter is verify all the same, nothing compiled
+    expect(b.state).toMatch(/^status=verify reason=install(-speg)?$/);
     expect(b.rules).toBeGreaterThan(1_000);
     expect(b.withoutMs).toHaveLength(12);
     expect(b.withMs).toHaveLength(12);
     expect(b.verdict).toBe('worth-it');
     expect(r.text).toContain('not applied');
     expect(r.text).toMatch(/cold start \d+ ms without, \d+ ms with: \d+ ms faster/);
-    // the app ends as an install leaves it
-    expect(state()).toBe(before);
+    // the app ends compiled as an install leaves it: a reset names its reason install, where a Samsung's said install-speg
+    const filter = (s: string | undefined) => s?.replace(/\] \[reason=.*/, '');
+    expect(filter(state())).toBe(filter(before));
   });
 
   it('reads applied from a .dm of this Android, and it survives the measure', async () => {
