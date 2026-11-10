@@ -165,7 +165,7 @@ async function nextOf(ctx: ServerContext, key: RunKey) {
 
 export function perfLaunchOp(ctx: ServerContext) {
   const tools = perfTools(ctx);
-  const { measure, appOf, virtualNote, save, keep, noisy } = tools;
+  const { measure, measuredApp, virtualNote, save, keep, noisy } = tools;
   return defineOp({
     name: 'perf_launch',
     title: 'Launch time',
@@ -204,8 +204,7 @@ export function perfLaunchOp(ctx: ServerContext) {
       baseline,
     }) => {
       const s = await ctx.session();
-      s.appPid = undefined;
-      const pkg = appOf(s, app);
+      const pkg = measuredApp(s, app);
       if (baselineProfile) {
         if (baseline)
           throw new ToolError(

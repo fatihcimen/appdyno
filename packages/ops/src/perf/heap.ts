@@ -13,7 +13,7 @@ const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
 };
 
 export function perfHeapOp(ctx: ServerContext) {
-  const { measure, appOf, save, keep } = perfTools(ctx);
+  const { measure, measuredApp, save, keep } = perfTools(ctx);
   return defineOp({
     name: 'perf_heap',
     title: 'Heap dump',
@@ -30,8 +30,7 @@ export function perfHeapOp(ctx: ServerContext) {
     annotations: READ,
     run: async ({ app, profile, seconds }) => {
       const s = await ctx.session();
-      s.appPid = undefined;
-      const pkg = appOf(s, app);
+      const pkg = measuredApp(s, app);
       if (profile) {
         const m = await measure(s, 'heapProfile')(pkg, profile, seconds);
         const v = m.value;

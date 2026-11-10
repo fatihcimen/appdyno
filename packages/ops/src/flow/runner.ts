@@ -287,8 +287,8 @@ export function flowRunner(
       throw new ToolError(`${file}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
     }
     if (flow.app) {
-      s.appId = checkApp(ctx.policy, fillApp(flow.app, values));
-      s.appPid = undefined;
+      s.select(checkApp(ctx.policy, fillApp(flow.app, values)));
+      s.forgetProcess();
     }
     const undo = ctx.hide(flow.secrets.flatMap((n) => values[n] ?? []));
     const was: Was = { up: false, pid: undefined, since: Date.now(), began: Date.now() };

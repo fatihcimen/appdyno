@@ -62,7 +62,8 @@ export function leakSignal(
 }
 
 export function perfScrollOp(ctx: ServerContext) {
-  const { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
+  const { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller } =
+    perfTools(ctx);
   return defineOp({
     name: 'perf_scroll',
     title: 'Scroll performance',
@@ -84,8 +85,7 @@ export function perfScrollOp(ctx: ServerContext) {
       // a reading is one round; what is kept under a name, for a baseline or a compare, has three to take a median of
       const repeats = asked ?? (scenario ? BASELINE_ROUNDS : 1);
       const s = await ctx.session();
-      s.appPid = undefined;
-      const pkg = appOf(s, app);
+      const pkg = measuredApp(s, app);
       await withProbe(s, pkg, probe);
       // turned off by the caller, which says nothing of the device
       const row = probe === false ? false : 'frames';

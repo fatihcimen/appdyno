@@ -56,7 +56,7 @@ export function windowSends(
     const tool = must((ops ??= opsFor(context()))[op], `the op ${op}`);
     try {
       if (app !== undefined)
-        (await context().session()).appId = app ? checkApp(ctx.policy, app) : undefined;
+        (await context().session()).select(app ? checkApp(ctx.policy, app) : undefined);
       const progress = (line: string) => tell(name, { line: spokenDone(line) });
       const { data } = await inCall({ client: WINDOW, progress }, () =>
         tool.handler(argumentsFor(tool, args)),

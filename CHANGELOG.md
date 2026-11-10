@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- What tells an app's death from a leave, the selected app, its process and whether it was left on purpose, is the session's own: what knows it is written through `select`, `sawProcess`, `forgetProcess` and `leftTheApp`, where 12 files wrote the fields, and a measure takes its app by one `measuredApp`, which forgets the process it may start anew, where six measures and a start trace each did that by hand.
 - A process ended by its pid, the runner's xcodebuild or a `DTServiceHub` launchd holds, is ended by one `endPid` beside `endChild`: each signal in turn, a grace after each, and no kill it was not given. Each kept its own copy of that loop; their signals, graces and the look at launchd before each signal are as they were.
 - The steps that only look, `wait_for` and `assert`, are named once, where a batch, a replay and a report's journal each kept their own set of them under a name of its own.
 - A device call that timed out takes its listener off the call's cancel: each one left it there, so a cancel of the call later wrote one more `cancel` to the agent for every call of it that had timed out, for ids long gone.

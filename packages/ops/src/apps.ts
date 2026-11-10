@@ -103,7 +103,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       : checkApp(policy, settings === 'app' ? (s.appId ?? '') : settings);
     if (!page && !app) throw noApp();
     checkSettings(policy, s.device.platform);
-    s.leftApp = true;
+    s.leftTheApp();
     const { row } = await s.device.openSettings(
       page ? { page } : { app: must(app, "the app's id") },
     );
@@ -173,7 +173,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
         if (!pkg) throw noApp();
         reportProgress(`launching ${pkg}`);
-        s.leftApp = pkg !== s.appId;
+        s.leftTheApp(pkg !== s.appId);
         if (!language) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
           await s.device.launch(pkg).catch(notThere(s, pkg));
@@ -202,9 +202,9 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const pkg = checkApp(policy, app ?? s.appId ?? '');
         if (!pkg) throw noApp();
         await s.device.terminate(pkg);
-        if (pkg === s.appId) s.leftApp = true;
+        if (pkg === s.appId) s.leftTheApp();
         s.acted();
-        s.appPid = undefined;
+        s.forgetProcess();
         return reply(`stopped ${pkg}`, { done: `stopped ${pkg}` });
       },
     }),

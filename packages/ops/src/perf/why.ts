@@ -150,7 +150,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
     mode: LaunchMode,
     compile?: string,
   ) => {
-    s.appPid = undefined;
+    s.forgetProcess();
     const m = await attempt(into(seen), 'a start trace', () =>
       measure(
         s,

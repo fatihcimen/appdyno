@@ -291,7 +291,7 @@ type ExtraName = keyof typeof EXTRAS;
 export const EXTRA_NAMES = Object.keys(EXTRAS) as [ExtraName, ...ExtraName[]];
 
 export function perfSnapshotOp(ctx: ServerContext) {
-  const { measure, appOf, virtualNote, save, keep, noisy } = perfTools(ctx);
+  const { measure, measuredApp, virtualNote, save, keep, noisy } = perfTools(ctx);
   return defineOp({
     name: 'perf_snapshot',
     title: 'Performance snapshot',
@@ -315,8 +315,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
     annotations: READ,
     run: async ({ app, cpuWindowMs, batteryWindowMs, also = [], scenario }) => {
       const s = await ctx.session();
-      s.appPid = undefined;
-      const pkg = appOf(s, app);
+      const pkg = measuredApp(s, app);
       const readCpu = measure(s, 'cpu');
       const readMemory = measure(s, 'memory');
       const cpu = await readCpu(pkg, cpuWindowMs);

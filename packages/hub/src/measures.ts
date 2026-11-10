@@ -159,7 +159,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       const input = flow.input.parse({ action: 'run', file, iterations: JOURNEY_ITERATIONS });
       const data = await held(say, async () => {
         // a flow that names no app takes the one in front, so that two builds can run one file
-        (await own.session()).appId = app;
+        (await own.session()).select(app);
         return flow.handler(input);
       });
       const { journey: ran } = flow.output.parse(data) as { journey?: JourneyAnswer };

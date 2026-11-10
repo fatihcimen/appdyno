@@ -274,7 +274,9 @@ export function perfTools(ctx: ServerContext) {
       });
     return run as unknown as MeasureSource[K];
   };
-  const appOf = (s: Session, app?: string) => {
+  /** The app a measure is of, which it may start anew: the next action asks for its process again. */
+  const measuredApp = (s: Session, app?: string) => {
+    s.forgetProcess();
     const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
     if (!pkg) throw noApp();
     return pkg;
@@ -326,5 +328,5 @@ export function perfTools(ctx: ServerContext) {
     };
   };
 
-  return { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller };
+  return { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller };
 }

@@ -57,7 +57,7 @@ export const systemAsks = (a: SystemAlert) =>
 
 /** The app check: a system alert points to alert; another app in front is said. */
 function appCheck(s: Session, screen: Screen) {
-  if (screen.foreground === s.appId) s.leftApp = false;
+  if (screen.foreground === s.appId) s.leftTheApp(false);
   if (s.wordless && screen.elements.some((e) => e.type === PICTURE_TEXT))
     return `\nno words in the tree: these were read from the picture, and their places are near${s.pictureLevel === 'fast' ? FAST_READ : ''}`;
   if (s.pictureFailed)
@@ -336,7 +336,7 @@ async function afterChange(
   const base = s.fresh?.list ?? before;
   s.acted();
   // a launch or a link may start a new process on purpose
-  s.appPid = undefined;
+  s.forgetProcess();
   // what the screen shows once the change has reached it, as a turn's call returns before the screen turns: what a read
   // gets meanwhile is the screen before, or a window with nothing on it yet
   if (ready) await s.until(ready, SETTLE.maxMs);

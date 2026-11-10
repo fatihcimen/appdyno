@@ -216,7 +216,7 @@ export class ServerContext {
       this.opening.set(serial, start);
       s = await start;
     }
-    if (app) s.appId = app;
+    if (app) s.select(app);
     this.currentSerial = serial;
     return s;
   }

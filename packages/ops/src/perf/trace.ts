@@ -33,7 +33,8 @@ const fewLine = (frames: number) =>
     : [];
 
 export function perfTraceOp(ctx: ServerContext) {
-  const { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
+  const { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller } =
+    perfTools(ctx);
   return defineOp({
     name: 'perf_trace',
     title: 'Frame trace',
@@ -54,8 +55,7 @@ export function perfTraceOp(ctx: ServerContext) {
     annotations: ACT,
     run: async ({ app, seconds, scroll, what, dsym, probe, scenario }) => {
       const s = await ctx.session();
-      s.appPid = undefined;
-      const pkg = appOf(s, app);
+      const pkg = measuredApp(s, app);
       const name = scenario ?? (what === 'frames' ? 'trace' : what);
       /** A reading saved, its numbers kept, and said: `lines` above the noise, `after` (given the raw file) below it. */
       const answer = async (

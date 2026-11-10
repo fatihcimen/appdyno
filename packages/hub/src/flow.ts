@@ -134,7 +134,7 @@ export function windowFlow(
     try {
       const s = await readerSession();
       const { app, mine } = await frontApp(device);
-      if (mine) s.appId = app;
+      if (mine) s.select(app);
       await follow.first();
       startRecording(own, serial, mine ? app : undefined, s.owner);
       const r = must(loadRecording(own, serial), 'the recording');

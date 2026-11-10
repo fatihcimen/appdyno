@@ -119,12 +119,13 @@ export class Session {
 
   constructor(
     readonly device: Device,
-    public appId: string | undefined,
+    appId: string | undefined,
     /** Who answers for what this session leaves on the device; a command line's stays until asked. */
     readonly owner?: Owner,
     /** What every input passes on its way to the device, whichever tool, step or replay sent it. */
     guard?: InputGuard,
   ) {
+    this.app = appId;
     if (guard) this.device = guardInputs(device, (input) => guard(this, input));
   }
 
@@ -224,10 +225,46 @@ export class Session {
     return this.latest?.at === this.version ? this.latest.screen : undefined;
   }
 
+  // what tells a death from a leave: written only by what knows which it was
+  private app: string | undefined;
+  private left = false;
+  private pid: string | undefined;
+
+  /** The app this session drives, if one is selected. */
+  get appId() {
+    return this.app;
+  }
+
+  /** Selects the app this session drives, or none. */
+  select(app: string | undefined) {
+    this.app = app;
+  }
+
   /** The app was left on purpose (a key, Settings, another app, a stop): out of the front, it did not crash. */
-  leftApp = false;
-  /** The app's process when last looked: another one means it went down and came back. */
-  appPid: string | undefined;
+  get leftApp() {
+    return this.left;
+  }
+
+  /** The app was left on purpose, or, with `false`, is in front again. */
+  leftTheApp(left = true) {
+    this.left = left;
+  }
+
+  /** The selected app's process when last looked: another one means it went down and came back. */
+  get appPid() {
+    return this.pid;
+  }
+
+  /** The process `app` was found with, kept where it is the selected one. */
+  sawProcess(app: string, pid: string | undefined) {
+    if (app === this.app) this.pid = pid;
+  }
+
+  /** A launch, a link or a measure may start the app anew: the next action asks for its process again. */
+  forgetProcess() {
+    this.pid = undefined;
+  }
+
   /** When the op of the last device action began (epoch ms): `logs` starts there, with what it set off. */
   lastActionAt: number | undefined;
 

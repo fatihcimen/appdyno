@@ -17,7 +17,7 @@ const unnamed = (entries: ProfileEntry[] | undefined) =>
   !!entries?.length && entries.every((e) => /^0x[0-9a-f]+$/i.test(e.symbol));
 
 export function perfProfileOp(ctx: ServerContext) {
-  const { measure, appOf, virtualNote, save, scroller } = perfTools(ctx);
+  const { measure, measuredApp, virtualNote, save, scroller } = perfTools(ctx);
   return defineOp({
     name: 'perf_profile',
     title: 'CPU profile',
@@ -35,8 +35,7 @@ export function perfProfileOp(ctx: ServerContext) {
     annotations: READ,
     run: async ({ app, seconds, scroll, dsym }) => {
       const s = await ctx.session();
-      s.appPid = undefined;
-      const pkg = appOf(s, app);
+      const pkg = measuredApp(s, app);
       const profile = measure(s, 'cpuProfile');
       const during = scroll ? await scroller(s, scroll, 300) : undefined;
       const m = await profile(pkg, seconds * 1000, during, symbolsOf(s, dsym));

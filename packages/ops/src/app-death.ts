@@ -87,7 +87,7 @@ export async function appDeath(
         () => undefined,
       ));
     const pid = asked ? asked.pid : wasPid;
-    if (app === s.appId) s.appPid = pid;
+    s.sawProcess(app, pid);
     // another process than before, or none of an app that ran where none was known before, as one a touch aimed at
     // with no app selected: the system's "keeps stopping" over its screen leaves it the one in front
     if (wasPid ? pid !== wasPid : !!asked && ran && !pid) {
@@ -156,7 +156,7 @@ async function deathWhile(
       ? pid !== wasPid
       : !pid;
   if (!gone) return undefined;
-  s.appPid = pid;
+  s.sawProcess(app, pid);
   reportProgress('the app went away during the action: looking for its crash report');
   const report = await reportOf(s, app, since, clean);
   return (

@@ -164,7 +164,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
           reportProgress(`replacing the data of ${pkg}`);
           await apps.replaceData(pkg, from);
           s.acted();
-          s.appPid = undefined;
+          s.forgetProcess();
           return done(`the data of ${pkg} is now what ${from} holds`);
         }
         case 'uninstall':
@@ -173,7 +173,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
           await approve(policy, s, `app ${action}`, pkg);
           await (action === 'clear' ? apps.clearData(pkg) : apps.uninstall(pkg));
           s.acted();
-          s.appPid = undefined;
+          s.forgetProcess();
           return done(`${action === 'clear' ? 'cleared the data of' : 'uninstalled'} ${pkg}`);
         }
       }

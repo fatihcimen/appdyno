@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir uygulamanın ölümünü bir ayrılıştan ayıran, seçili uygulama, süreci ve bilerek bırakılıp bırakılmadığı, oturumun kendisinindir: bunu bilen `select`, `sawProcess`, `forgetProcess` ve `leftTheApp` ile yazar, oysa alanları 12 dosya yazıyordu; bir ölçüm de uygulamasını tek bir `measuredApp` ile alır, o da yeniden başlatabileceği süreci unutur, oysa altı ölçüm ve bir başlangıç izi bunu her biri elle yapıyordu.
 - Pid'iyle bitirilen bir süreç, runner'ın xcodebuild'i ya da launchd'nin tuttuğu bir `DTServiceHub`, `endChild`'ın yanındaki tek bir `endPid` ile bitirilir: her sinyal sırayla, her birinden sonra bir süre, ve verilmeyen hiçbir öldürme yok. Her biri o döngünün kendi kopyasını tutuyordu; sinyalleri, süreleri ve her sinyalden önce launchd'ye bakışı oldukları gibidir.
 - Yalnızca bakan adımlar, `wait_for` ve `assert`, bir kez adlandırılır; bir toplu iş, bir yeniden oynatma ve bir raporun günlüğü her biri onların kendi adıyla kendi kümesini tutuyordu.
 - Süresi dolan bir cihaz çağrısı, dinleyicisini çağrının iptalinden kaldırır: her biri onu orada bırakıyordu, bu yüzden çağrının sonraki bir iptali, süresi dolmuş her çağrısı için ajana çoktan gitmiş kimliklere bir `cancel` daha yazıyordu.
