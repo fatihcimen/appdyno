@@ -393,6 +393,50 @@ describe('what a settle says of the screen', () => {
   });
 });
 
+describe('a reaction that begins after the settle', () => {
+  const a = tree(app(cell('A', 0))).tree;
+  /** A screen still for 650 ms after the tap, then one that moves on each read, or comes once and stays. */
+  const late = (moves: boolean) => {
+    let start = 0;
+    let n = 0;
+    const on: SettleOn = {
+      read: () => {
+        const at = Date.now() - start;
+        if (at > 650) n = moves ? n + 1 : 1;
+        return Promise.resolve({
+          tree: at > 650 ? tree(app(cell('A', 0), cell('B', 100 + n * 10))).tree : a,
+          busy: false,
+        });
+      },
+      remember: () => undefined,
+      recent: new Map([[a.hash, a.nodes]]),
+      width: 402,
+      clock: Date.now,
+      handled: () => Promise.resolve(undefined),
+    };
+    start = Date.now();
+    return settleAfter(
+      on,
+      { kind: 'tap', x: 20, y: 10 },
+      {
+        settle: { quietMs: 200, maxMs: 1_400 },
+        before: a.hash,
+        read: 'hash',
+      },
+    );
+  };
+
+  it('is settled in turn, not answered at its first frame', async () => {
+    const settleOf = (r: { result: object }) =>
+      (r.result as { settle: { settled: boolean; ms: number } }).settle;
+    expect(settleOf(await late(true)).settled).toBe(false);
+    const once = await late(false);
+    expect(settleOf(once).settled).toBe(true);
+    expect(settleOf(once).ms).toBeGreaterThanOrEqual(800);
+    expect(once.moved).toBe(true);
+  });
+});
+
 describe('the helpers prove themselves', () => {
   type Answer = (q: Record<string, unknown>) => Record<string, unknown>;
   /** A helper, and the mock of what it was asked. */

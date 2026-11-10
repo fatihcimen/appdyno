@@ -123,42 +123,48 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
   let alertGoneAt: number | undefined;
   const stuckBefore = stickingOut(seen, on.width);
   let slideSince: number | undefined;
-  const r = await settle<Capture | { tree: { nodes: Node[] }; busy: false }>({
-    actionAt,
+  const read = async (): Promise<Capture> => {
+    const c = await on.read(false);
+    const now = on.clock();
+    if (hasAlert(c.tree.nodes)) {
+      alertSince ??= now;
+      alertGoneAt = undefined;
+      if (now - alertSince < ALERT_APPEAR_MS) return { ...c, busy: true };
+    } else {
+      if (alertSince !== undefined) alertGoneAt = now;
+      alertSince = undefined;
+      if (alertGoneAt !== undefined && now - alertGoneAt < ALERT_GONE_MS)
+        return { ...c, busy: true };
+    }
+    const sliding = [...stickingOut(c.tree.nodes, on.width)].some((k) => !stuckBefore.has(k));
+    if (sliding) {
+      slideSince ??= now;
+      if (now - slideSince < SLIDE_CAP_MS) return { ...c, busy: true };
+    } else slideSince = undefined;
+    return c;
+  };
+  const rules = {
     clock: on.clock,
     quietMs,
+    reactedMs: REACTED_QUIET_MS,
+    pollMs: POLL_MS,
+    read,
+    same: (a: { tree: { nodes: Node[] } }, b: { tree: { nodes: Node[] } }) =>
+      sameContent(a.tree.nodes, b.tree.nodes),
+    busy: (c: { busy: boolean }) => c.busy,
+  };
+  const r = await settle<Capture | { tree: { nodes: Node[] }; busy: false }>({
+    ...rules,
+    actionAt,
     // XCTest's tap took 300-600 ms, in which the app reacted before the window began; a direct touch is
     // over in 50 ms, and an alert's button shows its effect only after about 300 ms
     firstMs: inert ? 0 : hadAlert ? ALERT_REACTION_MS : FIRST_REACTION_MS,
-    reactedMs: REACTED_QUIET_MS,
     maxMs,
-    pollMs: POLL_MS,
     before: before && { tree: { nodes: before }, busy: false },
-    read: async () => {
-      const c = await on.read(false);
-      const now = on.clock();
-      if (hasAlert(c.tree.nodes)) {
-        alertSince ??= now;
-        alertGoneAt = undefined;
-        if (now - alertSince < ALERT_APPEAR_MS) return { ...c, busy: true };
-      } else {
-        if (alertSince !== undefined) alertGoneAt = now;
-        alertSince = undefined;
-        if (alertGoneAt !== undefined && now - alertGoneAt < ALERT_GONE_MS)
-          return { ...c, busy: true };
-      }
-      const sliding = [...stickingOut(c.tree.nodes, on.width)].some((k) => !stuckBefore.has(k));
-      if (sliding) {
-        slideSince ??= now;
-        if (now - slideSince < SLIDE_CAP_MS) return { ...c, busy: true };
-      } else slideSince = undefined;
-      return c;
-    },
-    same: (a, b) => sameContent(a.tree.nodes, b.tree.nodes),
-    busy: (c) => c.busy,
   });
   let last = r.last as Capture;
-  let extraMs = 0;
+  let { settled, reads } = r;
+  let ms = r.elapsedMs;
   const unchanged = !!before && sameLayout(before, last.tree.nodes) && !hasAlert(last.tree.nodes);
   // an actionable tap that changed nothing in the app may have asked the system for something: its
   // alert comes a moment later, while the app is idle
@@ -166,11 +172,26 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
     const idleAt = Date.now();
     while (Date.now() - idleAt < ALERT_WATCH_MS) {
       await wait(100);
-      const c = await on.read(false);
-      last = c;
-      if (c.byRunner || !sameLayout(before, c.tree.nodes)) break;
+      last = await read();
+      if (last.byRunner || !sameLayout(before, last.tree.nodes)) break;
     }
-    extraMs = Date.now() - idleAt;
+    ms += Date.now() - idleAt;
+    // a reaction that began after the settle, an alert or the app's own: it is at its first frame, so it is
+    // settled in turn from there, within what is left of the action's time
+    if (!sameLayout(before, last.tree.nodes)) {
+      const at = on.clock();
+      const again = await settle({
+        ...rules,
+        actionAt: at,
+        firstMs: REACTED_QUIET_MS,
+        maxMs: actionAt + maxMs - at,
+        before: last,
+      });
+      last = again.last;
+      settled = again.settled;
+      reads += again.reads;
+      ms += again.elapsedMs;
+    }
   }
   const untouched = unchanged && sameLayout(before, last.tree.nodes);
   // the last look may have left to the runner what only it can tell
@@ -179,7 +200,7 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
     untouched,
     moved: !sameContent(seen, last.tree.nodes),
     result: {
-      settle: { settled: r.settled, ms: r.elapsedMs + extraMs, reads: r.reads, quietMs },
+      settle: { settled, ms, reads, quietMs },
       ...answer(last),
     },
   };
