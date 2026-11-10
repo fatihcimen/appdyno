@@ -674,17 +674,40 @@ describe('the helpers prove themselves', () => {
     expect(onKeyboard(n, 10, 10)).toBe(false);
   });
 
-  it('leaves input to the runner when the daemon stops answering', async () => {
+  it('leaves the first touch to the runner, unsent, where the daemon left the warm-up unanswered', async () => {
     const { call, helper: hid } = helping(() => ({ ok: false, error: 'dtuhidd did not answer' }));
     const d = new DirectSim(
       'u',
       { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(hid) },
       undefined,
     );
+    d.warm();
+    await vi.waitFor(() => expect(d.status().input).toMatch(/^runner: .*did not answer/));
     await d.read('a.b');
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
-    expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
-    expect(call).toHaveBeenCalledTimes(1);
+    expect(call).toHaveBeenCalledOnce();
+  });
+
+  it('says a touch with no answer may have gone through, and leaves the next to the runner', async () => {
+    for (const answer of [
+      { ok: false, error: 'dtuhidd did not answer after the touches' },
+      { ok: false, refused: 'timeout' },
+      { ok: false, refused: 'helper-gone' },
+    ]) {
+      const { call, helper: hid } = helping(() => answer);
+      const d = new DirectSim(
+        'u',
+        { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(hid) },
+        undefined,
+      );
+      await d.read('a.b');
+      await expect(d.send({ kind: 'tap', x: 1, y: 1 })).rejects.toMatchObject({
+        code: 'TIMEOUT',
+        sent: true,
+      });
+      expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
+      expect(call).toHaveBeenCalledTimes(1);
+    }
   });
 
   it('turns both off in landscape: only portrait is verified', async () => {

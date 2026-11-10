@@ -1,4 +1,4 @@
-import { PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
+import { DeviceError, PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
 import { turnedTouch, turnsOf } from './mirror-sim.js';
 import { type HelperProcess, startSimAx, startSimHid, type HelperAnswer } from './simhelper.js';
 import { type DirectRead, type Refusal, toTree, type RawAx, sameTree } from './simtree.js';
@@ -97,7 +97,14 @@ export class DirectSim {
     if (!this.readOff) void this.hello().catch(() => undefined);
     if (this.inputOff) return;
     this.hid ??= this.start.hid(this.udid);
-    this.hid.then((h) => h.call({ op: 'ping' }, 8_000)).catch(() => undefined);
+    // a daemon that leaves this unanswered takes no touch either: the first goes to the runner, not answered TIMEOUT
+    this.hid
+      .then((h) => h.call({ op: 'ping' }, 8_000))
+      .then((a) => {
+        if (!a.ok)
+          this.inputOff ??= `the input helper's first ask: ${a.error ?? a.refused ?? 'failed'}`;
+      })
+      .catch(() => undefined);
   }
 
   /** Portrait only is verified for the read helper; a touch turns with the app in front. */
@@ -218,7 +225,10 @@ export class DirectSim {
     return (a.ok ? turnsOf(a.orientation as number) : undefined) ?? (this.rotated ? undefined : 0);
   }
 
-  /** Sends the action straight to the simulator; false when the runner must do it. */
+  /**
+   * Sends the action straight to the simulator; false, with nothing sent, when the runner must do it. Asked and given no
+   * answer, it may have gone through, and the runner's would make it twice: TIMEOUT, sent.
+   */
   async send(action: ActParams): Promise<boolean> {
     if (this.inputOff || !this.screen) return false;
     this.hid ??= this.start.hid(this.udid);
@@ -246,10 +256,19 @@ export class DirectSim {
       key ? { op: 'key', ...key, ...(held && { modifiers: held }) } : { op: 'touch', events },
       last + 5_000,
     );
-    if (!a.ok) this.inputOff = a.error ?? a.refused ?? 'the input helper failed';
-    else if (events && this.reporting)
+    if (!a.ok) {
+      this.inputOff = a.error ?? a.refused ?? 'the input helper failed';
+      const e = new DeviceError(
+        'TIMEOUT',
+        `the ${action.kind} went to the input helper, which did not say it was sent: ${this.inputOff}`,
+        'read the screen to see whether it went through before doing it again',
+      );
+      e.sent = true;
+      throw e;
+    }
+    if (events && this.reporting)
       this.touchesDue = (this.touchesEnded ?? 0) + (action.kind === 'tap' ? 2 : 1);
-    return a.ok;
+    return true;
   }
 
   /** A touch the app never reported: the runner takes over the input from now on. */

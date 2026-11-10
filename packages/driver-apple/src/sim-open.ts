@@ -42,7 +42,8 @@ export const looksOf = (direct: DirectSim, queue: DeviceQueue): LinkLooks => ({
         (r) => ('refused' in r ? r.prompt : undefined),
         () => undefined,
       ),
-  tap: (at) => queue.run(() => direct.send({ kind: 'tap', ...at })),
+  // a touch that may have gone through is told by the next look, the prompt gone or still there
+  tap: (at) => queue.run(() => direct.send({ kind: 'tap', ...at })).catch(() => false),
 });
 
 /** Whether a link is in one of these schemes. */

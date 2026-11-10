@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/index.js';
 import { Simctl } from '../src/simctl.js';
 import { SimulatorApps } from '../src/simulator-manage.js';
@@ -282,5 +283,32 @@ describe('a look for what stands over the app on a simulator', () => {
     const { d, callNow } = await device({ refused: 'landscape' });
     expect(await d.systemWords()).toEqual([]);
     expect(callNow).not.toHaveBeenCalled();
+  });
+});
+
+describe('a touch the input helper gave no answer for on a simulator', () => {
+  it('is answered TIMEOUT, sent, and not made a second time by the runner', async () => {
+    const lost = Object.assign(new DeviceError('TIMEOUT', 'no answer from the input helper'), {
+      sent: true,
+    });
+    const direct = {
+      reads: true,
+      screenKnown: true,
+      touchesEnded: 0,
+      status: () => ({ input: 'ok', read: 'ok' }),
+      arm: () => Promise.resolve(false),
+      animationsOver: () => Promise.resolve(0),
+      send: vi.fn(() => Promise.reject(lost)),
+      close: vi.fn(),
+    };
+    const d = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    const runner = vi.fn(() => Promise.resolve({}));
+    Object.assign(d, { actByRunner: runner });
+    await expect(d.act({ kind: 'tap', x: 10, y: 10 })).rejects.toMatchObject({
+      code: 'TIMEOUT',
+      sent: true,
+    });
+    expect(direct.send).toHaveBeenCalledOnce();
+    expect(runner).not.toHaveBeenCalled();
   });
 });
