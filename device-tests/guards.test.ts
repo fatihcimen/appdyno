@@ -132,8 +132,10 @@ for (const [name, serial, provider] of [
     it('two recordings at once: the second refuses by name, and the first has its trace', async () => {
       const s = await t.ctx.session();
       await s.device.launch(APP);
+      // a list that scrolls while it records: Xcode's profiler counts time on a core, and an idle app has none
+      await t.call('open_link', { url: 'appdyno-fixture://open/list' });
       const [first, second] = await Promise.allSettled([
-        t.call('perf_profile', { seconds: 3 }),
+        t.call('perf_profile', { seconds: 3, scroll: 'down' }),
         pause(1_500).then(() => t.call('perf_profile', { seconds: 3 })),
       ]);
       if (first.status !== 'fulfilled' || second.status !== 'fulfilled')
