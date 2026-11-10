@@ -56,6 +56,8 @@ describe.skipIf(!ANDROID)('a crash on an emulator', () => {
   beforeAll(() => {
     call = opsOn(androidProvider(new Adb()), ANDROID, APP).call;
   });
+  // an emulator's crash dialog holds the crashed process, and the next suite would read the dialog for the app
+  afterAll(() => execFileSync('adb', ['-s', ANDROID, 'shell', 'am', 'force-stop', APP]));
 
   it('finds a native crash, and only its symbols name the function', async () => {
     const since = await crash(call, 'crash_native', /signal 11/);

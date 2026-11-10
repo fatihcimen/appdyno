@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `crashes` cihaz paketi Android'de sonunda fixture'ı durdurur: bir emülatörün çökme penceresi çöken süreci tutar ve ondan sonraki paket uygulama yerine `appdyno fixture keeps stopping` okuyordu; bu yüzden hemen ardından çalışan `diagnose` testlerinin 3'ünde başarısız oluyordu. API 34 bir emülatörde çalıştırıldı: ardından `diagnose` 8 testini geçer.
 - `exits` cihaz paketi hiçbir alt neden adlandırmayan bir arka plan öldürmesini olduğu gibi, kullanıcının isteği olarak alır: Android 16'lı bir Xiaomi `am kill`'i alt nedeni 0 olan `USER REQUESTED` diye yazar, diğerleri `KILL BACKGROUND` yazar, ve yine de bir zorla durdurmadan ayrılır. Orada çalıştırıldı: 5 testi geçer.
 - `build-and-run` cihaz paketi bir iPhone için yalnızca `XCODE_XCCONFIG_FILE` bir takım adlandırdığında derler, başlığının gerektiğini söylediği gibi: hiçbiri yokken Xcode onu ad hoc imzalamayı reddediyor ve test başarısız oluyordu. Bir iPhone 13 Pro Max'te çalıştırıldı: hiçbiri yokken atlanır, BKXMF846AT takımının bir xcconfig'iyle fixture'ı derler ve kurar.
 - `driving` cihaz paketi artık bir iPhone'da `device_setting`'ten bir push istemez, çünkü push kendi başına bir araçtır ve ayarın şeması bu adı reddeder; bu da testi kendi denetimlerinden önce bütünüyle başarısız kılıyordu. Bir iPhone 13 Pro Max'te çalıştırıldı: geçer.
