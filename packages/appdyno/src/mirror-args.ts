@@ -68,7 +68,7 @@ export async function mirrorCommand<Context extends { close(): void }>(
   }
   const ctx = use.context({
     ...(values.device?.[0] && { device: values.device[0] }),
-    ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
+    ...(values['allow-devices'] !== undefined && { 'allow-devices': values['allow-devices'] }),
     ...(values.takeover && { takeover: true }),
   });
   try {
@@ -93,7 +93,7 @@ export async function hubCommand<Context extends { close(): void }>(
 ) {
   const { values } = parseArgs({ args, options: COMMANDS.hub.flags });
   const ctx = use.context({
-    ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
+    ...(values['allow-devices'] !== undefined && { 'allow-devices': values['allow-devices'] }),
   });
   try {
     const code = await use.hub(ctx, {

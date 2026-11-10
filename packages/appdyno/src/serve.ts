@@ -2,13 +2,53 @@ import { randomBytes } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
-import { opsFor, type ServerContext } from '@appdyno/ops';
+import { DEFAULT_POLICY, opsFor, type Policy, type ServerContext } from '@appdyno/ops';
 import { endWithClient, handOff, putBack, putBackAfter, PUT_BACK_AFTER } from './lifetime.js';
 import { COMMANDS } from './usage.js';
 
 const flags = (args: string[]) => parseArgs({ args, options: COMMANDS.mcp.flags }).values;
 
 export type ServerFlags = ReturnType<typeof flags>;
+
+const listOf = (s: string | undefined) =>
+  (s ?? '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+/**
+ * What this server may do, by its flags, else the environment: no tool call sets any of it. A list given empty, as a
+ * script's unset variable gives it, is refused, as it would let in every device, app or link.
+ */
+export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.env): Policy {
+  const given = (flag: 'allow-devices' | 'allow-apps' | 'allow-urls', name: string) => {
+    const said = values[flag] ?? env[name];
+    if (said !== undefined && listOf(said).length === 0)
+      throw new Error(
+        `--${flag} (${name}) is empty, which would let in every one: give what it lets in, or leave it out`,
+      );
+    return said;
+  };
+  const regex = (s: string | undefined) => (s === undefined ? undefined : new RegExp(s));
+  const devices = regex(given('allow-devices', 'APPDYNO_ALLOW_DEVICES'));
+  const urls = regex(given('allow-urls', 'APPDYNO_ALLOW_URLS'));
+  const loss = values['allow-data-loss'] ?? env.APPDYNO_ALLOW_DATA_LOSS;
+  if (loss !== undefined && loss !== 'virtual' && loss !== 'all')
+    throw new Error(`--allow-data-loss takes virtual or all, not ${loss}`);
+  const power = values['allow-power'] ?? env.APPDYNO_ALLOW_POWER;
+  if (power !== undefined && power !== 'virtual' && power !== 'all')
+    throw new Error(`--allow-power takes virtual or all, not ${power}`);
+  return {
+    ...DEFAULT_POLICY,
+    ...(devices && { devices }),
+    ...(urls && { urls }),
+    apps: listOf(given('allow-apps', 'APPDYNO_ALLOW_APPS')),
+    allowHome: !values['no-home'],
+    secrets: listOf(env.APPDYNO_SECRETS),
+    ...(loss && { allowDataLoss: loss }),
+    ...(power && { allowPower: power }),
+  };
+}
 
 /** It goes in a URL as well as a header, and it is all that stands between a tunnel and a phone. */
 const GOOD_TOKEN = /^[\w.~-]{32,}$/;

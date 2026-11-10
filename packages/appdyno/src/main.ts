@@ -29,7 +29,6 @@ import {
 import { must } from '@appdyno/core';
 import { writeComment, writeDashboard } from '@appdyno/perf';
 import {
-  DEFAULT_POLICY,
   ServerContext,
   envValues,
   flowFiles,
@@ -39,7 +38,6 @@ import {
   opsFor,
   paramsOf,
   survey,
-  type Policy,
 } from '@appdyno/ops';
 import { runHub, runMirrors } from '@appdyno/hub';
 import { endWithHub } from './lifetime.js';
@@ -53,7 +51,7 @@ import { pushCommand } from './push-setup.js';
 import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
-import { serveCommand, type ServerFlags } from './serve.js';
+import { policyOf, serveCommand, type ServerFlags } from './serve.js';
 import {
   devicesCommand,
   installCommand,
@@ -76,30 +74,7 @@ const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
 /** The operations' context, from flags and the environment. */
 function contextFrom(values: ServerFlags, remember?: string) {
   const env = process.env;
-  const list = (s: string | undefined) =>
-    (s ?? '')
-      .split(',')
-      .map((x) => x.trim())
-      .filter(Boolean);
-  const regex = (s: string | undefined) => (s ? new RegExp(s) : undefined);
-  const devices = regex(values['allow-devices'] ?? env.APPDYNO_ALLOW_DEVICES);
-  const urls = regex(values['allow-urls'] ?? env.APPDYNO_ALLOW_URLS);
-  const loss = values['allow-data-loss'] ?? env.APPDYNO_ALLOW_DATA_LOSS;
-  if (loss !== undefined && loss !== 'virtual' && loss !== 'all')
-    throw new Error(`--allow-data-loss takes virtual or all, not ${loss}`);
-  const power = values['allow-power'] ?? env.APPDYNO_ALLOW_POWER;
-  if (power !== undefined && power !== 'virtual' && power !== 'all')
-    throw new Error(`--allow-power takes virtual or all, not ${power}`);
-  const policy: Policy = {
-    ...DEFAULT_POLICY,
-    ...(devices && { devices }),
-    ...(urls && { urls }),
-    apps: list(values['allow-apps'] ?? env.APPDYNO_ALLOW_APPS),
-    allowHome: !values['no-home'],
-    secrets: list(env.APPDYNO_SECRETS),
-    ...(loss && { allowDataLoss: loss }),
-    ...(power && { allowPower: power }),
-  };
+  const policy = policyOf(values, env);
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;
   const animations = values.animations ?? env.APPDYNO_ANIMATIONS;
