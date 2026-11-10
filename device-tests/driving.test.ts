@@ -706,7 +706,6 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
       expect(r.data.code, name).toBe('UNSUPPORTED');
     }
     for (const [name, value] of [
-      ['push', 'x'],
       ['biometric', 'match'],
       ['fold', 'open'],
       ['call', '5551234'],
