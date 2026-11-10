@@ -14,9 +14,9 @@ import {
   type SystemAlert,
 } from '@appdyno/core';
 import type { ActResult, TextResult } from '@appdyno/protocol';
-import { appDeath, diedLine, pidInAnswer } from './app-death.js';
+import { appDeath, diedLine, pidInAnswer, watched } from './app-death.js';
 import type { ServerContext } from './context.js';
-import { redact } from './policy.js';
+import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
 import { refusedAction, reply } from './tool.js';
@@ -228,6 +228,7 @@ async function afterAction(
 /** Runs a device action with the settle and read `read` asks for. */
 async function act(
   clean: Clean,
+  cleanLog: Clean,
   s: Session,
   read: ReadMode,
   run: (o: ActOptions) => Promise<ActResult | TextResult>,
@@ -253,7 +254,18 @@ async function act(
     (read !== 'none' && s.appId
       ? await s.device.appPid?.(s.appId).catch(() => undefined)
       : undefined);
-  const r: ActResult = await run(opts).catch(refusedAction);
+  // a crash under the action is said once its process goes, where the device's answer could wait for long
+  const action = run(opts).catch(refusedAction);
+  const r: ActResult =
+    read !== 'none' && s.appId && (pid || inFront(s))
+      ? await watched(s, action, {
+          wasPid: pid,
+          since: started,
+          done: typeof done === 'string' ? done : '',
+          clean,
+          cleanLog,
+        })
+      : await action;
   // the last read before the action, which a ref's lookup may have just made
   const base = s.fresh?.list ?? before;
   const aimed = s.fresh?.hash;
@@ -337,7 +349,7 @@ export function answersFor(ctx: ServerContext) {
       run: (o: ActOptions) => Promise<ActResult | TextResult>,
       done: string | ((r: ActResult | TextResult) => string),
       found?: () => boolean,
-    ) => act(clean, s, read, run, done, found),
+    ) => act(clean, (l) => redactLog(ctx.policy, l), s, read, run, done, found),
     settleRead,
     afterChange: (
       s: Session,

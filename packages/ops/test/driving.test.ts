@@ -36,7 +36,11 @@ type Result = {
 };
 
 /** What a tool answered, as this server writes it: its output, or a refusal's code and hint; any of it may be missing. */
-type Answer<N extends OpName> = Partial<OpData<N>> & { code?: ErrorCode; hint?: string };
+type Answer<N extends OpName> = Partial<OpData<N>> & {
+  code?: ErrorCode;
+  hint?: string;
+  dispatched?: boolean | 'unknown';
+};
 
 async function connect(
   device: Device,
@@ -381,6 +385,47 @@ describe('steps across screens', () => {
     })(d.current.bind(d));
     return d;
   };
+
+  it("says at once that the app died under a touch whose answer a crash holds, with the app's last lines", async () => {
+    for (const android of [false, true]) {
+      const d = new FakeDevice();
+      if (android) {
+        d.pid = '4242';
+        d.appPid = d.fakePid;
+      }
+      d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
+      // the lines shown start at the one that says why, past a weaker one before it and a stack's tail after it
+      d.logLines = [
+        'I Fixture: Did post notification. error:0',
+        'E OpenGLRenderer: Unable to match the desired swap behavior, an error',
+        'E AndroidRuntime: FATAL EXCEPTION: main',
+        'IllegalStateException: fixture crash',
+        ...Array.from({ length: 9 }, (_, i) => `\tat Frame${String(i)}`),
+      ];
+      const own = d.act.bind(d);
+      // as an iPhone simulator's runner held its answer for 15 s while the app it read went down
+      d.act = (a, o) => {
+        if (a.kind !== 'tap') return own(a, o);
+        d.running = false;
+        d.pid = undefined;
+        return new Promise(() => undefined);
+      };
+      const { call } = await connect(d);
+      await call('screen');
+      const started = Date.now();
+      const r = await call('tap', { selector: { text: 'Form' } });
+      expect(Date.now() - started, `android ${String(android)}`).toBeLessThan(10_000);
+      expect([r.data.code, r.data.hint, r.data.dispatched]).toEqual([
+        'APP_NOT_RUNNING',
+        'launch_app starts it again, and crashes says why it died',
+        true,
+      ]);
+      expect(r.text).toMatch(
+        /^APP_NOT_RUNNING: the app died: fixture crash \(\/tmp\/report\.ips\)\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main\nIllegalStateException: fixture crash/,
+      );
+      expect(r.text).toMatch(/\tat Frame5\nhint:/);
+    }
+  });
 
   it('stops at a step whose app died, saying so as that action alone does', async () => {
     for (const read of [undefined, 'diff']) {
