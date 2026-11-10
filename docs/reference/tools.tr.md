@@ -7,6 +7,8 @@ Bir MCP istemcisinin çağırabildiği 48 araç. Her biri aynı zamanda [bir kom
 Araçlar `device` parametresi almaz. Cihaz, sunucunun `--device`'ıdır; yoksa bağlı tek cihaz,
 yoksa `use_device`'ın seçtiği cihaz.
 
+Bir istemcinin eylemde bulunan çağrıları geldikleri sırayla birer birer çalışır: aynı anda gönderilen ikisi, bir turda iki ref'in her birine birer `tap` gibi, birbiri ardınca yapılır ve ikincisi ilkinin bıraktığı ekranı hedefler; bu yüzden ilkinin kaldırdığı bir ref `STALE` olarak reddedilir. `screen`, `find`, `wait_for` ya da `assert` gibi yalnızca okuyan bir çağrı onların yanında çalışır; bir `steps` çağrısının yaptığı bir araç da onun içinde çalışır.
+
 Sunucu, MCP'nin `initialize` ile açılan 2024-10-07 ile 2025-11-25 arasındaki revizyonlarını ve 2026-07-28 revizyonunu
 konuşur; sonuncusu `server/discover` ile açılır. Bunu stdio üzerinden de `--http` üzerinden de yapar: hangisi olduğunu istemcinin ilk mesajı söyler. Araçlar
 ve kendileri hakkında söyledikleri her birinde bayt bayt aynıdır.

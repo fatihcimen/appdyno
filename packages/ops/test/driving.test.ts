@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  inCall,
   must,
   type AppManager,
   type Device,
@@ -27,7 +28,7 @@ import {
 } from '../src/index.js';
 import { keyName, keyPress } from '../src/step-schemas.js';
 import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { callerOf, linkedClient } from './helpers.js';
 
 type Result = {
   isError?: boolean;
@@ -721,6 +722,45 @@ describe('a ref on a screen an app moved by itself', () => {
     const reads = d.calls.filter((c) => c.name === 'tree').length;
     await call('tap', { ref: line[1], read: 'none' });
     expect(d.calls.filter((c) => c.name === 'tree').length).toBe(reads);
+  });
+
+  it('of two taps sent at once, the second aims at the screen the first left', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const text = (await call('screen')).text;
+    const form = must(/(@\w+) button "Form"/.exec(text), 'Form')[1];
+    const allow = must(/(@\w+) button "İzin"/.exec(text), 'İzin')[1];
+    const [first, second] = await Promise.all([
+      call('tap', { ref: form }),
+      call('tap', { ref: allow }),
+      // a read runs beside them
+      call('screen'),
+    ]);
+    expect(first.error).toBe(false);
+    // where İzin was, the form has its Gönder, which a tap aimed at the screen before would have sent
+    expect([second.data.code, second.data.dispatched]).toEqual(['STALE', false]);
+    expect(act(d)).toHaveLength(1);
+    expect(d.screen).toBe('form');
+  });
+
+  it('does nothing of a call its client gave up while it waited its turn', async () => {
+    const d = new FakeDevice();
+    const own = d.act.bind(d);
+    d.act = async (a, o) => {
+      await new Promise((r) => setTimeout(r, 300));
+      return own(a, o);
+    };
+    const { ctx } = await connect(d);
+    const call = callerOf(ctx);
+    const gaveUp = new AbortController();
+    const first = call('tap', { selector: { text: 'Form' } });
+    const second = inCall({ signal: gaveUp.signal }, () => call('press_key', { key: 'tab' }));
+    gaveUp.abort();
+    await first;
+    await expect(second).rejects.toMatchObject({ code: 'CANCELLED' });
+    // as long as a key would take to land
+    await new Promise((r) => setTimeout(r, 600));
+    expect(act(d).map((a) => a.kind)).toEqual(['tap']);
   });
 });
 

@@ -7,6 +7,8 @@ The 48 tools an MCP client can call. Each is also [a command](cli.md), and a cal
 Tools take no `device` parameter. The device is the server's `--device`, else the only connected one,
 else the one `use_device` selected.
 
+A client's calls that act run one at a time, in the order they came: two sent at once, as a `tap` on each of two refs in one turn, are made one after the other, and the second aims at the screen the first left, so a ref the first took away is refused as `STALE`. A call that only reads, as `screen`, `find`, `wait_for` or `assert`, runs beside them, and a tool a `steps` call makes runs within it.
+
 The server speaks MCP's revisions from 2024-10-07 to 2025-11-25, which open with `initialize`, and 2026-07-28, which
 opens with `server/discover`, over stdio and over `--http` alike: the client's first message says which. The tools
 and what they say of themselves are the same, byte for byte, on each.

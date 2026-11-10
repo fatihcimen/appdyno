@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import {
+  DeviceQueue,
   kindOf,
   must,
   readState,
@@ -32,6 +33,8 @@ const Saved = z.object({
 export class ServerContext {
   private readonly sessions = new Map<string, Session>();
   currentSerial: string | undefined;
+  /** This client's calls that act, one at a time: two sent at once both aimed at the screen before either. */
+  readonly acting = new DeviceQueue();
 
   /** Its own copy: a replay's secrets join the list for as long as it runs. */
   readonly policy: Policy;
