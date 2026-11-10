@@ -50,6 +50,12 @@ export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.e
   };
 }
 
+/** The devices and apps a server this process starts may drive, as its flags: the same as this one's. */
+export const allowFlags = ({ devices, apps }: Policy) => [
+  ...(devices ? ['--allow-devices', devices.source] : []),
+  ...(apps.length > 0 ? ['--allow-apps', apps.join(',')] : []),
+];
+
 /** It goes in a URL as well as a header, and it is all that stands between a tunnel and a phone. */
 const GOOD_TOKEN = /^[\w.~-]{32,}$/;
 

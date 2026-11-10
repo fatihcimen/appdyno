@@ -51,7 +51,7 @@ import { pushCommand } from './push-setup.js';
 import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
-import { policyOf, serveCommand, type ServerFlags } from './serve.js';
+import { allowFlags, policyOf, serveCommand, type ServerFlags } from './serve.js';
 import {
   devicesCommand,
   installCommand,
@@ -126,7 +126,13 @@ const servicesOfHub = (ctx: ServerContext) => {
     home: homedir(),
     env: process.env,
     ...(server && { server }),
-    mcpCommand: [process.execPath, fileURLToPath(import.meta.url), 'mcp'],
+    // the hub's own lists, by flag or variable, hold for the server it starts for a tunnel
+    mcpCommand: [
+      process.execPath,
+      fileURLToPath(import.meta.url),
+      'mcp',
+      ...allowFlags(ctx.policy),
+    ],
     doctor: async () => [installCheck(root), ...(await doctor({ providers: providers() }))],
     self: [process.execPath, fileURLToPath(import.meta.url)],
     providers: providers(),

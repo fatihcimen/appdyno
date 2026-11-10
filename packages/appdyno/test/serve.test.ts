@@ -1,5 +1,7 @@
+import { parseArgs } from 'node:util';
 import { expect, it } from 'vitest';
-import { policyOf, tokenFromEnv } from '../src/serve.js';
+import { allowFlags, policyOf, tokenFromEnv } from '../src/serve.js';
+import { COMMANDS } from '../src/usage.js';
 
 it('takes a token that is long enough and fits in a URL, and refuses any other by its fix', () => {
   expect(tokenFromEnv(undefined)).toBeUndefined();
@@ -18,4 +20,13 @@ it('refuses an allow list given empty, by flag or variable, as it would let in e
   expect(policyOf({}, {})).toMatchObject({ apps: [] });
   expect(policyOf({}, {}).devices).toBeUndefined();
   expect(policyOf({ 'allow-devices': '^emulator-' }, {}).devices?.test('emulator-5554')).toBe(true);
+});
+
+it('gives a server it starts the devices and apps it keeps to, by flag, which that server reads as its own', () => {
+  const hub = policyOf({ 'allow-devices': '^emulator-5554$' }, { APPDYNO_ALLOW_APPS: 'a.b, c.d' });
+  const { values } = parseArgs({ args: allowFlags(hub), options: COMMANDS.mcp.flags });
+  const server = policyOf(values, {});
+  expect(server.devices?.source).toBe('^emulator-5554$');
+  expect(server.apps).toEqual(['a.b', 'c.d']);
+  expect(allowFlags(policyOf({}, {}))).toEqual([]);
 });
