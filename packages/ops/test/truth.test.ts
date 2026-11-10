@@ -92,6 +92,40 @@ describe('changed', () => {
     expect(launch.text).not.toContain('no change seen');
   });
 
+  it("waits up to 5 s for a link's screen to hold still, as an app it starts goes on drawing, and says so past that", async () => {
+    /** A screen that changes every read for `ms` after the link, then holds. */
+    const drawing = (ms: number) => {
+      const device = new FakeDevice();
+      let linkedAt = 0;
+      const shown = device.current.bind(device);
+      device.openUrl = () => Promise.resolve(void (linkedAt = Date.now()));
+      device.current = () => {
+        const t = shown();
+        const since = Date.now() - linkedAt;
+        if (!linkedAt || since > ms) return t;
+        t.nodes.push({
+          p: 0,
+          w: 0,
+          c: 'android.widget.TextView',
+          t: `${since}`,
+          b: [0, 0, 9, 9],
+          f: 17,
+        });
+        return { ...t, hash: `${t.hash}+${since}` };
+      };
+      return device;
+    };
+    const late = await (
+      await connect(drawing(3_600))
+    ).call('open_link', { url: 'https://example.test/' });
+    expect(late.structuredContent).toMatchObject({ settled: true });
+    expect(late.text).not.toContain('the screen may still be changing');
+    const never = await (
+      await connect(drawing(60_000))
+    ).call('open_link', { url: 'https://example.test/' });
+    expect(never.structuredContent).toMatchObject({ settled: false });
+  }, 20_000);
+
   it('names what kept the screen busy, where known', () => {
     const screen = {
       list: [{ ref: '@a', role: 'progressbar', label: 'Loading', x: 1, y: 1, flags: [] }],

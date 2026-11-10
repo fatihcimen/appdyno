@@ -47,6 +47,9 @@ const Language = z
 const APPS_PAGE_MS = 5_000;
 const APPS_SWIPES = 20;
 
+/** How long a link's screen has to hold still: an app it starts, as an action's settle allows 3 s. */
+const LINK_SETTLE_MS = 5_000;
+
 export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: Steps) {
   const policy = ctx.policy;
 
@@ -146,7 +149,8 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         if (settings) return openSettings(s, settings, read);
         const href = checkUrl(policy, must(url, 'url'), s.device.platform);
         await s.device.openUrl(href, s.appId);
-        return afterChange(s, linkSaid(s, href), read);
+        // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
+        return afterChange(s, linkSaid(s, href), read, undefined, undefined, LINK_SETTLE_MS);
       },
     }),
     defineOp({

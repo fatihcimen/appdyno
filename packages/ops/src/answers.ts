@@ -306,6 +306,7 @@ async function afterChange(
   read: ReadMode,
   launched?: string,
   ready?: (x: Screen) => boolean,
+  maxMs: number = SETTLE.maxMs,
 ) {
   const ran = inFront(s) || (!!launched && launched === s.appId);
   const started = Date.now();
@@ -319,7 +320,7 @@ async function afterChange(
   if (ready) await s.until(ready, SETTLE.maxMs);
   if (read === 'none') return reply(saidOf(said), summaryOf(clean, saidOf(said)));
   reportProgress('waiting for the screen to settle');
-  const { screen, settled } = await settleRead(s);
+  const { screen, settled } = await settleRead(s, maxMs);
   return afterAction(clean, s, saidOf(said, screen), read, screen, {
     before,
     base,
@@ -357,7 +358,8 @@ export function answersFor(ctx: ServerContext) {
       read: ReadMode,
       launched?: string,
       ready?: (x: Screen) => boolean,
-    ) => afterChange(clean, s, said, read, launched, ready),
+      maxMs?: number,
+    ) => afterChange(clean, s, said, read, launched, ready, maxMs),
   };
 }
 
