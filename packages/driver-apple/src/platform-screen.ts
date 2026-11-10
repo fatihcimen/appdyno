@@ -10,6 +10,7 @@ import {
   must,
 } from '@appdyno/core';
 import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
+import type { Prompt } from './simtree.js';
 
 /** The home screen app, whose alerts are the system's (permission prompts), never the app's own. */
 export const HOME_SCREEN_APP = 'com.apple.springboard';
@@ -18,15 +19,29 @@ export const HOME_SCREEN_APP = 'com.apple.springboard';
 export const SPOTLIGHT_APP = 'com.apple.Spotlight';
 
 /**
- * The confirming button of a system prompt over the screen ("Open in …?" after a link): of two buttons
- * the second (the first cancels, in any language), else one that says `words`.
+ * The button that opens of "Open in “name”?", which iOS asks before a link first opens an app: one line that names the
+ * app, and of two buttons the second in every language. A permission's prompt names the app too, with a line on why.
  */
-// shortcut: a two-button system prompt that is not the link's (a notification prompt) within the 3 s
-// after a link is answered as confirmed; tell them apart by the prompt's text if one shows up there
-export function promptButton(t: Tree, words = /^open$/): Point | undefined {
-  const buttons = t.nodes.filter((n) => t.windows[n.w]?.type === 3 && n.c === 'Button');
-  const b = buttons.length === 2 ? buttons[1] : buttons.find((n) => words.test(fold(n.d ?? '')));
-  return b && { x: (b.b[0] + b.b[2]) / 2, y: (b.b[1] + b.b[3]) / 2 };
+export function openButton(p: Prompt | undefined, name: string) {
+  if (p?.words.length !== 1 || !p.words[0]?.includes(name)) return undefined;
+  const b = p.buttons.length === 2 ? p.buttons[1] : p.buttons.find((x) => /^open$/i.test(x.label));
+  return b && { x: b.x, y: b.y };
+}
+
+/** `openButton` of the first alert in a read, by its own words and buttons. */
+export function promptButton(t: Tree, name: string): Point | undefined {
+  const alert = t.nodes.findIndex((n) => n.c === 'Alert');
+  const under = (i: number): boolean => {
+    const p = t.nodes[i]?.p ?? -1;
+    return p === alert || (p >= 0 && under(p));
+  };
+  const inside = alert < 0 ? [] : t.nodes.filter((_, i) => under(i));
+  const label = (n: Tree['nodes'][number]) => n.d ?? n.t ?? '';
+  const words = inside.filter((n) => n.c === 'StaticText' && label(n)).map(label);
+  const buttons = inside
+    .filter((n) => n.c === 'Button')
+    .map((n) => ({ label: label(n), x: (n.b[0] + n.b[2]) / 2, y: (n.b[1] + n.b[3]) / 2 }));
+  return openButton({ words, buttons }, name);
 }
 
 /** The words of a read that are no control's. */

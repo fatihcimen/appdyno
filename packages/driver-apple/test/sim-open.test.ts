@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { Tree } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import { IosSimulatorDevice } from '../src/index.js';
 import { Simctl } from '../src/simctl.js';
-import { openButton } from '../src/sim-open.js';
+import { openButton } from '../src/platform-screen.js';
 
 const UDID = 'C8F701E7-9A02-4465-AC91-F4C85FBA788D';
 const APP = 'dev.appdyno.fixture';
@@ -37,6 +40,21 @@ describe('the prompt iOS asks before a scheme first opens an app', () => {
     expect(openButton(PROMPT, 'other app')).toBeUndefined();
     expect(openButton(undefined, 'appdyno fixture')).toBeUndefined();
   });
+
+  it("is not the app's own permission prompt, which names it as well, with a line on why", () => {
+    // as the helper read it over the fixture on an iOS 27.2 simulator
+    const notifications = {
+      words: [
+        '“appdyno fixture” Would Like to Send You Notifications',
+        'Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.',
+      ],
+      buttons: [
+        { label: 'Don’t Allow', x: 127, y: 518 },
+        { label: 'Allow', x: 275, y: 518 },
+      ],
+    };
+    expect(openButton(notifications, 'appdyno fixture')).toBeUndefined();
+  });
 });
 
 describe("a link in a scheme of the app's own on a simulator", () => {
@@ -65,5 +83,28 @@ describe("a link in a scheme of the app's own on a simulator", () => {
     await d.openUrl('appdyno-fixture://open/list', APP);
     expect(read).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('a link on a simulator the helper does not read, by the runner', () => {
+  /** A read of an iOS 27.2 simulator by the runner, with the alert up. */
+  const read = (name: string) =>
+    JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures', `${name}.json`), 'utf8')) as Tree;
+  const linked = (tree: Tree) => {
+    const direct = { reads: false, front: () => Promise.resolve(undefined), close: vi.fn() };
+    const d = new IosSimulatorDevice(UDID, quiet(), direct as never);
+    const tap = vi.fn(() => Promise.resolve({}));
+    Object.assign(d, { target: () => Promise.resolve(), tree: () => Promise.resolve(tree), tap });
+    vi.spyOn(d.apps, 'listApps').mockResolvedValue([{ id: APP, name: 'appdyno fixture' }]);
+    return { d, tap };
+  };
+
+  it('answers "Open in …?" by the app\'s name, and never its own notification prompt', async () => {
+    const asks = linked(read('ios-open-in-prompt'));
+    await asks.d.openUrl('appdyno-fixture://open/list', APP);
+    expect(asks.tap).toHaveBeenCalledExactlyOnceWith({ x: 275, y: 474 }, { settle: {} });
+    const permission = linked(read('ios-notification-prompt'));
+    await permission.d.openUrl('appdyno-fixture://open/list', APP);
+    expect(permission.tap).not.toHaveBeenCalled();
   });
 });

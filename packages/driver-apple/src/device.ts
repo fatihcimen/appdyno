@@ -356,10 +356,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
     if (pkg) await this.target(pkg);
     await this.queue.run(() => this.ops.openUrl(url, pkg));
     if (!pkg || !this.ops.linkPrompt) return;
+    const name = await this.appName(pkg).catch(() => pkg);
     // shortcut: the prompt is looked for during 3 s after every link to an app; a link without one costs that time
     const end = Date.now() + 3_000;
     while (Date.now() < end) {
-      const open = promptButton(await this.tree());
+      const open = promptButton(await this.tree(), name);
       if (open) {
         // returns once the link's screen has come
         await this.tap(open, { settle: {} });

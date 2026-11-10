@@ -1,16 +1,9 @@
 import { type DeviceQueue, must, sleep } from '@appdyno/core';
-import { HOME_SCREEN_APP } from './platform-screen.js';
+import { HOME_SCREEN_APP, openButton } from './platform-screen.js';
 import type { Simctl } from './simctl.js';
 import type { DirectSim } from './simdirect.js';
 import { schemesAndName } from './sim-links.js';
 import type { Prompt } from './simtree.js';
-
-/** "Open in “name”?": its button that opens, the second of two in every language. */
-export function openButton(p: Prompt | undefined, name: string) {
-  if (!p?.words.some((w) => w.includes(name))) return undefined;
-  const b = p.buttons.length === 2 ? p.buttons[1] : p.buttons.find((x) => /^open$/i.test(x.label));
-  return b && { x: b.x, y: b.y };
-}
 
 const openers = new Map<string, Promise<{ schemes: string[]; name: string }>>();
 

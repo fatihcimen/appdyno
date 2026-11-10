@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -79,56 +79,32 @@ describe('iPhone inputs', () => {
 });
 
 describe('the link prompt', () => {
-  type Box = [number, number, number, number];
-  const prompt = (labels: string[]): Tree => ({
-    windows: [
-      {
-        type: 1,
-        pkg: 'com.example.app',
-        layer: 0,
-        b: [0, 0, 402, 874],
-        active: true,
-        focused: true,
-      },
-      {
-        type: 3,
-        pkg: 'com.apple.springboard',
-        layer: 1,
-        b: [60, 350, 342, 520],
-        active: false,
-        focused: false,
-      },
-    ],
-    nodes: [
-      { p: -1, w: 0, c: 'Application', b: [0, 0, 402, 874], f: 1 },
-      { p: -1, w: 1, c: 'Alert', d: '“App” içinde açılsın mı?', b: [60, 350, 342, 520], f: 1 },
-      ...labels.map((d, i) => ({
-        p: 1,
-        w: 1,
-        c: 'Button',
-        d,
-        b: [60 + i * 141, 470, 201 + i * 141, 520] as Box,
-        f: 3,
-      })),
-    ],
-    truncated: false,
-    elapsedMs: 1,
-    hash: 'h',
+  /** A read of an iOS 27.2 simulator by the runner, with the alert up and dismissed after. */
+  const read = (name: string) =>
+    JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures', `${name}.json`), 'utf8')) as Tree;
+  /** The read, its alert's words and buttons in another language. */
+  const said = (t: Tree, words: Record<string, string>) => ({
+    ...t,
+    nodes: t.nodes.map((n) => ({ ...n, ...(n.d && words[n.d] && { d: words[n.d] }) })),
   });
 
-  it('confirms by place in any language: the second of two buttons', async () => {
+  it('confirms "Open in …?" by place in any language: the second of two buttons', async () => {
     const { promptButton } = await import('../src/platform-screen.js');
-    expect(promptButton(prompt(['Vazgeç', 'Aç']))).toEqual({ x: 271.5, y: 495 });
-    expect(promptButton(prompt(['Abbrechen', 'Öffnen']))).toEqual({ x: 271.5, y: 495 });
-  });
-
-  it('falls back to the word with another count of buttons, and finds nothing without a prompt', async () => {
-    const { promptButton } = await import('../src/platform-screen.js');
-    expect(promptButton(prompt(['Cancel', 'Open', 'Always']))).toEqual({ x: 271.5, y: 495 });
-    expect(promptButton(prompt(['OK']))).toBeUndefined();
+    const asks = read('ios-open-in-prompt');
+    expect(promptButton(asks, 'appdyno fixture')).toEqual({ x: 275, y: 474 });
+    const tr = { 'Open in “appdyno fixture”?': '“appdyno fixture” içinde açılsın mı?' };
     expect(
-      promptButton({ ...prompt([]), windows: prompt([]).windows.slice(0, 1) }),
-    ).toBeUndefined();
+      promptButton(said(asks, { ...tr, Cancel: 'Vazgeç', Open: 'Aç' }), 'appdyno fixture'),
+    ).toEqual({ x: 275, y: 474 });
+  });
+
+  it("never answers the app's own permission prompt, which names it too, nor a prompt of another app", async () => {
+    const { promptButton } = await import('../src/platform-screen.js');
+    expect(promptButton(read('ios-notification-prompt'), 'appdyno fixture')).toBeUndefined();
+    const asks = read('ios-open-in-prompt');
+    expect(promptButton(asks, 'Maps')).toBeUndefined();
+    const none = { ...asks, nodes: asks.nodes.filter((n) => n.c !== 'Alert') };
+    expect(promptButton(none, 'appdyno fixture')).toBeUndefined();
   });
 });
 
