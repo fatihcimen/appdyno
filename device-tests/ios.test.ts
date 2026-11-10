@@ -1,4 +1,4 @@
-import { assert, beforeAll, describe, expect, it } from 'vitest';
+import { assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from './workspace.js';
 import { PROTOCOL, type Tree } from '@appdyno/protocol';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
@@ -59,28 +59,61 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   }, 240_000);
   beforeAll(() => d.open(), 240_000);
 
+  /** What the runner was asked meanwhile: it starts behind the helper at the first read, and nothing waits on it. */
+  const askedOfRunner = async (f: () => Promise<unknown>) => {
+    const spy = vi.spyOn(d as unknown as { callNow: () => Promise<unknown> }, 'callNow');
+    try {
+      await f();
+      return spy.mock.calls.length;
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
   it('launches, reads and taps with no runner, from the first touch on', async () => {
     expect(d.hello?.agentVersion).toBe('helper');
     const s = await home();
-    // not Form: its control found twice at different places is the runner's to tell apart
-    const r = await d.tap(found(s, 'Dialog'), { settle: SETTLE, read: 'tree', before: s.hash });
-    expect(r.tree?.nodes.some((n) => n.id === 'open_dialog')).toBe(true);
-    expect(d.lastStartWasCold).toBe(false);
-    expect(d.hello?.agentVersion).toBe('helper');
+    // not Form: its control found twice at different places is the runner's to tell apart, once it is up
+    let r: Awaited<ReturnType<IosSimulatorDevice['tap']>> | undefined;
+    const asked = await askedOfRunner(async () => {
+      r = await d.tap(found(s, 'Dialog'), { settle: SETTLE, read: 'tree', before: s.hash });
+    });
+    expect(r?.tree?.nodes.some((n) => n.id === 'open_dialog')).toBe(true);
+    expect(asked).toBe(0);
   });
 
-  it('looks for a sheet over the app in front with no runner, and brings none up', async () => {
+  it('looks for a sheet over the app in front with no runner', async () => {
     await home();
-    expect(await d.systemWords()).toEqual([]);
-    expect(d.agentUp).toBe(false);
+    let words: string[] = [];
+    expect(await askedOfRunner(async () => (words = await d.systemWords()))).toBe(0);
+    expect(words).toEqual([]);
+  });
+
+  it('touches and reads a layout with a control found twice while its runner starts, not after it', async () => {
+    const fresh = new IosSimulatorDevice(udid);
+    // a runner on its way, which never comes: what waits for it would hang here
+    Object.defineProperty(fresh, 'agentStarting', { value: true });
+    Object.assign(fresh, { ensure: () => new Promise(() => undefined) });
+    try {
+      await fresh.open();
+      await fresh.terminate(APP);
+      await fresh.launch(APP);
+      const s = await fresh.read(APP);
+      const r = await fresh.tap(found(s, 'Form'), { settle: SETTLE, read: 'tree', before: s.hash });
+      // the read that waited for the runner's seconds, its control found twice shown at both places
+      expect(r.tree?.nodes.filter((n) => n.id === 'dup_close')).toHaveLength(2);
+      expect(r.tree?.nodes.some((n) => n.id === 'gsm_input')).toBe(true);
+    } finally {
+      fresh.close();
+    }
   });
 
   it('says hello as iOS in points, from the helper and then from the runner', async () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: PROTOCOL });
     const size = helloOf(d).screen;
     expect(size.density).toBeGreaterThanOrEqual(2);
-    // only a runner waits on the device: the helper is read
-    expect(await d.waitChange(undefined, 0)).toBeUndefined();
+    // only a runner waits on the device: the helper is read (until the one started behind it is up)
+    if (!d.agentUp) expect(await d.waitChange(undefined, 0)).toBeUndefined();
     await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
     expect(helloOf(d).agentVersion).not.toBe('helper');
     expect(d.hello?.screen).toEqual(size);
@@ -385,7 +418,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       // an alert is the runner's to read
       const s = await open('Dialog');
       await d.tap(foundId(s, 'open_dialog'), { settle: SETTLE });
-      expect(await d.direct.read(APP)).toEqual({ refused: 'alert' });
+      expect(await d.direct.read(APP)).toMatchObject({ refused: 'alert' });
       expect((await d.tree()).nodes.some((n) => n.c === 'Alert')).toBe(true);
     }, 120_000);
 

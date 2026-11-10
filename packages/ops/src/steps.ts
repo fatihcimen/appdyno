@@ -235,12 +235,18 @@ export function stepsFor(
           st.ref || st.selector || st.x !== undefined
             ? (await target(s, st, patient)).point
             : undefined;
+        // a simulator's helper takes touches but not text: typing waits for its runner if that is still starting
+        const waited = s.device.agentUp ? undefined : Date.now();
         const r = await s.device.typeText(st.text, {
           ...(at && { at }),
           replace: st.replace ?? false,
           submit: st.submit ?? false,
           ...opts,
         });
+        const started =
+          waited !== undefined && s.device.agentUp
+            ? `, after the runner's start: ${((Date.now() - waited) / 1000).toFixed(1)} s`
+            : '';
         // iOS takes keys with no field reporting the focus (a hidden field does not): with no keyboard, nothing took them
         if (!at && r.verified === false && r.tree && !s.device.platformScreen.keyboardOpen(r.tree))
           throw new ToolError(
@@ -252,7 +258,7 @@ export function stepsFor(
         // never the text itself (it may be a phone number or a code)
         return {
           r,
-          done: `typed (${Array.from(st.text).length} characters${st.submit ? ', submitted' : ''}${r.verified === false ? ', the field read back holds other text' : r.verified === undefined ? ', not read back' : ''})`,
+          done: `typed (${Array.from(st.text).length} characters${st.submit ? ', submitted' : ''}${r.verified === false ? ', the field read back holds other text' : r.verified === undefined ? ', not read back' : ''}${started})`,
         };
       }
       case 'press_key': {

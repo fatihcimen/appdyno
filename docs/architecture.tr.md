@@ -64,7 +64,7 @@ Her platformun kendi giriş yolu vardır. Bir simülatörün hiç ajana ihtiyaç
 | cihaz     | orada ne çalışır                                         | Mac ona nasıl ulaşır                                      |
 | --------- | -------------------------------------------------------- | --------------------------------------------------------- |
 | Android   | ajan: shell kullanıcısı olarak çalışan bir `app_process` | adb sunucusu üzerinden, token ile bir abstract soket      |
-| simülatör | başta hiçbir şey: Mac'teki yardımcılar okur ve dokunur   | yardımcılar; runner bir şey ona ihtiyaç duyduğunda başlar |
+| simülatör | başta hiçbir şey: Mac'teki yardımcılar okur ve dokunur   | yardımcılar; runner seçildiğinde onların arkasında başlar |
 | iPhone    | runner, bir XCTest paketi                                | `usbmuxd`                                                 |
 
 ## Bir pencere

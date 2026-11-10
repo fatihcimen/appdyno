@@ -148,23 +148,27 @@ export class ServerContext {
 
   /**
    * What a first call on a selected device needs, started in the background: a simulator's helpers took about 400 ms of a
-   * server's first read and 200 of its first touch. A device this server may not drive is left for its call to refuse.
+   * server's first read and 200 of its first touch, and its runner seconds of what needs it. A device this server may not
+   * drive is left for its call to refuse.
    */
   warm(serial: string) {
     if (this.sessions.has(serial) || this.warmed.has(serial) || !this.allowed(serial)) return;
+    // what another process holds, its runner with it, is left to it until a call here says otherwise
+    const other = this.heldBy(serial);
+    if (other && other.pid !== process.pid) return;
     try {
       const device = this.deviceFor(serial);
       this.warmed.set(serial, device);
-      device.warm?.();
+      device.warm?.(this.defaults.app ?? this.saved?.app);
     } catch {
       // no driver takes it: its first call says so
     }
   }
 
-  private async open(serial: string, launching: string | undefined): Promise<Device> {
+  private async open(serial: string, launching: string | undefined, app?: string): Promise<Device> {
     const device = this.warmed.get(serial) ?? this.deviceFor(serial);
     this.warmed.delete(serial);
-    device.warm?.();
+    device.warm?.(app);
     reportProgress(`connecting to ${serial}`);
     if (launching) {
       // the launch alongside would hide whether the app ran before it, which the launch's answer says
@@ -232,10 +236,12 @@ export class ServerContext {
     const owner = this.defaults.remember ? undefined : thisOwner(tool);
     const s = new Session(
       // a replay, a test run and a survey ask for a session outside any op
-      await this.open(serial, launching).catch((e: unknown) => {
-        if (holds) release(serial);
-        return refused(e);
-      }),
+      await this.open(serial, launching, app ?? this.defaults.app ?? saved?.app).catch(
+        (e: unknown) => {
+          if (holds) release(serial);
+          return refused(e);
+        },
+      ),
       app ?? this.defaults.app ?? saved?.app,
       owner,
       powerGuard(this.policy),

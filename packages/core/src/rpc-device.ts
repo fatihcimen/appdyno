@@ -152,7 +152,12 @@ export abstract class RpcDevice extends DeviceActions {
     return rpc;
   }
 
-  private ensure(): Promise<RpcClient> {
+  /** Whether an agent is on its way up. */
+  protected get agentStarting() {
+    return this.connecting !== undefined;
+  }
+
+  protected ensure(): Promise<RpcClient> {
     if (this.rpc && !this.rpc.closed) return Promise.resolve(this.rpc);
     this.connecting ??= this.connect().finally(() => (this.connecting = undefined));
     return this.connecting;

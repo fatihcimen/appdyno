@@ -118,8 +118,11 @@ export type Device = {
   /** Whether the last connect started a new agent. */
   lastStartWasCold: boolean;
   open(): Promise<Hello>;
-  /** What a first read and a first touch need, started in the background: nothing waits on it, nothing is refused by it. */
-  warm?(): void;
+  /**
+   * What a first read and a first touch need, started in the background, and what a launch of `app` will ask: nothing
+   * waits on it, nothing is refused by it.
+   */
+  warm?(app?: string): void;
   close(): void;
   /** `asItIs`: a look that leaves a dark or locked screen so, for what reads with no one asking it to. */
   tree(opts?: TreeOptions): Promise<Tree>;

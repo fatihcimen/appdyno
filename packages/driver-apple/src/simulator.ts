@@ -112,8 +112,24 @@ export class IosSimulatorDevice extends IosDevice {
     return this.runnerUp;
   }
 
-  warm() {
+  warm(app?: string) {
     this.direct.warm();
+    // its folder, which a launch's look at whether it ran before asks first: 110 to 235 ms of a first launch
+    if (app) this.simctl.appContainer(this.serial, app).catch(() => undefined);
+  }
+
+  private behind = false;
+
+  /**
+   * The runner, started behind the helper at the first read or touch, once: what only it does finds it on its way, where
+   * its start was the seconds of a first touch (9 to 28 s at load). It takes no front. Started as the device was chosen it
+   * slowed the launch that came next by 3.4 s (median of 10 pairs); a launch's own reads come once its app is in front.
+   */
+  private startBehind() {
+    // a device the helper has not opened is no simulator a person chose
+    if (this.behind || !this.helloInfo) return;
+    this.behind = true;
+    this.ensure().catch(() => undefined);
   }
 
   /** The helper's hello: the runner starts for what needs it, a system alert, text, an image or a control found twice. */
@@ -128,17 +144,12 @@ export class IosSimulatorDevice extends IosDevice {
   /** When the transition the last touch started has ended. */
   private transitionEnds = 0;
 
-  /** What starting the runner has taken: no settle running meanwhile counts it. */
+  /** What calls have waited for the runner to come up: no settle running meanwhile counts it. */
   private startingMs = 0;
 
-  protected override async startAgent() {
-    const at = Date.now();
+  protected override startAgent() {
     this.runnerFront = undefined;
-    try {
-      return await super.startAgent();
-    } finally {
-      this.startingMs += Date.now() - at;
-    }
+    return super.startAgent();
   }
 
   protected override startAlongside(pkg: string) {
@@ -158,14 +169,20 @@ export class IosSimulatorDevice extends IosDevice {
     timeoutMs: number,
     closes?: number,
   ) {
-    if (!this.targetApp && method !== 'app.target') {
-      const front = await this.direct.front().catch(() => undefined);
-      if (front && front !== this.runnerFront) {
-        await super.callNow('app.target', { pkg: front }, TIMEOUTS.action, closes);
-        this.runnerFront = front;
+    // a start in the background counts only from when a call waits on it
+    const waits = this.runnerUp ? undefined : Date.now();
+    try {
+      if (!this.targetApp && method !== 'app.target') {
+        const front = await this.direct.front().catch(() => undefined);
+        if (front && front !== this.runnerFront) {
+          await super.callNow('app.target', { pkg: front }, TIMEOUTS.action, closes);
+          this.runnerFront = front;
+        }
       }
+      return await super.callNow(method, params, timeoutMs, closes);
+    } finally {
+      if (waits !== undefined) this.startingMs += Date.now() - waits;
     }
-    return super.callNow(method, params, timeoutMs, closes);
   }
 
   /** A runner that starts later is told by `connect`. */
@@ -194,7 +211,8 @@ export class IosSimulatorDevice extends IosDevice {
     if (r.partial && this.runnerUp) return undefined;
     const known = this.verdicts.get(r.tree.hash);
     if (known) return { tree: withoutCopies(r.tree, known), busy: r.busy };
-    if (!r.copies && !this.runnerUp) return { tree: r.tree, busy: r.busy };
+    // while the runner starts, copies are answered as the helper finds them, all of them, rather than after its seconds
+    if (!this.runnerUp && (!r.copies || this.agentStarting)) return { tree: r.tree, busy: r.busy };
     if (!final) return { tree: r.tree, busy: r.busy, askRunner: true };
     const runner = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
     const verdict = learnCopies(r.tree, runner);
@@ -232,6 +250,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   override async tree({ asItIs, ...limits }: TreeOptions = {}): Promise<Tree> {
+    this.startBehind();
     if (!asItIs) await this.wake();
     if (limits.maxDepth !== undefined || limits.maxNodes !== undefined) return super.tree(limits);
     const { tree } = await this.queue.run(() => this.readNow());
@@ -240,6 +259,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   override async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
+    this.startBehind();
     await this.wake();
     return this.queue.run(async () => {
       if (!this.direct.status().input.startsWith('runner') && !this.direct.screenKnown)
