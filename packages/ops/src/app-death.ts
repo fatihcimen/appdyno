@@ -56,6 +56,34 @@ async function reportOf(
   return undefined;
 }
 
+/**
+ * Whether the system holds the app's process for its crash dialog, Android's "keeps stopping": the process stays, with
+ * its pid, until the dialog is answered, and no report is written meanwhile, so only this tells that death.
+ */
+const heldForDialog = async (s: Session, app: string) =>
+  (await s.device.appCrashing?.(app).catch(() => false)) ?? false;
+
+/**
+ * A death, as its report says, else as it was seen: a process held for its crash dialog, read once as that writes none
+ * meanwhile, or no process. A new process with no report is no death, as a link may start one. What every check of a
+ * death answers by, during an action and after it.
+ */
+async function deathOf(
+  s: Session,
+  app: string,
+  since: number,
+  clean: Clean,
+  seen: { held: boolean; pid?: string | undefined },
+): Promise<Died | undefined> {
+  const report = await reportOf(s, app, since, clean, seen.held ? 1 : REPORT_TRIES);
+  if (report) return report;
+  if (seen.held)
+    return {
+      reason: 'the system holds its process for its crash dialog, and no crash report says why yet',
+    };
+  return seen.pid ? undefined : { reason: 'its process is gone and no crash report says why' };
+}
+
 /** The process an action's answer names, 0 for none, where it was asked for one: an older agent names none. */
 export const pidInAnswer = (asked: string | undefined, r: { pid?: number | undefined }) =>
   asked && r.pid !== undefined ? { pid: r.pid > 0 ? String(r.pid) : undefined } : undefined;
@@ -105,27 +133,18 @@ export async function appDeath(
           ? 'the app has a new process: looking for its crash report'
           : 'the app has no process: looking for its crash report',
       );
-      // a new process with no report is no death, as a link may start one; none at all is one, a crash dialog over it
-      const report = await reportOf(s, app, since, clean);
-      return (
-        report ?? (pid ? undefined : { reason: 'its process is gone and no crash report says why' })
-      );
+      // none at all is a death, a crash dialog over it
+      return deathOf(s, app, since, clean, { held: false, pid });
     }
   }
   if (foreground === app || !(ran || wasPid)) return undefined;
-  // a crash Android shows as "keeps stopping" holds its process alive until the dialog is answered, and over the app's
-  // screen, which then has no app in front: no report is written meanwhile, and none if dropbox's rate limit drops it
-  const held = await s.device.appCrashing?.(app).catch(() => false);
+  // "keeps stopping" stands over the app's screen, which then has no app in front, and none if dropbox's rate limit
+  // drops its report
+  const held = await heldForDialog(s, app);
   if (!held && (!foreground || (await s.device.appRunning(app).catch(() => true))))
     return undefined;
   reportProgress('the app is gone: looking for its crash report');
-  return (
-    (await reportOf(s, app, since, clean, held ? 1 : REPORT_TRIES)) ?? {
-      reason: held
-        ? 'the system holds its process for its crash dialog, and no crash report says why yet'
-        : 'its process is gone and no crash report says why',
-    }
-  );
+  return deathOf(s, app, since, clean, { held });
 }
 
 /**
@@ -147,8 +166,8 @@ export async function diedUnder(
 }
 
 /**
- * The app's end while an action is still under way: its process gone, or another one in its place with a crash report.
- * A new process with no report is no death, as a link may start one.
+ * The app's end while an action is still under way: its process gone, held for its crash dialog, or another one in its
+ * place with a crash report.
  */
 async function deathWhile(
   s: Session,
@@ -164,13 +183,16 @@ async function deathWhile(
     : wasPid
       ? pid !== wasPid
       : !pid;
-  if (!gone) return undefined;
+  // asked only of the same process, in some 40 ms on an emulator against the watch's 500 ms between looks
+  const held = !gone && (await heldForDialog(s, app));
+  if (!gone && !held) return undefined;
   s.sawProcess(app, pid);
-  reportProgress('the app went away during the action: looking for its crash report');
-  const report = await reportOf(s, app, since, clean);
-  return (
-    report ?? (pid ? undefined : { reason: 'its process is gone and no crash report says why' })
+  reportProgress(
+    held
+      ? 'the system holds the app for its crash dialog: looking for its crash report'
+      : 'the app went away during the action: looking for its crash report',
   );
+  return deathOf(s, app, since, clean, { held, pid });
 }
 
 /** Lines that say why, the surest first: a stack's head, where its tail says only where. */

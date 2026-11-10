@@ -463,20 +463,27 @@ describe('steps across screens', () => {
 
   it('stops a scroll or a key pressed again whose app died under it at its refusal: nothing reaches the device after it', async () => {
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    for (const [tool, args, kind] of [
-      ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture'],
-      ['press_key', { key: 'tab', count: 10 }, 'key'],
+    // its process gone, or held for "keeps stopping" with the same pid and no report written yet
+    for (const [tool, args, kind, held] of [
+      ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', false],
+      ['press_key', { key: 'tab', count: 10 }, 'key', false],
+      ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', true],
     ] as const) {
       const d = new ScrollingList();
       d.pid = '4242';
       d.appPid = d.fakePid;
-      d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
+      if (!held) d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
+      let crashing = false;
+      d.appCrashing = () => Promise.resolve(crashing);
       let sent = 0;
       const own = d.act.bind(d);
       // the second ends the app; each takes as long as a settled stroke does, so the watch finds it under way
       d.act = async (a, o) => {
         const r = await own(a, o);
-        if (a.kind === kind && ++sent === 2) d.pid = undefined;
+        if (a.kind === kind && ++sent === 2) {
+          if (held) crashing = true;
+          else d.pid = undefined;
+        }
         if (a.kind === kind) await wait(400);
         return r;
       };
@@ -484,10 +491,15 @@ describe('steps across screens', () => {
       await call('screen');
       const r = await call(tool, args);
       const atRefusal = sent;
-      expect([r.data.code, r.data.dispatched], tool).toEqual(['APP_NOT_RUNNING', true]);
-      expect(r.text).toContain('the app died: fixture crash');
+      const how = `${tool}${held ? ', held' : ''}`;
+      expect([r.data.code, r.data.dispatched], how).toEqual(['APP_NOT_RUNNING', true]);
+      expect(r.text, how).toContain(
+        held
+          ? 'the app died: the system holds its process for its crash dialog'
+          : 'the app died: fixture crash',
+      );
       await wait(2_000);
-      expect(sent, tool).toBe(atRefusal);
+      expect(sent, how).toBe(atRefusal);
     }
   });
 
