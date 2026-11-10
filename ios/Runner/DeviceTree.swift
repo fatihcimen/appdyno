@@ -132,7 +132,7 @@ extension Device {
                                "placeholderValue", "hasFocus", "hasKeyboardFocus"]
     private typealias AttributesOf = @convention(c) (AnyClass, Selector, NSArray, Bool) -> AnyObject?
     private typealias Request = @convention(c) (AnyObject, Selector, AnyObject, NSArray, NSDictionary,
-                                                UnsafeMutablePointer<NSError?>?) -> AnyObject?
+                                                AutoreleasingUnsafeMutablePointer<NSError?>?) -> AnyObject?
     private static let selRequest = NSSelectorFromString("requestSnapshotForElement:attributes:parameters:error:")
 
     static func ask(_ object: AnyObject, _ name: String) -> AnyObject? {
@@ -172,6 +172,7 @@ extension Device {
         guard let p = parts, let process = ask(app, "currentProcess"),
               let element = ask(process, "accessibilityElement")
         else { return nil }
+        // an error comes back autoreleased: a plain pointer to it made Swift release it a second time
         var error: NSError?
         guard let result = p.request(p.client, selRequest, element, p.attributes, p.parameters, &error) else {
             return nil

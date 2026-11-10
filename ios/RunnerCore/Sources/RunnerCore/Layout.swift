@@ -30,8 +30,10 @@ public extension Node {
 
 /// A frame as a tree gives it: [left, top, right, bottom], whole numbers; nothing finite to say is no box.
 public func box(_ rect: CGRect) -> [Int] {
-    guard rect.width.isFinite, rect.height.isFinite else { return [0, 0, 0, 0] }
-    return [Int(rect.minX.rounded()), Int(rect.minY.rounded()), Int(rect.maxX.rounded()), Int(rect.maxY.rounded())]
+    let edges = [rect.minX, rect.minY, rect.maxX, rect.maxY]
+    // a null frame's origin is infinite and an infinite frame's edges are past any Int: either would end the runner
+    guard edges.allSatisfy({ $0.isFinite && abs($0) < 1e9 }) else { return [0, 0, 0, 0] }
+    return edges.map { Int($0.rounded()) }
 }
 
 /// Node flags, as the protocol numbers them.

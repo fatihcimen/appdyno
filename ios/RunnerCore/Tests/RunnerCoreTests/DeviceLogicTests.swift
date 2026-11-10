@@ -97,6 +97,12 @@ final class BoxTests: XCTestCase {
     func testAFrameWithNoSizeToSpeakOfIsNoBox() {
         XCTAssertEqual(box(CGRect(x: 0, y: 0, width: CGFloat.infinity, height: 1)), [0, 0, 0, 0])
     }
+
+    func testANullOrInfiniteFrameIsNoBox() {
+        XCTAssertEqual(box(.null), [0, 0, 0, 0])
+        XCTAssertEqual(box(.infinite), [0, 0, 0, 0])
+        XCTAssertEqual(box(CGRect(x: CGFloat.nan, y: 0, width: 1, height: 1)), [0, 0, 0, 0])
+    }
 }
 
 final class PeerTests: XCTestCase {
