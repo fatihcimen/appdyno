@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Appdyno.app and its disk image, from what `pnpm build` made. Everything lands in `.app-build`:
 //   pnpm build && node scripts/build-app.mjs [--release]
+// The disk image's window is dmgbuild's, which uvx runs: uv is in .mise.toml.
 //
 // With no identity it signs ad hoc, and a person has to open it by hand once. These turn on the rest; each is a secret
 // the person releasing holds, and none is ever looked up on this machine:
@@ -23,20 +24,31 @@ import {
   readFileSync,
   rmSync,
   statSync,
-  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildGlassIcon, buildIcns, buildMenuGlyph } from './build-icons.mjs';
+import { buildDmgBackground, buildGlassIcon, buildIcns, buildMenuGlyph } from './build-icons.mjs';
 import { download } from './download.mjs';
+import { DMG } from './icon-art.mjs';
 
 /** The runtime, as nodejs.org publishes its digest: the long-term release in active support, which asks no newer macOS. */
 const NODE = {
   version: 'v26.13.0',
   sha256: '6f5b3187d9df9fc007e881167905bc7d69ad26450ddc377c83d63256a2495b6e',
 };
+/**
+ * dmgbuild, which writes the disk image's window as Finder keeps it in a .DS_Store, with no Finder and no AppleScript,
+ * and the two packages it needs: pure Python, by the digests PyPI publishes, run by uvx on this Python.
+ * @type {[string, string, string][]}
+ */
+const DMGBUILD = [
+  ['dmgbuild', '1.6.7', '37ee5771c377beb3203d9164aae8046ffed8531c06edf9227f5788b3c599b1bf'],
+  ['ds_store', '1.3.3', 'b92a371efbf1b4ccce2a04d1ed13fceacc4736c81ba09cf5aefb74c088160a35'],
+  ['mac_alias', '2.2.3', '7362b521d2132ef92f606a37abfed5fcd849ceb2f28b6f9743e014b02af92f0d'],
+];
+const PYTHON = '3.14';
 const MIN_MACOS = '13.5';
 const NAME = 'Appdyno';
 const WINDOW = 'Appdyno Window';
@@ -311,27 +323,88 @@ function notarizeApp() {
   sh('spctl', '--assess', '--type', 'execute', app);
 }
 
-function diskImage() {
-  const stage = mkdtempSync(join(tmpdir(), 'appdyno-dmg-'));
-  sh('ditto', app, join(stage, `${NAME}.app`));
-  symlinkSync('/Applications', join(stage, 'Applications'));
-  const dmg = join(out, image);
-  rmSync(dmg, { force: true });
+/** uvx's words for the pinned dmgbuild, from the wheels alone: nothing else is fetched for it. */
+async function dmgbuild() {
+  // its environments and any Python it downloads stay in this build's cache, off the person's own
+  process.env.UV_CACHE_DIR = join(out, 'cache/uv');
+  process.env.UV_PYTHON_INSTALL_DIR = join(out, 'cache/python');
+  const wheels = [];
+  for (const [name, release, digest] of DMGBUILD) {
+    const wheel = join(out, 'cache', `${name}-${release}-py3-none-any.whl`);
+    if (!existsSync(wheel)) {
+      const url = `https://files.pythonhosted.org/packages/py3/${name.charAt(0)}/${name}/${basename(wheel)}`;
+      await download(url, wheel);
+    }
+    if (sha256(wheel) !== digest) throw new Error(`${wheel} is not the pinned release`);
+    wheels.push(wheel);
+  }
+  const [tool = '', ...needs] = wheels;
+  return ['--python', PYTHON, '--no-index', '--from', tool, ...needs.flatMap((w) => ['--with', w])];
+}
+
+/**
+ * The image as a person and an update meet it, as dmgbuild leaves a failed copy or icon flag unsaid: the app whole at
+ * its root, where `update` takes it from, and the window's parts, with the volume's own icon turned on.
+ * @param {string} dmg
+ */
+function checkImage(dmg) {
+  const mount = mkdtempSync(join(tmpdir(), 'appdyno-dmg-check-'));
   sh(
     'hdiutil',
-    'create',
+    'attach',
     '-quiet',
-    '-fs',
-    'APFS',
-    '-format',
-    'ULMO',
-    '-volname',
-    NAME,
-    '-srcfolder',
-    stage,
+    '-nobrowse',
+    '-readonly',
+    '-noautoopen',
+    '-mountpoint',
+    mount,
     dmg,
   );
-  rmSync(stage, { recursive: true, force: true });
+  try {
+    sh('codesign', '--verify', '--deep', '--strict', join(mount, `${NAME}.app`));
+    for (const part of ['.VolumeIcon.icns', '.background.tiff', '.DS_Store', 'Applications'])
+      if (!existsSync(join(mount, part))) throw new Error(`${image} has no ${part}`);
+    // the folder's Finder flags, two bytes in: kHasCustomIcon, without which Finder shows a plain disk
+    const flags = sh('xattr', '-px', 'com.apple.FinderInfo', mount)
+      .replace(/\s/g, '')
+      .slice(16, 20);
+    if ((parseInt(flags, 16) & 0x400) === 0) throw new Error(`${image} has no icon of its own`);
+  } finally {
+    sh('hdiutil', 'detach', '-quiet', '-force', mount);
+    rmSync(mount, { recursive: true, force: true });
+  }
+}
+
+/** The window a read-only image opens by itself as it is double-clicked: the app, Applications and the way between. */
+async function diskImage() {
+  const art = mkdtempSync(join(tmpdir(), 'appdyno-dmg-'));
+  buildDmgBackground(art);
+  const settings = {
+    format: 'ULMO',
+    // what dmgbuild's alias to the background says the volume is, whatever it is
+    filesystem: 'HFS+',
+    files: [app],
+    symlinks: { Applications: '/Applications' },
+    icon: join(resources, `${ICON}.icns`),
+    background: join(art, 'background.png'),
+    icon_size: DMG.icon,
+    text_size: DMG.text,
+    window_rect: [[200, 120], DMG.size],
+    icon_locations: { [`${NAME}.app`]: DMG.app, Applications: DMG.applications },
+  };
+  // its settings are Python, and these values read the same in JSON
+  const file = join(art, 'settings.py');
+  writeFileSync(
+    file,
+    Object.entries(settings)
+      .map(([k, v]) => `${k} = ${JSON.stringify(v)}\n`)
+      .join(''),
+  );
+  const dmg = join(out, image);
+  rmSync(dmg, { force: true });
+  sh('uvx', ...(await dmgbuild()), 'dmgbuild', '-s', file, NAME, dmg);
+  rmSync(art, { recursive: true, force: true });
+  checkImage(dmg);
   if (identity) sh('codesign', '--sign', identity, '--timestamp', dmg);
   if (notary) notarize(dmg);
   return dmg;
@@ -371,7 +444,7 @@ icon();
 thePackage();
 signAll();
 if (notary) notarizeApp();
-const dmg = diskImage();
+const dmg = await diskImage();
 if (updateKey) appcast(dmg, updateKey);
 cask(dmg);
 

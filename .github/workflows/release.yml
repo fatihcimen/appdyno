@@ -41,6 +41,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 25
+      # uvx runs dmgbuild, which writes the disk image's window: uv as .mise.toml pins it, by its digest
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          checksum: 81b811b57e4624df7ed3aac148e0359100d9962f3d9dce00aec533dc2e086731
+          enable-cache: false
       - run: pnpm install --frozen-lockfile
       - name: Android agent
         run: cd android && ./gradlew --console=plain :agent:assembleDebug

@@ -284,6 +284,97 @@ export function social() {
   );
 }
 
+/**
+ * The disk image's window in points, from its top left: its size, and where the app and Applications stand, each the
+ * centre of its icon. scripts/build-app.mjs writes the same into the image's .DS_Store.
+ * @type {{ size: [number, number]; icon: number; text: number; app: [number, number]; applications: [number, number] }}
+ */
+export const DMG = {
+  size: [640, 400],
+  icon: 128,
+  text: 13,
+  app: [160, 204],
+  applications: [480, 204],
+};
+
+/** The ground of the hub in dark (mac/Viewer/Palette.m): where each bloom is, as shares of the window, its reach and strength. */
+const BLOOMS = /** @type {const} */ ([
+  [0.98, 0.04, 0.34, 0.86, '#1F3FD6'],
+  [0, 1, 0.36, 0.86, '#5B1FC4'],
+  [0.94, 1.04, 0.24, 0.66, '#B81C68'],
+  [0.02, 0, 0.2, 0.5, '#0B6DBD'],
+]);
+/** Past the window on the right and below, as Finder's title bar may take some of its height: the ground, never white. */
+const BLEED = 40;
+const FONT = 'font-family="Helvetica Neue, Helvetica, Arial, sans-serif" text-anchor="middle"';
+
+/**
+ * The disk image's background, `scale` pixels to a point. Finder may draw the names under the icons in black or in
+ * white, by the person's light or dark: each stands on the hub's blue, darkened until black and white text both read on
+ * it at 4.5:1 or more as drawn, #4170DA, as sips draws an SVG's colours a little lighter than they are written.
+ * @param {number} scale
+ */
+export function dmgBackground(scale) {
+  const [w, h] = DMG.size;
+  const [W, H] = [w + BLEED, h + BLEED];
+  const half = DMG.icon / 2;
+  const blooms = BLOOMS.map(
+    ([x, y, reach, strength, color], i) =>
+      `<radialGradient id="b${String(i)}" gradientUnits="userSpaceOnUse" cx="${n(x * w)}" cy="${n(y * h)}" r="${n(reach * w * 1.6)}">` +
+      `<stop offset="0" stop-color="${color}" stop-opacity="${String(strength)}"/>` +
+      `<stop offset=".45" stop-color="${color}" stop-opacity="${n(strength * 0.35)}"/>` +
+      `<stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`,
+  );
+  /** A pane of glass under an icon, and its name on a plate of light at its foot. */
+  const well = (/** @type {[number, number]} */ [x, y]) => {
+    const body = rounded(x - 88, y - half - 24, 176, DMG.icon + 70, 36);
+    const plate = `x="${x - 66}" y="${y + half - 2}" width="132" height="28" rx="14"`;
+    return (
+      `<path d="${body}" fill="url(#glass)"/>` +
+      `<path d="${body}" fill="none" stroke="url(#rim)" stroke-width="1.5"/>` +
+      `<rect ${plate} fill="${BLUE}" filter="url(#halo)" opacity=".7"/>` +
+      `<rect ${plate} fill="${BLUE}"/><rect ${plate} fill="${NIGHT}" opacity=".22"/>` +
+      `<rect ${plate} fill="none" stroke="url(#rim)" stroke-width="1"/>`
+    );
+  };
+  // from a pane of glass to the next, 22 points short of each
+  const [from, to] = [DMG.app[0] + 110, DMG.applications[0] - 110];
+  const y = DMG.app[1];
+  const arrow = `M${from} ${y}H${to}M${to - 13} ${y - 13}L${to} ${y}L${to - 13} ${y + 13}`;
+  return (
+    `<svg ${SVG} width="${W * scale}" height="${H * scale}" viewBox="0 0 ${W} ${H}"><defs>${blooms.join('')}` +
+    gradient(
+      'lit',
+      [
+        [0, BLUE],
+        [0.55, VIOLET],
+        [1, PINK],
+      ],
+      'x1="0" y1="0" x2="1" y2="0"',
+    ) +
+    gradient('glass', [
+      [0, WHITE, 0.1],
+      [1, WHITE, 0.04],
+    ]) +
+    gradient('rim', [
+      [0, WHITE, 0.4],
+      [0.5, WHITE, 0.08],
+      [1, WHITE, 0.16],
+    ]) +
+    '<filter id="soft" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="7"/></filter>' +
+    '<filter id="halo" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="9"/></filter></defs>' +
+    `<rect width="${W}" height="${H}" fill="${NIGHT}"/>` +
+    blooms.map((_, i) => `<rect width="${W}" height="${H}" fill="url(#b${String(i)})"/>`).join('') +
+    `<text x="${w / 2}" y="70" ${FONT} font-size="22" font-weight="500" fill="${PALE}">Drag appdyno to Applications</text>` +
+    `<text x="${w / 2}" y="96" ${FONT} font-size="13" fill="${QUIET}" opacity=".75">Then open it from Applications. It lives in the menu bar.</text>` +
+    well(DMG.app) +
+    well(DMG.applications) +
+    `<path d="${arrow}" fill="none" stroke="url(#lit)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#soft)" opacity=".9"/>` +
+    `<path d="${arrow}" fill="none" stroke="url(#lit)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` +
+    '</svg>\n'
+  );
+}
+
 /** @param {string} body */
 const layer = (body) =>
   `<svg ${SVG} width="1024" height="1024" viewBox="0 0 1024 1024">${body}</svg>\n`;

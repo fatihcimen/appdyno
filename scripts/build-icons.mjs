@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Regenerates every icon, logo and mark from scripts/icon-art.mjs, and compiles the Icon Composer file
- * to prove it. The app's icons and menu glyph are built with the app; see scripts/build-app.mjs.
+ * to prove it. The app's icons, menu glyph and disk image background are built with the app; see scripts/build-app.mjs.
  *
  *   node scripts/build-icons.mjs
  */
@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GENERATED, iosIcon, macIcon, menuGlyph, social } from './icon-art.mjs';
+import { dmgBackground, GENERATED, iosIcon, macIcon, menuGlyph, social } from './icon-art.mjs';
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
 /**
@@ -71,6 +71,15 @@ export function buildIcns(out) {
 export function buildMenuGlyph(dir) {
   render(menuGlyph(18), join(dir, 'menuTemplate.png'));
   render(menuGlyph(36), join(dir, 'menuTemplate@2x.png'));
+}
+
+/**
+ * The disk image's background, by its name and at twice its size beside it, as dmgbuild takes and joins them.
+ * @param {string} dir
+ */
+export function buildDmgBackground(dir) {
+  render(dmgBackground(1), join(dir, 'background.png'));
+  render(dmgBackground(2), join(dir, 'background@2x.png'));
 }
 
 /**
