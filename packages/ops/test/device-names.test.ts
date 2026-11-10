@@ -61,6 +61,15 @@ describe('use_device by what a person calls the device', () => {
     expect((await byName.call('device_info')).data.serial).toBe(SIM);
   });
 
+  it('opens a window on one the allow list names by its name, as every op past use_device does', async () => {
+    const { call } = context({ devices: /^Pixel_8_API_34$/ });
+    await call('use_device', { device: 'Pixel_8_API_34' });
+    // with no window command here, the step past the allow list
+    await expect(call('mirror', { action: 'open' })).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+    });
+  });
+
   it('refuses one the allow list leaves out with the devices it may drive, by name', async () => {
     const { call } = context({ devices: /^Pixel_8_API_34$/ });
     await expect(call('use_device', { device: 'bench-sim' })).rejects.toMatchObject({

@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
-import type { DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core';
+import type { DeviceProvider, DeviceSettings, SettingName, VirtualDevices } from '@appdyno/core';
 import { conditions, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
@@ -121,6 +121,26 @@ describe('the end of the server', () => {
       failed: [],
     });
     expect(s.persist).toHaveBeenCalledOnce();
+    drain();
+  });
+
+  it('puts back on a device the allow list names by its AVD, as the server it follows was let in by', async () => {
+    const s = serving();
+    s.values.dark_mode = 'yes';
+    const gone = { pid: 999_999, started: 'gone', tool: 'appdyno mcp', since: '' };
+    conditions.update(s.device.serial, () => ({ dark_mode: { was: 'no', owner: gone } }));
+    const avd = { id: 'Pixel_8', name: 'Pixel_8', state: 'running', serial: s.device.serial };
+    const virtual = { startable: () => Promise.resolve([avd]) } as unknown as VirtualDevices;
+    const ctx = new ServerContext(
+      { ...DEFAULT_POLICY, devices: /^Pixel_8$/ },
+      [{ ...providerOf(s.device), virtual }],
+      { claims: true, device: s.device.serial },
+    );
+    await putBackAfter(gone.pid, ctx, s.log);
+    expect(s.values.dark_mode).toBe('no');
+    expect(s.log).toHaveBeenCalledWith(
+      expect.objectContaining({ serial: s.device.serial, restored: ['dark_mode: off'] }),
+    );
     drain();
   });
 

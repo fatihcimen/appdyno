@@ -17,7 +17,7 @@ import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
 import { endSession, leftHere, sweep, type Taken } from './leftovers.js';
-import { checkApp, checkDevice, type Policy } from './policy.js';
+import { byPerson, checkApp, type Policy } from './policy.js';
 import { powerGuard } from './power.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
@@ -129,9 +129,14 @@ export class ServerContext {
     this.allowedAs.add(serial);
   }
 
-  /** As `checkDevice`, where a device let in by another of its names passes by its serial. */
-  private checkDevice(serial: string) {
-    if (!this.allowedAs.has(serial)) checkDevice(this.policy, serial);
+  /** The one check of the allow list: a device let in by another of its names passes by its serial. */
+  checkDevice(serial: string) {
+    if (!this.allowed(serial))
+      throw new ToolError(
+        `${serial} is not allowed on this server`,
+        'POLICY_DENIED',
+        byPerson('by --allow-devices'),
+      );
   }
 
   /** The devices of every provider. */

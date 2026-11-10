@@ -39,6 +39,17 @@ describe('what a window measures', () => {
     expect((await measures.history('dev.app')).map((line) => line.title)).toEqual(['Cold launch']);
   });
 
+  it('measures a device the allow list let in by another of its names, as its window was', async () => {
+    const device = new FakeDevice();
+    const ctx = new ServerContext({ ...DEFAULT_POLICY, devices: /^Pixel_8$/ }, [], {
+      measurements,
+      perf: join(state, 'perf'),
+    });
+    ctx.allowAs(device.serial);
+    const words = await windowMeasures(ctx, device).launch('dev.app', () => undefined);
+    expect(words.title).toBe('Cold launch');
+  });
+
   it("runs the tool an agent calls, on the window's own device, and keeps its run", async () => {
     const device = new FakeDevice();
     const open = vi.spyOn(device, 'open');

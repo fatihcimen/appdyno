@@ -8,6 +8,7 @@ import {
   type DeviceProvider,
   type Mirror,
   type MirrorSource,
+  type VirtualDevices,
 } from '@appdyno/core';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { must, startOf } from '@appdyno/core';
@@ -94,13 +95,14 @@ describe('--wifi', () => {
 
 function context(
   serials: string[],
-  over: { policy?: object; command?: string[]; recorder?: object } = {},
+  over: { policy?: object; command?: string[]; recorder?: object; virtual?: VirtualDevices } = {},
 ) {
   const provider: DeviceProvider = {
     list: () =>
       Promise.resolve(serials.map((serial) => ({ serial, state: 'device', ready: true }))),
     handles: () => true,
     open: (serial) => pixelsDevice(serial, over.recorder),
+    ...(over.virtual && { virtual: over.virtual }),
   };
   return new ServerContext({ ...DEFAULT_POLICY, ...over.policy }, [provider], {
     ...(over.command && { mirrorCommand: over.command }),
@@ -258,6 +260,15 @@ describe('a mirror parent', () => {
     });
     await expect(barred.done).resolves.toBe(1);
     expect(barred.lines.join()).toContain('not allowed');
+  }, 300_000);
+
+  it('a device the allow list names by its AVD is let in by it, as the server that opened the window was', async () => {
+    const avd = { id: 'Pixel_8', name: 'Pixel_8', state: 'running', serial: 'device-v' };
+    const virtual = { startable: () => Promise.resolve([avd]) } as unknown as VirtualDevices;
+    const named = context(['device-v'], { policy: { devices: /^Pixel_8$/ }, virtual });
+    const { lines, done } = run(named, { serials: ['device-v'], seconds: 0.05 });
+    await expect(done).resolves.toBe(0);
+    expect(lines.join()).not.toContain('not allowed');
   }, 300_000);
 
   it('several devices each have their own; one refused leaves the others', async () => {

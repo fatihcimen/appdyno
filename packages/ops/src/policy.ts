@@ -83,16 +83,6 @@ export function checkApp(policy: Policy, pkg: string): string {
   return pkg;
 }
 
-export function checkDevice(policy: Policy, serial: string): string {
-  if (policy.devices && !policy.devices.test(serial))
-    throw new ToolError(
-      `${serial} is not allowed on this server`,
-      'POLICY_DENIED',
-      byPerson('by --allow-devices'),
-    );
-  return serial;
-}
-
 /**
  * A new simulator's id is not known before it is made, so no allow list names it: none is made only to be refused, by
  * `simulator create` or the hub's New Simulator alike.

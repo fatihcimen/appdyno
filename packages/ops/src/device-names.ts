@@ -41,7 +41,7 @@ const namesOf = ({ d, ranAs }: Virtual) => [
   ),
 ];
 
-/** As `checkDevice`, by every name it answers to, so that a boot is allowed where the shutdown before it was. */
+/** As `ServerContext.checkDevice`, by every name it answers to, so that a boot is allowed where the shutdown before it was. */
 export function checkVirtual(ctx: ServerContext, x: Virtual) {
   const { devices } = ctx.policy;
   const names = namesOf(x);

@@ -95,8 +95,8 @@ const judged = (app: string, runs: string, data: { virtualDevice: boolean; noise
 export const WINDOW = 'appdyno window';
 
 /** Operations over a device already open in a window: a second driver object would be a second agent on it. */
-export const windowContext = (ctx: ServerContext, device: Device) =>
-  new ServerContext(
+export const windowContext = (ctx: ServerContext, device: Device) => {
+  const own = new ServerContext(
     ctx.policy,
     [{ list: () => Promise.resolve([]), handles: (s) => s === device.serial, open: () => device }],
     {
@@ -106,6 +106,10 @@ export const windowContext = (ctx: ServerContext, device: Device) =>
       tool: WINDOW,
     },
   );
+  // a device the allow list let in by another of its names, as an AVD's, is let in here as the window was
+  if (ctx.allowed(device.serial)) own.allowAs(device.serial);
+  return own;
+};
 
 /** A person's measure holds the device as an agent's session does, for as long as it runs. */
 export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasures {

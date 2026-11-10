@@ -4,7 +4,6 @@ import { dirname } from 'node:path';
 import { must, NEEDS, pause, reportProgress, isAlive } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { checkDevice } from '../policy.js';
 import { MirrorOut } from '../schemas.js';
 import { ACT, defineOp, reply, ToolError } from '../tool.js';
 import {
@@ -61,7 +60,7 @@ function lastWord(serial: string): string {
 export function mirrorOps(ctx: ServerContext) {
   const open = async (quality: string, wifi: boolean) => {
     const serial = await ctx.defaultSerial();
-    checkDevice(ctx.policy, serial);
+    ctx.checkDevice(serial);
     const running = liveMirror(serial);
     if (running) {
       process.kill(running.pid, FOCUS_SIGNAL);

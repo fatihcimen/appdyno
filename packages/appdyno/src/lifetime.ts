@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { processAlive, sleep } from '@appdyno/core';
-import type { ServerContext } from '@appdyno/ops';
+import { deviceNamed, type ServerContext } from '@appdyno/ops';
 
 /** How long putting a session's conditions back may hold up the end of the server. */
 const END_MS = 20_000;
@@ -98,10 +98,13 @@ export async function putBackAfter(pid: number, ctx: ServerContext, log: (line: 
   while (processAlive(pid) && Date.now() < end) await sleep(100);
   const serial = ctx.selected;
   if (serial && !processAlive(pid)) {
-    const s = await ctx.use(serial).catch((e: unknown) => {
-      log({ putBackAfter: pid, serial, failed: [e instanceof Error ? e.message : String(e)] });
-      return undefined;
-    });
+    // one the allow list names by another of its names, as an AVD's, is let in by that name here too
+    const s = await (ctx.allowed(serial) ? Promise.resolve(serial) : deviceNamed(ctx, serial))
+      .then(() => ctx.use(serial))
+      .catch((e: unknown) => {
+        log({ putBackAfter: pid, serial, failed: [e instanceof Error ? e.message : String(e)] });
+        return undefined;
+      });
     const { restored = [], failed = [] } = ctx.leftovers.get(serial) ?? {};
     if (s) log({ putBackAfter: pid, serial, restored, failed });
     if (s && restored.length > 0) await s.device.settings.persist?.().catch(() => undefined);

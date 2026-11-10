@@ -17,6 +17,7 @@ import { windowNetwork } from './window-network.js';
 import { windowSends } from './window-sends.js';
 import {
   answerWatches,
+  deviceNamed,
   FOCUS_SIGNAL,
   handoffDone,
   liveMirror,
@@ -265,12 +266,15 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
   process.on('SIGTERM', onStop);
   process.on(FOCUS_SIGNAL, parent.raise);
   const refusals = new Map<string, string>();
+  // a device the allow list names by another of its names, as the server that opened this window was let in by
   const open = (serial: string) =>
-    parent.open(serial).catch((e: unknown) => {
-      const why = e instanceof Error ? e.message : String(e);
-      if (refusals.get(serial) !== why) o.log(`${serial}: ${why}`);
-      refusals.set(serial, why);
-    });
+    (ctx.allowed(serial) ? Promise.resolve(serial) : deviceNamed(ctx, serial))
+      .then((s) => parent.open(s))
+      .catch((e: unknown) => {
+        const why = e instanceof Error ? e.message : String(e);
+        if (refusals.get(serial) !== why) o.log(`${serial}: ${why}`);
+        refusals.set(serial, why);
+      });
   const ready = async () =>
     (await ctx.devices()).filter((d) => d.ready && ctx.allowed(d.serial)).map((d) => d.serial);
   const serials = o.all
