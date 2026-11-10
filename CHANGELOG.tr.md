@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Süresi dolan bir cihaz çağrısı, dinleyicisini çağrının iptalinden kaldırır: her biri onu orada bırakıyordu, bu yüzden çağrının sonraki bir iptali, süresi dolmuş her çağrısı için ajana çoktan gitmiş kimliklere bir `cancel` daha yazıyordu.
 - Kaynakların adını andığı her `APPDYNO_` değişkeni CLI başvurusunda ya da CONTRIBUTING'in appdyno'ya ait olanlar tablosundadır ve `packages/appdyno/test/environment.test.ts` bunu böyle tutar: `APPDYNO_FAST_TAP`, `APPDYNO_ANIMATION_WAIT`, `APPDYNO_ANDROID_AGENT`, `APPDYNO_IOS_PRODUCTS` ve `APPDYNO_IOS_DEVICE_PRODUCTS` hiçbir sayfada yoktu; `APPDYNO_HELPERS`, `APPDYNO_NATIVE_DIR`, `APPDYNO_HELD_BY_HUB`, `APPDYNO_PROBE_OUT` ve `APPDYNO_RECORD_SEGMENT_S` ise başka hiçbir şeyin ayarlamaması için appdyno'nun kendine ait diye söylenir.
 - CLI başvurusu `--full-urls` ve `--flight-seconds` bayraklarını sunucunun öbür bayraklarıyla listeler, SECURITY de `--full-urls` bayrağının neyi tuttuğunu söyler: bir zaman çizelgesindeki isteği sorgusuyla. Değişiklik günlüğünün `steps` satırı, uygulaması ölen bir adımın yanıtını `appDied` yerine `APP_NOT_RUNNING` olarak söyler.
 - VoiceOver, Telefon Bağla'nın ve Başlayın'ın her adımının bittiğini, şimdiki adım olduğunu ya da henüz gelmediğini duyar; bunu yalnızca adımın işareti gösteriyordu. Etkinlik'te başarısız olan bir çağrı da bunu sözcükleriyle söyler; bunu yalnızca kırmızı bir işaret söylüyordu.

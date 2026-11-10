@@ -68,6 +68,18 @@ describe('rpc client', () => {
     expect(seen.at(-1)?.method).toBe('cancel');
   }, 5_000);
 
+  it('leaves nothing on the signal of a call that timed out: a cancel later sends no second word', async () => {
+    const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });
+    const abort = new AbortController();
+    await expect(
+      inCall({ signal: abort.signal }, () => rpc.call('tree.get', {}, { timeoutMs: 20 })),
+    ).rejects.toMatchObject({ code: 'TIMEOUT' });
+    const sent = seen.length;
+    abort.abort();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(seen).toHaveLength(sent);
+  }, 5_000);
+
   it('gives up a call when the client cancels, and tells the agent', async () => {
     const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });
     const abort = new AbortController();

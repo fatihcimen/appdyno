@@ -105,6 +105,7 @@ export class RpcClient {
     return new Promise<{ result: unknown; binary?: Buffer }>((resolve, reject) => {
       // fire and forget: the agent stops the work if it is still running
       const giveUp = (why: DeviceError) => {
+        off();
         this.pending.delete(id);
         if (!this.closedWith)
           this.stream.write(
@@ -120,8 +121,8 @@ export class RpcClient {
         clearTimeout(timer);
         giveUp(cancelled(method));
       };
-      signal?.addEventListener('abort', abort, { once: true });
       const off = () => signal?.removeEventListener('abort', abort);
+      signal?.addEventListener('abort', abort, { once: true });
       this.pending.set(id, {
         method,
         resolve: (v) => {
