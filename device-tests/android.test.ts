@@ -15,6 +15,7 @@ import {
   FOCUS_READ,
   NODE_FLAGS,
   TEST_LOCATION,
+  type RpcClient,
   type Screen,
 } from './workspace.js';
 
@@ -772,6 +773,17 @@ describe.skipIf(!serial)('android agent on a device', () => {
     await d.tree();
     // the wait read a still screen on to its 20 s, and every host's request queued behind it
     expect(Date.now() - start).toBeLessThan(3_000);
+  });
+
+  it('answers a touch it cannot make with its reason, and keeps the connection', async () => {
+    const rpc = await (d as unknown as { ensure(): Promise<RpcClient> }).ensure();
+    // past the host's schema, as the agent's own refusal would come
+    const raw = rpc as unknown as { callRaw(m: string, p: object, ms: number): Promise<unknown> };
+    await expect(raw.callRaw('touch', { p: 7, x: 0.5, y: 0.5 }, 5_000)).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
+    expect(rpc.closed).toBe(false);
+    expect((await d.tree()).nodes.length).toBeGreaterThan(0);
   });
 
   it('a killed agent fails the call in flight, comes back on the next read, and a touch lands after it', async () => {

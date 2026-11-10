@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A request the Android agent answers on its connection's thread, a mirror's touch among them, that fails is answered with its reason, and the connection goes on: a touch refused, as a Xiaomi without "USB debugging (Security settings)" refuses one with `PERMISSION_REQUIRED`, closed the connection with no answer, every job in flight on it lost its answer, and the hint that says what to turn on never reached the host.
 - On Android only a progress bar with no range, a spinner or a loading bar, keeps the screen busy: any visible bar did, a determinate one that stands still among them (a step bar, an order's progress), and every action on such a screen waited its whole 3 s and answered `settled: false`.
 - A connection that ends cancels its jobs, queued or running, in the Android agent and the iOS runner: a host killed during a `wait` or with taps queued left the agent reading on to the wait's end and making the taps, with nobody to read their answers, and the next host's requests waited behind them, past their deadline, until it restarted the agent as stuck.
 - The Android agent makes no touch or text once its host no longer waits, told TIMEOUT or CANCELLED, and goes no further after one: a tap or text that waited out a slide past its deadline was still made, and a job whose lane was given up went on to its settle's read beside the next lane's. A tree read keeps what it collects to itself, where two at once cleared and filled each other's lists and could fail with an internal error or put one read's places in the other.

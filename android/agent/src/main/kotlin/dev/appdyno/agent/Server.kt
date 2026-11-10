@@ -74,59 +74,64 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                     }
                     authed = true
                 }
-                when (method) {
-                    "hello" -> writer.json(resultJson(id, handlers.hello()))
+                // a request that fails here is answered, as one on the work lane is: the connection and its jobs go on
+                try {
+                    when (method) {
+                        "hello" -> writer.json(resultJson(id, handlers.hello()))
 
-                    "ping" -> writer.json(resultJson(id, handlers.ping()))
+                        "ping" -> writer.json(resultJson(id, handlers.ping()))
 
-                    "cancel" -> {
-                        jobs.cancel(OneValue.id(params))
-                        writer.json(resultJson(id, JSONObject()))
-                    }
-
-                    "animations.set" -> {
-                        val off = OneValue.off(params)
-                        synchronized(animationsOff) {
-                            if (off) animationsOff += socket else animationsOff -= socket
-                            params.put("off", animationsOff.isNotEmpty())
+                        "cancel" -> {
+                            jobs.cancel(OneValue.id(params))
+                            writer.json(resultJson(id, JSONObject()))
                         }
-                        submit(id, method, params, writer, jobs)
-                    }
 
-                    // on this thread, not the work lane: a person's finger and a stream wait for nothing
-                    "touch" -> {
-                        handlers.touch(TouchRequest.from(params))
-                        writer.json(resultJson(id, JSONObject()))
-                    }
-
-                    "stream.start" -> {
-                        stream?.let { streams.end(it) }
-                        stream = streams.start(StreamRequest.from(params), ConnectionOutput(writer))
-                        writer.json(resultJson(id, JSONObject()))
-                        releaseIfNoDrivers()
-                    }
-
-                    "stream.clock" -> writer.json(resultJson(id, Results.streamClock(System.nanoTime())))
-
-                    "stream.sync" -> {
-                        streams.requestKey()
-                        writer.json(resultJson(id, JSONObject()))
-                    }
-
-                    "stream.status" -> writer.json(resultJson(id, streams.status()))
-
-                    "shutdown" -> {
-                        writer.json(resultJson(id, JSONObject()))
-                        exitProcess(0)
-                    }
-
-                    else -> {
-                        if (!drives) {
-                            drives = true
-                            synchronized(this) { drivers++ }
+                        "animations.set" -> {
+                            val off = OneValue.off(params)
+                            synchronized(animationsOff) {
+                                if (off) animationsOff += socket else animationsOff -= socket
+                                params.put("off", animationsOff.isNotEmpty())
+                            }
+                            submit(id, method, params, writer, jobs)
                         }
-                        submit(id, method, params, writer, jobs)
+
+                        // on this thread, not the work lane: a person's finger and a stream wait for nothing
+                        "touch" -> {
+                            handlers.touch(TouchRequest.from(params))
+                            writer.json(resultJson(id, JSONObject()))
+                        }
+
+                        "stream.start" -> {
+                            stream?.let { streams.end(it) }
+                            stream = streams.start(StreamRequest.from(params), ConnectionOutput(writer))
+                            writer.json(resultJson(id, JSONObject()))
+                            releaseIfNoDrivers()
+                        }
+
+                        "stream.clock" -> writer.json(resultJson(id, Results.streamClock(System.nanoTime())))
+
+                        "stream.sync" -> {
+                            streams.requestKey()
+                            writer.json(resultJson(id, JSONObject()))
+                        }
+
+                        "stream.status" -> writer.json(resultJson(id, streams.status()))
+
+                        "shutdown" -> {
+                            writer.json(resultJson(id, JSONObject()))
+                            exitProcess(0)
+                        }
+
+                        else -> {
+                            if (!drives) {
+                                drives = true
+                                synchronized(this) { drivers++ }
+                            }
+                            submit(id, method, params, writer, jobs)
+                        }
                     }
+                } catch (t: Throwable) {
+                    writer.json(errorJson(id, failureOf(t)))
                 }
             }
         } catch (e: Throwable) {
