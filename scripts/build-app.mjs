@@ -40,6 +40,8 @@ const NODE = {
 const MIN_MACOS = '13.5';
 const NAME = 'Appdyno';
 const WINDOW = 'Appdyno Window';
+/** The icon's name in its catalog, as actool compiles mac/App/appdyno.icon: a bundle looks it up by exact case. */
+const ICON = 'appdyno';
 
 const IDENTITY = 'Developer ID Application: Fatih Cimen (BKXMF846AT)';
 
@@ -175,10 +177,10 @@ async function traceProcessorBinary() {
 /** The app's icon and menu glyph, and the same icon for the helper's Dock tile. */
 function icon() {
   buildGlassIcon(resources, MIN_MACOS);
-  buildIcns(join(resources, `${NAME}.icns`));
+  buildIcns(join(resources, `${ICON}.icns`));
   buildMenuGlyph(resources);
   mkdirSync(join(helper, 'Contents/Resources'), { recursive: true });
-  copyFileSync(join(resources, `${NAME}.icns`), join(helper, 'Contents/Resources', `${NAME}.icns`));
+  copyFileSync(join(resources, `${ICON}.icns`), join(helper, 'Contents/Resources', `${ICON}.icns`));
 }
 
 /**
@@ -192,8 +194,8 @@ function infoPlist(to, identifier, executable) {
     CFBundleDevelopmentRegion: 'en',
     CFBundleDisplayName: NAME,
     CFBundleExecutable: executable,
-    CFBundleIconFile: NAME,
-    CFBundleIconName: NAME,
+    CFBundleIconFile: ICON,
+    CFBundleIconName: ICON,
     CFBundleIdentifier: identifier,
     CFBundleInfoDictionaryVersion: '6.0',
     CFBundleName: NAME,

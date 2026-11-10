@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The Mac app shows its icon: Finder, the Dock and Applications drew the blank icon of an app with none, as its `Info.plist` named the icon `Appdyno` and the catalog actool compiles holds it as `appdyno`, a name a bundle looks up by its case. The `.icns` beside it, which a Mac before macOS 26 shows, was found by neither name either: with the catalog's name taken away, macOS 27 drew the blank icon from it too. Both are named `appdyno` now. Read by the Mac's own icon services on macOS 27, of the app as built and of one installed from the 0.6.0 disk image: the blank icon before, the glass icon after.
 - Whether a failed action's touch may have gone, as a device that stopped answering may have made it, is read from the protocol's one table of error codes, and the host's settle is the protocol's default, where ops kept its own list and its own numbers.
 - Logs, requests and console lines also hide a credential's object, as `"token": {"value": …}`, where the object's own values went whole; `secret_key_base` and `secret_key`, which no key the guard knew ended; and `code` or `sig` as a key of its own when what follows is long, mixed and undotted as a credential is, as an OAuth code in a JSON body. `statusCode: 200`, `"code": 404`, `code: "ERR_CONNECTION_REFUSED"`, `error_code`, `secretary` and `code: com.example.app2.Main` stay shown.
 - Twenty-one functions and constants no other file names are no longer exported, as `helpOf`, `phoneOps` and `traceStart`: they read as a package's surface where they are one file's own.
