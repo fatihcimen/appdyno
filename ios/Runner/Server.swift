@@ -112,6 +112,12 @@ final class Server: Sendable {
         let jobs = JobTable()
         var greeted = false
         init(connection: NWConnection) { self.connection = connection }
+
+        /// Nobody waits for its jobs any more: a wait or the touches queued behind it would hold the next host.
+        func end() {
+            jobs.cancelAll()
+            connection.cancel()
+        }
     }
 
     private func receive(_ session: Session) {
@@ -125,11 +131,11 @@ final class Server: Sendable {
                         try self.request(payload, session)
                     }
                 } catch {
-                    session.connection.cancel()
+                    session.end()
                     return
                 }
             }
-            if done || error != nil { session.connection.cancel(); return }
+            if done || error != nil { session.end(); return }
             self.receive(session)
         }
     }
@@ -166,7 +172,7 @@ final class Server: Sendable {
                 queue.async {
                     session.jobs.remove(job)
                     // an answer that cannot be written ends the connection, as a request that cannot be read does
-                    guard let answer else { session.connection.cancel(); return }
+                    guard let answer else { session.end(); return }
                     session.connection.send(content: answer, completion: .contentProcessed { _ in })
                 }
             }

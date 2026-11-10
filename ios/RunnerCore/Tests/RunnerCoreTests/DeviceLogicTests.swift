@@ -28,6 +28,18 @@ final class JobTableTests: XCTestCase {
         XCTAssertTrue(new.cancelled)
     }
 
+    func testTheEndOfAConnectionCancelsEachOfItsJobsAlone() throws {
+        let (mine, theirs) = (JobTable(), JobTable())
+        let (queued, running, other) = (try job(1), try job(2), try job(1))
+        mine.add(queued)
+        mine.add(running)
+        theirs.add(other)
+        mine.cancelAll()
+        XCTAssertTrue(queued.cancelled)
+        XCTAssertTrue(running.cancelled)
+        XCTAssertFalse(other.cancelled)
+    }
+
     func testAJobIsOverOnceCancelledOrPastItsDeadline() throws {
         let running = try job()
         XCTAssertFalse(running.over)

@@ -132,6 +132,8 @@ class Server(private val opts: Options, private val handlers: Handlers) {
         } catch (e: Throwable) {
             System.err.println("connection closed: $e")
         } finally {
+            // nobody waits for its jobs: a wait or the touches queued behind it would hold the lane for the next host
+            jobs.cancelAll()
             // the display and the codec go with the host, however it went
             stream?.let { streams.end(it) }
             try {

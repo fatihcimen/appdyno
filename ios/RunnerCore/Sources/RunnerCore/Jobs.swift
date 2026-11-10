@@ -48,4 +48,9 @@ public final class JobTable {
     public func remove(_ job: Job) {
         if jobs[job.id] === job { jobs[job.id] = nil }
     }
+
+    /// The connection ended: no one waits for any of them, queued or running.
+    public func cancelAll() {
+        for job in jobs.values { job.cancelled = true }
+    }
 }

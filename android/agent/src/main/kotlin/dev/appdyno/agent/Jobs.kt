@@ -34,4 +34,7 @@ class JobTable {
     fun remove(job: Job) {
         jobs.remove(job.id, job)
     }
+
+    /** The connection ended: no one waits for any of them, queued or running. */
+    fun cancelAll() = jobs.values.forEach { it.cancelled = true }
 }

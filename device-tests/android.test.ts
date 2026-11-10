@@ -758,6 +758,22 @@ describe.skipIf(!serial)('android agent on a device', () => {
     other.close();
   });
 
+  it('a host gone with a wait in flight leaves the agent to the next host at once', async () => {
+    await home();
+    const other = new AndroidDevice(serial);
+    await other.open();
+    const now = await other.waitChange(undefined, 0);
+    assert(now);
+    const waiting = other.waitChange(now.sig, 20_000).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 300));
+    other.close();
+    await waiting;
+    const start = Date.now();
+    await d.tree();
+    // the wait read a still screen on to its 20 s, and every host's request queued behind it
+    expect(Date.now() - start).toBeLessThan(3_000);
+  });
+
   it('a killed agent fails the call in flight, comes back on the next read, and a touch lands after it', async () => {
     await home();
     const { pid } = helloOf(d);

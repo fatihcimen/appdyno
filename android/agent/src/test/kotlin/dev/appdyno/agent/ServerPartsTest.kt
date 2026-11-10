@@ -77,6 +77,19 @@ class ServerPartsTest {
     }
 
     @Test
+    fun theEndOfAConnectionCancelsEachOfItsJobsAlone() {
+        val (mine, theirs) = JobTable() to JobTable()
+        val (queued, running, other) = Triple(Job(1), Job(2), Job(1))
+        mine.add(queued)
+        mine.add(running)
+        theirs.add(other)
+        mine.cancelAll()
+        assertTrue(queued.cancelled)
+        assertTrue(running.cancelled)
+        assertFalse(other.cancelled)
+    }
+
+    @Test
     fun aFailureTellsTheHostWhoseItIs() {
         val typed = AgentFailure("NO_FOCUS", "no field")
         assertSame(typed, failureOf(typed))

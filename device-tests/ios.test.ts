@@ -287,6 +287,29 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(t.nodes.find((n) => n.c === 'Application')?.d).toBeUndefined();
   });
 
+  it('a host gone with a wait in flight leaves the runner to the next host at once', async () => {
+    await home();
+    await d.tree();
+    const launcher = new IosRunnerLauncher(udid);
+    const gone = (await launcher.connect(APP)).rpc;
+    const next = (await launcher.connect(APP)).rpc;
+    try {
+      const { result } = await gone.call('wait', { timeoutMs: 0 }, { timeoutMs: 20_000 });
+      const waiting = gone
+        .call('wait', { since: result.sig, timeoutMs: 20_000 }, { timeoutMs: 30_000 })
+        .catch(() => undefined);
+      await new Promise((r) => setTimeout(r, 300));
+      gone.close();
+      await waiting;
+      const start = Date.now();
+      await next.call('tree.get', {}, { timeoutMs: 20_000 });
+      // the wait read a still screen on to its 20 s, and every host's request queued behind it
+      expect(Date.now() - start).toBeLessThan(3_000);
+    } finally {
+      next.close();
+    }
+  });
+
   it('answers an alert', async () => {
     const s = await open('Dialog');
     await d.tap(foundId(s, 'open_dialog'), { settle: SETTLE });
