@@ -132,6 +132,32 @@ describe("a window's Logs pane", () => {
     three.end();
   });
 
+  it('keeps a device that gives no log so as another app comes to the front, where its controls came back for a read', async () => {
+    const phone = on();
+    phone.device.apps = {
+      listApps: () =>
+        Promise.resolve([
+          { id: 'dev.app', name: 'Dev App' },
+          { id: 'dev.other', name: 'Other' },
+        ]),
+    } as unknown as FakeDevice['apps'];
+    let front = 'dev.app';
+    phone.device.foreground = () => Promise.resolve(front);
+    phone.device.logNote = "devicectl cannot read a running app's log on an iPhone.";
+    const logs = windowLogs(phone.ctx, phone.device, phone.session);
+    logs.onWindow({ op: 'paneWatch', pane: 'logs', on: true });
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(phone.of('logs').find((m) => m.note === NO_PHONE_LOG)).toMatchObject({ none: true });
+    const before = phone.of('logs').length;
+    front = 'dev.other';
+    await vi.advanceTimersByTimeAsync(12_000);
+    const after = phone.of('logs').slice(before);
+    // the new app starts the view over, and says nothing that would show what works on a log again
+    expect(after.find((m) => m.reset)).toMatchObject({ app: 'Other' });
+    expect(after.filter((m) => 'note' in m)).toEqual([]);
+    logs.end();
+  });
+
   it("lists the app's crash reports as crashes gives them, with what may hold a secret hidden", async () => {
     const t = on();
     t.device.crashReports = [

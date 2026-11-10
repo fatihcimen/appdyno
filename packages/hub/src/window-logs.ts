@@ -41,6 +41,8 @@ export function windowLogs(
   /** What a read began under: one that answers after the app or the level changed is of what no longer shows. */
   let turn = 0;
   let said = '';
+  /** The device said it gives no log of a running app at all, which holds for each app that comes to the front. */
+  let noLog = false;
 
   const tell = (m: Record<string, unknown>) => session().tell({ op: 'logs', ...m });
   /** A note under the pane's controls, said once until it changes. */
@@ -70,7 +72,12 @@ export function windowLogs(
     turn++;
     since = undefined;
     atSince = new Set();
-    tell({ reset: true, ...(app?.name && { app: app.name }), ...note(app?.why ?? '') });
+    // a device that gives no log gives none for the next app either: its note stands, and what works on a log stays hidden
+    tell({
+      reset: true,
+      ...(app?.name && { app: app.name }),
+      ...(noLog ? {} : note(app?.why ?? '')),
+    });
   };
 
   const follow = async () => {
@@ -140,7 +147,9 @@ export function windowLogs(
       text: redactLog(ctx.policy, text).slice(0, LONGEST),
       ...(mark?.level && { level: mark.level }),
     }));
-    const noted = note(personal(r.note ?? ''));
+    const why = personal(r.note ?? '');
+    noLog ||= why === NO_PHONE_LOG;
+    const noted = note(why);
     // `none`: no log comes here at all, so the pane hides what works on one
     if (lines.length || 'note' in noted)
       tell({ lines, ...noted, ...(noted.note === NO_PHONE_LOG && { none: true }) });
