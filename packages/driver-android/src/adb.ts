@@ -172,25 +172,49 @@ export class Adb {
   }
 
   /** As `exec`, the output as bytes (a file read with `cat`). */
-  async execBuffer(
+  execBuffer(serial: string, command: string, opts: { timeoutMs?: number } = {}): Promise<Buffer> {
+    return this.drain(serial, command, undefined, opts.timeoutMs);
+  }
+
+  /** Runs `command` with `input` on its standard input, where no other process reads it, and waits for it to end. */
+  async execIn(serial: string, command: string, input: string, timeoutMs?: number): Promise<void> {
+    await this.drain(serial, command, input, timeoutMs);
+  }
+
+  /**
+   * What `command` writes until it ends, at most `timeoutMs`, and the call's cancel stops it. A connection that fails on
+   * the way fails it: what came is cut off, not the whole answer, as an empty `pidof` would say the app is gone.
+   */
+  private async drain(
     serial: string,
     command: string,
-    opts: { timeoutMs?: number } = {},
-  ): Promise<Buffer> {
+    input: string | undefined,
+    timeoutMs = 30_000,
+  ) {
     const { socket, rest } = await this.open(serial, `exec:${command}`);
     return new Promise<Buffer>((resolve, reject) => {
       const chunks: Buffer[] = rest.length ? [rest] : [];
+      let failed: Error | undefined;
       const timer = setTimeout(() => {
         socket.destroy();
         reject(new DeviceError('TIMEOUT', `adb command timed out: ${command.slice(0, 80)}`));
-      }, opts.timeoutMs ?? 30_000);
+      }, timeoutMs);
       socket.on('data', (b: Buffer) => chunks.push(b));
-      socket.resume();
+      socket.on('error', (e) => (failed = e));
       socket.on('close', () => {
         clearTimeout(timer);
-        resolve(Buffer.concat(chunks));
+        if (failed)
+          reject(
+            new DeviceError(
+              'DEVICE_GONE',
+              `adb lost the device during ${command.slice(0, 80)}: ${failed.message}`,
+              'check that the device is connected (adb devices)',
+            ),
+          );
+        else resolve(Buffer.concat(chunks));
       });
-      socket.on('error', () => undefined);
+      socket.resume();
+      if (input !== undefined) socket.end(input);
       const signal = callSignal();
       const abort = () => {
         clearTimeout(timer);
@@ -200,19 +224,6 @@ export class Adb {
       if (signal?.aborted) abort();
       else signal?.addEventListener('abort', abort, { once: true });
       socket.once('close', () => signal?.removeEventListener('abort', abort));
-    });
-  }
-
-  /** Runs `command` with `input` on its standard input, where no other process reads it, and waits for it to end. */
-  async execIn(serial: string, command: string, input: string): Promise<void> {
-    const { socket } = await this.open(serial, `exec:${command}`);
-    await new Promise<void>((resolve) => {
-      socket.on('close', () => {
-        resolve();
-      });
-      socket.on('error', () => undefined);
-      socket.resume();
-      socket.end(input);
     });
   }
 

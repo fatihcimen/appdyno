@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bağlantısı yolda kopan bir adb komutu `DEVICE_GONE` ile reddedilir; girdi verilen bir komut da diğerleri gibi 30 sn ile sınırlanır ve çağrının iptaliyle durur: izlemenin `pidof`'u sırasında kopan bir Wi-Fi bağlantısı, kesik çıktısını bütün sayıyordu, yani boş bir çıktıyı, ve eylem `APP_NOT_RUNNING` ile reddediliyordu; ajanın belirtecinin yazılması cihazın kuyruğunda sonsuza dek bekleyebiliyordu. Kopan bir aktarımın ardından temiz bir kapanış yine bütün okunur, çünkü `exec:`'in bir bitiş işareti yoktur.
 - Durulmadan sonra başlayan bir tepki, bir sistem uyarısı ya da uygulamanın kendi geç değişikliği, onu gören okumadan başlayarak, eylemin kalan süresi içinde yeniden durulur; bir simülatörde ve iOS runner'ında: uyarıyı bekleyiş, değişikliğin ilk karesinde, ekran hâlâ kayarken ya da uyarı hâlâ gelirken `settled: true` yanıtlıyordu ve bir simülatörün sonraki dokunuşu, UIKit'in onu düşürdüğü kaymanın içine gidiyordu.
 - Durulma her okumayı bir öncekiyle değil, son değişikliğin yerleşimiyle karşılaştırır; bir simülatörde, iOS runner'ında ve Android ajanında: iki okuma arasında toleransın altında kalan bir hareket (4 pt, 8 px), bir fırlatmadan sonra bir listenin yavaş kuyruğu ya da yavaşça gelen bir sayfa gibi, hiç hareket sayılmıyordu ve bir eylem, yerleri çoktan eskimiş halde `settled: true` yanıtlanıyordu.
 - Öldürülen bir runner'ın bıraktığı `DTServiceHub` sınaması, onun yerine `sleep`'i kopyalamak yerine ona bir bağla koyar: macOS 27.2 bir sistem ikilisinin kopyasını başlarken öldürür ve sınama sonlandıracak bir şey bulamıyordu.

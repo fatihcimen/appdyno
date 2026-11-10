@@ -167,6 +167,31 @@ describe('a device that stopped answering', () => {
     await expect(adb.devices()).rejects.toMatchObject({ code: 'TIMEOUT' });
   });
 
+  it('fails a command whose connection broke on the way, rather than answer what came as whole', async () => {
+    server = createServer((socket) => {
+      socket.on('error', () => undefined);
+      socket.on('data', (asked) => {
+        if (asked.includes('host:transport')) socket.write('OKAY');
+        // the start of an answer, then the transport goes, as a phone's Wi-Fi does
+        else socket.write('OKAY12', () => setTimeout(() => socket.resetAndDestroy(), 20));
+      });
+    });
+    await new Promise<void>((up) => server.listen(0, '127.0.0.1', up));
+    const adb = new Adb({ port: (server.address() as AddressInfo).port, answerMs: 5_000 });
+    await expect(adb.exec('X1', 'pidof a.b')).rejects.toMatchObject({ code: 'DEVICE_GONE' });
+  });
+
+  it('bounds a command given input, as one without', async () => {
+    // it starts, takes its input, and then never ends
+    server = createServer({ allowHalfOpen: true }, (socket) => {
+      socket.on('error', () => undefined);
+      socket.on('data', () => socket.write('OKAY'));
+    });
+    await new Promise<void>((up) => server.listen(0, '127.0.0.1', up));
+    const adb = new Adb({ port: (server.address() as AddressInfo).port, answerMs: 5_000 });
+    await expect(adb.execIn('X1', 'cat > t', 'x', 100)).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+
   it('leaves an open stream as quiet as its user likes', async () => {
     server = createServer((socket) => {
       socket.on('error', () => undefined);
