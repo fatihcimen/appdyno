@@ -14,7 +14,6 @@ import {
 import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
 import { typeName } from './simulators.js';
 import {
-  DeviceError,
   type Hello,
   type Tree,
   type ActParams,
@@ -32,6 +31,8 @@ import { DirectSim } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
 import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
+import { looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
+import { pasteOnMac, setSimClipboard } from './sim-clipboard.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
 import { IosDevice } from './device.js';
@@ -94,6 +95,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   private readonly lock: SimulatorLock;
+  private behind = false;
 
   readonly recorder: ScreenRecorder;
   readonly mirror: SimulatorMirror;
@@ -118,15 +120,11 @@ export class IosSimulatorDevice extends IosDevice {
     if (app) this.simctl.appContainer(this.serial, app).catch(() => undefined);
   }
 
-  private behind = false;
-
   /**
-   * The runner, started behind the helper at the first read or touch, once: what only it does finds it on its way, where
-   * its start was the seconds of a first touch (9 to 28 s at load). It takes no front. Started as the device was chosen it
-   * slowed the launch that came next by 3.4 s (median of 10 pairs); a launch's own reads come once its app is in front.
+   * The runner, started behind the helper at the first read or touch of a simulator it opened, once: its start was the
+   * seconds of a first touch (9 to 28 s at load). Started as the device was chosen it slowed the next launch by 3.4 s.
    */
   private startBehind() {
-    // a device the helper has not opened is no simulator a person chose
     if (this.behind || !this.helloInfo) return;
     this.behind = true;
     this.ensure().catch(() => undefined);
@@ -351,35 +349,37 @@ export class IosSimulatorDevice extends IosDevice {
     return this.lock.wake(() => super.key('home', { settle: false, read: 'none' }));
   }
 
-  private readonly pasteOnMac = () => this.simctl.exec(['pbpaste', this.serial]);
-
-  /**
-   * From the Mac: at times the runner's own pasteboard call held it up for its 15 s. Where the Mac's call writes
-   * nothing, as `simctl pbcopy` on a new iOS 26.5 simulator with Xcode 27.1, only the runner's is left, and a stall
-   * of that is refused as what it is: it was restarted for it, and a second wait saw the same at load 138.
-   */
-  override async setClipboard(text: string) {
-    await this.simctl.pbcopy(this.serial, text);
-    if ((await this.pasteOnMac()) === text) return;
-    await super.setClipboard(text).catch((e: unknown) => {
-      if (!(e instanceof DeviceError && e.code === 'TIMEOUT')) throw e;
-      throw new DeviceError(
-        'UNSUPPORTED',
-        `this simulator's clipboard did not take the text: simctl pbcopy wrote nothing and the runner's call stalled`,
-        'try again once the Mac is less busy, or type the text instead',
-        { cause: e, retryable: true },
-      );
-    });
+  /** From the Mac (`setSimClipboard`), else by the runner. */
+  override setClipboard(text: string) {
+    return setSimClipboard(this.simctl, this.serial, text, (t) => super.setClipboard(t));
   }
 
   /** From the Mac: the runner may read only what it wrote itself, or a system prompt holds it up. */
   override async getClipboard() {
-    return (await this.pasteOnMac()) || (this.runnerUp ? super.getClipboard() : undefined);
+    return (
+      (await pasteOnMac(this.simctl, this.serial)) ||
+      (this.runnerUp ? super.getClipboard() : undefined)
+    );
   }
 
+  /**
+   * A link in a scheme of the app's own returns once the app is in front, where a cold app was answered as the home
+   * screen; the "Open in …?" iOS asks before a scheme first opens an app is answered on its way, if it names this app.
+   */
   override async openUrl(url: string, pkg?: string) {
     await this.wake();
-    return super.openUrl(url, pkg);
+    const app = pkg && this.direct.reads ? await this.opener(pkg) : undefined;
+    if (!pkg || !app || !ownScheme(app.schemes, url)) return super.openUrl(url, pkg);
+    await this.target(pkg);
+    await this.queue.run(() => this.ops.openUrl(url, pkg));
+    const looks = looksOf(this.direct, this.queue);
+    // the app opening over the home screen takes no touches either
+    if ((await untilOpened(pkg, app.name, looks, LAUNCH_FRONT_MS)) === false)
+      this.transitionEnds = Date.now() + TRANSITION_MS;
+  }
+
+  protected opener(pkg: string) {
+    return openerOf(this.simctl, this.serial, pkg);
   }
 
   override async launch(pkg: string) {

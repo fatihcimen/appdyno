@@ -28,6 +28,18 @@ export const infoValue = (bundle: string, key: string, as: 'json' | 'raw' = 'jso
     () => undefined,
   );
 
+/** An app's URL schemes and the name iOS's "Open in …?" gives it, from its Info.plist. */
+export async function schemesAndName(simctl: Simctl, udid: string, app: string) {
+  const bundle = await simctl.appContainer(udid, app);
+  const [types, display, name] = await Promise.all([
+    infoValue(bundle, 'CFBundleURLTypes'),
+    infoValue(bundle, 'CFBundleDisplayName', 'raw'),
+    infoValue(bundle, 'CFBundleName', 'raw'),
+  ]);
+  const text = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+  return { schemes: schemesOf(types), name: text(display) ?? text(name) ?? app };
+}
+
 /** What an app installed on a simulator says it opens: its URL schemes, and the domains its signature names. */
 export async function simulatorLinks(
   simctl: Simctl,

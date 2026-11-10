@@ -218,7 +218,24 @@ function toNode(raw: RawAx, parent: number, screen: { w: number; h: number }): N
   };
 }
 
-export type Refusal = { refused: string };
+/** A system alert's words and buttons, at their centres: what a link's "Open in …?" needs to be answered. */
+export type Prompt = { words: string[]; buttons: { label: string; x: number; y: number }[] };
+
+export type Refusal = { refused: string; prompt?: Prompt };
+
+function promptOf(raw: RawAx, screen: { w: number; h: number }): Prompt {
+  const prompt: Prompt = { words: [], buttons: [] };
+  const queue = [raw];
+  for (const r of queue) {
+    const n = toNode(r, -1, screen);
+    const label = n.d ?? n.t;
+    if (n.c === 'Button' && label)
+      prompt.buttons.push({ label, x: (n.b[0] + n.b[2]) / 2, y: (n.b[1] + n.b[3]) / 2 });
+    else if (n.c === 'StaticText' && label) prompt.words.push(label);
+    queue.push(...(r.k ?? []));
+  }
+  return prompt;
+}
 
 export type DirectRead = {
   tree: Tree;
@@ -281,7 +298,7 @@ export function toTree(
       partial = true;
     }
     // XCUI makes an Alert of it and leaves out what it covers; the settle has to see it as one
-    if (r.e?.includes('AlertController')) return { refused: 'alert' };
+    if (r.e?.includes('AlertController')) return { refused: 'alert', prompt: promptOf(r, screen) };
     if (n.c === 'ActivityIndicator' && (n.f & F.visible) !== 0) busy = true;
     if (r.cut) truncated = true;
     const index = nodes.push(n) - 1;

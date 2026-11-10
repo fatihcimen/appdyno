@@ -551,6 +551,13 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     ok(await h.call('assert', { text: 'pinches: 1', timeoutMs: 2_000 }));
   });
 
+  it("opens a link of the app's own on the stopped app in one call, with the app's screen", async () => {
+    ok(await h.call('terminate_app'));
+    const r = ok(await h.call('open_link', { url: 'appdyno-fixture://open/list', read: 'full' }));
+    expect(r.data.foreground).toBe(APP);
+    expect(r.text).toContain('Product 1');
+  });
+
   it('reads and answers a permission alert', async () => {
     await simctl.privacy(ios, 'reset', 'location', APP).catch(() => undefined);
     await open('permission');

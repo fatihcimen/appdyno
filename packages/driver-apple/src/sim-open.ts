@@ -1,0 +1,77 @@
+import { type DeviceQueue, must, sleep } from '@appdyno/core';
+import { HOME_SCREEN_APP } from './platform-screen.js';
+import type { Simctl } from './simctl.js';
+import type { DirectSim } from './simdirect.js';
+import { schemesAndName } from './sim-links.js';
+import type { Prompt } from './simtree.js';
+
+/** "Open in “name”?": its button that opens, the second of two in every language. */
+export function openButton(p: Prompt | undefined, name: string) {
+  if (!p?.words.some((w) => w.includes(name))) return undefined;
+  const b = p.buttons.length === 2 ? p.buttons[1] : p.buttons.find((x) => /^open$/i.test(x.label));
+  return b && { x: b.x, y: b.y };
+}
+
+const openers = new Map<string, Promise<{ schemes: string[]; name: string }>>();
+
+/** An installed app's schemes and the name its "Open in …?" gives it, asked once a simulator. */
+export function openerOf(simctl: Simctl, udid: string, app: string) {
+  const key = `${udid} ${app}`;
+  if (!openers.has(key))
+    openers.set(
+      key,
+      schemesAndName(simctl, udid, app).catch(() => ({ schemes: [], name: app })),
+    );
+  return must(openers.get(key), "an app's schemes");
+}
+
+/** What following a link asks of a simulator: what is in front, the alert over the home screen, a touch. */
+export type LinkLooks = {
+  front: () => Promise<string | undefined>;
+  prompt: () => Promise<Prompt | undefined>;
+  tap: (at: { x: number; y: number }) => Promise<unknown>;
+};
+
+/** Through the helper, each in the device's queue but the look at what is in front. */
+export const looksOf = (direct: DirectSim, queue: DeviceQueue): LinkLooks => ({
+  front: () => direct.front().catch(() => undefined),
+  prompt: () =>
+    queue
+      .run(() => direct.read(HOME_SCREEN_APP))
+      .then(
+        (r) => ('refused' in r ? r.prompt : undefined),
+        () => undefined,
+      ),
+  tap: (at) => queue.run(() => direct.send({ kind: 'tap', ...at })),
+});
+
+/** Whether a link is in one of these schemes. */
+export const ownScheme = (schemes: string[], url: string) => {
+  const scheme = url.slice(0, url.indexOf(':')).toLowerCase();
+  return schemes.some((s) => s.toLowerCase() === scheme);
+};
+
+const PROMPT_AGAIN_MS = 1_500;
+
+/**
+ * Until `app` is in front, up to `ms`, its "Open in …?" answered on the way if it names it (`name`). A prompt read while
+ * it goes away is not answered twice: a second touch would land on the home screen. Whether the app was in front at the
+ * first look; undefined if it never came.
+ */
+export async function untilOpened(app: string, name: string, looks: LinkLooks, ms: number) {
+  const end = Date.now() + ms;
+  let answered = 0;
+  for (let first = true; Date.now() < end; first = false) {
+    const front = await looks.front();
+    if (front === app) return first;
+    if (front === HOME_SCREEN_APP && Date.now() - answered > PROMPT_AGAIN_MS) {
+      const open = openButton(await looks.prompt(), name);
+      if (open) {
+        await looks.tap(open);
+        answered = Date.now();
+      }
+    }
+    await sleep(20);
+  }
+  return undefined;
+}

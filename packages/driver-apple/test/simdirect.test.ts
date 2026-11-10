@@ -134,7 +134,30 @@ describe('the helper read in the runner shape', () => {
         SCREEN,
         0,
       ),
-    ).toEqual({ refused: 'alert' });
+    ).toEqual({ refused: 'alert', prompt: { words: [], buttons: [] } });
+  });
+
+  it("gives with the refusal the alert's words and its buttons at their centres, which a link's prompt needs", () => {
+    const alert = {
+      a: 3,
+      e: '_UIAlertControllerPhoneTVMacView',
+      f: [41, 375, 320, 152],
+      k: [
+        { a: 48, l: 'Open in “appdyno fixture”?', f: [57, 400, 288, 20] },
+        { a: 9, l: 'Cancel', f: [57, 450, 140, 48] },
+        { a: 9, l: 'Open', f: [205, 450, 140, 48] },
+      ],
+    };
+    expect(toTree(app(alert as RawAx), 'com.apple.springboard', SCREEN, 0)).toEqual({
+      refused: 'alert',
+      prompt: {
+        words: ['Open in “appdyno fixture”?'],
+        buttons: [
+          { label: 'Cancel', x: 127, y: 474 },
+          { label: 'Open', x: 275, y: 474 },
+        ],
+      },
+    });
   });
 
   it('marks repeated controls; the runner verdict hides the copy out of reach, by its place', () => {
