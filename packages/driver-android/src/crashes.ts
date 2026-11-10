@@ -212,8 +212,19 @@ export async function androidCrashes(
   };
 }
 
-/** "keeps stopping": the system marks the process crashing while its dialog is up (`crashing=true` before API 31). */
+/**
+ * "keeps stopping", as a shell condition: the system marks the process crashing while its dialog is up (`crashing=true`
+ * before API 31), and keeps it, dead, until the dialog is answered.
+ */
+export const heldForDialog = (app: string) =>
+  `dumpsys activity processes ${shq(assertPkg(app))} | grep -qE '(mC|c)rashing=true'`;
+
 export async function androidCrashing(adb: Adb, serial: string, app: string) {
-  const out = await adb.exec(serial, `dumpsys activity processes ${shq(assertPkg(app))}`);
-  return /\b(mC|c)rashing=true\b/.test(out);
+  return (await adb.exec(serial, `${heldForDialog(app)} && echo held`)).trim() === 'held';
+}
+
+/** Whether the app has a process: one held for its crash dialog is no running app, dead until the dialog is answered. */
+export async function androidRunning(adb: Adb, serial: string, app: string) {
+  const up = `pidof ${shq(assertPkg(app))} >/dev/null && ! ${heldForDialog(app)} && echo up`;
+  return (await adb.exec(serial, up)).trim() === 'up';
 }

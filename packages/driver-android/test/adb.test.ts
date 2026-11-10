@@ -88,11 +88,31 @@ describe('launching an app', () => {
     } as unknown as Adb;
     return { d: new AndroidDevice('emulator-5640', adb), ran };
   };
-  const starts = (ran: string[]) => ran.filter((c) => c.startsWith('am start'));
+  const starts = (ran: string[]) => ran.filter((c) => c.includes('am start'));
 
   it('takes a start still drawing when the wait ended for a start: a read tells what is on the screen', async () => {
     const out = `${STARTED}Status: timeout\nLaunchState: UNKNOWN (0)\nWaitTime: 10001\nComplete\n`;
     await expect(device(out).d.launch('a.b')).resolves.toBeUndefined();
+  });
+
+  it('stops first a process the system holds for its crash dialog, which takes no start', async () => {
+    const { d, ran } = device(`${STARTED}Status: ok\n`);
+    await d.launch('a.b');
+    // only a process held so, and before the start: `am start -W` waited 10 s on one, its dialog still up
+    expect(starts(ran)).toEqual([
+      expect.stringMatching(
+        /^pidof 'a\.b' >\/dev\/null && dumpsys activity processes 'a\.b' \| grep -qE '\(mC\|c\)rashing=true' && am force-stop 'a\.b'; am start -W /,
+      ),
+    ]);
+  });
+
+  it('takes a process held for its crash dialog for no running app', async () => {
+    const held = device('');
+    expect(await held.d.appRunning('a.b')).toBe(false);
+    expect(held.ran).toEqual([
+      "pidof 'a.b' >/dev/null && ! dumpsys activity processes 'a.b' | grep -qE '(mC|c)rashing=true' && echo up",
+    ]);
+    expect(await device('up\n').d.appRunning('a.b')).toBe(true);
   });
 
   it('says what went wrong, not what it was starting', async () => {

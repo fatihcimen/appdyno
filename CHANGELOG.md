@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- On Android `launch_app` stops first an app whose process the system holds for its "keeps stopping" dialog, which takes the dialog with it, and starts it afresh, and such a process counts as no running app: `am start -W` waited 10 s on it and left the dialog up, and the launch the refusal of a crash pointed to answered after 14 s that the app had died.
 - The Android agent lets a job go 200 ms after its host cancels it, as it did a second after its deadline, and lets one past its deadline go after the same 200 ms: a stroke whose injection waited on an app held for its "keeps stopping" dialog held the agent's one work lane for seconds after its refusal, and the read of the `launch_app` the refusal pointed to waited behind it to its 15 s and restarted the agent.
 - The Android agent's TIMEOUT is claimed on its one timers thread and written on a thread of its own: a host that stopped reading while a big answer or a video frame was being written held the next timeout's write, and with it the timers thread, so that no request on any connection timed out again, no stuck lane was given up and the agent never left when idle.
 - A request the Android agent answers on its connection's thread, a mirror's touch among them, that fails is answered with its reason, and the connection goes on: a touch refused, as a Xiaomi without "USB debugging (Security settings)" refuses one with `PERMISSION_REQUIRED`, closed the connection with no answer, every job in flight on it lost its answer, and the hint that says what to turn on never reached the host.
