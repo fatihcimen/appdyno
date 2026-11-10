@@ -1,0 +1,461 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "com.google.android.apps.nexuslauncher",
+      "layer": 0,
+      "b": [0, 0, 1080, 2400],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 1,
+      "b": [0, 0, 1080, 128],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 17 },
+    { "p": -1, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 128], "f": 17 },
+    { "p": 0, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 0, 1080, 2400], "f": 4113 },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_launch_animation_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 0, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 4,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar",
+      "b": [0, 0, 1080, 128],
+      "f": 17
+    },
+    {
+      "p": 5,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/launcher",
+      "b": [0, 0, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 6,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_contents",
+      "b": [50, 0, 1027, 128],
+      "f": 4113
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/drag_layer",
+      "b": [0, 0, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_container",
+      "b": [50, 1, 469, 128],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.view.View",
+      "id": "com.android.systemui:id/cutout_space_view",
+      "b": [469, 1, 587, 128],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_container",
+      "b": [587, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "com.google.android.apps.nexuslauncher:id/scrim_view",
+      "b": [0, 0, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.widget.ScrollView",
+      "id": "com.google.android.apps.nexuslauncher:id/workspace",
+      "b": [0, 0, 1080, 2400],
+      "f": 273
+    },
+    { "p": 9, "w": 0, "c": "android.view.View", "d": "Home", "b": [0, 128, 1080, 2337], "f": 17 },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "com.google.android.apps.nexuslauncher:id/page_indicator",
+      "b": [0, 1810, 1080, 1873],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "id": "com.google.android.apps.nexuslauncher:id/hotseat",
+      "b": [0, 1873, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/overview_actions_view",
+      "b": [0, 2006, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_content",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 12,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_content",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    { "p": 14, "w": 0, "c": "android.view.ViewGroup", "b": [29, 195, 1051, 1779], "f": 4113 },
+    { "p": 17, "w": 0, "c": "android.view.ViewGroup", "b": [76, 1873, 1004, 2068], "f": 4113 },
+    {
+      "p": 17,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/search_container_hotseat",
+      "d": "Search",
+      "b": [75, 2125, 1004, 2290],
+      "f": 2071
+    },
+    {
+      "p": 19,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_except_heads_up",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 20,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/system_icons",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    { "p": 21, "w": 0, "c": "android.view.ViewGroup", "b": [57, 223, 1023, 1751], "f": 4113 },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Phone",
+      "d": "Phone",
+      "b": [76, 1873, 249, 2068],
+      "f": 2071
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Messages",
+      "d": "Messages",
+      "b": [328, 1873, 501, 2068],
+      "f": 2071
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Chrome",
+      "d": "Chrome",
+      "b": [580, 1873, 753, 2068],
+      "f": 2071
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "appdyno fixture",
+      "d": "Predicted app: appdyno fixture",
+      "b": [832, 1873, 1004, 2068],
+      "f": 2071
+    },
+    {
+      "p": 23,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.apps.nexuslauncher:id/g_icon",
+      "d": "Google app",
+      "b": [86, 2144, 212, 2270],
+      "f": 23
+    },
+    {
+      "p": 23,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/end_part",
+      "b": [741, 2125, 993, 2290],
+      "f": 4113
+    },
+    {
+      "p": 24,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.android.systemui:id/clock",
+      "t": "11:16 ",
+      "d": "11:16 PM",
+      "b": [50, 1, 157, 128],
+      "f": 17
+    },
+    {
+      "p": 24,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/notification_icon_area",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 25,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/statusIcons",
+      "b": [885, 1, 986, 128],
+      "f": 4113
+    },
+    {
+      "p": 25,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/battery",
+      "d": "Battery charging, 100 percent.",
+      "b": [986, 1, 1006, 128],
+      "f": 17
+    },
+    {
+      "p": 26,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/search_container_workspace",
+      "b": [57, 223, 1023, 495],
+      "f": 4113
+    },
+    {
+      "p": 26,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Gmail",
+      "d": "Gmail",
+      "b": [309, 1479, 519, 1751],
+      "f": 2071
+    },
+    {
+      "p": 26,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Photos",
+      "d": "Photos",
+      "b": [561, 1479, 771, 1751],
+      "f": 2071
+    },
+    {
+      "p": 26,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "YouTube",
+      "d": "YouTube",
+      "b": [813, 1479, 1023, 1751],
+      "f": 2071
+    },
+    {
+      "p": 32,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.apps.nexuslauncher:id/mic_icon",
+      "d": "Voice search",
+      "b": [741, 2125, 867, 2290],
+      "f": 19
+    },
+    {
+      "p": 32,
+      "w": 0,
+      "c": "android.widget.ImageButton",
+      "id": "com.google.android.apps.nexuslauncher:id/lens_icon",
+      "d": "Google Lens",
+      "b": [867, 2125, 993, 2290],
+      "f": 23
+    },
+    {
+      "p": 34,
+      "w": 1,
+      "c": "android.view.ViewGroup",
+      "id": "com.android.systemui:id/notificationIcons",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 35,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [885, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 35,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/mobile_combo",
+      "d": "Phone signal full.",
+      "b": [931, 35, 970, 93],
+      "f": 17
+    },
+    { "p": 36, "w": 1, "c": "android.widget.ImageView", "b": [986, 47, 1006, 81], "f": 4113 },
+    {
+      "p": 37,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/bc_smartspace_view",
+      "b": [99, 224, 1023, 495],
+      "f": 4113
+    },
+    {
+      "p": 43,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "d": "Android System notification: ",
+      "b": [157, 1, 215, 128],
+      "f": 17
+    },
+    {
+      "p": 44,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/wifi_group",
+      "b": [892, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 45,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/mobile_group",
+      "b": [931, 35, 970, 93],
+      "f": 4113
+    },
+    {
+      "p": 47,
+      "w": 0,
+      "c": "androidx.viewpager.widget.ViewPager",
+      "id": "com.google.android.apps.nexuslauncher:id/smartspace_card_pager",
+      "b": [99, 224, 1023, 495],
+      "f": 2069
+    },
+    {
+      "p": 49,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [892, 44, 931, 83],
+      "f": 4113
+    },
+    { "p": 50, "w": 1, "c": "android.widget.FrameLayout", "b": [931, 44, 970, 83], "f": 4113 },
+    { "p": 51, "w": 0, "c": "android.view.ViewGroup", "b": [99, 224, 1023, 495], "f": 23 },
+    {
+      "p": 52,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/wifi_signal",
+      "d": "Wifi signal full.",
+      "b": [892, 44, 931, 83],
+      "f": 17
+    },
+    {
+      "p": 53,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/mobile_signal",
+      "b": [931, 44, 970, 83],
+      "f": 4113
+    },
+    {
+      "p": 54,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "id": "com.google.android.apps.nexuslauncher:id/text_group",
+      "b": [99, 292, 1023, 427],
+      "f": 4113
+    },
+    {
+      "p": 57,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.apps.nexuslauncher:id/date",
+      "t": "Tue, Nov 10",
+      "d": "Tue, Nov 10",
+      "b": [99, 292, 1023, 354],
+      "f": 23
+    },
+    {
+      "p": 57,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "id": "com.google.android.apps.nexuslauncher:id/smartspace_subtitle_group",
+      "b": [99, 378, 120, 427],
+      "f": 4113
+    },
+    {
+      "p": 59,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.apps.nexuslauncher:id/subtitle_text",
+      "b": [99, 378, 99, 427],
+      "f": 22
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 5,
+  "hash": "ca180f7b72cacea4"
+}

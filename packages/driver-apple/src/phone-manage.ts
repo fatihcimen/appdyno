@@ -172,6 +172,11 @@ export class PhoneApps implements AppManager {
     return `${service} for ${app} is reset to ask: when the app asks, alert ${grant ? 'allow' : 'deny'}`;
   }
 
+  /** An iPhone's link opens in the app it is sent to, by `devicectl`, and in none without one. */
+  opener(_url: string, app?: string) {
+    return Promise.resolve(app);
+  }
+
   links(): Promise<never> {
     return Promise.reject(
       new DeviceError(

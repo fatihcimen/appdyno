@@ -40,7 +40,8 @@ Sizin koyduğunuz sınırlar:
 - `--allow-apps` ile Ayarlar da her uygulama gibidir: `open_link` `settings` onu, hangi sayfada olursa olsun, yalnızca
   kimliği listedeyken açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`; ona giden bir bağlantı da öyle, `App-prefs:` ya da `prefs:`, `package:`. `app install` yalnızca
   listenin adlandırdığı bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar; `build_and_run` reddedilir.
-- `--no-home` ana ekran tuşunu engeller.
+  Her girdi izin verilen bir uygulamanın penceresine ya da önde izin verilen bir uygulamanın üstünde kişinin kullandığı birine düşer: klavyesi, bir izin ya da sistem uyarısı, paylaşım sayfası. Başka yere, bir ana ekrana, bir tarayıcıya, Ayarlar'a düşecek olan reddedilir; yanıt da kişinin o uygulamaya nasıl izin verdiğini söyler. `open_link` bir bağlantıyı, cihazın onu göndermeden önce söylediği gibi, yalnızca izin verilen bir uygulamada açar: Android onu seçili uygulamaya ya da sistemin seçtiğine `-p` ile bağlar; bir simülatör yalnızca seçili uygulamanın şemasıyla ya da alan adıyla açtığını söylediği bir bağlantıyı açar; bir iPhone onu gönderildiği uygulamada açar.
+- `--no-home` ana ekran tuşunu ve hangi yoldan olursa olsun, ona giden bir bağlantı da dahil, Ayarlar'ı engeller.
 - `APPDYNO_SECRETS=a,b` değerleri hiçbir zaman geri gösterilmez ve panoya konmaz. Loglardan ve çökme
   özetlerinden bu değerler çıkarılır.
 - Bir zaman çizelgesi bir isteği method, host ve yoluyla tutar. `--full-urls` (`APPDYNO_FULL_URLS=1`) bir token'ın
@@ -66,8 +67,8 @@ düğmesi, bir Samsung'un ve bir Xiaomi'nin güç menüsü, Ayarlar'ın sıfırl
 için kaydırın ve Acil SOS'u, Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'i. Onları gösteren sistem uygulamasından, güç
 menüsünün ve silme ekranının her dilde aynı kimliklerinden ve İngilizce ve Türkçe sözlerinden tanır; dokunma ref, seçici ya da x,y ile,
 nasıl hedeflenirse hedeflensin. Güç ya da yan tuşa 5 saniye içinde üçüncü basış da sorar, çünkü arka arkaya basışlar birçok telefonda
-yardım çağırır. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları da. Yanıt, appdyno'nun bir cihazı
-yeniden başlatmadığını, kapatmadığını, sıfırlamadığını ya da silmediğini ve bunu kişinin yaptığını söyler. Aşağıda veri kaybettiren işlem
+yardım çağırır. Arama yapan bir bağlantı, `tel:`, `telprompt:`, `facetime:` ya da `facetime-audio:`, ve bir telefon uygulamasında, bir çeviricide, onun arama ekranında ya da FaceTime'da bir dokunuş da sorar. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları da. Yanıt, appdyno'nun bir cihazı
+yeniden başlatmadığını, kapatmadığını, sıfırlamadığını ya da silmediğini, arama da yapmadığını ve bunu kişinin yaptığını söyler. Aşağıda veri kaybettiren işlem
 nasıl sorulup reddediliyorsa öyle sorulur ve reddedilir; hiçbir şey sorulmadan yapılmasına yalnızca `--allow-power virtual` (simülatörler
 ve emülatörler) ya da `all` izin verir: `--allow-data-loss` vermez, çünkü bir emülatörde bir uygulamanın verisini temizleyen bir çalışma
 onu yeniden başlamış bulmamalıdır. Bir pencerenin kendi girdisi başındaki kişidir ve hiçbir korumadan geçmez.

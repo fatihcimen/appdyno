@@ -40,7 +40,8 @@ Limits you set:
 - Under `--allow-apps`, Settings is an app like any other: `open_link` `settings` opens it, at any page, only with its
   id in the list, `com.apple.Preferences` on iOS and `com.android.settings` on Android, and so does a link to it, `App-prefs:` or `prefs:`, `package:`. `app install` installs only
   an app the list names, by the id the file holds, read before anything reaches the device; `build_and_run` is refused.
-- `--no-home` blocks the home key.
+  Every input lands in an allowed app's window, or in one a person uses over an allowed app in front: its keyboard, a permission or system alert, the share sheet. One that would land elsewhere, a home screen, a browser, Settings, is refused, and the answer says how a person allows that app. `open_link` opens a link only in an allowed app, as the device tells before it sends it: Android holds it to the selected app, or to the one the system picks, by `-p`; a simulator opens only a link the selected app says it opens, by its scheme or its domain; an iPhone opens it in the app it is sent to.
+- `--no-home` blocks the home key, and Settings by any route, a link to it too.
 - `APPDYNO_SECRETS=a,b` values are never shown back and never put on the clipboard. Logs and crash
   summaries are redacted of them.
 - A timeline keeps a request by its method, host and path. `--full-urls` (`APPDYNO_FULL_URLS=1`) keeps its query too,
@@ -66,8 +67,8 @@ and a Xiaomi's power menu, Settings' resets and its erase-all-data screen and co
 Emergency SOS, and Settings' Reset and Erase All Content and Settings. It knows them by the system app that shows them,
 by the power menu's and the erase screen's ids in any language, and by their words in English and Turkish, however the
 touch is aimed, by ref, selector or x,y. A third press of the power or side key in 5 seconds asks too, as presses in a
-row call for help on many phones. Reading such a screen asks nothing, nor back and home, which leave it. The answer says
-that appdyno does not restart, power off, reset or erase a device, and that the person does it. It is asked and refused
+row call for help on many phones. A link that places a call, `tel:`, `telprompt:`, `facetime:` or `facetime-audio:`, and a touch in a phone app, a dialer, its call screen or FaceTime, ask too. Reading such a screen asks nothing, nor back and home, which leave it. The answer says
+that appdyno does not restart, power off, reset or erase a device, nor place a call, and that the person does it. It is asked and refused
 as what loses data is, below, and only `--allow-power virtual` (simulators and emulators) or `all` lets it go ahead
 with nothing asked: `--allow-data-loss` does not, as a run that clears an app's data on an emulator must not find it
 restarted. A window's own input is the person at it, and passes no guard.

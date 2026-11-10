@@ -22,7 +22,7 @@ import { macProxy } from './network.js';
 import { ApnsPush } from './apns-push.js';
 import { simulatorApnsTarget } from './sim-apns.js';
 import { simulatorPush, simulatorRoutes } from './sim-push.js';
-import { simulatorLinks } from './sim-links.js';
+import { opens, simulatorLinks } from './sim-links.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import {
   DATA_FOLDERS,
@@ -150,6 +150,17 @@ export class SimulatorApps implements AppManager {
 
   links(app: string) {
     return simulatorLinks(this.simctl, this.udid, app);
+  }
+
+  /**
+   * A simulator opens a link in whichever app owns it: the app named, where its scheme or its domain is one the app
+   * says it opens, and else none this can tell.
+   * shortcut: a domain the app names opens in it once iOS has verified the site's file, and in Safari before; read
+   * which opened, if a site that is not verified must be told apart
+   */
+  async opener(url: string, app?: string) {
+    if (!app) return undefined;
+    return (await this.links(app)).some((l) => opens(l, url)) ? app : undefined;
   }
 
   async launchWith(app: string, opts: LaunchOptions) {

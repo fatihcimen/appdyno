@@ -2,7 +2,17 @@ import { fold, INSTALLED_APPS, must, reportProgress, type Screen } from '@appdyn
 import { z } from 'zod';
 import { systemAsks, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
-import { byPerson, checkApp, checkSettings, checkUrl, noApp } from './policy.js';
+import { approvePower } from './approval.js';
+import {
+  byPerson,
+  CALL_LINK,
+  checkApp,
+  checkSettings,
+  checkUrl,
+  noApp,
+  noSettings,
+  SETTINGS_LINK,
+} from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import type { Session } from './session.js';
 import { setCondition } from './settings.js';
@@ -85,13 +95,26 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
     return asks ? `sent ${href}, and ${systemAsks(asks)}` : `opened ${href}`;
   };
 
+  /** Under --allow-apps a link opens in an allowed app, as the device tells before it is sent, or not at all. */
+  const linkApp = async (s: Session, href: string) => {
+    // Settings' own links are Settings', which checkUrl has held to the list
+    if (policy.apps.length === 0 || SETTINGS_LINK.test(href)) return s.appId;
+    const held = s.appId ?? (policy.apps.length === 1 ? policy.apps[0] : undefined);
+    const opener = await s.device.apps.opener(href, held);
+    if (opener && policy.apps.includes(opener)) return opener;
+    throw new ToolError(
+      opener
+        ? `the link opens in ${opener}, not an allowed app (${policy.apps.join(', ')})`
+        : `this device cannot tell that the link opens in an allowed app (${policy.apps.join(', ')})${held ? `: it is none ${held} says it opens` : ''}`,
+      'POLICY_DENIED',
+      `${held ? '' : 'use_device with app selects the allowed app it is for; '}${byPerson(
+        opener ? `by adding ${opener} to --allow-apps` : 'by --allow-apps',
+      )}`,
+    );
+  };
+
   const openSettings = async (s: Session, settings: string, read: ReadMode) => {
-    if (!policy.allowHome)
-      throw new ToolError(
-        'Settings is off on this server: the app may not be left',
-        'POLICY_DENIED',
-        byPerson('by starting it without --no-home'),
-      );
+    if (!policy.allowHome) throw noSettings();
     const page = s.device.settingsPages.find((p) => p === settings);
     if (!page && settings !== 'app' && !settings.includes('.'))
       throw new ToolError(
@@ -148,7 +171,10 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         }
         if (settings) return openSettings(s, settings, read);
         const href = checkUrl(policy, must(url, 'url'), s.device.platform);
-        await s.device.openUrl(href, s.appId);
+        const app = await linkApp(s, href);
+        if (CALL_LINK.test(href))
+          await approvePower(policy, s, `the link ${href}, which places a call`);
+        await s.device.openUrl(href, app);
         // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
         return afterChange(s, linkSaid(s, href), read, undefined, undefined, LINK_SETTLE_MS);
       },

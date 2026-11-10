@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { Adb } from '../src/adb.js';
+import { AndroidApps } from '../src/apps.js';
 import { linkFilters, linkStates } from '../src/links.js';
 
 /** What `dumpsys package` and `pm get-app-links` answered for the fixture on an API 34 emulator, cut to the parts read. */
@@ -47,5 +49,41 @@ describe("an Android app's links", () => {
       { url: 'https://shop.example.com', kind: 'domain', state: 'verified' },
     ]);
     expect(linkStates('Unknown command: get-app-links')).toEqual([]);
+  });
+});
+
+describe('the app a link opens in', () => {
+  /** A device whose `resolve-activity` answers `said`; every command kept. */
+  const resolving = (said: string) => {
+    const asked: string[] = [];
+    const adb = {
+      exec: (_: string, c: string) => {
+        asked.push(c);
+        return Promise.resolve(said);
+      },
+    } as unknown as Adb;
+    return { asked, apps: new AndroidApps(adb, 'emulator-5554', {} as never) };
+  };
+
+  it('is the app named, held there by -p, with nothing asked', async () => {
+    const { apps, asked } = resolving('');
+    expect(await apps.opener('https://example.org', 'dev.app')).toBe('dev.app');
+    expect(asked).toEqual([]);
+  });
+
+  it("is the system's own pick with none named: an app, its chooser, or none", async () => {
+    const pick = resolving(
+      'priority=0 preferredOrder=0 match=0x208000 specificIndex=-1 isDefault=true\ncom.android.chrome/com.google.android.apps.chrome.IntentDispatcher\n',
+    );
+    expect(await pick.apps.opener("https://example.org/?q=a'b")).toBe('com.android.chrome');
+    expect(pick.asked).toEqual([
+      `cmd package resolve-activity --brief -a android.intent.action.VIEW -d 'https://example.org/?q=a'\\''b' 2>&1`,
+    ]);
+    expect(
+      await resolving(
+        'priority=0 preferredOrder=0 match=0x0 specificIndex=-1 isDefault=false\nandroid/com.android.internal.app.ResolverActivity\n',
+      ).apps.opener('https://example.org'),
+    ).toBe('android');
+    expect(await resolving('No activity found\n').apps.opener('nothing://x')).toBeUndefined();
   });
 });

@@ -29,12 +29,23 @@ const UNSAFE_SCHEME = /^(file|content|intent|javascript|data|android-app|jar):/i
  * Links that open Settings, at a page or at an app's: iOS's prefs and App-prefs (a simulator opens App-prefs), and what
  * Android's VIEW could take to it. Each is Settings, an app of its own, whatever the page.
  */
-const SETTINGS_LINK =
+export const SETTINGS_LINK =
   /^((app-)?prefs|app-settings|settings-navigation|package|android\.settings\.[\w.]*):/i;
+
+/** Links that place a call, or ask to: the phone's and FaceTime's. */
+export const CALL_LINK = /^(tel|telprompt|facetime|facetime-audio):/i;
 
 /** What a person does to allow what this server refuses by its flag: no call changes one. */
 export const byPerson = (how: string) =>
   `the person who runs this server allows it ${how}, and no call can`;
+
+/** Under --no-home Settings opens by no route: it leaves the app. */
+export const noSettings = () =>
+  new ToolError(
+    'Settings is off on this server: the app may not be left',
+    'POLICY_DENIED',
+    byPerson('by starting it without --no-home'),
+  );
 
 /** Under --allow-apps Settings is an app like any other: it opens, by any route, only with its own id on the list. */
 export function checkSettings(policy: Policy, platform: Platform) {
@@ -62,7 +73,10 @@ export function checkUrl(policy: Policy, url: string, platform: Platform): strin
       'POLICY_DENIED',
       byPerson('by --allow-urls'),
     );
-  if (SETTINGS_LINK.test(u)) checkSettings(policy, platform);
+  if (SETTINGS_LINK.test(u)) {
+    if (!policy.allowHome) throw noSettings();
+    checkSettings(policy, platform);
+  }
   return u;
 }
 

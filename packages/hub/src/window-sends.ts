@@ -52,13 +52,21 @@ export function windowSends(
    * One op's call, by the pane it answers: its answer, and what it said whole where it said it. `app`, where given, is
    * the session's, as an agent's `use_device` sets it, through the same policy: an iPhone opens a link only in one.
    */
-  const call = async (name: string, op: string, args: Record<string, unknown>, app?: string) => {
+  const call = async (
+    name: string,
+    op: string,
+    args: Record<string, unknown>,
+    app?: string,
+    /** The person asked for it, in the window: what the op would ask them is answered. */
+    theirs = false,
+  ) => {
     const tool = must((ops ??= opsFor(context()))[op], `the op ${op}`);
     try {
       if (app !== undefined)
         (await context().session()).select(app ? checkApp(ctx.policy, app) : undefined);
       const progress = (line: string) => tell(name, { line: spokenDone(line) });
-      const { data } = await inCall({ client: WINDOW, progress }, () =>
+      const ask = theirs ? { ask: () => Promise.resolve(true) } : {};
+      const { data } = await inCall({ client: WINDOW, progress, ...ask }, () =>
         tool.handler(argumentsFor(tool, args)),
       );
       const answer: Answer = { ok: true, text: spokenDone(String(data.done)) ?? op };
@@ -79,7 +87,8 @@ export function windowSends(
   };
 
   const openLink = async (url: string, app: string) => {
-    const { answer } = await call('openLink', 'open_link', { url }, app);
+    // a person's own link, typed or chosen in the pane: a call it places is theirs, as a touch in the window is
+    const { answer } = await call('openLink', 'open_link', { url }, app, true);
     if (answer.ok)
       recentLinks.write(serial, [url, ...recent().filter((u) => u !== url)].slice(0, RECENT));
     tell('openLink', { ...answer, recent: recent() });

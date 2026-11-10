@@ -1,0 +1,1475 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "dev.appdyno.fixture",
+      "layer": 0,
+      "b": [0, 0, 1080, 2400],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 2,
+      "pkg": "com.google.android.inputmethod.latin",
+      "layer": 1,
+      "b": [0, 1517, 1080, 2400],
+      "active": false,
+      "focused": false
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 2,
+      "b": [0, 0, 1080, 128],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 17 },
+    { "p": -1, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 128, 1080, 2400], "f": 17 },
+    { "p": -1, "w": 2, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 128], "f": 17 },
+    { "p": 0, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 0, 1080, 2337], "f": 4113 },
+    {
+      "p": 0,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "android:id/statusBarBackground",
+      "b": [0, 0, 1080, 128],
+      "f": 4112
+    },
+    {
+      "p": 0,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "android:id/navigationBarBackground",
+      "b": [0, 2337, 1080, 2400],
+      "f": 4112
+    },
+    { "p": 1, "w": 1, "c": "android.widget.LinearLayout", "b": [0, 128, 1080, 2274], "f": 4113 },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.view.View",
+      "id": "android:id/navigationBarBackground",
+      "b": [0, 2274, 1080, 2400],
+      "f": 4113
+    },
+    { "p": 1, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 2274, 1080, 2400], "f": 4113 },
+    {
+      "p": 2,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_launch_animation_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    {
+      "p": 3,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 128, 1080, 1517],
+      "f": 4113
+    },
+    {
+      "p": 6,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 128, 1080, 2274],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/input_method_navigation_bar_view",
+      "b": [0, 2274, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar",
+      "b": [0, 0, 1080, 128],
+      "f": 17
+    },
+    { "p": 11, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 128, 1080, 1517], "f": 4113 },
+    {
+      "p": 12,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "android:id/parentPanel",
+      "b": [0, 128, 1080, 2274],
+      "f": 4113
+    },
+    {
+      "p": 13,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/input_method_nav_inflater",
+      "b": [0, 2274, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 14,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_contents",
+      "b": [50, 0, 1027, 128],
+      "f": 4113
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Enter your details",
+      "b": [32, 224, 1048, 287],
+      "f": 17
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.EditText",
+      "id": "dev.appdyno.fixture:id/name_input",
+      "h": "Your name",
+      "b": [32, 287, 1048, 405],
+      "f": 2207
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.EditText",
+      "id": "dev.appdyno.fixture:id/phone_input",
+      "h": "Phone",
+      "b": [32, 405, 1048, 523],
+      "f": 2199
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "dev.appdyno.fixture:id/gsm_layout",
+      "b": [32, 523, 1048, 932],
+      "f": 4113
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.EditText",
+      "id": "dev.appdyno.fixture:id/password_input",
+      "h": "Password",
+      "b": [32, 932, 1048, 1050],
+      "f": 2711
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.Button",
+      "id": "dev.appdyno.fixture:id/submit",
+      "t": "SEND",
+      "b": [32, 1050, 1048, 1176],
+      "f": 23
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "dev.appdyno.fixture:id/result",
+      "b": [32, 1176, 1048, 1227],
+      "f": 17
+    },
+    {
+      "p": 16,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/inputArea",
+      "b": [0, 128, 1080, 2274],
+      "f": 4113
+    },
+    {
+      "p": 17,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/input_method_nav_horizontal",
+      "b": [0, 2274, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 18,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_container",
+      "b": [50, 1, 469, 128],
+      "f": 4113
+    },
+    {
+      "p": 18,
+      "w": 2,
+      "c": "android.view.View",
+      "id": "com.android.systemui:id/cutout_space_view",
+      "b": [469, 1, 587, 128],
+      "f": 4113
+    },
+    {
+      "p": 18,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_container",
+      "b": [587, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Mobile phone",
+      "b": [32, 523, 1048, 574],
+      "f": 17
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.EditText",
+      "id": "dev.appdyno.fixture:id/gsm_input",
+      "b": [32, 574, 1048, 692],
+      "f": 2199
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "We will reach you at this number",
+      "b": [32, 692, 1048, 932],
+      "f": 17
+    },
+    { "p": 26, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 128, 1080, 2274], "f": 17 },
+    {
+      "p": 27,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/input_method_nav_buttons",
+      "b": [21, 2274, 1059, 2400],
+      "f": 4113
+    },
+    {
+      "p": 28,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_content",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 30,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_content",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    { "p": 34, "w": 1, "c": "android.widget.LinearLayout", "b": [0, 1494, 1080, 2274], "f": 4113 },
+    {
+      "p": 35,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "android:id/input_method_nav_ends_group",
+      "b": [21, 2274, 1059, 2400],
+      "f": 4113
+    },
+    {
+      "p": 35,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "android:id/input_method_nav_center_group",
+      "b": [445, 2274, 634, 2400],
+      "f": 4113
+    },
+    {
+      "p": 36,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_except_heads_up",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 37,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/system_icons",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 38,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [0, 1494, 1080, 1517],
+      "f": 4113
+    },
+    {
+      "p": 38,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [0, 1517, 1080, 2274],
+      "f": 4113
+    },
+    {
+      "p": 39,
+      "w": 1,
+      "c": "android.widget.RelativeLayout",
+      "b": [21, 2274, 204, 2400],
+      "f": 4113
+    },
+    {
+      "p": 39,
+      "w": 1,
+      "c": "android.widget.RelativeLayout",
+      "b": [876, 2274, 1059, 2400],
+      "f": 4113
+    },
+    {
+      "p": 41,
+      "w": 2,
+      "c": "android.widget.TextView",
+      "id": "com.android.systemui:id/clock",
+      "t": "11:20 ",
+      "d": "11:20 PM",
+      "b": [50, 1, 157, 128],
+      "f": 17
+    },
+    {
+      "p": 41,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/notification_icon_area",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 42,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/statusIcons",
+      "b": [885, 1, 986, 128],
+      "f": 4113
+    },
+    {
+      "p": 42,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/battery",
+      "d": "Battery charging, 100 percent.",
+      "b": [986, 1, 1006, 128],
+      "f": 17
+    },
+    {
+      "p": 44,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.inputmethod.latin:id/keyboard_holder",
+      "b": [0, 1517, 1080, 2274],
+      "f": 4113
+    },
+    { "p": 44, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 1517, 1080, 2274], "f": 4113 },
+    {
+      "p": 44,
+      "w": 1,
+      "c": "android.view.View",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [0, 2274, 1080, 2274],
+      "f": 18
+    },
+    {
+      "p": 45,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "android:id/input_method_nav_back",
+      "d": "Back",
+      "b": [21, 2274, 204, 2400],
+      "f": 2071
+    },
+    {
+      "p": 46,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "android:id/input_method_nav_ime_switcher",
+      "d": "Switch input method",
+      "b": [876, 2274, 1059, 2400],
+      "f": 2071
+    },
+    {
+      "p": 48,
+      "w": 2,
+      "c": "android.view.ViewGroup",
+      "id": "com.android.systemui:id/notificationIcons",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 49,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [885, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 49,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/mobile_combo",
+      "d": "Phone signal full.",
+      "b": [931, 35, 970, 93],
+      "f": 17
+    },
+    { "p": 50, "w": 2, "c": "android.widget.ImageView", "b": [986, 47, 1006, 81], "f": 4113 },
+    {
+      "p": 51,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/keyboard_header_view_holder",
+      "b": [0, 1517, 1080, 1633],
+      "f": 4113
+    },
+    { "p": 51, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 1633, 1080, 2274], "f": 4113 },
+    { "p": 52, "w": 1, "c": "android.widget.ImageView", "b": [0, 1517, 1080, 1520], "f": 4113 },
+    {
+      "p": 56,
+      "w": 2,
+      "c": "android.widget.ImageView",
+      "d": "Android System notification: ",
+      "b": [157, 1, 215, 128],
+      "f": 17
+    },
+    {
+      "p": 57,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/wifi_group",
+      "b": [892, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 58,
+      "w": 2,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/mobile_group",
+      "b": [931, 35, 970, 93],
+      "f": 4113
+    },
+    { "p": 60, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 1517, 1080, 1633], "f": 4113 },
+    {
+      "p": 61,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [0, 1633, 1080, 2274],
+      "f": 4113
+    },
+    {
+      "p": 61,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [0, 2274, 1080, 2274],
+      "f": 4112
+    },
+    {
+      "p": 64,
+      "w": 2,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [892, 44, 931, 83],
+      "f": 4113
+    },
+    { "p": 65, "w": 2, "c": "android.widget.FrameLayout", "b": [931, 44, 970, 83], "f": 4113 },
+    {
+      "p": 66,
+      "w": 1,
+      "c": "android.view.ViewGroup",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [0, 1517, 1080, 1633],
+      "f": 4113
+    },
+    { "p": 67, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 1633, 1080, 2274], "f": 4113 },
+    {
+      "p": 69,
+      "w": 2,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/wifi_signal",
+      "d": "Wifi signal full.",
+      "b": [892, 44, 931, 83],
+      "f": 17
+    },
+    {
+      "p": 70,
+      "w": 2,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/mobile_signal",
+      "b": [931, 44, 970, 83],
+      "f": 4113
+    },
+    {
+      "p": 71,
+      "w": 1,
+      "c": "android.view.View",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [5, 1517, 1075, 1633],
+      "f": 4113
+    },
+    {
+      "p": 71,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_header_access_points_menu",
+      "d": "More features",
+      "b": [5, 1517, 115, 1633],
+      "f": 23
+    },
+    { "p": 71, "w": 1, "c": "android.widget.LinearLayout", "b": [115, 1517, 965, 1633], "f": 4113 },
+    {
+      "p": 71,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [965, 1517, 1075, 1633],
+      "f": 4113
+    },
+    { "p": 72, "w": 1, "c": "android.widget.LinearLayout", "b": [0, 1633, 1080, 2274], "f": 4113 },
+    { "p": 76, "w": 1, "c": "android.view.View", "b": [15, 1530, 104, 1619], "f": 4113 },
+    {
+      "p": 76,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [28, 1543, 91, 1606],
+      "f": 4113
+    },
+    {
+      "p": 77,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [115, 1517, 965, 1633],
+      "f": 4113
+    },
+    {
+      "p": 78,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_header_power_key",
+      "d": "Voice input",
+      "b": [965, 1517, 1075, 1633],
+      "f": 2071
+    },
+    {
+      "p": 79,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.inputmethod.latin:id/input_area",
+      "b": [5, 1654, 1075, 2118],
+      "f": 4113
+    },
+    {
+      "p": 79,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [5, 2118, 1075, 2274],
+      "f": 4113
+    },
+    {
+      "p": 82,
+      "w": 1,
+      "c": "android.view.ViewGroup",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [115, 1517, 965, 1633],
+      "f": 4113
+    },
+    {
+      "p": 83,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [988, 1517, 1051, 1633],
+      "f": 4113
+    },
+    { "p": 84, "w": 1, "c": "android.widget.LinearLayout", "b": [5, 1654, 1075, 1808], "f": 4113 },
+    { "p": 84, "w": 1, "c": "android.widget.LinearLayout", "b": [5, 1808, 1075, 1963], "f": 4113 },
+    { "p": 84, "w": 1, "c": "android.widget.LinearLayout", "b": [5, 1963, 1075, 2118], "f": 4113 },
+    {
+      "p": 85,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_switch_to_symbol",
+      "d": "Symbol keyboard",
+      "b": [5, 2118, 165, 2274],
+      "f": 23
+    },
+    {
+      "p": 85,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_bottom_symbol_1",
+      "d": ",",
+      "b": [165, 2118, 272, 2274],
+      "f": 2071
+    },
+    { "p": 85, "w": 1, "c": "android.widget.LinearLayout", "b": [272, 2118, 807, 2274], "f": 4113 },
+    {
+      "p": 85,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_bottom_symbol_2",
+      "d": ".",
+      "b": [807, 2118, 914, 2274],
+      "f": 2071
+    },
+    {
+      "p": 85,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_ime_action",
+      "d": "Enter",
+      "b": [914, 2118, 1075, 2274],
+      "f": 23
+    },
+    {
+      "p": 86,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "d": "Sticker Keyboard",
+      "b": [120, 1517, 288, 1633],
+      "f": 2071
+    },
+    {
+      "p": 86,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "d": "GIF Keyboard",
+      "b": [288, 1517, 456, 1633],
+      "f": 2071
+    },
+    {
+      "p": 86,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "d": "Clipboard",
+      "b": [456, 1517, 624, 1633],
+      "f": 2071
+    },
+    {
+      "p": 86,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "d": "Settings",
+      "b": [624, 1517, 792, 1633],
+      "f": 2071
+    },
+    {
+      "p": 86,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "d": "Theme settings",
+      "b": [792, 1517, 960, 1633],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_0",
+      "d": "q",
+      "b": [5, 1654, 112, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_1",
+      "d": "w",
+      "b": [112, 1654, 219, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_2",
+      "d": "e",
+      "b": [219, 1654, 326, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_3",
+      "d": "r",
+      "b": [326, 1654, 433, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_4",
+      "d": "t",
+      "b": [433, 1654, 540, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_5",
+      "d": "y",
+      "b": [540, 1654, 647, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_6",
+      "d": "u",
+      "b": [647, 1654, 754, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_7",
+      "d": "i",
+      "b": [754, 1654, 861, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_8",
+      "d": "o",
+      "b": [861, 1654, 968, 1808],
+      "f": 2071
+    },
+    {
+      "p": 88,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_0_9",
+      "d": "p",
+      "b": [968, 1654, 1075, 1808],
+      "f": 2071
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_0",
+      "d": "a",
+      "b": [5, 1808, 165, 1963],
+      "f": 2071
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_1",
+      "d": "s",
+      "b": [165, 1808, 272, 1963],
+      "f": 2071
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_2",
+      "d": "d",
+      "b": [272, 1808, 379, 1963],
+      "f": 23
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_3",
+      "d": "f",
+      "b": [379, 1808, 486, 1963],
+      "f": 23
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_4",
+      "d": "g",
+      "b": [486, 1808, 593, 1963],
+      "f": 23
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_5",
+      "d": "h",
+      "b": [593, 1808, 700, 1963],
+      "f": 23
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_6",
+      "d": "j",
+      "b": [700, 1808, 807, 1963],
+      "f": 23
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_7",
+      "d": "k",
+      "b": [807, 1808, 914, 1963],
+      "f": 23
+    },
+    {
+      "p": 89,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_1_8",
+      "d": "l",
+      "b": [914, 1808, 1075, 1963],
+      "f": 23
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_shift",
+      "d": "Shift",
+      "b": [5, 1963, 165, 2118],
+      "f": 2071
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_2_1",
+      "d": "z",
+      "b": [165, 1963, 272, 2118],
+      "f": 23
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_2_2",
+      "d": "x",
+      "b": [272, 1963, 379, 2118],
+      "f": 23
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_2_3",
+      "d": "c",
+      "b": [379, 1963, 486, 2118],
+      "f": 2071
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_2_4",
+      "d": "v",
+      "b": [486, 1963, 593, 2118],
+      "f": 23
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_2_5",
+      "d": "b",
+      "b": [593, 1963, 700, 2118],
+      "f": 23
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_2_6",
+      "d": "n",
+      "b": [700, 1963, 807, 2118],
+      "f": 2071
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_2_7",
+      "d": "m",
+      "b": [807, 1963, 914, 2118],
+      "f": 23
+    },
+    {
+      "p": 90,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_del",
+      "d": "Delete",
+      "b": [914, 1963, 1075, 2118],
+      "f": 2071
+    },
+    {
+      "p": 91,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [35, 2149, 135, 2212],
+      "f": 4113
+    },
+    {
+      "p": 92,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [213, 2147, 224, 2227],
+      "f": 4113
+    },
+    {
+      "p": 93,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_switch_to_next_language",
+      "d": "Emoji button",
+      "b": [272, 2118, 379, 2274],
+      "f": 23
+    },
+    { "p": 93, "w": 1, "c": "android.widget.LinearLayout", "b": [379, 2118, 807, 2274], "f": 4113 },
+    {
+      "p": 94,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [856, 2147, 865, 2227],
+      "f": 4113
+    },
+    { "p": 95, "w": 1, "c": "android.widget.FrameLayout", "b": [921, 2118, 1068, 2243], "f": 4113 },
+    {
+      "p": 96,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/host",
+      "b": [120, 1517, 288, 1633],
+      "f": 4113
+    },
+    {
+      "p": 97,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/host",
+      "b": [288, 1517, 456, 1633],
+      "f": 4113
+    },
+    {
+      "p": 98,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/host",
+      "b": [456, 1517, 624, 1633],
+      "f": 4113
+    },
+    {
+      "p": 99,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/host",
+      "b": [624, 1517, 792, 1633],
+      "f": 4113
+    },
+    {
+      "p": 100,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/host",
+      "b": [792, 1517, 960, 1633],
+      "f": 4113
+    },
+    {
+      "p": 101,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [12, 1654, 105, 1777],
+      "f": 4113
+    },
+    {
+      "p": 101,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "1",
+      "b": [89, 1654, 105, 1696],
+      "f": 4113
+    },
+    {
+      "p": 102,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [119, 1654, 212, 1777],
+      "f": 4113
+    },
+    {
+      "p": 102,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "2",
+      "b": [192, 1654, 212, 1696],
+      "f": 4113
+    },
+    {
+      "p": 103,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [226, 1654, 319, 1777],
+      "f": 4113
+    },
+    {
+      "p": 103,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "3",
+      "b": [298, 1654, 319, 1696],
+      "f": 4113
+    },
+    {
+      "p": 104,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [333, 1654, 426, 1777],
+      "f": 4113
+    },
+    {
+      "p": 104,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "4",
+      "b": [404, 1654, 426, 1696],
+      "f": 4113
+    },
+    {
+      "p": 105,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [440, 1654, 533, 1777],
+      "f": 4113
+    },
+    {
+      "p": 105,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "5",
+      "b": [512, 1654, 533, 1696],
+      "f": 4113
+    },
+    {
+      "p": 106,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [547, 1654, 640, 1777],
+      "f": 4113
+    },
+    {
+      "p": 106,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "6",
+      "b": [619, 1654, 640, 1696],
+      "f": 4113
+    },
+    {
+      "p": 107,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [654, 1654, 747, 1777],
+      "f": 4113
+    },
+    {
+      "p": 107,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "7",
+      "b": [727, 1654, 747, 1696],
+      "f": 4113
+    },
+    {
+      "p": 108,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [761, 1654, 854, 1777],
+      "f": 4113
+    },
+    {
+      "p": 108,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "8",
+      "b": [833, 1654, 854, 1696],
+      "f": 4113
+    },
+    {
+      "p": 109,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [868, 1654, 961, 1777],
+      "f": 4113
+    },
+    {
+      "p": 109,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "9",
+      "b": [940, 1654, 961, 1696],
+      "f": 4113
+    },
+    {
+      "p": 110,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [975, 1654, 1068, 1777],
+      "f": 4113
+    },
+    {
+      "p": 110,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "t": "0",
+      "b": [1044, 1654, 1068, 1696],
+      "f": 4113
+    },
+    { "p": 111, "w": 1, "c": "android.widget.LinearLayout", "b": [5, 1808, 165, 1963], "f": 4113 },
+    {
+      "p": 112,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [172, 1808, 265, 1932],
+      "f": 4113
+    },
+    {
+      "p": 113,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [279, 1808, 372, 1932],
+      "f": 4113
+    },
+    {
+      "p": 114,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [386, 1808, 479, 1932],
+      "f": 4113
+    },
+    {
+      "p": 115,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [493, 1808, 586, 1932],
+      "f": 4113
+    },
+    {
+      "p": 116,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [600, 1808, 693, 1932],
+      "f": 4113
+    },
+    {
+      "p": 117,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [707, 1808, 800, 1932],
+      "f": 4113
+    },
+    {
+      "p": 118,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [814, 1808, 907, 1932],
+      "f": 4113
+    },
+    {
+      "p": 119,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "b": [914, 1808, 1075, 1963],
+      "f": 4113
+    },
+    {
+      "p": 120,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [48, 1988, 122, 2062],
+      "f": 4113
+    },
+    {
+      "p": 121,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [172, 1963, 265, 2087],
+      "f": 4113
+    },
+    {
+      "p": 122,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [279, 1963, 372, 2087],
+      "f": 4113
+    },
+    {
+      "p": 123,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [386, 1963, 479, 2087],
+      "f": 4113
+    },
+    {
+      "p": 124,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [493, 1963, 586, 2087],
+      "f": 4113
+    },
+    {
+      "p": 125,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [600, 1963, 693, 2087],
+      "f": 4113
+    },
+    {
+      "p": 126,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [707, 1963, 800, 2087],
+      "f": 4113
+    },
+    {
+      "p": 127,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [814, 1963, 907, 2087],
+      "f": 4113
+    },
+    {
+      "p": 128,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [957, 1988, 1031, 2062],
+      "f": 4113
+    },
+    {
+      "p": 131,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [294, 2149, 357, 2212],
+      "f": 4113
+    },
+    {
+      "p": 132,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/key_pos_space",
+      "d": "Space",
+      "b": [379, 2118, 807, 2274],
+      "f": 2071
+    },
+    {
+      "p": 134,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [963, 2149, 1026, 2212],
+      "f": 4113
+    },
+    { "p": 134, "w": 1, "c": "android.widget.ImageView", "b": [989, 2175, 1000, 2186], "f": 4113 },
+    {
+      "p": 135,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [128, 1533, 280, 1617],
+      "f": 4113
+    },
+    {
+      "p": 136,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [296, 1533, 448, 1617],
+      "f": 4113
+    },
+    {
+      "p": 137,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [464, 1533, 616, 1617],
+      "f": 4113
+    },
+    {
+      "p": 138,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [632, 1533, 784, 1617],
+      "f": 4113
+    },
+    {
+      "p": 139,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [800, 1533, 952, 1617],
+      "f": 4113
+    },
+    {
+      "p": 160,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/host",
+      "b": [59, 1808, 165, 1963],
+      "f": 4113
+    },
+    {
+      "p": 168,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.inputmethod.latin:id/host",
+      "b": [914, 1808, 1021, 1963],
+      "f": 4113
+    },
+    { "p": 179, "w": 1, "c": "android.widget.FrameLayout", "b": [386, 2118, 800, 2243], "f": 4113 },
+    {
+      "p": 182,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [172, 1543, 235, 1606],
+      "f": 4113
+    },
+    {
+      "p": 183,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [340, 1543, 403, 1606],
+      "f": 4113
+    },
+    {
+      "p": 184,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [508, 1543, 571, 1606],
+      "f": 4113
+    },
+    {
+      "p": 185,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [676, 1543, 739, 1606],
+      "f": 4113
+    },
+    {
+      "p": 186,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [844, 1543, 907, 1606],
+      "f": 4113
+    },
+    {
+      "p": 187,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [66, 1808, 158, 1932],
+      "f": 4113
+    },
+    {
+      "p": 188,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [921, 1808, 1014, 1932],
+      "f": 4113
+    },
+    {
+      "p": 189,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.inputmethod.latin:id/0_resource_name_obfuscated",
+      "b": [386, 2118, 800, 2243],
+      "f": 4113
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 21,
+  "hash": "8b8f104e40397ffa"
+}

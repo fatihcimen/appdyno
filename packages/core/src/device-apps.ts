@@ -43,4 +43,9 @@ export type AppManager = {
   launchWith(app: string, opts: LaunchOptions): Promise<void>;
   /** The links the installed app says it opens: its schemes, its domains, Android's filters and their verification. */
   links(app: string): Promise<AppLink[]>;
+  /**
+   * The app `openUrl(url, app)` opens a link in, as the device tells before it is sent; undefined where it cannot tell,
+   * or no app would.
+   */
+  opener(url: string, app?: string): Promise<string | undefined>;
 };

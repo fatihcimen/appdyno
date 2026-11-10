@@ -16,6 +16,7 @@ import {
   type ScreenElement,
 } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
+import { appInFront } from './apps-guard.js';
 import { guardInputs, type InputGuard } from './power.js';
 import type { RunningFlight } from './timeline/flight.js';
 import type { RunningTimeline } from './timeline/run.js';
@@ -184,8 +185,12 @@ export class Session {
     return screen;
   }
 
+  /** The app last seen in front on a read, a prompt over it aside: what a prompt that stands alone in front is over. */
+  shownApp: string | undefined;
+
   remember(screen: Screen) {
     this.latest = { screen, at: this.version, taken: Date.now() };
+    this.shownApp = appInFront(screen.tree, this.device.platformScreen) ?? this.shownApp;
   }
 
   /** The newest read when no action came after it, else a fresh one. */

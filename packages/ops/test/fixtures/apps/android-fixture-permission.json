@@ -1,0 +1,340 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "com.google.android.permissioncontroller",
+      "layer": 0,
+      "b": [28, 508, 1052, 1956],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 1,
+      "b": [0, 0, 1080, 128],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [28, 508, 1052, 1956], "f": 17 },
+    { "p": -1, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 128], "f": 17 },
+    { "p": 0, "w": 0, "c": "android.widget.FrameLayout", "b": [28, 508, 1052, 1956], "f": 4113 },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_launch_animation_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [28, 508, 1052, 1956],
+      "f": 4113
+    },
+    {
+      "p": 4,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar",
+      "b": [0, 0, 1080, 128],
+      "f": 17
+    },
+    { "p": 5, "w": 0, "c": "android.widget.ScrollView", "b": [28, 508, 1052, 1956], "f": 21 },
+    {
+      "p": 6,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_contents",
+      "b": [50, 0, 1027, 128],
+      "f": 4113
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.permissioncontroller:id/grant_singleton",
+      "b": [28, 508, 1052, 1956],
+      "f": 4115
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_container",
+      "b": [50, 1, 469, 128],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.view.View",
+      "id": "com.android.systemui:id/cutout_space_view",
+      "b": [469, 1, 587, 128],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_container",
+      "b": [587, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.permissioncontroller:id/grant_dialog",
+      "b": [28, 508, 1052, 1956],
+      "f": 4119
+    },
+    {
+      "p": 10,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_content",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 12,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_content",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.permissioncontroller:id/content_container",
+      "b": [70, 550, 1010, 909],
+      "f": 4113
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.permissioncontroller:id/permission_location_accuracy",
+      "b": [70, 909, 1010, 1385],
+      "f": 4113
+    },
+    { "p": 13, "w": 0, "c": "android.widget.LinearLayout", "b": [70, 1385, 1010, 1914], "f": 4113 },
+    {
+      "p": 14,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_except_heads_up",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 15,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/system_icons",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    { "p": 16, "w": 0, "c": "android.widget.LinearLayout", "b": [133, 597, 947, 846], "f": 4113 },
+    {
+      "p": 17,
+      "w": 0,
+      "c": "android.widget.RadioGroup",
+      "id": "com.android.permissioncontroller:id/permission_location_accuracy_radio_group",
+      "b": [70, 909, 1010, 1322],
+      "f": 17
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.Button",
+      "id": "com.android.permissioncontroller:id/permission_allow_foreground_only_button",
+      "t": "While using the app",
+      "b": [133, 1390, 947, 1537],
+      "f": 23
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.Button",
+      "id": "com.android.permissioncontroller:id/permission_allow_one_time_button",
+      "t": "Only this time",
+      "b": [133, 1547, 947, 1694],
+      "f": 23
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.Button",
+      "id": "com.android.permissioncontroller:id/permission_deny_button",
+      "t": "Don’t allow",
+      "b": [133, 1704, 947, 1851],
+      "f": 23
+    },
+    {
+      "p": 19,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.android.systemui:id/clock",
+      "t": "11:16 ",
+      "d": "11:16 PM",
+      "b": [50, 1, 157, 128],
+      "f": 17
+    },
+    {
+      "p": 19,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/notification_icon_area",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 20,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/statusIcons",
+      "b": [885, 1, 986, 128],
+      "f": 4113
+    },
+    {
+      "p": 20,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/battery",
+      "d": "Battery charging, 100 percent.",
+      "b": [986, 1, 1006, 128],
+      "f": 17
+    },
+    {
+      "p": 21,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "com.android.permissioncontroller:id/permission_icon",
+      "b": [498, 597, 582, 681],
+      "f": 4113
+    },
+    {
+      "p": 21,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.android.permissioncontroller:id/permission_message",
+      "t": "Allow appdyno fixture to access this device’s location?",
+      "b": [133, 713, 947, 846],
+      "f": 17
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.RadioButton",
+      "id": "com.android.permissioncontroller:id/permission_location_accuracy_radio_fine",
+      "t": "Precise",
+      "b": [157, 909, 498, 1322],
+      "f": 1079
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.RadioButton",
+      "id": "com.android.permissioncontroller:id/permission_location_accuracy_radio_coarse",
+      "t": "Approximate",
+      "b": [582, 909, 923, 1322],
+      "f": 1047
+    },
+    {
+      "p": 27,
+      "w": 1,
+      "c": "android.view.ViewGroup",
+      "id": "com.android.systemui:id/notificationIcons",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 28,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [885, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 28,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/mobile_combo",
+      "d": "Phone signal full.",
+      "b": [931, 35, 970, 93],
+      "f": 17
+    },
+    { "p": 29, "w": 1, "c": "android.widget.ImageView", "b": [986, 47, 1006, 81], "f": 4113 },
+    {
+      "p": 34,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "d": "Android System notification: ",
+      "b": [157, 1, 215, 128],
+      "f": 17
+    },
+    {
+      "p": 35,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/wifi_group",
+      "b": [892, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 36,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/mobile_group",
+      "b": [931, 35, 970, 93],
+      "f": 4113
+    },
+    {
+      "p": 39,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [892, 44, 931, 83],
+      "f": 4113
+    },
+    { "p": 40, "w": 1, "c": "android.widget.FrameLayout", "b": [931, 44, 970, 83], "f": 4113 },
+    {
+      "p": 41,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/wifi_signal",
+      "d": "Wifi signal full.",
+      "b": [892, 44, 931, 83],
+      "f": 17
+    },
+    {
+      "p": 42,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/mobile_signal",
+      "b": [931, 44, 970, 83],
+      "f": 4113
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 6,
+  "hash": "f3437e1d52749efd"
+}

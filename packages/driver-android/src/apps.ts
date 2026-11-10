@@ -266,6 +266,16 @@ export class AndroidApps implements AppManager {
     return androidLinks((c) => this.sh(c), assertPkg(app));
   }
 
+  /** `-p` holds a link to the app named; with none, the system's own pick, `android` where it is its chooser. */
+  async opener(url: string, app?: string) {
+    if (app) return app;
+    const out = await this.sh(
+      `cmd package resolve-activity --brief -a android.intent.action.VIEW -d ${shq(url)}`,
+    );
+    const component = out.trim().split('\n').at(-1) ?? '';
+    return component.includes('/') ? component.slice(0, component.indexOf('/')) : undefined;
+  }
+
   async launchWith(app: string, opts: LaunchOptions) {
     if (opts.env && Object.keys(opts.env).length > 0)
       throw new DeviceError(

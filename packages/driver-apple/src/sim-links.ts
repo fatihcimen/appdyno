@@ -57,3 +57,17 @@ export async function simulatorLinks(
     ...domainsOf(signed).map((d) => ({ url: `https://${d}`, kind: 'domain' as const })),
   ];
 }
+
+/** Whether a link is one of an app's: its scheme, or an `https` link to its domain, a `*.` one to any under it. */
+export function opens(link: AppLink, url: string) {
+  if (link.kind === 'scheme')
+    return url.toLowerCase().startsWith(link.url.toLowerCase().replace(/\/\/$/, ''));
+  // `URL.parse` came in Node 22.1, and engines lets 22.0 in
+  const host = URL.canParse(url) ? new URL(url).hostname : undefined;
+  const domain = link.url.replace(/^https:\/\//, '').toLowerCase();
+  return (
+    url.toLowerCase().startsWith('https:') &&
+    !!host &&
+    (domain.startsWith('*.') ? host.endsWith(domain.slice(1)) : host === domain)
+  );
+}

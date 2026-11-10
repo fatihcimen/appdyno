@@ -12,6 +12,8 @@ const SYSTEM_UI = 'com.android.systemui';
 const SYSTEM_DIALOGS =
   /^(android|com\.(google\.)?android\.(permissioncontroller|packageinstaller))$/;
 const PERMISSION_PACKAGES = /^com\.(google\.)?android\.permissioncontroller$/;
+/** The share sheet from Android 14 on, an app of its own; before it the chooser is `android`'s. */
+const SHARE_SHEET = 'com.android.intentresolver';
 const ALLOW = /:id\/permission_allow(_foreground_only|_one_time)?_button$/;
 const DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
 const STATUS_BAND_DP = 56;
@@ -39,6 +41,18 @@ export const androidScreen: PlatformScreen = {
     return alertOf(
       elements.filter((e) => e.pkg && pkgs.has(e.pkg)),
       (e) => !!e.clickable,
+    );
+  },
+
+  /** A keyboard, and what `systemAlert` reads as an alert: a system dialog, a focused system window but the bars'. */
+  overApp(tree, i) {
+    const w = tree.windows[i];
+    return (
+      !!w &&
+      (w.type === INPUT_METHOD_WINDOW ||
+        w.pkg === SHARE_SHEET ||
+        SYSTEM_DIALOGS.test(w.pkg ?? '') ||
+        (w.type === SYSTEM_WINDOW && w.focused && !!w.pkg && w.pkg !== SYSTEM_UI))
     );
   },
 

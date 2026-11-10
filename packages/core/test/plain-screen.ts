@@ -4,6 +4,7 @@ import type { PlatformScreen } from '../src/screen/index.js';
 export const plainScreen: PlatformScreen = {
   contrastAudits: [],
   systemAlert: () => undefined,
+  overApp: () => false,
   personPrompt: () => undefined,
   alertButton: () => undefined,
   keyboardOpen: () => false,

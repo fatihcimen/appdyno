@@ -17,8 +17,8 @@ import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
 import { endSession, leftHere, sweep, type Taken } from './leftovers.js';
+import { inputGuard } from './apps-guard.js';
 import { byPerson, checkApp, type Policy } from './policy.js';
-import { powerGuard } from './power.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
 
@@ -261,7 +261,7 @@ export class ServerContext {
       ),
       app ?? this.defaults.app ?? saved?.app,
       owner,
-      powerGuard(this.policy),
+      inputGuard(this.policy),
     );
     s.shown = saved?.shown;
     s.lastActionAt = saved?.lastActionAt;

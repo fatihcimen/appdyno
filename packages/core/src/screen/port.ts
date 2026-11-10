@@ -8,6 +8,8 @@ export type PlatformScreen = {
   readonly contrastAudits: readonly AuditType[];
   /** The system alert on the screen, whatever it asks. */
   systemAlert(tree: Tree, elements: UiElement[]): SystemAlert | undefined;
+  /** The window `w` of the tree is one a person uses over the app in front, and no app of its own: a keyboard, a system alert, a chooser. */
+  overApp(tree: Tree, w: number): boolean;
   /** What this screen wants of a person, as `personNeeded` names it: a prompt that is no alert as well. */
   personPrompt(tree: Tree, elements: UiElement[]): string | undefined;
   /** The button of a system permission prompt for `action`; undefined when no such prompt is up. */

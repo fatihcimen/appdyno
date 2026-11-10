@@ -64,6 +64,13 @@ describe('what a window sends to its device', () => {
       ]);
   });
 
+  it("opens a call's link a person chose, as theirs, where an agent's asks them first", async () => {
+    const device = new FakeDevice();
+    const { open } = sendsOn(device);
+    expect(await open('tel:5551234')).toMatchObject({ ok: true, text: 'Opened tel:5551234' });
+    expect(device.calls.find((c) => c.name === 'openUrl')?.args[0]).toBe('tel:5551234');
+  });
+
   it("says a refusal as the op does, with what to do in a person's words, and opens nothing", async () => {
     const device = new FakeDevice();
     const { open } = sendsOn(device, { ...DEFAULT_POLICY, urls: /^https:\/\/example\.test\// });
@@ -200,6 +207,7 @@ describe('what a window sends to its device', () => {
     device.apps = {
       listApps: () => Promise.resolve([{ id: front }]),
       links: () => Promise.resolve(opens),
+      opener: (_url: string, app?: string) => Promise.resolve(app),
     } as unknown as AppManager;
     const { sends, told, answer } = sendsOn(device, {
       ...DEFAULT_POLICY,

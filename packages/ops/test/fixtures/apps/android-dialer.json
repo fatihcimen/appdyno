@@ -1,0 +1,978 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "com.google.android.dialer",
+      "layer": 0,
+      "b": [0, 0, 1080, 2400],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 1,
+      "b": [0, 0, 1080, 128],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 17 },
+    { "p": -1, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 128], "f": 17 },
+    { "p": 0, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 0, 1080, 2337], "f": 4113 },
+    {
+      "p": 0,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "android:id/statusBarBackground",
+      "b": [0, 0, 1080, 128],
+      "f": 4112
+    },
+    {
+      "p": 0,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "android:id/navigationBarBackground",
+      "b": [0, 2337, 1080, 2400],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_launch_animation_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_container",
+      "b": [0, 0, 1080, 128],
+      "f": 4113
+    },
+    { "p": 2, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 128, 1080, 2337], "f": 4113 },
+    {
+      "p": 6,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar",
+      "b": [0, 0, 1080, 128],
+      "f": 17
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/action_bar_root",
+      "b": [0, 128, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 8,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_contents",
+      "b": [50, 0, 1027, 128],
+      "f": 4113
+    },
+    {
+      "p": 9,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 128, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_container",
+      "b": [50, 1, 469, 128],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 1,
+      "c": "android.view.View",
+      "id": "com.android.systemui:id/cutout_space_view",
+      "b": [469, 1, 587, 128],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_container",
+      "b": [587, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 11,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/outer_layout",
+      "b": [0, 128, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 12,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_content",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 14,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_end_side_content",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 15,
+      "w": 0,
+      "c": "android.widget.RelativeLayout",
+      "id": "com.google.android.dialer:id/root_layout",
+      "b": [0, 128, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 16,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/status_bar_start_side_except_heads_up",
+      "b": [50, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 17,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/system_icons",
+      "b": [885, 1, 1006, 128],
+      "f": 4113
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/dialpad_fragment_container",
+      "b": [0, 128, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "id": "com.google.android.dialer:id/main_activity_coordinator_layout",
+      "b": [0, 128, 1080, 2337],
+      "f": 17
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/bottom_nav_bar_fragment_container",
+      "b": [0, 2337, 1080, 2337],
+      "f": 4112
+    },
+    {
+      "p": 19,
+      "w": 1,
+      "c": "android.widget.TextView",
+      "id": "com.android.systemui:id/clock",
+      "t": "11:19 ",
+      "d": "11:19 PM",
+      "b": [50, 1, 157, 128],
+      "f": 17
+    },
+    {
+      "p": 19,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/notification_icon_area",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 20,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/statusIcons",
+      "b": [885, 1, 986, 128],
+      "f": 4113
+    },
+    {
+      "p": 20,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/battery",
+      "d": "Battery charging, 100 percent.",
+      "b": [986, 1, 1006, 128],
+      "f": 17
+    },
+    { "p": 21, "w": 0, "c": "android.view.ViewGroup", "b": [0, 128, 1080, 2337], "f": 4113 },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/search_fragment_container",
+      "b": [0, 128, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "b": [954, 2211, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/survey_container",
+      "b": [1080, 2337, 1080, 2337],
+      "f": 4112
+    },
+    {
+      "p": 25,
+      "w": 1,
+      "c": "android.view.ViewGroup",
+      "id": "com.android.systemui:id/notificationIcons",
+      "b": [157, 1, 215, 128],
+      "f": 4113
+    },
+    {
+      "p": 26,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [885, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 26,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/mobile_combo",
+      "d": "Phone signal full.",
+      "b": [931, 35, 970, 93],
+      "f": 17
+    },
+    { "p": 27, "w": 1, "c": "android.widget.ImageView", "b": [986, 47, 1006, 81], "f": 4113 },
+    {
+      "p": 28,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "com.google.android.dialer:id/spacer",
+      "b": [0, 128, 1080, 1170],
+      "f": 17
+    },
+    {
+      "p": 28,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_view_vertical",
+      "b": [0, 1170, 1080, 2337],
+      "f": 4113
+    },
+    {
+      "p": 28,
+      "w": 0,
+      "c": "android.widget.Button",
+      "id": "com.google.android.dialer:id/dialpad_voice_call_button",
+      "t": "Call",
+      "d": "dial",
+      "b": [413, 2158, 667, 2305],
+      "f": 23
+    },
+    { "p": 29, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 128, 1080, 2337], "f": 4113 },
+    {
+      "p": 32,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "d": "Android System notification: ",
+      "b": [157, 1, 215, 128],
+      "f": 17
+    },
+    {
+      "p": 33,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/wifi_group",
+      "b": [892, 35, 931, 93],
+      "f": 4113
+    },
+    {
+      "p": 34,
+      "w": 1,
+      "c": "android.widget.LinearLayout",
+      "id": "com.android.systemui:id/mobile_group",
+      "b": [931, 35, 970, 93],
+      "f": 4113
+    },
+    {
+      "p": 37,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "com.google.android.dialer:id/dialpad_shadow",
+      "b": [0, 1170, 1080, 1196],
+      "f": 4113
+    },
+    { "p": 37, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 1196, 1080, 2337], "f": 4113 },
+    { "p": 39, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 128, 1080, 128], "f": 4112 },
+    { "p": 39, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 128, 1080, 2337], "f": 4113 },
+    {
+      "p": 41,
+      "w": 1,
+      "c": "android.widget.FrameLayout",
+      "id": "com.android.systemui:id/wifi_combo",
+      "b": [892, 44, 931, 83],
+      "f": 4113
+    },
+    { "p": 42, "w": 1, "c": "android.widget.FrameLayout", "b": [931, 44, 970, 83], "f": 4113 },
+    {
+      "p": 44,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_view",
+      "b": [0, 1196, 1080, 2337],
+      "f": 23
+    },
+    {
+      "p": 46,
+      "w": 0,
+      "c": "android.widget.ScrollView",
+      "id": "com.google.android.dialer:id/result_container",
+      "b": [0, 128, 1080, 2337],
+      "f": 21
+    },
+    {
+      "p": 47,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/wifi_signal",
+      "d": "Wifi signal full.",
+      "b": [892, 44, 931, 83],
+      "f": 17
+    },
+    {
+      "p": 48,
+      "w": 1,
+      "c": "android.widget.ImageView",
+      "id": "com.android.systemui:id/mobile_signal",
+      "b": [931, 44, 970, 83],
+      "f": 4113
+    },
+    {
+      "p": 49,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "id": "com.google.android.dialer:id/digits_container",
+      "b": [0, 1196, 1080, 1340],
+      "f": 4113
+    },
+    {
+      "p": 49,
+      "w": 0,
+      "c": "android.view.View",
+      "id": "com.google.android.dialer:id/divider_line",
+      "b": [0, 1340, 1080, 1343],
+      "f": 4113
+    },
+    {
+      "p": 49,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad",
+      "b": [0, 1364, 1080, 2321],
+      "f": 4113
+    },
+    { "p": 50, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 128, 1080, 1196], "f": 4113 },
+    {
+      "p": 53,
+      "w": 0,
+      "c": "android.widget.ImageButton",
+      "id": "com.google.android.dialer:id/dialpad_overflow",
+      "d": "More options",
+      "b": [0, 1196, 147, 1340],
+      "f": 2071
+    },
+    {
+      "p": 53,
+      "w": 0,
+      "c": "android.widget.EditText",
+      "id": "com.google.android.dialer:id/digits",
+      "t": "555-1234",
+      "b": [147, 1196, 933, 1340],
+      "f": 2207
+    },
+    {
+      "p": 53,
+      "w": 0,
+      "c": "android.widget.ImageButton",
+      "id": "com.google.android.dialer:id/deleteButton",
+      "d": "backspace",
+      "b": [933, 1196, 1080, 1340],
+      "f": 2071
+    },
+    { "p": 55, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1364, 1080, 1554], "f": 4113 },
+    { "p": 55, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1554, 1080, 1744], "f": 4113 },
+    { "p": 55, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1744, 1080, 1934], "f": 4113 },
+    { "p": 55, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 1934, 1080, 2124], "f": 4113 },
+    {
+      "p": 56,
+      "w": 0,
+      "c": "android.support.v7.widget.RecyclerView",
+      "id": "com.google.android.dialer:id/search_recycler_view",
+      "b": [0, 128, 1080, 1196],
+      "f": 21
+    },
+    {
+      "p": 60,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/one",
+      "d": "1,",
+      "b": [32, 1375, 355, 1543],
+      "f": 2071
+    },
+    {
+      "p": 60,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/two",
+      "d": "2,ABC",
+      "b": [377, 1375, 701, 1543],
+      "f": 23
+    },
+    {
+      "p": 60,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/three",
+      "d": "3,DEF",
+      "b": [723, 1375, 1047, 1543],
+      "f": 23
+    },
+    {
+      "p": 61,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/four",
+      "d": "4,GHI",
+      "b": [32, 1565, 355, 1733],
+      "f": 23
+    },
+    {
+      "p": 61,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/five",
+      "d": "5,JKL",
+      "b": [377, 1565, 701, 1733],
+      "f": 23
+    },
+    {
+      "p": 61,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/six",
+      "d": "6,MNO",
+      "b": [723, 1565, 1047, 1733],
+      "f": 23
+    },
+    {
+      "p": 62,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/seven",
+      "d": "7,PQRS",
+      "b": [32, 1755, 355, 1923],
+      "f": 23
+    },
+    {
+      "p": 62,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/eight",
+      "d": "8,TUV",
+      "b": [377, 1755, 701, 1923],
+      "f": 23
+    },
+    {
+      "p": 62,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/nine",
+      "d": "9,WXYZ",
+      "b": [723, 1755, 1047, 1923],
+      "f": 23
+    },
+    {
+      "p": 63,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/star",
+      "d": "*",
+      "b": [32, 1945, 355, 2113],
+      "f": 23
+    },
+    {
+      "p": 63,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/zero",
+      "d": "0",
+      "b": [377, 1945, 701, 2113],
+      "f": 2071
+    },
+    {
+      "p": 63,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "com.google.android.dialer:id/pound",
+      "d": "#",
+      "b": [723, 1945, 1047, 2113],
+      "f": 23
+    },
+    { "p": 64, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 128, 1080, 254], "f": 23 },
+    { "p": 64, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 254, 1080, 380], "f": 23 },
+    { "p": 64, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 380, 1080, 506], "f": 23 },
+    {
+      "p": 65,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [162, 1395, 225, 1522],
+      "f": 4113
+    },
+    {
+      "p": 66,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [507, 1395, 570, 1522],
+      "f": 4113
+    },
+    {
+      "p": 67,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [857, 1395, 913, 1522],
+      "f": 4113
+    },
+    {
+      "p": 68,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [168, 1585, 219, 1712],
+      "f": 4113
+    },
+    {
+      "p": 69,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [512, 1585, 566, 1712],
+      "f": 4113
+    },
+    {
+      "p": 70,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [849, 1585, 921, 1712],
+      "f": 4113
+    },
+    {
+      "p": 71,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [154, 1775, 233, 1902],
+      "f": 4113
+    },
+    {
+      "p": 72,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [509, 1775, 569, 1902],
+      "f": 4113
+    },
+    {
+      "p": 73,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [843, 1775, 927, 1902],
+      "f": 4113
+    },
+    {
+      "p": 74,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [175, 1994, 211, 2063],
+      "f": 4113
+    },
+    {
+      "p": 75,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [512, 1965, 566, 2092],
+      "f": 4113
+    },
+    {
+      "p": 76,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_layout",
+      "b": [866, 1990, 903, 2067],
+      "f": 4113
+    },
+    {
+      "p": 77,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.dialer:id/search_action_image",
+      "b": [42, 128, 168, 254],
+      "f": 4113
+    },
+    {
+      "p": 77,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/search_action_text",
+      "t": "Create new contact",
+      "b": [210, 161, 586, 221],
+      "f": 17
+    },
+    {
+      "p": 78,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.dialer:id/search_action_image",
+      "b": [42, 254, 168, 380],
+      "f": 4113
+    },
+    {
+      "p": 78,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/search_action_text",
+      "t": "Add to a contact",
+      "b": [210, 287, 527, 347],
+      "f": 17
+    },
+    {
+      "p": 79,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.dialer:id/search_action_image",
+      "b": [42, 380, 168, 506],
+      "f": 4113
+    },
+    {
+      "p": 79,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/search_action_text",
+      "t": "Send a message",
+      "b": [210, 413, 526, 473],
+      "f": 17
+    },
+    {
+      "p": 80,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "1",
+      "b": [181, 1395, 205, 1464],
+      "f": 17
+    },
+    {
+      "p": 80,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [162, 1472, 225, 1522],
+      "f": 4113
+    },
+    {
+      "p": 81,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "2",
+      "b": [517, 1395, 559, 1465],
+      "f": 17
+    },
+    {
+      "p": 81,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [507, 1473, 570, 1522],
+      "f": 4113
+    },
+    {
+      "p": 82,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "3",
+      "b": [863, 1395, 906, 1467],
+      "f": 17
+    },
+    {
+      "p": 82,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [857, 1475, 913, 1522],
+      "f": 4113
+    },
+    {
+      "p": 83,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "4",
+      "b": [170, 1585, 217, 1654],
+      "f": 17
+    },
+    {
+      "p": 83,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [168, 1662, 219, 1712],
+      "f": 4113
+    },
+    {
+      "p": 84,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "5",
+      "b": [516, 1585, 561, 1656],
+      "f": 17
+    },
+    {
+      "p": 84,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [512, 1664, 566, 1712],
+      "f": 4113
+    },
+    {
+      "p": 85,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "6",
+      "b": [862, 1585, 908, 1656],
+      "f": 17
+    },
+    {
+      "p": 85,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [849, 1664, 921, 1712],
+      "f": 4113
+    },
+    {
+      "p": 86,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "7",
+      "b": [172, 1775, 214, 1844],
+      "f": 17
+    },
+    {
+      "p": 86,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [154, 1852, 233, 1902],
+      "f": 4113
+    },
+    {
+      "p": 87,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "8",
+      "b": [517, 1775, 561, 1847],
+      "f": 17
+    },
+    {
+      "p": 87,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [509, 1855, 569, 1902],
+      "f": 4113
+    },
+    {
+      "p": 88,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "9",
+      "b": [862, 1775, 908, 1846],
+      "f": 17
+    },
+    {
+      "p": 88,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [843, 1854, 927, 1902],
+      "f": 4113
+    },
+    {
+      "p": 89,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "*",
+      "b": [175, 1994, 211, 2029],
+      "f": 17
+    },
+    {
+      "p": 90,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "0",
+      "b": [512, 1965, 566, 2037],
+      "f": 17
+    },
+    {
+      "p": 90,
+      "w": 0,
+      "c": "android.widget.LinearLayout",
+      "id": "com.google.android.dialer:id/dialpad_key_icon_or_letters_layout",
+      "b": [531, 2045, 546, 2092],
+      "f": 4113
+    },
+    {
+      "p": 91,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_number",
+      "t": "#",
+      "b": [866, 1990, 903, 2033],
+      "f": 17
+    },
+    { "p": 99, "w": 0, "c": "android.view.View", "b": [162, 1472, 225, 1475], "f": 4113 },
+    {
+      "p": 99,
+      "w": 0,
+      "c": "android.widget.ImageView",
+      "id": "com.google.android.dialer:id/dialpad_key_voicemail",
+      "b": [162, 1475, 225, 1522],
+      "f": 4113
+    },
+    {
+      "p": 101,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "ABC",
+      "b": [507, 1485, 570, 1510],
+      "f": 17
+    },
+    {
+      "p": 103,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "DEF",
+      "b": [857, 1487, 913, 1510],
+      "f": 17
+    },
+    {
+      "p": 105,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "GHI",
+      "b": [168, 1674, 219, 1699],
+      "f": 17
+    },
+    {
+      "p": 107,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "JKL",
+      "b": [512, 1676, 566, 1700],
+      "f": 17
+    },
+    {
+      "p": 109,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "MNO",
+      "b": [849, 1675, 921, 1700],
+      "f": 17
+    },
+    {
+      "p": 111,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "PQRS",
+      "b": [154, 1864, 233, 1890],
+      "f": 17
+    },
+    {
+      "p": 113,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "TUV",
+      "b": [509, 1866, 569, 1890],
+      "f": 17
+    },
+    {
+      "p": 115,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "WXYZ",
+      "b": [843, 1866, 927, 1889],
+      "f": 17
+    },
+    {
+      "p": 118,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "id": "com.google.android.dialer:id/dialpad_key_letters",
+      "t": "+",
+      "b": [531, 2061, 546, 2076],
+      "f": 17
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 182,
+  "hash": "83463f6d70fccffe"
+}

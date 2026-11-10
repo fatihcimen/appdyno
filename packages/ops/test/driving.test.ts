@@ -1279,6 +1279,8 @@ describe('gestures, keys, clipboard', () => {
 
   it('opens a link to Settings under an app allow list only when Settings is on it, as its own pages do', async () => {
     const d = new FakeDevice();
+    // Android's: a link goes to the app named
+    d.apps = { opener: (_url: string, app?: string) => Promise.resolve(app) } as AppManager;
     const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
     for (const url of [
       'App-prefs:root=General',

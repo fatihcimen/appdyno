@@ -209,7 +209,7 @@ describe('the system power, emergency and erase controls', () => {
 });
 
 const AHEAD =
-  "appdyno does not restart, power off, reset or erase a device, nor call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: --allow-power virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_POWER)";
+  "appdyno does not restart, power off, reset or erase a device, nor place a call or call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: --allow-power virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_POWER)";
 
 beforeEach(() => {
   vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-power-state-')));
@@ -312,7 +312,7 @@ describe('an input on them', () => {
     const yes = await onDevice('android-power-en', { answer: 'accept' });
     expect((await yes.call('tap', restart)).error).toBe(false);
     expect(yes.asked).toEqual([
-      `Let appdyno act on a touch on "Restart", the system's own power, emergency or erase control on Fake Phone (emulator-5580)? The device may power off, restart, call for help, or lose all it holds.`,
+      `Let appdyno act on a touch on "Restart", the system's own power, emergency or erase control on Fake Phone (emulator-5580)? The device may power off, restart, place a call, call for help, or lose all it holds.`,
     ]);
     expect(yes.sent()).toEqual([expect.objectContaining({ kind: 'tap' })]);
     for (const answer of ['decline', 'cancel'] as const) {

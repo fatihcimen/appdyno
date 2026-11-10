@@ -50,6 +50,10 @@ export function guardInputs(device: Device, check: (input: Input) => Promise<voi
 const SYSTEM =
   /^(android$|com\.android\.(systemui|settings|phone|emergency)|com\.google\.android\.apps\.safetyhub|com\.(samsung|sec)\.android\.|com\.(miui|xiaomi)\.|com\.apple\.(springboard|Preferences)$)/;
 
+/** The phone apps, where a touch may place a call: the dialers, their in-call screens, and FaceTime. */
+const PHONE =
+  /^(com\.(google\.)?android\.(dialer|incallui|server\.telecom)|com\.samsung\.android\.(dialer|incallui)|com\.apple\.(mobilephone|facetime|InCallService))$/;
+
 /** A screen that is all such controls, by an id in any language: the power menu, and Settings' erase-all-data screen. */
 const SCREEN_IDS = /:id\/\w*(global_?actions|main_?clear|master_?clear)\w*$/;
 
@@ -89,6 +93,13 @@ const clickable = (n: Node) => (n.f & NODE_FLAGS.clickable) !== 0;
 
 const area = (n: Node) => (n.b[2] - n.b[0]) * (n.b[3] - n.b[1]);
 
+/** The window a finger coming down at `p` reaches, as the system routes it: the top one there. */
+export const windowAt = (tree: Tree, p: Point) =>
+  tree.windows
+    .map((win, i) => ({ win, i }))
+    .filter(({ win }) => p.x >= win.b[0] && p.x <= win.b[2] && p.y >= win.b[1] && p.y <= win.b[3])
+    .sort((a, b) => b.win.layer - a.win.layer)[0]?.i;
+
 /** The node's own words that name such a control, as an answer quotes them. */
 const words = (n: Node) => {
   const w = [n.t, n.d].find((x) => x && WORDS.some((re) => re.test(plain(x))));
@@ -126,12 +137,7 @@ function controls(tree: Tree) {
   return {
     /** What a finger coming down at `p` acts on, as the system routes it: the smallest clickable thing there. */
     at(p: Point) {
-      const w = tree.windows
-        .map((win, i) => ({ win, i }))
-        .filter(
-          ({ win }) => p.x >= win.b[0] && p.x <= win.b[2] && p.y >= win.b[1] && p.y <= win.b[3],
-        )
-        .sort((a, b) => b.win.layer - a.win.layer)[0]?.i;
+      const w = windowAt(tree, p);
       if (w === undefined || !system(w)) return undefined;
       const here = tree.nodes.flatMap((n, i) => (n.w === w && contains(n, p) ? [{ n, i }] : []));
       const smallest = (xs: typeof here) => xs.sort((a, b) => area(a.n) - area(b.n))[0];
@@ -155,11 +161,17 @@ function controls(tree: Tree) {
   };
 }
 
+/** The phone app a touch at `p` lands in, if it lands in one. */
+const phoneAt = (tree: Tree, p: Point) => {
+  const pkg = tree.windows[windowAt(tree, p) ?? -1]?.pkg;
+  return pkg && PHONE.test(pkg) ? pkg : undefined;
+};
+
 /** What a touch at `p` would act on of the system's power, emergency and erase controls: its words, or undefined. */
 export const powerControlAt = (tree: Tree, p: Point) => controls(tree).at(p);
 
 /** Keys that leave such a screen or act on no element: back, home, the switcher, the volume. */
-const LEAVES = new Set([
+export const LEAVES = new Set([
   'back',
   'home',
   'appSwitch',
@@ -171,7 +183,7 @@ const LEAVES = new Set([
 ]);
 
 /** The power and side keys: three presses this close call for help on many phones (Emergency SOS). */
-const SIDE_KEYS = new Set(['power', 'lock']);
+export const SIDE_KEYS = new Set(['power', 'lock']);
 const HELP_PRESSES = 3;
 const HELP_MS = 5_000;
 const pressed = new WeakMap<Session, number[]>();
@@ -189,7 +201,10 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
   if (input.key && LEAVES.has(input.key)) return undefined;
   // shortcut: the read a touch was aimed by, which may be up to 20 s old when nothing acted since (Session.beforeTouch);
   // a dialog a person opens by hand in that time is not seen: read again here if a person's hand must be allowed for
-  const found = controls((s.fresh ?? (await s.current())).tree);
+  const { tree } = s.fresh ?? (await s.current());
+  const call = input.points.map((p) => phoneAt(tree, p)).find(Boolean);
+  if (call) return `a touch on the phone app ${call}, which may place a call`;
+  const found = controls(tree);
   const touched = input.points.map((p) => found.at(p)).find(Boolean);
   const what = touched ?? (input.key || input.types ? found.focused() : undefined);
   const how = input.types ? 'typing into' : input.key ? `the ${input.key} key on` : 'a touch on';

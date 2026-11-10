@@ -80,6 +80,11 @@ export const iosScreen: PlatformScreen = {
 
   personPrompt: (tree, elements) => personNeeded(iosScreen.systemAlert(tree, elements)),
 
+  /** The home screen app's alert over the app, and no other of its windows; a keyboard and a share sheet are the app's. */
+  overApp: (tree, i) =>
+    tree.windows[i]?.pkg === HOME_SCREEN_APP &&
+    tree.nodes.some((n) => n.w === i && n.p < 0 && /alert$/i.test(n.c)),
+
   /**
    * A button of an Alert of the home screen app, by `words`, else by its place: of two buttons deny is
    * the first and allow the last; of three or more (location, photos: once / while using / don't)
