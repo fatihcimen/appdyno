@@ -34,13 +34,13 @@ const SECRET = 's3cr3t-pass';
 describe('flows', () => {
   let dir: string;
   let device: FakeDevice;
-  const context = (secrets: string[] = []) => {
+  const context = (secrets: string[] = [], app: string | null = 'dev.app') => {
     const provider: DeviceProvider = {
       list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
       handles: () => true,
       open: () => device,
     };
-    return new ServerContext({ ...DEFAULT_POLICY, secrets }, [provider], { app: 'dev.app' });
+    return new ServerContext({ ...DEFAULT_POLICY, secrets }, [provider], { app: app ?? undefined });
   };
   const refusal = async (p: Promise<unknown>) => {
     try {
@@ -909,6 +909,20 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         callerOf(context())('flow', { action: 'run', file: flowFile('tap text="Kaydet"\n') }),
       );
       expect(plain.code).toBe('NOT_FOUND');
+    });
+
+    it('tells that death by the app in front as the step began where none is selected, as a batch does', async () => {
+      device.crashReports = [{ at: 'now', reason: 'IllegalStateException: fixture crash' }];
+      const e = await refusal(
+        callerOf(context([], null))('flow', {
+          action: 'run',
+          file: flowFile('tap text="Form"\ntap text="Kaydet"\n'),
+        }),
+      );
+      expect(e.code).toBe('APP_NOT_RUNNING');
+      expect(e.message).toContain(
+        '\nthe app died: IllegalStateException: fixture crash, by step 2\n',
+      );
     });
 
     it('says a device failure while a step waits for its target, with no op around it', async () => {

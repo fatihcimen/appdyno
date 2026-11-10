@@ -16,7 +16,7 @@ import {
 } from '@appdyno/flows';
 import { z } from 'zod';
 import type { Answers } from '../answers.js';
-import { DIED_HINT, diedLine, diedUnder } from '../app-death.js';
+import { asStepBegan, DIED_HINT, diedLine, diedUnder } from '../app-death.js';
 import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
 import { LOOKS_ONLY } from '../step-schemas.js';
@@ -217,14 +217,13 @@ export function flowRunner(
   };
 
   /** The app as the step began, and when the step before it began: a step that fails as the app is gone failed for its death. */
-  type Was = { up: boolean; pid: string | undefined; since: number; began: number };
+  type Was = ReturnType<typeof asStepBegan> & { since: number; began: number };
 
   // the run's failure is read from what these throw, and a replay from code has no op around it
   const executor = (s: Session, was: Was): Executor => ({
     prepare: (st) => {
       Object.assign(was, {
-        up: !!s.appId && s.fresh?.foreground === s.appId,
-        pid: s.appPid,
+        ...asStepBegan(s, s.fresh?.foreground),
         since: was.began,
         began: Date.now(),
       });
@@ -291,7 +290,13 @@ export function flowRunner(
       s.forgetProcess();
     }
     const undo = ctx.hide(flow.secrets.flatMap((n) => values[n] ?? []));
-    const was: Was = { up: false, pid: undefined, since: Date.now(), began: Date.now() };
+    const was: Was = {
+      app: undefined,
+      up: false,
+      pid: undefined,
+      since: Date.now(),
+      began: Date.now(),
+    };
     try {
       const result = await runSteps(flow, executor(s, was), {
         from,
@@ -313,7 +318,7 @@ export function flowRunner(
         const appDied =
           f.code === 'APP_NOT_RUNNING'
             ? undefined
-            : await diedUnder(s, s.appId, screen?.foreground, was.pid, was.since, clean, was.up);
+            : await diedUnder(s, was.app, screen?.foreground, was.pid, was.since, clean, was.up);
         if (appDied)
           Object.assign(f, {
             message: `${f.message}\n${diedLine(appDied)}, by step ${f.n}`,

@@ -28,6 +28,15 @@ export type Died = { reason: string; file?: string };
  */
 export const aimedApp = (s: Session) => s.appId ?? s.fresh?.foreground;
 
+/**
+ * The app as a step began, by what was last seen in front: the one selected, else that one; whether it was in front;
+ * its process. A step that fails as it is gone failed for its death.
+ */
+export function asStepBegan(s: Session, seen: string | undefined) {
+  const app = s.appId ?? seen;
+  return { app, up: !!app && seen === app, pid: s.appPid };
+}
+
 /** What a report says of the app's end since `since`; a new process with no report is no death. */
 async function reportOf(
   s: Session,

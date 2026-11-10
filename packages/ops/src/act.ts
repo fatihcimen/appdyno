@@ -5,6 +5,7 @@ import {
   aimedApp,
   AppDied,
   appDeath,
+  asStepBegan,
   DIED_HINT,
   diedLine,
   diedRefusal,
@@ -278,9 +279,7 @@ export function actOps(
           const last = i === plan.length - 1;
           const name = p.op ? p.op.name : p.st.action;
           seen = front ?? s.fresh?.foreground ?? seen;
-          // the app as the step began (none selected: the one in front): a step that fails as it is gone failed for that
-          const at = s.appId ?? seen;
-          const was = { app: at, up: !!at && seen === at, pid: s.appPid };
+          const was = asStepBegan(s, seen);
           [since, began] = [began, Date.now()];
           try {
             throwIfCancelled('steps');
