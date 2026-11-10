@@ -31,7 +31,18 @@ void MVEmitFrom(NSView *_Nullable view, NSDictionary *message) {
   MVEmit(tagged);
 }
 
+#ifdef MV_SELFTEST
+static void (^gEmitTap)(NSDictionary *message);
+
+void MVTapEmits(void (^_Nullable tap)(NSDictionary *message)) {
+  gEmitTap = tap;
+}
+#endif
+
 void MVEmit(NSDictionary *message) {
+#ifdef MV_SELFTEST
+  if (gEmitTap && !message[@"check"]) return gEmitTap(message);
+#endif
   NSData *line = [NSJSONSerialization dataWithJSONObject:message options:0 error:NULL];
   if (!line) return;
   [gOut lock];

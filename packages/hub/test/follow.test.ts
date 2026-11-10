@@ -64,6 +64,29 @@ describe('what a window is told', () => {
     }
   });
 
+  it('hands on each call an agent made, for what the window lists to follow it', async () => {
+    vi.useFakeTimers();
+    try {
+      rmSync(activityFile(), { force: true });
+      const heard: unknown[] = [];
+      const off = followDevice('guarded', { tell: () => undefined }, undefined, (l) =>
+        heard.push(l.args),
+      );
+      appendActivity('guarded', {
+        at: Date.now(),
+        tool: 'app',
+        ms: 3,
+        ok: true,
+        args: { action: 'install' },
+      });
+      await vi.advanceTimersByTimeAsync(300);
+      expect(heard).toEqual([{ action: 'install' }]);
+      off();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('puts up a request for a person once, and takes it down when it ends', async () => {
     vi.useFakeTimers();
     try {

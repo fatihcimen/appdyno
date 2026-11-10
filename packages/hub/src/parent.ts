@@ -173,10 +173,15 @@ export class Parent {
     });
     this.sessions.set(serial, session);
     const watches = answerWatches(serial, session);
-    const unfollow = followDevice(serial, session, () => {
-      flow.follow();
-      watches();
-    });
+    const unfollow = followDevice(
+      serial,
+      session,
+      () => {
+        flow.follow();
+        watches();
+      },
+      controls.heard,
+    );
     this.done.set(
       serial,
       session.stopped.then(async (status) => {

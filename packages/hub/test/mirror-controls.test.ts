@@ -337,6 +337,19 @@ describe("a window's Apps pane", () => {
     await vi.waitFor(() => expect(told.some((m) => m.op === 'apps')).toBe(true), WAIT);
     expect(apps.uninstall).toHaveBeenCalledWith('a.b');
   });
+
+  it("lists them again after an agent's call puts an app on the device or takes one off, and after no other", async () => {
+    const { controls, told } = fixture('ios', { apps } as unknown as Partial<Device>);
+    const call = (tool: string, action: string, ok = true) =>
+      controls.heard({ at: 0, tool, ms: 1, ok, args: { action } });
+    call('app', 'launch');
+    call('app', 'install', false);
+    call('tap', 'install');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(told.filter((m) => m.op === 'apps')).toEqual([]);
+    for (const action of ['install', 'uninstall', 'build_and_run']) call('app', action);
+    await vi.waitFor(() => expect(told.filter((m) => m.op === 'apps')).toHaveLength(3), WAIT);
+  });
 });
 
 describe("a window's measures", () => {

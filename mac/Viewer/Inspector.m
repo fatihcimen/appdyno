@@ -59,7 +59,7 @@ static NSString *ms(id v) {
   NSSearchField *_filter;
   NSTextField *_appsNote;
   NSButton *_launch, *_quit, *_remove;
-  BOOL _asked;
+  BOOL _appsShown;
   BOOL _open;
 }
 
@@ -291,6 +291,11 @@ static NSString *ms(id v) {
   _logs.watching = _open && _chosen == MVPaneLogs;
   _network.watching = _open && _chosen == MVPaneNetwork;
   _audit.watching = _open && _chosen == MVPaneAccessibility;
+  // the apps are listed again each time they come into sight: one installed or removed since, by an agent or by Xcode,
+  // shows as it is
+  BOOL apps = _open && _chosen == MVPaneApps;
+  if (apps && !_appsShown) MVEmitFrom(self, @{@"op": @"app", @"action": @"list"});
+  _appsShown = apps;
 }
 
 - (BOOL)readings {
@@ -318,10 +323,6 @@ static NSString *ms(id v) {
   [self watchPanes];
   if (self.onPane) self.onPane();
   if (pane == MVPaneLinks || pane == MVPanePush || pane == MVPaneDevice) [(id<MVSendPane>)_panes[pane] ask];
-  if (pane == MVPaneApps && !_asked) {
-    _asked = YES;
-    MVEmitFrom(self, @{@"op": @"app", @"action": @"list"});
-  }
 }
 
 - (void)showStats:(NSDictionary *)s {

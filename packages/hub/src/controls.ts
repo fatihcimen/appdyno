@@ -16,9 +16,12 @@ import type {
   SystemSwipe,
   ViewerMessage,
 } from '@appdyno/core';
+import type { ActivityLine } from '@appdyno/ops';
 import { PERSON_HINTS, type WindowMeasures } from './measures.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
+/** What an agent's `app` call does that puts an app on the device or takes one off. */
+const APPS_CHANGE = new Set(['install', 'uninstall', 'build_and_run']);
 const RECORD_MAX_S = 3_600;
 /** A turn shows in the picture's shape by then, or the app in front refused it. */
 const TURN_MS = 2_000;
@@ -364,6 +367,12 @@ export function windowControls(
     read: async () => {
       await ready();
       return device.tree();
+    },
+
+    /** An agent's call on this device: one that installed or removed an app lists the apps again, for the Apps pane. */
+    heard: ({ tool, ok, args }: ActivityLine) => {
+      const { action } = (args ?? {}) as { action?: unknown };
+      if (ok && tool === 'app' && APPS_CHANGE.has(String(action))) trying(() => listApps());
     },
 
     /** A control of the window that is no input: a person's, however input is set. */

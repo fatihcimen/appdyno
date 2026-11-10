@@ -27,11 +27,15 @@ const forWindow = ({ at, tool, ms, ok, args, done }: ActivityLine) => ({
   ...(done && { done: spokenDone(done) }),
 });
 
-/** Tells a window what other processes do on its device: calls, and a request for a person. No socket. */
+/**
+ * Tells a window what other processes do on its device: calls, and a request for a person. No socket. `heard` has each
+ * call an agent made.
+ */
 export function followDevice(
   serial: string,
   session: Pick<MirrorSession, 'tell'>,
   each?: () => void,
+  heard?: (line: ActivityLine) => void,
 ) {
   const lines = activityFollower(serial);
   let lastCall = 0;
@@ -52,6 +56,7 @@ export function followDevice(
       });
       session.tell(forWindow(line));
       if (line.touched) session.tell({ op: 'touchAt', ...line.touched, agent: true });
+      heard?.(line);
     }
     if (driving && now - lastCall >= DRIVING_MS) {
       driving = false;
