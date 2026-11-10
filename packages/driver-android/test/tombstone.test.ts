@@ -145,6 +145,33 @@ describe('a tombstone', () => {
     });
   });
 
+  it("takes an end just after since, stamped by a phone's clock that is behind this Mac's", async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-tomb-')));
+    const local = (ms: number) => {
+      const d = new Date(ms);
+      const p = (n: number, w = 2) => String(n).padStart(w, '0');
+      return `${String(d.getFullYear())}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
+    };
+    // as a Xiaomi's clock stood: 190 ms behind, so a kill 100 ms after since was stamped before it
+    const behind = 190;
+    const since = Date.now();
+    const info = `  ApplicationExitInfo #0:
+    timestamp=${local(since + 100 - behind)} pid=9932 realUid=10192
+    process=dev.appdyno.fixture reason=2 (SIGNALED) subreason=0 (UNKNOWN) status=9
+    description=null
+`;
+    const adb = {
+      exec: (_s: string, c: string) =>
+        Promise.resolve(
+          c.includes('exit-info') ? info : c.startsWith('date') ? local(Date.now() - behind) : '',
+        ),
+    };
+    const q = { app: 'dev.appdyno.fixture', limit: 5, since };
+    const { exits } = await androidCrashes(adb as unknown as Adb, 'Y9DE', q);
+    vi.unstubAllEnvs();
+    expect(exits?.map((e) => e.reason)).toEqual(['SIGNALED status 9']);
+  });
+
   it('refuses a folder that is not there, and an SDK with no NDK, saying so', async () => {
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-tomb-')), 't.txt');
     await expect(namedTombstone(dropbox, '/no/such/folder', file)).rejects.toThrow(

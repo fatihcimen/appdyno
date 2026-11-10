@@ -153,11 +153,24 @@ export function crashReports(exitInfo: string, dropbox: string, q: CrashesQuery)
     .map(({ time: _time, ...r }) => r);
 }
 
+/**
+ * How far ahead of this Mac the device's stamps stand, read in this Mac's zone, taken as late as the answer can have
+ * been: a phone's clock is some 100 ms off, and an end just after `since` was stamped before it and left out.
+ */
+async function stampsAheadOf(adb: Adb, serial: string) {
+  const said = (await adb.exec(serial, `date '+%Y-%m-%d %H:%M:%S.%N'`)).trim();
+  const at = stampTime(said.replace(/(\.\d{3})\d*$/, '$1'));
+  return Number.isNaN(at) ? 0 : at - Date.now();
+}
+
 export async function androidCrashes(
   adb: Adb,
   serial: string,
-  q: CrashesQuery,
+  asked: CrashesQuery,
 ): Promise<CrashesAnswer> {
+  const q = asked.since
+    ? { ...asked, since: asked.since + (await stampsAheadOf(adb, serial)) }
+    : asked;
   const exitInfo = await adb.exec(serial, `dumpsys activity exit-info ${shq(q.app)}`);
   // one tag per command: given several, dumpsys dropbox looks for entries that are all of them
   const dropbox = await adb.exec(
