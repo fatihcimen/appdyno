@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The device suite `push` expects a refused style as the server says every refusal, its code first: `INVALID_ARGUMENT: type: …`, where it still wanted the words alone. Run on an API 34 emulator: it passes its 10.
 - The device suite `crashes` stops the fixture at its end on Android: an emulator's crash dialog holds the crashed process, and the suite after it read `appdyno fixture keeps stopping` for the app, so `diagnose` run right after it failed 3 of its tests. Run on an API 34 emulator: `diagnose` after it passes its 8.
 - The device suite `exits` takes a background kill that names no subreason for the user's request it is: a Xiaomi with Android 16 writes `am kill` as `USER REQUESTED` with subreason 0, where others write `KILL BACKGROUND`, and it is still told from a force stop. Run there: its 5 tests pass.
 - The device suite `build-and-run` builds for an iPhone only where `XCODE_XCCONFIG_FILE` names a team, as its header says it needs: with none Xcode refused to sign it ad hoc and the test failed. Run on an iPhone 13 Pro Max: it skips with none, and with an xcconfig of team BKXMF846AT builds the fixture and installs it.

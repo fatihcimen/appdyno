@@ -75,8 +75,9 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
     ]);
     // a style is no push of its own
     const style = await call('push', { type: 'inbox' });
+    // a refusal says its code first
     expect(style.text).toBe(
-      'type: alert, background, rich, live_activity, tapped, voip, widgets, not inbox',
+      'INVALID_ARGUMENT: type: alert, background, rich, live_activity, tapped, voip, widgets, not inbox',
     );
   });
 
