@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must, type Device, type InputEvent } from '@appdyno/core';
 import { afterAll, describe, expect, it, vi, type Mock } from 'vitest';
-import { stamp, windowControls, windowLook, type WindowSession } from '../src/controls.js';
+import {
+  MEASURE_YOURS,
+  stamp,
+  WAKE_AND_OPEN,
+  windowControls,
+  windowLook,
+  type WindowSession,
+} from '../src/controls.js';
 import { PROBE_HINT, type JourneyAnswer } from '@appdyno/ops';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
@@ -353,8 +360,23 @@ describe("a window's measures", () => {
     controls.onWindow({ op: 'control', name: 'measureScroll' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
     expect(measures.scroll).not.toHaveBeenCalled();
-    expect(answer(told)).toMatchObject({ title: 'Open an app first' });
+    expect(answer(told)).toMatchObject({
+      title: 'Open an app first',
+      detail: 'com.apple.springboard is in front',
+      hint: MEASURE_YOURS,
+    });
     expect(must(answer(told), 'the answer').ok).toBeUndefined();
+  });
+
+  it('say what to do where nothing is in front, as when the screen is off: the row is short, the note whole', async () => {
+    const { controls, told, measures } = fixture('android', {
+      ...yours,
+      foreground: () => Promise.resolve(''),
+    } as unknown as Partial<Device>);
+    controls.onWindow({ op: 'control', name: 'measureLaunch' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(measures.launch).not.toHaveBeenCalled();
+    expect(answer(told)).toMatchObject({ detail: 'No app is in front', hint: WAKE_AND_OPEN });
   });
 
   it('say why there is no number, and let the next one run', async () => {

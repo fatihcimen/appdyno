@@ -25,6 +25,11 @@ const TURN_MS = 2_000;
 const TURN_LOOK_MS = 100;
 /** How often a device's own source is told what is in front: one call to its agent while that stays the same. */
 const APP_LOOK_MS = 5_000;
+/** What to do when a measure finds no app of the person's in front: an app, or nothing, as when the screen is off. */
+export const MEASURE_YOURS =
+  'A measure restarts the app it measures, so it measures only an app of yours: open one, then measure it.';
+export const WAKE_AND_OPEN =
+  'Wake the device if its screen is off, open one of your apps, then measure it.';
 
 /** By the clock a person reads: a file's name is theirs, and it sorts as the ISO date does. */
 export const stamp = () =>
@@ -285,10 +290,11 @@ export function windowControls(
     alone(async () => {
       const { app, mine } = await frontApp(device);
       if (!app || !mine) {
-        const front = app ?? 'Nothing that can be named';
+        // the row's line is short; what to do is the note's, which a pane shows whole
         tellMeasured({
           title: 'Open an app first',
-          detail: `${front} is in front, and is not an app of yours`,
+          detail: app ? `${app} is in front` : 'No app is in front',
+          hint: app ? MEASURE_YOURS : WAKE_AND_OPEN,
         });
         return;
       }

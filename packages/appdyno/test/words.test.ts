@@ -2,7 +2,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { must, NEEDS } from '@appdyno/core';
-import { CREATE_REFUSED, PERSON_HINTS, PERSON_REASONS } from '@appdyno/hub';
+import {
+  CREATE_REFUSED,
+  MEASURE_YOURS,
+  PERSON_HINTS,
+  PERSON_REASONS,
+  WAKE_AND_OPEN,
+} from '@appdyno/hub';
 import { TRIED } from '../src/hub-services.js';
 
 const viewer = join(import.meta.dirname, '../../../mac/Viewer');
@@ -80,6 +86,16 @@ describe('the table of words', () => {
 
   it('has what the Performance pane says to do after a measure is refused, in the words it says it in', () => {
     expect([...PERSON_HINTS.values()].filter((w) => !known(w))).toEqual([]);
+  });
+
+  it('has what the Performance pane says when no app of yours is in front', () => {
+    const said = [
+      MEASURE_YOURS,
+      WAKE_AND_OPEN,
+      'No app is in front',
+      'com.apple.springboard is in front',
+    ];
+    expect(said.filter((w) => !known(w))).toEqual([]);
   });
 
   it('has why the New sheet makes no device, in the words it says it in', () => {

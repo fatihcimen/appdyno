@@ -54,8 +54,23 @@ static void checkKeptResult(void) {
           [NSString stringWithFormat:@"row %@ shown %@", NSStringFromRect(row.frame), NSStringFromRect(list.documentVisibleRect)]);
 }
 
+/// A Xiaomi with its screen off: the row's line read `Nothing that can be…not an app of yours`, cut in its middle.
+static void checkRefusedWhole(void) {
+  NSWindow *window;
+  MVPerfPane *pane = tallPane(&window);
+  NSString *what = @"Wake the device if its screen is off, open one of your apps, then measure it.";
+  [pane showMeasured:@{@"title": @"Open an app first",
+                       @"detail": @"No app is in front",
+                       @"hint": what}];
+  [window layoutIfNeeded];
+  NSTextField *hint = [pane valueForKey:@"_hint"];
+  NSRect needed = [hint.attributedStringValue boundingRectWithSize:NSMakeSize(NSWidth(hint.frame) - 4, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin];
+  MVCheck(@"performance: what to do when no app of yours is in front is said whole", !hint.hidden && [hint.stringValue isEqual:what] && NSHeight(hint.frame) >= NSHeight(needed) - 1, [NSString stringWithFormat:@"%.0f for %.0f", NSHeight(hint.frame), NSHeight(needed)]);
+}
+
 void MVCheckPerfPane(void) {
   checkDisplayRate();
   checkHeldByApp();
   checkKeptResult();
+  checkRefusedWhole();
 }
