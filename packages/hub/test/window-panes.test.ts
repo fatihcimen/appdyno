@@ -290,6 +290,26 @@ describe("a window's Network pane", () => {
     await expect.poll(() => said(t)).toMatchObject({ capturing: false });
   });
 
+  it('numbers each request by its place since the capture began, which a read past the most it shows keeps', async () => {
+    const t = on();
+    const many = Array.from({ length: 205 }, (_, i) => ({
+      method: 'GET',
+      url: `https://a.test/${i}`,
+      status: 200,
+      ms: 1,
+    }));
+    Object.assign(t.device, {
+      network: { ...probe(), read: () => Promise.resolve({ entries: many }) },
+    });
+    const pane = open(t);
+    pane.onWindow({ op: 'control', name: 'networkStart', via: 'probe' });
+    await expect.poll(() => (said(t)?.entries as unknown[] | undefined)?.length).toBe(200);
+    const entries = said(t)?.entries as { id: number; url: string }[];
+    expect(entries[0]).toMatchObject({ id: 5, url: 'https://a.test/5' });
+    expect(entries.at(-1)).toMatchObject({ id: 204, url: 'https://a.test/204' });
+    await pane.end();
+  });
+
   it('refuses the probe while a recording runs, as it restarts the app', async () => {
     const t = on();
     const source = probe();

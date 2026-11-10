@@ -151,12 +151,14 @@ static void checkNetwork(MVWindow *window) {
   [pane show:@{@"op": @"network",
                @"capturing": @"probe",
                @"since": @1793000000000,
-               @"entries": @[@{@"method": @"GET",
+               @"entries": @[@{@"id": @0,
+                               @"method": @"GET",
                                @"url": @"https://a.test/x?token=•••",
                                @"status": @200,
                                @"ms": @85,
                                @"bytes": @1200},
-                             @{@"method": @"POST",
+                             @{@"id": @1,
+                               @"method": @"POST",
                                @"url": @"https://a.test/y",
                                @"status": @500,
                                @"ms": @12}]}];
@@ -167,6 +169,26 @@ static void checkNetwork(MVWindow *window) {
   MVCheck(@"network: a capture says how and since when, with Stop to end it", [pane.said hasPrefix:@"Capturing by the probe since "] && [[[pane valueForKey:@"_go"] title] isEqual:MVWord(@"Stop")], pane.said);
   [window.nsWindow layoutIfNeeded];
   MVCheck(@"network: its controls stand whole in the Inspector", within([pane valueForKey:@"_go"], pane) && within([pane valueForKey:@"_list"], pane), nil);
+  // a probe's requests are read again every 3 s, and the detail a person read closed at each; past the most a read
+  // holds, the oldest go and every place in the list moves
+  MVPokeListRow([pane valueForKey:@"_list"], @"POST a.test/y");
+  MVPump(0.1);
+  NSTextView *detail = [pane valueForKey:@"_detail"];
+  detail.selectedRange = NSMakeRange(0, 4);
+  [pane show:@{@"op": @"network",
+               @"capturing": @"probe",
+               @"since": @1793000000000,
+               @"entries": @[@{@"id": @1,
+                               @"method": @"POST",
+                               @"url": @"https://a.test/y",
+                               @"status": @500,
+                               @"ms": @12},
+                             @{@"id": @2,
+                               @"method": @"GET",
+                               @"url": @"https://a.test/z",
+                               @"status": @200,
+                               @"ms": @9}]}];
+  MVCheck(@"network: the request chosen stays open as requests come and go, and so does what was selected in it", [pane.detail hasPrefix:@"POST https://a.test/y"] && NSEqualRanges(detail.selectedRange, NSMakeRange(0, 4)), [NSString stringWithFormat:@"%@ %@", pane.detail, NSStringFromRange(detail.selectedRange)]);
   [pane show:@{@"op": @"network",
                @"capturing": @"bytes",
                @"since": @1793000000000,

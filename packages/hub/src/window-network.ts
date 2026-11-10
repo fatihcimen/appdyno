@@ -20,6 +20,16 @@ const NO_APP = 'Open an app of yours to capture its requests';
 const PACKETS_LATER = 'Packets are counted when the capture stops';
 
 /**
+ * Each request with where it stands since the capture began, which the next read keeps as the oldest go: a window keeps
+ * the one a person chose by it, where its place in the list moves.
+ */
+const numbered = (data: Record<string, unknown>) =>
+  ((data.entries as Record<string, unknown>[] | undefined) ?? []).map((e, i) => ({
+    ...e,
+    id: Number(data.dropped ?? 0) + i,
+  }));
+
+/**
  * A window's Network pane: the capture `network` keeps for the device, read by that op so an agent's and the pane's are
  * one, and the ways the device has. A proxy is offered only where the device already goes through one: no window sets one.
  */
@@ -69,7 +79,7 @@ export function windowNetwork(
         answer(said);
         return;
       }
-      const entries = (data.entries as unknown[] | undefined) ?? [];
+      const entries = numbered(data);
       const note = c.via === 'packets' && !entries.length ? PACKETS_LATER : data.note;
       tell({ capturing: c.via, since: c.since, entries, ...(note ? { note } : {}) });
     } finally {
@@ -121,7 +131,7 @@ export function windowNetwork(
     tell({
       capturing: false,
       ...(was && { was: was.via }),
-      entries: data.entries ?? [],
+      entries: numbered(data),
       ...(data.note ? { note: data.note } : {}),
       ...(await ways()),
     });

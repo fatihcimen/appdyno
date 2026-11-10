@@ -43,9 +43,15 @@ static NSString *figures(NSDictionary *e) {
   return [parts componentsJoinedByString:@" · "];
 }
 
+/// A request by where it stands since the capture began, as the parent numbers it: its place in the list moves as the
+/// oldest go, and a person's choice must not.
+static NSString *keyOf(NSDictionary *e, NSUInteger at) {
+  return [e[@"id"] isKindOfClass:NSNumber.class] ? [e[@"id"] stringValue] : @(at).stringValue;
+}
+
 static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   MVRow *row = [MVRow new];
-  row.key = @(at).stringValue;
+  row.key = keyOf(e, at);
   row.detail = figures(e);
   NSString *url = [e[@"url"] isKindOfClass:NSString.class] ? e[@"url"] : nil;
   if (!url) {
@@ -173,9 +179,12 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   [_entries enumerateObjectsUsingBlock:^(NSDictionary *e, NSUInteger at, __unused BOOL *stop) {
     if ([e isKindOfClass:NSDictionary.class]) [rows addObject:entryRow(e, at)];
   }];
+  // a probe's requests are read again every few seconds: the one a person reads stays chosen, and stays open
+  NSString *chosen = _list.selected.key;
   _list.rows = rows;
+  [_list selectKey:chosen];
   [self layOut];
-  [self showDetail:nil];
+  [self showDetail:_list.selected.key];
 }
 
 /// What the pane says and offers, from what it was last told.
@@ -209,7 +218,10 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
 
 /// The request chosen, whole: its address, what came back, when, and what failed.
 - (void)showDetail:(nullable NSString *)key {
-  NSDictionary *e = key && key.integerValue < (NSInteger)_entries.count ? _entries[key.integerValue] : nil;
+  NSUInteger at = [_entries indexOfObjectPassingTest:^BOOL(NSDictionary *one, NSUInteger i, __unused BOOL *stop) {
+    return [one isKindOfClass:NSDictionary.class] && [keyOf(one, i) isEqual:key];
+  }];
+  NSDictionary *e = at == NSNotFound ? nil : _entries[at];
   _detailCard.hidden = !e;
   if (!e) return;
   NSMutableArray<NSString *> *lines = [NSMutableArray array];
@@ -218,7 +230,9 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   [lines addObject:figures(e)];
   if ([e[@"at"] length]) [lines addObject:MVFormat(@"At %@", @[e[@"at"]])];
   if ([e[@"body"] boolValue]) [lines addObject:MVWord(@"Its body is in the proxy's export")];
-  _detail.string = [lines componentsJoinedByString:@"\n"];
+  // the same words again keep what a person selected in them
+  NSString *words = [lines componentsJoinedByString:@"\n"];
+  if (![_detail.string isEqual:words]) _detail.string = words;
   _detail.textColor = MVInkColor();
 }
 
