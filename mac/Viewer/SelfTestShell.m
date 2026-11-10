@@ -164,6 +164,18 @@ static void checkActivity(void) {
   MVCheck(@"activity: a gap starts a new run, which stands first", [pane.firstLine isEqual:@"Worked for 1 s · 1 call"], pane.firstLine);
 }
 
+/// An agent that never stops for 20 s is one run for an hour: it keeps its newest calls, as the pane keeps its newest runs.
+static void checkLongRun(void) {
+  MVActivityPane *busy = [[MVActivityPane alloc] initWithFrame:NSMakeRect(0, 0, 288, 400)];
+  for (int i = 0; i < 250; i++) [busy add:@{@"at": @(1000 + i * 1000),
+                                            @"tool": @"tap",
+                                            @"ok": @YES,
+                                            @"ms": @3,
+                                            @"time": @"12:00",
+                                            @"done": @"Tapped Sign in"}];
+  MVCheck(@"activity: one run that never pauses keeps its newest 200 calls, and counts them all", busy.lines == 201 && [busy.firstLine isEqual:@"Worked for 4 min · 250 calls"], [NSString stringWithFormat:@"%lu lines, %@", (unsigned long)busy.lines, busy.firstLine]);
+}
+
 static void checkPlaces(void) {
   MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
   [hub show:@{@"devices": @[]}];
@@ -269,6 +281,7 @@ void MVCheckShell(void) {
   checkStateMoves();
   checkLine();
   checkActivity();
+  checkLongRun();
   checkTabs();
   checkPlaces();
   checkGoneAnotherWay();

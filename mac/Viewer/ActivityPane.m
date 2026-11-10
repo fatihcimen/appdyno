@@ -10,6 +10,8 @@ static const double kQuietMs = 20000, kMinuteMs = 60000;
 @interface MVRun : NSObject
 @property(nonatomic) NSMutableArray<NSDictionary *> *calls;
 @property(nonatomic) double from, to;
+/// All it made, its oldest calls gone too.
+@property(nonatomic) NSUInteger made;
 @property(nonatomic) BOOL open;
 @end
 
@@ -19,7 +21,7 @@ static const double kQuietMs = 20000, kMinuteMs = 60000;
 static NSString *tookWords(MVRun *run) {
   double ms = run.to - run.from;
   NSString *took = ms >= kMinuteMs ? [NSString stringWithFormat:@"Worked for %.0f min", ms / kMinuteMs] : [NSString stringWithFormat:@"Worked for %.0f s", MAX(ms / 1000, 1)];
-  return [NSString stringWithFormat:@"%@ · %@", took, run.calls.count == 1 ? @"1 call" : [NSString stringWithFormat:@"%lu calls", (unsigned long)run.calls.count]];
+  return [NSString stringWithFormat:@"%@ · %@", took, run.made == 1 ? @"1 call" : [NSString stringWithFormat:@"%lu calls", (unsigned long)run.made]];
 }
 
 static MVRow *rowOfCall(NSDictionary *call) {
@@ -105,7 +107,10 @@ static MVRow *rowOfCall(NSDictionary *call) {
     [_runs addObject:last];
   }
   last.to = at;
+  last.made++;
   [last.calls addObject:call];
+  // a run that never pauses for long is one run for hours: its oldest calls go, as older runs do
+  if (last.calls.count > kCallsKept) [last.calls removeObjectsInRange:NSMakeRange(0, last.calls.count - kCallsKept)];
   NSUInteger kept = 0;
   for (MVRun *run in _runs) kept += run.calls.count;
   if (kept > kCallsKept && _runs.count > 1) [_runs removeObjectAtIndex:0];
