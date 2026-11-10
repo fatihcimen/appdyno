@@ -85,6 +85,8 @@ export type DeviceSettings = {
   set(name: SettingName, value: string, app?: string): Promise<string | undefined>;
   /** Why a condition this device reads cannot be changed here, in the words `set` refuses with; none: it can. */
   cannotSet?(name: SettingName): Promise<string | undefined>;
+  /** What was set is on the device's disk, where a kill would lose what it took last. */
+  persist?(): Promise<void>;
 };
 
 /**

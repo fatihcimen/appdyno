@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
 import { opsFor, type ServerContext } from '@appdyno/ops';
-import { endWithClient, putBack } from './lifetime.js';
+import { endWithClient, handOff, putBack, putBackAfter, PUT_BACK_AFTER } from './lifetime.js';
 import { COMMANDS } from './usage.js';
 
 const flags = (args: string[]) => parseArgs({ args, options: COMMANDS.mcp.flags }).values;
@@ -39,9 +39,14 @@ export async function serveCommand(
     if (ctx.selected) ctx.warm(ctx.selected);
     return ctx;
   };
+  const after = values[PUT_BACK_AFTER];
+  if (after) {
+    await putBackAfter(Number(after), context(values), log);
+    process.exit(0);
+  }
   if (!values.http) {
     const ctx = started(context(values));
-    endWithClient(ctx, log);
+    endWithClient(ctx, log, undefined, undefined, handOff);
     // either revision, as the client's first message says
     const ops = opsFor(ctx);
     serveStdio(() => createServer(ops, log));

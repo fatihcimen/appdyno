@@ -15,7 +15,7 @@ import {
 import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
-import { endSession, sweep, type Taken } from './leftovers.js';
+import { endSession, leftHere, sweep, type Taken } from './leftovers.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { powerGuard } from './power.js';
 import { Session } from './session.js';
@@ -261,12 +261,21 @@ export class ServerContext {
     return this.defaults.claims ? holder(serial) : undefined;
   }
 
-  /** The end of a session: conditions it changed go back (a command line's stay until asked). */
-  async end(): Promise<string[]> {
+  /**
+   * The end of a session: conditions it changed go back (a command line's stay until asked). Of the devices in
+   * `handedOff`, another process puts back what is kept on disk once this one has gone.
+   */
+  async end(handedOff: string[] = []): Promise<string[]> {
     if (this.defaults.remember) return [];
     const failed: string[] = [];
-    for (const s of this.sessions.values()) failed.push(...(await endSession(this, s)).failed);
+    for (const [serial, s] of this.sessions)
+      failed.push(...(await endSession(this, s, handedOff.includes(serial))).failed);
     return failed;
+  }
+
+  /** The devices on which this process left what outlives it, as a session's end would put back. */
+  leftBehind(): string[] {
+    return this.defaults.remember ? [] : [...this.sessions.keys()].filter(leftHere);
   }
 
   /**

@@ -57,6 +57,12 @@ const OVER_ITS_NETWORK = /:\d+$|_adb-tls-connect/;
 export const EMULATOR_PIN = '1234';
 const NOT_A_PHONE_LOCK = "a screen lock is set only on an emulator: a phone's is its owner's";
 
+/**
+ * A kill loses what the system's settings took within the last 2 s, which it writes to disk only then: a setting put
+ * back just before, an emulator booted again with it changed. Its writes are let through, and synced.
+ */
+export const ON_DISK = 'sleep 3; sync';
+
 /** A shell command on the device, its errors in its answer. */
 export const shellOf = (adb: Adb, serial: string) => (command: string) =>
   adb.exec(serial, `${command} 2>&1`, { timeoutMs: TIMEOUTS.app });
@@ -109,6 +115,10 @@ export class AndroidSettings implements DeviceSettings {
 
   private emu = (what: string, ...words: string[]) =>
     emulatorConsole(this.adb, this.serial, what, words);
+
+  persist() {
+    return this.adb.exec(this.serial, ON_DISK).then(() => undefined);
+  }
 
   async willChange(name: SettingName) {
     if (name === 'animations' || name === 'reduce_motion') await this.releaseAnimations();

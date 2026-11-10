@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { type NewDevice, type VirtualDevices, type Startable, pause, run } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import type { Adb } from './adb.js';
+import { ON_DISK } from './settings.js';
 
 export const sdkDir = () =>
   process.env.ANDROID_HOME ??
@@ -213,13 +214,10 @@ export class AndroidEmulators implements VirtualDevices {
     throw new DeviceError('TIMEOUT', `the emulator ${id} did not finish booting in ${BOOT_MS} ms`);
   }
 
-  /**
-   * A kill loses what the system's settings took within the last 2 s, which it writes to disk only then: a setting put
-   * back just before, an emulator booted again with it changed. Its writes are let through, and synced, first.
-   */
+  /** The system's settings reach its disk first (`ON_DISK`): a kill loses what they took last. */
   async shutdown(id: string) {
     if (!id.startsWith('emulator-')) return;
-    await this.adb.exec(id, 'sleep 3; sync').catch(() => undefined);
+    await this.adb.exec(id, ON_DISK).catch(() => undefined);
     await this.adb.run(['-s', id, 'emu', 'kill'], 30_000);
     const end = Date.now() + 60_000;
     while (Date.now() < end) {

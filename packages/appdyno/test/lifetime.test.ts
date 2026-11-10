@@ -3,35 +3,38 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core';
-import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { conditions, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 import { callerOf } from '../../ops/test/helpers.js';
-import { endWithClient } from '../src/lifetime.js';
+import { endWithClient, putBackAfter } from '../src/lifetime.js';
 
-function serving() {
+const providerOf = (device: FakeDevice): DeviceProvider => ({
+  list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
+  handles: () => true,
+  open: () => device,
+});
+
+function serving(handOff?: (devices: string[]) => string[]) {
   const values: Record<string, string> = { dark_mode: 'no' };
   const set = vi.fn((name: SettingName, value: string) => {
     values[name] = value;
     return Promise.resolve();
   });
+  const persist = vi.fn(() => Promise.resolve());
   const settings = {
     get: (name: SettingName) => Promise.resolve(values[name]),
     set,
+    persist,
   } as unknown as DeviceSettings;
   const device = Object.assign(new FakeDevice(), { settings });
-  const provider: DeviceProvider = {
-    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
-    handles: () => true,
-    open: () => device,
-  };
-  const ctx = new ServerContext(DEFAULT_POLICY, [provider], { claims: true });
+  const ctx = new ServerContext(DEFAULT_POLICY, [providerOf(device)], { claims: true });
   const close = vi.spyOn(ctx, 'close');
   const exit = vi.fn();
   const stdin = new PassThrough();
   const log = vi.fn<(line: object) => void>();
-  endWithClient(ctx, log, exit, stdin);
-  return { values, set, ctx, close, exit, stdin, log, call: callerOf(ctx) };
+  endWithClient(ctx, log, exit, stdin, handOff);
+  return { values, set, persist, ctx, close, exit, stdin, log, call: callerOf(ctx), device };
 }
 
 const signals = ['SIGTERM', 'SIGINT'] as const;
@@ -85,6 +88,40 @@ describe('the end of the server', () => {
     expect(s.exit).toHaveBeenCalledOnce();
     expect(s.close).toHaveBeenCalledOnce();
     expect(s.set).toHaveBeenCalledTimes(2);
+  });
+
+  it('hands what is kept on disk to the process that puts it back once this one has gone', async () => {
+    const handOff = vi.fn((devices: string[]) => devices);
+    const s = serving(handOff);
+    await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    // as claude -p ends its server: a kill half a second after, which no put-back of seconds outlasts
+    process.emit('SIGINT');
+    await vi.waitFor(() => expect(s.exit).toHaveBeenCalledWith(0));
+    expect(handOff).toHaveBeenCalledWith([s.device.serial]);
+    expect(s.set).toHaveBeenCalledTimes(1);
+    expect(conditions.read(s.device.serial)).toMatchObject({ dark_mode: { was: 'no' } });
+    drain();
+  });
+
+  it('puts back what a server that has gone left, and lets the settings reach the disk', async () => {
+    const s = serving();
+    s.values.dark_mode = 'yes';
+    const gone = { pid: 999_999, started: 'gone', tool: 'appdyno mcp', since: '' };
+    conditions.update(s.device.serial, () => ({ dark_mode: { was: 'no', owner: gone } }));
+    const ctx = new ServerContext(DEFAULT_POLICY, [providerOf(s.device)], {
+      claims: true,
+      device: s.device.serial,
+    });
+    await putBackAfter(gone.pid, ctx, s.log);
+    expect(s.values.dark_mode).toBe('no');
+    expect(s.log).toHaveBeenCalledWith({
+      putBackAfter: gone.pid,
+      serial: s.device.serial,
+      restored: ['dark_mode: off'],
+      failed: [],
+    });
+    expect(s.persist).toHaveBeenCalledOnce();
+    drain();
   });
 
   it('says what it could not put back, and still exits', async () => {

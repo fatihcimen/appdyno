@@ -49,6 +49,7 @@ export const COMMANDS = {
       'accept-install-warnings': on,
       http: value('127.0.0.1:PORT'),
       'end-with-parent': unsaidOn,
+      'put-back-after': unsaidValue,
     },
     what: "the MCP server over stdio; with --http, on this Mac's loopback behind a token",
   },

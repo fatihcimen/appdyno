@@ -12,8 +12,16 @@ import { conditions, restoreConditions, type Whose } from './settings.js';
 /** What was put back on a device, and what could not be. */
 export type Taken = { restored: string[]; failed: string[] };
 
-/** Ends what `whose` takes of what runs on the device, then puts its conditions back. */
-async function takeBack(ctx: ServerContext, s: Session, whose: Whose): Promise<Taken> {
+/**
+ * Ends what `whose` takes of what runs on the device, then puts its conditions back. `handedOff`: another process puts
+ * back what is kept on disk, once this one has gone, and only what this process holds is ended here.
+ */
+async function takeBack(
+  ctx: ServerContext,
+  s: Session,
+  whose: Whose,
+  handedOff = false,
+): Promise<Taken> {
   const serial = s.device.serial;
   const restored: string[] = [];
   const failed: string[] = [];
@@ -55,18 +63,29 @@ async function takeBack(ctx: ServerContext, s: Session, whose: Whose): Promise<T
     },
   ];
   for (const { name, held, end, done } of running) {
-    if (!held || !whose(held.owner)) continue;
+    if (
+      !held ||
+      !whose(held.owner) ||
+      (handedOff && name !== 'timeline' && name !== 'flight recorder')
+    )
+      continue;
     await end().then(
       (ended) => ended && restored.push(done),
       (e: unknown) => failed.push(`${name}: ${e instanceof Error ? e.message : String(e)}`),
     );
   }
-  const back = await restoreConditions(s, whose);
+  const back = handedOff ? { restored: [], failed: [] } : await restoreConditions(s, whose);
   return { restored: [...restored, ...back.restored], failed: [...failed, ...back.failed] };
 }
 
-/** A session is over: what it left goes back. */
-export const endSession = (ctx: ServerContext, s: Session) => takeBack(ctx, s, isThisProcess);
+/** A session is over: what it left goes back, or what this process alone holds where the rest is handed off. */
+export const endSession = (ctx: ServerContext, s: Session, handedOff = false) =>
+  takeBack(ctx, s, isThisProcess, handedOff);
+
+/** Whether this process left on the device what outlives it: a session's start puts that back once it has gone. */
+export const leftHere = (serial: string) =>
+  Object.values(conditions.read(serial) ?? {}).some((c) => isThisProcess(c.owner)) ||
+  [filming, captures, openReports].some((state) => isThisProcess(state.read(serial)?.owner));
 
 /** A session starts: what a process now dead left goes back, and a file that cannot be read is said. */
 export async function sweep(ctx: ServerContext, s: Session): Promise<Taken> {

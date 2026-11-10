@@ -123,6 +123,8 @@ Karar veremeyen bir kapı geçirmemelidir. Bu yüzden `few-samples`, `noisy` ve 
 
 Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece ölü bir sahibin talebi talep sayılmaz ve bir çökmeden sonra temizlenecek bir şey kalmaz. Her birim testi çalıştırması kendi klasörünü alır ve sizin gerçek durumunuza ulaşamaz.
 
+**Bir oturumun değiştirdiği, bir öldürmeden sonra bile geri gider.** Her koşul değişmeden önce eski değeri ve sahibiyle yazılır ve oturumun sonu onu geri koyar. Bir cihazda başlayan oturum, artık ölmüş bir sahibin orada bıraktığını geri koyar. İstemcisinin bitirdiği bir sunucu, bıraktığını sunucunun grubu dışında kendine ait bir süreç olan `appdyno mcp --put-back-after <pid>`'e devreder; o sunucunun gitmesini bekler ve sonra böyle bir oturum başlatır: bir istemci sunucusunu, bitmesini istedikten yarım saniye sonra, bir cihazın geri gidebileceğinden önce öldürebilir.
+
 ## Testlerin tuttukları
 
 Önemli kurallar birer testtir, böylece sessizce eskiyemezler.
