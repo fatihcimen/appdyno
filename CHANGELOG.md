@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- VoiceOver hears whether each step of Connect a Phone and Get Started is done, the current one or not yet, which only its mark showed, and a call that failed in Activity says so in its words, which only a red mark said.
 - What follows a comma or `·` in a sentence a window is sent stays as it came on a Turkish Mac, as an app's label may hold one: the iOS Settings cell `Bluetooth, On` read `Bluetooth öğesine dokunuldu, Açık` in Activity, and reads `Bluetooth öğesine dokunuldu, On`. The words a window joins of its own, in the capsule and in a measure's line, are said a part at a time, in Turkish as before. Remove's question names the app as it is: the iPhone's Watch app was asked as `Dikkat kaldırılsın mı?`, and is `Watch kaldırılsın mı?`.
 - The Apps pane lists the device's apps each time it comes into sight, by its tab or with the Inspector, and the hub lists them again after an agent's `app install`, `uninstall` or `build_and_run`: they were asked for once a window, so an app installed since, by an agent or by Xcode, never showed until the window was opened again, and one removed elsewhere stayed.
 - A request chosen in the Network pane stays open, and what was selected in it stays selected, as a probe's capture is read again every 3 s: each read closed it. The hub numbers each request by its place since the capture began, which holds as the oldest go past the 200 a read shows, and the pane keeps the one chosen by that number, where its place in the list moves.

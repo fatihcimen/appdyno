@@ -61,6 +61,9 @@ const MVWordRow MVWordTableConnect[] = {
     {"No Phone?", "Telefon Yok mu?"},
     {"A simulator or an emulator needs none of this.", "Simülatör ya da emülatör için bunların hiçbiri gerekmez."},
     {"Get Started", "Başlayın"},
+    // what a step's mark says to a person who hears it
+    {"Current step", "Şimdiki adım"},
+    {"Not yet", "Henüz değil"},
     {"Add a device", "Cihaz ekleyin"},
     {"Connect an AI client", "Bir yapay zekâ istemcisi bağlayın"},
     {"Try a prompt", "Bir istem deneyin"},

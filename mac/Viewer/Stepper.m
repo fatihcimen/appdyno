@@ -1,6 +1,7 @@
 // A list that ticks itself: what is done, what is now and what is later, on one line. It stands for the phone's steps and for
 // Get Started alike, and it reads as a path to follow, not as a form to fill in.
 #import "Place.h"
+#import "Words.h"
 
 static const double kRowHigh = 36, kMarkWide = 24, kRadius = 10, kLine = 2;
 static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7, kPassedSeconds = 0.3;
@@ -96,6 +97,20 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7, kPassed
   beat.repeatCount = beats;
   beat.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
   [_pulse addAnimation:beat forKey:@"pulse"];
+}
+
+/// What it draws, in words for a person who hears the window: the step's title is the text beside it.
+- (BOOL)isAccessibilityElement {
+  return YES;
+}
+
+- (NSAccessibilityRole)accessibilityRole {
+  return NSAccessibilityStaticTextRole;
+}
+
+- (id)accessibilityValue {
+  if ([self.state isEqual:@"done"]) return MVWord(@"Done");
+  return [self.state isEqual:@"now"] ? MVWord(@"Current step") : MVWord(@"Not yet");
 }
 
 - (void)layout {

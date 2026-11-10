@@ -173,6 +173,22 @@ static void checkActivity(void) {
               @"ms": @3,
               @"time": @"12:01"}];
   MVCheck(@"activity: a gap starts a new run, which stands first", [pane.firstLine isEqual:@"Worked for 1 s · 1 call"], pane.firstLine);
+  [pane add:@{@"at": @(101000),
+              @"tool": @"tap",
+              @"ok": @NO,
+              @"ms": @3,
+              @"time": @"12:01",
+              @"done": @"Tapped Sign in"}];
+  MVList *list = [pane valueForKey:@"_list"];
+  NSString *english = list.rows[1].title;
+  MVTestTurkish(YES);
+  [pane add:@{@"at": @(102000),
+              @"tool": @"tap",
+              @"ok": @YES,
+              @"ms": @3,
+              @"time": @"12:01"}];
+  MVTestTurkish(NO);
+  MVCheck(@"activity: a call that failed says so in words, as well as by its mark, in Turkish too", [english isEqual:@"Failed: Tapped Sign in"] && list.rows[2].symbol && [list.rows[2].title isEqual:@"Başarısız: Sign in öğesine dokunuldu"], [NSString stringWithFormat:@"%@ / %@", english, list.rows[2].title]);
 }
 
 /// An agent that never stops for 20 s is one run for an hour: it keeps its newest calls, as the pane keeps its newest runs.
@@ -241,6 +257,14 @@ static NSInteger passedUnder(NSView *view) {
   return count;
 }
 
+/// What a person who hears the window is told of a view and what it holds, in order: a mark by its value, a label by its
+/// words.
+static void heardUnder(NSView *view, NSMutableArray *heard) {
+  if (view.isAccessibilityElement && [view.accessibilityValue isKindOfClass:NSString.class]) [heard addObject:view.accessibilityValue];
+  else if ([view isKindOfClass:NSTextField.class]) [heard addObject:((NSTextField *)view).stringValue];
+  for (NSView *sub in view.subviews) heardUnder(sub, heard);
+}
+
 static void checkStateMoves(void) {
   NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 300, 60) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
   MVCapsule *capsule = [[MVCapsule alloc] initWithFrame:NSMakeRect(0, 0, 200, 28)];
@@ -264,6 +288,13 @@ static void checkStateMoves(void) {
   MVCheck(@"motion: what a window opens on is old news, and no step passes", passedUnder(stepper) == 0, nil);
   [stepper showItems:@[@{@"title": @"One", @"state": @"done"}, @{@"title": @"Two", @"state": @"done"}]];
   MVCheck(@"motion: a step seen undone is seen to pass, and that one only", passedUnder(stepper) == 1, nil);
+  // what a mark draws is heard too, and its step's title is heard as it is
+  MVTestTurkish(YES);
+  [stepper showItems:@[@{@"title": @"One", @"state": @"done"}, @{@"title": @"Two", @"state": @"now"}, @{@"title": @"Three", @"state": @"later"}]];
+  NSMutableArray *heard = [NSMutableArray array];
+  for (NSView *row in stepper.arrangedSubviews) heardUnder(row, heard);
+  MVTestTurkish(NO);
+  MVCheck(@"steps: each says whether it is done, now or to come, to a person who hears the window", [heard isEqual:@[@"Bitti", @"One", @"Şimdiki adım", @"Two", @"Henüz değil", @"Three"]], [heard componentsJoinedByString:@"|"]);
 }
 
 static void checkMotion(void) {

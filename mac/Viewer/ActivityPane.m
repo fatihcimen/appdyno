@@ -29,6 +29,8 @@ static MVRow *rowOfCall(NSDictionary *call) {
   MVRow *row = [MVRow new];
   // what was done names what it touched as the app does: `Tapped Settings` keeps its Settings
   row.title = [call[@"done"] length] ? MVSentence(call[@"done"]) : MVWord([[call[@"tool"] ?: @"" stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString]);
+  // a mark is drawn, and a person who cannot see it hears the word
+  if (!ok) row.title = MVFormat(@"Failed: %@", @[row.title]);
   row.detail = [NSString stringWithFormat:@"%@ · %@ ms", call[@"time"] ?: @"", call[@"ms"] ?: @0];
   row.help = call[@"args"];
   // only what failed gets a mark: a run of ticks says nothing
