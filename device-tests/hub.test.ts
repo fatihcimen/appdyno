@@ -23,6 +23,8 @@ const main = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
 const BOOT_MS = 180_000;
 const WINDOW_MS = 120_000;
 const MADE = 'appdyno-hub-made';
+/** Only ours, unless a picture is to show the Mac's whole list: nothing else here is pressed. */
+const WHOLE = process.env.APPDYNO_HUB_ALL === '1';
 
 const until = untilWithin(30_000);
 
@@ -60,9 +62,7 @@ describe.runIf(udid)('the hub', () => {
       sent.push(m);
       send(m);
     };
-    // only ours, unless a picture is to show the Mac's whole list: nothing else here is pressed
-    const whole = process.env.APPDYNO_HUB_ALL === '1';
-    const policy = whole ? DEFAULT_POLICY : { ...DEFAULT_POLICY, devices: new RegExp(`^${udid}$`) };
+    const policy = WHOLE ? DEFAULT_POLICY : { ...DEFAULT_POLICY, devices: new RegExp(`^${udid}$`) };
     const ctx = new ServerContext(policy, [simulatorProvider()], {
       mirrorCommand: [process.execPath, main, 'mirror'],
     });
@@ -109,7 +109,7 @@ describe.runIf(udid)('the hub', () => {
   );
 
   it(
-    'makes a new simulator from what this Mac has, by its sheet',
+    'makes a new simulator from what this Mac has, by its sheet, and none while it keeps to an allow list',
     async () => {
       const named = () =>
         execFileSync('xcrun', ['simctl', 'list', 'devices', '-j'], { encoding: 'utf8' }).includes(
@@ -121,7 +121,12 @@ describe.runIf(udid)('the hub', () => {
       await picture('new');
       link.send({ op: 'poke', press: 'create', name: MADE });
       try {
-        await until('the new simulator', named, WINDOW_MS);
+        // a simulator made would not be on the list the hub keeps to, so it makes none, and says why
+        if (WHOLE) await until('the new simulator', named, WINDOW_MS);
+        else
+          await until('the refusal', () =>
+            sent.some((m) => m.op === 'note' && String(m.text).includes('allow list')),
+          );
       } finally {
         if (named()) execFileSync('xcrun', ['simctl', 'delete', MADE], { stdio: 'ignore' });
       }
