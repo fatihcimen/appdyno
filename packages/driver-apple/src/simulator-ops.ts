@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import { simulatorCrashes } from './crashes.js';
 import type { IosDeviceOps } from './device.js';
 import { simulatorLogs } from './logs.js';
@@ -27,7 +28,16 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
       await simctl.exec(['spawn', udid, await helperBinary('SimOpen'), link]);
     },
     logs: (q) => simulatorLogs(simctl, udid, q),
-    crashes: (q) => simulatorCrashes(udid, q),
+    crashes: async (q) =>
+      simulatorCrashes(
+        udid,
+        q,
+        undefined,
+        await simctl.appContainer(udid, q.app).then(
+          (app) => basename(app, '.app'),
+          () => undefined,
+        ),
+      ),
     name: `simulator ${udid}`,
     pid: (b) => simctl.pid(udid, b),
   };

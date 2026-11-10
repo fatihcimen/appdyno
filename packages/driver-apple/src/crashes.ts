@@ -103,6 +103,23 @@ export async function reportsIn(
 
 const SIM_SOURCE = '~/Library/Logs/DiagnosticReports';
 
+/** macOS saves no crash report of a process that has as many in the folder: "the limit of 25 logs has been reached". */
+const KEPT_REPORTS = 25;
+
+/** What keeps a crash of the process `name` from leaving a report: the folder holds as many of its own as macOS keeps. */
+export function reportLimit(dir: string, name: string | undefined) {
+  if (!name) return undefined;
+  let held: number;
+  try {
+    held = readdirSync(dir).filter((n) => n.startsWith(`${name}-`) && n.endsWith('.ips')).length;
+  } catch {
+    return undefined;
+  }
+  return held >= KEPT_REPORTS
+    ? `this Mac holds ${String(held)} crash reports of ${name}, and macOS saves none past ${String(KEPT_REPORTS)}: a crash now leaves no report. Move ${name}-*.ips out of ${SIM_SOURCE}, and the next one is kept`
+    : undefined;
+}
+
 /** The simulator a report names: by the app's path, or by its coalition, which a system app's has as well. */
 const simulatorOf = (r: Ips) =>
   /\/Devices\/([0-9A-F-]{36})\//.exec(r.procPath ?? '')?.[1] ??
@@ -116,6 +133,8 @@ export async function simulatorCrashes(
   udid: string,
   q: CrashesQuery,
   dir = join(homedir(), 'Library/Logs/DiagnosticReports'),
+  /** The app's process, by which macOS names its reports and keeps count of them. */
+  processName?: string,
 ): Promise<CrashesAnswer> {
   let others = 0;
   let unnamed = 0;
@@ -132,11 +151,11 @@ export async function simulatorCrashes(
       ? [`${unnamed} that name no simulator, so none could be told to be this one's`]
       : []),
   ];
-  const answer = {
-    reports,
-    source: SIM_SOURCE,
-    ...(left.length > 0 && { note: `left out ${left.join(', and ')}` }),
-  };
+  const note = [
+    ...(left.length > 0 ? [`left out ${left.join(', and ')}`] : []),
+    ...[reportLimit(dir, processName)].filter((n) => n !== undefined),
+  ].join('\n');
+  const answer = { reports, source: SIM_SOURCE, ...(note && { note }) };
   return q.symbols ? withSymbols(answer, q.symbols) : answer;
 }
 

@@ -100,6 +100,20 @@ describe('crash reports', () => {
     expect((await simulatorCrashes(UDID, q, join(dir, 'none'))).reports).toEqual([]);
   });
 
+  it('says when macOS keeps no more reports of the process, and how to have the next kept', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
+    for (let i = 0; i < 24; i++)
+      writeFileSync(join(dir, `Fixture-2026-11-09-${String(i)}.ips`), '');
+    writeFileSync(join(dir, 'Other-2026-11-09-1.ips'), '');
+    const q = { app: 'dev.app', limit: 5 };
+    expect((await simulatorCrashes(UDID, q, dir, 'Fixture')).note).toBeUndefined();
+    writeFileSync(join(dir, 'Fixture-2026-11-09-24.ips'), '');
+    expect((await simulatorCrashes(UDID, q, dir, 'Fixture')).note).toBe(
+      'this Mac holds 25 crash reports of Fixture, and macOS saves none past 25: a crash now leaves no report. Move Fixture-*.ips out of ~/Library/Logs/DiagnosticReports, and the next one is kept',
+    );
+    expect((await simulatorCrashes(UDID, q, dir)).note).toBeUndefined();
+  });
+
   it("takes a simulator's report only where it names that simulator, a system app's by its coalition, and says what it left out", async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
     writeFileSync(join(dir, 'mine.ips'), ips('com.apple.Preferences', UDID, 'system'));
