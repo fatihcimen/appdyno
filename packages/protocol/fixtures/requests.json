@@ -11,12 +11,18 @@
   },
   "act.tap": {
     "method": "act",
-    "input": { "action": { "kind": "tap", "x": 100.5, "y": 200 }, "settle": {}, "before": "abc" },
+    "input": {
+      "action": { "kind": "tap", "x": 100.5, "y": 200 },
+      "settle": {},
+      "before": "abc",
+      "pidOf": "dev.app"
+    },
     "params": {
       "action": { "kind": "tap", "x": 100.5, "y": 200 },
       "settle": { "quietMs": 200, "maxMs": 3000 },
       "read": "none",
-      "before": "abc"
+      "before": "abc",
+      "pidOf": "dev.app"
     }
   },
   "act.doubleTap": {

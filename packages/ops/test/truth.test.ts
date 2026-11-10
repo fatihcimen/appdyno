@@ -570,6 +570,50 @@ describe('crashes', () => {
     expect(r.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(EXCEPTION)' } });
   });
 
+  it("takes the app's process after an action from the action's own answer, and asks for it only where an agent has none", async () => {
+    const device = new FakeDevice();
+    device.pid = '100';
+    let asked = 0;
+    device.appPid = () => {
+      asked++;
+      return Promise.resolve(device.pid);
+    };
+    // as the agent's: the process of the app named, once the action is over
+    const act = device.act.bind(device);
+    const naming: typeof act = async (a, o) => ({
+      ...(await act(a, o)),
+      ...(o?.pidOf && { pid: Number(device.pid ?? 0) }),
+    });
+    device.act = naming;
+    const { call } = await connect(device);
+    await call('screen');
+    // the first action asks once, before it, as nothing knew the process then
+    await call('tap', { x: 5, y: 2390 });
+    expect(asked).toBe(1);
+    await call('tap', { x: 5, y: 2390 });
+    expect(asked).toBe(1);
+    // the system restarted it at once: the answer names another process, and the report says why
+    device.pid = '200';
+    device.crashReports = [{ at: 'now', reason: 'APP CRASH(NATIVE)' }];
+    const died = await call('tap', { x: 5, y: 2390 });
+    expect(died.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(NATIVE)' } });
+    expect(asked).toBe(1);
+    device.crashReports = [];
+    // a batch's steps that read nothing take it from their answers too
+    const tap = { action: 'tap', x: 5, y: 2390 };
+    device.calls = [];
+    expect((await call('steps', { steps: [tap, tap, tap] })).isError).toBeFalsy();
+    const named = device.calls
+      .filter((c) => c.name === 'act')
+      .map((c) => (c.args[1] as { pidOf?: string }).pidOf);
+    expect(named).toEqual(['dev.app', 'dev.app', 'dev.app']);
+    expect(asked).toBe(1);
+    // an older agent, which names none: asked after the action, as before
+    device.act = act;
+    await call('tap', { x: 5, y: 2390 });
+    expect(asked).toBe(2);
+  });
+
   it('says so when the app has no process left after an action, though its screen is still the one in front', async () => {
     const device = new FakeDevice();
     device.pid = '100';

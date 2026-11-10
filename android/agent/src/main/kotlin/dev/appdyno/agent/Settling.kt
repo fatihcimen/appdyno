@@ -62,6 +62,8 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
                 out.put("hash", c.also { recent[it.hash] = it }.hash)
             }
         }
+        // as the screen answered with is: after the settle
+        r.pidOf?.let { pkg -> AppProcess.of(pkg)?.let { out.put("pid", it) } }
         return Reply(out)
     }
 

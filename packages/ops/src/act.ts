@@ -1,7 +1,7 @@
 import { alertAnswer, reportProgress, throwIfCancelled, type ActOptions } from '@appdyno/core';
 import { z } from 'zod';
 import { SETTLE, type Answers, type ReadMode } from './answers.js';
-import { appDeath, DIED_HINT, diedLine, diedUnder } from './app-death.js';
+import { appDeath, DIED_HINT, diedLine, diedUnder, pidInAnswer } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
@@ -307,16 +307,18 @@ export function actOps(
               // screen must reach that screen, not the transition
               const stays =
                 st.action === 'type_text' && !st.submit && !readsScreen(plan[i + 1]?.st);
+              // a death is told only of an app that was in front: one that never ran has none
+              const app = s.appId;
+              const up = app !== undefined && (front ?? (await inFront())) === app;
+              const pidOf = up && s.device.appPid ? app : undefined;
               const opts = !stays
                 ? ({
                     settle: SETTLE,
                     read: 'none',
                     ...(s.fresh && { before: s.fresh.hash }),
+                    ...(pidOf && { pidOf }),
                   } as const)
-                : ({ settle: false, read: 'none' } as const);
-              // a death is told only of an app that was in front: one that never ran has none
-              const app = s.appId;
-              const up = app !== undefined && (front ?? (await inFront())) === app;
+                : ({ settle: false, read: 'none', ...(pidOf && { pidOf }) } as const);
               const pid = up
                 ? (s.appPid ?? (await s.device.appPid?.(app).catch(() => undefined)))
                 : undefined;
@@ -324,7 +326,9 @@ export function actOps(
               const x = await attempt(opts);
               s.acted();
               front = up ? await inFront() : undefined;
-              const appDied = up ? await appDeath(s, front, pid, started, clean, true) : undefined;
+              const appDied = up
+                ? await appDeath(s, front, pid, started, clean, true, pidInAnswer(pidOf, x.r))
+                : undefined;
               if (!appDied) {
                 done.push(`${i + 1}. ${x.done}`);
                 continue;

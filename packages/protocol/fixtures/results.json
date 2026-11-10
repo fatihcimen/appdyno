@@ -96,7 +96,8 @@
     "method": "act",
     "result": {
       "settle": { "settled": true, "ms": 240, "reads": 3, "quietMs": 200 },
-      "hash": "abc"
+      "hash": "abc",
+      "pid": 4242
     }
   },
   "act.watched": {

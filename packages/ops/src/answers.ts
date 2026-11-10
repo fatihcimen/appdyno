@@ -14,7 +14,7 @@ import {
   type SystemAlert,
 } from '@appdyno/core';
 import type { ActResult, TextResult } from '@appdyno/protocol';
-import { appDeath, diedLine } from './app-death.js';
+import { appDeath, diedLine, pidInAnswer } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { redact } from './policy.js';
 import type { ActionOut } from './schemas.js';
@@ -168,6 +168,8 @@ type Aftermath = {
   busy: string[];
   started: number;
   pid: string | undefined;
+  /** The app's process once the action was over, as its agent told it with the answer: none to ask after it. */
+  pidNow?: { pid: string | undefined } | undefined;
   settleMs?: number | undefined;
   /** What a `scroll_to` looked for is there: it compares with its own last swipe, not with before the call. */
   found?: boolean;
@@ -197,7 +199,7 @@ async function afterAction(
   const diff = d && diffText(d, screen.list.length, clean);
   const changed = o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined;
   const fg = await noticed(s, screen, changed === false || !!o.launched);
-  const appDied = await appDeath(s, screen.foreground, o.pid, o.started, clean, o.ran);
+  const appDied = await appDeath(s, screen.foreground, o.pid, o.started, clean, o.ran, o.pidNow);
   const busy = o.settled === false ? o.busy : [];
   const moving =
     o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
@@ -234,10 +236,17 @@ async function act(
 ) {
   const started = Date.now();
   const before = s.shown;
+  // the app's process after the action comes with the answer where the device can tell it
+  const pidOf = read !== 'none' && s.device.appPid ? s.appId : undefined;
   const opts: ActOptions =
     read === 'none'
       ? { settle: false, read: 'none' }
-      : { settle: SETTLE, read: 'tree', ...(s.fresh && { before: s.fresh.hash }) };
+      : {
+          settle: SETTLE,
+          read: 'tree',
+          ...(s.fresh && { before: s.fresh.hash }),
+          ...(pidOf && { pidOf }),
+        };
   // before the action, where not known: one read beside it took the process a crash had already restarted as the app's
   const pid =
     s.appPid ??
@@ -258,6 +267,8 @@ async function act(
   const screen = await s.seen(r.tree);
   return afterAction(clean, s, said, read, screen, {
     pid,
+    // an older agent says nothing of it, and is asked after the action as before
+    pidNow: pidInAnswer(pidOf, r),
     before,
     base,
     settled: r.settle?.settled,

@@ -73,6 +73,7 @@ class WireFixturesTest {
         assertEquals(3_000L, after.settle.maxMs)
         assertEquals("none", after.read)
         assertEquals("abc", after.before)
+        assertEquals("dev.app", after.pidOf)
     }
 
     @Test
@@ -93,6 +94,7 @@ class WireFixturesTest {
         assertEquals("a", shortcut.key)
         assertEquals(listOf("command", "shift"), shortcut.modifiers)
         assertNull(AfterRequest.from(params("act.doubleTap")).settle)
+        assertNull(AfterRequest.from(params("act.doubleTap")).pidOf)
         assertEquals("tree", AfterRequest.from(params("act.longPress")).read)
     }
 

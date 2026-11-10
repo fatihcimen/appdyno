@@ -147,6 +147,8 @@ export const ActResult = z.object({
   animationWaitMs: z.number().optional(),
   hash: z.string().optional(),
   tree: Tree.optional(),
+  /** The process of the app `pidOf` named once the action is over, 0 for none; absent where the agent cannot tell. */
+  pid: z.number().int().min(0).optional(),
 });
 export type ActResult = z.infer<typeof ActResult>;
 
@@ -264,6 +266,8 @@ export const METHODS = {
        * window), and a tap on something that cannot react settles after a short window.
        */
       before: z.string().optional(),
+      /** Android: an app whose process the answer names, as a host compares it with the one before the action. */
+      pidOf: z.string().optional(),
     }),
     result: ActResult,
   },
@@ -278,6 +282,7 @@ export const METHODS = {
       focusTimeoutMs: z.number().int().min(0).max(10_000).default(5_000),
       settle: Settle.optional(),
       read: Read.default('none'),
+      pidOf: z.string().optional(),
     }),
     result: TextResult,
   },

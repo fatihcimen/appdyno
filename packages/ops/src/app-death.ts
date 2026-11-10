@@ -23,6 +23,10 @@ async function reportOf(s: Session, since: number, clean: Clean, tries = REPORT_
   return undefined;
 }
 
+/** The process an action's answer names, 0 for none, where it was asked for one: an older agent names none. */
+export const pidInAnswer = (asked: string | undefined, r: { pid?: number | undefined }) =>
+  asked && r.pid !== undefined ? { pid: r.pid > 0 ? String(r.pid) : undefined } : undefined;
+
 /** What to do once the app died under a call that failed for it. */
 export const DIED_HINT = 'launch_app starts it again, and crashes says why it died';
 
@@ -34,7 +38,7 @@ export const diedLine = ({ reason, file }: NonNullable<ActionOut['appDied']>) =>
  * The app's end during an action: its process is gone from the front, or another one has taken over
  * (Android restarts a crashed app at once, so the screen alone would not tell). `ran`: it was in front on the read
  * before the action, or the action launched it; an app not running then, with no process before either, did not die
- * in it, as one a link never opened.
+ * in it, as one a link never opened. `now`: the process after the action, as the action's own answer told it.
  */
 export async function appDeath(
   s: Session,
@@ -43,10 +47,11 @@ export async function appDeath(
   since: number,
   clean: Clean,
   ran: boolean,
+  now?: { pid: string | undefined },
 ) {
   if (!s.appId) return undefined;
   if (s.device.appPid) {
-    const pid = await s.device.appPid(s.appId).catch(() => wasPid);
+    const pid = now ? now.pid : await s.device.appPid(s.appId).catch(() => wasPid);
     s.appPid = pid;
     if (wasPid && pid !== wasPid) {
       reportProgress(

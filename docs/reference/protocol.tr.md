@@ -53,7 +53,7 @@ kendisi başarısız sayar ve `cancel {id}` gönderir. Cihaz işi tek bir thread
 | `hello`                                                  | `token`, `protocol`                                                                                     | ajan ve cihaz açıklaması                                                             |
 | `ping`                                                   | –                                                                                                       | `uptimeMs`, `atMs` (cihazın duvar saati)                                             |
 | `tree.get`                                               | `maxDepth` (128), `maxNodes` (5000)                                                                     | `Tree`                                                                               |
-| `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                                           | `settle?`, `hash?`, `tree?`                                                          |
+| `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`, `pidOf?`                                 | `settle?`, `hash?`, `tree?`, `pid?`                                                  |
 | `text.set`                                               | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; iOS sürücüsü 2000 ister), `settle?`, `read` | `act` gibi, ayrıca `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
 | `text.keys` (iOS)                                        | `text`, `into?`, `focusTimeoutMs` (6000)                                                                | `focusMs`                                                                            |
 | `screenshot`                                             | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                       | `w`, `h`, `format`, `bytes`, ayrıca görüntüyü taşıyan bir ek                         |
@@ -79,6 +79,10 @@ son örneklerinde birlikte kalkar) ve `key {key, modifiers?}` (`back`, `home`, `
 `appSwitch`, `volumeUp`, `volumeDown`, `power`, `lock`, `escape`, `space`, `arrowUp`, `arrowDown`, `arrowLeft`,
 `arrowRight` ya da bir harf veya rakam; `modifiers` içindeki `command`, `control`, `option`, `shift` tuş boyunca basılı tutulur, Android'de
 `command`, metin alanlarının kabul ettiği Ctrl'dir). Koordinatlar cihaz pikselidir.
+
+`act` ve `text.set` üzerindeki `pidOf` (Android), yanıtın eylem bittiğinde `pid` içinde sürecini verdiği bir uygulamayı
+adlandırır, uygulama hiçbir süreçle çalışmıyorsa 0: bir sunucu onu eylemden önceki süreçle karşılaştırır, çünkü sistemin
+hemen yeniden başlattığı bir çökme başka hiçbir şeyde görünmez. Söyleyemeyen bir ajan, eskisi gibi, `pid`'i dışarıda bırakır ve sunucu `pidof`'a sorar.
 
 ### Bekleme
 

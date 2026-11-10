@@ -210,6 +210,7 @@ export abstract class RpcDevice extends DeviceActions {
         ...(settle && { settle }),
         read: opts.read ?? 'none',
         ...(opts.before && { before: opts.before }),
+        ...(opts.pidOf && { pidOf: opts.pidOf }),
       },
       TIMEOUTS.action + (settle?.maxMs ?? 0) + extraMs,
     ).catch(failedAfterSending);
@@ -237,6 +238,7 @@ export abstract class RpcDevice extends DeviceActions {
         ...(opts.focusTimeoutMs !== undefined && { focusTimeoutMs: opts.focusTimeoutMs }),
         ...(settle && { settle }),
         read: opts.read ?? 'none',
+        ...(opts.pidOf && { pidOf: opts.pidOf }),
       },
       TIMEOUTS.text + (settle?.maxMs ?? 0),
     ).catch(failedAfterSending);

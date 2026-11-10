@@ -55,7 +55,13 @@ export const TIMEOUTS = {
   audit: 30_000,
 } as const;
 
-export type ActOptions = { settle?: SettleInput | false; read?: Read; before?: string };
+/** `pidOf`: an app whose process the answer names, where the device's agent can tell it (`pid`). */
+export type ActOptions = {
+  settle?: SettleInput | false;
+  read?: Read;
+  before?: string;
+  pidOf?: string;
+};
 
 export type TreeOptions = { maxDepth?: number; maxNodes?: number; asItIs?: boolean };
 

@@ -16,13 +16,14 @@ class TreeRequest(val maxDepth: Int, val maxNodes: Int) {
 
 class SettleRequest(val quietMs: Long, val maxMs: Long)
 
-/** What an action asks for once it is done. */
-class AfterRequest(val settle: SettleRequest?, val read: String, val before: String?) {
+/** What an action asks for once it is done; `pidOf`: the app whose process the answer names. */
+class AfterRequest(val settle: SettleRequest?, val read: String, val before: String?, val pidOf: String? = null) {
     companion object {
         fun from(p: JSONObject) = AfterRequest(
             p.optJSONObject("settle")?.let { SettleRequest(it.getLong("quietMs"), it.getLong("maxMs")) },
             p.getString("read"),
             if (p.has("before")) p.getString("before") else null,
+            if (p.has("pidOf")) p.getString("pidOf") else null,
         )
     }
 }

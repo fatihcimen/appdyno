@@ -53,7 +53,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `hello`                                                  | `token`, `protocol`                                                                                      | agent and device description                                                         |
 | `ping`                                                   | –                                                                                                        | `uptimeMs`, `atMs` (the device's wall clock)                                         |
 | `tree.get`                                               | `maxDepth` (128), `maxNodes` (5000)                                                                      | `Tree`                                                                               |
-| `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                                            | `settle?`, `hash?`, `tree?`                                                          |
+| `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`, `pidOf?`                                  | `settle?`, `hash?`, `tree?`, `pid?`                                                  |
 | `text.set`                                               | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`              |
 | `text.keys` (iOS)                                        | `text`, `into?`, `focusTimeoutMs` (6000)                                                                 | `focusMs`                                                                            |
 | `screenshot`                                             | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                         |
@@ -79,6 +79,10 @@ first sample and up together at their last) and `key {key, modifiers?}` (`back`,
 `appSwitch`, `volumeUp`, `volumeDown`, `power`, `lock`, `escape`, `space`, `arrowUp`, `arrowDown`, `arrowLeft`,
 `arrowRight`, or a letter or digit; `modifiers` of `command`, `control`, `option`, `shift` are held during it, and on
 Android `command` is Ctrl, which its text fields take). Coordinates are device pixels.
+
+`pidOf` (Android), on `act` and `text.set`, names an app whose process the answer gives in `pid` once the action is
+over, 0 when it runs none: a host compares it with the one before the action, as a crash the system restarted at once
+shows in nothing else. An agent that cannot tell leaves `pid` out, as an older one does, and the host asks `pidof`.
 
 ### Wait
 
