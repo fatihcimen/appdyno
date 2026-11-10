@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The Android agent's TIMEOUT is claimed on its one timers thread and written on a thread of its own: a host that stopped reading while a big answer or a video frame was being written held the next timeout's write, and with it the timers thread, so that no request on any connection timed out again, no stuck lane was given up and the agent never left when idle.
 - A request the Android agent answers on its connection's thread, a mirror's touch among them, that fails is answered with its reason, and the connection goes on: a touch refused, as a Xiaomi without "USB debugging (Security settings)" refuses one with `PERMISSION_REQUIRED`, closed the connection with no answer, every job in flight on it lost its answer, and the hint that says what to turn on never reached the host.
 - On Android only a progress bar with no range, a spinner or a loading bar, keeps the screen busy: any visible bar did, a determinate one that stands still among them (a step bar, an order's progress), and every action on such a screen waited its whole 3 s and answered `settled: false`.
 - A connection that ends cancels its jobs, queued or running, in the Android agent and the iOS runner: a host killed during a `wait` or with taps queued left the agent reading on to the wait's end and making the taps, with nobody to read their answers, and the next host's requests waited behind them, past their deadline, until it restarted the agent as stuck.

@@ -172,32 +172,44 @@ class Server(private val opts: Options, private val handlers: Handlers) {
     private fun submit(id: Int, method: String, params: JSONObject, writer: FrameWriter, jobs: JobTable) {
         val job = Job(id)
         jobs.add(job)
-        val replied = AtomicBoolean(false)
+        val answer = OneAnswer(id, writer)
         val deadlineMs = params.getLong("_deadlineMs").coerceIn(100, 600_000)
-        val timedOut = {
-            if (replied.compareAndSet(false, true)) {
-                writer.safe { json(errorJson(id, AgentFailure("TIMEOUT", "$method took longer than $deadlineMs ms"))) }
-            }
-        }
-        actions.submit(job, deadlineMs, timedOut) {
+        actions.submit(job, deadlineMs, { answer.timeout(AgentFailure("TIMEOUT", "$method took longer than $deadlineMs ms")) }) {
             try {
                 if (job.cancelled) throw AgentFailure("CANCELLED", "$method was cancelled before it started")
                 val reply = handlers.handle(method, params, job)
-                if (replied.compareAndSet(false, true)) {
-                    val text = resultJson(id, reply.result)
-                    writer.safe { if (reply.binary != null) binaryThenJson(id, reply.binary, text) else json(text) }
-                }
+                val text = resultJson(id, reply.result)
+                answer.give { if (reply.binary != null) binaryThenJson(id, reply.binary, text) else json(text) }
             } catch (t: Throwable) {
-                if (replied.compareAndSet(false, true)) writer.safe { json(errorJson(id, failureOf(t))) }
+                answer.give { json(errorJson(id, failureOf(t))) }
             } finally {
                 jobs.remove(job)
             }
         }
     }
+}
 
-    private inline fun FrameWriter.safe(block: FrameWriter.() -> Unit) {
+/**
+ * A request's one answer, whichever comes first: the job's, or the TIMEOUT of its deadline. The deadline's is claimed
+ * on the one timers thread and written on a thread of its own: a host that stops reading holds a write for good, and
+ * with the timers thread every later timeout, lane given up and idle exit.
+ */
+class OneAnswer(private val id: Int, private val writer: FrameWriter) {
+    private val given = AtomicBoolean(false)
+
+    fun timeout(failure: AgentFailure) {
+        if (given.compareAndSet(false, true)) {
+            Thread({ write { json(errorJson(id, failure)) } }, "appdyno-timeout").apply { isDaemon = true }.start()
+        }
+    }
+
+    fun give(block: FrameWriter.() -> Unit) {
+        if (given.compareAndSet(false, true)) write(block)
+    }
+
+    private fun write(block: FrameWriter.() -> Unit) {
         try {
-            block()
+            writer.block()
         } catch (e: Throwable) {
             System.err.println("write failed: $e")
         }

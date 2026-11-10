@@ -9,7 +9,11 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.OutputStream
 import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class ServerPartsTest {
     private val token = "0123456789abcdef"
@@ -87,6 +91,34 @@ class ServerPartsTest {
         assertTrue(queued.cancelled)
         assertTrue(running.cancelled)
         assertFalse(other.cancelled)
+    }
+
+    @Test
+    fun aTimeoutWhoseWriteIsHeldHoldsNoOtherTimeout() {
+        val held = CountDownLatch(1)
+        val writing = CountDownLatch(1)
+        // a host that stopped reading: a write waits for good
+        val blocked = object : OutputStream() {
+            override fun write(b: Int) {
+                writing.countDown()
+                held.await()
+            }
+        }
+        val answer = OneAnswer(7, FrameWriter(blocked))
+        val timers = Executors.newSingleThreadScheduledExecutor()
+        try {
+            // on the timers thread it returns while its write waits, on another thread
+            timers.submit { answer.timeout(AgentFailure("TIMEOUT", "late")) }.get(2, TimeUnit.SECONDS)
+            assertTrue(writing.await(2, TimeUnit.SECONDS))
+            assertTrue(timers.submit<Boolean> { true }.get(2, TimeUnit.SECONDS))
+            // the job's own answer, later, is not written: the host has its TIMEOUT
+            var gave = false
+            answer.give { gave = true }
+            assertFalse(gave)
+        } finally {
+            held.countDown()
+            timers.shutdownNow()
+        }
     }
 
     @Test
