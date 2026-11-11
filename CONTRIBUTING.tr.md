@@ -107,7 +107,7 @@ dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi.
 
 `packages/appdyno/test/structure.test.ts`, `packages/*/src` içindeki bir dosyayı ve bizim yazdığımız her `.kt`, `.swift`, `.m` ve `.h`
 dosyasını, bir gerekçeyle adını verdikleri dışında, tek bir işe ve 450 satıra bağlı tutar ve iki kez geçen 8 satırlık bir diziyi
-reddeder. İki sürücünün de yaptığı şey `core`'a aittir; iOS runner'ının cihaz olmadan verdiği kararlar
+reddeder; bir test dosyasını da, bir paketin `test`'inde ya da `device-tests`'te, 800 satıra bağlı tutar. İki sürücünün de yaptığı şey `core`'a aittir; iOS runner'ının cihaz olmadan verdiği kararlar
 `ios/RunnerCore`'a, Android ajanınınkiler ise içinde framework olmayan, birim testinin ulaştığı kendine ait bir sınıfa.
 
 `packages/appdyno/test/function-size.test.ts` aynısını bir TypeScript fonksiyonu için 200 satırda yapar; içindeki bir closure

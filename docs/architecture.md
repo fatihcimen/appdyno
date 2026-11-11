@@ -129,14 +129,14 @@ A claim on a device holds a pid and a start time, so a dead owner's claim is no 
 
 Rules that matter are tests, so they cannot go stale in silence.
 
-| test                                          | it holds                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------- |
-| `packages/appdyno/test/boundaries.test.ts`    | The package map: what each package may import.                      |
-| `packages/appdyno/test/structure.test.ts`     | 450 lines to a file, and no run of 8 lines twice.                   |
-| `packages/appdyno/test/function-size.test.ts` | 200 lines to a function.                                            |
-| `packages/mcp/test/catalog.test.ts`           | The catalog's size, and that the docs list every tool.              |
-| `packages/protocol/test/native.test.ts`       | The Kotlin, Swift and TypeScript sides agree on the protocol.       |
-| `packages/appdyno/test/docs.test.ts`          | Every link in the docs resolves, and these diagrams match the code. |
+| test                                          | it holds                                                                     |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| `packages/appdyno/test/boundaries.test.ts`    | The package map: what each package may import.                               |
+| `packages/appdyno/test/structure.test.ts`     | 450 lines to a source file, 800 to a test file, and no run of 8 lines twice. |
+| `packages/appdyno/test/function-size.test.ts` | 200 lines to a function.                                                     |
+| `packages/mcp/test/catalog.test.ts`           | The catalog's size, and that the docs list every tool.                       |
+| `packages/protocol/test/native.test.ts`       | The Kotlin, Swift and TypeScript sides agree on the protocol.                |
+| `packages/appdyno/test/docs.test.ts`          | Every link in the docs resolves, and these diagrams match the code.          |
 
 Device suites live in `device-tests`. They need a device you name, and CI runs none of them: see [the CI page](reference/ci.md).
 

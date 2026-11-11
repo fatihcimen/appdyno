@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A test file keeps to 800 lines, as `structure.test.ts` holds every file under a package's `test` and `device-tests`, where tests had no cap; three device suites over it are named, each to be split once it runs on its device again.
 - A window's recorded flow and what is under its pointer are test files of their own over one setup, and the simulator's direct reads, its settle and its helpers' proofs are three over its trees, where two files of over 800 lines held them.
 - The tests of the tools' list and answers, acting, measuring and iOS simulators are a folder, `packages/ops/test/tools`, over one shared server, where one file of 940 lines held them.
 - The flow tests are a folder, `packages/ops/test/flow`: recording, secrets and params, replay and the test runner each a file over one harness, where one file of 1,290 lines held them.

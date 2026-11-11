@@ -129,14 +129,14 @@ Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece 
 
 Önemli kurallar birer testtir, böylece sessizce eskiyemezler.
 
-| test                                          | tuttuğu                                                                           |
-| --------------------------------------------- | --------------------------------------------------------------------------------- |
-| `packages/appdyno/test/boundaries.test.ts`    | Paket haritası: her paketin neyi içe aktarabileceği.                              |
-| `packages/appdyno/test/structure.test.ts`     | Bir dosyaya 450 satır, iki kez geçen 8 satırlık bir dizi yok.                     |
-| `packages/appdyno/test/function-size.test.ts` | Bir fonksiyona 200 satır.                                                         |
-| `packages/mcp/test/catalog.test.ts`           | Kataloğun boyutu ve belgelerin her aracı listelemesi.                             |
-| `packages/protocol/test/native.test.ts`       | Kotlin, Swift ve TypeScript taraflarının protokolde anlaşması.                    |
-| `packages/appdyno/test/docs.test.ts`          | Belgelerdeki her bağlantının bir yere varması ve bu diyagramların kodla uyuşması. |
+| test                                          | tuttuğu                                                                                      |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `packages/appdyno/test/boundaries.test.ts`    | Paket haritası: her paketin neyi içe aktarabileceği.                                         |
+| `packages/appdyno/test/structure.test.ts`     | Bir kaynak dosyaya 450, bir test dosyasına 800 satır, iki kez geçen 8 satırlık bir dizi yok. |
+| `packages/appdyno/test/function-size.test.ts` | Bir fonksiyona 200 satır.                                                                    |
+| `packages/mcp/test/catalog.test.ts`           | Kataloğun boyutu ve belgelerin her aracı listelemesi.                                        |
+| `packages/protocol/test/native.test.ts`       | Kotlin, Swift ve TypeScript taraflarının protokolde anlaşması.                               |
+| `packages/appdyno/test/docs.test.ts`          | Belgelerdeki her bağlantının bir yere varması ve bu diyagramların kodla uyuşması.            |
 
 Cihaz suite'leri `device-tests` içindedir. Adını verdiğiniz bir cihaz isterler ve CI hiçbirini çalıştırmaz: bkz. [CI sayfası](reference/ci.tr.md).
 

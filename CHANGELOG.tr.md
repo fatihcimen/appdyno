@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir test dosyası 800 satıra bağlı kalır, `structure.test.ts` bir paketin `test`'i ve `device-tests` altındaki her dosyayı buna bağlı tuttuğu için; önceden testlerin bir sınırı yoktu. Onu aşan üç cihaz suite'i adıyla anılır, her biri cihazında yeniden çalıştığında bölünmek üzere.
 - Bir pencerenin kaydedilen akışı ve işaretçisinin altındaki, tek bir kurulum üzerinde kendi test dosyalarıdır; simülatörün doğrudan okumaları, durulması ve yardımcılarının kanıtları da ağaçları üzerinde üç dosyadır; önceden 800 satırı aşan iki dosya onları tutuyordu.
 - Araçların listesinin ve yanıtlarının, eylemin, ölçümün ve iOS simülatörlerinin testleri, tek bir paylaşılan sunucu üzerinde bir klasördür, `packages/ops/test/tools`; önceden 940 satırlık tek bir dosya onları tutuyordu.
 - Akış testleri bir klasördür, `packages/ops/test/flow`: kayıt, sırlar ve parametreler, yeniden oynatma ve test çalıştırıcısı, tek bir düzenek üzerinde her biri bir dosya; önceden 1.290 satırlık tek bir dosya onları tutuyordu.

@@ -107,7 +107,7 @@ as `@appdyno/testing/fake-device.js`.
 
 `packages/appdyno/test/structure.test.ts` keeps a file in `packages/*/src`, and every `.kt`, `.swift`, `.m` and `.h`
 we wrote, to one job and to 450 lines, but for the ones it names with a reason, and refuses a run of 8 lines that
-appears twice. What both drivers do belongs in `core`; what the iOS runner decides without a device belongs in
+appears twice, and a test file, in a package's `test` or in `device-tests`, to 800 lines. What both drivers do belongs in `core`; what the iOS runner decides without a device belongs in
 `ios/RunnerCore`, and the Android agent's in a class of its own with no framework in it, where a unit test reaches it.
 
 `packages/appdyno/test/function-size.test.ts` does the same for a TypeScript function, at 200 lines, a closure inside it

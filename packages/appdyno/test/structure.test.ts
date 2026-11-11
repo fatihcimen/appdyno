@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -37,6 +37,24 @@ const lineCount = (text: string) => text.trimEnd().split('\n').length;
 const MAX_LINES = 450;
 /** Each stays until it is cut: one under the limit fails below. */
 const LARGER: Record<string, string> = {};
+
+/** A test file's cap: its cases and fixtures run longer than code does, and it stays one file to read. */
+const MAX_TEST_LINES = 800;
+/** Each stays until it is cut, as `LARGER` does. */
+const LARGER_TESTS: Record<string, string> = {
+  'device-tests/android.test.ts':
+    'a device suite: no run here checks one split, so it waits for a run on its device',
+  'device-tests/evidence.test.ts': 'a device suite, as above',
+  'device-tests/driving.test.ts': 'a device suite, as above',
+};
+
+const tests = [
+  ...readdirSync(packages).map((p) => join(packages, p, 'test')),
+  join(root, 'device-tests'),
+]
+  .filter((dir) => existsSync(dir))
+  .flatMap((dir) => sourcesIn(dir, /\.(ts|mjs)$/))
+  .map((file) => ({ name: relative(root, file), text: readFileSync(file, 'utf8') }));
 
 const RUN_LINES = 8;
 
@@ -90,6 +108,24 @@ describe('the size of a file', () => {
   it('names only files that exist and are over the limit', () => {
     const lines = new Map(sources.map((f) => [f.name, lineCount(f.text)]));
     const stale = Object.keys(LARGER).filter((name) => (lines.get(name) ?? 0) <= MAX_LINES);
+    expect(stale).toEqual([]);
+  });
+});
+
+describe('the size of a test file', () => {
+  it(`stays under ${MAX_TEST_LINES} lines, but for the ones named`, () => {
+    expect(tests.length).toBeGreaterThan(300);
+    const over = tests
+      .filter((f) => lineCount(f.text) > MAX_TEST_LINES && !LARGER_TESTS[f.name])
+      .map((f) => `${f.name}: ${lineCount(f.text)}`);
+    expect(over).toEqual([]);
+  });
+
+  it('names only files that exist and are over the limit', () => {
+    const lines = new Map(tests.map((f) => [f.name, lineCount(f.text)]));
+    const stale = Object.keys(LARGER_TESTS).filter(
+      (name) => (lines.get(name) ?? 0) <= MAX_TEST_LINES,
+    );
     expect(stale).toEqual([]);
   });
 });
