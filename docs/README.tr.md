@@ -28,6 +28,7 @@ Bir şeye bakmak için burası.
 | [Performans](reference/perf.tr.md)       | her ölçümün her cihazda neyi okuduğu ve her sayının nasıl kanıtlandığı |
 | [Protokol](reference/protocol.tr.md)     | host ile bir cihazın ajanı arasındaki baytlar                          |
 | [CI ve sürümler](reference/ci.tr.md)     | her kapı, cihaz suite'leri, bir sürümün nasıl yapıldığı                |
+| [Sıkı lint](reference/lint.tr.md)        | kodun, bir seçim bırakan tipe dayalı bir kuralı nasıl karşıladığı      |
 
 ## Nasıl çalışır
 

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- CONTRIBUTING asks for a commit subject of at most 72 characters, with why in the body, and how the code meets a type-checked rule that leaves a choice is `docs/reference/lint.md`, where CONTRIBUTING held it in eight long bullets.
 - The function size rule counts what a package's `src` holds of its own tests, as the file size rule does: the phone stream's fake phone answers each step of a pairing by a method of its own, where one function of 290 lines held them and the rule skipped its folder.
 - Unit tests that waited on the clock, for a poll's gap, a settle, a crash report or a deadline, run on vitest's fake timers by `onFakeTime` and `fakeTimed` of `packages/testing`, and the unit run takes less than half the time it took. Those that wait on a real process, a socket, a file a real tool holds or the native viewer keep the real clock.
 - The server's context takes where it keeps measures, baselines and a command line's state, and what traces may take, as one `storage` option, and whether it holds a device and shares one as one `claims` option, as it took a person's; what it was given is `options`, read as given, where five getters handed each on. A `share` given with no `claims` was never read, and three tests no longer give one.
