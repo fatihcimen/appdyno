@@ -108,8 +108,7 @@ for (const t of targets)
     const ctx = new ServerContext(DEFAULT_POLICY, [t.provider()], {
       device: t.serial,
       app: APP,
-      measurements: dir,
-      perf: project,
+      storage: { measurements: dir, perf: project },
     });
     const ops = checkedOps(ctx);
     const op = (name: string) => {

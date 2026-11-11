@@ -171,12 +171,12 @@ describe('react_native', () => {
       metro = await fakeMetro({ reloadRoute: true });
       // the recording began in an earlier process, on the device a command line remembers
       const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-rn-')), 'session.json');
-      const start = new ServerContext(DEFAULT_POLICY, [provider], { remember });
+      const start = new ServerContext(DEFAULT_POLICY, [provider], { storage: { remember } });
       await callerOf(start)('flow', { action: 'start' });
       start.close();
       opens = 0;
 
-      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember });
+      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { storage: { remember } });
       const call = callerOf(ctx);
       await call('react_native', { action: 'targets', metro: metro.metro });
       await call('react_native', { action: 'reload', metro: metro.metro });

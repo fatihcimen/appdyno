@@ -67,7 +67,10 @@ class TimedDevice extends FakeDevice {
   }
 }
 
-function connect(device: FakeDevice = new TimedDevice(), defaults = {}) {
+function connect(
+  device: FakeDevice = new TimedDevice(),
+  defaults: ConstructorParameters<typeof ServerContext>[2] = {},
+) {
   const provider: DeviceProvider = {
     list: () =>
       Promise.resolve([{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }]),
@@ -76,8 +79,8 @@ function connect(device: FakeDevice = new TimedDevice(), defaults = {}) {
   };
   const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
     app: 'dev.app',
-    measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')),
     ...defaults,
+    storage: { measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')), ...defaults.storage },
   });
   return { ctx, call: callerOf(ctx), device };
 }
@@ -237,7 +240,7 @@ describe('report timeline', () => {
   });
 
   describe('a request in the file', () => {
-    const withCapture = async (defaults = {}) => {
+    const withCapture = async (defaults: ConstructorParameters<typeof ServerContext>[2] = {}) => {
       const device = new TimedDevice();
       const { call } = connect(device, defaults);
       await call('report', { action: 'timeline', dir });
@@ -277,7 +280,7 @@ describe('report timeline', () => {
 
   it('refuses a command line, which ends before there is anything to read', async () => {
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'session.json');
-    const { call } = connect(new TimedDevice(), { remember });
+    const { call } = connect(new TimedDevice(), { storage: { remember } });
     await expect(call('report', { action: 'timeline', dir })).rejects.toThrow(/appdyno timeline/);
   });
 

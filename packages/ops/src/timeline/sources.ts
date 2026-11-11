@@ -148,7 +148,7 @@ export async function writePage(ctx: ServerContext, s: Session, p: Page): Promis
         : [{ began: step.began, at: Date.parse(step.at), op: step.op, ok: step.ok }],
     ),
     clean: (text) => redactLog(ctx.policy, text),
-    full: ctx.fullUrls,
+    full: ctx.options.fullUrls === true,
   });
   const out = await writeTimeline(t, p.dir, p.video && p.videoFile, p.name);
   const said = p.video

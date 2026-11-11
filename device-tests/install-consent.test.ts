@@ -52,7 +52,7 @@ function harness(installAnswers: InstallAnswers) {
   const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider(new Adb(), { installAnswers })], {
     device: serial,
     app: APP,
-    claims: true,
+    claims: { share: false },
   });
   return { ctx, call: opCaller(checkedOps(ctx)) };
 }

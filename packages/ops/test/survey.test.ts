@@ -26,7 +26,7 @@ function context(measures: Record<string, unknown> = {}) {
         open: () => device,
       },
     ],
-    { device: device.serial, app: 'dev.app', measurements, perf },
+    { device: device.serial, app: 'dev.app', storage: { measurements, perf } },
   );
   return { ctx, measurements, perf };
 }

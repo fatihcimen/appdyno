@@ -218,7 +218,7 @@ function connect(device: FlightDevice, flightSeconds?: number) {
   };
   const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
     app: 'dev.app',
-    measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')),
+    storage: { measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')) },
     ...(flightSeconds !== undefined && { flightSeconds }),
   });
   return { ctx, call: callerOf(ctx) };
@@ -500,7 +500,10 @@ describe('the flight recorder', () => {
       handles: () => true,
       open: () => d,
     };
-    const cli = new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app', remember });
+    const cli = new ServerContext(DEFAULT_POLICY, [provider], {
+      app: 'dev.app',
+      storage: { remember },
+    });
     await expect(callerOf(cli)('report', { action: 'flight' })).rejects.toThrow(/appdyno flight/);
     d.running = false;
     await expect(call('report', { action: 'flight' })).rejects.toThrow(/not running/);

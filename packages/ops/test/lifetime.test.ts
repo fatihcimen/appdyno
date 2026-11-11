@@ -96,7 +96,7 @@ describe('whose conditions go back', () => {
     try {
       settings.values.dark_mode = 'yes';
       leave('conditions', device.serial, { dark_mode: { was: 'no', owner: other.owner } });
-      const { ctx, call } = connect(device, { claims: true });
+      const { ctx, call } = connect(device, { claims: { share: false } });
       const used = await call('use_device', { device: device.serial });
       expect(used.text).not.toContain('restored');
       expect(settings.values.dark_mode).toBe('yes');
@@ -121,7 +121,7 @@ describe('whose conditions go back', () => {
         text_size: { was: '1.0', owner: await killedProcess() },
         reduce_motion: { was: 'off' },
       });
-      const { ctx, call } = connect(device, { claims: true });
+      const { ctx, call } = connect(device, { claims: { share: false } });
       const used = await call('use_device', { device: device.serial });
       expect(used.text).toContain('restored what an ended session left changed: text_size: 1.0');
       expect(settings.values).toEqual({
@@ -141,7 +141,7 @@ describe('whose conditions go back', () => {
     leave('conditions', device.serial, {
       dark_mode: { was: 'no', owner: await killedProcess() },
     });
-    const { ctx, call } = connect(device, { claims: true, share: true });
+    const { ctx, call } = connect(device, { claims: { share: true } });
     await call('use_device', { device: device.serial });
     expect(settings.values.dark_mode).toBe('no');
     ctx.close();
@@ -150,19 +150,19 @@ describe('whose conditions go back', () => {
   it('a command line’s change outlives a later session, and goes when asked', async () => {
     const { settings, device } = withSettings();
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
-    const cli = connect(device, { remember });
+    const cli = connect(device, { storage: { remember } });
     expect((await cli.call('device_setting', { name: 'dark_mode', value: 'yes' })).text).toBe(
       'dark_mode: yes; it stays until restore',
     );
     expect(await cli.ctx.end()).toEqual([]);
     cli.ctx.close();
-    const next = connect(device, { claims: true });
+    const next = connect(device, { claims: { share: false } });
     await next.call('use_device', { device: device.serial });
     expect(settings.values.dark_mode).toBe('yes');
     expect(await next.ctx.end()).toEqual([]);
     expect(settings.values.dark_mode).toBe('yes');
     next.ctx.close();
-    const later = connect(device, { remember });
+    const later = connect(device, { storage: { remember } });
     expect((await later.call('device_setting', { name: 'restore' })).text).toContain(
       'restored dark_mode: off',
     );
@@ -189,7 +189,7 @@ describe('a conditions file', () => {
     const { settings, device } = withSettings();
     const set = vi.spyOn(settings, 'set');
     const file = leave('conditions', device.serial, text);
-    const { ctx, call } = connect(device, { claims: true });
+    const { ctx, call } = connect(device, { claims: { share: false } });
     const used = await call('use_device', { device: device.serial });
     expect(used.text).toContain('could not restore');
     expect(used.text).toContain(`${file}.bad`);
@@ -250,7 +250,7 @@ describe('tool calls in parallel', () => {
     leave('conditions', device.serial, {
       dark_mode: { was: 'no', owner: await killedProcess() },
     });
-    const { ctx, call } = connect(device, { claims: true });
+    const { ctx, call } = connect(device, { claims: { share: false } });
     await Promise.all([call('device_info'), call('device_info'), call('device_info')]);
     expect(open).toHaveBeenCalledTimes(1);
     expect(set).toHaveBeenCalledTimes(1);
@@ -410,14 +410,14 @@ describe('what a process leaves running', () => {
   it('a command line’s recording outlives a session, and its next command stops it', async () => {
     const device = equipped();
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
-    const start = connect(device, { remember });
+    const start = connect(device, { storage: { remember } });
     await start.call('record', { action: 'start', file: join(tmpdir(), 'appdyno-cli.mp4') });
     start.ctx.close();
     const session = connect(device);
     await session.call('use_device', { device: device.serial });
     expect(await session.ctx.end()).toEqual([]);
     expect(stops.recording).not.toHaveBeenCalled();
-    const stop = connect(device, { remember });
+    const stop = connect(device, { storage: { remember } });
     await stop.call('record', { action: 'stop' });
     expect(stops.recording).toHaveBeenCalledOnce();
   });
@@ -466,7 +466,7 @@ describe('a flow recording', () => {
   it('a command line started has no owner, and goes on across its commands', async () => {
     const device = new FakeDevice();
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
-    await connect(device, { remember }).call('flow', { action: 'start' });
+    await connect(device, { storage: { remember } }).call('flow', { action: 'start' });
     expect(recording(device.serial).owner).toBeUndefined();
     const { ctx, call } = connect(device);
     await call('use_device', { device: device.serial });

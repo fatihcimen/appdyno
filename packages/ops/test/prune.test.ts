@@ -31,7 +31,11 @@ const context = (o: { measurements?: string; traceLimitGb: number; autoPrune?: b
         open: () => device,
       },
     ],
-    { device: device.serial, app: 'dev.app', perf: mkdtempSync(join(tmpdir(), 'p-')), ...o },
+    {
+      device: device.serial,
+      app: 'dev.app',
+      storage: { perf: mkdtempSync(join(tmpdir(), 'p-')), ...o },
+    },
   );
 };
 

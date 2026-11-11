@@ -53,7 +53,7 @@ function phone(until?: string) {
         open: () => device,
       },
     ],
-    { device: device.serial, app: 'dev.app', measurements, perf },
+    { device: device.serial, app: 'dev.app', storage: { measurements, perf } },
   );
   return { ctx, measurements, perf, call: callerOf(ctx) };
 }

@@ -42,7 +42,7 @@ async function serving(idleMs?: number, policy = DEFAULT_POLICY) {
     port: 0,
     token: TOKEN,
     open: () => {
-      const ctx = new ServerContext(policy, [provider], { claims: true });
+      const ctx = new ServerContext(policy, [provider], { claims: { share: false } });
       contexts.push(ctx);
       return { ops: opsFor(ctx), end: () => ctx.end().then(() => ctx.close()) };
     },

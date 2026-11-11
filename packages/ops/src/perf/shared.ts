@@ -173,7 +173,7 @@ export function pruneNow(ctx: ServerContext, limitGb: number, dryRun = false) {
  * of this. After what writes a trace: a kept run, a measurement kept with none, a flight recorder's page.
  */
 export async function pruneWhenDue(ctx: ServerContext) {
-  if (!ctx.autoPrune) return;
+  if (!ctx.options.storage?.autoPrune) return;
   const stamp = join(stateDir(), 'traces-pruned');
   try {
     const last = await stat(stamp).then(

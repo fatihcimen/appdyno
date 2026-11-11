@@ -28,7 +28,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
   const ctx = new ServerContext(SUITE_POLICY, [provider], {
     device: serial,
     app: APP,
-    claims: true,
+    claims: { share: false },
   });
   const call = opCaller(checkedOps(ctx));
   return { ctx, call };
@@ -423,7 +423,6 @@ describe.skipIf(!android)('driving on Android', () => {
       const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider(adb, { animations: 'off' })], {
         device: android,
         app: APP,
-        share: true,
       });
       const ops = checkedOps(ctx);
       const set = async (args: Record<string, unknown>) => {

@@ -73,7 +73,7 @@ export async function keptBy(
         open: () => device,
       },
     ],
-    { device: device.serial, app: 'dev.app', measurements, perf: measurements },
+    { device: device.serial, app: 'dev.app', storage: { measurements, perf: measurements } },
   );
   const { text, data } = await callerOf(ctx)(tool, args);
   const [key] = await runKeys(measurements, { app: 'dev.app' });

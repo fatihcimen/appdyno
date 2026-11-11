@@ -82,7 +82,6 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
   const ctx = new ServerContext({ ...DEFAULT_POLICY, secrets: ['gizli-kod-9911'] }, [provider], {
     device: serial,
     app: APP,
-    share: true,
   });
   const call = opCaller(checkedOps(ctx));
   const ok: Call = async (name, args = {}) => {

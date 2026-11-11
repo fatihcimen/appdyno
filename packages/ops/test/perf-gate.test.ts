@@ -52,7 +52,7 @@ function context(
         open: () => device,
       },
     ],
-    { device: device.serial, app: 'dev.appdyno.fixture', measurements, perf },
+    { device: device.serial, app: 'dev.appdyno.fixture', storage: { measurements, perf } },
   );
   const ops = checkedOps(ctx);
   return {
@@ -352,7 +352,7 @@ describe('perf_query', () => {
           },
         },
       ],
-      { measurements: dir },
+      { storage: { measurements: dir } },
     );
     const query = must(checkedOps(ctx).perf_query, 'perf_query');
     const refused = query.handler({ trace: '/etc/passwd', sql: 'SELECT 1', limit: 5 });

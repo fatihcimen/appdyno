@@ -86,7 +86,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
     {
       ...(device && { device }),
       ...(app && { app }),
-      claims: true,
+      claims: { share: false },
       tool: 'appdyno library',
       env: process.env,
     },

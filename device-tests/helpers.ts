@@ -57,7 +57,11 @@ export const SUITE_POLICY = { ...DEFAULT_POLICY, allowDataLoss: 'all' } as const
 export function opsOn(provider: DeviceProvider, device: string, app: string) {
   const measurements = mkdtempSync(join(tmpdir(), 'appdyno-measures-'));
   const perf = mkdtempSync(join(tmpdir(), 'appdyno-perf-'));
-  const ctx = new ServerContext(SUITE_POLICY, [provider], { device, app, measurements, perf });
+  const ctx = new ServerContext(SUITE_POLICY, [provider], {
+    device,
+    app,
+    storage: { measurements, perf },
+  });
   return { ctx, measurements, call: opCaller(checkedOps(ctx)) };
 }
 

@@ -93,7 +93,7 @@ describe("a snapshot's frozen frames", () => {
       {
         device: d.serial,
         app: 'dev.app',
-        measurements: mkdtempSync(join(tmpdir(), 'appdyno-vitals-')),
+        storage: { measurements: mkdtempSync(join(tmpdir(), 'appdyno-vitals-')) },
       },
     );
     return callerOf(ctx)('perf_snapshot', {});
@@ -139,7 +139,7 @@ describe('why a hang was a hang, in an answer', () => {
           open: () => d,
         },
       ],
-      { device: d.serial, app: 'dev.app', measurements: '/tmp/appdyno-hang-test' },
+      { device: d.serial, app: 'dev.app', storage: { measurements: '/tmp/appdyno-hang-test' } },
     );
     return { call: callerOf(ctx), asked };
   };

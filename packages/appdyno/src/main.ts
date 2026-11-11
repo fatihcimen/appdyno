@@ -101,17 +101,18 @@ function contextFrom(values: ServerFlags, remember?: string, flowEnv?: NodeJS.Pr
   return new ServerContext(policy, providers(values.takeover, animations, installAnswers), {
     ...(device && { device }),
     ...(app && { app }),
-    ...(values.measurements && { measurements: values.measurements }),
-    ...(traceLimitGb !== undefined && { traceLimitGb }),
+    storage: {
+      ...(values.measurements && { measurements: values.measurements }),
+      ...(traceLimitGb !== undefined && { traceLimitGb }),
+      // a run kept in a folder of its own says nothing of the traces here
+      ...(!values.measurements && { autoPrune: true }),
+      ...(remember && { remember }),
+    },
     ...(flightSeconds !== undefined && { flightSeconds }),
     ...((values['full-urls'] || env.APPDYNO_FULL_URLS === '1') && { fullUrls: true }),
-    // a run kept in a folder of its own says nothing of the traces here
-    ...(!values.measurements && { autoPrune: true }),
-    ...(remember && { remember }),
-    claims: true,
+    claims: { share: values.share || env.APPDYNO_SHARE === '1' },
     // a put-back's hold is one a server started meanwhile waits out
     tool: remember ? 'appdyno cli' : values[PUT_BACK_AFTER] ? PUT_BACK_TOOL : 'appdyno mcp',
-    ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
     // a silent server sounds nowhere: a window that shows its request is told so
     person: { ...(alertPerson ? { alertPerson } : { silent: true }), clientNamed },
     ...(flowEnv && { env: flowEnv }),

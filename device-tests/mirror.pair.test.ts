@@ -43,7 +43,7 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
     })),
     {
       mirrorCommand: [process.execPath, main, 'mirror'],
-      perf: mkdtempSync(join(tmpdir(), 'pair-')),
+      storage: { perf: mkdtempSync(join(tmpdir(), 'pair-')) },
     },
   );
   const [a, b] = serials as [string, string];

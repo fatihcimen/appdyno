@@ -2679,7 +2679,7 @@ describe('device claims', () => {
     try {
       claimOf(pid);
       const d = new FakeDevice();
-      const { call, ctx } = await connect(d, { defaults: { claims: true } });
+      const { call, ctx } = await connect(d, { defaults: { claims: { share: false } } });
       const r = await call('use_device', { device: d.serial });
       expect(r.error).toBe(true);
       expect(r.data.code).toBe('DEVICE_CLAIMED');
@@ -2699,7 +2699,7 @@ describe('device claims', () => {
     let done: NodeJS.Timeout | undefined;
     try {
       const d = new FakeDevice();
-      const { call, ctx } = await connect(d, { defaults: { claims: true } });
+      const { call, ctx } = await connect(d, { defaults: { claims: { share: false } } });
       const started = Date.now();
       done = setTimeout(() => child.kill('SIGKILL'), 500);
       expect((await call('use_device', { device: d.serial })).error).toBe(false);
@@ -2731,7 +2731,7 @@ describe('device claims', () => {
     child.kill('SIGKILL');
     await new Promise((r) => child.once('exit', r));
     const d = new FakeDevice();
-    const first = await connect(d, { defaults: { claims: true, tool: 'one' } });
+    const first = await connect(d, { defaults: { claims: { share: false }, tool: 'one' } });
     expect((await first.call('use_device', { device: d.serial })).error).toBe(false);
     expect((await first.call('list_devices')).data.devices?.[0]?.heldBy).toMatchObject({
       pid: process.pid,
@@ -2746,7 +2746,7 @@ describe('device claims', () => {
       join(dir, 'emulator-5580.json'),
       JSON.stringify({ pid: process.pid, started: 'long ago', tool: 'x', since: 'y' }),
     );
-    const second = await connect(new FakeDevice(), { defaults: { claims: true } });
+    const second = await connect(new FakeDevice(), { defaults: { claims: { share: false } } });
     expect(
       must((await second.call('list_devices')).data.devices?.[0], 'the device').heldBy,
     ).toBeUndefined();

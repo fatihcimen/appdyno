@@ -64,7 +64,7 @@ function phone(overrides: Partial<MeasureSource> = {}) {
         open: () => device,
       },
     ],
-    { device: device.serial, app: 'dev.app', measurements, perf },
+    { device: device.serial, app: 'dev.app', storage: { measurements, perf } },
   );
   return { device, ctx, measurements, perf, call: callerOf(ctx) };
 }

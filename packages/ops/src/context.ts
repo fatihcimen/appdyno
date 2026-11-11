@@ -32,6 +32,26 @@ type Person = {
   clientNamed?: (said: string) => string;
 };
 
+/** Where measures, baselines and a command line's state are kept, and what traces may take. */
+type Storage = {
+  /** Where measurements and their raw outputs are stored (this machine only). */
+  measurements?: string;
+  /** The project's baselines and budgets. */
+  perf?: string;
+  /** What traces and heap dumps may take on this Mac, in GB: `--trace-limit-gb`, `APPDYNO_TRACE_LIMIT_GB`. */
+  traceLimitGb?: number;
+  /** Only a user's own entry point sets this: a kept run looks at what traces take. */
+  autoPrune?: boolean;
+  /** A file to keep the selection and the diff baseline in between processes (the command line). */
+  remember?: string;
+};
+
+/** Holding a device for the session, refusing one another live process holds. */
+type Claims = {
+  /** Use a device another process holds. */
+  share: boolean;
+};
+
 const Saved = z.object({
   serial: z.string(),
   app: z.string().optional(),
@@ -55,25 +75,17 @@ export class ServerContext {
     policy: Policy,
     /** Listed in this order; of those that handle a serial, the last one opens it. */
     readonly providers: DeviceProvider[],
-    private readonly defaults: {
+    readonly options: {
       device?: string;
       app?: string;
-      measurements?: string;
-      traceLimitGb?: number;
+      storage?: Storage;
       /** What a flight recorder keeps, from a person's own flag: an agent is not the one to ask for more of a screen. */
       flightSeconds?: number;
       /** Whole URLs in a timeline, query and all, from a person's own flag: it is a file that gets sent to people. */
       fullUrls?: boolean;
-      autoPrune?: boolean;
-      /** The project's baselines and budgets. */
-      perf?: string;
-      /** A file to keep the selection and the diff baseline in between processes (the command line). */
-      remember?: string;
-      /** Hold a device for the session, refusing one another live process holds (`tool`: this one, as it is shown). */
-      claims?: boolean;
+      claims?: Claims;
+      /** This process as a holder and as the owner of what a session leaves, as it is shown. */
       tool?: string;
-      /** Use a device another process holds. */
-      share?: boolean;
       /** How to run this tool again, for a window that outlives the call that opened it. */
       mirrorCommand?: string[];
       person?: Person;
@@ -85,8 +97,9 @@ export class ServerContext {
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };
-    this.person = defaults.person ?? {};
-    this.saved = defaults.remember ? readState(defaults.remember, Saved) : undefined;
+    this.person = options.person ?? {};
+    const remember = options.storage?.remember;
+    this.saved = remember ? readState(remember, Saved) : undefined;
   }
 
   /** These texts are not shown back until the returned function is called. */
@@ -100,37 +113,22 @@ export class ServerContext {
 
   private readonly saved: z.infer<typeof Saved> | undefined;
 
-  /** Where measurements and their raw outputs are stored (this machine only). */
-  /** What traces and heap dumps may take on this Mac, in GB: `--trace-limit-gb`, `APPDYNO_TRACE_LIMIT_GB`. */
+  /** What traces and heap dumps may take on this Mac, in GB. */
   get traceLimitGb(): number {
-    return this.defaults.traceLimitGb ?? DEFAULT_TRACE_LIMIT_GB;
+    return this.options.storage?.traceLimitGb ?? DEFAULT_TRACE_LIMIT_GB;
   }
 
-  get flightSeconds(): number | undefined {
-    return this.defaults.flightSeconds;
-  }
-
-  get env(): Record<string, string | undefined> {
-    return this.defaults.env ?? {};
-  }
-
-  get fullUrls(): boolean {
-    return this.defaults.fullUrls === true;
-  }
-
-  /** Only a user's own entry point sets this: a kept run looks at what traces take. */
-  get autoPrune(): boolean {
-    return this.defaults.autoPrune === true;
-  }
-
+  /** Where measurements and their raw outputs are stored (this machine only), read when asked as the state folder is. */
   get measurementsDir(): string {
-    return this.defaults.measurements ?? join(stateDir(), 'measurements');
+    return this.options.storage?.measurements ?? join(stateDir(), 'measurements');
   }
 
   /** Baselines and budgets, under the project (committable). */
   get perfDir(): string {
     return (
-      this.defaults.perf ?? process.env.APPDYNO_PERF_DIR ?? join(process.cwd(), '.appdyno/perf')
+      this.options.storage?.perf ??
+      process.env.APPDYNO_PERF_DIR ??
+      join(process.cwd(), '.appdyno/perf')
     );
   }
 
@@ -184,7 +182,7 @@ export class ServerContext {
     try {
       const device = this.deviceFor(serial);
       this.warmed.set(serial, device);
-      device.warm?.(this.defaults.app ?? this.saved?.app);
+      device.warm?.(this.options.app ?? this.saved?.app);
     } catch {
       // no driver takes it: its first call says so
     }
@@ -221,7 +219,7 @@ export class ServerContext {
 
   /** The session a launch runs on; when it is the first call, the app starts alongside the agent. */
   sessionToLaunch(app: string | undefined) {
-    const wanted = app ?? this.defaults.app ?? this.saved?.app;
+    const wanted = app ?? this.options.app ?? this.saved?.app;
     return this.session(
       undefined,
       wanted && checkLaunch(this.policy, checkApp(this.policy, wanted)),
@@ -258,19 +256,19 @@ export class ServerContext {
     launching: string | undefined,
   ) {
     const saved = this.saved?.serial === serial ? this.saved : undefined;
-    const holds = this.defaults.claims && !share && !this.defaults.share;
-    const tool = this.defaults.tool ?? 'appdyno';
+    const holds = this.options.claims && !share && !this.options.claims.share;
+    const tool = this.options.tool ?? 'appdyno';
     if (holds) await claim(serial, tool);
-    const owner = this.defaults.remember ? undefined : thisOwner(tool);
+    const owner = this.options.storage?.remember ? undefined : thisOwner(tool);
     const s = new Session(
       // a replay, a test run and a survey ask for a session outside any op
-      await this.open(serial, launching, app ?? this.defaults.app ?? saved?.app).catch(
+      await this.open(serial, launching, app ?? this.options.app ?? saved?.app).catch(
         (e: unknown) => {
           if (holds) release(serial);
           return refused(e);
         },
       ),
-      app ?? this.defaults.app ?? saved?.app,
+      app ?? this.options.app ?? saved?.app,
       owner,
       inputGuard(this.policy),
     );
@@ -285,7 +283,7 @@ export class ServerContext {
 
   /** Who holds a device, when this server keeps to claims. */
   heldBy(serial: string) {
-    return this.defaults.claims ? holder(serial) : undefined;
+    return this.options.claims ? holder(serial) : undefined;
   }
 
   /**
@@ -293,7 +291,7 @@ export class ServerContext {
    * `handedOff`, another process puts back what is kept on disk once this one has gone.
    */
   async end(handedOff: string[] = []): Promise<string[]> {
-    if (this.defaults.remember) return [];
+    if (this.options.storage?.remember) return [];
     const failed: string[] = [];
     for (const [serial, s] of this.sessions)
       failed.push(...(await endSession(this, s, handedOff.includes(serial))).failed);
@@ -302,7 +300,7 @@ export class ServerContext {
 
   /** The devices on which this process left what outlives it, as a session's end would put back. */
   leftBehind(): string[] {
-    if (this.defaults.remember) return [];
+    if (this.options.storage?.remember) return [];
     return [...this.sessions].flatMap(([serial, s]) => (leftHere(s) ? [serial] : []));
   }
 
@@ -315,22 +313,18 @@ export class ServerContext {
     this.warmed.delete(serial);
     const s = this.sessions.get(serial);
     if (!s) return undefined;
-    const taken = this.defaults.remember ? undefined : await endSession(this, s);
+    const taken = this.options.storage?.remember ? undefined : await endSession(this, s);
     await s.device.stopAgent().catch(() => undefined);
     s.device.close();
     this.sessions.delete(serial);
-    if (this.defaults.claims) release(serial);
+    if (this.options.claims) release(serial);
     if (this.currentSerial === serial) this.currentSerial = undefined;
     return taken;
   }
 
   /** The device in use or named, known with nothing opened. */
   get selected(): string | undefined {
-    return this.currentSerial ?? this.defaults.device ?? this.saved?.serial;
-  }
-
-  get mirrorCommand() {
-    return this.defaults.mirrorCommand;
+    return this.currentSerial ?? this.options.device ?? this.saved?.serial;
   }
 
   /** A device's driver object, cold: nothing on the device has started. */
@@ -377,8 +371,9 @@ export class ServerContext {
 
   close() {
     const s = this.currentSerial ? this.sessions.get(this.currentSerial) : undefined;
-    if (s && this.defaults.remember) {
-      writeState(this.defaults.remember, {
+    const remember = this.options.storage?.remember;
+    if (s && remember) {
+      writeState(remember, {
         serial: s.device.serial,
         ...(s.appId && { app: s.appId }),
         ...(s.shown && { shown: s.shown }),
@@ -387,6 +382,6 @@ export class ServerContext {
     }
     for (const x of this.sessions.values()) x.device.close();
     for (const device of this.warmed.values()) device.close();
-    if (this.defaults.claims) for (const serial of this.sessions.keys()) release(serial);
+    if (this.options.claims) for (const serial of this.sessions.keys()) release(serial);
   }
 }

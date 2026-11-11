@@ -75,8 +75,7 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
     const hardware = await device.hardware();
     const measures = windowMeasures(
       new ServerContext(DEFAULT_POLICY, [], {
-        measurements: join(runs, 'measurements'),
-        perf: join(runs, 'perf'),
+        storage: { measurements: join(runs, 'measurements'), perf: join(runs, 'perf') },
       }),
       device,
     );

@@ -35,7 +35,7 @@ function stayingApp(ctx: ServerContext, s: Session, command: 'timeline' | 'fligh
 async function startFlightOn(ctx: ServerContext, s: Session, dir: string | undefined) {
   if (s.flight)
     throw new ToolError(`a flight recorder runs on ${s.device.serial}`, 'INVALID_ARGUMENT');
-  const asked = ctx.flightSeconds ?? DEFAULT_FLIGHT_SECONDS;
+  const asked = ctx.options.flightSeconds ?? DEFAULT_FLIGHT_SECONDS;
   const seconds = Math.max(MIN_FLIGHT_SECONDS, Math.min(asked, MAX_FLIGHT_SECONDS));
   const app = stayingApp(ctx, s, 'flight');
   s.keepFlight(await startFlight(ctx, s, app, seconds, dir && resolve(dir)));

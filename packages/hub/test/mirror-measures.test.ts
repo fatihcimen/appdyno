@@ -28,7 +28,9 @@ describe('what a window measures', () => {
 
   const measuresOn = (device: FakeDevice) =>
     windowMeasures(
-      new ServerContext(DEFAULT_POLICY, [], { measurements, perf: join(state, 'perf') }),
+      new ServerContext(DEFAULT_POLICY, [], {
+        storage: { measurements, perf: join(state, 'perf') },
+      }),
       device,
     );
 
@@ -42,8 +44,7 @@ describe('what a window measures', () => {
   it('measures a device the allow list let in by another of its names, as its window was', async () => {
     const device = new FakeDevice();
     const ctx = new ServerContext({ ...DEFAULT_POLICY, devices: /^Pixel_8$/ }, [], {
-      measurements,
-      perf: join(state, 'perf'),
+      storage: { measurements, perf: join(state, 'perf') },
     });
     ctx.allowAs(device.serial);
     const words = await windowMeasures(ctx, device).launch('dev.app', () => undefined);

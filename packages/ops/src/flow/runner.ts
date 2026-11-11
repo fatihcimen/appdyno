@@ -288,7 +288,7 @@ export function flowRunner(
     validate(flow, file);
     let values: Record<string, string>;
     try {
-      values = valuesFor(flow, o.params ?? {}, { ...ctx.env, ...o.fromFile }, from);
+      values = valuesFor(flow, o.params ?? {}, { ...ctx.options.env, ...o.fromFile }, from);
     } catch (e) {
       throw new ToolError(`${file}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
     }

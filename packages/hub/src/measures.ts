@@ -107,8 +107,7 @@ export const windowContext = (ctx: ServerContext, device: Device) => {
     [{ list: () => Promise.resolve([]), handles: (s) => s === device.serial, open: () => device }],
     {
       device: device.serial,
-      measurements: ctx.measurementsDir,
-      perf: ctx.perfDir,
+      storage: { measurements: ctx.measurementsDir, perf: ctx.perfDir },
       tool: WINDOW,
     },
   );

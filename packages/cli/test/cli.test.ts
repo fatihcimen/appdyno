@@ -235,7 +235,9 @@ describe('commands from the operations', () => {
       open: () => device,
     };
     const process = async (name: string, ...argv: string[]) => {
-      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember: file });
+      const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
+        storage: { remember: file },
+      });
       const out: string[] = [];
       const code = await must(commandsFor(opsFor(ctx))[name], name).run(argv, {
         out: (s) => out.push(s),
@@ -273,7 +275,9 @@ describe('commands from the operations', () => {
       open: (serial) => (serial === other.serial ? other : device),
     };
     const inFolder = async (cwd: string, name: string, ...argv: string[]) => {
-      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember: cliSessionFile(cwd) });
+      const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
+        storage: { remember: cliSessionFile(cwd) },
+      });
       const out: string[] = [];
       await must(commandsFor(opsFor(ctx))[name], name).run(argv, {
         out: (s) => out.push(s),

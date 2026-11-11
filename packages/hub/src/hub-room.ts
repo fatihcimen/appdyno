@@ -10,7 +10,7 @@ const OWN_WINDOW_MS = 20_000;
 
 /** A window of its own for a device: a process of its own, which outlives the hub. */
 function openWindow(ctx: ServerContext, serial: string, behind: boolean) {
-  const command = ctx.mirrorCommand;
+  const command = ctx.options.mirrorCommand;
   if (!command) throw new ToolError('this host cannot start a window', 'UNSUPPORTED');
   const log = mirrorLog(serial);
   mkdirSync(dirname(log), { recursive: true, mode: 0o700 });

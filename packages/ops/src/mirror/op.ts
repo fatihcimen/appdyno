@@ -69,7 +69,7 @@ export function mirrorOps(ctx: ServerContext) {
         mirrors: [asData(running)],
       });
     }
-    const command = ctx.mirrorCommand;
+    const command = ctx.options.mirrorCommand;
     if (!command)
       throw new ToolError(
         'this host cannot start a window',

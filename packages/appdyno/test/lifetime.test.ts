@@ -28,7 +28,9 @@ function serving(handOff?: (devices: string[]) => string[]) {
     persist,
   } as unknown as DeviceSettings;
   const device = Object.assign(new FakeDevice(), { settings });
-  const ctx = new ServerContext(DEFAULT_POLICY, [providerOf(device)], { claims: true });
+  const ctx = new ServerContext(DEFAULT_POLICY, [providerOf(device)], {
+    claims: { share: false },
+  });
   const close = vi.spyOn(ctx, 'close');
   const exit = vi.fn();
   const stdin = new PassThrough();
@@ -109,7 +111,7 @@ describe('the end of the server', () => {
     const gone = { pid: 999_999, started: 'gone', tool: 'appdyno mcp', since: '' };
     conditions.update(s.device.serial, () => ({ dark_mode: { was: 'no', owner: gone } }));
     const ctx = new ServerContext(DEFAULT_POLICY, [providerOf(s.device)], {
-      claims: true,
+      claims: { share: false },
       device: s.device.serial,
     });
     await putBackAfter(gone.pid, ctx, s.log);
@@ -134,7 +136,7 @@ describe('the end of the server', () => {
     const ctx = new ServerContext(
       { ...DEFAULT_POLICY, devices: /^Pixel_8$/ },
       [{ ...providerOf(s.device), virtual }],
-      { claims: true, device: s.device.serial },
+      { claims: { share: false }, device: s.device.serial },
     );
     await putBackAfter(gone.pid, ctx, s.log);
     expect(s.values.dark_mode).toBe('no');

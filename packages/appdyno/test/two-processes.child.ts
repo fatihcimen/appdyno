@@ -28,7 +28,7 @@ const provider: DeviceProvider = {
   handles: () => true,
   open: () => device,
 };
-const ops = opsFor(new ServerContext(DEFAULT_POLICY, [provider], { share: true }));
+const ops = opsFor(new ServerContext(DEFAULT_POLICY, [provider]));
 const setting = must(ops.device_setting, 'device_setting');
 const change = () => Promise.all(names.map((name) => setting.handler({ name, value: 'changed' })));
 

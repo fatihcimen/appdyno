@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The server's context takes where it keeps measures, baselines and a command line's state, and what traces may take, as one `storage` option, and whether it holds a device and shares one as one `claims` option, as it took a person's; what it was given is `options`, read as given, where five getters handed each on. A `share` given with no `claims` was never read, and three tests no longer give one.
 - Each rule test holds one rule: the phone stream's folder, the clients' names, a person's pasteboard, the scripts' types and the Xcode project are files of their own beside `boundaries.test.ts` and `structure.test.ts`, which held them with the package map and the size of a file.
 - The fakes the packages' tests share, a fake device and its screens, the server's callers, a fake agent, the mirror's fakes, a fake video, a picture's comparison and a slow `devicectl`, are `packages/testing`, a private package with a rule of its own that each test takes a fake from by its file, where tests reached into other packages' `test` folders by a relative path the boundary rule let through.
 - A step a window's Apps pane makes, a launch, a quit or a removal, is a function of its own in the hub's `flow.ts`, where `windowFlow` stood at 198 lines, two under the function size cap.

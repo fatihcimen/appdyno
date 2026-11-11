@@ -46,7 +46,7 @@ async function connect(
   };
   const ctx = new ServerContext({ ...DEFAULT_POLICY, ...policy }, [provider], {
     app: 'dev.app',
-    measurements: MEASUREMENTS,
+    storage: { measurements: MEASUREMENTS },
   });
   const client = await linkedClient(ctx, (l) => logs.push(l), undefined, revision);
   const call = async (name: string, args: Record<string, unknown> = {}) =>
