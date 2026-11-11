@@ -185,12 +185,12 @@ describe('what covers the app', () => {
     rect: { x, y, width: 402, height: 54 },
   });
 
-  it('is the status bar, above the navigation bar at the top, and no bar further down', () => {
-    expect(iosScreen.appTop?.([root, bar(62)])).toBe(62);
+  it('is the navigation bar at the top, under the status bar, and no bar further down', () => {
+    expect(iosScreen.topBars?.([root, bar(62)])).toEqual([1]);
     // landscape hides the status bar; a sheet's bar, or one beside a sidebar, says nothing of it
-    expect(iosScreen.appTop?.([root, bar(0)])).toBeUndefined();
-    expect(iosScreen.appTop?.([root, bar(300)])).toBeUndefined();
-    expect(iosScreen.appTop?.([root, bar(62, 320)])).toBeUndefined();
+    expect(iosScreen.topBars?.([root, bar(0)])).toEqual([]);
+    expect(iosScreen.topBars?.([root, bar(300)])).toEqual([]);
+    expect(iosScreen.topBars?.([root, bar(62, 320)])).toEqual([]);
   });
 
   it('is the keyboard, in the windows past the first that hold it', () => {

@@ -301,3 +301,37 @@ describe('rows not laid out yet', () => {
     expect(screenElements(els, ios).map((e) => e.label)).toContain('Kahve Seti 0');
   });
 });
+
+describe('what a navigation bar at the top covers', () => {
+  const full = { x: 0, y: 0, width: 402, height: 874 };
+  const under = (label: string, parent: number, y = 70): UiElement => ({
+    ...button(label, y, `@${label.replace(/\W/g, '')}`),
+    parent,
+  });
+  // the window; the navigation screen, with its bar, the bar's Back and its list; a sheet over it, another's
+  const els: UiElement[] = [
+    root,
+    { type: 'Other', ref: '@nav', parent: 0, rect: full },
+    {
+      type: 'NavigationBar',
+      ref: '@bar',
+      parent: 1,
+      rect: { x: 0, y: 62, width: 402, height: 54 },
+    },
+    { ...under('Back', 2), rect: { x: 16, y: 66, width: 44, height: 44 } },
+    under('Row under the bar', 1),
+    under('Row below the bar', 1, 130),
+    { type: 'Other', ref: '@sheet', parent: 0, rect: { ...full, y: 59, height: 815 } },
+    under('Close the sheet', 6),
+  ];
+  const withBar = { ...ios, port: { ...plainScreen, topBars: () => [2] } };
+
+  it("leaves out what of the bar's own screen lies under it, and keeps the bar's own and a sheet's there", () => {
+    expect(screenElements(els, withBar).map((e) => e.label)).toEqual([
+      'Back',
+      'Row below the bar',
+      'Close the sheet',
+    ]);
+    expect(screenElements(els, ios).map((e) => e.label)).toContain('Row under the bar');
+  });
+});

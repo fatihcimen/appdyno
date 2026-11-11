@@ -114,11 +114,21 @@ describe('an iOS screen', () => {
     expect(d.typed).toEqual(['hello']);
   });
 
-  it('leaves out what lies under the status bar, as a touch there scrolls the list to its top', async () => {
-    const { call } = await connect(new Simulator(recorded('list-under-status-bar')), APP);
+  it('leaves out what lies under the status bar or the navigation bar, as a touch there scrolls the list to its top', async () => {
+    const d = new Simulator(recorded('list-under-status-bar'));
+    const { call } = await connect(d, APP);
     const r = await call('screen');
-    // the row at -24 to 41 is under the bar, which ends where the navigation bar begins at 62
-    expect(r.text).not.toContain('Product 33');
-    expect(r.text).toContain('"Product 34 In basket: 0 Add" 73');
+    // the row at -24 to 41 is under the status bar, and the one at 41 to 105 under the navigation bar, at 62 to 116
+    expect(r.text).not.toMatch(/Product 3[34]/);
+    expect(r.text).toContain('"Product 35 In basket: 0 Add" 137');
+    expect(r.text).toContain('@v181 button "Back" 38,84');
+    // the first Add is the first a touch reaches
+    expect((await call('find', { selector: { text: 'Add', index: 0 } })).text).toMatch(
+      /^@\w+ button "Add" 339,137 /,
+    );
+    expect((await call('tap', { selector: { text: 'Add', index: 0 } })).error).toBe(false);
+    expect(d.calls.filter((c) => c.name === 'act').map((c) => c.args[0])).toEqual([
+      expect.objectContaining({ kind: 'tap', x: 339, y: 137 }),
+    ]);
   });
 });

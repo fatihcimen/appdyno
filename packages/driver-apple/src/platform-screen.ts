@@ -163,17 +163,16 @@ export const iosScreen: PlatformScreen = {
 
   typesBlind: true,
 
-  /** The status bar ends where a navigation bar across the screen begins, at most as tall as it gets. */
-  appTop(elements) {
-    const tops = elements.flatMap((e) =>
+  /** The navigation bars across the screen that begin where the status bar ends, at most as tall as it gets. */
+  topBars(elements) {
+    return elements.flatMap((e, i) =>
       bare(e.type) === 'navigationbar' &&
       e.rect?.x === 0 &&
       e.rect.y > 0 &&
       e.rect.y <= STATUS_BAND_PT
-        ? [e.rect.y]
+        ? [i]
         : [],
     );
-    return tops.length > 0 ? Math.min(...tops) : undefined;
   },
 
   /**

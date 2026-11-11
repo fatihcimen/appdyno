@@ -137,15 +137,26 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
 
   const items = new Map<number, Item>();
   const win = windowRect(elements, port);
+  const family = familyOf(elements);
+  const below = (y: number) =>
+    win && y > win.y ? { ...win, y, height: win.height - (y - win.y) } : win;
+  const bars = (port.topBars?.(elements) ?? []).flatMap((i) => {
+    const { parent, rect } = must(elements[i], 'a bar');
+    return parent !== undefined && rect ? [{ i, parent, rect }] : [];
+  });
   // what the status bar covers is off the screen for a touch as what is past its edge
-  const top = port.appTop?.(elements);
-  const seen =
-    win && top !== undefined && top > win.y
-      ? { ...win, y: top, height: win.height - (top - win.y) }
-      : win;
+  const seen = bars.length ? below(Math.min(...bars.map((b) => b.rect.y))) : win;
+  // and so is what of a bar's own screen lies under the bar, which takes the touch: what is the bar's own stays, and a
+  // sheet or a cover over that screen is another's
+  const shownIn = (i: number) => {
+    const up = bars.length ? family.ancestors(i) : [];
+    const bar = bars.find((b) => i !== b.i && up.includes(b.parent) && !up.includes(b.i));
+    return bar ? below(bar.rect.y + bar.rect.height) : seen;
+  };
   elements.forEach((el, index) => {
     if (dropped.has(index) || !el.rect || el.rect.width <= 0 || el.rect.height <= 0) return;
-    if (el.visible === false || (seen && !onScreen(el.rect, seen))) return;
+    const shown = seen && shownIn(index);
+    if (el.visible === false || (shown && !onScreen(el.rect, shown))) return;
     const type = bare(el.type);
     const known = ROLES[type];
     const role =
@@ -156,7 +167,6 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
     items.set(index, { el, index, type, role, r: { x, y, w: width, h: height } });
   });
 
-  const family = familyOf(elements);
   const descendants = (i: number): Item[] =>
     family.descendants(i).flatMap((d) => items.get(d) ?? []);
   const { ancestors } = family;

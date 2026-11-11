@@ -40,10 +40,10 @@ export type PlatformScreen = {
   /** An untyped element with no words of its own is listed when an id names it. */
   readonly listsByIdAlone: boolean;
   /**
-   * Where the app's part of the screen begins, in tap units: above it the status bar takes a touch, which on iOS scrolls
-   * a list to its top. Undefined where the tree does not tell.
+   * The bars across the screen's top, by index: above one the status bar takes a touch, and the bar takes one on what of
+   * its own screen lies under it; on iOS either scrolls a list to its top. None where the tree does not tell.
    */
-  appTop?(elements: UiElement[]): number | undefined;
+  topBars?(elements: UiElement[]): number[];
   /** What of the app's own tree the on-screen keyboard is, by the elements that hold it: Android's is a window apart. */
   keyboardParts?(elements: UiElement[]): number[];
   /**
