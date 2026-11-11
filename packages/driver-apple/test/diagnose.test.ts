@@ -2,9 +2,9 @@ import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assert, describe, expect, it } from 'vitest';
-import type { CrashesQuery } from '@appdyno/core';
+import { must, type CrashesQuery } from '@appdyno/core';
 import { crashExits, endReports, parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
-import { logShowArgs, placeLines } from '../src/logs.js';
+import { entriesOf, logShowArgs, placeLines } from '../src/logs.js';
 
 const UDID = '8BC57F11-901C-4DF6-A2B9-2A3B7DE1B79D';
 const OTHER = '11111111-2222-3333-4444-555555555555';
@@ -192,13 +192,40 @@ describe('simulator log', () => {
       expect.arrayContaining(['spawn', UDID, 'log', 'show', '--info', '--debug']),
     );
     expect(args[args.indexOf('--start') + 1]).toBe('2026-11-03 01:02:03');
-    expect(args.at(-1)).toBe('processImagePath CONTAINS "/Preferences.app/"');
+    expect(args.at(-1)).toBe(
+      'processImagePath CONTAINS "/Preferences.app/" AND subsystem != "com.apple.dt.xctest"',
+    );
+  });
+
+  it("reads the app's own lines and Apple's errors below debug, and never XCTest's", () => {
+    const at = (level: 'info' | 'error' | 'debug') =>
+      must(logShowArgs(UDID, app, { app: 'a.b', level, maxLines: 10 }).at(-1), 'a predicate');
+    for (const level of ['info', 'error'] as const) {
+      expect(at(level)).toContain('subsystem != "com.apple.dt.xctest"');
+      expect(at(level)).toContain('NOT subsystem BEGINSWITH "com.apple." OR messageType == error');
+      expect(at(level)).toContain('category == "UIKBRenderingLog"');
+    }
+    expect(at('debug')).not.toContain('BEGINSWITH');
   });
 
   it('error means error and fault', () => {
     const args = logShowArgs(UDID, app, { app: 'a.b', level: 'error', maxLines: 10 });
     expect(args).toContain('--last');
     expect(args.at(-1)).toContain('messageType == fault');
+  });
+
+  it('gives a message of several lines as one, and none cut from its start', () => {
+    expect(
+      entriesOf([
+        '    "XC_kAXXCAttributeWindowContextId" = 1;',
+        '2026-11-05 04:46:59.959 F  App[1:2] it went wrong',
+        '    timeEntry = 1;',
+        '2026-11-05 04:46:59.960 Df App[1:2] next',
+      ]),
+    ).toEqual([
+      '2026-11-05 04:46:59.959 F  App[1:2] it went wrong\n    timeEntry = 1;',
+      '2026-11-05 04:46:59.960 Df App[1:2] next',
+    ]);
   });
 
   describe('lines on the clock', () => {

@@ -91,18 +91,19 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
       name: 'logs',
       title: 'App log',
       description:
-        "The app's log (logcat on Android), bounded, secrets redacted. On an iPhone it says what it cannot read.",
+        "The app's own log lines (logcat on Android), newest last, bounded, secrets redacted; contains: only lines with this text, whatever its case. On an iPhone it says what it cannot read.",
       input: z
         .object({
           app: App,
           since: Since,
           level: z.enum(['verbose', 'debug', 'info', 'warn', 'error']).default('info'),
           maxLines: z.number().int().min(1).max(MAX_LINES).default(DEFAULT_LINES),
+          contains: z.string().min(1).max(200).optional(),
         })
         .strict(),
       output: LogsOut,
       annotations: READ,
-      run: async ({ app, since, level, maxLines }) => {
+      run: async ({ app, since, level, maxLines, contains }) => {
         const s = await ctx.session();
         const pkg = appOf(s, ctx, app);
         const from = sinceOf(since, s);
@@ -112,10 +113,15 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
           maxLines,
           ...(from !== undefined && { since: from }),
         });
-        const { kept, dropped } = boundLines(lines, maxLines);
-        const shown = kept.map((l) => redactLog(ctx.policy, l));
+        // matched as shown: a secret's words find nothing
+        const want = contains?.toLowerCase();
+        const read = lines.map((l) => redactLog(ctx.policy, l));
+        const { kept: shown, dropped } = boundLines(
+          want ? read.filter((l) => l.toLowerCase().includes(want)) : read,
+          maxLines,
+        );
         const head = [
-          `${shown.length} line${shown.length === 1 ? '' : 's'} of ${pkg} from ${source}${from !== undefined ? ` since ${new Date(from).toISOString()}` : ''}${dropped ? ` (${dropped} older lines left out)` : ''}`,
+          `${shown.length} line${shown.length === 1 ? '' : 's'}${want ? ` with ${JSON.stringify(contains)}` : ''} of ${pkg} from ${source}${from !== undefined ? ` since ${new Date(from).toISOString()}` : ''}${dropped ? ` (${dropped} older lines left out)` : ''}`,
           ...(note ? [note] : []),
         ];
         return reply([...head, ...shown].join('\n'), {

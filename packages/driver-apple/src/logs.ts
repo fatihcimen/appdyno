@@ -17,14 +17,30 @@ const LEVEL_FLAGS: Record<LogLevel, string[]> = {
   error: [],
 };
 
+/** What XCTest logs in the app's process, where appdyno's runner reads the screen and touches: never the app's. */
+const RUNNER = 'subsystem != "com.apple.dt.xctest"';
+
+/**
+ * Below debug, the app's own lines: its messages, NSLog's among them, and of Apple's frameworks only their errors, but
+ * the thousand a simulator's keyboard logs as it draws, and no activity or signpost.
+ */
+const APP_OWN = [
+  'eventType == logEvent',
+  'NOT (subsystem == "com.apple.UIKit" AND category == "UIKBRenderingLog")',
+  '(NOT subsystem BEGINSWITH "com.apple." OR messageType == error OR messageType == fault)',
+];
+
 /**
  * `log show`, the same log `log stream` follows: a stream sees only what comes after it starts, and
  * this answers about the time since the last action.
  */
 export function logShowArgs(udid: string, appPath: string, q: LogsQuery): string[] {
-  const predicate =
-    `processImagePath CONTAINS "/${basename(appPath)}/"` +
-    (q.level === 'error' ? ' AND (messageType == error OR messageType == fault)' : '');
+  const predicate = [
+    `processImagePath CONTAINS "/${basename(appPath)}/"`,
+    RUNNER,
+    ...(q.level === 'debug' || q.level === 'verbose' ? [] : APP_OWN),
+    ...(q.level === 'error' ? ['(messageType == error OR messageType == fault)'] : []),
+  ].join(' AND ');
   return [
     'spawn',
     assertUdid(udid),
@@ -73,6 +89,16 @@ export function placeLines(lines: string[]) {
   return placed;
 }
 
+/** Each message whole, its lines after the first joined to it; lines with no message begun before them are left out. */
+export function entriesOf(lines: string[]) {
+  const out: string[] = [];
+  for (const line of lines) {
+    if (STAMPED.test(line)) out.push(line);
+    else if (out.length > 0) out.push(`${out.pop() ?? ''}\n${line}`);
+  }
+  return out;
+}
+
 export async function simulatorLogs(
   simctl: Simctl,
   udid: string,
@@ -84,7 +110,7 @@ export async function simulatorLogs(
     .split('\n')
     .filter((l) => l && !/^(Timestamp\s|Filtering the log data|Skipping info)/.test(l));
   const source = 'simctl spawn log show';
-  if (!q.timed) return { lines, source };
+  if (!q.timed) return { lines: entriesOf(lines), source };
   const placed = placeLines(lines);
   return { lines: placed.map((p) => p.line), marks: placed.map((p) => p.mark), source };
 }
