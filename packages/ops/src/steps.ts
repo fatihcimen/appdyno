@@ -1,10 +1,5 @@
 import {
-  cutContext,
-  KEYBOARD_REF,
   type Selector as SelectorOf,
-  type ScreenElement,
-  nearest,
-  selectIn,
   type Screen,
   must,
   throwIfCancelled,
@@ -18,118 +13,19 @@ import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 import { byPerson, type Policy } from './policy.js';
 import { LEAVES_APP, NEEDS_NO_LOOK, NOTHING_TO_READ, SHORTCUT_LEAVES } from './keys.js';
-import {
-  LOOKS_ONLY,
-  NAME_AN_ELEMENT,
-  Step,
-  keyPress,
-  showSelector,
-  viewNamed,
-} from './step-schemas.js';
+import { LOOKS_ONLY, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
-import { checksFor, selectorOf, UNREAD } from './checks.js';
+import { checksFor, selectorOf } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
+import { aim, missed, pick, wordsOf, type Aim } from './targets.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
-const STALE = 'stale ref, read the screen again';
-
-/** How long a selector with no match waits for its element, as a screen may still be coming. */
-export const NO_MATCH_WAIT_MS = 1_500;
+export { NO_MATCH_WAIT_MS } from './targets.js';
 
 const DRAG_HOLD_MS = 150;
 
 /** What every step passes through on its way to the device (the recorder). */
 export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promise<T>;
-
-/** How a step names elements: by its words made safe, one to a line, and the nearest to what it wanted. */
-type Words = {
-  clean: (s: string) => string;
-  line: (e: ScreenElement) => string;
-  offer: (list: ScreenElement[], want?: string) => string;
-};
-
-function wordsOf(clean: (s: string) => string): Words {
-  // what tells like elements apart is the row each is in, where the list has one
-  const line = (e: ScreenElement) =>
-    `${e.ref} ${e.role} ${JSON.stringify(clean(e.label || e.id || ''))} ${e.x},${e.y}${e.refContext ? ` — ${cutContext(clean(e.refContext))}` : ''}`;
-  const offer = (list: ScreenElement[], want?: string) => {
-    const near = nearest(list, want).map(line);
-    return near.length > 0 ? `; nearest: ${near.join('; ')}` : '';
-  };
-  return { clean, line, offer };
-}
-
-/** The matches a refusal lists, of many. */
-const MANY_SHOWN = 10;
-
-/** One element of a selector's matches, or a refusal listing them. */
-function pick(hits: ScreenElement[], sel: SelectorOf, line: Words['line']): ScreenElement {
-  // a control and its own text inside it, with the same words (an Android row), are one target
-  const inside = (a: ScreenElement, b: ScreenElement) =>
-    a !== b &&
-    a.rect.x >= b.rect.x &&
-    a.rect.y >= b.rect.y &&
-    a.rect.x + a.rect.width <= b.rect.x + b.rect.width &&
-    a.rect.y + a.rect.height <= b.rect.y + b.rect.height;
-  const outer = hits.filter((a) => !hits.some((b) => inside(a, b)));
-  const hit =
-    sel.index === undefined ? (outer.length === 1 ? outer[0] : undefined) : hits[sel.index];
-  if (hit) return hit;
-  const more = hits.length > MANY_SHOWN ? `; and ${hits.length - MANY_SHOWN} more` : '';
-  throw new ToolError(
-    `${hits.length} elements match ${showSelector(sel)}: ${hits.slice(0, MANY_SHOWN).map(line).join('; ')}${more}`,
-    'AMBIGUOUS',
-    'give the selector an index, 0 for the first listed, or use a ref',
-  );
-}
-
-/** A selector on a fresh read; no match waits a moment, as the screen may still be coming. */
-async function resolve(
-  s: Session,
-  sel: SelectorOf,
-  { line, offer }: Words,
-): Promise<ScreenElement> {
-  const { screen, met } = await s.until((x) => selectIn(x.list, sel).length > 0, NO_MATCH_WAIT_MS);
-  if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
-  if (!met)
-    throw new ToolError(
-      `no element matches ${showSelector(sel)} after ${NO_MATCH_WAIT_MS} ms${offer(screen.list, sel.text ?? sel.id)}`,
-      'NOT_FOUND',
-      'read the screen, or use scroll_to if it may be further along a list',
-    );
-  return pick(selectIn(screen.list, sel), sel, line);
-}
-
-type Aim = { ref?: string; x?: number; y?: number; selector?: SelectorOf };
-
-/** An element as a touch aims at it; the keyboard is listed whole, and a touch on it would type one key. */
-function aimedAt(e: ScreenElement, clean: Words['clean']) {
-  if (e.ref === KEYBOARD_REF)
-    throw new ToolError(
-      `${KEYBOARD_REF} is the on-screen keyboard: type_text types, press_key enter presses its return key, and keyboard dismiss closes it`,
-      'INVALID_ARGUMENT',
-      undefined,
-      false,
-    );
-  return { point: { x: e.x, y: e.y }, name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
-}
-
-/** The point of a ref (on the device's current screen), a selector or x,y. */
-async function aim(s: Session, a: Aim, patient: boolean, words: Words) {
-  const { clean } = words;
-  if (a.ref) {
-    const has = (x: Screen | undefined) => x?.list.find((e) => e.ref === a.ref);
-    const e =
-      has(await s.justNow()) ??
-      (patient ? has((await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen) : undefined);
-    if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
-    return aimedAt(e, clean);
-  }
-  if (a.selector) return aimedAt(await resolve(s, a.selector, words), clean);
-  if (a.x === undefined || a.y === undefined)
-    throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
-  return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
-}
 
 async function windowSize(s: Session) {
   const w =
@@ -172,6 +68,11 @@ type Kit = {
   target: (s: Session, a: Aim, patient?: boolean) => ReturnType<typeof aim>;
   scrolling: ReturnType<typeof scrollingFor>;
   checks: ReturnType<typeof checksFor>;
+  missing: (
+    s: Session,
+    screen: Screen,
+    a: { gone: boolean; selector?: SelectorOf | undefined },
+  ) => { said: string; hint: string };
 };
 
 /** A screen a step only looked at, as the device's answer when the action asked for its tree. */
@@ -347,11 +248,14 @@ async function call(
     case 'wait_for': {
       const w = await checks.waitFor(s, st);
       const what = st.ref ?? showSelector(selectorOf(st.selector) ?? {});
-      if (!w.met)
+      if (!w.met) {
+        const why = kit.missing(s, w.screen, st);
         throw new ToolError(
-          `${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms`,
+          `${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms${why.said}`,
           'TIMEOUT',
+          why.hint,
         );
+      }
       return { r: treeIfAsked(opts, w.screen), done: `${what} ${st.gone ? 'gone' : 'shown'}` };
     }
     case 'assert': {
@@ -380,7 +284,14 @@ export function stepsFor(
     offer,
   });
   const checks = checksFor({ ctx, clean, line, offer });
-  const kit: Kit = { policy: ctx.policy, settleRead, target, scrolling, checks };
+  /** What a wait that ran out says: the nearest of what it waited to show, and what to do next. */
+  const missing: Kit['missing'] = (s, screen, a) => {
+    const why = a.gone
+      ? { said: '' }
+      : missed(s, screen, a.selector?.text ?? a.selector?.id, offer);
+    return { said: why.said, hint: why.hint ?? 'call again to wait longer, or read the screen' };
+  };
+  const kit: Kit = { policy: ctx.policy, settleRead, target, scrolling, checks, missing };
 
   /** One step's device call. `patient`: in a sequence, a ref may need a moment to come. */
   const step = (s: Session, st: Step, opts: ActOptions, patient = false) =>
@@ -409,7 +320,18 @@ export function stepsFor(
 
   const { checkNow, waitFor } = checks;
   const { holdsStill } = scrolling;
-  return { target, windowSize, onTheScreen, step, one, checkNow, waitFor, holdsStill, line };
+  return {
+    target,
+    windowSize,
+    onTheScreen,
+    step,
+    one,
+    checkNow,
+    waitFor,
+    holdsStill,
+    line,
+    missing,
+  };
 }
 
 export type Steps = ReturnType<typeof stepsFor>;

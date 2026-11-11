@@ -129,7 +129,7 @@ A screenshot's answer says where its pixel is tapped: its x and y times its scal
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
 just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),
 and an exact match beats a partial one. Several matches refuse and list them with their refs; no match
-waits a moment, then refuses with the nearest labels. When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app.
+waits a moment, then refuses with the nearest labels, or, where another app is in front and the app did not leave on purpose, says that the app is not; a `wait_for` that runs out says the same, and that calling again waits longer. When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app.
 
 ## Steps, gestures, apps and settings
 

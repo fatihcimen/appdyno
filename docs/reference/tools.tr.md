@@ -129,7 +129,7 @@ Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyle
 Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce
 yeni bir okumada çözülür. Metin, `find`'daki gibi büyük-küçük harfe ve aksanlara bakmadan eşleşir ("İstanbul", "istanbul") ve
 tam eşleşme kısmi eşleşmeden üstündür. Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir; eşleşme yoksa
-bir an beklenir, sonra en yakın etiketlerle reddedilir. Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir akışın adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir.
+bir an beklenir, sonra en yakın etiketlerle reddedilir; önde başka bir uygulama varsa ve uygulama bilerek ayrılmadıysa, bunun yerine uygulamanın önde olmadığı söylenir. Süresi dolan bir `wait_for` da aynısını ve yeniden çağırmanın daha uzun beklediğini söyler. Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir akışın adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir.
 
 ## Adımlar, hareketler, uygulamalar ve ayarlar
 

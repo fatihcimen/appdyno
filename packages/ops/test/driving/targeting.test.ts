@@ -81,6 +81,23 @@ describe('targeting', () => {
     expect(many.data.hint).toBe('give the selector an index, 0 for the first listed, or use a ref');
   });
 
+  it('says the app is not in front where nothing matches and another app is, in place of its labels', async () => {
+    class Away extends FakeDevice {
+      override current() {
+        const t = super.current();
+        return { ...t, windows: t.windows.map((w) => ({ ...w, pkg: 'com.android.launcher' })) };
+      }
+    }
+    const { call } = await connect(new Away());
+    const tap = await call('tap', { selector: { text: 'Gönder' } });
+    expect(tap.text).toMatch(
+      /^NOT_FOUND: no element matches text="Gönder" after 1500 ms; dev\.app is not in front \(com\.android\.launcher\) \(no touch was sent\)\n/,
+    );
+    expect(tap.data.hint).toBe('launch_app brings it back, and crashes says why if it crashed');
+    const wait = await call('wait_for', { selector: { text: 'Gönder' }, timeoutMs: 300 });
+    expect(wait.text).toMatch(/^TIMEOUT: not shown after 300 ms; dev\.app is not in front/);
+  });
+
   it(
     'waits for no match, then refuses with the nearest labels',
     fakeTimed(async () => {

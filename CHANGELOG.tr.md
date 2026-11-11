@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Eşleşmesi olmayan bir seçici, önde başka bir uygulama varken ve uygulama bilerek ayrılmamışken, uygulamanın önde olmadığını ve `launch_app`'in onu geri getirdiğini söyler; önceden öteki uygulamanın etiketlerini en yakınlar olarak listeliyordu. Süresi dolan bir `wait_for`, bir dokunuşun reddi gibi en yakın etiketleri adlandırır ve yeniden çağırmanın daha uzun beklediğini söyler.
 - `find`, `wait_for` ve `assert` ile `wait_for` ve `assert` adımları, `tap`, `gesture`, `swipe`, `scroll_to` ve `type_text` gibi, bir seçiciyi `selector`'da alır; önceden sözcüklerini en üstte alıyorlardı: her yerde tek bir biçim, en üstte verilen sözcükler de ipucunda çağrı bu biçimde gösterilerek reddedilir. Birden çok eşleşmenin reddi her birinin bulunduğu satırı adlandırır, ondan sonra kaç tane daha olduğunu ve `index`'in 0'dan saydığını söyler; bir retteki bir öğenin satırı da onun satırını adlandırır.
 - `restart`, `args`, `env` ya da `language` ile `launch_app`, uygulama öne geldiğinde yanıt verir; önceden bir simülatörde uygulama başlarken uygulama değiştiricinin onun resmini okuyor ve ana ekran uygulamasının önde olduğu uyarısını veriyordu.
 - iOS'ta hedefsiz bir `type_text`, hiçbir alan odakta değilken ve klavye açık değilken, hiçbir tuş gönderilmeden `NO_FOCUS` ile reddedilir; önceden bir simülatörde `typed` yanıtını veriyordu ve ilk tuşu, kalanını alan bir alanı odaklayabiliyordu.

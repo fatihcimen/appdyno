@@ -112,7 +112,8 @@ describe('what did not happen is no success', () => {
       }),
     );
     expect(e.code).toBe('TIMEOUT');
-    expect(e.message).toBe('not shown after 300 ms');
+    expect(e.message).toMatch(/^not shown after 300 ms; nearest: /);
+    expect(e.hint).toBe('call again to wait longer, or read the screen');
   });
 
   it('a wait for what goes refuses while it stays', async () => {

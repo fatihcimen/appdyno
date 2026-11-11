@@ -91,7 +91,7 @@ async function saveShot(s: Session, file: string, overwrite: boolean, inline: bo
 export function readOps(
   ctx: ServerContext,
   { clean, noticed, header, show }: Answers,
-  { waitFor }: Steps,
+  { waitFor, missing }: Steps,
 ) {
   return [
     defineOp({
@@ -190,8 +190,10 @@ export function readOps(
           read === 'diff' && before
             ? diffText(diffScreens(before, last.list), last.list.length, clean)
             : undefined;
-        const said = read === 'none' ? head : `${head}\n${diff ?? header(last)}`;
-        if (!met) throw new ToolError(said, 'TIMEOUT');
+        const why = met ? undefined : missing(s, last, a);
+        const told = `${head}${why?.said ?? ''}`;
+        const said = read === 'none' ? told : `${told}\n${diff ?? header(last)}`;
+        if (why) throw new ToolError(said, 'TIMEOUT', why.hint);
         if (read === 'none') return reply(said, { ...out, screen: 'none' });
         return reply(said, {
           ...out,

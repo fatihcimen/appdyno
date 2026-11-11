@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A selector with no match, where another app is in front and the app did not leave on purpose, says that the app is not in front and that `launch_app` brings it back, where it listed the other app's labels as the nearest. A `wait_for` that runs out names the nearest labels as a tap's refusal does, and says that calling again waits longer.
 - `find`, `wait_for` and `assert`, and the `wait_for` and `assert` steps, take a selector in `selector`, as `tap`, `gesture`, `swipe`, `scroll_to` and `type_text` do, where they took its words at their top: one shape everywhere, and words given at the top are refused with the call in that shape in the hint. A refusal of several matches names the row each is in, says how many more there are past ten, and that `index` counts from 0; an element's line in a refusal names its row too.
 - `launch_app` with `restart`, `args`, `env` or `language` answers once the app is in front, where on a simulator it read the switcher's picture of the app as it started and warned that the home screen app was in front.
 - `type_text` with no target on iOS, with no field holding the focus and no keyboard up, is refused with `NO_FOCUS` before any key is sent, where it answered `typed` on a simulator and its first key could focus a field that took the rest.
