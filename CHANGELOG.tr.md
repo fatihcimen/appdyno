@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir cihazı yönetmenin testleri bir klasördür, `packages/ops/test/driving`: tek bir paylaşılan sahte sunucu üzerinde bir araç ya da bir davranış başına bir dosya; önceden 2.800 satırlık tek bir dosya onları tutuyordu.
 - CONTRIBUTING, en fazla 72 karakterlik bir commit konusu ister, nedeni gövdededir; kodun bir seçim bırakan tipe dayalı bir kuralı nasıl karşıladığı da `docs/reference/lint.md`'dir; önceden CONTRIBUTING bunu sekiz uzun maddede tutuyordu.
 - Fonksiyon boyutu kuralı, bir paketin `src`'sinin kendi testlerinden tuttuğunu, dosya boyutu kuralının saydığı gibi sayar: telefon akışının sahte telefonu bir eşleştirmenin her adımını kendine ait bir metotla yanıtlar; önceden 290 satırlık tek bir fonksiyon onları tutuyordu ve kural klasörünü atlıyordu.
 - Saati bekleyen birim testleri, bir yoklamanın aralığı, bir durulma, bir çökme raporu ya da bir son süre için, `packages/testing`'in `onFakeTime` ve `fakeTimed`'ı ile vitest'in sahte zamanlayıcıları üzerinde çalışır ve birim çalıştırması eskiden aldığı sürenin yarısından azını alır. Gerçek bir süreci, bir soketi, gerçek bir aracın tuttuğu bir dosyayı ya da yerel viewer'ı bekleyenler gerçek saati korur.
