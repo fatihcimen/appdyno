@@ -102,7 +102,9 @@ describe("the home screen app's read, where a read of an iPhone's app has no win
       expect(r.text, name).toContain(
         'the home screen app could not be read, to tell whether Control Center or the power-off screen is over the app: the runner gave no answer to tree.get in 10000 ms (no touch was sent)',
       );
-      expect(r.hint, name).toMatch(/^read the screen and try again: appdyno sends no input where/);
+      expect(r.hint, name).toMatch(
+        /^read the screen and try again: appdyno sends no input where .*; a person who allows those controls ahead in this server's own command line skips the look: --allow-power virtual for simulators and emulators, all for every device \(APPDYNO_ALLOW_POWER\)$/,
+      );
     }
     expect(sent()).toEqual([]);
   });

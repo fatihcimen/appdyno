@@ -7,7 +7,7 @@ import {
   type Point,
   type Tree,
 } from '@appdyno/protocol';
-import { approvePower, powerAllowed } from './approval.js';
+import { ALLOW_POWER, approvePower, powerAllowed } from './approval.js';
 import { LEAVES, SIDE_KEYS } from './keys.js';
 import type { Policy } from './policy.js';
 import type { Session } from './session.js';
@@ -233,8 +233,8 @@ const unseen = (e: unknown, what: string, under: string) => {
   return new ToolError(
     `${what}: ${(e as Error).message}`,
     cause?.code ?? 'INTERNAL',
-    cause?.hint ??
-      `read the screen and try again: appdyno sends no input where it cannot tell whether ${under}`,
+    // a look that keeps failing would refuse every input: the person's way past it is named
+    `${cause?.hint ?? 'read the screen and try again'}: appdyno sends no input where it cannot tell whether ${under}; a person who allows those controls ahead in this server's own command line skips the look: ${ALLOW_POWER}`,
     false,
   );
 };

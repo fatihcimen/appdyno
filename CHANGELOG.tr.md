@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Koruma bakışını yapamadığı için, bir iPhone'da ana ekran uygulamasına ya da bir Android cihazın varsayılan çeviricisine, reddedilen bir girdi, kişinin onu aşmasının yolunu, o bakışı atlayan `--allow-power`'ı adlandırır: ana ekran uygulaması okunamamaya devam eden bir iPhone her dokunuşu, tuşu ve metni yalnızca "ekranı okuyup yeniden deneyin" diyerek reddediyordu.
 - Android'de cihaz bir aramanın bağlantısının hangi uygulamada açıldığını söyleyemediğinde girdi gönderilmez ve cihaza bir sonraki girdide yeniden sorulur: ilk girdide bir adb aksaklığında olduğu gibi başarısız olan bir sorgu oturum boyunca "böyle bir uygulama yok" diye tutuluyordu; bu yüzden sabit listenin dışındaki bir üreticinin çeviricisi, oturum bitene kadar bir dokunuşu, tuşu ya da metni sorulmadan alıyordu.
 - Cihaza gittikten sonra başarısız olan bir girdi, örneğin yanıtı zaman aşımına uğrayan bir kaydırma, bir sonrakinden önce ekranın yeniden okunmasını sağlar: güç ve uygulama korumaları bir sonraki girdiyi 20 s'ye kadar başarısız olandan önceki okumayla değerlendiriyordu; bu yüzden Denetim Merkezi'ni ya da hızlı ayarları açıp sonra zaman aşımına uğrayan bir kaydırma, güç düğmesine x,y ile bir dokunuşun sorulmadan gitmesine izin veriyordu. Böyle bir başarısızlıktan önce okunan bir ref de yeni bir okumada aranır.
 - `hub`, `cli` ve `appdyno` `@appdyno/testing`'i kendileri bildirir, çünkü `testing` hiçbirine bağlı değildir; bağlı olduğu paketler için onu kök bildirir, çünkü onların kendi bildirimi pnpm'in reddettiği bir döngü olurdu.

@@ -52,8 +52,11 @@ export async function approve(policy: Policy, s: Session, action: DataLoss, app 
 }
 
 /** As SECURITY.md has it: no tool does any of this, so a person does it, and a touch that would is asked of them. */
-const POWER_AHEAD =
-  "appdyno does not restart, power off, reset or erase a device, nor place a call or call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: --allow-power virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_POWER)";
+/** How a person lets the power, emergency, erase and call controls be touched with nothing asked. */
+export const ALLOW_POWER =
+  '--allow-power virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_POWER)';
+
+const POWER_AHEAD = `appdyno does not restart, power off, reset or erase a device, nor place a call or call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: ${ALLOW_POWER}`;
 
 /** As `approve`, for an input that would act on the system's own power, emergency or erase controls: `what` names it. */
 export async function approvePower(policy: Policy, s: Session, what: string) {
