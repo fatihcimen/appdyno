@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir simülatör yardımcısının öndeki uygulamayı okuması ve runner'ın yinelenen denetimlerden oluşan bir düzen hakkında söyledikleri kendi `sim-read.ts`'leridir; önceden simülatörün cihaz sınıfı onları boyut sınırında tutuyordu.
 - Runner paketinin bir XCTest `measure()` çalıştırması ve sonuç paketinin tuttukları kendi `xct-metrics.ts`'idir; önceden iz aracının kayıtları onu boyut sınırında tutuyordu; artık dışa aktarılmaz, çünkü onu yalnızca runner adlandırır.
 - Denetçinin bir denetimin sorununu nasıl listelediği, işaretçinin altındaki öğeyi nasıl bulduğu ve onun bir denetimini nasıl yazdığı `inspect.ts`'te kendi işlevleridir; önceden `windowInspector` onları işlev boyutu sınırının bir altında, 199 satırda tutuyordu.
 - Hub'ın bir istemciyi nasıl denediği, bir kişinin bir istemci hakkındaki sözünü nasıl okuduğu ve Bağlan yerini nasıl gösterdiği `hub-services.ts`'te kendi işlevleridir; önceden `hubServices` onları işlev boyutu sınırının bir altında, 199 satırda tutuyordu.

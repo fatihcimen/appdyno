@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A simulator helper's read of the app in front, and what the runner said of a layout of repeated controls, are `sim-read.ts` of their own, where the simulator's device class held them at the size cap.
 - An XCTest `measure()` run of the runner's bundle and what its result bundle holds is `xct-metrics.ts` of its own, where the trace tool's recordings held it at the size cap; it is no longer exported, as only the runner names it.
 - How the inspector lists an audit's issue, finds the element under the pointer and writes a check of it are functions of their own in `inspect.ts`, where `windowInspector` held them at 199 lines, one under the function size cap.
 - How the hub tests a client, reads a person's word on one and shows the Connect place are functions of their own in `hub-services.ts`, where `hubServices` held them at 199 lines, one under the function size cap.

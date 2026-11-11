@@ -8,7 +8,6 @@ import {
   TRANSITION_MS,
   type ActOptions,
   type TreeOptions,
-  pause,
   must,
   throwIfCancelled,
 } from '@appdyno/core';
@@ -34,7 +33,8 @@ import { DirectSim } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
 import { type Capture, nodesBusy, settleAfter } from './simsettle.js';
 import { firstPoint } from './simtouch.js';
-import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
+import { onKeyboard } from './simtree.js';
+import { HelperReads } from './sim-read.js';
 import { helperSeesFront, looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
 import { pasteOnMac, setSimClipboard } from './sim-clipboard.js';
 import { IosRunnerLauncher } from './runner.js';
@@ -45,22 +45,18 @@ import { HOME_SCREEN_APP } from './platform-screen.js';
 
 type Node = Tree['nodes'][number];
 
-/** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
-/** A first boot has nothing in front for a few seconds: this is shorter than a runner's start. */
-const FIRST_FRONT_MS = 10_000;
-const FRONT_AGAIN_MS = 250;
-
 /** How long a touch that changed nothing has to be reported, before the runner does it again. */
 const LATE_TOUCH_MS = 4_000;
 
 const LAUNCH_FRONT_MS = 15_000;
 
+/** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
   readonly direct: DirectSim;
   /** Layouts recently answered, by hash: what an action's `before` names. */
   private readonly recent = new Map<string, Node[]>();
-  private readonly verdicts = new Map<string, Set<string>>();
+  private readonly reads: HelperReads;
 
   /** Its processes run on this Mac's kernel and read this clock, and a time needs no runner brought up for it. */
   override wallClock() {
@@ -84,6 +80,13 @@ export class IosSimulatorDevice extends IosDevice {
     this.network = new SimulatorNetwork(simctl, serial);
     this.web = new SimulatorWeb(simctl, serial);
     this.lock = new SimulatorLock(simctl, serial);
+    this.reads = new HelperReads({
+      direct: this.direct,
+      app: () => this.targetApp,
+      runnerUp: () => this.runnerUp,
+      runnerStarting: () => this.agentStarting,
+      runner: async () => (await this.callNow('tree.get', {}, TIMEOUTS.read)).result,
+    });
   }
 
   private readonly lock: SimulatorLock;
@@ -190,52 +193,9 @@ export class IosSimulatorDevice extends IosDevice {
     return t;
   }
 
-  /**
-   * The helper's read of the app in front, when it can say what the runner would; for one in the queue.
-   * `final`: this read is an answer, not one of a settle's looks. Only XCUI tells which copy of a control a
-   * tap reaches, so a layout with repeated controls is believed once the runner has read it alike, and that
-   * verdict is kept by the layout's digest. Any other layout needs no runner, and is checked once one is up.
-   */
-  private async readDirect(final: boolean): Promise<Capture | undefined> {
-    const r = await this.readFront();
-    if ('refused' in r) return undefined;
-    // with a runner up it reads the widget too: this read is less, and no misread to hold against the helper
-    if (r.partial && this.runnerUp) return undefined;
-    const known = this.verdicts.get(r.tree.hash);
-    if (known) return { tree: withoutCopies(r.tree, known), busy: r.busy };
-    // while the runner starts, copies are answered as the helper finds them, all of them, rather than after its seconds
-    if (!this.runnerUp && (!r.copies || this.agentStarting)) return { tree: r.tree, busy: r.busy };
-    if (!final) return { tree: r.tree, busy: r.busy, askRunner: true };
-    const runner = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
-    const verdict = learnCopies(r.tree, runner);
-    if (!verdict || !this.direct.checkRead(withoutCopies(r.tree, verdict), runner))
-      return { tree: runner, busy: nodesBusy(runner), byRunner: true };
-    this.verdicts.delete(r.tree.hash);
-    this.verdicts.set(r.tree.hash, verdict);
-    if (this.verdicts.size > 64)
-      this.verdicts.delete(must(this.verdicts.keys().next().value, 'a verdict'));
-    return { tree: withoutCopies(r.tree, verdict), busy: r.busy };
-  }
-
-  /**
-   * The named app, else what is in front: a new simulator's home screen needs no runner to be read. While the helper
-   * cannot say what that is the home screen is asked for, which it refuses if an app is up after all.
-   */
-  private async readFront() {
-    const end = Date.now() + FIRST_FRONT_MS;
-    for (;;) {
-      const app =
-        this.targetApp ?? (await this.direct.front().catch(() => undefined)) ?? HOME_SCREEN_APP;
-      const r = await this.direct.read(app).catch(() => ({ refused: 'failed' }));
-      const waiting = 'refused' in r && r.refused === 'no-foreground';
-      if (!waiting || this.targetApp || this.runnerUp || Date.now() >= end) return r;
-      await pause(FRONT_AGAIN_MS);
-    }
-  }
-
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */
   private async readNow(final = true): Promise<Capture> {
-    const d = await this.readDirect(final);
+    const d = await this.reads.read(final);
     if (d) return d;
     const tree = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
     return { tree, busy: nodesBusy(tree), byRunner: true };
@@ -256,7 +216,7 @@ export class IosSimulatorDevice extends IosDevice {
     return this.queue.run(async () => {
       // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
       throwIfCancelled('the action');
-      if (this.helperInput && !this.direct.screenKnown) await this.readDirect(true);
+      if (this.helperInput && !this.direct.screenKnown) await this.reads.read(true);
       const touch = action.kind !== 'key';
       const at = touch ? firstPoint(action) : undefined;
       const armed = this.helperInput && !!at && (await this.direct.arm().catch(() => false));
@@ -409,7 +369,7 @@ export class IosSimulatorDevice extends IosDevice {
       await this.wake();
       const typed = await this.queue.run(async () => {
         const r = await typeByKeys(text, opts, {
-          read: () => this.readFront().then((x) => ('refused' in x ? undefined : x.tree)),
+          read: () => this.reads.front().then((x) => ('refused' in x ? undefined : x.tree)),
           send: (a) => this.direct.send(a),
           keyboardOpen: (t) => this.platformScreen.keyboardOpen(t),
         });
