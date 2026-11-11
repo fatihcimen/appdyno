@@ -231,7 +231,12 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         const done = [language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true), held]
           .filter(Boolean)
           .join('; ');
-        return afterChange(s, was, done, read, pkg);
+        // the system's launch returns as the app starts, and the screen shows its switcher's picture of it a while
+        const front = {
+          met: (x: Screen) => x.foreground === pkg,
+          otherwise: `${pkg} is not in front yet`,
+        };
+        return afterChange(s, was, done, read, pkg, front);
       },
     }),
     defineOp({

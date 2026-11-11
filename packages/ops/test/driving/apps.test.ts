@@ -79,6 +79,34 @@ describe('app management', () => {
     ]);
   });
 
+  it('answers a restart with the app in front, past the picture the system shows as it starts', async () => {
+    class Starting extends FakeDevice {
+      /** Until when the home screen app shows its picture of the app starting, longer than a settle's quiet window. */
+      starting = 0;
+      override current() {
+        const t = super.current();
+        if (Date.now() > this.starting) return t;
+        return {
+          ...t,
+          hash: `${t.hash}-starting`,
+          windows: t.windows.map((w) => ({ ...w, pkg: 'com.apple.springboard' })),
+        };
+      }
+    }
+    const d = new Starting();
+    d.apps = manager({
+      launchWith: () => {
+        d.starting = Date.now() + 600;
+        return Promise.resolve();
+      },
+    });
+    const { call } = await connect(d);
+    const r = await call('launch_app', { restart: true });
+    expect(r.text).toMatch(/^restarted dev\.app, which was running\n/);
+    expect(r.text).not.toContain('not in the foreground');
+    expect(r.data.foreground).toBe('dev.app');
+  });
+
   it('launches an allowed app by the name app list gives it', async () => {
     const d = Object.assign(new FakeDevice(), { apps: manager() });
     const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
