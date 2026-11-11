@@ -83,11 +83,14 @@ extension Device {
                 verified = echoed(field, job: job, givesUp: false, holds: holds)
             }
         }
-        // a field that is gone has taken the text and submitted it already
-        if request.submit, field.exists, !job.over { field.typeText("\n") }
-        let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         // no verdict when the field cannot be read back: gone (it took the text and submitted), or secure
-        return out.merging(textWire(focusMs: focusMs, verified: secure ? nil : verified)) { $1 }
+        let verdict = secure ? nil : verified
+        let submits = submitsText(asked: request.submit, verified: verdict)
+        // a field that is gone has taken the text and submitted it already
+        if submits, field.exists, !job.over { field.typeText("\n") }
+        let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
+        let wire = textWire(focusMs: focusMs, verified: verdict, notSubmitted: request.submit && !submits)
+        return out.merging(wire) { $1 }
     }
 
     /// shortcut: with the synthesizer gone XCUI's typing writes plain text into the test's log and result bundle

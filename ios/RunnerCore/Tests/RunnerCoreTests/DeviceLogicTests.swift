@@ -71,6 +71,14 @@ final class TextCheckTests: XCTestCase {
         XCTAssertFalse(holdsText("xabc", before: "", text: "abc", replace: true))
     }
 
+    func testEnterFollowsNoTextTheFieldReadBackAsOther() {
+        XCTAssertFalse(submitsText(asked: true, verified: false))
+        // read back as the text, or not readable (a secure field, a field gone): submitted as asked
+        XCTAssertTrue(submitsText(asked: true, verified: true))
+        XCTAssertTrue(submitsText(asked: true, verified: nil))
+        XCTAssertFalse(submitsText(asked: false, verified: true))
+    }
+
     func testAFieldThatFormatsHoldsTheSameLettersAndDigits() {
         XCTAssertTrue(holdsText("(599) 999-9900", before: "", text: "5999999900", replace: true))
         XCTAssertTrue(holdsText("(599) 999", before: "(599)", text: "999", replace: false))

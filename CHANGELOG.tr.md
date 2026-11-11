@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- iOS runner'ı, geri okunan alan başka bir metin tutuyorsa Enter'a basmaz ve yanıt, Android ajanında ve bir simülatörün tuşlarla yazmasında olduğu gibi `submitted: false` der: önceden bir iPhone'da yanlış metin bir aramaya ya da forma gidiyordu.
 - Android'de, gönderilmesi istenen bir yazma, geri okunan alan başka bir metin tutuyorsa Enter'a basmaz ve yanıt, bir simülatörün tuşlarla yazmasında olduğu gibi `submitted: false` der: önceden yanlış metin bir aramaya ya da forma gidiyordu.
 - Ekranın bir okuması, alındıktan sonra aynı sunucunun başka bir istemcisi cihaza bir girdi gönderdiğinde eskimiş sayılır ve korumalar bir sonraki girdiden önce yeniden okur: tek bir `--http` sunucusunun iki istemcisi bir girdiyi her biri kendi son, 20 s'ye kadar eski okumasıyla değerlendiriyordu; bu yüzden diğer istemcinin kaydırmasının az önce getirdiği bir güç düğmesine x,y ile bir dokunuş sorulmadan gidiyordu.
 - iOS'ta uygulamanın üstündeki Denetim Merkezi'ne herhangi bir dokunuş, her dilde, modül ızgarasının kimliğiyle bilinerek kişiye sorar ve yanıt Denetim Merkezi'nin yapacağını `device_setting`'in değiştirdiğini söyler: güç düğmesinin bir kimliği de diğer düğmelerini dışarıda bırakan bir işareti de yoktur ve yalnızca İngilizce ve Türkçe sözcükleriyle biliniyordu, bu yüzden başka bir dilde ona uzun basış sorulmadan gidiyordu.

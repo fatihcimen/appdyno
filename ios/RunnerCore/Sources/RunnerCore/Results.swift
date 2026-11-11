@@ -37,10 +37,11 @@ public func settleWire(settled: Bool, ms: Int, reads: Int, quietMs: Int, idleMs:
     return w
 }
 
-/// `verified`: no verdict when the field cannot be read back.
-public func textWire(focusMs: Int, verified: Bool?) -> Wire {
+/// `verified`: no verdict when the field cannot be read back. `notSubmitted`: Enter was asked for and not pressed.
+public func textWire(focusMs: Int, verified: Bool?, notSubmitted: Bool = false) -> Wire {
     var w: Wire = ["mode": "keys", "focusMs": focusMs]
     if let verified { w["verified"] = verified }
+    if notSubmitted { w["submitted"] = false }
     return w
 }
 

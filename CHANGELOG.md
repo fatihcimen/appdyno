@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The iOS runner presses no Enter where the field read back holds other text, and the answer says `submitted: false`, as the Android agent and a simulator's typing by keys do: on an iPhone the wrong text went to a search or a form.
 - On Android, typing asked to submit presses no Enter where the field read back holds other text, and the answer says `submitted: false`, as a simulator's typing by keys does: the wrong text went to a search or a form.
 - A read of the screen is stale once another client of the same server sent the device an input after it was taken, and the guards read again before the next input: two clients of one `--http` server each judged an input by their own last read, up to 20 s old, so a tap by x,y on a power button that the other client's swipe had just brought up went unasked.
 - On iOS any touch on Control Center over the app asks the person, in any language, known by its module grid's id, and the answer says that `device_setting` changes what Control Center would: its power button has no id nor any mark that leaves its other buttons alone, and was known by its English and Turkish words alone, so in another language a long press on it went unasked.
