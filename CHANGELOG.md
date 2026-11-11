@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- An action refused as its app died while Android's crash dialog holds the app says to read `logs` now, and `crashes` once `alert` has answered the dialog, as no report is written before: its hint said "crashes says why it died" beside a text that said no crash report did yet.
 - `set_orientation` on an Android tablet wide as it stands, as a Pixel Tablet, takes the shape a rotation gives from the device's own: Android counts rotations from it, so `landscape_left` stands such a tablet up, and the turn was taken for one the window already had and read before it came, while `portrait`, which leaves it wide, said "the window stayed wide: the app may keep to one orientation" of an app that had turned.
 - An agent restarted as stuck after a call timed out keeps that call's hint after "has been restarted": a touch XCTest's synthesizer gave no answer for said in its text to read the screen first, and in its hint only "try again", which made it twice.
 - An action that waits for one its client sent before it says so in its progress, "waiting its turn", where it said nothing until it ran.

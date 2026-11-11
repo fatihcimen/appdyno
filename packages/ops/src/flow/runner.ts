@@ -16,7 +16,7 @@ import {
 } from '@appdyno/flows';
 import { z } from 'zod';
 import type { Answers } from '../answers.js';
-import { asStepBegan, DIED_HINT, diedLine, diedUnder } from '../app-death.js';
+import { asStepBegan, diedHint, diedLine, diedUnder } from '../app-death.js';
 import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
 import { LOOKS_ONLY } from '../step-schemas.js';
@@ -334,7 +334,7 @@ export function flowRunner(
           Object.assign(f, {
             message: `${f.message}\n${diedLine(appDied)}, by step ${f.n}`,
             code: 'APP_NOT_RUNNING',
-            hint: DIED_HINT,
+            hint: diedHint(appDied),
           });
         if (o.evidence) f.saved = await keepEvidence(s, o.evidence, clean);
       }

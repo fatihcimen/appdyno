@@ -6,7 +6,7 @@ import {
   AppDied,
   appDeath,
   asStepBegan,
-  DIED_HINT,
+  diedHint,
   diedLine,
   diedRefusal,
   diedUnder,
@@ -380,7 +380,7 @@ export function actOps(
                 ...(screen ? [header(screen)] : []),
               ].join('\n'),
               own || appDied ? 'APP_NOT_RUNNING' : e.code,
-              own || appDied ? DIED_HINT : e.hint,
+              appDied ? diedHint(appDied) : e.hint,
               e.dispatched,
             );
           }

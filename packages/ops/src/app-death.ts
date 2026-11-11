@@ -19,8 +19,8 @@ const REPORT_GAP_MS = 700;
 
 type Clean = (s: string) => string;
 
-/** Why the app ended, and the report that says so. */
-export type Died = { reason: string; file?: string };
+/** Why the app ended, and the report that says so; `held`: by its crash dialog, which none is written before. */
+export type Died = { reason: string; file?: string; held?: true };
 
 /**
  * The app a death is looked for in: the one selected, else the one in front as the action aimed, which a launch or a
@@ -80,6 +80,7 @@ async function deathOf(
   if (seen.held)
     return {
       reason: 'the system holds its process for its crash dialog, and no crash report says why yet',
+      held: true,
     };
   return seen.pid ? undefined : { reason: 'its process is gone and no crash report says why' };
 }
@@ -88,8 +89,11 @@ async function deathOf(
 export const pidInAnswer = (asked: string | undefined, r: { pid?: number | undefined }) =>
   asked && r.pid !== undefined ? { pid: r.pid > 0 ? String(r.pid) : undefined } : undefined;
 
-/** What to do once the app died under a call that failed for it. */
-export const DIED_HINT = 'launch_app starts it again, and crashes says why it died';
+/** What to do once the app died under a call that failed for it: while its crash dialog holds it, its log says why. */
+export const diedHint = (d: Died) =>
+  d.held
+    ? 'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after'
+    : 'launch_app starts it again, and crashes says why it died';
 
 /** An answer's line of the app's end. */
 export const diedLine = ({ reason, file }: Died) =>
@@ -236,7 +240,7 @@ export async function diedRefusal(
       ...(lines.length ? ['its last log lines:', ...lines] : []),
     ].join('\n'),
     'APP_NOT_RUNNING',
-    DIED_HINT,
+    diedHint(said),
     true,
   );
 }

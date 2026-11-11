@@ -569,6 +569,10 @@ describe('steps across screens', () => {
       expect(r.text).toContain(
         'the app died: the system holds its process for its crash dialog, and no crash report says why yet\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main',
       );
+      // no report is written while the dialog is up: what says why is the log
+      expect(r.data.hint, tool).toBe(
+        'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after',
+      );
       expect(act(d)).toHaveLength(1);
     }
   });
