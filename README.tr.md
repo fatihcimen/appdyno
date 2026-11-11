@@ -33,7 +33,7 @@ Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Devin Desktop (esk
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/one-call.tr.dark.svg">
-  <img src="docs/images/one-call.tr.svg" alt="Bir yapay zekâ ajanı Dark seçeneğine dokunmak ister. appdyno öğeyi taze bir okumayla bulur, cihazda ona dokunur, ekran 200 ms boyunca, en çok 3 saniye içinde durgunlaşana kadar bekler ve durulmuş ekranla neyin değiştiğini döndürür">
+  <img src="docs/images/one-call.tr.svg" alt="Bir yapay zekâ ajanı Dark seçeneğine dokunmak ister. appdyno öğeyi yeni bir okumayla bulur, cihazda ona dokunur, ekran 200 ms boyunca, en çok 3 saniye içinde durgunlaşana kadar bekler ve durulmuş ekranla neyin değiştiğini döndürür">
 </picture>
 
 Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yoktur. Ekran durulduysa yanıtta `settled`, öncekinden farklıysa `changed` yazar. Reddedilen bir çağrı bir kod ve sonraki adım için bir ipucu taşır.

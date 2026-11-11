@@ -57,9 +57,9 @@ Bir ajanın en çok yaptığı şey bakmak, işlem yapmak ve yeniden bakmaktır.
 
 **Ekranın ne zaman durgun olduğuna ekrana en yakın taraf karar verir.** Ajan ya da runner ekranı izler ve ekran 200 ms boyunca sessiz kaldığında, en çok 3 s içinde, yanıt verir. Bunu cihazda yapmak gidiş-dönüş gerektirmez ve hiçbir şey kıpırdamazken hat sessiz kalır. Runner'ı olmayan bir simülatör aynısını Mac'te, `packages/driver-apple/src/simsettle.ts` içinde, kendi zamanlamalarıyla yapar: orada bir okuma yaklaşık 30 ms sürer, bu yüzden daha sık bakabilir. Kurallar ve pencerenin neleri yakaladığı [protokolde](reference/protocol.tr.md#durulma).
 
-**Bir seçici son anda çözülür.** Hedef, dokunuştan hemen önce, taze bir okumada bulunur. Arada kıpırdayan bir ekran onu yanlış yere gönderemez. Birden çok eşleşme, ref'leriyle birlikte reddedilir. Bir tahmin başarı gibi görünürdü.
+**Bir seçici son anda çözülür.** Hedef, dokunuştan hemen önce, yeni bir okumada bulunur. Arada kıpırdayan bir ekran onu yanlış yere gönderemez. Birden çok eşleşme, ref'leriyle birlikte reddedilir. Bir tahmin başarı gibi görünürdü.
 
-**Bir ret öğretir.** Başarısız bir çağrı, bir `code` ve bir `hint` taşıyan bir `isError` yanıtıdır; başarısız bir işlem dokunuşunun gidip gitmediğini de söyler. Argümanlar geldiklerinde sıkı biçimde denetlenir; bir sunucunun neye dokunabileceğini her zaman bayrakları belirler, hiçbir zaman bir araç çağrısı değil.
+**Bir ret öğretir.** Başarısız bir çağrı, bir `code` ve bir `hint` taşıyan bir `isError` yanıtıdır; başarısız bir işlem dokunuşunun gidip gitmediğini de söyler. Argümanlar geldiklerinde sıkı biçimde denetlenir; bir sunucunun neye dokunabileceğini her zaman seçenekleri belirler, hiçbir zaman bir araç çağrısı değil.
 
 Her platformun kendi giriş yolu vardır. Bir simülatörün hiç ajana ihtiyaç duymadığı yer dışında hepsi aynı protokolü konuşur.
 

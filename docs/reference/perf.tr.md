@@ -268,8 +268,8 @@ Bunun nasıl ve hangi cihazlarda sınandığı: [kanıtlar](perf-evidence.tr.md#
 | tür                                                    | ne                                                                                                                                                                                                  |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `journey.total_ms`                                     | her yinelemenin adımlarının toplamı                                                                                                                                                                 |
-| `journey.<n>_<line>.ms`                                | eylemden durulmuş bir ekrana kadar cihazın kendi sayımı; `launch`, `open_link`, `scroll_to`, `wait_for`, `assert` ve böyle bir sayımı olmayanlar bu Mac'in saatinde ölçülen eylemdir, `throughHost` |
-| `journey.<n>_<line>.frames_p95_ms`, `.frames_worst_ms` | adımın kareleri: eyleminden önce sıfırlanır, durulduktan sonra okunur; hiçbir şey çizmediyse yok                                                                                                    |
+| `journey.<n>_<line>.ms`                                | işlemden durulmuş bir ekrana kadar cihazın kendi sayımı; `launch`, `open_link`, `scroll_to`, `wait_for`, `assert` ve böyle bir sayımı olmayanlar bu Mac'in saatinde ölçülen işlemdir, `throughHost` |
+| `journey.<n>_<line>.frames_p95_ms`, `.frames_worst_ms` | adımın kareleri: işleminden önce sıfırlanır, durulduktan sonra okunur; hiçbir şey çizmediyse yok                                                                                                    |
 | `journey.<n>_<line>.memory_kb`                         | durulduktan sonra `perf_snapshot`'ın okuduğu                                                                                                                                                        |
 | `journey.unsettled`                                    | bir yinelemenin adımlarından kaçının hiç durulmadığı: böyle bir adım süre tutmaz, yinelemesi de bütün tutmaz, çünkü onu aracın süre sınırı bitirdi; kareleri ve belleği o süre sınırında okunur     |
 
@@ -449,7 +449,7 @@ Bunun nasıl ve hangi cihazlarda sınandığı: [kanıtlar](perf-evidence.tr.md#
 
 `perf_scroll` bir tur okur, çalıştırmayı bir `scenario` altında sakladığında ise bir temel çizginin ya da bir
 karşılaştırmanın aldığı medyan için üç; `repeats` başka sayılar ister. Takılma eşiğinin üstünde, hiçbir turun saymadığı
-bir kez daha CPU profil oluşturucusu altında kaydırır ve uygulamanın o kaydırmadaki en üst fonksiyonunu adlandırır: API 34 bir emülatörde fixture'ın ağır listesi bir turda %94,4 takılmalı okundu ve 25 sn'de örneklerin %84'üyle `dev.appdyno.fixture.HeavyListActivity.heavyFrame` adlandırıldı.
+bir kez daha CPU profil oluşturucusu altında kaydırır ve uygulamanın o kaydırmadaki en üst fonksiyonunu adlandırır: API 34 bir emülatörde fixture'ın ağır listesi bir turda %94,4 takılmalı okundu ve 25 s'de örneklerin %84'üyle `dev.appdyno.fixture.HeavyListActivity.heavyFrame` adlandırıldı.
 
 Bir emülatörün sayıları host'un yüküne ve GPU kipine bağlıdır: görelidirler ve yalnızca
 aynı türden bir cihazla karşılaştırılırlar (araçlar şunu söyler: "virtual device: relative, compare only with the same kind of device").

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The Turkish pages say one word for one thing across pages: a command's flag is a seçenek, an action an işlem, a read made just now a yeni one, and seconds s.
 - The comments of the suites, scripts and sources that print or rest on measured numbers name the page that now holds them, perf-evidence.md or mirror-internals.md.
 - The Turkish flows guide calls a measured journey one the gate checks, where its heading said it passed the gate.
 - The window's reference is "The window and the hub": what a person sees and does, each pane of the Inspector under a heading of its own with a few points each, the window's words quoted as it shows them in each language, every flag of `mirror` with what `--detach` and `--pair` take, the controls' shortcuts, `hand_off`'s wait, and what a screenshot or a movie from the window keeps. How the picture and input travel, the wire, and each run's device, date and load are "How the window works", a page of their own.
