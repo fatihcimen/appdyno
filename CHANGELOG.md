@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The `steps` description says which tools a step can be: any but `steps` and those with an `action` argument of their own, as `app`, `keyboard` and `network`, whose own action a step's `action` takes the place of; it said any but `steps` and `flow`.
 - The tools reference and SECURITY.md no longer name `app launch`, among `app`'s actions or what `--no-home` holds: `launch_app` does what it did.
 - CONTRIBUTING says how a change gets in and that it is under the MIT License; how to build and install appdyno from a checkout with `scripts/install.sh`, which needs a JDK and the Android SDK with platform 37.2 and build-tools 37.0.0 even for iOS alone; where the unit tests and their shared fakes are, and how to point the device suites at a device; and the commit rule, with its line in each changelog. Its table of appdyno's own variables is headed Internal variables.
 - The release is 1.0.0. Every package, the MCP registry's entry, the Android agent and the iOS runner say so, and the Mac app, its disk image and the Homebrew cask take it from the package when they are built.

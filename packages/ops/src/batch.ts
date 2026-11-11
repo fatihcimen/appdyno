@@ -91,7 +91,7 @@ export function stepsOp(
   return defineOp({
     name: 'steps',
     title: 'Steps',
-    description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }, as { action: tap, selector: { text: OK } }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
+    description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }, as { action: tap, selector: { text: OK } }; any tool but steps and those with an action argument (app, keyboard, network…), and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
     input: z
       .object({
         steps: z
