@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The pasteboard rule reads the shared fakes of `packages/testing` too, which it lost when they left the packages' `test` folders, and the architecture page says what that package is and that the map leaves it out.
 - The fakes of `packages/testing` are type-checked and linted in `ops`'s project, which its `tsconfig.json` refers to, where a program of their own over the whole workspace took eslint past its 4 GB heap.
 - A trace's temp test waits for the process that holds its file to say it holds it, where it slept 300 ms on `tail -f`, and the iOS runner's start lock is waited on fake time; their watches over a real process keep the real clock.
 - A test file keeps to 800 lines, as `structure.test.ts` holds every file under a package's `test` and `device-tests`, where tests had no cap; three device suites over it are named, each to be split once it runs on its device again.

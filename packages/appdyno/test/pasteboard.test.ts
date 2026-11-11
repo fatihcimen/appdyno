@@ -33,6 +33,8 @@ describe("a person's pasteboard", () => {
     const tests = [
       join(root, 'device-tests'),
       join(root, 'scripts'),
+      // the fakes the tests share are a test's too
+      join(packages, 'testing/src'),
       ...readdirSync(packages).flatMap((p) => [
         join(packages, p, 'test'),
         join(packages, p, 'scripts'),

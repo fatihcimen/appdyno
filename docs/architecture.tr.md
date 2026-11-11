@@ -34,6 +34,8 @@ TypeScript'teki her şey `packages/` altındadır. Bir paket yalnızca buradaki 
 | `hub`            | Pencereleri yönetir: hub'ın listesi, kayıt, ölçümler, bir kişinin girdisi.              |
 | `appdyno`        | Yayımlanan tek paket. Diğerlerini birbirine bağlar ve giriş noktalarını tutar.          |
 
+`packages/testing`, testlerin paylaştığı sahteleri tutar. Hiçbir şeyin içinde gönderilmez ve harita onu dışarıda bırakır.
+
 Bunu üç karar biçimlendirir.
 
 **Bir araç bir kez yazılır.** `packages/ops` içindeki bir `Op`, bir MCP istemcisi için bir araç, komut satırında bir komut, bir akışta bir adım ve kütüphanede bir çağrıdır. Böylece bir düzeltme dördüne birden ulaşır ve hiçbiri diğerlerinden ayrı düşemez.

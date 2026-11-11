@@ -34,6 +34,8 @@ Everything in TypeScript lives in `packages/`. A package may import only what li
 | `hub`            | Controls windows: the hub's list, recording, measures, a person's input.      |
 | `appdyno`        | The one published package. It wires the rest and holds the entry points.      |
 
+`packages/testing` holds the fakes the tests share. It ships in nothing, and the map leaves it out.
+
 Three decisions shape this.
 
 **A tool is written once.** An `Op` in `packages/ops` is a tool to an MCP client, a command on the command line, a step in a flow and a call in the library. So a fix reaches all four, and none of them can drift from the others.
