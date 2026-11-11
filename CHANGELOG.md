@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- On iOS a touch on a button of a system alert whose text is a phone number and nothing more asks the person in any language, unless the button is a Cancel, and such an alert is looked for in the home screen app's read too: only a button saying Call or Ara asked, and only in the read of the screen, so in German a tap on Anrufen of such an alert went unasked.
 - On iOS a touch anywhere on the power-off screen but its Cancel asks the person, the screen known by its slider's id in any language: the Emergency SOS slider of a phone's power-off screen has no id known here, and was known by its English and Turkish words alone, so in another language a touch along it went unasked.
 - An input refused because the guard could not take its look, at the home screen app on an iPhone or at an Android device's default dialer, names the person's way past it, `--allow-power`, which skips that look: an iPhone whose home screen app kept failing to be read refused every tap, key and text, with only "read the screen and try again" to say.
 - On Android an input is not sent when the device could not say which app a call's link opens in, and the device is asked again at the next input: a query that failed, as on an adb hiccup at the first input, was kept for the session as "no such app", so a maker's dialer outside the fixed list took a touch, key or text unasked until the session ended.

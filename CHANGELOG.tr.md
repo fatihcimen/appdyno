@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- iOS'ta metni yalnızca bir telefon numarası olan bir sistem uyarısının düğmesine bir dokunuş, düğme bir Vazgeç değilse, her dilde kişiye sorar ve böyle bir uyarı ana ekran uygulamasının okumasında da aranır: yalnızca Call ya da Ara diyen bir düğme soruyordu, o da yalnızca ekranın okumasında; bu yüzden Almancada böyle bir uyarının Anrufen'ine bir dokunuş sorulmadan gidiyordu.
 - iOS'ta kapatma ekranında Vazgeç dışında herhangi bir yere dokunuş kişiye sorar; ekran, her dilde kaydırıcısının kimliğiyle bilinir: bir telefonun kapatma ekranındaki Acil SOS kaydırıcısının burada bilinen bir kimliği yoktur ve yalnızca İngilizce ve Türkçe sözcükleriyle biliniyordu, bu yüzden başka bir dilde onun boyunca bir dokunuş sorulmadan gidiyordu.
 - Koruma bakışını yapamadığı için, bir iPhone'da ana ekran uygulamasına ya da bir Android cihazın varsayılan çeviricisine, reddedilen bir girdi, kişinin onu aşmasının yolunu, o bakışı atlayan `--allow-power`'ı adlandırır: ana ekran uygulaması okunamamaya devam eden bir iPhone her dokunuşu, tuşu ve metni yalnızca "ekranı okuyup yeniden deneyin" diyerek reddediyordu.
 - Android'de cihaz bir aramanın bağlantısının hangi uygulamada açıldığını söyleyemediğinde girdi gönderilmez ve cihaza bir sonraki girdide yeniden sorulur: ilk girdide bir adb aksaklığında olduğu gibi başarısız olan bir sorgu oturum boyunca "böyle bir uygulama yok" diye tutuluyordu; bu yüzden sabit listenin dışındaki bir üreticinin çeviricisi, oturum bitene kadar bir dokunuşu, tuşu ya da metni sorulmadan alıyordu.

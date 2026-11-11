@@ -242,4 +242,42 @@ describe('a system alert over the app, which the runner reads alone, and what th
       expect(sent(), yes).toHaveLength(1);
     }
   });
+
+  /** `read` with its alert saying `says` where the permission alert asks for the location. */
+  const saying = (read: Tree, says: string): Tree => ({
+    ...read,
+    nodes: read.nodes.map((n) => (n.c === 'Alert' ? { ...n, d: says } : n)),
+  });
+
+  it('asks in any language before a touch on a button of an alert that names a phone number and no more, but its Cancel', async () => {
+    const home = recorded('ios-nothing-over-springboard');
+    // as iOS writes a number, between marks that hold its direction
+    const de = saying(alerted('Anrufen', 'Abbrechen'), '\u202a+49 30 1234567\u202c');
+    const { call, sent, asked } = await over(home, [], de);
+    expect((await call('tap', allow)).code).toBe('PERMISSION_REQUIRED');
+    expect(asked[0]).toContain('a touch on "Anrufen" of a system alert, which places a call');
+    const en = await over(home, [], saying(alerted('Call', 'Cancel'), '112'));
+    expect((await en.call('tap', { x: 130, y: 490 })).error).toBe(false);
+    // an alert with a number among its words is no call's
+    const full = await over(home, [], saying(alerted('OK'), 'Storage Almost Full: 500 MB left'));
+    expect((await full.call('tap', allow)).error).toBe(false);
+    expect([sent().length, en.sent().length, full.sent().length]).toEqual([0, 1, 1]);
+  });
+
+  it("asks before a touch on the Call of such an alert in the home screen app's read alone", async () => {
+    const home = recorded('ios-nothing-over-springboard');
+    const prompt: Tree = {
+      ...home,
+      nodes: [
+        ...home.nodes,
+        ...saying(alerted('Anrufen', 'Abbrechen'), '112')
+          .nodes.slice(-3)
+          .map((n, i) => ({ ...n, w: 0, p: i ? home.nodes.length : 0 })),
+      ],
+    };
+    const { call, sent, asked } = await over(prompt, [], recorded('ios-control-center-app'));
+    expect((await call('tap', allow)).code).toBe('PERMISSION_REQUIRED');
+    expect(asked[0]).toContain('a touch on "Anrufen" of a system alert, which places a call');
+    expect(sent()).toEqual([]);
+  });
 });

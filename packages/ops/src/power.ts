@@ -106,12 +106,22 @@ const WORDS = [
 
 /** A system alert's button that places a call, in English and Turkish, as `plain` writes it: "Call", "Ara". */
 const CALL_WORDS = /^(call|ara)\b/;
+const CANCEL_WORDS = /^(cancel|vazgec|iptal)$/;
+
+/** A phone number and no more, as iOS's alert for a call link names what it calls, in any language: three digits or more. */
+const aNumber = (s: string | undefined) => {
+  const x = s?.replace(/\p{Cf}/gu, '').trim();
+  return !!x && /^\+?[\d\s().-]+\??$/.test(x) && (x.match(/\d/g) ?? []).length >= 3;
+};
+
+/** The alert node `i` lies in, if any. */
+const alertOf = (tree: Tree, i: number): number | undefined => {
+  const n = tree.nodes[i];
+  return !n ? undefined : /alert$/i.test(n.c) ? i : alertOf(tree, n.p);
+};
 
 /** Whether node `i` lies in an alert. */
-export const inAlert = (tree: Tree, i: number): boolean => {
-  const n = tree.nodes[i];
-  return !!n && (/alert$/i.test(n.c) || inAlert(tree, n.p));
-};
+export const inAlert = (tree: Tree, i: number) => alertOf(tree, i) !== undefined;
 
 /** Words as compared: no case nor accent, Turkish's dotless i an i, one space between, no closing mark. */
 const plain = (s: string) =>
@@ -202,11 +212,18 @@ function controls(tree: Tree) {
       // the power-off screen's Cancel, by its id in any language, is the way off it
       return said ?? slider ?? (hit?.n.id === IOS_CANCEL ? undefined : wholeWindow(w));
     },
-    /** The button of a system alert a finger at `p` places a call by, as iOS's "Call …?" of a link the app opened. */
+    /**
+     * The button of a system alert a finger at `p` places a call by, as iOS's of a link the app opened: Call by its words,
+     * and in any language each button but a Cancel of an alert that names a phone number and no more.
+     */
     callAt(p: Point) {
       const hit = hitAt(p)?.hit;
-      const label = hit && clickable(hit.n) && inAlert(tree, hit.i) ? (hit.n.d ?? hit.n.t) : '';
-      return label && CALL_WORDS.test(plain(label)) ? JSON.stringify(label.trim()) : undefined;
+      const alert = hit && clickable(hit.n) ? alertOf(tree, hit.i) : undefined;
+      if (!hit || alert === undefined) return undefined;
+      const label = (hit.n.d ?? hit.n.t ?? '').trim();
+      const prompt = within(alert).some((n) => aNumber(n.t) || aNumber(n.d));
+      const calls = CALL_WORDS.test(plain(label)) || (prompt && !CANCEL_WORDS.test(plain(label)));
+      return calls ? (label ? JSON.stringify(label) : 'a button') : undefined;
     },
     /** What a key or typed text may act on: a screen that is all such controls, or one in the focus. */
     focused() {
@@ -296,15 +313,18 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
     ? input.points.map((p) => phone(read.windows[windowAt(read, p) ?? -1]?.pkg)).find(Boolean)
     : phone(focusedApp(read));
   if (call) return `${how} the phone app ${call}, which may place a call`;
-  const found = controls(read);
-  const calls = input.points.map((p) => found.callAt(p)).find(Boolean);
-  if (calls) return `${how} ${calls} of a system alert, which places a call`;
-  let what = actsOn(found, input);
-  if (!what) {
-    const over = await overTheApp(s, screen);
-    what = over && actsOn(controls(over), input);
-  }
-  return what && `${how} ${what}, the system's own power, emergency or erase control`;
+  /** What a read holds of such controls for this input, a call's first. */
+  const judged = (t: Tree) => {
+    const found = controls(t);
+    const calls = input.points.map((p) => found.callAt(p)).find(Boolean);
+    if (calls) return `${how} ${calls} of a system alert, which places a call`;
+    const what = actsOn(found, input);
+    return what && `${how} ${what}, the system's own power, emergency or erase control`;
+  };
+  const said = judged(read);
+  if (said) return said;
+  const over = await overTheApp(s, screen);
+  return over && judged(over);
 }
 
 /**
