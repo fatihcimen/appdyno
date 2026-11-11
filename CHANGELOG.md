@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The test of the `DTServiceHub` a killed runner leaves stands one in by a link to `sleep`, where it copied it: macOS 27.2 kills a system binary's copy as it starts, and the test found nothing left to end.
 - A flow run's saving of what a failure left (`--evidence`) is a function of its own beside the runner, which had grown past the 200-line cap.
 - The viewer's self test tries once whether a table takes the click it sends, where it went by the macOS version: macOS 27.2 gives a table no such click again, as 26 did not, and the test then chose no row, read the wrong place and ended on `-[MVConnectPane fillDevice:app:]`. A person's click was never affected.
 - The power guard sees iOS's own views over the app in front: Control Center and the power-off screen were in no read of the app, which stays in front under them, so a touch on Control Center's power button or along the power-off slider went out with nothing asked. The runner's read holds them as a window of the home screen app's, as it holds a system alert, and where a read has no such window the guard reads the home screen app as well, which took 200 to 250 ms a touch on an iPhone 13 Pro Max at a load of 800. Read on that iPhone with iOS 27.2 in Turkish: Control Center over the fixture came as that window, its power button `Güç`, which the guard now knows; with nothing over the app the read is the app's alone. Control Center's identifier and the power-off slider's are iOS 27's, the slider's read on a simulator.

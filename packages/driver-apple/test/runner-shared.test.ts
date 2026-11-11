@@ -2,12 +2,12 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import {
   chmodSync,
-  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -190,9 +190,9 @@ describe('a start that cannot come', () => {
 
   it("ends the DTServiceHub a simulator's killed xcodebuild left to launchd, and no other process", async () => {
     // a DTServiceHub by its name: sleep under that name, which the runner's xcodebuild starts and a kill leaves, and
-    // which takes no SIGTERM, as the real one takes none
+    // which takes no SIGTERM, as the real one takes none. A link, as macOS 27.2 kills a system binary's copy at its start
     const hub = join(state, 'DTServiceHub');
-    copyFileSync('/bin/sleep', hub);
+    symlinkSync('/bin/sleep', hub);
     const pidFile = join(state, 'hub.pid');
     writeFileSync(
       join(state, 'xcodebuild'),
