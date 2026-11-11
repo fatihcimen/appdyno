@@ -199,7 +199,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       annotations: DESTRUCTIVE,
       run: async ({ app, language, read }) => {
         const named = app !== undefined && !APP_ID.test(app);
-        const s = await (named ? ctx.session() : ctx.sessionToLaunch(app));
+        const s = await (named ? ctx.session() : ctx.sessionToLaunch(app, language));
         const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
         if (!pkg) throw noApp();
         checkLaunch(policy, pkg);

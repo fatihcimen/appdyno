@@ -217,12 +217,16 @@ export class ServerContext {
     return s.device.appRunning(app).catch(() => undefined);
   }
 
-  /** The session a launch runs on; when it is the first call, the app starts alongside the agent. */
-  sessionToLaunch(app: string | undefined) {
+  /**
+   * The session a launch runs on; when it is the first call, the app starts alongside the agent. A launch in a
+   * `language` starts the app itself: what began alongside would be left for the next launch, which took it for its
+   * own and started nothing.
+   */
+  sessionToLaunch(app: string | undefined, language?: string) {
     const wanted = app ?? this.options.app ?? this.saved?.app;
     return this.session(
       undefined,
-      wanted && checkLaunch(this.policy, checkApp(this.policy, wanted)),
+      language ? undefined : wanted && checkLaunch(this.policy, checkApp(this.policy, wanted)),
     );
   }
 

@@ -251,6 +251,24 @@ describe('a first call that launches', () => {
     await call('launch_app', { app: 'dev.app' });
     expect(began).toEqual(['dev.app with hello false']);
   });
+
+  it('in a language begins none alongside, which the next plain launch took for its own and started nothing', async () => {
+    const d = new FakeDevice();
+    const began: string[] = [];
+    d.launchAlongside = (pkg) => void began.push(pkg);
+    const launched: unknown[] = [];
+    Object.assign(d, {
+      apps: {
+        launchWith: (app: string, o: unknown) => Promise.resolve(void launched.push([app, o])),
+      },
+    });
+    const { call } = await connect(d);
+    expect((await call('launch_app', { language: 'de-DE' })).text).toMatch(
+      /^started dev\.app in de-DE/,
+    );
+    expect(launched).toEqual([['dev.app', { language: 'de-DE' }]]);
+    expect(began).toEqual([]);
+  });
 });
 
 describe('a folded answer', () => {

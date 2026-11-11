@@ -315,7 +315,10 @@ export function flowRecorder(ctx: ServerContext) {
               ? undefined
               : await (
                   op.name === 'launch_app'
-                    ? ctx.sessionToLaunch((args as { app?: string }).app)
+                    ? ctx.sessionToLaunch(
+                        (args as { app?: string }).app,
+                        (args as { language?: string }).language,
+                      )
                     : ctx.session()
                 ).catch(() => undefined);
           const r = activeRecording(ctx, s?.device.serial ?? ctx.selected);
