@@ -93,6 +93,9 @@ export const NO_APP_HINT =
 export const noApp = () =>
   new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT', NO_APP_HINT);
 
+/** An app's id; anything else is what a person calls it. */
+export const APP_ID = /^[\w-]+(\.[\w-]+)+$/;
+
 export function checkApp(policy: Policy, pkg: string): string {
   if (policy.apps.length > 0 && !policy.apps.includes(pkg))
     throw new ToolError(

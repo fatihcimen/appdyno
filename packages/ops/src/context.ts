@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
 import { endSession, leftHere, sweep, type Taken } from './leftovers.js';
 import { inputGuard } from './apps-guard.js';
-import { byPerson, checkApp, checkLaunch, type Policy } from './policy.js';
+import { APP_ID, byPerson, checkApp, checkLaunch, type Policy } from './policy.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
 
@@ -220,9 +220,10 @@ export class ServerContext {
   /**
    * The session a launch runs on; when it is the first call, the app starts alongside the agent. A launch in a
    * `language` starts the app itself: what began alongside would be left for the next launch, which took it for its
-   * own and started nothing.
+   * own and started nothing. An app named as a person calls it is looked up on the device first, and starts after.
    */
-  sessionToLaunch(app: string | undefined, language?: string) {
+  async sessionToLaunch(app: string | undefined, language?: string) {
+    if (app !== undefined && !APP_ID.test(app)) return this.session();
     const wanted = app ?? this.options.app ?? this.saved?.app;
     return this.session(
       undefined,

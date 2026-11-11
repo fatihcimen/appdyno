@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `launch_app` launches an allowed app by the name `app list` gives it, as its description says, where under `--allow-apps` it refused the name as an app not allowed, before any name was looked up.
 - An answer's structured content says what was done once: its `text` holds it, and `done` is left out beside it, where a tap's said its first line twice and a listing's, `steps`' or `network paths`' said the whole answer twice. A client that hands a model the structured content in place of the text hands it about a tenth less.
 - A call prompt iOS shows as a sheet is asked about as its alert is: the power guard and the guard of `--allow-apps` take the home screen app's sheet over the app for a system prompt.
 - The iOS runner reads a system sheet over the app as it reads a system alert, alone and with the touches in its frame, so that the guards see it: a call's prompt for a link the app opened, shown as a sheet, was in neither read and asked no one.

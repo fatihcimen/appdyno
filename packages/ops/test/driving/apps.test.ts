@@ -74,6 +74,15 @@ describe('app management', () => {
     ]);
   });
 
+  it('launches an allowed app by the name app list gives it', async () => {
+    const d = Object.assign(new FakeDevice(), { apps: manager() });
+    const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
+    const r = await call('launch_app', { app: 'app', read: 'none' });
+    expect(r.error).toBe(false);
+    expect(r.done).toMatch(/dev\.app/);
+    expect(d.calls.filter((c) => c.name === 'launch').map((c) => c.args[0])).toEqual(['dev.app']);
+  });
+
   it('keeps what an install answered on the phone in its answer, whatever the read mode', async () => {
     const apps = manager({
       install: () =>

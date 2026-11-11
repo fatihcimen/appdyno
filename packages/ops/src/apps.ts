@@ -4,6 +4,7 @@ import { systemAsks, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
 import { approvePower } from './approval.js';
 import {
+  APP_ID,
   byPerson,
   CALL_LINK,
   checkApp,
@@ -45,9 +46,6 @@ export const launchSaid = (pkg: string, ran: boolean | undefined, restarts = fal
       : restarts
         ? `restarted ${pkg}, which was running`
         : `brought ${pkg} to the front, on the screen it was on`;
-
-/** An app's id; anything else is what a person calls it. */
-const APP_ID = /^[\w-]+(\.[\w-]+)+$/;
 
 /** A language as the systems take it: `tr`, `pt-BR`, `zh-Hans`. */
 const Language = z
@@ -199,7 +197,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       annotations: DESTRUCTIVE,
       run: async ({ app, language, read }) => {
         const named = app !== undefined && !APP_ID.test(app);
-        const s = await (named ? ctx.session() : ctx.sessionToLaunch(app, language));
+        const s = await ctx.sessionToLaunch(app, language);
         const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
         if (!pkg) throw noApp();
         checkLaunch(policy, pkg);
