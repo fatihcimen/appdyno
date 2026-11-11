@@ -6,6 +6,7 @@ import type { Tree, WireNode } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { powerControlAt } from '../src/index.js';
 import { middle, onDevice, recorded } from './power-device.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 type Made = Partial<WireNode> & { b: [number, number, number, number] };
 
@@ -235,15 +236,18 @@ describe('an input on them', () => {
     }
   });
 
-  it('is refused in a flow replayed, before its step touches anything', async () => {
-    const { call, sent } = await onDevice('android-power-en');
-    const dir = mkdtempSync(join(tmpdir(), 'appdyno-power-flow-'));
-    writeFileSync(join(dir, 'r.flow'), 'tap text="Restart"\n');
-    const r = await call('flow', { action: 'run', file: join(dir, 'r.flow') });
-    expect(r.error).toBe(true);
-    expect(r.text).toContain('asks the person first');
-    expect(sent()).toEqual([]);
-  });
+  it(
+    'is refused in a flow replayed, before its step touches anything',
+    fakeTimed(async () => {
+      const { call, sent } = await onDevice('android-power-en');
+      const dir = mkdtempSync(join(tmpdir(), 'appdyno-power-flow-'));
+      writeFileSync(join(dir, 'r.flow'), 'tap text="Restart"\n');
+      const r = await call('flow', { action: 'run', file: join(dir, 'r.flow') });
+      expect(r.error).toBe(true);
+      expect(r.text).toContain('asks the person first');
+      expect(sent()).toEqual([]);
+    }),
+  );
 
   it('leaves the screen by back and home, and reads it, with nothing asked', async () => {
     const { call, sent, asked } = await onDevice('android-power-en', { answer: 'decline' });

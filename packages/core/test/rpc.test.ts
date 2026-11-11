@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
 import { inCall } from '../src/call.js';
 import { HELLO, TOKEN, fakeAgent, wireTree } from '@appdyno/testing/fake-agent.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 describe('rpc client', () => {
   it('validates results and passes the deadline to the agent', async () => {
@@ -58,27 +59,35 @@ describe('rpc client', () => {
     });
   });
 
-  it('times out a call the agent never answers and asks it to cancel', async () => {
-    const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });
-    const t = Date.now();
-    await expect(rpc.call('tree.get', {}, { timeoutMs: 50 })).rejects.toMatchObject({
-      code: 'TIMEOUT',
-    });
-    expect(Date.now() - t).toBeGreaterThanOrEqual(50);
-    expect(seen.at(-1)?.method).toBe('cancel');
-  }, 5_000);
+  it(
+    'times out a call the agent never answers and asks it to cancel',
+    fakeTimed(async () => {
+      const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });
+      const t = Date.now();
+      await expect(rpc.call('tree.get', {}, { timeoutMs: 50 })).rejects.toMatchObject({
+        code: 'TIMEOUT',
+      });
+      expect(Date.now() - t).toBeGreaterThanOrEqual(50);
+      expect(seen.at(-1)?.method).toBe('cancel');
+    }),
+    5_000,
+  );
 
-  it('leaves nothing on the signal of a call that timed out: a cancel later sends no second word', async () => {
-    const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });
-    const abort = new AbortController();
-    await expect(
-      inCall({ signal: abort.signal }, () => rpc.call('tree.get', {}, { timeoutMs: 20 })),
-    ).rejects.toMatchObject({ code: 'TIMEOUT' });
-    const sent = seen.length;
-    abort.abort();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(seen).toHaveLength(sent);
-  }, 5_000);
+  it(
+    'leaves nothing on the signal of a call that timed out: a cancel later sends no second word',
+    fakeTimed(async () => {
+      const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });
+      const abort = new AbortController();
+      await expect(
+        inCall({ signal: abort.signal }, () => rpc.call('tree.get', {}, { timeoutMs: 20 })),
+      ).rejects.toMatchObject({ code: 'TIMEOUT' });
+      const sent = seen.length;
+      abort.abort();
+      await new Promise((r) => setTimeout(r, 10));
+      expect(seen).toHaveLength(sent);
+    }),
+    5_000,
+  );
 
   it('gives up a call when the client cancels, and tells the agent', async () => {
     const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });

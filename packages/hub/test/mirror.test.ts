@@ -25,6 +25,7 @@ import {
   ServerContext,
   writeMirrorFile,
 } from '@appdyno/ops';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-mirror-'));
 const before = process.env.APPDYNO_STATE_DIR;
@@ -282,19 +283,23 @@ describe('a mirror parent', () => {
     expect(stateFiles()).toEqual([]);
   }, 300_000);
 
-  it('--watch opens a device that comes, once: a window closed stays closed until its device returns', async () => {
-    const serials = ['device-w1'];
-    const ctx = context(serials);
-    const time = clock();
-    const { lines, done } = run(ctx, { all: true, watch: true, ends: time.ends });
-    await until(() => liveMirror('device-w1')?.status.state === 'live');
-    serials.push('device-w2');
-    await until(() => liveMirror('device-w2')?.status.state === 'live');
-    time.end();
-    await expect(done).resolves.toBe(0);
-    expect(lines.filter((l) => l === 'device-w2: connecting')).toHaveLength(1);
-    expect(stateFiles()).toEqual([]);
-  }, 300_000);
+  it(
+    '--watch opens a device that comes, once: a window closed stays closed until its device returns',
+    fakeTimed(async () => {
+      const serials = ['device-w1'];
+      const ctx = context(serials);
+      const time = clock();
+      const { lines, done } = run(ctx, { all: true, watch: true, ends: time.ends });
+      await until(() => liveMirror('device-w1')?.status.state === 'live');
+      serials.push('device-w2');
+      await until(() => liveMirror('device-w2')?.status.state === 'live');
+      time.end();
+      await expect(done).resolves.toBe(0);
+      expect(lines.filter((l) => l === 'device-w2: connecting')).toHaveLength(1);
+      expect(stateFiles()).toEqual([]);
+    }),
+    300_000,
+  );
 
   it('--all with no device says so', async () => {
     const { lines, done } = run(context([]), { all: true });

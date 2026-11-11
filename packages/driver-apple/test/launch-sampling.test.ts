@@ -8,6 +8,7 @@ import { IosSimulatorPerf } from '../src/perf.js';
 import { IosPhoneDevice } from '../src/phone.js';
 import { IosPhonePerf } from '../src/phone-perf.js';
 import { Simctl } from '../src/simctl.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const APP = 'dev.appdyno.fixture';
 
@@ -54,28 +55,36 @@ describe('a launch on a simulator', () => {
     return { did, perf };
   };
 
-  it('warms up once, then keeps the lower middle of what it times', async () => {
-    clockOf(10);
-    const { did, perf } = simulator(() => Promise.resolve(true));
-    const { value, raw } = await perf.launch(APP, { mode: 'cold', repeats: 2 });
-    expect(did).toEqual(['stop', 'launch', 'stop', 'launch', 'stop', 'launch']);
-    expect(value.samples).toHaveLength(2);
-    expect(value.medianMs).toBe(value.samples[0]?.totalMs);
-    expect(value.until).toBe('the first screen is read');
-    expect(raw.split('\n')).toHaveLength(3);
-  }, 10_000);
+  it(
+    'warms up once, then keeps the lower middle of what it times',
+    fakeTimed(async () => {
+      clockOf(10);
+      const { did, perf } = simulator(() => Promise.resolve(true));
+      const { value, raw } = await perf.launch(APP, { mode: 'cold', repeats: 2 });
+      expect(did).toEqual(['stop', 'launch', 'stop', 'launch', 'stop', 'launch']);
+      expect(value.samples).toHaveLength(2);
+      expect(value.medianMs).toBe(value.samples[0]?.totalMs);
+      expect(value.until).toBe('the first screen is read');
+      expect(raw.split('\n')).toHaveLength(3);
+    }),
+    10_000,
+  );
 
-  it('puts another app in front for a warm launch', async () => {
-    clockOf(10);
-    const { did, perf } = simulator(() => Promise.resolve(true));
-    await perf.launch(APP, { mode: 'warm', repeats: 1 });
-    expect(did).toEqual([
-      'launch U com.apple.Preferences',
-      'launch',
-      'launch U com.apple.Preferences',
-      'launch',
-    ]);
-  }, 10_000);
+  it(
+    'puts another app in front for a warm launch',
+    fakeTimed(async () => {
+      clockOf(10);
+      const { did, perf } = simulator(() => Promise.resolve(true));
+      await perf.launch(APP, { mode: 'warm', repeats: 1 });
+      expect(did).toEqual([
+        'launch U com.apple.Preferences',
+        'launch',
+        'launch U com.apple.Preferences',
+        'launch',
+      ]);
+    }),
+    10_000,
+  );
 
   it('refuses a screen that never comes', async () => {
     clockOf(25_000);
@@ -83,13 +92,17 @@ describe('a launch on a simulator', () => {
     await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).rejects.toMatchObject(NO_SCREEN);
   }, 10_000);
 
-  it('looks once even when the launch itself took longer than the wait', async () => {
-    clockOf(25_000);
-    const seen = vi.fn(() => Promise.resolve(true));
-    const { perf } = simulator(seen);
-    await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).resolves.toBeDefined();
-    expect(seen).toHaveBeenCalled();
-  }, 10_000);
+  it(
+    'looks once even when the launch itself took longer than the wait',
+    fakeTimed(async () => {
+      clockOf(25_000);
+      const seen = vi.fn(() => Promise.resolve(true));
+      const { perf } = simulator(seen);
+      await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).resolves.toBeDefined();
+      expect(seen).toHaveBeenCalled();
+    }),
+    10_000,
+  );
 });
 
 describe('a launch on a phone', () => {
@@ -127,35 +140,47 @@ describe('a launch on a phone', () => {
     return { did, perf: device.measure };
   };
 
-  it('warms up once, and stops looking once the screen shows', async () => {
-    clockOf(10);
-    const { did, perf } = phone(() => Promise.resolve(screen(APP)));
-    const { value, raw } = await perf.launch(APP, { mode: 'cold', repeats: 2 });
-    expect(did.filter((d) => d === 'launch')).toHaveLength(3);
-    expect(value.samples).toHaveLength(2);
-    expect(value.medianMs).toBe(value.samples[0]?.totalMs);
-    expect(value.until).toBe('the first screen is read');
-    expect(raw.split(' ')).toHaveLength(2);
-  }, 10_000);
+  it(
+    'warms up once, and stops looking once the screen shows',
+    fakeTimed(async () => {
+      clockOf(10);
+      const { did, perf } = phone(() => Promise.resolve(screen(APP)));
+      const { value, raw } = await perf.launch(APP, { mode: 'cold', repeats: 2 });
+      expect(did.filter((d) => d === 'launch')).toHaveLength(3);
+      expect(value.samples).toHaveLength(2);
+      expect(value.medianMs).toBe(value.samples[0]?.totalMs);
+      expect(value.until).toBe('the first screen is read');
+      expect(raw.split(' ')).toHaveLength(2);
+    }),
+    10_000,
+  );
 
-  it('puts Settings in front for a warm launch', async () => {
-    clockOf(10);
-    const { did, perf } = phone(() => Promise.resolve(screen(APP)));
-    await perf.launch(APP, { mode: 'warm', repeats: 1 });
-    expect(did.filter((d) => d !== 'target')).toEqual([
-      'front com.apple.Preferences',
-      'launch',
-      'front com.apple.Preferences',
-      'launch',
-    ]);
-  }, 10_000);
+  it(
+    'puts Settings in front for a warm launch',
+    fakeTimed(async () => {
+      clockOf(10);
+      const { did, perf } = phone(() => Promise.resolve(screen(APP)));
+      await perf.launch(APP, { mode: 'warm', repeats: 1 });
+      expect(did.filter((d) => d !== 'target')).toEqual([
+        'front com.apple.Preferences',
+        'launch',
+        'front com.apple.Preferences',
+        'launch',
+      ]);
+    }),
+    10_000,
+  );
 
-  it('launches by itself with an environment, naming the app', async () => {
-    clockOf(10);
-    const { did, perf } = phone(() => Promise.resolve(screen(APP)));
-    await perf.launch(APP, { mode: 'cold', repeats: 1, env: { A: '1' } });
-    expect(did.slice(0, 3)).toEqual(['stop', `env ${APP}`, 'target']);
-  }, 10_000);
+  it(
+    'launches by itself with an environment, naming the app',
+    fakeTimed(async () => {
+      clockOf(10);
+      const { did, perf } = phone(() => Promise.resolve(screen(APP)));
+      await perf.launch(APP, { mode: 'cold', repeats: 1, env: { A: '1' } });
+      expect(did.slice(0, 3)).toEqual(['stop', `env ${APP}`, 'target']);
+    }),
+    10_000,
+  );
 
   it('refuses a screen that never comes: a launch that showed none is no measurement', async () => {
     clockOf(5_000);
@@ -241,16 +266,19 @@ describe('frames on a simulator', () => {
   };
   const resets = () => (readFileSync(file(), 'utf8').match(/"reset"/g) ?? []).length;
 
-  it('start a window of their own at each read, as they do on Android', async () => {
-    mkdirSync(join(stateDir(), 'probes'), { recursive: true });
-    writeFileSync(file(), `${JSON.stringify({ pid: 4242, loaded: APP, t: Date.now() })}\n`);
-    await perf().frames(APP);
-    expect(resets()).toBe(1);
-    await perf().frames(APP, { reset: false });
-    expect(resets()).toBe(1);
-    await perf().frames(APP, { reset: true });
-    expect(resets()).toBe(2);
-  });
+  it(
+    'start a window of their own at each read, as they do on Android',
+    fakeTimed(async () => {
+      mkdirSync(join(stateDir(), 'probes'), { recursive: true });
+      writeFileSync(file(), `${JSON.stringify({ pid: 4242, loaded: APP, t: Date.now() })}\n`);
+      await perf().frames(APP);
+      expect(resets()).toBe(1);
+      await perf().frames(APP, { reset: false });
+      expect(resets()).toBe(1);
+      await perf().frames(APP, { reset: true });
+      expect(resets()).toBe(2);
+    }),
+  );
 });
 
 describe('a CPU profile on a simulator', () => {

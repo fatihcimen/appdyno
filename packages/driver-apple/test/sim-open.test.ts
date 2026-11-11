@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { IosSimulatorDevice } from '../src/index.js';
 import { Simctl } from '../src/simctl.js';
 import { openButton } from '../src/platform-screen.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const UDID = 'C8F701E7-9A02-4465-AC91-F4C85FBA788D';
 const APP = 'dev.appdyno.fixture';
@@ -99,12 +100,15 @@ describe('a link on a simulator the helper does not read, by the runner', () => 
     return { d, tap };
   };
 
-  it('answers "Open in …?" by the app\'s name, and never its own notification prompt', async () => {
-    const asks = linked(read('ios-open-in-prompt'));
-    await asks.d.openUrl('appdyno-fixture://open/list', APP);
-    expect(asks.tap).toHaveBeenCalledExactlyOnceWith({ x: 275, y: 474 }, { settle: {} });
-    const permission = linked(read('ios-notification-prompt'));
-    await permission.d.openUrl('appdyno-fixture://open/list', APP);
-    expect(permission.tap).not.toHaveBeenCalled();
-  });
+  it(
+    'answers "Open in …?" by the app\'s name, and never its own notification prompt',
+    fakeTimed(async () => {
+      const asks = linked(read('ios-open-in-prompt'));
+      await asks.d.openUrl('appdyno-fixture://open/list', APP);
+      expect(asks.tap).toHaveBeenCalledExactlyOnceWith({ x: 275, y: 474 }, { settle: {} });
+      const permission = linked(read('ios-notification-prompt'));
+      await permission.d.openUrl('appdyno-fixture://open/list', APP);
+      expect(permission.tap).not.toHaveBeenCalled();
+    }),
+  );
 });

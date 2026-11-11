@@ -6,6 +6,7 @@ import { AndroidEvents } from '../src/events.js';
 import { enrolmentStep } from '../src/fingerprint.js';
 import { AndroidSettings } from '../src/settings.js';
 import { ANDROID_PAGES, openSettingsAt } from '../src/settings-pages.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 /** A device by what its shell answers: the first pattern that matches a command. */
 const device = (serial: string, answers: [RegExp, string | (() => string)][]) => {
@@ -134,17 +135,21 @@ describe('a radio', () => {
     expect(reads).toBe(3);
   });
 
-  it('says what the device said when it does not change', { timeout: 15_000 }, async () => {
-    const { settings } = device('Y9DE', [
-      [/svc data/, 'java.lang.SecurityException: not allowed\n\tat x'],
-      [/settings get global mobile_data/, '1'],
-    ]);
-    const e = await refusal(settings.set('mobile_data', 'off'));
-    expect(e.code).toBe('UNSUPPORTED');
-    expect(e.message).toBe(
-      'asked for mobile_data off and it still reads on after 10 s: java.lang.SecurityException: not allowed',
-    );
-  });
+  it(
+    'says what the device said when it does not change',
+    { timeout: 15_000 },
+    fakeTimed(async () => {
+      const { settings } = device('Y9DE', [
+        [/svc data/, 'java.lang.SecurityException: not allowed\n\tat x'],
+        [/settings get global mobile_data/, '1'],
+      ]);
+      const e = await refusal(settings.set('mobile_data', 'off'));
+      expect(e.code).toBe('UNSUPPORTED');
+      expect(e.message).toBe(
+        'asked for mobile_data off and it still reads on after 10 s: java.lang.SecurityException: not allowed',
+      );
+    }),
+  );
 
   it('refuses to cut the network a device is reached over', async () => {
     for (const serial of ['192.168.1.5:5555', 'adb-R5CT-abc._adb-tls-connect._tcp']) {
@@ -182,18 +187,21 @@ describe('a fingerprint', () => {
     expect(asked.filter((c) => c.includes('finger touch'))).toEqual([]);
   });
 
-  it('touches until enrolled, lifting between, where the sensor already listens', async () => {
-    const { events, asked } = device('emulator-5554', [
-      [
-        /dumpsys fingerprint/,
-        () => prints(asked.filter((c) => c.includes('touch')).length >= 3 ? 1 : 0, 0, 0, 1),
-      ],
-    ]);
-    expect(await events.biometric('enroll')).toBeUndefined();
-    expect(asked.filter((c) => c.includes('finger touch 1'))).toHaveLength(3);
-    expect(asked.filter((c) => c.includes('finger remove'))).toHaveLength(3);
-    expect(asked.filter((c) => /lock_settings|am start/.test(c))).toEqual([]);
-  });
+  it(
+    'touches until enrolled, lifting between, where the sensor already listens',
+    fakeTimed(async () => {
+      const { events, asked } = device('emulator-5554', [
+        [
+          /dumpsys fingerprint/,
+          () => prints(asked.filter((c) => c.includes('touch')).length >= 3 ? 1 : 0, 0, 0, 1),
+        ],
+      ]);
+      expect(await events.biometric('enroll')).toBeUndefined();
+      expect(asked.filter((c) => c.includes('finger touch 1'))).toHaveLength(3);
+      expect(asked.filter((c) => c.includes('finger remove'))).toHaveLength(3);
+      expect(asked.filter((c) => /lock_settings|am start/.test(c))).toEqual([]);
+    }),
+  );
 
   it('finds the step of an enrolment screen by its kinds, not its words', () => {
     const t = tree([
@@ -219,7 +227,7 @@ describe('a fingerprint', () => {
   it(
     'sets a PIN, written down, and goes through Settings to the sensor',
     { timeout: 10_000 },
-    async () => {
+    fakeTimed(async () => {
       let listening = false;
       const asked: string[] = [];
       const adb = {
@@ -252,33 +260,36 @@ describe('a fingerprint', () => {
       expect(asked).toContain('am start -a android.settings.FINGERPRINT_ENROLL 2>&1');
       expect(asked).toContain('input tap 540 950; input text 1234; input keyevent 66 2>&1');
       expect(asked.at(-1)).toBe('input tap 900 2250 2>&1');
-    },
+    }),
   );
 
-  it('says the PIN it set when Settings never reaches the sensor, and closes Settings', async () => {
-    const asked: string[] = [];
-    const adb = {
-      exec: (_: string, c: string) => {
-        asked.push(c);
-        if (c.startsWith('cmd lock_settings verify'))
-          return Promise.resolve('Lock credential verified successfully');
-        return Promise.resolve(c.startsWith('dumpsys fingerprint') ? prints(0) : '');
-      },
-      run: () => Promise.resolve('OK'),
-    };
-    // each read of the clock a second on, so that each wait for the sensor ends at once
-    let t = 0;
-    const now = vi.spyOn(Date, 'now').mockImplementation(() => (t += 1_000));
-    const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', () =>
-      Promise.resolve(tree([])),
-    );
-    const e = await refusal(events.biometric('enroll', () => Promise.resolve()));
-    now.mockRestore();
-    expect(e.message).toBe(
-      "Settings' fingerprint enrolment did not come to its sensor in 8 screens: enrol by hand, then biometric enroll; the screen lock is PIN 1234 until restore takes it off",
-    );
-    expect(asked.at(-1)).toBe('am force-stop com.android.settings 2>&1');
-  });
+  it(
+    'says the PIN it set when Settings never reaches the sensor, and closes Settings',
+    fakeTimed(async () => {
+      const asked: string[] = [];
+      const adb = {
+        exec: (_: string, c: string) => {
+          asked.push(c);
+          if (c.startsWith('cmd lock_settings verify'))
+            return Promise.resolve('Lock credential verified successfully');
+          return Promise.resolve(c.startsWith('dumpsys fingerprint') ? prints(0) : '');
+        },
+        run: () => Promise.resolve('OK'),
+      };
+      // each read of the clock a second on, so that each wait for the sensor ends at once
+      let t = 0;
+      const now = vi.spyOn(Date, 'now').mockImplementation(() => (t += 1_000));
+      const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', () =>
+        Promise.resolve(tree([])),
+      );
+      const e = await refusal(events.biometric('enroll', () => Promise.resolve()));
+      now.mockRestore();
+      expect(e.message).toBe(
+        "Settings' fingerprint enrolment did not come to its sensor in 8 screens: enrol by hand, then biometric enroll; the screen lock is PIN 1234 until restore takes it off",
+      );
+      expect(asked.at(-1)).toBe('am force-stop com.android.settings 2>&1');
+    }),
+  );
 
   it('refuses a screen lock of its own, and a server that keeps to the app', async () => {
     const theirs = device('emulator-5554', [
@@ -336,31 +347,38 @@ describe('a fingerprint', () => {
     expect(asked.filter((c) => c.includes('finger touch'))).toEqual([]);
   });
 
-  it('is done only when the service counted it, with the finger it was asked for', async () => {
-    let touched = false;
-    const { events, asked } = device('emulator-5554', [
-      [/dumpsys fingerprint/, () => prints(1, touched ? 1 : 0, 0)],
-    ]);
-    const run = events.biometric('match');
-    await new Promise((r) => setTimeout(r, 400));
-    touched = true;
-    await run;
-    expect(asked).toContain('-s emulator-5554 emu finger touch 1');
-    const other = device('emulator-5554', [
-      [
-        /dumpsys fingerprint/,
-        () => prints(1, 0, other.asked.some((c) => c.includes('touch 99')) ? 1 : 0),
-      ],
-    ]);
-    await other.events.biometric('nomatch');
-  });
+  it(
+    'is done only when the service counted it, with the finger it was asked for',
+    fakeTimed(async () => {
+      let touched = false;
+      const { events, asked } = device('emulator-5554', [
+        [/dumpsys fingerprint/, () => prints(1, touched ? 1 : 0, 0)],
+      ]);
+      const run = events.biometric('match');
+      await new Promise((r) => setTimeout(r, 400));
+      touched = true;
+      await run;
+      expect(asked).toContain('-s emulator-5554 emu finger touch 1');
+      const other = device('emulator-5554', [
+        [
+          /dumpsys fingerprint/,
+          () => prints(1, 0, other.asked.some((c) => c.includes('touch 99')) ? 1 : 0),
+        ],
+      ]);
+      await other.events.biometric('nomatch');
+    }),
+  );
 
-  it('says when nothing took the touch', { timeout: 8_000 }, async () => {
-    const { events } = device('emulator-5554', [[/dumpsys fingerprint/, prints(1, 4, 2)]]);
-    const e = await refusal(events.biometric('match'));
-    expect(e.message).toContain('not counted as a match (4 accepted, 2 rejected)');
-    expect(e.message).toContain('an app must be asking');
-  });
+  it(
+    'says when nothing took the touch',
+    { timeout: 8_000 },
+    fakeTimed(async () => {
+      const { events } = device('emulator-5554', [[/dumpsys fingerprint/, prints(1, 4, 2)]]);
+      const e = await refusal(events.biometric('match'));
+      expect(e.message).toContain('not counted as a match (4 accepted, 2 rejected)');
+      expect(e.message).toContain('an app must be asking');
+    }),
+  );
 
   it('says when the service gives no counts', async () => {
     const { events } = device('emulator-5554', [
@@ -436,69 +454,73 @@ describe('a text size', () => {
   it(
     'puts back a scale the device never set by deleting it until it holds, and the languages the system wrote beside it',
     { timeout: 15_000 },
-    async () => {
+    fakeTimed(async () => {
       const { settings, held } = scaled('null');
       await settings.set('text_size', '1.3');
       expect(held).toEqual({ font_scale: '1.3', system_locales: 'null' });
       await settings.set('text_size', 'default');
       expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
-    },
+    }),
   );
 
   it(
     'waits for the languages the system writes late beside a scale, and deletes them again',
     { timeout: 15_000 },
-    async () => {
+    fakeTimed(async () => {
       const { settings, held } = scaled('null', false, 1_200);
       await settings.set('text_size', '1.3');
       await sleep(1_500);
       expect(held).toEqual({ font_scale: '1.3', system_locales: 'null' });
-    },
+    }),
   );
 
   it(
     'leaves the scale and the languages unset after a put-back, the system writing 1.0 beside them late',
     { timeout: 20_000 },
-    async () => {
+    fakeTimed(async () => {
       const { settings, held } = scaled('null', false, 1_200);
       await settings.set('text_size', '1.3');
       await settings.set('text_size', 'default');
       await sleep(1_500);
       expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
-    },
+    }),
   );
 
   it(
     'puts the languages back unset as they were first, after a write of them that came once their watch was over',
     { timeout: 15_000 },
-    async () => {
+    fakeTimed(async () => {
       const { settings, held } = scaled('null');
       await settings.set('text_size', '1.3');
       held.system_locales = 'en-US';
       await settings.set('text_size', 'default');
       expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
-    },
+    }),
   );
 
-  it('puts back a scale of 1.0 as 1.0', { timeout: 15_000 }, async () => {
-    const { settings, held } = scaled('1.0');
-    const was = await settings.get('text_size');
-    await settings.set('text_size', '1.3');
-    await settings.set('text_size', was);
-    expect([was, held.font_scale]).toEqual(['1.0', '1.0']);
-  });
+  it(
+    'puts back a scale of 1.0 as 1.0',
+    { timeout: 15_000 },
+    fakeTimed(async () => {
+      const { settings, held } = scaled('1.0');
+      const was = await settings.get('text_size');
+      await settings.set('text_size', '1.3');
+      await settings.set('text_size', was);
+      expect([was, held.font_scale]).toEqual(['1.0', '1.0']);
+    }),
+  );
 
   it(
     'asks again while the write of the scale before lands after it, and is done once it holds',
     { timeout: 15_000 },
-    async () => {
+    fakeTimed(async () => {
       const { settings, asked, held } = scaled('1.3', true);
       await settings.set('text_size', 'default');
       expect(asked.filter((c) => c.startsWith('settings delete system font_scale'))).toHaveLength(
         3,
       );
       expect(held).toEqual({ font_scale: 'null', system_locales: 'null' });
-    },
+    }),
   );
 
   it('says what the device said when it refuses a scale', async () => {
@@ -623,7 +645,7 @@ describe("the whole device's languages", () => {
   it(
     'leave the text scale and the languages the device had unset still unset, when set and when put back, however late the system writes them',
     { timeout: 20_000 },
-    async () => {
+    fakeTimed(async () => {
       for (const lag of [0, 1_200]) {
         const held: Record<string, string> = { font_scale: 'null', system_locales: 'null' };
         let tags = 'en-US';
@@ -659,7 +681,7 @@ describe("the whole device's languages", () => {
         await sleep(lag);
         expect([await settings.get('locale'), held]).toEqual(['en-US', unset]);
       }
-    },
+    }),
   );
 });
 

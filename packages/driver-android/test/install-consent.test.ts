@@ -13,6 +13,7 @@ import {
   type InstallScreen,
   type InstallStep,
 } from '../src/install-consent.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 /**
  * fixtures/install/*.json are real: agent reads of the prompts on a Xiaomi 25078RA3EY (HyperOS 3, Android 16, tr-TR),
@@ -504,18 +505,23 @@ describe('install', () => {
     expect(screen.presses).toEqual([]);
   });
 
-  it('says so when the phone says no to a prompt it tapped, and names the setting', async () => {
-    const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }], { opensLater: true });
-    // the prompt said no a moment after the touch
-    const refused = () => new Promise<void>((r) => setTimeout(r, 2_500)).then(restricted);
-    const e = await new AndroidApps(adb(refused), 'phone', screen)
-      .install(APK)
-      .catch((x: unknown) => x);
-    expect(screen.presses).toHaveLength(1);
-    expect((e as DeviceError).message).toContain('though its prompt was tapped');
-    expect((e as DeviceError).message).toContain('tapped "Yükle"');
-    expect((e as DeviceError).hint).toContain('USB debugging (Security settings)');
-  });
+  it(
+    'says so when the phone says no to a prompt it tapped, and names the setting',
+    fakeTimed(async () => {
+      const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }], {
+        opensLater: true,
+      });
+      // the prompt said no a moment after the touch
+      const refused = () => new Promise<void>((r) => setTimeout(r, 2_500)).then(restricted);
+      const e = await new AndroidApps(adb(refused), 'phone', screen)
+        .install(APK)
+        .catch((x: unknown) => x);
+      expect(screen.presses).toHaveLength(1);
+      expect((e as DeviceError).message).toContain('though its prompt was tapped');
+      expect((e as DeviceError).message).toContain('tapped "Yükle"');
+      expect((e as DeviceError).hint).toContain('USB debugging (Security settings)');
+    }),
+  );
 
   it('returns at once where no prompt comes, and says nothing', async () => {
     const screen = phone([{ focus: 'Window{0 u0 launcher}' }]);

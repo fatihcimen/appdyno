@@ -19,7 +19,7 @@ import {
   defineOp,
   DEFAULT_POLICY,
   flowFiles,
-  flowsFor,
+  flowsFor as runnerOf,
   flowsTagged,
   paramsOf,
   reply,
@@ -28,7 +28,18 @@ import {
 } from '../src/index.js';
 import { FakeDevice, WithKeyboard } from '@appdyno/testing/fake-device.js';
 import { SCREENS } from '@appdyno/testing/fake-screens.js';
-import { callerOf } from '@appdyno/testing/calls.js';
+import { callerOf as callsOf } from '@appdyno/testing/calls.js';
+import { onFakeTime } from '@appdyno/testing/fake-time.js';
+
+// a run's waits, a miss's and an app's end's, are the code's: the clock is faked, and runs on while a call is under way
+const callerOf = (ctx: ServerContext) => callsOf(ctx, onFakeTime);
+const flowsFor = (ctx: ServerContext) => {
+  const flows = runnerOf(ctx);
+  return {
+    replay: (...a: Parameters<typeof flows.replay>) => onFakeTime(flows.replay(...a)),
+    test: (...a: Parameters<typeof flows.test>) => onFakeTime(flows.test(...a)),
+  };
+};
 
 const SECRET = 's3cr3t-pass';
 
@@ -66,8 +77,12 @@ describe('flows', () => {
     dir = mkdtempSync(join(tmpdir(), 'appdyno-flow-'));
     vi.stubEnv('APPDYNO_STATE_DIR', join(dir, 'state'));
     device = new FakeDevice();
+    vi.useFakeTimers();
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
 
   const recorded = async (
     call: ReturnType<typeof callerOf>,
@@ -684,11 +699,7 @@ assert id=result check=text equals="Gönderildi"
     it('stops at a miss with the nearest candidates, the screen, the step and the line', async () => {
       const ctx = context();
       const file = flowFile(`app dev.app\n\n# the form\ntap text="Formm"\ntap text="Form"\n`);
-      vi.useFakeTimers();
-      const p = refusal(callerOf(ctx)('flow', { action: 'run', file }));
-      await vi.advanceTimersByTimeAsync(30_000);
-      const e = await p;
-      vi.useRealTimers();
+      const e = await refusal(callerOf(ctx)('flow', { action: 'run', file }));
       expect(e.code).toBe('NOT_FOUND');
       expect(e.message).toContain(`${file}:4: step 1 failed: tap text="Formm"`);
       expect(e.message).toContain('nearest: ');

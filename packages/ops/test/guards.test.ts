@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, ToolError } from '../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const contextOf = (device: FakeDevice) =>
   new ServerContext(
@@ -144,28 +145,34 @@ describe('what did not happen is no success', () => {
     expect(r.content[0]?.text).toContain('no system alert is open');
   });
 
-  it('a sequence stops at an answer to no alert', async () => {
-    const device = new FakeDevice();
-    const e = await refusal(
-      callerOf(contextOf(device))('steps', {
-        steps: [
-          { action: 'alert', answer: 'allow' },
-          { action: 'press_key', key: 'back' },
-        ],
-      }),
-    );
-    expect(e.code).toBe('NOT_FOUND');
-    expect(namesOf(device)).not.toContain('act');
-  });
+  it(
+    'a sequence stops at an answer to no alert',
+    fakeTimed(async () => {
+      const device = new FakeDevice();
+      const e = await refusal(
+        callerOf(contextOf(device))('steps', {
+          steps: [
+            { action: 'alert', answer: 'allow' },
+            { action: 'press_key', key: 'back' },
+          ],
+        }),
+      );
+      expect(e.code).toBe('NOT_FOUND');
+      expect(namesOf(device)).not.toContain('act');
+    }),
+  );
 });
 
 describe('a failed action says whether its touch went out', () => {
-  it('no: nothing named the target', async () => {
-    const call = callerOf(contextOf(new FakeDevice()));
-    const e = await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
-    expect(e.dispatched).toBe(false);
-    expect(e.message).toContain('no touch was sent');
-  });
+  it(
+    'no: nothing named the target',
+    fakeTimed(async () => {
+      const call = callerOf(contextOf(new FakeDevice()));
+      const e = await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
+      expect(e.dispatched).toBe(false);
+      expect(e.message).toContain('no touch was sent');
+    }),
+  );
 
   it('no: the device refused before the touch', async () => {
     const device = new FakeDevice();
@@ -225,22 +232,25 @@ describe('a failed action says whether its touch went out', () => {
     expect(e.message).toContain('the touch was sent');
   });
 
-  it('says it in a sequence, and to a client in its data', async () => {
-    const device = new FakeDevice();
-    const ctx = contextOf(device);
-    const e = await refusal(
-      callerOf(ctx)('steps', {
-        steps: [{ action: 'tap', selector: { text: 'Nothing like it' } }],
-      }),
-    );
-    expect(e.dispatched).toBe(false);
-    const client = await linkedClient(ctx);
-    const r = (await client.callTool({
-      name: 'tap',
-      arguments: { selector: { text: 'Nothing like it' } },
-    })) as { structuredContent: Record<string, unknown> };
-    expect(r.structuredContent.dispatched).toBe(false);
-  });
+  it(
+    'says it in a sequence, and to a client in its data',
+    fakeTimed(async () => {
+      const device = new FakeDevice();
+      const ctx = contextOf(device);
+      const e = await refusal(
+        callerOf(ctx)('steps', {
+          steps: [{ action: 'tap', selector: { text: 'Nothing like it' } }],
+        }),
+      );
+      expect(e.dispatched).toBe(false);
+      const client = await linkedClient(ctx);
+      const r = (await client.callTool({
+        name: 'tap',
+        arguments: { selector: { text: 'Nothing like it' } },
+      })) as { structuredContent: Record<string, unknown> };
+      expect(r.structuredContent.dispatched).toBe(false);
+    }),
+  );
 });
 
 describe('a touch looks first', () => {

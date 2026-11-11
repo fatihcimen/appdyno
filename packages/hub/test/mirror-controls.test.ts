@@ -6,6 +6,7 @@ import { afterAll, describe, expect, it, vi, type Mock } from 'vitest';
 import { stamp, windowControls, windowLook, type WindowSession } from '../src/controls.js';
 import { MEASURE_YOURS, WAKE_AND_OPEN } from '../src/measures.js';
 import { DEFAULT_POLICY, PROBE_HINT, type JourneyAnswer, type Policy } from '@appdyno/ops';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
 vi.mock('node:os', async (real) => ({
@@ -132,19 +133,22 @@ describe("a window's controls", () => {
     await vi.waitFor(() => expect(turns).toEqual([[3], [0]]), WAIT);
   });
 
-  it('says so when the app in front does not turn, and asks for no turn it would keep', async () => {
-    const { controls, told, device } = fixture('android', {
-      setOrientation: vi.fn(() => Promise.resolve(undefined)),
-    });
-    controls.press('rotateRight');
-    await vi.waitFor(
-      () => expect(told).toContainEqual({ op: 'note', text: 'The app in front does not turn' }),
-      WAIT,
-    );
-    expect(mocks(device).setOrientation.mock.calls).toEqual([[3], [0]]);
-    controls.press('rotateLeft');
-    await vi.waitFor(() => expect(mocks(device).setOrientation.mock.calls[2]).toEqual([1]), WAIT);
-  });
+  it(
+    'says so when the app in front does not turn, and asks for no turn it would keep',
+    fakeTimed(async () => {
+      const { controls, told, device } = fixture('android', {
+        setOrientation: vi.fn(() => Promise.resolve(undefined)),
+      });
+      controls.press('rotateRight');
+      await vi.waitFor(
+        () => expect(told).toContainEqual({ op: 'note', text: 'The app in front does not turn' }),
+        WAIT,
+      );
+      expect(mocks(device).setOrientation.mock.calls).toEqual([[3], [0]]);
+      controls.press('rotateLeft');
+      await vi.waitFor(() => expect(mocks(device).setOrientation.mock.calls[2]).toEqual([1]), WAIT);
+    }),
+  );
 
   it('says what went wrong beneath the device, and goes on', async () => {
     const { controls, told } = fixture('ios', {
@@ -635,55 +639,58 @@ describe("a window's measures", () => {
     }
   });
 
-  it('tell the pane of the app in front as it changes, where the measures ask each turn', async () => {
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-    try {
-      const foreground = vi.fn(() => Promise.resolve('dev.app'));
-      // the numbers are not what this is about: each read says it has none
-      const measure = new Proxy(
-        { slowReads: [] },
-        {
-          get: (t, k) =>
-            k === 'slowReads' ? t.slowReads : () => Promise.reject(new Error('none')),
-        },
-      );
-      const { controls, told, measures } = fixture('android', {
-        measure,
-        apps: {
-          listApps: () =>
-            Promise.resolve([
-              { id: 'dev.app', name: 'App' },
-              { id: 'dev.other', name: 'Other' },
-            ]),
-        },
-        foreground,
-      } as unknown as Partial<Device>);
-      const results = () => told.filter((m) => m.op === 'results');
-      controls.onWindow({ op: 'perfWatch', on: true });
-      await vi.waitFor(
-        () => expect(results()).toEqual([{ op: 'results', results: [], app: 'App' }]),
-        WAIT,
-      );
-      foreground.mockResolvedValue('dev.other');
-      vi.advanceTimersByTime(5_000);
-      await vi.waitFor(() => expect(results().at(-1)).toMatchObject({ app: 'Other' }), WAIT);
-      expect(measures.history).toHaveBeenLastCalledWith('dev.other');
-      // what is the system's has no name: the pane asks for an app again
-      foreground.mockResolvedValue('com.android.launcher');
-      vi.advanceTimersByTime(5_000);
-      await vi.waitFor(
-        () => expect(results().at(-1)).toEqual({ op: 'results', results: [] }),
-        WAIT,
-      );
-      controls.onWindow({ op: 'perfWatch', on: false });
-      await controls.end();
-      foreground.mockClear();
-      vi.advanceTimersByTime(20_000);
-      expect(foreground).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+  it(
+    'tell the pane of the app in front as it changes, where the measures ask each turn',
+    fakeTimed(async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+      try {
+        const foreground = vi.fn(() => Promise.resolve('dev.app'));
+        // the numbers are not what this is about: each read says it has none
+        const measure = new Proxy(
+          { slowReads: [] },
+          {
+            get: (t, k) =>
+              k === 'slowReads' ? t.slowReads : () => Promise.reject(new Error('none')),
+          },
+        );
+        const { controls, told, measures } = fixture('android', {
+          measure,
+          apps: {
+            listApps: () =>
+              Promise.resolve([
+                { id: 'dev.app', name: 'App' },
+                { id: 'dev.other', name: 'Other' },
+              ]),
+          },
+          foreground,
+        } as unknown as Partial<Device>);
+        const results = () => told.filter((m) => m.op === 'results');
+        controls.onWindow({ op: 'perfWatch', on: true });
+        await vi.waitFor(
+          () => expect(results()).toEqual([{ op: 'results', results: [], app: 'App' }]),
+          WAIT,
+        );
+        foreground.mockResolvedValue('dev.other');
+        vi.advanceTimersByTime(5_000);
+        await vi.waitFor(() => expect(results().at(-1)).toMatchObject({ app: 'Other' }), WAIT);
+        expect(measures.history).toHaveBeenLastCalledWith('dev.other');
+        // what is the system's has no name: the pane asks for an app again
+        foreground.mockResolvedValue('com.android.launcher');
+        vi.advanceTimersByTime(5_000);
+        await vi.waitFor(
+          () => expect(results().at(-1)).toEqual({ op: 'results', results: [] }),
+          WAIT,
+        );
+        controls.onWindow({ op: 'perfWatch', on: false });
+        await controls.end();
+        foreground.mockClear();
+        vi.advanceTimersByTime(20_000);
+        expect(foreground).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    }),
+  );
 
   it('open the page of every kept run', async () => {
     const { controls, measures } = fixture('ios');

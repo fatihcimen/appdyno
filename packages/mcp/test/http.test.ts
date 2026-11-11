@@ -13,6 +13,7 @@ import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { REVISIONS, type Revision } from '@appdyno/testing/calls.js';
 import { listenOn, serveHttp } from '../src/http.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const TOKEN = 'a-token-of-the-length-it-should-have';
 const bearer = { authorization: `Bearer ${TOKEN}` };
@@ -365,19 +366,22 @@ describe('one client at a time', () => {
     expect(await stranger.text()).toContain('client-a has held it since');
   });
 
-  it('leaves the holder its calls and its time, whatever a refused client tries', async () => {
-    const { url, dark } = await serving(1_000);
-    const a = await clientOf(url, 'client-a');
-    const b = await clientOf(url, 'client-b');
-    await a.callTool({ name: 'device_setting', arguments: { name: 'dark_mode', value: 'yes' } });
-    const end = Date.now() + 3_000;
-    // retries faster than the idle time: a seat that lapsed anyway is one they did not keep
-    while (dark.value === 'yes' && Date.now() < end) {
-      await b.callTool({ name: 'list_devices' }).catch(() => undefined);
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    expect(dark.value).toBe('no');
-  });
+  it(
+    'leaves the holder its calls and its time, whatever a refused client tries',
+    fakeTimed(async () => {
+      const { url, dark } = await serving(1_000);
+      const a = await clientOf(url, 'client-a');
+      const b = await clientOf(url, 'client-b');
+      await a.callTool({ name: 'device_setting', arguments: { name: 'dark_mode', value: 'yes' } });
+      const end = Date.now() + 3_000;
+      // retries faster than the idle time: a seat that lapsed anyway is one they did not keep
+      while (dark.value === 'yes' && Date.now() < end) {
+        await b.callTool({ name: 'list_devices' }).catch(() => undefined);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(dark.value).toBe('no');
+    }),
+  );
 
   it('holds nothing for a client that only looked, as a health check does', async () => {
     const { url, contexts } = await serving();
@@ -412,17 +416,20 @@ describe('when the client has gone', () => {
     expect(contexts.length).toBeGreaterThan(1);
   });
 
-  it('does not count a client as gone while a call of its own runs', async () => {
-    // the idle time outlasts the gap between two calls on a slow Mac, and the second call outlasts it
-    const { url, dark } = await serving(500);
-    const client = await clientOf(url);
-    await client.callTool({
-      name: 'device_setting',
-      arguments: { name: 'dark_mode', value: 'yes' },
-    });
-    await client.callTool({ name: 'wait_for', arguments: { text: 'never', timeoutMs: 1_000 } });
-    expect(dark.value).toBe('yes');
-  });
+  it(
+    'does not count a client as gone while a call of its own runs',
+    fakeTimed(async () => {
+      // the idle time outlasts the gap between two calls on a slow Mac, and the second call outlasts it
+      const { url, dark } = await serving(500);
+      const client = await clientOf(url);
+      await client.callTool({
+        name: 'device_setting',
+        arguments: { name: 'dark_mode', value: 'yes' },
+      });
+      await client.callTool({ name: 'wait_for', arguments: { text: 'never', timeoutMs: 1_000 } });
+      expect(dark.value).toBe('yes');
+    }),
+  );
 
   it('holds no call of a stopped server, and ends the seat', async () => {
     const { url, dark, stop } = await serving();

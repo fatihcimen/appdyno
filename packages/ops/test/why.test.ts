@@ -22,6 +22,7 @@ import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf } from '@appdyno/testing/calls.js';
+import { onFakeTime } from '@appdyno/testing/fake-time.js';
 
 // the Mac's load is this test's to set: under load the gate calls no regression, and nothing is looked at
 const host = vi.hoisted(() => ({ load: 1 }));
@@ -35,8 +36,12 @@ const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-why-'));
 beforeEach(() => {
   host.load = 1;
   vi.stubEnv('APPDYNO_STATE_DIR', fresh());
+  vi.useFakeTimers();
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 
 const measured = <T>(value: T) => ({ value, raw: 'raw', at: new Date().toISOString() });
 
@@ -109,7 +114,7 @@ function phone(overrides: Partial<MeasureSource> = {}, policy = DEFAULT_POLICY) 
     ],
     { device: device.serial, app: 'dev.app', storage: { measurements, perf } },
   );
-  return { device, ctx, measurements, perf, looks, costs, call: callerOf(ctx) };
+  return { device, ctx, measurements, perf, looks, costs, call: callerOf(ctx, onFakeTime) };
 }
 
 type Phone = ReturnType<typeof phone>;

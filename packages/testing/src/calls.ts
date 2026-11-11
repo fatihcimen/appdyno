@@ -38,15 +38,23 @@ export const checkedOps = (ctx: ServerContext): Record<string, Op> =>
     ]),
   );
 
-/** Calls operations as their tools do: through their input schema, with their text and data back. */
-export const callerOf = (ctx: ServerContext) => {
+/**
+ * Calls operations as their tools do: through their input schema, with their text and data back. `on` runs each call,
+ * as `onFakeTime` does on a faked clock.
+ */
+export const callerOf = (
+  ctx: ServerContext,
+  on: (work: Promise<OpResult>) => Promise<OpResult> = (work) => work,
+) => {
   const ops = checkedOps(ctx);
   return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const op = must(ops[name], `the op ${name}`);
-    const r = await op.handler(op.input.parse(args));
+    const r = await on(op.handler(op.input.parse(args)));
     return { text: textOf(r.blocks), data: r.data as OpData<N> };
   };
 };
+
+type OpResult = Awaited<ReturnType<Op['handler']>>;
 
 /** One tool on a phone that answers `measures`: its answer, and what was kept of it, none if nothing was. */
 export async function keptBy(

@@ -19,6 +19,7 @@ import {
 } from '../src/simtree.js';
 import { touchEvents } from '../src/simtouch.js';
 import type { HelperProcess } from '../src/simhelper.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const SCREEN = { w: 402, h: 874 };
 const cell = (label: string, y: number, extra: Partial<RawAx> = {}): RawAx => ({
@@ -426,15 +427,18 @@ describe('a reaction that begins after the settle', () => {
     );
   };
 
-  it('is settled in turn, not answered at its first frame', async () => {
-    const settleOf = (r: { result: object }) =>
-      (r.result as { settle: { settled: boolean; ms: number } }).settle;
-    expect(settleOf(await late(true)).settled).toBe(false);
-    const once = await late(false);
-    expect(settleOf(once).settled).toBe(true);
-    expect(settleOf(once).ms).toBeGreaterThanOrEqual(800);
-    expect(once.moved).toBe(true);
-  });
+  it(
+    'is settled in turn, not answered at its first frame',
+    fakeTimed(async () => {
+      const settleOf = (r: { result: object }) =>
+        (r.result as { settle: { settled: boolean; ms: number } }).settle;
+      expect(settleOf(await late(true)).settled).toBe(false);
+      const once = await late(false);
+      expect(settleOf(once).settled).toBe(true);
+      expect(settleOf(once).ms).toBeGreaterThanOrEqual(800);
+      expect(once.moved).toBe(true);
+    }),
+  );
 });
 
 describe('the helpers prove themselves', () => {

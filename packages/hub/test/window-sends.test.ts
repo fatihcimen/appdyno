@@ -8,6 +8,7 @@ import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { windowSends } from '../src/window-sends.js';
 import { followDevice } from '../src/follow.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 describe('what a window sends to its device', () => {
   let state: string;
@@ -231,69 +232,72 @@ describe('what a window sends to its device', () => {
     expect(device.calls.filter((c) => c.name === 'openUrl')).toHaveLength(1);
   });
 
-  it("keeps a person's push token for the app in the pane, by no op, and says it back nowhere", async () => {
-    const token = 'c0ffee'.repeat(11);
-    const device = new FakeDevice();
-    const kept: unknown[][] = [];
-    device.events = {
-      pushToken: (...args: unknown[]) => {
-        if (args[1] === 'short') throw new DeviceError('INVALID_ARGUMENT', 'a token is hex');
-        kept.push(args);
-      },
-    } as unknown as DeviceEvents;
-    const seen: Record<string, unknown>[] = [];
-    const off = followDevice(device.serial, { tell: (m) => seen.push(m) });
-    const logged = (['log', 'info', 'warn', 'error', 'debug'] as const).map((level) =>
-      vi.spyOn(console, level),
-    );
-    const { sends, told, answer } = sendsOn(device, { ...DEFAULT_POLICY, apps: ['dev.app'] });
-    const keep = (m: Record<string, unknown>) => {
-      told.length = 0;
-      expect(sends.onWindow({ op: 'control', name: 'pushToken', ...m })).toBe(true);
-      return answer();
-    };
-    try {
-      expect(await keep({ app: ' dev.app ', token: ` ${token} `, kind: 'start' })).toEqual({
-        op: 'answer',
-        name: 'push',
-        ok: true,
-        text: "Kept dev.app's start token for this session only",
-      });
-      expect(kept).toEqual([['dev.app', token, 'start']]);
-      // each refused, with nothing kept and the token in no answer
-      const refusals = [
-        await keep({ app: 'com.other', token, kind: 'device' }),
-        await keep({ app: '', token, kind: 'device' }),
-        await keep({ app: 'dev.app', token, kind: 'session' }),
-        await keep({ app: 'dev.app', token: 'short', kind: 'device' }),
-      ];
-      expect(refusals.map((r) => [r.ok, r.text])).toEqual([
-        [false, expect.stringContaining('com.other is not an allowed app')],
-        [false, 'give the app the token is for'],
-        [false, 'kind: device, activity, start, voip, widget'],
-        [false, 'a token is hex'],
-      ]);
-      expect(kept).toHaveLength(1);
-      device.events = {} as DeviceEvents;
-      expect(await keep({ app: 'dev.app', token, kind: 'device' })).toMatchObject({
-        ok: false,
-        text: 'this device takes no token a person types',
-      });
-      await new Promise((r) => setTimeout(r, 600));
-      expect(seen.filter((m) => m.op === 'agent' || m.op === 'activity')).toEqual([]);
-      const files = readdirSync(state, { recursive: true, withFileTypes: true }).filter((f) =>
-        f.isFile(),
+  it(
+    "keeps a person's push token for the app in the pane, by no op, and says it back nowhere",
+    fakeTimed(async () => {
+      const token = 'c0ffee'.repeat(11);
+      const device = new FakeDevice();
+      const kept: unknown[][] = [];
+      device.events = {
+        pushToken: (...args: unknown[]) => {
+          if (args[1] === 'short') throw new DeviceError('INVALID_ARGUMENT', 'a token is hex');
+          kept.push(args);
+        },
+      } as unknown as DeviceEvents;
+      const seen: Record<string, unknown>[] = [];
+      const off = followDevice(device.serial, { tell: (m) => seen.push(m) });
+      const logged = (['log', 'info', 'warn', 'error', 'debug'] as const).map((level) =>
+        vi.spyOn(console, level),
       );
-      const written = files.map((f) => readFileSync(join(f.parentPath, f.name), 'utf8'));
-      const logs = logged.flatMap((spy) => spy.mock.calls.flat().map(String));
-      for (const said of [JSON.stringify(told), JSON.stringify(seen), ...written, ...logs])
-        expect(said).not.toContain(token);
-      expect(device.calls).toEqual([]);
-    } finally {
-      off();
-      logged.forEach((spy) => spy.mockRestore());
-    }
-  });
+      const { sends, told, answer } = sendsOn(device, { ...DEFAULT_POLICY, apps: ['dev.app'] });
+      const keep = (m: Record<string, unknown>) => {
+        told.length = 0;
+        expect(sends.onWindow({ op: 'control', name: 'pushToken', ...m })).toBe(true);
+        return answer();
+      };
+      try {
+        expect(await keep({ app: ' dev.app ', token: ` ${token} `, kind: 'start' })).toEqual({
+          op: 'answer',
+          name: 'push',
+          ok: true,
+          text: "Kept dev.app's start token for this session only",
+        });
+        expect(kept).toEqual([['dev.app', token, 'start']]);
+        // each refused, with nothing kept and the token in no answer
+        const refusals = [
+          await keep({ app: 'com.other', token, kind: 'device' }),
+          await keep({ app: '', token, kind: 'device' }),
+          await keep({ app: 'dev.app', token, kind: 'session' }),
+          await keep({ app: 'dev.app', token: 'short', kind: 'device' }),
+        ];
+        expect(refusals.map((r) => [r.ok, r.text])).toEqual([
+          [false, expect.stringContaining('com.other is not an allowed app')],
+          [false, 'give the app the token is for'],
+          [false, 'kind: device, activity, start, voip, widget'],
+          [false, 'a token is hex'],
+        ]);
+        expect(kept).toHaveLength(1);
+        device.events = {} as DeviceEvents;
+        expect(await keep({ app: 'dev.app', token, kind: 'device' })).toMatchObject({
+          ok: false,
+          text: 'this device takes no token a person types',
+        });
+        await new Promise((r) => setTimeout(r, 600));
+        expect(seen.filter((m) => m.op === 'agent' || m.op === 'activity')).toEqual([]);
+        const files = readdirSync(state, { recursive: true, withFileTypes: true }).filter((f) =>
+          f.isFile(),
+        );
+        const written = files.map((f) => readFileSync(join(f.parentPath, f.name), 'utf8'));
+        const logs = logged.flatMap((spy) => spy.mock.calls.flat().map(String));
+        for (const said of [JSON.stringify(told), JSON.stringify(seen), ...written, ...logs])
+          expect(said).not.toContain(token);
+        expect(device.calls).toEqual([]);
+      } finally {
+        off();
+        logged.forEach((spy) => spy.mockRestore());
+      }
+    }),
+  );
 
   it('leaves what is not its own to the rest of the window', () => {
     const { sends } = sendsOn(new FakeDevice());
@@ -301,16 +305,19 @@ describe('what a window sends to its device', () => {
     expect(sends.onWindow({ op: 'app', action: 'list' })).toBe(false);
   });
 
-  it("keeps a person's own link out of what an agent is said to do", async () => {
-    const device = new FakeDevice();
-    const seen: Record<string, unknown>[] = [];
-    const off = followDevice(device.serial, { tell: (m) => seen.push(m) });
-    try {
-      await sendsOn(device).open('app://screen/form');
-      await new Promise((r) => setTimeout(r, 600));
-      expect(seen.filter((m) => m.op === 'agent' || m.op === 'activity')).toEqual([]);
-    } finally {
-      off();
-    }
-  });
+  it(
+    "keeps a person's own link out of what an agent is said to do",
+    fakeTimed(async () => {
+      const device = new FakeDevice();
+      const seen: Record<string, unknown>[] = [];
+      const off = followDevice(device.serial, { tell: (m) => seen.push(m) });
+      try {
+        await sendsOn(device).open('app://screen/form');
+        await new Promise((r) => setTimeout(r, 600));
+        expect(seen.filter((m) => m.op === 'agent' || m.op === 'activity')).toEqual([]);
+      } finally {
+        off();
+      }
+    }),
+  );
 });

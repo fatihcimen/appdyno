@@ -8,6 +8,7 @@ import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_POLICY, flowsFor, ServerContext, ToolError } from '../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf } from '@appdyno/testing/calls.js';
+import { onFakeTime } from '@appdyno/testing/fake-time.js';
 
 // the Mac's load is this test's to set: what the gate says under it is part of what is tested
 const host = vi.hoisted(() => ({ load: 1 }));
@@ -21,8 +22,12 @@ const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-journey-'));
 beforeEach(() => {
   host.load = 1;
   vi.stubEnv('APPDYNO_STATE_DIR', fresh());
+  vi.useFakeTimers();
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 
 /**
  * A phone whose tap on "Form" takes `formMs` and any other touch 200 ms, a little apart from one to the next. Its tap on
@@ -66,7 +71,7 @@ function phone(overrides: Partial<MeasureSource> = {}) {
     ],
     { device: device.serial, app: 'dev.app', storage: { measurements, perf } },
   );
-  return { device, ctx, measurements, perf, call: callerOf(ctx) };
+  return { device, ctx, measurements, perf, call: callerOf(ctx, onFakeTime) };
 }
 
 const JOURNEY = 'launch\ntap text="Form"\nassert text="Bilgiler"\n';
@@ -333,14 +338,16 @@ describe('a journey as a performance scenario', () => {
     const artifacts = fresh();
     const junit = join(artifacts, 'junit.xml');
     const logged: string[] = [];
-    const r = await flowsFor(ctx).test({
-      files: [flowFile(JOURNEY, 'a.flow')],
-      devices: [],
-      artifacts,
-      junit,
-      iterations: 2,
-      log: (l) => logged.push(l),
-    });
+    const r = await onFakeTime(
+      flowsFor(ctx).test({
+        files: [flowFile(JOURNEY, 'a.flow')],
+        devices: [],
+        artifacts,
+        junit,
+        iterations: 2,
+        log: (l) => logged.push(l),
+      }),
+    );
     expect(r.passed).toBe(true);
     expect(logged.join('\n')).toContain('journey-a: 2 iterations');
     expect(readFileSync(junit, 'utf8')).toContain('journey-a: 2 iterations');

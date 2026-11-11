@@ -6,7 +6,7 @@ import {
   type DeviceProvider,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { busyReasons } from '../src/answers.js';
 import { ServerContext } from '../src/context.js';
@@ -16,6 +16,11 @@ import { ActionOut, CrashesOut, LogsOut } from '../src/schemas.js';
 import { defineOp, READ, reply, ToolError } from '../src/tool.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
+import { onFakeTime } from '@appdyno/testing/fake-time.js';
+
+// a settle's wait, a crash report's and a deadline are the code's: the clock is faked, and runs on under a call
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
 
 type Result = {
   isError?: boolean;
@@ -32,7 +37,7 @@ async function connect(device: Device = new FakeDevice(), policy: Partial<Policy
   const ctx = new ServerContext({ ...DEFAULT_POLICY, ...policy }, [provider], { app: 'dev.app' });
   const client = await linkedClient(ctx);
   const call = async (name: string, args: Record<string, unknown> = {}) => {
-    const r = (await client.callTool({ name, arguments: args })) as Result;
+    const r = (await onFakeTime(client.callTool({ name, arguments: args }))) as Result;
     return { ...r, text: r.content.map((c) => c.text ?? '').join('\n') };
   };
   return { client, call, ctx };
@@ -301,7 +306,7 @@ describe('failed answers', () => {
 describe('an answer', () => {
   it('is known by its op’s name to what calls it', async () => {
     const { ctx } = await connect();
-    const call = callerOf(ctx);
+    const call = callerOf(ctx, onFakeTime);
     const { data } = await call('find', { text: 'Form' });
     expect(data.matches[0]?.label).toBe('Form');
     // @ts-expect-error: no such key in the schema of find
@@ -383,11 +388,11 @@ describe('cancellation and progress', () => {
     );
     setTimeout(() => abort.abort(), 50);
     const t = Date.now();
-    await expect(waiting).rejects.toThrow();
+    await expect(onFakeTime(waiting)).rejects.toThrow();
     expect(Date.now() - t).toBeLessThan(5_000);
-    await new Promise((r) => setTimeout(r, 400));
+    await vi.advanceTimersByTimeAsync(400);
     const reads = device.calls.length;
-    await new Promise((r) => setTimeout(r, 700));
+    await vi.advanceTimersByTimeAsync(700);
     expect(device.calls.length).toBe(reads);
   });
 
@@ -400,11 +405,13 @@ describe('cancellation and progress', () => {
     };
     const { client } = await connect(device);
     const seen: (string | undefined)[] = [];
-    await client.callTool(
-      { name: 'launch_app', arguments: {} },
-      {
-        onprogress: (p) => seen.push(p.message),
-      },
+    await onFakeTime(
+      client.callTool(
+        { name: 'launch_app', arguments: {} },
+        {
+          onprogress: (p) => seen.push(p.message),
+        },
+      ),
     );
     expect(seen).toEqual(
       expect.arrayContaining([
@@ -413,7 +420,9 @@ describe('cancellation and progress', () => {
         'deep in the driver',
       ]),
     );
-    await expect(client.callTool({ name: 'launch_app', arguments: {} })).resolves.toBeDefined();
+    await expect(
+      onFakeTime(client.callTool({ name: 'launch_app', arguments: {} })),
+    ).resolves.toBeDefined();
   });
 });
 

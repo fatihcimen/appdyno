@@ -9,6 +9,7 @@ import { IosPhoneDevice } from '../src/phone.js';
 import { startPhase } from '../src/runner.js';
 import type { Tree } from '@appdyno/protocol';
 import { assertBundle, assertUdid, type Simctl } from '../src/simctl.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 describe('simulator inputs', () => {
   it('takes only a simulator id, never "booted" or a name', () => {
@@ -157,28 +158,31 @@ describe('what a device measures', () => {
     expect(phone().slowReads).toEqual(['memory', 'frames', 'resetFrames']);
   });
 
-  it("a simulator counts what it is given by the clock, whatever another reader's reset said meanwhile", async () => {
-    const state = mkdtempSync(join(tmpdir(), 'appdyno-probe-'));
-    vi.stubEnv('APPDYNO_STATE_DIR', state);
-    try {
-      const perf = simulator();
-      Object.assign(perf, { pid: () => Promise.resolve(42) });
-      const file = join(state, 'probes', '7994F239-7CD7-4247-9FC0-4F92C7CFC951-a.b.jsonl');
-      mkdirSync(dirname(file), { recursive: true });
-      const line = (l: object) => `${JSON.stringify(l)}\n`;
-      writeFileSync(file, line({ loaded: 'a.b', pid: 42, t: Date.now() - 5_000 }));
-      const m = await perf.framesDuring('a.b', 1, () => {
-        const t = Date.now();
-        const frame = (at: number) => line({ t: at, dt: 16.7, v: 16.7 });
-        // a timeline's reader, as it was, reset the probe's count between two frames of the scroll
-        appendFileSync(file, frame(t + 1) + frame(t + 2) + line({ reset: t + 3 }) + frame(t + 4));
-        return Promise.resolve();
-      });
-      expect(m.value.totalFrames).toBe(3);
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
+  it(
+    "a simulator counts what it is given by the clock, whatever another reader's reset said meanwhile",
+    fakeTimed(async () => {
+      const state = mkdtempSync(join(tmpdir(), 'appdyno-probe-'));
+      vi.stubEnv('APPDYNO_STATE_DIR', state);
+      try {
+        const perf = simulator();
+        Object.assign(perf, { pid: () => Promise.resolve(42) });
+        const file = join(state, 'probes', '7994F239-7CD7-4247-9FC0-4F92C7CFC951-a.b.jsonl');
+        mkdirSync(dirname(file), { recursive: true });
+        const line = (l: object) => `${JSON.stringify(l)}\n`;
+        writeFileSync(file, line({ loaded: 'a.b', pid: 42, t: Date.now() - 5_000 }));
+        const m = await perf.framesDuring('a.b', 1, () => {
+          const t = Date.now();
+          const frame = (at: number) => line({ t: at, dt: 16.7, v: 16.7 });
+          // a timeline's reader, as it was, reset the probe's count between two frames of the scroll
+          appendFileSync(file, frame(t + 1) + frame(t + 2) + line({ reset: t + 3 }) + frame(t + 4));
+          return Promise.resolve();
+        });
+        expect(m.value.totalFrames).toBe(3);
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    }),
+  );
 
   it('each says what it has no way of measuring', async () => {
     const sim = simulator();

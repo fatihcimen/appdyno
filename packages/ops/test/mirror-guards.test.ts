@@ -12,6 +12,7 @@ import { removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { reply, type Op } from '../src/tool.js';
 import { z } from 'zod';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-guards-'));
 const before = process.env.APPDYNO_STATE_DIR;
@@ -176,31 +177,39 @@ describe('hand_off', () => {
     await expect(asked).resolves.toMatchObject({ data: { by: 'screen' } });
   }, 30_000);
 
-  it('on a server run --silent, tells the window to show it with no sound', async () => {
-    const quiet = context(undefined, undefined, true);
-    const asked = handOff(quiet).handler({ reason: 'Face ID', timeoutS: 1 });
-    const end = Date.now() + 5_000;
-    while (!handoffRequest('guarded') && Date.now() < end)
-      await new Promise((r) => setTimeout(r, 20));
-    expect(handoffRequest('guarded')).toMatchObject({ reason: 'Face ID', silent: true });
-    await asked;
-    const loud = context();
-    const again = handOff(loud).handler({ reason: 'Face ID', timeoutS: 1 });
-    while (!handoffRequest('guarded') && Date.now() < end)
-      await new Promise((r) => setTimeout(r, 20));
-    expect(handoffRequest('guarded')).not.toHaveProperty('silent');
-    await again;
-  }, 30_000);
+  it(
+    'on a server run --silent, tells the window to show it with no sound',
+    fakeTimed(async () => {
+      const quiet = context(undefined, undefined, true);
+      const asked = handOff(quiet).handler({ reason: 'Face ID', timeoutS: 1 });
+      const end = Date.now() + 5_000;
+      while (!handoffRequest('guarded') && Date.now() < end)
+        await new Promise((r) => setTimeout(r, 20));
+      expect(handoffRequest('guarded')).toMatchObject({ reason: 'Face ID', silent: true });
+      await asked;
+      const loud = context();
+      const again = handOff(loud).handler({ reason: 'Face ID', timeoutS: 1 });
+      while (!handoffRequest('guarded') && Date.now() < end)
+        await new Promise((r) => setTimeout(r, 20));
+      expect(handoffRequest('guarded')).not.toHaveProperty('silent');
+      await again;
+    }),
+    30_000,
+  );
 
-  it('at the time it was given it says no one came, and takes the request down', async () => {
-    const ctx = context();
-    await expect(
-      handOff(ctx).handler({ reason: 'Allow Paste', timeoutS: 1 }),
-    ).resolves.toMatchObject({
-      data: { by: 'timeout' },
-    });
-    expect(handoffRequest('guarded')).toBeUndefined();
-  }, 30_000);
+  it(
+    'at the time it was given it says no one came, and takes the request down',
+    fakeTimed(async () => {
+      const ctx = context();
+      await expect(
+        handOff(ctx).handler({ reason: 'Allow Paste', timeoutS: 1 }),
+      ).resolves.toMatchObject({
+        data: { by: 'timeout' },
+      });
+      expect(handoffRequest('guarded')).toBeUndefined();
+    }),
+    30_000,
+  );
 });
 
 describe('a measure on a mirrored device', () => {

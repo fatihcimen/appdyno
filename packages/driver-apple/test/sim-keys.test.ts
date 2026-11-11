@@ -2,6 +2,7 @@ import { inCall } from '@appdyno/core';
 import { NODE_FLAGS as F, type ActParams, type Tree } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { holdsText, typeByKeys, typesByKeys } from '../src/sim-keys.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 /** A form with one text field at 0..200 x 100..140, holding `text`, with the focus or not, and the keyboard up or not. */
 const box = (...b: [number, number, number, number]) => b;
@@ -92,27 +93,36 @@ describe("typing by a simulator's keys", () => {
     expect(f.sent[1]).toEqual({ kind: 'key', key: 'A', modifiers: ['shift'] });
   });
 
-  it('types again, slower, what a field that formats lost, once it knows all it must hold', async () => {
-    const f = field({ drops: [4] });
-    const r = await typeByKeys('5999999900', { at: AT }, f.keyboard);
-    expect(r).toMatchObject({ verified: true });
-    expect(f.text()).toBe('5999999900');
-  });
+  it(
+    'types again, slower, what a field that formats lost, once it knows all it must hold',
+    fakeTimed(async () => {
+      const f = field({ drops: [4] });
+      const r = await typeByKeys('5999999900', { at: AT }, f.keyboard);
+      expect(r).toMatchObject({ verified: true });
+      expect(f.text()).toBe('5999999900');
+    }),
+  );
 
-  it('takes back what keys added to a field that held text, for the runner to type after it', async () => {
-    const f = field({ focused: true, text: 'x', drops: [1] });
-    expect(await typeByKeys('abc', { at: AT }, f.keyboard)).toBe('append');
-    expect(f.text()).toBe('x');
-    // as a Turkish Q layout types quick: what the field held stays, never cleared
-    const tr = field({ focused: true, text: 'Hello ', layout: { i: 'ı' } });
-    expect(await typeByKeys('quick', { at: AT }, tr.keyboard)).toBe('append');
-    expect(tr.text()).toBe('Hello ');
-    expect(tr.sent.filter((a) => a.kind === 'key' && a.modifiers?.includes('command'))).toEqual([]);
-    // a field that formats takes its dash with the last character after it: no delete more than it takes
-    const gsm = field({ focused: true, text: '(599) 999', layout: { '1': '!' }, dash: 9 });
-    expect(await typeByKeys('12', { at: AT }, gsm.keyboard)).toBe('append');
-    expect(gsm.text()).toBe('(599) 999');
-  }, 15_000);
+  it(
+    'takes back what keys added to a field that held text, for the runner to type after it',
+    fakeTimed(async () => {
+      const f = field({ focused: true, text: 'x', drops: [1] });
+      expect(await typeByKeys('abc', { at: AT }, f.keyboard)).toBe('append');
+      expect(f.text()).toBe('x');
+      // as a Turkish Q layout types quick: what the field held stays, never cleared
+      const tr = field({ focused: true, text: 'Hello ', layout: { i: 'ı' } });
+      expect(await typeByKeys('quick', { at: AT }, tr.keyboard)).toBe('append');
+      expect(tr.text()).toBe('Hello ');
+      expect(tr.sent.filter((a) => a.kind === 'key' && a.modifiers?.includes('command'))).toEqual(
+        [],
+      );
+      // a field that formats takes its dash with the last character after it: no delete more than it takes
+      const gsm = field({ focused: true, text: '(599) 999', layout: { '1': '!' }, dash: 9 });
+      expect(await typeByKeys('12', { at: AT }, gsm.keyboard)).toBe('append');
+      expect(gsm.text()).toBe('(599) 999');
+    }),
+    15_000,
+  );
 
   it('replaces by selecting all and deleting it first', async () => {
     const f = field({ focused: true, text: 'old' });
@@ -127,12 +137,16 @@ describe("typing by a simulator's keys", () => {
     expect(f.sent).toEqual([]);
   });
 
-  it('clears for the runner what keys of a layout that is not US typed twice, as a Turkish Q one types quick', async () => {
-    const f = field({ layout: { i: 'ı', '-': '*' } });
-    expect(await typeByKeys('quick-i', { at: AT }, f.keyboard)).toBe('retype');
-    expect(f.text()).toBe('');
-    expect(f.sent.filter((a) => a.kind === 'key' && a.key === 'enter')).toEqual([]);
-  }, 10_000);
+  it(
+    'clears for the runner what keys of a layout that is not US typed twice, as a Turkish Q one types quick',
+    fakeTimed(async () => {
+      const f = field({ layout: { i: 'ı', '-': '*' } });
+      expect(await typeByKeys('quick-i', { at: AT }, f.keyboard)).toBe('retype');
+      expect(f.text()).toBe('');
+      expect(f.sent.filter((a) => a.kind === 'key' && a.key === 'enter')).toEqual([]);
+    }),
+    10_000,
+  );
 
   it('types no key more once its call is stopped, as for its app having died', async () => {
     const stop = new AbortController();

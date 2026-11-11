@@ -32,6 +32,7 @@ import { keyName, keyPress } from '../src/step-schemas.js';
 import { FakeDevice, WithKeyboard } from '@appdyno/testing/fake-device.js';
 import { SCREENS } from '@appdyno/testing/fake-screens.js';
 import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 type Result = {
   isError?: boolean;
@@ -133,16 +134,19 @@ describe('targeting', () => {
     expect(act(d).at(-1)).toMatchObject({ y: 350 });
   });
 
-  it('waits for no match, then refuses with the nearest labels', async () => {
-    const d = new FakeDevice();
-    const { call } = await connect(d);
-    const started = Date.now();
-    const r = await call('tap', { selector: { text: 'Formm' } });
-    expect(Date.now() - started).toBeGreaterThanOrEqual(1_400);
-    expect(r.error).toBe(true);
-    expect(r.data.code).toBe('NOT_FOUND');
-    expect(r.text).toMatch(/nearest: @\w+ button "Form"/);
-  });
+  it(
+    'waits for no match, then refuses with the nearest labels',
+    fakeTimed(async () => {
+      const d = new FakeDevice();
+      const { call } = await connect(d);
+      const started = Date.now();
+      const r = await call('tap', { selector: { text: 'Formm' } });
+      expect(Date.now() - started).toBeGreaterThanOrEqual(1_400);
+      expect(r.error).toBe(true);
+      expect(r.data.code).toBe('NOT_FOUND');
+      expect(r.text).toMatch(/nearest: @\w+ button "Form"/);
+    }),
+  );
 
   it('swipes from an element, and types at coordinates', async () => {
     const d = new FakeDevice();
@@ -409,121 +413,134 @@ describe('steps across screens', () => {
     return d;
   };
 
-  it("says at once that the app died under a touch whose answer a crash holds, with the app's last lines", async () => {
-    for (const android of [false, true]) {
-      const d = new FakeDevice();
-      if (android) {
+  it(
+    "says at once that the app died under a touch whose answer a crash holds, with the app's last lines",
+    fakeTimed(async () => {
+      for (const android of [false, true]) {
+        const d = new FakeDevice();
+        if (android) {
+          d.pid = '4242';
+          d.appPid = d.fakePid;
+        }
+        d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
+        // the lines shown start at the newest that says why, past an earlier crash, a weaker one before it and a stack's
+        // tail after it
+        d.logLines = [
+          'E AndroidRuntime: FATAL EXCEPTION: main, an earlier crash',
+          'IllegalStateException: an earlier crash',
+          'I Fixture: Did post notification. error:0',
+          'E OpenGLRenderer: Unable to match the desired swap behavior, an error',
+          'E AndroidRuntime: FATAL EXCEPTION: main',
+          'IllegalStateException: fixture crash',
+          ...Array.from({ length: 9 }, (_, i) => `\tat Frame${String(i)}`),
+        ];
+        const own = d.act.bind(d);
+        // as an iPhone simulator's runner held its answer for 15 s while the app it read went down
+        d.act = (a, o) => {
+          if (a.kind !== 'tap') return own(a, o);
+          d.running = false;
+          d.pid = undefined;
+          return new Promise(() => undefined);
+        };
+        const { call } = await connect(d);
+        await call('screen');
+        const started = Date.now();
+        const r = await call('tap', { selector: { text: 'Form' } });
+        expect(Date.now() - started, `android ${String(android)}`).toBeLessThan(10_000);
+        expect([r.data.code, r.data.hint, r.data.dispatched]).toEqual([
+          'APP_NOT_RUNNING',
+          'launch_app starts it again, and crashes says why it died',
+          true,
+        ]);
+        expect(r.text).toMatch(
+          /^APP_NOT_RUNNING: the app died: fixture crash \(\/tmp\/report\.ips\)\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main\nIllegalStateException: fixture crash/,
+        );
+        expect(r.text).toMatch(/\tat Frame5\nhint:/);
+      }
+    }),
+  );
+
+  it(
+    'refuses a touch whose app died under it however the device answers, with its last lines',
+    fakeTimed(async () => {
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      // the answer at once, and once the watch has found the death but is still reading the log
+      for (const answerMs of [0, 1_800]) {
+        let tapped = false;
+        const d = dying(() => tapped);
+        d.logLines = ['E AndroidRuntime: FATAL EXCEPTION: main'];
+        // as long as a loaded simulator's log read takes: an answer that came meanwhile won the race, unsaid
+        const logs = d.logs.bind(d);
+        d.logs = async (q) => {
+          await wait(2_000);
+          return logs(q);
+        };
+        const own = d.act.bind(d);
+        d.act = async (a, o) => {
+          if (a.kind !== 'tap') return own(a, o);
+          tapped = true;
+          await wait(answerMs);
+          return own(a, o);
+        };
+        const { call } = await connect(d);
+        await call('screen');
+        const r = await call('tap', { selector: { text: 'Form' } });
+        expect([r.data.code, r.data.dispatched], String(answerMs)).toEqual([
+          'APP_NOT_RUNNING',
+          true,
+        ]);
+        expect(r.text).toMatch(
+          /^APP_NOT_RUNNING: (tapped @\w+ "Form"; )?the app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\)\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main\n/,
+        );
+      }
+    }),
+  );
+
+  it(
+    'stops a scroll or a key pressed again whose app died under it at its refusal: nothing reaches the device after it',
+    fakeTimed(async () => {
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      // its process gone, or held for "keeps stopping" with the same pid and no report written yet
+      for (const [tool, args, kind, held] of [
+        ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', false],
+        ['press_key', { key: 'tab', count: 10 }, 'key', false],
+        ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', true],
+      ] as const) {
+        const d = new ScrollingList();
         d.pid = '4242';
         d.appPid = d.fakePid;
-      }
-      d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
-      // the lines shown start at the newest that says why, past an earlier crash, a weaker one before it and a stack's
-      // tail after it
-      d.logLines = [
-        'E AndroidRuntime: FATAL EXCEPTION: main, an earlier crash',
-        'IllegalStateException: an earlier crash',
-        'I Fixture: Did post notification. error:0',
-        'E OpenGLRenderer: Unable to match the desired swap behavior, an error',
-        'E AndroidRuntime: FATAL EXCEPTION: main',
-        'IllegalStateException: fixture crash',
-        ...Array.from({ length: 9 }, (_, i) => `\tat Frame${String(i)}`),
-      ];
-      const own = d.act.bind(d);
-      // as an iPhone simulator's runner held its answer for 15 s while the app it read went down
-      d.act = (a, o) => {
-        if (a.kind !== 'tap') return own(a, o);
-        d.running = false;
-        d.pid = undefined;
-        return new Promise(() => undefined);
-      };
-      const { call } = await connect(d);
-      await call('screen');
-      const started = Date.now();
-      const r = await call('tap', { selector: { text: 'Form' } });
-      expect(Date.now() - started, `android ${String(android)}`).toBeLessThan(10_000);
-      expect([r.data.code, r.data.hint, r.data.dispatched]).toEqual([
-        'APP_NOT_RUNNING',
-        'launch_app starts it again, and crashes says why it died',
-        true,
-      ]);
-      expect(r.text).toMatch(
-        /^APP_NOT_RUNNING: the app died: fixture crash \(\/tmp\/report\.ips\)\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main\nIllegalStateException: fixture crash/,
-      );
-      expect(r.text).toMatch(/\tat Frame5\nhint:/);
-    }
-  });
-
-  it('refuses a touch whose app died under it however the device answers, with its last lines', async () => {
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    // the answer at once, and once the watch has found the death but is still reading the log
-    for (const answerMs of [0, 1_800]) {
-      let tapped = false;
-      const d = dying(() => tapped);
-      d.logLines = ['E AndroidRuntime: FATAL EXCEPTION: main'];
-      // as long as a loaded simulator's log read takes: an answer that came meanwhile won the race, unsaid
-      const logs = d.logs.bind(d);
-      d.logs = async (q) => {
+        if (!held)
+          d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
+        let crashing = false;
+        d.appCrashing = () => Promise.resolve(crashing);
+        let sent = 0;
+        const own = d.act.bind(d);
+        // the second ends the app; each takes as long as a settled stroke does, so the watch finds it under way
+        d.act = async (a, o) => {
+          const r = await own(a, o);
+          if (a.kind === kind && ++sent === 2) {
+            if (held) crashing = true;
+            else d.pid = undefined;
+          }
+          if (a.kind === kind) await wait(400);
+          return r;
+        };
+        const { call } = await connect(d);
+        await call('screen');
+        const r = await call(tool, args);
+        const atRefusal = sent;
+        const how = `${tool}${held ? ', held' : ''}`;
+        expect([r.data.code, r.data.dispatched], how).toEqual(['APP_NOT_RUNNING', true]);
+        expect(r.text, how).toContain(
+          held
+            ? 'the app died: the system holds its process for its crash dialog'
+            : 'the app died: fixture crash',
+        );
         await wait(2_000);
-        return logs(q);
-      };
-      const own = d.act.bind(d);
-      d.act = async (a, o) => {
-        if (a.kind !== 'tap') return own(a, o);
-        tapped = true;
-        await wait(answerMs);
-        return own(a, o);
-      };
-      const { call } = await connect(d);
-      await call('screen');
-      const r = await call('tap', { selector: { text: 'Form' } });
-      expect([r.data.code, r.data.dispatched], String(answerMs)).toEqual(['APP_NOT_RUNNING', true]);
-      expect(r.text).toMatch(
-        /^APP_NOT_RUNNING: (tapped @\w+ "Form"; )?the app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\)\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main\n/,
-      );
-    }
-  });
-
-  it('stops a scroll or a key pressed again whose app died under it at its refusal: nothing reaches the device after it', async () => {
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    // its process gone, or held for "keeps stopping" with the same pid and no report written yet
-    for (const [tool, args, kind, held] of [
-      ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', false],
-      ['press_key', { key: 'tab', count: 10 }, 'key', false],
-      ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', true],
-    ] as const) {
-      const d = new ScrollingList();
-      d.pid = '4242';
-      d.appPid = d.fakePid;
-      if (!held) d.crashReports = [{ at: 'now', reason: 'fixture crash', file: '/tmp/report.ips' }];
-      let crashing = false;
-      d.appCrashing = () => Promise.resolve(crashing);
-      let sent = 0;
-      const own = d.act.bind(d);
-      // the second ends the app; each takes as long as a settled stroke does, so the watch finds it under way
-      d.act = async (a, o) => {
-        const r = await own(a, o);
-        if (a.kind === kind && ++sent === 2) {
-          if (held) crashing = true;
-          else d.pid = undefined;
-        }
-        if (a.kind === kind) await wait(400);
-        return r;
-      };
-      const { call } = await connect(d);
-      await call('screen');
-      const r = await call(tool, args);
-      const atRefusal = sent;
-      const how = `${tool}${held ? ', held' : ''}`;
-      expect([r.data.code, r.data.dispatched], how).toEqual(['APP_NOT_RUNNING', true]);
-      expect(r.text, how).toContain(
-        held
-          ? 'the app died: the system holds its process for its crash dialog'
-          : 'the app died: fixture crash',
-      );
-      await wait(2_000);
-      expect(sent, how).toBe(atRefusal);
-    }
-  });
+        expect(sent, how).toBe(atRefusal);
+      }
+    }),
+  );
 
   it('says a step with no app selected killed the one it aimed at, gone or started again under the same screen', async () => {
     // as an emulator's "keeps stopping" stands over the app's last screen: its process gone, or a new one in its place
@@ -551,51 +568,54 @@ describe('steps across screens', () => {
     }
   });
 
-  it('says the app died whose process the system holds for its "keeps stopping", alone or in a batch', async () => {
-    // a repeated crash: the process lives on, held by the system's dialog, which takes the front; no report is written
-    for (const [tool, app] of [
-      ['tap', 'dev.app'],
-      ['steps', undefined],
-    ] as const) {
-      const d = new FakeDevice();
-      d.pid = '100';
-      d.appPid = d.fakePid;
-      let crashing = false;
-      d.appCrashing = () => Promise.resolve(crashing);
-      d.logLines = ['E AndroidRuntime: FATAL EXCEPTION: main'];
-      d.current = ((own) => () => {
-        const t = own();
-        if (crashing) t.windows = t.windows.map((w) => ({ ...w, pkg: 'android' }));
-        return t;
-      })(d.current.bind(d));
-      const act0 = d.act.bind(d);
-      d.act = (a, o) => {
-        if (a.kind === 'tap') crashing = true;
-        return act0(a, o);
-      };
-      const { call } = await connect(d, { defaults: { app } });
-      await call('screen');
-      const tap = { selector: { text: 'Form' } };
-      const r =
-        tool === 'tap'
-          ? await call('tap', tap)
-          : await call('steps', {
-              steps: [
-                { action: 'tap', ...tap },
-                { action: 'tap', selector: { text: 'Gönder' } },
-              ],
-            });
-      expect([r.data.code, r.data.dispatched], tool).toEqual(['APP_NOT_RUNNING', true]);
-      expect(r.text).toContain(
-        'the app died: the system holds its process for its crash dialog, and no crash report says why yet\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main',
-      );
-      // no report is written while the dialog is up: what says why is the log
-      expect(r.data.hint, tool).toBe(
-        'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after',
-      );
-      expect(act(d)).toHaveLength(1);
-    }
-  });
+  it(
+    'says the app died whose process the system holds for its "keeps stopping", alone or in a batch',
+    fakeTimed(async () => {
+      // a repeated crash: the process lives on, held by the system's dialog, which takes the front; no report is written
+      for (const [tool, app] of [
+        ['tap', 'dev.app'],
+        ['steps', undefined],
+      ] as const) {
+        const d = new FakeDevice();
+        d.pid = '100';
+        d.appPid = d.fakePid;
+        let crashing = false;
+        d.appCrashing = () => Promise.resolve(crashing);
+        d.logLines = ['E AndroidRuntime: FATAL EXCEPTION: main'];
+        d.current = ((own) => () => {
+          const t = own();
+          if (crashing) t.windows = t.windows.map((w) => ({ ...w, pkg: 'android' }));
+          return t;
+        })(d.current.bind(d));
+        const act0 = d.act.bind(d);
+        d.act = (a, o) => {
+          if (a.kind === 'tap') crashing = true;
+          return act0(a, o);
+        };
+        const { call } = await connect(d, { defaults: { app } });
+        await call('screen');
+        const tap = { selector: { text: 'Form' } };
+        const r =
+          tool === 'tap'
+            ? await call('tap', tap)
+            : await call('steps', {
+                steps: [
+                  { action: 'tap', ...tap },
+                  { action: 'tap', selector: { text: 'Gönder' } },
+                ],
+              });
+        expect([r.data.code, r.data.dispatched], tool).toEqual(['APP_NOT_RUNNING', true]);
+        expect(r.text).toContain(
+          'the app died: the system holds its process for its crash dialog, and no crash report says why yet\nits last log lines:\nE AndroidRuntime: FATAL EXCEPTION: main',
+        );
+        // no report is written while the dialog is up: what says why is the log
+        expect(r.data.hint, tool).toBe(
+          'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after',
+        );
+        expect(act(d)).toHaveLength(1);
+      }
+    }),
+  );
 
   it('stops at a step whose app died, refused as that action alone is, with no app selected too', async () => {
     // with none selected, the app is the one in front as the touch aimed, as a launch or a link in the batch opened it
@@ -652,31 +672,37 @@ describe('steps across screens', () => {
       ],
     });
 
-  it('says the app died when a step fails as it is gone, where no step before had looked', async () => {
-    // with no app selected, the one in front as the step began
-    for (const app of ['dev.app', undefined]) {
-      const d = dying((x) => x.screen === 'form');
-      const { call } = await connect(d, { defaults: { app } });
-      const r = await cutShort(call);
-      expect([r.data.code, r.data.hint], app).toEqual([
-        'APP_NOT_RUNNING',
-        'launch_app starts it again, and crashes says why it died',
-      ]);
-      expect(r.text).toMatch(
-        /\n3\. tap failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,
-      );
-      expect(act(d)).toHaveLength(1);
-    }
-  });
+  it(
+    'says the app died when a step fails as it is gone, where no step before had looked',
+    fakeTimed(async () => {
+      // with no app selected, the one in front as the step began
+      for (const app of ['dev.app', undefined]) {
+        const d = dying((x) => x.screen === 'form');
+        const { call } = await connect(d, { defaults: { app } });
+        const r = await cutShort(call);
+        expect([r.data.code, r.data.hint], app).toEqual([
+          'APP_NOT_RUNNING',
+          'launch_app starts it again, and crashes says why it died',
+        ]);
+        expect(r.text).toMatch(
+          /\n3\. tap failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,
+        );
+        expect(act(d)).toHaveLength(1);
+      }
+    }),
+  );
 
-  it('tells no death in a step that fails while the app still runs', async () => {
-    const d = dying(() => false);
-    d.crashReports = [];
-    const r = await cutShort((await connect(d)).call);
-    expect(r.data.code).toBe('NOT_FOUND');
-    expect(r.text).toContain('3. tap failed, the rest were not run: ');
-    expect(r.text).not.toContain('the app died');
-  });
+  it(
+    'tells no death in a step that fails while the app still runs',
+    fakeTimed(async () => {
+      const d = dying(() => false);
+      d.crashReports = [];
+      const r = await cutShort((await connect(d)).call);
+      expect(r.data.code).toBe('NOT_FOUND');
+      expect(r.text).toContain('3. tap failed, the rest were not run: ');
+      expect(r.text).not.toContain('the app died');
+    }),
+  );
 });
 
 describe('waiting on the device', () => {
@@ -732,25 +758,28 @@ describe('waiting on the device', () => {
 });
 
 describe('a ref on a screen an app moved by itself', () => {
-  it('is touched where the element is now, not where the last answer had it', async () => {
-    const d = new FakeDevice();
-    d.screen = 'settings';
-    const { call } = await connect(d);
-    const line = must(/(@\w+) "Wi-Fi On" (\d+)/.exec((await call('screen')).text), 'its line');
-    expect(line[2]).toBe('350');
-    // the app adds a row above it, with no action of ours
-    withScreen('settingsMoved', [
-      { b: [0, 200, 1080, 300], c: 'android.widget.LinearLayout', d: 'Added', f: 19 },
-      ...must(SCREENS.settings, 'the settings').map((n) => ({
-        ...n,
-        b: [n.b[0], n.b[1] + 100, n.b[2], n.b[3] + 100] as typeof n.b,
-      })),
-    ]);
-    d.screen = 'settingsMoved';
-    await new Promise((r) => setTimeout(r, 200));
-    expect((await call('tap', { ref: line[1] })).error).toBe(false);
-    expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 450 }]);
-  });
+  it(
+    'is touched where the element is now, not where the last answer had it',
+    fakeTimed(async () => {
+      const d = new FakeDevice();
+      d.screen = 'settings';
+      const { call } = await connect(d);
+      const line = must(/(@\w+) "Wi-Fi On" (\d+)/.exec((await call('screen')).text), 'its line');
+      expect(line[2]).toBe('350');
+      // the app adds a row above it, with no action of ours
+      withScreen('settingsMoved', [
+        { b: [0, 200, 1080, 300], c: 'android.widget.LinearLayout', d: 'Added', f: 19 },
+        ...must(SCREENS.settings, 'the settings').map((n) => ({
+          ...n,
+          b: [n.b[0], n.b[1] + 100, n.b[2], n.b[3] + 100] as typeof n.b,
+        })),
+      ]);
+      d.screen = 'settingsMoved';
+      await new Promise((r) => setTimeout(r, 200));
+      expect((await call('tap', { ref: line[1] })).error).toBe(false);
+      expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 450 }]);
+    }),
+  );
 
   it('costs no second read when the client acts at once on what it just read', async () => {
     const d = new FakeDevice();
@@ -781,27 +810,30 @@ describe('a ref on a screen an app moved by itself', () => {
     expect(d.screen).toBe('form');
   });
 
-  it('says a tap changed the screen it opened, though a read beside it saw that screen first', async () => {
-    const d = new FakeDevice();
-    const own = d.act.bind(d);
-    let touched: () => void = () => undefined;
-    const landed = new Promise<void>((r) => (touched = r));
-    // the touch lands at once, and the answer takes a while: a read beside it meanwhile sees the screen it opened
-    d.act = async (a, o) => {
-      const r = await own(a, o);
-      touched();
-      await new Promise((r) => setTimeout(r, 300));
-      return r;
-    };
-    const { call } = await connect(d);
-    await call('screen');
-    const tap = call('tap', { selector: { text: 'Form' } });
-    await landed;
-    expect((await call('screen')).text).toContain('Gönder');
-    const r = await tap;
-    expect(r.data.changed).toBe(true);
-    expect(r.text).not.toContain('no change seen');
-  });
+  it(
+    'says a tap changed the screen it opened, though a read beside it saw that screen first',
+    fakeTimed(async () => {
+      const d = new FakeDevice();
+      const own = d.act.bind(d);
+      let touched: () => void = () => undefined;
+      const landed = new Promise<void>((r) => (touched = r));
+      // the touch lands at once, and the answer takes a while: a read beside it meanwhile sees the screen it opened
+      d.act = async (a, o) => {
+        const r = await own(a, o);
+        touched();
+        await new Promise((r) => setTimeout(r, 300));
+        return r;
+      };
+      const { call } = await connect(d);
+      await call('screen');
+      const tap = call('tap', { selector: { text: 'Form' } });
+      await landed;
+      expect((await call('screen')).text).toContain('Gönder');
+      const r = await tap;
+      expect(r.data.changed).toBe(true);
+      expect(r.text).not.toContain('no change seen');
+    }),
+  );
 
   it('says a link changed the screen it opened, though a read beside it saw that screen first', async () => {
     const d = new FakeDevice();
@@ -849,46 +881,52 @@ describe('a ref on a screen an app moved by itself', () => {
     }
   });
 
-  it('tells a call that waits its turn why, and one that need not wait nothing of it', async () => {
-    const d = new FakeDevice();
-    const own = d.act.bind(d);
-    d.act = async (a, o) => {
-      await new Promise((r) => setTimeout(r, 300));
-      return own(a, o);
-    };
-    const { ctx } = await connect(d);
-    const call = callerOf(ctx);
-    const told: [string[], string[]] = [[], []];
-    const [first, second] = told.map((seen, i) =>
-      inCall({ progress: (m) => seen.push(m) }, () =>
-        i ? call('press_key', { key: 'tab' }) : call('tap', { selector: { text: 'Form' } }),
-      ),
-    );
-    await Promise.all([first, second]);
-    const waits = 'waiting its turn';
-    expect(told[0].filter((m) => m.includes(waits))).toEqual([]);
-    expect(told[1][0]).toContain(waits);
-  });
+  it(
+    'tells a call that waits its turn why, and one that need not wait nothing of it',
+    fakeTimed(async () => {
+      const d = new FakeDevice();
+      const own = d.act.bind(d);
+      d.act = async (a, o) => {
+        await new Promise((r) => setTimeout(r, 300));
+        return own(a, o);
+      };
+      const { ctx } = await connect(d);
+      const call = callerOf(ctx);
+      const told: [string[], string[]] = [[], []];
+      const [first, second] = told.map((seen, i) =>
+        inCall({ progress: (m) => seen.push(m) }, () =>
+          i ? call('press_key', { key: 'tab' }) : call('tap', { selector: { text: 'Form' } }),
+        ),
+      );
+      await Promise.all([first, second]);
+      const waits = 'waiting its turn';
+      expect(told[0].filter((m) => m.includes(waits))).toEqual([]);
+      expect(told[1][0]).toContain(waits);
+    }),
+  );
 
-  it('does nothing of a call its client gave up while it waited its turn', async () => {
-    const d = new FakeDevice();
-    const own = d.act.bind(d);
-    d.act = async (a, o) => {
-      await new Promise((r) => setTimeout(r, 300));
-      return own(a, o);
-    };
-    const { ctx } = await connect(d);
-    const call = callerOf(ctx);
-    const gaveUp = new AbortController();
-    const first = call('tap', { selector: { text: 'Form' } });
-    const second = inCall({ signal: gaveUp.signal }, () => call('press_key', { key: 'tab' }));
-    gaveUp.abort();
-    await first;
-    await expect(second).rejects.toMatchObject({ code: 'CANCELLED' });
-    // as long as a key would take to land
-    await new Promise((r) => setTimeout(r, 600));
-    expect(act(d).map((a) => a.kind)).toEqual(['tap']);
-  });
+  it(
+    'does nothing of a call its client gave up while it waited its turn',
+    fakeTimed(async () => {
+      const d = new FakeDevice();
+      const own = d.act.bind(d);
+      d.act = async (a, o) => {
+        await new Promise((r) => setTimeout(r, 300));
+        return own(a, o);
+      };
+      const { ctx } = await connect(d);
+      const call = callerOf(ctx);
+      const gaveUp = new AbortController();
+      const first = call('tap', { selector: { text: 'Form' } });
+      const second = inCall({ signal: gaveUp.signal }, () => call('press_key', { key: 'tab' }));
+      gaveUp.abort();
+      await first;
+      await expect(second).rejects.toMatchObject({ code: 'CANCELLED' });
+      // as long as a key would take to land
+      await new Promise((r) => setTimeout(r, 600));
+      expect(act(d).map((a) => a.kind)).toEqual(['tap']);
+    }),
+  );
 });
 
 describe('a first call that launches', () => {
@@ -1148,16 +1186,19 @@ describe('swipe exact', () => {
     }
   }
 
-  it('moves the content by the distance, whatever a drag loses at its start', async () => {
-    const d = new Dragged();
-    const { call } = await connect(d);
-    const r = await call('swipe', { direction: 'up', distance: 3000, exact: true });
-    expect(r.error).toBe(false);
-    expect(Math.abs(d.offset - 3000)).toBeLessThanOrEqual(2);
-    expect(r.text).toMatch(/^scrolled up 3\d{3} of 3000 in \d strokes/);
-    const moves = act(d).filter((a) => a.kind === 'gesture');
-    expect(moves.length).toBeGreaterThan(1);
-  });
+  it(
+    'moves the content by the distance, whatever a drag loses at its start',
+    fakeTimed(async () => {
+      const d = new Dragged();
+      const { call } = await connect(d);
+      const r = await call('swipe', { direction: 'up', distance: 3000, exact: true });
+      expect(r.error).toBe(false);
+      expect(Math.abs(d.offset - 3000)).toBeLessThanOrEqual(2);
+      expect(r.text).toMatch(/^scrolled up 3\d{3} of 3000 in \d strokes/);
+      const moves = act(d).filter((a) => a.kind === 'gesture');
+      expect(moves.length).toBeGreaterThan(1);
+    }),
+  );
 
   it('a list that ends is no failure: the answer says how far it went', async () => {
     const d = new Dragged();
@@ -1699,24 +1740,30 @@ describe('a turn of the screen', () => {
     }
   }
 
-  it('answers with the screen turned and settled, as the call returns before the screen turns', async () => {
-    const d = new Turning();
-    const { call } = await connect(d);
-    const r = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
-    expect(r.error).toBe(false);
-    expect(r.text).toMatch(/"Ana sayfa" 1200,150/);
-    expect(r.text).not.toContain('stayed');
-  });
+  it(
+    'answers with the screen turned and settled, as the call returns before the screen turns',
+    fakeTimed(async () => {
+      const d = new Turning();
+      const { call } = await connect(d);
+      const r = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
+      expect(r.error).toBe(false);
+      expect(r.text).toMatch(/"Ana sayfa" 1200,150/);
+      expect(r.text).not.toContain('stayed');
+    }),
+  );
 
-  it('says so where the window kept its shape, as an app held to portrait does, with a read or none', async () => {
-    for (const read of ['full', 'none'] as const) {
-      const { call } = await connect(new FakeDevice());
-      const r = await call('set_orientation', { orientation: 'landscape_left', read });
-      const kept = 'the window stayed tall: the app may keep to one orientation';
-      expect(r.text, read).toContain(kept);
-      expect(r.data.warnings, read).toContain(kept);
-    }
-  });
+  it(
+    'says so where the window kept its shape, as an app held to portrait does, with a read or none',
+    fakeTimed(async () => {
+      for (const read of ['full', 'none'] as const) {
+        const { call } = await connect(new FakeDevice());
+        const r = await call('set_orientation', { orientation: 'landscape_left', read });
+        const kept = 'the window stayed tall: the app may keep to one orientation';
+        expect(r.text, read).toContain(kept);
+        expect(r.data.warnings, read).toContain(kept);
+      }
+    }),
+  );
 
   it('waits for no turn the window already has, and says nothing of one', async () => {
     const { call } = await connect(new FakeDevice());
@@ -1727,45 +1774,51 @@ describe('a turn of the screen', () => {
     expect(r.text).toBe('orientation: upside_down');
   });
 
-  it('waits for the turn of a tablet wide as it stands, and blames no app for the shape it stands in', async () => {
-    /** A Pixel Tablet: Android counts its rotations from its own wide shape, so a quarter turn stands it up. */
-    class Tablet extends FakeDevice {
-      turnedAt = 0;
-      rotation = 0;
-      was = 0;
-      constructor() {
-        super();
-        this.hello = { ...this.hello, screen: { w: 2560, h: 1600, density: 320, rotation: 0 } };
+  it(
+    'waits for the turn of a tablet wide as it stands, and blames no app for the shape it stands in',
+    fakeTimed(async () => {
+      /** A Pixel Tablet: Android counts its rotations from its own wide shape, so a quarter turn stands it up. */
+      class Tablet extends FakeDevice {
+        turnedAt = 0;
+        rotation = 0;
+        was = 0;
+        constructor() {
+          super();
+          this.hello = { ...this.hello, screen: { w: 2560, h: 1600, density: 320, rotation: 0 } };
+        }
+        override setOrientation(r: 0 | 1 | 2 | 3) {
+          [this.was, this.rotation, this.turnedAt] = [this.rotation, r, Date.now()];
+          return super.setOrientation(r);
+        }
+        override current(): Tree {
+          const t = super.current();
+          const wide = (Date.now() - this.turnedAt < 500 ? this.was : this.rotation) % 2 === 0;
+          if (wide)
+            for (const n of [...t.windows, ...t.nodes])
+              n.b = [n.b[0], n.b[1], n.b[2] + 1320, Math.min(n.b[3], 1080)];
+          t.hash = `${t.hash}+${String(wide)}`;
+          return t;
+        }
       }
-      override setOrientation(r: 0 | 1 | 2 | 3) {
-        [this.was, this.rotation, this.turnedAt] = [this.rotation, r, Date.now()];
-        return super.setOrientation(r);
-      }
-      override current(): Tree {
-        const t = super.current();
-        const wide = (Date.now() - this.turnedAt < 500 ? this.was : this.rotation) % 2 === 0;
-        if (wide)
-          for (const n of [...t.windows, ...t.nodes])
-            n.b = [n.b[0], n.b[1], n.b[2] + 1320, Math.min(n.b[3], 1080)];
-        t.hash = `${t.hash}+${String(wide)}`;
-        return t;
-      }
-    }
-    const { call } = await connect(new Tablet());
-    await call('screen');
-    const up = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
-    expect(up.text).toMatch(/"Ana sayfa" 540,150/);
-    const back = await call('set_orientation', { orientation: 'portrait', read: 'full' });
-    expect(back.text).toMatch(/"Ana sayfa" 1200,150/);
-    for (const r of [up, back]) expect(r.text).not.toContain('stayed');
-  });
+      const { call } = await connect(new Tablet());
+      await call('screen');
+      const up = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
+      expect(up.text).toMatch(/"Ana sayfa" 540,150/);
+      const back = await call('set_orientation', { orientation: 'portrait', read: 'full' });
+      expect(back.text).toMatch(/"Ana sayfa" 1200,150/);
+      for (const r of [up, back]) expect(r.text).not.toContain('stayed');
+    }),
+  );
 
-  it('is turned for the next read where its own answer reads nothing', async () => {
-    const d = new Turning();
-    const { call } = await connect(d);
-    await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
-    expect((await call('screen')).text).toMatch(/"Ana sayfa" 1200,150/);
-  });
+  it(
+    'is turned for the next read where its own answer reads nothing',
+    fakeTimed(async () => {
+      const d = new Turning();
+      const { call } = await connect(d);
+      await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
+      expect((await call('screen')).text).toMatch(/"Ana sayfa" 1200,150/);
+    }),
+  );
 });
 
 describe('keyboard', () => {
@@ -1795,14 +1848,17 @@ describe('keyboard', () => {
     expect(r.text).not.toContain('no change seen');
   });
 
-  it('refuses when the app keeps it open', async () => {
-    const d = new WithKeyboard();
-    d.closes = false;
-    const { call } = await connect(d);
-    const r = await call('keyboard', { action: 'dismiss' });
-    expect(r.error).toBe(true);
-    expect(r.text).toContain('stayed open');
-  });
+  it(
+    'refuses when the app keeps it open',
+    fakeTimed(async () => {
+      const d = new WithKeyboard();
+      d.closes = false;
+      const { call } = await connect(d);
+      const r = await call('keyboard', { action: 'dismiss' });
+      expect(r.error).toBe(true);
+      expect(r.text).toContain('stayed open');
+    }),
+  );
 
   // as a landscape phone's full-screen keyboard, or a pan, leaves the app's window: whole, under the keyboard
   it('closes it before a touch on an element under it, which would type, by selector or ref', async () => {
@@ -1824,25 +1880,28 @@ describe('keyboard', () => {
     expect(d.up).toBe(false);
   });
 
-  it('closes no keyboard the app has closed since the last read, as the back key would leave the screen', async () => {
-    const d = new WithKeyboard();
-    d.hides = 'Gönder';
-    d.screen = 'form';
-    let closes = 0;
-    const close = d.dismissKeyboard;
-    d.dismissKeyboard = () => {
-      closes++;
-      return close();
-    };
-    const { call } = await connect(d);
-    await call('screen');
-    d.up = false;
-    // older than a read a touch aims by
-    await new Promise((r) => setTimeout(r, 200));
-    expect((await call('tap', { selector: { text: 'Gönder' } })).error).toBe(false);
-    expect(closes).toBe(0);
-    expect(d.screen).toBe('sent');
-  });
+  it(
+    'closes no keyboard the app has closed since the last read, as the back key would leave the screen',
+    fakeTimed(async () => {
+      const d = new WithKeyboard();
+      d.hides = 'Gönder';
+      d.screen = 'form';
+      let closes = 0;
+      const close = d.dismissKeyboard;
+      d.dismissKeyboard = () => {
+        closes++;
+        return close();
+      };
+      const { call } = await connect(d);
+      await call('screen');
+      d.up = false;
+      // older than a read a touch aims by
+      await new Promise((r) => setTimeout(r, 200));
+      expect((await call('tap', { selector: { text: 'Gönder' } })).error).toBe(false);
+      expect(closes).toBe(0);
+      expect(d.screen).toBe('sent');
+    }),
+  );
 
   it('touches a key of the keyboard itself, as iOS lists its keys, with no closing first', async () => {
     class IosKeyboard extends FakeDevice {
@@ -1872,19 +1931,22 @@ describe('keyboard', () => {
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 940, y: 2300 });
   });
 
-  it('closes it when the window it shrank leaves the element out, and finds it then', async () => {
-    const d = new WithKeyboard();
-    d.hides = 'Gönder';
-    d.screen = 'form';
-    const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'Gönder' } });
-    expect(r.error).toBe(false);
-    expect(d.screen).toBe('sent');
-    d.screen = 'form';
-    d.up = true;
-    const missing = await call('tap', { selector: { text: 'Nowhere' } });
-    expect(missing.data.code).toBe('NOT_FOUND');
-  });
+  it(
+    'closes it when the window it shrank leaves the element out, and finds it then',
+    fakeTimed(async () => {
+      const d = new WithKeyboard();
+      d.hides = 'Gönder';
+      d.screen = 'form';
+      const { call } = await connect(d);
+      const r = await call('tap', { selector: { text: 'Gönder' } });
+      expect(r.error).toBe(false);
+      expect(d.screen).toBe('sent');
+      d.screen = 'form';
+      d.up = true;
+      const missing = await call('tap', { selector: { text: 'Nowhere' } });
+      expect(missing.data.code).toBe('NOT_FOUND');
+    }),
+  );
 });
 
 describe('system alerts', () => {

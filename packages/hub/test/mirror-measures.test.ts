@@ -8,6 +8,7 @@ import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest'
 import { windowMeasures } from '../src/measures.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { DEFAULT_POLICY, holder, ServerContext } from '@appdyno/ops';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const opened = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', async (real) => ({
@@ -82,27 +83,33 @@ describe('what a window measures', () => {
     expect(words.flagged).toBe(true);
   });
 
-  it('says of a list that stopped moving how many of the rounds asked for it ran', async () => {
-    const device = new FakeDevice();
-    // a screen that does not scroll: the first round is counted as it is, and no other moves it
-    device.listEnd = 0;
-    const said: string[] = [];
-    const words = await measuresOn(device).scroll('dev.app', (line) => said.push(line));
-    expect(said).toContain('scroll round 2 of 3');
-    expect(words.detail).toMatch(/^1 of 3 rounds/);
-    const full = await measuresOn(new FakeDevice()).scroll('dev.app', () => undefined);
-    expect(full.detail).toMatch(/^3 rounds/);
-  });
+  it(
+    'says of a list that stopped moving how many of the rounds asked for it ran',
+    fakeTimed(async () => {
+      const device = new FakeDevice();
+      // a screen that does not scroll: the first round is counted as it is, and no other moves it
+      device.listEnd = 0;
+      const said: string[] = [];
+      const words = await measuresOn(device).scroll('dev.app', (line) => said.push(line));
+      expect(said).toContain('scroll round 2 of 3');
+      expect(words.detail).toMatch(/^1 of 3 rounds/);
+      const full = await measuresOn(new FakeDevice()).scroll('dev.app', () => undefined);
+      expect(full.detail).toMatch(/^3 rounds/);
+    }),
+  );
 
-  it('says a journey with no whole as not measured, for a person to look at', async () => {
-    const device = new FakeDevice();
-    device.settles = false;
-    const file = join(state, 'moving.flow');
-    writeFileSync(file, 'launch\ntap text="Form"\n');
-    const { ran, said } = await measuresOn(device).journey(file, 'dev.app', () => undefined);
-    expect(ran.totalMs).toBeUndefined();
-    expect(said).toMatchObject({ value: 'not measured', flagged: true });
-  });
+  it(
+    'says a journey with no whole as not measured, for a person to look at',
+    fakeTimed(async () => {
+      const device = new FakeDevice();
+      device.settles = false;
+      const file = join(state, 'moving.flow');
+      writeFileSync(file, 'launch\ntap text="Form"\n');
+      const { ran, said } = await measuresOn(device).journey(file, 'dev.app', () => undefined);
+      expect(ran.totalMs).toBeUndefined();
+      expect(said).toMatchObject({ value: 'not measured', flagged: true });
+    }),
+  );
 
   it('holds the device only while it runs, and leaves the window its device', async () => {
     const device = new FakeDevice();

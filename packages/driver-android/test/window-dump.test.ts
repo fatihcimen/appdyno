@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidDevice } from '../src/device.js';
 import { FOCUS_READ, KEYGUARD_READ } from '../src/window-dump.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 /**
  * fixtures/window/*.txt are real `dumpsys window`, with only its section headers and the lines read here kept:
@@ -32,18 +33,21 @@ describe('a read of the window dump', () => {
     expect(read(dump, KEYGUARD_READ)).toContain('isKeyguardShowing=false');
   });
 
-  it('a read of a dozing display wakes it, though the app is still listed', async () => {
-    const commands: string[] = [];
-    const exec = (_serial: string, command: string) => {
-      commands.push(command);
-      return Promise.resolve(command.includes('dumpsys power') ? 'mWakefulness=Dozing\n' : '');
-    };
-    const windows = [{ type: 1, pkg: 'dev.app', layer: 0, b: [0, 0, 1080, 2400] }];
-    const device = new AndroidDevice('s', { exec } as unknown as Adb);
-    const call = () => Promise.resolve({ result: { windows, nodes: [], dark: true } });
-    await Object.assign(device, { call }).tree();
-    expect(commands).toContain('input keyevent KEYCODE_WAKEUP');
-  });
+  it(
+    'a read of a dozing display wakes it, though the app is still listed',
+    fakeTimed(async () => {
+      const commands: string[] = [];
+      const exec = (_serial: string, command: string) => {
+        commands.push(command);
+        return Promise.resolve(command.includes('dumpsys power') ? 'mWakefulness=Dozing\n' : '');
+      };
+      const windows = [{ type: 1, pkg: 'dev.app', layer: 0, b: [0, 0, 1080, 2400] }];
+      const device = new AndroidDevice('s', { exec } as unknown as Adb);
+      const call = () => Promise.resolve({ result: { windows, nodes: [], dark: true } });
+      await Object.assign(device, { call }).tree();
+      expect(commands).toContain('input keyevent KEYCODE_WAKEUP');
+    }),
+  );
 
   it('a look at a dozing display leaves it as it is', async () => {
     const commands: string[] = [];
@@ -63,18 +67,21 @@ describe('a read of the window dump', () => {
     expect(params).toEqual([{}]);
   });
 
-  it('a phone locked since its last ANR is seen as locked, and is dismissed', async () => {
-    const commands: string[] = [];
-    const exec = (_serial: string, command: string) => {
-      commands.push(command);
-      return Promise.resolve(
-        command.includes('dumpsys window')
-          ? `mWakefulness=Awake\n${read('after-an-anr', KEYGUARD_READ)}`
-          : '',
-      );
-    };
-    const state = await new AndroidDevice('s', { exec } as unknown as Adb).ensureAwake();
-    expect(state.locked).toBe(true);
-    expect(commands).toContain('wm dismiss-keyguard');
-  });
+  it(
+    'a phone locked since its last ANR is seen as locked, and is dismissed',
+    fakeTimed(async () => {
+      const commands: string[] = [];
+      const exec = (_serial: string, command: string) => {
+        commands.push(command);
+        return Promise.resolve(
+          command.includes('dumpsys window')
+            ? `mWakefulness=Awake\n${read('after-an-anr', KEYGUARD_READ)}`
+            : '',
+        );
+      };
+      const state = await new AndroidDevice('s', { exec } as unknown as Adb).ensureAwake();
+      expect(state.locked).toBe(true);
+      expect(commands).toContain('wm dismiss-keyguard');
+    }),
+  );
 });

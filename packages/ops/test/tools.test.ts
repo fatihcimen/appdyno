@@ -13,6 +13,7 @@ import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { LACKS } from '@appdyno/testing/fake-measures.js';
 import { linkedClient, REVISIONS, type Revision } from '@appdyno/testing/calls.js';
 import { opsFor } from '../src/registry.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
 vi.mock('node:os', async (original) => ({
@@ -304,29 +305,32 @@ describe('act and read', () => {
     });
   });
 
-  it('runs steps with one read at the end, and stops at a stale ref before doing anything', async () => {
-    const home = (await t.textOf('screen')).text;
-    const bad = await t.textOf('steps', { steps: [{ action: 'tap', ref: '@zz99' }] });
-    expect(bad.error).toBe(true);
-    expect(t.device.calls.filter((c) => c.name === 'act')).toHaveLength(0);
-    const r = await t.textOf('steps', {
-      steps: [
-        { action: 'tap', ref: refOf(home, 'Form') },
-        { action: 'type_text', text: 'Ali' },
-        { action: 'press_key', key: 'enter' },
-      ],
-    });
-    expect(r.text.split('\n').slice(0, 3)).toEqual([
-      '1. tapped ' + refOf(home, 'Form') + ' "Form"',
-      '2. typed (3 characters)',
-      '3. pressed enter',
-    ]);
-    const reads = t.device.calls
-      .filter((c) => c.name === 'act')
-      .map((c) => (c.args[1] as { read?: string }).read);
-    // tap, the fake's typing, then the key with the one read
-    expect(reads).toEqual(['none', 'none', 'tree']);
-  });
+  it(
+    'runs steps with one read at the end, and stops at a stale ref before doing anything',
+    fakeTimed(async () => {
+      const home = (await t.textOf('screen')).text;
+      const bad = await t.textOf('steps', { steps: [{ action: 'tap', ref: '@zz99' }] });
+      expect(bad.error).toBe(true);
+      expect(t.device.calls.filter((c) => c.name === 'act')).toHaveLength(0);
+      const r = await t.textOf('steps', {
+        steps: [
+          { action: 'tap', ref: refOf(home, 'Form') },
+          { action: 'type_text', text: 'Ali' },
+          { action: 'press_key', key: 'enter' },
+        ],
+      });
+      expect(r.text.split('\n').slice(0, 3)).toEqual([
+        '1. tapped ' + refOf(home, 'Form') + ' "Form"',
+        '2. typed (3 characters)',
+        '3. pressed enter',
+      ]);
+      const reads = t.device.calls
+        .filter((c) => c.name === 'act')
+        .map((c) => (c.args[1] as { read?: string }).read);
+      // tap, the fake's typing, then the key with the one read
+      expect(reads).toEqual(['none', 'none', 'tree']);
+    }),
+  );
 
   it('answers only a system permission prompt', async () => {
     const home = (await t.textOf('screen')).text;
