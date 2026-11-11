@@ -259,6 +259,11 @@ export function perfTraceOp(ctx: ServerContext) {
       .strict(),
     output: TraceOut,
     annotations: ACT,
+    // with no swipe and no relaunch it only records, beside the taps that load the app it traces, as perf_profile
+    readsOnly: ({ scroll, what, probe }) =>
+      !scroll &&
+      (what === 'hangs' ||
+        (what === 'frames' && !(probe ?? ctx.openSession?.device.measure.framesByProbe ?? true))),
     run: async ({ app, seconds, scroll, what, dsym, probe, scenario }) => {
       const s = await ctx.session();
       const pkg = measuredApp(s, app);

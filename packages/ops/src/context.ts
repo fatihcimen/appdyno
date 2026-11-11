@@ -373,8 +373,13 @@ export class ServerContext {
     );
   }
 
+  /** The session tools act on by default, where one is open: nothing is opened to tell. */
+  get openSession(): Session | undefined {
+    return this.currentSerial ? this.sessions.get(this.currentSerial) : undefined;
+  }
+
   close() {
-    const s = this.currentSerial ? this.sessions.get(this.currentSerial) : undefined;
+    const s = this.openSession;
     const remember = this.options.storage?.remember;
     if (s && remember) {
       writeState(remember, {

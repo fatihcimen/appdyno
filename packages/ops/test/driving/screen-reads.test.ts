@@ -184,6 +184,45 @@ describe('a ref on a screen an app moved by itself', () => {
     }
   });
 
+  it('answers a tap sent while a trace records, where it only records, and holds it behind one that swipes or may relaunch the app', async () => {
+    for (const [args, byProbe, beside] of [
+      [{}, false, true],
+      [{ what: 'hangs' }, true, true],
+      [{ probe: false }, true, true],
+      [{}, true, false],
+      [{ scroll: 'down' }, false, false],
+      [{ what: 'xct_launch' }, false, false],
+    ] as const) {
+      const d = new FakeDevice();
+      let stop: () => void = () => undefined;
+      const recording = new Promise<void>((r) => (stop = r));
+      const base = d.measure;
+      // the fake's measures, recording until the test stops them
+      const measure = {
+        ...base,
+        framesByProbe: byProbe,
+        attachProbe: () => Promise.resolve(false),
+        frameTrace: (...a: Parameters<typeof base.frameTrace>) =>
+          recording.then(() => base.frameTrace(...a)),
+        hangs: (...a: Parameters<typeof base.hangs>) => recording.then(() => base.hangs(...a)),
+        xctMetrics: (...a: Parameters<typeof base.xctMetrics>) =>
+          recording.then(() => base.xctMetrics(...a)),
+      };
+      Object.defineProperty(d, 'measure', { get: () => measure });
+      const { call } = await connect(d);
+      await call('screen');
+      const trace = call('perf_trace', { seconds: 6, ...args });
+      // as a client sends it a few seconds into the trace
+      await new Promise((r) => setTimeout(r, 50));
+      const tap = call('tap', { selector: { text: 'Form' } });
+      const held = new Promise((r) => setTimeout(() => r('held'), 1_500));
+      const first = await Promise.race([tap.then(() => 'answered'), held]);
+      stop();
+      await Promise.all([trace, tap]);
+      expect(first, JSON.stringify([args, byProbe])).toBe(beside ? 'answered' : 'held');
+    }
+  });
+
   it(
     'tells a call that waits its turn why, and one that need not wait nothing of it',
     fakeTimed(async () => {
