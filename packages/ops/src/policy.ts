@@ -116,9 +116,16 @@ export function checkCreate(policy: Policy) {
     );
 }
 
-/** A word that names a credential, which may end a longer key, all but a bare `pass`, which `bypass` ends too. */
+/**
+ * A word that names a credential, which may end a longer key, all but a bare `pass`, `otp` or `pin`, which `bypass`,
+ * `spin` end too; `pwd` with a path is a working directory.
+ */
 const CREDENTIAL =
-  '(?<![a-z])pass|pass(?:word|wd|phrase)|pwd|secret(?:[_-]?key(?:[_-]?base)?)?|token|credentials?|signature|api[_ -]?key|access[_-]?key|session[_-]?id';
+  '(?<![a-z])(?:pass|otp|pin)|pass(?:word|wd|phrase)|pwd(?!\\W*/)|secret(?:[_-]?key(?:[_-]?base)?)?|token|credentials?|signature|api[_ -]?key|access[_-]?key|private[_-]?key|session[_-]?id|jwt';
+
+/** A value of such a key that is none: a literal, a fetch's `credentials` mode, a count of three digits at most. */
+const NO_CREDENTIAL =
+  '(?!(?:true|false|null|undefined|include|omit|same-origin|\\d{1,3})(?:[\\s,;&"\'}\\])]|$))';
 
 /**
  * What a log may hold that nobody listed: tokens by their shape or by the word in front of them, which may end a longer
@@ -137,15 +144,17 @@ const LOG_SECRETS: [RegExp, string][] = [
   [/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]+/g, '•••'],
   [
     new RegExp(
-      `(${CREDENTIAL})(["']?\\s*[:=]\\s*)(?:(["'])(?:(?!\\3)[^\\r\\n])*\\3?|\\{[^{}\\r\\n]*\\}|[^\\s,;&"']+)`,
+      `(${CREDENTIAL})(["']?\\s*[:=]\\s*)(?:(["'])(?:(?!\\3)[^\\r\\n])*\\3?|\\{[^{}\\r\\n]*\\}|${NO_CREDENTIAL}[^\\s,;&"'}\\])]+)`,
       'gi',
     ),
     '$1$2$3•••$3',
   ],
+  // an error's name, upper case and underscores, is what a log is read for
   [
-    /((?<![\w-])(?:code|sig)["']?\s*[:=]\s*)(["']?)(?=[\w~+/-]*\d)(?=[\w~+/-]*[a-z])[\w~+/-]{16,}=*\2/gi,
+    /((?<![\w-])(?:[Cc]ode|CODE|[Ss]ig|SIG)["']?\s*[:=]\s*)(["']?)(?![A-Z0-9_]*_[A-Z0-9_]*(?![\w~+/-]))(?=[\w~+/-]*\d)(?=[\w~+/-]*[A-Za-z])[\w~+/-]{16,}=*\2/g,
     '$1$2•••$2',
   ],
+  [/\bAIza[\w-]{35}(?![\w-])/g, '•••'],
   [/([?&](?:code|sig)=)[^\s&#"']+/gi, '$1•••'],
   [/(:\/\/[^\s/:@]+:)[^\s/@]+@/g, '$1•••@'],
 ];

@@ -155,6 +155,29 @@ describe('logs', () => {
     ];
     for (const line of ordinary) expect(clean(line)).toBe(line);
   });
+
+  it("hides a one-time code, a PIN, a private key, a JWT and a Google key, and shows an error's name and what is none", () => {
+    const clean = (s: string) => redactLog(DEFAULT_POLICY, s);
+    const hidden = {
+      'otp=123456 sent': 'otp=••• sent',
+      'pin: 4821': 'pin: •••',
+      '{"private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBg", "id": 1}':
+        '{"private_key": "•••", "id": 1}',
+      '{"pin": 4821}': '{"pin": •••}',
+      'jwt: abc': 'jwt: •••',
+      'maps key=AIzaSyA1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q ok': 'maps key=••• ok',
+    };
+    for (const [line, shown] of Object.entries(hidden)) expect(clean(line)).toBe(shown);
+    const ordinary = [
+      'pwd: /Users/me/project PWD=/home/u',
+      'pass: 3 of 4, spin: 2',
+      'fetch credentials: include, secret: false, apiKey: null, sessionId=12',
+      '{"secret": false, "apiKey": null}',
+      'code=ERR_NETWORK_CHANGED_1234567',
+      '{"code": "ERR_HTTP2_PROTOCOL_ERROR"}',
+    ];
+    for (const line of ordinary) expect(clean(line)).toBe(line);
+  });
 });
 
 describe('crashes', () => {

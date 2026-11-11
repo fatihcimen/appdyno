@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A log's redaction hides a one-time code, a PIN, a private key, a JWT under its name and a Google API key by its shape, and shows what was hidden though it is no credential: an error's name in capitals and underscores as a `code`, a working directory as `pwd`, and a value that is `true`, `false`, `null`, a fetch's `include` or a count of three digits at most.
 - SECURITY and the tools reference say all that asks before a call: a touch, key or typed text in a phone app, an Android device's own default dialer among them, and a touch on a system alert whose text is a phone number alone, in any language; that iOS's power-off screen asks whole but its Cancel; that the guard reads the screen again after an input of the same client that may have changed it; and that an input is not sent where the guard cannot tell. They named a touch in a phone app alone.
 - On iOS a touch on a button of a system alert whose text is a phone number and nothing more asks the person in any language, unless the button is a Cancel, and such an alert is looked for in the home screen app's read too: only a button saying Call or Ara asked, and only in the read of the screen, so in German a tap on Anrufen of such an alert went unasked.
 - On iOS a touch anywhere on the power-off screen but its Cancel asks the person, the screen known by its slider's id in any language: the Emergency SOS slider of a phone's power-off screen has no id known here, and was known by its English and Turkish words alone, so in another language a touch along it went unasked.
