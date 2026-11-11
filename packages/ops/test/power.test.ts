@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { AppManager } from '@appdyno/core';
 import type { Tree, WireNode } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { powerControlAt } from '../src/index.js';
@@ -373,5 +374,20 @@ describe('a key or typing into a phone app', () => {
     const own = await onDevice('android-system-en');
     expect((await own.call('press_key', { key: '1' })).error).toBe(false);
     expect([sent().length, own.sent().length, asked, own.asked]).toEqual([1, 1, [], []]);
+  });
+
+  it("asks of a touch in the device's own dialer, which no list here names, asking the device once", async () => {
+    // a maker's dialer, as Xiaomi's is its contacts app: the app a call's link opens in
+    const { call, sent, device } = await onDevice(made('com.android.contacts', []));
+    const opener = vi.fn(() => Promise.resolve('com.android.contacts'));
+    device.apps = { opener } as unknown as AppManager;
+    for (let i = 0; i < 2; i++)
+      expect((await call('tap', { x: 540, y: 1000 })).code).toBe('PERMISSION_REQUIRED');
+    expect(opener).toHaveBeenCalledOnce();
+    expect(sent()).toEqual([]);
+    // with no default dialer the system's chooser answers, which is no phone app
+    const none = await onDevice(made('android', []));
+    none.device.apps = { opener: () => Promise.resolve('android') } as unknown as AppManager;
+    expect((await none.call('tap', { x: 540, y: 1000 })).error).toBe(false);
   });
 });

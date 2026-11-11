@@ -170,19 +170,22 @@ function controls(tree: Tree) {
   };
 }
 
-/** The phone app a touch at `p` lands in, if it lands in one. */
-const phoneAt = (tree: Tree, p: Point) => phoneOf(tree.windows[windowAt(tree, p) ?? -1]?.pkg);
+/** The app a key or typed text goes to: the window with the focus, else the top one of an app. */
+const focusedApp = (tree: Tree) =>
+  (
+    tree.windows.find((w) => w.focused) ??
+    tree.windows.filter((w) => w.type === 1).sort((a, b) => b.layer - a.layer)[0]
+  )?.pkg;
 
-/** The phone app a key or typed text goes to: the window with the focus, else the top one of an app. */
-const phoneFocused = (tree: Tree) =>
-  phoneOf(
-    (
-      tree.windows.find((w) => w.focused) ??
-      tree.windows.filter((w) => w.type === 1).sort((a, b) => b.layer - a.layer)[0]
-    )?.pkg,
-  );
-
-const phoneOf = (pkg: string | undefined) => (pkg && PHONE.test(pkg) ? pkg : undefined);
+/** The app a call's link opens in on the device, a maker's own dialer among them: asked once a session. */
+const dialers = new WeakMap<Session, Promise<string | undefined>>();
+function dialerOf(s: Session) {
+  // a device that cannot say has the fixed list alone, however it fails
+  const ask = async () => s.device.apps.opener('tel:112');
+  const known = dialers.get(s) ?? ask().catch(() => undefined);
+  dialers.set(s, known);
+  return known;
+}
 
 /** What a touch at `p` would act on of the system's power, emergency and erase controls: its words, or undefined. */
 export const powerControlAt = (tree: Tree, p: Point) => controls(tree).at(p);
@@ -221,10 +224,14 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
   const screen = s.fresh ?? (await s.current());
   const read = screen.tree;
   const how = input.types ? 'typing into' : input.key ? `the ${input.key} key on` : 'a touch on';
+  // the system's chooser, which answers where no dialer is the default, has no dot in its name as an app's id has
+  const dialer = await dialerOf(s);
+  const phone = (pkg?: string) =>
+    pkg && (PHONE.test(pkg) || (pkg === dialer && pkg.includes('.'))) ? pkg : undefined;
   // a dial pad takes digits and Enter by keys as it does by touch
   const call = input.points.length
-    ? input.points.map((p) => phoneAt(read, p)).find(Boolean)
-    : phoneFocused(read);
+    ? input.points.map((p) => phone(read.windows[windowAt(read, p) ?? -1]?.pkg)).find(Boolean)
+    : phone(focusedApp(read));
   if (call) return `${how} the phone app ${call}, which may place a call`;
   let what = actsOn(controls(read), input);
   if (!what) {
