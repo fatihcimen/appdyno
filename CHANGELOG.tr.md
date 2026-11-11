@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- eslint, lint'lediği her dosyanın tiplerini tek bir programdan, `tsconfig.eslint.json`'dan okur; önceden her paketin bir projesi çalışma alanının çoğunu yeniden denetliyordu: tepe belleği 4,5 GB'tan 2,3 GB'a, 2 GB'lık bir yığının içine iner ve CI, 4 GB'ı aştığı Node 22'de de yeniden lint çalıştırır.
 - Bir simülatörün girdi yardımcısı, girdisinin sonuyla ya da bir isteğin ortasında gelen bir SIGTERM ile biterken tuttuğunu bırakır: hâlâ basılı bir tuş kalkar, hâlâ basılı bir parmak, kaldırılan bir insan parmağı gibi olduğu yerde biter ve yardımcı bunu hata çıktısına yazar. Giden bir yardımcı için onları tutan bir simülatör, onları sıradakine de tutardı.
 - iOS runner'ı, uygulamanın animasyonlarını bekledikten sonra, bir dokunuştan ve yazacağı alana dokunmadan önce, ayrıca hiçbir alanın odağı almadığı bir metnin Enter'ından önce çağrısına yeniden bakar: bu bekleme sırasında TIMEOUT ya da CANCELLED denen bir çağıran yine de dokunuşu ya da Enter'ı alıyordu.
 - Düz yatan bir iPad'de runner, uzun bir uygulamanın şeklinden yön çıkarmaz: bir dokunuş XCUI'nin kendi koordinatıyla gider ve çok parmaklı bir hareket reddedilir; önceden yatay bir ekranda başka bir pencerenin yanındaki uzun bir pencereye ya da ters duran bir iPad'e dikeymiş gibi dokunuluyor ve ıskalanıyordu. Ret, önceden telefonun düz yattığını ve uygulamasının geniş olduğunu söylerken artık cihazın düz yattığını söyler.

@@ -24,7 +24,8 @@ export default defineConfig(
   {
     extends: [tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
     languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      // one program over every file: a project per package checked the workspace again in each, past 4 GB of heap
+      parserOptions: { project: './tsconfig.eslint.json', tsconfigRootDir: import.meta.dirname },
     },
     rules: {
       // the code declares its shapes by `type`, and an alias passes for a Record, which an interface does not

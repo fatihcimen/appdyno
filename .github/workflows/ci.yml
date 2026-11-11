@@ -37,9 +37,8 @@ jobs:
           # the linters .mise.toml pins: Node, pnpm and Java are the steps above
           install_args: uv pipx:clang-format shellcheck shfmt actionlint zizmor swiftlint ktlint
       - run: pnpm install --frozen-lockfile
-      # what eslint and prettier find asks nothing of Node either, and Node 22 runs eslint's type-aware rules out of 4 GB
+      # on both: eslint and its typescript-eslint run on the Node a contributor has
       - run: pnpm lint
-        if: matrix.node == 26
       - name: Native lint
         if: matrix.node == 26
         run: scripts/lint-native.sh

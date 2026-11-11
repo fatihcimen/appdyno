@@ -35,7 +35,8 @@ scripts/lint-native.sh                        # TypeScript olmayan her şey; Xco
 
 `pnpm lint`, eslint'i ve `prettier --check`'i çalıştırır; `pnpm format` biçimi düzeltir. Aynı kontroller
 `.github/workflows/ci.yml` içinde de çalışır. eslint, bütün TypeScript ve JavaScript'i derleyicinin tipleriyle typescript-eslint'in `strictTypeChecked`
-ve `stylisticTypeChecked` kurallarına bağlı tutar.
+ve `stylisticTypeChecked` kurallarına bağlı tutar. Tipler, lint'lediği her dosyayı kapsayan tek bir programındır,
+`tsconfig.eslint.json`; yeni bir kod klasörü onun `include`'una eklenir.
 
 `scripts/lint-native.sh`, `.mise.toml`'un sabitlediği linter'ları çalıştırır ve herhangi bir uyarıda başarısız olur: shell
 betikleri için shellcheck ve shfmt (`ci.sh` zsh'tir, shellcheck onu okumaz, bu yüzden onu `zsh -n` ayrıştırır), workflow'lar için

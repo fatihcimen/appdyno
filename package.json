@@ -12,7 +12,7 @@
     "typecheck": "pnpm -r typecheck && tsc -p device-tests/tsconfig.json --noEmit && tsc -p tsconfig.json",
     "test": "vitest run --maxWorkers=2",
     "test:device": "vitest run --config vitest.device.config.ts",
-    "lint": "NODE_OPTIONS=--max-old-space-size=4096 eslint packages scripts device-tests '*.{js,ts}' && prettier --check packages scripts device-tests docs ios .github '*.{md,json,js,ts,yaml,yml}'",
+    "lint": "NODE_OPTIONS=--max-old-space-size=2048 eslint packages scripts device-tests '*.{js,ts}' && prettier --check packages scripts device-tests docs ios .github '*.{md,json,js,ts,yaml,yml}'",
     "format": "prettier --write packages scripts device-tests docs ios .github '*.{md,json,js,ts,yaml,yml}'",
     "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },

@@ -35,7 +35,8 @@ scripts/lint-native.sh                        # all that is not TypeScript; need
 
 `pnpm lint` runs eslint and `prettier --check`; `pnpm format` fixes formatting. The same checks run in
 `.github/workflows/ci.yml`. eslint holds all the TypeScript and JavaScript to typescript-eslint's `strictTypeChecked`
-and `stylisticTypeChecked`, with the compiler's types.
+and `stylisticTypeChecked`, with the compiler's types. They are those of one program over every file it lints,
+`tsconfig.eslint.json`; a new folder of code joins its `include`.
 
 `scripts/lint-native.sh` runs the linters `.mise.toml` pins, and fails on any warning: shellcheck and shfmt for the
 shell scripts (`ci.sh` is zsh, which shellcheck does not read, so `zsh -n` parses it), actionlint and zizmor for the
