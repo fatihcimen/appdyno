@@ -1,0 +1,27 @@
+name: Feature request
+description: Something appdyno does not do yet. English or Turkish.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: want
+    attributes:
+      label: What you want to do
+      description: The task, on which device and in which client, as you would ask an agent to do it.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What you do today
+      description: How you get it done now, by hand or with another tool, and where that falls short.
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      multiple: true
+      options:
+        - iOS simulator
+        - iPhone
+        - Android emulator
+        - Android phone
+        - Not about a device

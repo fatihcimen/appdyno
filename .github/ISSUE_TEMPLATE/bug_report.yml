@@ -1,5 +1,5 @@
 name: Bug report
-description: Something did not work as the docs say.
+description: Something did not work as the docs say. English or Turkish.
 labels: [bug]
 body:
   - type: textarea
@@ -29,6 +29,17 @@ body:
         - Not about a device
     validations:
       required: true
+  - type: input
+    id: os
+    attributes:
+      label: Device model and OS version
+      description: For example "Pixel 8, Android 15" or "iPhone 17 simulator, iOS 27.2". No serial number or UDID.
+  - type: textarea
+    id: call
+    attributes:
+      label: The call and its answer
+      description: The tool call or command that failed, and its answer, which starts with an error code. Take out tokens, account names and anything on the screen you would not share.
+      render: text
   - type: input
     id: version
     attributes:

@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Yeni bir issue bir hata bildirimi ya da bir özellik isteğidir; bir güvenlik bildirimi özel bildirime gider ve boş issue açılmaz. Hata bildirimi cihazın modelini ve işletim sistemini, başarısız çağrıyı da yanıtıyla ister ve bildirimin İngilizce ya da Türkçe olabileceğini söyler. THIRD_PARTY_NOTICES Mac uygulamasının taşıdığı Node.js'i adlandırır; MCP registry'sindeki kayıt da appdyno'nun bir Mac'ten çalıştığını söyler.
 - npm'in gösterdiği README resimlerine ve sayfalarına `main` yerine sürümün kendi etiketinden bağlanır: bir sürümün sayfası o sürümün resimlerini ve belgelerini korur; bir rozetin bağlantısı da tam adres olur.
 - Diyagramlar temiz okunur: araç çağrısının yaşam çizgileri kestikleri sözcüklerden önce durur ve okları sürücüden ve sunucudan geçer, cihaz tablosunun notları ne demek istediklerini söyler, paket haritası native koda giden okun ne olduğunu söyler, pencerenin alt yazıları da kutularının içinde kalır. Mimari sayfası `simsettle.ts`'in yolunu verir ve `--put-back-after`'ın elle yazılacak bir seçenek olmadığını söyler.
 - Akışlar rehberi adımların bütün sözdizimini verir: `launch` ve `stop` için isteğe bağlı bir uygulama, `count`, `distance`, `durationMs`, `exact`, `maxSwipes` ve `settings`, yorumlar, koordinatlar ve üç işaret. Kanıt rehberinde zaman çizelgesi ve uçuş kaydedicisi var; dashboard kısa paragraflarda, yanındaki ölçümler bir listede, proxy de ne olduğuyla anılır.

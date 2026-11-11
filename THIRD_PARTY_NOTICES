@@ -1,3 +1,5 @@
+The copy of this file in the npm package also holds the notice of every package bundled into it, which its build adds.
+
 appdyno's Android agent (Stream*.kt, DisplayMirror.kt, Animations.kt) makes its display and encoder as the platform
 behaves, which was read in the source of scrcpy (https://github.com/Genymobile/scrcpy, Apache License 2.0): which
 hidden calls exist on which release, the sizes an encoder refuses, and a separate shell process that puts a setting
@@ -17,7 +19,9 @@ android/push-fixture, is built with that SDK's Firebase Messaging, which ships i
 
 The Mac app carries Perfetto's trace processor (trace_processor_shell, https://github.com/google/perfetto, Apache
 License 2.0), which reads Android's traces, as Google's release builds it and unchanged but for the app's signature. Its
-license and notices are in licenses/perfetto.txt, as that release gives them.
+license and notices are in licenses/perfetto.txt, as that release gives them. It also carries Node.js
+(https://nodejs.org), as its release builds it, with its symbols stripped and the app's signature added. Its license,
+with those of what Node.js itself includes, is in licenses/node.txt.
 
 idevice (https://github.com/jkcoxson/idevice)
 

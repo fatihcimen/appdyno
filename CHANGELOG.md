@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A new issue is a bug report or a feature request, and a security report goes to private reporting, with no blank issue; the bug report asks for the device's model and OS and for the failing call with its answer, and says a report may be in English or Turkish. THIRD_PARTY_NOTICES names the Node.js the Mac app carries, and the MCP registry's entry says appdyno runs from a Mac.
 - The README npm shows links its pictures and pages at the release's own tag, where it linked `main`: a version's page keeps that version's pictures and docs, and a badge's link is made whole too.
 - The diagrams read clean: the tool call's lifelines stop short of the words they crossed and its arrows pass through the driver and the server, the devices table's notes say what they mean, the map of packages says what an arrow into native code is, and the window's captions sit inside their boxes. The architecture page gives `simsettle.ts` its path and says that `--put-back-after` is not a flag to type.
 - The flows guide gives the whole step syntax: an optional app for `launch` and `stop`, `count`, `distance`, `durationMs`, `exact`, `maxSwipes` and `settings`, comments, coordinates and the three flags. The evidence guide has the timeline and the flight recorder, the dashboard in short paragraphs with a list of the measures beside it, and a proxy named by what it is.
