@@ -107,7 +107,7 @@ const SIM_SOURCE = '~/Library/Logs/DiagnosticReports';
 const KEPT_REPORTS = 25;
 
 /** What keeps a crash of the process `name` from leaving a report: the folder holds as many of its own as macOS keeps. */
-export function reportLimit(dir: string, name: string | undefined) {
+function reportLimit(dir: string, name: string | undefined) {
   if (!name) return undefined;
   let held: number;
   try {

@@ -7,9 +7,9 @@ import type { PerfRecord } from './record.js';
  */
 
 /** A session counts as slow above this share of frames over 16 ms. */
-export const SLOW_SESSION_PERCENT = 50;
+const SLOW_SESSION_PERCENT = 50;
 /** A session counts as frozen above this share of frames over 700 ms. */
-export const FROZEN_SESSION_PERCENT = 0.1;
+const FROZEN_SESSION_PERCENT = 0.1;
 /** Fewer frames than this say nothing of a share that small: one frame in 500 is already over it. */
 export const FROZEN_MIN_FRAMES = 1_000;
 

@@ -52,7 +52,7 @@ const schemaOf = (op: Op) =>
   };
 
 /** An op's flags in words, from its schema. */
-export function helpOf(op: Op): string {
+function helpOf(op: Op): string {
   const { properties = {}, required = [] } = schemaOf(op);
   const flags = Object.entries(properties).map(([key, p]) => {
     const value = p.enum ? p.enum.join('|') : (p.type ?? 'json');

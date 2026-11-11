@@ -34,7 +34,7 @@ const ALWAYS: Partial<Record<LiveField, string>> = {
   networkInKbps: "an iPhone's samples hold no network by app",
   networkOutKbps: "an iPhone's samples hold no network by app",
 };
-export const FPS_NOTE = 'the display, not the app: a mirror alone keeps it near 20';
+const FPS_NOTE = 'the display, not the app: a mirror alone keeps it near 20';
 
 export const sysmonConfig = () => ({
   ur: SAMPLE_MS,

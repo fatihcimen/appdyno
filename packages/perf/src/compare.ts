@@ -67,7 +67,7 @@ export const ALPHA = 0.01;
  * a simulator's start 600 ms slower read p 0.033 against slow launches of the baseline's own, and passed as `ok`. Past
  * it, the samples say nothing moved. scripts/perf-floor-sim.mjs has what each costs.
  */
-export const SUSPECT = 0.05;
+const SUSPECT = 0.05;
 /** Fewer baseline runs say nothing of how far a run moves by itself. */
 export const MIN_BASELINE_RUNS = 3;
 /**

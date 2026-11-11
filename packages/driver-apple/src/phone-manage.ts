@@ -214,7 +214,7 @@ const APPEARANCE: ReadonlySet<SettingName> = new Set<SettingName>([
 ]);
 
 /** `devicectl` shows "Extra Large" where it is told extra-large. */
-export const phoneTextSize = (shown: string) => shown.trim().toLowerCase().replace(/\s+/g, '-');
+const phoneTextSize = (shown: string) => shown.trim().toLowerCase().replace(/\s+/g, '-');
 
 const noSwitch = (name: SettingName) =>
   new DeviceError(

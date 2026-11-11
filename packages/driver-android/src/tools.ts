@@ -60,7 +60,7 @@ const asset = () => PERFETTO.assets[`${platform()}-${arch()}`];
 const folderOf = (a: { name: string }) => a.name.replace(/\.zip$/, '');
 
 /** The trace processor already on this Mac: APPDYNO_TRACE_PROCESSOR, else the app's own, else the pinned one fetched. */
-export function foundTraceProcessor(): string | undefined {
+function foundTraceProcessor(): string | undefined {
   const env = process.env.APPDYNO_TRACE_PROCESSOR;
   if (env) return env;
   const helpers = process.env.APPDYNO_HELPERS;

@@ -16,7 +16,7 @@ const runtimeName = (runtime: string) =>
     .replaceAll('-', '.');
 
 /** A device type's id as people name it: the same words, with spaces. */
-export const typeName = (deviceType: string) =>
+const typeName = (deviceType: string) =>
   deviceType.replace(/^.*SimDeviceType\./, '').replaceAll('-', ' ');
 
 /** A simulator's model as Xcode names its device type. */

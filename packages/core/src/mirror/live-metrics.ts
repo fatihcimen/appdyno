@@ -42,7 +42,7 @@ export type LiveMetrics = {
 };
 
 /** Why a window's numbers are not a clean run's: a stream runs an encoder on the device. */
-export const LIVE_NOISE = ['mirrored'] as const;
+const LIVE_NOISE = ['mirrored'] as const;
 
 /** What a window is told, one a second: `{op: 'perf', sample, noise}`. A window asks with `{op: 'perfWatch', on}`. */
 export const perfMessage = (sample: LiveSample) => ({

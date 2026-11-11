@@ -90,7 +90,7 @@ export function parseProcStatTicks(text: string): number {
 }
 
 /** The share of all cores at work between two `cpu` lines of /proc/stat: idle and waiting on storage are no work. */
-export function busyPercent(before: string, after: string): number | undefined {
+function busyPercent(before: string, after: string): number | undefined {
   const fields = (l: string) => l.trim().split(/\s+/).slice(1).map(Number);
   const moved = fields(after).map((n, i) => n - (fields(before)[i] ?? NaN));
   const total = moved.reduce((a, b) => a + b, 0);

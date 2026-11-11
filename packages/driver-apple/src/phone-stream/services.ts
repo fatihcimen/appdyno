@@ -19,7 +19,7 @@ export type ServiceList = {
 };
 
 export const DISPLAY = 'com.apple.coredevice.displayservice';
-export const SCREEN_CAPTURE = 'com.apple.coredevice.screencaptureservice';
+const SCREEN_CAPTURE = 'com.apple.coredevice.screencaptureservice';
 export const HID_INDIGO = 'com.apple.coredevice.hid.indigo';
 export const HID_UNIVERSAL = 'com.apple.coredevice.hid.universalhidservice';
 

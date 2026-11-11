@@ -17,7 +17,7 @@ export type Condition = { id: string; profiles: string[]; on?: string };
 const text = (v: Archived | undefined) => (typeof v === 'string' ? v : undefined);
 
 /** The phone's answer to `availableConditionInducers`, by identifiers. */
-export function conditionsOf(answer: Archived): Condition[] {
+function conditionsOf(answer: Archived): Condition[] {
   const list = Array.isArray(answer) ? answer : [];
   return list.flatMap((c) => {
     const id = isDict(c) ? text(c.identifier) : undefined;

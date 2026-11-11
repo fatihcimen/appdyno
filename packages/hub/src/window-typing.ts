@@ -15,7 +15,7 @@ const ENTER = KEY_USAGES.enter.usage;
 
 type Typing = { text: string; submit: boolean; before: Promise<Screen | undefined> };
 
-export const focusOf = (screen: Screen | undefined) => screen?.elements.find((e) => e.focused);
+const focusOf = (screen: Screen | undefined) => screen?.elements.find((e) => e.focused);
 
 /** A field that holds nothing yet may still say its placeholder. */
 const isEmpty = (f: UiElement) => !f.text || f.text === f.placeholder;

@@ -54,7 +54,7 @@ export async function installingApp(
 }
 
 /** A language for one launch, in the arguments the system reads for it. */
-export const languageArgs = (language: string | undefined) =>
+const languageArgs = (language: string | undefined) =>
   language ? ['-AppleLanguages', `(${language})`, '-AppleLocale', language.replace('-', '_')] : [];
 
 /** The language each app is launched in by this tool, kept on this Mac: nothing on the device holds one for an app. */
@@ -97,7 +97,7 @@ export const appLanguage = (device: string, app: string) => appLanguages.read(de
 export const on = (v: string, yes: string, no: string) => ({ on: yes, off: no })[v] ?? v;
 
 /** iOS's text sizes, as simctl and devicectl both take them. */
-export const TEXT_SIZES = [
+const TEXT_SIZES = [
   'extra-small',
   'small',
   'medium',

@@ -373,7 +373,7 @@ export async function queryTraceFile(
 }
 
 /** When a trace began, by its table of contents: what its rows are counted from. */
-export async function traceStart(tracePath: string) {
+async function traceStart(tracePath: string) {
   const { stdout } = await exporting(['--input', tracePath, '--toc'], {
     maxBuffer: 64 * 1024 * 1024,
     timeout: 120_000,

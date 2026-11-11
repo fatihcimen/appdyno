@@ -46,7 +46,7 @@ export function startPhase(log: string): string {
     return 'xcodebuild started testing: the runner is launching';
   return 'xcodebuild is preparing the device (installing the runner)';
 }
-export const RUNNER_TEST = 'Runner/RunnerTests/testServe';
+const RUNNER_TEST = 'Runner/RunnerTests/testServe';
 
 const State = z.object({
   port: z.number().int(),

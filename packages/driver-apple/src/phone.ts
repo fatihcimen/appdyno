@@ -56,7 +56,7 @@ const LOCK_GOES_MS = 1_500;
 const signedRunners = new Map<string, ReturnType<typeof signedRunner>>();
 
 /** A phone: the runner signed for the profile, a port on the phone, reached over USB. */
-export function phoneTransport(
+function phoneTransport(
   udid: string,
   given?: PhoneSigning,
 ): RunnerTransport & { signed(): ReturnType<typeof signedRunner> } {
@@ -100,7 +100,7 @@ export function phoneTransport(
 /** A phone paired for Wi-Fi with no cable, whose stream is in this build: the network is what reaches it. */
 const wifiOnly = async (udid: string) => (await loadPhoneStream())?.onWifi(udid) ?? false;
 
-export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
+function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
   return {
     up: async () =>
       (await listDevices()).some(

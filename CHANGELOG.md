@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Twenty-one functions and constants no other file names are no longer exported, as `helpOf`, `phoneOps` and `traceStart`: they read as a package's surface where they are one file's own.
 - The mirror window's wire gives each name its fields: `ViewerMessage` and `ViewerOrder` in `viewer-wire.ts` are unions of one member a name, the hub's and the session's handlers read a message by its name with no `String` or `Number` over what the window said, and a test holds the fields to what the viewer writes and reads, where a field renamed on one side became `undefined` or `NaN` on the other with nothing failing. It found four fields sent that no code of the viewer reads, an element's `selector`, a measure's `kept`, a stopped capture's `was` and a tick's `seq`: they still go, and the test names them. A device suite's line of activity sent a field of its own, `line`, and now sends one as the hub does.
 - A window's controls are parts, each a function of its own: its turns, a screenshot, the Apps pane, its movie in `window-movie.ts` and its Perf pane, live numbers and one measure at a time, in `window-perf.ts`, where one function of 338 lines held them all and the function size rule let it pass by name.
 - How a mirror tries again, an open backed off up to ten tries and a viewer that died twice in a minute let go, is `retries.ts` of its own, where the mirror's session held it at the size cap.

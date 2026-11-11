@@ -10,7 +10,7 @@ export const BRAND_VERSION = '2';
 const ICONS = ['AppIcon60x60@2x.png', 'AppIcon60x60@3x.png'] as const;
 
 /** The runner's icons: the repository's, else the packaged copy. */
-export function brandingDir(): string | undefined {
+function brandingDir(): string | undefined {
   return [inCheckout('ios', 'Branding'), inPackage('ios', 'Branding')].find(
     (d): d is string => !!d && existsSync(join(d, ICONS[0])),
   );
