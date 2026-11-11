@@ -70,6 +70,13 @@ describe('an iOS screen', () => {
     expect(r.data.elements).toBe(10);
   });
 
+  it('lists no keyboard that has slid below the screen as it closes', async () => {
+    const closing = structuredClone(keyboardUp);
+    for (const n of closing.nodes) if (n.c === 'Keyboard') n.b = [0, 900, 402, 1126];
+    const { call } = await connect(new Simulator(closing), APP);
+    expect((await call('screen')).text).not.toContain('@keyboard');
+  });
+
   it('says a tap that opened the keyboard changed the screen, by one line', async () => {
     const d = new Simulator(keyboardDown(keyboardUp));
     const { call } = await connect(d, APP);
