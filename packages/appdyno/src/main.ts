@@ -195,6 +195,107 @@ async function surveyCommand(args: string[]) {
   }
 }
 
+/** `test`: flow files on one or more devices, with JUnit and artifacts; exit 1 when one failed. */
+async function testCommand(rest: string[]) {
+  const { values, positionals } = parseArgs({
+    args: rest,
+    allowPositionals: true,
+    options: COMMANDS.test.flags,
+  });
+  const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
+  const retries = Number(values.retries ?? 0);
+  if (
+    positionals.length === 0 ||
+    !Number.isInteger(iterations) ||
+    iterations < 1 ||
+    !Number.isInteger(retries) ||
+    retries < 0
+  ) {
+    err(usage('test'));
+    return 2;
+  }
+  const artifacts = values.artifacts ?? 'appdyno-artifacts';
+  const ctx = commandLine({
+    ...(values.share && { share: true }),
+    ...(values.measurements && { measurements: values.measurements }),
+  });
+  try {
+    const { passed } = await flowsFor(ctx).test({
+      files: flowsTagged(flowFiles(positionals), values.tag, values['exclude-tag']),
+      devices: values.device ?? [],
+      artifacts,
+      junit: values.junit ?? join(artifacts, 'junit.xml'),
+      params: paramsOf(values.param),
+      ...(values['env-file'] && { fromFile: envValues(values['env-file']) }),
+      retries,
+      ...(values.measure && { iterations }),
+      log: (line) => console.log(line),
+    });
+    return passed ? 0 : 1;
+  } finally {
+    await ctx.end().catch(() => []);
+    ctx.close();
+  }
+}
+
+/** Every other command is an operation's, the tool's own, on the device a folder's session holds. */
+async function operationCommand(command: string | undefined, rest: string[]) {
+  if (command === 'perf' && rest[0] === 'dashboard') return dashboardCommand(rest.slice(1));
+  if (command === 'perf' && rest[0] === 'survey') return surveyCommand(rest.slice(1));
+  if (command === 'perf' && rest[0] === 'comment') return commentCommand(rest.slice(1));
+  // `push setup` keeps a push service's credentials; any other `push` is the tool's
+  if (command === 'push' && rest[0] === 'setup') return pushCommand(rest);
+  // `perf compare|baseline|budget [flags]`: the gate's names for one operation
+  const gate = command === 'perf' ? rest.shift() : undefined;
+  if (
+    command === 'perf' &&
+    !['compare', 'why', 'reference', 'baseline', 'budget', 'functions', 'prune'].includes(
+      gate ?? '',
+    )
+  ) {
+    err(usage('perf '));
+    return 2;
+  }
+  if (gate) rest.push('--action', gate);
+  const name = gate ? 'perf-compare' : command;
+  const device = deviceFlag(command, rest);
+  // use-device has its own flag of that name
+  const shareAt = command === 'use-device' ? -1 : rest.indexOf('--share');
+  if (shareAt >= 0) rest.splice(shareAt, 1);
+  const measurements = takeFlag(rest, 'measurements');
+  const ctx = commandLine(
+    {
+      ...(device && { device }),
+      ...(shareAt >= 0 && { share: true }),
+      ...(measurements && { measurements }),
+    },
+    cliSessionFile(),
+  );
+  const ops = opsFor(ctx);
+  const commands = commandsFor(ops);
+  const op = name === undefined ? undefined : commands[name];
+  if (!op) {
+    const asked = command === undefined || ['--help', '-h', 'help'].includes(command);
+    (asked ? console.log : err)(
+      `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
+
+commands:
+${commandList()}
+
+operations (--device S selects the device, also for the next commands in this folder; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F):
+${listOf(ops)}`,
+    );
+    return asked ? 0 : 2;
+  }
+  try {
+    // piped words are no person: what would ask them is refused, but for --yes
+    const ask = process.stdin.isTTY ? askOnTerminal : undefined;
+    return await op.run(rest, { out: (s) => console.log(s), err, ...(ask && { ask }) });
+  } finally {
+    ctx.close();
+  }
+}
+
 async function main(): Promise<number> {
   if (['version', '--version', '-v'].includes(command ?? '')) {
     console.log(SERVER_INFO.version);
@@ -263,47 +364,8 @@ async function main(): Promise<number> {
         );
       return checks.some((c) => !c.ok && !c.warn) ? 1 : 0;
     }
-    case 'test': {
-      const { values, positionals } = parseArgs({
-        args: rest,
-        allowPositionals: true,
-        options: COMMANDS.test.flags,
-      });
-      const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
-      const retries = Number(values.retries ?? 0);
-      if (
-        positionals.length === 0 ||
-        !Number.isInteger(iterations) ||
-        iterations < 1 ||
-        !Number.isInteger(retries) ||
-        retries < 0
-      ) {
-        err(usage('test'));
-        return 2;
-      }
-      const artifacts = values.artifacts ?? 'appdyno-artifacts';
-      const ctx = commandLine({
-        ...(values.share && { share: true }),
-        ...(values.measurements && { measurements: values.measurements }),
-      });
-      try {
-        const { passed } = await flowsFor(ctx).test({
-          files: flowsTagged(flowFiles(positionals), values.tag, values['exclude-tag']),
-          devices: values.device ?? [],
-          artifacts,
-          junit: values.junit ?? join(artifacts, 'junit.xml'),
-          params: paramsOf(values.param),
-          ...(values['env-file'] && { fromFile: envValues(values['env-file']) }),
-          retries,
-          ...(values.measure && { iterations }),
-          log: (line) => console.log(line),
-        });
-        return passed ? 0 : 1;
-      } finally {
-        await ctx.end().catch(() => []);
-        ctx.close();
-      }
-    }
+    case 'test':
+      return testCommand(rest);
     case 'bench': {
       const { values } = parseArgs({ args: rest, options: COMMANDS.bench.flags });
       const serial = values.serial;
@@ -333,62 +395,8 @@ async function main(): Promise<number> {
         );
       return 0;
     }
-    default: {
-      if (command === 'perf' && rest[0] === 'dashboard') return dashboardCommand(rest.slice(1));
-      if (command === 'perf' && rest[0] === 'survey') return surveyCommand(rest.slice(1));
-      if (command === 'perf' && rest[0] === 'comment') return commentCommand(rest.slice(1));
-      // `push setup` keeps a push service's credentials; any other `push` is the tool's
-      if (command === 'push' && rest[0] === 'setup') return pushCommand(rest);
-      // `perf compare|baseline|budget [flags]`: the gate's names for one operation
-      const gate = command === 'perf' ? rest.shift() : undefined;
-      if (
-        command === 'perf' &&
-        !['compare', 'why', 'reference', 'baseline', 'budget', 'functions', 'prune'].includes(
-          gate ?? '',
-        )
-      ) {
-        err(usage('perf '));
-        return 2;
-      }
-      if (gate) rest.push('--action', gate);
-      const name = gate ? 'perf-compare' : command;
-      const device = deviceFlag(command, rest);
-      // use-device has its own flag of that name
-      const shareAt = command === 'use-device' ? -1 : rest.indexOf('--share');
-      if (shareAt >= 0) rest.splice(shareAt, 1);
-      const measurements = takeFlag(rest, 'measurements');
-      const ctx = commandLine(
-        {
-          ...(device && { device }),
-          ...(shareAt >= 0 && { share: true }),
-          ...(measurements && { measurements }),
-        },
-        cliSessionFile(),
-      );
-      const ops = opsFor(ctx);
-      const commands = commandsFor(ops);
-      const op = name === undefined ? undefined : commands[name];
-      if (!op) {
-        const asked = command === undefined || ['--help', '-h', 'help'].includes(command);
-        (asked ? console.log : err)(
-          `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
-
-commands:
-${commandList()}
-
-operations (--device S selects the device, also for the next commands in this folder; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F):
-${listOf(ops)}`,
-        );
-        return asked ? 0 : 2;
-      }
-      try {
-        // piped words are no person: what would ask them is refused, but for --yes
-        const ask = process.stdin.isTTY ? askOnTerminal : undefined;
-        return await op.run(rest, { out: (s) => console.log(s), err, ...(ask && { ask }) });
-      } finally {
-        ctx.close();
-      }
-    }
+    default:
+      return operationCommand(command, rest);
   }
 }
 

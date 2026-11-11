@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `appdyno test` ve bir işlemin olan komutlar `main`'in yanında kendi fonksiyonlarıdır; o, 200 satırının 196'sından 103'üne iner. Logların, çökmelerin ve denetimin yanıtları `ops`'un `diagnose.test.ts`'i, JSON ve TOML düzenleyicilerinin testleri `cli`'ın `file-edits.test.ts`'idir; önceden `truth.test.ts` 800 satırın 793'ünde, `install.test.ts` 791'indeydi.
 - `packages/testing` tip projesine ve `typecheck`'ine, `ops`'unkinin dışında yeniden kavuşur ve onu kökün manifest'i bildirir; her paketin manifest'i testlerinin ve betiklerinin içe aktardığını bildirir: `hub` ve `ops` için sürücüler, `cli` için `mcp`, `protocol` ve MCP istemcisi, `ops` için MCP istemcisi, `core` ve `appdyno` için `typescript`, `appdyno` için `prettier`.
 - Her birim test dosyası, `no-real-state.setup.ts`'in oluşturduğu, çalıştırmanınkinin içinde kendine ait bir durum klasöründe çalışır; önceden iki işçinin dosyaları tek bir klasörü ve onunla birlikte sahte bir cihazın seri numarasıyla adlanan dosyalarını paylaşıyordu. 28 dosya bir klasörü elle oluşturan satırı bırakır; testlerinin her biri boş bir klasör isteyen 9 dosya kendininkini tutar.
 - `tool-kinds.ts` registry'den hiçbir şey içe aktarmaz: listeleri, `registry.ts`'in var olan araçlara bağlı tuttuğu sabitlerdir; böylece araç olmayan bir ad yine build'i bozar ve ops'un dosyaları arasındaki tip döngüsü, 62 dosyadan yeniden 21 dosyaya iner.
