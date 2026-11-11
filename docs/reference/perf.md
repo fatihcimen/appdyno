@@ -6,6 +6,8 @@ Every measurement is read from the platform's own tools and stored with the raw 
 (`<measurements dir>/pm-<id>.json` and `.txt`; the MCP server's `--measurements`, default
 `~/Library/Caches/appdyno/measurements`). Commands run in the C locale. Nothing leaves the machine.
 
+Words this page uses. The **fixture** is this project's own test app (`dev.appdyno.fixture`), which can add a known cost, such as 500 ms at its start, so that a measure can be checked against it. **Host load** is the Mac's 1-minute load average, on 15 cores unless said otherwise. The **probe** is a small library put into a simulator app to time its frames ([below](#the-simulators-frame-probe)). A **kind** is the name a number is kept under, such as `launch.ttid_ms`. The gate **calls** a change when it judges the change real. A **hang** is a time in which the app's main thread did not answer; a **frozen frame** is one frame of 700 ms or longer.
+
 ## What works where
 
 Each cell was run on this machine against a known cost on the fixture, except where it says otherwise. The Android phone is a Xiaomi on Android 16 (HyperOS), Turkish, and [One UI against HyperOS](#one-ui-against-hyperos) says what differs on a Samsung; the numbers are from its runs of `device-tests/perf.test.ts` and `device-tests/measures-android.test.ts` on 2026-11-03 and 04. The iPhone changed from iOS 27.0.1 to 27.2 between runs on 2026-11-04, so a number of the phone says which it was read on where it was read on one only. An emulator's frames here are on the Mac's GPU (`-gpu host`): drawing them on its CPU, its frames and start times are only the Mac's load. "no" says why; a measure a platform
@@ -120,22 +122,21 @@ file, device and OS, virtual or physical, build type, compile state, host and de
 time. A run goes to `<measurements dir>/runs/<app>/<scenario>/<device class>/`. A baseline goes to
 `.appdyno/perf/baselines/<app>/<scenario>/<device class>.json` (`APPDYNO_PERF_DIR` moves it), which can be committed. Limits
 go in `.appdyno/perf/budgets.json`: a list of `{ "kind": "launch.ttid_ms", "max": 2000 }`, with `app`, `scenario`, `deviceClass`
-and `min` optional. `perf_compare` `budget` with `kind` and `max` or `min` writes one there, in place of a rule of the same kind and scope, and needs no run measured (`appdyno perf budget --app A --kind launch.ttid_ms --max 200`): a kind no measure keeps is refused, naming those it could mean, and one the app's kept runs lack is said, as it would hold nothing to it.
+and `min` optional. `perf_compare` `budget` with `kind` and `max` or `min` writes one there, in place of a rule of the same kind and scope, and needs no run measured (`appdyno perf budget --app A --kind launch.ttid_ms --max 200`). A kind no measure keeps is refused, with the kinds of that name it may have meant. A kind none of the app's kept runs holds is kept all the same, and the answer says so and names the kinds they hold.
 
-```text
-appdyno perf-launch --app A --mode cold --repeats 6      a measured run, kept
-appdyno perf baseline --app A [--last 3]                 adds the newest run, or runs, to the baseline, each once; exit 1 until it holds 3, and 5 samples of a kind
-appdyno perf compare --app A [--format text|json|junit]  exit 1 on a regression, a broken budget, or what it could not judge
-appdyno perf budget --app A                              budgets only
-appdyno perf why --app A                                 the same as compare, and on a regression its cause
-```
+| command                                                     | what it does                                                                                                    |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `appdyno perf-launch --app A --mode cold --repeats 6`       | measures a run and keeps it                                                                                     |
+| `appdyno perf baseline --app A [--last 3]`                  | adds the newest run, or runs, to the baseline, each once; exits 1 until it holds 3 runs and 5 samples of a kind |
+| `appdyno perf compare --app A [--format text\|json\|junit]` | exits 1 on a regression, a broken budget, or a change it could not judge                                        |
+| `appdyno perf budget --app A`                               | checks the budgets only                                                                                         |
+| `appdyno perf why --app A`                                  | does what `compare` does, and on a regression looks for its cause                                               |
 
 The tool `perf_compare` does what the last four do, its `action` naming which: `baseline`, `compare`, `budget` or `why`. [Why it got worse](#why-it-got-worse) says what `perf why` runs.
 
-**How a change is called.** All of: at least 5 samples each side and 3 baseline runs, else `few-samples`: a change the gate could not judge, which is no pass and exits 1; a rank
-test on all baseline samples against the run, p under 0.01 (by permutation, because whole milliseconds tie; 4 against 4 cannot reach
-it); a shift past a floor by unit (15 % and 10 ms for times); and past 4 standard deviations of the baseline's run medians. A worse shift past both floors with p from 0.01 to 0.05 says `noisy` and exits 1, measure again with more repeats: a few slow samples on either side hide a real change from the test, as on a simulator 600 ms put into the start read +754 ms past a floor of 415 ms with p 0.033, against a baseline with launches of 6.4 and 3.9 s, and passed as `ok`. A better one unconfirmed, or a worse one at p 0.05 or more, says `ok`. A kind every run of a baseline of 3 or more holds and this run lacks also reads `few-samples`, as a screen that stops drawing keeps no frames: changing a flow's steps stops its gate until the baseline is taken again. A run under
-high load or on a hot device says `noisy` and exit 1, as the gate could not judge it, and is refused as a baseline; a number of its own under noise is left out of one and named, and the rest of the run goes in. A run whose build or compile state differs from its baseline's says `refused` and exits 1, naming both sides. A number with no baseline says `new`, and passes. A phone whose load, pressure, share at work and heat could not be read says `device-state-unread` beside its numbers: that stops nothing and keeps nothing out of a baseline, but a device unread is not a device known to be calm. A virtual device's state is this Mac's, which is read.
+**How a change is called.** A number that did not move past its floor is `ok`. The floor is the largest of a floor by unit (15 % and 10 ms for times) and 4 standard deviations of the baseline's run medians. Past the floor, the gate needs 3 baseline runs and at least 5 samples on each side, else `few-samples`: a change it could not judge, which is no pass and exits 1. Then a rank test of all the baseline's samples against the run must give p under 0.01 (by permutation, as whole milliseconds tie; 4 against 4 cannot reach it). A better change the test confirms is an `improvement`; a better one it does not confirm, or a worse one at p 0.05 or more, is `ok`. A worse change at p from 0.01 to 0.05 is `noisy` and exits 1: measure again with more repeats, as a few slow samples on either side hide a real change from the test (on a simulator, 600 ms put into the start read +754 ms past a floor of 415 ms with p 0.033, against a baseline with launches of 6.4 and 3.9 s, which the test alone would have passed). A worse change the test confirms, in a run or against a baseline measured under high load, on a hot device or with a mirror open, is `noisy` too and exits 1, as the gate cannot tell the change from the load; any other is a `regression`, and exits 1. A kind every run of a baseline of 3 or more holds and this run lacks is `few-samples` too, as a screen that stops drawing keeps no frames: changing a flow's steps stops its gate until the baseline is taken again.
+
+**What load keeps out of a baseline.** A number measured with host load over 0.8 a core (on a virtual device, or a number timed through this Mac), on a busy or hot device, or with a mirror open, is left out of a baseline and named, and the rest of its run goes in; a run with nothing else is refused as a baseline. A run whose build or compile state differs from its baseline's is `refused` and exits 1, naming both sides. A number with no baseline is `new`, and passes. A phone whose load, pressure, share at work and heat could not be read says `device-state-unread` beside its numbers: that stops nothing and keeps nothing out of a baseline, but a device unread is not a device known to be calm. A virtual device's state is this Mac's, which is read.
 
 **Why that method.** Samples of one run share its load and heat, so two runs of an unchanged app differ "significantly". Across 72
 ordered pairs of unchanged runs, a rank test alone and a 10 % difference of medians alone would have alarmed:
@@ -160,7 +161,7 @@ Why `noisy` from p 0.01 to 0.05, from the same script, by the gate itself, 400 t
 
 Why a count's floor is 0.5, from the same script, by the gate itself on counts that follow a Poisson law, 3 baseline runs, 400 trials. At a floor of 1 a rise from none read `ok` every time, so a crash on every run passed. Under 1 it never reads `ok`: with one sample a run it is `few-samples`, exit 1, and with 5 it is `regression`. What that costs an unchanged count of one sample a run is more stops, and all of them `few-samples`: 0 % to 6 % at a rate of 0.1 a run, 4 % to 12 % at 0.5, 4 % to 7 % at 1, 5 % to 10 % at 2, and no change from 3 up. Floors of 0.25, 0.5 and 0.75 read the same within the trials: on whole counts a move is at least a half.
 
-**The acceptance tests** (`device-tests/perf-compare.test.ts`; the numbers are kept in `.ci/perf-gate.txt`), 6 launches per run, a baseline
+**The acceptance tests** (`device-tests/perf-compare.test.ts`, which writes its numbers to `.ci/perf-gate.txt` on the machine that runs it), 6 launches per run, a baseline
 of 3 runs, 6 unchanged runs, then the fixture's start made slower by a known amount:
 
 | device            | baseline median | unchanged runs               | false alarms | injected at start | called                      |
@@ -220,11 +221,11 @@ A first version of the binder case spent 100 ms in a framework call, and the ans
 
 `appdyno perf why` is the gate, and on a regression it looks for the cause by itself, on the same device, the same build and the same journey, and writes one answer: what got worse and by how much, how sure the gate is, against which baseline and which run, and the likeliest cause with what shows it. The same comes through `perf_compare` with `action: why`, in `answers`, and on the dashboard. It fails as `perf compare` does: exit 1 on a regression or a broken budget.
 
-```text
-appdyno perf reference --app A [--scenario S] [--device S] [--dsym D]  on the baseline's build: the other side of a later diff
-appdyno perf why --app A [--scenario S] [--device S] [--dsym D]        the gate, and on a regression its cause
-appdyno perf comment --app A --out comment.md                          the answers as Markdown in a file; no device
-```
+| command                                                                 | what it does                                                  |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `appdyno perf reference --app A [--scenario S] [--device S] [--dsym D]` | on the baseline's build, keeps the other side of a later diff |
+| `appdyno perf why --app A [--scenario S] [--device S] [--dsym D]`       | the gate, and on a regression its cause                       |
+| `appdyno perf comment --app A --out comment.md`                         | writes the answers to a file as Markdown; needs no device     |
 
 **Only a regression is looked at.** Every call is the gate's own, with its rank test, floors and run-to-run limit. A run with no regression touches no device, and `noisy`, `few-samples` and `refused` are said and nothing runs: noise is not a regression. What a look reads is kept as a measurement and never as a run, so it cannot become the newest run the gate compares.
 
@@ -253,13 +254,13 @@ A journey's whole goes with the step that moved most. A step that starts the app
 - A profile sees what is on the CPU, and a frame trace what the main thread did in its frames. A sleep in a touch's handler holds up no frame in flight, so it shows in neither, as a timer or a wait for the network does not: the answer says no cause was found and why, not the nearest thing that moved.
 - If the change does not show again while it is looked at, that is said: what was read may not be that change.
 
-**On a phone** the gate goes by the phone. What the phone timed itself is called whatever the Mac is doing, and what was timed on the Mac is left out of a baseline by name. Where the phone's own numbers were called, a change in one of those under a loaded Mac is a note and fails nothing; with none of its own called, it fails as `noisy` does anywhere. On an iPhone `perf_launch` is timed on the Mac, so a loaded Mac refuses the run whole; with `trace: true` its phases are the phone's own, one sample a run. A phone that is hot, or busy, is refused: that is the phone's own state, and the gate is right. On a phone a function is an address unless `--dsym` names the build's dSYM, on `perf reference` and on `perf why`. On an iPhone a hang trace sees a wait too, so a sleep in a touch reads as a blocked hang, in what ran last, and not as no cause.
+**On a phone** the gate goes by the phone. What the phone timed itself is called whatever the Mac is doing, and what was timed on the Mac is left out of a baseline by name. If the gate could judge the numbers the phone timed itself, a change in a number timed on a loaded Mac is only a note and fails nothing. If it could judge none of the phone's own numbers, that change fails the run as `noisy`, as it does on any device. On an iPhone `perf_launch` is timed on the Mac, so a loaded Mac refuses the run whole; with `trace: true` its phases are the phone's own, one sample a run. A phone that is hot, or busy, is refused: that is the phone's own state, and the gate is right. On a phone a function is an address unless `--dsym` names the build's dSYM, on `perf reference` and on `perf why`. On an iPhone a hang trace sees a wait too, so a sleep in a touch reads as a blocked hang, in what ran last, and not as no cause.
 
 **How sure.** The gate's own numbers beside each answer: p, the samples on each side, the baseline's runs, and how many times its floor the change is. A modelled number stays `(modelled)` and one timed on this Mac `(timed through the host)` on every surface, and a virtual device's answer says what the dashboard says of one.
 
 **A replay's values** come from the environment. A value given by `--param` is not kept, as it may be a secret, so a flow that needs one has it set, or the answer says which it lacks. A flow changed so that a step is no longer that step is said, and not timed.
 
-**The comment.** `perf comment` reads what `perf why` kept of the newest run of each scenario, and an answer of an older run is not used. All that comes from the app is escaped, as a pull request can name a function anything and an `@name` would notify someone. A body is cut at 60,000 characters. [`perf-gate.yml`](../examples/perf-gate.yml) is a job to copy: see [`ci.md`](ci.md).
+**The comment.** `perf comment` reads what `perf why` kept of the newest run of each scenario, and an answer of an older run is not used. All that comes from the app is escaped, as a pull request can name a function anything and an `@name` would notify someone. A body is cut at 60,000 characters. [`perf-gate.yml`](../examples/perf-gate.yml) is a job to copy: see [On a pull request](../guides/performance.md#on-a-pull-request).
 
 Against what was put there on purpose, by `device-tests/gate-why.test.ts`, on 2026-11-04, each on a baseline of 3 runs of 5 iterations, 6 launches for a start, and a reference, on an emulator with API 34 and an iPhone 17 simulator with iOS 26.5, each made for the test, host load 6-10 on 15 cores. The cost is 800 ms in one step or at the start, read from a file or the environment by the same fixture build:
 
@@ -329,7 +330,7 @@ Against a known cost, by `device-tests/journey.test.ts`, on the Xiaomi, Android 
 A timeline puts what happened in a journey on one clock, in one HTML file: the video, touches, steps, frames, requests, traffic, the log and memory. Click a slow frame and the video goes to that moment, with the requests and the log lines around it. The file opens with no server and no network, and can be sent to someone.
 
 ```sh
-appdyno timeline --app dev.app --flow journey.flow    # a flow, or --seconds 30 of your own hands
+appdyno timeline --app com.example.app --flow journey.flow    # a flow, or --seconds 30 of your own hands
 ```
 
 Through the server: `report` `timeline`, then the journey, then `report` `stop`; a session's end writes it too. A timeline lasts at most 180 s, as past one recording's segment the video's own times are lost. It writes `timeline.html` beside the report, and a video over 64 MB stays beside the page, with the page saying so. A `perf_*` run during it is marked `mirrored`, as an encoder is at work on the device. Its frames each second are what the counters grew by, as a reset would cut the window a `perf_scroll` counts from its own: one that reset them every second left a list janking on every frame at 0 % on an Android 14 emulator, against 97 % alone, and now reads 98 %; on a simulator it left 0 frames, and now 100 % as alone. The second in which another measure begins its own count has no frames.
@@ -340,7 +341,7 @@ Everything stands on the device's own clock. What was read there needs nothing d
 
 The page says how far off each row can be, and two rows can be apart by at most the sum of their figures:
 
-| Row               | Read on | Placed by                                                          | Within       |
+| row               | read on | placed by                                                          | within       |
 | ----------------- | ------- | ------------------------------------------------------------------ | ------------ |
 | Video, Android    | device  | each frame's own time, in the metadata track `screenrecord` writes | ±40 ms       |
 | Video, simulator  | Mac     | when its recording began, as measured of this recorder             | ±150 ms      |
@@ -366,7 +367,7 @@ So the page takes those lines as its Stalls row, 1483 ms on the emulator and 149
 
 ### What each device gives
 
-| Row      | Android                                        | iOS simulator                            | iPhone                                           |
+| row      | Android                                        | iOS simulator                            | iPhone                                           |
 | -------- | ---------------------------------------------- | ---------------------------------------- | ------------------------------------------------ |
 | Video    | yes, each frame stamped                        | yes, placed within 150 ms                | yes, HEVC, placed within 620 ms                  |
 | Frames   | yes: every frame, with Perfetto's verdict      | yes: the probe, which relaunches the app | its hitches and hangs only, placed within 215 ms |
@@ -392,7 +393,7 @@ The page's one script is allowed by its hash, so a second script on it does not 
 ### The flight recorder
 
 ```sh
-appdyno flight --app dev.app --seconds 30    # until Ctrl-C; through the server, report flight, report stop
+appdyno flight --app com.example.app --seconds 30    # until Ctrl-C; through the server, report flight, report stop
 ```
 
 It keeps the last N seconds of an app as a timeline, 30 by default, from 20 to 120 (`--flight-seconds`, `APPDYNO_FLIGHT_SECONDS`), and saves them when the app crashes or stalls. It is off until a person turns it on, and it ends with its session.
@@ -419,10 +420,10 @@ It keeps the last N seconds of an app as a timeline, 30 by default, from 20 to 1
 
 ## The dashboard
 
-```text
-appdyno perf survey --app A [--device S]               every measure on that device in turn, then the page
-appdyno perf dashboard [--app A] [--out dir] [--open]  the page alone, from what is kept; no device needed
-```
+| command                                                 | what it does                                                    |
+| ------------------------------------------------------- | --------------------------------------------------------------- |
+| `appdyno perf survey --app A [--device S]`              | runs every measure on that device in turn, then writes the page |
+| `appdyno perf dashboard [--app A] [--out dir] [--open]` | writes the page alone, from what is kept; needs no device       |
 
 `perf_compare` with `action: dashboard` writes the page too, in its usual place: `<measurements dir>/dashboard/index.html`. `--out` and `--open` are the command line's alone. The page is rewritten after each kept run and each baseline, and an open page reloads itself every minute, which closes a table left open. A failure to write it never fails a measurement.
 
@@ -461,10 +462,10 @@ A start through it (`perf_launch` with `trace`) writes its phases: `load`, proce
 
 | measure        | source                                                                                                | notes                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| frames         | `dumpsys gfxinfo <pkg> framestats`, then `reset` in the same shell                                    | summary (total, janky %, p50–p99, frozen = frames ≥ 700 ms from the histogram) and the last ~120 frames of every window: a frame taking over two vsync intervals from its vsync to completion is slow (a smooth frame takes about one, the render pipeline). Some releases print `FrameInterval` and `FrameStartTime` swapped against their header: the interval is the column with a plausible period.                                                     |
+| frames         | `dumpsys gfxinfo <pkg> framestats`, then `reset` in the same shell                                    | summary (total, janky %, p50-p99, frozen = frames ≥ 700 ms from the histogram) and the last ~120 frames of every window: a frame taking over two vsync intervals from its vsync to completion is slow (a smooth frame takes about one, the render pipeline). Some releases print `FrameInterval` and `FrameStartTime` swapped against their header: the interval is the column with a plausible period.                                                     |
 | frame timeline | Perfetto `android.surfaceflinger.frametimeline` (Android 12+), analysed by the pinned trace processor | every frame of the app's process with its jank type: app deadline missed, buffer stuffing, compositor (SurfaceFlinger, display HAL, prediction error). The app's own share (app deadline missed) is reported apart: an emulator marks nearly every frame with a prediction error of its emulated display (measured: 122 of 122 frames of a smooth animation), which is not the app's. Perfetto v59.1 by its sha256: the app's own or fetched on first need. |
 | memory         | `dumpsys meminfo <pkg>`                                                                               | TOTAL PSS (what the system charges the app), Java and native heap, graphics, private dirty                                                                                                                                                                                                                                                                                                                                                                  |
-| CPU            | `/proc/<pid>/stat` utime + stime before and after a window, `getconf CLK_TCK`                         | **works**: `/proc` against one busy core; each thread; simpleperf                                                                                                                                                                                                                                                                                                                                                                                           |
+| CPU            | `/proc/<pid>/stat` utime + stime before and after a window, `getconf CLK_TCK`                         | % of one core over the window (2 s by default, `cpuWindowMs`); each thread's share beside it; `perf_profile` names functions with simpleperf                                                                                                                                                                                                                                                                                                                |
 | launch         | `am start -W`                                                                                         | cold: the app is stopped first; warm: it goes home and comes back. One warm-up launch is left out, then the median TotalTime of the launches the system reports in that state. WaitTime includes `am`'s own cost and is not used.                                                                                                                                                                                                                           |
 | device state   | `/proc/loadavg`, `/proc/pressure/cpu`, `/proc/meminfo`, `dumpsys thermalservice`, `dumpsys battery`   | recorded with measurements: a loaded device explains slow frames that are not the app's                                                                                                                                                                                                                                                                                                                                                                     |
 
@@ -552,7 +553,7 @@ the same kind of device (the tools say "virtual device: relative, compare only w
 
 `device-tests/perf.test.ts` checks every measure against a fixture screen of known cost: a 2 s animation
 whose draw takes about 1 ms or 40 ms (frames and the frame timeline), 50 MB of Java heap held (memory,
-within 15 %), one busy core (CPU, 80–125 %), and cold launches against the system's own "Displayed" log
+within 15 %), one busy core (CPU, 80-125 %), and cold launches against the system's own "Displayed" log
 line (within 50 ms).
 
 ## iOS
@@ -571,7 +572,7 @@ a phone connected by USB, whatever the recording's length.
 | launch      | `simctl launch` until the first screen reads                                                                                              | `devicectl` until the runner reads the first screen                  | cold: terminated first; warm: another app in between. One warm-up left out, the median of the rest; includes a read. xctrace's App Launch needs `get-task-allow`: denied for Settings                                                                                                                                                                                                                                                                         |
 | CPU profile | Time Profiler, attached (`sample` sees no busy samples of a simulator app under macOS 27, and stays only for a Mac where attaching fails) | Time Profiler, every process, as attaching fails at times on a phone | the busiest functions by the weight of the samples on top of their stacks, and the app's own functions (of a binary inside an .app) by inclusive weight; the trace stays for Instruments                                                                                                                                                                                                                                                                      |
 | heap        | `leaks --outputGraph` (a memory graph for Xcode), the leaks found                                                                         | –                                                                    | the summary is read from the saved graph                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| hangs       | –                                                                                                                                         | Time Profiler's `potential-hangs`                                    | library only (`measure.hangs`): there is no Hangs template in Xcode 27.1, the Time Profiler has the table                                                                                                                                                                                                                                                                                                                                                     |
+| hangs       | –                                                                                                                                         | Time Profiler's `potential-hangs`                                    | `perf_trace` with `what: hangs`: there is no Hangs template in Xcode 27.1, so the Time Profiler's table is read                                                                                                                                                                                                                                                                                                                                               |
 | hitches     | –                                                                                                                                         | `xctrace record --template 'Animation Hitches'`, exported            | frames shown, the app's hitches, their total and worst time, the hitch ratio and the likely causes; a frozen frame is a hitch or a hang of 700 ms or longer. **A recording with no displayed surfaces is refused (`CHECK_FAILED`: nothing moved), never "no hitches".** The few surfaces seen earlier came from our own bug: the start note was never noticed, so the scroll ran 30 s late, outside the recording. On a simulator the tool's recording fails. |
 | network     | `nettop` on the app's process                                                                                                             | Power Profiler instrument, attached, `wifi-` and `cellular-` columns | an app's bytes, headers included, in periods of 5 s on a phone; the measure records 6 s past its window, as the unfinished last period is left out                                                                                                                                                                                                                                                                                                            |
 | energy      | `ri_energy_nj` of the app's process (`proc_pid_rusage`): this Mac's energy                                                                | Power Profiler instrument, attached: `energy.impact`                 | a phone has a score, by subsystem, no joules                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -580,7 +581,7 @@ a phone connected by USB, whatever the recording's length.
 A simulator's numbers are relative: `Device.virtual` is true there, false on a phone, and the tools say so.
 
 `device-tests/ios-perf.test.ts` checks the simulator measures on the fixture: 50 MB held (memory, within
-15 %), one busy thread (CPU, 80–125 %, and the profile's top app function, from a trace), a memory graph with
+15 %), one busy thread (CPU, 80-125 %, and the profile's top app function, from a trace), a memory graph with
 its leaks summary, cold launches slower than warm. `device-tests/iphone.test.ts` reads memory, CPU, a profile, the
 hangs and a launch of Settings; a cost-known check of them needs an app signed for the phone.
 
@@ -592,10 +593,10 @@ Medians and the worst of 5 runs, in ms, each through the MCP server over stdio, 
 
 | call                                                | iOS simulator | Android emulator | iPhone        | Samsung       | Xiaomi        |
 | --------------------------------------------------- | ------------- | ---------------- | ------------- | ------------- | ------------- |
-| `list_devices`                                      | 112 / 123     | 119 / 175        | 220 / 258     | 118 / 148     | 476 / 568     |
-| `screen`, first of a server                         | 375 / 434     | 30 / 32          | 591 / 624     | 147 / 181     | 136 / 159     |
 | `initialize`                                        | 141 / 153     | 142 / 148        | 134 / 137     | 120 / 131     | 104 / 115     |
 | `tools/list`                                        | 7 / 7         | 8 / 9            | 6 / 7         | 6 / 6         | 6 / 7         |
+| `list_devices`                                      | 112 / 123     | 119 / 175        | 220 / 258     | 118 / 148     | 476 / 568     |
+| `screen`, first of a server                         | 375 / 434     | 30 / 32          | 591 / 624     | 147 / 181     | 136 / 159     |
 | `launch_app` of the fixture, cold                   | 2,044 / 2,139 | 823 / 834        | 2,636 / 2,654 | 1,548 / 1,615 | 1,890 / 2,063 |
 | `screen`                                            | 18 / 27       | 11 / 14          | 308 / 317     | 49 / 59       | 58 / 68       |
 | `swipe`, the touch alone (`read: none`)             | 313 / 315     | 647 / 710        | 913 / 1,044   | 380 / 432     | 679 / 717     |
