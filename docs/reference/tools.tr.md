@@ -163,13 +163,13 @@ Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri k
 - `device_setting keychain`: uygulamaların anahtar zincirinde tuttuğu her öğe
 - sistemin kendi güç, acil durum ya da silme denetimlerine, yani cihazın kendisine bir girdi: herhangi bir araçtan, `steps`'ten ya
   da bir akıştan, Android'in güç menüsüne (Kapat, Yeniden başlat, Acil durum) ya da hızlı ayarlardaki düğmesine, bir kilit ekranının
-  acil aramasına, Ayarlar'ın sıfırlamalarına ve tüm verileri silme ekranına, iOS'un kapatmak için kaydırın ve Acil SOS'una, Denetim Merkezi'nin güç düğmesine ya da
+  acil aramasına, Ayarlar'ın sıfırlamalarına ve tüm verileri silme ekranına, iOS'un Vazgeç'i dışındaki kapatma ekranına, Denetim Merkezi'nin güç düğmesine ya da
   Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'ine bir dokunuş, hareket, kaydırma, uzun basış, yazma ya da tuş; dokunuş nereye
   düşerse düşsün sistem uygulamasından, her dilde aynı kimliklerden ve İngilizce ve Türkçe sözlerden tanınır; bir de güç ya da yan tuşa
   5 saniye içinde üçüncü basış, bu birçok telefonda yardım çağırır. appdyno hiçbir cihazı yeniden başlatmaz, sıfırlamaz ya da silmez; `simulator` `shutdown` ile kapattığı bir simülatör ya da emülatör dışında hiçbirini kapatmaz; geri kalanında
   yanıt bunu kişinin yaptığını söyler. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları
   da. Bunların hiçbir şey sorulmadan yapılmasına yalnızca `--allow-power virtual` ya da `all` izin verir, asla `--allow-data-loss` değil
-- bir arama: arama başlatan bir bağlantıyla (`tel:`, `telprompt:`, `facetime:` ya da `facetime-audio:`) `open_link` ve bir telefon uygulamasındaki (numara çevirici, arama ekranı ya da FaceTime) ya da bir sistem uyarısının Ara düğmesindeki bir dokunuş. appdyno hiçbir arama başlatmaz; bunların seçeneği de `--allow-power`'dır
+- bir arama: arama başlatan bir bağlantıyla (`tel:`, `telprompt:`, `facetime:` ya da `facetime-audio:`) `open_link` ve bir telefon uygulamasındaki (numara çevirici, arama ekranı ya da FaceTime ya da bir Android cihazın kendi varsayılan çeviricisi) bir dokunuş, tuş ya da metin ya da metni yalnızca bir telefon numarası olan bir iOS sistem uyarısının, her dilde, Vazgeç dışındaki bir düğmesine ya da Call veya Ara diyen bir düğmeye bir dokunuş. appdyno hiçbir arama başlatmaz; bunların seçeneği de `--allow-power`'dır
 
 Sunucu, istemcinin bunu yapabildiğini bildirdiği yerde istemcinin kendi sorusuyla, yani MCP elicitation ile sorar; istemci bunu bir 2025
 revizyonunda `initialize`'da, 2026-07-28'de ise her istekte bildirir; soru cihazı, uygulamayı ve neyin kaybolacağını söyler. Model onu yanıtlayamaz.
