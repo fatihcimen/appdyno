@@ -137,6 +137,8 @@ async function launchRun(
             `trace (perf_query): ${startup.tracePath}`,
           ]
         : []),
+      // where it was before is not where a start leaves it: the next call must not take it for that screen
+      ...(mode === 'hot' ? [] : [RESTARTED]),
       ...noisy(noise),
       `raw output: ${saved.txt}`,
     ],
@@ -170,6 +172,9 @@ async function nextOf(ctx: ServerContext, key: RunKey) {
     return `perf_compare with scenario ${key.scenario} compares this run with its baseline of ${held} runs`;
   return `kept as one run of ${key.scenario}, not as a baseline: ${held ? `its baseline holds ${held} of the ${MIN_BASELINE_RUNS} runs it needs` : 'it has none'}; perf_launch with baseline: true measures ${MIN_BASELINE_RUNS} runs and keeps them as one`;
 }
+
+/** What a cold or warm start leaves the app on. */
+const RESTARTED = 'the app was started anew: it shows its first screen';
 
 /** Where no store rates a start, what tells a slow one is the app's own runs before. */
 const UNRATED =

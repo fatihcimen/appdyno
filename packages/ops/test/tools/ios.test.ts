@@ -285,6 +285,7 @@ describe('iOS simulators', () => {
         'cold launch (until the first screen is read): 100 ms, 9000 ms, 8000 ms',
         'median: 8000 ms',
         'no limit of a slow start is rated on this platform: judge it against a baseline (perf_launch baseline: true, then perf_compare)',
+        'the app was started anew: it shows its first screen',
       ]);
       expect(launch.at(-1)).toMatch(/^kept as one run of launch-cold, not as a baseline/);
       expect((await t.textOf('perf_heap')).text).toMatch(

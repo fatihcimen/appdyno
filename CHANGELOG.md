@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `perf_launch` with a cold or warm start says that the app was started anew and shows its first screen, where the next call took the app to be where it was before.
 - A `steps` call that ends in a `wait_for` or an `assert` that held, or in a `scroll_to` that found its row, no longer adds "no change seen", where it did as though the step had acted.
 - A tool's step in `steps`, as `launch_app` or `open_link`, reads the screen as a touch's does: where its step says `read`, or at the last step as the call says, where each printed a screen of its own under `read: none`.
 - A text field with no id of its own keeps its ref while its placeholder comes and as it is typed in, named by the words around it, where its ref changed with either and the next call on it was refused as stale. What another field holds no longer names an element's row.
