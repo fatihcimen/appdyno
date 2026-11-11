@@ -12,10 +12,7 @@ const MAX_LINES = 200;
  * worth of state, as a file's limit never sees one. These hold little: most are small functions over one context, and
  * each reason says what is long about it.
  */
-const LONGER: Record<string, string> = {
-  'packages/ops/src/timeline/flight.ts startFlight':
-    'a recorder, armed and disarmed around one state: its parts have no use apart',
-};
+const LONGER: Record<string, string> = {};
 
 type Fn = { name: string; lines: number };
 

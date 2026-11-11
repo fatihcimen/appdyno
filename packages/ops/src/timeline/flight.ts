@@ -91,6 +91,110 @@ const stallOf = (s: LiveSample) => {
       : undefined;
 };
 
+type Device = Session['device'];
+
+/** The ring's trace is about to end: the next one is up before it does, and what disarms waits for that. */
+function renewFrames(device: Device, app: string, seconds: number, a: Armed) {
+  const old = a.frames;
+  const renewing = recordFrames(device, app, FRAMES_SECONDS, seconds).then(async (next) => {
+    a.frames = next;
+    await dropTrace(await old.finish());
+  });
+  a.renewing = renewing.catch(() => undefined);
+  return renewing;
+}
+
+/** The screen's video going round in segments on this Mac, or why there is none. */
+async function videoRing(s: Session, folder: string, segmentSeconds: number, offsetMs: number) {
+  const { serial, recorder } = s.device;
+  let noVideo = recorder.oneAtATime
+    ? 'this device gives one recording at a time, so no ring of them is kept'
+    : undefined;
+  let ring: VideoRing | undefined;
+  if (!recorder.oneAtATime) {
+    ring = new VideoRing(recorder, folder, segmentSeconds, offsetMs);
+    ring.onHandle = (handle, file) =>
+      filming.write(serial, { handle, since: new Date().toISOString(), file, owner: s.owner });
+    await ring.rotate().catch((e: unknown) => {
+      noVideo = e instanceof Error ? e.message : String(e);
+      ring = undefined;
+    });
+  }
+  return { ring, noVideo };
+}
+
+/** The page of a stretch kept for `why`: its video sealed, its frames and numbers. */
+async function pageOf(
+  ctx: ServerContext,
+  s: Session,
+  a: Armed,
+  k: {
+    app: string;
+    why: string;
+    marks: Awaited<ReturnType<FrameRecording['finish']>>;
+    end: number;
+    seconds: number;
+    folder: string;
+    to: string;
+  },
+) {
+  const { device } = s;
+  const video = await a.ring?.seal(join(k.folder, `whole.${device.recorder.extension}`));
+  filming.remove(device.serial);
+  const last = await measureClock(() => device.wallClock()).catch(() => a.first);
+  const stamp = new Date().toISOString().replace(/\W/g, '');
+  return writePage(ctx, s, {
+    app: k.app,
+    ...(a.pid && { pid: a.pid }),
+    reason: k.why,
+    // no further back than it was watching: what came before that is not what it saw
+    from: Math.max(k.end - k.seconds * 1_000, a.since),
+    to: k.end,
+    clocks: { first: a.first, last },
+    frames: k.marks,
+    ...(video && { video }),
+    ...(!video && { noVideo: a.noVideo ?? 'the screen could not be kept' }),
+    samples: a.samples,
+    steps: k.folder,
+    dir: k.to,
+    name: `${safeName(k.app)}-flight-${stamp}.timeline.html`,
+    ...(video && { videoFile: video.file }),
+  });
+}
+
+/** No recording of the device's own runs, and the app runs. */
+async function mayFly(device: Device, app: string) {
+  const running = filming.read(device.serial);
+  if (running)
+    throw new ToolError(
+      `a recording has run on ${device.serial} since ${running.since}: stop it first, as the flight recorder makes its own`,
+      'INVALID_ARGUMENT',
+    );
+  if (!(await device.appRunning(app)))
+    throw new ToolError(`${app} is not running: launch it first`, 'APP_NOT_RUNNING');
+}
+
+/** The ring's folder, with nothing in it. */
+const emptied = (folder: string) => {
+  rmSync(folder, { recursive: true, force: true });
+  mkdirSync(folder, { recursive: true, mode: 0o700 });
+};
+
+/** A process gone with a report of why is a crash: one a person closed has none, and nothing is kept. */
+async function crashOf(device: Device, app: string, since: number) {
+  const end = Date.now() + CRASH_WAIT_MS;
+  for (;;) {
+    const c = await device.crashes({ app, since, limit: 1 }).catch(() => undefined);
+    if (c?.reports[0]) return c.reports[0].reason;
+    if (Date.now() >= end) return undefined;
+    await sleep(POLL_MS);
+  }
+}
+
+/** By its process where a device has that to say: Android restarts a crashed app within the second, and it runs. */
+const stillThere = async (device: Device, app: string, a: Armed) =>
+  device.appPid ? (await device.appPid(app)) === a.pid : device.appRunning(app);
+
 /**
  * A timeline with no end: it holds the last `seconds` of a device and keeps them when the app crashes or stalls, by the
  * signals the measures read. Opt-in: nothing of it runs until a person asks, and it ends with its session. Its video
@@ -104,20 +208,10 @@ export async function startFlight(
   dir: string | undefined,
 ): Promise<RunningFlight> {
   const { device } = s;
-  const { serial, recorder, measure } = device;
-  const running = filming.read(serial);
-  if (running)
-    throw new ToolError(
-      `a recording has run on ${serial} since ${running.since}: stop it first, as the flight recorder makes its own`,
-      'INVALID_ARGUMENT',
-    );
-  if (!(await device.appRunning(app)))
-    throw new ToolError(`${app} is not running: launch it first`, 'APP_NOT_RUNNING');
+  const { serial, measure } = device;
+  await mayFly(device, app);
   const folder = flightFolder(serial);
-  const clear = () => {
-    rmSync(folder, { recursive: true, force: true });
-    mkdirSync(folder, { recursive: true, mode: 0o700 });
-  };
+  const clear = () => emptied(folder);
   clear();
   const to = dir ?? tracesDir();
   mkdirSync(to, { recursive: true });
@@ -131,34 +225,11 @@ export async function startFlight(
   let lastSave = 0;
   let logsReadTo = 0;
 
-  /** The ring's trace is about to end: the next one is up before it does, and what disarms waits for that. */
-  const renewFrames = (a: Armed) => {
-    const old = a.frames;
-    const renewing = recordFrames(device, app, FRAMES_SECONDS, seconds).then(async (next) => {
-      a.frames = next;
-      await dropTrace(await old.finish());
-    });
-    a.renewing = renewing.catch(() => undefined);
-    return renewing;
-  };
-
   const arm = async (): Promise<Armed> => {
     const first = await measureClock(() => device.wallClock());
     if (measure.framesByProbe) await measure.attachProbe(app);
     const frames = await recordFrames(device, app, FRAMES_SECONDS, seconds);
-    let noVideo = recorder.oneAtATime
-      ? 'this device gives one recording at a time, so no ring of them is kept'
-      : undefined;
-    let ring: VideoRing | undefined;
-    if (!recorder.oneAtATime) {
-      ring = new VideoRing(recorder, folder, segmentSeconds, first.offsetMs);
-      ring.onHandle = (handle, file) =>
-        filming.write(serial, { handle, since: new Date().toISOString(), file, owner: s.owner });
-      await ring.rotate().catch((e: unknown) => {
-        noVideo = e instanceof Error ? e.message : String(e);
-        ring = undefined;
-      });
-    }
+    const { ring, noVideo } = await videoRing(s, folder, segmentSeconds, first.offsetMs);
     const a: Armed = {
       frames,
       ring,
@@ -176,7 +247,10 @@ export async function startFlight(
     try {
       a.pid = await device.appPid?.(app);
       a.timers.push(
-        setInterval(() => void renewFrames(a).catch(() => undefined), FRAMES_RENEWED_MS),
+        setInterval(
+          () => void renewFrames(device, app, seconds, a).catch(() => undefined),
+          FRAMES_RENEWED_MS,
+        ),
       );
       const turning = ring;
       if (turning)
@@ -212,27 +286,7 @@ export async function startFlight(
       filming.remove(serial);
       return undefined;
     }
-    const video = await a.ring?.seal(join(folder, `whole.${recorder.extension}`));
-    filming.remove(serial);
-    const last = await measureClock(() => device.wallClock()).catch(() => a.first);
-    const stamp = new Date().toISOString().replace(/\W/g, '');
-    const page = await writePage(ctx, s, {
-      app,
-      ...(a.pid && { pid: a.pid }),
-      reason: why,
-      // no further back than it was watching: what came before that is not what it saw
-      from: Math.max(end - seconds * 1_000, a.since),
-      to: end,
-      clocks: { first: a.first, last },
-      frames: marks,
-      ...(video && { video }),
-      ...(!video && { noVideo: a.noVideo ?? 'the screen could not be kept' }),
-      samples: a.samples,
-      steps: folder,
-      dir: to,
-      name: `${safeName(app)}-flight-${stamp}.timeline.html`,
-      ...(video && { videoFile: video.file }),
-    });
+    const page = await pageOf(ctx, s, a, { app, why, marks, end, seconds, folder, to });
     clear();
     saved.push(page.file);
     lastSave = Date.now();
@@ -274,26 +328,11 @@ export async function startFlight(
     return stopped ? 'a stall of its main thread' : undefined;
   };
 
-  /** A process gone with a report of why is a crash: one a person closed has none, and nothing is kept. */
-  const crashOf = async (since: number) => {
-    const end = Date.now() + CRASH_WAIT_MS;
-    for (;;) {
-      const c = await device.crashes({ app, since, limit: 1 }).catch(() => undefined);
-      if (c?.reports[0]) return c.reports[0].reason;
-      if (Date.now() >= end) return undefined;
-      await sleep(POLL_MS);
-    }
-  };
-
   /** After a crash it waits for the app, at no cost but a look each second. */
   const comeBack = async () => {
     while (!over && !(await device.appRunning(app).catch(() => false))) await sleep(POLL_MS * 2);
     if (!over) await arm();
   };
-
-  /** By its process where a device has that to say: Android restarts a crashed app within the second, and it runs. */
-  const stillThere = async (a: Armed) =>
-    device.appPid ? (await device.appPid(app)) === a.pid : device.appRunning(app);
 
   const watch = async (a: Armed, sample: LiveSample) => {
     a.samples.push(sample);
@@ -303,8 +342,12 @@ export async function startFlight(
     a.lookedAt = Date.now();
     await alone(async () => {
       if (a !== armed) return;
-      if (!(await stillThere(a))) {
-        const crash = await crashOf(Date.now() + a.first.offsetMs - (seconds + 5) * 1_000);
+      if (!(await stillThere(device, app, a))) {
+        const crash = await crashOf(
+          device,
+          app,
+          Date.now() + a.first.offsetMs - (seconds + 5) * 1_000,
+        );
         await disarm(crash && `a crash: ${crash}`);
         await comeBack();
         return;
