@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Sunucunun yönergeleri bir seçicinin metninin büyük küçük harf ve aksandan bağımsız, önce tam etiketle nasıl eşleştiğini ve `index`'in 0'dan saydığını; başarısız bir yanıtın, varsa bir ipucuyla bittiğini; `app`'in, `scenario`'nun, bir taban çizgisinin ve `probe`'un ne olduğunu her biri bir cümlede söyler; önceden bir cümle bunların dördünü taşıyordu ve bir başkası bir sonrakine boşluksuz bitişiyordu.
 - `file` ile `flow stop` kaydı oraya kaydeder; önceden dosyayı alıp hiçbir şey yazmıyordu. Durdurmadan önce reddedilen bir dosya kaydı sürdürür, yazarken reddedilen biri de adımların `flow save` için tutulduğunu söyler. Dosyasız bir durdurma kaç adım tuttuğuyla ve onların nasıl yazılacağıyla başlar. Uygulamayı çalışır bulan bir adım, bir yeniden oynatmanın uygulamanın o an olduğu ekrandan devam ettiğini ve onun yerine `launch_app` `restart: true`'nun uygulamayı baştan başlattığını söyler.
 - `launch_app`, uygulamayı baştan başlatmak için `restart`'ı ve onu bunlarla baştan başlatan `args` ile `env`'i alır; `app`'in artık `launch`'ı yoktur. İlk ekranında açılan bir uygulama tek bir aracın tek çağrısıdır; önceden `launch_app` çalışan bir uygulamayı olduğu yerde öne getiriyordu ve baştan başlatma başka bir aracın işlemiydi.
 - `launch_app`, açıklamasının söylediği gibi izin verilen bir uygulamayı `app list`'in verdiği adla başlatır; önceden `--allow-apps` altında, hiçbir ad aranmadan, adı izin verilmeyen bir uygulama diye reddediyordu.

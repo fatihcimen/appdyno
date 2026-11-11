@@ -20,11 +20,18 @@ export const SERVER_INFO = {
   ],
 };
 
-export const INSTRUCTIONS =
-  'Tests, drives and measures iOS and Android apps on simulators, emulators and real phones: read the screen, tap, type, swipe, screenshots, video, logs, crashes, accessibility, network, and performance (frames, memory, CPU, launch time). Use these tools for anything on a phone, a simulator, an emulator or a mobile app. ' +
-  'It drives one device: the one use_device selected, or the only one connected. Read the screen first; act on elements by ref or selector (tap, gesture, type_text, steps). ' +
-  'Every action returns the settled screen after it (read: diff by default), no extra read needed, with changed: false when nothing moved and settled: false when it kept moving. ' +
-  'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement. A failed answer starts with its code and ends with its hint.When the app misbehaves: logs and crashes. ' +
-  'Apps: app; an app left out is the selected one, scenario names the runs a measure is kept among, of which a baseline takes 3 (perf_launch baseline), and probe is the frame probe of an iOS simulator, which relaunches the app. Conditions and biometrics: device_setting; pushes: push. Starting a simulator or emulator: simulator. ' +
-  `${DATA_LOSS_WORDS} ask the person first. ` +
-  'To see why something was slow: report timeline, then the journey, then report stop: timeline.html holds video, touches, frames, requests, log and memory on one clock, in one file to send.';
+export const INSTRUCTIONS = [
+  'Tests, drives and measures iOS and Android apps on simulators, emulators and real phones: read the screen, tap, type, swipe, screenshots, video, logs, crashes, accessibility, network, and performance (frames, memory, CPU, launch time).',
+  'Use these tools for anything on a phone, a simulator, an emulator or a mobile app.',
+  'It drives one device: the one use_device selected, or the only one connected.',
+  'Read the screen first; act on elements by ref or selector (tap, gesture, type_text, steps).',
+  "A selector's text matches a label whatever its case or accents: the exact label if one matches, else every label that contains it; index picks one of several, from 0.",
+  'Every action returns the settled screen after it (read: diff by default), no extra read needed, with changed: false when nothing moved and settled: false when it kept moving.',
+  'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement.',
+  'A failed answer starts with its code, and ends with a hint where there is one.',
+  'When the app misbehaves: logs and crashes. Installing and managing apps: app. In every tool, app left out means the selected app.',
+  "In the perf_ tools, scenario is the name a measure is kept under, a baseline takes 3 runs of it (perf_launch baseline: true), and probe: true puts the frame probe in an iOS simulator's app, which restarts it once: open the screen again and call again.",
+  'Conditions and biometrics: device_setting. Pushes: push. Starting a simulator or emulator: simulator.',
+  `${DATA_LOSS_WORDS} ask the person first.`,
+  'To see why something was slow: report timeline, then the journey, then report stop: timeline.html holds video, touches, frames, requests, log and memory on one clock, in one file to send.',
+].join(' ');

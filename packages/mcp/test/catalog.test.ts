@@ -53,6 +53,10 @@ it('says what it is for first, within what a client keeps of its instructions', 
   expect(INSTRUCTIONS.length).toBeLessThanOrEqual(4_096);
   for (const word of ['iOS', 'Android', 'simulators', 'emulators', 'phones'])
     expect(INSTRUCTIONS.slice(0, 100)).toContain(word);
+  // each sentence apart from the next, and the rule a selector's words match by, with the base of its index
+  expect(INSTRUCTIONS).not.toMatch(/[a-z][.;:][A-Z]/);
+  expect(INSTRUCTIONS).toContain('whatever its case or accents');
+  expect(INSTRUCTIONS).toContain('from 0');
 });
 
 it('has every tool in the table of the docs, and what they say of steps as the tool says it', () => {
