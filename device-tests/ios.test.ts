@@ -1,4 +1,5 @@
 import { assert, beforeAll, describe, expect, it, vi } from 'vitest';
+import { spawn } from 'node:child_process';
 import { IosSimulatorDevice, Simctl, buildScreen, stoppable, type Screen } from './workspace.js';
 import { PROTOCOL, type Tree } from '@appdyno/protocol';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
@@ -6,7 +7,12 @@ import { IosRunnerLauncher } from '../packages/driver-apple/src/index.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
 import { DirectSim } from '../packages/driver-apple/src/simdirect.js';
 import { learnCopies, sameTree, withoutCopies } from '../packages/driver-apple/src/simtree.js';
-import { startSimAx, type HelperProcess } from '../packages/driver-apple/src/simhelper.js';
+import { xcodeEnv } from '../packages/driver-apple/src/simctl.js';
+import {
+  helperBinary,
+  startSimAx,
+  type HelperProcess,
+} from '../packages/driver-apple/src/simhelper.js';
 import { SIM_FIXTURE } from './helpers.js';
 
 /**
@@ -689,6 +695,43 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       // the runner tapped once the animation was over, for a caller told CANCELLED
       expect(byId(await other.read(APP), 'slide_count')?.label).toBe('Onay: 0');
       other.close();
+    });
+
+    it('lets go of what its input helper held when it ends, between two requests or at a SIGTERM', async () => {
+      const helper = await helperBinary('SimHID');
+      /** A helper that holds `held`, then ends as `end` says; what it said on its way out, and how it went. */
+      const holding = (held: object, end: 'stdin' | 'host') =>
+        new Promise<{ said: string; code: number | null }>((resolve, reject) => {
+          const child = spawn(helper, [udid], { env: xcodeEnv() });
+          let said = '';
+          let answers = 0;
+          child.stderr.on('data', (b: Buffer) => (said += b.toString()));
+          child.stdout.on('data', (b: Buffer) => {
+            answers += b.toString().split('\n').filter(Boolean).length;
+            if (answers < 2) return;
+            child.stdin.end();
+            // as HelperProcess.close ends one: its stdin and a SIGTERM at once
+            if (end === 'host') child.kill('SIGTERM');
+          });
+          child.on('error', reject);
+          child.on('exit', (code) => resolve({ said, code }));
+          child.stdin.write(`${JSON.stringify({ op: 'ping', timeoutMs: 4_000, id: 1 })}\n`);
+          child.stdin.write(`${JSON.stringify({ ...held, id: 2 })}\n`);
+        });
+      await home();
+      const shift = { op: 'keyState', page: 7, usage: 0xe1, state: 1 };
+      // a touch's start alone, on the status bar
+      const finger = { op: 'touch', events: [{ p: 0, x: 0.5, y: 0.01, at: 0 }] };
+      for (const end of ['stdin', 'host'] as const) {
+        expect(await holding(shift, end)).toEqual({
+          said: 'let go of 1 keys and 0 fingers it held\n',
+          code: 0,
+        });
+        expect(await holding(finger, end)).toEqual({
+          said: 'let go of 0 keys and 1 fingers it held\n',
+          code: 0,
+        });
+      }
     });
 
     it('says hello with the size of the screen', () => {

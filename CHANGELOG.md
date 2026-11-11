@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A simulator's input helper lets go of what it holds when it ends, by the end of its input or a SIGTERM in the middle of a request: a key still down goes up and a finger still down ends where it is, as a person's lifted would, and the helper says so on its error output. A simulator that kept them for a helper gone would have held them for the next.
 - The iOS runner looks at its call again once it has waited for the app's animations, before a touch and before its tap on the field it types into, and before the Enter of a text no field took the focus for: a caller told TIMEOUT or CANCELLED during that wait still got the touch or the Enter.
 - On an iPad lying flat, the runner takes no turn from a tall app's shape: a tap goes by XCUI's own coordinate and a gesture of many fingers is refused, where a tall window beside another on a screen in landscape, or an iPad upside down, was touched as portrait and missed. The refusal says that the device lies flat, where it said the phone did and its app was wide.
 - On Android, a long press, a swipe or a gesture its caller stopped before its end lets go of its fingers where they are, as no touch: it lifted them, so that a press cut short was a tap, and a drag jumped to its end and dropped or flung there, after the host was told CANCELLED.

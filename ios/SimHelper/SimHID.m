@@ -6,6 +6,7 @@
 #import <dlfcn.h>
 #import <mach/mach.h>
 #import <objc/runtime.h>
+#import <os/lock.h>
 #import <xpc/xpc.h>
 
 static const char *const kService = "com.apple.coredevice.feature.remote.hid.digitizer";
@@ -85,6 +86,32 @@ static BOOL barrier(int64_t timeoutMs) {
   return ok;
 }
 
+// What is down now, let go of when the helper ends, however it ends (its stdin closed, or a SIGTERM in the middle of a
+// request): a daemon that kept a key or a finger down for a client gone would hold it for the next. Nothing is sent
+// once that is done.
+static os_unfair_lock gHeldLock = OS_UNFAIR_LOCK_INIT;
+static NSMutableSet<NSArray<NSNumber *> *> *gHeldKeys; // [page, usage]
+static NSDictionary *gFinger;                          // the last event of a touch not ended
+static BOOL gEnded;
+
+static void postTouch(NSDictionary *e, uint64_t phase) {
+  xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
+  xpc_dictionary_set_value(payload, "pointOne", point([e[@"x"] doubleValue], [e[@"y"] doubleValue]));
+  if (e[@"x2"]) xpc_dictionary_set_value(payload, "pointTwo", point([e[@"x2"] doubleValue], [e[@"y2"] doubleValue]));
+  xpc_dictionary_set_uint64(payload, "eventType", phase);
+  xpc_dictionary_set_uint64(payload, "edge", 0);
+  xpc_dictionary_set_uint64(payload, "target", 0);
+  xpc_connection_send_message(gConnection, message("IndigoDigitizerEvent", payload, false));
+}
+
+static void postKeyState(uint64_t page, uint64_t usage, uint64_t state) {
+  xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
+  if (page != 7) xpc_dictionary_set_uint64(payload, "usagePage", page);
+  xpc_dictionary_set_uint64(payload, "usageCode", usage);
+  xpc_dictionary_set_uint64(payload, "state", state);
+  xpc_connection_send_message(gConnection, message(page == 7 ? "IndigoKeyboardButtonEvent" : "IndigoButtonEvent", payload, false));
+}
+
 // [{p: 0 start, 1 move, 2 end; x, y, x2?, y2? normalized; at: ms from the first}]
 // `quick`: a person's finger in a live window, where the next move is the proof, not a round trip
 static NSString *sendTouches(NSArray<NSDictionary *> *events, BOOL quick) {
@@ -93,24 +120,44 @@ static NSString *sendTouches(NSArray<NSDictionary *> *events, BOOL quick) {
     uint64_t due = start + (uint64_t)([e[@"at"] doubleValue] * NSEC_PER_MSEC);
     uint64_t now = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
     if (due > now) usleep((useconds_t)((due - now) / 1000));
-    xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
-    xpc_dictionary_set_value(payload, "pointOne", point([e[@"x"] doubleValue], [e[@"y"] doubleValue]));
-    if (e[@"x2"]) xpc_dictionary_set_value(payload, "pointTwo", point([e[@"x2"] doubleValue], [e[@"y2"] doubleValue]));
-    xpc_dictionary_set_uint64(payload, "eventType", [e[@"p"] unsignedLongLongValue]);
-    xpc_dictionary_set_uint64(payload, "edge", 0);
-    xpc_dictionary_set_uint64(payload, "target", 0);
-    xpc_connection_send_message(gConnection, message("IndigoDigitizerEvent", payload, false));
+    uint64_t phase = [e[@"p"] unsignedLongLongValue];
+    os_unfair_lock_lock(&gHeldLock);
+    if (!gEnded) {
+      postTouch(e, phase);
+      gFinger = phase == 2 ? nil : e;
+    }
+    os_unfair_lock_unlock(&gHeldLock);
   }
   return quick || barrier(2000) ? nil : @"dtuhidd did not answer after the touches";
 }
 
 // A key of a keyboard (page 7) or a hardware button (another page) going down (1) or up (2).
 static void sendKeyState(uint64_t page, uint64_t usage, uint64_t state) {
-  xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
-  if (page != 7) xpc_dictionary_set_uint64(payload, "usagePage", page);
-  xpc_dictionary_set_uint64(payload, "usageCode", usage);
-  xpc_dictionary_set_uint64(payload, "state", state);
-  xpc_connection_send_message(gConnection, message(page == 7 ? "IndigoKeyboardButtonEvent" : "IndigoButtonEvent", payload, false));
+  os_unfair_lock_lock(&gHeldLock);
+  if (!gEnded) {
+    postKeyState(page, usage, state);
+    NSArray<NSNumber *> *key = @[@(page), @(usage)];
+    if (state == 1) [gHeldKeys addObject:key];
+    else [gHeldKeys removeObject:key];
+  }
+  os_unfair_lock_unlock(&gHeldLock);
+}
+
+// Each key still down goes up, and a finger still down ends where it is, as a person's lifted would; once. A second
+// caller (the end of stdin and a SIGTERM together) waits for the first, so that the process ends after the sends.
+static void letGo(void) {
+  os_unfair_lock_lock(&gHeldLock);
+  if (!gEnded) {
+    gEnded = YES;
+    for (NSArray<NSNumber *> *key in gHeldKeys) postKeyState(key[0].unsignedLongLongValue, key[1].unsignedLongLongValue, 2);
+    if (gFinger) postTouch(gFinger, 2);
+    if (gHeldKeys.count || gFinger) {
+      fprintf(stderr, "let go of %lu keys and %d fingers it held\n", (unsigned long)gHeldKeys.count, gFinger ? 1 : 0);
+      // the sends go out in order: an answer after them is their delivery
+      barrier(500);
+    }
+  }
+  os_unfair_lock_unlock(&gHeldLock);
 }
 
 // One press, with the keyboard's `modifiers` held during it.
@@ -127,6 +174,16 @@ int main(int argc, char **argv) {
   @autoreleasepool {
     if (argc != 2) fail(@"usage: SimHID <udid>");
     gConnection = connectTo(@(argv[1]));
+    gHeldKeys = [NSMutableSet set];
+    // the host ends a helper by closing its stdin and a SIGTERM at once, which may come inside a request
+    signal(SIGTERM, SIG_IGN);
+    static dispatch_source_t term;
+    term = dispatch_source_create(DISPATCH_SOURCE_TYPE_SIGNAL, SIGTERM, 0, dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0));
+    dispatch_source_set_event_handler(term, ^{
+      letGo();
+      exit(0);
+    });
+    dispatch_resume(term);
     char *line = NULL;
     size_t capacity = 0;
     while (getline(&line, &capacity, stdin) > 0) {
@@ -151,6 +208,7 @@ int main(int argc, char **argv) {
       }
     }
     free(line);
+    letGo();
   }
   return 0;
 }
