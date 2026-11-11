@@ -101,7 +101,7 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
     await until('the pasteboard', () => heard.some((m) => m.op === 'board'));
     const said = heard.find((m) => m.op === 'board');
     assert(said, 'board');
-    return String(said.text);
+    return said.text;
   };
 
   beforeAll(async () => {

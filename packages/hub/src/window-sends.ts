@@ -4,7 +4,9 @@ import {
   must,
   PUSH_TOKEN_KINDS,
   type Device,
-  type ViewerMessage,
+  type ViewerControl,
+  type ViewerSaid,
+  type WindowControl,
 } from '@appdyno/core';
 import {
   argumentsFor,
@@ -119,7 +121,7 @@ export function windowSends(
    * A token a person typed for the app in the pane, which the device keeps for this session for its pushes by APNs or
    * FCM. No op takes it, so no call, Activity or log of one sees it, and nothing here says it back.
    */
-  const pushToken = (m: ViewerMessage) =>
+  const pushToken = (m: ViewerControl<'pushToken'>) =>
     new Promise<void>((resolve) => {
       const app = field(m.app);
       const kind = PUSH_TOKEN_KINDS.find((k) => k === m.kind);
@@ -133,8 +135,8 @@ export function windowSends(
       resolve();
     });
 
-  const sends: Record<string, (m: ViewerMessage) => Promise<void>> = {
-    links: async (m) => {
+  const sends = {
+    links: async (m: ViewerControl<'links'>) => {
       const front = await ownFront();
       // the app the pane names, else the one in front: what it opens, as `open_link` lists it
       const app = field(m.app) || front.app;
@@ -147,9 +149,9 @@ export function windowSends(
         ...(listed && !listed.answer.ok && { linksWhy: listed.answer.text }),
       });
     },
-    openLink: (m) => openLink(field(m.url), field(m.app)),
-    pushes: (m) => pushes(field(m.app)),
-    push: (m) => push(m.args),
+    openLink: (m: ViewerControl<'openLink'>) => openLink(field(m.url), field(m.app)),
+    pushes: (m: ViewerControl<'pushes'>) => pushes(field(m.app)),
+    push: (m: ViewerControl<'push'>) => push(m.args),
     pushToken,
     ...conditionSends(device, () => context().session(), call, tell),
   };
@@ -161,11 +163,13 @@ export function windowSends(
     call,
 
     /** What is a send of what the window says; false: it is another's. */
-    onWindow(m: ViewerMessage): boolean {
+    onWindow(m: WindowControl): boolean {
       if (m.op !== 'control') return false;
-      const name = String(m.name);
-      if (!sends[name]) return false;
-      void sends[name](m).catch((e: unknown) =>
+      const { name } = m;
+      // each takes the control of its own name, which is the one it is found by
+      const send = (sends as Record<string, (m: ViewerSaid<'control'>) => Promise<void>>)[name];
+      if (!send) return false;
+      void send(m).catch((e: unknown) =>
         tell(answering(name), { ok: false, text: e instanceof Error ? e.message : String(e) }),
       );
       return true;

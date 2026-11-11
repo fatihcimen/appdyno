@@ -3,7 +3,7 @@ import {
   type Device,
   type Screen,
   type ScreenElement,
-  type ViewerMessage,
+  type ViewerSaid,
   type ViewerOrder,
 } from '@appdyno/core';
 import { elementUnder, type FlowStep, selectorLine, stepLine } from '@appdyno/flows';
@@ -238,8 +238,8 @@ export function windowInspector(o: InspectPort) {
     },
 
     /** A click that is no touch: it copies what names an element, or checks it. */
-    pick(m: ViewerMessage) {
-      const u = under({ x: Number(m.x), y: Number(m.y) });
+    pick(m: ViewerSaid<'pick'>) {
+      const u = under({ x: m.x, y: m.y });
       if (!u?.e) {
         o.say('Nothing is named there');
         return;

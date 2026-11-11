@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { jsonLines } from '../json-lines.js';
 import { nativeBinary, nativeFile } from '../native.js';
 import { NeedError } from './need.js';
+import type { ViewerMessage, ViewerOrder } from './viewer-wire.js';
 
 const VIEWER_FLAGS = [
   'clang',
@@ -68,88 +69,6 @@ export const viewerTestBinary = () =>
     withTest: true,
     flags: [...VIEWER_FLAGS, '-DMV_SELFTEST'],
   });
-
-/**
- * The viewer's wire, by name: what it takes and what it says. Both sides pass over a name they do not know, so one
- * changed on one side only would fail in silence: a test holds this list to the viewer's sources.
- */
-export const VIEWER_OPS = {
-  takes: [
-    'activity',
-    'agent',
-    'answer',
-    'apps',
-    'attach',
-    'audit',
-    'banner',
-    'clients',
-    'copied',
-    'copyText',
-    'crashes',
-    'detach',
-    'element',
-    'flow',
-    'hub',
-    'logs',
-    'mark',
-    'measured',
-    'measuring',
-    'network',
-    'note',
-    'pair',
-    'perf',
-    'poke',
-    'quit',
-    'raise',
-    'record',
-    'recording',
-    'recordStop',
-    'results',
-    'snapshot',
-    'status',
-    'tick',
-    'touchAt',
-    'turns',
-    'watch',
-  ],
-  says: [
-    'app',
-    'board',
-    'button',
-    'clicked',
-    'closed',
-    'control',
-    'done',
-    'fired',
-    'first',
-    'hover',
-    'hub',
-    'inspect',
-    'key',
-    'lost',
-    'marked',
-    'needKey',
-    'paneWatch',
-    'perfWatch',
-    'pick',
-    'ready',
-    'recorded',
-    'refused',
-    'sleep',
-    'snapped',
-    'stats',
-    'text',
-    'touch',
-    'wake',
-    'watched',
-    'zoom',
-  ],
-} as const;
-
-/** What a viewer says. */
-export type ViewerMessage = { op: (typeof VIEWER_OPS.says)[number] } & Record<string, unknown>;
-/** What a viewer is told. */
-export type ViewerOrder = { op: (typeof VIEWER_OPS.takes)[number] } & Record<string, unknown>;
 
 /** The viewer as a session sees it, a process or a test's stand-in. */
 export type ViewerLink = {

@@ -4,7 +4,7 @@ import {
   type Device,
   type DeviceEvent,
   type SettingName,
-  type ViewerMessage,
+  type ViewerControl,
 } from '@appdyno/core';
 import { conditions, readCondition, type Session } from '@appdyno/ops';
 
@@ -160,8 +160,7 @@ export function conditionSends(
       return { name, ...(why && { why: personal(why) }) };
     });
 
-  const given = (m: ViewerMessage) =>
-    m.args && typeof m.args === 'object' ? (m.args as Record<string, unknown>) : {};
+  const given = (m: ViewerControl<'deviceSet' | 'deviceLocation'>) => m.args;
   /** A location has nothing to read: only whether one fixed here is written down to go back. */
   const location = () => ({ name: 'location', ...(changed('location') && { changed: true }) });
 
@@ -173,7 +172,7 @@ export function conditionSends(
       }),
 
     /** One condition or event, by the op's own arguments; a condition comes back as the device then reads it. */
-    deviceSet: async (m: ViewerMessage) => {
+    deviceSet: async (m: ViewerControl<'deviceSet'>) => {
       const args = given(m);
       const name = String(args.name);
       if (phone && CUTS.includes(name)) {
@@ -193,7 +192,7 @@ export function conditionSends(
       });
     },
 
-    deviceLocation: async (m: ViewerMessage) =>
+    deviceLocation: async (m: ViewerControl<'deviceLocation'>) =>
       tell('device', {
         ...(await call('device', 'set_location', given(m))).answer,
         conditions: [location()],

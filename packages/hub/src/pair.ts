@@ -3,7 +3,7 @@ import {
   pause,
   type InputEvent,
   type MirrorSession,
-  type ViewerMessage,
+  type WindowControl,
 } from '@appdyno/core';
 import { MIN_SAMPLES, pairedChange } from '@appdyno/perf';
 import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
@@ -279,12 +279,13 @@ export function pairWindows(sides: [PairSide, PairSide]) {
     },
 
     /** What is the pair's of a window's controls; `false` leaves it to the window. */
-    control(m: ViewerMessage) {
+    control(m: WindowControl) {
+      if (m.op !== 'control') return false;
       if (m.name === 'both') {
         both = !both;
         sides.forEach((side) => say(side));
       } else if (m.name === 'journey') {
-        if (!journeying) void journey(String(m.file));
+        if (!journeying) void journey(m.file);
       } else return false;
       return true;
     },

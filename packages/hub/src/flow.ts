@@ -6,7 +6,8 @@ import {
   type DeviceHardware,
   type InputEvent,
   type Screen,
-  type ViewerMessage,
+  type ViewerSaid,
+  type WindowControl,
 } from '@appdyno/core';
 import { type FlowStep, type Recording, stepLine } from '@appdyno/flows';
 import { windowSteps } from './window-steps.js';
@@ -179,11 +180,10 @@ export function windowFlow(
     void work().catch((e: unknown) => say(e instanceof Error ? e.message : String(e)));
 
   /** A step from the window that is no input. */
-  const fromPane = (m: ViewerMessage): FlowStep | undefined => {
-    const app = String(m.id);
-    if (m.action === 'launch') return stepOf('launch', {}, { app });
-    if (m.action === 'quit') return stepOf('stop', {}, { app });
-    if (m.action === 'remove') return unrecorded(`removing ${app}`);
+  const fromPane = (m: ViewerSaid<'app'>): FlowStep | undefined => {
+    if (m.action === 'launch') return stepOf('launch', {}, { app: m.id });
+    if (m.action === 'quit') return stepOf('stop', {}, { app: m.id });
+    if (m.action === 'remove') return unrecorded(`removing ${m.id}`);
     return undefined;
   };
 
@@ -198,13 +198,13 @@ export function windowFlow(
     recording: () => recording,
 
     /** What is the flow's of what the window says; false: it is another's. */
-    onWindow(m: ViewerMessage): boolean {
+    onWindow(m: WindowControl): boolean {
       const accessibility = m.op === 'paneWatch' && m.pane === 'accessibility';
       if (m.op === 'inspect' || accessibility) {
-        if (accessibility) auditing = m.on === true;
-        else inspecting = m.on === true;
+        if (accessibility) auditing = m.on;
+        else inspecting = m.on;
         inspector.audits(auditing);
-        if (m.on === true) trying(() => readerSession().then(() => undefined));
+        if (m.on) trying(() => readerSession().then(() => undefined));
         wanted();
         return true;
       }
@@ -213,7 +213,7 @@ export function windowFlow(
         return true;
       }
       if (m.op === 'hover') {
-        inspector.hover({ x: Number(m.x), y: Number(m.y) });
+        inspector.hover({ x: m.x, y: m.y });
         return true;
       }
       if (m.op === 'pick') {
@@ -224,7 +224,7 @@ export function windowFlow(
         if (!starting && !stopping) trying(recording ? stop : start);
         return true;
       }
-      if (recording && m.op === 'control' && String(m.name).startsWith('measure')) {
+      if (recording && m.op === 'control' && m.name.startsWith('measure')) {
         say('A measure restarts the app: stop the recording first');
         return true;
       }

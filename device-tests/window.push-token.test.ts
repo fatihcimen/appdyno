@@ -129,7 +129,7 @@ describe.runIf(UDID)('a push token typed in a window, on a simulator', () => {
         ok: true,
         text: `Kept ${APP}'s device token for this session only`,
       });
-      expect(heard.find((m) => m.name === 'pushToken')).toMatchObject({
+      expect(heard.find((m) => m.op === 'control' && m.name === 'pushToken')).toMatchObject({
         app: APP,
         token: TOKEN,
         kind: 'device',
@@ -147,7 +147,9 @@ describe.runIf(UDID)('a push token typed in a window, on a simulator', () => {
       expect(sent[0]?.headers['apns-topic']).toBe(APP);
       // the window's own word of it is the one place the token goes, and this test's pokes
       expect(JSON.stringify(all.filter((m) => m.op !== 'poke'))).not.toContain(TOKEN);
-      expect(JSON.stringify(heard.filter((m) => m.name !== 'pushToken'))).not.toContain(TOKEN);
+      expect(
+        JSON.stringify(heard.filter((m) => m.op !== 'control' || m.name !== 'pushToken')),
+      ).not.toContain(TOKEN);
     },
     FIRST_MS + 60_000,
   );
@@ -158,7 +160,7 @@ describe.runIf(UDID)('a push token typed in a window, on a simulator', () => {
     poke({ push: { app: APP, type: 'alert', token: TOKEN, kind: 'device' } });
     // gone from the window, so no click can reach it
     expect(await keep()).toMatchObject({ found: false });
-    expect(heard.filter((m) => m.name === 'pushToken')).toEqual([]);
+    expect(heard.filter((m) => m.op === 'control' && m.name === 'pushToken')).toEqual([]);
     expect(sent).toHaveLength(1);
   });
 });

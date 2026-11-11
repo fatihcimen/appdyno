@@ -1,4 +1,5 @@
-import type { ViewerLink, ViewerMessage } from './viewer.js';
+import type { ViewerLink } from './viewer.js';
+import type { ViewerSaid } from './viewer-wire.js';
 
 /** What a movie came to; `why` if it ended early or never began. */
 export type RecordingResult = { frames: number; seconds?: number; dropped?: number; why?: string };
@@ -32,8 +33,8 @@ export class MirrorRecording {
     });
   }
 
-  onMessage(m: ViewerMessage) {
-    this.answer?.(m as unknown as RecordingResult);
+  onMessage(m: ViewerSaid<'recorded'>) {
+    this.answer?.(m);
     this.answer = undefined;
   }
 }

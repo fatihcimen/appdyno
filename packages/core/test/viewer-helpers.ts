@@ -4,7 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll } from 'vitest';
-import { ViewerProcess, viewerBinary, viewerTestBinary, type ViewerMessage } from '../src/index.js';
+import {
+  ViewerProcess,
+  viewerBinary,
+  viewerTestBinary,
+  type ViewerMessage,
+  type ViewerSaid,
+} from '../src/index.js';
 
 export const run = promisify(execFile);
 export const VIEWER = join(import.meta.dirname, '../../../mac/Viewer');
@@ -41,14 +47,22 @@ export function viewer(binary: string) {
         w.done(m);
       }
   });
-  const until = (op: string, test: (m: ViewerMessage) => boolean = () => true) =>
-    new Promise<ViewerMessage>((done, fail) => {
-      const old = said.find((m) => m.op === op && test(m));
+  const until = <K extends ViewerMessage['op']>(
+    op: K,
+    test: (m: ViewerSaid<K>) => boolean = () => true,
+  ) =>
+    new Promise<ViewerSaid<K>>((done, fail) => {
+      const mine = (m: ViewerMessage): m is ViewerSaid<K> => m.op === op;
+      const old = said.find((m) => mine(m) && test(m));
       if (old) {
-        done(old);
+        done(old as ViewerSaid<K>);
         return;
       }
-      waiting.push({ op, test, done });
+      waiting.push({
+        op,
+        test: (m) => mine(m) && test(m),
+        done: (m) => done(m as ViewerSaid<K>),
+      });
       setTimeout(() => fail(new Error(`no ${op}: ${JSON.stringify(said).slice(-400)}`)), WAIT_MS);
     });
   return { v, said, until };

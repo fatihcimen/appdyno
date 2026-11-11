@@ -1,5 +1,6 @@
 import type { MotionWatch } from './port.js';
-import type { ViewerLink, ViewerMessage } from './viewer.js';
+import type { ViewerLink } from './viewer.js';
+import type { ViewerSaid } from './viewer-wire.js';
 
 const NO_VIEWER = 'its window went';
 
@@ -36,9 +37,9 @@ export class ViewerRequests {
     this.marks.splice(0).forEach((r) => r(ms));
   }
 
-  watched(m: ViewerMessage) {
-    this.watches.get(String(m.id))?.(m as unknown as MotionWatch);
-    this.watches.delete(String(m.id));
+  watched(m: ViewerSaid<'watched'>) {
+    this.watches.get(m.id)?.(m);
+    this.watches.delete(m.id);
   }
 
   /** The viewer went, and with it what it was asked: no one is left to answer these. */

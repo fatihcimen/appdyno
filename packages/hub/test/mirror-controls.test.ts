@@ -359,7 +359,7 @@ describe("a window's Apps pane", () => {
       false,
       only,
     );
-    for (const action of ['launch', 'quit', 'remove'])
+    for (const action of ['launch', 'quit', 'remove'] as const)
       controls.onWindow({ op: 'app', action, id: 'a.b' });
     await vi.waitFor(
       () =>

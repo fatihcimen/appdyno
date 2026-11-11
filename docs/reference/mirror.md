@@ -390,7 +390,7 @@ A viewer kept behind, or with no window at all, copies to a board of its own, `d
 
 ## The wire
 
-A viewer and its parent speak one JSON object a line, on the viewer's stdin and stdout, each with an `op`. Either side passes over a name it does not know, so `VIEWER_OPS` in `packages/core/src/mirror/viewer.ts` lists them all, the compiler holds the parent to that list, and a test holds it to the viewer's sources and to these tables. Names only: what a message carries is read where it is handled.
+A viewer and its parent speak one JSON object a line, on the viewer's stdin and stdout, each with an `op`. Either side passes over a name it does not know, so `VIEWER_OPS` in `packages/core/src/mirror/viewer-wire.ts` lists them all, the compiler holds the parent to that list, and a test holds it to the viewer's sources and to these tables. `ViewerMessage` and `ViewerOrder` beside it give each name its fields, which the parent's handlers read by name, and the same test holds them to what the viewer writes and reads.
 
 What it takes:
 

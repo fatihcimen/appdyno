@@ -1,5 +1,5 @@
 import type { InputEvent } from './port.js';
-import type { ViewerMessage } from './viewer.js';
+import type { ViewerSaid } from './viewer-wire.js';
 
 /** A device that falls behind this much gets the newest of a drag, and every finger down and up. */
 const MAX_QUEUED = 64;
@@ -7,28 +7,23 @@ const MAX_QUEUED = 64;
 const isMove = (e: InputEvent | undefined) => e?.kind === 'touch' && e.p === 1;
 
 /** A person's input as the viewer says it. */
-export function inputOf(m: ViewerMessage): InputEvent {
+export function inputOf(m: ViewerSaid<'touch' | 'key' | 'text' | 'button'>): InputEvent {
   switch (m.op) {
     case 'touch':
       return {
         kind: 'touch',
-        p: m.p as 0 | 1 | 2,
-        x: Number(m.x),
-        y: Number(m.y),
-        ...(m.x2 !== undefined && { x2: Number(m.x2), y2: Number(m.y2) }),
+        p: m.p,
+        x: m.x,
+        y: m.y,
+        ...(m.x2 !== undefined && { x2: m.x2, y2: m.y2 }),
         ...(m.wheel === true && { wheel: true }),
       };
     case 'key':
-      return {
-        kind: 'key',
-        page: Number(m.page),
-        usage: Number(m.usage),
-        state: m.state as 1 | 2,
-      };
+      return { kind: 'key', page: m.page, usage: m.usage, state: m.state };
     case 'text':
-      return { kind: 'text', s: String(m.s) };
-    default:
-      return { kind: 'button', name: String(m.name) };
+      return { kind: 'text', s: m.s };
+    case 'button':
+      return { kind: 'button', name: m.name };
   }
 }
 

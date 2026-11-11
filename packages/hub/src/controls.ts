@@ -7,7 +7,7 @@ import type {
   DeviceHardware,
   MirrorSession,
   SystemSwipe,
-  ViewerMessage,
+  WindowControl,
 } from '@appdyno/core';
 import { checkApp, type ActivityLine, type Policy } from '@appdyno/ops';
 import type { WindowMeasures } from './measures.js';
@@ -212,21 +212,23 @@ export function windowControls(
     },
 
     /** A control of the window that is no input: a person's, however input is set. */
-    onWindow(m: ViewerMessage) {
+    onWindow(m: WindowControl) {
       if (m.op === 'perfWatch') {
-        trying(() => perf.want(m.on === true));
+        trying(() => perf.want(m.on));
         return;
       }
       if (m.op === 'app') {
-        const act = apps.actions[String(m.action)];
-        trying(act ? () => act(String(m.id)) : () => apps.listApps());
+        // an action the window has and this side does not lists the apps, as a list does
+        const act = m.action === 'list' ? undefined : apps.actions[m.action];
+        trying(act && m.action !== 'list' ? () => act(m.id) : () => apps.listApps());
         return;
       }
+      if (m.op !== 'control') return;
       if (m.name === 'reconnect') session().askAgain();
       else if (m.name === 'record') trying(movie.record);
       else if (m.name === 'measureLaunch') trying(() => perf.measure(measures.launch));
       else if (m.name === 'measureScroll') trying(() => perf.measure(measures.scroll));
-      else if (m.name === 'journey') trying(() => perf.journey(String(m.file)));
+      else if (m.name === 'journey') trying(() => perf.journey(m.file));
       else if (m.name === 'dashboard') trying(measures.dashboard);
       else if (m.name === 'screenshot' || m.name === 'copy')
         trying(() => screenshotOf(parts, m.name === 'copy'));

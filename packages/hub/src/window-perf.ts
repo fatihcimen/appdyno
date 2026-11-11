@@ -1,4 +1,4 @@
-import { measuredLive, perfMessage } from '@appdyno/core';
+import { measuredLive, perfMessage, type ViewerTold } from '@appdyno/core';
 import type { WindowParts } from './controls.js';
 import { MEASURE_YOURS, PERSON_HINTS, WAKE_AND_OPEN, type WindowMeasures } from './measures.js';
 
@@ -63,7 +63,7 @@ export function windowPerf(parts: WindowParts, measures: WindowMeasures) {
   /** One at a time: a window quickly closed must not leave a source that started late running. */
   const turnReadings = () => (readingsTurn = readingsTurn.then(followReadings, followReadings));
 
-  const tellMeasured = (m: Record<string, unknown>) => session().tell({ op: 'measured', ...m });
+  const tellMeasured = (m: ViewerTold<'measured'>) => session().tell({ op: 'measured', ...m });
 
   /**
    * What was measured here before, with the app's own name: a person never reads its id. What is not an app of theirs

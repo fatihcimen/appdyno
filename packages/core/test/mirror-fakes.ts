@@ -74,7 +74,7 @@ export class FakeViewer implements ViewerLink {
   }
 
   say(op: ViewerMessage['op'], rest: Record<string, unknown> = {}) {
-    for (const l of this.listeners) l({ op, ...rest });
+    for (const l of this.listeners) l({ op, ...rest } as ViewerMessage);
   }
 
   die(tail = '') {

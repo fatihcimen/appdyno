@@ -1,6 +1,7 @@
 import type { InputEvent, Mirror, MirrorOptions } from './port.js';
 import type { MirrorClock, MirrorStatus } from './state.js';
-import type { ViewerMessage, ViewerStart } from './viewer.js';
+import type { ViewerStart } from './viewer.js';
+import type { WindowControl } from './viewer-handlers.js';
 
 export type MirrorSessionOptions = {
   mirror: Mirror;
@@ -24,7 +25,7 @@ export type MirrorSessionOptions = {
   /** A person's input, before it is the device's: `true` when a pair of windows sends it on itself. */
   takeInput?: (e: InputEvent) => boolean;
   /** A control of the window that is no input: a capture, the Apps pane. */
-  onWindow?: (m: ViewerMessage) => void;
+  onWindow?: (m: WindowControl) => void;
   /** A person's input, once it has left for the device: what watches it is beside a touch, and never in front of one. */
   onInput?: (e: InputEvent) => void;
 };

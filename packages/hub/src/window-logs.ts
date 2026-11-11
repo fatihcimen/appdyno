@@ -1,4 +1,10 @@
-import { pause, type Device, type LogLevel, type ViewerMessage } from '@appdyno/core';
+import {
+  pause,
+  type Device,
+  type LogLevel,
+  type ViewerTold,
+  type WindowControl,
+} from '@appdyno/core';
 import { checkApp, redact, redactLog, type ServerContext } from '@appdyno/ops';
 import type { WindowSession } from './controls.js';
 
@@ -44,7 +50,7 @@ export function windowLogs(
   /** The device said it gives no log of a running app at all, which holds for each app that comes to the front. */
   let noLog = false;
 
-  const tell = (m: Record<string, unknown>) => session().tell({ op: 'logs', ...m });
+  const tell = (m: ViewerTold<'logs'>) => session().tell({ op: 'logs', ...m });
   /** A note under the pane's controls, said once until it changes. */
   const note = (text: string) => {
     if (text === said) return {};
@@ -173,14 +179,14 @@ export function windowLogs(
 
   return {
     /** The pane shows, or not, at a level; false: the message is another's. */
-    onWindow(m: ViewerMessage): boolean {
+    onWindow(m: WindowControl): boolean {
       if (m.op !== 'paneWatch' || m.pane !== 'logs') return false;
       const asked = LEVELS.find((l) => l === m.level) ?? level;
       if (asked !== level) {
         level = asked;
         if (app) startOver();
       }
-      const on = m.on === true;
+      const { on } = m;
       // shown again, its reports may be new; a pause takes up where it stopped
       if (on && !wanted) crashesDue = true;
       wanted = on;

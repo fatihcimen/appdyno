@@ -167,14 +167,18 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
     phones = [{ serial: sim, state: 'device', ready: true, model: 'iPhone 17 Pro' }];
     await until(
       'the phone to open',
-      () => sent.some((m) => m.op === 'attach') || heard.some((m) => m.action === 'select'),
+      () =>
+        sent.some((m) => m.op === 'attach') ||
+        heard.some((m) => m.op === 'hub' && m.action === 'select'),
     );
     await quiet(6_000);
     await picture('done');
     await click('noteClients');
     await clickRow('Tools');
     // a click is posted: Tools stands when it asks for its apps
-    await until('Tools on show', () => heard.some((m) => m.do === 'apps'));
+    await until('Tools on show', () =>
+      heard.some((m) => m.op === 'hub' && m.action === 'clients' && m.do === 'apps'),
+    );
   }, 120_000);
 
   it.skipIf(short)(

@@ -138,7 +138,7 @@ describe('the viewer on an agent stream, through adb', () => {
     });
     expect(existsSync(`/proc/${String(v.pid)}/cmdline`)).toBe(false);
     const stats = await until('stats', (m) => Number(m.arrived) > 0);
-    expect(Number(stats.decoded)).toBeGreaterThan(0);
+    expect(stats.decoded).toBeGreaterThan(0);
     expect(stats.source).toBe('adb');
     // the end of the connection, and the same viewer on a new one: no new process for a reconnect
     must(agent.socket, 'its connection').destroy();

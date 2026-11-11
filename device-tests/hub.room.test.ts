@@ -9,6 +9,7 @@ import {
   viewerBinary,
   ViewerProcess,
   type ViewerMessage,
+  type ViewerSaid,
 } from '../packages/core/src/index.js';
 import { Adb, androidProvider } from '../packages/driver-android/src/index.js';
 import { iphoneProvider, simulatorProvider } from '../packages/driver-apple/src/index.js';
@@ -118,11 +119,7 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       const shown = serials.find(live);
       assert(shown);
       // it stands open, reading: a real click closes it, and what it read stops with it
-      await until(
-        'readings',
-        () => told.some((m) => m.op === 'perfWatch' && m.on === true),
-        10_000,
-      );
+      await until('readings', () => told.some((m) => m.op === 'perfWatch' && m.on), 10_000);
       told.length = 0;
       link.send({ op: 'poke', stage: shown, clickOn: 'inspector' });
       await until('the Inspector closing', () => told.some((m) => m.op === 'perfWatch'), 10_000);
@@ -442,7 +439,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     async () => {
       const shown = await inRoom();
       const size = () => {
-        const stats = told.findLast((m) => m.op === 'stats' && m.stage === shown && m.w);
+        const stats = told.findLast(
+          (m): m is ViewerSaid<'stats'> => m.op === 'stats' && m.stage === shown && !!m.w,
+        );
         assert(stats);
         const { w, h } = stats;
         return `${String(w)}x${String(h)}`;

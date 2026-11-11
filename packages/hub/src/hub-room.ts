@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { isAlive, must, pause, type ViewerMessage } from '@appdyno/core';
+import { isAlive, must, pause, type ViewerHubAsk } from '@appdyno/core';
 import type { Parent } from './parent.js';
 import { liveMirror, mirrorLog, type ServerContext, ToolError } from '@appdyno/ops';
 
@@ -77,9 +77,8 @@ export class HubRoom {
     return this.choosing;
   }
 
-  select(m: ViewerMessage): Promise<unknown> | undefined {
-    // the window names a device by its serial, a string
-    const serial = typeof m.serial === 'string' ? m.serial : undefined;
+  select(m: ViewerHubAsk<'select'>): Promise<unknown> | undefined {
+    const { serial } = m;
     this.wanted = serial;
     const held = serial ? (this.ownWindows.get(serial) ?? 0) - Date.now() : 0;
     // the window says a thing once: a choice held off is not lost, as nothing will ask again
@@ -90,21 +89,21 @@ export class HubRoom {
     return this.choose(serial ? [serial] : []);
   }
 
-  async open(m: ViewerMessage) {
-    this.ownWindows.set(String(m.serial), Date.now() + OWN_WINDOW_MS);
+  async open(m: ViewerHubAsk<'open'>) {
+    this.ownWindows.set(m.serial, Date.now() + OWN_WINDOW_MS);
     await this.choose([]);
-    openWindow(this.ctx, String(m.serial), this.behind);
+    openWindow(this.ctx, m.serial, this.behind);
   }
 
   /** Windows already open are each a process of their own: the pair is one. */
-  async pair(m: ViewerMessage) {
-    const serials = [String(m.serial), String(m.with)];
+  async pair(m: ViewerHubAsk<'pair'>) {
+    const serials = [m.serial, m.with];
     await Promise.all(serials.map(closeWindow));
     return this.choose(serials, true);
   }
 
-  async close(m: ViewerMessage) {
-    await closeWindow(String(m.serial));
-    this.ownWindows.delete(String(m.serial));
+  async close(m: ViewerHubAsk<'close'>) {
+    await closeWindow(m.serial);
+    this.ownWindows.delete(m.serial);
   }
 }

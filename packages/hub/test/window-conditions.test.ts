@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { must, startOf, type DeviceEvents } from '@appdyno/core';
+import { must, startOf, type DeviceEvents, type WindowControl } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { conditions, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { windowSends } from '../src/window-sends.js';
@@ -49,7 +49,7 @@ describe("a window's Device pane", () => {
     }));
     const said = async (name: string, m: Record<string, unknown> = {}) => {
       told.length = 0;
-      expect(sends.onWindow({ op: 'control', name, ...m })).toBe(true);
+      expect(sends.onWindow({ op: 'control', name, ...m } as WindowControl)).toBe(true);
       await expect.poll(() => told.length).toBeGreaterThan(0);
       return must(told[0], 'an answer');
     };

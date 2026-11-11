@@ -1,9 +1,10 @@
 import {
   viewerBinary,
   ViewerProcess,
-  type NewDevice,
   type ViewerLink,
+  type ViewerHubAsk,
   type ViewerMessage,
+  type ViewerSaid,
 } from '@appdyno/core';
 import { HubList } from './hub-list.js';
 import { HubRoom } from './hub-room.js';
@@ -31,6 +32,7 @@ export type HubServices = {
 
 /** What a stage's session listens with. */
 type Stage = { message: (m: ViewerMessage) => void; exit: (tail: string) => void };
+type HubAsk = ViewerSaid<'hub'>;
 
 const POLL_MS = 2_000;
 /** A window that keeps dying is not brought back for ever. */
@@ -119,18 +121,16 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     windowUp: (serial) => room.windowUp(serial),
     tell: (m) => link.send(m),
   });
-  const acts: Record<string, (m: ViewerMessage) => unknown> = {
+  const acts: { [A in HubAsk['action']]: (m: ViewerHubAsk<A>) => unknown } = {
     select: (m) => room.select(m),
     open: (m) => room.open(m),
     pair: (m) => room.pair(m),
     close: (m) => room.close(m),
-    start: async (m) => (await ownerOf(ctx, String(m.id))).boot(String(m.id)),
-    stop: async (m) => (await ownerOf(ctx, String(m.id))).shutdown(String(m.id)),
+    start: async (m) => (await ownerOf(ctx, m.id)).boot(m.id),
+    stop: async (m) => (await ownerOf(ctx, m.id)).shutdown(m.id),
     new: (m) => {
       checkCreate(ctx.policy);
-      return ctx.providers
-        .find((p) => p.virtual?.kind === m.kind)
-        ?.virtual?.create?.(m as unknown as NewDevice);
+      return ctx.providers.find((p) => p.virtual?.kind === m.kind)?.virtual?.create?.(m);
     },
     clients: (m) => o.services?.act(m, (said) => link.send({ op: 'clients', ...said })),
   };
@@ -147,7 +147,8 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     if (m.op === 'closed') leaving = true;
     if (m.op !== 'hub') return;
     Promise.resolve()
-      .then(() => acts[String(m.action)]?.(m))
+      // one table of every action, each of its own: a call by one name takes what that name gives
+      .then(() => (acts[m.action] as ((ask: HubAsk) => unknown) | undefined)?.(m))
       .then(() => list.refresh())
       .catch(note);
   };

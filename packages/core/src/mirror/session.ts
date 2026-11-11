@@ -12,7 +12,8 @@ import {
   type MirrorStats,
   type MirrorStatus,
 } from './state.js';
-import type { ViewerLink, ViewerMessage, ViewerOrder } from './viewer.js';
+import type { ViewerLink } from './viewer.js';
+import type { ViewerMessage, ViewerOrder, ViewerSaid } from './viewer-wire.js';
 import { ViewerRequests } from './viewer-requests.js';
 import { handleViewerMessage, type ViewerHandlers } from './viewer-handlers.js';
 
@@ -316,8 +317,8 @@ export class MirrorSession {
     handleViewerMessage(m, this.handlers);
   }
 
-  private onFirst(m: ViewerMessage) {
-    this.picture = { w: Number(m.w), h: Number(m.h), codec: String(m.codec) };
+  private onFirst({ w, h, codec }: ViewerSaid<'first'>) {
+    this.picture = { w, h, codec };
     this.cancelTimer?.();
     this.retries.attempt = 0;
     if (this.current.state !== 'live') this.set({ state: 'live' });

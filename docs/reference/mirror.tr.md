@@ -390,7 +390,7 @@ Arkada tutulan ya da hiç penceresi olmayan bir viewer kendine ait bir panoya, `
 
 ## Hat
 
-Bir viewer ve üst süreci, viewer'ın stdin ve stdout'unda satır başına bir JSON nesnesi konuşur, her birinde bir `op` vardır. İki taraf da bilmediği bir adı atlar, bu yüzden `packages/core/src/mirror/viewer.ts` içindeki `VIEWER_OPS` hepsini listeler, derleyici üst süreci bu listeye bağlı tutar, bir test de listeyi viewer'ın kaynaklarına ve bu tablolara bağlı tutar. Yalnızca adlar: bir mesajın taşıdığı, işlendiği yerde okunur.
+Bir viewer ve üst süreci, viewer'ın stdin ve stdout'unda satır başına bir JSON nesnesi konuşur, her birinde bir `op` vardır. İki taraf da bilmediği bir adı atlar, bu yüzden `packages/core/src/mirror/viewer-wire.ts` içindeki `VIEWER_OPS` hepsini listeler, derleyici üst süreci bu listeye bağlı tutar, bir test de listeyi viewer'ın kaynaklarına ve bu tablolara bağlı tutar. Yanındaki `ViewerMessage` ve `ViewerOrder` her ada alanlarını verir, üst sürecin işleyicileri onları adla okur, aynı test de onları viewer'ın yazıp okuduklarına bağlı tutar.
 
 Aldıkları:
 

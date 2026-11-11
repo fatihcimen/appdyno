@@ -1,6 +1,6 @@
 import type { Key } from '@appdyno/protocol';
 import type { Need } from './need.js';
-import type { ViewerOrder } from './viewer.js';
+import type { ViewerOrder } from './viewer-wire.js';
 
 export type MirrorQuality = 'auto' | 'high' | 'standard';
 

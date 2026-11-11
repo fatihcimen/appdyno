@@ -1,4 +1,12 @@
-import type { Device, NetworkPath, NetworkVia, ViewerMessage } from '@appdyno/core';
+import type {
+  Device,
+  NetworkPath,
+  NetworkVia,
+  ViewerControl,
+  ViewerSaid,
+  ViewerTold,
+  WindowControl,
+} from '@appdyno/core';
 import { captures } from '@appdyno/ops';
 import { frontApp, type WindowSession } from './controls.js';
 import type { windowSends } from './window-sends.js';
@@ -44,7 +52,7 @@ export function windowNetwork(
   let ours = false;
   let reading = false;
   let looking: NodeJS.Timeout | undefined;
-  const tell = (m: Record<string, unknown>) => session().tell({ op: 'network', ...m });
+  const tell = (m: ViewerTold<'network'>) => session().tell({ op: 'network', ...m });
   const answer = (m: Record<string, unknown>) =>
     session().tell({ op: 'answer', name: 'network', ...m });
   const op = (args: Record<string, unknown>) =>
@@ -137,22 +145,26 @@ export function windowNetwork(
     });
   };
 
-  const controls: Record<string, (m: ViewerMessage) => Promise<unknown>> = {
-    networkStart: (m) => start(String(m.via) as NetworkVia),
+  const controls = {
+    networkStart: (m: ViewerControl<'networkStart'>) => start(m.via),
     networkStop: stop,
     networkRead: read,
   };
 
   return {
     /** The pane shows or hides, or a person pressed one of its buttons; false: the message is another's. */
-    onWindow(m: ViewerMessage): boolean {
-      const pressed = m.op === 'control' ? controls[String(m.name)] : undefined;
-      if (pressed) {
+    onWindow(m: WindowControl): boolean {
+      if (m.op === 'control') {
+        // each takes the control of its own name, which is the one it is found by
+        const pressed = (
+          controls as Record<string, (m: ViewerSaid<'control'>) => Promise<unknown>>
+        )[m.name];
+        if (!pressed) return false;
         void pressed(m).catch((e: unknown) => answer({ ok: false, text: (e as Error).message }));
         return true;
       }
       if (m.op !== 'paneWatch' || m.pane !== 'network') return false;
-      wanted = m.on === true;
+      wanted = m.on;
       if (wanted)
         void look().catch((e: unknown) => answer({ ok: false, text: (e as Error).message }));
       else clearInterval(looking);
