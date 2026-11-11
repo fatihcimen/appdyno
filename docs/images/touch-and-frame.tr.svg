@@ -64,7 +64,7 @@
   <text class="text" x="238" y="94">adb üzerinden, doğrudan pencereye</text>
   <path class="line s-p" marker-end="url(#ap)" d="M730 158H576"/>
   <path class="line s-p" marker-end="url(#ap)" d="M386 158H224"/>
-  <text class="text" x="238" y="150">dokunma isteği</text>
+  <text class="text" x="238" y="150">dokunuş isteği</text>
 
   <!-- Android emulator -->
   <rect class="card s-d" x="32" y="214" width="190" height="120" rx="12"/>
@@ -73,12 +73,12 @@
   <text class="text" x="50" y="290">ortak dosyayı doldurur</text>
   <rect class="card s-h" x="386" y="266" width="188" height="56" rx="12"/>
   <text class="name" x="404" y="290">MirrorSession</text>
-  <text class="code" x="404" y="311">her kare için bir tik</text>
+  <text class="code" x="404" y="311">kare başına bir tik</text>
   <path class="line s-d" marker-end="url(#ad)" d="M222 240H730"/>
   <text class="text" x="238" y="230">ortak dosyada pikseller, Node’dan kopya geçmez</text>
   <path class="line s-p" marker-end="url(#ap)" d="M730 294H576"/>
   <path class="line s-p" marker-end="url(#ap)" d="M386 294H224"/>
-  <text class="text" x="238" y="286">dokunma isteği</text>
+  <text class="text" x="238" y="286">dokunuş isteği</text>
 
   <!-- simulator -->
   <rect class="card s-d" x="32" y="350" width="190" height="120" rx="12"/>
@@ -87,7 +87,7 @@
   <text class="text" x="50" y="426">kodlama olmadan</text>
   <rect class="card s-h" x="386" y="402" width="188" height="56" rx="12"/>
   <text class="name" x="404" y="426">MirrorSession</text>
-  <text class="code" x="404" y="447">bir yardımcı gönderir</text>
+  <text class="code" x="404" y="447">yardımcı gönderir</text>
   <path class="line s-d" marker-end="url(#ad)" d="M222 376H730"/>
   <text class="text" x="238" y="366">yüzeyin kendisi, CoreSimulator paylaşır</text>
   <path class="line s-p" marker-end="url(#ap)" d="M730 430H576"/>

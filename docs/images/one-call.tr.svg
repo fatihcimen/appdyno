@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" width="960" height="440" role="img" aria-labelledby="title desc">
   <title id="title">Tek çağrı, tek yanıt</title>
-  <desc id="desc">Bir yapay zekâ ajanı bir isteği düz cümleyle söyler ve bir araç çağırır, burada Dark seçeneğine dokunmak. Mac’inizdeki appdyno öğeyi ekranın taze bir okumasıyla bulur ve işi cihazda yapar. Cihazın ekranı 200 ms boyunca durgun kalana kadar, en çok 3 saniye izlenir. Ajan durulmuş ekranı ve neyin değiştiğini aynı yanıtta geri alır: bakmak için ikinci bir çağrı yok, sabit bir bekleme yok.</desc>
+  <desc id="desc">Bir yapay zekâ ajanı bir isteği düz cümleyle söyler ve bir araç çağırır, burada Dark seçeneğine dokunmak. Mac’inizdeki appdyno öğeyi ekranın yeni bir okumasıyla bulur ve işi cihazda yapar. Cihazın ekranı 200 ms boyunca durgun kalana kadar, en çok 3 saniye izlenir. Ajan durulmuş ekranı ve neyin değiştiğini aynı yanıtta geri alır: bakmak için ikinci bir çağrı yok, sabit bir bekleme yok.</desc>
   <style>
     svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -62,7 +62,7 @@
   <circle class="card s-h" cx="352" cy="102" r="15"/>
   <text class="name on-h mid" x="352" y="108">1</text>
   <text class="name" x="380" y="97">Bulur</text>
-  <text class="text" x="380" y="121">taze bir okumayla: metin, id ya da ref</text>
+  <text class="text" x="380" y="121">yeni bir okumayla: metin, id ya da ref</text>
 
   <rect class="card s-h" x="322" y="156" width="328" height="72" rx="12"/>
   <circle class="card s-h" cx="352" cy="192" r="15"/>

@@ -55,7 +55,7 @@ Bir ajanın en çok yaptığı şey bakmak, işlem yapmak ve yeniden bakmaktır.
 
 **Yanıt ekranı taşır.** Bir işlem durulmuş ekranı, neyin değiştiğini gösteren bir diff olarak döndürür; böylece bir istemcinin ne olduğunu görmek için ikinci bir çağrıya ihtiyacı olmaz. `settled`, ekranın durgunlaştığını söyler. `changed`, öncekinden farklı olduğunu söyler.
 
-**Ekranın ne zaman durgun olduğuna ekrana en yakın taraf karar verir.** Ajan ya da runner ekranı izler ve ekran 200 ms boyunca sessiz kaldığında, en çok 3 s içinde, yanıt verir. Bunu cihazda yapmak gidiş-dönüş gerektirmez ve hiçbir şey kıpırdamazken hat sessiz kalır. Runner'ı olmayan bir simülatör aynısını Mac'te, `simsettle.ts` içinde, kendi zamanlamalarıyla yapar: orada bir okuma yaklaşık 30 ms sürer, bu yüzden daha sık bakabilir. Kurallar ve pencerenin neleri yakaladığı [protokolde](reference/protocol.tr.md#durulma).
+**Ekranın ne zaman durgun olduğuna ekrana en yakın taraf karar verir.** Ajan ya da runner ekranı izler ve ekran 200 ms boyunca sessiz kaldığında, en çok 3 s içinde, yanıt verir. Bunu cihazda yapmak gidiş-dönüş gerektirmez ve hiçbir şey kıpırdamazken hat sessiz kalır. Runner'ı olmayan bir simülatör aynısını Mac'te, `packages/driver-apple/src/simsettle.ts` içinde, kendi zamanlamalarıyla yapar: orada bir okuma yaklaşık 30 ms sürer, bu yüzden daha sık bakabilir. Kurallar ve pencerenin neleri yakaladığı [protokolde](reference/protocol.tr.md#durulma).
 
 **Bir seçici son anda çözülür.** Hedef, dokunuştan hemen önce, taze bir okumada bulunur. Arada kıpırdayan bir ekran onu yanlış yere gönderemez. Birden çok eşleşme, ref'leriyle birlikte reddedilir. Bir tahmin başarı gibi görünürdü.
 
@@ -78,9 +78,9 @@ Her platformun kendi giriş yolu vardır. Bir simülatörün hiç ajana ihtiyaç
 
 Bir pencere cihazın kendisi gibi hissettirmelidir. Biçimini bu belirler.
 
-**Pencere native'dir, kontrol düzlemi Node'dur.** `mac/Viewer` içindeki viewer Objective-C'dir; her pencere için bir süreçtir ve ilk kullanımda `clang` ile derlenir. Görüntüyü çözer ve çizer. Node yayınları başlatır ve durdurur, girdiyi taşır ve neyin yanlış olduğunu adıyla söyler. İkisi viewer'ın stdin ve stdout'unda, her seferinde bir satır JSON konuşur. Her mesajı [hat](reference/mirror.tr.md#hat) listeler.
+**Pencere native'dir, kontrol düzlemi Node'dur.** `mac/Viewer` içindeki görüntüleyici Objective-C'dir; her pencere için bir süreçtir ve ilk kullanımda `clang` ile derlenir. Görüntüyü çözer ve çizer. Node yayınları başlatır ve durdurur, girdiyi taşır ve neyin yanlış olduğunu adıyla söyler. İkisi görüntüleyicinin stdin ve stdout'unda, her seferinde bir satır JSON konuşur. Her mesajı [hat](reference/mirror.tr.md#hat) listeler.
 
-**Bir görüntü var olan en kısa yolu izler.** Bir Android telefonda viewer ajana kendisi bağlanır, böylece Node hiçbir kareyi görmez. Bir simülatör yüzeyini paylaşır, bir emülatör de bir dosyayı doldurur. Node'un bunlardaki tek payı yeni bir karenin geldiğini söylemektir. İstisna iPhone'dur: yayınını Node sürecinin bir worker thread'i tutar ve bu thread adlandırılmış bir pipe'a yazar.
+**Bir görüntü var olan en kısa yolu izler.** Bir Android telefonda görüntüleyici ajana kendisi bağlanır, böylece Node hiçbir kareyi görmez. Bir simülatör yüzeyini paylaşır, bir emülatör de bir dosyayı doldurur. Node'un bunlardaki tek payı yeni bir karenin geldiğini söylemektir. İstisna iPhone'dur: yayınını Node sürecinin bir worker thread'i tutar ve bu thread adlandırılmış bir pipe'a yazar.
 
 **Bir dokunuş tek bir yol izler ve bir kişinin girdisi hiç beklemez.** Her dokunuş `MirrorSession` ve cihazın `Mirror.input`'u üzerinden geçer. Android'de bu kendi başına bir bağlantıdır, böylece bir parmak bir sürücünün yaptığı işin arkasında sıraya girmez.
 
@@ -125,7 +125,7 @@ Karar veremeyen bir kapı geçirmemelidir. Bu yüzden `few-samples`, `noisy` ve 
 
 Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece ölü bir sahibin talebi talep sayılmaz ve bir çökmeden sonra temizlenecek bir şey kalmaz. Her birim testi çalıştırması kendi klasörünü alır ve sizin gerçek durumunuza ulaşamaz.
 
-**Bir oturumun değiştirdiği, bir öldürmeden sonra bile geri gider.** Her koşul değişmeden önce eski değeri ve sahibiyle yazılır ve oturumun sonu onu geri koyar. Bir cihazda başlayan oturum, artık ölmüş bir sahibin orada bıraktığını geri koyar. İstemcisinin bitirdiği bir sunucu, bıraktığını sunucunun grubu dışında kendine ait bir süreç olan `appdyno mcp --put-back-after <pid>`'e devreder; o sunucunun gitmesini bekler ve sonra böyle bir oturum başlatır: bir istemci sunucusunu, bitmesini istedikten yarım saniye sonra, bir cihazın geri gidebileceğinden önce öldürebilir.
+**Bir oturumun değiştirdiği, bir öldürmeden sonra bile geri gider.** Her koşul değişmeden önce eski değeri ve sahibiyle yazılır ve oturumun sonu onu geri koyar. Bir cihazda başlayan oturum, artık ölmüş bir sahibin orada bıraktığını geri koyar. İstemcisinin bitirdiği bir sunucu, bıraktığını sunucunun grubu dışında kendine ait bir süreç olan `appdyno mcp --put-back-after <pid>`'e (appdyno'nun kendi süreçleri arasındaki bir seçenek; elle yazılmaz) devreder; o sunucunun gitmesini bekler ve sonra böyle bir oturum başlatır: bir istemci sunucusunu, bitmesini istedikten yarım saniye sonra, bir cihazın geri gidebileceğinden önce öldürebilir.
 
 ## Testlerin tuttukları
 

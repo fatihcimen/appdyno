@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 708" width="960" height="708" role="img" aria-labelledby="title desc">
   <title id="title">Hangi cihazda ne çalışır</title>
-  <desc id="desc">iOS’ta simülatör ve iPhone, Android’de emülatör ve telefon. Ekranı okumak, dokunmak, yazmak, kaydırmak: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Deep link, universal link, App Link: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, seçili uygulamada; Emülatör çalışır; Telefon çalışır. Uygulamanın bağlantılarını listelemek: Simülatör çalışır, şema, alan adı; iPhone hayır, simülatörde okunur; Emülatör çalışır, App Link durumu; Telefon telefonda henüz denenmedi. Push bildirimi göndermek: Simülatör bir kısmı, notta yazdığı gibi, 7’de 1; APNs: 6; iPhone telefonda henüz denenmedi, APNs: 7’de 6; Emülatör bir kısmı, notta yazdığı gibi, 7’de 5; Telefon bir kısmı, notta yazdığı gibi, 7’de 5; veri denendi. Elle kullanılan canlı pencere: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, deneysel; Emülatör çalışır; Telefon çalışır, Android 10 ve üstü. Açılış, kare, bellek, CPU: Simülatör bir kısmı, notta yazdığı gibi, kare: main thread; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Video, log, çökme kaydı: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, uygulama logu yok; Emülatör çalışır; Telefon çalışır. Karanlık mod, yazı boyutu: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Biyometri: Simülatör çalışır, Face ID, Touch ID; iPhone hayır; Emülatör çalışır, parmak izi; Telefon hayır. Uçak modu, Wi-Fi, mobil veri: Simülatör hayır, Mac’in ağı; iPhone hayır; Emülatör çalışır; Telefon çalışır.</desc>
+  <desc id="desc">iOS’ta simülatör ve iPhone, Android’de emülatör ve telefon. Ekranı okumak, dokunmak, yazmak, kaydırmak: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Deep link, universal link, App Link: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, seçili uygulamada; Emülatör çalışır; Telefon çalışır. Uygulamanın bağlantılarını listelemek: Simülatör çalışır, şema, alan adı; iPhone hayır, simülatörde okunur; Emülatör çalışır, App Link durumu; Telefon telefonda henüz denenmedi. Push bildirimi göndermek: Simülatör bir kısmı, notta yazdığı gibi, 7’de 1; APNs ile 6; iPhone telefonda henüz denenmedi, APNs ile 7’de 6; Emülatör bir kısmı, notta yazdığı gibi, 7’de 5; Telefon bir kısmı, notta yazdığı gibi, 7’de 5; veri denendi. Dokunabildiğiniz canlı pencere: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, deneysel; Emülatör çalışır; Telefon çalışır, Android 10 ve üstü. Açılış, kare, bellek, CPU: Simülatör bir kısmı, notta yazdığı gibi, main thread kareleri; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Video, log, çökme kaydı: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, uygulama logu yok; Emülatör çalışır; Telefon çalışır. Karanlık mod, yazı boyutu: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Biyometri: Simülatör çalışır, Face ID, Touch ID; iPhone hayır; Emülatör çalışır, parmak izi; Telefon hayır. Uçak modu, Wi-Fi, mobil veri: Simülatör hayır, Mac’in ağı; iPhone hayır; Emülatör çalışır; Telefon çalışır.</desc>
   <style>
     svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -76,15 +76,15 @@
   <path class="rule" d="M32 280H936"/>
   <text class="note" x="44" y="311">Push bildirimi göndermek</text>
   <circle class="card s-h" cx="446" cy="297" r="7"/><path class="f-h" d="M446 290A7 7 0 0 0 446 304Z"/>
-  <text class="text mid" x="446" y="323">7’de 1; APNs: 6</text>
+  <text class="text mid" x="446" y="323">7’de 1; APNs ile 6</text>
   <circle class="card s-h dash" cx="586" cy="297" r="7"/>
-  <text class="text mid" x="586" y="323">APNs: 7’de 6</text>
+  <text class="text mid" x="586" y="323">APNs ile 7’de 6</text>
   <circle class="card s-d" cx="726" cy="297" r="7"/><path class="f-d" d="M726 290A7 7 0 0 0 726 304Z"/>
   <text class="text mid" x="726" y="323">7’de 5</text>
   <circle class="card s-d" cx="866" cy="297" r="7"/><path class="f-d" d="M866 290A7 7 0 0 0 866 304Z"/>
   <text class="text mid" x="866" y="323">7’de 5; veri denendi</text>
   <path class="rule" d="M32 332H936"/>
-  <text class="note" x="44" y="363">Elle kullanılan canlı pencere</text>
+  <text class="note" x="44" y="363">Dokunabildiğiniz canlı pencere</text>
   <circle class="f-h" cx="446" cy="358" r="7"/>
   <circle class="card s-h" cx="586" cy="349" r="7"/><path class="f-h" d="M586 342A7 7 0 0 0 586 356Z"/>
   <text class="text mid" x="586" y="375">deneysel</text>
@@ -94,7 +94,7 @@
   <path class="rule" d="M32 384H936"/>
   <text class="note" x="44" y="415">Açılış, kare, bellek, CPU</text>
   <circle class="card s-h" cx="446" cy="401" r="7"/><path class="f-h" d="M446 394A7 7 0 0 0 446 408Z"/>
-  <text class="text mid" x="446" y="427">kare: main thread</text>
+  <text class="text mid" x="446" y="427">main thread kareleri</text>
   <circle class="f-h" cx="586" cy="410" r="7"/>
   <circle class="f-d" cx="726" cy="410" r="7"/>
   <circle class="f-d" cx="866" cy="410" r="7"/>

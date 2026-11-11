@@ -55,7 +55,7 @@ What an agent does most is look, act, and look again. Most of the design serves 
 
 **The answer holds the screen.** An action returns the settled screen, as a diff of what changed, so a client needs no second call to see what happened. `settled` says the screen went still. `changed` says it differs from before.
 
-**The side nearest the screen decides when it is still.** The agent or runner watches the screen and answers once it has been quiet for 200 ms, within 3 s. Doing that on the device needs no round trips, and the wire stays quiet while nothing moves. A simulator with no runner does the same on the Mac, in `simsettle.ts`, with timings of its own: a read costs about 30 ms there, so it can look more often. [The protocol](reference/protocol.md#settle) has the rules and what the window catches.
+**The side nearest the screen decides when it is still.** The agent or runner watches the screen and answers once it has been quiet for 200 ms, within 3 s. Doing that on the device needs no round trips, and the wire stays quiet while nothing moves. A simulator with no runner does the same on the Mac, in `packages/driver-apple/src/simsettle.ts`, with timings of its own: a read costs about 30 ms there, so it can look more often. [The protocol](reference/protocol.md#settle) has the rules and what the window catches.
 
 **A selector is resolved late.** A target is found on a fresh read, just before the touch. A screen that moved in between cannot send it to the wrong place. Several matches are refused, with their refs. A guess would look like success.
 
@@ -125,7 +125,7 @@ A gate that cannot judge must not pass. So `few-samples`, `noisy` and `refused` 
 
 A claim on a device holds a pid and a start time, so a dead owner's claim is no claim, and there is nothing to clean up after a crash. Each unit-test run gets a folder of its own, and cannot reach your real state.
 
-**What a session changed goes back, even past a kill.** Each condition is written down, with its old value and its owner, before it changes, and the session's end puts it back. A session that starts on a device puts back what an owner now dead left there. A server its client ends hands what it left to `appdyno mcp --put-back-after <pid>`, a process of its own outside the server's group, which waits for it to be gone and then starts such a session: a client may kill its server half a second after asking it to end, sooner than a device can go back.
+**What a session changed goes back, even past a kill.** Each condition is written down, with its old value and its owner, before it changes, and the session's end puts it back. A session that starts on a device puts back what an owner now dead left there. A server its client ends hands what it left to `appdyno mcp --put-back-after <pid>` (a flag between appdyno's own processes, not one to type), a process of its own outside the server's group, which waits for it to be gone and then starts such a session: a client may kill its server half a second after asking it to end, sooner than a device can go back.
 
 ## What the tests hold
 

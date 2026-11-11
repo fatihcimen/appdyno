@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 710" width="960" height="710" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 734" width="960" height="734" role="img" aria-labelledby="title desc">
   <title id="title">Paket haritası</title>
   <desc id="desc">Yayımlanan paket appdyno en üstte durur ve geri kalanını birbirine bağlar. Altında, araçlar olan ops’u içe aktaran mcp, cli ve hub vardır. ops, flows ve perf’i içe aktarır. Hepsi core ve protocol’ü içe aktarabilir. İki sürücünün, driver-android ve driver-apple’ın adını yalnızca en üstteki paket anar. Her sürücü cihazdaki native kodla konuşur, pencereyi de core başlatır.</desc>
   <style>
@@ -35,7 +35,7 @@
     <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
   </defs>
 
-  <rect class="ground" width="960" height="710" rx="16"/>
+  <rect class="ground" width="960" height="734" rx="16"/>
 
   <text class="label" x="40" y="46">TYPESCRIPT, packages/</text>
   <text class="label" x="716" y="46">NATIVE KOD</text>
@@ -133,6 +133,7 @@
   <path class="line s-d" marker-end="url(#ad)" d="M632 314H714"/>
   <path class="line s-h" marker-end="url(#ah)" d="M632 520H714"/>
 
-  <text class="note" x="40" y="664">Ok, içe aktarabilir demektir. core’un üstündeki her şey core ve protocol’ü de içe aktarabilir.</text>
-  <text class="note" x="40" y="688">Kesikli ok, bir sürücünün adının geçtiği tek yerdir: ops ve istemciler hiçbirini görmez.</text>
+  <text class="note" x="40" y="664">Paketler arasındaki ok, içe aktarabilir demektir. core’un üstündeki her şey core ve protocol’ü de içe aktarabilir.</text>
+  <text class="note" x="40" y="688">Native koda giden ok, onu başlatır ve onunla konuşur demektir.</text>
+  <text class="note" x="40" y="712">Kesikli ok, bir sürücünün adının geçtiği tek yerdir: ops ve istemciler hiçbirini görmez.</text>
 </svg>

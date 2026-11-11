@@ -73,7 +73,7 @@
   <text class="text" x="50" y="290">fills a shared file</text>
   <rect class="card s-h" x="386" y="266" width="188" height="56" rx="12"/>
   <text class="name" x="404" y="290">MirrorSession</text>
-  <text class="code" x="404" y="311">a tick for each frame</text>
+  <text class="code" x="404" y="311">a tick per frame</text>
   <path class="line s-d" marker-end="url(#ad)" d="M222 240H730"/>
   <text class="text" x="238" y="230">pixels in a shared file, no copy through Node</text>
   <path class="line s-p" marker-end="url(#ap)" d="M730 294H576"/>
