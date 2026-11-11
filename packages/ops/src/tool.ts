@@ -1,5 +1,5 @@
 import { inOp, noting } from '@appdyno/core';
-import { DeviceError, type ErrorCode } from '@appdyno/protocol';
+import { DeviceError, ERROR_TRAITS, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 
 /** A refusal the agent can act on (shown as the tool's error text, never a stack). */
@@ -17,15 +17,6 @@ export class ToolError extends Error {
   }
 }
 
-/** A device that stopped answering may have made the touch before it did. Any other refusal comes before it. */
-const MAY_HAVE_GONE: ReadonlySet<ErrorCode> = new Set([
-  'TIMEOUT',
-  'CANCELLED',
-  'DEVICE_GONE',
-  'AGENT_UNAVAILABLE',
-  'INTERNAL',
-]);
-
 const WORDS = {
   yes: 'the touch was sent',
   no: 'no touch was sent',
@@ -39,7 +30,10 @@ export function refusedAction(err: unknown): never {
   } catch (e) {
     if (e instanceof ToolError && e.dispatched === undefined)
       e.dispatched =
-        MAY_HAVE_GONE.has(e.code) || (err instanceof DeviceError && err.sent) ? 'unknown' : false;
+        // a device that stopped answering may have made the touch before it did; any other refusal comes before it
+        ERROR_TRAITS[e.code].touch === 'may have gone' || (err instanceof DeviceError && err.sent)
+          ? 'unknown'
+          : false;
     // a call that was wrong is said to be: it touched nothing, as `dispatched` has it
     if (
       e instanceof ToolError &&

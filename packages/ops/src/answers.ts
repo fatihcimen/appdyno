@@ -13,7 +13,7 @@ import {
   type ScreenDiff,
   type SystemAlert,
 } from '@appdyno/core';
-import type { ActResult, TextResult } from '@appdyno/protocol';
+import { SETTLE_DEFAULT, type ActResult, type TextResult } from '@appdyno/protocol';
 import { aimedApp, appDeath, diedRefusal, pidInAnswer, watched } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { redact, redactLog } from './policy.js';
@@ -22,7 +22,7 @@ import type { Session } from './session.js';
 import { refusedAction, reply } from './tool.js';
 
 /** After an action: quiet window and cap of the on-device settle (the window: docs/reference/protocol.md, measured). */
-export const SETTLE = { quietMs: 200, maxMs: 3_000 } as const;
+export const SETTLE = SETTLE_DEFAULT;
 const MAYBE_MOVING = 'the screen may still be changing';
 const FAST_READ =
   '; read at the fast level: letters outside English, French, Italian, German, Spanish and Portuguese may be wrong';
