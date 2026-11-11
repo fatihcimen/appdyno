@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Kaydırmanın parçaları `scroll.ts`'te kendi işlevleridir: bir darbenin kaydırdığı liste, parmağının onu nerede kestiği, yerinde duran bir hedef, `scroll_to` ve bir uzaklık kadar kaydırma; önceden hepsini 212 satırda `scrollingFor` tutuyordu ve işlev boyutu kuralı onu adıyla geçiriyordu.
 - Bir simülatör yardımcısının öndeki uygulamayı okuması ve runner'ın yinelenen denetimlerden oluşan bir düzen hakkında söyledikleri kendi `sim-read.ts`'leridir; önceden simülatörün cihaz sınıfı onları boyut sınırında tutuyordu.
 - Runner paketinin bir XCTest `measure()` çalıştırması ve sonuç paketinin tuttukları kendi `xct-metrics.ts`'idir; önceden iz aracının kayıtları onu boyut sınırında tutuyordu; artık dışa aktarılmaz, çünkü onu yalnızca runner adlandırır.
 - Denetçinin bir denetimin sorununu nasıl listelediği, işaretçinin altındaki öğeyi nasıl bulduğu ve onun bir denetimini nasıl yazdığı `inspect.ts`'te kendi işlevleridir; önceden `windowInspector` onları işlev boyutu sınırının bir altında, 199 satırda tutuyordu.
