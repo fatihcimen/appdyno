@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir simülatör uygulamasının, içindeki probla, uygulamayla başlatılıp bu Mac'in saatiyle geri okunan kareleri kendi `sim-frames.ts`'leridir; önceden simülatörün ölçümleri onları boyut sınırında tutuyordu.
 - Kararan ya da kilitlenen bir Android ekranının nasıl geri geldiği ve uygulamanın odağının tutmasını nasıl beklediği Android sürücüsünde kendi `wake.ts`'idir; önceden cihaz sınıfı onu boyut sınırında tutuyordu.
 - Protokolün ekran ağacı, bir ajanın bayraklarıyla gönderdiği düğümler ve pencereler, `tree.ts`'tir; bir denetimin bulduğu da `audit.ts`'tir; onları taşıyan mesajların yanında durur, önceden `messages.ts` üçünü de boyut sınırına birkaç satır kala tutuyordu.
 - Xcode'un ilk açılış kurulumu bitmemişken, örneğin bir macOS güncellemesi CoreDevice'ı Xcode'un ötesine taşıdıktan sonra, `devicectl` gerektiren bir çağrı hemen `PERMISSION_REQUIRED` ile reddedilir ve `sudo xcodebuild -runFirstLaunch` çalıştırmayı ya da Xcode'u bir kez açmayı söyler; `appdyno doctor` da aynısını söyler: her `devicectl` çağrısı o kurulumu başlatıyordu, o da kişinin ekranında bir yönetici parolası soruyordu ve yanıt yalnızca "devicectl … took over 60000 ms" oluyordu. Denetim, `xcodebuild -checkFirstLaunchStatus`, hiçbir şey sormaz ve yaklaşık 70 ms sürer; bir sürecin ilk `devicectl`'inden önce, bir retten sonra da yeniden yapılır. Bir telefonla çalıştırılmadı: bu Mac'te kurulum bitmemiş ve öyle bırakıldı.

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A simulator app's frames by the probe inside it, started with the app and read back by this Mac's clock, are `sim-frames.ts` of their own, where the simulator's measures held them at the size cap.
 - How an Android screen that went dark or locked comes back, and waits for the app's focus to hold, is `wake.ts` of its own in the Android driver, where its device class held it at the size cap.
 - The protocol's screen tree, the nodes and windows an agent sends with their flags, is `tree.ts`, and what an audit finds is `audit.ts`, beside the messages that carry them, where `messages.ts` held all three within a few lines of the size cap.
 - While Xcode's first-launch setup is not done, as after a macOS update has moved CoreDevice past Xcode, a call that needs `devicectl` is refused at once with `PERMISSION_REQUIRED`, saying to run `sudo xcodebuild -runFirstLaunch` or open Xcode once, and `appdyno doctor` says the same: each `devicectl` call started that setup, which asked for an administrator's password on the person's screen, and answered only "devicectl … took over 60000 ms". The check, `xcodebuild -checkFirstLaunchStatus`, asks nothing and takes about 70 ms; it is made before the first `devicectl` of a process, and again after a refusal. Not run with a phone: on this Mac the setup is not done and was left so.
