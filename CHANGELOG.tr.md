@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Tutan bir `wait_for` ya da `assert` ile, ya da satırını bulan bir `scroll_to` ile biten bir `steps` çağrısı artık "no change seen" eklemez; önceden adım bir işlem yapmış gibi ekliyordu.
 - `steps`'teki bir aracın adımı, `launch_app` ya da `open_link` gibi, ekranı bir dokunuşunki gibi okur: adımı `read` dediği yerde ya da son adımda çağrının dediği gibi; önceden `read: none` altında her biri kendi ekranını yazdırıyordu.
 - Kendi kimliği olmayan bir metin alanı, çevresindeki sözcüklerle adlandırılarak, yer tutucusu gelirken ve içine yazılırken ref'ini korur; önceden ref'i ikisiyle de değişiyordu ve ona yapılan bir sonraki çağrı eskimiş diye reddediliyordu. Başka bir alanın tuttuğu artık bir öğenin satırını adlandırmaz.
 - Kapanırken ekranın altına kaymış bir klavye listelenmez; önceden gidişinin ortasındaki bir okuma onu ekranın kenarının ötesindeki bir yerde gösteriyordu.

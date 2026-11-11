@@ -14,7 +14,7 @@ import {
 } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
-import { Read, Step } from './step-schemas.js';
+import { LOOKS_ONLY, Read, Step } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { NOT_A_STEP } from './tool-kinds.js';
 import {
@@ -196,15 +196,19 @@ export function stepsOp(
             continue;
           }
           let stepDone = '';
+          // a step that only looked, or found what it scrolled to, is no action whose change is to be seen
+          let said = LOOKS_ONLY.has(st.action);
           const r = await act(
             s,
             reads,
             async (o) => {
               const x = await attempt(o);
               stepDone = x.done;
+              said ||= x.found === true;
               return x.r;
             },
             () => stepDone,
+            () => said,
           );
           done.push(`${i + 1}. ${answerText(r)}`);
           if (last) ending = r;

@@ -65,6 +65,18 @@ describe('steps across screens', () => {
     expect(r.text).toMatch(/\n3\. opened app:\/\/y\nforeground: dev\.app\n3 elements: ref role/);
   });
 
+  it('says no change was seen of no last step that only looked, or found what it scrolled to', async () => {
+    const { call } = await connect(new FakeDevice());
+    for (const last of [
+      { action: 'wait_for', selector: { text: 'Form' } },
+      { action: 'assert', selector: { text: 'Form' } },
+    ]) {
+      const r = await call('steps', { steps: [{ action: 'press_key', key: 'tab' }, last] });
+      expect(r.error, last.action).toBe(false);
+      expect(r.text, last.action).not.toContain('no change seen');
+    }
+  });
+
   it('settles after a step that may change the screen, not between typing', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
