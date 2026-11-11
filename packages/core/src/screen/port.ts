@@ -46,6 +46,11 @@ export type PlatformScreen = {
   appTop?(elements: UiElement[]): number | undefined;
   /** What of the app's own tree the on-screen keyboard is, by the elements that hold it: Android's is a window apart. */
   keyboardParts?(elements: UiElement[]): number[];
+  /**
+   * Keys typed with no field focused may focus one and the rest land in it, with nothing read back to tell: typing waits
+   * for a focused field or a keyboard, where the platform's own typing would not say that nothing took it.
+   */
+  readonly typesBlind?: boolean;
 };
 
 /** What makes a tree a screen: its platform's rules, and the app it is read for. */

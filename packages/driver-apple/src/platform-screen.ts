@@ -161,6 +161,8 @@ export const iosScreen: PlatformScreen = {
 
   listsByIdAlone: true,
 
+  typesBlind: true,
+
   /** The status bar ends where a navigation bar across the screen begins, at most as tall as it gets. */
   appTop(elements) {
     const tops = elements.flatMap((e) =>

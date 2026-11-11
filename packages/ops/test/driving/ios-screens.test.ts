@@ -93,6 +93,20 @@ describe('an iOS screen', () => {
     expect(d.calls.filter((c) => c.name === 'act')).toEqual([]);
   });
 
+  it('refuses typing with no field focused and no keyboard, before any key is sent', async () => {
+    const d = new Simulator(keyboardDown(keyboardUp));
+    const { call } = await connect(d, APP);
+    const r = await call('type_text', { text: 'hello' });
+    expect(r.data.code).toBe('NO_FOCUS');
+    expect(r.data.dispatched).toBe(false);
+    expect(r.text).toContain('tap the field first (or give type_text a ref)');
+    expect(d.typed).toEqual([]);
+    d.fixture = keyboardUp;
+    // focused by the app since the last read: read again before it is refused
+    expect((await call('type_text', { text: 'hello' })).error).toBe(false);
+    expect(d.typed).toEqual(['hello']);
+  });
+
   it('leaves out what lies under the status bar, as a touch there scrolls the list to its top', async () => {
     const { call } = await connect(new Simulator(recorded('list-under-status-bar')), APP);
     const r = await call('screen');

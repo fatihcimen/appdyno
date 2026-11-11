@@ -257,6 +257,17 @@ async function pressKey(
   };
 }
 
+/** Where the platform types blind: with no field holding the focus and no keyboard up, no key is sent. */
+async function focusFirst(s: Session) {
+  const port = s.device.platformScreen;
+  if (!port.typesBlind) return;
+  const takes = (x: Screen) =>
+    x.elements.some((e) => e.focused && e.editable) || port.keyboardOpen(x.tree);
+  // a field the app focused by itself since the last read counts: that read is taken again before a refusal
+  if (!takes(await s.justNow()) && !takes(await s.read()))
+    throw new DeviceError('NO_FOCUS', 'no editable field has the focus');
+}
+
 /** What a step does on the device, by its kind. */
 async function call(
   kit: Kit,
@@ -322,6 +333,7 @@ async function call(
         st.ref || st.selector || st.x !== undefined
           ? (await target(s, st, patient)).point
           : undefined;
+      if (!at) await focusFirst(s);
       return typeText(s, st, at, opts);
     }
     case 'press_key':
