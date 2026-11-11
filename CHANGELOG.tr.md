@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `steps`'te bir seçicinin sözcükleri en üstünde olan bir aracın adımı, `text`'li bir `find` adımı gibi, bir dokunuşun adımı gibi ipucunda doğru biçimdeki adımla reddedilir; önceden ret yalnızca alınmayan sözcüğü adlandırıyordu.
 - iOS'ta bir listenin üstteki bir gezinme çubuğunun altına kaymış bir satırı, üstündeki durum çubuğunun altındaki gibi dışarıda bırakılır: oraya bir dokunuş çubuğa ulaşır; çubuk listeyi başına kaydırıyor, yanıt ise satıra dokunulduğunu söylüyordu, `index: 0` da her kaydırmadan sonra o satırı seçiyordu. Çubuğun kendi düğmeleri listede kalır, çubuğun ekranının üstündeki bir sayfa da.
 - Bir iPhone'un, bir öğeye yalnızca sözcükleri ya da kimliğiyle basan `inspector` `press`'i her girdinin geçtiği korumadan geçer: ekranda bir güç, acil durum, silme ya da arama denetimi olup olmadığını söyleyecek bir yer olmadığından her seferinde kişiye sorar, `--allow-apps` ya da `--no-home` altında da reddedilir. Önceden sorulmadan, iki seçeneği de aşarak telefona gidiyordu.
 - `steps`'in açıklaması bir adımın hangi araçlar olabileceğini söyler: `steps` ile, `app`, `keyboard` ve `network` gibi kendi `action` argümanı olanlar dışında herhangi biri, çünkü bir adımın `action`'ı onların kendi eyleminin yerini alır; önceden `steps` ve `flow` dışında herhangi biri diyordu.

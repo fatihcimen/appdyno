@@ -187,6 +187,10 @@ describe('steps across screens', () => {
       );
       expect((await call(tool, { selector: { text: 'Form' } })).error, tool).toBe(false);
     }
+    // a tool's step, as a touch's
+    expect((await call('steps', { steps: [{ action: 'find', text: 'Form' }] })).text).toBe(
+      'INVALID_ARGUMENT: step 1: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"action":"find","selector":{"text":"Form"}}',
+    );
   });
 
   it("says where a tool's target goes by its own selector, as a tap with text at the top has it", async () => {

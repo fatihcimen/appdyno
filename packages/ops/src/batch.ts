@@ -77,7 +77,11 @@ function planned(
   }
   if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);
   const p = op.input.safeParse(args);
-  if (!p.success) throw fail(z.prettifyError(p.error));
+  if (!p.success)
+    throw fail(
+      z.prettifyError(p.error),
+      inSelector(op.input, x, p.error.issues) ?? argumentsHint(p.error.issues),
+    );
   return { op, args: p.data, ownRead: 'read' in args };
 }
 
