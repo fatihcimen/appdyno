@@ -263,8 +263,7 @@ export class ServerContext {
       owner,
       inputGuard(this.policy),
     );
-    s.shown = saved?.shown;
-    s.lastActionAt = saved?.lastActionAt;
+    if (saved) s.carryOver(saved);
     this.sessions.set(serial, s);
     if (owner) this.leftovers.set(serial, await sweep(this, s));
     return s;

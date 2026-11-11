@@ -38,14 +38,14 @@ async function startFlightOn(ctx: ServerContext, s: Session, dir: string | undef
   const asked = ctx.flightSeconds ?? DEFAULT_FLIGHT_SECONDS;
   const seconds = Math.max(MIN_FLIGHT_SECONDS, Math.min(asked, MAX_FLIGHT_SECONDS));
   const app = stayingApp(ctx, s, 'flight');
-  s.flight = await startFlight(ctx, s, app, seconds, dir && resolve(dir));
+  s.keepFlight(await startFlight(ctx, s, app, seconds, dir && resolve(dir)));
   const t = `flight recorder on: the last ${seconds} s of ${app}, kept on a crash or a stall; report stop ends it`;
   return reply(t, { done: t, dir: dir ?? '' });
 }
 
 async function stopFlight(s: Session, flight: RunningFlight) {
   await flight.stop();
-  s.flight = undefined;
+  s.keepFlight();
   const t = [`flight recorder off, ${flight.saved.length} kept`, ...flight.saved].join('\n');
   return reply(t, { done: t, dir: '', saved: flight.saved });
 }

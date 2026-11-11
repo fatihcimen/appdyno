@@ -106,12 +106,59 @@ export class Session {
     }
   }
 
+  // what the agent was shown, and what records: written only by what knows it
+  private recording: RunningTimeline | undefined;
+  private flying: RunningFlight | undefined;
+  private told: ScreenElement[] | undefined;
+  private picture: { at: number; hash: string } | undefined;
+  private actedAt: number | undefined;
+
   /** What is recording for a timeline: its sources run in this process, and end with it. */
-  timeline: RunningTimeline | undefined;
+  get timeline() {
+    return this.recording;
+  }
+
+  /** The timeline now recording, or none once it ended. */
+  keepTimeline(t?: RunningTimeline) {
+    this.recording = t;
+  }
+
   /** The flight recorder of this device, for as long as a person keeps it on. */
-  flight: RunningFlight | undefined;
+  get flight() {
+    return this.flying;
+  }
+
+  /** The flight recorder now on, or none once it is off. */
+  keepFlight(f?: RunningFlight) {
+    this.flying = f;
+  }
+
   /** The screen the agent was shown last: diffs are against it. */
-  shown: ScreenElement[] | undefined;
+  get shown() {
+    return this.told;
+  }
+
+  /** The agent was shown this screen: the next diff is against it. */
+  show(list: ScreenElement[]) {
+    this.told = list;
+  }
+
+  /** The version and layout of the last screenshot sent. */
+  get shot() {
+    return this.picture;
+  }
+
+  /** A screenshot of this layout was sent now, or with none, the next one is sent whatever it shows. */
+  pictured(layout?: string) {
+    this.picture = layout === undefined ? undefined : { at: this.version, hash: layout };
+  }
+
+  /** What a command line's last session was shown and when it acted, carried into this one. */
+  carryOver(saved: { shown?: ScreenElement[] | undefined; lastActionAt?: number | undefined }) {
+    this.told = saved.shown;
+    this.actedAt = saved.lastActionAt;
+  }
+
   /** Device actions so far. */
   version = 0;
   private latest: Latest | undefined;
@@ -134,8 +181,6 @@ export class Session {
     const result = await this.own.run(mine, action);
     return { result, aimedAt: mine.latest?.at === this.version ? mine.latest.screen : undefined };
   }
-  /** The version and layout of the last screenshot sent. */
-  shot: { at: number; hash: string } | undefined;
 
   /** Changes to the device's conditions, one at a time: each reads, asks the device, then writes. */
   readonly conditions = new DeviceQueue();
@@ -245,7 +290,12 @@ export class Session {
   }
 
   /** The last touch skipped its settle: when it ended, and the screen it was aimed at. */
-  unsettled: { at: number; hash: string | undefined } | undefined;
+  private unsettled: { at: number; hash: string | undefined } | undefined;
+
+  /** The touch just made skipped its settle, aimed at the screen `hash`: the next touch waits out a slide. */
+  skippedSettle(hash: string | undefined) {
+    this.unsettled = { at: Date.now(), hash };
+  }
 
   /** The newest read when it is still the device's screen (no action since), else undefined. */
   get fresh(): Screen | undefined {
@@ -293,11 +343,13 @@ export class Session {
   }
 
   /** When the op of the last device action began (epoch ms): `logs` starts there, with what it set off. */
-  lastActionAt: number | undefined;
+  get lastActionAt() {
+    return this.actedAt;
+  }
 
   /** A device action happened: refs read before it are resolved on a new read. */
   acted() {
     this.version++;
-    this.lastActionAt = opStartedAt() ?? Date.now();
+    this.actedAt = opStartedAt() ?? Date.now();
   }
 }

@@ -105,7 +105,7 @@ export function readOps(
       run: async () => {
         const s = await ctx.session();
         const screen = await s.read();
-        s.shown = screen.list;
+        s.show(screen.list);
         const fg = await noticed(s, screen);
         const web = await webLines(s, screen, clean);
         return reply(`${header(screen)}${web ? `\n${web}` : ''}${fg}`, {
@@ -261,7 +261,7 @@ export function readOps(
         const look = await s.current().catch(() => undefined);
         // a sheet over the app is in the picture: no look past the app, which took 4.5 s of an iPhone's after typing
         const fg = look ? await noticed(s, look, false) : '';
-        s.shot = { at: s.version, hash: layout ?? '' };
+        s.pictured(layout ?? '');
         const scale = scaleOf(s, meta.w);
         return reply(
           `image ${meta.w}x${meta.h} px${scale ? `; ${tapAt(scale)}` : ''}${fg}`,

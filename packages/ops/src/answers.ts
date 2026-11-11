@@ -100,7 +100,7 @@ function info(s: Session) {
 
 function show(s: Session, screen: Screen) {
   s.remember(screen);
-  s.shown = screen.list;
+  s.show(screen.list);
 }
 
 /** Until the layout has held for the settle's quiet window, at most `maxMs` (after a link or a launch). */
@@ -295,7 +295,7 @@ async function act(
   const app = aimedApp(s, aimedAt);
   const ran = !!app && aimedAt?.foreground === app;
   s.acted();
-  if (read === 'none') s.unsettled = { at: Date.now(), hash: aimed };
+  if (read === 'none') s.skippedSettle(aimed);
   const said = typeof done === 'string' ? done : done(r);
   const isFound = found();
   if (read === 'none' || !r.tree)

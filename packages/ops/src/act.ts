@@ -286,7 +286,7 @@ export function actOps(
             reportProgress(`step ${i + 1} of ${plan.length}: ${name}`);
             if (p.op) {
               // an image asked for at a step is that step's evidence, even of a screen that has not changed
-              if (name === 'screenshot') s.shot = undefined;
+              if (name === 'screenshot') s.pictured();
               const r = await p.op.handler(p.args);
               done.push(`${i + 1}. ${answerText(r)}`);
               images.push(...r.blocks.filter((b) => b.type === 'image'));

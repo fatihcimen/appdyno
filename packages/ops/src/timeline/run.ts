@@ -103,11 +103,11 @@ export async function startTimeline(
   };
 
   let finished: Promise<TimelineDone> | undefined;
-  s.timeline = {
+  s.keepTimeline({
     finish: (reason) => {
-      s.timeline = undefined;
+      s.keepTimeline();
       return (finished ??= finishing(reason));
     },
-  };
+  });
   return `timeline of ${app} on one clock, at most ${MAX_SECONDS} s, in ${dir}: its device reads ${first.offsetMs} ms from this Mac, ±${first.boundMs} ms. stop writes it`;
 }

@@ -38,7 +38,7 @@ async function takeBack(
       held: s.flight && { owner: s.owner },
       end: async () => {
         await must(s.flight, 'the flight recorder').stop();
-        s.flight = undefined;
+        s.keepFlight();
         return true;
       },
       done: 'flight recorder off',

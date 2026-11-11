@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir oturuma ne gösterildiği, son ekran görüntüsü, oturmasını atlayan bir dokunuş, en son ne zaman eylem yaptığı ve üzerinde çalışan zaman çizelgesi ya da uçuş kaydedicisi, uygulaması ve o uygulamanın süreci zaten olduğu gibi, artık onun kendisinindir ve yöntemleriyle ayarlanır: yedi dosya bunları düz alanlar olarak yazıyordu ve kimin yazabileceğini ancak her birini okumak söylüyordu.
 - Uygulaması, Android'in çökme penceresi onu tutarken öldüğü için reddedilen bir eylem, şimdi `logs`'u, pencere `alert` ile yanıtlandıktan sonra da `crashes`'i okumayı söyler, çünkü ondan önce hiçbir rapor yazılmaz: ipucu, henüz hiçbir çökme raporunun söylemediğini söyleyen bir metnin yanında "crashes says why it died" diyordu.
 - Kendi duruşunda geniş bir Android tabletinde, örneğin bir Pixel Tablet'te, `set_orientation` bir dönüşün verdiği biçimi cihazın kendi biçiminden alır: Android dönüşleri ondan sayar; bu yüzden `landscape_left` böyle bir tableti dikleştirir ve dönüş, pencerenin zaten sahip olduğu bir dönüş sanılıp gelmeden okunuyordu; onu geniş bırakan `portrait` ise dönmüş bir uygulama için "the window stayed wide: the app may keep to one orientation" diyordu.
 - Bir çağrı zaman aşımına uğradıktan sonra takılı diye yeniden başlatılan bir ajan, o çağrının ipucunu "has been restarted" sonrasında korur: XCTest'in sentezleyicisinin yanıt vermediği bir dokunuş metninde önce ekranı okumayı, ipucunda ise yalnızca "try again" diyordu; bu da onu iki kez yaptırıyordu.
