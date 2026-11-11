@@ -14,6 +14,7 @@ import {
   elementsOf,
   FOCUS_READ,
   NODE_FLAGS,
+  stoppable,
   TEST_LOCATION,
   type RpcClient,
   type Screen,
@@ -263,6 +264,27 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(res.verified).toBe(true);
     const field = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/gsm_input'));
     expect(field?.t?.replace(/\D/g, '')).toBe('5321234567');
+  });
+
+  it('focuses nothing more once its host stopped the typing in its wait for the focus', async () => {
+    await open('FORM');
+    const layout = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/gsm_layout'));
+    assert(layout);
+    const [l, t, r, b] = layout.b;
+    // on the layout's helper text: a tap there focuses nothing, and the agent waits for a field to take the focus
+    const at = { x: (l + r) / 2, y: (t + b) / 2 };
+    const stop = new AbortController();
+    const typing = stoppable(stop.signal, () =>
+      d.typeText('5321234567', { at, replace: true, settle: false }),
+    ).catch((e: unknown) => e);
+    await new Promise((x) => setTimeout(x, 300));
+    stop.abort();
+    expect(await typing).toMatchObject({ code: 'CANCELLED' });
+    await new Promise((x) => setTimeout(x, 1_000));
+    // a wait that ended on the stop went on as one no field answered: it focused the field under the point and tapped again
+    const field = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/gsm_input'));
+    assert(field);
+    expect(field.f & NODE_FLAGS.focused).toBe(0);
   });
 
   it('types Turkish text into a field and reads it back, replacing and appending', async () => {

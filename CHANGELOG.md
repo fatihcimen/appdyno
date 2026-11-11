@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- On Android, typing that its caller stopped while it waited for a field to take the focus ends there: it went on as if no field had taken it, focused the field under the point, tapped it again and could type keys, after the host was told CANCELLED. A tap the device refused is no longer made again once its call is stopped.
 - The Android agent gives up the thread of a stopped call only while that call still runs on it: a call that ended just as its let-go came could have its thread given up while the next call ran there, which was interrupted and answered INTERNAL.
 - The Android agent keeps the screens it sent lately behind a lock: a thread given up after a stopped call, still reading or writing them beside the next call's, could leave the list broken for the agent's life, a `before` not found or a walk of the list that never ended.
 - What a device's window shows of its numbers, a measure under way and its result is a file of its own, `WindowReadings.m`, and the self test's checks of the backdrop's colours are `SelfTestMood.m`; the window and the self test do what they did, in the same order.

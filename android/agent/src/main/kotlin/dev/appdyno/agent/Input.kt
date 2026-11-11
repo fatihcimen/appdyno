@@ -39,20 +39,9 @@ object Paths {
 
 /** Touch and key input injected as the shell user, timed on the device's uptime clock. */
 class Input(private val automation: Automation) {
-    fun tap(x: Float, y: Float) {
-        // a Xiaomi just woken may refuse the finger-up, its finger-down having reached no window: nothing has reached
-        // the app, and the tap can be made again
-        repeat(TAP_TRIES - 1) {
-            try {
-                touchOnce(x, y)
-                return
-            } catch (e: AgentFailure) {
-                if (e.code != "INTERNAL") throw e
-                Thread.sleep(TAP_RETRY_MS)
-            }
-        }
-        touchOnce(x, y)
-    }
+    // a Xiaomi just woken may refuse the finger-up, its finger-down having reached no window: nothing has reached the
+    // app, and the tap can be made again
+    fun tap(x: Float, y: Float, cancelled: () -> Boolean) = again(TAP_TRIES, cancelled, { Thread.sleep(TAP_RETRY_MS) }) { touchOnce(x, y) }
 
     private fun touchOnce(x: Float, y: Float) {
         Platform.userActivity()
@@ -61,11 +50,11 @@ class Input(private val automation: Automation) {
         automation.inject(touch(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y))
     }
 
-    fun doubleTap(x: Float, y: Float) {
-        tap(x, y)
+    fun doubleTap(x: Float, y: Float, cancelled: () -> Boolean) {
+        tap(x, y, cancelled)
         // the platform takes a second touch sooner than 40 ms after the first as a separate tap
         Thread.sleep(40)
-        tap(x, y)
+        tap(x, y, cancelled)
     }
 
     fun longPress(x: Float, y: Float, durationMs: Long, cancelled: () -> Boolean) {
@@ -241,6 +230,24 @@ class Input(private val automation: Automation) {
     companion object {
         private const val TAP_TRIES = 3
         private const val TAP_RETRY_MS = 100L
+
+        /**
+         * `once`, and again after an INTERNAL failure, up to `tries` in all; never again once the job is cancelled, as
+         * its host was told the touch did not go (pure, unit tested).
+         */
+        fun again(tries: Int, cancelled: () -> Boolean, pause: () -> Unit, once: () -> Unit) {
+            repeat(tries - 1) {
+                try {
+                    once()
+                    return
+                } catch (e: AgentFailure) {
+                    if (e.code != "INTERNAL") throw e
+                    pause()
+                    if (cancelled()) throw e
+                }
+            }
+            once()
+        }
 
         val KEYS = mapOf(
             "back" to KeyEvent.KEYCODE_BACK,

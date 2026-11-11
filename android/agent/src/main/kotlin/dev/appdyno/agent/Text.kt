@@ -27,6 +27,30 @@ object TextPlan {
     fun keysOnly(maxTextLength: Int, text: String) = maxTextLength in 1 until text.length
 }
 
+/** The wait for a field to take the focus (pure, unit tested). */
+object FocusWait {
+    /**
+     * `look`, every 40 ms, until it finds the field; null once `deadline` passes. A device that stalled (a starved
+     * emulator, an app that did not answer for seconds) spent the wait without looking: that time does not count (A/B
+     * runs 3b9df4d5, 64985b2a: a 4 s stall ended it). A cancel ends it as CANCELLED: a wait that ended so is no field
+     * that would not take the focus, which the caller makes up for with another tap or keys typed blind.
+     */
+    fun <T : Any> until(deadline: Long, cancelled: () -> Boolean, now: () -> Long, sleep: (Long) -> Unit, look: (polls: Int) -> T?): T? {
+        var polls = 0
+        var end = deadline
+        var last = now()
+        while (!cancelled()) {
+            look(polls++)?.let { return it }
+            val t = now()
+            if (t - last > TextInput.STALL_MS) end = minOf(end + t - last, deadline + TextInput.MAX_STALL_MS)
+            last = t
+            if (t >= end) return null
+            sleep(40)
+        }
+        throw AgentFailure("CANCELLED", "the host no longer waits for it")
+    }
+}
+
 /** `verified`: the field read back holds the text (null: it cannot be read back, a password or no field). */
 class TextOutcome(val mode: String, val verified: Boolean?, val focusMs: Long)
 
@@ -262,27 +286,13 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         return out.sortedByDescending { it.isFocused }
     }
 
-    private fun waitFocus(deadline: Long, cancelled: () -> Boolean): AccessibilityNodeInfo? {
-        var polls = 0
-        var end = deadline
-        var last = SystemClock.uptimeMillis()
-        while (!cancelled()) {
-            // the cached answer may predate the tap's focus change
-            if (polls++ % 3 == 0) automation.clearCache()
-            val f = automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            if (f != null && f.isEditable) return f
+    private fun waitFocus(deadline: Long, cancelled: () -> Boolean): AccessibilityNodeInfo? = FocusWait.until(deadline, cancelled, SystemClock::uptimeMillis, Thread::sleep) { polls ->
+        // the cached answer may predate the tap's focus change
+        if (polls % 3 == 0) automation.clearCache()
+        automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable }
             // a toolkit that draws its own fields (Compose) reports the host view as the input focus, and a sheet
             // that just opened is a window of its own: the focused editable node of any window
-            editables().firstOrNull { it.isFocused }?.let { return it }
-            // a device that stalled (a starved emulator, an app that did not answer for seconds) spent the wait
-            // without looking: that time does not count (A/B runs 3b9df4d5, 64985b2a: a 4 s stall ended it)
-            val now = SystemClock.uptimeMillis()
-            if (now - last > STALL_MS) end = minOf(end + now - last, deadline + MAX_STALL_MS)
-            last = now
-            if (now >= end) return null
-            Thread.sleep(40)
-        }
-        return null
+            ?: editables().firstOrNull { it.isFocused }
     }
 
     companion object {

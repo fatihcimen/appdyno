@@ -114,8 +114,8 @@ class Handlers(private val automation: Automation, private val token: String) {
         val then = settling.appWindows()
         job.goOn()
         when (a) {
-            is Action.Tap -> input.tap(a.x, a.y)
-            is Action.DoubleTap -> input.doubleTap(a.x, a.y)
+            is Action.Tap -> input.tap(a.x, a.y, cancelled)
+            is Action.DoubleTap -> input.doubleTap(a.x, a.y, cancelled)
             is Action.LongPress -> input.longPress(a.x, a.y, a.durationMs, cancelled)
             is Action.Swipe -> input.path(Paths.line(a.from.first, a.from.second, a.to.first, a.to.second, a.durationMs), cancelled)
             is Action.Gesture -> input.gesture(a.pointers, cancelled)
@@ -138,7 +138,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         settling.awaitRest()
         val then = settling.appWindows()
         val cancelled = { job.cancelled }
-        val tapAt = r.at?.let { (x, y) -> { input.tap(x, y) } }
+        val tapAt = r.at?.let { (x, y) -> { input.tap(x, y, cancelled) } }
         job.goOn()
         tapAt?.invoke()
         val o = text.set(r.text, r.replace, r.focusTimeoutMs, cancelled, tapAt, r.at)
