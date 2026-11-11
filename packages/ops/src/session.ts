@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   buildScreen,
   DeviceQueue,
@@ -29,6 +30,8 @@ const LOOK_MS = 20_000;
 
 /** A read this recent is what the device shows: a client that reads and at once acts pays for one read. */
 const FRESH_MS = 150;
+
+type Latest = { screen: Screen; at: number; taken: number };
 
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
@@ -111,7 +114,26 @@ export class Session {
   shown: ScreenElement[] | undefined;
   /** Device actions so far. */
   version = 0;
-  private latest: { screen: Screen; at: number; taken: number } | undefined;
+  private latest: Latest | undefined;
+  /** The newest read of the call it runs in, which a read of another call beside it leaves as it was. */
+  private readonly own = new AsyncLocalStorage<{ latest: Latest | undefined }>();
+
+  /** The newest read, for every call and for the one that made it. */
+  private keep(latest: Latest | undefined) {
+    this.latest = latest;
+    const mine = this.own.getStore();
+    if (mine) mine.latest = latest;
+  }
+
+  /**
+   * `action`, and the newest read it made, else the one before it: the screen it aimed at, whatever a read beside it saw
+   * meanwhile, as a read made after the touch already has the screen the touch opened.
+   */
+  async aiming<T>(action: () => Promise<T>): Promise<{ result: T; aimedAt: Screen | undefined }> {
+    const mine = { latest: this.latest };
+    const result = await this.own.run(mine, action);
+    return { result, aimedAt: mine.latest?.at === this.version ? mine.latest.screen : undefined };
+  }
   /** The version and layout of the last screenshot sent. */
   shot: { at: number; hash: string } | undefined;
 
@@ -170,7 +192,7 @@ export class Session {
   async read(): Promise<Screen> {
     // a read that fails has seen nothing: what was read before it says nothing of a screen that now refuses
     const tree = await this.device.tree().catch((e: unknown) => {
-      this.latest = undefined;
+      this.keep(undefined);
       throw e;
     });
     const screen = await this.seen(tree);
@@ -189,7 +211,7 @@ export class Session {
   shownApp: string | undefined;
 
   remember(screen: Screen) {
-    this.latest = { screen, at: this.version, taken: Date.now() };
+    this.keep({ screen, at: this.version, taken: Date.now() });
     this.shownApp = appInFront(screen.tree, this.device.platformScreen) ?? this.shownApp;
   }
 

@@ -757,6 +757,28 @@ describe('a ref on a screen an app moved by itself', () => {
     expect(d.screen).toBe('form');
   });
 
+  it('says a tap changed the screen it opened, though a read beside it saw that screen first', async () => {
+    const d = new FakeDevice();
+    const own = d.act.bind(d);
+    let touched: () => void = () => undefined;
+    const landed = new Promise<void>((r) => (touched = r));
+    // the touch lands at once, and the answer takes a while: a read beside it meanwhile sees the screen it opened
+    d.act = async (a, o) => {
+      const r = await own(a, o);
+      touched();
+      await new Promise((r) => setTimeout(r, 300));
+      return r;
+    };
+    const { call } = await connect(d);
+    await call('screen');
+    const tap = call('tap', { selector: { text: 'Form' } });
+    await landed;
+    expect((await call('screen')).text).toContain('Gönder');
+    const r = await tap;
+    expect(r.data.changed).toBe(true);
+    expect(r.text).not.toContain('no change seen');
+  });
+
   it('does nothing of a call its client gave up while it waited its turn', async () => {
     const d = new FakeDevice();
     const own = d.act.bind(d);

@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir eylem neyi değiştirdiğini, nişan aldığı okumaya göre söyler: aynı istemcinin yanında çalışan bir `screen`, `find` ya da `wait_for` o okumayı dokunuştan sonra değiştirebiliyordu; yanında okunan bir ekranı açan bir dokunuş, öncesi açtığı ekran olduğu için `changed: false` ve "no change seen" ile yanıtlanıyordu.
 - `perf_profile` artık salt okunur işaretli değildir, çünkü `scroll` ile kaydırır: kuyruğun bir okumaya izin verdiği gibi aynı istemcinin bir eyleminin yanında çalışıyordu ve salt okunur araçları sormadan geçiren bir istemci onun kaydırmalarını da geçiriyordu. Artık `perf_scroll` gibi sırasını bekler.
 - Öz sınamanın, bir tablonun tıklamasını alıp almadığını denemesi, görüntüleyicinin kendi listesine tıklamak yerine düz bir AppKit tablosunda yapılır ve onu bir saniyeye kadar bekler: tıklama almayı bırakan kendi listesi, hiç tıklama vermeyen bir macOS gibi okunur ve denetimleri her Mac'te atlanırdı.
 - Android'de `launch_app`, sistemin "keeps stopping" penceresi için sürecini tuttuğu bir uygulamayı önce durdurur, bu pencereyi de onunla birlikte kaldırır, ve onu yeniden başlatır; böyle bir süreç çalışan bir uygulama sayılmaz: `am start -W` onu 10 sn bekliyor ve pencereyi açık bırakıyordu, bir çökmenin reddinin gösterdiği başlatma da 14 sn sonra uygulamanın öldüğünü yanıtlıyordu.

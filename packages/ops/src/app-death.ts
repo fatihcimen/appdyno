@@ -26,7 +26,7 @@ export type Died = { reason: string; file?: string };
  * The app a death is looked for in: the one selected, else the one in front as the action aimed, which a launch or a
  * link earlier in a batch opened with no app selected.
  */
-export const aimedApp = (s: Session) => s.appId ?? s.fresh?.foreground;
+export const aimedApp = (s: Session, at = s.fresh) => s.appId ?? at?.foreground;
 
 /**
  * The app as a step began, by what was last seen in front: the one selected, else that one; whether it was in front;

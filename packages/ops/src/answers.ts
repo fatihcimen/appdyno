@@ -277,9 +277,9 @@ async function act(
       : undefined);
   // a crash under the action is said once its process goes, where the device's answer could wait for long
   const action = () => run(opts).catch(refusedAction);
-  const r: ActResult =
+  const { result: r, aimedAt } = await s.aiming((): Promise<ActResult> =>
     read !== 'none' && s.appId && (pid || inFront(s))
-      ? await watched(s, action, {
+      ? watched(s, action, {
           app: s.appId,
           wasPid: pid,
           since: started,
@@ -287,12 +287,13 @@ async function act(
           clean,
           cleanLog,
         })
-      : await action();
+      : action(),
+  );
   // the last read before the action, which a ref's lookup may have just made
-  const base = s.fresh?.list ?? before;
-  const aimed = s.fresh?.hash;
-  const app = aimedApp(s);
-  const ran = !!app && s.fresh?.foreground === app;
+  const base = aimedAt?.list ?? before;
+  const aimed = aimedAt?.hash;
+  const app = aimedApp(s, aimedAt);
+  const ran = !!app && aimedAt?.foreground === app;
   s.acted();
   if (read === 'none') s.unsettled = { at: Date.now(), hash: aimed };
   const said = typeof done === 'string' ? done : done(r);
