@@ -19,18 +19,19 @@ Her biri sizi bir işin baştan sonuna götürür.
 
 Bir şeye bakmak için burası.
 
-| başvuru                                                    | içindekiler                                                                                   |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [Araçlar](reference/tools.tr.md)                           | her araç ve girdileri, her platformun neyi yapıp neyi yapamadığı                              |
-| [Araçlar nasıl test edildi](reference/tools-tested.tr.md)  | her aracın neyin üzerinde çalıştırıldığı ve çalıştırmaların ne gösterdiği                     |
-| [Komut satırı](reference/cli.tr.md)                        | her komut, sunucunun seçenekleri ve değişkenleri                                              |
-| [Kütüphane](reference/library.tr.md)                       | bir cihazı TypeScript'ten yönetmek                                                            |
-| [Pencere ve hub](reference/mirror.tr.md)                   | canlı pencere: onu neyin beslediği, durumları, hattı, sınırları                               |
-| [Performans](reference/perf.tr.md)                         | her ölçümün her cihazda neyi okuduğu, kapı ve her çağrının ne kadar hızlı olduğu              |
-| [Ölçümler nasıl doğrulandı](reference/perf-evidence.tr.md) | her ölçümün bilinen bir maliyete karşı sınanması: hangi cihazda, hangi gün, hangi yük altında |
-| [Protokol](reference/protocol.tr.md)                       | host ile bir cihazın ajanı arasındaki baytlar                                                 |
-| [CI ve sürümler](reference/ci.tr.md)                       | her denetim, cihaz suite'leri, bir sürümün nasıl yapıldığı                                    |
-| [Sıkı lint](reference/lint.tr.md)                          | kodun, bir seçim bırakan tipe dayalı bir kuralı nasıl karşıladığı                             |
+| başvuru                                                    | içindekiler                                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [Araçlar](reference/tools.tr.md)                           | her araç ve girdileri, her platformun neyi yapıp neyi yapamadığı                                  |
+| [Araçlar nasıl test edildi](reference/tools-tested.tr.md)  | her aracın neyin üzerinde çalıştırıldığı ve çalıştırmaların ne gösterdiği                         |
+| [Komut satırı](reference/cli.tr.md)                        | her komut, sunucunun seçenekleri ve değişkenleri                                                  |
+| [Kütüphane](reference/library.tr.md)                       | bir cihazı TypeScript'ten yönetmek                                                                |
+| [Pencere ve hub](reference/mirror.tr.md)                   | canlı pencere ve hub: her denetim, panel ve durum, sınırlarıyla                                   |
+| [Pencere nasıl çalışır](reference/mirror-internals.tr.md)  | görüntünün ve girdinin nasıl ilerlediği, iletişim protokolü ve hangi cihazda neyin çalıştırıldığı |
+| [Performans](reference/perf.tr.md)                         | her ölçümün her cihazda neyi okuduğu, kapı ve her çağrının ne kadar hızlı olduğu                  |
+| [Ölçümler nasıl doğrulandı](reference/perf-evidence.tr.md) | her ölçümün bilinen bir maliyete karşı sınanması: hangi cihazda, hangi gün, hangi yük altında     |
+| [Protokol](reference/protocol.tr.md)                       | host ile bir cihazın ajanı arasındaki baytlar                                                     |
+| [CI ve sürümler](reference/ci.tr.md)                       | her denetim, cihaz suite'leri, bir sürümün nasıl yapıldığı                                        |
+| [Sıkı lint](reference/lint.tr.md)                          | kodun, bir seçim bırakan tipe dayalı bir kuralı nasıl karşıladığı                                 |
 
 ## Nasıl çalışır
 

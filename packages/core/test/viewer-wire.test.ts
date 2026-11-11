@@ -29,8 +29,8 @@ describe("the viewer's wire", () => {
   });
 
   it('is written down, each name once', () => {
-    const doc = read('docs/reference/mirror.md');
-    const section = doc.slice(doc.indexOf('## The wire'), doc.indexOf('## Stated limits'));
+    const doc = read('docs/reference/mirror-internals.md');
+    const section = doc.slice(doc.indexOf('## The wire'), doc.indexOf('## Limits'));
     const [takes, says] = section.split('What it says').map((part) => found(part, /^\| `(\w+)`/gm));
     expect(takes).toEqual(sorted(VIEWER_OPS.takes));
     expect(says).toEqual(sorted(VIEWER_OPS.says));

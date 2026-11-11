@@ -25,7 +25,8 @@ Look things up here.
 | [How the tools were tested](reference/tools-tested.md)        | what each tool was run on, and what the runs showed                            |
 | [Command line](reference/cli.md)                              | every command, and the server's flags and variables                            |
 | [Library](reference/library.md)                               | driving a device from TypeScript                                               |
-| [The window and the hub](reference/mirror.md)                 | the live window: what feeds it, its states, its wire, its limits               |
+| [The window and the hub](reference/mirror.md)                 | the live window and the hub: every control, pane and state, and their limits   |
+| [How the window works](reference/mirror-internals.md)         | how the picture and input travel, the wire, and what was run on which device   |
 | [Performance](reference/perf.md)                              | what each measure reads on each device, the gate, and how fast each call is    |
 | [How the measures were validated](reference/perf-evidence.md) | each measure against a known cost: on which device, on which day, at what load |
 | [Protocol](reference/protocol.md)                             | the bytes between the host and a device's agent                                |

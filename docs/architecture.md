@@ -78,7 +78,7 @@ Each platform has its own way in. All of them speak the same protocol, except wh
 
 A window has to feel like the device. That sets its shape.
 
-**The window is native, and Node is the control plane.** The viewer in `mac/Viewer` is Objective-C, one process per window, compiled by `clang` on first use. It decodes and draws. Node starts and stops streams, carries input, and names what is wrong. They speak one line of JSON at a time, on the viewer's stdin and stdout. [The wire](reference/mirror.md#the-wire) lists every message.
+**The window is native, and Node is the control plane.** The viewer in `mac/Viewer` is Objective-C, one process per window, compiled by `clang` on first use. It decodes and draws. Node starts and stops streams, carries input, and names what is wrong. They speak one line of JSON at a time, on the viewer's stdin and stdout. [The wire](reference/mirror-internals.md#the-wire), on the page of how the window works, lists every message.
 
 **A picture takes the shortest way there is.** On an Android phone the viewer connects to the agent by itself, so Node never sees a frame. A simulator shares its surface, and an emulator fills a file. Node has a part in those only to say a new frame is there. An iPhone is the exception: its stream is held by a worker thread of the Node process, which writes to a named pipe.
 

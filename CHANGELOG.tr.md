@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Pencerenin başvurusu artık "Pencere ve hub"dır: bir kişinin gördüğü ve yaptığı, Denetçi'nin her paneli kendi başlığı altında birkaç maddeyle, pencerenin sözleri her dilde gösterdiği gibi tırnak içinde, `mirror`'ın her seçeneği ve `--detach` ile `--pair`'in neleri aldığı, denetimlerin kısayolları, `hand_off`'un bekleme süresi ve pencereden alınan bir ekran görüntüsünün ya da filmin neyi tuttuğu. Görüntünün ve girdinin nasıl ilerlediği, iletişim protokolü ve her çalıştırmanın cihazı, tarihi ve yükü kendine ait bir sayfadadır: "Pencere nasıl çalışır".
 - Araçlar başvurusunun push bölümü daha kısa paragraflardadır: türü olmayan bir push'un ne yanıtladığı, bir iPhone'da token'ın nasıl okunduğu ve neye benzediği her biri kendi paragrafında başlar.
 - Araçlar başvurusu, başarısız bir işlemin dokunuşu için ne yanıtladığını, bir dokunuşun önce ekranı okuduğunu ve kilitli bir telefonun nasıl reddedildiğini söyler; bunları önceden performans başvurusu kendi başlığı altında söylüyordu. Kilitli bir telefonda neyin çalıştırıldığı testler sayfasındadır.
 - Protokol başvurusu, aralarında `permission.reset`, `animations.wait` ve `locales` da olmak üzere hattın her metodunu, `tree.get`'in `pkg`'ini, `act`'in `animationWaitMs`'ini, `mute` ve `siri` tuşlarını ve bir ağacın `dark` ve `moving` alanlarını listeler; her akış metodunun kendi satırı vardır ve kod blokları dillerini söyler.
