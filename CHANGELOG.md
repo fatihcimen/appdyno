@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Logs, requests and console lines also hide `pwd`, `passphrase`, `credential`, `credentials`, `signature` and `api key`, a link's `code` and `sig` as parameters of their own, as an OAuth code rides back in `?code=`, and the password in a link, `https://user:password@host`: each reached the agent whole. `code` and `sig` as keys elsewhere stay shown, as `statusCode: 200` does.
 - `webview` opens a page's socket only on the port forwarded to the app's DevTools, by the check `react_native` makes of Metro's: it opened the `webSocketDebuggerUrl` the app's socket named wherever it pointed, so an app on the device could have this Mac open a WebSocket to any host.
 - `react_native` and `webview` follow no redirect from the DevTools endpoint they ask, and say what it answered, as "answered 302": a port on this Mac that answered `/json/list` or `/reload` with a redirect sent this Mac's request to whatever host it named.
 - What a session was shown, its last screenshot, a touch that skipped its settle, when it last acted and the timeline or flight recorder running on it are its own, set by its methods, as its app and that app's process already were: seven files wrote them as plain fields, and nothing but a reading of each said who might.

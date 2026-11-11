@@ -527,6 +527,32 @@ describe('logs', () => {
     ];
     for (const line of ordinary) expect(clean(line)).toBe(line);
   });
+
+  it("hides a password's other names, a signature, a code or signature in a link, and a link's password", () => {
+    const clean = (s: string) => redactLog(DEFAULT_POLICY, s);
+    const hidden = {
+      'GET https://app.example/cb?code=4/0AeanS0SECRET&state=ok 200':
+        'GET https://app.example/cb?code=•••&state=ok 200',
+      'GET https://cdn.example/f.png?Expires=1&sig=SECRETSIG&x=1':
+        'GET https://cdn.example/f.png?Expires=1&sig=•••&x=1',
+      'signature=SECRETSIG99 ok': 'signature=••• ok',
+      'connecting to https://bob:hunter2@db.example/x':
+        'connecting to https://bob:•••@db.example/x',
+      'pwd=hunter2 next': 'pwd=••• next',
+      'passphrase: "correct horse"': 'passphrase: "•••"',
+      'credential=SECRETVALUE99&x=1': 'credential=•••&x=1',
+      'aws_credentials: SECRETVALUE99': 'aws_credentials: •••',
+      'api key: SECRETVALUE99': 'api key: •••',
+    };
+    for (const [line, shown] of Object.entries(hidden)) expect(clean(line)).toBe(shown);
+    const ordinary = [
+      '{"statusCode": 200, "errorCode": 5} encode=utf8',
+      'GET https://example.com:8080/a@b 200',
+      'mailto:bob@example.com from host:8080',
+      'GET https://api.example/items?zipcode=12345 200',
+    ];
+    for (const line of ordinary) expect(clean(line)).toBe(line);
+  });
 });
 
 describe('crashes', () => {
