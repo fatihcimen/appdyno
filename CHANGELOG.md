@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- What the regression gate looks at on the device, a profile, the main thread, a start and the replay around a step, is functions of their own in `packages/ops/src/perf/looks.ts`, and the gate's `why` and `reference` are in `why.ts`: they were one function of 342 lines, let past the 200-line cap by name.
 - What `perf_snapshot`'s `also` can read, each with how it is read, kept, said and answered, is a file of its own, `packages/ops/src/perf/extras.ts`, beside the op: they shared one file at 449 of its 450 lines.
 - Each tool that acts on the screen, `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `assert` and `alert`, is a function of its own, as the `perf_` tools are, and `steps` is in `packages/ops/src/batch.ts`: they were one function of 378 lines, let past the 200-line cap by name, in a file at 449 of its 450.
 - What a session may leave on a device, its conditions, timeline, flight recorder, recording, network capture, report and flow recording, is one table in `packages/ops/src/leftovers.ts`, which says of each where it is kept, how it ends and whether it ends with the process: a session's end, a start's sweep and the check of whether to put back after a process wrote three lists of them, each with other members.

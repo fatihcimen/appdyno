@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Gerileme kapısının cihazda baktıkları, bir profil, ana iş parçacığı, bir başlatma ve bir adımın çevresindeki yeniden oynatma, `packages/ops/src/perf/looks.ts` içinde kendi işlevleridir; kapının `why` ve `reference`'ı da `why.ts` içindedir: 200 satır sınırını adıyla geçen 342 satırlık tek bir işlevdiler.
 - `perf_snapshot`'ın `also`'sunun okuyabildikleri, her biri nasıl okunduğu, saklandığı, söylendiği ve yanıtlandığıyla, işlemin yanında kendi dosyasındadır, `packages/ops/src/perf/extras.ts`: 450 satırının 449'undaki tek bir dosyayı paylaşıyorlardı.
 - Ekranda eylem yapan her araç, `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `assert` ve `alert`, `perf_` araçları gibi kendi işlevidir; `steps` de `packages/ops/src/batch.ts` içindedir: 450 satırının 449'undaki bir dosyada, 200 satır sınırını adıyla geçen 378 satırlık tek bir işlevdiler.
 - Bir oturumun cihazda bırakabileceği koşulları, zaman çizelgesi, uçuş kaydedicisi, kaydı, ağ yakalaması, raporu ve akış kaydı, `packages/ops/src/leftovers.ts` içinde tek bir tablodadır; her biri için nerede tutulduğunu, nasıl bittiğini ve süreçle birlikte bitip bitmediğini söyler: bir oturumun sonu, bir başlangıcın taraması ve bir süreçten sonra geri koyup koymama denetimi bunların her biri başka üyelerle üç listesini yazıyordu.

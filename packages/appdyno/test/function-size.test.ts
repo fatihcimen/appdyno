@@ -17,7 +17,6 @@ const LONGER: Record<string, string> = {
     'finding an element, judging it and one case per kind of step, with no state',
   'packages/ops/src/scroll.ts scrollingFor':
     'three scrolling tools over one context, with no state',
-  'packages/ops/src/perf/why.ts gateLooks': 'one look per kind of measure, with no state',
   'packages/ops/src/perf/trace.ts perfTraceOp': 'one op, nearly all of it `run` below',
   'packages/ops/src/perf/trace.ts run':
     'one branch per kind of trace, and each says its own answer',
