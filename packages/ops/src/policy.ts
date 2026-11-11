@@ -116,11 +116,17 @@ export function checkCreate(policy: Policy) {
     );
 }
 
+/** A word that names a credential, which may end a longer key, all but a bare `pass`, which `bypass` ends too. */
+const CREDENTIAL =
+  '(?<![a-z])pass|pass(?:word|wd|phrase)|pwd|secret(?:[_-]?key(?:[_-]?base)?)?|token|credentials?|signature|api[_ -]?key|access[_-]?key|session[_-]?id';
+
 /**
  * What a log may hold that nobody listed: tokens by their shape or by the word in front of them, which may end a longer
- * key (`access_token`, `accessToken`, `client_secret`), all but a bare `pass`, which `bypass` and `compass` end too. A
- * quoted value is hidden to its closing quote; a header's unquoted value to the end of its line, as a Cookie holds many.
- * A link's password, and its `code` or `sig` as a parameter of their own: as keys they are too common (`statusCode`).
+ * key (`access_token`, `accessToken`, `client_secret`, `secret_key_base`). A quoted value is hidden to its closing
+ * quote, an object to its closing brace (`"token": {"value": …}`); a header's unquoted value to the end of its line,
+ * as a Cookie holds many. A link's password, and its `code` or `sig` as a parameter of their own; as a key of their own
+ * only with a value long, mixed and undotted as a credential is: `statusCode: 200`, `"code": "E_NOT_FOUND"` and
+ * `code: com.example.app2.Main` are ordinary.
  */
 const LOG_SECRETS: [RegExp, string][] = [
   [
@@ -130,8 +136,15 @@ const LOG_SECRETS: [RegExp, string][] = [
   [/\bbearer\s+[A-Za-z0-9._~+/-]{8,}=*/gi, 'Bearer •••'],
   [/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]+/g, '•••'],
   [
-    /((?<![a-z])pass|pass(?:word|wd|phrase)|pwd|secret|token|credentials?|signature|api[_ -]?key|access[_-]?key|session[_-]?id)(["']?\s*[:=]\s*)(?:(["'])(?:(?!\3)[^\r\n])*\3?|[^\s,;&"']+)/gi,
+    new RegExp(
+      `(${CREDENTIAL})(["']?\\s*[:=]\\s*)(?:(["'])(?:(?!\\3)[^\\r\\n])*\\3?|\\{[^{}\\r\\n]*\\}|[^\\s,;&"']+)`,
+      'gi',
+    ),
     '$1$2$3•••$3',
+  ],
+  [
+    /((?<![\w-])(?:code|sig)["']?\s*[:=]\s*)(["']?)(?=[\w~+/-]*\d)(?=[\w~+/-]*[a-z])[\w~+/-]{16,}=*\2/gi,
+    '$1$2•••$2',
   ],
   [/([?&](?:code|sig)=)[^\s&#"']+/gi, '$1•••'],
   [/(:\/\/[^\s/:@]+:)[^\s/@]+@/g, '$1•••@'],

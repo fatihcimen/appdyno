@@ -543,6 +543,12 @@ describe('logs', () => {
       'credential=SECRETVALUE99&x=1': 'credential=•••&x=1',
       'aws_credentials: SECRETVALUE99': 'aws_credentials: •••',
       'api key: SECRETVALUE99': 'api key: •••',
+      '{"token": {"value": "ya29.SECRET", "expiry": 3600}, "ok": true}':
+        '{"token": •••, "ok": true}',
+      'secret_key_base: 9f8e7d6c5b4a32109f8e7d6c5b4a3210': 'secret_key_base: •••',
+      'SECRET_KEY_BASE=9f8e7d6c5b4a3210 rails': 'SECRET_KEY_BASE=••• rails',
+      '{"code": "4/0AeanS0SECRETVALUE99", "state": "ok"}': '{"code": "•••", "state": "ok"}',
+      'sig: Zm9vYmFyYmF6cXV4MTIzNDU2 end': 'sig: ••• end',
     };
     for (const [line, shown] of Object.entries(hidden)) expect(clean(line)).toBe(shown);
     const ordinary = [
@@ -550,6 +556,9 @@ describe('logs', () => {
       'GET https://example.com:8080/a@b 200',
       'mailto:bob@example.com from host:8080',
       'GET https://api.example/items?zipcode=12345 200',
+      '{"code": 404, "message": "not found"} code: "ERR_CONNECTION_REFUSED" exit code 1',
+      'error_code: E1234567890123456789 secretary: Jane, 3 tokens: {"used": 2}',
+      'code: com.example.app2.Main sig: v2',
     ];
     for (const line of ordinary) expect(clean(line)).toBe(line);
   });
