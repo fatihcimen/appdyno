@@ -179,6 +179,8 @@ type Aftermath = {
   app: string | undefined;
   /** What the change itself says beside the screen: a turn the window did not take. */
   notes?: string[];
+  /** The action saw its own effect where the list cannot show it, as a keyboard Android lists no key of. */
+  seen?: boolean | undefined;
 };
 
 /** Whether the selected app was in front on the last read before an action: what it ran as when the action began. */
@@ -203,7 +205,8 @@ async function afterAction(
   show(s, screen);
   const d = read === 'diff' && o.before ? diffScreens(o.before, screen.list) : undefined;
   const diff = d && diffText(d, screen.list.length, clean);
-  const changed = o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined;
+  const changed =
+    o.seen || (o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined);
   const appDied = await appDeath(
     s,
     o.app,
@@ -327,8 +330,11 @@ type Ready = { met: (x: Screen) => boolean; otherwise: string };
 type Said = string | ((screen: Screen | undefined) => string);
 const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said : said(screen));
 
-/** What a change is compared with, and whether the selected app was in front as it began. */
-type Was = { before: Shown; base: Shown; ran: boolean };
+/**
+ * What a change is compared with, and whether the selected app was in front as it began; `seen`: the action confirmed its
+ * effect itself, which the screen's list may not show.
+ */
+type Was = { before: Shown; base: Shown; ran: boolean; seen?: true };
 
 /**
  * A change on the device by its call alone, as a launch, a link or a turn, and what its answer compares with: the newest
@@ -345,7 +351,7 @@ async function afterChange(
   clean: Clean,
   cleanLog: Clean,
   s: Session,
-  { before, base, ran: wasInFront }: Was,
+  { before, base, ran: wasInFront, seen }: Was,
   said: Said,
   read: ReadMode,
   launched?: string,
@@ -381,6 +387,7 @@ async function afterChange(
     launched,
     ran,
     notes,
+    seen,
   });
 }
 

@@ -39,6 +39,16 @@ describe('keyboard', () => {
     expect(r.text).not.toContain('no change seen');
   });
 
+  // Android lists no keyboard key, so an app whose window the keyboard did not shrink shows the same list either way
+  it('says closing it changed the screen though the app beneath it did not move', async () => {
+    const d = new WithKeyboard();
+    const { call } = await connect(d);
+    const r = await call('keyboard', { action: 'dismiss' });
+    expect(r.error).toBe(false);
+    expect(r.data.changed).toBe(true);
+    expect(r.text).not.toContain('no change seen');
+  });
+
   it(
     'refuses when the app keeps it open',
     fakeTimed(async () => {

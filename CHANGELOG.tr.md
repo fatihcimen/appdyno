@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `keyboard dismiss`, klavye gidince ekranın değiştiğini söyler; Android'de klavyenin altındaki uygulama kıpırdamadığında "değişiklik görülmedi" deyip `wait_for` öneriyordu: Android'in öğe listesinde klavyenin hiçbir tuşu yoktur.
 - Pano kuralı `packages/testing`'in paylaşılan sahtelerini de okur; sahteler paketlerin `test` klasörlerinden ayrıldığında bunu yitirmişti. Mimari sayfası da o paketin ne olduğunu ve haritanın onu dışarıda bıraktığını söyler.
 - `packages/testing`'in sahteleri, `tsconfig.json`'unun gösterdiği `ops`'un projesinde tip denetiminden geçer ve lint'lenir; önceden tüm çalışma alanı üzerinde kendilerine ait bir program eslint'i 4 GB'lık yığınının ötesine taşıyordu.
 - Bir izin geçici dosya testi, dosyasını tutan sürecin onu tuttuğunu söylemesini bekler; önceden `tail -f` üzerinde 300 ms uyuyordu. iOS runner'ının başlatma kilidi de sahte zaman üzerinde beklenir; gerçek bir süreç üzerindeki gözlemleri gerçek saati korur.

@@ -188,7 +188,8 @@ function keyboardOp(
           'UNSUPPORTED',
           'keyboard enter closes it on a field whose return key does so, and may submit the form',
         );
-      const r = await afterChange(s, was, 'closed the keyboard', read);
+      // the keyboard's going is the change, whether or not the app beneath it moved
+      const r = await afterChange(s, { ...was, seen: true }, 'closed the keyboard', read);
       return { ...r, data: { ...r.data, closed: true } };
     },
   });
