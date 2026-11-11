@@ -1,4 +1,5 @@
 import { MirrorRecording } from './recording.js';
+import { MirrorRetries } from './retries.js';
 import { InputQueue } from './input-queue.js';
 import { NEEDS, NeedError, type Need } from './need.js';
 import type { DeviceState, InputEvent } from './port.js';
@@ -16,13 +17,6 @@ import { ViewerRequests } from './viewer-requests.js';
 import { handleViewerMessage, type ViewerHandlers } from './viewer-handlers.js';
 
 const WAITING_POLL_MS = 1_000;
-/** A viewer that goes on dying is not started a third time. */
-const DEATHS_WINDOW_MS = 60_000;
-const MAX_DEATHS = 2;
-/** Failures to open on a device that says it is there, before the session gives up. */
-const MAX_ATTEMPTS = 10;
-const BACKOFF_FIRST_MS = 200;
-const BACKOFF_MAX_MS = 5_000;
 const NO_FIRST_FRAME_MS = 15_000;
 const DECODER_FAILURES = 3;
 const QUIT_MS = 5_000;
@@ -40,8 +34,7 @@ export class MirrorSession {
   private run = 0;
   private cancelTimer: (() => void) | undefined;
   private abort = new AbortController();
-  private attempt = 0;
-  private deaths: number[] = [];
+  private readonly retries = new MirrorRetries();
   private renewed = false;
   private zoom: number | undefined;
   private stats: MirrorStats | undefined;
@@ -278,14 +271,13 @@ export class MirrorSession {
   private reconnect(why: string) {
     if (this.current.state === 'stopped') return;
     this.run++;
-    this.attempt++;
-    if (this.attempt > MAX_ATTEMPTS) {
-      void this.stop(`no picture after ${MAX_ATTEMPTS} tries: ${why}`);
+    const next = this.retries.next(why);
+    if ('gaveUp' in next) {
+      void this.stop(next.gaveUp);
       return;
     }
-    this.set({ state: 'reconnecting', attempt: this.attempt });
-    const backoff = Math.min(BACKOFF_FIRST_MS * 2 ** (this.attempt - 1), BACKOFF_MAX_MS);
-    this.schedule(backoff, () => void this.connect());
+    this.set({ state: 'reconnecting', attempt: this.retries.attempt });
+    this.schedule(next.waitMs, () => void this.connect());
   }
 
   /** The stream is ended on both sides, and a new one is asked for. */
@@ -327,7 +319,7 @@ export class MirrorSession {
   private onFirst(m: ViewerMessage) {
     this.picture = { w: Number(m.w), h: Number(m.h), codec: String(m.codec) };
     this.cancelTimer?.();
-    this.attempt = 0;
+    this.retries.attempt = 0;
     if (this.current.state !== 'live') this.set({ state: 'live' });
     else this.o.onChange?.(this.status);
   }
@@ -350,7 +342,7 @@ export class MirrorSession {
     this.run++;
     this.cancelTimer?.();
     // said at once: what comes next may be an agent's whole start
-    if (!fatal) this.set({ state: 'reconnecting', attempt: this.attempt + 1 });
+    if (!fatal) this.set({ state: 'reconnecting', attempt: this.retries.attempt + 1 });
     void this.o.mirror
       .close()
       .catch(() => undefined)
@@ -400,9 +392,7 @@ export class MirrorSession {
       await this.stop(NEEDS[this.refusedNeed].title, this.refusedNeed);
       return;
     }
-    const now = this.clock.now();
-    this.deaths = [...this.deaths.filter((t) => now - t < DEATHS_WINDOW_MS), now];
-    if (this.deaths.length >= MAX_DEATHS) {
+    if (this.retries.diedTooOften(this.clock.now())) {
       await this.stop(
         `the viewer died twice in a minute: ${tail.slice(-400) || 'it said nothing'}`,
       );

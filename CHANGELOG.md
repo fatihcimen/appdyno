@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- How a mirror tries again, an open backed off up to ten tries and a viewer that died twice in a minute let go, is `retries.ts` of its own, where the mirror's session held it at the size cap.
 - A simulator app's frames by the probe inside it, started with the app and read back by this Mac's clock, are `sim-frames.ts` of their own, where the simulator's measures held them at the size cap.
 - How an Android screen that went dark or locked comes back, and waits for the app's focus to hold, is `wake.ts` of its own in the Android driver, where its device class held it at the size cap.
 - The protocol's screen tree, the nodes and windows an agent sends with their flags, is `tree.ts`, and what an audit finds is `audit.ts`, beside the messages that carry them, where `messages.ts` held all three within a few lines of the size cap.
