@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `perf_scroll` refuses a screen its swipes do not move, as a popup over the list, where it measured that as a smooth scroll, and its description says that the first call on an iOS simulator puts the frame probe in, restarts the app and measures nothing. `perf_launch` where no store rates a slow start says to judge the time against a baseline, and leaves `excessive` out of its answer there, where it said `false`, which nothing had rated.
 - A selector with no match, where another app is in front and the app did not leave on purpose, says that the app is not in front and that `launch_app` brings it back, where it listed the other app's labels as the nearest. A `wait_for` that runs out names the nearest labels as a tap's refusal does, and says that calling again waits longer.
 - `find`, `wait_for` and `assert`, and the `wait_for` and `assert` steps, take a selector in `selector`, as `tap`, `gesture`, `swipe`, `scroll_to` and `type_text` do, where they took its words at their top: one shape everywhere, and words given at the top are refused with the call in that shape in the hint. A refusal of several matches names the row each is in, says how many more there are past ten, and that `index` counts from 0; an element's line in a refusal names its row too.
 - `launch_app` with `restart`, `args`, `env` or `language` answers once the app is in front, where on a simulator it read the switcher's picture of the app as it started and warned that the home screen app was in front.

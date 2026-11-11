@@ -96,8 +96,9 @@ async function launchRun(
     ],
     compile: m.value.compile?.asked,
   });
+  const rated = ratedByPlay(s.device.platform);
   const longest =
-    worst === undefined || !ratedByPlay(s.device.platform)
+    worst === undefined || !rated
       ? undefined
       : await dayLongest(
           ctx.measurementsDir,
@@ -111,6 +112,7 @@ async function launchRun(
       `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
       `median: ${med === undefined ? 'not measured' : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
       ...(longest === undefined ? [] : [playLine(worstKind, longest)]),
+      ...(med !== undefined && !rated ? [UNRATED] : []),
       ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),
       ...(m.value.compile
         ? [
@@ -148,7 +150,7 @@ async function launchRun(
         ...(x.state && { state: x.state }),
       })),
       ...(med !== undefined && { medianMs: med }),
-      excessive: over,
+      ...(longest !== undefined && { excessive: over }),
       ...(fullyDrawnMedianMs !== undefined && { fullyDrawnMedianMs }),
       ...(m.value.compile && { compile: m.value.compile.asked }),
       ...(startup && {
@@ -168,6 +170,10 @@ async function nextOf(ctx: ServerContext, key: RunKey) {
     return `perf_compare with scenario ${key.scenario} compares this run with its baseline of ${held} runs`;
   return `kept as one run of ${key.scenario}, not as a baseline: ${held ? `its baseline holds ${held} of the ${MIN_BASELINE_RUNS} runs it needs` : 'it has none'}; perf_launch with baseline: true measures ${MIN_BASELINE_RUNS} runs and keeps them as one`;
 }
+
+/** Where no store rates a start, what tells a slow one is the app's own runs before. */
+const UNRATED =
+  'no limit of a slow start is rated on this platform: judge it against a baseline (perf_launch baseline: true, then perf_compare)';
 
 export function perfLaunchOp(ctx: ServerContext) {
   const tools = perfTools(ctx);
@@ -244,7 +250,6 @@ export function perfLaunchOp(ctx: ServerContext) {
             virtualDevice: s.device.virtual,
             mode: 'cold' as const,
             samples: withMs.map((totalMs) => ({ totalMs })),
-            excessive: false,
             baselineProfile: {
               present,
               ...(state && { state }),

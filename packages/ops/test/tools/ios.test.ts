@@ -238,38 +238,42 @@ describe('iOS simulators', () => {
 
   describe('each measure in its own terms', () => {
     const m = <T>(value: T) => ({ value, raw: 'raw', at: '2026-11-02T00:00:00.000Z' });
-    const onDevice = (measure: object) => {
+    const onDevice = (measure: object, platform?: 'ios') => {
       const device = new FakeDevice();
       Object.defineProperty(device, 'measure', { value: { ...LACKS, ...measure } });
+      if (platform) Object.defineProperty(device, 'platform', { value: platform });
       return connect({}, device);
     };
 
     it('a simulator: physical footprint, launch until the first read, a memory graph', async () => {
-      const t = await onDevice({
-        framesByProbe: true,
-        attachProbe: () => Promise.resolve(false),
-        cpu: () => Promise.resolve(m({ percent: 5, windowMs: 2_000 })),
-        memory: () => Promise.resolve(m({ kb: 52_429, kind: 'footprint', peakKb: 62_464 })),
-        launch: (_: string, o: { mode: 'cold' | 'warm' }) =>
-          Promise.resolve(
-            m({
-              mode: o.mode,
-              samples: [{ totalMs: 100 }, { totalMs: 9_000 }, { totalMs: 8_000 }],
-              medianMs: 8_000,
-              until: 'the first screen is read',
-            }),
-          ),
-        heap: (_: string, dir: string) =>
-          Promise.resolve(
-            m({
-              file: `${dir}/x.memgraph`,
-              bytes: 1_048_576,
-              leaks: 3,
-              leakedBytes: 192,
-              kind: 'memgraph',
-            }),
-          ),
-      });
+      const t = await onDevice(
+        {
+          framesByProbe: true,
+          attachProbe: () => Promise.resolve(false),
+          cpu: () => Promise.resolve(m({ percent: 5, windowMs: 2_000 })),
+          memory: () => Promise.resolve(m({ kb: 52_429, kind: 'footprint', peakKb: 62_464 })),
+          launch: (_: string, o: { mode: 'cold' | 'warm' }) =>
+            Promise.resolve(
+              m({
+                mode: o.mode,
+                samples: [{ totalMs: 100 }, { totalMs: 9_000 }, { totalMs: 8_000 }],
+                medianMs: 8_000,
+                until: 'the first screen is read',
+              }),
+            ),
+          heap: (_: string, dir: string) =>
+            Promise.resolve(
+              m({
+                file: `${dir}/x.memgraph`,
+                bytes: 1_048_576,
+                leaks: 3,
+                leakedBytes: 192,
+                kind: 'memgraph',
+              }),
+            ),
+        },
+        'ios',
+      );
       const snap = (await t.textOf('perf_snapshot')).text.split('\n');
       expect(snap.slice(1, -1)).toEqual([
         'CPU: 5% (of one core, 2000 ms)',
@@ -280,6 +284,7 @@ describe('iOS simulators', () => {
       expect(launch.slice(1, -2)).toEqual([
         'cold launch (until the first screen is read): 100 ms, 9000 ms, 8000 ms',
         'median: 8000 ms',
+        'no limit of a slow start is rated on this platform: judge it against a baseline (perf_launch baseline: true, then perf_compare)',
       ]);
       expect(launch.at(-1)).toMatch(/^kept as one run of launch-cold, not as a baseline/);
       expect((await t.textOf('perf_heap')).text).toMatch(

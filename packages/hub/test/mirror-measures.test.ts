@@ -86,9 +86,15 @@ describe('what a window measures', () => {
   it(
     'says of a list that stopped moving how many of the rounds asked for it ran',
     fakeTimed(async () => {
-      const device = new FakeDevice();
-      // a screen that does not scroll: the first round is counted as it is, and no other moves it
-      device.listEnd = 0;
+      /** A list that a swipe back does not bring back: past its first round, nothing moves it. */
+      class Stuck extends FakeDevice {
+        override act(...[a, o]: Parameters<FakeDevice['act']>) {
+          const back = a.kind === 'swipe' && a.to.y > a.from.y;
+          return super.act(back ? { kind: 'tap', x: 5, y: 2390 } : a, o);
+        }
+      }
+      const device = new Stuck();
+      device.listEnd = 1;
       const said: string[] = [];
       const words = await measuresOn(device).scroll('dev.app', (line) => said.push(line));
       expect(said).toContain('scroll round 2 of 3');

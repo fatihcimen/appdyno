@@ -140,7 +140,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       return {
         title: 'Cold launch',
         value: out.medianMs === undefined ? 'not measured' : `${out.medianMs} ms`,
-        flagged: out.excessive,
+        flagged: out.excessive === true,
         ...judged(app, `median of ${out.samples.length}`, out),
       };
     },

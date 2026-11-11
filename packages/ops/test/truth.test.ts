@@ -334,7 +334,7 @@ describe('a launch', () => {
     const r = await call('perf_launch');
     expect(r.text).toContain('median: 6000 ms');
     expect(r.text).not.toContain('excessive');
-    expect(r.structuredContent).toMatchObject({ excessive: false });
+    expect(r.structuredContent).not.toHaveProperty('excessive');
   });
 
   it('is asked for as many times as it is done', async () => {

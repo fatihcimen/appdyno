@@ -91,6 +91,17 @@ describe('perf tools', () => {
     expect(swipe.to.y).toBeLessThan(swipe.from.y);
   });
 
+  it('scroll: refuses a screen its swipes do not move, as a popup over the list, where it read as smooth', async () => {
+    const dev = new FakeDevice();
+    dev.listEnd = 0;
+    const t = await connect({}, dev);
+    const r = await t.textOf('perf_scroll', { swipes: 2 });
+    expect(r.text).toMatch(
+      /^NOT_FOUND: the swipes moved nothing on this screen, so no scroll was measured/,
+    );
+    expect(r.text).not.toContain('no threshold exceeded');
+  });
+
   it('scroll: goes on into new rows for as long as the list moves', async () => {
     const dev = new FakeDevice();
     const t = await connect({}, dev);

@@ -17,7 +17,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { moved } from '../scroll.js';
 import { ScrollOut } from './schemas.js';
-import { defineOp, ACT, reply } from '../tool.js';
+import { defineOp, ACT, reply, ToolError } from '../tool.js';
 import { perfTools, App, Probe, Scenario, kb } from './shared.js';
 import { frameVitals } from './vitals.js';
 
@@ -122,7 +122,7 @@ export function perfScrollOp(ctx: ServerContext) {
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Scroll jank: frames, frozen frames and memory of a list, in rounds of `swipes` swipes into new rows, read once it stops: one, three under a scenario. A list at its end comes back for a round. Jank names its top function.',
+      'Scroll jank: frames, frozen frames and memory of a list, in rounds of `swipes` swipes into new rows, read once it stops: one, three under a scenario. A list at its end comes back for a round; one the swipes do not move is refused. Jank names its top function. iOS simulator: the first call puts the frame probe in, restarting the app, and measures nothing: open the list again and call again.',
     input: z
       .object({
         app: App,
@@ -166,13 +166,24 @@ export function perfScrollOp(ctx: ServerContext) {
         });
         return f && moved(was.list, (await s.read()).list) ? f : undefined;
       };
+      /** The first round, which a screen the swipes do not move, as a popup over the list, would read as smooth. */
+      const firstRound = async () => {
+        const was = await s.read();
+        const f = await framesOfRound();
+        if (moved(was.list, (await s.read()).list)) return f;
+        throw new ToolError(
+          'the swipes moved nothing on this screen, so no scroll was measured: a popup or a sheet over the list takes them, or there is no list',
+          'NOT_FOUND',
+          'read the screen, close what covers the list or open the one to measure, and call again',
+        );
+      };
       let ended = false;
       for (let r = 0; r < repeats; r++) {
         reportProgress(`scroll round ${r + 1} of ${repeats}`);
         const m0 = await readMemory(pkg);
         // new rows are the cost a person feels, so a list goes on for as long as it moves, and one that has ended comes
         // back for each round after; a first round that cannot is a screen that does not scroll, said as it is
-        let f = r === 0 ? await framesOfRound() : ended ? undefined : await roundThatMoved();
+        let f = r === 0 ? await firstRound() : ended ? undefined : await roundThatMoved();
         if (!f && r > 0) {
           ended = true;
           await swipeBack();

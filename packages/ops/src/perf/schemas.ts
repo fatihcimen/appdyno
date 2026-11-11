@@ -127,7 +127,8 @@ export const LaunchOut = z.object({
   mode: z.enum(['cold', 'warm', 'hot']),
   samples: z.array(z.object({ totalMs: z.number().optional(), state: z.string().optional() })),
   medianMs: z.number().optional(),
-  excessive: z.boolean(),
+  /** Past the store's limit, where one rates a start: absent where none does. */
+  excessive: z.boolean().optional(),
   fullyDrawnMedianMs: z.number().optional(),
   compile: z.string().optional(),
   tracePath: z.string().optional(),
