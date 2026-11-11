@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The README's pictures of the hub and of a device's own window are taken again from the app as it is, in English and in Turkish, on an iPhone simulator while it moves, at a Mac load under 8: the hub's Turkish button reads Gösterge Panelini Aç and its frame rate is the picture's own, and the Turkish README shows a Turkish window.
 - The Turkish pages say one word for one thing across pages: a command's flag is a seçenek, an action an işlem, a read made just now a yeni one, and seconds s.
 - The comments of the suites, scripts and sources that print or rest on measured numbers name the page that now holds them, perf-evidence.md or mirror-internals.md.
 - The Turkish flows guide calls a measured journey one the gate checks, where its heading said it passed the gate.

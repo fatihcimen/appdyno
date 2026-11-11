@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- README'nin hub ve bir cihazın kendi penceresi resimleri, uygulamanın bugünkü haliyle, İngilizce ve Türkçe olarak, hareket halindeki bir iPhone simülatöründe, Mac'in yükü 8'in altındayken yeniden çekildi: hub'ın Türkçe düğmesi Gösterge Panelini Aç der, kare hızı görüntünün kendisidir ve Türkçe README Türkçe bir pencere gösterir.
 - Türkçe sayfalar bir şey için sayfalar boyunca tek bir sözcük kullanır: bir komutun seçeneği seçenek, bir işlem işlem, az önce yapılan bir okuma yeni, saniye s.
 - Ölçülen sayıları yazdıran ya da onlara dayanan suite'lerin, betiklerin ve kaynakların yorumları, onları artık tutan sayfayı, perf-evidence.md'yi ya da mirror-internals.md'yi adlandırır.
 - Türkçe akışlar rehberi ölçülen yolculuğu kapının denetlediği bir yolculuk olarak adlandırır; başlığı onun kapıdan geçtiğini söylüyordu.

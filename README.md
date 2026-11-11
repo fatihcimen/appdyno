@@ -74,13 +74,13 @@ Until APNs is set up, a real iPhone takes no push, and the answer says so. FCM's
 
 ### The live window and the hub
 
-<img src="docs/images/hub.webp" width="100%" alt="The hub in its dark look: an Android emulator live in Settings, an iPhone simulator beside it in the list, and the Performance pane reading 30 frames a second, CPU and memory">
+<img src="docs/images/hub.webp" width="100%" alt="The hub in its dark look: an iPhone simulator live in Settings while an AI client scrolls it, and the Performance pane reading the picture at 84 frames a second, CPU and memory">
 
 `appdyno hub` opens every device on this Mac in one window, driven by mouse and keyboard while an agent drives it too. Its Performance pane reads frames, CPU and memory as they happen. AI Clients shows each MCP client on this Mac as it truly stands, and adds appdyno to it. A phone joins by cable, or by Wi-Fi once paired with `appdyno pair`. See [The window and the hub](docs/reference/mirror.md).
 
 <p>
-  <img src="docs/images/window.webp" width="49.5%" alt="A simulator's own window in its light look, with a test app's push, sent through appdyno, on the home screen">
-  <img src="docs/images/window-push.webp" width="49.5%" alt="A simulator's own window in its dark look, with its Push pane open: the app's id, the type Alert and how it goes, and a title, a body and data filled in">
+  <img src="docs/images/window.webp" width="49.5%" alt="A simulator's own window in its light look, with a test app's push on the home screen">
+  <img src="docs/images/window-push.webp" width="49.5%" alt="A simulator's own window in its dark look, with its Push pane open: the app's id, the type Alert and what it sends, and a title, a body and data filled in">
 </p>
 
 <p align="center"><sub>A device's own window, light and dark. Its Push pane sends by <code>push</code>, as an agent does, with the types this device takes.</sub></p>
