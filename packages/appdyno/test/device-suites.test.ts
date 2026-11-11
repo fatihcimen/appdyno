@@ -46,6 +46,8 @@ describe('which suites a device can take', () => {
     expect(android).not.toContain('device-tests/ios.test.ts');
     expect(on(SIMULATOR).files).toContain('device-tests/mirror.simulator.test.ts');
     expect(on(IPHONE).files).toContain('device-tests/iphone.test.ts');
+    // by helpers.ts's IPHONE, which reads the variable there
+    expect(on(IPHONE).files).toContain('device-tests/keys.test.ts');
   });
 
   it('leaves no suite with no place: a device takes it, or it gates itself and is named here', () => {

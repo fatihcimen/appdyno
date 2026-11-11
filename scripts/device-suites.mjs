@@ -24,11 +24,20 @@ export const kindOf = (serial) =>
       ? 'iphone'
       : 'android';
 
+/** A suite that gates on helpers.ts's IPHONE reads the iPhone's variable there, not in its own text. */
+const BY_HELPERS = {
+  APPDYNO_IPHONE_UDID: /import \{[^}]*\bIPHONE\b[^}]*\} from '\.\/helpers\.js'/,
+};
+
 /** @param {string} variable */
 const suites = (variable) =>
   readdirSync(SUITES)
     .filter((f) => f.endsWith('.test.ts'))
-    .filter((f) => readFileSync(join(SUITES, f), 'utf8').includes(variable))
+    .filter((f) => {
+      const text = readFileSync(join(SUITES, f), 'utf8');
+      const helpers = /** @type {Record<string, RegExp | undefined>} */ (BY_HELPERS)[variable];
+      return text.includes(variable) || !!helpers?.test(text);
+    })
     .map((f) => `device-tests/${f}`)
     .sort();
 

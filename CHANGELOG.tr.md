@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- iPhone'da `scripts/ci.sh --all-on`, iPhone'a `device-tests/helpers.ts` üzerinden bağlanan 10 suite'i de çalıştırır, örneğin `keys`, `scroll` ve `small-tools`; önceden 29'un 19'unu çalıştırıyordu ve kalanı denenmeden kalıyordu.
 - Sosyal kart, işaretin, adın ve README'nin ilk satırının yanında çalışan hub'ı gösterir; `scripts/build-icons.mjs` onu `docs/images/hub.webp`'den çizer.
 - Hub'ın Test Et'i, npm appdyno'yu bulamadığında npm registry'sinde olmadığını ve npm'in hangi registry'ye sorduğunun nasıl görüleceğini söyler; önceden appdyno'nun henüz npm'de olmadığını ve bir kopyanın derlenmesini söylüyordu. Rehberler bir cihazı, `appdyno tools install adb`'nin indirdiği adb'yi de bulan `appdyno devices` ile denetler; önceden `adb devices` diyordu.
 - README'nin hub ve bir cihazın kendi penceresi resimleri, uygulamanın bugünkü haliyle, İngilizce ve Türkçe olarak, hareket halindeki bir iPhone simülatöründe, Mac'in yükü 8'in altındayken yeniden çekildi: hub'ın Türkçe düğmesi Gösterge Panelini Aç der, kare hızı görüntünün kendisidir ve Türkçe README Türkçe bir pencere gösterir.
