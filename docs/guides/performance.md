@@ -31,7 +31,7 @@ appdyno perf-launch --app A --mode cold --repeats 6     # after your change
 appdyno perf compare --app A                            # exit 1 on a regression
 ```
 
-Through your agent, `perf_launch` with `baseline` measures the three runs and keeps them as the baseline in one call. Any other run's answer says, in `next`, what it was kept as: one run of its scenario is no baseline.
+Through your agent, `perf_launch` with `baseline` measures the three runs and keeps them as the baseline in one call. Every other run's answer has a `next` line that says what the run was kept as, and which call makes a baseline of it: one run alone is no baseline.
 
 The baseline goes to `.appdyno/perf/baselines/`. Commit it. Limits of your own go in `.appdyno/perf/budgets.json`:
 
@@ -48,11 +48,11 @@ Through your agent, "keep the cold launch under 200 ms" is `perf_compare` `budge
   <img src="../images/perf-gate.svg" alt="How the gate decides: seven questions in order, each ending in a verdict: new, refused, ok, few-samples, improvement, noisy or regression">
 </picture>
 
-A gate that cannot judge does not pass. `few-samples`, `noisy` and `refused` all exit 1, each with what to do. [The gate](../reference/perf.md#the-gate) has the method, and why it needs all three tests.
+A gate that cannot judge does not pass. `few-samples`, `noisy` and `refused` all exit 1, and each says what to do. [The gate](../reference/perf.md#the-gate) has the method, and why it needs all three tests.
 
 ## Why it got worse
 
-`appdyno perf why --app A` is `compare`, and on a regression it finds the cause. See [Why it got worse](../reference/perf.md#why-it-got-worse).
+`appdyno perf why --app A` does what `compare` does, and on a regression it also looks for the cause. See [Why it got worse](../reference/perf.md#why-it-got-worse).
 
 ## A journey
 
@@ -69,6 +69,8 @@ appdyno perf compare --app A --scenario journey-login       # exit 1, naming the
 
 [`perf-gate.yml`](../examples/perf-gate.yml) is a job to copy to `.github/workflows/perf-gate.yml`. Set the values under its `env`: the app, the flow, the simulator and how the app builds.
 
+The job has been run step by step on a Mac with a simulator, and not yet on a GitHub runner. If it fails there, the fault may be the job's own: please report it.
+
 The job runs on a macOS runner with a simulator, so its numbers are relative to that runner. What it does is catch a change between two builds on one machine, and say why.
 
 It measures the pull request's base and head in one job, because a baseline from another machine does not compare:
@@ -83,7 +85,7 @@ appdyno has no service and no token, and posts nothing. It writes a file, and yo
 
 ### What to expect of a runner
 
-- A change seen under load says `noisy` and fails the job, and tells you to measure again. A run under load is refused as a baseline.
+- A change seen under load is `noisy`: it fails the job, and the answer tells you to measure again. A run under load is refused as a baseline.
 - GitHub's arm64 runners have 3 cores, which makes the limit a load of 2.4, and a build leaves more than that behind. That is why the job measures until three runs are in.
 - A new simulator is busy by itself at first: about 3 minutes and 7 cores on an M5 Pro with iOS 27.2. So the job waits for the load to fall first, and again after each build.
 - `macos-latest` is an arm64 runner, and [those have no nested virtualization](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). An Android emulator needs an Intel label or a Mac of your own.

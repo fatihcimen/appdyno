@@ -67,7 +67,7 @@
   <text class="text" x="52" y="561">p &lt; 0.01, all baseline samples against the run; at 0.05 or more, ok</text>
 
   <rect class="card s-h" x="32" y="598" width="560" height="62" rx="12"/>
-  <text class="name" x="52" y="626">Was the run or the baseline loud?</text>
+  <text class="name" x="52" y="626">Was the run or the baseline measured under load?</text>
   <text class="text" x="52" y="647">high load on this Mac or the device, a hot device, a mirror open</text>
 
   <!-- down: the way on -->
