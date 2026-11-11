@@ -70,6 +70,10 @@ Bir API 34 emülatöründe bu Mac'ten bir megabayt 778 ms sürdü, 100.000'lik b
 
 Android'de `locale` bir API 30 emülatöründe çalıştırıldı; Ayarlar `tr-TR`'den sonra Türkçe, `restore`'dan sonra İngilizce okundu. Bir simülatörde iOS 27.2'li bir iPhone 17 Pro'da çalıştırıldı; `tr-TR`'de tutulan Settings, simülatörün kendi `AppleLocale`'i olduğu gibi kalırken Ayarlar diye okundu, `restore`'dan sonra yeniden Settings diye okundu.
 
+## Kilitli bir telefon
+
+API 36'lı ve test için PIN ayarlanmış bir emülatörde, host yükü 220-250'de, `screen`, `tap` ve `swipe` `DEVICE_LOCKED` ile reddedildi ve hiçbir dokunuş gitmedi, `device-tests/guards.test.ts` ile. Parolası olmayan bir iPhone'da son dokunuştan 90 s sonraki bir kaydırma ana ekran düğmesine tek basıştan sonra uygulamaya ulaştı, bir başlatma ekranı uyandırdı ve uygulama seçilmemiş bir oturum kilit ekranını kendiliğinden geçti. Denenen telefon `passcodeRequired: false` okur; bu yüzden parolalı bir telefon için ret yalnızca koddan gelir ve çalıştırılmadı.
+
 ## Çökmeler
 
 `symbols` ile `crashes` bir iPhone 13 Pro Max'te çalıştırıldı: sembolleri ayıklanmış bir Release build'in çökmesinde önce çıplak bir `Fixture` çerçevesi, sonra dSYM'sinden `Fixture fixtureCrash(_:)` okundu.

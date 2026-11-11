@@ -356,13 +356,7 @@ Bir uygulamanın son N saniyesini bir zaman çizelgesi olarak tutar, varsayılan
 
 Bunun nasıl ve hangi cihazlarda sınandığı: [kanıtlar](perf-evidence.tr.md#tek-bir-zaman-çizelgesi).
 
-## Sessiz başarı yok
-
-**Başarısız bir eylem bir şeye dokunup dokunmadığını söyler.** Yanıtı "no touch was sent", "the touch was sent" ya da yanıt vermeyi bırakan bir cihaz için "the touch may have been sent: read the screen before trying again" ile biter ve bir istemcide `dispatched` vardır: `true`, `false` ya da `unknown`. Orada olmayan bir hedef ve cihazın bir reddi her dokunuştan önce gelir; listesi biten bir kaydırma ise önce kaydırma hareketini yapmıştır. Bir eylemden sonraki okuma da, karanlık bir ekranda ya da donmuş bir uygulamada, başarısız olabilir: eylem gitmiştir, bu yüzden o yanıt, başka ne derse desin, dokunuşun gönderilmiş olabileceğini söyler.
-
-**Bir dokunuş önce bakar.** Son eylemden bu yana ve 20 s'den kısa süre önce bir okuma yapılmadıysa her eylem ekranı okur, çünkü bir telefon son dokunuştan yaklaşık bir dakika sonra kendini kilitler: araştırma sırasında kör bir kaydırma bir kilit ekranından Spotlight'ı açtı. Yalnızca okuma olmayan yerde bir okumaya mal olur. Reddedilen bir okuma dayanacak bir şey bırakmaz, bu yüzden bir sonraki dokunuş yeniden okur. Bu 20 s içinde açıkken kilitlenen bir ekrana yine dokunulur; kararan birini ajan reddeder.
-
-**Kilitli bir telefon, kodu söylenerek reddedilir**: okumalar da dokunuşlar da `DEVICE_LOCKED` alır. Android: bir uyandırma ve bir kapatmadan sonra yerinde kalan bir keyguard. API 36'lı ve test için PIN ayarlanmış bir emülatörde, host yükü 220-250'de, `screen`, `tap` ve `swipe` reddetti ve hiçbir dokunuş gitmedi, `device-tests/guards.test.ts` ile. Parolası olmayan bir iPhone kilit ekranını ana ekran düğmesiyle geçer: karanlık bir ekranda ilk basış yalnızca onu uyandırır, kilit ekranı hâlâ açıktır, bu yüzden üç kereye kadar basar ve uygulama geri gelir. Son dokunuştan 90 s sonraki bir kaydırma tek basıştan sonra uygulamaya ulaştı, bir başlatma ekranı uyandırdı ve uygulama seçilmemiş bir oturum da iPhone'da kendiliğinden geçti. Parolayla okuma reddeder, `devicectl device info lockState` ile; bu, bu telefonda `passcodeRequired: false` okur, yani o ret yalnızca koddandır.
+## İkinci bir kayıt ve bir iPhone'un ısısı
 
 **Aynı anda ikinci bir kayıt, kodu söylenerek reddedilir.** Xcode'un trace aracı, ikinci bir kayıt verildiğinde performans sayaçlarını kilitleyemez ve boş bir trace bırakır; bu yüzden `recordTrace` bir cihazı süreçler arasında tutar ve ikincisi ilkini adlandıran `DEVICE_CLAIMED` alır, ölü bir sahibin dosyası devralınır. iPhone'da ikincisi reddetti ve ilki trace'ini tuttu. Başka bir aracın kaydı yalnızca o başarısızlık olarak görünür ve aynı biçimde reddeder. Android'in Perfetto'su oturumları yan yana kabul eder, bu yüzden böyle bir kuralı yoktur.
 

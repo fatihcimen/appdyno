@@ -70,6 +70,10 @@ On an API 34 emulator a megabyte from this Mac took 778 ms, 11.2 s under a cap o
 
 `locale` on Android was run on an API 30 emulator, where Settings read Turkish after `tr-TR` and English after `restore`. On a simulator it was run on an iPhone 17 Pro with iOS 27.2, where Settings held in `tr-TR` read Ayarlar while the simulator's own `AppleLocale` stayed as it was, and read Settings again after `restore`.
 
+## A locked phone
+
+On an emulator with API 36 and a PIN set for the test, at host load 220-250, `screen`, `tap` and `swipe` were refused with `DEVICE_LOCKED` and no touch went out, by `device-tests/guards.test.ts`. On an iPhone with no passcode, a swipe 90 s after the last touch reached the app after one press of the home button, a launch woke the screen, and a session with no app chosen got past the lock screen on its own. The phone tested reads `passcodeRequired: false`, so the refusal for a phone with a passcode comes from the code alone and has not been run.
+
 ## Crashes
 
 `crashes` with `symbols` was run on an iPhone 13 Pro Max: a stripped Release build's crash read a bare `Fixture` frame, then `Fixture fixtureCrash(_:)` from its dSYM.

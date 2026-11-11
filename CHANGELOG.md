@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The tools reference says what a failed action answers of its touch, that a touch reads the screen first, and how a locked phone is refused, where the performance reference said it under a heading of its own; what was run on a locked phone is on the page of tests.
 - The protocol reference lists every method the wire has, `permission.reset`, `animations.wait` and `locales` among them, `tree.get`'s `pkg`, `act`'s `animationWaitMs`, the keys `mute` and `siri`, and a tree's `dark` and `moving`; each stream method has a row of its own, and its code blocks say their language.
 - The repository's social card carries the README's line, that an AI agent drives, tests and measures an iOS or Android app, where it said only "Real numbers from a real device."
 - A new issue is a bug report or a feature request, and a security report goes to private reporting, with no blank issue; the bug report asks for the device's model and OS and for the failing call with its answer, and says a report may be in English or Turkish. THIRD_PARTY_NOTICES names the Node.js the Mac app carries, and the MCP registry's entry says appdyno runs from a Mac.

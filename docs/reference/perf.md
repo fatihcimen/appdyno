@@ -356,13 +356,7 @@ It keeps the last N seconds of an app as a timeline, 30 by default, from 20 to 1
 
 How this was checked, and on which devices: [the evidence](perf-evidence.md#one-timeline).
 
-## No silent success
-
-**A failed action says whether it touched anything.** Its answer ends "no touch was sent", "the touch was sent", or, for a device that stopped answering, "the touch may have been sent: read the screen before trying again", and a client has `dispatched`: `true`, `false` or `unknown`. A target that is not there and a refusal by the device come before any touch; a scroll that ran out of list swiped first. A read after an action can fail too, on a dark screen or a frozen app: the action had gone out, so that answer says it may have been sent, whatever else it says.
-
-**A touch looks first.** Every action reads the screen unless a read was taken since the last action and under 20 s ago, as a phone locks itself about a minute after the last touch: during research a blind swipe opened Spotlight from a lock screen. It costs a read only where there was none. A read that is refused leaves nothing to go on, so the next touch reads again. Within those 20 s a screen that locked while on is still touched; one that went dark is refused by the agent.
-
-**A locked phone refuses by name**, with `DEVICE_LOCKED`, reads and touches alike. Android: after a wake and a dismissal, a keyguard that stays. On an emulator with API 36 and a PIN set for the test, at host load 220-250, `screen`, `tap` and `swipe` refused and no touch went out, by `device-tests/guards.test.ts`. An iPhone with no passcode gets past its lock screen with the home button: on a dark screen the first press only wakes it, with the lock screen still up, so it presses up to three times, and the app comes back. A swipe 90 s after the last touch reached the app after one press, a launch waking the screen, and a session with no app chosen got past it on its own, on the iPhone. With a passcode the read refuses, by `devicectl device info lockState`, which reads `passcodeRequired: false` on this phone; so that refusal is from the code alone.
+## A second recording, and an iPhone's heat
 
 **Two recordings at once refuse by name.** Xcode's trace tool, given a second recording, fails to lock the performance counters and leaves an empty trace, so `recordTrace` holds a device across processes, and a second gets `DEVICE_CLAIMED` naming the first, a dead holder's file being taken over. On the iPhone the second refused and the first kept its trace. A recording by another tool shows only as that failure, which refuses the same way. Android's Perfetto takes sessions side by side, so it has no such rule.
 
