@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir iPhone'un, bir öğeye yalnızca sözcükleri ya da kimliğiyle basan `inspector` `press`'i her girdinin geçtiği korumadan geçer: ekranda bir güç, acil durum, silme ya da arama denetimi olup olmadığını söyleyecek bir yer olmadığından her seferinde kişiye sorar, `--allow-apps` ya da `--no-home` altında da reddedilir. Önceden sorulmadan, iki seçeneği de aşarak telefona gidiyordu.
 - `steps`'in açıklaması bir adımın hangi araçlar olabileceğini söyler: `steps` ile, `app`, `keyboard` ve `network` gibi kendi `action` argümanı olanlar dışında herhangi biri, çünkü bir adımın `action`'ı onların kendi eyleminin yerini alır; önceden `steps` ve `flow` dışında herhangi biri diyordu.
 - Araç başvurusu ve SECURITY.md artık `app`'in eylemleri ya da `--no-home`'un tuttukları arasında `app launch`'ı adlandırmaz: onun yaptığını `launch_app` yapar.
 - CONTRIBUTING bir değişikliğin nasıl girdiğini ve MIT Lisansı altında olduğunu; appdyno'nun kaynak koddan, yalnızca iOS için bile bir JDK ile platform 37.2 ve build-tools 37.0.0 içeren Android SDK isteyen `scripts/install.sh` ile nasıl derlenip kurulduğunu; birim testlerinin ve paylaştıkları sahtelerin nerede olduğunu, cihaz suite'lerinin bir cihaza nasıl yöneltildiğini; ve her değişiklik günlüğündeki satırıyla commit kuralını söyler. appdyno'nun kendi değişkenlerinin tablosunun başlığı İç değişkenler'dir.

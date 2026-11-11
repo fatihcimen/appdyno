@@ -172,6 +172,7 @@ These lose what a person may want, so each waits for the person's yes:
   answer says the person does it. Reading such a screen asks nothing, nor back and home, which leave it. Only
   `--allow-power virtual` or `all` lets these go ahead with nothing asked, never `--allow-data-loss`
 - a call: `open_link` with a link that places one (`tel:`, `telprompt:`, `facetime:` or `facetime-audio:`), and a touch, key or text in a phone app (a dialer, its call screen or FaceTime, or an Android device's own default dialer) or on a button but Cancel of an iOS system alert whose text is a phone number alone, in any language, or on one that says Call or Ara. appdyno places no call, and `--allow-power` is the flag for these too
+- `inspector` `press` on an iPhone, which presses an element by its words or id alone, with no place on the screen to tell whether it is one of these controls: under `--allow-apps` or `--no-home` it is refused, and `--allow-power all` lets it go ahead with nothing asked
 
 The server asks by the client's own prompt, MCP elicitation, where the client declared it can, at `initialize` on a 2025
 revision and on each request on 2026-07-28, and names the device, the app and what is lost. The model cannot answer it.

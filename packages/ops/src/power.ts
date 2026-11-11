@@ -13,14 +13,22 @@ import type { Policy } from './policy.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 
-/** What an input would reach: the points a finger comes down on, a key, or text typed (at a point, if given). */
-export type Input = { points: Point[]; key?: string; types?: true };
+/**
+ * What an input would reach: the points a finger comes down on, a key, or text typed (at a point, if given); `named`: an
+ * element pressed by its words or id alone, wherever it is, with no point to judge.
+ */
+export type Input = { points: Point[]; key?: string; types?: true; named?: string };
 
 /** Looks at an input before it leaves for the device, and refuses it there or lets it go. */
 export type InputGuard = (s: Session, input: Input) => Promise<void>;
 
+/** A device's inputs, and those of a part of it that takes its own. */
+type Inputs = { [key: string]: ((...args: never[]) => Input) | Inputs };
+
 /** Each way a device takes an input, as what it would reach: these are all of them. */
-const INPUTS: Record<string, (...args: never[]) => Input> = {
+const INPUTS: Inputs = {
+  // an iPhone's accessibility service presses what has those words or that id, as no runner is up to read the screen
+  inspector: { press: (name: string) => ({ points: [], named: name }) },
   act: (a: ActParams) =>
     a.kind === 'key'
       ? { points: [], key: a.key }
@@ -46,31 +54,35 @@ export function guardInputs(
   check: (input: Input) => Promise<void>,
   mayHaveGone: () => void,
 ): Device {
-  return new Proxy(device, {
-    get(target, key) {
-      const v: unknown = Reflect.get(target, key);
-      if (typeof v !== 'function') return v;
-      const input = typeof key === 'string' ? INPUTS[key] : undefined;
-      const own = (v as (...args: unknown[]) => unknown).bind(target);
-      return input
-        ? async (...args: never[]) => {
-            await check(input(...args));
-            try {
-              return await own(...args);
-            } catch (e) {
-              // the next input is judged by a new read, not by the screen before this one
-              if (
-                !(e instanceof DeviceError) ||
-                ERROR_TRAITS[e.code].touch !== 'refused first' ||
-                e.sent
-              )
-                mayHaveGone();
-              throw e;
+  const guarded = <T extends object>(on: T, inputs: Inputs): T =>
+    new Proxy(on, {
+      get(target, key) {
+        const v: unknown = Reflect.get(target, key);
+        const input =
+          typeof key === 'string' && Object.hasOwn(inputs, key) ? inputs[key] : undefined;
+        if (typeof input === 'object') return v && typeof v === 'object' ? guarded(v, input) : v;
+        if (typeof v !== 'function') return v;
+        const own = (v as (...args: unknown[]) => unknown).bind(target);
+        return input
+          ? async (...args: never[]) => {
+              await check(input(...args));
+              try {
+                return await own(...args);
+              } catch (e) {
+                // the next input is judged by a new read, not by the screen before this one
+                if (
+                  !(e instanceof DeviceError) ||
+                  ERROR_TRAITS[e.code].touch !== 'refused first' ||
+                  e.sent
+                )
+                  mayHaveGone();
+                throw e;
+              }
             }
-          }
-        : own;
-    },
-  });
+          : own;
+      },
+    });
+  return guarded(device, INPUTS);
 }
 
 /** The system's own apps: an app under test may call a button Restart, and only these power off or erase a device. */

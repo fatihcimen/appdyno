@@ -172,6 +172,7 @@ Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri k
   yanıt bunu kişinin yaptığını söyler. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları
   da. Bunların hiçbir şey sorulmadan yapılmasına yalnızca `--allow-power virtual` ya da `all` izin verir, asla `--allow-data-loss` değil
 - bir arama: arama başlatan bir bağlantıyla (`tel:`, `telprompt:`, `facetime:` ya da `facetime-audio:`) `open_link` ve bir telefon uygulamasındaki (numara çevirici, arama ekranı ya da FaceTime ya da bir Android cihazın kendi varsayılan çeviricisi) bir dokunuş, tuş ya da metin ya da metni yalnızca bir telefon numarası olan bir iOS sistem uyarısının, her dilde, Vazgeç dışındaki bir düğmesine ya da Call veya Ara diyen bir düğmeye bir dokunuş. appdyno hiçbir arama başlatmaz; bunların seçeneği de `--allow-power`'dır
+- bir iPhone'da bir öğeye yalnızca sözcükleri ya da kimliğiyle, ekranda bunlardan biri olup olmadığını söyleyecek bir yeri olmadan basan `inspector` `press`: `--allow-apps` ya da `--no-home` altında reddedilir, `--allow-power all` da hiçbir şey sormadan geçirir
 
 Sunucu, istemcinin bunu yapabildiğini bildirdiği yerde istemcinin kendi sorusuyla, yani MCP elicitation ile sorar; istemci bunu bir 2025
 revizyonunda `initialize`'da, 2026-07-28'de ise her istekte bildirir; soru cihazı, uygulamayı ve neyin kaybolacağını söyler. Model onu yanıtlayamaz.

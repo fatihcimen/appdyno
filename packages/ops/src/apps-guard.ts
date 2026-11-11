@@ -1,5 +1,6 @@
 import type { PlatformScreen, Screen } from '@appdyno/core';
 import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
+import { ALLOW_POWER, approvePower } from './approval.js';
 import { byPerson, type Policy } from './policy.js';
 import { LEAVES, SIDE_KEYS } from './keys.js';
 import { inAlert, overTheApp, powerGuard, windowAt, type Input, type InputGuard } from './power.js';
@@ -104,11 +105,38 @@ export const appsGuard =
       );
   };
 
+/** What a person can do in place of a press by name, which no look at the screen can judge. */
+const BY_NAME_AHEAD = `a press by name has no place on the screen to tell a power, emergency, erase or call control by, so each one asks; a person allows them ahead in this server's own command line: ${ALLOW_POWER}`;
+
+/**
+ * An element pressed by its words or id alone, as an iPhone's inspector does, may be any app's and any control: refused
+ * where the server holds to an app, else asked of the person.
+ */
+async function pressedByName(policy: Policy, s: Session, name: string) {
+  const [why, flag] =
+    policy.apps.length > 0
+      ? [`it may land outside the allowed apps (${policy.apps.join(', ')})`, '--allow-apps']
+      : [policy.allowHome ? undefined : 'it may leave the app', '--no-home'];
+  if (why)
+    throw new ToolError(
+      `a press by name is off on this server: ${why}`,
+      'POLICY_DENIED',
+      byPerson(`by starting it without ${flag}`),
+    );
+  await approvePower(
+    policy,
+    s,
+    `the element ${JSON.stringify(name)}, pressed by name with no look at what it is`,
+    BY_NAME_AHEAD,
+  );
+}
+
 /** Every input of a session passes the allowed apps first, then the power guard, both by one read. */
 export const inputGuard = (policy: Policy): InputGuard => {
   const apps = appsGuard(policy);
   const power = powerGuard(policy);
   return async (s, input) => {
+    if (input.named !== undefined) return pressedByName(policy, s, input.named);
     await apps(s, input);
     await power(s, input);
   };

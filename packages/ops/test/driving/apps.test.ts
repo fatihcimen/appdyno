@@ -197,7 +197,10 @@ describe('app management', () => {
         return Promise.resolve({ caption: 'Form, Button' });
       },
     };
-    const { call } = await connect(Object.assign(new FakeDevice(), { inspector }));
+    // a press by name asks the person, as power-named.test.ts has it: allowed ahead here
+    const { call } = await connect(Object.assign(new FakeDevice(), { inspector }), {
+      policy: { allowPower: 'all' },
+    });
     const list = await call('inspector', { action: 'list' });
     expect(list.text).toBe('Form, Button #open_form\nTitle');
     expect((await call('inspector', { action: 'press' })).error).toBe(true);
