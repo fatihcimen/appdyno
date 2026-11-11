@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A settle's numbers, still for 200 ms and at most 3 s, are stated once in the protocol as the agent's defaults, and the benchmark asks what the tools ask, where it wrote them a third time.
 - What both drivers wrote alike is core's: the read-only calls retried once on a new connection, to which each driver adds its own, and the cache of a push service's signed token with how a JWT is put together, which FCM and APNs each kept.
 - Whether an error code is worth a retry, and whether an agent refuses with it before it touches anything, is said once for every code in one table the compiler holds whole: two hand-kept lists in two packages said it, and a new code fell out of both unseen.
 - How a person is reached and how a client is named to one, `silent`, `alertPerson` and `clientNamed`, are one `person` option of the server's context, read as it is given, where each was an option of its own and a getter that passed it through.

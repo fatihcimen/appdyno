@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir durulmanın sayıları, 200 ms durgun ve en çok 3 s, protokolde ajanın varsayılanları olarak bir kez yazılır ve kıyaslama, onları üçüncü kez yazdığı yerde, araçların istediğini ister.
 - Her iki sürücünün aynı yazdığı core'undur: yeni bir bağlantıda bir kez yeniden denenen salt okunur çağrılar, ki her sürücü kendininkileri onlara ekler, ve bir push hizmetinin imzalı belirtecinin önbelleği ile bir JWT'nin nasıl birleştirildiği, ki onları FCM ve APNs ayrı ayrı tutuyordu.
 - Bir hata kodunun yeniden denemeye değip değmediği ve bir ajanın onunla bir şeye dokunmadan önce reddedip reddetmediği, her kod için derleyicinin eksiksiz tuttuğu tek bir tabloda bir kez söylenir: bunu iki pakette elle tutulan iki liste söylüyordu ve yeni bir kod ikisinin de dışında fark edilmeden kalıyordu.
 - Bir kişiye nasıl ulaşıldığı ve bir istemcinin ona nasıl adlandırıldığı, `silent`, `alertPerson` ve `clientNamed`, sunucunun bağlamının verildiği gibi okunan tek bir `person` seçeneğidir; önceden her biri kendi seçeneği ve onu olduğu gibi geçiren bir okuyucuydu.

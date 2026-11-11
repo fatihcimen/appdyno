@@ -1,6 +1,7 @@
 import { freemem, loadavg, totalmem } from 'node:os';
 import { buildScreen, must, run, sleep, stats, type Stats } from '@appdyno/core';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
+import { SETTLE } from '@appdyno/ops';
 
 /** An element a benchmark looks up: its label or id, and its centre in tap units. */
 export type BenchElement = { label: string; id?: string; x: number; y: number };
@@ -29,7 +30,6 @@ export type BenchDriver = {
 export function appdynoDriver(serial: string, adb = new Adb()): BenchDriver {
   let d = new AndroidDevice(serial, adb);
   let lastHash: string | undefined;
-  const SETTLE = { quietMs: 200, maxMs: 3_000 };
   return {
     name: 'appdyno',
     async setup() {
