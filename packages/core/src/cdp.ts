@@ -105,6 +105,26 @@ export type DevToolsTarget = {
   webSocketDebuggerUrl?: string;
 };
 
+/** This Mac, by any of its names. */
+const LOOPBACK = ['localhost', '127.0.0.1', '[::1]'];
+
+/**
+ * Whether a target's socket is where the endpoint that listed it is, this Mac and its port: what the list names is the
+ * listing's to say, as an app on a device or any server on that port, and anywhere else it would have this Mac call.
+ */
+export function onEndpoint(base: string, socket: string) {
+  // `URL.parse` came in Node 22.1, and engines lets 22.0 in
+  const at = URL.canParse(socket) ? new URL(socket) : undefined;
+  return (
+    !!at &&
+    ['ws:', 'wss:'].includes(at.protocol) &&
+    !at.username &&
+    !at.password &&
+    LOOPBACK.includes(at.hostname) &&
+    at.port === new URL(base).port
+  );
+}
+
 export async function devToolsTargets(base: string): Promise<DevToolsTarget[]> {
   // a redirect is answered as it is: followed, it would send this Mac's request to any host
   const res = await fetch(`${base}/json/list`, {

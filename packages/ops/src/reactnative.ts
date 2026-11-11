@@ -1,4 +1,4 @@
-import { CdpSession, devToolsTargets, pause, type DevToolsTarget } from '@appdyno/core';
+import { CdpSession, devToolsTargets, onEndpoint, pause, type DevToolsTarget } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { boundLines } from './diagnose.js';
@@ -10,23 +10,6 @@ const DEFAULT_METRO = 'localhost:8081';
 const DEFAULT_LOG_MS = 3_000;
 const MAX_LOG_MS = 60_000;
 const MAX_LINES = 500;
-
-/** Metro on this Mac, by any of its names: a host elsewhere would have this Mac call it, and a name carry data out. */
-const LOOPBACK = ['localhost', '127.0.0.1', '[::1]'];
-
-/** A runtime's socket where Metro is, this Mac and its port, and nowhere else Metro's answer might send this Mac. */
-function onMetro(base: string, socket: string) {
-  // `URL.parse` came in Node 22.1, and engines lets 22.0 in
-  const at = URL.canParse(socket) ? new URL(socket) : undefined;
-  return (
-    !!at &&
-    ['ws:', 'wss:'].includes(at.protocol) &&
-    !at.username &&
-    !at.password &&
-    LOOPBACK.includes(at.hostname) &&
-    at.port === new URL(base).port
-  );
-}
 
 type Console = {
   type?: string;
@@ -62,7 +45,7 @@ export function reactNativeOps(ctx: ServerContext) {
           : `no app is connected to the Metro at ${base}: open the app with Hermes on`,
         'NOT_FOUND',
       );
-    if (!onMetro(base, hit.webSocketDebuggerUrl))
+    if (!onEndpoint(base, hit.webSocketDebuggerUrl))
       throw new ToolError(
         `the Metro at ${base} named ${hit.webSocketDebuggerUrl} for ${hit.id}, which is not on it: it was not opened`,
         'POLICY_DENIED',

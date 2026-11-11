@@ -1,4 +1,11 @@
-import { must, CdpSession, devToolsTargets, type WebInspector, type WebPage } from '@appdyno/core';
+import {
+  must,
+  CdpSession,
+  devToolsTargets,
+  onEndpoint,
+  type WebInspector,
+  type WebPage,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { type Adb } from './adb.js';
 
@@ -53,6 +60,11 @@ export class AndroidWeb implements WebInspector {
       const target = (await devToolsTargets(base)).find((t) => t.id === page.id.slice(at + 1));
       if (!target?.webSocketDebuggerUrl)
         throw new DeviceError('NOT_FOUND', `the page ${page.title || page.id} has gone`);
+      if (!onEndpoint(base, target.webSocketDebuggerUrl))
+        throw new DeviceError(
+          'POLICY_DENIED',
+          `the app's DevTools named ${target.webSocketDebuggerUrl} for ${page.title || page.id}, off the port forwarded to it: it was not opened`,
+        );
       const session = await CdpSession.open(target.webSocketDebuggerUrl);
       try {
         return await session.evaluate(script);

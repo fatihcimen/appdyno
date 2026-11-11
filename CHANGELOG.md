@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `webview` opens a page's socket only on the port forwarded to the app's DevTools, by the check `react_native` makes of Metro's: it opened the `webSocketDebuggerUrl` the app's socket named wherever it pointed, so an app on the device could have this Mac open a WebSocket to any host.
 - `react_native` and `webview` follow no redirect from the DevTools endpoint they ask, and say what it answered, as "answered 302": a port on this Mac that answered `/json/list` or `/reload` with a redirect sent this Mac's request to whatever host it named.
 - What a session was shown, its last screenshot, a touch that skipped its settle, when it last acted and the timeline or flight recorder running on it are its own, set by its methods, as its app and that app's process already were: seven files wrote them as plain fields, and nothing but a reading of each said who might.
 - An action refused as its app died while Android's crash dialog holds the app says to read `logs` now, and `crashes` once `alert` has answered the dialog, as no report is written before: its hint said "crashes says why it died" beside a text that said no crash report did yet.
