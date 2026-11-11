@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- npm'in gösterdiği README resimlerine ve sayfalarına `main` yerine sürümün kendi etiketinden bağlanır: bir sürümün sayfası o sürümün resimlerini ve belgelerini korur; bir rozetin bağlantısı da tam adres olur.
 - Diyagramlar temiz okunur: araç çağrısının yaşam çizgileri kestikleri sözcüklerden önce durur ve okları sürücüden ve sunucudan geçer, cihaz tablosunun notları ne demek istediklerini söyler, paket haritası native koda giden okun ne olduğunu söyler, pencerenin alt yazıları da kutularının içinde kalır. Mimari sayfası `simsettle.ts`'in yolunu verir ve `--put-back-after`'ın elle yazılacak bir seçenek olmadığını söyler.
 - Akışlar rehberi adımların bütün sözdizimini verir: `launch` ve `stop` için isteğe bağlı bir uygulama, `count`, `distance`, `durationMs`, `exact`, `maxSwipes` ve `settings`, yorumlar, koordinatlar ve üç işaret. Kanıt rehberinde zaman çizelgesi ve uçuş kaydedicisi var; dashboard kısa paragraflarda, yanındaki ölçümler bir listede, proxy de ne olduğuyla anılır.
 - Ağ aracı ve pencerenin Ağ paneli sizin çalıştırdığınız bir HTTP proxy'sinden söz eder ve hiçbir proxy ürününün adını vermez: proxy'den okunan bir liste proxy'den geldiğini söyler, listesi okunamayan bir proxy için de oturumunu HAR olarak dışa aktarmak söylenir. Bir akışın dışa aktarımı her reddinde biçiminin adını, Maestro YAML'ı söyler.

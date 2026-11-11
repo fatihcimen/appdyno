@@ -126,10 +126,12 @@ packed(join(pkg, '../..', mac.repo), mac);
 // what a registry shows, and what has to travel with copies of the code inlined above
 /** @type {unknown} */
 const manifest = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
-const { repository } = /** @type {{ repository: { url: string } }} */ (manifest);
+const { repository, version } = /** @type {{ repository: { url: string }; version: string }} */ (
+  manifest
+);
 writeFileSync(
   join(pkg, 'README.md'),
-  publishedReadme(readFileSync(join(pkg, '../../README.md'), 'utf8'), repository.url),
+  publishedReadme(readFileSync(join(pkg, '../../README.md'), 'utf8'), repository.url, version),
 );
 cpSync(join(pkg, '../../LICENSE'), join(pkg, 'LICENSE'));
 writeFileSync(

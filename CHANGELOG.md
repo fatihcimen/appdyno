@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The README npm shows links its pictures and pages at the release's own tag, where it linked `main`: a version's page keeps that version's pictures and docs, and a badge's link is made whole too.
 - The diagrams read clean: the tool call's lifelines stop short of the words they crossed and its arrows pass through the driver and the server, the devices table's notes say what they mean, the map of packages says what an arrow into native code is, and the window's captions sit inside their boxes. The architecture page gives `simsettle.ts` its path and says that `--put-back-after` is not a flag to type.
 - The flows guide gives the whole step syntax: an optional app for `launch` and `stop`, `count`, `distance`, `durationMs`, `exact`, `maxSwipes` and `settings`, comments, coordinates and the three flags. The evidence guide has the timeline and the flight recorder, the dashboard in short paragraphs with a list of the measures beside it, and a proxy named by what it is.
 - The network tool and the window's Network pane speak of an HTTP proxy you run, and name no proxy product: a list read from the proxy says it came from the proxy, and a proxy whose list cannot be read is told to export its session as HAR. A flow's export names its format, Maestro YAML, in each refusal.
