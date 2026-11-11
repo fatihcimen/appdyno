@@ -57,8 +57,8 @@ extension Device {
         add(snap, window: 0)
         // `exists` answers at once; a snapshot of a missing element waits for it to appear
         let overQuery = springboard.descendants(matching: .any).matching(Device.overTheApp).firstMatch
-        // a read for another's look leaves the alert a touch goes to as the app's last read had it
-        if pkg == nil { alertFrame = nil }
+        // a read for another's look leaves the alert a touch goes to and the app's shape as its last read had them
+        if pkg == nil { (alertFrame, appFrame) = (nil, snap.frame) }
         if pkg == nil, app !== springboard, overQuery.exists, let over = try? overQuery.snapshot() {
             // a system alert (permission, notification prompt) alone; Control Center or the power-off screen as all the
             // home screen app shows, as their power and emergency controls lie outside what the query finds

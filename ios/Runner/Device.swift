@@ -13,6 +13,8 @@ import XCTest
     var unreachable: [(hash: String, copies: [String])] = []
     /// The frame of the system alert in the last read, if one was over the app.
     var alertFrame: CGRect?
+    /// The app's frame in the last read: wider than tall where its interface stands turned.
+    var appFrame: CGRect?
     let settler = Settler(clock: { Int(Date().timeIntervalSince1970 * 1000) },
                           sleep: { Thread.sleep(forTimeInterval: Double($0) / 1000) })
     /// The longest a touch waits for the app's animations (UIKit's sheet comes up in about 0.5 s; an

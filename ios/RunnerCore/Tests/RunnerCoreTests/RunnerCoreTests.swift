@@ -166,6 +166,15 @@ final class GestureTimelineTests: XCTestCase {
         XCTAssertEqual([0, 5, 6].map { interfaceTurn(device: $0) }, [nil, nil, nil])
     }
 
+    func testATouchOnADeviceLyingFlatGoesUprightWhereTheAppStandsTallAndNoWayWhereItIsWide() {
+        let tall = (w: 402.0, h: 874.0), wide = (w: 874.0, h: 402.0)
+        XCTAssertEqual([0, 5, 6].map { touchTurn(device: $0, app: tall) }, [1, 1, 1])
+        XCTAssertEqual([0, 5, 6].map { touchTurn(device: $0, app: wide) }, [nil, nil, nil])
+        XCTAssertNil(touchTurn(device: 5, app: nil))
+        // a device that says its turn is taken at its word, whatever the app's shape
+        XCTAssertEqual([1, 3, 4].map { touchTurn(device: $0, app: wide) }, [1, 4, 3])
+    }
+
     func testFingersGoDownTogetherAndLiftAfterTheLastSampleOfAny() throws {
         let plan = try gestureTimeline([
             [sample(10, 10, 100), sample(20, 10, 200), sample(30, 10, 300)],

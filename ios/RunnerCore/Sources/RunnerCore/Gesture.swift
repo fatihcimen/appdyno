@@ -13,6 +13,15 @@ public func interfaceTurn(device: Int) -> Int? {
     }
 }
 
+/// The interface's turn a touch goes with: the device's own, else, lying flat, portrait where the app's last read
+/// stood taller than wide (`app`: its width and height), as a portrait app on a desk does. Nil where neither tells: a
+/// wide app on a device lying flat may stand turned either way.
+public func touchTurn(device: Int, app: (w: Double, h: Double)?) -> Int? {
+    if let turn = interfaceTurn(device: device) { return turn }
+    guard let app, app.h > app.w else { return nil }
+    return 1
+}
+
 /// A point of a finger's path; `t` in the host's milliseconds, or in seconds from the down once on a timeline.
 public struct GesturePoint {
     public let x: Double, y: Double, t: Double
