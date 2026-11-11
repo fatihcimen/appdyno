@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The release is 1.0.0. Every package, the MCP registry's entry, the Android agent and the iOS runner say so, and the Mac app, its disk image and the Homebrew cask take it from the package when they are built.
 - A bar the app puts above the iOS keyboard, as a Done over a number pad, stays listed, where it went with the keyboard's own views; a point on the keyboard is no element a recording names, as the touch there reaches a key; and `press_key` passes a key on by the name it lists, so `Home` and `Return` are read as `home` and `enter` by whatever looks at the key after. `app install` names the id it read where an allow list has it read one, and a file whose id cannot be read installs as before where none does.
 - `perf_launch` with a cold or warm start says that the app was started anew and shows its first screen, where the next call took the app to be where it was before.
 - A `steps` call that ends in a `wait_for` or an `assert` that held, or in a `scroll_to` that found its row, no longer adds "no change seen", where it did as though the step had acted.

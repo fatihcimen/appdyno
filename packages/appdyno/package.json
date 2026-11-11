@@ -1,6 +1,6 @@
 {
   "name": "appdyno",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "private": false,
   "description": "MCP server, command line and TypeScript library that test, drive and measure iOS and Android apps on simulators, emulators and real phones.",
   "keywords": [

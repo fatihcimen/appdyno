@@ -7,7 +7,7 @@ export const DEVICE_ICON_SVG = SERVER_ICON_SVG;
 export const SERVER_INFO = {
   name: 'appdyno',
   title: 'appdyno',
-  version: '0.6.0',
+  version: '1.0.0',
   description:
     'Test, drive and measure iOS and Android apps on simulators, emulators and real phones.',
   websiteUrl: 'https://github.com/fatihcimen/appdyno',
