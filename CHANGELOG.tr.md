@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- CONTRIBUTING bir değişikliğin nasıl girdiğini ve MIT Lisansı altında olduğunu; appdyno'nun kaynak koddan, yalnızca iOS için bile bir JDK ile platform 37.2 ve build-tools 37.0.0 içeren Android SDK isteyen `scripts/install.sh` ile nasıl derlenip kurulduğunu; birim testlerinin ve paylaştıkları sahtelerin nerede olduğunu, cihaz suite'lerinin bir cihaza nasıl yöneltildiğini; ve her değişiklik günlüğündeki satırıyla commit kuralını söyler. appdyno'nun kendi değişkenlerinin tablosunun başlığı İç değişkenler'dir.
 - Sürüm 1.0.0'dır. Her paket, MCP kayıt defterindeki girdi, Android ajanı ve iOS runner'ı bunu söyler; Mac uygulaması, disk imajı ve Homebrew cask'i de derlendiklerinde sürümü paketten alır.
 - Uygulamanın iOS klavyesinin üstüne koyduğu bir çubuk, örneğin bir sayı tuş takımının üstündeki Done, listede kalır; önceden klavyenin kendi görünümleriyle birlikte gidiyordu. Klavyenin üstündeki bir nokta bir kaydın adlandırdığı bir öğe değildir, çünkü oraya bir dokunuş bir tuşa ulaşır. `press_key` bir tuşu listelediği adla iletir, böylece `Home` ve `Return`, tuşa sonra bakan her şeyce `home` ve `enter` olarak okunur. `app install`, bir izin listesinin ona okuttuğu kimliği adlandırır; liste olmayan yerde kimliği okunamayan bir dosya da eskisi gibi kurulur.
 - Soğuk ya da ılık bir açılışla `perf_launch`, uygulamanın baştan başlatıldığını ve ilk ekranını gösterdiğini söyler; önceden sonraki çağrı uygulamayı önceki yerinde sanıyordu.

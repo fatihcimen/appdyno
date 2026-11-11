@@ -21,7 +21,7 @@ const documented = namesIn(
 );
 /** What is appdyno's own: the table CONTRIBUTING keeps of them. */
 const table = must(
-  /^## Variables of its own\n([^]*?)\n## /m.exec(read('CONTRIBUTING.md'))?.[1],
+  /^## Internal variables\n([^]*?)\n## /m.exec(read('CONTRIBUTING.md'))?.[1],
   "CONTRIBUTING's table of variables",
 );
 const own = new Set(
