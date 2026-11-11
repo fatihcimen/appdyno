@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Tree, WireNode } from '@appdyno/protocol';
@@ -342,5 +342,36 @@ describe('an input on them', () => {
     const started = performance.now();
     for (let i = 0; i < 200; i++) powerControlAt(qs, { x: 540, y: 1200 });
     expect((performance.now() - started) / 200).toBeLessThan(1);
+  });
+});
+
+describe('a key or typing into a phone app', () => {
+  /** The dial pad of an API 34 emulator's Google dialer, its number field holding the focus. */
+  const dialer = JSON.parse(
+    readFileSync(join(import.meta.dirname, 'fixtures/apps/android-dialer.json'), 'utf8'),
+  ) as Tree;
+
+  it('asks the person as a touch there does, as a dial pad takes digits and Enter by keys too', async () => {
+    for (const [name, args, how] of [
+      ['type_text', { text: '112', submit: true }, 'typing into'],
+      ['press_key', { key: 'enter' }, 'the enter key on'],
+      ['press_key', { key: '1' }, 'the 1 key on'],
+    ] as const) {
+      const { call, sent } = await onDevice(dialer);
+      const r = await call(name, args);
+      expect(r.code, name).toBe('PERMISSION_REQUIRED');
+      expect(r.text, name).toContain(
+        `${how} the phone app com.google.android.dialer, which may place a call asks the person first`,
+      );
+      expect(sent(), name).toEqual([]);
+    }
+  });
+
+  it('asks nothing of a key in an app of no phone, nor of what leaves the dial pad', async () => {
+    const { call, sent, asked } = await onDevice(dialer);
+    expect((await call('press_key', { key: 'back' })).error).toBe(false);
+    const own = await onDevice('android-system-en');
+    expect((await own.call('press_key', { key: '1' })).error).toBe(false);
+    expect([sent().length, own.sent().length, asked, own.asked]).toEqual([1, 1, [], []]);
   });
 });
