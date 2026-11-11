@@ -118,6 +118,8 @@ The inputs below are read from each tool's schema. A bold input is required. Aft
 
 ## Reading the screen
 
+The on-screen keyboard is one element, `@keyboard keyboard`, on iOS as on Android, and none of its keys, bars or predictions is listed: `type_text` types, `press_key` `enter` presses its return key, `keyboard` `dismiss` closes it, and a touch on it is refused. A field's tap that opened it says so in one line of the diff. On iOS what lies under the status bar, above a navigation bar at the top of the screen, is left out as what is past the screen's edge is, since a touch there scrolls a list to its top. Four or more elements at one point, none holding another, are rows a list has not placed yet, piled where it begins: they are left out too.
+
 A whole screen in an answer folds what repeats. A plain text or image inside a row whose label already holds it gets no line of its own, nor does a control named as the row at the row's very place; the first line counts what was folded. Three or more like rows in a sequence share one header (`cell x=201 clickable: ref "label" y`). A label that an element gives twice is shown once, and what tells two like elements apart, such as their place, is shown only when another line has the same name. Only the text is folded: `find`, selectors, refs, diffs, flows and `report` still reach every element.
 
 A screenshot's answer says where its pixel is tapped: its x and y times its scale to tap units, said as a division where that is a whole one, `x/3` for an iPhone's picture at full size. With `file` it saves the picture at full size and shows the image as a screenshot does beside it, whose size and scale the answer gives, so that the file need not be read back; `inline: false` saves the file alone.
@@ -127,7 +129,7 @@ A screenshot's answer says where its pixel is tapped: its x and y times its scal
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
 just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),
 and an exact match beats a partial one. Several matches refuse and list them with their refs; no match
-waits a moment, then refuses with the nearest labels. When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app. A key of the keyboard itself, where iOS lists them, is touched with the keyboard open.
+waits a moment, then refuses with the nearest labels. When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app.
 
 ## Steps, gestures, apps and settings
 

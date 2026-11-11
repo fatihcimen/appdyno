@@ -1,7 +1,5 @@
-import { iosScreen } from '@appdyno/driver-apple';
-import { type Tree } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
-import { FakeDevice, WithKeyboard } from '@appdyno/testing/fake-device.js';
+import { WithKeyboard } from '@appdyno/testing/fake-device.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import { connect, act, withScreen } from './shared.js';
 
@@ -96,34 +94,6 @@ describe('keyboard', () => {
       expect(d.screen).toBe('sent');
     }),
   );
-
-  it('touches a key of the keyboard itself, as iOS lists its keys, with no closing first', async () => {
-    class IosKeyboard extends FakeDevice {
-      closed = 0;
-      constructor() {
-        super();
-        Object.defineProperty(this, 'platformScreen', { value: iosScreen });
-      }
-      override current(): Tree {
-        const t = super.current();
-        const keyboard = t.nodes.length;
-        t.nodes.push(
-          { p: 0, w: 0, c: 'Keyboard', b: [0, 1500, 1080, 2400], f: 17 },
-          { p: keyboard, w: 0, c: 'Button', d: 'Return', b: [800, 2200, 1080, 2400], f: 19 },
-        );
-        return t;
-      }
-      dismissKeyboard = () => {
-        this.closed++;
-        return Promise.resolve();
-      };
-    }
-    const d = new IosKeyboard();
-    const { call } = await connect(d);
-    expect((await call('tap', { selector: { text: 'Return' } })).error).toBe(false);
-    expect(d.closed).toBe(0);
-    expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 940, y: 2300 });
-  });
 
   it(
     'closes it when the window it shrank leaves the element out, and finds it then',

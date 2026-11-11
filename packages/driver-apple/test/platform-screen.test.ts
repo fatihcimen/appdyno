@@ -176,3 +176,37 @@ describe('what a tester sees of a tree', () => {
     expect(windowRect([wide], iosScreen)).toBeUndefined();
   });
 });
+
+describe('what covers the app', () => {
+  const bar = (y: number, x = 0): UiElement => ({
+    type: 'NavigationBar',
+    ref: `@n${y}`,
+    parent: 0,
+    rect: { x, y, width: 402, height: 54 },
+  });
+
+  it('is the status bar, above the navigation bar at the top, and no bar further down', () => {
+    expect(iosScreen.appTop?.([root, bar(62)])).toBe(62);
+    // landscape hides the status bar; a sheet's bar, or one beside a sidebar, says nothing of it
+    expect(iosScreen.appTop?.([root, bar(0)])).toBeUndefined();
+    expect(iosScreen.appTop?.([root, bar(300)])).toBeUndefined();
+    expect(iosScreen.appTop?.([root, bar(62, 320)])).toBeUndefined();
+  });
+
+  it('is the keyboard, in the windows past the first that hold it', () => {
+    const t = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'fixtures/ios-screens/form-number-pad.json'), 'utf8'),
+    ) as Tree;
+    const els = t.nodes.map((n, i): UiElement => ({
+      type: n.c,
+      ...(n.d && { label: n.d }),
+      ...(n.id && { identifier: n.id }),
+      ref: `@n${i}`,
+      rect: { x: n.b[0], y: n.b[1], width: n.b[2] - n.b[0], height: n.b[3] - n.b[1] },
+      ...(n.p >= 0 && { parent: n.p }),
+    }));
+    const listed = screenElements(els, { port: iosScreen }).map((e) => e.label || e.id || '');
+    expect(listed).toContain('Send');
+    expect(listed.filter((l) => /^\d$|Delete|Dictate|inputView|LayoutStar/.test(l))).toEqual([]);
+  });
+});

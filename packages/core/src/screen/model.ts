@@ -124,7 +124,7 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
   const { port } = opts;
   // an app not on the screen has nothing to keep apart from: what is in front is what must be seen
   const front = elements.some((el) => el.pkg === opts.appId) ? opts.appId : undefined;
-  const dropped = new Set<number>();
+  const dropped = new Set<number>(port.keyboardParts?.(elements));
   const systemUi = new Set<number>();
   elements.forEach((el, i) => {
     const pkg = packageOf(el.identifier);
@@ -137,9 +137,15 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
 
   const items = new Map<number, Item>();
   const win = windowRect(elements, port);
+  // what the status bar covers is off the screen for a touch as what is past its edge
+  const top = port.appTop?.(elements);
+  const seen =
+    win && top !== undefined && top > win.y
+      ? { ...win, y: top, height: win.height - (top - win.y) }
+      : win;
   elements.forEach((el, index) => {
     if (dropped.has(index) || !el.rect || el.rect.width <= 0 || el.rect.height <= 0) return;
-    if (el.visible === false || (win && !onScreen(el.rect, win))) return;
+    if (el.visible === false || (seen && !onScreen(el.rect, seen))) return;
     const type = bare(el.type);
     const known = ROLES[type];
     const role =
@@ -219,6 +225,7 @@ export function screenElements(
     return best && cutContext(ownName(best.o.el));
   };
   const out: ScreenElement[] = [];
+  const from: number[] = [];
   for (const i of items.values()) {
     if (!i.el.ref) continue;
     const control = i.role !== undefined && i.role !== 'image';
@@ -260,6 +267,30 @@ export function screenElements(
           : []),
       ],
     });
+    from.push(i.index);
   }
-  return out;
+  return withoutPiles(out, from, ancestors);
+}
+
+/**
+ * As many elements as this at one point, none inside another, are rows not laid out yet, piled where their list begins
+ * at places nothing is: none of them is on the screen.
+ */
+const PILED = 4;
+/** Two centres this close, in tap units, are one point. */
+const ONE_POINT = 4;
+
+function withoutPiles(out: ScreenElement[], from: number[], ancestors: (i: number) => number[]) {
+  const key = (e: ScreenElement) => `${Math.round(e.x / ONE_POINT)},${Math.round(e.y / ONE_POINT)}`;
+  const at = new Map<string, number[]>();
+  out.forEach((e, n) => at.set(key(e), [...(at.get(key(e)) ?? []), n]));
+  const piled = new Set<number>();
+  for (const here of at.values()) {
+    const which = new Set(here.map((n) => from[n]));
+    const apart = here.filter(
+      (n) => !ancestors(must(from[n], 'its element')).some((a) => which.has(a)),
+    );
+    if (apart.length >= PILED) for (const n of here) piled.add(n);
+  }
+  return piled.size ? out.filter((_, n) => !piled.has(n)) : out;
 }

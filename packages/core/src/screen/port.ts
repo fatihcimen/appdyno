@@ -39,6 +39,13 @@ export type PlatformScreen = {
   windowByBars(elements: UiElement[]): Rect | undefined;
   /** An untyped element with no words of its own is listed when an id names it. */
   readonly listsByIdAlone: boolean;
+  /**
+   * Where the app's part of the screen begins, in tap units: above it the status bar takes a touch, which on iOS scrolls
+   * a list to its top. Undefined where the tree does not tell.
+   */
+  appTop?(elements: UiElement[]): number | undefined;
+  /** What of the app's own tree the on-screen keyboard is, by the elements that hold it: Android's is a window apart. */
+  keyboardParts?(elements: UiElement[]): number[];
 };
 
 /** What makes a tree a screen: its platform's rules, and the app it is read for. */

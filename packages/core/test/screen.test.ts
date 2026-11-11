@@ -232,3 +232,36 @@ describe('what an alert wants of a person', () => {
     expect(personNeeded(undefined)).toBeUndefined();
   });
 });
+
+describe('rows not laid out yet', () => {
+  /** A shop's card: its texts, as a list holds rows it has not placed yet, all at one spot near the top. */
+  const card = (shop: number, at: (n: number) => UiElement['rect']): UiElement[] => [
+    { type: 'Cell', ref: `@c${shop}`, parent: 0, rect: at(0) },
+    ...['Kahve Seti', '540,00 TL', '2li'].map((label, n): UiElement => ({
+      type: 'StaticText',
+      label: `${label} ${shop}`,
+      ref: `@t${shop}-${n}`,
+      parent: 1 + shop * 4,
+      rect: at(n + 1),
+    })),
+  ];
+  const piled = (n: number) => ({ x: 9 + n, y: 200, width: 80, height: 15 });
+  const placed = (shop: number) => (n: number) => ({
+    x: 16,
+    y: 300 + shop * 100 + n * 20,
+    width: 300,
+    height: 18,
+  });
+
+  it('are left out, where many unrelated elements share one point, and rows in their places stay', () => {
+    const els = [root, ...card(0, placed(0)), ...[1, 2, 3, 4].flatMap((s) => card(s, piled))];
+    const labels = screenElements(els, ios).map((e) => e.label);
+    expect(labels).toContain('Kahve Seti 0');
+    expect(labels.filter((l) => /[1-4]$/.test(l))).toEqual([]);
+  });
+
+  it('are not a row and what it holds, at one point', () => {
+    const els = [root, ...card(0, piled)];
+    expect(screenElements(els, ios).map((e) => e.label)).toContain('Kahve Seti 0');
+  });
+});

@@ -2,6 +2,7 @@ import {
   alertButtonOf,
   alertOf,
   bare,
+  familyOf,
   fold,
   personNeeded,
   type AlertWords,
@@ -88,6 +89,11 @@ const insideOf = (elements: UiElement[], root: number) =>
 
 const isButton = (e: UiElement) => /button$/i.test(e.type);
 
+/** What iOS shows of the keyboard in the app's tree: the keyboard, and the views its windows hold above and beside it. */
+const KEYBOARD_VIEWS = new Set(['inputView', 'SystemInputAssistantView']);
+const ofKeyboard = (e: UiElement) =>
+  /keyboard$/i.test(e.type) || KEYBOARD_VIEWS.has(e.identifier ?? '');
+
 export const iosScreen: PlatformScreen = {
   /** The alerts of the home screen app; a dialog of an app is the app's own. */
   systemAlert(_tree, elements) {
@@ -154,4 +160,31 @@ export const iosScreen: PlatformScreen = {
   },
 
   listsByIdAlone: true,
+
+  /** The status bar ends where a navigation bar across the screen begins, at most as tall as it gets. */
+  appTop(elements) {
+    const tops = elements.flatMap((e) =>
+      bare(e.type) === 'navigationbar' &&
+      e.rect?.x === 0 &&
+      e.rect.y > 0 &&
+      e.rect.y <= STATUS_BAND_PT
+        ? [e.rect.y]
+        : [],
+    );
+    return tops.length > 0 ? Math.min(...tops) : undefined;
+  },
+
+  /** The keyboard, and the app's windows past its first that hold it or its bars: the predictions, dictation. */
+  keyboardParts(elements) {
+    const root = (e: UiElement) =>
+      e.parent !== undefined && elements[e.parent]?.parent === undefined;
+    const windows = elements.flatMap((e, i) => (/window$/i.test(e.type) && root(e) ? [i] : []));
+    const { descendants } = familyOf(elements);
+    return [
+      ...windows
+        .slice(1)
+        .filter((w) => descendants(w).some((d) => ofKeyboard(must(elements[d], 'an element')))),
+      ...elements.flatMap((e, i) => (/keyboard$/i.test(e.type) ? [i] : [])),
+    ];
+  },
 };

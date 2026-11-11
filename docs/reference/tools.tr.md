@@ -118,6 +118,8 @@ Aşağıdaki girdiler her aracın şemasından okunur. Kalın bir girdi zorunlud
 
 ## Ekranı okumak
 
+Ekran klavyesi, Android'de olduğu gibi iOS'ta da tek bir öğedir, `@keyboard keyboard`; tuşlarının, çubuklarının ve önerilerinin hiçbiri listelenmez: `type_text` yazar, `press_key` `enter` onun return tuşuna basar, `keyboard` `dismiss` onu kapatır ve ona bir dokunuş reddedilir. Onu açan bir alan dokunuşu bunu farkın tek bir satırında söyler. iOS'ta ekranın üstündeki bir gezinme çubuğunun yukarısında, durum çubuğunun altında kalan, ekranın kenarının ötesindeki gibi dışarıda bırakılır, çünkü oraya bir dokunuş bir listeyi başına kaydırır. Biri ötekini tutmayan, tek bir noktadaki dört ya da daha çok öğe, bir listenin henüz yerleştirmediği, başladığı yere yığılmış satırlardır: onlar da dışarıda bırakılır.
+
 Bir yanıttaki bütün bir ekran, tekrar edeni katlar. Etiketi kendisini zaten içeren bir satırın içindeki düz bir metin ya da görsel ayrı bir satır almaz; satırla aynı adı taşıyan ve satırın tam yerinde duran bir kontrol de almaz; ilk satır katlananları sayar. Art arda gelen, birbirine benzeyen üç ya da daha fazla satır tek bir başlığı paylaşır (`cell x=201 clickable: ref "label" y`). Bir öğenin iki kez verdiği etiket bir kez gösterilir; benzer iki öğeyi ayıran bilgi, örneğin yerleri, yalnızca başka bir satır aynı adı taşıdığında gösterilir. Yalnızca metin katlanır: `find`, seçiciler, ref'ler, diff'ler, akışlar ve `report` yine her öğeye ulaşır.
 
 Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyler: x ve y'si, dokunuş birimine ölçeğiyle çarpılır; bu bir tam sayıya bölmeyse bölme olarak söylenir, bir iPhone'un tam boyutlu resmi için `x/3`. `file` ile resmi tam boyutta kaydeder ve yanında görüntüyü bir ekran görüntüsünün yaptığı gibi gösterir, yanıt onun boyutunu ve ölçeğini verir; böylece dosyanın geri okunması gerekmez; `inline: false` yalnızca dosyayı kaydeder.
@@ -127,7 +129,7 @@ Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyle
 Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce
 yeni bir okumada çözülür. Metin, `find`'daki gibi büyük-küçük harfe ve aksanlara bakmadan eşleşir ("İstanbul", "istanbul") ve
 tam eşleşme kısmi eşleşmeden üstündür. Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir; eşleşme yoksa
-bir an beklenir, sonra en yakın etiketlerle reddedilir. Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir akışın adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir. Klavyenin kendi tuşuna, iOS'un onları listelediği yerde, klavye açıkken dokunulur.
+bir an beklenir, sonra en yakın etiketlerle reddedilir. Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir akışın adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir.
 
 ## Adımlar, hareketler, uygulamalar ve ayarlar
 

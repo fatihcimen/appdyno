@@ -1,4 +1,5 @@
 import {
+  KEYBOARD_REF,
   type Selector as SelectorOf,
   type ScreenElement,
   nearest,
@@ -95,6 +96,18 @@ async function resolve(
 
 type Aim = { ref?: string; x?: number; y?: number; selector?: SelectorOf };
 
+/** An element as a touch aims at it; the keyboard is listed whole, and a touch on it would type one key. */
+function aimedAt(e: ScreenElement, clean: Words['clean']) {
+  if (e.ref === KEYBOARD_REF)
+    throw new ToolError(
+      `${KEYBOARD_REF} is the on-screen keyboard: type_text types, press_key enter presses its return key, and keyboard dismiss closes it`,
+      'INVALID_ARGUMENT',
+      undefined,
+      false,
+    );
+  return { point: { x: e.x, y: e.y }, name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
+}
+
 /** The point of a ref (on the device's current screen), a selector or x,y. */
 async function aim(s: Session, a: Aim, patient: boolean, words: Words) {
   const { clean } = words;
@@ -104,12 +117,9 @@ async function aim(s: Session, a: Aim, patient: boolean, words: Words) {
       has(await s.justNow()) ??
       (patient ? has((await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen) : undefined);
     if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
-    return { point: { x: e.x, y: e.y }, name: `${a.ref} ${JSON.stringify(clean(e.label))}` };
+    return aimedAt(e, clean);
   }
-  if (a.selector) {
-    const e = await resolve(s, a.selector, words);
-    return { point: { x: e.x, y: e.y }, name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
-  }
+  if (a.selector) return aimedAt(await resolve(s, a.selector, words), clean);
   if (a.x === undefined || a.y === undefined)
     throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
   return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };

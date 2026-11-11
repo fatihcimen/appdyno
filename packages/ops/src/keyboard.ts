@@ -31,14 +31,6 @@ export async function keyboardFirst(s: Session, selector: Selector) {
   if (covered(await s.current()) && covered(await s.justNow())) await hideKeyboard(s);
 }
 
-/** Whether an element is the keyboard's own, as iOS lists its keys: a touch on it is meant for the keyboard. */
-function ofKeyboard(screen: Screen, ref: string) {
-  let el = screen.elements.find((x) => x.ref === ref);
-  while (el && !/keyboard$/i.test(el.type))
-    el = el.parent === undefined ? undefined : screen.elements[el.parent];
-  return !!el;
-}
-
 type Aimed = { point: Point; name: string };
 
 /**
@@ -65,7 +57,5 @@ export async function pastKeyboard(
   const k = platform.keyboardArea(screen.tree);
   const { x, y } = aimed.point;
   if (!k || x < k.x || x > k.x + k.width || y < k.y || y > k.y + k.height) return aimed;
-  // the element aimed at is centred on the point
-  const own = screen.list.some((e) => e.x === x && e.y === y && ofKeyboard(screen, e.ref));
-  return !own && (await hideKeyboard(s)) ? aim(true) : aimed;
+  return (await hideKeyboard(s)) ? aim(true) : aimed;
 }
