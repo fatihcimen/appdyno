@@ -2,7 +2,7 @@ import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } f
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RpcDevice } from '@appdyno/core';
+import { must, RpcDevice } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/simulator.js';
 import { IosPhoneDevice } from '../src/phone.js';
@@ -105,6 +105,31 @@ describe('the link prompt', () => {
     expect(promptButton(asks, 'Maps')).toBeUndefined();
     const none = { ...asks, nodes: asks.nodes.filter((n) => n.c !== 'Alert') };
     expect(promptButton(none, 'appdyno fixture')).toBeUndefined();
+  });
+
+  it("never answers the app's own alert of that shape, in its window: only the home screen app's", async () => {
+    const { promptButton } = await import('../src/platform-screen.js');
+    const asks = read('ios-open-in-prompt');
+    const app = { ...must(asks.windows[0], 'a window'), pkg: 'dev.appdyno.fixture' };
+    const first = asks.nodes.findIndex((n) => n.w === 1);
+    // the app's own "Delete … account?", Cancel and Delete, drawn lower in its own window
+    const own = said(asks, {
+      'Open in “appdyno fixture”?': 'Delete appdyno fixture account?',
+      Open: 'Delete',
+    })
+      .nodes.slice(first)
+      .map((n) => ({
+        ...n,
+        w: 0,
+        p: n.p < 0 ? -1 : n.p - first,
+        b: [n.b[0], n.b[1] + 200, n.b[2], n.b[3] + 200] as typeof n.b,
+      }));
+    expect(
+      promptButton({ ...asks, windows: [app], nodes: own }, 'appdyno fixture'),
+    ).toBeUndefined();
+    const under = asks.nodes.map((n) => ({ ...n, p: n.p < 0 ? -1 : n.p + own.length }));
+    const both = { ...asks, windows: [app, ...asks.windows.slice(1)], nodes: [...own, ...under] };
+    expect(promptButton(both, 'appdyno fixture')).toEqual({ x: 275, y: 474 });
   });
 });
 

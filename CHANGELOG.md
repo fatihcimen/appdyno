@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `open_link` on the runner's read answers "Open in …?" only in a window of the home screen app: it took the first alert in any window, so the app's own alert of the same shape, one line that names the app and two buttons, as "Delete appdyno fixture account?" with Cancel and Delete, had its second button tapped as the link opened the app. A simulator's helper reads the home screen app alone, and was not affected.
 - `perf_profile` with `scroll` waits its turn behind the client's actions, as `perf_scroll` does, and with none it runs beside them as before, as it swipes only with it: taps sent with a profile still load the app it profiles, and a second recording sent with it is still refused by name.
 - `type_text` that failed once its text may have gone says that part of it may be in the field, to be read and typed with `replace: true`: a simulator's helper that gave no answer for a key in the middle of a text said only that the key may have gone, and the text typed again followed what was already there.
 - Under `--no-home` `launch_app`, `app launch` and the `perf_` measures, which may start their app, refuse Settings, a first call's launch too, which starts beside the device's agent, as `open_link` and a link to it already did, and SECURITY.md and the command line reference say what the flag holds: "Settings by any route" was not so, as each launched it, and a swipe or a tap by x,y that goes home, and a tap on Settings' icon there, are held only by `--allow-apps`.

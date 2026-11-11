@@ -28,9 +28,11 @@ export function openButton(p: Prompt | undefined, name: string) {
   return b && { x: b.x, y: b.y };
 }
 
-/** `openButton` of the first alert in a read, by its own words and buttons. */
+/** `openButton` of the home screen app's first alert in a read, by its own words and buttons: never the app's own. */
 export function promptButton(t: Tree, name: string): Point | undefined {
-  const alert = t.nodes.findIndex((n) => n.c === 'Alert');
+  const alert = t.nodes.findIndex(
+    (n) => n.c === 'Alert' && t.windows[n.w]?.pkg === HOME_SCREEN_APP,
+  );
   const under = (i: number): boolean => {
     const p = t.nodes[i]?.p ?? -1;
     return p === alert || (p >= 0 && under(p));
