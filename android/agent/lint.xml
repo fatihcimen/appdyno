@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <lint>
-    <!-- Automation.kt's hidden methods: the agent runs as the shell user by app_process and is never installed, so no
-         target SDK's hidden-API policy applies to it. By message, as lint takes a path or a message, not both. -->
+    <!-- the hidden methods of Automation.kt and Transitions.kt: the agent runs as the shell user by app_process and is
+         never installed, so no target SDK's hidden-API policy applies to it. By message, as lint takes a path or a
+         message, not both. -->
     <issue id="BlockedPrivateApi">
         <ignore regexp="^Reflective access to syncInputTransactions " />
     </issue>

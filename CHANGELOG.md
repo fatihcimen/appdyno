@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The Android agent's watch on window transitions, which asks the window manager whether one runs, is a file of its own, `Transitions.kt`, beside the UI automation connection it asks through; nothing it does changed.
 - On Android 16 a spinner holds the settle again, as it reports a range of the indeterminate type there, where a check for no range took it for a still bar: a tap on Xiaomi's Android 16 answered before what the spinner waited for came.
 - A first `launch_app` of a session in a `language` begins no launch alongside the device's start, as it starts the app itself, where that launch was left for the next `launch_app`, which took it for its own and started nothing: after a `terminate_app` it answered that the app died, seen on a Samsung every time.
 - On an iPhone a read just after the app started, by `launch_app`, `open_link` to a stopped app, `app launch` with arguments or a language, or from outside, waits up to 1 s for XCTest to take the new process for running, where it answered `APP_NOT_RUNNING`, "Application … is not running", for the app in front: iOS lists a process in front some 300 ms before XCTest's own object of it runs.
