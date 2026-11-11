@@ -1,12 +1,14 @@
 package dev.appdyno.agent
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class WorkLaneTest {
     private val timers = Executors.newSingleThreadScheduledExecutor()
@@ -67,6 +69,39 @@ class WorkLaneTest {
         assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - cancelledAt) < 2_000)
         assertEquals(1, lane.replaced.get())
         release.countDown()
+    }
+
+    @Test
+    fun aLetGoThatComesAsItsJobEndsLeavesTheNextJobAlone() {
+        val lane = WorkLane(timers, graceMs = 0)
+        val release = CountDownLatch(1)
+        val started = CountDownLatch(1)
+        val nextDone = CountDownLatch(1)
+        val interrupted = AtomicBoolean(false)
+        val first = Job(1)
+        lane.submit(first, 60_000, {}) {
+            started.countDown()
+            release.await()
+        }
+        lane.submit(Job(2), 60_000, {}) {
+            try {
+                Thread.sleep(600)
+            } catch (_: InterruptedException) {
+                interrupted.set(true)
+            }
+            nextDone.countDown()
+        }
+        assertTrue(started.await(10, TimeUnit.SECONDS))
+        // the let-go is held at the lane's monitor while the job ends, and the next one could start on its thread
+        synchronized(lane) {
+            first.cancelled = true
+            Thread.sleep(300)
+            release.countDown()
+            Thread.sleep(300)
+        }
+        assertTrue(nextDone.await(10, TimeUnit.SECONDS))
+        // where it looked at the job before taking the monitor, it gave up the thread the next job ran on, and interrupted it
+        assertFalse("the next job was interrupted", interrupted.get())
     }
 
     @Test

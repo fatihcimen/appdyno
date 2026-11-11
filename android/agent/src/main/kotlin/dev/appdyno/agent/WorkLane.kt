@@ -26,14 +26,13 @@ class WorkLane(private val timers: ScheduledExecutorService, private val graceMs
 
     /** Runs `work` after the jobs before it; `onTimeout` once `deadlineMs` passes before it ends. */
     fun submit(job: Job, deadlineMs: Long, onTimeout: () -> Unit, work: () -> Unit) {
+        // set and read under the lane's monitor: a let-go that looked before the job ended gave up the thread that had
+        // gone on to the next job, and interrupted that one
         val finished = AtomicBoolean(false)
         // the thread's lane, taken when the job starts (it may have moved to a new lane while it waited)
         val ranOn = AtomicReference<ExecutorService?>()
         job.onCancel = {
-            timers.schedule({
-                val on = ranOn.get()
-                if (on != null && !finished.get()) giveUp(on)
-            }, graceMs, TimeUnit.MILLISECONDS)
+            timers.schedule({ ranOn.get()?.let { giveUp(it, finished) } }, graceMs, TimeUnit.MILLISECONDS)
         }
         val timeout = timers.schedule({
             job.cancelled = true
@@ -46,7 +45,7 @@ class WorkLane(private val timers: ScheduledExecutorService, private val graceMs
                 try {
                     work()
                 } finally {
-                    finished.set(true)
+                    synchronized(this) { finished.set(true) }
                     timeout.cancel(false)
                 }
             }
@@ -54,8 +53,8 @@ class WorkLane(private val timers: ScheduledExecutorService, private val graceMs
     }
 
     @Synchronized
-    private fun giveUp(stuck: ExecutorService) {
-        if (lane !== stuck) return
+    private fun giveUp(stuck: ExecutorService, finished: AtomicBoolean) {
+        if (lane !== stuck || finished.get()) return
         val next = newLane()
         lane = next
         replaced.incrementAndGet()
