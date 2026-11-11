@@ -163,7 +163,7 @@ Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri k
 - `device_setting keychain`: uygulamaların anahtar zincirinde tuttuğu her öğe
 - sistemin kendi güç, acil durum ya da silme denetimlerine, yani cihazın kendisine bir girdi: herhangi bir araçtan, `steps`'ten ya
   da bir akıştan, Android'in güç menüsüne (Kapat, Yeniden başlat, Acil durum) ya da hızlı ayarlardaki düğmesine, bir kilit ekranının
-  acil aramasına, Ayarlar'ın sıfırlamalarına ve tüm verileri silme ekranına, iOS'un Vazgeç'i dışındaki kapatma ekranına, Denetim Merkezi'nin güç düğmesine ya da
+  acil aramasına, Ayarlar'ın sıfırlamalarına ve tüm verileri silme ekranına, iOS'un Vazgeç'i dışındaki kapatma ekranına, güç düğmesinin kendine ait bir işareti olmayan Denetim Merkezi'nin herhangi bir yerine ya da
   Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'ine bir dokunuş, hareket, kaydırma, uzun basış, yazma ya da tuş; dokunuş nereye
   düşerse düşsün sistem uygulamasından, her dilde aynı kimliklerden ve İngilizce ve Türkçe sözlerden tanınır; bir de güç ya da yan tuşa
   5 saniye içinde üçüncü basış, bu birçok telefonda yardım çağırır. appdyno hiçbir cihazı yeniden başlatmaz, sıfırlamaz ya da silmez; `simulator` `shutdown` ile kapattığı bir simülatör ya da emülatör dışında hiçbirini kapatmaz; geri kalanında

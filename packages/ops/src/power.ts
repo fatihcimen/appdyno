@@ -7,7 +7,7 @@ import {
   type Point,
   type Tree,
 } from '@appdyno/protocol';
-import { ALLOW_POWER, approvePower, powerAllowed } from './approval.js';
+import { ALLOW_POWER, approvePower, CONTROL_CENTER_AHEAD, powerAllowed } from './approval.js';
 import { LEAVES, SIDE_KEYS } from './keys.js';
 import type { Policy } from './policy.js';
 import type { Session } from './session.js';
@@ -91,6 +91,9 @@ const CONTROL_IDS =
 /** iOS's slide to power off, as the runner's read names it (ios/Runner/DeviceTree.swift), and the Cancel beside it. */
 const IOS_SLIDER = 'actionSlider';
 const IOS_CANCEL = 'cancelButton';
+
+/** iOS's Control Center, by its module grid as the runner's read names it, in any language. */
+const IOS_CONTROL_CENTER = 'cc-root-folder-view';
 
 /**
  * A control by its words, in English and Turkish, as `plain` writes them: the power menu's keys and the button that opens
@@ -178,16 +181,15 @@ function controls(tree: Tree) {
     return all.map(words).find(Boolean) ?? all.map(byId).find(Boolean);
   };
   const system = (w: number) => SYSTEM.test(tree.windows[w]?.pkg ?? '');
+  const visibly = (w: number, id: string) =>
+    tree.nodes.some((n) => n.w === w && n.id === id && (n.f & NODE_FLAGS.visible) !== 0);
   /** A window that is all such controls, by what it is. */
   const wholeWindow = (w: number) => {
     const id = tree.nodes.find((n) => n.w === w && n.id && SCREEN_IDS.test(n.id))?.id;
     if (id)
       return /global_?actions/.test(id) ? 'the power menu' : "Settings' erase-all-data screen";
     // iOS's power-off screen by its slider's id in any language: its Emergency SOS has none known here
-    const off = tree.nodes.some(
-      (n) => n.w === w && n.id === IOS_SLIDER && (n.f & NODE_FLAGS.visible) !== 0,
-    );
-    return off ? "iOS's power-off screen" : undefined;
+    return visibly(w, IOS_SLIDER) ? "iOS's power-off screen" : undefined;
   };
   /** What a finger coming down at `p` in a system window reaches, as the system routes it: the smallest clickable thing. */
   const hitAt = (p: Point) => {
@@ -224,6 +226,14 @@ function controls(tree: Tree) {
       const prompt = within(alert).some((n) => aNumber(n.t) || aNumber(n.d));
       const calls = CALL_WORDS.test(plain(label)) || (prompt && !CANCEL_WORDS.test(plain(label)));
       return calls ? (label ? JSON.stringify(label) : 'a button') : undefined;
+    },
+    /**
+     * Whether a finger at `p` lands on iOS's Control Center: its power button has no id, nor any mark that leaves its other
+     * buttons alone, so all of it is taken for that button.
+     */
+    inControlCenter(p: Point) {
+      const w = windowAt(tree, p);
+      return w !== undefined && system(w) && visibly(w, IOS_CONTROL_CENTER);
     },
     /** What a key or typed text may act on: a screen that is all such controls, or one in the focus. */
     focused() {
@@ -289,13 +299,18 @@ const HELP_MS = 5_000;
 const pressed = new WeakMap<Session, number[]>();
 
 /** What of the system's power, emergency and erase controls an input would act on, if any. */
-async function reaches(s: Session, input: Input): Promise<string | undefined> {
+/** What an input would act on, as the question says it, and what the refusal's hint says a person can do instead. */
+type Reached = { what: string; ahead?: string };
+
+async function reaches(s: Session, input: Input): Promise<Reached | undefined> {
   if (input.key && SIDE_KEYS.has(input.key)) {
     const now = Date.now();
     const recent = [...(pressed.get(s) ?? []).filter((t) => now - t < HELP_MS), now];
     pressed.set(s, recent);
     return recent.length >= HELP_PRESSES
-      ? `${input.key} pressed ${recent.length} times in a row, which calls for help on many phones`
+      ? {
+          what: `${input.key} pressed ${recent.length} times in a row, which calls for help on many phones`,
+        }
       : undefined;
   }
   if (input.key && LEAVES.has(input.key)) return undefined;
@@ -312,14 +327,17 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
   const call = input.points.length
     ? input.points.map((p) => phone(read.windows[windowAt(read, p) ?? -1]?.pkg)).find(Boolean)
     : phone(focusedApp(read));
-  if (call) return `${how} the phone app ${call}, which may place a call`;
+  if (call) return { what: `${how} the phone app ${call}, which may place a call` };
   /** What a read holds of such controls for this input, a call's first. */
-  const judged = (t: Tree) => {
+  const judged = (t: Tree): Reached | undefined => {
     const found = controls(t);
     const calls = input.points.map((p) => found.callAt(p)).find(Boolean);
-    if (calls) return `${how} ${calls} of a system alert, which places a call`;
+    if (calls) return { what: `${how} ${calls} of a system alert, which places a call` };
     const what = actsOn(found, input);
-    return what && `${how} ${what}, the system's own power, emergency or erase control`;
+    if (what) return { what: `${how} ${what}, the system's own power, emergency or erase control` };
+    return input.points.some((p) => found.inControlCenter(p))
+      ? { what: `${how} Control Center, which holds the power button`, ahead: CONTROL_CENTER_AHEAD }
+      : undefined;
   };
   const said = judged(read);
   if (said) return said;
@@ -373,6 +391,6 @@ export const powerGuard =
   async (s, input) => {
     // what the person allowed ahead needs no look, which could only cost time or refuse what would go anyway
     if (powerAllowed(policy, s)) return;
-    const what = await reaches(s, input);
-    if (what) await approvePower(policy, s, what);
+    const reached = await reaches(s, input);
+    if (reached) await approvePower(policy, s, reached.what, reached.ahead);
   };

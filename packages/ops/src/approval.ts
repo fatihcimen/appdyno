@@ -58,8 +58,14 @@ export const ALLOW_POWER =
 
 const POWER_AHEAD = `appdyno does not restart, power off, reset or erase a device, nor place a call or call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: ${ALLOW_POWER}`;
 
-/** As `approve`, for an input that would act on the system's own power, emergency or erase controls: `what` names it. */
-export async function approvePower(policy: Policy, s: Session, what: string) {
+/** What a person can do in place of a touch on iOS's Control Center, which holds the power button. */
+export const CONTROL_CENTER_AHEAD = `appdyno touches nothing in Control Center, which holds the power button: device_setting changes what it would (airplane mode, Wi-Fi, mobile data, dark mode), and press_key home leaves it; a person allows it ahead in this server's own command line: ${ALLOW_POWER}`;
+
+/**
+ * As `approve`, for an input that would act on the system's own power, emergency or erase controls: `what` names it, and
+ * `ahead` says what a person can do instead.
+ */
+export async function approvePower(policy: Policy, s: Session, what: string, ahead = POWER_AHEAD) {
   if (powerAllowed(policy, s)) return;
   await askPerson(
     s,
@@ -68,7 +74,7 @@ export async function approvePower(policy: Policy, s: Session, what: string) {
       `Let appdyno act on ${what}`,
       'The device may power off, restart, place a call, call for help, or lose all it holds',
     ],
-    POWER_AHEAD,
+    ahead,
   );
 }
 

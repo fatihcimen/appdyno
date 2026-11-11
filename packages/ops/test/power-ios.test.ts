@@ -65,11 +65,31 @@ describe("iOS's own views over an app, where a read of the app has none of them"
     expect(powerControlAt(said, middle(said, 'Abbrechen'))).toBeUndefined();
   });
 
-  it('lets a touch elsewhere on them go with nothing asked', async () => {
-    const { call, sent, asked, over } = await under('ios-control-center-springboard');
-    expect((await call('tap', middle(over, 'Add Controls'))).error).toBe(false);
-    expect(asked).toEqual([]);
-    expect(sent()).toHaveLength(1);
+  it('asks before any touch on Control Center in a language of no words here, as its power button has no mark of its own', async () => {
+    const de: Record<string, string> = {
+      Power: 'Ein/Aus',
+      'Add Controls': 'Steuerelemente hinzufügen',
+    };
+    const t = recorded('ios-control-center-springboard');
+    const cc: Tree = {
+      ...t,
+      nodes: t.nodes.map((n) => ({ ...n, ...(n.d && de[n.d] && { d: de[n.d] }) })),
+    };
+    for (const label of ['Ein/Aus', 'Steuerelemente hinzufügen']) {
+      const o = await onDevice('ios-control-center-app', { answer: 'decline' });
+      Object.assign(o.device, { systemTree: () => Promise.resolve(cc) });
+      const r = await o.call('tap', middle(cc, label));
+      expect(r.code, label).toBe('PERMISSION_REQUIRED');
+      expect(o.asked[0], label).toContain(
+        'a touch on Control Center, which holds the power button',
+      );
+      expect(r.hint, label).toContain('device_setting changes what it would');
+      expect(o.sent(), label).toEqual([]);
+    }
+    // what the person allowed ahead goes
+    const allowed = await onDevice('ios-control-center-app', { policy: { allowPower: 'virtual' } });
+    Object.assign(allowed.device, { systemTree: () => Promise.resolve(cc) });
+    expect((await allowed.call('tap', middle(cc, 'Steuerelemente hinzufügen'))).error).toBe(false);
   });
 });
 

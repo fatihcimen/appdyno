@@ -164,7 +164,7 @@ These lose what a person may want, so each waits for the person's yes:
 - an input on the system's own power, emergency or erase controls, the device itself: a tap, gesture, swipe, long press,
   typing or key from any tool, `steps` or a flow, on Android's power menu (Power off, Restart, Emergency) or its button in
   quick settings, a lock screen's emergency call, Settings' resets and its erase-all-data screen, iOS's power-off screen
-  but its Cancel, Control Center's power button, or Settings' Reset and Erase All Content and Settings, known by the system app, the ids in any
+  but its Cancel, any part of Control Center, whose power button has no mark of its own, or Settings' Reset and Erase All Content and Settings, known by the system app, the ids in any
   language and the words in English and Turkish wherever the touch lands; and a third press of the power or side key in
   5 seconds, which calls for help on many phones. appdyno restarts, resets and erases no device, and powers off none but a simulator or emulator, by `simulator` `shutdown`; for the rest the
   answer says the person does it. Reading such a screen asks nothing, nor back and home, which leave it. Only
