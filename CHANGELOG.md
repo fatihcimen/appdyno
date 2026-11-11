@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `launch_app` takes `restart`, to start the app fresh, and `args` and `env`, which start it fresh with them; `app` has no `launch` any more. An app opened at its first screen is one call of one tool, where `launch_app` brought a running app to the front where it was and the fresh start was another tool's action.
 - `launch_app` launches an allowed app by the name `app list` gives it, as its description says, where under `--allow-apps` it refused the name as an app not allowed, before any name was looked up.
 - An answer's structured content says what was done once: its `text` holds it, and `done` is left out beside it, where a tap's said its first line twice and a listing's, `steps`' or `network paths`' said the whole answer twice. A client that hands a model the structured content in place of the text hands it about a tenth less.
 - A call prompt iOS shows as a sheet is asked about as its alert is: the power guard and the guard of `--allow-apps` take the home screen app's sheet over the app for a system prompt.

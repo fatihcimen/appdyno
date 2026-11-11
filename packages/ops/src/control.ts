@@ -5,11 +5,10 @@ import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { approve } from './approval.js';
-import { launchSaid } from './apps.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkVirtual, namedVirtual, RanAs, ranAsFile, virtuals } from './device-names.js';
-import { byPerson, checkApp, checkCreate, checkLaunch, noApp } from './policy.js';
+import { byPerson, checkApp, checkCreate, noApp } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
@@ -46,7 +45,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
     name: 'app',
     title: 'App management',
     description:
-      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (permission: service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant).',
+      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (permission: service), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant; args, env as launch_app takes them).',
     input: z
       .object({
         action: z.enum([
@@ -57,7 +56,6 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
           'clear',
           'grant',
           'revoke',
-          'launch',
           'download_data',
           'replace_data',
           'build_and_run',
@@ -132,16 +130,6 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
             apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) }),
           );
           return afterChange(s, was, `built and launched ${pkg}`, read, pkg);
-        }
-        case 'launch': {
-          const pkg = checkLaunch(policy, appOf(s, app));
-          reportProgress(`launching ${pkg}`);
-          const ran = await ctx.ranBeforeLaunch(s, pkg);
-          const { was } = await changing(s, () =>
-            apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) }),
-          );
-          // every platform's launch with args stops a running app first
-          return afterChange(s, was, launchSaid(pkg, ran, true), read, pkg);
         }
         case 'grant':
         case 'revoke': {

@@ -345,7 +345,7 @@ assert id=result check=text equals="Gönderildi"
       ]);
     });
 
-    it("writes the app tool's launch as a start, whether the app ran or not, with its arguments and environment", async () => {
+    it('writes a launch with restart, arguments or an environment as a start, whether the app ran or not', async () => {
       const launched: unknown[] = [];
       device.apps = {
         launchWith: (app: string, o: unknown) => {
@@ -356,7 +356,7 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       const stepsOf = (text: string) => text.split('\n').filter((l) => l && !l.startsWith('app '));
       const how = { args: ['-UITests', 'YES'], env: { API_URL: 'https://a.test/' } };
-      const launch = () => call('app', { action: 'launch', ...how });
+      const launch = () => call('launch_app', how);
       device.running = false;
       const started = await recorded(call, launch, 'started.flow');
       expect(stepsOf(started.text)).toEqual([
@@ -370,7 +370,7 @@ assert id=result check=text equals="Gönderildi"
       await call('flow', { action: 'run', file: restarted.file });
       expect(device.calls.map((c) => c.name)).toContain('terminate');
       expect(launched.at(-1)).toEqual(['dev.app', how]);
-      const plain = await recorded(call, () => call('app', { action: 'launch' }), 'plain.flow');
+      const plain = await recorded(call, () => call('launch_app', { restart: true }), 'plain.flow');
       expect(stepsOf(plain.text)).toEqual(['stop', 'launch']);
     });
 

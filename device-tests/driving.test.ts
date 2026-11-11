@@ -357,10 +357,8 @@ describe.skipIf(!android)('driving on Android', () => {
     expect(await sh(`dumpsys package ${APP}`)).toMatch(/ACCESS_FINE_LOCATION: granted=true/);
     ok(await h.call('app', { action: 'revoke', service: 'location' }));
     expect(await sh(`dumpsys package ${APP}`)).toMatch(/ACCESS_FINE_LOCATION: granted=false/);
-    ok(await h.call('app', { action: 'launch', args: ['who=me'] }));
-    expect((await h.call('app', { action: 'launch', env: { A: '1' } })).data.code).toBe(
-      'UNSUPPORTED',
-    );
+    ok(await h.call('launch_app', { args: ['who=me'] }));
+    expect((await h.call('launch_app', { env: { A: '1' } })).data.code).toBe('UNSUPPORTED');
     ok(await h.call('app', { action: 'clear' }));
     const apk = join(ROOT, 'android/fixture/build/outputs/apk/debug/fixture-debug.apk');
     expect(existsSync(apk)).toBe(true);
@@ -594,9 +592,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   it('manages apps: permissions, launch with arguments, clear, uninstall and install', async () => {
     ok(await h.call('app', { action: 'grant', service: 'photos' }));
     ok(await h.call('app', { action: 'revoke', service: 'photos' }));
-    ok(
-      await h.call('app', { action: 'launch', args: ['-mode', 'test'], env: { FIXTURE_VAR: '1' } }),
-    );
+    ok(await h.call('launch_app', { args: ['-mode', 'test'], env: { FIXTURE_VAR: '1' } }));
     ok(await h.call('app', { action: 'clear' }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     ok(await h.call('app', { action: 'uninstall' }));
@@ -693,9 +689,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     expect(ok(await h.call('app', { action: 'list', all: true })).text).toContain(
       'com.apple.Preferences',
     );
-    ok(
-      await h.call('app', { action: 'launch', args: ['-mode', 'test'], env: { FIXTURE_VAR: '1' } }),
-    );
+    ok(await h.call('launch_app', { args: ['-mode', 'test'], env: { FIXTURE_VAR: '1' } }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('foreground');
     ok(await h.call('terminate_app'));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');

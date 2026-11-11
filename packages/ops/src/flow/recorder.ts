@@ -232,25 +232,22 @@ const MEASURES: Record<string, ToStep> = {
 /** An op with no step of its own, as a flow step; a refused action is none, and any other op stops a replay. */
 const OPS: Record<string, ToStep> = {
   ...MEASURES,
-  // a launch that started the app is a start in a replay too, where a plain launch brings a running app forward as it is
+  // a launch that started the app is a start in a replay too, where a plain launch brings a running app forward as it is;
+  // a restart, arguments and an environment stop a running app first on every platform: a start, whether it ran or not
   launch_app: (a, data) => {
-    const how = { language: a.language as string | undefined };
-    return data.wasRunning === false
+    const env = a.env as Record<string, string> | undefined;
+    const how = {
+      language: a.language as string | undefined,
+      arg: a.args as string[] | undefined,
+      env: env && Object.entries(env).map(([k, v]) => `${k}=${v}`),
+    };
+    return data.wasRunning === false || a.restart || a.args || a.env
       ? restarts(a, how)
       : stepOf(
           'launch',
           { flags: data.wasRunning ? ['running'] : [] },
-          { app: a.app as string | undefined, ...how },
+          { app: a.app as string | undefined, language: how.language },
         );
-  },
-  // the app tool's launch stops a running app first on every platform: a start, whether it ran or not
-  app: (a) => {
-    if (a.action !== 'launch') return unknownOp('app')(a);
-    const env = a.env as Record<string, string> | undefined;
-    return restarts(a, {
-      arg: a.args as string[] | undefined,
-      env: env && Object.entries(env).map(([k, v]) => `${k}=${v}`),
-    });
   },
   terminate_app: (a) => stepOf('stop', {}, { app: a.app as string | undefined }),
   // what an app opens is read, and nothing opened: no step

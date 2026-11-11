@@ -185,17 +185,20 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       name: 'launch_app',
       title: 'Launch app',
       description:
-        'Launch the app by id or name, to the front if it runs. language: tr, pt-BR: restarts it so; held on Android',
+        'Launch the app by its id or the name app list gives, to the front on the screen it was on if it runs. restart: start it fresh, as args (Android: key=value extras), env and language (tr, pt-BR; Android keeps it until changed) do.',
       input: z
         .object({
           app: z.string().max(200).optional(),
+          restart: z.boolean().optional(),
+          args: z.array(z.string().max(500)).max(50).optional(),
+          env: z.record(z.string(), z.string().max(1_000)).optional(),
           language: Language.optional(),
           read: Read,
         })
         .strict(),
       output: ActionOut,
       annotations: DESTRUCTIVE,
-      run: async ({ app, language, read }) => {
+      run: async ({ app, restart, args, env, language, read }) => {
         const named = app !== undefined && !APP_ID.test(app);
         const s = await ctx.sessionToLaunch(app, language);
         const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
@@ -203,21 +206,31 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         checkLaunch(policy, pkg);
         reportProgress(`launching ${pkg}`);
         s.leftTheApp(pkg !== s.appId);
-        if (!language) {
-          const ran = await ctx.ranBeforeLaunch(s, pkg);
+        const ran = await ctx.ranBeforeLaunch(s, pkg);
+        const { apps } = s.device;
+        if (!restart && !args && !env && !language) {
           const { was } = await changing(s, () => s.device.launch(pkg).catch(notThere(s, pkg)));
           const out = await afterChange(s, was, launchSaid(pkg, ran), read, pkg);
           // a recording writes a start as a start, so that its replay starts where this did
           return ran === undefined ? out : { ...out, data: { ...out.data, wasRunning: ran } };
         }
-        const { apps } = s.device;
-        const held = apps.languageStays
-          ? (await setCondition(s, 'locale', language, pkg)).also
-          : undefined;
+        const held =
+          language && apps.languageStays
+            ? (await setCondition(s, 'locale', language, pkg)).also
+            : undefined;
+        // every platform's launch with these stops a running app first
         const { was } = await changing(s, () =>
-          apps.launchWith(pkg, { language }).catch(notThere(s, pkg)),
+          apps
+            .launchWith(pkg, {
+              ...(args && { args }),
+              ...(env && { env }),
+              ...(language && { language }),
+            })
+            .catch(notThere(s, pkg)),
         );
-        const done = [`started ${pkg} in ${language}`, held].filter(Boolean).join('; ');
+        const done = [language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true), held]
+          .filter(Boolean)
+          .join('; ');
         return afterChange(s, was, done, read, pkg);
       },
     }),

@@ -375,7 +375,7 @@ describe('a link under an app allow list', () => {
     device.launchAlongside = (pkg) => void alongside.push(pkg);
     for (const [tool, args] of [
       ['launch_app', { app: 'com.android.settings', read: 'none' }],
-      ['app', { action: 'launch', app: 'com.android.settings', read: 'none' }],
+      ['launch_app', { app: 'com.android.settings', restart: true, read: 'none' }],
       ['perf_launch', { app: 'com.android.settings' }],
       ['launch_app', { app: 'com.apple.Preferences', read: 'none' }],
     ] as const) {

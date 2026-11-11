@@ -41,14 +41,21 @@ describe('app management', () => {
   /** A person's yes in advance, by the server's flag: what asks first is `approval.test.ts`'s. */
   const allowed = { policy: { allowDataLoss: 'virtual' as const } };
 
-  it('says whether launch started the app or restarted a running one, in the words launch_app uses', async () => {
-    const d = Object.assign(new FakeDevice(), { apps: manager() });
+  it('says whether a restart started the app or restarted a running one, and starts it fresh with its arguments', async () => {
+    const apps = manager();
+    const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d);
-    expect((await call('app', { action: 'launch' })).text).toMatch(
+    expect((await call('launch_app', { restart: true })).text).toMatch(
       /^restarted dev\.app, which was running\n/,
     );
     d.running = false;
-    expect((await call('app', { action: 'launch' })).done).toBe('started dev.app');
+    expect((await call('launch_app', { restart: true })).done).toBe('started dev.app');
+    await call('launch_app', { args: ['a=1'], env: { B: '2' } });
+    expect(apps.log).toEqual([
+      ['launch', 'dev.app', {}],
+      ['launch', 'dev.app', {}],
+      ['launch', 'dev.app', { args: ['a=1'], env: { B: '2' } }],
+    ]);
   });
 
   it('does each action, with the selected app by default', async () => {
@@ -63,14 +70,12 @@ describe('app management', () => {
     await call('app', { action: 'uninstall', app: 'dev.other' });
     await call('app', { action: 'grant', service: 'camera' });
     await call('app', { action: 'revoke', service: 'camera' });
-    await call('app', { action: 'launch', args: ['a=1'], env: { B: '2' } });
     expect(apps.log).toEqual([
       ['install', '/tmp/a.apk'],
       ['clear', 'dev.app'],
       ['uninstall', 'dev.other'],
       ['permission', 'dev.app', true, 'camera'],
       ['permission', 'dev.app', false, 'camera'],
-      ['launch', 'dev.app', { args: ['a=1'], env: { B: '2' } }],
     ]);
   });
 
