@@ -5,7 +5,7 @@
 Host kütüphanesi cihazdaki bir ajanla tek bir bayt akışı üzerinden konuşur: Android'de ajanın adb sunucusu üzerinden açılan abstract bir unix
 soketi (`localabstract:<name>`), iOS'ta bir TCP bağlantısı
 (simülatör loopback'i ya da bir telefona usbmux bağlantısı). Mesaj biçimlerinin asıl kaynağı
-`packages/protocol/src/messages.ts`'tir. Host bir isteğin parametrelerini ona göre ayrıştırır, bu yüzden oradaki bir varsayılan bağlantı üzerinden giden değerdir
+`packages/protocol/src/messages.ts`'tir, ekranın ağacı `tree.ts`'te, bir denetimin bulguları `audit.ts`'tedir. Host bir isteğin parametrelerini ona göre ayrıştırır, bu yüzden oradaki bir varsayılan bağlantı üzerinden giden değerdir
 ve bir ajanın kendine ait varsayılanı yoktur: eksik bir değer `INVALID_ARGUMENT` olur. `packages/protocol/fixtures` her isteği,
 sonucu ve hatayı kanonik JSON olarak tutar; protokolün testleri bunları şemalara göre denetler, Android
 ajanının ve iOS runner'ının testleri de kendi kodlarıyla okur; `packages/protocol/test/native.test.ts` üçünün de yazdığı

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The protocol's screen tree, the nodes and windows an agent sends with their flags, is `tree.ts`, and what an audit finds is `audit.ts`, beside the messages that carry them, where `messages.ts` held all three within a few lines of the size cap.
 - While Xcode's first-launch setup is not done, as after a macOS update has moved CoreDevice past Xcode, a call that needs `devicectl` is refused at once with `PERMISSION_REQUIRED`, saying to run `sudo xcodebuild -runFirstLaunch` or open Xcode once, and `appdyno doctor` says the same: each `devicectl` call started that setup, which asked for an administrator's password on the person's screen, and answered only "devicectl … took over 60000 ms". The check, `xcodebuild -checkFirstLaunchStatus`, asks nothing and takes about 70 ms; it is made before the first `devicectl` of a process, and again after a refusal. Not run with a phone: on this Mac the setup is not done and was left so.
 - The command line's parser, its help and its list of commands are a file of their own, `commands.ts`, where they filled the cli package's index, which now only names what the package gives.
 - A settle's numbers, still for 200 ms and at most 3 s, are stated once in the protocol as the agent's defaults, and the benchmark asks what the tools ask, where it wrote them a third time.

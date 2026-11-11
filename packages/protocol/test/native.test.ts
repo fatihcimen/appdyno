@@ -11,13 +11,8 @@ import {
   VIDEO_HEADER_BYTES,
 } from '../src/frame.js';
 import { keyOfUsage, KEYS } from '../src/keys.js';
-import {
-  METHODS,
-  NODE_FLAGS,
-  NOTIFICATIONS,
-  PROTOCOL,
-  type Notification,
-} from '../src/messages.js';
+import { METHODS, NOTIFICATIONS, PROTOCOL, type Notification } from '../src/messages.js';
+import { NODE_FLAGS } from '../src/tree.js';
 
 const read = (path: string) => readFileSync(join(import.meta.dirname, '../../..', path), 'utf8');
 

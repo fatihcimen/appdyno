@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Protokolün ekran ağacı, bir ajanın bayraklarıyla gönderdiği düğümler ve pencereler, `tree.ts`'tir; bir denetimin bulduğu da `audit.ts`'tir; onları taşıyan mesajların yanında durur, önceden `messages.ts` üçünü de boyut sınırına birkaç satır kala tutuyordu.
 - Xcode'un ilk açılış kurulumu bitmemişken, örneğin bir macOS güncellemesi CoreDevice'ı Xcode'un ötesine taşıdıktan sonra, `devicectl` gerektiren bir çağrı hemen `PERMISSION_REQUIRED` ile reddedilir ve `sudo xcodebuild -runFirstLaunch` çalıştırmayı ya da Xcode'u bir kez açmayı söyler; `appdyno doctor` da aynısını söyler: her `devicectl` çağrısı o kurulumu başlatıyordu, o da kişinin ekranında bir yönetici parolası soruyordu ve yanıt yalnızca "devicectl … took over 60000 ms" oluyordu. Denetim, `xcodebuild -checkFirstLaunchStatus`, hiçbir şey sormaz ve yaklaşık 70 ms sürer; bir sürecin ilk `devicectl`'inden önce, bir retten sonra da yeniden yapılır. Bir telefonla çalıştırılmadı: bu Mac'te kurulum bitmemiş ve öyle bırakıldı.
 - Komut satırının ayrıştırıcısı, yardımı ve komut listesi kendi dosyalarındadır, `commands.ts`; önceden cli paketinin index'ini dolduruyorlardı, o artık yalnızca paketin verdiklerini adlandırır.
 - Bir durulmanın sayıları, 200 ms durgun ve en çok 3 s, protokolde ajanın varsayılanları olarak bir kez yazılır ve kıyaslama, onları üçüncü kez yazdığı yerde, araçların istediğini ister.
