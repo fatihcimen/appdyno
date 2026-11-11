@@ -57,6 +57,8 @@ it('says what it is for first, within what a client keeps of its instructions', 
   expect(INSTRUCTIONS).not.toMatch(/[a-z][.;:][A-Z]/);
   expect(INSTRUCTIONS).toContain('whatever its case or accents');
   expect(INSTRUCTIONS).toContain('from 0');
+  // as perf/shared.ts's withProbe has it: two measures put the probe in by themselves
+  expect(INSTRUCTIONS).toContain('perf_scroll and perf_trace put the frame probe in the app');
 });
 
 it('has every tool in the table of the docs, and what they say of steps as the tool says it', () => {

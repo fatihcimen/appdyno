@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Sunucunun yönergeleri, `perf_scroll` ve `perf_trace`'in kare probunu bir iOS simülatörünün uygulamasına kendiliğinden (`probe: false`: koymaz), `perf_launch`'un da `probe: true` ile koyduğunu söyler; önceden bunu yalnızca `probe: true`'nun yaptığını söylüyordu. Araç başvurusu, metin `done`'u tuttuğunda onun `structuredContent`'e konmadığını söyler; önceden `done`'un yalnızca metinde olduğunu söylüyordu.
 - MCP üzerinden ya da `appdyno app launch` olarak `launch`'lı `app`, nereye gittiği söylenerek reddedilir: bir uygulamayı `launch_app` başlatır, `restart: true` ile de baştan başlatır. Komut satırında aracının bir eylemi olmayan ilk sözcük, aracın eylemleri sayılarak reddedilir; önceden yalnızca sözcüğün beklenmedik olduğunu söylüyordu.
 - `steps`'te bir seçicinin sözcükleri en üstünde olan bir aracın adımı, `text`'li bir `find` adımı gibi, bir dokunuşun adımı gibi ipucunda doğru biçimdeki adımla reddedilir; önceden ret yalnızca alınmayan sözcüğü adlandırıyordu.
 - iOS'ta bir listenin üstteki bir gezinme çubuğunun altına kaymış bir satırı, üstündeki durum çubuğunun altındaki gibi dışarıda bırakılır: oraya bir dokunuş çubuğa ulaşır; çubuk listeyi başına kaydırıyor, yanıt ise satıra dokunulduğunu söylüyordu, `index: 0` da her kaydırmadan sonra o satırı seçiyordu. Çubuğun kendi düğmeleri listede kalır, çubuğun ekranının üstündeki bir sayfa da.
