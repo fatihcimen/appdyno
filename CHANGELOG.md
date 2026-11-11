@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- What a `perf_scroll` round reads and what its rounds found are functions of their own in `perf/scroll.ts`, where `perfScrollOp` stood at 198 lines, two under the function size cap.
 - The iPhone stream's TCP, a connection to a phone's service with its retries, its window and its goodbye, is `tcp.ts` of its own beside the IPv6 and UDP of `ipstack.ts`, which held it over 420 lines; `ipstack.ts` still gives `TcpConnection` and `PortRefused` to what names them there.
 - The table of a flow's steps, the words and arguments each line takes, is `specs.ts` of its own, where it held the flow file's reader and writer over 420 lines.
 - What a device can measure, `MeasureSource` with `Cannot` and `cannot`, is `measure-source.ts` of its own in core, where it shared `measure.ts` with the readings it answers and held that file over 420 lines.

@@ -2,7 +2,10 @@ import {
   FROZEN_FRAME_MS,
   MIN_FRAMES,
   type FrameHistogram,
+  type FrameStats,
   type Measured,
+  type MemoryReading,
+  type ProfileEntry,
   pause,
   reportProgress,
   median,
@@ -59,6 +62,57 @@ export function leakSignal(
     const grew = seen.every((v, i) => i === 0 || v > must(seen[i - 1], 'the round before'));
     return grew ? [`${name} rose every round (${seen.join(' → ')}): likely a leak`] : [];
   });
+}
+
+/** A round's reading, of its frames and the memory before and after it. */
+const roundOf = (f: FrameStats, m0: MemoryReading, m1: MemoryReading, rewound: boolean): Round => ({
+  jankyPercent: f.jankyPercent,
+  frozen: f.frozenFrames,
+  frames: f.histogram?.rowFrames ?? f.totalFrames,
+  ...(rewound && { rewound: true }),
+  ...(f.p95Ms !== undefined && { p95Ms: f.p95Ms }),
+  memStartKb: m0.kb,
+  memEndKb: m1.kb,
+  ...(m1.activities !== undefined && { activities: m1.activities }),
+  ...(m1.appContexts !== undefined && { appContexts: m1.appContexts }),
+  ...(m1.viewRootImpl !== undefined && { viewRootImpl: m1.viewRootImpl }),
+});
+
+/** What the rounds found past a threshold, and what a reader of them should know. */
+function findings(
+  rounds: Round[],
+  o: {
+    repeats: number;
+    jank: number | undefined;
+    frozen: number;
+    growth: number | undefined;
+    busiest: ProfileEntry | undefined;
+  },
+) {
+  const { repeats, jank, frozen, growth, busiest } = o;
+  return [
+    ...(jank !== undefined && jank > JANK_PERCENT
+      ? [`high jank: median ${jank}% (threshold ${JANK_PERCENT}%)`]
+      : []),
+    ...(frozen > 0 ? [`frozen frames: ${frozen} (of ${FROZEN_FRAME_MS} ms or longer)`] : []),
+    ...(growth !== undefined && growth > 0.3
+      ? [`memory grows: ${Math.round(growth * 100)}% (from round 2 to the last)`]
+      : []),
+    ...(busiest
+      ? [
+          `the app's top function as it scrolled: ${busiest.symbol}, ${busiest.percent}% of its samples`,
+        ]
+      : []),
+    ...leakSignal(rounds),
+    ...rounds.flatMap((x, i) =>
+      x.rewound
+        ? [`round ${i + 1} ran after the list was brought back, over rows already seen`]
+        : [],
+    ),
+    ...(rounds.length < repeats
+      ? [`the list stopped moving: ${rounds.length} of ${repeats} rounds`]
+      : []),
+  ];
 }
 
 export function perfScrollOp(ctx: ServerContext) {
@@ -129,18 +183,7 @@ export function perfScrollOp(ctx: ServerContext) {
         if (!f) break;
         const m1 = await readMemory(pkg);
         all.push(m0, f, m1);
-        rounds.push({
-          jankyPercent: f.value.jankyPercent,
-          frozen: f.value.frozenFrames,
-          frames: f.value.histogram?.rowFrames ?? f.value.totalFrames,
-          ...(ended && { rewound: true }),
-          ...(f.value.p95Ms !== undefined && { p95Ms: f.value.p95Ms }),
-          memStartKb: m0.value.kb,
-          memEndKb: m1.value.kb,
-          ...(m1.value.activities !== undefined && { activities: m1.value.activities }),
-          ...(m1.value.appContexts !== undefined && { appContexts: m1.value.appContexts }),
-          ...(m1.value.viewRootImpl !== undefined && { viewRootImpl: m1.value.viewRootImpl }),
-        });
+        rounds.push(roundOf(f.value, m0.value, m1.value, ended));
         limits = f.value.limits;
         if (f.value.histogram) histograms.push(f.value.histogram);
         // the worst of no frames is none, and not a good round
@@ -177,29 +220,7 @@ export function perfScrollOp(ctx: ServerContext) {
         frozen,
         memGrowth: growth,
       });
-      const notes = [
-        ...(jank !== undefined && jank > JANK_PERCENT
-          ? [`high jank: median ${jank}% (threshold ${JANK_PERCENT}%)`]
-          : []),
-        ...(frozen > 0 ? [`frozen frames: ${frozen} (of ${FROZEN_FRAME_MS} ms or longer)`] : []),
-        ...(growth !== undefined && growth > 0.3
-          ? [`memory grows: ${Math.round(growth * 100)}% (from round 2 to the last)`]
-          : []),
-        ...(busiest
-          ? [
-              `the app's top function as it scrolled: ${busiest.symbol}, ${busiest.percent}% of its samples`,
-            ]
-          : []),
-        ...leakSignal(rounds),
-        ...rounds.flatMap((x, i) =>
-          x.rewound
-            ? [`round ${i + 1} ran after the list was brought back, over rows already seen`]
-            : [],
-        ),
-        ...(rounds.length < repeats
-          ? [`the list stopped moving: ${rounds.length} of ${repeats} rounds`]
-          : []),
-      ];
+      const notes = findings(rounds, { repeats, jank, frozen, growth, busiest });
       const play = frameVitals(histograms);
       const noise = await keep(s, {
         app: pkg,
