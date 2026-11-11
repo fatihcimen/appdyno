@@ -8,7 +8,7 @@ appdyno'ya yardım ettiğiniz için teşekkürler. Burada herkes [Davranış Kur
 
 Bir hata için Bug report formuyla, appdyno'nun henüz yapmadığı bir şey için de Feature request formuyla bir issue açın. Bir düzeltmeden büyük her şey için önce bir issue açıp neyi değiştirmek istediğinizi söyleyin: uymayabilecek bir işe emek vermekten sizi kurtarır. Bir güvenlik sorununu [SECURITY](SECURITY.tr.md) sayfasının dediği gibi özel olarak bildirin, asla bir issue ile değil.
 
-Bir pull request tek bir değişiklik taşır. Açmadan önce `pnpm run ci` geçer ve her commit, iki değişiklik günlüğündeki satırıyla birlikte, [Commit'ler](#commitler) bölümünün dediği gibi yazılır. Bir cihaza dokunuyorsa hangi cihazda çalıştırdığınızı söyleyin.
+Bir pull request tek bir değişiklik taşır. Açmadan önce `pnpm run ci` geçer ve her commit, bir kullanıcının fark edeceği bir değişiklikse `CHANGELOG.md` içindeki satırıyla birlikte, [Commit'ler](#commitler) bölümünün dediği gibi yazılır. Bir cihaza dokunuyorsa hangi cihazda çalıştırdığınızı söyleyin.
 
 Katkınız, geri kalanı gibi [MIT Lisansı](LICENSE) altındadır.
 
@@ -119,7 +119,7 @@ Buradaki bazı adların kendine özgü bir anlamı vardır:
 
 ## Commit'ler
 
-Commit başına tek değişiklik. Konusu en fazla 72 karakterlik tek bir satırdır, `type(scope): what changed` biçiminde; `type`, `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci` ya da `chore`'dan biridir, kapsam ise isteğe bağlıdır, `fix(ios): ...` gibi. Nedeni ve okurun bunun ötesinde gereksindiği, boş bir satırdan sonra gövdeye girer. Her commit, `CHANGELOG.md` içinde Unreleased başlığının en üstüne İngilizce bir satır, `CHANGELOG.tr.md` içine de aynı satırı Türkçe olarak ekler. `git log`'daki eski konular daha uzundur: yenilerini buna göre yazın.
+Commit başına tek değişiklik. Konusu en fazla 72 karakterlik tek bir satırdır, `type(scope): what changed` biçiminde; `type`, `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci` ya da `chore`'dan biridir, kapsam ise isteğe bağlıdır, `fix(ios): ...` gibi. Nedeni ve okurun bunun ötesinde gereksindiği, boş bir satırdan sonra gövdeye girer. Bir kullanıcının fark edeceği bir değişiklik, `CHANGELOG.md` içinde Unreleased başlığının en üstüne İngilizce tek bir satır ekler; bir refactor, bir test, CI ya da iç bir belge hiçbir satır eklemez. `CHANGELOG.tr.md`'ye dokunmayın: bir sürüm çıkarılırken bakımcı Türkçe satırları yazar ve Unreleased bölümünü iki dosyada da o sürümün bölümüne taşır. `git log`'daki eski konular daha uzundur: yenilerini buna göre yazın.
 
 ## Yorumlar
 
@@ -133,7 +133,7 @@ Kod typescript-eslint'in tipe dayalı kurallarını kendisi karşılar: bir kura
 
 [Belgeler](docs/README.tr.md), okuru bir işin içinden geçiren rehberleri ve bir şeye bakmak için bir başvuruyu tutar. Yeni bir sayfa bunlardan birine ve dizine girer. Belgelerdeki bir sayı, kendi ölçtüğünüz bir sayıdır: hangi cihazda ve hangi yük altında ölçtüğünüzü söyleyin.
 
-Her belge İngilizce ve Türkçedir, `X.md` ve `X.tr.md`, `CHANGELOG.md` de, ve birindeki bir değişiklik ikisinde de yapılır, bir değişiklik günlüğü satırı da: `docs.test.ts` ikisini, her biri kendi dilinde, aynı satırlara, koda, sayılara ve bağlantılara bağlı tutar.
+Her belge İngilizce ve Türkçedir, `X.md` ve `X.tr.md`, ve birindeki bir değişiklik ikisinde de yapılır: `docs.test.ts` ikisini, her biri kendi dilinde, aynı satırlara, koda, sayılara ve bağlantılara bağlı tutar. Değişiklik günlüğü yayımlanmış her bölümünde böyledir, Unreleased bölümü ise [Commit'ler](#commitler) bölümünün dediği gibi yalnızca İngilizcedir.
 
 Diyagramlar `docs/images` içinde elle yazılmış SVG'lerdir, üreteç yoktur. Her birinin kendi zemini vardır, böylece her sayfada okunur, ve iki dosya olarak gelir: açık `X.svg` ve koyu `X.dark.svg`; bir sayfa onları, `<source media="(prefers-color-scheme: dark)">`'u GitHub'ın temasına göre seçen bir `<picture>` içinde gösterir: bir SVG'nin içindeki media query GitHub'ın temasını değil, sistemin temasını izler. Türkçe bir sayfa `X.tr.svg` ve `X.tr.dark.svg` gösterir. Bir tane çizmek için başka birinin stil bloğunu kopyalayın ve onun biçimlerine bağlı kalın: mavi sizin Mac'iniz, turkuaz ya da mor cihaz, pembe soran kimse. Ona iki temada da bakın.
 

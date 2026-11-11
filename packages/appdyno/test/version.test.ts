@@ -29,6 +29,8 @@ describe('release version', () => {
     expect(read('ios/Runner/RunnerTests.swift')).toContain(`let agentVersion = "${v}"`);
     expect(read('ios/Appdyno.xcodeproj/project.pbxproj')).toContain(`MARKETING_VERSION = ${v};`);
     expect(read('packages/mcp/src/brand.ts')).toContain(`version: '${v}'`);
+    expect(read('CHANGELOG.md')).toContain(`## ${v}`);
+    expect(read('CHANGELOG.tr.md')).toContain(`## ${v}`);
     const server = JSON.parse(read('server.json')) as { version: string; packages: Package[] };
     expect(server.version).toBe(v);
     expect(server.packages.map((p) => p.version)).toEqual([v]);

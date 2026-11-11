@@ -8,7 +8,7 @@ Thank you for helping with appdyno. Everyone here follows the [Code of Conduct](
 
 For a bug, open an issue with the Bug report form, and for something appdyno does not do yet, with the Feature request form. For anything larger than a fix, open an issue first and say what you want to change: it saves you work that may not fit. Report a security problem privately, as [SECURITY](SECURITY.md) says, never in an issue.
 
-A pull request holds one change. Before you open it, `pnpm run ci` passes, and each commit is written as [Commits](#commits) says, with its line in both changelogs. If it touches a device, say which device you ran it on.
+A pull request holds one change. Before you open it, `pnpm run ci` passes, and each commit is written as [Commits](#commits) says, with its line in `CHANGELOG.md` where a user would notice the change. If it touches a device, say which device you ran it on.
 
 What you contribute is under the [MIT License](LICENSE), as the rest is.
 
@@ -119,7 +119,7 @@ Some names here carry a meaning of their own:
 
 ## Commits
 
-One change per commit. Its subject is one line of at most 72 characters, as `type(scope): what changed`, with `type` one of `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci` or `chore`, and the scope optional, as in `fix(ios): ...`. Why, and what a reader needs beyond that, goes in the body after a blank line. Each commit adds a line in English at the top of Unreleased in `CHANGELOG.md`, and the same line in Turkish in `CHANGELOG.tr.md`. Older subjects in `git log` run longer: write new ones to this.
+One change per commit. Its subject is one line of at most 72 characters, as `type(scope): what changed`, with `type` one of `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci` or `chore`, and the scope optional, as in `fix(ios): ...`. Why, and what a reader needs beyond that, goes in the body after a blank line. A change a user would notice adds one line in English at the top of Unreleased in `CHANGELOG.md`; a refactor, a test, CI or an internal doc adds none. Leave `CHANGELOG.tr.md` alone: when a release is cut, the maintainer writes the Turkish lines and moves Unreleased into that version's section in both files. Older subjects in `git log` run longer: write new ones to this.
 
 ## Comments
 
@@ -133,7 +133,7 @@ The code meets typescript-eslint's type-checked rules by itself: a rule is turne
 
 [The docs](docs/README.md) hold guides, which take a reader through a task, and a reference to look things up in. A new page goes in one of those and in the index. A number in the docs is one you measured yourself: say on which device, and under what load.
 
-Every doc is in English and in Turkish, `X.md` and `X.tr.md`, `CHANGELOG.md` too, and a change to one is made in both, a changelog line as well: `docs.test.ts` holds the two to the same lines, code, numbers and links, each in its own language.
+Every doc is in English and in Turkish, `X.md` and `X.tr.md`, and a change to one is made in both: `docs.test.ts` holds the two to the same lines, code, numbers and links, each in its own language. The changelog is so in each released section, and its Unreleased is in English alone, as [Commits](#commits) says.
 
 Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its own ground, so it reads on any page, and comes as two files, `X.svg` light and `X.dark.svg` dark, which a page shows in a `<picture>` whose `<source media="(prefers-color-scheme: dark)">` picks by GitHub's theme: a media query inside an SVG follows the system's theme, not GitHub's. A Turkish page shows `X.tr.svg` and `X.tr.dark.svg`. To draw one, copy the style block of another and keep to its shapes: blue is your Mac, teal or violet the device, pink whoever is asking. Look at it in both themes.
 

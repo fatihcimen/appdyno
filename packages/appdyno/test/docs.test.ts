@@ -120,6 +120,15 @@ const partsOf = (text: string) => {
   return { kinds, code, prose: prose.join('\n') };
 };
 
+/**
+ * A page as its pair is held to: a changelog's Unreleased is written in English alone, and turned into Turkish when a
+ * release moves it into its version's section.
+ */
+const pairedOf = (page: string) =>
+  /^CHANGELOG(\.tr)?\.md$/.test(page)
+    ? read(page).replace(/^## (?:Unreleased|Yayımlanmamış)\n[^]*?(?=^## )/m, '')
+    : read(page);
+
 const spansOf = (prose: string) => (prose.match(/`[^`\n]+`/g) ?? []).sort();
 
 /**
@@ -138,7 +147,7 @@ const numbersOf = (prose: string) =>
 
 /** Where a page's links lead, a heading by its place in its page; `across` names what the other language's page would. */
 const targetsOf = (page: string, across = false) =>
-  linksOf(read(page))
+  linksOf(pairedOf(page))
     .map((link) => {
       if (/^[a-z]+:/.test(link)) return link;
       const [path, anchor] = link.split('#') as [string, string | undefined];
@@ -168,7 +177,7 @@ describe('a page', () => {
 
   for (const [en, tr] of pairs)
     it(`says in ${tr} what ${en} says`, () => {
-      const [a, b] = [partsOf(read(en)), partsOf(read(tr))];
+      const [a, b] = [partsOf(pairedOf(en)), partsOf(pairedOf(tr))];
       expect(b.kinds, 'a line for each line').toEqual(a.kinds);
       expect(b.code, 'the same code').toEqual(a.code);
       expect(spansOf(b.prose), 'the same code in the prose').toEqual(spansOf(a.prose));
