@@ -227,12 +227,23 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
     : phoneFocused(read);
   if (call) return `${how} the phone app ${call}, which may place a call`;
   let what = actsOn(controls(read), input);
-  // iOS's Control Center and power-off screen over an app may be in no read of it: the home screen app's read has them
-  if (!what && s.device.systemTree && !read.windows.some((w) => SYSTEM.test(w.pkg ?? ''))) {
-    const over = await homeRead(s, screen);
+  if (!what) {
+    const over = await overTheApp(s, screen);
     what = over && actsOn(controls(over), input);
   }
   return what && `${how} ${what}, the system's own power, emergency or erase control`;
+}
+
+/**
+ * The home screen app's read, where what it shows over the app may be in no read of the screen: iOS's Control Center and
+ * power-off screen, Notification Center. A read whose only system window is an alert has the alert alone, as the runner
+ * captures that, and not what came with it; undefined where there is nothing to take or nothing over the app.
+ */
+export async function overTheApp(s: Session, screen: Screen) {
+  const t = screen.tree;
+  const port = s.device.platformScreen;
+  const sees = t.windows.some((w, i) => SYSTEM.test(w.pkg ?? '') && !port.overApp(t, i));
+  return s.device.systemTree && !sees ? homeRead(s, screen) : undefined;
 }
 
 /**

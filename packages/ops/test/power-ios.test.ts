@@ -1,6 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { iosScreen } from '@appdyno/driver-apple';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { powerControlAt, type Policy } from '../src/index.js';
@@ -121,5 +122,77 @@ describe("the home screen app's read, where a read of an iPhone's app has no win
     expect((await call('tap', inApp)).error).toBe(false);
     expect(sent()).toHaveLength(1);
     expect(systemTree).not.toHaveBeenCalled();
+  });
+});
+
+describe('a system alert over the app, which the runner reads alone, and what the home screen app shows with it', () => {
+  const APP = 'dev.appdyno.fixture';
+  const box: [number, number, number, number] = [60, 300, 330, 520];
+  const allow = { x: 260, y: 490 };
+  /** The fixture's read with a permission alert over it, a window of the home screen app's as the runner captures it. */
+  const alerted = (): Tree => {
+    const t = recorded('ios-control-center-app');
+    const at = t.nodes.length;
+    return {
+      ...t,
+      windows: [
+        ...t.windows,
+        { type: 3, pkg: 'com.apple.springboard', layer: 1, b: box, active: false, focused: false },
+      ],
+      nodes: [
+        ...t.nodes,
+        {
+          p: -1,
+          w: 1,
+          c: 'Alert',
+          d: 'Allow “appdyno fixture” to use your location?',
+          b: box,
+          f: 17,
+        },
+        { p: at, w: 1, c: 'Button', d: 'Allow', b: [200, 470, 320, 510], f: 19 },
+      ],
+    };
+  };
+  /** That read, the home screen app's being `home`; `apps` as --allow-apps. */
+  const over = async (home: Tree, apps: string[] = []) => {
+    const o = await onDevice(alerted(), { answer: 'decline', policy: { apps } });
+    Object.assign(o.device, { systemTree: () => Promise.resolve(home), platformScreen: iosScreen });
+    return o;
+  };
+
+  it("asks before a touch on Control Center's power button, which the alert hid from the read", async () => {
+    const cc = recorded('ios-control-center-springboard');
+    const { call, sent, asked } = await over(cc);
+    expect((await call('tap', middle(cc, 'Power'))).code).toBe('PERMISSION_REQUIRED');
+    expect(asked[0]).toContain('a touch on "Power"');
+    expect(sent()).toEqual([]);
+  });
+
+  it('refuses under --allow-apps a touch on a control of what the home screen app shows over the app, as no read had it', async () => {
+    const cc = recorded('ios-control-center-springboard');
+    const { call, sent } = await over(cc, [APP]);
+    const r = await call('tap', middle(cc, 'Add Controls'));
+    expect(r.code).toBe('POLICY_DENIED');
+    expect(r.text).toContain(
+      `a touch lands in com.apple.springboard over ${APP}, not an allowed app`,
+    );
+    expect(sent()).toEqual([]);
+  });
+
+  it("lets the alert's own button and the app go, with nothing over the app but the alert, as an iPhone read it", async () => {
+    const home = recorded('ios-nothing-over-springboard');
+    const withAlert: Tree = {
+      ...home,
+      nodes: [
+        ...home.nodes,
+        ...alerted()
+          .nodes.slice(-2)
+          .map((n, i) => ({ ...n, w: 0, p: i ? home.nodes.length : 0 })),
+      ],
+    };
+    const { call, sent, asked } = await over(withAlert, [APP]);
+    expect((await call('tap', allow)).error).toBe(false);
+    expect((await call('tap', { x: 200, y: 700 })).error).toBe(false);
+    expect([sent().length, asked]).toEqual([2, []]);
   });
 });

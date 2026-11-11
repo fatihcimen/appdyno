@@ -1,7 +1,16 @@
-import type { PlatformScreen } from '@appdyno/core';
-import type { Tree } from '@appdyno/protocol';
+import type { PlatformScreen, Screen } from '@appdyno/core';
+import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
 import { byPerson, type Policy } from './policy.js';
-import { LEAVES, powerGuard, SIDE_KEYS, windowAt, type Input, type InputGuard } from './power.js';
+import {
+  LEAVES,
+  overTheApp,
+  powerGuard,
+  SIDE_KEYS,
+  windowAt,
+  type Input,
+  type InputGuard,
+} from './power.js';
+import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 
 const APPLICATION_WINDOW = 1;
@@ -50,6 +59,34 @@ export function outsideApps(
   return undefined;
 }
 
+/**
+ * A touch on what iOS's home screen app shows over the app and no read of the screen holds, Notification Center, or
+ * Control Center under an alert: a control of the home screen app's read there that is no alert's.
+ */
+async function homeTouched(s: Session, screen: Screen, input: Input, front: string | undefined) {
+  const over = input.points.length ? await overTheApp(s, screen) : undefined;
+  if (!over) return undefined;
+  const inAlert = (i: number): boolean => {
+    const n = over.nodes[i];
+    return !!n && (/alert$/i.test(n.c) || inAlert(n.p));
+  };
+  const control = (p: Point) =>
+    over.nodes.some(
+      (n, i) =>
+        (n.f & NODE_FLAGS.clickable) !== 0 &&
+        (n.f & NODE_FLAGS.visible) !== 0 &&
+        p.x >= n.b[0] &&
+        p.x <= n.b[2] &&
+        p.y >= n.b[1] &&
+        p.y <= n.b[3] &&
+        !inAlert(i),
+    );
+  const pkg = over.windows[0]?.pkg ?? 'the home screen app';
+  return input.points.some(control)
+    ? { what: `a touch lands in ${pkg} over ${front ?? "no app's window"}`, allow: pkg }
+    : undefined;
+}
+
 /** The guard of every input of a session, under `--allow-apps`: one that lands outside the allowed apps is refused. */
 export const appsGuard =
   (policy: Policy): InputGuard =>
@@ -60,14 +97,11 @@ export const appsGuard =
     // the read the power guard judges by too: one read for both
     // shortcut: the read a touch was aimed by, up to 20 s old (Session.beforeTouch): an app that opens another by itself
     // after it lets one touch by x,y reach that one; read justNow here if that must be closed, at a read per touch
-    const { tree } = s.fresh ?? (await s.current());
-    const out = outsideApps(
-      policy.apps,
-      tree,
-      s.device.platformScreen,
-      input,
-      s.shownApp ?? s.appId,
-    );
+    const screen = s.fresh ?? (await s.current());
+    const before = s.shownApp ?? s.appId;
+    const out =
+      outsideApps(policy.apps, screen.tree, s.device.platformScreen, input, before) ??
+      (await homeTouched(s, screen, input, before));
     if (out)
       throw new ToolError(
         `${out.what}, not an allowed app (${policy.apps.join(', ')})`,
