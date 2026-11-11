@@ -142,7 +142,7 @@ A selector goes in `selector` in every tool and step that takes one, `find`, `wa
 
 `gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the buttons (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), a keyboard's keys (`enter`, `delete`, `tab`, `escape`, `space`, the arrows `arrow_up`, `arrow_down`, `arrow_left` and `arrow_right`, and a letter or digit with the keys held first, as `command+a`, where `command` is Ctrl on Android), and `control_center`, `notification_center` and `spotlight`, which `home` closes. A key's name is read whatever its case, and `return` is `enter`, `esc` `escape` and `backspace` `delete`; a letter is a small one, as a capital would be a shift too.
 `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,
-`launch` with arguments and environment, `download_data` into a new or empty folder, and `replace_data`
+`download_data` into a new or empty folder, and `replace_data`
 from one, which stops the app and takes away what the folder does not hold, and `build_and_run` from a
 project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gradle folder with `scheme` as
 its module and `configuration` as its variant.

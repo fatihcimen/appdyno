@@ -142,7 +142,7 @@ Bir seçici, onu alan her araçta ve adımda, aralarında `find`, `wait_for` ve 
 
 `gesture`; `double_tap`, `long_press`, `drag`, `pinch` ve serbest bir `plan` içerir. `press_key`; düğmeleri (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), bir klavyenin tuşlarını (`enter`, `delete`, `tab`, `escape`, `space`, `arrow_up`, `arrow_down`, `arrow_left` ve `arrow_right` ok tuşları ve önce basılı tutulan tuşlarla bir harf ya da rakam, `command+a` gibi; Android'de `command` Ctrl'dir) ve `home`'un kapattığı `control_center`, `notification_center` ile `spotlight`'ı içerir. Bir tuşun adı büyük küçük harf fark etmeksizin okunur; `return` `enter`, `esc` `escape`, `backspace` de `delete`'tir. Bir harf küçük harftir, çünkü büyük bir harf aynı zamanda bir shift olurdu.
 `app`; `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,
-argümanlar ve ortam değişkenleriyle `launch`, yeni ya da boş bir klasöre `download_data`, bir klasörden `replace_data`
+yeni ya da boş bir klasöre `download_data`, bir klasörden `replace_data`
 (uygulamayı durdurur ve klasörde olmayanı kaldırır) ve bu Mac'teki bir projeden `build_and_run` içerir:
 `scheme` ve `configuration` ile bir Xcode projesi ya da modülü `scheme`,
 varyantı `configuration` olan bir Gradle klasörü.

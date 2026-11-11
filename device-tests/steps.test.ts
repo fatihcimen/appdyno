@@ -31,7 +31,7 @@ function stepsOf(get: () => Call) {
           { action: 'tap', selector: { text: 'Form' }, read: 'diff' },
           { action: 'wait_for', selector: { id: 'name_input' } },
           { action: 'type_text', selector: { id: 'name_input' }, text: 'Ali' },
-          { action: 'find', id: 'name_input' },
+          { action: 'find', selector: { id: 'name_input' } },
           { action: 'screenshot' },
           { action: 'device_info' },
         ],

@@ -345,7 +345,7 @@ describe("a window's Apps pane", () => {
     const { controls, told } = fixture('ios', { apps } as unknown as Partial<Device>);
     const call = (tool: string, action: string, ok = true) =>
       controls.heard({ at: 0, tool, ms: 1, ok, args: { action } });
-    call('app', 'launch');
+    call('app', 'state');
     call('app', 'install', false);
     call('tap', 'install');
     await new Promise((r) => setTimeout(r, 50));
