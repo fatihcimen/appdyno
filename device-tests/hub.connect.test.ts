@@ -144,6 +144,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, main, 'mcp'],
+        policy: ctx.policy,
         doctor: () => Promise.resolve(tools),
         self: [process.execPath, main],
         providers,

@@ -14,6 +14,7 @@ import { BROWSER_CLIENTS, CLIENTS } from '@appdyno/cli';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HubHttp, httpToken, renewHttpToken } from '../src/hub-http.js';
 import { hubServices } from '../src/hub-services.js';
+import { policyOf } from '../src/serve.js';
 
 const fake = join(import.meta.dirname, 'fake-mcp.mjs');
 /** Plain JSON, a key of `mcpServers`, and a file `install` may begin. */
@@ -31,11 +32,14 @@ let file: string;
 const told: Record<string, unknown>[] = [];
 const services: ReturnType<typeof hubServices>[] = [];
 
-function place(o: { mcpCommand?: string[]; dock?: boolean } = {}) {
+function place(
+  o: { mcpCommand?: string[]; dock?: boolean; policy?: ReturnType<typeof policyOf> } = {},
+) {
   const made = hubServices({
     home,
     env: { PATH: process.env.PATH },
     mcpCommand: o.mcpCommand ?? [process.execPath, fake, 'http'],
+    policy: o.policy ?? policyOf({}, {}),
     doctor: () => Promise.resolve([{ name: 'node', ok: true, detail: '22' }]),
   });
   services.push(made);
@@ -339,6 +343,17 @@ describe('the HTTP server', () => {
     await http.stop();
     expect(readFileSync(args, 'utf8')).not.toContain(httpToken());
     expect(readFileSync(args, 'utf8')).toContain('--end-with-parent');
+  });
+
+  it("keeps the server to the hub's own devices and apps, by flag, which no server takes by itself", async () => {
+    const args = join(home, 'args');
+    vi.stubEnv('FAKE_ARGS', args);
+    const policy = policyOf({ 'allow-devices': '^emulator-5554$', 'allow-apps': 'a.b, c.d' }, {});
+    expect((await act(place({ policy }), 'start')).server.address).toBeDefined();
+    await vi.waitFor(() => expect(existsSync(args)).toBe(true));
+    expect(readFileSync(args, 'utf8')).toContain(
+      'http --allow-devices ^emulator-5554$ --allow-apps a.b,c.d --http',
+    );
   });
 
   it('starts once however often it is asked, and says it is on its way', async () => {

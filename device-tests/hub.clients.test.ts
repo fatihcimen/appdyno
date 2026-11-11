@@ -133,6 +133,7 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, main, 'mcp'],
+        policy: ctx.policy,
         doctor: () =>
           Promise.resolve([
             { name: 'node', ok: true, detail: process.versions.node },

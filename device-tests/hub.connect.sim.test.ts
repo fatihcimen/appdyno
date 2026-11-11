@@ -121,6 +121,7 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
         home,
         env: { ...process.env, HOME: home, APPDYNO_ALLOW_DEVICES: `^${sim}$` },
         mcpCommand: [process.execPath, main, 'mcp'],
+        policy: ctx.policy,
         doctor: () => doctor({ providers: [] }),
         self: [process.execPath, main],
         providers: [staged],

@@ -82,6 +82,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, join(dist, 'main.js'), 'mcp'],
+        policy,
         doctor: () => Promise.resolve([]),
       }),
       viewer: () => {

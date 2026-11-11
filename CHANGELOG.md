@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The hub's services are given the hub's policy, which they cannot be built without, and add its device and app lists to the server they start for a tunnel themselves, and a test holds the flags that server starts with: the command was built with them in a place no test reached, so dropping them failed nothing.
 - A device or link allow list whose pattern matches the empty text is refused at the start, as an empty one already was: `--allow-devices "$A|$B"` with one of them unset gave `emu|`, which as a regular expression lets in every device, and `--allow-urls` the same of every link.
 - Logs, requests and console lines also hide `pwd`, `passphrase`, `credential`, `credentials`, `signature` and `api key`, a link's `code` and `sig` as parameters of their own, as an OAuth code rides back in `?code=`, and the password in a link, `https://user:password@host`: each reached the agent whole. `code` and `sig` as keys elsewhere stay shown, as `statusCode: 200` does.
 - `webview` opens a page's socket only on the port forwarded to the app's DevTools, by the check `react_native` makes of Metro's: it opened the `webSocketDebuggerUrl` the app's socket named wherever it pointed, so an app on the device could have this Mac open a WebSocket to any host.

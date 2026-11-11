@@ -21,11 +21,13 @@ import {
 } from '@appdyno/cli';
 import { Adb, ownSwitches, PLATFORM_TOOLS } from '@appdyno/driver-android';
 import { probeCommand, probeHttp, type Probe } from '@appdyno/mcp';
+import type { Policy } from '@appdyno/ops';
 import { runKeys } from '@appdyno/perf';
 import { ago, type HubServices } from '@appdyno/hub';
 import { guideFor, listedPhones, runnerChecks } from './hub-connect.js';
 import { HubHttp, httpToken, renewHttpToken } from './hub-http.js';
 import { HubRuns } from './hub-run.js';
+import { allowFlags } from './serve.js';
 
 /** What an app opened from the Dock has: neither Homebrew nor a Node from a version manager. */
 const DOCK_PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
@@ -90,6 +92,8 @@ export type ServicesOptions = {
   server?: Stdio;
   /** `appdyno mcp`, as this copy is run. */
   mcpCommand: string[];
+  /** The hub's own devices and apps, by flag or variable, which the server it starts for a tunnel keeps to. */
+  policy: Policy;
   doctor(): Promise<Check[]>;
   /** This copy of appdyno, for what a person runs from the window. */
   self?: string[];
@@ -109,7 +113,7 @@ type Undo = { back?: Record<string, unknown> };
 /** What the hub's AI Clients and Help ask of this Mac, from `install`'s own code. */
 export function hubServices(o: ServicesOptions): HubServices {
   const where = { home: o.home, env: o.env, ...(o.server && { server: o.server }) };
-  const http = new HubHttp(o.mcpCommand);
+  const http = new HubHttp([...o.mcpCommand, ...allowFlags(o.policy)]);
   const runs = new HubRuns(o.self ?? o.mcpCommand.slice(0, -1), o.env, o.home);
   /** What `doctor` found, kept: it is slow, and a tool comes or goes only by what a person ran. */
   let checks: Promise<Check[]> | undefined;
