@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Akış testleri bir klasördür, `packages/ops/test/flow`: kayıt, sırlar ve parametreler, yeniden oynatma ve test çalıştırıcısı, tek bir düzenek üzerinde her biri bir dosya; önceden 1.290 satırlık tek bir dosya onları tutuyordu.
 - Bir cihazı yönetmenin testleri bir klasördür, `packages/ops/test/driving`: tek bir paylaşılan sahte sunucu üzerinde bir araç ya da bir davranış başına bir dosya; önceden 2.800 satırlık tek bir dosya onları tutuyordu.
 - CONTRIBUTING, en fazla 72 karakterlik bir commit konusu ister, nedeni gövdededir; kodun bir seçim bırakan tipe dayalı bir kuralı nasıl karşıladığı da `docs/reference/lint.md`'dir; önceden CONTRIBUTING bunu sekiz uzun maddede tutuyordu.
 - Fonksiyon boyutu kuralı, bir paketin `src`'sinin kendi testlerinden tuttuğunu, dosya boyutu kuralının saydığı gibi sayar: telefon akışının sahte telefonu bir eşleştirmenin her adımını kendine ait bir metotla yanıtlar; önceden 290 satırlık tek bir fonksiyon onları tutuyordu ve kural klasörünü atlıyordu.
