@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Policy } from '../src/index.js';
+import { powerControlAt, type Policy } from '../src/index.js';
 import { middle, onDevice, recorded } from './power-device.js';
 
 beforeEach(() => {
@@ -40,6 +40,25 @@ describe("iOS's own views over an app, where a read of the app has none of them"
       expect(asked[0], over).toContain(`a touch on "${label}"`);
       expect(sent(), over).toEqual([]);
     }
+  });
+
+  it('knows the power-off slider by its id in a language of no words here, and not its Cancel', () => {
+    const de: Record<string, string> = {
+      'slide to power off': 'Zum Ausschalten streichen',
+      'Power off': 'Ausschalten',
+      Power: 'Ein/Aus',
+      Cancel: 'Abbrechen',
+    };
+    const t = recorded('ios-power-off-springboard');
+    const said = {
+      ...t,
+      nodes: t.nodes.map((n) => ({ ...n, ...(n.d && de[n.d] && { d: de[n.d] }) })),
+    };
+    expect(powerControlAt(said, middle(said, 'Zum Ausschalten streichen'))).toBe(
+      'the control actionSlider',
+    );
+    expect(powerControlAt(said, middle(said, 'Ein/Aus'))).toBe('the control actionSlider');
+    expect(powerControlAt(said, middle(said, 'Abbrechen'))).toBeUndefined();
   });
 
   it('lets a touch elsewhere on them go with nothing asked', async () => {

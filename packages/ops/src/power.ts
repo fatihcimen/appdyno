@@ -62,6 +62,9 @@ const SCREEN_IDS = /:id\/\w*(global_?actions|main_?clear|master_?clear)\w*$/;
 const CONTROL_IDS =
   /:id\/(pm_lite|(\w+_)?(power_?(off|menu|button)|shut_?down|reboot|restart|emergency|sos)(_\w+)?)$/;
 
+/** iOS's slide to power off, as the runner's read names it (ios/Runner/DeviceTree.swift). */
+const IOS_SLIDER = 'actionSlider';
+
 /**
  * A control by its words, in English and Turkish, as `plain` writes them: the power menu's keys and the button that opens
  * it, iOS Control Center's power button, a lock screen's emergency call, iOS's sliders, and Settings' resets and erases,
@@ -146,7 +149,11 @@ function controls(tree: Tree) {
       const hit = smallest(here.filter((x) => clickable(x.n))) ?? smallest(here);
       // a clickable thing acts as all it holds; anything else only as itself
       const said = hit && (clickable(hit.n) ? named(hit.i) : ownControl(hit.n));
-      return said ?? wholeWindow(w);
+      // iOS's power-off slider by its id in any language, which holds the button a finger lands on
+      const slider = here.some((x) => x.n.id === IOS_SLIDER)
+        ? `the control ${IOS_SLIDER}`
+        : undefined;
+      return said ?? slider ?? wholeWindow(w);
     },
     /** What a key or typed text may act on: a screen that is all such controls, or one in the focus. */
     focused() {
