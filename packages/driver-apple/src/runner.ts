@@ -24,7 +24,7 @@ import {
 import { childrenNamed, endLeftBehind, HUB } from './left-behind.js';
 import { runnerBuild } from './runner-build.js';
 import { assertUdid, Simctl, xcodeEnv } from './simctl.js';
-import { recordXctMetrics } from './trace.js';
+import { recordXctMetrics } from './xct-metrics.js';
 
 /** A first start installs the runner (on a phone, UI automation may wait for an approval): allow for it. */
 const START_MS = 180_000;

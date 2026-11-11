@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- An XCTest `measure()` run of the runner's bundle and what its result bundle holds is `xct-metrics.ts` of its own, where the trace tool's recordings held it at the size cap; it is no longer exported, as only the runner names it.
 - How the inspector lists an audit's issue, finds the element under the pointer and writes a check of it are functions of their own in `inspect.ts`, where `windowInspector` held them at 199 lines, one under the function size cap.
 - How the hub tests a client, reads a person's word on one and shows the Connect place are functions of their own in `hub-services.ts`, where `hubServices` held them at 199 lines, one under the function size cap.
 - A step's parts are functions of their own in `steps.ts`: how it names an element, picks one of a selector's matches and aims, the screen's size and edge, typing, a key and one case per kind of step, where one function of 297 lines held them and the function size rule let it pass by name.
