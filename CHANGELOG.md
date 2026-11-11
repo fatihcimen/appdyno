@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `perf_profile` is no longer marked read-only, as with `scroll` it swipes: it ran beside an action of the same client, which the queue lets a read do, and a client that lets read-only tools through unasked let its swipes through too. It now waits its turn as `perf_scroll` does.
 - The self test's trial of whether a table takes its click runs on a plain AppKit table and waits up to a second for it, where it clicked the viewer's own list: a list of its own that stopped taking a click would have read as a macOS that gives none, and its checks would have been skipped on every Mac.
 - On Android `launch_app` stops first an app whose process the system holds for its "keeps stopping" dialog, which takes the dialog with it, and starts it afresh, and such a process counts as no running app: `am start -W` waited 10 s on it and left the dialog up, and the launch the refusal of a crash pointed to answered after 14 s that the app had died.
 - The Android agent lets a job go 200 ms after its host cancels it, as it did a second after its deadline, and lets one past its deadline go after the same 200 ms: a stroke whose injection waited on an app held for its "keeps stopping" dialog held the agent's one work lane for seconds after its refusal, and the read of the `launch_app` the refusal pointed to waited behind it to its 15 s and restarted the agent.

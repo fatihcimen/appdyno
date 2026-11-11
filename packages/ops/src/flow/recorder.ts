@@ -310,8 +310,7 @@ export function flowRecorder(ctx: ServerContext) {
     wrap: (op: Op): Op => {
       const checks = op.name === 'wait_for' || op.name === 'assert';
       const elsewhere = BY_STEP.has(op.name) || NOT_ACTIONS.has(op.name);
-      // what is called a read may still move the screen, as a profile scrolling meanwhile
-      if (!checks && (elsewhere || (op.annotations.readOnlyHint && !OPS[op.name]))) return op;
+      if (!checks && (elsewhere || op.annotations.readOnlyHint)) return op;
       const toStep = OPS[op.name] ?? unknownOp(op.name);
       return {
         ...op,

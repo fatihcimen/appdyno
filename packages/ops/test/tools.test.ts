@@ -136,7 +136,6 @@ describe('tool list', () => {
       'list_devices',
       'logs',
       'perf_heap',
-      'perf_profile',
       'perf_query',
       'perf_snapshot',
       'screen',

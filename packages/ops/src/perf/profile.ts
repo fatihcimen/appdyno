@@ -2,7 +2,7 @@ import type { ProfileEntry } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ProfileOut } from './schemas.js';
-import { defineOp, READ, reply } from '../tool.js';
+import { ACT, defineOp, reply } from '../tool.js';
 import { perfTools, App, Dsym, symbolsOf } from './shared.js';
 
 /** What an answer holds; the measurement keeps them all, for a diff of two runs. */
@@ -32,7 +32,8 @@ export function perfProfileOp(ctx: ServerContext) {
       })
       .strict(),
     output: ProfileOut,
-    annotations: READ,
+    // with scroll it swipes: it waits its turn behind an action, and no client takes it for a read
+    annotations: ACT,
     run: async ({ app, seconds, scroll, dsym }) => {
       const s = await ctx.session();
       const pkg = measuredApp(s, app);
