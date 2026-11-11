@@ -1783,6 +1783,17 @@ describe('keyboard', () => {
     expect(act(d).at(-1)).toEqual({ kind: 'key', key: 'enter' });
   });
 
+  it('says what closing it changed against the screen before, not its own read after', async () => {
+    const d = new WithKeyboard();
+    d.hides = 'Gönder';
+    d.screen = 'form';
+    const { call } = await connect(d);
+    const r = await call('keyboard', { action: 'dismiss' });
+    expect(r.error).toBe(false);
+    expect(r.data.changed).toBe(true);
+    expect(r.text).not.toContain('no change seen');
+  });
+
   it('refuses when the app keeps it open', async () => {
     const d = new WithKeyboard();
     d.closes = false;

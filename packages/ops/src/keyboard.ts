@@ -9,6 +9,11 @@ const KEYBOARD_GONE_MS = 1_500;
 /** Closes the on-screen keyboard: whether it went. */
 export async function hideKeyboard(s: Session) {
   await s.device.dismissKeyboard();
+  return keyboardGone(s);
+}
+
+/** Whether a keyboard the device was just asked to close went. */
+export async function keyboardGone(s: Session) {
   s.acted();
   const open = (x: Screen) => s.device.platformScreen.keyboardOpen(x.tree);
   return (await s.until((x) => !open(x), KEYBOARD_GONE_MS)).met;

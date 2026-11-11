@@ -331,8 +331,8 @@ const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said
 type Was = { before: Shown; base: Shown; ran: boolean };
 
 /**
- * A change on the device, as a launch, a link or a turn, and what its answer compares with: the newest read it made
- * itself, else the last one before it, as a read beside it may already show what it did.
+ * A change on the device by its call alone, as a launch, a link or a turn, and what its answer compares with: the newest
+ * read it made itself, else the last one before it, as a read beside it may already show what it did.
  */
 async function changing<T>(s: Session, change: () => Promise<T>) {
   const before = s.shown;

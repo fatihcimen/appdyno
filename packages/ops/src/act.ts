@@ -5,7 +5,7 @@ import { stepsOp } from './batch.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
-import { hideKeyboard } from './keyboard.js';
+import { keyboardGone } from './keyboard.js';
 import {
   AssertStep,
   Coord,
@@ -181,8 +181,8 @@ function keyboardOp(
         return reply(t, { ...summary(t), open });
       }
       if (!open) return reply('no keyboard is open', summary('no keyboard is open'));
-      const { result: closed, was } = await changing(s, () => hideKeyboard(s));
-      if (!closed)
+      const { was } = await changing(s, () => s.device.dismissKeyboard());
+      if (!(await keyboardGone(s)))
         throw new ToolError(
           'the keyboard stayed open: the app keeps it there',
           'UNSUPPORTED',
