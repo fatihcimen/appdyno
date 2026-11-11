@@ -21,6 +21,7 @@
     "@appdyno/core": "workspace:*",
     "@appdyno/driver-android": "workspace:*",
     "@appdyno/perf": "workspace:*",
+    "@appdyno/testing": "workspace:*",
     "@eslint/js": "^10.0.1",
     "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/server": "^2.4.0",

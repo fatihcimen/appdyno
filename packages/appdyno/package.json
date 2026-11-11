@@ -88,6 +88,8 @@
     "@appdyno/protocol": "workspace:*",
     "@modelcontextprotocol/server": "^2.4.0",
     "esbuild": "^0.28.2",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
     "zod": "^4.6.7"
   }
 }

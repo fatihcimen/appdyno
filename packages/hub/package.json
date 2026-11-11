@@ -22,5 +22,9 @@
     "@appdyno/perf": "workspace:*",
     "@appdyno/protocol": "workspace:*",
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@appdyno/driver-android": "workspace:*",
+    "@appdyno/driver-apple": "workspace:*"
   }
 }

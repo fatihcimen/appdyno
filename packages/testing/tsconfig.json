@@ -1,4 +1,4 @@
 {
-  "files": [],
-  "references": [{ "path": "../ops" }]
+  "extends": "../../tsconfig.packages.json",
+  "include": ["src"]
 }

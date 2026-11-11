@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `packages/testing` has its type project and `typecheck` back, outside `ops`'s, and the root manifest declares it; each package's manifest declares what its tests and scripts import: the drivers for `hub` and `ops`, `mcp`, `protocol` and the MCP client for `cli`, the MCP client for `ops`, `typescript` for `core` and `appdyno`, and `prettier` for `appdyno`.
 - Each unit test file runs on a state folder of its own within the run's, made by `no-real-state.setup.ts`, where the files of both workers shared one, and a fake device's files by its serial with it; 28 files drop the line that made one by hand, and 9 whose tests each want an empty one keep theirs.
 - `tool-kinds.ts` imports nothing of the registry: its lists are constants that `registry.ts` holds to the tools there are, so a name that is no tool still fails the build, and the type cycle among ops's files is 21 files again, where it was 62.
 - eslint reads the types of one program over every file it lints, `tsconfig.eslint.json`, where a project of each package checked most of the workspace again: its peak falls from 4.5 GB to 2.3 GB, within a 2 GB heap, and CI lints on Node 22 again, where it ran out of 4 GB.
