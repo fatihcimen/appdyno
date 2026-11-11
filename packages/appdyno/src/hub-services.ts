@@ -110,9 +110,71 @@ type Say = (said: Message) => void;
 /** How a change is taken back: only the one entry, by the same edit, as a client may have written its file since. */
 type Undo = { back?: Record<string, unknown> };
 
+/** Where the clients' files are, and what a client runs. */
+type Where = Pick<ServicesOptions, 'home' | 'env' | 'server'>;
+
+const clientNamed = (m: Message) => CLIENTS.find((c) => c.name === m.client);
+
+/** A person's word on a client, read fresh: a client may have written its file since the preview. */
+function planned(where: Where, m: Message, asked: Parameters<typeof outcomeFor>[2]) {
+  const client = clientNamed(m);
+  const file = client && fileOf(client, where);
+  return client && file ? outcomeFor(client, file, { ...where, ...asked }) : undefined;
+}
+
+async function tryClient(
+  o: ServicesOptions,
+  where: Where,
+  http: HubHttp,
+  m: Message,
+): Promise<Tried> {
+  const name = String(m.client);
+  if (BROWSER_CLIENTS.some((c) => c.name === name)) {
+    if (!http.address) {
+      const [said, next] = TRIED.noServer;
+      return { ok: false, said, next };
+    }
+    return triedWords(await probeHttp(http.address, httpToken()), { connected: false });
+  }
+  const client = clientNamed(m);
+  const entry = entryCommand(planned(where, m, {})?.had);
+  if (!client || !entry) {
+    const [said, next] = TRIED.missing;
+    return { ok: false, said: said.replace('%@', name), next };
+  }
+  const env = {
+    ...(o.env as Record<string, string>),
+    ...(client.dock && { PATH: DOCK_PATH }),
+    ...entry.env,
+  };
+  const row = clientRows(where).find((r) => r.name === name);
+  return triedWords(await probeCommand({ ...entry, env, cwd: o.home }), {
+    command: entry.command,
+    connected: row?.state === 'connected',
+  });
+}
+
+/** The phone in a person's hand, and how far along they are, as the Connect place shows it. */
+async function connectPlace(o: ServicesOptions, where: Where, known: Check[], fromApp: boolean) {
+  const adb = new Adb();
+  const phones = await listedPhones(o.providers ?? [], (s) => ownSwitches(adb, s), o.allowed);
+  const has = (tool: string) => !known.some((c) => c.name === tool && !c.ok);
+  const rows = clientRows(where);
+  const guide = guideFor(o.providers ?? [], { usb: await usbPhones(), phones, has });
+  return {
+    ...guide,
+    ...(guide.need && { needWords: NEEDS[guide.need] }),
+    fromApp,
+    terms: PLATFORM_TOOLS.terms,
+    runner: runnerChecks(known),
+    client: rows.some((r) => r.state === 'connected' || r.state === 'added'),
+    prompt: clientCalls().length > 0,
+  };
+}
+
 /** What the hub's AI Clients and Help ask of this Mac, from `install`'s own code. */
 export function hubServices(o: ServicesOptions): HubServices {
-  const where = { home: o.home, env: o.env, ...(o.server && { server: o.server }) };
+  const where: Where = { home: o.home, env: o.env, ...(o.server && { server: o.server }) };
   const http = new HubHttp([...o.mcpCommand, ...allowFlags(o.policy)]);
   const runs = new HubRuns(o.self ?? o.mcpCommand.slice(0, -1), o.env, o.home);
   /** What `doctor` found, kept: it is slow, and a tool comes or goes only by what a person ran. */
@@ -125,7 +187,6 @@ export function hubServices(o: ServicesOptions): HubServices {
   /** Only an app has a command to put on the PATH. */
   const fromApp = o.env.APPDYNO_HELPERS !== undefined;
   const undos = new Map<string, Undo>();
-  const clientNamed = (m: Message) => CLIENTS.find((c) => c.name === m.client);
   const notes = [...CLIENTS, ...BROWSER_CLIENTS].flatMap((c) =>
     Object.entries(c.notes ?? {}).map(([kind, said]) => ({
       client: c.name,
@@ -146,58 +207,7 @@ export function hubServices(o: ServicesOptions): HubServices {
     notes,
   });
 
-  /** A person's word on a client, read fresh: a client may have written its file since the preview. */
-  const planned = (m: Message, asked: Parameters<typeof outcomeFor>[2]) => {
-    const client = clientNamed(m);
-    const file = client && fileOf(client, where);
-    return client && file ? outcomeFor(client, file, { ...where, ...asked }) : undefined;
-  };
-
-  const tryClient = async (m: Message): Promise<Tried> => {
-    const name = String(m.client);
-    if (BROWSER_CLIENTS.some((c) => c.name === name)) {
-      if (!http.address) {
-        const [said, next] = TRIED.noServer;
-        return { ok: false, said, next };
-      }
-      return triedWords(await probeHttp(http.address, httpToken()), { connected: false });
-    }
-    const client = clientNamed(m);
-    const entry = entryCommand(planned(m, {})?.had);
-    if (!client || !entry) {
-      const [said, next] = TRIED.missing;
-      return { ok: false, said: said.replace('%@', name), next };
-    }
-    const env = {
-      ...(o.env as Record<string, string>),
-      ...(client.dock && { PATH: DOCK_PATH }),
-      ...entry.env,
-    };
-    const row = clientRows(where).find((r) => r.name === name);
-    return triedWords(await probeCommand({ ...entry, env, cwd: o.home }), {
-      command: entry.command,
-      connected: row?.state === 'connected',
-    });
-  };
-
-  /** The phone in a person's hand, and how far along they are, as the Connect place shows it. */
-  const look = async (fresh: boolean) => {
-    const known = await found(fresh);
-    const adb = new Adb();
-    const phones = await listedPhones(o.providers ?? [], (s) => ownSwitches(adb, s), o.allowed);
-    const has = (tool: string) => !known.some((c) => c.name === tool && !c.ok);
-    const rows = clientRows(where);
-    const guide = guideFor(o.providers ?? [], { usb: await usbPhones(), phones, has });
-    return {
-      ...guide,
-      ...(guide.need && { needWords: NEEDS[guide.need] }),
-      fromApp,
-      terms: PLATFORM_TOOLS.terms,
-      runner: runnerChecks(known),
-      client: rows.some((r) => r.state === 'connected' || r.state === 'added'),
-      prompt: clientCalls().length > 0,
-    };
-  };
+  const look = async (fresh: boolean) => connectPlace(o, where, await found(fresh), fromApp);
 
   const acts: Record<string, (m: Message, say: Say) => Promise<unknown> | undefined> = {
     list: (_, say) => {
@@ -227,7 +237,7 @@ export function hubServices(o: ServicesOptions): HubServices {
       say({ apps: [...new Set(kept.map((k) => k.app))], fromApp });
     },
     preview: (m, say) => {
-      const plan = planned(m, { remove: m.remove === true });
+      const plan = planned(where, m, { remove: m.remove === true });
       if (!plan) return;
       say({
         preview: {
@@ -242,7 +252,7 @@ export function hubServices(o: ServicesOptions): HubServices {
       });
     },
     change: (m, say) => {
-      const plan = planned(m, { remove: m.remove === true });
+      const plan = planned(where, m, { remove: m.remove === true });
       if (!plan || !changes(plan)) {
         say(status());
         return;
@@ -260,7 +270,7 @@ export function hubServices(o: ServicesOptions): HubServices {
     undo: (m, say) => {
       const undo = undos.get(String(m.client));
       if (!undo) return;
-      const plan = planned(m, undo.back ? { back: undo.back } : { remove: true });
+      const plan = planned(where, m, undo.back ? { back: undo.back } : { remove: true });
       // nothing changed, and it can be asked again; `line` is what keeps a window's Undo on the row
       if (!plan || plan.did === 'refused') {
         const now = status();
@@ -275,7 +285,8 @@ export function hubServices(o: ServicesOptions): HubServices {
       undos.delete(String(m.client));
       say({ ...status(), done: { client: m.client, did: 'undone' } });
     },
-    test: async (m, say) => say({ tested: { client: m.client, ...(await tryClient(m)) } }),
+    test: async (m, say) =>
+      say({ tested: { client: m.client, ...(await tryClient(o, where, http, m)) } }),
     start: async (_, say) => {
       await http
         .start()

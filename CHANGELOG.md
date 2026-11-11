@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- How the hub tests a client, reads a person's word on one and shows the Connect place are functions of their own in `hub-services.ts`, where `hubServices` held them at 199 lines, one under the function size cap.
 - A step's parts are functions of their own in `steps.ts`: how it names an element, picks one of a selector's matches and aims, the screen's size and edge, typing, a key and one case per kind of step, where one function of 297 lines held them and the function size rule let it pass by name.
 - `keyboard` with `dismiss` says what closing the keyboard changed against the screen before it, where it compared with its own read after the keyboard went and answered `changed: false` and "no change seen". A launch, a link, a turn, a push and `app launch` and `build_and_run` had no such read: each passes the device's call alone.
 - The Mac app lets the hub's window come to the front as it opens: it opens the hub on every launch, on Connect a Phone where nothing is connected, but the window is a process the app starts, and from macOS 14 such a process comes forward only where the app in front lets it, so it could open behind Finder's window and a person saw nothing. The app now lets the window's helper come forward as it starts it, and on a double click while it runs. Not seen here: a test on this Mac brings no window to the front.

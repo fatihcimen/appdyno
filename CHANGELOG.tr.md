@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Hub'ın bir istemciyi nasıl denediği, bir kişinin bir istemci hakkındaki sözünü nasıl okuduğu ve Bağlan yerini nasıl gösterdiği `hub-services.ts`'te kendi işlevleridir; önceden `hubServices` onları işlev boyutu sınırının bir altında, 199 satırda tutuyordu.
 - Bir adımın parçaları `steps.ts`'te kendi işlevleridir: bir öğeyi nasıl adlandırdığı, bir seçicinin eşleşmelerinden birini nasıl seçtiği ve nasıl nişan aldığı, ekranın boyutu ve kenarı, yazma, bir tuş ve her adım türü için bir durum; önceden hepsini 297 satırlık tek bir işlev tutuyordu ve işlev boyutu kuralı onu adıyla geçiriyordu.
 - `dismiss` ile `keyboard`, klavyeyi kapatmanın neyi değiştirdiğini ondan önceki ekrana göre söyler; önceden klavye gittikten sonraki kendi okumasıyla karşılaştırıyor ve `changed: false` ile "no change seen" yanıtlıyordu. Bir başlatma, bir bağlantı, bir dönüş, bir push, `app launch` ve `build_and_run`'da böyle bir okuma yoktu: her biri yalnızca cihazın çağrısını geçirir.
 - Mac uygulaması açılırken hub'ın penceresinin öne gelmesine izin verir: hub'ı her açılışta, hiçbir şey bağlı değilse Telefon Bağla'da açar, ama pencere uygulamanın başlattığı bir süreçtir ve macOS 14'ten beri böyle bir süreç ancak öndeki uygulama izin verirse öne gelir; bu yüzden Finder'ın penceresinin arkasında açılabiliyor ve kişi hiçbir şey görmüyordu. Uygulama artık pencerenin yardımcısını başlatırken, ve çalışırken yapılan bir çift tıklamada, öne gelmesine izin verir. Burada görülmedi: bu Mac'teki bir test hiçbir pencereyi öne getirmez.
