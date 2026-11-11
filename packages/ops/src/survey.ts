@@ -12,7 +12,7 @@ import {
 } from '@appdyno/perf';
 import type { ServerContext } from './context.js';
 import { deviceInfo, keepRefusal, ROW_OF } from './perf/shared.js';
-import { EXTRA_NAMES } from './perf/snapshot.js';
+import { EXTRA_NAMES } from './perf/extras.js';
 import { opsFor } from './registry.js';
 
 type Call = { op: string; args?: Record<string, unknown> };

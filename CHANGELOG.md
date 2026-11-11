@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- What `perf_snapshot`'s `also` can read, each with how it is read, kept, said and answered, is a file of its own, `packages/ops/src/perf/extras.ts`, beside the op: they shared one file at 449 of its 450 lines.
 - Each tool that acts on the screen, `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `assert` and `alert`, is a function of its own, as the `perf_` tools are, and `steps` is in `packages/ops/src/batch.ts`: they were one function of 378 lines, let past the 200-line cap by name, in a file at 449 of its 450.
 - What a session may leave on a device, its conditions, timeline, flight recorder, recording, network capture, report and flow recording, is one table in `packages/ops/src/leftovers.ts`, which says of each where it is kept, how it ends and whether it ends with the process: a session's end, a start's sweep and the check of whether to put back after a process wrote three lists of them, each with other members.
 - How a tool is treated by its name, whether it can be a step of `steps`, goes into the activity a person watches, a report or a recorded flow, and which flow steps are timed whole, is one file, `packages/ops/src/tool-kinds.ts`, whose sets are held to the tools' names and the flow's actions: they were plain sets of words in five files, so a tool renamed or added dropped out of one with nothing to say so.
