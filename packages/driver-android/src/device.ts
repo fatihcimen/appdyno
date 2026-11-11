@@ -12,6 +12,7 @@ import {
   assertLatLon,
   must,
   decodePng,
+  RETRY_SAFE,
   RpcDevice,
   swipeThrough,
   SYSTEM_SWIPES,
@@ -47,15 +48,6 @@ import { ANDROID_PAGES, openSearch, openSettingsAt } from './settings-pages.js';
 import { AndroidWeb } from './web.js';
 import { FOCUS_READ, KEYGUARD_READ, noWindowHint } from './window-dump.js';
 
-/** Read-only requests are retried once on a fresh connection when the agent went away. */
-const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
-  'tree.get',
-  'a11y.read',
-  'screenshot',
-  'app.foreground',
-  'clipboard.get',
-]);
-
 /** How long a phone just woken gets for its focus to hold, and how long it must hold. */
 const WAKE_FOCUS_MS = 5_000;
 const WAKE_STEADY_MS = 600;
@@ -79,7 +71,7 @@ export class AndroidDevice extends RpcDevice implements Device {
   readonly platform = 'android' as const;
   readonly platformScreen = androidScreen;
   readonly settingsPages = ANDROID_PAGES;
-  protected readonly retrySafe = RETRY_SAFE;
+  protected readonly retrySafe = new Set<Method>([...RETRY_SAFE, 'a11y.read']);
   private readonly launcher: AndroidAgentLauncher;
 
   private readonly reconnectWaitMs: number;

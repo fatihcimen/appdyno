@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Her iki sürücünün aynı yazdığı core'undur: yeni bir bağlantıda bir kez yeniden denenen salt okunur çağrılar, ki her sürücü kendininkileri onlara ekler, ve bir push hizmetinin imzalı belirtecinin önbelleği ile bir JWT'nin nasıl birleştirildiği, ki onları FCM ve APNs ayrı ayrı tutuyordu.
 - Bir hata kodunun yeniden denemeye değip değmediği ve bir ajanın onunla bir şeye dokunmadan önce reddedip reddetmediği, her kod için derleyicinin eksiksiz tuttuğu tek bir tabloda bir kez söylenir: bunu iki pakette elle tutulan iki liste söylüyordu ve yeni bir kod ikisinin de dışında fark edilmeden kalıyordu.
 - Bir kişiye nasıl ulaşıldığı ve bir istemcinin ona nasıl adlandırıldığı, `silent`, `alertPerson` ve `clientNamed`, sunucunun bağlamının verildiği gibi okunan tek bir `person` seçeneğidir; önceden her biri kendi seçeneği ve onu olduğu gibi geçiren bir okuyucuydu.
 - Gerileme kapısının cihazda baktıkları, bir profil, ana iş parçacığı, bir başlatma ve bir adımın çevresindeki yeniden oynatma, `packages/ops/src/perf/looks.ts` içinde kendi işlevleridir; kapının `why` ve `reference`'ı da `why.ts` içindedir: 200 satır sınırını adıyla geçen 342 satırlık tek bir işlevdiler.

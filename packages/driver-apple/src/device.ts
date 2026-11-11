@@ -4,6 +4,7 @@ import {
   type LogsAnswer,
   type CrashesQuery,
   type CrashesAnswer,
+  RETRY_SAFE,
   RpcDevice,
   type AppManager,
   type Device,
@@ -68,15 +69,6 @@ const KEYS_AFTER_MS = 2_000;
 /** The app goes 0.9 to 1.8 s after home, at load 7 to 40 on a simulator, by either input. */
 const LEAVES_MS = 5_000;
 
-/** Read-only requests are retried once on a fresh connection when the runner went away. */
-const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
-  'tree.get',
-  'screenshot',
-  'app.foreground',
-  'app.target',
-  'clipboard.get',
-]);
-
 /** What differs between a simulator and a phone: whether it is up, app lifecycle, links, location. */
 export type IosDeviceOps = {
   /** Up and usable (a simulator booted, a phone connected); asked only before a new runner starts. */
@@ -114,7 +106,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
   abstract readonly recorder: ScreenRecorder;
   abstract readonly mirror: Mirror;
   abstract readonly measure: MeasureSource;
-  protected readonly retrySafe = RETRY_SAFE;
+  protected readonly retrySafe = new Set<Method>([...RETRY_SAFE, 'app.target']);
   /** The app the runner reads and acts on (set by launch, openUrl with a bundle, or target). */
   protected targetApp: string | undefined;
 

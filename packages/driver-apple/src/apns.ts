@@ -1,5 +1,6 @@
 import { createPrivateKey, randomUUID, sign } from 'node:crypto';
 import { connect, type ClientHttp2Session } from 'node:http2';
+import { jwtCache, jwtOf } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import type { ApnsKey } from './apns-key.js';
 
@@ -24,26 +25,18 @@ export const APNS_KINDS = {
 export type ApnsKind = keyof typeof APNS_KINDS;
 
 /** Apple takes a provider token for an hour, and one made more often than every 20 minutes is refused: 40 it is. */
-const TOKEN_MS = 40 * 60_000;
-const tokens = new Map<string, { jwt: string; at: number }>();
-
-const b64url = (b: Buffer | string) => Buffer.from(b).toString('base64url');
+const tokens = jwtCache(40 * 60_000);
 
 /** The provider token: an ES256 JWT of the key's id and the team's, made again only once Apple would want it. */
 export function providerToken(k: ApnsKey, now = Date.now()) {
-  const id = `${k.teamId}.${k.keyId}`;
-  const kept = tokens.get(id);
-  if (kept && now - kept.at < TOKEN_MS) return kept.jwt;
-  const signed = `${b64url(JSON.stringify({ alg: 'ES256', kid: k.keyId }))}.${b64url(
-    JSON.stringify({ iss: k.teamId, iat: Math.floor(now / 1000) }),
-  )}`;
-  const signature = sign('sha256', Buffer.from(signed), {
-    key: createPrivateKey(k.key),
-    dsaEncoding: 'ieee-p1363',
-  });
-  const jwt = `${signed}.${b64url(signature)}`;
-  tokens.set(id, { jwt, at: now });
-  return jwt;
+  return tokens(`${k.teamId}.${k.keyId}`, now, () =>
+    jwtOf(
+      { alg: 'ES256', kid: k.keyId },
+      { iss: k.teamId, iat: Math.floor(now / 1000) },
+      (signed) =>
+        sign('sha256', signed, { key: createPrivateKey(k.key), dsaEncoding: 'ieee-p1363' }),
+    ),
+  );
 }
 
 /** A request to APNs as it goes on the wire. */

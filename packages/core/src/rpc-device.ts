@@ -28,6 +28,14 @@ export function failedAfterSending(e: unknown): never {
   throw e;
 }
 
+/** Read-only requests every agent takes: each driver adds its own to them. */
+export const RETRY_SAFE: readonly Method[] = [
+  'tree.get',
+  'screenshot',
+  'app.foreground',
+  'clipboard.get',
+];
+
 const closedHere = () => new DeviceError('AGENT_UNAVAILABLE', 'the connection was closed');
 
 /** The touches and keys every device words as one `act`. */

@@ -1,4 +1,5 @@
 import { createPrivateKey, sign } from 'node:crypto';
+import { jwtCache, jwtOf } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import type { FcmKey } from './fcm-key.js';
 
@@ -9,10 +10,7 @@ export const FCM_HOST = 'fcm.googleapis.com';
 const FCM_BYTES = 4_096;
 
 /** An access token is good for an hour: made again ten minutes before. */
-const TOKEN_MS = 50 * 60_000;
-const tokens = new Map<string, { jwt: string; at: number }>();
-
-const b64url = (b: Buffer | string) => Buffer.from(b).toString('base64url');
+const tokens = jwtCache(50 * 60_000);
 
 /**
  * The service account's own token, by Google's "service account authorization without OAuth": an RS256 JWT for
@@ -20,21 +18,20 @@ const b64url = (b: Buffer | string) => Buffer.from(b).toString('base64url');
  * one is unverified until a live send: if it does not, the token comes from that endpoint instead, a second host.
  */
 export function fcmToken(k: FcmKey, now = Date.now()) {
-  const kept = tokens.get(k.keyId);
-  if (kept && now - kept.at < TOKEN_MS) return kept.jwt;
   const iat = Math.floor(now / 1000);
-  const signed = `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT', kid: k.keyId }))}.${b64url(
-    JSON.stringify({
-      iss: k.clientEmail,
-      sub: k.clientEmail,
-      aud: `https://${FCM_HOST}/`,
-      iat,
-      exp: iat + 3_600,
-    }),
-  )}`;
-  const jwt = `${signed}.${b64url(sign('sha256', Buffer.from(signed), createPrivateKey(k.key)))}`;
-  tokens.set(k.keyId, { jwt, at: now });
-  return jwt;
+  return tokens(k.keyId, now, () =>
+    jwtOf(
+      { alg: 'RS256', typ: 'JWT', kid: k.keyId },
+      {
+        iss: k.clientEmail,
+        sub: k.clientEmail,
+        aud: `https://${FCM_HOST}/`,
+        iat,
+        exp: iat + 3_600,
+      },
+      (signed) => sign('sha256', signed, createPrivateKey(k.key)),
+    ),
+  );
 }
 
 /** A request to FCM as it goes on the wire. */

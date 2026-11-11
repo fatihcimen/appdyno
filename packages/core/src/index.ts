@@ -1,8 +1,15 @@
 export { RpcClient, greet } from './rpc.js';
-export { assertLatLon, DeviceActions, failedAfterSending, RpcDevice } from './rpc-device.js';
+export {
+  assertLatLon,
+  DeviceActions,
+  failedAfterSending,
+  RETRY_SAFE,
+  RpcDevice,
+} from './rpc-device.js';
 export { DeviceQueue } from './queue.js';
 export { endChild, endPid } from './end-child.js';
 export { jsonLines } from './json-lines.js';
+export { jwtCache, jwtOf } from './jwt.js';
 export { afterTimeout } from './stuck.js';
 export * from './state.js';
 export { run } from './run.js';
