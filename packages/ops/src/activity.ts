@@ -14,6 +14,7 @@ import type { ServerContext } from './context.js';
 import { redactLog } from './policy.js';
 import { shownArgs } from './report-journal.js';
 import type { Op, ToolResult } from './tool.js';
+import { NOT_ACTIVITY } from './tool-kinds.js';
 
 /** One call, for a person watching: no socket, across processes. */
 export type ActivityLine = {
@@ -32,8 +33,6 @@ export type ActivityLine = {
 
 /** A session of hours stays small: past this the older half goes. */
 const MAX_BYTES = 256 * 1024;
-/** Calls that are not an agent acting on the device. */
-const NOT_ACTIVITY = new Set(['mirror', 'hand_off', 'list_devices']);
 
 const fileOf = (serial: string) => deviceStateFile('activity', serial).replace(/\.json$/, '.jsonl');
 

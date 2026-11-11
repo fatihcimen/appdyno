@@ -25,6 +25,7 @@ import type { Session } from '../session.js';
 import type { Steps } from '../steps.js';
 import { keyboardFirst } from '../keyboard.js';
 import { refused, ToolError, type Op } from '../tool.js';
+import { WHOLE_STEP } from '../tool-kinds.js';
 import { defined, loadRecording } from './shared.js';
 
 /**
@@ -129,9 +130,6 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
       );
   }
 }
-
-/** They end on a settled screen with no time from the device (no lookup before, or several actions): all of the step is the time. */
-const WHOLE_STEP = new Set(['launch', 'open_link', 'scroll_to']);
 
 /** What a step took: the device's own count from action to settled where it has one, else the action on this Mac's clock. */
 export const stepTime = (action: FlowStep['action'], r: StepResult) =>

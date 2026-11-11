@@ -6,10 +6,9 @@ import { journalOf, openReports, type Step } from './report-state.js';
 import { reportShot } from './report-write.js';
 import { LOOKS_ONLY } from './step-schemas.js';
 import type { Op, ToolResult } from './tool.js';
+import { NOT_STEPS } from './tool-kinds.js';
 
 const MAX_ANSWER = 20_000;
-/** Calls that say nothing about the app. */
-export const NOT_STEPS = new Set(['report', 'list_devices', 'simulator', 'mirror', 'hand_off']);
 
 /** What an argument under these names holds names something; a selector's text is what is on the screen. */
 const NAMES = new Set([

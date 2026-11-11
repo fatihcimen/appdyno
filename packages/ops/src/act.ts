@@ -29,6 +29,7 @@ import {
   TypeStep,
 } from './step-schemas.js';
 import type { Steps } from './steps.js';
+import { NOT_A_STEP } from './tool-kinds.js';
 import {
   ACT,
   argumentsHint,
@@ -46,9 +47,6 @@ import {
 // 30 took 13 s on an emulator and 21 s on a simulator at load 12, and up to 56 s on a loaded Mac, near a client's usual 60 s: each step says its progress
 const MAX_STEPS = 30;
 const PINCH_MS = 400;
-
-/** What cannot be a step: `steps` in itself, and a flow's own sequence. */
-const NOT_A_STEP = new Set(['steps', 'flow']);
 
 /** One step, whole before anything acts: a touch of this file, or another tool's call. */
 type Planned =

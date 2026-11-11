@@ -1,12 +1,12 @@
 import { type Screen, type ScreenElement, selectIn } from '@appdyno/core';
 import { type FlowSelector, type FlowStep, type Flag, Recording } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
-import { NOT_STEPS } from '../report-journal.js';
 import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
 import { NO_MATCH_WAIT_MS } from '../steps.js';
 import type { Op, ToolResult } from '../tool.js';
+import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
 import { type Aim, aimAt, fieldName, named, stepOf, unrecorded } from './aim.js';
 import { activeRecording, addSteps, defined } from './shared.js';
 
@@ -18,12 +18,6 @@ type ToStep = (
   a: Record<string, unknown>,
   data: Record<string, unknown>,
 ) => FlowStep | FlowStep[] | undefined;
-
-/** No action of a flow, as they pick the device, film it or run the recording; nor is what a report leaves out. */
-const NOT_ACTIONS = new Set([...NOT_STEPS, 'use_device', 'record', 'flow']);
-
-/** Each step these run passes `through`. */
-const BY_STEP = new Set(['tap', 'swipe', 'scroll_to', 'type_text', 'press_key', 'steps']);
 
 /** What an op that can change things does when it only looks. */
 const LOOKS: Record<string, string[]> = {
