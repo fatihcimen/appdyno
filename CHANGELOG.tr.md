@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir pencerenin Uygulamalar bölmesinin yaptığı bir adım, bir başlatma, bir çıkış ya da bir kaldırma, hub'ın `flow.ts`'inde kendi işlevidir; önceden `windowFlow` işlev boyutu sınırının iki altında, 198 satırdaydı.
 - Bir `perf_scroll` turunun okuduğu ve turlarının bulduğu `perf/scroll.ts`'te kendi işlevleridir; önceden `perfScrollOp` işlev boyutu sınırının iki altında, 198 satırdaydı.
 - iPhone akışının TCP'si, bir telefonun hizmetine yeniden denemeleri, penceresi ve vedasıyla bir bağlantı, `ipstack.ts`'in IPv6 ve UDP'sinin yanında kendi `tcp.ts`'idir; önceden o dosya onu 420 satırın üstünde tutuyordu; `ipstack.ts` `TcpConnection` ve `PortRefused`'u onları orada adlandıranlara hâlâ verir.
 - Bir akışın adımlarının tablosu, her satırın aldığı sözcükler ve bağımsız değişkenler, kendi `specs.ts`'idir; önceden akış dosyasının okuyucusunu ve yazıcısını 420 satırın üstünde tutuyordu.

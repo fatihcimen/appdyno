@@ -50,6 +50,14 @@ const frontNote = (app: string | undefined) =>
 const savedNote = (steps: number, notes: number) =>
   `Saved to the Desktop: ${steps} steps${notes ? `, ${notes} to look at` : ''}`;
 
+/** A step from the window that is no input. */
+function fromPane(m: ViewerSaid<'app'>): FlowStep | undefined {
+  if (m.action === 'launch') return stepOf('launch', {}, { app: m.id });
+  if (m.action === 'quit') return stepOf('stop', {}, { app: m.id });
+  if (m.action === 'remove') return unrecorded(`removing ${m.id}`);
+  return undefined;
+}
+
 /**
  * A window's flow: what a person does on it, written as a flow's steps, and what is under the pointer. It reads the
  * screen only while one of them is in use, as a read costs the device. The recording is the one `flow` keeps, on disk,
@@ -178,14 +186,6 @@ export function windowFlow(
 
   const trying = (work: () => Promise<void>) =>
     void work().catch((e: unknown) => say(e instanceof Error ? e.message : String(e)));
-
-  /** A step from the window that is no input. */
-  const fromPane = (m: ViewerSaid<'app'>): FlowStep | undefined => {
-    if (m.action === 'launch') return stepOf('launch', {}, { app: m.id });
-    if (m.action === 'quit') return stepOf('stop', {}, { app: m.id });
-    if (m.action === 'remove') return unrecorded(`removing ${m.id}`);
-    return undefined;
-  };
 
   return {
     /** A person's input, gone to the device already. */
