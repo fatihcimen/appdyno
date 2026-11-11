@@ -168,11 +168,18 @@ final class GestureTimelineTests: XCTestCase {
 
     func testATouchOnADeviceLyingFlatGoesUprightWhereTheAppStandsTallAndNoWayWhereItIsWide() {
         let tall = (w: 402.0, h: 874.0), wide = (w: 874.0, h: 402.0)
-        XCTAssertEqual([0, 5, 6].map { touchTurn(device: $0, app: tall) }, [1, 1, 1])
-        XCTAssertEqual([0, 5, 6].map { touchTurn(device: $0, app: wide) }, [nil, nil, nil])
-        XCTAssertNil(touchTurn(device: 5, app: nil))
+        XCTAssertEqual([0, 5, 6].map { touchTurn(device: $0, app: tall, pad: false) }, [1, 1, 1])
+        XCTAssertEqual([0, 5, 6].map { touchTurn(device: $0, app: wide, pad: false) }, [nil, nil, nil])
+        XCTAssertNil(touchTurn(device: 5, app: nil, pad: false))
         // a device that says its turn is taken at its word, whatever the app's shape
-        XCTAssertEqual([1, 3, 4].map { touchTurn(device: $0, app: wide) }, [1, 4, 3])
+        XCTAssertEqual([1, 3, 4].map { touchTurn(device: $0, app: wide, pad: false) }, [1, 4, 3])
+    }
+
+    func testATallAppOnAnIPadLyingFlatSaysNoTurn() {
+        // a window beside another on a screen in landscape, or an iPad upside down: tall is no portrait there
+        let tall = (w: 507.0, h: 834.0)
+        XCTAssertEqual([0, 5, 6].map { touchTurn(device: $0, app: tall, pad: true) }, [nil, nil, nil])
+        XCTAssertEqual([1, 2, 3, 4].map { touchTurn(device: $0, app: tall, pad: true) }, [1, 2, 4, 3])
     }
 
     func testFingersGoDownTogetherAndLiftAfterTheLastSampleOfAny() throws {

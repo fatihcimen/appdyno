@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Düz yatan bir iPad'de runner, uzun bir uygulamanın şeklinden yön çıkarmaz: bir dokunuş XCUI'nin kendi koordinatıyla gider ve çok parmaklı bir hareket reddedilir; önceden yatay bir ekranda başka bir pencerenin yanındaki uzun bir pencereye ya da ters duran bir iPad'e dikeymiş gibi dokunuluyor ve ıskalanıyordu. Ret, önceden telefonun düz yattığını ve uygulamasının geniş olduğunu söylerken artık cihazın düz yattığını söyler.
 - Android'de, çağıranın sonundan önce durdurduğu bir uzun basma, kaydırma ya da hareket parmaklarını oldukları yerde, dokunuş saymadan bırakır: önceden onları kaldırıyordu; yarıda kesilen bir basma bir dokunuş oluyor, bir sürükleme sonuna atlayıp orada bırakılıyor ya da fırlatılıyordu, sunucuya CANCELLED denmişken.
 - Android'de, çağıranın bir alanın odağı almasını beklerken durdurduğu yazma orada biter: önceden hiçbir alan odağı almamış gibi devam ediyor, noktanın altındaki alanı odaklıyor, ona yeniden dokunuyor ve tuş yazabiliyordu, sunucuya CANCELLED denmişken. Cihazın geri çevirdiği bir dokunuş, çağrısı durdurulduktan sonra yeniden yapılmaz.
 - Android ajanı durdurulan bir çağrının iş parçacığını yalnızca çağrı hâlâ orada sürerken bırakır: bırakma tam geldiği anda biten bir çağrının iş parçacığı, sıradaki çağrı orada çalışırken bırakılabiliyor, o çağrı kesilip INTERNAL ile yanıtlanıyordu.

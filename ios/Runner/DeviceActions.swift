@@ -25,7 +25,7 @@ extension Device {
         case let .tap(x, y):
             let waited = animationsOver(x, y)
             // the synthesizer's tap missed on a turned screen, where XCUI's own coordinate knows the way, as it does
-            // on a phone lying flat with a wide app, which does not say how its screen stands
+            // on a device lying flat whose turn nothing tells: a phone with a wide app, an iPad
             let upright = touchOrientation() == 1
             if try !upright || !EventShim.tap(CGPoint(x: x, y: y), orientation: 1) { point(x, y).tap() }
             return waited
@@ -66,11 +66,12 @@ extension Device {
         }
         let plan = try gestureTimeline(pointers)
         guard EventShim.gestureAvailable else { throw Self.noSynthesizer(pointers, path) }
-        // XCUI has no gesture of many fingers to fall back on: a wide app on a phone lying flat stands either way
+        // XCUI has no gesture of many fingers to fall back on: a wide app on a phone lying flat stands either way, and
+        // any app on an iPad lying flat
         guard let turn = touchOrientation() else {
             throw AgentError(
                 "UNSUPPORTED",
-                "this phone lies flat and its app is wide, so which way its screen stands is not known: stand it up"
+                "this device lies flat, so which way its screen stands is not known: stand it up"
             )
         }
         let waited = animationsOver(fromX, fromY)

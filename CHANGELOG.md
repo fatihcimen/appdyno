@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- On an iPad lying flat, the runner takes no turn from a tall app's shape: a tap goes by XCUI's own coordinate and a gesture of many fingers is refused, where a tall window beside another on a screen in landscape, or an iPad upside down, was touched as portrait and missed. The refusal says that the device lies flat, where it said the phone did and its app was wide.
 - On Android, a long press, a swipe or a gesture its caller stopped before its end lets go of its fingers where they are, as no touch: it lifted them, so that a press cut short was a tap, and a drag jumped to its end and dropped or flung there, after the host was told CANCELLED.
 - On Android, typing that its caller stopped while it waited for a field to take the focus ends there: it went on as if no field had taken it, focused the field under the point, tapped it again and could type keys, after the host was told CANCELLED. A tap the device refused is no longer made again once its call is stopped.
 - The Android agent gives up the thread of a stopped call only while that call still runs on it: a call that ended just as its let-go came could have its thread given up while the next call ran there, which was interrupted and answered INTERNAL.

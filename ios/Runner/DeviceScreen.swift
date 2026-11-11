@@ -38,10 +38,12 @@ extension Device {
     /// The turn synthesized keys go with: a key has no place on the screen, so a device lying flat may say none.
     static func keysOrientation() -> Int { interfaceOrientation() ?? 1 }
 
-    /// The turn a touch goes with (`touchTurn`): lying flat, by the app's shape in the last read; nil where none tells.
+    /// The turn a touch goes with (`touchTurn`): a phone lying flat, by the app's shape in the last read; nil where
+    /// none tells.
     func touchOrientation() -> Int? {
         touchTurn(device: XCUIDevice.shared.orientation.rawValue,
-                  app: appFrame.map { (w: Double($0.width), h: Double($0.height)) })
+                  app: appFrame.map { (w: Double($0.width), h: Double($0.height)) },
+                  pad: UIDevice.current.userInterfaceIdiom == .pad)
     }
 
     func orientation(_ rotation: Int) {

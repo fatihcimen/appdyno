@@ -14,11 +14,12 @@ public func interfaceTurn(device: Int) -> Int? {
 }
 
 /// The interface's turn a touch goes with: the device's own, else, lying flat, portrait where the app's last read
-/// stood taller than wide (`app`: its width and height), as a portrait app on a desk does. Nil where neither tells: a
-/// wide app on a device lying flat may stand turned either way.
-public func touchTurn(device: Int, app: (w: Double, h: Double)?) -> Int? {
+/// stood taller than wide (`app`: its width and height), as a portrait app on a phone on a desk does. Nil where
+/// neither tells: a wide app on a phone lying flat may stand turned either way, and an iPad (`pad`) keeps any of four
+/// turns lying flat, with a tall window beside another on a screen in landscape.
+public func touchTurn(device: Int, app: (w: Double, h: Double)?, pad: Bool) -> Int? {
     if let turn = interfaceTurn(device: device) { return turn }
-    guard let app, app.h > app.w else { return nil }
+    guard !pad, let app, app.h > app.w else { return nil }
     return 1
 }
 
