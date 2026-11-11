@@ -274,13 +274,16 @@ export function logo(letters = INK) {
   );
 }
 
-/** A repository's preview, 1280 by 640. */
+/** A repository's preview, 1280 by 640, with the README's line: what a shared link shows first. */
 export function social() {
   const word = wordmark(470, 318, 84, PALE);
+  // a text each, as sips draws no tspan where it is placed
+  const line = (/** @type {number} */ y, /** @type {string} */ text) =>
+    `<text x="470" y="${y}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="40" fill="${QUIET}">${text}</text>`;
   return (
     `<svg ${SVG} width="1280" height="640" viewBox="0 0 1280 640"><rect width="1280" height="640" fill="${NIGHT}"/>` +
     `<g transform="translate(70 140) scale(.3515625)">${macIcon(1024).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>` +
-    `${word.svg}<text x="470" y="436" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="42" fill="${QUIET}">Real numbers from a real device.</text></svg>\n`
+    `${word.svg}${line(430, 'Let an AI agent drive, test and measure')}${line(482, 'your iOS and Android app.')}</svg>\n`
   );
 }
 
