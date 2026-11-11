@@ -39,13 +39,19 @@ export const CALL_LINK = /^(tel|telprompt|facetime|facetime-audio):/i;
 export const byPerson = (how: string) =>
   `the person who runs this server allows it ${how}, and no call can`;
 
-/** Under --no-home Settings opens by no route: it leaves the app. */
+/** Under --no-home no tool opens Settings: it leaves the app. */
 export const noSettings = () =>
   new ToolError(
     'Settings is off on this server: the app may not be left',
     'POLICY_DENIED',
     byPerson('by starting it without --no-home'),
   );
+
+/** Under --no-home no tool launches Settings either, known by its id on any platform, as a first call's is before the device is. */
+export function checkLaunch(policy: Policy, pkg: string): string {
+  if (!policy.allowHome && Object.values(SETTINGS_APP).includes(pkg)) throw noSettings();
+  return pkg;
+}
 
 /** Under --allow-apps Settings is an app like any other: it opens, by any route, only with its own id on the list. */
 export function checkSettings(policy: Policy, platform: Platform) {

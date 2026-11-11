@@ -9,7 +9,7 @@ import { launchSaid } from './apps.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkVirtual, namedVirtual, RanAs, ranAsFile, virtuals } from './device-names.js';
-import { byPerson, checkApp, checkCreate, noApp } from './policy.js';
+import { byPerson, checkApp, checkCreate, checkLaunch, noApp } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
@@ -132,7 +132,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
           return afterChange(s, `built and launched ${pkg}`, read, pkg);
         }
         case 'launch': {
-          const pkg = appOf(s, app);
+          const pkg = checkLaunch(policy, appOf(s, app));
           reportProgress(`launching ${pkg}`);
           const ran = await ctx.ranBeforeLaunch(s, pkg);
           await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });

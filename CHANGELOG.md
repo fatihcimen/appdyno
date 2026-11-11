@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Under `--no-home` `launch_app`, `app launch` and the `perf_` measures, which may start their app, refuse Settings, a first call's launch too, which starts beside the device's agent, as `open_link` and a link to it already did, and SECURITY.md and the command line reference say what the flag holds: "Settings by any route" was not so, as each launched it, and a swipe or a tap by x,y that goes home, and a tap on Settings' icon there, are held only by `--allow-apps`.
 - The hub's services are given the hub's policy, which they cannot be built without, and add its device and app lists to the server they start for a tunnel themselves, and a test holds the flags that server starts with: the command was built with them in a place no test reached, so dropping them failed nothing.
 - A device or link allow list whose pattern matches the empty text is refused at the start, as an empty one already was: `--allow-devices "$A|$B"` with one of them unset gave `emu|`, which as a regular expression lets in every device, and `--allow-urls` the same of every link.
 - Logs, requests and console lines also hide `pwd`, `passphrase`, `credential`, `credentials`, `signature` and `api key`, a link's `code` and `sig` as parameters of their own, as an OAuth code rides back in `?code=`, and the password in a link, `https://user:password@host`: each reached the agent whole. `code` and `sig` as keys elsewhere stay shown, as `statusCode: 200` does.

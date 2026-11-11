@@ -41,7 +41,9 @@ Limits you set:
   id in the list, `com.apple.Preferences` on iOS and `com.android.settings` on Android, and so does a link to it, `App-prefs:` or `prefs:`, `package:`. `app install` installs only
   an app the list names, by the id the file holds, read before anything reaches the device; `build_and_run` is refused.
   Every input lands in an allowed app's window, or in one a person uses over an allowed app in front: its keyboard, a permission or system alert, the share sheet. One that would land elsewhere, a home screen, a browser, Settings, is refused, and the answer says how a person allows that app. `open_link` opens a link only in an allowed app, as the device tells before it sends it: Android holds it to the selected app, or to the one the system picks, by `-p`; a simulator opens only a link the selected app says it opens, by its scheme or its domain; an iPhone opens it in the app it is sent to.
-- `--no-home` blocks the home key, and Settings by any route, a link to it too.
+- `--no-home` blocks every key that leaves the app, the home key among them, and Settings by any tool: `open_link`
+  `settings`, a link to it, `launch_app`, `app launch` and a `perf_` measure, which may start its app. A swipe or a tap
+  by x,y that goes home, and a tap on Settings' icon there, is held only by `--allow-apps`.
 - `APPDYNO_SECRETS=a,b` values are never shown back and never put on the clipboard. Logs and crash
   summaries are redacted of them.
 - A timeline keeps a request by its method, host and path. `--full-urls` (`APPDYNO_FULL_URLS=1`) keeps its query too,

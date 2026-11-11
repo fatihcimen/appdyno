@@ -41,7 +41,9 @@ Sizin koyduğunuz sınırlar:
   kimliği listedeyken açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`; ona giden bir bağlantı da öyle, `App-prefs:` ya da `prefs:`, `package:`. `app install` yalnızca
   listenin adlandırdığı bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar; `build_and_run` reddedilir.
   Her girdi izin verilen bir uygulamanın penceresine ya da önde izin verilen bir uygulamanın üstünde kişinin kullandığı birine düşer: klavyesi, bir izin ya da sistem uyarısı, paylaşım sayfası. Başka yere, bir ana ekrana, bir tarayıcıya, Ayarlar'a düşecek olan reddedilir; yanıt da kişinin o uygulamaya nasıl izin verdiğini söyler. `open_link` bir bağlantıyı, cihazın onu göndermeden önce söylediği gibi, yalnızca izin verilen bir uygulamada açar: Android onu seçili uygulamaya ya da sistemin seçtiğine `-p` ile bağlar; bir simülatör yalnızca seçili uygulamanın şemasıyla ya da alan adıyla açtığını söylediği bir bağlantıyı açar; bir iPhone onu gönderildiği uygulamada açar.
-- `--no-home` ana ekran tuşunu ve hangi yoldan olursa olsun, ona giden bir bağlantı da dahil, Ayarlar'ı engeller.
+- `--no-home` uygulamadan çıkaran her tuşu, ana ekran tuşu da dahil, ve herhangi bir araçla Ayarlar'ı engeller: `open_link`
+  `settings`, ona giden bir bağlantı, `launch_app`, `app launch` ve uygulamasını başlatabilen bir `perf_` ölçümü. Ana
+  ekrana giden x,y ile bir kaydırma ya da dokunuş ve oradaki Ayarlar simgesine bir dokunuş yalnızca `--allow-apps` ile tutulur.
 - `APPDYNO_SECRETS=a,b` değerleri hiçbir zaman geri gösterilmez ve panoya konmaz. Loglardan ve çökme
   özetlerinden bu değerler çıkarılır.
 - Bir zaman çizelgesi bir isteği method, host ve yoluyla tutar. `--full-urls` (`APPDYNO_FULL_URLS=1`) bir token'ın

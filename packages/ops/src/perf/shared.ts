@@ -29,7 +29,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { liveMirror } from '../mirror-state.js';
-import { checkApp, noApp } from '../policy.js';
+import { checkApp, checkLaunch, noApp } from '../policy.js';
 import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
 import { ToolError } from '../tool.js';
@@ -278,7 +278,7 @@ export function perfTools(ctx: ServerContext) {
   /** The app a measure is of, which it may start anew: the next action asks for its process again. */
   const measuredApp = (s: Session, app?: string) => {
     s.forgetProcess();
-    const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
+    const pkg = checkLaunch(ctx.policy, checkApp(ctx.policy, app ?? s.appId ?? ''));
     if (!pkg) throw noApp();
     return pkg;
   };

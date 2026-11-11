@@ -7,6 +7,7 @@ import {
   byPerson,
   CALL_LINK,
   checkApp,
+  checkLaunch,
   checkSettings,
   checkUrl,
   noApp,
@@ -198,6 +199,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const s = await (named ? ctx.session() : ctx.sessionToLaunch(app));
         const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
         if (!pkg) throw noApp();
+        checkLaunch(policy, pkg);
         reportProgress(`launching ${pkg}`);
         s.leftTheApp(pkg !== s.appId);
         if (!language) {

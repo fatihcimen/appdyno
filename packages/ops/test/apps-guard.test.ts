@@ -372,6 +372,26 @@ describe('a link under an app allow list', () => {
     }
     expect(sent()).toEqual([]);
   });
+
+  it('launches no Settings under --no-home, by any tool that launches, a first call too', async () => {
+    const { call, sent, device } = await onDevice(own, { allowHome: false });
+    // a first call's launch starts alongside the device's agent
+    const alongside: string[] = [];
+    device.launchAlongside = (pkg) => void alongside.push(pkg);
+    for (const [tool, args] of [
+      ['launch_app', { app: 'com.android.settings', read: 'none' }],
+      ['app', { action: 'launch', app: 'com.android.settings', read: 'none' }],
+      ['perf_launch', { app: 'com.android.settings' }],
+      ['launch_app', { app: 'com.apple.Preferences', read: 'none' }],
+    ] as const) {
+      const r = await call(tool, args);
+      expect(r.text, tool).toMatch(
+        /^POLICY_DENIED: Settings is off on this server: the app may not be left/,
+      );
+    }
+    expect(sent()).toEqual([]);
+    expect(alongside).toEqual([]);
+  });
 });
 
 describe('a call', () => {

@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
 import { endSession, leftHere, sweep, type Taken } from './leftovers.js';
 import { inputGuard } from './apps-guard.js';
-import { byPerson, checkApp, type Policy } from './policy.js';
+import { byPerson, checkApp, checkLaunch, type Policy } from './policy.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
 
@@ -214,7 +214,10 @@ export class ServerContext {
   /** The session a launch runs on; when it is the first call, the app starts alongside the agent. */
   sessionToLaunch(app: string | undefined) {
     const wanted = app ?? this.defaults.app ?? this.saved?.app;
-    return this.session(undefined, wanted && checkApp(this.policy, wanted));
+    return this.session(
+      undefined,
+      wanted && checkLaunch(this.policy, checkApp(this.policy, wanted)),
+    );
   }
 
   /**
