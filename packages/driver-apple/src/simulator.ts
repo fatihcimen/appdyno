@@ -10,6 +10,7 @@ import {
   type TreeOptions,
   pause,
   must,
+  throwIfCancelled,
 } from '@appdyno/core';
 import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
 import { modelOf } from './simulators.js';
@@ -253,6 +254,8 @@ export class IosSimulatorDevice extends IosDevice {
     this.startBehind();
     await this.wake();
     return this.queue.run(async () => {
+      // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
+      throwIfCancelled('the action');
       if (this.helperInput && !this.direct.screenKnown) await this.readDirect(true);
       const touch = action.kind !== 'key';
       const at = touch ? firstPoint(action) : undefined;

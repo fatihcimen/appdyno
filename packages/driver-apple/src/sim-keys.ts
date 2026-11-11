@@ -1,4 +1,4 @@
-import { must, sleep } from '@appdyno/core';
+import { must, sleep, throwIfCancelled } from '@appdyno/core';
 import { NODE_FLAGS as F, type ActParams, type Tree } from '@appdyno/protocol';
 import { usageOf } from './simtouch.js';
 
@@ -47,6 +47,8 @@ const STILL_MS = 500;
 
 async function press(k: Keyboard, text: string, gapMs: number) {
   for (const c of text) {
+    // a text of a call stopped meanwhile goes no further onto whatever came to the front
+    throwIfCancelled('the text');
     const { shift } = must(usageOf(c), 'a key');
     if (!(await k.send({ kind: 'key', key: c, ...(shift && { modifiers: ['shift'] }) })))
       throw new Error('the input helper took no key');

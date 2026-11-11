@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { inCall } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/index.js';
 import { Simctl } from '../src/simctl.js';
@@ -316,5 +317,25 @@ describe('a touch the input helper gave no answer for on a simulator', () => {
     });
     expect(direct.send).toHaveBeenCalledOnce();
     expect(runner).not.toHaveBeenCalled();
+  });
+
+  it('goes to no helper once its call is stopped, as a scroll stopped for its app having died', async () => {
+    const send = vi.fn(() => Promise.resolve(true));
+    const direct = {
+      reads: true,
+      screenKnown: true,
+      status: () => ({ input: 'ok' }),
+      arm: () => Promise.resolve(false),
+      animationsOver: () => Promise.resolve(0),
+      send,
+    };
+    const d = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    const stop = new AbortController();
+    stop.abort();
+    const from = { x: 10, y: 500 };
+    const stroke = () => d.act({ kind: 'swipe', from, to: { x: 10, y: 100 }, durationMs: 300 });
+    const stopped: unknown = await inCall({ signal: stop.signal }, stroke).catch((e: unknown) => e);
+    expect(send).not.toHaveBeenCalled();
+    expect(stopped).toMatchObject({ code: 'CANCELLED' });
   });
 });

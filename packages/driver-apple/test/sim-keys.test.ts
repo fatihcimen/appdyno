@@ -1,3 +1,4 @@
+import { inCall } from '@appdyno/core';
 import { NODE_FLAGS as F, type ActParams, type Tree } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { holdsText, typeByKeys, typesByKeys } from '../src/sim-keys.js';
@@ -116,6 +117,21 @@ describe("typing by a simulator's keys", () => {
     expect(f.text()).toBe('');
     expect(f.sent.filter((a) => a.kind === 'key' && a.key === 'enter')).toEqual([]);
   }, 10_000);
+
+  it('types no key more once its call is stopped, as for its app having died', async () => {
+    const stop = new AbortController();
+    const f = field({ focused: true });
+    const send = f.keyboard.send;
+    f.keyboard.send = (a) => {
+      if (f.sent.length === 2) stop.abort();
+      return send(a);
+    };
+    const typing = () => typeByKeys('abcdef', { at: AT }, f.keyboard);
+    await expect(inCall({ signal: stop.signal }, typing)).rejects.toMatchObject({
+      code: 'CANCELLED',
+    });
+    expect(f.text()).toBe('abc');
+  });
 
   it('leaves to the runner a point with no field, or no field with the focus', async () => {
     expect(await typeByKeys('a', { at: { x: 300, y: 600 } }, field().keyboard)).toBeUndefined();
