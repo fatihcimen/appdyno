@@ -22,6 +22,7 @@ Bir şeye bakmak için burası.
 | başvuru                                                    | içindekiler                                                                                   |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | [Araçlar](reference/tools.tr.md)                           | her araç ve girdileri, her platformun neyi yapıp neyi yapamadığı                              |
+| [Araçlar nasıl test edildi](reference/tools-tested.tr.md)  | her aracın neyin üzerinde çalıştırıldığı ve çalıştırmaların ne gösterdiği                     |
 | [Komut satırı](reference/cli.tr.md)                        | her komut, sunucunun seçenekleri ve değişkenleri                                              |
 | [Kütüphane](reference/library.tr.md)                       | bir cihazı TypeScript'ten yönetmek                                                            |
 | [Pencere ve hub](reference/mirror.tr.md)                   | canlı pencere: onu neyin beslediği, durumları, hattı, sınırları                               |

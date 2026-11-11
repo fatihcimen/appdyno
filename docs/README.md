@@ -22,6 +22,7 @@ Look things up here.
 | reference                                                     | what it holds                                                                  |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [Tools](reference/tools.md)                                   | every tool and its inputs, and what each platform can and cannot do            |
+| [How the tools were tested](reference/tools-tested.md)        | what each tool was run on, and what the runs showed                            |
 | [Command line](reference/cli.md)                              | every command, and the server's flags and variables                            |
 | [Library](reference/library.md)                               | driving a device from TypeScript                                               |
 | [The window and the hub](reference/mirror.md)                 | the live window: what feeds it, its states, its wire, its limits               |
