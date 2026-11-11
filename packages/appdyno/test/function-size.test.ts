@@ -13,9 +13,6 @@ const MAX_LINES = 200;
  * each reason says what is long about it.
  */
 const LONGER: Record<string, string> = {
-  'packages/ops/src/perf/trace.ts perfTraceOp': 'one op, nearly all of it `run` below',
-  'packages/ops/src/perf/trace.ts run':
-    'one branch per kind of trace, and each says its own answer',
   'packages/ops/src/timeline/flight.ts startFlight':
     'a recorder, armed and disarmed around one state: its parts have no use apart',
 };
