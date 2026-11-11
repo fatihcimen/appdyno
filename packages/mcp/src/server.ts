@@ -21,6 +21,7 @@ import {
   text,
   textOf,
   type Op,
+  type ToolResult,
 } from '@appdyno/ops';
 
 /**
@@ -63,6 +64,16 @@ const refusal = (e: ToolError): CallToolResult => {
   };
 };
 
+/**
+ * An answer's structured content: its whole text, as a client may hand a model this in place of the text, and beside it
+ * the summary but for `done`, the words the text starts with, which a listing's or `steps`' is the whole of.
+ */
+export const structuredOf = ({ blocks, data }: ToolResult): Record<string, unknown> => {
+  const said = textOf(blocks);
+  const { done, ...rest } = data;
+  return { text: said, ...(typeof done === 'string' && !said.includes(done) && { done }), ...rest };
+};
+
 /** What many tools would each say of an argument: the server's instructions say it once. */
 const IN_INSTRUCTIONS = new Set([
   'default: the selected app',
@@ -93,8 +104,7 @@ function slim(schema: unknown): unknown {
 /**
  * The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. No
  * output schemas in the catalog: 16,000 characters that a client's validator would also hold against a
- * failed answer's code and hint. Structured content goes out all the same, the answer's text in it beside the
- * summary, as a client may show it in place of the text. `http` says the server serves `--http`, where a server lasts
+ * failed answer's code and hint. Structured content goes out all the same, as `structuredOf` has it. `http` says the server serves `--http`, where a server lasts
  * one POST and the `initialize` that named its client, `client`, came in another. There no one is asked: whoever holds
  * the token answers what it is asked, so what loses data or acts on a device's power goes ahead only by the person's
  * own flag, as SECURITY.md has it.
@@ -141,10 +151,7 @@ export function createServer(
                 () => t.handler(argumentsFor(t, args)),
               );
               said('ok');
-              return {
-                content: r.blocks,
-                structuredContent: { text: textOf(r.blocks), ...r.data },
-              };
+              return { content: r.blocks, structuredContent: structuredOf(r) };
             } catch (e) {
               if (e instanceof ToolError) {
                 said('refused', { code: e.code });

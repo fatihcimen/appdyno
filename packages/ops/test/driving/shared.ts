@@ -46,9 +46,12 @@ export async function connect(
   const client = await linkedClient(ctx);
   const call = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const r = (await client.callTool({ name, arguments: args })) as Result;
+    const text = r.content.map((c) => c.text ?? '').join('\n');
     return {
       error: r.isError === true,
-      text: r.content.map((c) => c.text ?? '').join('\n'),
+      text,
+      /** What was done: the text's first line, which the structured answer does not say again. */
+      done: text.split('\n')[0],
       data: r.structuredContent as Answer<N>,
       images: r.content.filter((c) => c.type === 'image').length,
     };

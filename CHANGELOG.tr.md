@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir yanıtın yapılandırılmış içeriği yapılan işi bir kez söyler: onu `text` taşır ve yanında `done` yer almaz; önceden bir dokunuşunki ilk satırını, bir listenin, `steps`'in ya da `network paths`'in ki yanıtın tamamını iki kez söylüyordu. Bir modele metin yerine yapılandırılmış içeriği veren bir istemci ona yaklaşık onda bir daha az verir.
 - iOS'un sayfa olarak gösterdiği bir arama sorusu, uyarısı gibi sorulur: güç koruması ve `--allow-apps` koruması, ana ekran uygulamasının uygulamanın üstündeki sayfasını bir sistem sorusu sayar.
 - iOS runner'ı uygulamanın üzerindeki bir sistem sayfasını bir sistem uyarısı gibi, tek başına ve çerçevesindeki dokunuşlarla okur, böylece korumalar onu görür: uygulamanın açtığı bir bağlantı için bir sayfa olarak gösterilen arama istemi hiçbir okumada yoktu ve kimseye sorulmuyordu.
 - iOS runner'ı, geri okunan alan başka bir metin tutuyorsa Enter'a basmaz ve yanıt, Android ajanında ve bir simülatörün tuşlarla yazmasında olduğu gibi `submitted: false` der: önceden bir iPhone'da yanlış metin bir aramaya ya da forma gidiyordu.

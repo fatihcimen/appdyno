@@ -290,7 +290,7 @@ describe('gestures, keys, clipboard', () => {
       /^brought dev\.app to the front, on the screen it was on\n/,
     );
     d.running = false;
-    expect((await call('launch_app')).data.done).toBe('started dev.app');
+    expect((await call('launch_app')).done).toBe('started dev.app');
   });
 
   it('warns that the app is not in front only when it left by itself', async () => {

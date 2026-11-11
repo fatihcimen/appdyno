@@ -25,7 +25,8 @@ describe('changed', () => {
       const r = await call('tap', { ref: refOf(home.text, 'Form'), read });
       expect(r.structuredContent).toMatchObject({ changed: true, settled: true });
       expect(r.text).not.toContain('no change seen');
-      ActionOut.parse(r.structuredContent);
+      // what was done is the text's first line, and said there only
+      ActionOut.omit({ done: true }).parse(r.structuredContent);
     }
   });
 

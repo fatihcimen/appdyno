@@ -48,7 +48,7 @@ describe('app management', () => {
       /^restarted dev\.app, which was running\n/,
     );
     d.running = false;
-    expect((await call('app', { action: 'launch' })).data.done).toBe('started dev.app');
+    expect((await call('app', { action: 'launch' })).done).toBe('started dev.app');
   });
 
   it('does each action, with the selected app by default', async () => {
@@ -87,7 +87,6 @@ describe('app management', () => {
         ...(read && { read }),
       });
       expect(r.text).toContain('passed a Play Protect warning for dev.app: "Unsafe app blocked"');
-      expect(r.data.done).toContain('Unsafe app blocked');
     }
   });
 
@@ -104,7 +103,7 @@ describe('app management', () => {
     const ok = await connect(Object.assign(new FakeDevice(), { apps: holding('dev.app') }), {
       policy,
     });
-    expect((await ok.call('app', { action: 'install', path: '/tmp/a.apk' })).data.done).toBe(
+    expect((await ok.call('app', { action: 'install', path: '/tmp/a.apk' })).done).toBe(
       'installed /tmp/a.apk',
     );
     const other = await connect(Object.assign(new FakeDevice(), { apps: holding('dev.other') }), {
