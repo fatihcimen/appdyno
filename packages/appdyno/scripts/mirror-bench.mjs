@@ -1,4 +1,4 @@
-// What a mirror does on one device, against its targets (docs/reference/mirror.md): frames per second on the fixture,
+// What a mirror does on one device, against its targets (docs/reference/mirror-internals.md): frames per second on the fixture,
 // capture to arrival, touch to first changed frame, decode, and the viewer's own cost on a still screen.
 // All arrive-on-Mac figures. Every number has the host's load beside it, and a miss above load 60 says
 // "run it later": it is no proof either way. It reads the screen before it touches.

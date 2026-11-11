@@ -19,7 +19,7 @@ import { IPHONE_FIXTURE, opsOn } from './helpers.js';
  * The gate finding the cause by itself, against what was put there on purpose: a baseline of three runs, a reference,
  * an unchanged run that must give no alarm, then a known cost on the main thread in one step, and at the start. The
  * answer must name the function or phase the cost is in. A sleep must be called and named as no function, as a CPU
- * profile does not see one. Numbers are printed and kept: docs/reference/perf.md quotes them. APPDYNO_ANDROID_SERIAL,
+ * profile does not see one. Numbers are printed and kept: docs/reference/perf-evidence.md quotes them. APPDYNO_ANDROID_SERIAL,
  * APPDYNO_IOS_UDID or APPDYNO_IPHONE_UDID with APPDYNO_IPHONE_FIXTURE_APP and its APPDYNO_IPHONE_FIXTURE_DSYM picks the
  * device. On a phone nothing it read stays: its temporary folders go at the end.
  */

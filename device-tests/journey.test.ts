@@ -11,7 +11,7 @@ import { opsOn } from './helpers.js';
 /**
  * A journey measured and gated on a known cost, through the operations: a baseline of three runs, an unchanged run, then
  * one step of the flow made slower by a known amount. The gate must name that step, within a share of the cost, and
- * leave the others alone. Numbers are printed: docs/reference/perf.md quotes them. APPDYNO_ANDROID_SERIAL or APPDYNO_IPHONE_UDID
+ * leave the others alone. Numbers are printed: docs/reference/perf-evidence.md quotes them. APPDYNO_ANDROID_SERIAL or APPDYNO_IPHONE_UDID
  * with APPDYNO_IPHONE_FIXTURE_APP.
  */
 const APP = 'dev.appdyno.fixture';

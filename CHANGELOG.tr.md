@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Ölçülen sayıları yazdıran ya da onlara dayanan suite'lerin, betiklerin ve kaynakların yorumları, onları artık tutan sayfayı, perf-evidence.md'yi ya da mirror-internals.md'yi adlandırır.
 - Türkçe akışlar rehberi ölçülen yolculuğu kapının denetlediği bir yolculuk olarak adlandırır; başlığı onun kapıdan geçtiğini söylüyordu.
 - Pencerenin başvurusu artık "Pencere ve hub"dır: bir kişinin gördüğü ve yaptığı, Denetçi'nin her paneli kendi başlığı altında birkaç maddeyle, pencerenin sözleri her dilde gösterdiği gibi tırnak içinde, `mirror`'ın her seçeneği ve `--detach` ile `--pair`'in neleri aldığı, denetimlerin kısayolları, `hand_off`'un bekleme süresi ve pencereden alınan bir ekran görüntüsünün ya da filmin neyi tuttuğu. Görüntünün ve girdinin nasıl ilerlediği, iletişim protokolü ve her çalıştırmanın cihazı, tarihi ve yükü kendine ait bir sayfadadır: "Pencere nasıl çalışır".
 - Araçlar başvurusunun push bölümü daha kısa paragraflardadır: türü olmayan bir push'un ne yanıtladığı, bir iPhone'da token'ın nasıl okunduğu ve neye benzediği her biri kendi paragrafında başlar.

@@ -6,7 +6,7 @@ import { untilWithin } from './until.js';
 
 /**
  * Numbers against Play's definitions, on known shares of frames, a known slow start and a provoked ANR
- * (APPDYNO_ANDROID_SERIAL). What is read is printed: docs/reference/perf.md quotes it.
+ * (APPDYNO_ANDROID_SERIAL). What is read is printed: docs/reference/perf-evidence.md quotes it.
  */
 const serial = process.env.APPDYNO_ANDROID_SERIAL ?? '';
 const APP = 'dev.appdyno.fixture';

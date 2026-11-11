@@ -78,7 +78,7 @@ export const RUN_SDS = 4;
 
 /**
  * The least change worth reporting, whatever the baseline's runs say: a difference of medians over 10 % alone
- * alarmed on 25 of 72 pairs of unchanged runs on a loaded simulator (docs/reference/perf.md). A count's is under 1, as a move of
+ * alarmed on 25 of 72 pairs of unchanged runs on a loaded simulator (docs/reference/perf-evidence.md). A count's is under 1, as a move of
  * one is the smallest there is: at 1 a rise from none was `ok` on 400 of 400 simulated runs, and a crash on every run
  * passed (scripts/perf-floor-sim.mjs).
  */
@@ -103,7 +103,7 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
  * A change counts when it passes all of three: a rank test (p < ALPHA, current run against every baseline
  * sample), a practical floor by unit, and the baseline's own run-to-run movement. The last is what a rank
  * test on samples cannot see: samples of one run share its load and heat, so two runs of an unchanged app
- * differ "significantly" (docs/reference/perf.md has the rates with and without it). A worse shift past both floors
+ * differ "significantly" (docs/reference/perf-evidence.md has the rates with and without it). A worse shift past both floors
  * with p from ALPHA to SUSPECT is no pass either: it is `noisy`, as the gate can neither call it nor rule it out.
  */
 export function compareMetric(

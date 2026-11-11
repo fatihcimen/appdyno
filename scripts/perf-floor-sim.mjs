@@ -1,4 +1,4 @@
-// False alarms and catches of the gate's floors, on simulated launches and counts: the numbers docs/reference/perf.md quotes.
+// False alarms and catches of the gate's floors, on simulated launches and counts: the numbers docs/reference/perf-evidence.md quotes.
 // Needs a build: pnpm --filter '@appdyno/perf...' build; then node scripts/perf-floor-sim.mjs
 import { compareMetric, FLOOR, median, rankTest, seededRandom, shift } from '@appdyno/perf';
 

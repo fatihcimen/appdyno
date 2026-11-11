@@ -12,7 +12,7 @@ import { checkedOps } from '@appdyno/testing/calls.js';
 /**
  * The gate's two acceptance tests on a device, through the operations: no false alarm across repeated runs
  * of an unchanged app, and a known slow start (the fixture sleeps as told) caught. Numbers are printed: they
- * are what docs/reference/perf.md quotes. APPDYNO_ANDROID_SERIAL, APPDYNO_IOS_UDID or APPDYNO_IPHONE_UDID picks it.
+ * are what docs/reference/perf-evidence.md quotes. APPDYNO_ANDROID_SERIAL, APPDYNO_IOS_UDID or APPDYNO_IPHONE_UDID picks it.
  */
 const APP = 'dev.appdyno.fixture';
 const REPEATS = Number(process.env.APPDYNO_GATE_REPEATS ?? 6);
