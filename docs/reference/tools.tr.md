@@ -366,7 +366,7 @@ bir iPhone'un sistem çökme logları) sınırlı bir özet ve bir dosya yolu ol
 
 ## Bir telefona ulaşmak
 
-- Android: USB hata ayıklamayı açın, bağlayın ve `adb devices` ile kontrol edin. Bir Xiaomi, USB üzerinden her yeni kurulumdan önce ekranında sorar ve
+- Android: USB hata ayıklamayı açın, bağlayın ve `appdyno devices` ile kontrol edin. Bir Xiaomi, USB üzerinden her yeni kurulumdan önce ekranında sorar ve
   10 s sonra kendiliğinden hayır der: `app install` telefonu uyandırır ve o sorunun evet düğmesine dokunur, ama yalnızca kendi başlattığı bir kurulum sırasında; yanıt ve `report`
   bunu söyler (`--no-install-consent` bunu size bırakır). Play Protect'in uygulamayı Google'a gönderme sorusu her zaman hayırla yanıtlanır: özel bir build
   Google'a gönderilmez. Sunucu `--accept-install-warnings` ile çalışmıyorsa bir Play Protect uyarısına dokunulmaz, metni aktarılır. Hangi telefonda neyin görüldüğü için bkz.

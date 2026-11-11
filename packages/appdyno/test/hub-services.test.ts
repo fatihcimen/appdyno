@@ -268,7 +268,8 @@ describe('Test', () => {
     });
     expect(await tried(place())).toMatchObject({
       ok: false,
-      said: 'appdyno is not on the npm registry yet.',
+      said: "npm's registry has no appdyno.",
+      next: expect.stringContaining('npm config get registry') as unknown,
     });
   });
 

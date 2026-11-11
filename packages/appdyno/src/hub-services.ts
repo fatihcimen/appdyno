@@ -44,8 +44,8 @@ export const TRIED = {
     'An app opened from the Dock has a short PATH. Give its entry the full path of the command, and a PATH that holds node and adb, then restart it.',
   ],
   registry: [
-    'appdyno is not on the npm registry yet.',
-    'Run sh scripts/install.sh in a checkout, or use the Mac app, then add this client again.',
+    "npm's registry has no appdyno.",
+    'npm config get registry names the registry npm asks, and the public one is https://registry.npmjs.org/. Or use the Mac app. Then add this client again.',
   ],
   slow: [
     'It gave no answer in 60 s.',

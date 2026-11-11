@@ -366,7 +366,7 @@ With `symbols`, it names the stack of a release build. On iOS that is a `.dSYM`,
 
 ## Reaching a phone
 
-- Android: turn on USB debugging, connect, and check `adb devices`. A Xiaomi asks on its screen before each new install over USB and
+- Android: turn on USB debugging, connect, and check `appdyno devices`. A Xiaomi asks on its screen before each new install over USB and
   says no by itself after 10 s: `app install` wakes the phone and taps that prompt's yes, but only during an install it started itself; the answer and `report`
   say so (`--no-install-consent` leaves it to you). Play Protect's prompt to send the app to Google is always answered no: a private build is not sent
   to Google. A Play Protect warning is left alone, quoted, unless the server runs with `--accept-install-warnings`. See [A phone's install prompts](protocol.md#a-phones-install-prompts)

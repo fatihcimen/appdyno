@@ -370,10 +370,10 @@ You need `adb`, Android's tool for talking to a device.
 2. On the phone, turn on developer options: Settings, About phone, tap **Build number** seven times. On a Xiaomi it is **OS version**.
 3. In Settings, Developer options, turn on **USB debugging**. On a Xiaomi turn on **Install via USB** and **USB debugging (Security settings)** too.
 4. Connect the cable. Unlock the phone, and answer **Allow** on the question it asks.
-5. Check: `adb devices` lists the phone as `device`. `unauthorized` means the question was not answered: look at the phone. An empty list usually means a charge-only cable.
+5. Check: `appdyno devices` lists the phone as `device`. `unauthorized` means the question was not answered: look at the phone. An empty list usually means a charge-only cable.
 6. Check again: `appdyno doctor --serial <serial>`.
 
-No phone? Create a virtual device in Android Studio's Device Manager and start it. `adb devices` lists it as `emulator-5554`.
+No phone? Create a virtual device in Android Studio's Device Manager and start it. `appdyno devices` lists it as `emulator-5554`.
 
 appdyno installs its own agent on the device the first time it is used. A Xiaomi asks on its screen before each new install, and appdyno answers that one question for an install it started. See [Reaching a phone](../reference/tools.md#reaching-a-phone).
 
@@ -471,7 +471,7 @@ Then give the entry the full path of `npx`, and a `PATH` that holds `node` and `
 | what you see                                  | what it means, and what to do                                                                                               |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | the client lists no tools, and shows no error | restart it: most read their list once. Then look in its log, and run `appdyno doctor`                                       |
-| `no connected device this server may drive`   | `adb devices` or Xcode does not see one, or `--allow-devices` shuts it out                                                  |
+| `no connected device this server may drive`   | `appdyno devices` lists none, or `--allow-devices` shuts it out                                                             |
 | `more than one device this server may drive`  | ask your client to use the device you mean, or add `--device` to the entry                                                  |
 | `is held by pid ...`                          | another program drives that device. Stop it, or use `--share`                                                               |
 | `no signing for the iPhone runner`            | see [An iPhone or a simulator](#an-iphone-or-a-simulator)                                                                   |

@@ -370,10 +370,10 @@ Android cihazlarla konuşan `adb` aracı gerekir.
 2. Telefonda geliştirici seçeneklerini açın: Ayarlar, Telefon hakkında, **Derleme numarası**na (bazı telefonlarda Yapım numarası) yedi kez dokunun. Xiaomi'de bu **OS sürümü**dür.
 3. Ayarlar, Geliştirici seçenekleri altında **USB hata ayıklama**yı açın. Xiaomi'de **USB ile yükle** ve **USB hata ayıklama (Güvenlik ayarları)** da açılmalı.
 4. Kabloyu takın. Telefonun kilidini açın, sorduğu soruya **İzin ver** deyin.
-5. Kontrol: `adb devices` telefonu `device` olarak listeler. `unauthorized`, sorunun yanıtlanmadığı anlamına gelir: telefona bakın. Liste boşsa kablo büyük olasılıkla yalnızca şarj kablosudur.
+5. Kontrol: `appdyno devices` telefonu `device` olarak listeler. `unauthorized`, sorunun yanıtlanmadığı anlamına gelir: telefona bakın. Liste boşsa kablo büyük olasılıkla yalnızca şarj kablosudur.
 6. Bir kontrol daha: `appdyno doctor --serial <serial>`.
 
-Telefon yok mu? Android Studio'nun Device Manager'ında sanal bir cihaz oluşturup başlatın. `adb devices` onu `emulator-5554` olarak listeler.
+Telefon yok mu? Android Studio'nun Device Manager'ında sanal bir cihaz oluşturup başlatın. `appdyno devices` onu `emulator-5554` olarak listeler.
 
 appdyno ilk kullanımda cihaza kendi ajanını kurar. Xiaomi her yeni kurulumda ekranda sorar, appdyno da yalnızca kendi başlattığı kurulumda bu tek soruyu yanıtlar. Bkz. [Bir telefona ulaşmak](../reference/tools.tr.md#bir-telefona-ulaşmak).
 
@@ -471,7 +471,7 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 | gördüğünüz                                                | anlamı ve yapılacak                                                                                                                      |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | istemci araç göstermiyor, hata da vermiyor                | yeniden başlatın, çoğu listeyi bir kez okur. Sonra kayıtlarına bakın ve `appdyno doctor` çalıştırın                                      |
-| `no connected device this server may drive`               | `adb devices` ya da Xcode cihaz görmüyor, veya `--allow-devices` onu dışarıda bırakıyor                                                  |
+| `no connected device this server may drive`               | `appdyno devices` hiçbir cihaz listelemiyor ya da `--allow-devices` onu dışarıda bırakıyor                                               |
 | `more than one device this server may drive`              | istemcinize hangi cihazı kullanacağını söyleyin ya da girdiye `--device` ekleyin                                                         |
 | `is held by pid ...`                                      | o cihazı başka bir program kullanıyor. Durdurun ya da `--share` kullanın                                                                 |
 | `no signing for the iPhone runner`                        | bkz. [iPhone veya simülatör](#iphone-veya-simülatör)                                                                                     |
