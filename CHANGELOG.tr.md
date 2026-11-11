@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Android'de, çağıranın sonundan önce durdurduğu bir uzun basma, kaydırma ya da hareket parmaklarını oldukları yerde, dokunuş saymadan bırakır: önceden onları kaldırıyordu; yarıda kesilen bir basma bir dokunuş oluyor, bir sürükleme sonuna atlayıp orada bırakılıyor ya da fırlatılıyordu, sunucuya CANCELLED denmişken.
 - Android'de, çağıranın bir alanın odağı almasını beklerken durdurduğu yazma orada biter: önceden hiçbir alan odağı almamış gibi devam ediyor, noktanın altındaki alanı odaklıyor, ona yeniden dokunuyor ve tuş yazabiliyordu, sunucuya CANCELLED denmişken. Cihazın geri çevirdiği bir dokunuş, çağrısı durdurulduktan sonra yeniden yapılmaz.
 - Android ajanı durdurulan bir çağrının iş parçacığını yalnızca çağrı hâlâ orada sürerken bırakır: bırakma tam geldiği anda biten bir çağrının iş parçacığı, sıradaki çağrı orada çalışırken bırakılabiliyor, o çağrı kesilip INTERNAL ile yanıtlanıyordu.
 - Android ajanı son gönderdiği ekranları bir kilit arkasında tutar: durdurulan bir çağrıdan sonra bırakılan ve sonraki çağrınınkiyle aynı anda onları okuyup yazmaya devam eden bir iş parçacığı, listeyi ajanın ömrü boyunca bozuk bırakabiliyordu; bir `before` bulunamıyor ya da listede dolaşmak hiç bitmiyordu.

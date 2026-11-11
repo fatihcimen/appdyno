@@ -1,5 +1,6 @@
 package dev.appdyno.agent
 
+import android.annotation.SuppressLint
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
@@ -62,8 +63,24 @@ class Input(private val automation: Automation) {
         val down = SystemClock.uptimeMillis()
         automation.inject(touch(down, down, MotionEvent.ACTION_DOWN, x, y))
         sleepUntil(down + durationMs, cancelled)
+        if (cancelled()) {
+            // the finger `touch` puts down: id 0, of no tool type
+            val finger = arrayOf(MotionEvent.PointerProperties().apply { id = 0 })
+            val at = MotionEvent.PointerCoords().apply {
+                this.x = x
+                this.y = y
+            }
+            return letGo(down, 1, finger, arrayOf(at))
+        }
         automation.inject(touch(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y))
     }
+
+    /**
+     * A touch its host stopped is let go of where its fingers are, as no touch: a finger lifted there made a cut-short
+     * press a tap, and a drag jumped to its end and dropped or flung there, after the host was told CANCELLED.
+     */
+    @SuppressLint("InlinedApi") // FLAG_CANCELED goes to every release, as Automation's own cancel sends it
+    private fun letGo(down: Long, count: Int, props: Array<MotionEvent.PointerProperties>, coords: Array<MotionEvent.PointerCoords>) = automation.inject(multi(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, count, props, coords, MotionEvent.FLAG_CANCELED))
 
     /** One finger along `samples` (times from the gesture start). */
     fun path(samples: List<Sample>, cancelled: () -> Boolean) = gesture(listOf(samples), cancelled)
@@ -105,8 +122,8 @@ class Input(private val automation: Automation) {
         }
         var t = Paths.STEP_MS
         while (t <= end) {
-            if (cancelled()) break
             sleepUntil(down + t, cancelled)
+            if (cancelled()) return letGo(down, n, props, coords)
             at(t)
             automation.inject(multi(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE, n, props, coords))
             t += Paths.STEP_MS
@@ -214,9 +231,10 @@ class Input(private val automation: Automation) {
         count: Int,
         props: Array<MotionEvent.PointerProperties>,
         coords: Array<MotionEvent.PointerCoords>,
+        flags: Int = 0,
     ): MotionEvent = MotionEvent.obtain(
         down, time, action, count, props.copyOf(count).requireNoNulls(), coords.copyOf(count).requireNoNulls(),
-        0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0,
+        0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, flags,
     )
 
     private fun sleepUntil(t: Long, cancelled: () -> Boolean) {

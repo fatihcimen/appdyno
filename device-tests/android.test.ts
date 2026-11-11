@@ -827,6 +827,26 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(labels(await open('FORM'))).toContain('Enter your details');
   });
 
+  it('lets go of a touch its host stopped short where it is, as no touch: no tap, no drop', async () => {
+    const strokes = [
+      (p: { x: number; y: number }) => d.longPress(p, 3_000, { settle: false }),
+      (p: { x: number; y: number }) => d.swipe(p, { x: p.x + 1, y: p.y }, 3_000, { settle: false }),
+    ];
+    for (const stroke of strokes) {
+      const form = found(await home(), 'FORM');
+      const stop = new AbortController();
+      const going = stoppable(stop.signal, () => stroke(form)).catch((e: unknown) => e);
+      await new Promise((r) => setTimeout(r, 300));
+      stop.abort();
+      expect(await going).toMatchObject({ code: 'CANCELLED' });
+      await new Promise((r) => setTimeout(r, 1_000));
+      // a finger lifted there, 300 ms after it went down, was a tap on FORM
+      expect(labels(await screen())).not.toContain('Enter your details');
+    }
+    // nothing was left down: the next touch lands
+    expect(labels(await open('FORM'))).toContain('Enter your details');
+  });
+
   it('a second automation server on the device is refused with a typed reason', async () => {
     await d.read(APP); // ours holds the connection
     // the running agent's own build: a phone keeps every build any appdyno pushed, and the first by name may be an old one
