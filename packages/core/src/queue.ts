@@ -4,10 +4,20 @@
  */
 export class DeviceQueue {
   private tail: Promise<unknown> = Promise.resolve();
+  private queued = 0;
+
+  /** A command runs or waits: one given now waits for it. */
+  get busy() {
+    return this.queued > 0;
+  }
 
   run<T>(fn: () => Promise<T>): Promise<T> {
+    this.queued++;
     const run = this.tail.then(fn);
-    this.tail = run.catch(() => undefined);
+    const settled = () => {
+      this.queued--;
+    };
+    this.tail = run.then(settled, settled);
     return run;
   }
 }

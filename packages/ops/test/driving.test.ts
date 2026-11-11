@@ -779,6 +779,27 @@ describe('a ref on a screen an app moved by itself', () => {
     expect(r.text).not.toContain('no change seen');
   });
 
+  it('tells a call that waits its turn why, and one that need not wait nothing of it', async () => {
+    const d = new FakeDevice();
+    const own = d.act.bind(d);
+    d.act = async (a, o) => {
+      await new Promise((r) => setTimeout(r, 300));
+      return own(a, o);
+    };
+    const { ctx } = await connect(d);
+    const call = callerOf(ctx);
+    const told: [string[], string[]] = [[], []];
+    const [first, second] = told.map((seen, i) =>
+      inCall({ progress: (m) => seen.push(m) }, () =>
+        i ? call('press_key', { key: 'tab' }) : call('tap', { selector: { text: 'Form' } }),
+      ),
+    );
+    await Promise.all([first, second]);
+    const waits = 'waiting its turn';
+    expect(told[0].filter((m) => m.includes(waits))).toEqual([]);
+    expect(told[1][0]).toContain(waits);
+  });
+
   it('does nothing of a call its client gave up while it waited its turn', async () => {
     const d = new FakeDevice();
     const own = d.act.bind(d);

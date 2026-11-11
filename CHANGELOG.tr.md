@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- İstemcisinin ondan önce gönderdiği bir eylemi bekleyen bir eylem bunu ilerlemesinde, "waiting its turn" diye söyler; önceden çalışana kadar hiçbir şey söylemiyordu.
 - Bir eylem neyi değiştirdiğini, nişan aldığı okumaya göre söyler: aynı istemcinin yanında çalışan bir `screen`, `find` ya da `wait_for` o okumayı dokunuştan sonra değiştirebiliyordu; yanında okunan bir ekranı açan bir dokunuş, öncesi açtığı ekran olduğu için `changed: false` ve "no change seen" ile yanıtlanıyordu.
 - `perf_profile` artık salt okunur işaretli değildir, çünkü `scroll` ile kaydırır: kuyruğun bir okumaya izin verdiği gibi aynı istemcinin bir eyleminin yanında çalışıyordu ve salt okunur araçları sormadan geçiren bir istemci onun kaydırmalarını da geçiriyordu. Artık `perf_scroll` gibi sırasını bekler.
 - Öz sınamanın, bir tablonun tıklamasını alıp almadığını denemesi, görüntüleyicinin kendi listesine tıklamak yerine düz bir AppKit tablosunda yapılır ve onu bir saniyeye kadar bekler: tıklama almayı bırakan kendi listesi, hiç tıklama vermeyen bir macOS gibi okunur ve denetimleri her Mac'te atlanırdı.

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- An action that waits for one its client sent before it says so in its progress, "waiting its turn", where it said nothing until it ran.
 - An action says what it changed against the read it aimed by, where a `screen`, `find` or `wait_for` of the same client, which runs beside it, could replace that read after the touch: a tap that opened a screen read beside it was answered `changed: false` with "no change seen", as its before was the screen it opened.
 - `perf_profile` is no longer marked read-only, as with `scroll` it swipes: it ran beside an action of the same client, which the queue lets a read do, and a client that lets read-only tools through unasked let its swipes through too. It now waits its turn as `perf_scroll` does.
 - The self test's trial of whether a table takes its click runs on a plain AppKit table and waits up to a second for it, where it clicked the viewer's own list: a list of its own that stopped taking a click would have read as a macOS that gives none, and its checks would have been skipped on every Mac.
