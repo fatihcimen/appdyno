@@ -65,6 +65,9 @@ describe('gestures, keys, clipboard', () => {
     for (const enter of ['Enter', 'return', 'RETURN'])
       expect(keyPress(enter)).toEqual({ key: 'enter', modifiers: [] });
     expect(keyPress('Command+A')).toBeUndefined();
+    // and so the press says it, and what reads a key after reads it so
+    const said = await (await connect(new FakeDevice())).call('press_key', { key: 'Return' });
+    expect(said.text).toMatch(/^pressed enter\n/);
     for (const bad of ['command+home', 'alt+a', 'command+', 'A', 'warp'])
       expect(keyPress(bad)).toBeUndefined();
 

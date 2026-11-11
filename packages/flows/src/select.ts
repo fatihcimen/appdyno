@@ -49,7 +49,9 @@ export const elementUnder = (list: ScreenElement[], p: { x: number; y: number })
         p.x >= e.rect.x &&
         p.x <= e.rect.x + e.rect.width &&
         p.y >= e.rect.y &&
-        p.y <= e.rect.y + e.rect.height,
+        p.y <= e.rect.y + e.rect.height &&
+        // a touch there reaches a key, which no list holds
+        e.role !== 'keyboard',
     )
     .sort((a, b) => area(a) - area(b))[0];
 

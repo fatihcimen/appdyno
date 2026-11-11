@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Uygulamanın iOS klavyesinin üstüne koyduğu bir çubuk, örneğin bir sayı tuş takımının üstündeki Done, listede kalır; önceden klavyenin kendi görünümleriyle birlikte gidiyordu. Klavyenin üstündeki bir nokta bir kaydın adlandırdığı bir öğe değildir, çünkü oraya bir dokunuş bir tuşa ulaşır. `press_key` bir tuşu listelediği adla iletir, böylece `Home` ve `Return`, tuşa sonra bakan her şeyce `home` ve `enter` olarak okunur. `app install`, bir izin listesinin ona okuttuğu kimliği adlandırır; liste olmayan yerde kimliği okunamayan bir dosya da eskisi gibi kurulur.
 - Soğuk ya da ılık bir açılışla `perf_launch`, uygulamanın baştan başlatıldığını ve ilk ekranını gösterdiğini söyler; önceden sonraki çağrı uygulamayı önceki yerinde sanıyordu.
 - Tutan bir `wait_for` ya da `assert` ile, ya da satırını bulan bir `scroll_to` ile biten bir `steps` çağrısı artık "no change seen" eklemez; önceden adım bir işlem yapmış gibi ekliyordu.
 - `steps`'teki bir aracın adımı, `launch_app` ya da `open_link` gibi, ekranı bir dokunuşunki gibi okur: adımı `read` dediği yerde ya da son adımda çağrının dediği gibi; önceden `read: none` altında her biri kendi ekranını yazdırıyordu.

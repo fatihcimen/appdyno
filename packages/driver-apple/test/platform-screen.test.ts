@@ -205,8 +205,18 @@ describe('what covers the app', () => {
       rect: { x: n.b[0], y: n.b[1], width: n.b[2] - n.b[0], height: n.b[3] - n.b[1] },
       ...(n.p >= 0 && { parent: n.p }),
     }));
+    // the app's own bar above the keys, in the window that holds them, as a Done over a number pad
+    els.push({
+      type: 'Button',
+      label: 'Done',
+      ref: '@done',
+      parent: 9,
+      clickable: true,
+      rect: { x: 330, y: 528, width: 60, height: 40 },
+    });
     const listed = screenElements(els, { port: iosScreen }).map((e) => e.label || e.id || '');
     expect(listed).toContain('Send');
+    expect(listed).toContain('Done');
     expect(listed.filter((l) => /^\d$|Delete|Dictate|inputView|LayoutStar/.test(l))).toEqual([]);
   });
 });

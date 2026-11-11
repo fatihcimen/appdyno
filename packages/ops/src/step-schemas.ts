@@ -59,6 +59,14 @@ const KEY_WORDS: Record<string, string | undefined> = {
   backspace: 'delete',
 };
 
+/** A key's words as press_key lists them: what is held and a name in small letters, `return` as `enter`. */
+function keyNamed(words: string) {
+  const parts = words.split('+');
+  const last = must(parts.pop(), 'a key');
+  const named = last.length > 1 ? last.toLowerCase() : last;
+  return [...parts.map((p) => p.toLowerCase()), KEY_WORDS[named] ?? named].join('+');
+}
+
 /** `command+a` as the wire has it: what is held, then the key by its name whatever its case, or a letter or digit. */
 export function keyPress(words: string): { key: string; modifiers: Modifier[] } | undefined {
   const parts = words.split('+').map((p) => p.toLowerCase());
@@ -78,9 +86,11 @@ export function keyPress(words: string): { key: string; modifiers: Modifier[] } 
 const KeyWords = z
   .string()
   .refine(
-    (k) => !!keyPress(k) || !!viewNamed(k),
+    (k) => !!keyPress(k) || !!viewNamed(k.toLowerCase()),
     `a key: ${Object.keys(WIRE_KEY).join(', ')}, or a letter or digit, held keys first: command+a`,
-  );
+  )
+  // as press_key lists it, whatever case or other name it was given in: what reads the key after reads that
+  .transform((k) => keyNamed(k));
 
 export const WAIT_MS = 5_000;
 

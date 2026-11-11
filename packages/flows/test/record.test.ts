@@ -120,6 +120,9 @@ describe('the element under a point', () => {
 
   it('is none on an empty place, a slider, or a large area where the point itself counts', () => {
     expect(elementAt([button], { x: 900, y: 900 }, size)).toBeUndefined();
+    // a point on the keyboard reaches a key, which no list holds: it is no element
+    const keyboard = { ...button, ref: '@keyboard', role: 'keyboard', label: '' };
+    expect(elementAt([keyboard], { x: 150, y: 120 }, size)).toBeUndefined();
     const slider = el('@s', 'slider', 'Volume', undefined, { x: 0, y: 0, width: 500, height: 50 });
     expect(elementAt([slider], { x: 400, y: 20 }, size)).toBeUndefined();
     const pad = el('@p', 'tappable', 'Pad', undefined, { x: 0, y: 0, width: 1000, height: 1000 });

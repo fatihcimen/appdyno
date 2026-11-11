@@ -176,16 +176,32 @@ export const iosScreen: PlatformScreen = {
     return tops.length > 0 ? Math.min(...tops) : undefined;
   },
 
-  /** The keyboard, and the app's windows past its first that hold it or its bars: the predictions, dictation. */
+  /**
+   * The keyboard, and what the app's windows past its first that hold it show from its top down: the predictions,
+   * dictation. A bar the app puts above it there, as a Done over a number pad, stays the app's.
+   */
   keyboardParts(elements) {
     const root = (e: UiElement) =>
       e.parent !== undefined && elements[e.parent]?.parent === undefined;
     const windows = elements.flatMap((e, i) => (/window$/i.test(e.type) && root(e) ? [i] : []));
     const { descendants } = familyOf(elements);
+    const at = (i: number) => must(elements[i], 'an element');
+    const held = windows
+      .slice(1)
+      .map(descendants)
+      .filter((inside) => inside.some((d) => ofKeyboard(at(d))));
+    const tops = held
+      .flat()
+      .flatMap((i) => (ofKeyboard(at(i)) && at(i).rect ? [at(i).rect?.y ?? 0] : []));
+    const top = Math.min(...tops);
+    const under = (i: number) => {
+      const r = at(i).rect;
+      return !!r && r.y + r.height / 2 >= top;
+    };
+    // what it holds goes with it: what holds the app's bar stays, for the bar's sake
+    const below = (i: number) => under(i) && descendants(i).every(under);
     return [
-      ...windows
-        .slice(1)
-        .filter((w) => descendants(w).some((d) => ofKeyboard(must(elements[d], 'an element')))),
+      ...held.flat().filter(below),
       ...elements.flatMap((e, i) => (/keyboard$/i.test(e.type) ? [i] : [])),
     ];
   },
