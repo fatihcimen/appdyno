@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The device suites hold a screenshot saved to a file to the file's own size, on Android, a simulator and an iPhone, where they read the answer's `width`, which is the image shown beside the file since `screenshot` with `file` shows one, and failed on each.
 - `scripts/ci.sh --all-on` on an iPhone runs the 10 suites that gate on the iPhone through `device-tests/helpers.ts`, as `keys`, `scroll` and `small-tools`, where it ran 19 of 29 and the rest went untried.
 - The social card shows the hub at work beside the mark, the name and the README's first line, drawn by `scripts/build-icons.mjs` from `docs/images/hub.webp`.
 - The hub's Test says, when npm finds no appdyno, that npm's registry has none and how to see which registry npm asks, where it said appdyno was not on npm yet and to build a checkout. The guides check a device with `appdyno devices`, which finds the adb `appdyno tools install adb` fetched too, where they said `adb devices`.

@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Cihaz suite'leri bir dosyaya kaydedilen ekran görüntüsünü Android'de, bir simülatörde ve bir iPhone'da dosyanın kendi boyutuyla denetler; önceden yanıtın `width` alanını okuyorlardı, ki `file` ile `screenshot` dosyanın yanında bir görüntü gösterdiğinden beri o gösterilen görüntününkidir, ve her birinde başarısız oluyorlardı.
 - iPhone'da `scripts/ci.sh --all-on`, iPhone'a `device-tests/helpers.ts` üzerinden bağlanan 10 suite'i de çalıştırır, örneğin `keys`, `scroll` ve `small-tools`; önceden 29'un 19'unu çalıştırıyordu ve kalanı denenmeden kalıyordu.
 - Sosyal kart, işaretin, adın ve README'nin ilk satırının yanında çalışan hub'ı gösterir; `scripts/build-icons.mjs` onu `docs/images/hub.webp`'den çizer.
 - Hub'ın Test Et'i, npm appdyno'yu bulamadığında npm registry'sinde olmadığını ve npm'in hangi registry'ye sorduğunun nasıl görüleceğini söyler; önceden appdyno'nun henüz npm'de olmadığını ve bir kopyanın derlenmesini söylüyordu. Rehberler bir cihazı, `appdyno tools install adb`'nin indirdiği adb'yi de bulan `appdyno devices` ile denetler; önceden `adb devices` diyordu.

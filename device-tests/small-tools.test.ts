@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, assert, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
-import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
+import { Adb, androidProvider, imageSize, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
@@ -81,9 +81,9 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
   it('saves a picture at the size of the screen', async () => {
     // a phone's screen is a person's: no picture of it stays
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
-    const r = ok(await call('screenshot', { file: join(dir, 'screen.png') }));
+    const saved = await savedWidth(call, dir);
     rmSync(dir, { recursive: true });
-    expect(r.data.width).toBe(ok(await call('device_info')).data.screen.w);
+    expect(saved).toBe(ok(await call('device_info')).data.screen.w);
   });
 
   it('turns to each of the four rotations, as the device says', async () => {
@@ -95,6 +95,13 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
     expect(shell('settings', 'get', 'system', 'user_rotation')).toBe('0');
   });
 });
+
+/** The width of the picture saved in `dir`: the answer's own image is the one shown, at most 800 px. */
+const savedWidth = async (call: Call, dir: string) => {
+  const file = join(dir, 'screen.png');
+  ok(await call('screenshot', { file }));
+  return imageSize(readFileSync(file))?.w;
+};
 
 /** The language the fixture says it was launched in. */
 const language = async (call: Call) => {
@@ -256,11 +263,11 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   it("saves a picture at the screen's own size, and refuses to replace one", async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
     onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
-    const file = join(dir, 'screen.png');
-    const r = ok(await call('screenshot', { file }));
+    const saved = await savedWidth(call, dir);
     const { w, density } = ok(await call('device_info')).data.screen;
-    expect(r.data.width).toBe(Math.round(w * density));
-    expect((await call('screenshot', { file })).text).toContain('is there already');
+    expect(saved).toBe(Math.round(w * density));
+    const again = await call('screenshot', { file: join(dir, 'screen.png') });
+    expect(again.text).toContain('is there already');
   });
 
   it('takes a picture whose pixels are points', () => inPoints(call));
@@ -340,10 +347,10 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
 
   it("saves a picture at the screen's own size", async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
-    const r = ok(await call('screenshot', { file: join(dir, 'screen.png') }));
+    const saved = await savedWidth(call, dir);
     rmSync(dir, { recursive: true });
     const { w, density } = ok(await call('device_info')).data.screen;
-    expect(r.data.width).toBe(Math.round(w * density));
+    expect(saved).toBe(Math.round(w * density));
   });
 
   it('takes a picture whose pixels are points', () => inPoints(call));
