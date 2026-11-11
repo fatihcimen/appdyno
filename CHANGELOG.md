@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The social card shows the hub at work beside the mark, the name and the README's first line, drawn by `scripts/build-icons.mjs` from `docs/images/hub.webp`.
 - The hub's Test says, when npm finds no appdyno, that npm's registry has none and how to see which registry npm asks, where it said appdyno was not on npm yet and to build a checkout. The guides check a device with `appdyno devices`, which finds the adb `appdyno tools install adb` fetched too, where they said `adb devices`.
 - The README's pictures of the hub and of a device's own window are taken again from the app as it is, in English and in Turkish, on an iPhone simulator while it moves, at a Mac load under 8: the hub's Turkish button reads Gösterge Panelini Aç and its frame rate is the picture's own, and the Turkish README shows a Turkish window.
 - The Turkish pages say one word for one thing across pages: a command's flag is a seçenek, an action an işlem, a read made just now a yeni one, and seconds s.

@@ -275,15 +275,41 @@ export function logo(letters = INK) {
 }
 
 /** A repository's preview, 1280 by 640, with the README's line: what a shared link shows first. */
-export function social() {
-  const word = wordmark(470, 318, 84, PALE);
+/** The hub's picture on the social card: its stage and Inspector, left of the sidebar, in pixels of docs/images/hub.webp. */
+const SHOT = { from: 244, width: 1240, height: 820, x: 628, y: 64, shown: 612 };
+
+/**
+ * GitHub's card for a link to the repository: the mark, the name and the README's first line, beside the hub at work.
+ * @param {string} hub docs/images/hub.webp as a PNG, base64
+ */
+export function social(hub) {
+  const [w, h] = [1280, 640];
+  const blooms = BLOOMS.map(
+    ([x, y, reach, strength, color], i) =>
+      `<radialGradient id="s${String(i)}" gradientUnits="userSpaceOnUse" cx="${n(x * w)}" cy="${n(y * h)}" r="${n(reach * w)}">` +
+      `<stop offset="0" stop-color="${color}" stop-opacity="${n(strength * 0.8)}"/>` +
+      `<stop offset=".5" stop-color="${color}" stop-opacity="${n(strength * 0.25)}"/>` +
+      `<stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`,
+  );
+  const word = wordmark(72, 336, 58, PALE);
   // a text each, as sips draws no tspan where it is placed
   const line = (/** @type {number} */ y, /** @type {string} */ text) =>
-    `<text x="470" y="${y}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="40" fill="${QUIET}">${text}</text>`;
+    `<text x="72" y="${y}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="30" fill="${QUIET}">${text}</text>`;
+  const scale = SHOT.shown / (SHOT.width - SHOT.from);
+  const shown = { w: SHOT.shown, h: n(SHOT.height * scale) };
+  const frame = `x="${SHOT.x}" y="${SHOT.y}" width="${shown.w}" height="${shown.h}" rx="18"`;
   return (
-    `<svg ${SVG} width="1280" height="640" viewBox="0 0 1280 640"><rect width="1280" height="640" fill="${NIGHT}"/>` +
-    `<g transform="translate(70 140) scale(.3515625)">${macIcon(1024).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>` +
-    `${word.svg}${line(430, 'Let an AI agent drive, test and measure')}${line(482, 'your iOS and Android app.')}</svg>\n`
+    `<svg ${SVG} width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs>${blooms.join('')}` +
+    `<clipPath id="shot"><rect ${frame}/></clipPath>` +
+    `<filter id="lift" x="-10%" y="-10%" width="120%" height="130%"><feGaussianBlur stdDeviation="18"/></filter></defs>` +
+    `<rect width="${w}" height="${h}" fill="${NIGHT}"/>` +
+    blooms.map((_, i) => `<rect width="${w}" height="${h}" fill="url(#s${String(i)})"/>`).join('') +
+    `<g transform="translate(72 96) scale(.1171875)">${macIcon(1024).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>` +
+    `${word.svg}${line(430, 'Let an AI agent drive, test and')}${line(472, 'measure your iOS and Android app.')}` +
+    `<rect ${frame} fill="${NIGHT}" opacity=".7" filter="url(#lift)" transform="translate(0 14)"/>` +
+    `<image x="${n(SHOT.x - SHOT.from * scale)}" y="${SHOT.y}" width="${n(SHOT.width * scale)}" height="${shown.h}" ` +
+    `clip-path="url(#shot)" href="data:image/png;base64,${hub}"/>` +
+    `<rect ${frame} fill="none" stroke="${PALE}" stroke-opacity=".22" stroke-width="1.5"/></svg>\n`
   );
 }
 

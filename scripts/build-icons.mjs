@@ -6,7 +6,7 @@
  *   node scripts/build-icons.mjs
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -120,7 +120,11 @@ function main() {
   render(iosIcon(120), join(repo, 'ios/Branding/AppIcon60x60@2x.png'));
   render(iosIcon(180), join(repo, 'ios/Branding/AppIcon60x60@3x.png'));
   render(macIcon(256), join(repo, 'mac/Viewer/tile.png'));
-  render(social(), join(repo, 'docs/images/social.png'));
+  // the card shows the hub as the README does, from its picture
+  const shot = join(mkdtempSync(join(tmpdir(), 'appdyno-shot-')), 'hub.png');
+  sh('sips', '-s', 'format', 'png', join(repo, 'docs/images/hub.webp'), '--out', shot);
+  render(social(readFileSync(shot).toString('base64')), join(repo, 'docs/images/social.png'));
+  rmSync(dirname(shot), { recursive: true, force: true });
   const proof = mkdtempSync(join(tmpdir(), 'appdyno-proof-'));
   buildGlassIcon(proof, '14.0');
   rmSync(proof, { recursive: true, force: true });
