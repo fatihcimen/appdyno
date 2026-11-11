@@ -26,7 +26,8 @@ export async function afterTimeout(
   return new DeviceError(
     'TIMEOUT',
     e.message,
-    'the agent was stuck and has been restarted: try again',
+    // what the call said to do still holds: a touch it timed out on may have gone through
+    `the agent was stuck and has been restarted: ${e.hint ?? 'read the screen, then try again'}`,
     { cause: e },
   );
 }

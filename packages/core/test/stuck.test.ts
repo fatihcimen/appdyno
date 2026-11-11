@@ -18,6 +18,22 @@ describe('a call that timed out', () => {
     });
   });
 
+  it('keeps what the call that timed out said to do, as a touch it was may have gone through', async () => {
+    const { rpc } = fakeAgent({ 'app.foreground': () => new Promise(() => undefined) });
+    const restart = () => Promise.resolve();
+    const tap = new DeviceError(
+      'TIMEOUT',
+      "XCTest's event synthesizer did not answer a tap, which may have gone through",
+      'read the screen to see whether it did before doing it again',
+    );
+    expect(((await afterTimeout(tap, rpc, restart, 50)) as DeviceError).hint).toBe(
+      'the agent was stuck and has been restarted: read the screen to see whether it did before doing it again',
+    );
+    expect(((await afterTimeout(timeout, rpc, restart, 50)) as DeviceError).hint).toBe(
+      'the agent was stuck and has been restarted: read the screen, then try again',
+    );
+  });
+
   it('leaves an agent that answers alone (a slow call, not a stuck agent)', async () => {
     const { rpc } = fakeAgent({ 'app.foreground': () => ({ result: { pkg: 'a.b' } }) });
     const restart = vi.fn(() => Promise.resolve());

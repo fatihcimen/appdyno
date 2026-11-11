@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- An agent restarted as stuck after a call timed out keeps that call's hint after "has been restarted": a touch XCTest's synthesizer gave no answer for said in its text to read the screen first, and in its hint only "try again", which made it twice.
 - An action that waits for one its client sent before it says so in its progress, "waiting its turn", where it said nothing until it ran.
 - An action says what it changed against the read it aimed by, where a `screen`, `find` or `wait_for` of the same client, which runs beside it, could replace that read after the touch: a tap that opened a screen read beside it was answered `changed: false` with "no change seen", as its before was the screen it opened.
 - `perf_profile` is no longer marked read-only, as with `scroll` it swipes: it ran beside an action of the same client, which the queue lets a read do, and a client that lets read-only tools through unasked let its swipes through too. It now waits its turn as `perf_scroll` does.
