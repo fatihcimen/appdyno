@@ -224,14 +224,38 @@ const focusedApp = (tree: Tree) =>
     tree.windows.filter((w) => w.type === 1).sort((a, b) => b.layer - a.layer)[0]
   )?.pkg;
 
-/** The app a call's link opens in on the device, a maker's own dialer among them: asked once a session. */
+/**
+ * A look the guard could not take, as the refusal of the input it was for: no input goes where the guard cannot tell
+ * whether it reaches such a control, `under`.
+ */
+const unseen = (e: unknown, what: string, under: string) => {
+  const cause = e instanceof DeviceError ? e : undefined;
+  return new ToolError(
+    `${what}: ${(e as Error).message}`,
+    cause?.code ?? 'INTERNAL',
+    cause?.hint ??
+      `read the screen and try again: appdyno sends no input where it cannot tell whether ${under}`,
+    false,
+  );
+};
+
+/**
+ * The app a call's link opens in on the device, a maker's own dialer among them: asked once a session, and again after
+ * a failure, which sends nothing, as that input could be a touch on a dialer that no list here names.
+ */
 const dialers = new WeakMap<Session, Promise<string | undefined>>();
-function dialerOf(s: Session) {
-  // a device that cannot say has the fixed list alone, however it fails
+async function dialerOf(s: Session) {
   const ask = async () => s.device.apps.opener('tel:112');
-  const known = dialers.get(s) ?? ask().catch(() => undefined);
+  const known = dialers.get(s) ?? ask();
   dialers.set(s, known);
-  return known;
+  return known.catch((e: unknown) => {
+    if (dialers.get(s) === known) dialers.delete(s);
+    throw unseen(
+      e,
+      'the device could not say which app places its calls, to tell whether this input may place one',
+      'it may place a call',
+    );
+  });
 }
 
 /** What a touch at `p` would act on of the system's power, emergency and erase controls: its words, or undefined. */
@@ -302,13 +326,10 @@ const homeReads = new WeakMap<Screen, Tree | undefined>();
 async function homeRead(s: Session, screen: Screen) {
   if (homeReads.has(screen)) return homeReads.get(screen);
   const over = await s.device.systemTree?.().catch((e: unknown) => {
-    const cause = e instanceof DeviceError ? e : undefined;
-    throw new ToolError(
-      `the home screen app could not be read, to tell whether Control Center or the power-off screen is over the app: ${(e as Error).message}`,
-      cause?.code ?? 'INTERNAL',
-      cause?.hint ??
-        'read the screen and try again: appdyno sends no input where it cannot tell whether a power, emergency or erase control is under it',
-      false,
+    throw unseen(
+      e,
+      'the home screen app could not be read, to tell whether Control Center or the power-off screen is over the app',
+      'a power, emergency or erase control is under it',
     );
   });
   homeReads.set(screen, over);

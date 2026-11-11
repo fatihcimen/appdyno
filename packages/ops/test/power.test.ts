@@ -411,4 +411,19 @@ describe('a key or typing into a phone app', () => {
     none.device.apps = { opener: () => Promise.resolve('android') } as unknown as AppManager;
     expect((await none.call('tap', { x: 540, y: 1000 })).error).toBe(false);
   });
+
+  it('sends nothing where the device could not say which app places its calls, and asks it again the next time', async () => {
+    const { call, sent, device } = await onDevice(made('com.android.contacts', []));
+    const gone = new DeviceError('DEVICE_GONE', 'adb lost the device during cmd package');
+    const opener = vi.fn().mockRejectedValueOnce(gone).mockResolvedValue('com.android.contacts');
+    device.apps = { opener } as unknown as AppManager;
+    const r = await call('tap', { x: 540, y: 1000 });
+    expect(r.code).toBe('DEVICE_GONE');
+    expect(r.text).toContain(
+      'the device could not say which app places its calls, to tell whether this input may place one: adb lost the device during cmd package (no touch was sent)',
+    );
+    expect((await call('tap', { x: 540, y: 1000 })).code).toBe('PERMISSION_REQUIRED');
+    expect(opener).toHaveBeenCalledTimes(2);
+    expect(sent()).toEqual([]);
+  });
 });

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- On Android an input is not sent when the device could not say which app a call's link opens in, and the device is asked again at the next input: a query that failed, as on an adb hiccup at the first input, was kept for the session as "no such app", so a maker's dialer outside the fixed list took a touch, key or text unasked until the session ended.
 - An input that fails once it has left for the device, as a swipe whose answer timed out, leaves the screen to be read again before the next one: the power and apps guards judged the next input by the read before the failed one, for up to 20 s, so a swipe that opened Control Center or quick settings and then timed out let a tap by x,y on its power button go unasked. A ref read before such a failure is looked up on a new read too.
 - `hub`, `cli` and `appdyno` declare `@appdyno/testing` themselves, as `testing` depends on none of them; the root declares it for the packages it depends on, whose own declaration would be a cycle pnpm refuses.
 - CI runs on a push to `main` and on a pull request, so a branch with one runs once where it ran twice; a newer push cancels the run of the same branch or pull request before it, and a job ends at 45 minutes, where a hang took GitHub's six hours.

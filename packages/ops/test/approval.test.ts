@@ -48,6 +48,7 @@ async function onDevice(
   const device = Object.assign(new FakeDevice(), {
     virtual: o.virtual ?? true,
     apps: {
+      opener: () => Promise.resolve(undefined),
       grantResets: o.grantResets,
       uninstall: record('uninstall'),
       clearData: record('clear'),

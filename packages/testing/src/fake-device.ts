@@ -20,12 +20,13 @@ import { DeviceError, type ActParams, type Hello, type Point, type Tree } from '
 import { LACKS } from './fake-measures.js';
 import { SCREENS, tree } from './fake-screens.js';
 
-/** A part of the port a test did not give: whatever is asked of it, it refuses. */
-const notGiven = (what: string): object =>
-  new Proxy(
-    {},
-    { get: () => () => Promise.reject(new DeviceError('UNSUPPORTED', `this fake has no ${what}`)) },
-  );
+/** A part of the port a test did not give: whatever is asked of it but `given`, it refuses. */
+const notGiven = (what: string, given: object = {}): object =>
+  new Proxy(given, {
+    get: (has, key) =>
+      (Reflect.get(has, key) as unknown) ??
+      (() => Promise.reject(new DeviceError('UNSUPPORTED', `this fake has no ${what}`))),
+  });
 
 /** What a call of the device answers: what `work` throws is the promise's rejection, as it is a device's. */
 const answer = <T>(work: () => T) =>
@@ -39,7 +40,8 @@ export class FakeDevice extends DeviceActions implements Device {
   readonly settingsPages = ANDROID_PAGES;
   virtual = true;
   lastStartWasCold = true;
-  apps = notGiven('apps') as AppManager;
+  // a device that names no app a call's link opens in, as an iPhone, for the guard every input passes
+  apps = notGiven('apps', { opener: () => Promise.resolve(undefined) }) as AppManager;
   recorder = notGiven('recorder') as ScreenRecorder;
   mirror = notGiven('mirror') as Mirror;
   settings: DeviceSettings = {

@@ -18,6 +18,7 @@ export const serialsFrom = (first: number) => {
 export function setup(device: FakeDevice = new FakeDevice(nextSerial())) {
   device.apps = {
     listApps: () => Promise.resolve([{ id: 'dev.app' }]),
+    opener: () => Promise.resolve(undefined),
   } as unknown as FakeDevice['apps'];
   device.mirror = { keyOf: keyOfUsage } as unknown as FakeDevice['mirror'];
   const told: Record<string, unknown>[] = [];
