@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The README and the clients guide install appdyno from npm or the Mac app's disk image, with a heading to each step, a pointer for a client that cannot find `npx`, and badges; the CLI reference lists every command, splits the server's flags from the settings that have only a variable, adds the state, perf, iOS signing and emulator variables, and warns of `all` on a real phone; the library page names `connect`'s and `replay`'s options and what a data-losing tool does from a program. Tunnels, package managers and version managers are no longer named as examples.
 - `update` tells a copy that another package manager keeps to upgrade it with that manager, and `doctor` tells an old Node to install Node 22 or newer, with no other tool named where each named one.
 - `keyboard dismiss` says the screen changed once the keyboard has gone, where on Android it said "no change seen" and to use `wait_for` when the app beneath the keyboard did not move: Android's element list holds none of the keyboard's keys.
 - The pasteboard rule reads the shared fakes of `packages/testing` too, which it lost when they left the packages' `test` folders, and the architecture page says what that package is and that the map leaves it out.

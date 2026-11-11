@@ -2,9 +2,9 @@
 
 [Türkçe](clients.tr.md)
 
-appdyno runs on your Mac, beside the phone or simulator it drives. A client is the app you talk to. This page says how to join the two, client by client, and how to get a phone ready from nothing. What each client offers was read from its own documentation on 2026-11-04. They change often, so if a menu has moved, trust the client's page.
+appdyno runs on your Mac, beside the phone or simulator it drives. A client is the app you talk to. This page says how to join the two, client by client, and how to get a phone ready from nothing. What each client offers was read from its own documentation on 2026-11-04. They change often, so if a menu has moved, trust the client's page. Phone settings are named as stock Android and iOS name them; a maker or a version may name them otherwise.
 
-Most clients run appdyno themselves on your Mac, which needs no network at all, but once without the app: the first Android trace fetches its trace processor. A client that lives in a browser cannot start anything on your Mac, and that is the hard case.
+Most clients start appdyno themselves on your Mac, and once it is installed that needs no network. There is one exception: without the Mac app, the first Android trace downloads its trace processor, once. A client that lives in a browser cannot start anything on your Mac, and that is the hard case.
 
 | client                                      | how it reaches appdyno                         | start at                                      |
 | ------------------------------------------- | ---------------------------------------------- | --------------------------------------------- |
@@ -24,8 +24,6 @@ The Mac app is for most people, and needs no terminal. The npm package is for CI
 ### The Mac app
 
 You need a Mac with Apple silicon and macOS 13.5 or newer. You do not need Node, Xcode or a terminal: the app carries its own Node, the Android agent and its window.
-
-There is no release yet. Until there is one, a checkout builds the same app: `pnpm build && node scripts/build-app.mjs` leaves it in `.app-build`.
 
 1. Download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases) and open it.
 2. Drag Appdyno to Applications.
@@ -51,14 +49,12 @@ brew install --cask you/tools/appdyno
 
 You need a Mac and Node 22 or newer. Check with `node --version`; if it says "command not found", install the LTS from [nodejs.org](https://nodejs.org/).
 
-appdyno is not on the npm registry yet. Until it is, build it from a checkout, which also needs pnpm, a JDK 25 and the Android SDK, as it builds the agent appdyno puts on an Android device:
-
 ```sh
-sh scripts/install.sh      # builds this checkout and installs the appdyno command
+npm install -g appdyno     # installs the appdyno command
 appdyno doctor             # says what is here and what is missing
 ```
 
-Once it is published, you will not need a checkout, and `npx -y appdyno install` does the next step directly.
+`npx -y appdyno install` adds appdyno to your clients with nothing installed first, but then every client start asks npm for the latest release, unverified: see [Keep appdyno current](#keep-appdyno-current). To build appdyno from a checkout, see [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ## Keep appdyno current
 
@@ -80,14 +76,14 @@ It then upgrades with whatever installed appdyno. `appdyno doctor` shows which, 
 | `npm install -g`, any prefix | upgrades with npm, in that prefix, from the copy it just verified               |
 | `pnpm add -g`                | upgrades with pnpm, to that exact version, which pnpm downloads again itself    |
 | the Mac app                  | replaces the app: see below                                                     |
-| Homebrew, Volta, Nix         | refuses: upgrade it with that manager                                           |
+| another package manager      | refuses: upgrade it with that manager                                           |
 | a one-off `npx`              | refuses: see below                                                              |
 | a source checkout            | refuses: `git pull`, then `pnpm install && pnpm build`                          |
 | anything else                | refuses: upgrade it with what installed it, or install it with `npm install -g` |
 
 A failed install leaves the old version working. `update` never moves to an older version, and never to a prerelease, even when the registry's `latest` points at one.
 
-**The Mac app** updates itself by the same promise, with Check for Updates in the menu bar, or `appdyno update`. Nothing looks for an update unless you ask. A release publishes a small file, its appcast, signed with a key whose public half is in your app. The app believes nothing else: it downloads the disk image that file names, checks its hash and size, unpacks it beside the app, and checks its code signature, that it is the same program from the same signer, and that it is the version signed. Only then does it swap the two. If any of this fails, your app stays as it was, and a build made with no update key refuses to update at all. Open the app again afterwards.
+**The Mac app** updates itself with the same guarantee, with Check for Updates in the menu bar, or `appdyno update`. Nothing looks for an update unless you ask. A release publishes a small file, its appcast, signed with a key whose public half is in your app. The app believes nothing else: it downloads the disk image that file names, checks its hash and size, unpacks it beside the app, and checks its code signature, that it is the same program from the same signer, and that it is the version signed. Only then does it swap the two. If any of this fails, your app stays as it was, and a build made with no update key refuses to update at all. Open the app again afterwards.
 
 **A client that runs `npx -y appdyno mcp`.** npx asks the registry at each start and moves to the latest release by itself, with none of the checks above. If appdyno is installed globally, npx runs that install instead. So run `npm install -g appdyno` once: what your clients run then changes only when you run `appdyno update`.
 
@@ -118,18 +114,18 @@ Flags go at the end of `args`. For example `"--device", "emulator-5554"`, or `"-
 
 **AI Clients** in the hub's sidebar lists every client here, each as it truly stands:
 
-| it says                   | what that means                                                               |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| Connected, with when      | it has really called a tool here. Only that earns the word                    |
-| Added, restart it         | its entry is there and no call has come yet                                   |
-| Not added                 | it is on this Mac, with nothing of appdyno's                                  |
-| Its file cannot be edited | `install` will not touch a file it cannot read, and says why                  |
-| Not on This Mac           | it has no file or folder here: open it once                                   |
-| Runs in a browser         | nothing to add on this Mac: see [Clients in a browser](#clients-in-a-browser) |
+| it says                                | what that means                                                                  |
+| -------------------------------------- | -------------------------------------------------------------------------------- |
+| Connected, with when                   | it has really called a tool here. Nothing else is shown as Connected             |
+| Added, restart it                      | its entry is there and no call has come yet                                      |
+| Not added                              | it is on this Mac, with nothing of appdyno's                                     |
+| Its settings file cannot be edited     | `install` will not touch a file it cannot read, and says why                     |
+| Not installed on this Mac              | it has no file or folder here, and is listed under Not on This Mac: open it once |
+| Runs in a browser: nothing to add here | see [Clients in a browser](#clients-in-a-browser)                                |
 
 **Add** and **Remove** go by the code of `appdyno install`. The exact lines show first, and nothing is written until the second click. Only that entry changes, and a backup stays beside the file. **Undo** takes that one entry back, flags and all, and does not restore the backup, as a client may have written its file since.
 
-**Test** runs what the client's entry runs, as far as asking for its list of tools, and says what it found and what to do next. It calls no tool, so it touches no device and earns no Connected. A client opened from the Dock is tried with the short `PATH` the Dock gives it.
+**Test** runs what the client's entry runs, as far as asking for its list of tools, and says what it found and what to do next. It calls no tool, so it touches no device and does not make the client Connected. A client opened from the Dock is tried with the short `PATH` the Dock gives it.
 
 How it knows: the server keeps, for each client, the name and version it gave, whether it came over stdio or HTTP, and the time of its last call, in `~/Library/Caches/appdyno/clients`, and nothing it sent. A client that is not in this list still gets a row of its own once it has called. The names were read from each client's own call where one could be made: see [What this was tried on](#what-this-was-tried-on). Taking a client out forgets its calls.
 
@@ -307,7 +303,7 @@ npx @modelcontextprotocol/inspector --cli "http://127.0.0.1:8765/mcp/$APPDYNO_HT
   --transport http --method tools/list          # lists the tools
 ```
 
-Then run a tunnel to `http://127.0.0.1:8765`, such as a named Cloudflare Tunnel, `ngrok http 8765` or `tailscale funnel 8765`, and use the HTTPS address it gives you. A `cloudflared` quick tunnel holds streamed answers back, so use a named one.
+Then run a tunnel of your choice to `http://127.0.0.1:8765`, and use the HTTPS address it gives you. The tunnel must pass a streamed answer on as it comes: some quick, unnamed tunnels hold it back until it ends, so use a named one.
 
 **One client at a time.** Once a client has called a tool, it holds the server until 10 minutes after its last call. Another client is refused with a 409 that names the holder, at its call even if it connected first, and a client that has only listed the tools holds nothing, so a health check does not get in the way. When the 10 minutes are up, or you stop the server, whatever it changed on the device goes back, as it does when a client on this Mac quits. There is one context, not one per client: a second window of the same client shares it. To drive two devices from two clients, run two servers on two ports.
 
@@ -370,7 +366,7 @@ A tool call has about 240 seconds, and an answer about 150,000 characters. Claud
 
 You need `adb`, Android's tool for talking to a device.
 
-1. Install it. Either [Android Studio](https://developer.android.com/studio), which puts it where appdyno looks, or `brew install --cask android-platform-tools`.
+1. Install it. Either [Android Studio](https://developer.android.com/studio), which puts it where appdyno looks, or Google's platform-tools, by `appdyno tools install adb --accept-license`, which says you accept Google's terms.
 2. On the phone, turn on developer options: Settings, About phone, tap **Build number** seven times. On a Xiaomi it is **OS version**.
 3. In Settings, Developer options, turn on **USB debugging**. On a Xiaomi turn on **Install via USB** and **USB debugging (Security settings)** too.
 4. Connect the cable. Unlock the phone, and answer **Allow** on the question it asks.
@@ -383,7 +379,7 @@ appdyno installs its own agent on the device the first time it is used. A Xiaomi
 
 ## An iPhone or a simulator
 
-Install [Xcode](https://apps.apple.com/app/xcode/id497799835) from the App Store, open it once, and accept what it asks. Run `appdyno doctor` to see it found.
+Install [Xcode](https://apps.apple.com/app/xcode/id497799835) from the App Store, open it once, and accept what it asks. Run `appdyno doctor` to confirm it was found.
 
 **A simulator needs nothing more**, no account and no signing. Open one with Xcode's Simulator app, or ask your client to boot one. The first action that needs appdyno's helper builds it, which takes a few minutes. To do that ahead of time:
 
@@ -395,7 +391,7 @@ appdyno ios build
 
 1. Connect it by cable, unlock it, and answer **Trust** on the question it asks.
 2. In Xcode: Settings, Accounts, +, and sign in with your Apple ID.
-3. On the phone: Settings, Privacy & Security, **Developer Mode**, on. The phone restarts and asks you to confirm. The switch appears once the phone has met Xcode.
+3. On the phone: Settings, Privacy & Security, **Developer Mode**, on. The phone restarts and asks you to confirm. The switch appears after the phone has been connected to Xcode once.
 4. Find the phone's id: `xcrun devicectl list devices`, or Xcode's Window, Devices and Simulators.
 5. Sign, in one of the ways below.
 6. Check: `appdyno doctor` lists the phone with no warning. If it says `no signing for the iPhone runner`, read on.
@@ -446,7 +442,7 @@ export APPDYNO_IOS_KEYCHAIN_PASSWORD=...
 
 ### An app cannot find npx or adb
 
-An app opened from the Dock does not read your shell's setup. It has a short `PATH` that holds neither Homebrew nor a Node from nvm or mise, which gives `spawn npx ENOENT`, a server that stays disconnected, or `adb: not found`.
+An app opened from the Dock does not read your shell's setup. It has a short `PATH` that holds no Node or adb a package manager or a version manager installed, which gives `spawn npx ENOENT`, a server that stays disconnected, or `adb: not found`.
 
 Find where they are, in a terminal:
 
@@ -460,9 +456,9 @@ Then give the entry the full path of `npx`, and a `PATH` that holds `node` and `
 {
   "mcpServers": {
     "appdyno": {
-      "command": "/opt/homebrew/bin/npx",
+      "command": "/usr/local/bin/npx",
       "args": ["-y", "appdyno", "mcp"],
-      "env": { "PATH": "/opt/homebrew/bin:/usr/bin:/bin" }
+      "env": { "PATH": "/usr/local/bin:/usr/bin:/bin" }
     }
   }
 }
@@ -472,25 +468,24 @@ Then give the entry the full path of `npx`, and a `PATH` that holds `node` and `
 
 ### Everything else
 
-| what you see                                     | what it means, and what to do                                                                                               |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `npm error 404 ... appdyno`                      | appdyno is not on the registry yet, and not installed here: run `sh scripts/install.sh`                                     |
-| the client lists no tools, and shows no error    | restart it: most read their list once. Then look in its log, and run `appdyno doctor`                                       |
-| `no connected device this server may drive`      | `adb devices` or Xcode does not see one, or `--allow-devices` shuts it out                                                  |
-| `more than one device: pick one with use_device` | ask your client to use the device you mean, or add `--device` to the entry                                                  |
-| `is held by pid ...`                             | another program drives that device. Stop it, or use `--share`                                                               |
-| `no signing for the iPhone runner`               | see [An iPhone or a simulator](#an-iphone-or-a-simulator)                                                                   |
-| `DEVICE_LOCKED`                                  | unlock the phone                                                                                                            |
-| a first call on iOS fails or times out           | the runner is still building and the client gave up: run `appdyno ios build`, then try again                                |
-| a call stops at 60 seconds in Codex              | add `tool_timeout_sec` [to its entry](#codex-and-the-chatgpt-desktop-app)                                                   |
-| a call stops at 120 seconds in ChatGPT           | the Secure MCP Tunnel's limit. It cannot be raised: use something shorter, or the desktop app                               |
-| a call stops at about 4 minutes in Claude        | the hosted limit. Use something shorter, or Claude Code                                                                     |
-| `401` on the HTTP server                         | no token, or the wrong one. A client that sends none needs the token in the address                                         |
-| `403 requests from ... are not accepted`         | a web page or a client that sent an `Origin` header not of this server. It is in the server's log                           |
-| `409 this server serves one client at a time`    | another client holds it, as the message says. Wait 10 minutes from its last call, or restart the server                     |
-| `address already in use`                         | the port is taken: pick another                                                                                             |
-| a connector will not add, or sees no tools       | `curl -i -X POST https://<your tunnel>/mcp` should give 401. Anything else means the tunnel is not reaching the server      |
-| a connector worked and now fails                 | the server restarted with a generated token, or the tunnel's address changed. Keep `APPDYNO_HTTP_TOKEN`, use a named tunnel |
+| what you see                                  | what it means, and what to do                                                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| the client lists no tools, and shows no error | restart it: most read their list once. Then look in its log, and run `appdyno doctor`                                       |
+| `no connected device this server may drive`   | `adb devices` or Xcode does not see one, or `--allow-devices` shuts it out                                                  |
+| `more than one device this server may drive`  | ask your client to use the device you mean, or add `--device` to the entry                                                  |
+| `is held by pid ...`                          | another program drives that device. Stop it, or use `--share`                                                               |
+| `no signing for the iPhone runner`            | see [An iPhone or a simulator](#an-iphone-or-a-simulator)                                                                   |
+| `DEVICE_LOCKED`                               | unlock the phone                                                                                                            |
+| a first call on iOS fails or times out        | the runner is still building and the client gave up: run `appdyno ios build`, then try again                                |
+| a call stops at 60 seconds in Codex           | add `tool_timeout_sec` [to its entry](#codex-and-the-chatgpt-desktop-app)                                                   |
+| a call stops at 120 seconds in ChatGPT        | the Secure MCP Tunnel's limit. It cannot be raised: use something shorter, or the desktop app                               |
+| a call stops at about 4 minutes in Claude     | the hosted limit. Use something shorter, or Claude Code                                                                     |
+| `401` on the HTTP server                      | no token, or the wrong one. A client that sends none needs the token in the address                                         |
+| `403 requests from ... are not accepted`      | a web page or a client that sent an `Origin` header not of this server. It is in the server's log                           |
+| `409 this server serves one client at a time` | another client holds it, as the message says. Wait 10 minutes from its last call, or restart the server                     |
+| `address already in use`                      | the port is taken: pick another                                                                                             |
+| a connector will not add, or sees no tools    | `curl -i -X POST https://<your tunnel>/mcp` should give 401. Anything else means the tunnel is not reaching the server      |
+| a connector worked and now fails              | the server restarted with a generated token, or the tunnel's address changed. Keep `APPDYNO_HTTP_TOKEN`, use a named tunnel |
 
 ## What this was tried on
 
@@ -506,6 +501,6 @@ On macOS with a temporary home folder, from the package built and installed from
 
 What each client calls itself in `clientInfo`, which is how AI Clients knows it has called, was read from the client's own call for Claude Code 2.1.318: `claude-code`. For every other client the pattern in `packages/cli/src/clients.ts` comes from what it is known to send, and has not been seen here. If one is wrong, that client shows as a row of its own under the name it gave, and is never called Connected in another's place.
 
-What a client shows of an answer was read from the stream of Claude Code 2.1.319, headless (`claude -p`), over stdio from a checkout, on 2026-11-08 and 2026-11-09: it shows a tool's `structuredContent` in place of its text, keeping its images, and a failed answer's text alone. Each holds the whole answer, so on an iPhone 17 Pro simulator with iOS 27.2 and an API 34 emulator it was shown a screen's elements, an action's diff, the lines `logs` read and each refusal's code and hint; before, a screen read was shown as a count of its elements, and a refusal with no hint, and often no code.
+Claude Code 2.1.319 shows a tool's structured answer whole, with its images, and a refusal's code and hint. This was read from its headless stream (`claude -p`) on 2026-11-08 and 2026-11-09, on an iPhone 17 Pro simulator with iOS 27.2 and an API 34 emulator.
 
 Not tried, as each needs an account, a licence or a window: the ChatGPT app and web, Claude Desktop and Claude on the web, Secure MCP Tunnel, any public tunnel, a connection from Codex, Cursor, VS Code, Devin Desktop, Antigravity and Zed. Their steps here are from their own documentation. A free Apple ID's signing has not been tried either.

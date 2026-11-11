@@ -15,6 +15,10 @@
 
 **English** · [Türkçe](README.tr.md)
 
+[![npm](https://img.shields.io/npm/v/appdyno)](https://www.npmjs.com/package/appdyno)
+[![CI](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml/badge.svg)](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 </div>
 
 ![A real run: a terminal of MCP tool calls drives an iPhone simulator in the appdyno hub, which turns the phone to dark mode and back and scrolls Settings, while the Performance pane reads frames, CPU and memory](docs/images/demo.webp)
@@ -23,7 +27,7 @@
 
 An agent reads the screen as elements, taps, types and swipes. It sends a push, opens a deep link, and measures how the app starts, scrolls and holds its memory. Every action answers with the screen once it has settled, so the agent sees what it did in the same call. You can watch and touch the same device in a live window. It all runs on your Mac, with no cloud and no telemetry.
 
-Works with Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Windsurf, Antigravity, Gemini CLI, Zed, opencode, Cline and any other MCP client.
+Works with Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Devin Desktop (formerly Windsurf), Antigravity, Gemini CLI, Zed, opencode, Cline and any other MCP client.
 
 ## One call, one answer
 
@@ -55,14 +59,14 @@ All 48 tools are in [Tools](docs/reference/tools.md). Each is also [a command](d
 
 <p align="center"><sub>A real run on a simulator, through MCP, with the times it took on a busy Mac.</sub></p>
 
-`push` sends a push by type, and answers with the screen after it. Asked with no type, it says which types this device takes, the way each one goes, and the payload it would send.
+`push` sends a push by type, and answers with the screen after it. Asked with no type, it says which types this device takes, how each one is delivered, and the payload it would send.
 
 - **On a simulator** an alert goes by `simctl` and reaches the app's own code, from fields or from APNs' own payload with a badge, a sound and a category.
-- **On Android** a push is always the app's own. A debuggable build with Firebase Messaging takes an alert, a rich push, a background push and a Live Activity's as FCM's own message to its Firebase SDK, sent by `run-as`, or as root where adbd already runs as root, with no Firebase project or key. `tapped` opens the app with its data in the launcher activity's extras, where a tapped push puts it. Any other build takes `tapped` alone, and the answer says what the rest need.
+- **On Android** a push always goes to the app itself. A debuggable build that includes Firebase Messaging takes alert, rich, background and Live Activity pushes as real FCM messages, handed straight to its Firebase SDK, with no Firebase project or key. `tapped` opens the app as a tapped notification does, with the push's data in the intent that launches it. Any other build takes `tapped` only, and the answer says what the rest need.
 - **With APNs set up** by a person, with `appdyno push setup apns`, a simulator also takes rich, background, Live Activity, VoIP and widget pushes by APNs' sandbox, and a real iPhone on its cable takes those and an alert. Behind strict controls: the sandbox by default, a token only from the app's own log or typed by a person in a window's Push pane, 4 KB at most (5 for VoIP), 10 pushes a minute, and no key or token in any answer or log.
 - **With FCM set up**, with `appdyno push setup fcm`, an Android device takes alert, rich, background and Live Activity pushes by FCM, behind the same kind of controls.
 
-Until APNs is set up, a real iPhone takes no push, and the answer says so. FCM's own message was run on an API 34 emulator, and its data pushes on a Samsung phone too. The requests to Apple and Google are tested against recorded ones, and the sending to Apple against a local stand-in server: no push has gone through Apple's or Google's servers from here yet.
+Until APNs is set up, a real iPhone takes no push, and the answer says so. FCM's own message was run on an API 34 emulator, and its data pushes on a Samsung phone too. The requests to Apple and Google are tested against recorded ones, and the sending to Apple against a local stand-in server: no push has yet gone through Apple's or Google's own servers in testing.
 
 `open_link` opens a deep link, a universal link or an App Link and answers with the screen it led to. Given an app's id, it lists the links that app opens: on a simulator its URL schemes and the domains its signature names, on Android each filter as `scheme://host/path` and each App Link domain with the state Android verified it in.
 
@@ -75,7 +79,7 @@ Until APNs is set up, a real iPhone takes no push, and the answer says so. FCM's
 `appdyno hub` opens every device on this Mac in one window, driven by mouse and keyboard while an agent drives it too. Its Performance pane reads frames, CPU and memory as they happen. AI Clients shows each MCP client on this Mac as it truly stands, and adds appdyno to it. A phone joins by cable, or by Wi-Fi once paired with `appdyno pair`. See [The window and the hub](docs/reference/mirror.md).
 
 <p>
-  <img src="docs/images/window.webp" width="49.5%" alt="A simulator's own window in its light look, with a push from appdyno on the home screen">
+  <img src="docs/images/window.webp" width="49.5%" alt="A simulator's own window in its light look, with a test app's push, sent through appdyno, on the home screen">
   <img src="docs/images/window-push.webp" width="49.5%" alt="A simulator's own window in its dark look, with its Push pane open: the app's id, the type Alert and how it goes, and a title, a body and data filled in">
 </p>
 
@@ -88,7 +92,7 @@ Until APNs is set up, a real iPhone takes no push, and the answer says so. FCM's
   <img src="docs/images/approval.svg" alt="An AI agent asks to clear an app's data. appdyno stops, as this loses data, and asks the person in the client's own prompt, naming the app, the device and what is lost. The person says yes, and only then does appdyno clear the data and answer the agent. On a no, or no answer, nothing is done">
 </picture>
 
-Nothing the agent sends counts as a yes, and no tool erases or resets a device. [What asks the person first](docs/reference/tools.md#what-asks-the-person-first) lists each action, and how a person allows them ahead.
+Nothing the agent sends counts as a yes, and no tool erases or resets a device. [What asks the person first](docs/reference/tools.md#what-asks-the-person-first) lists each action, and how a person allows them ahead of time.
 
 ## On each device
 
@@ -108,35 +112,30 @@ Nothing the agent sends counts as a yes, and no tool erases or resets a device. 
 
 ## Install
 
-appdyno is not on npm yet, and has no release yet, so today it installs from a checkout of this repository. Once it is published, `npx -y appdyno install` will do steps 2 and 3 in one command, with nothing to build.
+### 1. What you need
 
-**1. What you need**
+| for                           | you need                                                      |
+| ----------------------------- | ------------------------------------------------------------- |
+| appdyno                       | a Mac, and Node 22 or newer. The Mac app carries its own Node |
+| an iOS simulator or an iPhone | Xcode                                                         |
+| an Android emulator or phone  | `adb`, from Android Studio or Google's platform tools         |
 
-| for                           | you need                                                                   |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| appdyno                       | a Mac, and Node 22 or newer                                                |
-| building it from a checkout   | pnpm 12, a JDK 25 and the Android SDK, for the agent it builds for Android |
-| an iOS simulator or an iPhone | Xcode                                                                      |
-| an Android emulator or phone  | `adb`, from Android Studio or Google's platform tools                      |
-
-**2. Get appdyno**
+### 2. Get appdyno
 
 ```sh
-git clone https://github.com/fatihcimen/appdyno.git
-cd appdyno
-sh scripts/install.sh      # builds this checkout and installs the appdyno command
+npm install -g appdyno     # installs the appdyno command
 ```
 
-The Mac app needs no terminal and carries its own Node, on Apple silicon with macOS 13.5 or newer. Until a release has one, a checkout builds it: `pnpm build && node scripts/build-app.mjs` leaves it in `.app-build`. See [The Mac app](docs/guides/clients.md#the-mac-app).
+Or take the Mac app, which needs no terminal: download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases) and drag it to Applications. It runs on Apple silicon with macOS 13.5 or newer, and Add to MCP Clients in its menu bar does step 3. See [The Mac app](docs/guides/clients.md#the-mac-app). To build appdyno from a checkout instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**3. Add it to your MCP client**
+### 3. Add it to your MCP client
 
 ```sh
 appdyno install --dry-run  # shows the change for each client it finds, and writes nothing
 appdyno install            # asks which clients; --yes takes all of them
 ```
 
-It changes the one entry of appdyno's, keeps a backup beside the file, and `appdyno install --remove` takes it out. Restart the client afterwards. For any other client, add this to its server list:
+It changes only appdyno's own entry, keeps a backup beside the file, and `appdyno install --remove` takes it out. Restart the client afterwards. For any other client, add this to its server list:
 
 ```json
 {
@@ -146,14 +145,16 @@ It changes the one entry of appdyno's, keeps a backup beside the file, and `appd
 }
 ```
 
-**4. Get a device ready**
+A client opened from the Dock may not find `npx`: if it says `spawn npx ENOENT`, see [An app cannot find npx or adb](docs/guides/clients.md#an-app-cannot-find-npx-or-adb).
 
-- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helper ahead, as the first action would, which takes a few minutes. A build of other sources than the current ones goes once a new one is there, unless a process runs from it.
+### 4. Get a device ready
+
+- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helper ahead of time, as the first action would, which takes a few minutes. It also deletes builds of older versions, except one that a running process still uses.
 - **Android emulator**: create one in Android Studio's Device Manager and start it.
 - **Android phone**: turn on Developer options (Settings, About phone, tap Build number seven times), then USB debugging in them. Connect the cable and answer Allow on the phone. For Wi-Fi, pair once under Wireless debugging, Pair device with pairing code: `appdyno pair <address> <code>`.
 - **iPhone**: connect the cable and answer Trust, turn on Developer Mode, and give it a development signing identity with a profile: [An iPhone or a simulator](docs/guides/clients.md#an-iphone-or-a-simulator) takes you through it. For Wi-Fi, pair once on the cable: `appdyno pair --device <udid>`.
 
-**5. Check**
+### 5. Check
 
 ```sh
 appdyno doctor             # what is here, what is missing, and how to fix it
@@ -180,7 +181,7 @@ Or run it yourself:
 appdyno devices                # what is connected
 appdyno screen                 # what is on the screen
 appdyno hub                    # every device in one window you can touch
-appdyno perf survey --app A    # every measure on this device, then a page of them
+appdyno perf survey --app com.example.app   # every measure on this device, then a page of them
 ```
 
 `appdyno doctor` says what is missing, and how to fix it.
@@ -197,7 +198,7 @@ Medians of 5 runs, through MCP over stdio, on the fixture app, on an M5 Pro, on 
 | type into a field | 1,137 ms      | 648 ms           | 1,934 ms | 930 ms        |
 | screenshot        | 82 ms         | 28 ms            | 184 ms   | 166 ms        |
 
-A tap waits until the screen has been still for 200 ms and answers with what changed, so most of its time is the app's own. `node scripts/speed.mjs <device id>` runs the same calls on your Mac. [Speed](docs/reference/perf.md#speed) has every call, where the time goes, and what each one proves.
+A tap waits until the screen has been still for 200 ms and answers with what changed, so most of its time is the app's own. In a checkout, after `pnpm build` and with the fixture app installed on the device, `node scripts/speed.mjs <device id>` runs the same calls on your Mac. [Speed](docs/reference/perf.md#speed) has every call, where the time goes, and what each one proves.
 
 ## Documentation
 
@@ -218,7 +219,7 @@ Local only: no network listener by default, no telemetry, and you decide which d
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). `CHANGELOG.md` lists the releases.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). [CHANGELOG.md](CHANGELOG.md) lists the releases.
 
 ## License
 

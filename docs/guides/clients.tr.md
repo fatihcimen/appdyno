@@ -4,7 +4,7 @@
 
 appdyno, Mac'inizde, kullandığı telefonun ya da simülatörün yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
 
-İstemcilerin çoğu appdyno'yu Mac'inizde kendisi başlatır, bunun için ağ gerekmez; uygulama olmadan yalnızca bir kez gerekir: ilk Android trace'i kendi trace processor'ını indirir. Tarayıcıda çalışan bir istemci ise Mac'inizde hiçbir şey başlatamaz. Zor olan durum budur.
+İstemcilerin çoğu appdyno'yu Mac'inizde kendisi başlatır ve appdyno kurulduktan sonra bunun için ağ gerekmez. Tek istisna: Mac uygulaması olmadan, ilk Android trace'i kendi trace processor'ını bir kez indirir. Tarayıcıda çalışan bir istemci ise Mac'inizde hiçbir şey başlatamaz. Zor olan durum budur.
 
 | istemci                                     | appdyno'ya nasıl ulaşır                                    | başlangıç noktası                                |
 | ------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
@@ -24,8 +24,6 @@ Sonra cihazınızı hazırlayın: [Android](#android-telefon-veya-emülatör), [
 ### Mac uygulaması
 
 Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node, Xcode ya da terminal gerekmez: uygulama kendi Node'unu, Android ajanını ve penceresini içinde taşır.
-
-Henüz yayımlanmış bir sürüm yok. O zamana kadar kaynak kod aynı uygulamayı derler: `pnpm build && node scripts/build-app.mjs` onu `.app-build` klasörüne bırakır.
 
 1. `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip açın.
 2. Appdyno'yu Applications klasörüne sürükleyin.
@@ -51,14 +49,12 @@ brew install --cask you/tools/appdyno
 
 Bir Mac ve Node 22 ya da üstü gerekir. `node --version` ile bakın; "command not found" derse [nodejs.org](https://nodejs.org/) adresinden LTS sürümünü kurun.
 
-appdyno henüz npm'de yok. Yayımlanana kadar kaynak koddan derlenir, bunun için pnpm, JDK 25 ve Android SDK da gerekir; appdyno'nun Android cihaza kurduğu ajan bununla derlenir:
-
 ```sh
-sh scripts/install.sh      # kaynak kodu derler ve appdyno komutunu kurar
+npm install -g appdyno     # appdyno komutunu kurar
 appdyno doctor             # nelerin kurulu olduğunu, neyin eksik olduğunu söyler
 ```
 
-Yayımlandıktan sonra kaynak koda gerek kalmayacak, sıradaki adımı doğrudan `npx -y appdyno install` yapacak.
+`npx -y appdyno install`, önce hiçbir şey kurmadan appdyno'yu istemcilerinize ekler; ama o zaman her istemci her açılışta npm'e son sürümü sorar ve onu doğrulamadan alır: bkz. [appdyno'yu güncel tutmak](#appdynoyu-güncel-tutmak). appdyno'yu kaynak koddan derlemek için bkz. [CONTRIBUTING.tr.md](../../CONTRIBUTING.tr.md).
 
 ## appdyno'yu güncel tutmak
 
@@ -80,16 +76,16 @@ Ardından appdyno'yu hangi araç kurduysa onunla yükseltir. Hangisi olduğunu, 
 | `npm install -g`, her prefix | npm ile, o prefix içinde, az önce doğruladığı kopyadan yükseltir  |
 | `pnpm add -g`                | pnpm ile, tam o sürüme yükseltir; pnpm onu yeniden indirir        |
 | Mac uygulaması               | uygulamayı değiştirir: aşağıya bakın                              |
-| Homebrew, Volta, Nix         | reddeder: o araçla yükseltin                                      |
+| başka bir paket yöneticisi   | reddeder: o yöneticiyle yükseltin                                 |
 | tek seferlik `npx`           | reddeder: aşağıya bakın                                           |
 | kaynak kod                   | reddeder: `git pull`, ardından `pnpm install && pnpm build`       |
 | başka bir şey                | reddeder: kuran araçla yükseltin ya da `npm install -g` ile kurun |
 
-Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hiçbir zaman daha eski bir sürüme geçmez, kayıt defterindeki `latest` bir ön sürümü gösterse bile ön sürüme de geçmez.
+Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hiçbir zaman daha eski bir sürüme geçmez, npm registry'sindeki `latest` bir ön sürümü gösterse bile ön sürüme de geçmez.
 
-**Mac uygulaması** kendini aynı sözle günceller: menü çubuğundaki Check for Updates ya da `appdyno update` ile. Siz istemedikçe güncelleme aranmaz. Her sürüm, appcast denen küçük bir dosya yayımlar. Bu dosya, açık yarısı uygulamanızda bulunan bir anahtarla imzalıdır ve uygulama başka hiçbir şeye inanmaz: dosyanın gösterdiği disk imajını indirir, hash'ini ve boyutunu denetler, uygulamanın yanına açar, kod imzasını, aynı imzacıdan gelen aynı program olduğunu ve imzalanan sürüm olduğunu denetler. İkisini ancak bundan sonra değiştirir. Bunlardan biri başarısız olursa uygulamanız olduğu gibi kalır, güncelleme anahtarı olmadan yapılmış bir derleme ise güncellemeyi hiç kabul etmez. Ardından uygulamayı yeniden açın.
+**Mac uygulaması** kendini aynı güvenceyle günceller: menü çubuğundaki Check for Updates ya da `appdyno update` ile. Siz istemedikçe güncelleme aranmaz. Her sürüm, appcast denen küçük bir dosya yayımlar. Bu dosya, açık yarısı uygulamanızda bulunan bir anahtarla imzalıdır ve uygulama başka hiçbir şeye inanmaz: dosyanın gösterdiği disk imajını indirir, hash'ini ve boyutunu denetler, uygulamanın yanına açar, kod imzasını, aynı imzacıdan gelen aynı program olduğunu ve imzalanan sürüm olduğunu denetler. İkisini ancak bundan sonra değiştirir. Bunlardan biri başarısız olursa uygulamanız olduğu gibi kalır, güncelleme anahtarı olmadan yapılmış bir build ise güncellemeyi hiç kabul etmez. Ardından uygulamayı yeniden açın.
 
-**`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta kayıt defterine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
+**`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta npm registry'sine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
 
 **Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android ajanı ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu ilk kullanımda bir kez derler, bu birkaç dakika sürer.
 
@@ -118,18 +114,18 @@ Hub'ın kenar çubuğundaki **Telefon Bağla**, telefonu USB hata ayıklama ya d
 
 Hub'ın kenar çubuğundaki **Yapay Zekâ İstemcileri**, buradaki her istemciyi gerçek durumuyla listeler:
 
-| ne der                      | anlamı                                                                                    |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
-| Bağlı, ne zaman olduğuyla   | burada gerçekten bir araç çağırdı. Bu sözü yalnızca bu kazandırır                         |
-| Eklendi, yeniden başlatın   | girdisi yerinde, henüz çağrı gelmedi                                                      |
-| Eklenmedi                   | bu Mac'te var, appdyno'ya ait bir şey yok                                                 |
-| Ayar dosyası düzenlenemiyor | `install` okuyamadığı dosyaya dokunmaz, nedenini söyler                                   |
-| Bu Mac'te Yok               | burada dosyası ya da klasörü yok: bir kez açın                                            |
-| Tarayıcıda çalışır          | bu Mac'te eklenecek bir şey yok: bkz. [Tarayıcıdaki istemciler](#tarayıcıdaki-istemciler) |
+| ne der                                           | anlamı                                                                             |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Bağlı, ne zaman olduğuyla                        | burada gerçekten bir araç çağırdı. Başka hiçbir durumda Bağlı yazmaz               |
+| Eklendi, yeniden başlatın                        | girdisi yerinde, henüz çağrı gelmedi                                               |
+| Eklenmedi                                        | bu Mac'te var, appdyno'ya ait bir şey yok                                          |
+| Ayar dosyası düzenlenemiyor                      | `install` okuyamadığı dosyaya dokunmaz, nedenini söyler                            |
+| Bu Mac'te kurulu değil                           | burada dosyası ya da klasörü yok ve Bu Mac'te Yok altında listelenir: bir kez açın |
+| Tarayıcıda çalışır: burada eklenecek bir şey yok | bkz. [Tarayıcıdaki istemciler](#tarayıcıdaki-istemciler)                           |
 
-**Ekle** ve **Kaldır**, `appdyno install` kodunu kullanır. Önce satırların tam hali görünür, ikinci tıklamaya kadar hiçbir şey yazılmaz. Yalnızca o girdi değişir, dosyanın yanında yedek kalır. **Geri Al** yalnızca o girdiyi, bayraklarıyla birlikte eski haline döndürür; yedeği geri yüklemez, çünkü istemci o arada dosyasını yazmış olabilir.
+**Ekle** ve **Kaldır**, `appdyno install` kodunu kullanır. Önce satırların tam hali görünür, ikinci tıklamaya kadar hiçbir şey yazılmaz. Yalnızca o girdi değişir, dosyanın yanında yedek kalır. **Geri Al** yalnızca o girdiyi, seçenekleriyle birlikte eski haline döndürür; yedeği geri yüklemez, çünkü istemci o arada dosyasını yazmış olabilir.
 
-**Test Et**, istemcinin girdisinin çalıştırdığını çalıştırır, araç listesini ister, ne bulduğunu ve sırada ne yapılacağını söyler. Araç çağırmaz, bu yüzden cihaza dokunmaz ve Bağlı sözünü kazandırmaz. Dock'tan açılan istemci, Dock'un verdiği kısa `PATH` ile denenir.
+**Test Et**, istemcinin girdisinin çalıştırdığını çalıştırır, araç listesini ister, ne bulduğunu ve sırada ne yapılacağını söyler. Araç çağırmaz, bu yüzden cihaza dokunmaz ve istemciyi Bağlı durumuna da geçirmez. Dock'tan açılan istemci, Dock'un verdiği kısa `PATH` ile denenir.
 
 Bunu nasıl bilir: sunucu her istemci için verdiği adı ve sürümü, stdio mu HTTP mi kullandığını ve son çağrısının zamanını `~/Library/Caches/appdyno/clients` altında tutar; gönderdiği hiçbir şeyi tutmaz. Listede olmayan bir istemci de çağırdığında kendi satırını alır. Adlar, çağrı yapılabilen yerlerde istemcinin kendi çağrısından okundu: bkz. [Neyle denendi](#neyle-denendi). Bir istemciyi kaldırmak çağrılarını da unutturur.
 
@@ -281,7 +277,7 @@ Tünel açmadan önce:
 
 ### HTTP sunucusu
 
-Hub bunların hepsini Yapay Zekâ İstemcileri'nde, Tarayıcıda bölümünde yapar. Sunucuyu Başlat aynı komutu kendi sürecinde, 8765 bağlantı noktasından ya da sonraki boş olandan çalıştırır ve adresi söyler. Token siz istemedikçe gizli kalır, sunucuya ortam değişkeniyle gider ve durum klasöründe 0600 izniyle saklanır, böylece kayıtlı bir bağlayıcı çalışmaya devam eder. Yeni Token, dışarı sızan token'ın yerine yenisini koyar. Sunucu, hub nasıl kapanırsa kapansın onunla birlikte kapanır.
+Hub bunların hepsini Yapay Zekâ İstemcileri'nde, Tarayıcıda bölümünde yapar. Sunucuyu Başlat aynı komutu kendi sürecinde, 8765 numaralı porttan ya da sonraki boş porttan çalıştırır ve adresi söyler. Token siz istemedikçe gizli kalır, sunucuya ortam değişkeniyle gider ve durum klasöründe 0600 izniyle saklanır, böylece kayıtlı bir bağlayıcı çalışmaya devam eder. Yeni Token, dışarı sızan token'ın yerine yenisini koyar. Sunucu, hub nasıl kapanırsa kapansın onunla birlikte kapanır.
 
 Elle, `appdyno mcp --http` aynı araçları MCP'nin Streamable HTTP taşıması üzerinden sunar. Siz istemedikçe kapalıdır ve yalnızca bu Mac'te dinler:
 
@@ -307,7 +303,7 @@ npx @modelcontextprotocol/inspector --cli "http://127.0.0.1:8765/mcp/$APPDYNO_HT
   --transport http --method tools/list          # araçları listeler
 ```
 
-Sonra `http://127.0.0.1:8765` adresine bir tünel açın; örneğin adlandırılmış bir Cloudflare Tunnel, `ngrok http 8765` ya da `tailscale funnel 8765`. Size verdiği HTTPS adresini kullanın. `cloudflared` hızlı tüneli akış halindeki yanıtları tutar, adlandırılmış tünel kullanın.
+Sonra `http://127.0.0.1:8765` adresine seçtiğiniz bir tünel açın ve size verdiği HTTPS adresini kullanın. Tünel, akış halindeki bir yanıtı geldikçe iletmelidir: bazı hızlı, adsız tüneller onu sonuna kadar tutar; adlandırılmış bir tünel kullanın.
 
 **Aynı anda tek istemci.** Bir istemci araç çağırdığı andan itibaren sunucuyu tutar, son çağrısından 10 dakika sonrasına kadar. Başka bir istemci, önce bağlanmış olsa bile çağrısında, sunucuyu tutanın adını söyleyen 409 ile reddedilir. Yalnızca araçları listelemiş bir istemci hiçbir şey tutmaz, yani sağlık kontrolü kimseyi engellemez. 10 dakika dolunca ya da sunucuyu durdurunca, cihazda değiştirdiği her şey eski haline döner; bu Mac'teki bir istemci kapandığında olduğu gibi. Bağlam istemci başına değil, tektir: aynı istemcinin ikinci penceresi onu paylaşır. İki istemciyle iki cihaz kullanmak için iki portta iki sunucu çalıştırın.
 
@@ -370,7 +366,7 @@ Bir araç çağrısının yaklaşık 240 saniyesi, bir yanıtın yaklaşık 150.
 
 Android cihazlarla konuşan `adb` aracı gerekir.
 
-1. Kurun. Ya [Android Studio](https://developer.android.com/studio), appdyno'nun baktığı yere kurar, ya da `brew install --cask android-platform-tools`.
+1. Kurun. Ya [Android Studio](https://developer.android.com/studio), appdyno'nun baktığı yere kurar, ya da Google'ın platform-tools paketini `appdyno tools install adb --accept-license` ile kurun; bu seçenek Google'ın koşullarını kabul ettiğinizi söyler.
 2. Telefonda geliştirici seçeneklerini açın: Ayarlar, Telefon hakkında, **Derleme numarası**na (bazı telefonlarda Yapım numarası) yedi kez dokunun. Xiaomi'de bu **OS sürümü**dür.
 3. Ayarlar, Geliştirici seçenekleri altında **USB hata ayıklama**yı açın. Xiaomi'de **USB ile yükle** ve **USB hata ayıklama (Güvenlik ayarları)** da açılmalı.
 4. Kabloyu takın. Telefonun kilidini açın, sorduğu soruya **İzin ver** deyin.
@@ -395,7 +391,7 @@ appdyno ios build
 
 1. Kabloyla bağlayın, kilidi açın, sorduğu soruya **Güven** deyin.
 2. Xcode'da: Settings, Accounts, +, Apple kimliğinizle giriş yapın.
-3. Telefonda: Ayarlar, Gizlilik ve Güvenlik, **Geliştirici Modu**, açın. Telefon yeniden başlar ve onay ister. Bu anahtar, telefon Xcode ile tanıştıktan sonra görünür.
+3. Telefonda: Ayarlar, Gizlilik ve Güvenlik, **Geliştirici Modu**, açın. Telefon yeniden başlar ve onay ister. Bu anahtar, telefon Xcode'a bir kez bağlandıktan sonra görünür.
 4. Telefonun kimliğini bulun: `xcrun devicectl list devices` ya da Xcode'da Window, Devices and Simulators.
 5. Aşağıdaki yollardan biriyle imzalayın.
 6. Kontrol: `appdyno doctor` telefonu uyarısız listeler. `no signing for the iPhone runner` derse okumaya devam edin.
@@ -446,7 +442,7 @@ export APPDYNO_IOS_KEYCHAIN_PASSWORD=...
 
 ### Uygulama npx'i veya adb'yi bulamıyor
 
-Dock'tan açılan bir uygulama kabuğunuzun ayarlarını okumaz. Kısa bir `PATH` ile çalışır, burada ne Homebrew ne de nvm veya mise ile kurulmuş Node bulunur. Sonuç: `spawn npx ENOENT`, bağlanmayan bir sunucu ya da `adb: not found`.
+Dock'tan açılan bir uygulama kabuğunuzun ayarlarını okumaz. Kısa bir `PATH` ile çalışır; bir paket yöneticisinin ya da sürüm yöneticisinin kurduğu Node ve adb burada bulunmaz. Sonuç: `spawn npx ENOENT`, bağlanmayan bir sunucu ya da `adb: not found`.
 
 Terminalde nerede olduklarına bakın:
 
@@ -460,9 +456,9 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 {
   "mcpServers": {
     "appdyno": {
-      "command": "/opt/homebrew/bin/npx",
+      "command": "/usr/local/bin/npx",
       "args": ["-y", "appdyno", "mcp"],
-      "env": { "PATH": "/opt/homebrew/bin:/usr/bin:/bin" }
+      "env": { "PATH": "/usr/local/bin:/usr/bin:/bin" }
     }
   }
 }
@@ -474,10 +470,9 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 
 | gördüğünüz                                                | anlamı ve yapılacak                                                                                                                      |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm error 404 ... appdyno`                               | appdyno henüz npm'de yok ve burada kurulu değil: `sh scripts/install.sh` çalıştırın                                                      |
 | istemci araç göstermiyor, hata da vermiyor                | yeniden başlatın, çoğu listeyi bir kez okur. Sonra kayıtlarına bakın ve `appdyno doctor` çalıştırın                                      |
 | `no connected device this server may drive`               | `adb devices` ya da Xcode cihaz görmüyor, veya `--allow-devices` onu dışarıda bırakıyor                                                  |
-| `more than one device: pick one with use_device`          | istemcinize hangi cihazı kullanacağını söyleyin ya da girdiye `--device` ekleyin                                                         |
+| `more than one device this server may drive`              | istemcinize hangi cihazı kullanacağını söyleyin ya da girdiye `--device` ekleyin                                                         |
 | `is held by pid ...`                                      | o cihazı başka bir program kullanıyor. Durdurun ya da `--share` kullanın                                                                 |
 | `no signing for the iPhone runner`                        | bkz. [iPhone veya simülatör](#iphone-veya-simülatör)                                                                                     |
 | `DEVICE_LOCKED`                                           | telefonun kilidini açın                                                                                                                  |
@@ -506,6 +501,6 @@ macOS'ta, geçici bir ev klasörüyle, paketinden derlenip kurulan sürümle, b�
 
 Yapay Zekâ İstemcileri'nin bir istemcinin çağırdığını bilmesini sağlayan `clientInfo` adı, Claude Code 2.1.318 için istemcinin kendi çağrısından okundu: `claude-code`. Diğer istemciler için `packages/cli/src/clients.ts` içindeki kalıp, gönderdiği bilinen addan gelir ve burada görülmedi. Biri yanlışsa o istemci verdiği adla kendi satırında görünür, başkasının yerine asla Bağlı denmez.
 
-Bir istemcinin bir yanıttan ne gösterdiği, Claude Code 2.1.319'un başsız (`claude -p`), bir checkout'tan stdio üzerinden çalıştırıldığı akışından, 2026-11-08 ve 2026-11-09'da okundu: bir aracın metni yerine görsellerini koruyarak `structuredContent`'ini, başarısız bir yanıtın ise yalnızca metnini gösterir. Her biri yanıtın tamamını taşır; böylece iOS 27.2'li bir iPhone 17 Pro simülatöründe ve bir API 34 emülatöründe ona bir ekranın öğeleri, bir işlemin farkı, `logs`'un okuduğu satırlar ve her reddin kodu ve ipucu gösterildi; önceden bir ekran okuması öğelerinin sayısı olarak, bir ret de ipucusuz ve çoğu zaman kodsuz gösteriliyordu.
+Claude Code 2.1.319 bir aracın yapılandırılmış yanıtını görselleriyle birlikte bütünüyle, bir reddi de kodu ve ipucuyla gösterir. Bu, 2026-11-08 ve 2026-11-09'da arayüzsüz akışından (`claude -p`), iOS 27.2'li bir iPhone 17 Pro simülatöründe ve bir API 34 emülatöründe okundu.
 
 Hesap, lisans ya da pencere gerektirdiği için denenmeyenler: ChatGPT uygulaması ve web sürümü, Claude Desktop ve web'deki Claude, Secure MCP Tunnel, herkese açık herhangi bir tünel, Codex'ten bağlantı, Cursor, VS Code, Devin Desktop, Antigravity ve Zed. Buradaki adımlar kendi belgelerinden alındı. Ücretsiz Apple kimliğiyle imzalama da denenmedi.

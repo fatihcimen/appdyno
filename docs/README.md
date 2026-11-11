@@ -27,7 +27,7 @@ Look things up here.
 | [The window and the hub](reference/mirror.md) | the live window: what feeds it, its states, its wire, its limits       |
 | [Performance](reference/perf.md)              | what each measure reads on each device, and how each number was proved |
 | [Protocol](reference/protocol.md)             | the bytes between the host and a device's agent                        |
-| [CI and releases](reference/ci.md)            | every gate, the device suites, how a release is made                   |
+| [CI and releases](reference/ci.md)            | every check, the device suites, how a release is made                  |
 | [The strict lint](reference/lint.md)          | how the code meets a type-checked rule that leaves a choice            |
 
 ## How it works

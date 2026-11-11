@@ -15,15 +15,19 @@
 
 [English](README.md) · **Türkçe**
 
+[![npm](https://img.shields.io/npm/v/appdyno)](https://www.npmjs.com/package/appdyno)
+[![CI](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml/badge.svg)](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml)
+[![Lisans: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 </div>
 
 ![Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub'ındaki bir iPhone simülatörünü yönetiyor; telefonu karanlık moda alıp geri getiriyor, Ayarlar'ı kaydırıyor, bu sırada Performans paneli kare, CPU ve bellek değerlerini okuyor](docs/images/demo.webp)
 
-<p align="center"><sub>Kurgu değil, gerçek bir çalıştırma: çağrıları bir MCP istemcisi yapıyor, süreler gerçek. Hub ise telefonu gösteriyor ve okuyor.</sub></p>
+<p align="center"><sub>Kurgu değil, gerçek bir çalıştırma: çağrıları bir MCP istemcisi yapıyor, süreler gerçek. Hub ise telefonu gösteriyor ve okuyor. Kayıt İngilizce arayüzle alındı; uygulama Türkçe de çalışır.</sub></p>
 
 Ajan ekranı öğeler halinde okur; dokunur, yazar, kaydırır. Push bildirimi gönderir, deep link açar, uygulamanın nasıl açıldığını, nasıl kaydığını ve ne kadar bellek tuttuğunu ölçer. Her işlem, ekran durulduktan sonraki haliyle yanıt verir: ajan yaptığı işin sonucunu aynı çağrıda görür. Siz de aynı cihazı canlı bir pencerede izleyip elle kullanabilirsiniz. Hepsi Mac'inizde çalışır; bulut yok, telemetri yok.
 
-Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Windsurf, Antigravity, Gemini CLI, Zed, opencode, Cline ve diğer tüm MCP istemcileriyle çalışır.
+Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Devin Desktop (eski adıyla Windsurf), Antigravity, Gemini CLI, Zed, opencode, Cline ve diğer tüm MCP istemcileriyle çalışır.
 
 ## Tek çağrı, tek yanıt
 
@@ -42,7 +46,7 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 | **Push bildirimleri.** Cihazın kabul ettiği her türde push gönderir; bir başlık ve metinden ya da platformun kendi JSON'undan.                                                                                                           | `push`                                                                  |
 | **Bağlantılar.** Deep link, universal link ya da App Link açar. Kurulu bir uygulamanın açtığı bağlantıları listeler.                                                                                                                     | `open_link`                                                             |
 | **Cihaz koşulları.** Karanlık mod, yazı boyutu, dil, yavaş ağ, uçak modu ve biyometri; her biri oturum bitince eski haline döner. Konum ve ekranın yönü de.                                                                              | `device_setting` `set_location` `set_orientation`                       |
-| **Ölçüm.** Açılış süresi, kareler, bellek, CPU, ağ verisi ve enerji; platformun kendi araçlarından okunur, ham çıktısıyla saklanır. Uygulamayı yavaşlatan bir değişiklik karşılaştırmada başarısız sayılır.                              | `perf_launch` `perf_scroll` `perf_snapshot` `perf_compare` ve diğerleri |
+| **Ölçüm.** Açılış süresi, kareler, bellek, CPU, ağ verisi ve enerji; platformun kendi araçlarından okunur, ham çıktısıyla saklanır. Performans kapısı, uygulamayı yavaşlatan bir değişikliği başarısız kılar.                            | `perf_launch` `perf_scroll` `perf_snapshot` `perf_compare` ve diğerleri |
 | **Kanıt.** Video, her adımın raporu, loglar, çökme kayıtları, ağ trafiği, erişilebilirlik denetimi ve görsel karşılaştırma.                                                                                                              | `record` `report` `logs` `crashes` `network` `audit` `visual`           |
 | **Akışlar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                       | `flow`                                                                  |
 | **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                  | `mirror` `hand_off`                                                     |
@@ -58,11 +62,11 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 `push`, bildirimi türüne göre gönderir ve sonraki ekranla yanıt verir. Tür verilmezse bu cihazın hangi türleri kabul ettiğini, her birinin hangi yoldan gittiğini ve göndereceği payload'u söyler.
 
 - **Simülatörde** alert `simctl` ile gider ve doğrudan uygulamanın koduna ulaşır: alanlardan ya da badge, ses ve kategori içeren APNs payload'unun kendisinden.
-- **Android'de** push her zaman uygulamanın kendisinindir. Firebase Messaging içeren debuggable bir derleme alert, rich, background ve Live Activity push'larını, Firebase SDK'sına giden FCM'in kendi mesajı olarak alır: `run-as` ile, ya da adbd zaten root çalışıyorsa root olarak gönderilir; Firebase projesi ya da anahtar gerekmez. `tapped` ise uygulamayı, dokunulmuş bir push'un yaptığı gibi, verisi launcher activity'nin extras'ında olacak şekilde açar. Başka bir derleme yalnızca `tapped` alır; yanıt, diğerleri için neyin gerektiğini söyler.
+- **Android'de** push her zaman uygulamanın kendisine gider. Firebase Messaging içeren debuggable bir build alert, rich, background ve Live Activity push'larını gerçek FCM mesajları olarak, doğrudan Firebase SDK'sına teslim edilmiş halde alır; Firebase projesi ya da anahtar gerekmez. `tapped`, uygulamayı dokunulmuş bir bildirimin açtığı gibi, push'un verisi onu başlatan intent'te olacak şekilde açar. Başka bir build yalnızca `tapped` alır; yanıt, diğerleri için neyin gerektiğini söyler.
 - **APNs kurulduğunda**, yani bir kişi `appdyno push setup apns` ile kurduğunda, simülatör APNs'in sandbox'ı üzerinden rich, background, Live Activity, VoIP ve widget push'larını da alır; kabloyla bağlı gerçek bir iPhone da bunları ve alert'i alır. Kurallar sıkıdır: varsayılan olarak sandbox; token yalnızca uygulamanın kendi logundan ya da bir kişinin pencerenin Bildirim panelinde yazdığından; en çok 4 KB (VoIP için 5); dakikada 10 push; hiçbir yanıtta ya da logda anahtar ya da token yok.
 - **FCM kurulduğunda**, `appdyno push setup fcm` ile, Android cihaz alert, rich, background ve Live Activity push'larını FCM üzerinden alır; kurallar aynı türdendir.
 
-APNs kurulana kadar gerçek bir iPhone push almaz, yanıt da bunu söyler. FCM'in kendi mesajı API 34 bir emülatörde, veri push'ları da bir Samsung telefonda denendi. Apple'a ve Google'a giden istekler kaydedilmiş isteklerle, Apple'a gönderim de yerel bir test sunucusuyla sınanır: buradan henüz Apple'ın ya da Google'ın sunucularından geçen bir push gönderilmedi.
+APNs kurulana kadar gerçek bir iPhone push almaz, yanıt da bunu söyler. FCM'in kendi mesajı API 34 bir emülatörde, veri push'ları da bir Samsung telefonda denendi. Apple'a ve Google'a giden istekler kaydedilmiş isteklerle, Apple'a gönderim de yerel bir test sunucusuyla sınanır: denemelerde henüz Apple'ın ya da Google'ın kendi sunucularından geçen bir push gönderilmedi.
 
 `open_link` bir deep link, universal link ya da App Link açar ve vardığı ekranla yanıt verir. Bir uygulamanın kimliği verilirse o uygulamanın açtığı bağlantıları listeler: simülatörde URL şemalarını ve imzasında adı geçen alan adlarını, Android'de her filtreyi `scheme://host/path` biçiminde ve her App Link alan adını Android'in doğrulama durumuyla.
 
@@ -75,7 +79,7 @@ Her türün her cihazdaki durumu ve neyin nerede denendiği: [Push bildirimleri]
 `appdyno hub`, bu Mac'teki bütün cihazları tek pencerede açar. Ajan bir cihazı kullanırken siz de fare ve klavyeyle kullanabilirsiniz. Performans paneli kareleri, CPU'yu ve belleği anında okur. Yapay Zekâ İstemcileri, bu Mac'teki her MCP istemcisini gerçek durumuyla gösterir ve appdyno'yu ona ekler. Telefon kabloyla bağlanır; `appdyno pair` ile bir kez eşleştirildikten sonra Wi-Fi ile de. Ayrıntılar: [Pencere ve hub](docs/reference/mirror.tr.md).
 
 <p>
-  <img src="docs/images/window.webp" width="49.5%" alt="Bir simülatörün kendi penceresi, açık görünümüyle; ana ekranda appdyno'dan gelen bir push">
+  <img src="docs/images/window.webp" width="49.5%" alt="Bir simülatörün kendi penceresi, açık görünümüyle; ana ekranda bir test uygulamasının appdyno ile gönderilmiş push'u">
   <img src="docs/images/window-push.tr.webp" width="49.5%" alt="Bir simülatörün kendi penceresi, koyu görünümüyle; Bildirim paneli açık: uygulamanın kimliği, Uyarı türü ve nasıl gittiği, doldurulmuş başlık, metin ve veri">
 </p>
 
@@ -108,28 +112,23 @@ Her ölçümün her cihazdaki durumu ve nasıl kanıtlandığı: [Ne nerede çal
 
 ## Kurulum
 
-appdyno henüz npm'de değil ve henüz bir sürümü yayımlanmadı; bu yüzden bugün bu deponun bir kopyasından kurulur. Yayımlandığında `npx -y appdyno install`, 2. ve 3. adımları hiçbir şey derlemeden tek komutta yapacak.
-
-**1. Gerekenler**
+### 1. Gerekenler
 
 | ne için                         | gereken                                                                  |
 | ------------------------------- | ------------------------------------------------------------------------ |
-| appdyno                         | bir Mac ve Node 22 ya da üstü                                            |
-| kaynak koddan derlemek          | pnpm 12, bir JDK 25 ve Android ajanını derlemek için Android SDK         |
+| appdyno                         | bir Mac ve Node 22 ya da üstü. Mac uygulaması kendi Node'unu taşır       |
 | iOS simülatörü ya da iPhone     | Xcode                                                                    |
 | Android emülatörü ya da telefon | Android Studio'dan ya da Google'ın platform-tools paketinden gelen `adb` |
 
-**2. appdyno'yu edinin**
+### 2. appdyno'yu edinin
 
 ```sh
-git clone https://github.com/fatihcimen/appdyno.git
-cd appdyno
-sh scripts/install.sh      # bu kopyayı derler ve appdyno komutunu kurar
+npm install -g appdyno     # appdyno komutunu kurar
 ```
 
-Mac uygulaması terminal istemez ve kendi Node'unu içinde taşır; Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac ister. Bir sürüm onu getirene kadar kaynak koddan derlenir: `pnpm build && node scripts/build-app.mjs` uygulamayı `.app-build` klasörüne bırakır. Bkz. [Mac uygulaması](docs/guides/clients.tr.md#mac-uygulaması).
+Ya da terminal istemeyen Mac uygulamasını alın: `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip Applications'a sürükleyin. Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac'te çalışır; menü çubuğundaki Add to MCP Clients da 3. adımı yapar. Bkz. [Mac uygulaması](docs/guides/clients.tr.md#mac-uygulaması). appdyno'yu bunun yerine kaynak koddan derlemek için bkz. [CONTRIBUTING.tr.md](CONTRIBUTING.tr.md).
 
-**3. MCP istemcinize ekleyin**
+### 3. MCP istemcinize ekleyin
 
 ```sh
 appdyno install --dry-run  # bulduğu her istemci için değişikliği gösterir, hiçbir şey yazmaz
@@ -146,14 +145,16 @@ Yalnızca appdyno'nun girdisini değiştirir, dosyanın yanına bir yedek bırak
 }
 ```
 
-**4. Cihazı hazırlayın**
+Dock'tan açılan bir istemci `npx`'i bulamayabilir: `spawn npx ENOENT` derse [Uygulama npx'i veya adb'yi bulamıyor](docs/guides/clients.tr.md#uygulama-npxi-veya-adbyi-bulamıyor) bölümüne bakın.
 
-- **iOS simülatörü**: başka bir şey gerekmez. Xcode'un Simulator uygulamasından açın ya da ajanınızdan açmasını isteyin. `appdyno ios build`, appdyno'nun yardımcısını ilk işlemin yapacağı gibi önceden derler; birkaç dakika sürer. Güncel kaynaklardan başkalarının bir derlemesi, yenisi hazır olunca, bir süreç onunla çalışmıyorsa silinir.
+### 4. Cihazı hazırlayın
+
+- **iOS simülatörü**: başka bir şey gerekmez. Xcode'un Simulator uygulamasından açın ya da ajanınızdan açmasını isteyin. `appdyno ios build`, appdyno'nun yardımcısını ilk işlemin yapacağı gibi önceden derler; birkaç dakika sürer. Eski sürümlerin build'lerini de siler; çalışan bir sürecin hâlâ kullandığı build'e dokunmaz.
 - **Android emülatörü**: Android Studio'nun Device Manager'ında bir sanal cihaz oluşturup başlatın.
 - **Android telefon**: geliştirici seçeneklerini açın (Ayarlar, Telefon hakkında, Derleme numarasına yedi kez dokunun), ardından orada USB hata ayıklamayı açın. Kabloyu takın ve telefonun sorusuna İzin ver deyin. Wi-Fi için bir kez eşleştirin: Kablosuz hata ayıklama altında eşleme koduyla eşleştirmeyi seçin ve telefonun gösterdiğiyle `appdyno pair <address> <code>` çalıştırın.
 - **iPhone**: kabloyu takın ve Güven deyin, Geliştirici Modu'nu açın, bir geliştirme imzası ve ona ait bir profil verin: [iPhone veya simülatör](docs/guides/clients.tr.md#iphone-veya-simülatör) adım adım anlatır. Wi-Fi için kabloluyken bir kez eşleştirin: `appdyno pair --device <udid>`.
 
-**5. Kontrol edin**
+### 5. Kontrol edin
 
 ```sh
 appdyno doctor             # neyin kurulu, neyin eksik olduğunu ve nasıl düzeltileceğini söyler
@@ -180,7 +181,7 @@ Ya da kendiniz çalıştırın:
 appdyno devices                # neler bağlı
 appdyno screen                 # ekranda ne var
 appdyno hub                    # bütün cihazlar, dokunabileceğiniz tek pencerede
-appdyno perf survey --app A    # bu cihazdaki her ölçüm, ardından hepsini gösteren bir sayfa
+appdyno perf survey --app com.example.app   # bu cihazdaki her ölçüm, ardından hepsini gösteren bir sayfa
 ```
 
 `appdyno doctor` neyin eksik olduğunu ve nasıl düzeltileceğini söyler.
@@ -197,7 +198,7 @@ appdyno perf survey --app A    # bu cihazdaki her ölçüm, ardından hepsini g�
 | bir alana yazmak     | 1.137 ms       | 648 ms            | 1.934 ms | 930 ms          |
 | ekran görüntüsü      | 82 ms          | 28 ms             | 184 ms   | 166 ms          |
 
-Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğini söyler; bu yüzden süresinin çoğu uygulamanın kendisine aittir. `node scripts/speed.mjs <device id>` aynı çağrıları sizin Mac'inizde çalıştırır. Her çağrı, sürenin nereye gittiği ve her birinin neyi kanıtladığı: [Hız](docs/reference/perf.tr.md#hız).
+Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğini söyler; bu yüzden süresinin çoğu uygulamanın kendisine aittir. Bir kaynak kopyasında, `pnpm build` sonrasında ve fixture uygulaması cihazda kuruluyken `node scripts/speed.mjs <device id>` aynı çağrıları sizin Mac'inizde çalıştırır. Her çağrı, sürenin nereye gittiği ve her birinin neyi kanıtladığı: [Hız](docs/reference/perf.tr.md#hız).
 
 ## Belgeler
 
@@ -218,7 +219,7 @@ Yalnızca yereldir: varsayılan olarak ağdan bağlantı dinlemez, telemetri yok
 
 ## Katkıda bulunmak
 
-Bkz. [CONTRIBUTING.tr.md](CONTRIBUTING.tr.md) ve [Davranış Kuralları](CODE_OF_CONDUCT.tr.md). Sürümler `CHANGELOG.md` dosyasında.
+Bkz. [CONTRIBUTING.tr.md](CONTRIBUTING.tr.md) ve [Davranış Kuralları](CODE_OF_CONDUCT.tr.md). Sürümler [CHANGELOG.tr.md](CHANGELOG.tr.md) dosyasında.
 
 ## Lisans
 

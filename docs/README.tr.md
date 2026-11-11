@@ -22,12 +22,12 @@ Bir şeye bakmak için burası.
 | başvuru                                  | içindekiler                                                            |
 | ---------------------------------------- | ---------------------------------------------------------------------- |
 | [Araçlar](reference/tools.tr.md)         | her araç, her platformun neyi yapıp neyi yapamadığı                    |
-| [Komut satırı](reference/cli.tr.md)      | her komut, sunucunun bayrakları ve değişkenleri                        |
+| [Komut satırı](reference/cli.tr.md)      | her komut, sunucunun seçenekleri ve değişkenleri                       |
 | [Kütüphane](reference/library.tr.md)     | bir cihazı TypeScript'ten yönetmek                                     |
 | [Pencere ve hub](reference/mirror.tr.md) | canlı pencere: onu neyin beslediği, durumları, hattı, sınırları        |
 | [Performans](reference/perf.tr.md)       | her ölçümün her cihazda neyi okuduğu ve her sayının nasıl kanıtlandığı |
 | [Protokol](reference/protocol.tr.md)     | host ile bir cihazın ajanı arasındaki baytlar                          |
-| [CI ve sürümler](reference/ci.tr.md)     | her kapı, cihaz suite'leri, bir sürümün nasıl yapıldığı                |
+| [CI ve sürümler](reference/ci.tr.md)     | her denetim, cihaz suite'leri, bir sürümün nasıl yapıldığı             |
 | [Sıkı lint](reference/lint.tr.md)        | kodun, bir seçim bırakan tipe dayalı bir kuralı nasıl karşıladığı      |
 
 ## Nasıl çalışır
