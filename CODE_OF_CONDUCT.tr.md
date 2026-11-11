@@ -6,7 +6,7 @@
 
 Üyeler, katkıda bulunanlar ve liderler olarak biz; yaş, beden ölçüsü, görünür veya görünmez engellilik, etnik köken, cinsiyet özellikleri, cinsiyet kimliği ve ifadesi, deneyim düzeyi, eğitim, sosyo-ekonomik durum, milliyet, kişisel görünüm, ırk, kast, ten rengi, din veya cinsel kimlik ve yönelim gözetmeksizin, topluluğumuza katılımı herkes için tacizden uzak bir deneyim haline getirmeyi taahhüt ederiz.
 
-Açık, misafirperver, çeşitli, kapsayıcı ve sağlıklı bir topluluğa katkıda bulunacak şekillerde davranmayı ve etkileşim kurmayı taahhüt ederiz.
+Açık, misafirperver, çeşitliliğe değer veren, kapsayıcı ve sağlıklı bir topluluğa katkıda bulunacak şekillerde davranmayı ve etkileşim kurmayı taahhüt ederiz.
 
 ## Standartlarımız
 
