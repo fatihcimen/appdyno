@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- iOS runner'ı uygulamanın üzerindeki bir sistem sayfasını bir sistem uyarısı gibi, tek başına ve çerçevesindeki dokunuşlarla okur, böylece korumalar onu görür: uygulamanın açtığı bir bağlantı için bir sayfa olarak gösterilen arama istemi hiçbir okumada yoktu ve kimseye sorulmuyordu.
 - iOS runner'ı, geri okunan alan başka bir metin tutuyorsa Enter'a basmaz ve yanıt, Android ajanında ve bir simülatörün tuşlarla yazmasında olduğu gibi `submitted: false` der: önceden bir iPhone'da yanlış metin bir aramaya ya da forma gidiyordu.
 - Android'de, gönderilmesi istenen bir yazma, geri okunan alan başka bir metin tutuyorsa Enter'a basmaz ve yanıt, bir simülatörün tuşlarla yazmasında olduğu gibi `submitted: false` der: önceden yanlış metin bir aramaya ya da forma gidiyordu.
 - Ekranın bir okuması, alındıktan sonra aynı sunucunun başka bir istemcisi cihaza bir girdi gönderdiğinde eskimiş sayılır ve korumalar bir sonraki girdiden önce yeniden okur: tek bir `--http` sunucusunun iki istemcisi bir girdiyi her biri kendi son, 20 s'ye kadar eski okumasıyla değerlendiriyordu; bu yüzden diğer istemcinin kaydırmasının az önce getirdiği bir güç düğmesine x,y ile bir dokunuş sorulmadan gidiyordu.

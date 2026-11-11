@@ -2,10 +2,16 @@ import UIKit
 import XCTest
 
 extension Device {
-    /// What the home screen app draws over the app in front, and no read of that app has: a system alert, Control
-    /// Center (its module grid) and the power-off screen (its slider), by the identifiers iOS 27 gives them.
-    static let overTheApp = NSPredicate(format: "elementType == %lu OR identifier IN %@",
-                                        XCUIElement.ElementType.alert.rawValue, ["cc-root-folder-view", "actionSlider"])
+    /// What the home screen app draws over the app in front, and no read of that app has: a system alert or sheet (a
+    /// call's prompt for a link the app opened may come as either; a simulator has no phone to show it), Control Center
+    /// (its module grid) and the power-off screen (its slider), by the identifiers iOS 27 gives them.
+    static let overTheApp = NSPredicate(format: "elementType IN %@ OR identifier IN %@",
+                                        Device.aloneOverTheApp.map(\.rawValue),
+                                        ["cc-root-folder-view", "actionSlider"])
+
+    /// What of the home screen app over the app is read as itself, with the touches in its frame: all else it shows is
+    /// read whole.
+    static let aloneOverTheApp: [XCUIElement.ElementType] = [.alert, .sheet]
 
     struct Capture {
         var windows: [[String: Any]]
@@ -76,9 +82,9 @@ extension Device {
         // a read for another's look leaves the alert a touch goes to and the app's shape as its last read had them
         if pkg == nil { (alertFrame, appFrame) = (nil, snap.frame) }
         if pkg == nil, app !== springboard, overQuery.exists, let over = try? overQuery.snapshot() {
-            // a system alert (permission, notification prompt) alone; Control Center or the power-off screen as all the
-            // home screen app shows, as their power and emergency controls lie outside what the query finds
-            let alert = over.elementType == .alert
+            // a system alert (permission, notification prompt) or sheet alone; Control Center or the power-off screen
+            // as all the home screen app shows, as their power and emergency controls lie outside what the query finds
+            let alert = Device.aloneOverTheApp.contains(over.elementType)
             let shown = alert ? over : try? KeyedSnapshot.of(springboard) ?? springboard.snapshot()
             if let shown, alert || id != Device.springboardId {
                 alertFrame = shown.frame

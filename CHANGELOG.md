@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The iOS runner reads a system sheet over the app as it reads a system alert, alone and with the touches in its frame, so that the guards see it: a call's prompt for a link the app opened, shown as a sheet, was in neither read and asked no one.
 - The iOS runner presses no Enter where the field read back holds other text, and the answer says `submitted: false`, as the Android agent and a simulator's typing by keys do: on an iPhone the wrong text went to a search or a form.
 - On Android, typing asked to submit presses no Enter where the field read back holds other text, and the answer says `submitted: false`, as a simulator's typing by keys does: the wrong text went to a search or a form.
 - A read of the screen is stale once another client of the same server sent the device an input after it was taken, and the guards read again before the next input: two clients of one `--http` server each judged an input by their own last read, up to 20 s old, so a tap by x,y on a power button that the other client's swipe had just brought up went unasked.
