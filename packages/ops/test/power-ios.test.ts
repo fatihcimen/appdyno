@@ -107,6 +107,22 @@ describe("the home screen app's read, where a read of an iPhone's app has no win
     expect(sent()).toEqual([]);
   });
 
+  it('is taken anew once an input failed after it left, as a swipe that opened Control Center and timed out', async () => {
+    const cc = recorded('ios-control-center-springboard');
+    let open = false;
+    const { call, sent, asked, device } = await phone(() => Promise.resolve(open ? cc : undefined));
+    await call('screen', {});
+    const late = new DeviceError('TIMEOUT', 'the runner gave no answer to act in 10000 ms');
+    late.sent = true;
+    const act = device.act.bind(device);
+    device.act = () => ((open = true), Promise.reject(late));
+    expect((await call('swipe', { direction: 'down' })).code).toBe('TIMEOUT');
+    device.act = act;
+    expect((await call('tap', middle(cc, 'Power'))).code).toBe('PERMISSION_REQUIRED');
+    expect(asked[0]).toContain('a touch on "Power"');
+    expect(sent()).toEqual([]);
+  });
+
   it('is not taken where the person allowed the power controls ahead, as it could only cost time', async () => {
     const { call, sent, systemTree } = await phone(() => Promise.reject(new Error('no')), {
       virtual: true,

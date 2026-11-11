@@ -1,5 +1,12 @@
 import type { Device, Screen } from '@appdyno/core';
-import { DeviceError, NODE_FLAGS, type ActParams, type Point, type Tree } from '@appdyno/protocol';
+import {
+  DeviceError,
+  ERROR_TRAITS,
+  NODE_FLAGS,
+  type ActParams,
+  type Point,
+  type Tree,
+} from '@appdyno/protocol';
 import { approvePower, powerAllowed } from './approval.js';
 import { LEAVES, SIDE_KEYS } from './keys.js';
 import type { Policy } from './policy.js';
@@ -30,8 +37,15 @@ const INPUTS: Record<string, (...args: never[]) => Input> = {
   typeText: (_text: string, o?: { at?: Point }) => ({ points: o?.at ? [o.at] : [], types: true }),
 };
 
-/** The device, each of whose inputs `check` sees first, with nothing sent when it refuses. */
-export function guardInputs(device: Device, check: (input: Input) => Promise<void>): Device {
+/**
+ * The device, each of whose inputs `check` sees first, with nothing sent when it refuses. `mayHaveGone`: an input that
+ * failed once it left may have changed the screen all the same, as a swipe that opened Control Center and timed out.
+ */
+export function guardInputs(
+  device: Device,
+  check: (input: Input) => Promise<void>,
+  mayHaveGone: () => void,
+): Device {
   return new Proxy(device, {
     get(target, key) {
       const v: unknown = Reflect.get(target, key);
@@ -41,7 +55,18 @@ export function guardInputs(device: Device, check: (input: Input) => Promise<voi
       return input
         ? async (...args: never[]) => {
             await check(input(...args));
-            return own(...args);
+            try {
+              return await own(...args);
+            } catch (e) {
+              // the next input is judged by a new read, not by the screen before this one
+              if (
+                !(e instanceof DeviceError) ||
+                ERROR_TRAITS[e.code].touch !== 'refused first' ||
+                e.sent
+              )
+                mayHaveGone();
+              throw e;
+            }
           }
         : own;
     },

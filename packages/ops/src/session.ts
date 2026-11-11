@@ -194,7 +194,12 @@ export class Session {
     guard?: InputGuard,
   ) {
     this.app = appId;
-    if (guard) this.device = guardInputs(device, (input) => guard(this, input));
+    if (guard)
+      this.device = guardInputs(
+        device,
+        (input) => guard(this, input),
+        () => this.acted(),
+      );
   }
 
   screenOf(tree: Tree): Screen {

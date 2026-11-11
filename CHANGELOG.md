@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- An input that fails once it has left for the device, as a swipe whose answer timed out, leaves the screen to be read again before the next one: the power and apps guards judged the next input by the read before the failed one, for up to 20 s, so a swipe that opened Control Center or quick settings and then timed out let a tap by x,y on its power button go unasked. A ref read before such a failure is looked up on a new read too.
 - `hub`, `cli` and `appdyno` declare `@appdyno/testing` themselves, as `testing` depends on none of them; the root declares it for the packages it depends on, whose own declaration would be a cycle pnpm refuses.
 - CI runs on a push to `main` and on a pull request, so a branch with one runs once where it ran twice; a newer push cancels the run of the same branch or pull request before it, and a job ends at 45 minutes, where a hang took GitHub's six hours.
 - `appdyno test` and the commands that are an operation's are functions of their own beside `main`, which falls from 196 lines to 103 of its 200; the logs, crashes and audit answers are `ops`'s `diagnose.test.ts`, and the JSON and TOML editors' tests `cli`'s `file-edits.test.ts`, where `truth.test.ts` stood at 793 and `install.test.ts` at 791 of 800 lines.

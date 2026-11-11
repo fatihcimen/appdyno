@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AppManager } from '@appdyno/core';
-import type { Tree, WireNode } from '@appdyno/protocol';
+import { DeviceError, type Tree, type WireNode } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import { powerControlAt } from '../src/index.js';
 import { middle, onDevice, recorded } from './power-device.js';
@@ -244,6 +244,27 @@ describe('an input on them', () => {
       expect(sent()).toEqual([]);
     }),
   );
+
+  it('is judged on a new read once an input failed after it left, by a tool or a step, as a swipe that opened quick settings', async () => {
+    const qs = recorded('android-quick-settings-tr');
+    const power = middle(qs, 'Güç menüsü');
+    for (const [tool, args] of [
+      ['swipe', { direction: 'down' }],
+      ['steps', { steps: [{ action: 'swipe', direction: 'down' }] }],
+    ] as const) {
+      const { call, sent, device } = await onDevice('android-system-en');
+      await call('screen', {});
+      const act = device.act.bind(device);
+      device.act = () => (
+        (device.fixture = qs),
+        Promise.reject(new DeviceError('TIMEOUT', 'no answer'))
+      );
+      expect((await call(tool, args)).code, tool).toBe('TIMEOUT');
+      device.act = act;
+      expect((await call('tap', power)).code, tool).toBe('PERMISSION_REQUIRED');
+      expect(sent(), tool).toEqual([]);
+    }
+  });
 
   it('leaves the screen by back and home, and reads it, with nothing asked', async () => {
     const { call, sent, asked } = await onDevice('android-power-en', { answer: 'decline' });
