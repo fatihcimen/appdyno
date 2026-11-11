@@ -10,7 +10,8 @@ appdyno tap --json '{"selector":{"text":"Form"}}'
 appdyno flow stop             # akışı ve bakılması gereken her adımı yazdırır
 appdyno flow save login.flow
 appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
-appdyno test flows/ --tag smoke --env-file ci.env --retries 1 --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
+appdyno test flows/ --tag smoke --env-file ci.env --retries 1 \
+  --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
 appdyno flow export login.flow > login.yaml
 ```
 
@@ -32,18 +33,20 @@ assert id=result check=text equals="Sent: ${NAME}"
 tap id=add_button index=1 !ambiguous
 ```
 
-| adım                                                                        | çalıştırdığı                                                          |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `launch [language=] [arg=] [env=]`, `stop`                                  | `launch_app`, `arg=` ya da `env=` ile `app` `launch`, `terminate_app` |
-| `tap`, `long_press durationMs=`, `double_tap`                               | `tap`, `gesture`                                                      |
-| `type "text" [target] [replace] [submit]`                                   | `type_text`                                                           |
-| `press_key back`, `swipe up [target]`, `scroll_to <selector> [direction=]`  | o adı taşıyan araç                                                    |
-| `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                                                            |
-| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                                                              |
-| `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | kendi araçları                                                        |
-| `run shared/login.flow`                                                     | o dosyanın adımları, yerinde                                          |
+| adım                                                                                                                               | çalıştırdığı                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `launch [app] [language=] [arg=] [env=]`, `stop [app]`                                                                             | `launch_app`, `arg=` ya da `env=` ile `app` `launch`, `terminate_app` |
+| `tap`, `long_press [durationMs=]`, `double_tap`                                                                                    | `tap`, `gesture`                                                      |
+| `type "text" [target] [replace] [submit]`                                                                                          | `type_text`                                                           |
+| `press_key back [count=]`, `swipe up [target] [distance=] [durationMs=] [exact]`, `scroll_to <selector> [direction=] [maxSwipes=]` | o adı taşıyan araç                                                    |
+| `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `wait_for`                                                            |
+| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `assert`                                                              |
+| `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | kendi araçları                                                        |
+| `run shared/login.flow`                                                                                                            | o dosyanın adımları, yerinde                                          |
 
 Bir seçici `id=`, `role=`, `text=`, `index=` alanlarından herhangi biridir; metin, araçlarda olduğu gibi eşleşir. `launch`, `launch_app` gibi bir `language=` alır ya da `app` `launch` gibi uygulama aracının argümanlarını ve ortamını: her argüman için bir `arg=`, her değişken için bir `env=NAME=value`.
+
+Bir `#`, satırın sonuna kadar süren bir yorum başlatır. Bir adımın hedef aldığı yerde `tap`, `long_press`, `double_tap`, `type` ve `swipe`, `screen=` ve `!coordinates` ile birlikte `x= y=` de alır; bir kayıt bunu, yeri hiçbir şeyin adlandırmadığı yerde yazar. Bir `ref=` reddedilir, çünkü bir ref bir öğeyi yalnızca tek bir oturum için adlandırır. Üç işaret bakılması gereken bir adımı gösterir: `!ambiguous`, `!coordinates` ve `!running`; her biri [Kaydetmek](#kaydetmek) bölümünde açıklanır.
 
 ## Kaydetmek
 
@@ -91,17 +94,17 @@ Adımlardan önce `tag smoke login`; `--tag smoke` adı verilen etiketlerden her
 
 ## Bir akışın bir başkasını çalıştırması
 
-`run shared/login.flow` o dosyanın adımlarını kendi yerine koyar; yolu, onu anan dosyaya göre alınır. Adımlar ilk adım iş yapmadan önce okunur; böylece eksik bir dosya, bozuk bir satır ya da hangi dolambaçtan olursa olsun kendini çalıştıran bir dosya, o dolambaç adıyla söylenerek reddedilir ve hiçbir şey çalışmaz. Bir ad hepsinde tek bir şey anlamına gelir, çünkü hepsi değerlerini tek bir yerden alır. Tek bir çalıştırmaya değer geçiremezsiniz ve bir dosyada gizli olan bir ad hepsinde gizlidir. Başka bir uygulamaya ait bir dosya reddedilir. Bir hata, bulunduğu dosyayı ve satırı adıyla söyler; adımlar `--from`, rapor ve bir yolculuğun türleri için çalıştıkça sayılır. Bir dışa aktarma adımları yerinde yazar. Bir etiket içinde bulunduğu dosyaya aittir.
+`run shared/login.flow` o dosyanın adımlarını kendi yerine koyar; yolu, onu anan dosyaya göre alınır. Adımlar ilk adım iş yapmadan önce okunur; böylece eksik bir dosya, bozuk bir satır ya da doğrudan ya da başka dosyalar üzerinden kendini çalıştıran bir dosya, döngü adıyla söylenerek reddedilir ve hiçbir şey çalışmaz. Bir ad hepsinde tek bir şey anlamına gelir, çünkü hepsi değerlerini tek bir yerden alır. Tek bir çalıştırmaya değer geçiremezsiniz ve bir dosyada gizli olan bir ad hepsinde gizlidir. Başka bir uygulamaya ait bir dosya reddedilir. Bir hata, bulunduğu dosyayı ve satırı adıyla söyler; adımlar `--from`, rapor ve bir yolculuğun türleri için çalıştıkça sayılır. Bir dışa aktarma adımları yerinde yazar. Bir etiket içinde bulunduğu dosyaya aittir.
 
 ## Yeniden denemeler
 
-`--retries N`, bir adımda başarısız olan bir dosyayı ilk adımından başlayarak bütünüyle, kendi çalıştırmasında yeniden çalıştırır: bir çalıştırmanın içinde başarısız bir adım başarısız kalır. Bir yeniden denemede geçen dosya flaky'dir, geçmiş değildir. Satır `FLAKY login.flow: passed on attempt 2 of 3` der, çalıştırma çalıştırdığı her şeyin sayısıyla biter (`2 passed, 1 flaky, 0 failed`, yeşil bir çalıştırmada da) ve onu adıyla söyler, JUnit case'i her başarısız denemeyi `<flakyFailure>` olarak tutar ve suite'inde `flakes="1"` bulunur, her başarısız denemenin kanıtı da kalır, sonrakiler `attempt-<n>/` altında. Flaky bir dosya 0 ile çıkar, yoksa yeniden deneme boşuna olurdu. Birinde durmak için `flakes`'i okuyun ya da `--retries`'ı kullanmayın. Her denemede başarısız olan bir dosya, denemeleri `<rerunFailure>` olarak taşır. Bir dosyanın hiç çalışmasını engelleyen şey (ayrıştırılamayan bir satır, eksik bir değer) yeniden çalıştırılmaz ve `--measure`, `--retries`'ı reddeder, çünkü kapı başarısız bir denemenin bıraktığını sonrakinin okuduğuyla karşılaştırırdı.
+`--retries N`, bir adımda başarısız olan bir dosyayı ilk adımından başlayarak bütünüyle, kendi çalıştırmasında yeniden çalıştırır: bir çalıştırmanın içinde başarısız bir adım başarısız kalır. Bir yeniden denemede geçen dosya kararsızdır (flaky), geçmiş değildir. Satır `FLAKY login.flow: passed on attempt 2 of 3` der, çalıştırma çalıştırdığı her şeyin sayısıyla biter (`2 passed, 1 flaky, 0 failed`, yeşil bir çalıştırmada da) ve onu adıyla söyler, JUnit case'i her başarısız denemeyi `<flakyFailure>` olarak tutar ve suite'inde `flakes="1"` bulunur, her başarısız denemenin kanıtı da kalır, sonrakiler `attempt-<n>/` altında. Kararsız bir dosya 0 ile çıkar, yoksa yeniden deneme boşuna olurdu. Birinde durmak için `flakes`'i okuyun ya da `--retries`'ı kullanmayın. Her denemede başarısız olan bir dosya, denemeleri `<rerunFailure>` olarak taşır. Bir dosyanın hiç çalışmasını engelleyen şey (ayrıştırılamayan bir satır, eksik bir değer) yeniden çalıştırılmaz ve `--measure`, `--retries`'ı reddeder, çünkü kapı başarısız bir denemenin bıraktığını sonrakinin okuduğuyla karşılaştırırdı.
 
 ## Dışa aktarma
 
 `flow export` Maestro YAML'ı yazar ya da karşılığı olmayan her adımı adıyla söyleyerek reddeder (bir `alert`, `replace`,
-koordinatlar, id'si ya da metni olmayan bir rol). Bir metnin yanındaki rol dışarıda bırakılır, çünkü Maestro'da rol yoktur ve YAML
-bunu bir yorumda söyler. Maestro'nun metni bütün bir etiketle eşleşir, bizimki ise bir etiketin bir parçasını da kabul eder. İçe
+koordinatlar, id'si ya da metni olmayan bir rol). Bir metnin yanındaki rol dışarıda bırakılır, çünkü o biçimde rol yoktur ve YAML
+bunu bir yorumda söyler. Oradaki bir metin bütün bir etiketle eşleşir, bizimki ise bir etiketin bir parçasını da kabul eder. İçe
 aktarma yoktur.
 
 Araç YAML ile yanıt verir; `to` (komut satırında `--to`) onu ayrıca bir `.yaml` dosyasına yazar, sunucunun çalıştığı klasörün ya da durum klasörünün içine, çünkü bir istemcinin bir dosya yazmanın başka yolu olmayabilir. Başka bir yerdeki bir yol ya da bir bağlantının onların dışına çıkardığı bir yol reddedilir; `overwrite` verilmedikçe var olan bir dosya da reddedilir.

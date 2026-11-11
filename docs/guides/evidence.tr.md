@@ -30,6 +30,10 @@ Sayfa hiçbir şey yüklemez: betiği yoktur ve içerik politikası yalnızca ke
 kimlik bilgisine benzeyen her şey bütün metinlerde gizlenir. Yazılan metin ve bir şeyi adlandırdığı bilinmeyen her argüman uzunluğuyla gösterilir. Bir öğenin gizli bir değer tuttuğu ya da
 parola alanı olduğu yerde görüntünün üstü boyanır; üstü boyanamıyorsa görüntü dışarıda bırakılır. Arkasında öğe olmadan çizilen metin ayırt edilemez ve bir videonun üstü boyanmaz.
 
+## Zaman çizelgesi
+
+`report` `timeline`, ardından yolculuk, ardından `report` `stop`, raporun yanına `timeline.html` yazar: video, dokunuşlar, kareler, istekler, log ve bellek tek bir saatte, gönderilebilecek tek bir dosyada. `report` `flight`, bir uygulamanın son saniyelerini tutar ve bir çökmede ya da takılmada kaydeder. Terminalden: `appdyno timeline` ve `appdyno flight`. Bkz. performans başvurusunda [Tek bir zaman çizelgesi](../reference/perf.tr.md#tek-bir-zaman-çizelgesi); dosyayı göndermeden önce içinde ne olduğunu da orada söyler.
+
 ## Dashboard
 
 ```sh
@@ -37,7 +41,21 @@ appdyno perf survey --app A [--device S]               # o cihazdaki her ölçü
 appdyno perf dashboard [--app A] [--out dir] [--open]  # yalnızca sayfa, saklananlardan
 ```
 
-Bir uygulamanın bütün cihazlarınızdaki performansı tek sayfada: neyin ilgi beklediği, Play'in tanımlarına göre neyin sayılacağı (bir oturum, asla bir oran değil), cihaza göre her ölçüm (en yeni değeri; bir tahminse ya da gürültü altında alındıysa işaretli, ya da o cihazın onu neden okuyamadığı) ve her birinin baseline bandı ve bütçesiyle eğilimi. Bir emülatörün ya da simülatörün sayılarının bu Mac'e göre olduğunu ve gerçek kare hızlarının, donmuş karelerin, takılmaların ve enerjinin bir telefon gerektirdiğini, bir sayının farklı olduğu yerde ne anlama geldiğini (bir simülatörün kareleri ana thread'in temposudur, enerjisi bu Mac'inkidir) ve bir uygulama için hiçbir telefon ölçülmemişse bunun komutunu söyler. Sayfa `<measurements dir>/dashboard/index.html` dosyasıdır, saklanan her çalıştırmadan sonra yeniden yazılır ve açık bir sayfa kendini yeniden yükler. Sunucu yoktur: betiği olmayan, hiçbir şey yüklemeyen tek bir dosya. `action: dashboard` ile `perf_compare` de onu yazar. `perf_snapshot` `also: surface`, `gfxinfo`'nun hiç görmediği bir `SurfaceView`'un ya da bir oyunun karelerini Play'in yavaş oturumlarına karşı okur. `baselineProfile: true` ile `perf_launch`, bir Android release build'i için Baseline Profile'ının APK'da olup olmadığını, uygulanıp uygulanmadığını ve ne kazandırdığını, onunla ve onsuz soğuk açılışlarla söyler. Bkz. performans başvurusunda [Bir Baseline Profile](../reference/perf.tr.md#bir-baseline-profile). Bir Android uygulamasının pil sinyalleri (etikete göre wake lock'lar, uyanmalar, job'lar; güç modeli olmadan) `perf_snapshot` `also: battery`'den, Play'in değerlendirdiği haliyle belleği (süreç durumuna göre anon RSS ve swap, bitmap'ler) `also: anonMemory`'den, en son neden başladığı da Android 15'ten itibaren `also: startInfo`'dan gelir. Bkz. performans başvurusunda [Dashboard](../reference/perf.tr.md#dashboard). `perf_trace` yavaş karelerin ve donmaların neden yavaş olduğunu, `perf_compare` `action: functions` de iki profil arasında hangi fonksiyonların kaydığını söyler.
+Bir uygulamanın bütün cihazlarınızdaki performansı tek sayfada: neyin ilgi beklediği, Google Play'in yavaş ya da donmuş oturum sayacağı şey (burada tek bir oturum, kullanıcılar arasında bir oran değil), cihaza göre her ölçüm (en yeni değeri; bir tahminse ya da gürültü altında alındıysa işaretli, ya da o cihazın onu neden okuyamadığı) ve her birinin baseline bandı ve bütçesiyle eğilimi.
+
+Bir emülatörün ya da simülatörün sayılarının bu Mac'e göre olduğunu ve gerçek kare hızlarının, donmuş karelerin, takılmaların ve enerjinin bir telefon gerektirdiğini söyler. Bir sayı bir cihazda başka bir şey anlatıyorsa neyi anlattığını söyler: bir simülatörün kareleri ana thread'in temposudur, enerjisi de bu Mac'inkidir. Bir uygulama için hiçbir telefon ölçülmemişse bunun komutunu verir.
+
+Sayfa `<measurements dir>/dashboard/index.html` dosyasıdır, saklanan her çalıştırmadan sonra yeniden yazılır ve açık bir sayfa kendini yeniden yükler. Sunucu yoktur: betiği olmayan, hiçbir şey yüklemeyen tek bir dosya. `action: dashboard` ile `perf_compare` de onu yazar, Mac uygulamasındaki **Gösterge Panelini Aç** da onu açar. Bkz. performans başvurusunda [Dashboard](../reference/perf.tr.md#dashboard).
+
+Okunacak başka şeyler, her biri [performans başvurusunda](../reference/perf.tr.md):
+
+- `perf_snapshot` `also: surface`, `gfxinfo`'nun hiç görmediği bir `SurfaceView`'un ya da bir oyunun karelerini Google Play'in yavaş oturumlarına karşı okur.
+- `baselineProfile: true` ile `perf_launch`, bir Android release build'i için Baseline Profile'ının APK'da olup olmadığını, uygulanıp uygulanmadığını ve onunla ve onsuz soğuk açılışlarda ne kazandırdığını söyler: [Bir Baseline Profile](../reference/perf.tr.md#bir-baseline-profile).
+- `perf_snapshot` `also: battery`, bir Android uygulamasının pil sinyallerini verir: etikete göre wake lock'lar, uyanmalar ve job'lar; güç modeli olmadan.
+- `perf_snapshot` `also: anonMemory`, belleğini Google Play'in değerlendirdiği haliyle verir: süreç durumuna göre anon RSS ve swap, bir de bitmap'ler.
+- `perf_snapshot` `also: startInfo`, Android 15'ten itibaren uygulamanın en son neden başladığını söyler.
+- `perf_trace`, yavaş karelerin ve donmaların neden yavaş olduğunu söyler.
+- `perf_compare` `action: functions`, iki profil arasında hangi fonksiyonların kaydığını söyler.
 
 ## Ağ
 
@@ -50,8 +68,8 @@ Bir uygulamanın bütün cihazlarınızdaki performansı tek sayfada: neyin ilgi
 | `bytes`   | Android: `dumpsys netstats`                                                                                                                                                                                       | bir uygulamanın baytları ve paketleri; loopback değil                                                                    | hayır                                                                 |
 | `packets` | Android 14+: Perfetto'nun `android.network_packets`'i                                                                                                                                                             | bir uygulamanın paketleri, uzak porta ve yöne göre, `stop`'ta okunur                                                     | hayır                                                                 |
 
-Proxy sizin çalıştırdığınız bir proxy'dir. `read`, çalışan bir Proxyman'i kendi dışa aktarımıyla, herhangi bir proxy'yi de bir dosyadan listeler: `har`, Charles'tan (File,
-Export Session) ya da mitmproxy'den (`--set hardump=file`). Bir liste, `start`'tan bu yana herhangi bir istemciden proxy'den geçeni tutar. Hiçbir
+Proxy sizin çalıştırdığınız bir proxy'dir. `read` onun gördüklerini listeler: bu aracın çağırabildiği yerde proxy'nin kendi dışa aktarımıyla, herhangi bir proxy'den de bir dosyayla,
+`har`, yani HAR olarak dışa aktarılmış oturumuyla. Bir liste, `start`'tan bu yana herhangi bir istemciden proxy'den geçeni tutar. Hiçbir
 sertifika asla kurulmaz: HTTPS'i bir proxy üzerinden görmek için onun sertifikasını kendiniz kurun. Bir iPhone'da yalnızca `har` ile `read` vardır: proxy'si Wi-Fi ayarlarındadır.
 
 ## Web görünümleri
@@ -67,7 +85,7 @@ seçiciyle ekler. Hata ayıklanabilir olmayan bir uygulama da web görünümün�
 ## Flutter
 
 Bir Flutter uygulamasının semantiği erişilebilirlik ağacındadır, bu yüzden `screen`, seçiciler ve dokunuşlar onda çalışır. Dart VM
-servisinin daha zengin ağacı yapılmadı: bu aracın kuralı gönderdiğini test etmektir ve bunun yazıldığı Mac'te bir test uygulaması derleyecek Flutter SDK'sı yok.
+servisinin daha zengin ağacı henüz yapılmadı: bu araç yalnızca test ettiğini gönderir ve onu test edecek bir Flutter test uygulaması yok.
 `webview`'un yaptığı gibi olurdu: bir debug build'in logunda `Observatory` ya da `Dart VM service` satırını bulmak, portunu
 yönlendirmek ve WebSocket'i üzerinden `ext.flutter.inspector.getRootWidgetSummaryTree` çağırmak.
 

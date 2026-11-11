@@ -10,7 +10,8 @@ appdyno tap --json '{"selector":{"text":"Form"}}'
 appdyno flow stop             # prints the flow, and any step to look at
 appdyno flow save login.flow
 appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
-appdyno test flows/ --tag smoke --env-file ci.env --retries 1 --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
+appdyno test flows/ --tag smoke --env-file ci.env --retries 1 \
+  --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
 appdyno flow export login.flow > login.yaml
 ```
 
@@ -32,18 +33,20 @@ assert id=result check=text equals="Sent: ${NAME}"
 tap id=add_button index=1 !ambiguous
 ```
 
-| step                                                                        | runs                                                                |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `launch [language=] [arg=] [env=]`, `stop`                                  | `launch_app`, `app` `launch` with `arg=` or `env=`, `terminate_app` |
-| `tap`, `long_press durationMs=`, `double_tap`                               | `tap`, `gesture`                                                    |
-| `type "text" [target] [replace] [submit]`                                   | `type_text`                                                         |
-| `press_key back`, `swipe up [target]`, `scroll_to <selector> [direction=]`  | the tool of that name                                               |
-| `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                                                          |
-| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                                                            |
-| `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | their tools                                                         |
-| `run shared/login.flow`                                                     | that file's steps, in place                                         |
+| step                                                                                                                               | runs                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `launch [app] [language=] [arg=] [env=]`, `stop [app]`                                                                             | `launch_app`, `app` `launch` with `arg=` or `env=`, `terminate_app` |
+| `tap`, `long_press [durationMs=]`, `double_tap`                                                                                    | `tap`, `gesture`                                                    |
+| `type "text" [target] [replace] [submit]`                                                                                          | `type_text`                                                         |
+| `press_key back [count=]`, `swipe up [target] [distance=] [durationMs=] [exact]`, `scroll_to <selector> [direction=] [maxSwipes=]` | the tool of that name                                               |
+| `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `wait_for`                                                          |
+| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `assert`                                                            |
+| `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | their tools                                                         |
+| `run shared/login.flow`                                                                                                            | that file's steps, in place                                         |
 
 A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, as `launch_app` does, or the app tool's arguments and environment, an `arg=` for each argument and an `env=NAME=value` for each variable, as `app` `launch` does.
+
+A `#` starts a comment, to the end of its line. Where a step takes a target, `tap`, `long_press`, `double_tap`, `type` and `swipe` also take `x= y=` with `screen=` and `!coordinates`, which a recording writes where nothing names the place. A `ref=` is refused, as a ref names an element for one session only. Three flags mark a step to look at: `!ambiguous`, `!coordinates` and `!running`, each explained in [Recording](#recording).
 
 ## Recording
 
@@ -56,7 +59,7 @@ Android's own ids (`android:id/button1`) are not kept. An action with no step (a
 is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. `app` `launch` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. `flow stop` and
 `flow save` list every step to look at.
 
-A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): wherever it was or is typed or read, it is `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
+A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): in every step that typed or read it, before or after, it becomes `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
 
 ## Secrets
 
@@ -91,7 +94,7 @@ failed or if there was nothing to run. Assertions are steps.
 
 ## One flow running another
 
-`run shared/login.flow` puts that file's steps in its place, its path taken from the file that names it. They are read before the first step acts, so a missing file, a bad line or a file that runs itself, by any way round, is refused with the way round named, and nothing runs. A name means one thing in all of them, because all take their values from one place. You cannot pass a value to one run, and a name that is secret in one file is secret in all. A file for another app is refused. A failure names the file and line it is on, and steps are counted as they run, for `--from`, the report and a journey's kinds. An export writes the steps in place. A tag belongs to the file it is in.
+`run shared/login.flow` puts that file's steps in its place, its path taken from the file that names it. They are read before the first step acts, so a missing file, a bad line or a file that runs itself, directly or through other files, is refused with the loop named, and nothing runs. A name means one thing in all of them, because all take their values from one place. You cannot pass a value to one run, and a name that is secret in one file is secret in all. A file for another app is refused. A failure names the file and line it is on, and steps are counted as they run, for `--from`, the report and a journey's kinds. An export writes the steps in place. A tag belongs to the file it is in.
 
 ## Retries
 
@@ -100,8 +103,8 @@ failed or if there was nothing to run. Assertions are steps.
 ## Export
 
 `flow export` writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, `replace`,
-coordinates, a role with no id or text). A role beside a text is left out, because Maestro has none, and the YAML
-says so in a comment. Maestro's text matches a whole label where ours also takes a part of one. There is no
+coordinates, a role with no id or text). A role beside a text is left out, because that format has no role, and the YAML
+says so in a comment. A text there matches a whole label, where ours also takes a part of one. There is no
 import.
 
 The tool answers with the YAML, and `to` (`--to` on the command line) writes it to a `.yaml` file as well, inside the folder the server runs in or its state folder, as a client may have no other way to write a file. A path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`.
