@@ -103,7 +103,8 @@ kaynaklardaki her `APPDYNO_` adını belgelere ya da bu tabloya bağlı tutar.
 ve onları uygulayan test `packages/appdyno/test/boundaries.test.ts` içindedir. Bir paketin testleri de, testin adını verdiği
 birkaçı dışında, kendi kuralına uyar. Mimari gerektiriyorsa kuralı orada değiştirin, etrafından dolaşmayın.
 Testlerin paylaştığı sahteler, hiçbir şeyin içinde gönderilmeyen bir paket olan `packages/testing`'tedir; bir test birini
-dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi.
+dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi. Tipleri `ops`'un projesinde denetlenir ve lint'lenir, çünkü tüm
+çalışma alanının bir programı daha eslint'i yığınının ötesine taşırdı.
 
 `packages/appdyno/test/structure.test.ts`, `packages/*/src` içindeki bir dosyayı ve bizim yazdığımız her `.kt`, `.swift`, `.m` ve `.h`
 dosyasını, bir gerekçeyle adını verdikleri dışında, tek bir işe ve 450 satıra bağlı tutar ve iki kez geçen 8 satırlık bir diziyi

@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `packages/testing`'in sahteleri, `tsconfig.json`'unun gösterdiği `ops`'un projesinde tip denetiminden geçer ve lint'lenir; önceden tüm çalışma alanı üzerinde kendilerine ait bir program eslint'i 4 GB'lık yığınının ötesine taşıyordu.
 - Bir izin geçici dosya testi, dosyasını tutan sürecin onu tuttuğunu söylemesini bekler; önceden `tail -f` üzerinde 300 ms uyuyordu. iOS runner'ının başlatma kilidi de sahte zaman üzerinde beklenir; gerçek bir süreç üzerindeki gözlemleri gerçek saati korur.
 - Bir test dosyası 800 satıra bağlı kalır, `structure.test.ts` bir paketin `test`'i ve `device-tests` altındaki her dosyayı buna bağlı tuttuğu için; önceden testlerin bir sınırı yoktu. Onu aşan üç cihaz suite'i adıyla anılır, her biri cihazında yeniden çalıştığında bölünmek üzere.
 - Bir pencerenin kaydedilen akışı ve işaretçisinin altındaki, tek bir kurulum üzerinde kendi test dosyalarıdır; simülatörün doğrudan okumaları, durulması ve yardımcılarının kanıtları da ağaçları üzerinde üç dosyadır; önceden 800 satırı aşan iki dosya onları tutuyordu.

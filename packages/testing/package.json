@@ -6,9 +6,6 @@
   "exports": {
     "./*": "./src/*"
   },
-  "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
   "dependencies": {
     "@appdyno/core": "workspace:*",
     "@appdyno/driver-android": "workspace:*",
