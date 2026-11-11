@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Android 16'da bir döner simge durulmayı yeniden bekletir, çünkü orada belirsiz türde bir aralık bildirir; önceden aralık olmamasına bakan bir denetim onu yerinde duran bir çubuk sanıyordu: Xiaomi'nin Android 16'sında bir dokunuş, döner simgenin beklediği şey gelmeden yanıt veriyordu.
 - Bir oturumun `language` ile ilk `launch_app`'i cihazın başlangıcıyla birlikte bir başlatma başlatmaz, çünkü uygulamayı kendisi başlatır; önceden o başlatma bir sonraki `launch_app`'e kalıyordu, o da onu kendi başlatması sayıp hiçbir şey başlatmıyordu: bir `terminate_app`'ten sonra uygulamanın öldüğünü söylüyordu, bir Samsung'da her seferinde görüldü.
 - Bir iPhone'da uygulama başladıktan hemen sonraki bir okuma, ister `launch_app`, durmuş bir uygulamaya `open_link`, argümanlı ya da dilli `app launch` ile ister dışarıdan başlamış olsun, XCTest'in yeni süreci çalışıyor sayması için 1 sn'ye kadar bekler; önceden öndeki uygulama için `APP_NOT_RUNNING`, "Application … is not running" yanıtı veriyordu: iOS bir süreci, XCTest'in kendi nesnesi onu çalışıyor saymadan 300 ms kadar önce önde listeler.
 - Cihaz suite'leri bir dosyaya kaydedilen ekran görüntüsünü Android'de, bir simülatörde ve bir iPhone'da dosyanın kendi boyutuyla denetler; önceden yanıtın `width` alanını okuyorlardı, ki `file` ile `screenshot` dosyanın yanında bir görüntü gösterdiğinden beri o gösterilen görüntününkidir, ve her birinde başarısız oluyorlardı.

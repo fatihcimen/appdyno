@@ -14,9 +14,18 @@ class CNode(
     var right: Int,
     var bottom: Int,
     var flags: Int,
-    /** A progress bar with no range: busy while it shows. Not on the wire, where flags go. */
+    /** A progress bar that shows no progress (`spinning`): busy while it shows. Not on the wire, where flags go. */
     val indeterminate: Boolean = false,
 )
+
+/** RangeInfo.RANGE_TYPE_INDETERMINATE, from Android 16: before it, no range has this type. */
+private const val RANGE_INDETERMINATE = 3
+
+/**
+ * A progress bar that shows no progress, a spinner or a loading bar, by the type of its range, null for none: it has
+ * no range below Android 16, and one of the indeterminate type from 16. A bar with a range of numbers may stand still.
+ */
+fun spinning(cls: String, rangeType: Int?) = cls.endsWith("ProgressBar") && (rangeType == null || rangeType == RANGE_INDETERMINATE)
 
 object Flags {
     const val VISIBLE = 1

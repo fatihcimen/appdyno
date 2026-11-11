@@ -334,8 +334,7 @@ class TreeCapture(private val automation: Automation) {
         return CNode(
             parent, windowIndex, cls, n.viewIdResourceName, text,
             n.contentDescription?.toString(), hint, r.left, r.top, maxOf(r.right, r.left), maxOf(r.bottom, r.top), f,
-            // a bar with no range has no progress to show: a spinner, a loading bar; one with a range may stand still
-            indeterminate = cls.endsWith("ProgressBar") && n.rangeInfo == null,
+            indeterminate = spinning(cls, n.rangeInfo?.type),
         )
     }
 

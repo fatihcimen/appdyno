@@ -31,6 +31,15 @@ class SlideTest {
     }
 
     @Test
+    fun aSpinnerIsOneWithNoRangeOrFromAndroid16OneOfTheIndeterminateType() {
+        assertTrue(spinning("android.widget.ProgressBar", null))
+        // RangeInfo.RANGE_TYPE_INDETERMINATE: an Android 16 phone's spinner, which a check for no range took for a still bar
+        assertTrue(spinning("android.widget.ProgressBar", 3))
+        assertFalse(spinning("android.widget.ProgressBar", 0))
+        assertFalse(spinning("android.widget.SeekBar", null))
+    }
+
+    @Test
     fun theStatusBarIsNoScreen() {
         assertFalse(Slide.hasScreen(TYPE_SYSTEM, 0, 0, 1080, 128, d))
         assertFalse(Slide.hasScreen(TYPE_SYSTEM, 0, 2355, 1080, 2400, d)) // a gesture handle
