@@ -39,6 +39,8 @@ const leave = async (ax: HelperProcess) => {
 export class DirectSim {
   private ax: Promise<HelperProcess> | undefined;
   private hid: Promise<HelperProcess> | undefined;
+  /** The input helper's first ask, answered: what is sent after it waits for it. */
+  private hidAsked: Promise<void> | undefined;
   private readChecked = false;
   private readOff: string | undefined;
   private inputOff: string | undefined;
@@ -97,14 +99,21 @@ export class DirectSim {
     if (!this.readOff) void this.hello().catch(() => undefined);
     if (this.inputOff) return;
     this.hid ??= this.start.hid(this.udid);
-    // a daemon that leaves this unanswered takes no touch either: the first goes to the runner, not answered TIMEOUT
-    this.hid
-      .then((h) => h.call({ op: 'ping' }, 8_000))
-      .then((a) => {
+    void this.hid.then((h) => this.asked(h)).catch(() => undefined);
+  }
+
+  /**
+   * The input helper's first ask, a ping, once: a daemon that leaves it unanswered, or a helper that ends as it connects,
+   * takes no touch either, and the first goes to the runner, not answered TIMEOUT as maybe sent.
+   */
+  private asked(h: HelperProcess) {
+    return (this.hidAsked ??= h.call({ op: 'ping' }, 8_000).then(
+      (a) => {
         if (!a.ok)
           this.inputOff ??= `the input helper's first ask: ${a.error ?? a.refused ?? 'failed'}`;
-      })
-      .catch(() => undefined);
+      },
+      () => undefined,
+    ));
   }
 
   /** Portrait only is verified for the read helper; a touch turns with the app in front. */
@@ -238,6 +247,8 @@ export class DirectSim {
       return undefined;
     });
     if (!hid) return false;
+    await this.asked(hid);
+    if (this.inputOff) return false;
     const key = action.kind === 'key' ? hidKey(action.key) : undefined;
     const held = action.kind === 'key' ? action.modifiers?.map((m) => HID_MODIFIERS[m]) : undefined;
     const turns = key ? 0 : await this.turns();
@@ -301,5 +312,6 @@ export class DirectSim {
       () => undefined,
     );
     this.ax = this.hid = undefined;
+    this.hidAsked = undefined;
   }
 }

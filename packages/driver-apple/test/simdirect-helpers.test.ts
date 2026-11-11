@@ -90,14 +90,14 @@ describe('the helpers prove themselves', () => {
 
   it('turns a touch as a window turns one, by what the app in front says of itself', async () => {
     const touch = async (screen: number[], orientation: number) => {
-      const sent: { events: { x: number; y: number }[] }[] = [];
+      const sent: { events?: { x: number; y: number }[] }[] = [];
       const answer = helper((q) =>
         q.op === 'orientation'
           ? { ok: true, orientation }
           : { ok: true, osVersion: '26.5', model: 'x', scale: 3, screen },
       );
       const hid = helper((q) => {
-        sent.push(q as never);
+        sent.push(q);
         return { ok: true };
       });
       const d = new DirectSim('u', {
@@ -109,7 +109,8 @@ describe('the helpers prove themselves', () => {
       if (must(screen[0], 'a width') < must(screen[1], 'a height'))
         d.setRotation(orientation === 1 ? 0 : 1);
       expect(await d.send({ kind: 'tap', x: 753, y: 210 })).toBe(true);
-      return must(sent[0]?.events[0], 'a touch');
+      // after the input helper's first ask, a ping
+      return must(sent.find((q) => q.events)?.events?.[0], 'a touch');
     };
     const [across, down] = [753 / 874, 210 / 402];
     const right = await touch([402, 874], 3);
@@ -338,7 +339,7 @@ describe('the helpers prove themselves', () => {
       { ok: false, refused: 'timeout' },
       { ok: false, refused: 'helper-gone' },
     ]) {
-      const { call, helper: hid } = helping(() => answer);
+      const { call, helper: hid } = helping((q) => (q.op === 'ping' ? { ok: true } : answer));
       const d = new DirectSim(
         'u',
         { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(hid) },
@@ -350,7 +351,23 @@ describe('the helpers prove themselves', () => {
         sent: true,
       });
       expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
-      expect(call).toHaveBeenCalledTimes(1);
+      expect(call.mock.calls.map(([q]) => q.op)).toEqual(['ping', 'touch']);
+    }
+  });
+
+  it('leaves the first touch to the runner, unsent, where the helper ended as it connected, warmed or not', async () => {
+    for (const warmed of [false, true]) {
+      const { call, helper: hid } = helping(() => ({ ok: false, refused: 'helper-gone' }));
+      const d = new DirectSim(
+        'u',
+        { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(hid) },
+        undefined,
+      );
+      await d.read('a.b');
+      if (warmed) d.warm();
+      expect(await d.send({ kind: 'tap', x: 1, y: 1 }), String(warmed)).toBe(false);
+      expect(call.mock.calls.map(([q]) => q.op)).toEqual(['ping']);
+      expect(d.status().input).toMatch(/^runner: the input helper's first ask: helper-gone/);
     }
   });
 
