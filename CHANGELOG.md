@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- An input is judged on a new read where the read before it was taken while another client's input to the same device was on its way: that read could hold the screen before the other's swipe, and a touch on the power menu's button the swipe brought up went unasked.
 - On Android a double tap stopped during its first tap makes no second, where the second went after the call was answered as cancelled.
 - A simulator's touch or key for a call stopped while the input helper started, answered its first ask or told the screen's turn is not sent, where only a stop before those waits held it.
 - `press_key` with a capital letter, as `Command+A`, is refused saying a letter is a small one, as a capital would be a shift too, where the refusal asked for a letter, which it had been given.

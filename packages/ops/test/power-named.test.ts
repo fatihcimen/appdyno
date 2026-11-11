@@ -31,6 +31,7 @@ describe("an element pressed by name by an iPhone's inspector", () => {
         return Promise.reject(new Error('refused'));
       },
       () => undefined,
+      () => undefined,
     );
     await expect(guarded.inspector?.press('Power')).rejects.toThrow('refused');
     expect(seen).toEqual([{ points: [], named: 'Power' }]);

@@ -279,6 +279,23 @@ describe('an input on them', () => {
     expect(one.sent()).toHaveLength(1);
   });
 
+  it("is judged on a new read where this client read while the other client's input was on its way", async () => {
+    const qs = recorded('android-quick-settings-tr');
+    const one = await onDevice('android-system-en', { answer: 'decline' });
+    const two = await onDevice('android-system-en', { device: one.device });
+    const act = one.device.act.bind(one.device);
+    one.device.act = async (a, o) => {
+      // a read of this client's, taken as the swipe goes, has the screen before the swipe opens quick settings
+      expect((await one.call('screen', {})).error).toBe(false);
+      one.device.fixture = qs;
+      return act(a, o);
+    };
+    expect((await two.call('swipe', { direction: 'down' })).error).toBe(false);
+    one.device.act = act;
+    expect((await one.call('tap', middle(qs, 'Güç menüsü'))).code).toBe('PERMISSION_REQUIRED');
+    expect(one.sent()).toHaveLength(1);
+  });
+
   it('leaves the screen by back and home, and reads it, with nothing asked', async () => {
     const { call, sent, asked } = await onDevice('android-power-en', { answer: 'decline' });
     expect((await call('screen', {})).error).toBe(false);

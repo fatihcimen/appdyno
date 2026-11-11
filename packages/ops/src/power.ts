@@ -48,11 +48,13 @@ const INPUTS: Inputs = {
 /**
  * The device, each of whose inputs `check` sees first, with nothing sent when it refuses. `mayHaveGone`: an input that
  * failed once it left may have changed the screen all the same, as a swipe that opened Control Center and timed out.
+ * `back`: an input that left is over, however it ended, and what was read while it went may hold the screen before it.
  */
 export function guardInputs(
   device: Device,
   check: (input: Input) => Promise<void>,
   mayHaveGone: () => void,
+  back: () => void,
 ): Device {
   const guarded = <T extends object>(on: T, inputs: Inputs): T =>
     new Proxy(on, {
@@ -77,6 +79,8 @@ export function guardInputs(
                 )
                   mayHaveGone();
                 throw e;
+              } finally {
+                back();
               }
             }
           : own;

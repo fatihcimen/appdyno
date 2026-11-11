@@ -206,13 +206,17 @@ export class Session {
         device,
         (input) => guard(this, input).then(() => this.sending()),
         () => this.acted(),
+        () => this.sending(),
       );
   }
 
   /** The inputs this session sent its device: what the device had besides came from another session. */
   private ownInputs = 0;
 
-  /** An input of this session leaves for its device. */
+  /**
+   * An input of this session leaves for its device, and is counted again once it is back: a read another session took
+   * while it went may hold the screen before it, and is no longer that session's newest.
+   */
   private sending() {
     this.ownInputs++;
     inputsTo.set(this.device.serial, (inputsTo.get(this.device.serial) ?? 0) + 1);
