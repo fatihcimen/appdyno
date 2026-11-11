@@ -387,7 +387,11 @@ describe('appdyno update', () => {
   it.each([
     ['a source checkout', 'packages/tool', /git pull/],
     ['a one-off npx run', '.npm/_npx/a9bef924/node_modules/tool', /npm install -g tool/],
-    ['kept by another manager', 'homebrew/Cellar/tool/1.0.0/lib/node_modules/tool', /brew upgrade/],
+    [
+      'kept by another manager',
+      'homebrew/Cellar/tool/1.0.0/lib/node_modules/tool',
+      /package manager/,
+    ],
     ['kept by no manager known here', 'work/node_modules/tool', /what installed it/],
   ])('refuses %s with what to do, with no network', async (by, path, instead) => {
     const copy = copyAt(path);

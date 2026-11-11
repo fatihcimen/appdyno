@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `update` tells a copy that another package manager keeps to upgrade it with that manager, and `doctor` tells an old Node to install Node 22 or newer, with no other tool named where each named one.
 - `keyboard dismiss` says the screen changed once the keyboard has gone, where on Android it said "no change seen" and to use `wait_for` when the app beneath the keyboard did not move: Android's element list holds none of the keyboard's keys.
 - The pasteboard rule reads the shared fakes of `packages/testing` too, which it lost when they left the packages' `test` folders, and the architecture page says what that package is and that the map leaves it out.
 - The fakes of `packages/testing` are type-checked and linted in `ops`'s project, which its `tsconfig.json` refers to, where a program of their own over the whole workspace took eslint past its 4 GB heap.

@@ -11,7 +11,9 @@ export async function doctor(opts: {
       name: 'node',
       ok: major >= 22,
       detail: process.versions.node,
-      ...(major < 22 && { fix: 'install Node 22 or newer (mise use node@22)' }),
+      ...(major < 22 && {
+        fix: 'install Node 22 or newer, from nodejs.org or as you installed this one',
+      }),
     },
   ];
   // the app's helpers are built already

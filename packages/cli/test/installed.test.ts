@@ -33,7 +33,7 @@ describe('where a copy is installed', () => {
       'a one-off npx run',
       /npm install -g/,
     ],
-    ['/opt/homebrew/Cellar/tool/1.0.0/libexec/lib/node_modules/tool', 'kept by', /brew upgrade/],
+    ['/opt/homebrew/Cellar/tool/1.0.0/libexec/lib/node_modules/tool', 'kept by', /package manager/],
     [
       '/Users/a/.volta/tools/image/packages/tool/lib/node_modules/tool',
       'kept by',

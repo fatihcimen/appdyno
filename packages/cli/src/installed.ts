@@ -59,7 +59,7 @@ export function installedBy(root: string, name: string): Installed {
   if (OTHER_MANAGER.test(root))
     return {
       by: 'kept by another manager',
-      instead: `upgrade it with what installed it, such as brew upgrade ${name}`,
+      instead: `upgrade it with what installed it: its package manager`,
     };
   if (PNPM_GLOBAL.test(root)) return { by: 'pnpm' };
   const global = `/lib/node_modules/${name}`;
