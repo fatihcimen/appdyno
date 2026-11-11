@@ -1,5 +1,5 @@
 import { assert, beforeAll, describe, expect, it, vi } from 'vitest';
-import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from './workspace.js';
+import { IosSimulatorDevice, Simctl, buildScreen, stoppable, type Screen } from './workspace.js';
 import { PROTOCOL, type Tree } from '@appdyno/protocol';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
 import { IosRunnerLauncher } from '../packages/driver-apple/src/index.js';
@@ -638,7 +638,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       other.close();
     });
 
-    it('reads and touches through the runner when the helpers do not start', async () => {
+    /** The fixture started afresh on the simulator with helpers that do not start: every read and touch is the runner's. */
+    const runnerOnly = async () => {
       const broken = (): Promise<HelperProcess> => Promise.reject(new Error('no clang here'));
       const other = new IosSimulatorDevice(
         udid,
@@ -648,10 +649,45 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       await other.open();
       await other.terminate(APP);
       await other.launch(APP);
+      return other;
+    };
+
+    it('reads and touches through the runner when the helpers do not start', async () => {
+      const other = await runnerOnly();
       const s = await other.read(APP);
       const r = await other.tap(found(s, 'Form'), { settle: SETTLE, read: 'tree', before: s.hash });
       expect(r.tree?.nodes.some((n) => n.id === 'name_input')).toBe(true);
       expect(other.direct.status().read).toMatch(/did not start/);
+      other.close();
+    });
+
+    it('touches nothing through the runner once its call is stopped in the wait for an animation', async () => {
+      const other = await runnerOnly();
+      await other.openUrl('appdyno-fixture://open/slide', APP);
+      await new Promise((r) => setTimeout(r, 1_000));
+      const show = foundId(await other.read(APP), 'slide_show');
+      const shown = await other.tap(show, { settle: false, read: 'tree' });
+      assert(shown.tree);
+      // where it ends, as the tree has it from the start of its slide
+      const confirm = foundId(
+        buildScreen(shown.tree, { port: other.platformScreen }),
+        'slide_confirm',
+      );
+      await new Promise((r) => setTimeout(r, 1_000));
+      for (let i = 0; i < 3; i++) {
+        await other.tap(show, { settle: false, read: 'none' });
+        const stop = new AbortController();
+        const going = stoppable(stop.signal, () =>
+          other.tap(confirm, { settle: false, read: 'none' }),
+        ).catch((e: unknown) => e);
+        // inside the 300 ms the button slides in for, which the runner waits out before a touch
+        await new Promise((r) => setTimeout(r, 40));
+        stop.abort();
+        expect(await going).toMatchObject({ code: 'CANCELLED' });
+      }
+      await new Promise((r) => setTimeout(r, 1_000));
+      // the runner tapped once the animation was over, for a caller told CANCELLED
+      expect(byId(await other.read(APP), 'slide_count')?.label).toBe('Onay: 0');
       other.close();
     });
 

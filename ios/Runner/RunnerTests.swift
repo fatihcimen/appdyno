@@ -99,7 +99,7 @@ final class RunnerTests: XCTestCase {
         "wait": { job, d, _ in Reply(result: try d.wait(WaitRequest(job.params), job: job)) },
         "act": { job, d, _ in
             let action = try Action(required(job.params, "action"))
-            let waited = try d.perform(action)
+            let waited = try d.perform(action, job: job)
             // the quiet window starts once the action has returned: a synthesized tap alone takes 300–600 ms,
             // and a window counted from its start would be spent before the app saw the touch
             let at = Int(Date().timeIntervalSince1970 * 1000)

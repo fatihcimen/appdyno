@@ -19,11 +19,14 @@ extension Device {
         IdleShim.waitForAnimations(of: app(at: x, y), within: Device.animationWaitS)
     }
 
-    /// Does the action; for a touch, the milliseconds it first waited for the app's animations.
-    func perform(_ action: Action) throws -> Int? {
+    /// Does the action; for a touch, the milliseconds it first waited for the app's animations, after which a caller
+    /// told TIMEOUT or CANCELLED gets no touch.
+    func perform(_ action: Action, job: Job) throws -> Int? {
+        let touch = "the touch"
         switch action {
         case let .tap(x, y):
             let waited = animationsOver(x, y)
+            try job.stillWaited(before: touch)
             // the synthesizer's tap missed on a turned screen, where XCUI's own coordinate knows the way, as it does
             // on a device lying flat whose turn nothing tells: a phone with a wide app, an iPad
             let upright = touchOrientation() == 1
@@ -31,25 +34,28 @@ extension Device {
             return waited
         case let .doubleTap(x, y):
             let waited = animationsOver(x, y)
+            try job.stillWaited(before: touch)
             point(x, y).doubleTap()
             return waited
         case let .longPress(x, y, ms):
             let waited = animationsOver(x, y)
+            try job.stillWaited(before: touch)
             point(x, y).press(forDuration: ms / 1000)
             return waited
         case let .swipe(fromX, fromY, toX, toY, ms):
             let waited = animationsOver(fromX, fromY)
+            try job.stillWaited(before: touch)
             try drag(fromX, fromY, toX, toY, ms: ms)
             return waited
         case let .gesture(pointers):
-            return try perform(gesture: pointers)
+            return try perform(gesture: pointers, job: job)
         case let .key(name, modifiers):
             try key(name, modifiers)
             return nil
         }
     }
 
-    private func perform(gesture pointers: [[Action.Sample]]) throws -> Int? {
+    private func perform(gesture pointers: [[Action.Sample]], job: Job) throws -> Int? {
         guard let path = pointers.first, let first = path.first, let last = path.last else {
             throw AgentError("INVALID_ARGUMENT", "pointers need a finger with samples")
         }
@@ -57,6 +63,7 @@ extension Device {
         if pointers.count == 1, path.count <= 2 {
             let ms = max(20, last.t - first.t)
             let waited = animationsOver(fromX, fromY)
+            try job.stillWaited(before: "the touch")
             if fromX == toX, fromY == toY {
                 point(fromX, fromY).press(forDuration: ms / 1000)
             } else {
@@ -75,6 +82,7 @@ extension Device {
             )
         }
         let waited = animationsOver(fromX, fromY)
+        try job.stillWaited(before: "the gesture")
         guard try EventShim.gesture(plan.fingers, liftAt: plan.liftAt, orientation: turn) else {
             throw AgentError(
                 "UNSUPPORTED",

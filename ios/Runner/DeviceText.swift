@@ -42,6 +42,7 @@ extension Device {
             // a field that already has the focus there is not tapped again (each event costs about 350 ms)
             if focusedField(app)?.snap.frame.contains(CGPoint(x: x, y: y)) != true {
                 _ = animationsOver(x, y)
+                try job.stillWaited(before: "the field was tapped")
                 // XCUI's own, which returns once the app is idle: keys typed after a synthesized tap went in while the
                 // keyboard came up, and a formatting field lost some ("(599) 999" of 5999999900, 3 of 3)
                 point(x, y).tap()
@@ -126,7 +127,10 @@ extension Device {
             }
             app.typeText(request.text)
         }
-        if request.submit, try !EventShim.type("\n", orientation: orientation) { app.typeText("\n") }
+        if request.submit {
+            try job.stillWaited(before: "the Enter")
+            if try !EventShim.type("\n", orientation: orientation) { app.typeText("\n") }
+        }
         let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         return out.merging(textWire(focusMs: focusMs, verified: nil)) { $1 }
     }
