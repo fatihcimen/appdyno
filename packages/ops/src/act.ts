@@ -71,7 +71,7 @@ const readsScreen = (st: Step | undefined) =>
 
 export function actOps(
   ctx: ServerContext,
-  { act, summary, header, show, clean, cleanLog, afterChange }: Answers,
+  { act, summary, header, show, clean, cleanLog, changing, afterChange }: Answers,
   { one, step, windowSize, onTheScreen, checkNow }: Steps,
   tools: () => Record<string, Op>,
 ) {
@@ -236,13 +236,14 @@ export function actOps(
           return reply(t, { ...summary(t), open });
         }
         if (!open) return reply('no keyboard is open', summary('no keyboard is open'));
-        if (!(await hideKeyboard(s)))
+        const { result: closed, was } = await changing(s, () => hideKeyboard(s));
+        if (!closed)
           throw new ToolError(
             'the keyboard stayed open: the app keeps it there',
             'UNSUPPORTED',
             'keyboard enter closes it on a field whose return key does so, and may submit the form',
           );
-        const r = await afterChange(s, 'closed the keyboard', read);
+        const r = await afterChange(s, was, 'closed the keyboard', read);
         return { ...r, data: { ...r.data, closed: true } };
       },
     }),

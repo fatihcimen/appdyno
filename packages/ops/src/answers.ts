@@ -327,10 +327,25 @@ type Ready = { met: (x: Screen) => boolean; otherwise: string };
 type Said = string | ((screen: Screen | undefined) => string);
 const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said : said(screen));
 
+/** What a change is compared with, and whether the selected app was in front as it began. */
+type Was = { before: Shown; base: Shown; ran: boolean };
+
+/**
+ * A change on the device, as a launch, a link or a turn, and what its answer compares with: the newest read it made
+ * itself, else the last one before it, as a read beside it may already show what it did.
+ */
+async function changing<T>(s: Session, change: () => Promise<T>) {
+  const before = s.shown;
+  const { result, aimedAt } = await s.aiming(change);
+  const ran = !!s.appId && aimedAt?.foreground === s.appId;
+  return { result, was: { before, base: aimedAt?.list ?? before, ran } satisfies Was };
+}
+
 async function afterChange(
   clean: Clean,
   cleanLog: Clean,
   s: Session,
+  { before, base, ran: wasInFront }: Was,
   said: Said,
   read: ReadMode,
   launched?: string,
@@ -339,10 +354,8 @@ async function afterChange(
 ) {
   // with no app selected, the one launched is the one whose death is looked for
   const app = s.appId ?? launched;
-  const ran = inFront(s) || (!!launched && launched === app);
+  const ran = wasInFront || (!!launched && launched === app);
   const started = Date.now();
-  const before = s.shown;
-  const base = s.fresh?.list ?? before;
   s.acted();
   // a launch or a link may start a new process on purpose
   s.forgetProcess();
@@ -391,14 +404,16 @@ export function answersFor(ctx: ServerContext) {
       found?: () => boolean,
     ) => act(clean, cleanLog, s, read, run, done, found),
     settleRead,
+    changing,
     afterChange: (
       s: Session,
+      was: Was,
       said: Said,
       read: ReadMode,
       launched?: string,
       ready?: Ready,
       maxMs?: number,
-    ) => afterChange(clean, cleanLog, s, said, read, launched, ready, maxMs),
+    ) => afterChange(clean, cleanLog, s, was, said, read, launched, ready, maxMs),
   };
 }
 

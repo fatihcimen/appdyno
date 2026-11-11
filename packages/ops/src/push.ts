@@ -43,7 +43,7 @@ function payloadOf(text: string) {
   return parsed as Record<string, unknown>;
 }
 
-export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
+export function pushOps(ctx: ServerContext, { changing, afterChange }: Answers) {
   return [
     defineOp({
       name: 'push',
@@ -119,15 +119,17 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
             'INVALID_ARGUMENT',
           );
         if (!pkg) throw noApp();
-        const said = await s.device.events.push(pkg, {
-          type: route.type,
-          ...(title && { title }),
-          ...(body && { body }),
-          ...(image && { image }),
-          ...(data && { data }),
-          ...(payload && { payload: payloadOf(payload) }),
-        });
-        return afterChange(s, type ? said : `${said} (as alert: no type was given)`, read);
+        const { result: said, was } = await changing(s, () =>
+          s.device.events.push(pkg, {
+            type: route.type,
+            ...(title && { title }),
+            ...(body && { body }),
+            ...(image && { image }),
+            ...(data && { data }),
+            ...(payload && { payload: payloadOf(payload) }),
+          }),
+        );
+        return afterChange(s, was, type ? said : `${said} (as alert: no type was given)`, read);
       },
     }),
   ];

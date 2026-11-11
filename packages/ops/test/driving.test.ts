@@ -802,6 +802,29 @@ describe('a ref on a screen an app moved by itself', () => {
     expect(r.text).not.toContain('no change seen');
   });
 
+  it('says a link changed the screen it opened, though a read beside it saw that screen first', async () => {
+    const d = new FakeDevice();
+    let opened: () => void = () => undefined;
+    let answer: () => void = () => undefined;
+    const landed = new Promise<void>((r) => (opened = r));
+    const held = new Promise<void>((r) => (answer = r));
+    // the link opens its screen at once, and the device answers when the test lets it: a read beside it sees that screen
+    d.openUrl = async () => {
+      d.screen = 'form';
+      opened();
+      await held;
+    };
+    const { call } = await connect(d);
+    await call('screen');
+    const link = call('open_link', { url: 'https://example.com/form' });
+    await landed;
+    expect((await call('screen')).text).toContain('Gönder');
+    answer();
+    const r = await link;
+    expect(r.error).toBe(false);
+    expect(r.data.changed).toBe(true);
+  });
+
   it('runs a profile beside an action, and one that scrolls meanwhile in its turn', async () => {
     for (const [scroll, order] of [
       [undefined, ['perf_profile', 'tap']],

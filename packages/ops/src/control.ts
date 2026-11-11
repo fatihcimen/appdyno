@@ -35,7 +35,7 @@ function dataFolder(path: string | undefined) {
 
 const Started = z.array(z.string());
 const startedFile = () => join(stateDir(), 'started.json');
-function appOp(ctx: ServerContext, { afterChange }: Answers) {
+function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
   const { policy } = ctx;
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(policy, app ?? s.appId ?? '');
@@ -128,16 +128,20 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
             ...(configuration && { configuration }),
           });
           reportProgress(`launching ${pkg}`);
-          await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
-          return afterChange(s, `built and launched ${pkg}`, read, pkg);
+          const { was } = await changing(s, () =>
+            apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) }),
+          );
+          return afterChange(s, was, `built and launched ${pkg}`, read, pkg);
         }
         case 'launch': {
           const pkg = checkLaunch(policy, appOf(s, app));
           reportProgress(`launching ${pkg}`);
           const ran = await ctx.ranBeforeLaunch(s, pkg);
-          await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
+          const { was } = await changing(s, () =>
+            apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) }),
+          );
           // every platform's launch with args stops a running app first
-          return afterChange(s, launchSaid(pkg, ran, true), read, pkg);
+          return afterChange(s, was, launchSaid(pkg, ran, true), read, pkg);
         }
         case 'grant':
         case 'revoke': {

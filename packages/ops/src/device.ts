@@ -22,7 +22,7 @@ const ROTATIONS = ['portrait', 'landscape_left', 'upside_down', 'landscape_right
 const turnedTo = (wide: boolean) => (x: Screen) =>
   !!x.window && x.window.w > x.window.h === wide && x.list.length > 0;
 
-export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
+export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: Answers) {
   return [
     defineOp({
       name: 'list_devices',
@@ -148,10 +148,13 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
             () => undefined,
           ))
         )?.window;
-        await turning(s, (kept) => s.device.setOrientation(rotation, kept));
+        const turned = await changing(s, () =>
+          turning(s, (kept) => s.device.setOrientation(rotation, kept)),
+        );
         const otherwise = `the window stayed ${wide ? 'tall' : 'wide'}: the app may keep to one orientation`;
         return afterChange(
           s,
+          turned.was,
           `orientation: ${orientation}`,
           read,
           undefined,

@@ -61,7 +61,7 @@ const APPS_SWIPES = 20;
 /** How long a link's screen has to hold still: an app it starts, as an action's settle allows 3 s. */
 const LINK_SETTLE_MS = 5_000;
 
-export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: Steps) {
+export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, { one }: Steps) {
   const policy = ctx.policy;
 
   const appNamed = async (s: Session, name: string) => {
@@ -128,10 +128,13 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
     if (!page && !app) throw noApp();
     checkSettings(policy, s.device.platform);
     s.leftTheApp();
-    const { row } = await s.device.openSettings(
-      page ? { page } : { app: must(app, "the app's id") },
+    const {
+      result: { row },
+      was,
+    } = await changing(s, () =>
+      s.device.openSettings(page ? { page } : { app: must(app, "the app's id") }),
     );
-    if (!row) return afterChange(s, `opened Settings: ${settings}`, read);
+    if (!row) return afterChange(s, was, `opened Settings: ${settings}`, read);
     s.acted();
     const selector = { text: row };
     await s.until((x) => x.list.length > 0, APPS_PAGE_MS);
@@ -175,9 +178,9 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const app = await linkApp(s, href);
         if (CALL_LINK.test(href))
           await approvePower(policy, s, `the link ${href}, which places a call`);
-        await s.device.openUrl(href, app);
+        const { was } = await changing(s, () => s.device.openUrl(href, app));
         // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
-        return afterChange(s, linkSaid(s, href), read, undefined, undefined, LINK_SETTLE_MS);
+        return afterChange(s, was, linkSaid(s, href), read, undefined, undefined, LINK_SETTLE_MS);
       },
     }),
     defineOp({
@@ -204,8 +207,8 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         s.leftTheApp(pkg !== s.appId);
         if (!language) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
-          await s.device.launch(pkg).catch(notThere(s, pkg));
-          const out = await afterChange(s, launchSaid(pkg, ran), read, pkg);
+          const { was } = await changing(s, () => s.device.launch(pkg).catch(notThere(s, pkg)));
+          const out = await afterChange(s, was, launchSaid(pkg, ran), read, pkg);
           // a recording writes a start as a start, so that its replay starts where this did
           return ran === undefined ? out : { ...out, data: { ...out.data, wasRunning: ran } };
         }
@@ -213,9 +216,11 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const held = apps.languageStays
           ? (await setCondition(s, 'locale', language, pkg)).also
           : undefined;
-        await apps.launchWith(pkg, { language }).catch(notThere(s, pkg));
+        const { was } = await changing(s, () =>
+          apps.launchWith(pkg, { language }).catch(notThere(s, pkg)),
+        );
         const done = [`started ${pkg} in ${language}`, held].filter(Boolean).join('; ');
-        return afterChange(s, done, read, pkg);
+        return afterChange(s, was, done, read, pkg);
       },
     }),
     defineOp({
