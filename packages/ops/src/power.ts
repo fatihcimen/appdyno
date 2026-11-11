@@ -117,10 +117,10 @@ const aNumber = (s: string | undefined) => {
   return !!x && /^\+?[\d\s().-]+\??$/.test(x) && (x.match(/\d/g) ?? []).length >= 3;
 };
 
-/** The alert node `i` lies in, if any. */
+/** The alert node `i` lies in, if any: iOS may show a system prompt, a call's among them, as a sheet. */
 const alertOf = (tree: Tree, i: number): number | undefined => {
   const n = tree.nodes[i];
-  return !n ? undefined : /alert$/i.test(n.c) ? i : alertOf(tree, n.p);
+  return !n ? undefined : /(alert|sheet)$/i.test(n.c) ? i : alertOf(tree, n.p);
 };
 
 /** Whether node `i` lies in an alert. */

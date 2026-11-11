@@ -284,6 +284,22 @@ describe('a system alert over the app, which the runner reads alone, and what th
     expect([sent().length, en.sent().length, full.sent().length]).toEqual([0, 1, 1]);
   });
 
+  it('asks before a touch on the Call of a call prompt iOS shows as a sheet, as it does an alert', async () => {
+    const home = recorded('ios-nothing-over-springboard');
+    const sheet = (read: Tree): Tree => ({
+      ...read,
+      nodes: read.nodes.map((n) => (n.c === 'Alert' ? { ...n, c: 'Sheet' } : n)),
+    });
+    const { call, sent, asked } = await over(
+      home,
+      [],
+      sheet(saying(alerted('Anrufen', 'Abbrechen'), '112')),
+    );
+    expect((await call('tap', allow)).code).toBe('PERMISSION_REQUIRED');
+    expect(asked[0]).toContain('a touch on "Anrufen" of a system alert, which places a call');
+    expect(sent()).toEqual([]);
+  });
+
   it("asks before a touch on the Call of such an alert in the home screen app's read alone", async () => {
     const home = recorded('ios-nothing-over-springboard');
     const prompt: Tree = {
