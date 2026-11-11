@@ -31,6 +31,7 @@ export * from './device-network.js';
 export * from './virtual.js';
 export * from './frames.js';
 export * from './measure.js';
+export * from './measure-source.js';
 export * from './energy-model.js';
 export * from './screen/index.js';
 export * from './cdp.js';

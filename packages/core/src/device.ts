@@ -15,7 +15,8 @@ import type {
   AuditResult,
   Platform,
 } from '@appdyno/protocol';
-import type { MeasureSource, TraceDigest } from './measure.js';
+import type { TraceDigest } from './measure.js';
+import type { MeasureSource } from './measure-source.js';
 import type { LiveMetrics } from './mirror/live-metrics.js';
 import type { PlatformScreen } from './screen/port.js';
 import type { Need } from './mirror/need.js';

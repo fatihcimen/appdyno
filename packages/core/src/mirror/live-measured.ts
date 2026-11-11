@@ -1,7 +1,8 @@
 import { pause } from '../call.js';
 import type { Device } from '../device.js';
 import type { FrameStats } from '../frames.js';
-import type { Capability, Measured } from '../measure.js';
+import type { Measured } from '../measure.js';
+import type { Capability } from '../measure-source.js';
 import { LIVE_FIELDS, type LiveField, type LiveMetrics, type LiveSample } from './live-metrics.js';
 
 /** The least time between two samples: a reader that takes longer sets the pace itself. */

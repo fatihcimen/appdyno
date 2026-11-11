@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- What a device can measure, `MeasureSource` with `Cannot` and `cannot`, is `measure-source.ts` of its own in core, where it shared `measure.ts` with the readings it answers and held that file over 420 lines.
 - What the flight recorder does apart from its own state is functions of their own in `flight.ts`: whether it may start, its video ring, the next frame trace, a crash's report, whether the app is still there and the page of a stretch it keeps, where `startFlight` held them in 234 lines and the function size rule let it pass by name. No function is over the size cap by name any more.
 - What `perf_trace` says of each kind of trace, XCTest's metrics, hangs, a probe's frames, hitches and Android's frame timeline, is a function of its own, where one function of 266 lines held them and the function size rule let it pass by name.
 - Scrolling's parts are functions of their own in `scroll.ts`: the list a stroke moves, where its finger crosses it, a target held still, `scroll_to` and a scroll by a distance, where `scrollingFor` held them in 212 lines and the function size rule let it pass by name.
