@@ -36,7 +36,7 @@ describe("iOS's own views over an app, where a read of the app has none of them"
     }
   });
 
-  it('knows the power-off slider by its id in a language of no words here, and not its Cancel', () => {
+  it("knows the power-off screen by its slider's id in a language of no words here, all of it but its Cancel", () => {
     const de: Record<string, string> = {
       'slide to power off': 'Zum Ausschalten streichen',
       'Power off': 'Ausschalten',
@@ -44,10 +44,20 @@ describe("iOS's own views over an app, where a read of the app has none of them"
       Cancel: 'Abbrechen',
     };
     const t = recorded('ios-power-off-springboard');
-    const said = {
-      ...t,
-      nodes: t.nodes.map((n) => ({ ...n, ...(n.d && de[n.d] && { d: de[n.d] }) })),
+    // a phone's has Emergency SOS too, which a simulator's has not: a slider of no id known here
+    const sos: Tree['nodes'][number] = {
+      p: 8,
+      w: 0,
+      c: 'Other',
+      d: 'Notruf SOS',
+      b: [33, 560, 369, 652],
+      f: 17,
     };
+    const said: Tree = {
+      ...t,
+      nodes: [...t.nodes, sos].map((n) => ({ ...n, ...(n.d && de[n.d] && { d: de[n.d] }) })),
+    };
+    expect(powerControlAt(said, middle(said, 'Notruf SOS'))).toBe("iOS's power-off screen");
     expect(powerControlAt(said, middle(said, 'Zum Ausschalten streichen'))).toBe(
       'the control actionSlider',
     );

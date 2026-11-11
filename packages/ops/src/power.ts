@@ -88,8 +88,9 @@ const SCREEN_IDS = /:id\/\w*(global_?actions|main_?clear|master_?clear)\w*$/;
 const CONTROL_IDS =
   /:id\/(pm_lite|(\w+_)?(power_?(off|menu|button)|shut_?down|reboot|restart|emergency|sos)(_\w+)?)$/;
 
-/** iOS's slide to power off, as the runner's read names it (ios/Runner/DeviceTree.swift). */
+/** iOS's slide to power off, as the runner's read names it (ios/Runner/DeviceTree.swift), and the Cancel beside it. */
 const IOS_SLIDER = 'actionSlider';
+const IOS_CANCEL = 'cancelButton';
 
 /**
  * A control by its words, in English and Turkish, as `plain` writes them: the power menu's keys and the button that opens
@@ -170,9 +171,13 @@ function controls(tree: Tree) {
   /** A window that is all such controls, by what it is. */
   const wholeWindow = (w: number) => {
     const id = tree.nodes.find((n) => n.w === w && n.id && SCREEN_IDS.test(n.id))?.id;
-    return (
-      id && (/global_?actions/.test(id) ? 'the power menu' : "Settings' erase-all-data screen")
+    if (id)
+      return /global_?actions/.test(id) ? 'the power menu' : "Settings' erase-all-data screen";
+    // iOS's power-off screen by its slider's id in any language: its Emergency SOS has none known here
+    const off = tree.nodes.some(
+      (n) => n.w === w && n.id === IOS_SLIDER && (n.f & NODE_FLAGS.visible) !== 0,
     );
+    return off ? "iOS's power-off screen" : undefined;
   };
   /** What a finger coming down at `p` in a system window reaches, as the system routes it: the smallest clickable thing. */
   const hitAt = (p: Point) => {
@@ -194,7 +199,8 @@ function controls(tree: Tree) {
       const slider = here.some((x) => x.n.id === IOS_SLIDER)
         ? `the control ${IOS_SLIDER}`
         : undefined;
-      return said ?? slider ?? wholeWindow(w);
+      // the power-off screen's Cancel, by its id in any language, is the way off it
+      return said ?? slider ?? (hit?.n.id === IOS_CANCEL ? undefined : wholeWindow(w));
     },
     /** The button of a system alert a finger at `p` places a call by, as iOS's "Call …?" of a link the app opened. */
     callAt(p: Point) {

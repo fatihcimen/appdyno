@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- On iOS a touch anywhere on the power-off screen but its Cancel asks the person, the screen known by its slider's id in any language: the Emergency SOS slider of a phone's power-off screen has no id known here, and was known by its English and Turkish words alone, so in another language a touch along it went unasked.
 - An input refused because the guard could not take its look, at the home screen app on an iPhone or at an Android device's default dialer, names the person's way past it, `--allow-power`, which skips that look: an iPhone whose home screen app kept failing to be read refused every tap, key and text, with only "read the screen and try again" to say.
 - On Android an input is not sent when the device could not say which app a call's link opens in, and the device is asked again at the next input: a query that failed, as on an adb hiccup at the first input, was kept for the session as "no such app", so a maker's dialer outside the fixed list took a touch, key or text unasked until the session ended.
 - An input that fails once it has left for the device, as a swipe whose answer timed out, leaves the screen to be read again before the next one: the power and apps guards judged the next input by the read before the failed one, for up to 20 s, so a swipe that opened Control Center or quick settings and then timed out let a tap by x,y on its power button go unasked. A ref read before such a failure is looked up on a new read too.
