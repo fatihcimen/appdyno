@@ -1,16 +1,9 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { must } from '@appdyno/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { opsFor } from '../../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import { connect, act, ScrollingList } from './shared.js';
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-driving-')));
-});
 
 describe('steps across screens', () => {
   it('runs selectors, wait_for and assert across screens with one read at the end', async () => {

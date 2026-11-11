@@ -105,7 +105,9 @@ and the test that enforces them are in `packages/appdyno/test/boundaries.test.ts
 to its rule too, but for the few the test names. Change the rule there if the architecture needs it, not around it.
 The fakes the tests share are `packages/testing`, a package that ships in nothing, and a test takes one by its file,
 as `@appdyno/testing/fake-device.js`. Its types are checked and linted in `ops`'s project, as one more program of the whole
-workspace would take eslint past its heap.
+workspace would take eslint past its heap. Each test file runs on a state folder of its own, which
+`packages/appdyno/test/no-real-state.setup.ts` makes; a file whose tests each want an empty one stubs `APPDYNO_STATE_DIR`
+in its `beforeEach`.
 
 `packages/appdyno/test/structure.test.ts` keeps a file in `packages/*/src`, and every `.kt`, `.swift`, `.m` and `.h`
 we wrote, to one job and to 450 lines, but for the ones it names with a reason, and refuses a run of 8 lines that

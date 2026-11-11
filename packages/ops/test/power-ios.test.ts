@@ -1,15 +1,8 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { iosScreen } from '@appdyno/driver-apple';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { powerControlAt, type Policy } from '../src/index.js';
 import { middle, onDevice, recorded } from './power-device.js';
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-power-state-')));
-});
 
 describe("iOS's own views over an app, where a read of the app has none of them", () => {
   /** The fixture app under Control Center, as a runner read it; the home screen app's read, with `over` up. */

@@ -1,8 +1,8 @@
 import { readdirSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { userInfo } from 'node:os';
-import { join } from 'node:path';
-import { stateDir } from '@appdyno/core';
+import { basename, dirname, join } from 'node:path';
+import { must, stateDir } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { provoked } from './no-real-state.setup.js';
 
@@ -23,6 +23,13 @@ describe('a unit test and this Mac’s own state', () => {
     expect(process.env.APPDYNO_STATE_DIR).toBeTruthy();
     expect(stateDir().startsWith(REAL)).toBe(false);
     expect(process.env.APPDYNO_TOOLS_DIR?.startsWith(REAL)).toBe(false);
+  });
+
+  it("has one no other test file shares, within the run's", () => {
+    // the run's folder holds the breaches file: the other worker's files have folders beside this one
+    const run = dirname(must(process.env.APPDYNO_TEST_BREACH_FILE, 'the breaches file'));
+    expect(dirname(stateDir())).toBe(run);
+    expect(basename(stateDir())).toMatch(/^file-/);
   });
 
   it('cannot read, write or remove there, by either kind of call', async () => {

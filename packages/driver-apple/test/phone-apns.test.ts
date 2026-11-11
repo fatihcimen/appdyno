@@ -109,7 +109,6 @@ describe("an iPhone's app, to APNs", () => {
 
 describe("an iPhone's push types", () => {
   it('are refused, saying how, until a person sets APNs up; then go by APNs, but for a tap', async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-phone-push-')));
     const events = new PhoneEvents({ udid: 'U' } as Devicectl, new Map());
     const said = async () =>
       Object.fromEntries(

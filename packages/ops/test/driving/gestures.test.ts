@@ -3,15 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must, type AppManager } from '@appdyno/core';
 import { DeviceError, KEYS, type ActParams } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 import { type OpName } from '../../src/index.js';
 import { keyName, keyPress } from '../../src/step-schemas.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect, act } from './shared.js';
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-driving-')));
-});
 
 describe('gestures, keys, clipboard', () => {
   it('sends double tap, drag, pinch and a free plan', async () => {

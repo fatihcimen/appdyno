@@ -1,8 +1,6 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { deviceStateFile, writeState, type MotionRegion, type MotionWatch } from '@appdyno/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { answerWatches, motionText, movedIn, regionLine } from '../src/watch.js';
 
 const SCREEN = { w: 400, h: 800 };
@@ -91,10 +89,6 @@ describe('what a watch says', () => {
 });
 
 describe('a window that shares its stream', () => {
-  beforeEach(() => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-watch-')));
-  });
-
   it('asks nothing of a session with no request', () => {
     const watching = vi.fn();
     answerWatches('phone', { watch: watching })();

@@ -1,12 +1,11 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ElicitResult } from '@modelcontextprotocol/client';
 import type { AppManager, PlatformScreen } from '@appdyno/core';
 import { androidScreen } from '@appdyno/driver-android';
 import { iosScreen } from '@appdyno/driver-apple';
 import type { Tree, WireWindow } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { outsideApps } from '../src/apps-guard.js';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
@@ -197,10 +196,6 @@ describe('where an input lands, under an app allow list', () => {
       'com.apple.Preferences',
     );
   });
-});
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-apps-guard-')));
 });
 
 /** A device showing `tree`, under `policy`; a client that answers each question as `answer` says, or cannot ask. */

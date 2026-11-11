@@ -43,6 +43,11 @@ if (breachFile === undefined)
   throw new Error('APPDYNO_TEST_BREACH_FILE is missing: vitest.config.ts sets it');
 const note = fs.appendFileSync;
 
+const run = process.env.APPDYNO_STATE_DIR;
+if (run === undefined) throw new Error('APPDYNO_STATE_DIR is missing: vitest.config.ts sets it');
+// each test file's own, within the run's: a fake device keeps its files by its serial, which files in two workers share
+process.env.APPDYNO_STATE_DIR = fs.mkdtempSync(join(run, 'file-'));
+
 /** A test of this guard itself sets this: what it provokes is no breach. */
 export const provoked = { now: false };
 

@@ -105,7 +105,9 @@ ve onları uygulayan test `packages/appdyno/test/boundaries.test.ts` içindedir.
 birkaçı dışında, kendi kuralına uyar. Mimari gerektiriyorsa kuralı orada değiştirin, etrafından dolaşmayın.
 Testlerin paylaştığı sahteler, hiçbir şeyin içinde gönderilmeyen bir paket olan `packages/testing`'tedir; bir test birini
 dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi. Tipleri `ops`'un projesinde denetlenir ve lint'lenir, çünkü tüm
-çalışma alanının bir programı daha eslint'i yığınının ötesine taşırdı.
+çalışma alanının bir programı daha eslint'i yığınının ötesine taşırdı. Her test dosyası kendine ait bir durum klasöründe çalışır;
+onu `packages/appdyno/test/no-real-state.setup.ts` oluşturur. Testlerinin her biri boş bir klasör isteyen bir dosya `APPDYNO_STATE_DIR`'ı
+kendi `beforeEach`'inde stub'lar.
 
 `packages/appdyno/test/structure.test.ts`, `packages/*/src` içindeki bir dosyayı ve bizim yazdığımız her `.kt`, `.swift`, `.m` ve `.h`
 dosyasını, bir gerekçeyle adını verdikleri dışında, tek bir işe ve 450 satıra bağlı tutar ve iki kez geçen 8 satırlık bir diziyi

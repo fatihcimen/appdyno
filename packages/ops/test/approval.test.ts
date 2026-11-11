@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ElicitResult } from '@modelcontextprotocol/client';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   DATA_LOSS,
   DEFAULT_POLICY,
@@ -30,10 +30,6 @@ const GATED: [DataLoss, string, Record<string, unknown>, string, Kind?][] = [
   ['app grant', 'app', { action: 'grant', service: 'camera' }, 'grant', { grantResets: true }],
   ['device_setting keychain', 'device_setting', { name: 'keychain', value: 'reset' }, 'keychain'],
 ];
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-approval-state-')));
-});
 
 /**
  * A device whose drivers only write down what they were asked; a client on `revision` that answers each question as

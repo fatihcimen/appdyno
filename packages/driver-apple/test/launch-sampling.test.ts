@@ -1,5 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Cannot, cannot, deviceStateFile, stateDir, thisOwner } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
@@ -283,7 +282,6 @@ describe('frames on a simulator', () => {
 
 describe('a CPU profile on a simulator', () => {
   it('refuses while another recording holds the device, where sample would answer with no samples', async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-profile-')));
     const udid = 'F7A3E1C2-0000-4000-8000-000000000003';
     const held = deviceStateFile('traces-recording', udid);
     mkdirSync(dirname(held), { recursive: true });

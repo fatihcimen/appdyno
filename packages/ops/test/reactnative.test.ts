@@ -163,7 +163,6 @@ describe('react_native', () => {
     };
     beforeEach(() => {
       opens = 0;
-      vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-rn-')));
     });
     afterEach(() => vi.unstubAllEnvs());
 

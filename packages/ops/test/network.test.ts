@@ -68,7 +68,6 @@ describe('a proxy export', () => {
   });
 
   it('is read on any device, bounded, with credentials hidden', async () => {
-    process.env.APPDYNO_STATE_DIR = mkdtempSync(join(tmpdir(), 'appdyno-state-'));
     const device = new FakeDevice();
     const ctx = new ServerContext(
       DEFAULT_POLICY,

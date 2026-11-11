@@ -1,8 +1,5 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, ToolError } from '../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
@@ -34,9 +31,6 @@ const refusal = (p: Promise<unknown>) =>
 
 const namesOf = (d: FakeDevice) => d.calls.map((c) => c.name);
 
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-guards-')));
-});
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();

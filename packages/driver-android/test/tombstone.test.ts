@@ -146,7 +146,6 @@ describe('a tombstone', () => {
   });
 
   it("takes an end just after since, stamped by a phone's clock that is behind this Mac's", async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-tomb-')));
     const local = (ms: number) => {
       const d = new Date(ms);
       const p = (n: number, w = 2) => String(n).padStart(w, '0');

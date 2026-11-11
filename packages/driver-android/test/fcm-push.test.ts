@@ -1,7 +1,4 @@
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { assert, describe, expect, it, vi } from 'vitest';
 import { AndroidEvents } from '../src/events.js';
 import { keepFcmKey } from '../src/fcm-key.js';
@@ -169,7 +166,6 @@ describe('a push by FCM', () => {
 
 describe("an Android device's pushes, by FCM once it is set up", () => {
   it("go by FCM for what only Google delivers, read the app's own logcat for its token, and leave a tap as it was", async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-fcm-')));
     const asked: string[] = [];
     const adb = {
       exec: (_serial: string, command: string) => {

@@ -35,7 +35,6 @@ const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-why-'));
 
 beforeEach(() => {
   host.load = 1;
-  vi.stubEnv('APPDYNO_STATE_DIR', fresh());
   vi.useFakeTimers();
 });
 afterEach(() => {

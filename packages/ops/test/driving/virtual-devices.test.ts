@@ -1,15 +1,8 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { must, type Startable, type VirtualDevices } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './shared.js';
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-driving-')));
-});
 
 describe('simulators and emulators', () => {
   class Fleet implements VirtualDevices {

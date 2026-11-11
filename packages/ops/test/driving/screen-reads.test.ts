@@ -1,19 +1,12 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { inCall, must } from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { opsFor } from '../../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { SCREENS } from '@appdyno/testing/fake-screens.js';
 import { callerOf } from '@appdyno/testing/calls.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import { connect, act, withScreen } from './shared.js';
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-driving-')));
-});
 
 describe('waiting on the device', () => {
   it('says its longest wait in its description, and in the hint of a refusal of a longer one', async () => {

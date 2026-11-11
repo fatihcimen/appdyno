@@ -68,7 +68,6 @@ describe('what a recording leaves in the temp folder', () => {
 
   beforeEach(() => {
     dir = realpathSync(mkdtempSync(join(tmpdir(), 'appdyno-temp-')));
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-temp-state-')));
   });
   afterEach(() => {
     vi.unstubAllEnvs();

@@ -1,10 +1,7 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { DeviceProvider, DeviceSettings, SettingName, VirtualDevices } from '@appdyno/core';
 import { conditions, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf } from '@appdyno/testing/calls.js';
 import { endWithClient, putBackAfter } from '../src/lifetime.js';
@@ -45,9 +42,6 @@ const signals = ['SIGTERM', 'SIGINT'] as const;
 const drain = () => signals.forEach((s) => process.emit(s));
 
 describe('the end of the server', () => {
-  beforeEach(() => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-end-')));
-  });
   afterEach(() => vi.useRealTimers());
 
   it.each(signals)('%s ends the session as the client leaving does', async (signal) => {

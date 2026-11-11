@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AppManager } from '@appdyno/core';
 import type { Tree, WireNode } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { powerControlAt } from '../src/index.js';
 import { middle, onDevice, recorded } from './power-device.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
@@ -201,10 +201,6 @@ describe('the system power, emergency and erase controls', () => {
 
 const AHEAD =
   "appdyno does not restart, power off, reset or erase a device, nor place a call or call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: --allow-power virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_POWER)";
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-power-state-')));
-});
 
 describe('an input on them', () => {
   const restart = middle(recorded('android-power-en'), 'Restart');

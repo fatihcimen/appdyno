@@ -264,7 +264,6 @@ describe('commands from the operations', () => {
   });
 
   it('gives two terminals in two folders a session each', async () => {
-    process.env.APPDYNO_STATE_DIR = mkdtempSync(join(tmpdir(), 'appdyno-cli-'));
     const other = new FakeDevice('emulator-5612');
     const provider: DeviceProvider = {
       list: () =>

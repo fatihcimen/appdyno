@@ -1,16 +1,11 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { must } from '@appdyno/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { claim, PUT_BACK_TOOL } from '../../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './shared.js';
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-driving-')));
-});
 
 describe('device claims', () => {
   const claimOf = (pid: number, tool = 'other agent') => {

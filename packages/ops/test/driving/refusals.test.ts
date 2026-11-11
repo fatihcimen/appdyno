@@ -1,14 +1,7 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './shared.js';
-
-beforeEach(() => {
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-driving-')));
-});
 
 describe('a refusal of a call that names too little', () => {
   it('says where an app is found when the call names none and none is selected', async () => {
