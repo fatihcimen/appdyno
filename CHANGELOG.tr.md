@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `hub`, `cli` ve `appdyno` `@appdyno/testing`'i kendileri bildirir, çünkü `testing` hiçbirine bağlı değildir; bağlı olduğu paketler için onu kök bildirir, çünkü onların kendi bildirimi pnpm'in reddettiği bir döngü olurdu.
 - CI, `main`'e bir push'ta ve bir pull request'te çalışır; böylece pull request'i olan bir dal iki kez yerine bir kez çalışır. Daha yeni bir push, aynı dalın ya da pull request'in ondan önceki çalıştırmasını iptal eder ve bir iş 45 dakikada biter; önceden bir takılma GitHub'ın altı saatini alıyordu.
 - `appdyno test` ve bir işlemin olan komutlar `main`'in yanında kendi fonksiyonlarıdır; o, 200 satırının 196'sından 103'üne iner. Logların, çökmelerin ve denetimin yanıtları `ops`'un `diagnose.test.ts`'i, JSON ve TOML düzenleyicilerinin testleri `cli`'ın `file-edits.test.ts`'idir; önceden `truth.test.ts` 800 satırın 793'ünde, `install.test.ts` 791'indeydi.
 - `packages/testing` tip projesine ve `typecheck`'ine, `ops`'unkinin dışında yeniden kavuşur ve onu kökün manifest'i bildirir; her paketin manifest'i testlerinin ve betiklerinin içe aktardığını bildirir: `hub` ve `ops` için sürücüler, `cli` için `mcp`, `protocol` ve MCP istemcisi, `ops` için MCP istemcisi, `core` ve `appdyno` için `typescript`, `appdyno` için `prettier`.

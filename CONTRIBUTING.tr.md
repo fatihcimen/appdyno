@@ -104,8 +104,8 @@ kaynaklardaki her `APPDYNO_` adını belgelere ya da bu tabloya bağlı tutar.
 ve onları uygulayan test `packages/appdyno/test/boundaries.test.ts` içindedir. Bir paketin testleri de, testin adını verdiği
 birkaçı dışında, kendi kuralına uyar. Mimari gerektiriyorsa kuralı orada değiştirin, etrafından dolaşmayın.
 Testlerin paylaştığı sahteler, hiçbir şeyin içinde gönderilmeyen bir paket olan `packages/testing`'tedir; bir test birini
-dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi. Kendine ait bir tip projesi vardır ve onu kökteki `package.json` bildirir,
-çünkü taklit ettiği paketlere bağlıdır ve pnpm onlar arasında bir döngüyü reddeder. Her test dosyası kendine ait bir durum klasöründe çalışır;
+dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi. Kendine ait bir tip projesi vardır; testleri onu alan bir paket onu bildirir,
+bağlı olduğu bir paket hariç, çünkü pnpm o döngüyü reddeder; onlar için kökteki `package.json` bildirir. Her test dosyası kendine ait bir durum klasöründe çalışır;
 onu `packages/appdyno/test/no-real-state.setup.ts` oluşturur. Testlerinin her biri boş bir klasör isteyen bir dosya `APPDYNO_STATE_DIR`'ı
 kendi `beforeEach`'inde stub'lar.
 

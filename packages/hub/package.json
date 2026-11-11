@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@appdyno/driver-android": "workspace:*",
-    "@appdyno/driver-apple": "workspace:*"
+    "@appdyno/driver-apple": "workspace:*",
+    "@appdyno/testing": "workspace:*"
   }
 }

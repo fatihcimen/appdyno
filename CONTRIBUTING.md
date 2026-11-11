@@ -104,8 +104,8 @@ Each package under `packages/` may import only the packages its rule allows. For
 and the test that enforces them are in `packages/appdyno/test/boundaries.test.ts`. A package's tests keep
 to its rule too, but for the few the test names. Change the rule there if the architecture needs it, not around it.
 The fakes the tests share are `packages/testing`, a package that ships in nothing, and a test takes one by its file,
-as `@appdyno/testing/fake-device.js`. It has a type project of its own, and the root `package.json` declares it, as it
-depends on the packages it fakes and pnpm refuses a cycle among them. Each test file runs on a state folder of its own, which
+as `@appdyno/testing/fake-device.js`. It has a type project of its own; a package whose tests take it declares it, but one it
+depends on, as pnpm refuses that cycle, and the root `package.json` does for those. Each test file runs on a state folder of its own, which
 `packages/appdyno/test/no-real-state.setup.ts` makes; a file whose tests each want an empty one stubs `APPDYNO_STATE_DIR`
 in its `beforeEach`.
 

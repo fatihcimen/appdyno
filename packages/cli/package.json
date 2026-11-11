@@ -23,6 +23,7 @@
   "devDependencies": {
     "@appdyno/mcp": "workspace:*",
     "@appdyno/protocol": "workspace:*",
+    "@appdyno/testing": "workspace:*",
     "@modelcontextprotocol/client": "^2.4.0"
   }
 }
