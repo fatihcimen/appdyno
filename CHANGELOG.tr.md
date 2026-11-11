@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Fonksiyon boyutu kuralı, bir paketin `src`'sinin kendi testlerinden tuttuğunu, dosya boyutu kuralının saydığı gibi sayar: telefon akışının sahte telefonu bir eşleştirmenin her adımını kendine ait bir metotla yanıtlar; önceden 290 satırlık tek bir fonksiyon onları tutuyordu ve kural klasörünü atlıyordu.
 - Saati bekleyen birim testleri, bir yoklamanın aralığı, bir durulma, bir çökme raporu ya da bir son süre için, `packages/testing`'in `onFakeTime` ve `fakeTimed`'ı ile vitest'in sahte zamanlayıcıları üzerinde çalışır ve birim çalıştırması eskiden aldığı sürenin yarısından azını alır. Gerçek bir süreci, bir soketi, gerçek bir aracın tuttuğu bir dosyayı ya da yerel viewer'ı bekleyenler gerçek saati korur.
 - Sunucunun bağlamı ölçümleri, baseline'ları ve bir komut satırının durumunu nerede tuttuğunu ve izlerin ne kadar yer alabileceğini tek bir `storage` seçeneği olarak, bir cihazı tutup tutmadığını ve paylaşıp paylaşmadığını da tek bir `claims` seçeneği olarak alır, bir kişininkini aldığı gibi; ona verilen `options`'tır ve verildiği gibi okunur; önceden beş getter her birini aktarıyordu. `claims` olmadan verilen bir `share` hiç okunmuyordu ve üç test artık onu vermez.
 - Her kural testi tek bir kural tutar: telefon akışının klasörü, istemcilerin adları, bir kişinin panosu, betiklerin tipleri ve Xcode projesi, `boundaries.test.ts` ile `structure.test.ts`'in yanında kendi dosyalarıdır; önceden bunlar onları paket haritasıyla ve bir dosyanın boyutuyla birlikte tutuyordu.

@@ -55,6 +55,25 @@ type Body = {
   };
 };
 
+/** What a host and the phone have agreed so far, in one conversation. */
+type Session = {
+  verifyKey?: Buffer;
+  shared?: Buffer;
+  theirs?: Buffer;
+  ours?: Buffer;
+  srp?: { salt: Buffer; b: bigint; B: bigint; v: bigint };
+  key?: Buffer;
+};
+
+/** One conversation: what it agreed, and how the phone answers in it. */
+type Talk = {
+  session: Session;
+  plain: (body: unknown) => void;
+  pairing: (data: Buffer) => void;
+  send: (message: unknown) => void;
+  socket: Socket;
+};
+
 export class FakePhone {
   private server: Server | undefined;
   private readonly ed = generateKeyPairSync('ed25519');
@@ -98,236 +117,12 @@ export class FakePhone {
     const plain = (body: unknown) => send({ plain: { _0: body } });
     const pairing = (data: Buffer) =>
       plain({ event: { _0: { pairingData: { _0: { data: data.toString('base64') } } } } });
-    const session: {
-      verifyKey?: Buffer;
-      shared?: Buffer;
-      theirs?: Buffer;
-      ours?: Buffer;
-      srp?: { salt: Buffer; b: bigint; B: bigint; v: bigint };
-      key?: Buffer;
-    } = {};
-
-    const onSetup = async (data: Map<number, Buffer>) => {
-      const state = must(data.get(TAG.state), 'a state')[0];
-      if (state === 1) {
-        plain({ event: { _0: { awaitingUserConsent: {} } } });
-        const yes =
-          this.consent ??
-          (await new Promise<boolean>((resolve) => {
-            this.person = resolve;
-          }));
-        if (!yes) {
-          plain({
-            event: {
-              _0: {
-                pairingRejectedWithError: {
-                  wrappedError: { userInfo: { NSLocalizedDescription: 'the person said no' } },
-                },
-              },
-            },
-          });
-          return;
-        }
-        const salt = randomBytes(16);
-        const x = big(sha512(salt, sha512(Buffer.from('Pair-Setup:000000'))));
-        const v = power(5n, x);
-        const b = big(randomBytes(32));
-        const k = big(sha512(wide(SRP_N), wide(5n)));
-        const B = (((k * v) % SRP_N) + power(5n, b)) % SRP_N;
-        session.srp = { salt, b, B, v };
-        pairing(
-          tlv([
-            [TAG.state, Buffer.from([2])],
-            [TAG.salt, salt],
-            [TAG.publicKey, wide(B)],
-          ]),
-        );
-      } else if (state === 3) {
-        const { b, B, v, salt } = must(session.srp, 'the SRP values');
-        const A = big(must(data.get(TAG.publicKey), 'a public key'));
-        const u = big(sha512(wide(A), wide(B)));
-        const S = power((A * power(v, u)) % SRP_N, b);
-        const key = sha512(wide(S));
-        session.key = key;
-        const group = Buffer.from(sha512(wide(SRP_N)));
-        const g = sha512(Buffer.from([5]));
-        group.forEach((value, i) => (group[i] = value ^ g.readUInt8(i)));
-        const expected = sha512(
-          group,
-          sha512(Buffer.from('Pair-Setup')),
-          salt,
-          wide(A),
-          wide(B),
-          key,
-        );
-        const proof = data.get(TAG.proof);
-        assert(proof);
-        if (!proof.equals(expected)) {
-          pairing(
-            tlv([
-              [TAG.state, Buffer.from([4])],
-              [TAG.error, Buffer.from([2])],
-            ]),
-          );
-          return;
-        }
-        pairing(
-          tlv([
-            [TAG.state, Buffer.from([4])],
-            [TAG.proof, sha512(wide(A), proof, key)],
-          ]),
-        );
-      } else if (state === 5) {
-        const key = session.key;
-        assert(key);
-        const box = derive(key, 'Pair-Setup-Encrypt-Salt', 'Pair-Setup-Encrypt-Info');
-        const inner = readTlv(
-          unseal(box, stepNonce('PS-Msg05'), must(data.get(TAG.encrypted), 'a sealed box')),
-        );
-        const host = inner.get(TAG.identifier);
-        assert(host);
-        const hostKey = inner.get(TAG.publicKey);
-        assert(hostKey);
-        const signing = derive(
-          key,
-          'Pair-Setup-Controller-Sign-Salt',
-          'Pair-Setup-Controller-Sign-Info',
-        );
-        if (
-          !verify(
-            null,
-            Buffer.concat([signing, host, hostKey]),
-            rawKey(ED25519_SPKI, hostKey),
-            must(inner.get(TAG.signature), 'a signature'),
-          )
-        ) {
-          throw new Error('the host did not sign');
-        }
-        this.known.set(host.toString(), hostKey);
-        const mine = lastBytes(this.ed.publicKey);
-        const accessory = derive(
-          key,
-          'Pair-Setup-Accessory-Sign-Salt',
-          'Pair-Setup-Accessory-Sign-Info',
-        );
-        const reply = tlv([
-          [TAG.identifier, this.who],
-          [TAG.publicKey, mine],
-          [
-            TAG.signature,
-            sign(null, Buffer.concat([accessory, this.who, mine]), this.ed.privateKey),
-          ],
-        ]);
-        pairing(
-          tlv([
-            [TAG.state, Buffer.from([6])],
-            [TAG.encrypted, seal(box, stepNonce('PS-Msg06'), reply)],
-          ]),
-        );
-        socket.end();
-      }
-    };
-
-    const onVerify = (data: Map<number, Buffer>) => {
-      const state = must(data.get(TAG.state), 'a state')[0];
-      if (state === 1 && this.refusesWith) {
-        plain({
-          event: {
-            _0: {
-              pairingRejectedWithError: {
-                wrappedError: { userInfo: { NSLocalizedDescription: this.refusesWith } },
-              },
-            },
-          },
-        });
-        return;
-      }
-      if (state === 1) {
-        const theirs = data.get(TAG.publicKey);
-        assert(theirs);
-        const { publicKey, privateKey } = generateKeyPairSync('x25519');
-        const ours = lastBytes(publicKey);
-        const shared = diffieHellman({ privateKey, publicKey: rawKey(X25519_SPKI, theirs) });
-        Object.assign(session, { theirs, ours, shared });
-        session.verifyKey = derive(shared, 'Pair-Verify-Encrypt-Salt', 'Pair-Verify-Encrypt-Info');
-        const signer = this.impostor
-          ? generateKeyPairSync('ed25519').privateKey
-          : this.ed.privateKey;
-        const inner = tlv([
-          [TAG.identifier, this.who],
-          [TAG.signature, sign(null, Buffer.concat([ours, this.who, theirs]), signer)],
-        ]);
-        pairing(
-          tlv([
-            [TAG.state, Buffer.from([2])],
-            [TAG.publicKey, ours],
-            [TAG.encrypted, seal(session.verifyKey, stepNonce('PV-Msg02'), inner)],
-          ]),
-        );
-        return;
-      }
-      const inner = readTlv(
-        unseal(
-          must(session.verifyKey, 'a verify key'),
-          stepNonce('PV-Msg03'),
-          must(data.get(TAG.encrypted), 'a sealed box'),
-        ),
-      );
-      const host = inner.get(TAG.identifier);
-      assert(host);
-      const key = this.known.get(host.toString());
-      const signed = Buffer.concat([
-        must(session.theirs, 'their key'),
-        host,
-        must(session.ours, 'our key'),
-      ]);
-      const good =
-        key !== undefined &&
-        verify(
-          null,
-          signed,
-          rawKey(ED25519_SPKI, key),
-          must(inner.get(TAG.signature), 'a signature'),
-        );
-      pairing(
-        good
-          ? tlv([[TAG.state, Buffer.from([4])]])
-          : tlv([
-              [TAG.state, Buffer.from([4])],
-              [TAG.error, Buffer.from([2])],
-            ]),
-      );
-    };
-
-    const onEncrypted = (sealed: string) => {
-      const shared = session.shared;
-      assert(shared);
-      const request = JSON.parse(
-        unseal(
-          derive(shared, '', 'ClientEncrypt-main'),
-          countNonce(0),
-          Buffer.from(sealed, 'base64'),
-        ).toString(),
-      ) as { request: { _0: { createListener?: { key: string } } } };
-      const asked = request.request._0.createListener;
-      const body =
-        asked?.key === shared.toString('base64')
-          ? { response: { _1: { createListener: { port: this.listenerPort } } } }
-          : { response: { _1: { errorExtended: { reason: 'no such key' } } } };
-      send({
-        streamEncrypted: {
-          _0: seal(
-            derive(shared, '', 'ServerEncrypt-main'),
-            countNonce(0),
-            Buffer.from(JSON.stringify(body)),
-          ).toString('base64'),
-        },
-      });
-    };
+    const session: Session = {};
+    const talk: Talk = { session, plain, pairing, send, socket };
 
     const onMessage = async ({ message }: Body) => {
       if (message.streamEncrypted) {
-        onEncrypted(message.streamEncrypted._0);
+        this.encryptedStep(talk, message.streamEncrypted._0);
         return;
       }
       const body = must(message.plain, 'a plain message')._0 as {
@@ -363,8 +158,8 @@ export class FakePhone {
         data: string;
       };
       const fields = readTlv(Buffer.from(data, 'base64'));
-      if (kind === 'verifyManualPairing') onVerify(fields);
-      else await onSetup(fields);
+      if (kind === 'verifyManualPairing') this.verifyStep(talk, fields);
+      else await this.setupStep(talk, fields);
     };
 
     let turn = Promise.resolve();
@@ -379,5 +174,218 @@ export class FakePhone {
       }
     });
     socket.on('error', () => undefined);
+  }
+
+  private async setupStep({ session, plain, pairing, socket }: Talk, data: Map<number, Buffer>) {
+    const state = must(data.get(TAG.state), 'a state')[0];
+    if (state === 1) {
+      plain({ event: { _0: { awaitingUserConsent: {} } } });
+      const yes =
+        this.consent ??
+        (await new Promise<boolean>((resolve) => {
+          this.person = resolve;
+        }));
+      if (!yes) {
+        plain({
+          event: {
+            _0: {
+              pairingRejectedWithError: {
+                wrappedError: { userInfo: { NSLocalizedDescription: 'the person said no' } },
+              },
+            },
+          },
+        });
+        return;
+      }
+      const salt = randomBytes(16);
+      const x = big(sha512(salt, sha512(Buffer.from('Pair-Setup:000000'))));
+      const v = power(5n, x);
+      const b = big(randomBytes(32));
+      const k = big(sha512(wide(SRP_N), wide(5n)));
+      const B = (((k * v) % SRP_N) + power(5n, b)) % SRP_N;
+      session.srp = { salt, b, B, v };
+      pairing(
+        tlv([
+          [TAG.state, Buffer.from([2])],
+          [TAG.salt, salt],
+          [TAG.publicKey, wide(B)],
+        ]),
+      );
+    } else if (state === 3) {
+      const { b, B, v, salt } = must(session.srp, 'the SRP values');
+      const A = big(must(data.get(TAG.publicKey), 'a public key'));
+      const u = big(sha512(wide(A), wide(B)));
+      const S = power((A * power(v, u)) % SRP_N, b);
+      const key = sha512(wide(S));
+      session.key = key;
+      const group = Buffer.from(sha512(wide(SRP_N)));
+      const g = sha512(Buffer.from([5]));
+      group.forEach((value, i) => (group[i] = value ^ g.readUInt8(i)));
+      const expected = sha512(
+        group,
+        sha512(Buffer.from('Pair-Setup')),
+        salt,
+        wide(A),
+        wide(B),
+        key,
+      );
+      const proof = data.get(TAG.proof);
+      assert(proof);
+      if (!proof.equals(expected)) {
+        pairing(
+          tlv([
+            [TAG.state, Buffer.from([4])],
+            [TAG.error, Buffer.from([2])],
+          ]),
+        );
+        return;
+      }
+      pairing(
+        tlv([
+          [TAG.state, Buffer.from([4])],
+          [TAG.proof, sha512(wide(A), proof, key)],
+        ]),
+      );
+    } else if (state === 5) {
+      const key = session.key;
+      assert(key);
+      const box = derive(key, 'Pair-Setup-Encrypt-Salt', 'Pair-Setup-Encrypt-Info');
+      const inner = readTlv(
+        unseal(box, stepNonce('PS-Msg05'), must(data.get(TAG.encrypted), 'a sealed box')),
+      );
+      const host = inner.get(TAG.identifier);
+      assert(host);
+      const hostKey = inner.get(TAG.publicKey);
+      assert(hostKey);
+      const signing = derive(
+        key,
+        'Pair-Setup-Controller-Sign-Salt',
+        'Pair-Setup-Controller-Sign-Info',
+      );
+      if (
+        !verify(
+          null,
+          Buffer.concat([signing, host, hostKey]),
+          rawKey(ED25519_SPKI, hostKey),
+          must(inner.get(TAG.signature), 'a signature'),
+        )
+      ) {
+        throw new Error('the host did not sign');
+      }
+      this.known.set(host.toString(), hostKey);
+      const mine = lastBytes(this.ed.publicKey);
+      const accessory = derive(
+        key,
+        'Pair-Setup-Accessory-Sign-Salt',
+        'Pair-Setup-Accessory-Sign-Info',
+      );
+      const reply = tlv([
+        [TAG.identifier, this.who],
+        [TAG.publicKey, mine],
+        [TAG.signature, sign(null, Buffer.concat([accessory, this.who, mine]), this.ed.privateKey)],
+      ]);
+      pairing(
+        tlv([
+          [TAG.state, Buffer.from([6])],
+          [TAG.encrypted, seal(box, stepNonce('PS-Msg06'), reply)],
+        ]),
+      );
+      socket.end();
+    }
+  }
+
+  private verifyStep({ session, plain, pairing }: Talk, data: Map<number, Buffer>) {
+    const state = must(data.get(TAG.state), 'a state')[0];
+    if (state === 1 && this.refusesWith) {
+      plain({
+        event: {
+          _0: {
+            pairingRejectedWithError: {
+              wrappedError: { userInfo: { NSLocalizedDescription: this.refusesWith } },
+            },
+          },
+        },
+      });
+      return;
+    }
+    if (state === 1) {
+      const theirs = data.get(TAG.publicKey);
+      assert(theirs);
+      const { publicKey, privateKey } = generateKeyPairSync('x25519');
+      const ours = lastBytes(publicKey);
+      const shared = diffieHellman({ privateKey, publicKey: rawKey(X25519_SPKI, theirs) });
+      Object.assign(session, { theirs, ours, shared });
+      session.verifyKey = derive(shared, 'Pair-Verify-Encrypt-Salt', 'Pair-Verify-Encrypt-Info');
+      const signer = this.impostor ? generateKeyPairSync('ed25519').privateKey : this.ed.privateKey;
+      const inner = tlv([
+        [TAG.identifier, this.who],
+        [TAG.signature, sign(null, Buffer.concat([ours, this.who, theirs]), signer)],
+      ]);
+      pairing(
+        tlv([
+          [TAG.state, Buffer.from([2])],
+          [TAG.publicKey, ours],
+          [TAG.encrypted, seal(session.verifyKey, stepNonce('PV-Msg02'), inner)],
+        ]),
+      );
+      return;
+    }
+    const inner = readTlv(
+      unseal(
+        must(session.verifyKey, 'a verify key'),
+        stepNonce('PV-Msg03'),
+        must(data.get(TAG.encrypted), 'a sealed box'),
+      ),
+    );
+    const host = inner.get(TAG.identifier);
+    assert(host);
+    const key = this.known.get(host.toString());
+    const signed = Buffer.concat([
+      must(session.theirs, 'their key'),
+      host,
+      must(session.ours, 'our key'),
+    ]);
+    const good =
+      key !== undefined &&
+      verify(
+        null,
+        signed,
+        rawKey(ED25519_SPKI, key),
+        must(inner.get(TAG.signature), 'a signature'),
+      );
+    pairing(
+      good
+        ? tlv([[TAG.state, Buffer.from([4])]])
+        : tlv([
+            [TAG.state, Buffer.from([4])],
+            [TAG.error, Buffer.from([2])],
+          ]),
+    );
+  }
+
+  private encryptedStep({ session, send }: Talk, sealed: string) {
+    const shared = session.shared;
+    assert(shared);
+    const request = JSON.parse(
+      unseal(
+        derive(shared, '', 'ClientEncrypt-main'),
+        countNonce(0),
+        Buffer.from(sealed, 'base64'),
+      ).toString(),
+    ) as { request: { _0: { createListener?: { key: string } } } };
+    const asked = request.request._0.createListener;
+    const body =
+      asked?.key === shared.toString('base64')
+        ? { response: { _1: { createListener: { port: this.listenerPort } } } }
+        : { response: { _1: { errorExtended: { reason: 'no such key' } } } };
+    send({
+      streamEncrypted: {
+        _0: seal(
+          derive(shared, '', 'ServerEncrypt-main'),
+          countNonce(0),
+          Buffer.from(JSON.stringify(body)),
+        ).toString('base64'),
+      },
+    });
   }
 }

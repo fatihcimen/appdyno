@@ -41,8 +41,8 @@ function functionsIn(text: string): Fn[] {
 const sourcesIn = (dir: string): string[] =>
   readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
-    // what `src` holds of its own tests is a test's
-    if (statSync(p).isDirectory()) return f === 'test' ? [] : sourcesIn(p);
+    // what `src` holds of its own tests is held to it too, as the size of a file is
+    if (statSync(p).isDirectory()) return sourcesIn(p);
     return p.endsWith('.ts') ? [p] : [];
   });
 
@@ -59,6 +59,8 @@ const functions = readdirSync(packages)
 describe('the size of a function', () => {
   it(`stays under ${MAX_LINES} lines, but for the ones named`, () => {
     expect(functions.length).toBeGreaterThan(1_000);
+    // a fake under `src` too, as a phone's end of a pairing is
+    expect(functions.some((f) => /\/src\/.+\/test\//.test(f.key))).toBe(true);
     const over = functions
       .filter((f) => f.lines > MAX_LINES && !LONGER[f.key])
       .map((f) => `${f.key}: ${f.lines}`);
