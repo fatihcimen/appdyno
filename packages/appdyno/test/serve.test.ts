@@ -22,6 +22,19 @@ it('refuses an allow list given empty, by flag or variable, as it would let in e
   expect(policyOf({ 'allow-devices': '^emulator-' }, {}).devices?.test('emulator-5554')).toBe(true);
 });
 
+it('refuses a device or link pattern that matches the empty text, as one side of it unset leaves', () => {
+  for (const values of [
+    { 'allow-devices': 'emu|' },
+    { 'allow-devices': '|' },
+    { 'allow-urls': '.*' },
+  ])
+    expect(() => policyOf(values, {})).toThrow('matches the empty text');
+  expect(() => policyOf({}, { APPDYNO_ALLOW_DEVICES: '^R68|' })).toThrow(
+    '(APPDYNO_ALLOW_DEVICES) matches the empty text',
+  );
+  expect(policyOf({ 'allow-devices': '^emulator-5554$|^R68' }, {}).devices?.test('x')).toBe(false);
+});
+
 it('gives a server it starts the devices and apps it keeps to, by flag, which that server reads as its own', () => {
   const hub = policyOf({ 'allow-devices': '^emulator-5554$' }, { APPDYNO_ALLOW_APPS: 'a.b, c.d' });
   const { values } = parseArgs({ args: allowFlags(hub), options: COMMANDS.mcp.flags });

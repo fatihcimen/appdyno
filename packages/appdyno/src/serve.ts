@@ -18,7 +18,8 @@ const listOf = (s: string | undefined) =>
 
 /**
  * What this server may do, by its flags, else the environment: no tool call sets any of it. A list given empty, as a
- * script's unset variable gives it, is refused, as it would let in every device, app or link.
+ * script's unset variable gives it, is refused, as it would let in every device, app or link, and so is a pattern that
+ * matches the empty text, as `"$A|$B"` with one unset gives, which matches every serial and link.
  */
 export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.env): Policy {
   const given = (flag: 'allow-devices' | 'allow-apps' | 'allow-urls', name: string) => {
@@ -29,9 +30,17 @@ export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.e
       );
     return said;
   };
-  const regex = (s: string | undefined) => (s === undefined ? undefined : new RegExp(s));
-  const devices = regex(given('allow-devices', 'APPDYNO_ALLOW_DEVICES'));
-  const urls = regex(given('allow-urls', 'APPDYNO_ALLOW_URLS'));
+  const regex = (flag: 'allow-devices' | 'allow-urls', name: string) => {
+    const said = given(flag, name);
+    const re = said === undefined ? undefined : new RegExp(said);
+    if (re?.test(''))
+      throw new Error(
+        `--${flag} (${name}) matches the empty text, as a pattern with an empty side such as "a|" does, which lets in every one: give what it lets in, or leave it out`,
+      );
+    return re;
+  };
+  const devices = regex('allow-devices', 'APPDYNO_ALLOW_DEVICES');
+  const urls = regex('allow-urls', 'APPDYNO_ALLOW_URLS');
   const loss = values['allow-data-loss'] ?? env.APPDYNO_ALLOW_DATA_LOSS;
   if (loss !== undefined && loss !== 'virtual' && loss !== 'all')
     throw new Error(`--allow-data-loss takes virtual or all, not ${loss}`);

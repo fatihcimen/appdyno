@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Deseni boş metinle eşleşen bir cihaz ya da bağlantı izin listesi, boş olanın zaten reddedildiği gibi başlangıçta reddedilir: biri tanımsızken `--allow-devices "$A|$B"` `emu|` veriyordu; bu da düzenli ifade olarak her cihazı içeri alır, `--allow-urls` da her bağlantıyı.
 - Günlükler, istekler ve konsol satırları ayrıca `pwd`, `passphrase`, `credential`, `credentials`, `signature` ve `api key`'i, bir bağlantının kendi parametresi olarak `code` ve `sig`'ini, çünkü bir OAuth kodu `?code=` ile geri döner, ve bir bağlantıdaki parolayı, `https://user:password@host`, gizler: her biri ajana olduğu gibi ulaşıyordu. Başka yerde anahtar olan `code` ve `sig`, `statusCode: 200` gibi, gösterilmeye devam eder.
 - `webview` bir sayfanın soketini yalnızca uygulamanın DevTools'una yönlendirilen portta açar; `react_native`'in Metro'nunkine yaptığı denetimle: uygulamanın soketinin adını verdiği `webSocketDebuggerUrl`'yi nereyi gösterirse orada açıyordu, böylece cihazdaki bir uygulama bu Mac'e herhangi bir ana makineye bir WebSocket açtırabiliyordu.
 - `react_native` ve `webview` sordukları DevTools uç noktasından gelen bir yönlendirmeyi izlemez ve ne yanıtladığını "answered 302" diye söyler: bu Mac'te `/json/list` ya da `/reload`'a bir yönlendirmeyle yanıt veren bir port, bu Mac'in isteğini adını verdiği herhangi bir ana makineye gönderiyordu.
