@@ -13,7 +13,7 @@ error codes, node flags and version the three of them write down.
 
 ## Frames
 
-```
+```text
 [u32 BE payload length][u8 type][payload]
 ```
 
@@ -48,36 +48,41 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 
 ## Methods
 
-| method                                                   | params                                                                                                   | result                                                                               |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `hello`                                                  | `token`, `protocol`                                                                                      | agent and device description                                                         |
-| `ping`                                                   | –                                                                                                        | `uptimeMs`, `atMs` (the device's wall clock)                                         |
-| `tree.get`                                               | `maxDepth` (128), `maxNodes` (5000)                                                                      | `Tree`                                                                               |
-| `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`, `pidOf?`                                  | `settle?`, `hash?`, `tree?`, `pid?`                                                  |
-| `text.set`                                               | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`              |
-| `text.keys` (iOS)                                        | `text`, `into?`, `focusTimeoutMs` (6000)                                                                 | `focusMs`                                                                            |
-| `screenshot`                                             | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                         |
-| `app.foreground`                                         | –                                                                                                        | `pkg?`                                                                               |
-| `app.target` (iOS)                                       | `pkg` (bundle id)                                                                                        | –                                                                                    |
-| `app.labels` (Android)                                   | –                                                                                                        | `apps`: `id`, `name` of each app a launcher shows                                    |
-| `clipboard.set` / `clipboard.get`                        | `text` / –                                                                                               | – / `text?`                                                                          |
-| `orientation.set`                                        | `rotation` 0–3 (frozen), `kept?`                                                                         | –                                                                                    |
-| `animations.set`                                         | `off`                                                                                                    | –                                                                                    |
-| `rest.wait`                                              | –                                                                                                        | –                                                                                    |
-| `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                                   |
-| `a11y.read` (Android)                                    | `maxNodes` (60)                                                                                          | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`)     |
-| `touch` (Android)                                        | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  | –                                                                                    |
-| `stream.start` (Android)                                 | `codec` (`h264`/`hevc`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                    | –, then video frames on this connection until it ends                                |
-| `stream.clock`, `stream.sync`, `stream.status` (Android) | –                                                                                                        | `now` (ns) / – / `active`, `on`, `w`, `h`, `rotation`, `modes`, `dropped`, `behind?` |
-| `wait`                                                   | `since?`, `timeoutMs`, `minMs` (300)                                                                     | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                      |
-| `cancel`                                                 | `id`                                                                                                     | –                                                                                    |
-| `shutdown`                                               | –                                                                                                        | – (the agent exits)                                                                  |
+| method                            | params                                                                                                   | result                                                                           |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `hello`                           | `token`, `protocol`                                                                                      | agent and device description                                                     |
+| `ping`                            | –                                                                                                        | `uptimeMs`, `atMs` (the device's wall clock)                                     |
+| `tree.get`                        | `maxDepth` (128), `maxNodes` (5000), `pkg?` (iOS)                                                        | `Tree`                                                                           |
+| `act`                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`, `pidOf?`                                  | `settle?`, `animationWaitMs?` (iOS), `hash?`, `tree?`, `pid?`                    |
+| `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
+| `text.keys` (iOS)                 | `text`, `into?`, `focusTimeoutMs` (6000)                                                                 | `focusMs`                                                                        |
+| `screenshot`                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
+| `app.foreground`                  | –                                                                                                        | `pkg?`                                                                           |
+| `permission.reset` (iOS)          | `pkg`, `service`                                                                                         | –                                                                                |
+| `app.target` (iOS)                | `pkg` (bundle id)                                                                                        | –                                                                                |
+| `app.labels` (Android)            | –                                                                                                        | `apps`: `id`, `name` of each app a launcher shows                                |
+| `clipboard.set` / `clipboard.get` | `text` / –                                                                                               | – / `text?`                                                                      |
+| `animations.wait` (iOS)           | `x`, `y`                                                                                                 | `ms?`                                                                            |
+| `orientation.set`                 | `rotation` 0–3 (frozen), `kept?`                                                                         | –                                                                                |
+| `animations.set`                  | `off`                                                                                                    | –                                                                                |
+| `locales` (Android)               | `set?`                                                                                                   | `tags`                                                                           |
+| `rest.wait`                       | –                                                                                                        | –                                                                                |
+| `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                               |
+| `a11y.read` (Android)             | `maxNodes` (60)                                                                                          | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
+| `touch` (Android)                 | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  | –                                                                                |
+| `stream.start` (Android)          | `codec` (`h264`/`hevc`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                    | –, then video frames on this connection until it ends                            |
+| `stream.clock` (Android)          | –                                                                                                        | `now` (ns)                                                                       |
+| `stream.sync` (Android)           | –                                                                                                        | –                                                                                |
+| `stream.status` (Android)         | –                                                                                                        | `active`, `on`, `w`, `h`, `rotation`, `modes`, `dropped`, `behind?`              |
+| `wait`                            | `since?`, `timeoutMs`, `minMs` (300)                                                                     | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
+| `cancel`                          | `id`                                                                                                     | –                                                                                |
+| `shutdown`                        | –                                                                                                        | – (the agent exits)                                                              |
 
 `action` is one of `tap {x,y}`, `doubleTap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
 `gesture {pointers}` (1–5 fingers, each a list of `{x,y,t}` samples; fingers go down together at their
 first sample and up together at their last) and `key {key, modifiers?}` (`back`, `home`, `enter`, `delete`, `tab`,
 `appSwitch`, `volumeUp`, `volumeDown`, `power`, `lock`, `escape`, `space`, `arrowUp`, `arrowDown`, `arrowLeft`,
-`arrowRight`, or a letter or digit; `modifiers` of `command`, `control`, `option`, `shift` are held during it, and on
+`arrowRight`, `mute`, `siri`, or a letter or digit; `modifiers` of `command`, `control`, `option`, `shift` are held during it, and on
 Android `command` is Ctrl, which its text fields take). Coordinates are device pixels.
 
 `pidOf` (Android), on `act` and `text.set`, names an app whose process the answer gives in `pid` once the action is
@@ -188,6 +193,8 @@ change needed), `t` (text; absent while a field shows its hint), `d` (content
 description), `h` (hint), `b` (bounds on screen), `f` (flags: visible 1, clickable 2, focusable 4,
 focused 8, enabled 16, checked 32, selected 64, editable 128, scrollable 256, password 512, checkable
 1024, long-clickable 2048).
+
+`dark` is true when the screen is off, though the app's windows may still be listed, as they are while a display dozes; `moving` is true while a window still slides to its place, and the places given are those it comes to rest at.
 
 Android adds flag 4096 (not important for accessibility: a screen reader skips the node) and 8192 (a
 screen reader reads the node with its children as one unit, Android 9+); both are local fields of the node.
@@ -439,8 +446,9 @@ retries read-only requests itself once on a fresh connection, never an action (i
 The host pushes the agent APK (`/data/local/tmp/appdyno/agent-<sha256 prefix>.apk`, only when that
 build is not there) and starts it as the shell user:
 
-```
-CLASSPATH=<apk> app_process / dev.appdyno.agent.Main --socket appdyno_<random> --token-file /data/local/tmp/appdyno/appdyno_<random>.token
+```sh
+CLASSPATH=<apk> app_process / dev.appdyno.agent.Main \
+  --socket appdyno_<random> --token-file /data/local/tmp/appdyno/appdyno_<random>.token
 ```
 
 The socket name and token are kept in a state file readable only by the user

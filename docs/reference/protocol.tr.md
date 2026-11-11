@@ -13,7 +13,7 @@ hata kodlarını, düğüm bayraklarını ve sürümü karşılaştırır.
 
 ## Çerçeveler
 
-```
+```text
 [u32 BE payload length][u8 type][payload]
 ```
 
@@ -48,41 +48,46 @@ kendisi başarısız sayar ve `cancel {id}` gönderir. Cihaz işi tek bir thread
 
 ## Metotlar
 
-| metot                                                    | parametreler                                                                                            | sonuç                                                                                |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `hello`                                                  | `token`, `protocol`                                                                                     | ajan ve cihaz açıklaması                                                             |
-| `ping`                                                   | –                                                                                                       | `uptimeMs`, `atMs` (cihazın duvar saati)                                             |
-| `tree.get`                                               | `maxDepth` (128), `maxNodes` (5000)                                                                     | `Tree`                                                                               |
-| `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`, `pidOf?`                                 | `settle?`, `hash?`, `tree?`, `pid?`                                                  |
-| `text.set`                                               | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; iOS sürücüsü 2000 ister), `settle?`, `read` | `act` gibi, ayrıca `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
-| `text.keys` (iOS)                                        | `text`, `into?`, `focusTimeoutMs` (6000)                                                                | `focusMs`                                                                            |
-| `screenshot`                                             | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                       | `w`, `h`, `format`, `bytes`, ayrıca görüntüyü taşıyan bir ek                         |
-| `app.foreground`                                         | –                                                                                                       | `pkg?`                                                                               |
-| `app.target` (iOS)                                       | `pkg` (bundle id)                                                                                       | –                                                                                    |
-| `app.labels` (Android)                                   | –                                                                                                       | `apps`: bir launcher'ın gösterdiği her uygulamanın `id`, `name`'i                    |
-| `clipboard.set` / `clipboard.get`                        | `text` / –                                                                                              | – / `text?`                                                                          |
-| `orientation.set`                                        | `rotation` 0–3 (sabitlenir), `kept?`                                                                    | –                                                                                    |
-| `animations.set`                                         | `off`                                                                                                   | –                                                                                    |
-| `rest.wait`                                              | –                                                                                                       | –                                                                                    |
-| `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                              | `issues`, `truncated`, `elapsedMs`                                                   |
-| `a11y.read` (Android)                                    | `maxNodes` (60)                                                                                         | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`)     |
-| `touch` (Android)                                        | `p` (0 basma, 1 hareket, 2 bırakma), `x`, `y`, `x2?`, `y2?`: ekranın kesirleri, durulma yok             | –                                                                                    |
-| `stream.start` (Android)                                 | `codec` (`h264`/`hevc`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                   | –, ardından bağlantı bitene kadar bu bağlantıda video kareleri                       |
-| `stream.clock`, `stream.sync`, `stream.status` (Android) | –                                                                                                       | `now` (ns) / – / `active`, `on`, `w`, `h`, `rotation`, `modes`, `dropped`, `behind?` |
-| `wait`                                                   | `since?`, `timeoutMs`, `minMs` (300)                                                                    | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                      |
-| `cancel`                                                 | `id`                                                                                                    | –                                                                                    |
-| `shutdown`                                               | –                                                                                                       | – (ajan kapanır)                                                                     |
+| metot                             | parametreler                                                                                            | sonuç                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `hello`                           | `token`, `protocol`                                                                                     | ajan ve cihaz açıklaması                                                         |
+| `ping`                            | –                                                                                                       | `uptimeMs`, `atMs` (cihazın duvar saati)                                         |
+| `tree.get`                        | `maxDepth` (128), `maxNodes` (5000), `pkg?` (iOS)                                                       | `Tree`                                                                           |
+| `act`                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`, `pidOf?`                                 | `settle?`, `animationWaitMs?` (iOS), `hash?`, `tree?`, `pid?`                    |
+| `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; iOS sürücüsü 2000 ister), `settle?`, `read` | `act` gibi, ayrıca `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`      |
+| `text.keys` (iOS)                 | `text`, `into?`, `focusTimeoutMs` (6000)                                                                | `focusMs`                                                                        |
+| `screenshot`                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                       | `w`, `h`, `format`, `bytes`, ayrıca görüntüyü taşıyan bir ek                     |
+| `app.foreground`                  | –                                                                                                       | `pkg?`                                                                           |
+| `permission.reset` (iOS)          | `pkg`, `service`                                                                                        | –                                                                                |
+| `app.target` (iOS)                | `pkg` (bundle id)                                                                                       | –                                                                                |
+| `app.labels` (Android)            | –                                                                                                       | `apps`: bir launcher'ın gösterdiği her uygulamanın `id`, `name`'i                |
+| `clipboard.set` / `clipboard.get` | `text` / –                                                                                              | – / `text?`                                                                      |
+| `animations.wait` (iOS)           | `x`, `y`                                                                                                | `ms?`                                                                            |
+| `orientation.set`                 | `rotation` 0–3 (sabitlenir), `kept?`                                                                    | –                                                                                |
+| `animations.set`                  | `off`                                                                                                   | –                                                                                |
+| `locales` (Android)               | `set?`                                                                                                  | `tags`                                                                           |
+| `rest.wait`                       | –                                                                                                       | –                                                                                |
+| `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                                              | `issues`, `truncated`, `elapsedMs`                                               |
+| `a11y.read` (Android)             | `maxNodes` (60)                                                                                         | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
+| `touch` (Android)                 | `p` (0 basma, 1 hareket, 2 bırakma), `x`, `y`, `x2?`, `y2?`: ekranın kesirleri, durulma yok             | –                                                                                |
+| `stream.start` (Android)          | `codec` (`h264`/`hevc`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                   | –, ardından bağlantı bitene kadar bu bağlantıda video kareleri                   |
+| `stream.clock` (Android)          | –                                                                                                       | `now` (ns)                                                                       |
+| `stream.sync` (Android)           | –                                                                                                       | –                                                                                |
+| `stream.status` (Android)         | –                                                                                                       | `active`, `on`, `w`, `h`, `rotation`, `modes`, `dropped`, `behind?`              |
+| `wait`                            | `since?`, `timeoutMs`, `minMs` (300)                                                                    | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
+| `cancel`                          | `id`                                                                                                    | –                                                                                |
+| `shutdown`                        | –                                                                                                       | – (ajan kapanır)                                                                 |
 
 `action` şunlardan biridir: `tap {x,y}`, `doubleTap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
 `gesture {pointers}` (1–5 parmak, her biri `{x,y,t}` örneklerinden bir liste; parmaklar ilk örneklerinde birlikte iner,
 son örneklerinde birlikte kalkar) ve `key {key, modifiers?}` (`back`, `home`, `enter`, `delete`, `tab`,
 `appSwitch`, `volumeUp`, `volumeDown`, `power`, `lock`, `escape`, `space`, `arrowUp`, `arrowDown`, `arrowLeft`,
-`arrowRight` ya da bir harf veya rakam; `modifiers` içindeki `command`, `control`, `option`, `shift` tuş boyunca basılı tutulur, Android'de
+`arrowRight`, `mute`, `siri` ya da bir harf veya rakam; `modifiers` içindeki `command`, `control`, `option`, `shift` tuş boyunca basılı tutulur, Android'de
 `command`, metin alanlarının kabul ettiği Ctrl'dir). Koordinatlar cihaz pikselidir.
 
-`act` ve `text.set` üzerindeki `pidOf` (Android), yanıtın eylem bittiğinde `pid` içinde sürecini verdiği bir uygulamayı
-adlandırır, uygulama hiçbir süreçle çalışmıyorsa 0: bir sunucu onu eylemden önceki süreçle karşılaştırır, çünkü sistemin
-hemen yeniden başlattığı bir çökme başka hiçbir şeyde görünmez. Söyleyemeyen bir ajan, eskisi gibi, `pid`'i dışarıda bırakır ve sunucu `pidof`'a sorar.
+`act` ve `text.set` üzerindeki `pidOf` (Android), yanıtın işlem bittiğinde `pid` içinde sürecini verdiği bir uygulamayı
+adlandırır, uygulama hiçbir süreçle çalışmıyorsa 0: bir host onu işlemden önceki süreçle karşılaştırır, çünkü sistemin
+hemen yeniden başlattığı bir çökme başka hiçbir şeyde görünmez. Söyleyemeyen bir ajan, eski bir ajanın yaptığı gibi, `pid`'i dışarıda bırakır ve host `pidof`'a sorar.
 
 ### Bekleme
 
@@ -188,6 +193,8 @@ değişiklik gerekmez), `t` (metin; bir alan ipucunu gösterirken yoktur), `d` (
 açıklaması), `h` (ipucu), `b` (ekrandaki sınırlar), `f` (bayraklar: visible 1, clickable 2, focusable 4,
 focused 8, enabled 16, checked 32, selected 64, editable 128, scrollable 256, password 512, checkable
 1024, long-clickable 2048).
+
+`dark`, ekran kapalıyken true olur; bir ekran uyuklarken olduğu gibi uygulamanın pencereleri yine de listelenebilir. `moving`, bir pencere hâlâ yerine kayarken true olur; verilen yerler, pencerenin duracağı yerlerdir.
 
 Android 4096 bayrağını (erişilebilirlik için önemli değil: bir ekran okuyucu düğümü atlar) ve 8192'yi (bir
 ekran okuyucu düğümü çocuklarıyla birlikte tek bir birim olarak okur, Android 9+) ekler; ikisi de düğümün yerel alanlarıdır.
@@ -439,8 +446,9 @@ salt okunur istekleri yeni bir bağlantıda kendisi bir kez yeniden dener, bir i
 Host ajan APK'sını cihaza gönderir (`/data/local/tmp/appdyno/agent-<sha256 prefix>.apk`, yalnızca o
 build orada değilse) ve onu shell kullanıcısı olarak başlatır:
 
-```
-CLASSPATH=<apk> app_process / dev.appdyno.agent.Main --socket appdyno_<random> --token-file /data/local/tmp/appdyno/appdyno_<random>.token
+```sh
+CLASSPATH=<apk> app_process / dev.appdyno.agent.Main \
+  --socket appdyno_<random> --token-file /data/local/tmp/appdyno/appdyno_<random>.token
 ```
 
 Soket adı ve token yalnızca kullanıcının okuyabildiği bir durum dosyasında tutulur
