@@ -2,22 +2,22 @@
 
 [Türkçe](ci.tr.md)
 
-`scripts/ci.sh` runs every gate in order and stops nothing early: each step's exit code and duration go to
+`scripts/ci.sh` runs every check in order and does not stop at the first failure: each step's exit code and duration go to
 `.ci/runs/<stamp>.json`, its output to `.ci/logs/`. The script exits 1 when any step failed, and 3 when none did and a
-measuring step was postponed, as what never ran is no pass.
+measuring step was postponed, as what never ran is no pass. It needs `mise` and zsh: each step runs under `mise exec`.
 
-| step                                   | what                                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------------------- |
-| install, format, lint, typecheck, unit | `pnpm install --frozen-lockfile`, prettier, eslint, tsc, vitest (`--maxWorkers=2`)    |
-| agent                                  | Gradle: the agent's unit tests, the agent and the fixture app                         |
-| build                                  | `pnpm build` (packages the agent when it was built)                                   |
-| fixture-install, device-functional     | with `--device <serial>`: the fixture app, then the contract, smoke and stdio suites  |
-| device-perf                            | the measurement accuracy suite (a measuring step)                                     |
-| latency, regression-gate               | with `--nightly`: the latency suite (`appdyno bench`, n = 30) and the gate            |
-| runner-core                            | the iOS runner's Swift core (`swift test`), where Xcode is                            |
-| ios-build, ios-functional, ios-perf    | with `--ios <simulator id>`: the runner, the contract and stdio suites, perf accuracy |
-| iphone-build, iphone-functional        | with `--iphone <UDID>`: the runner for phones, the iPhone suites (signing variables)  |
-| a step for each file                   | with `--all-on <serial>`: every suite that device can take                            |
+| step                                                | what                                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| install, format, lint, lint-native, typecheck, unit | `pnpm install --frozen-lockfile`, prettier, eslint, the native linters (`scripts/lint-native.sh`), tsc, vitest (`--maxWorkers=2`) |
+| agent                                               | Gradle: the agent's unit tests, the agent, the fixture app and the push fixture                                                   |
+| build                                               | `pnpm build` (packages the agent when it was built)                                                                               |
+| fixture-install, device-functional                  | with `--device <serial>`: the fixture app, then the contract, smoke and stdio suites                                              |
+| device-perf                                         | the measurement accuracy suite (a measuring step)                                                                                 |
+| latency, regression-gate                            | with `--nightly`: the latency suite (`appdyno bench`, n = 30) and the gate                                                        |
+| runner-core                                         | the iOS runner's Swift core (`swift test`), where Xcode is                                                                        |
+| ios-build, ios-functional, ios-perf                 | with `--ios <simulator id>`: the runner, the contract and stdio suites, perf accuracy                                             |
+| iphone-build, iphone-functional                     | with `--iphone <UDID>`: the runner for phones, the iPhone suites (signing variables)                                              |
+| a step for each file                                | with `--all-on <serial>`: every suite that device can take                                                                        |
 
 **Which suites run where.** No device suite runs by itself: each gates on a variable, and every one a run must take has to be named.
 
@@ -66,11 +66,11 @@ scripts/ci.sh --all-on <serial>                    # + every suite that device c
 
 A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the Mac app, `npm publish --provenance --access public`, and a GitHub release with the disk image, the cask and the appcast.
 
-Before the first release:
+What a release depends on:
 
-- The repository must be public. npm generates no provenance for a private one, even for a public package, and `appdyno update` refuses a release with none.
-- `repository` in `packages/appdyno/package.json` must match it, case included. npm checks this when it publishes, and `update` holds every release to that address, so a release built elsewhere is refused.
-- The first publish needs an `NPM_TOKEN` secret, as a package must exist before it can have a trusted publisher. After it, add `release.yml` as the trusted publisher on npmjs.com and remove the secret. The publish job's Node 26 has an npm that can do this.
+- The repository is public. npm generates no provenance from a private repository, even for a public package, and `appdyno update` refuses a release with none.
+- `repository` in `packages/appdyno/package.json` matches it, case included. npm checks this when it publishes, and `update` holds every release to that address, so a release built elsewhere is refused.
+- npm takes the publish from `release.yml` as the package's trusted publisher, set on npmjs.com, or by an `NPM_TOKEN` secret. A package's first publish needs the secret, as a package must exist before it can have a trusted publisher; once one is set, the secret can go. The publish job's Node 26 has an npm that can publish as a trusted publisher.
 
 Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.mjs` installs the tarball on an empty home. It stays out of the workflow, as it refuses to run where a JDK is on its path.
 
@@ -95,4 +95,4 @@ Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.
 
 `openssl genpkey -algorithm ed25519` makes an update key. Keep it: an app can only ever verify releases signed by the key it was built with, so losing it means people reinstall by hand. An identity is only ever taken from these variables, never found on the machine.
 
-`scripts/check-app.mjs` meets the app as a stranger does: a clean home and a PATH with no Node and no developer tools, where each would-be tool is a decoy that tells if it was reached. It downloads adb, opens the hub, updates from a real disk image, refuses a tampered one, and moves the app. `--android <serial>` adds a window on that device, with frames recorded. It needs the network, and windows stay behind.
+`scripts/check-app.mjs` meets the app as a stranger does: a clean home and a PATH with no Node and no developer tools, where each would-be tool is a decoy that tells if it was reached. It downloads adb, opens the hub, updates from a real disk image, refuses a tampered one, and moves the app. `--android <serial>` adds a window on that device, with frames recorded, and `--iphone <udid>` the same on an iPhone. `--keep` leaves the temporary folder it made, its clean home and what it installed there, and prints where. It needs the network, and windows stay behind.
