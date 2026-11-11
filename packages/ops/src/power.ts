@@ -1,6 +1,7 @@
 import type { Device, Screen } from '@appdyno/core';
 import { DeviceError, NODE_FLAGS, type ActParams, type Point, type Tree } from '@appdyno/protocol';
 import { approvePower, powerAllowed } from './approval.js';
+import { LEAVES, SIDE_KEYS } from './keys.js';
 import type { Policy } from './policy.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
@@ -211,20 +212,6 @@ function dialerOf(s: Session) {
 /** What a touch at `p` would act on of the system's power, emergency and erase controls: its words, or undefined. */
 export const powerControlAt = (tree: Tree, p: Point) => controls(tree).at(p);
 
-/** Keys that leave such a screen or act on no element: back, home, the switcher, the volume. */
-export const LEAVES = new Set([
-  'back',
-  'home',
-  'appSwitch',
-  'volumeUp',
-  'volumeDown',
-  'mute',
-  'escape',
-  'siri',
-]);
-
-/** The power and side keys: three presses this close call for help on many phones (Emergency SOS). */
-export const SIDE_KEYS = new Set(['power', 'lock']);
 const HELP_PRESSES = 3;
 const HELP_MS = 5_000;
 const pressed = new WeakMap<Session, number[]>();

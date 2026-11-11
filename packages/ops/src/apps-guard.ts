@@ -1,16 +1,8 @@
 import type { PlatformScreen, Screen } from '@appdyno/core';
 import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
 import { byPerson, type Policy } from './policy.js';
-import {
-  inAlert,
-  LEAVES,
-  overTheApp,
-  powerGuard,
-  SIDE_KEYS,
-  windowAt,
-  type Input,
-  type InputGuard,
-} from './power.js';
+import { LEAVES, SIDE_KEYS } from './keys.js';
+import { inAlert, overTheApp, powerGuard, windowAt, type Input, type InputGuard } from './power.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 

@@ -1,6 +1,7 @@
 import { must, SYSTEM_VIEWS, type SystemView } from '@appdyno/core';
 import { KEYS, MODIFIERS, type Key, type Modifier } from '@appdyno/protocol';
 import { z } from 'zod';
+import { BUTTONS } from './keys.js';
 
 /** The screen in the answer after an action: its changes, all of it, or nothing. */
 export const Read = z.enum(['diff', 'full', 'none']).default('diff');
@@ -48,19 +49,6 @@ export const keyName = (k: Key) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase(
 const WIRE_KEY: Record<string, Key | undefined> = Object.fromEntries(
   KEYS.map((k) => [keyName(k), k]),
 );
-
-/** What a key that is a button takes: nothing is held during it. */
-const BUTTONS: ReadonlySet<string> = new Set<Key>([
-  'back',
-  'home',
-  'appSwitch',
-  'volumeUp',
-  'volumeDown',
-  'mute',
-  'siri',
-  'power',
-  'lock',
-]);
 
 export const viewNamed = (words: string) => SYSTEM_VIEWS.find((v): v is SystemView => v === words);
 

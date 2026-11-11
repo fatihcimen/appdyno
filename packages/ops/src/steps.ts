@@ -15,6 +15,7 @@ import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 import { byPerson } from './policy.js';
+import { LEAVES_APP, NEEDS_NO_LOOK, NOTHING_TO_READ, SHORTCUT_LEAVES } from './keys.js';
 import {
   LOOKS_ONLY,
   NAME_AN_ELEMENT,
@@ -29,21 +30,6 @@ import { pastKeyboard } from './keyboard.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 const STALE = 'stale ref, read the screen again';
-
-/** These leave the app, as the home key does. */
-const LEAVES_APP = new Set(['home', 'appSwitch', 'power', 'lock', 'siri']);
-
-/** A keyboard's way to the same: to the home screen, the switcher and search. */
-const SHORTCUT_LEAVES = new Set(['h', 'tab', 'space']);
-
-/** The screen goes dark, or to a system sheet with no window to read: nothing to wait for. */
-const NOTHING_TO_READ = new Set(['power', 'lock', 'siri', 'mute']);
-
-/**
- * What is pressed with no look first: the way out of such a sheet, what opens one over itself, and what acts on the
- * screen's power, as a look at a dark screen wakes it and the key would then put it back.
- */
-const NEEDS_NO_LOOK = new Set(['home', 'mute', 'power', 'lock']);
 
 /** How long a selector with no match waits for its element, as a screen may still be coming. */
 export const NO_MATCH_WAIT_MS = 1_500;
