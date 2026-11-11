@@ -1,14 +1,7 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  measuredLive,
-  pause,
-  perfMessage,
-  safeName,
-  swipeThrough,
-  SYSTEM_SWIPES,
-} from '@appdyno/core';
+import { pause, safeName, swipeThrough, SYSTEM_SWIPES } from '@appdyno/core';
 import type {
   Device,
   DeviceHardware,
@@ -17,22 +10,16 @@ import type {
   ViewerMessage,
 } from '@appdyno/core';
 import { checkApp, type ActivityLine, type Policy } from '@appdyno/ops';
-import { PERSON_HINTS, type WindowMeasures } from './measures.js';
+import type { WindowMeasures } from './measures.js';
+import { windowMovie } from './window-movie.js';
+import { windowPerf } from './window-perf.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
 /** What an agent's `app` call does that puts an app on the device or takes one off. */
 const APPS_CHANGE = new Set(['install', 'uninstall', 'build_and_run']);
-const RECORD_MAX_S = 3_600;
 /** A turn shows in the picture's shape by then, or the app in front refused it. */
 const TURN_MS = 2_000;
 const TURN_LOOK_MS = 100;
-/** How often a device's own source is told what is in front: one call to its agent while that stays the same. */
-const APP_LOOK_MS = 5_000;
-/** What to do when a measure finds no app of the person's in front: an app, or nothing, as when the screen is off. */
-export const MEASURE_YOURS =
-  'A measure restarts the app it measures, so it measures only an app of yours: open one, then measure it.';
-export const WAKE_AND_OPEN =
-  'Wake the device if its screen is off, open one of your apps, then measure it.';
 
 /** By the clock a person reads: a file's name is theirs, and it sorts as the ISO date does. */
 export const stamp = () =>
@@ -52,9 +39,6 @@ export function windowLook(hardware: DeviceHardware | undefined) {
   };
 }
 
-/** How a movie ended: what it came to in words, and why it ended early or holds little. */
-export type MovieEnd = { kept: boolean; what: string; why?: string };
-
 export type WindowSession = Pick<
   MirrorSession,
   'send' | 'tell' | 'recording' | 'streamsItsOwn' | 'askAgain' | 'status'
@@ -71,46 +55,31 @@ export async function frontApp(device: Device) {
 export const fileName = (device: Device, hardware: DeviceHardware | undefined) =>
   safeName(hardware?.name ?? hardware?.model ?? device.serial);
 
-/**
- * What a window's controls do that is not one key to one device: gestures, captures and the Apps pane, which keeps to
- * `policy`'s apps as the Links and Push panes do.
- */
-export function windowControls(
-  device: Device,
-  hardware: DeviceHardware | undefined,
-  session: () => WindowSession,
-  measures: WindowMeasures,
-  policy: Policy,
-) {
-  const name = () => fileName(device, hardware);
-  let opened: Promise<unknown> | undefined;
+/** What the parts of a window's controls share. */
+export type WindowParts = {
+  device: Device;
+  hardware: DeviceHardware | undefined;
+  session: () => WindowSession;
+  /** The device agent, started once for what is asked of the device past the stream: the window needs none of its own. */
+  ready: () => Promise<unknown>;
+  /** A line for the person. */
+  note: (text: string) => void;
+  /** What is in front, and whether it is the person's own app. */
+  frontApp: () => ReturnType<typeof frontApp>;
+  /** A file's name for what is taken now: the device's, then the time. */
+  stem: () => string;
+};
+
+/** Each turn of the picture, the first of which may start the device agent. */
+function windowTurns({ device, session, ready, note }: WindowParts, opened: () => boolean) {
   let rotation: 0 | 1 | 2 | 3 = 0;
-  let stopRecording: (() => Promise<MovieEnd>) | undefined;
-  let stopPerf: (() => unknown) | undefined;
-  let readingsWanted = false;
-  let measuring = false;
-  let readingsTurn: Promise<void> = Promise.resolve();
-
-  /** The window needs no agent of its own; what is asked of the device past the stream does. */
-  const ready = () =>
-    (opened ??= device.open().catch((e: unknown) => {
-      opened = undefined;
-      throw e;
-    }));
-  const note = (text: string) => session().tell({ op: 'note', text });
-  const trying = (work: () => Promise<void>) =>
-    void work().catch((e: unknown) => note(e instanceof Error ? e.message : String(e)));
-
-  const swipe = (way: SystemSwipe) => swipeThrough(way, (e) => session().send(e));
-
   const sideways = () => {
     const { picture } = session().status;
     return picture && picture.w > picture.h;
   };
-
-  const rotate = async (by: 1 | 3) => {
+  return async (by: 1 | 3) => {
     // a simulator's orientation has no way in but its runner, which a first turn may have to build
-    note(opened ? 'Rotating' : 'Rotating: the first turn starts the device agent');
+    note(opened() ? 'Rotating' : 'Rotating: the first turn starts the device agent');
     await ready();
     const [was, shape] = [rotation, sideways()];
     rotation = ((rotation + by) % 4) as 0 | 1 | 2 | 3;
@@ -123,217 +92,38 @@ export function windowControls(
     await device.setOrientation(was);
     note('The app in front does not turn');
   };
+}
 
-  const presses: Record<string, () => Promise<void>> = {
-    rotateLeft: () => rotate(1),
-    rotateRight: () => rotate(3),
-  };
+/** A screenshot to the Desktop and the pasteboard, or to the pasteboard only. */
+async function screenshotOf(parts: WindowParts, copyOnly: boolean) {
+  const { device, hardware, session, ready, note, stem } = parts;
+  // no agent is started for what the device can answer without one
+  const own = await device.mirror.screenshot?.('png');
+  if (!own) await ready();
+  const { data } = own ?? (await device.screenshot({ format: 'png' }));
+  const file = copyOnly
+    ? join(tmpdir(), `${fileName(device, hardware)}-${process.pid}.png`)
+    : join(homedir(), 'Desktop', `${stem()}.png`);
+  writeFileSync(file, data, { mode: 0o600 });
+  session().tell({ op: 'copied', file });
+  if (!copyOnly) {
+    note(`Saved to the Desktop and copied`);
+    return;
+  }
+  note('Copied');
+  await pause(2_000);
+  rmSync(file, { force: true });
+}
 
-  const screenshot = async (copyOnly: boolean) => {
-    // no agent is started for what the device can answer without one
-    const own = await device.mirror.screenshot?.('png');
-    if (!own) await ready();
-    const { data } = own ?? (await device.screenshot({ format: 'png' }));
-    const file = copyOnly
-      ? join(tmpdir(), `${name()}-${process.pid}.png`)
-      : join(homedir(), 'Desktop', `${name()} ${stamp()}.png`);
-    writeFileSync(file, data, { mode: 0o600 });
-    session().tell({ op: 'copied', file });
-    if (!copyOnly) {
-      note(`Saved to the Desktop and copied`);
-      return;
-    }
-    note('Copied');
-    await pause(2_000);
-    rmSync(file, { force: true });
-  };
-
-  /** A movie into `file`, by what this source has, and how to end it: once, however many ask. */
-  const movieTo = async (file: string) => {
-    const { recorder } = device;
-    let finish: () => Promise<MovieEnd>;
-    if (session().streamsItsOwn) {
-      // its frames as the stream has them: nothing is encoded twice
-      session().recording.start(file);
-      finish = async () => {
-        const r = await session().recording.stop();
-        const took = r.seconds ? ` in ${r.seconds.toFixed(1)} s` : '';
-        return {
-          kept: r.frames > 0,
-          what: `${r.frames} frames${took}`,
-          ...(r.why && { why: r.why }),
-        };
-      };
-    } else {
-      const handle = await recorder.start(file, { maxSeconds: RECORD_MAX_S });
-      finish = async () => {
-        const { files, note: why } = await recorder.stop(handle);
-        const what = `${files.length} file${files.length > 1 ? 's' : ''}`;
-        return { kept: files.length > 0, what, ...(why && { why }) };
-      };
-    }
-    let ending: Promise<MovieEnd> | undefined;
-    const stop = () => {
-      stopRecording = undefined;
-      return (ending ??= finish());
-    };
-    stopRecording = stop;
-    return stop;
-  };
-
-  const record = async () => {
-    if (stopRecording) {
-      session().tell({ op: 'recording', on: false });
-      const { what, why } = await stopRecording();
-      note(why ?? `Saved to Movies: ${what}`);
-      return;
-    }
-    const movies = join(homedir(), 'Movies');
-    mkdirSync(movies, { recursive: true });
-    const type = session().streamsItsOwn ? 'mp4' : device.recorder.extension;
-    await movieTo(join(movies, `${name()} ${stamp()}.${type}`));
-    session().tell({ op: 'recording', on: true });
-  };
-
-  const inFront = () => device.frontApp?.() ?? device.foreground();
-
-  /**
-   * A device's own source where it has one, or its measures: nothing is read while nothing shows it, nor while a measure
-   * runs, whose counts a reading would reset.
-   */
-  const followReadings = async () => {
-    await stopPerf?.();
-    stopPerf = undefined;
-    if (!readingsWanted || measuring) return;
-    // only a device that has no way to say what is in front but its agent starts it: a late answer is no refusal
-    let front: string | undefined;
-    const refused = await inFront().then(
-      (app) => void (front = app),
-      () => true,
-    );
-    if (refused) void ready().catch(() => undefined);
-    // its measures ask each turn what is in front; a device's own source reads the app it is given, and is told again
-    const own = device.liveMetrics;
-    const live = own ?? measuredLive(device);
-    const stop = await live.start(
-      (sample) => session().tell(perfMessage(sample)),
-      own ? front : undefined,
-    );
-    void tellHistory(front).catch(() => undefined);
-    // a person moves on, and the numbers go with them: a device's own source starts again on the new app, and the
-    // pane's measures and results follow either way
-    const looking = setInterval(() => {
-      void inFront()
-        .catch(() => front)
-        .then((now) => {
-          if (now === front || !stopPerf) return;
-          if (own) return turnReadings();
-          front = now;
-          return tellHistory(now);
-        })
-        .catch(() => undefined);
-    }, APP_LOOK_MS);
-    stopPerf = () => {
-      clearInterval(looking);
-      return stop();
-    };
-  };
-
-  /** One at a time: a window quickly closed must not leave a source that started late running. */
-  const turnReadings = () => (readingsTurn = readingsTurn.then(followReadings, followReadings));
-
-  const tellMeasured = (m: Record<string, unknown>) => session().tell({ op: 'measured', ...m });
-
-  /**
-   * What was measured here before, with the app's own name: a person never reads its id. What is not an app of theirs
-   * has no name, and the pane goes back to asking for one.
-   */
-  const tellHistory = async (app: string | undefined) => {
-    const known = app ? await device.apps.listApps(false).catch(() => []) : [];
-    const name = known.find((a) => a.id === app)?.name;
-    session().tell({
-      op: 'results',
-      results: app ? await measures.history(app) : [],
-      ...(name && { app: name }),
-    });
-  };
-  // a tool's progress names the device by its id, as `connecting to <udid>`: a person reads its name
-  const person = hardware?.name ?? hardware?.model;
-  const id = new RegExp(
-    `(?<![\\w-])${device.serial.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`,
-    'g',
-  );
-  const saying = (line: string) =>
-    session().tell({ op: 'measuring', line: person ? line.replace(id, person) : line });
-
-  /** A measure has the device to itself: nothing reads over what it counts, and no second one starts. */
-  const alone = async <T>(work: () => Promise<T>) => {
-    if (measuring) {
-      note('A measure is running');
-      return undefined;
-    }
-    measuring = true;
-    try {
-      saying('Starting the device agent');
-      await turnReadings();
-      await ready();
-      return await work();
-    } catch (e) {
-      // a refusal says what to do next, which is the person's to do here, in their words
-      const { message, hint } = e as Error & { hint?: string };
-      const said = hint && PERSON_HINTS.get(hint);
-      // what failed is the first line: a flow's names its file first, which the person chose, and then what the screen held
-      const detail = (message.split('\n')[0] ?? '').replace(/^.*\.flow:\d+: /, '');
-      tellMeasured({ title: 'No measure', detail, ...(said && { hint: said }) });
-      return undefined;
-    } finally {
-      measuring = false;
-      await turnReadings();
-    }
-  };
-
-  /** A real measure of the app in front, by the tools an agent calls: what is the system's is not measured. */
-  const measure = (work: WindowMeasures['launch']) =>
-    alone(async () => {
-      const { app, mine } = await frontApp(device);
-      if (!app || !mine) {
-        // the row's line is short; what to do is the note's, which a pane shows whole
-        tellMeasured({
-          title: 'Open an app first',
-          detail: app ? `${app} is in front` : 'No app is in front',
-          hint: app ? MEASURE_YOURS : WAKE_AND_OPEN,
-        });
-        return;
-      }
-      const newest = async () => (await measures.history(app).catch(() => []))[0]?.why;
-      const was = await newest();
-      const said = await work(app, saying);
-      // a line the Mac keeps stands in for this one in the pane, and one with no number to keep stays as it is
-      tellMeasured({ ok: true, ...said, kept: (await newest()) !== was });
-      await tellHistory(app);
-    });
-
-  /** A flow as a measure, with what a window beside this one needs to compare it. */
-  const journey = (file: string) =>
-    alone(async () => {
-      const front = await frontApp(device).catch(() => undefined);
-      const { said, ran } = await measures.journey(
-        file,
-        front?.mine ? front.app : undefined,
-        saying,
-      );
-      tellMeasured({ ok: true, ...said });
-      return ran;
-    });
-
-  /** The Apps pane's list, and what was just done to one of them, by its name. */
+/** The Apps pane: its list, and a launch, quit or removal of an app the policy allows. */
+function windowApps({ device, hardware, session, ready }: WindowParts, policy: Policy) {
+  /** The list, and what was just done to one of them, by its name. */
   const listApps = async (done?: { id: string; what: string }) => {
     const apps = await device.apps.listApps(hardware?.systemApps === true);
     const name = done ? (apps.find((a) => a.id === done.id)?.name ?? done.id) : undefined;
     session().tell({ op: 'apps', apps, ...(done && name && { note: `${done.what} ${name}` }) });
   };
-
-  const appActions: Record<string, (id: string) => Promise<unknown>> = {
+  const actions: Record<string, (id: string) => Promise<unknown>> = {
     launch: async (id) => {
       checkApp(policy, id);
       await ready();
@@ -352,64 +142,100 @@ export function windowControls(
       await listApps();
     },
   };
+  return { listApps, actions };
+}
+
+/**
+ * What a window's controls do that is not one key to one device: gestures, captures and the Apps pane, which keeps to
+ * `policy`'s apps as the Links and Push panes do.
+ */
+export function windowControls(
+  device: Device,
+  hardware: DeviceHardware | undefined,
+  session: () => WindowSession,
+  measures: WindowMeasures,
+  policy: Policy,
+) {
+  let opened: Promise<unknown> | undefined;
+  const note = (text: string) => session().tell({ op: 'note', text });
+  const trying = (work: () => Promise<unknown>) =>
+    void work().catch((e: unknown) => note(e instanceof Error ? e.message : String(e)));
+  const parts: WindowParts = {
+    device,
+    hardware,
+    session,
+    ready: () =>
+      (opened ??= device.open().catch((e: unknown) => {
+        opened = undefined;
+        throw e;
+      })),
+    note,
+    frontApp: () => frontApp(device),
+    stem: () => `${fileName(device, hardware)} ${stamp()}`,
+  };
+  const rotate = windowTurns(parts, () => opened !== undefined);
+  const presses: Record<string, () => Promise<void>> = {
+    rotateLeft: () => rotate(1),
+    rotateRight: () => rotate(3),
+  };
+  const movie = windowMovie(parts);
+  const perf = windowPerf(parts, measures);
+  const apps = windowApps(parts, policy);
 
   return {
     /** A measure runs: what reads the screen stays out of its numbers. */
-    measuring: () => measuring,
+    measuring: perf.measuring,
 
-    movieTo,
+    movieTo: movie.movieTo,
 
     /** A press of what is more than a key; `false` leaves it to the device's own. */
     press: (button: string) => {
       const swiped = SWIPES[button];
-      if (swiped) trying(() => swipe(swiped));
+      if (swiped) trying(() => swipeThrough(swiped, (e) => session().send(e)));
       else if (presses[button]) trying(presses[button]);
       else return false;
       return true;
     },
 
-    journey,
+    journey: perf.journey,
 
     /** What is on the screen, by the device agent, which starts for it. */
     read: async () => {
-      await ready();
+      await parts.ready();
       return device.tree();
     },
 
     /** An agent's call on this device: one that installed or removed an app lists the apps again, for the Apps pane. */
     heard: ({ tool, ok, args }: ActivityLine) => {
       const { action } = (args ?? {}) as { action?: unknown };
-      if (ok && tool === 'app' && APPS_CHANGE.has(String(action))) trying(() => listApps());
+      if (ok && tool === 'app' && APPS_CHANGE.has(String(action))) trying(() => apps.listApps());
     },
 
     /** A control of the window that is no input: a person's, however input is set. */
     onWindow(m: ViewerMessage) {
       if (m.op === 'perfWatch') {
-        readingsWanted = m.on === true;
-        trying(turnReadings);
+        trying(() => perf.want(m.on === true));
         return;
       }
       if (m.op === 'app') {
-        const act = appActions[String(m.action)];
-        trying(act ? () => act(String(m.id)).then(() => undefined) : () => listApps());
+        const act = apps.actions[String(m.action)];
+        trying(act ? () => act(String(m.id)) : () => apps.listApps());
         return;
       }
       if (m.name === 'reconnect') session().askAgain();
-      else if (m.name === 'record') trying(record);
-      else if (m.name === 'measureLaunch') trying(() => measure(measures.launch));
-      else if (m.name === 'measureScroll') trying(() => measure(measures.scroll));
-      else if (m.name === 'journey') trying(() => journey(String(m.file)).then(() => undefined));
+      else if (m.name === 'record') trying(movie.record);
+      else if (m.name === 'measureLaunch') trying(() => perf.measure(measures.launch));
+      else if (m.name === 'measureScroll') trying(() => perf.measure(measures.scroll));
+      else if (m.name === 'journey') trying(() => perf.journey(String(m.file)));
       else if (m.name === 'dashboard') trying(measures.dashboard);
       else if (m.name === 'screenshot' || m.name === 'copy')
-        trying(() => screenshot(m.name === 'copy'));
+        trying(() => screenshotOf(parts, m.name === 'copy'));
     },
 
     /** A movie still being made ends with the window, and keeps what it has. */
     async end() {
-      readingsWanted = false;
-      await turnReadings();
-      await stopRecording?.().catch(() => undefined);
-      stopRecording = undefined;
+      await perf.end();
+      await movie.end();
     },
   };
 }

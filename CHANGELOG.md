@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A window's controls are parts, each a function of its own: its turns, a screenshot, the Apps pane, its movie in `window-movie.ts` and its Perf pane, live numbers and one measure at a time, in `window-perf.ts`, where one function of 338 lines held them all and the function size rule let it pass by name.
 - How a mirror tries again, an open backed off up to ten tries and a viewer that died twice in a minute let go, is `retries.ts` of its own, where the mirror's session held it at the size cap.
 - A simulator app's frames by the probe inside it, started with the app and read back by this Mac's clock, are `sim-frames.ts` of their own, where the simulator's measures held them at the size cap.
 - How an Android screen that went dark or locked comes back, and waits for the app's focus to hold, is `wake.ts` of its own in the Android driver, where its device class held it at the size cap.

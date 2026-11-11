@@ -7,7 +7,8 @@ import {
   type ViewerStart,
   startOf,
 } from '@appdyno/core';
-import { windowControls, windowLook, type MovieEnd } from './controls.js';
+import { windowControls, windowLook } from './controls.js';
+import type { MovieEnd } from './window-movie.js';
 import { windowFlow } from './flow.js';
 import { followDevice } from './follow.js';
 import { windowMeasures } from './measures.js';

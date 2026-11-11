@@ -22,8 +22,6 @@ const LONGER: Record<string, string> = {
     'one branch per kind of trace, and each says its own answer',
   'packages/ops/src/timeline/flight.ts startFlight':
     'a recorder, armed and disarmed around one state: its parts have no use apart',
-  'packages/hub/src/controls.ts windowControls':
-    'one handler per control of a window, with the one reading and one measure at a time they share',
 };
 
 type Fn = { name: string; lines: number };

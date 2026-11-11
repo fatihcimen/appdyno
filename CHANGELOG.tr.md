@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir pencerenin denetimleri, her biri kendi işlevi olan parçalardır: dönüşleri, bir ekran görüntüsü, Uygulamalar bölmesi, `window-movie.ts`'te filmi ve `window-perf.ts`'te canlı sayılar ve bir seferde bir ölçümle Perf bölmesi; önceden hepsini 338 satırlık tek bir işlev tutuyordu ve işlev boyutu kuralı onu adıyla geçiriyordu.
 - Bir yansının nasıl yeniden denediği, on denemeye kadar geri çekilen bir açılış ve bir dakikada iki kez ölen bir görüntüleyicinin bırakılması, kendi `retries.ts`'idir; önceden yansının oturumu onu boyut sınırında tutuyordu.
 - Bir simülatör uygulamasının, içindeki probla, uygulamayla başlatılıp bu Mac'in saatiyle geri okunan kareleri kendi `sim-frames.ts`'leridir; önceden simülatörün ölçümleri onları boyut sınırında tutuyordu.
 - Kararan ya da kilitlenen bir Android ekranının nasıl geri geldiği ve uygulamanın odağının tutmasını nasıl beklediği Android sürücüsünde kendi `wake.ts`'idir; önceden cihaz sınıfı onu boyut sınırında tutuyordu.

@@ -45,6 +45,12 @@ export type WindowMeasures = {
   history: (app: string) => Promise<PastMeasure[]>;
 };
 
+/** What to do when a measure finds no app of the person's in front: an app, or nothing, as when the screen is off. */
+export const MEASURE_YOURS =
+  'A measure restarts the app it measures, so it measures only an app of yours: open one, then measure it.';
+export const WAKE_AND_OPEN =
+  'Wake the device if its screen is off, open one of your apps, then measure it.';
+
 /**
  * What a refusal of a measure, a link, a push or a condition says to do, in a person's words: a tool's hint is said to
  * whoever calls it, and here that is a person at a button. A hint not here is not shown, and the refusal's own words

@@ -3,14 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must, type Device, type InputEvent } from '@appdyno/core';
 import { afterAll, describe, expect, it, vi, type Mock } from 'vitest';
-import {
-  MEASURE_YOURS,
-  stamp,
-  WAKE_AND_OPEN,
-  windowControls,
-  windowLook,
-  type WindowSession,
-} from '../src/controls.js';
+import { stamp, windowControls, windowLook, type WindowSession } from '../src/controls.js';
+import { MEASURE_YOURS, WAKE_AND_OPEN } from '../src/measures.js';
 import { DEFAULT_POLICY, PROBE_HINT, type JourneyAnswer, type Policy } from '@appdyno/ops';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
