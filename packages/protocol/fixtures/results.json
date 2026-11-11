@@ -125,6 +125,10 @@
     "method": "text.set",
     "result": { "mode": "keys", "focusMs": 2000 }
   },
+  "text.unsubmitted": {
+    "method": "text.set",
+    "result": { "mode": "keys", "focusMs": 40, "verified": false, "submitted": false }
+  },
   "text.keys.sent": {
     "method": "text.keys",
     "result": { "focusMs": 40 }

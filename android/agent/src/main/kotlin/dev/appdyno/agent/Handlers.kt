@@ -142,12 +142,13 @@ class Handlers(private val automation: Automation, private val token: String) {
         job.goOn()
         tapAt?.invoke()
         val o = text.set(r.text, r.replace, r.focusTimeoutMs, cancelled, tapAt, r.at)
-        if (r.submit) {
+        val submits = TextPlan.submits(r.submit, o.verified)
+        if (submits) {
             job.goOn()
             input.key(android.view.KeyEvent.KEYCODE_ENTER)
         }
         val at = SystemClock.uptimeMillis()
-        return settling.after(r.after, at, job, Results.text(o), then)
+        return settling.after(r.after, at, job, Results.text(o, notSubmitted = r.submit && !submits), then)
     }
 
     private fun foreground(): String? {

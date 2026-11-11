@@ -25,6 +25,9 @@ object TextPlan {
 
     /** A field limited to fewer characters than the text (`maxTextLength` -1: no limit) takes it key by key. */
     fun keysOnly(maxTextLength: Int, text: String) = maxTextLength in 1 until text.length
+
+    /** Enter goes after the text when asked, but never after a read-back that says the field holds other text: a search or a form would act on it. */
+    fun submits(asked: Boolean, verified: Boolean?) = asked && verified != false
 }
 
 /** The wait for a field to take the focus (pure, unit tested). */

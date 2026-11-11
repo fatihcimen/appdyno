@@ -200,6 +200,7 @@ class WireFixturesTest {
         same(moving, Results.settle(SettleOutcome(false, 9, Unit, 3_000, 400), moving = true))
         same(result("text.verified"), Results.text(TextOutcome("setText", true, 40)))
         same(result("text.keys"), Results.text(TextOutcome("keys", null, 2_000)))
+        same(result("text.unsubmitted"), Results.text(TextOutcome("keys", false, 40), notSubmitted = true))
         same(result("screenshot.jpeg"), Results.shot(540, 1200, false, 4096))
         same(result("screenshot.png"), Results.shot(540, 1200, true, 8192))
     }

@@ -48,7 +48,11 @@ object Results {
     fun settle(o: SettleOutcome<*>, moving: Boolean): JSONObject = JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", o.quietMs)
         .apply { if (moving) put("moving", true) }
 
-    fun text(o: TextOutcome): JSONObject = JSONObject().put("mode", o.mode).put("focusMs", o.focusMs).apply { o.verified?.let { put("verified", it) } }
+    /** `notSubmitted`: Enter was asked for and not pressed, said as `submitted: false`. */
+    fun text(o: TextOutcome, notSubmitted: Boolean = false): JSONObject = JSONObject().put("mode", o.mode).put("focusMs", o.focusMs).apply {
+        o.verified?.let { put("verified", it) }
+        if (notSubmitted) put("submitted", false)
+    }
 
     fun shot(w: Int, h: Int, png: Boolean, bytes: Int): JSONObject = JSONObject().put("w", w).put("h", h).put("format", if (png) "png" else "jpeg").put("bytes", bytes)
 

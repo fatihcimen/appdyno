@@ -37,4 +37,13 @@ class TextPlanTest {
         assertFalse(TextPlan.keysOnly(-1, "9643")) // no limit
         assertFalse(TextPlan.keysOnly(0, "x"))
     }
+
+    @Test
+    fun enterFollowsNoTextTheFieldReadBackAsOther() {
+        assertFalse(TextPlan.submits(true, false))
+        // read back as the text, or not readable (a password, a code entry): submitted as asked
+        assertTrue(TextPlan.submits(true, true))
+        assertTrue(TextPlan.submits(true, null))
+        assertFalse(TextPlan.submits(false, true))
+    }
 }
