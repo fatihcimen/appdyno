@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir akışın adımlarının tablosu, her satırın aldığı sözcükler ve bağımsız değişkenler, kendi `specs.ts`'idir; önceden akış dosyasının okuyucusunu ve yazıcısını 420 satırın üstünde tutuyordu.
 - Bir cihazın neyi ölçebildiği, `Cannot` ve `cannot` ile `MeasureSource`, core'da kendi `measure-source.ts`'idir; önceden yanıtladığı okumalarla `measure.ts`'i paylaşıyor ve o dosyayı 420 satırın üstünde tutuyordu.
 - Uçuş kaydedicisinin kendi durumundan ayrı yaptıkları `flight.ts`'te kendi işlevleridir: başlayıp başlayamayacağı, video halkası, sonraki kare izi, bir çökmenin raporu, uygulamanın hâlâ orada olup olmadığı ve sakladığı bir aralığın sayfası; önceden hepsini 234 satırda `startFlight` tutuyordu ve işlev boyutu kuralı onu adıyla geçiriyordu. Artık hiçbir işlev boyut sınırını adıyla aşmıyor.
 - `perf_trace`'in her iz türü için söyledikleri, XCTest'in ölçütleri, takılmalar, bir probun kareleri, aksamalar ve Android'in kare zaman çizelgesi, kendi işlevleridir; önceden hepsini 266 satırlık tek bir işlev tutuyordu ve işlev boyutu kuralı onu adıyla geçiriyordu.
