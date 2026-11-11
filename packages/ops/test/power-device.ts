@@ -22,13 +22,18 @@ export function middle(tree: Tree, label: string) {
 /** A device showing `screen`; a client that answers each question as `answer` says, or cannot ask. */
 export async function onDevice(
   screen: string | Tree,
-  o: { virtual?: boolean; policy?: Partial<Policy>; answer?: ElicitResult['action'] } = {},
+  o: {
+    virtual?: boolean;
+    policy?: Partial<Policy>;
+    answer?: ElicitResult['action'];
+    /** Another client's device, which this one drives too, as two clients of one server do. */
+    device?: FakeDevice;
+  } = {},
 ) {
   const asked: string[] = [];
-  const device = Object.assign(new FakeDevice(), {
-    virtual: o.virtual ?? true,
-    fixture: typeof screen === 'string' ? recorded(screen) : screen,
-  });
+  const tree = typeof screen === 'string' ? recorded(screen) : screen;
+  const device =
+    o.device ?? Object.assign(new FakeDevice(), { virtual: o.virtual ?? true, fixture: tree });
   const ctx = new ServerContext(
     { ...DEFAULT_POLICY, ...o.policy },
     [
@@ -57,5 +62,5 @@ export async function onDevice(
   /** What reached the device: its touches and keys. */
   const sent = () =>
     device.calls.filter((c) => c.name === 'act' || c.name === 'typeText').map((c) => c.args[0]);
-  return { call, asked, sent, device, tree: device.fixture };
+  return { call, asked, sent, device, tree };
 }

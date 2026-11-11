@@ -266,6 +266,19 @@ describe('an input on them', () => {
     }
   });
 
+  it('is judged on a new read once another client of the server sent the device an input after this one read', async () => {
+    const qs = recorded('android-quick-settings-tr');
+    const one = await onDevice('android-system-en', { answer: 'decline' });
+    const two = await onDevice('android-system-en', { device: one.device });
+    await one.call('screen', {});
+    const act = one.device.act.bind(one.device);
+    one.device.act = (a, o) => ((one.device.fixture = qs), act(a, o));
+    expect((await two.call('swipe', { direction: 'down' })).error).toBe(false);
+    expect((await one.call('tap', middle(qs, 'Güç menüsü'))).code).toBe('PERMISSION_REQUIRED');
+    // the other client's swipe alone
+    expect(one.sent()).toHaveLength(1);
+  });
+
   it('leaves the screen by back and home, and reads it, with nothing asked', async () => {
     const { call, sent, asked } = await onDevice('android-power-en', { answer: 'decline' });
     expect((await call('screen', {})).error).toBe(false);

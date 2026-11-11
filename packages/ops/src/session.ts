@@ -31,7 +31,14 @@ const LOOK_MS = 20_000;
 /** A read this recent is what the device shows: a client that reads and at once acts pays for one read. */
 const FRESH_MS = 150;
 
-type Latest = { screen: Screen; at: number; taken: number };
+/** A read, as of this session's actions (`at`) and of the inputs other sessions had sent its device (`others`). */
+type Latest = { screen: Screen; at: number; taken: number; others: number };
+
+/**
+ * The inputs this process has sent each device, from any of its sessions: two clients of one server each have one, and
+ * a read one took is not the screen once the other's input went.
+ */
+const inputsTo = new Map<string, number>();
 
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
@@ -197,9 +204,23 @@ export class Session {
     if (guard)
       this.device = guardInputs(
         device,
-        (input) => guard(this, input),
+        (input) => guard(this, input).then(() => this.sending()),
         () => this.acted(),
       );
+  }
+
+  /** The inputs this session sent its device: what the device had besides came from another session. */
+  private ownInputs = 0;
+
+  /** An input of this session leaves for its device. */
+  private sending() {
+    this.ownInputs++;
+    inputsTo.set(this.device.serial, (inputsTo.get(this.device.serial) ?? 0) + 1);
+  }
+
+  /** The inputs other sessions of this process have sent this device so far. */
+  private othersInputs() {
+    return (inputsTo.get(this.device.serial) ?? 0) - this.ownInputs;
   }
 
   screenOf(tree: Tree): Screen {
@@ -240,13 +261,15 @@ export class Session {
 
   /** A fresh read of the device, remembered as the newest. */
   async read(): Promise<Screen> {
+    // another session's input that went while this one read may not be in it
+    const others = this.othersInputs();
     // a read that fails has seen nothing: what was read before it says nothing of a screen that now refuses
     const tree = await this.device.tree().catch((e: unknown) => {
       this.keep(undefined);
       throw e;
     });
     const screen = await this.seen(tree);
-    this.remember(screen);
+    this.remember(screen, others);
     return screen;
   }
 
@@ -260,15 +283,14 @@ export class Session {
   /** The app last seen in front on a read, a prompt over it aside: what a prompt that stands alone in front is over. */
   shownApp: string | undefined;
 
-  remember(screen: Screen) {
-    this.keep({ screen, at: this.version, taken: Date.now() });
+  remember(screen: Screen, others = this.othersInputs()) {
+    this.keep({ screen, at: this.version, taken: Date.now(), others });
     this.shownApp = appInFront(screen.tree, this.device.platformScreen) ?? this.shownApp;
   }
 
   /** The newest read when no action came after it, else a fresh one. */
   async current(): Promise<Screen> {
-    if (this.latest?.at === this.version) return this.latest.screen;
-    return this.read();
+    return this.fresh ?? this.read();
   }
 
   /**
@@ -277,7 +299,7 @@ export class Session {
    */
   async justNow(): Promise<Screen> {
     const l = this.latest;
-    return l?.at === this.version && Date.now() - l.taken < FRESH_MS ? l.screen : this.read();
+    return this.fresh && l && Date.now() - l.taken < FRESH_MS ? l.screen : this.read();
   }
 
   /**
@@ -302,9 +324,10 @@ export class Session {
     this.unsettled = { at: Date.now(), hash };
   }
 
-  /** The newest read when it is still the device's screen (no action since), else undefined. */
+  /** The newest read when it is still the device's screen (no action since, of this session or another), else undefined. */
   get fresh(): Screen | undefined {
-    return this.latest?.at === this.version ? this.latest.screen : undefined;
+    const l = this.latest;
+    return l?.at === this.version && l.others === this.othersInputs() ? l.screen : undefined;
   }
 
   // what tells a death from a leave: written only by what knows which it was

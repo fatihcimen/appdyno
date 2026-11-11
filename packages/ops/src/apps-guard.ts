@@ -84,7 +84,8 @@ export const appsGuard =
     // what leaves a screen, and the side keys, are the home key's flag's and the power guard's
     if (input.key && (LEAVES.has(input.key) || SIDE_KEYS.has(input.key))) return;
     // the read the power guard judges by too: one read for both
-    // shortcut: the read a touch was aimed by, up to 20 s old (Session.beforeTouch): an app that opens another by itself
+    // shortcut: the read a touch was aimed by, up to 20 s old where no client of this server acted since
+    // (Session.beforeTouch, Session.fresh): an app that opens another by itself
     // after it lets one touch by x,y reach that one; read justNow here if that must be closed, at a read per touch
     const screen = s.fresh ?? (await s.current());
     const before = s.shownApp ?? s.appId;

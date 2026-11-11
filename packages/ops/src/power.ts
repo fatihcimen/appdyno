@@ -314,7 +314,8 @@ async function reaches(s: Session, input: Input): Promise<Reached | undefined> {
       : undefined;
   }
   if (input.key && LEAVES.has(input.key)) return undefined;
-  // shortcut: the read a touch was aimed by, which may be up to 20 s old when nothing acted since (Session.beforeTouch);
+  // shortcut: the read a touch was aimed by, which may be up to 20 s old when no client of this server acted since
+  // (Session.beforeTouch, Session.fresh);
   // a dialog a person opens by hand in that time is not seen: read again here if a person's hand must be allowed for
   const screen = s.fresh ?? (await s.current());
   const read = screen.tree;
