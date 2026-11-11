@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <lint>
+    <!-- a newer release on Maven or of the Gradle plugin is no fault of a change: the gate holds the code, not the
+         calendar, so what a third party publishes never fails it -->
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
     <!-- a fixture shows the text its suites read, English and computed, never translated -->
     <issue id="SetTextI18n" severity="ignore" />
     <!-- the web screen exists to be driven with its scripts on, and loads only its own page -->
