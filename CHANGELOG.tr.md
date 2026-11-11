@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Öz sınamanın, bir tablonun tıklamasını alıp almadığını denemesi, görüntüleyicinin kendi listesine tıklamak yerine düz bir AppKit tablosunda yapılır ve onu bir saniyeye kadar bekler: tıklama almayı bırakan kendi listesi, hiç tıklama vermeyen bir macOS gibi okunur ve denetimleri her Mac'te atlanırdı.
 - Android'de `launch_app`, sistemin "keeps stopping" penceresi için sürecini tuttuğu bir uygulamayı önce durdurur, bu pencereyi de onunla birlikte kaldırır, ve onu yeniden başlatır; böyle bir süreç çalışan bir uygulama sayılmaz: `am start -W` onu 10 sn bekliyor ve pencereyi açık bırakıyordu, bir çökmenin reddinin gösterdiği başlatma da 14 sn sonra uygulamanın öldüğünü yanıtlıyordu.
 - Android ajanı, host'u bir işi iptal edince onu 200 ms sonra bırakır, süre sınırından bir saniye sonra bıraktığı gibi; süre sınırını geçen birini de aynı 200 ms sonra bırakır: enjeksiyonu, "keeps stopping" penceresi için tutulan bir uygulamayı bekleyen bir kaydırma, reddinden sonra ajanın tek iş şeridini saniyelerce tutuyordu ve reddin gösterdiği `launch_app`'in okuması onun arkasında 15 sn'sine dek bekleyip ajanı yeniden başlatıyordu.
 - Android ajanının TIMEOUT'u tek zamanlayıcı iş parçacığında sahiplenilir ve kendine ait bir iş parçacığında yazılır: büyük bir yanıt ya da bir video karesi yazılırken okumayı bırakan bir host, sonraki zaman aşımının yazmasını, onunla da zamanlayıcı iş parçacığını tutuyordu; böylece hiçbir bağlantıdaki hiçbir istek bir daha zaman aşımına uğramıyor, takılan hiçbir şeritten vazgeçilmiyor ve ajan boşta kalınca hiç çıkmıyordu.

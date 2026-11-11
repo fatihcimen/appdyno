@@ -10,30 +10,42 @@ void MVPump(double seconds) {
     for (NSEvent *e; (e = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate dateWithTimeIntervalSinceNow:0.02] inMode:NSDefaultRunLoopMode dequeue:YES]);) [NSApp sendEvent:e];
 }
 
+/// Two rows of a plain table, for the trial below: AppKit's own, so the trial asks the system and not the list under test.
+@interface MVClickTrial : NSObject <NSTableViewDataSource>
+@end
+
+@implementation MVClickTrial
+- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
+  return 2;
+}
+- (id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)column row:(NSInteger)row {
+  return row ? @"Two" : @"One";
+}
+@end
+
 /// Whether a table takes the click this test sends: none did before macOS 27 (GitHub's macOS 15 and 26 runners), 27.0 did,
-/// and 27.2 takes none again, so one is tried once, on a list in a window placed as the hub's is behind, and the checks that
-/// need one go by it. It is the test that cannot click a row then, not a person.
+/// and 27.2 takes none again, so one is tried once, on a plain table in a window placed as the hub's is behind, and the
+/// checks that need one go by it. It is the test that cannot click a row then, not a person; a list of the viewer's own that
+/// stops taking a click still fails its checks, as the trial never touched it.
 static BOOL tablesTakeClicks(void) {
   static int took = -1;
   if (took >= 0) return took;
   MVOffscreenWindow *window = [[MVOffscreenWindow alloc] initWithContentRect:NSMakeRect(0, 0, 320, 200) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
   window.releasedWhenClosed = NO;
-  MVList *list = [[MVList alloc] initWithFrame:window.contentView.bounds];
-  NSMutableArray<MVRow *> *rows = [NSMutableArray array];
-  for (NSString *title in @[@"One", @"Two"]) {
-    MVRow *row = [MVRow new];
-    row.title = title;
-    row.key = title;
-    [rows addObject:row];
-  }
-  list.rows = rows;
-  window.contentView = list;
+  NSTableView *table = [[NSTableView alloc] initWithFrame:window.contentView.bounds];
+  [table addTableColumn:[[NSTableColumn alloc] initWithIdentifier:@"trial"]];
+  MVClickTrial *rows = [MVClickTrial new];
+  table.dataSource = rows;
+  window.contentView = table;
   MVPresent(window, MVShowBehind);
+  [table reloadData];
   [window layoutIfNeeded];
   [window displayIfNeeded];
-  MVRealClick(window, [list pointOfRow:1]);
-  MVPump(0.2);
-  took = [list.selected.key isEqual:@"Two"];
+  NSRect second = [table convertRect:[table rectOfRow:1] toView:nil];
+  MVRealClick(window, NSMakePoint(NSMidX(second), NSMidY(second)));
+  // a slow Mac is given a second for the click to come through, where a fixed moment read it as none
+  for (int i = 0; i < 50 && table.selectedRow != 1; i++) MVPump(0.02);
+  took = table.selectedRow == 1;
   [window close];
   return took;
 }
