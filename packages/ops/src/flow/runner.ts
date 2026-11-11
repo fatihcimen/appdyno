@@ -154,6 +154,30 @@ const filedValues = (values: Record<string, string>, o: ReplayOptions) =>
     return v ? [v] : [];
   });
 
+/** The failure's moment on disk; what cannot be had is left out, the failure already says enough. */
+const keepEvidence = async (s: Session, dir: string, clean: (s: string) => string) => {
+  mkdirSync(dir, { recursive: true });
+  const out: string[] = [];
+  const shot = await s.device
+    .screenshot({ format: 'jpeg', quality: 80, maxPx: 1024 })
+    .catch(() => undefined);
+  if (shot) {
+    const file = join(dir, 'screen.jpg');
+    out.push(file);
+    writeFileSync(file, shot.data);
+  }
+  const tree = await s.device.tree().catch(() => undefined);
+  if (tree) {
+    const file = join(dir, 'tree.json');
+    out.push(file);
+    writeFileSync(
+      file,
+      JSON.stringify(tree, (_k, v: unknown) => (typeof v === 'string' ? clean(v) : v), 1),
+    );
+  }
+  return out;
+};
+
 /** Runs flows through the operations themselves, as an agent's calls would. */
 export function flowRunner(
   ctx: ServerContext,
@@ -241,30 +265,6 @@ export function flowRunner(
     act: (st) => act(s, st).catch(refused),
   });
 
-  /** The failure's moment on disk; what cannot be had is left out, the failure already says enough. */
-  const keepEvidence = async (s: Session, dir: string) => {
-    mkdirSync(dir, { recursive: true });
-    const out: string[] = [];
-    const shot = await s.device
-      .screenshot({ format: 'jpeg', quality: 80, maxPx: 1024 })
-      .catch(() => undefined);
-    if (shot) {
-      const file = join(dir, 'screen.jpg');
-      out.push(file);
-      writeFileSync(file, shot.data);
-    }
-    const tree = await s.device.tree().catch(() => undefined);
-    if (tree) {
-      const file = join(dir, 'tree.json');
-      out.push(file);
-      writeFileSync(
-        file,
-        JSON.stringify(tree, (_k, v: unknown) => (typeof v === 'string' ? clean(v) : v), 1),
-      );
-    }
-    return out;
-  };
-
   /**
    * A flow on the session's device, with each step's time from action to settled. A secret's value is
    * hidden from all this run shows or saves, as a screen may hold it. `onStep` is the hook a measure of
@@ -336,7 +336,7 @@ export function flowRunner(
             code: 'APP_NOT_RUNNING',
             hint: DIED_HINT,
           });
-        if (o.evidence) f.saved = await keepEvidence(s, o.evidence);
+        if (o.evidence) f.saved = await keepEvidence(s, o.evidence, clean);
       }
       return result;
     } finally {
