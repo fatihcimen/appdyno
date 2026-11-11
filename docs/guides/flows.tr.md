@@ -7,8 +7,7 @@ Bir ajanın bir kez yaptığı, model olmadan, bu cihazda ya da bir başkasında
 ```sh
 appdyno flow start            # ya da flow aracı, action start: buradan sonraki her işlem kayda geçer
 appdyno tap --json '{"selector":{"text":"Form"}}'
-appdyno flow stop             # akışı ve bakılması gereken her adımı yazdırır
-appdyno flow save login.flow
+appdyno flow stop login.flow  # akışı kaydeder, bakılması gereken her adımla yazdırır
 appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
 appdyno test flows/ --tag smoke --env-file ci.env --retries 1 \
   --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
@@ -59,7 +58,7 @@ Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir i�
 `unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `language` ile bir `launch_app`, `launch language=tr` olur, böylece bir yeniden oynatma da uygulamayı o dilde başlatır; uygulamayı yeniden başlattığı için işaretlenmez. `restart`, `args` ya da `env` ile bir `launch_app` her platformda çalışan bir uygulamayı başlatmadan önce durdurur, bu yüzden uygulama çalışsa da çalışmasa da argümanları ve ortamıyla `stop`, `launch` olarak yazılır. `flow stop` ve
 `flow save` bakılması gereken her adımı listeler.
 
-Ajanın yazdığı ya da okuduğu bir değer, `flow start`, `stop` ya da `save` üzerinde `params` ile bir parametre olur (komut satırında `--param NAME=Grace`): yazıldığı ya da okunduğu her yerde, önce ya da sonra, `${NAME}` olur, `param NAME` olarak bildirilir ve `flow run` değerini `params` içinde alır. Hiçbir kaydedilmiş adımın tutmadığı bir ad `stop` ve `save`'de reddedilir. `save` dosyayı, `export` `to` gibi, sunucunun çalıştığı klasörün ya da durum klasörünün içine yazar: başka bir yerdeki bir yol ya da bir bağlantının onların dışına çıkardığı bir yol reddedilir; `overwrite` verilmedikçe var olan bir dosya da reddedilir. Yazdığı dosyayla yanıt verir.
+Ajanın yazdığı ya da okuduğu bir değer, `flow start`, `stop` ya da `save` üzerinde `params` ile bir parametre olur (komut satırında `--param NAME=Grace`): yazıldığı ya da okunduğu her yerde, önce ya da sonra, `${NAME}` olur, `param NAME` olarak bildirilir ve `flow run` değerini `params` içinde alır. Hiçbir kaydedilmiş adımın tutmadığı bir ad `stop` ve `save`'de reddedilir. `file` ile `stop`, `save` gibi kaydeder; `save` son kaydı yeniden yazar. `save` dosyayı, `export` `to` gibi, sunucunun çalıştığı klasörün ya da durum klasörünün içine yazar: başka bir yerdeki bir yol ya da bir bağlantının onların dışına çıkardığı bir yol reddedilir; `overwrite` verilmedikçe var olan bir dosya da reddedilir. Yazdığı dosyayla yanıt verir.
 
 ## Gizli değerler
 

@@ -84,7 +84,7 @@ export const flagged = (flow: Flow) =>
     const why = [
       ...st.flags.map((f) =>
         f === 'running'
-          ? 'running: the app was running, and a replay goes on from the screen it is on then; stop before it starts it anew'
+          ? 'running: the app was already running, so a replay goes on from whatever screen it is on then; for a fresh start, record launch_app restart: true in its place'
           : f,
       ),
       ...(st.action === 'unrecorded' ? [`not recorded: ${String(st.args.what)}`] : []),

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `flow stop` with `file` saves the recording there, where it took the file and wrote nothing; a file refused before the stop leaves the recording running, and one refused at the write says the steps are kept for `flow save`. A stop without a file starts with how many steps it kept and how to write them. A step that found the app running says a replay goes on from whatever screen the app is on then, and that `launch_app` `restart: true` in its place starts it fresh.
 - `launch_app` takes `restart`, to start the app fresh, and `args` and `env`, which start it fresh with them; `app` has no `launch` any more. An app opened at its first screen is one call of one tool, where `launch_app` brought a running app to the front where it was and the fresh start was another tool's action.
 - `launch_app` launches an allowed app by the name `app list` gives it, as its description says, where under `--allow-apps` it refused the name as an app not allowed, before any name was looked up.
 - An answer's structured content says what was done once: its `text` holds it, and `done` is left out beside it, where a tap's said its first line twice and a listing's, `steps`' or `network paths`' said the whole answer twice. A client that hands a model the structured content in place of the text hands it about a tenth less.

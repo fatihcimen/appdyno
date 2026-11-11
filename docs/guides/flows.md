@@ -7,8 +7,7 @@ What an agent does once can run again with no model, on this device or another, 
 ```sh
 appdyno flow start            # or the flow tool, action start: every action from here on is logged
 appdyno tap --json '{"selector":{"text":"Form"}}'
-appdyno flow stop             # prints the flow, and any step to look at
-appdyno flow save login.flow
+appdyno flow stop login.flow  # saves the flow, and prints it with any step to look at
 appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
 appdyno test flows/ --tag smoke --env-file ci.env --retries 1 \
   --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
@@ -59,7 +58,7 @@ Android's own ids (`android:id/button1`) are not kept. An action with no step (a
 is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. A `launch_app` with `restart`, `args` or `env` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. `flow stop` and
 `flow save` list every step to look at.
 
-A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): in every step that typed or read it, before or after, it becomes `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
+A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): in every step that typed or read it, before or after, it becomes `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `stop` with `file` saves as `save` does, and `save` writes the last recording again. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
 
 ## Secrets
 

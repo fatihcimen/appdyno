@@ -310,9 +310,39 @@ assert id=result check=text equals="Gönderildi"
       await call('launch_app');
       const stop = await call('flow', { action: 'stop' });
       expect(stop.text).toContain('\nlaunch !running\n');
+      expect(stop.text).toMatch(
+        /^stopped: 1 steps, kept until the next start; flow save with file writes them\n/,
+      );
       expect(stop.data.flagged).toEqual([
-        expect.stringMatching(/^step 1: running: the app was running, and a replay goes on/),
+        expect.stringMatching(
+          /^step 1: running: the app was already running, .*record launch_app restart: true in its place$/,
+        ),
       ]);
+    });
+
+    it('saves at stop to the file it is given, and keeps a recording whose file is refused', async () => {
+      const call = callerOf(context());
+      const file = join(dir, 'state', 'tapped.flow');
+      await call('flow', { action: 'start' });
+      const home = await call('screen');
+      await call('tap', { ref: refOf(home.text, 'Form') });
+      // a path refused before the stop: the recording goes on
+      expect(
+        (await refusal(call('flow', { action: 'stop', file: join(dir, 'state', 'a.txt') }))).code,
+      ).toBe('INVALID_ARGUMENT');
+      const stop = await call('flow', { action: 'stop', file });
+      expect(stop.text).toMatch(new RegExp(`^stopped, and saved 1 steps to ${file}\n`));
+      expect(readFileSync(file, 'utf8')).toContain('tap ');
+      // a file there already: stopped all the same, and what it held is still to save
+      await call('flow', { action: 'start' });
+      await call('press_key', { key: 'back' });
+      const there = await refusal(call('flow', { action: 'stop', file }));
+      expect(there.message).toMatch(
+        /exists: overwrite true replaces it; the recording stopped, and its 1 steps are kept: flow save writes them$/,
+      );
+      expect(
+        (await call('flow', { action: 'save', file: join(dir, 'state', 'again.flow') })).text,
+      ).toMatch(/^saved 1 steps/);
     });
 
     it('launches a replay as the recording did: in its language, with the arguments and environment it names', async () => {

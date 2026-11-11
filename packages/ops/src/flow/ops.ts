@@ -61,6 +61,31 @@ function nameParams(r: Recording, params: string[] | undefined, held: boolean): 
   });
 }
 
+/** A recording written to its file, and the answer that shows it, as a client with no file tools reads it only here. */
+function saved(
+  held: Recording,
+  path: string,
+  overwrite: boolean | undefined,
+  named: string[],
+  stopped: boolean,
+) {
+  let notes: string[];
+  try {
+    notes = saveRecording(held, path, overwrite);
+  } catch (e) {
+    if (stopped && e instanceof ToolError)
+      e.message += `; the recording stopped, and its ${held.state.steps.length} steps are kept: flow save writes them`;
+    throw e;
+  }
+  keepRecording(held);
+  const t = `${stopped ? 'stopped, and saved' : 'saved'} ${held.state.steps.length} steps to ${path}`;
+  return reply([t, '', held.text(), ...named, ...notes.map((n) => `look at ${n}`)].join('\n'), {
+    done: t,
+    steps: held.state.steps.length,
+    flagged: notes,
+  });
+}
+
 export function flowOps(ctx: ServerContext, runner: FlowRunner) {
   const done = (t: string, data: Record<string, unknown> = {}) => reply(t, { done: t, ...data });
   return [
@@ -68,7 +93,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'flow',
       title: 'Flow',
       description:
-        'Record your actions as a repeatable test; replay them with no model. params NAME=value: on start, stop or save, makes that recorded value the parameter ${NAME}; on run, its value. run (from: a step; iterations: a journey timed by step, kept for perf_compare), export (Maestro YAML; to: a .yaml path to write it to).',
+        'Record your actions as a repeatable test, replayed with no model: start, your calls, stop (file: saves a .flow), run (file). save: the last recording to file. params NAME=value: on start, stop or save, the recorded value becomes ${NAME}; on run, its value. run: from a step; iterations: a journey timed by step, for perf_compare. export: Maestro YAML, to a .yaml path.',
       input: z
         .object({
           action: z.enum(['start', 'stop', 'save', 'run', 'export']),
@@ -127,17 +152,26 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           case 'stop': {
             if (!held)
               throw new ToolError('no recording to stop: flow start begins one', 'NOT_FOUND');
+            // a file refused before anything stops leaves the recording running, as it was
+            const path = file === undefined ? undefined : inside(need());
             const named = nameParams(held, params, true);
             held.state.running = false;
             keepRecording(held);
+            const n = held.state.steps.length;
+            if (path && n > 0) return saved(held, path, overwrite, named, true);
             const notes = flagged(held.flow());
+            const t =
+              n > 0
+                ? `stopped: ${n} steps, kept until the next start; flow save with file writes them`
+                : 'stopped: nothing was recorded';
             return reply(
               [
-                held.state.steps.length > 0 ? held.text() : 'nothing was recorded',
+                t,
+                ...(n > 0 ? [held.text()] : []),
                 ...named,
-                ...notes.map((n) => `look at ${n}`),
+                ...notes.map((x) => `look at ${x}`),
               ].join('\n'),
-              { done: 'stopped', steps: held.state.steps.length, flagged: notes },
+              { done: t, steps: n, flagged: notes },
             );
           }
           case 'save': {
@@ -146,19 +180,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
             if (held.state.steps.length === 0)
               throw new ToolError('nothing was recorded yet', 'NOT_FOUND');
             const path = inside(need());
-            const named = nameParams(held, params, true);
-            const notes = saveRecording(held, path, overwrite);
-            keepRecording(held);
-            const t = `saved ${held.state.steps.length} steps to ${path}`;
-            // a client with no file tools reads the file here, or nowhere
-            return reply(
-              [t, '', held.text(), ...named, ...notes.map((n) => `look at ${n}`)].join('\n'),
-              {
-                done: t,
-                steps: held.state.steps.length,
-                flagged: notes,
-              },
-            );
+            return saved(held, path, overwrite, nameParams(held, params, true), false);
           }
           case 'run': {
             const path = need();

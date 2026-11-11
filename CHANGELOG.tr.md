@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `file` ile `flow stop` kaydı oraya kaydeder; önceden dosyayı alıp hiçbir şey yazmıyordu. Durdurmadan önce reddedilen bir dosya kaydı sürdürür, yazarken reddedilen biri de adımların `flow save` için tutulduğunu söyler. Dosyasız bir durdurma kaç adım tuttuğuyla ve onların nasıl yazılacağıyla başlar. Uygulamayı çalışır bulan bir adım, bir yeniden oynatmanın uygulamanın o an olduğu ekrandan devam ettiğini ve onun yerine `launch_app` `restart: true`'nun uygulamayı baştan başlattığını söyler.
 - `launch_app`, uygulamayı baştan başlatmak için `restart`'ı ve onu bunlarla baştan başlatan `args` ile `env`'i alır; `app`'in artık `launch`'ı yoktur. İlk ekranında açılan bir uygulama tek bir aracın tek çağrısıdır; önceden `launch_app` çalışan bir uygulamayı olduğu yerde öne getiriyordu ve baştan başlatma başka bir aracın işlemiydi.
 - `launch_app`, açıklamasının söylediği gibi izin verilen bir uygulamayı `app list`'in verdiği adla başlatır; önceden `--allow-apps` altında, hiçbir ad aranmadan, adı izin verilmeyen bir uygulama diye reddediyordu.
 - Bir yanıtın yapılandırılmış içeriği yapılan işi bir kez söyler: onu `text` taşır ve yanında `done` yer almaz; önceden bir dokunuşunki ilk satırını, bir listenin, `steps`'in ya da `network paths`'in ki yanıtın tamamını iki kez söylüyordu. Bir modele metin yerine yapılandırılmış içeriği veren bir istemci ona yaklaşık onda bir daha az verir.
