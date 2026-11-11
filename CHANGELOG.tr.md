@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- iPhone akışının TCP'si, bir telefonun hizmetine yeniden denemeleri, penceresi ve vedasıyla bir bağlantı, `ipstack.ts`'in IPv6 ve UDP'sinin yanında kendi `tcp.ts`'idir; önceden o dosya onu 420 satırın üstünde tutuyordu; `ipstack.ts` `TcpConnection` ve `PortRefused`'u onları orada adlandıranlara hâlâ verir.
 - Bir akışın adımlarının tablosu, her satırın aldığı sözcükler ve bağımsız değişkenler, kendi `specs.ts`'idir; önceden akış dosyasının okuyucusunu ve yazıcısını 420 satırın üstünde tutuyordu.
 - Bir cihazın neyi ölçebildiği, `Cannot` ve `cannot` ile `MeasureSource`, core'da kendi `measure-source.ts`'idir; önceden yanıtladığı okumalarla `measure.ts`'i paylaşıyor ve o dosyayı 420 satırın üstünde tutuyordu.
 - Uçuş kaydedicisinin kendi durumundan ayrı yaptıkları `flight.ts`'te kendi işlevleridir: başlayıp başlayamayacağı, video halkası, sonraki kare izi, bir çökmenin raporu, uygulamanın hâlâ orada olup olmadığı ve sakladığı bir aralığın sayfası; önceden hepsini 234 satırda `startFlight` tutuyordu ve işlev boyutu kuralı onu adıyla geçiriyordu. Artık hiçbir işlev boyut sınırını adıyla aşmıyor.
