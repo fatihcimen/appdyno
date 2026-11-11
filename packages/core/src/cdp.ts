@@ -106,7 +106,11 @@ export type DevToolsTarget = {
 };
 
 export async function devToolsTargets(base: string): Promise<DevToolsTarget[]> {
-  const res = await fetch(`${base}/json/list`, { signal: AbortSignal.timeout(CONNECT_MS) });
+  // a redirect is answered as it is: followed, it would send this Mac's request to any host
+  const res = await fetch(`${base}/json/list`, {
+    redirect: 'manual',
+    signal: AbortSignal.timeout(CONNECT_MS),
+  });
   if (!res.ok) throw new DeviceError('INTERNAL', `${base}/json/list answered ${res.status}`);
   return (await res.json()) as DevToolsTarget[];
 }

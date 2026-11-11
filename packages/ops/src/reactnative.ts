@@ -108,6 +108,7 @@ export function reactNativeOps(ctx: ServerContext) {
           // Metro's own route; a server without it still has the runtime's
           const r = await fetch(`${base}/reload`, {
             method: 'POST',
+            redirect: 'manual',
             signal: AbortSignal.timeout(5_000),
           }).catch(() => undefined);
           if (r?.ok) return reply('reloaded through Metro', { done: 'reloaded through Metro' });

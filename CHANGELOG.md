@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `react_native` and `webview` follow no redirect from the DevTools endpoint they ask, and say what it answered, as "answered 302": a port on this Mac that answered `/json/list` or `/reload` with a redirect sent this Mac's request to whatever host it named.
 - What a session was shown, its last screenshot, a touch that skipped its settle, when it last acted and the timeline or flight recorder running on it are its own, set by its methods, as its app and that app's process already were: seven files wrote them as plain fields, and nothing but a reading of each said who might.
 - An action refused as its app died while Android's crash dialog holds the app says to read `logs` now, and `crashes` once `alert` has answered the dialog, as no report is written before: its hint said "crashes says why it died" beside a text that said no crash report did yet.
 - `set_orientation` on an Android tablet wide as it stands, as a Pixel Tablet, takes the shape a rotation gives from the device's own: Android counts rotations from it, so `landscape_left` stands such a tablet up, and the turn was taken for one the window already had and read before it came, while `portrait`, which leaves it wide, said "the window stayed wide: the app may keep to one orientation" of an app that had turned.

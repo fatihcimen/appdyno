@@ -227,6 +227,31 @@ describe('react_native', () => {
     metro = undefined;
   });
 
+  it('follows no redirect a port on this Mac answers with, to another host or port', async () => {
+    const elsewhere: string[] = [];
+    const other = createServer((req, res) => {
+      elsewhere.push(String(req.url));
+      res.end('[]');
+    });
+    await new Promise<void>((r) => other.listen(0, '127.0.0.1', r));
+    const to = `http://127.0.0.1:${(other.address() as AddressInfo).port}`;
+    const sending = createServer((req, res) => {
+      res.statusCode = 302;
+      res.setHeader('location', `${to}${String(req.url)}`);
+      res.end();
+    });
+    await new Promise<void>((r) => sending.listen(0, '127.0.0.1', r));
+    const at = `127.0.0.1:${(sending.address() as AddressInfo).port}`;
+    try {
+      for (const action of ['targets', 'reload', 'logs'])
+        await expect(call({ action, metro: at, ms: 100 })).rejects.toThrow(/answered 302/);
+      expect(elsewhere).toEqual([]);
+    } finally {
+      other.close();
+      sending.close();
+    }
+  });
+
   it('says when no app is connected', async () => {
     metro = await fakeMetro({ reloadRoute: false, targets: 0 });
     await expect(call({ action: 'logs', metro: metro.metro, ms: 100 })).rejects.toThrow(
