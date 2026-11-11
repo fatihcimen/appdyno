@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A window's recorded flow and what is under its pointer are test files of their own over one setup, and the simulator's direct reads, its settle and its helpers' proofs are three over its trees, where two files of over 800 lines held them.
 - The tests of the tools' list and answers, acting, measuring and iOS simulators are a folder, `packages/ops/test/tools`, over one shared server, where one file of 940 lines held them.
 - The flow tests are a folder, `packages/ops/test/flow`: recording, secrets and params, replay and the test runner each a file over one harness, where one file of 1,290 lines held them.
 - The tests of driving a device are a folder, `packages/ops/test/driving`, a file a tool or a behaviour over one shared fake server, where one file of 2,800 lines held them.
