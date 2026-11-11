@@ -26,7 +26,8 @@ const form = (text: string, focused: boolean, secure = false): Tree => ({
 
 /**
  * A field that takes the focus when touched and types what its keys say; `drops`: the key numbers it loses; `layout`:
- * the letters of keys another layout than US gives them.
+ * the letters of keys another layout than US gives them; `dash`: where a field that formats puts a dash once the text is
+ * longer, and takes it away with the character after it.
  */
 function field(
   opts: {
@@ -35,8 +36,10 @@ function field(
     secure?: boolean;
     drops?: number[];
     layout?: Record<string, string>;
+    dash?: number;
   } = {},
 ) {
+  const dash = opts.dash ?? Infinity;
   let focused = opts.focused ?? false;
   let text = opts.text ?? '';
   let keys = 0;
@@ -48,11 +51,16 @@ function field(
       sent.push(a);
       if (a.kind === 'tap') focused = true;
       if (a.kind === 'key' && a.modifiers?.includes('command')) text = '';
-      else if (a.kind === 'key' && a.key === 'delete') text = text.slice(0, -1);
-      else if (a.kind === 'key' && a.key !== 'enter' && !opts.drops?.includes(keys++))
+      else if (a.kind === 'key' && a.key === 'delete') {
+        text = text.slice(0, -1);
+        // the dash goes with the last character after it
+        if (text.length === dash + 1) text = text.slice(0, dash);
+      } else if (a.kind === 'key' && a.key !== 'enter' && !opts.drops?.includes(keys++))
         text += a.modifiers?.includes('shift')
           ? a.key.toUpperCase()
           : (opts.layout?.[a.key] ?? a.key);
+      if (text.length > dash && text[dash] !== '-')
+        text = `${text.slice(0, dash)}-${text.slice(dash)}`;
       return Promise.resolve(true);
     },
     keyboardOpen: (t: Tree) => t.nodes.some((n) => n.c === 'Keyboard'),
@@ -91,12 +99,20 @@ describe("typing by a simulator's keys", () => {
     expect(f.text()).toBe('5999999900');
   });
 
-  it('says a field holds other text where it held some before, and does not type it again', async () => {
+  it('takes back what keys added to a field that held text, for the runner to type after it', async () => {
     const f = field({ focused: true, text: 'x', drops: [1] });
-    const r = await typeByKeys('abc', { at: AT }, f.keyboard);
-    expect(r).toMatchObject({ verified: false });
-    expect(f.text()).toBe('xac');
-  }, 5_000);
+    expect(await typeByKeys('abc', { at: AT }, f.keyboard)).toBe('append');
+    expect(f.text()).toBe('x');
+    // as a Turkish Q layout types quick: what the field held stays, never cleared
+    const tr = field({ focused: true, text: 'Hello ', layout: { i: 'ı' } });
+    expect(await typeByKeys('quick', { at: AT }, tr.keyboard)).toBe('append');
+    expect(tr.text()).toBe('Hello ');
+    expect(tr.sent.filter((a) => a.kind === 'key' && a.modifiers?.includes('command'))).toEqual([]);
+    // a field that formats takes its dash with the last character after it: no delete more than it takes
+    const gsm = field({ focused: true, text: '(599) 999', layout: { '1': '!' }, dash: 9 });
+    expect(await typeByKeys('12', { at: AT }, gsm.keyboard)).toBe('append');
+    expect(gsm.text()).toBe('(599) 999');
+  }, 15_000);
 
   it('replaces by selecting all and deleting it first', async () => {
     const f = field({ focused: true, text: 'old' });

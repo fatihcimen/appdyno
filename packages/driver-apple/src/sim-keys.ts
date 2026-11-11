@@ -92,6 +92,7 @@ async function echoed(
  * there took the focus, or a secure one, which cannot be read back, for the runner to type. `retype`: the field still
  * held other text after a second try, as keys make on a simulator whose keyboard layout is not US, and was cleared for
  * the runner, which types the text as it is in its place: the field held nothing before, or was to be replaced.
+ * `append`: a field that held text, which the keys added other text to, has that taken back for the runner to type.
  */
 export async function typeByKeys(
   text: string,
@@ -131,6 +132,20 @@ export async function typeByKeys(
       return 'retype' as const;
     }
   }
+  if (verified === false && !known && (await takeBack(k, at, before))) return 'append' as const;
   if (opts.submit) await k.send({ kind: 'key', key: 'enter' });
   return { mode: 'keys' as const, focusMs, ...(verified !== undefined && { verified }) };
+}
+
+/** What keys added after the text a field held, deleted: true once it holds that text alone again. */
+async function takeBack(k: Keyboard, at: Point | undefined, before: string) {
+  let now = fieldOf(await k.read(), at)?.t ?? '';
+  // one at a time, each seen gone: a field that formats may take a separator along with a character
+  for (let left = now.length - before.length; left > 0 && now.startsWith(before); left--) {
+    const was = now;
+    await k.send({ kind: 'key', key: 'delete' });
+    if (!(await echoed(k, at, (s) => ((now = s), s !== was), false))) return false;
+    if (now === before) return true;
+  }
+  return now === before;
 }
