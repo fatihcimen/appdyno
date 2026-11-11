@@ -78,6 +78,10 @@ describe('gestures, keys, clipboard', () => {
     const refused = await call('press_key', { key: 'alt+a' });
     expect(refused).toMatchObject({ error: true });
     expect(refused.text).toContain('command+a');
+    // a capital would be a shift too, and the refusal says so
+    expect((await call('press_key', { key: 'Command+A' })).text).toContain(
+      'or a small letter or digit, held keys first: command+a',
+    );
   });
 
   it('presses count times with one settle, the last', async () => {

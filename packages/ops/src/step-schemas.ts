@@ -87,7 +87,7 @@ const KeyWords = z
   .string()
   .refine(
     (k) => !!keyPress(k) || !!viewNamed(k.toLowerCase()),
-    `a key: ${Object.keys(WIRE_KEY).join(', ')}, or a letter or digit, held keys first: command+a`,
+    `a key: ${Object.keys(WIRE_KEY).join(', ')}, or a small letter or digit, held keys first: command+a`,
   )
   // as press_key lists it, whatever case or other name it was given in: what reads the key after reads that
   .transform((k) => keyNamed(k));
