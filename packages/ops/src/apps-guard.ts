@@ -2,6 +2,7 @@ import type { PlatformScreen, Screen } from '@appdyno/core';
 import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
 import { byPerson, type Policy } from './policy.js';
 import {
+  inAlert,
   LEAVES,
   overTheApp,
   powerGuard,
@@ -66,10 +67,6 @@ export function outsideApps(
 async function homeTouched(s: Session, screen: Screen, input: Input, front: string | undefined) {
   const over = input.points.length ? await overTheApp(s, screen) : undefined;
   if (!over) return undefined;
-  const inAlert = (i: number): boolean => {
-    const n = over.nodes[i];
-    return !!n && (/alert$/i.test(n.c) || inAlert(n.p));
-  };
   const control = (p: Point) =>
     over.nodes.some(
       (n, i) =>
@@ -79,7 +76,7 @@ async function homeTouched(s: Session, screen: Screen, input: Input, front: stri
         p.x <= n.b[2] &&
         p.y >= n.b[1] &&
         p.y <= n.b[3] &&
-        !inAlert(i),
+        !inAlert(over, i),
     );
   const pkg = over.windows[0]?.pkg ?? 'the home screen app';
   return input.points.some(control)

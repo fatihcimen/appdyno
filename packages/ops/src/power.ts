@@ -77,6 +77,15 @@ const WORDS = [
   /^(erase|reset|factory|delete all)\b|\berase all\b|\bsifirla\b|\b(tum verileri|tum icerikleri ve ayarlari|tumunu|iphone'u|simdi) sil\b|\bfabrika\b/,
 ];
 
+/** A system alert's button that places a call, in English and Turkish, as `plain` writes it: "Call", "Ara". */
+const CALL_WORDS = /^(call|ara)\b/;
+
+/** Whether node `i` lies in an alert. */
+export const inAlert = (tree: Tree, i: number): boolean => {
+  const n = tree.nodes[i];
+  return !!n && (/alert$/i.test(n.c) || inAlert(tree, n.p));
+};
+
 /** Words as compared: no case nor accent, Turkish's dotless i an i, one space between, no closing mark. */
 const plain = (s: string) =>
   s
@@ -139,14 +148,20 @@ function controls(tree: Tree) {
       id && (/global_?actions/.test(id) ? 'the power menu' : "Settings' erase-all-data screen")
     );
   };
+  /** What a finger coming down at `p` in a system window reaches, as the system routes it: the smallest clickable thing. */
+  const hitAt = (p: Point) => {
+    const w = windowAt(tree, p);
+    if (w === undefined || !system(w)) return undefined;
+    const here = tree.nodes.flatMap((n, i) => (n.w === w && contains(n, p) ? [{ n, i }] : []));
+    const smallest = (xs: typeof here) => xs.sort((a, b) => area(a.n) - area(b.n))[0];
+    return { w, here, hit: smallest(here.filter((x) => clickable(x.n))) ?? smallest(here) };
+  };
   return {
-    /** What a finger coming down at `p` acts on, as the system routes it: the smallest clickable thing there. */
+    /** What a finger coming down at `p` acts on of such controls. */
     at(p: Point) {
-      const w = windowAt(tree, p);
-      if (w === undefined || !system(w)) return undefined;
-      const here = tree.nodes.flatMap((n, i) => (n.w === w && contains(n, p) ? [{ n, i }] : []));
-      const smallest = (xs: typeof here) => xs.sort((a, b) => area(a.n) - area(b.n))[0];
-      const hit = smallest(here.filter((x) => clickable(x.n))) ?? smallest(here);
+      const reached = hitAt(p);
+      if (!reached) return undefined;
+      const { w, here, hit } = reached;
       // a clickable thing acts as all it holds; anything else only as itself
       const said = hit && (clickable(hit.n) ? named(hit.i) : ownControl(hit.n));
       // iOS's power-off slider by its id in any language, which holds the button a finger lands on
@@ -154,6 +169,12 @@ function controls(tree: Tree) {
         ? `the control ${IOS_SLIDER}`
         : undefined;
       return said ?? slider ?? wholeWindow(w);
+    },
+    /** The button of a system alert a finger at `p` places a call by, as iOS's "Call …?" of a link the app opened. */
+    callAt(p: Point) {
+      const hit = hitAt(p)?.hit;
+      const label = hit && clickable(hit.n) && inAlert(tree, hit.i) ? (hit.n.d ?? hit.n.t) : '';
+      return label && CALL_WORDS.test(plain(label)) ? JSON.stringify(label.trim()) : undefined;
     },
     /** What a key or typed text may act on: a screen that is all such controls, or one in the focus. */
     focused() {
@@ -233,7 +254,10 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
     ? input.points.map((p) => phone(read.windows[windowAt(read, p) ?? -1]?.pkg)).find(Boolean)
     : phone(focusedApp(read));
   if (call) return `${how} the phone app ${call}, which may place a call`;
-  let what = actsOn(controls(read), input);
+  const found = controls(read);
+  const calls = input.points.map((p) => found.callAt(p)).find(Boolean);
+  if (calls) return `${how} ${calls} of a system alert, which places a call`;
+  let what = actsOn(found, input);
   if (!what) {
     const over = await overTheApp(s, screen);
     what = over && actsOn(controls(over), input);

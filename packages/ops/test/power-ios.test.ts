@@ -129,10 +129,21 @@ describe('a system alert over the app, which the runner reads alone, and what th
   const APP = 'dev.appdyno.fixture';
   const box: [number, number, number, number] = [60, 300, 330, 520];
   const allow = { x: 260, y: 490 };
-  /** The fixture's read with a permission alert over it, a window of the home screen app's as the runner captures it. */
-  const alerted = (): Tree => {
+  /**
+   * The fixture's read with a permission alert over it, a window of the home screen app's as the runner captures it;
+   * its right button `right`, and `left` beside it.
+   */
+  const alerted = (right = 'Allow', left?: string): Tree => {
     const t = recorded('ios-control-center-app');
     const at = t.nodes.length;
+    const button = (d: string, x: number) => ({
+      p: at,
+      w: 1,
+      c: 'Button',
+      d,
+      b: [x, 470, x + 120, 510] as typeof box,
+      f: 19,
+    });
     return {
       ...t,
       windows: [
@@ -149,13 +160,14 @@ describe('a system alert over the app, which the runner reads alone, and what th
           b: box,
           f: 17,
         },
-        { p: at, w: 1, c: 'Button', d: 'Allow', b: [200, 470, 320, 510], f: 19 },
+        button(right, 200),
+        ...(left ? [button(left, 70)] : []),
       ],
     };
   };
-  /** That read, the home screen app's being `home`; `apps` as --allow-apps. */
-  const over = async (home: Tree, apps: string[] = []) => {
-    const o = await onDevice(alerted(), { answer: 'decline', policy: { apps } });
+  /** That read, the home screen app's being `home`; `apps` as --allow-apps; `read`, the read with its alert. */
+  const over = async (home: Tree, apps: string[] = [], read = alerted()) => {
+    const o = await onDevice(read, { answer: 'decline', policy: { apps } });
     Object.assign(o.device, { systemTree: () => Promise.resolve(home), platformScreen: iosScreen });
     return o;
   };
@@ -194,5 +206,19 @@ describe('a system alert over the app, which the runner reads alone, and what th
     expect((await call('tap', allow)).error).toBe(false);
     expect((await call('tap', { x: 200, y: 700 })).error).toBe(false);
     expect([sent().length, asked]).toEqual([2, []]);
+  });
+
+  it('asks before a touch on the Call of the alert iOS shows for a call link the app opened, and not on its Cancel', async () => {
+    const home = recorded('ios-nothing-over-springboard');
+    for (const [yes, no] of [
+      ['Call', 'Cancel'],
+      ['Ara', 'Vazgeç'],
+    ] as const) {
+      const { call, sent, asked } = await over(home, [], alerted(yes, no));
+      expect((await call('tap', allow)).code, yes).toBe('PERMISSION_REQUIRED');
+      expect(asked[0], yes).toContain(`a touch on "${yes}" of a system alert, which places a call`);
+      expect((await call('tap', { x: 130, y: 490 })).error, no).toBe(false);
+      expect(sent(), yes).toHaveLength(1);
+    }
   });
 });
