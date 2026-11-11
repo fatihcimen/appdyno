@@ -163,6 +163,25 @@ describe('targeting', () => {
     await call('type_text', { text: 'Ayşe', selector: { role: 'textField' } });
     expect(d.typed).toEqual(['Ayşe']);
   });
+
+  it('says a typing that may have gone may have gone in part, as keys typed one by one do', async () => {
+    const d = new FakeDevice();
+    d.screen = 'form';
+    d.typeText = () => {
+      const e = new DeviceError(
+        'TIMEOUT',
+        'the key went to the input helper, which did not say it was sent',
+      );
+      e.sent = true;
+      return Promise.reject(e);
+    };
+    const { call } = await connect(d);
+    const r = await call('type_text', { text: 'Ayşe', selector: { role: 'textField' } });
+    expect([r.data.code, r.data.dispatched]).toEqual(['TIMEOUT', 'unknown']);
+    expect(r.text).toMatch(
+      /^TIMEOUT: the key went to the input helper, which did not say it was sent; part of the text may be in the field: read it, and type with replace: true/,
+    );
+  });
 });
 
 describe('steps across screens', () => {

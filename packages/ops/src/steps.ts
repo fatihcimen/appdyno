@@ -8,7 +8,7 @@ import {
   throwIfCancelled,
   type ActOptions,
 } from '@appdyno/core';
-import type { ActResult, Point, TextResult } from '@appdyno/protocol';
+import { DeviceError, type ActResult, type Point, type TextResult } from '@appdyno/protocol';
 import type { Answers, ReadMode } from './answers.js';
 import { noteTouch } from './activity.js';
 import type { ServerContext } from './context.js';
@@ -243,12 +243,20 @@ export function stepsFor(
         // a simulator types a US keyboard's text by its helper's keys, anything else by its runner, which it may wait
         // for: a typing by keys that the runner's start ended meanwhile is no wait, and takes no 3 s
         const waited = s.device.agentUp ? undefined : Date.now();
-        const r = await s.device.typeText(st.text, {
-          ...(at && { at }),
-          replace: st.replace ?? false,
-          submit: st.submit ?? false,
-          ...opts,
-        });
+        const r = await s.device
+          .typeText(st.text, {
+            ...(at && { at }),
+            replace: st.replace ?? false,
+            submit: st.submit ?? false,
+            ...opts,
+          })
+          .catch((e: unknown) => {
+            // text that may have gone may have gone in part, as keys typed one by one: typed again, it would follow it
+            if (e instanceof DeviceError && e.sent)
+              e.message +=
+                '; part of the text may be in the field: read it, and type with replace: true';
+            throw e;
+          });
         const started =
           waited !== undefined && s.device.agentUp && Date.now() - waited >= 3_000
             ? `, after the runner's start: ${((Date.now() - waited) / 1000).toFixed(1)} s`

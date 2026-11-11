@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Metni gitmiş olabilecekken başarısız olan `type_text`, bir kısmının alanda olabileceğini, okunup `replace: true` ile yazılması gerektiğini söyler: bir metnin ortasında bir tuş için yanıt vermeyen bir simülatör yardımcısı yalnızca tuşun gitmiş olabileceğini söylüyordu ve yeniden yazılan metin orada zaten olanın ardına geliyordu.
 - `--no-home` ile `launch_app`, `app launch` ve uygulamalarını başlatabilen `perf_` ölçümleri, cihazın ajanının yanında başlayan ilk çağrının başlatması da dahil, `open_link` ve ona giden bir bağlantının zaten yaptığı gibi Ayarlar'ı reddeder; SECURITY.md ve komut satırı başvurusu da bayrağın neyi tuttuğunu söyler: "hangi yoldan olursa olsun Ayarlar" doğru değildi, çünkü her biri onu başlatıyordu; ana ekrana giden x,y ile bir kaydırma ya da dokunuş ve oradaki Ayarlar simgesine bir dokunuş yalnızca `--allow-apps` ile tutulur.
 - Hub'ın hizmetlerine, onsuz kurulamayacakları hub'ın ilkesi verilir ve bir tünel için başlattıkları sunucuya cihaz ve uygulama listelerini kendileri eklerler; bir sınama da o sunucunun hangi bayraklarla başladığını tutar: komut onlarla hiçbir sınamanın ulaşmadığı bir yerde kuruluyordu, bu yüzden onları düşürmek hiçbir şeyi bozmuyordu.
 - Deseni boş metinle eşleşen bir cihaz ya da bağlantı izin listesi, boş olanın zaten reddedildiği gibi başlangıçta reddedilir: biri tanımsızken `--allow-devices "$A|$B"` `emu|` veriyordu; bu da düzenli ifade olarak her cihazı içeri alır, `--allow-urls` da her bağlantıyı.
