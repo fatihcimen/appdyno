@@ -306,20 +306,20 @@ export abstract class IosDevice extends RpcDevice implements Device {
   }
 
   /**
-   * The home screen app's read, with what it shows over the app: one run of the queue, as a call between its two
-   * targets would read or touch the home screen app for the app.
+   * The home screen app's read, with what it shows over the app, whichever app is in front: one call, which leaves the
+   * runner's target as it was, so no call between nor a cancel leaves the runner reading the home screen app for the app.
    */
   async systemTree(): Promise<Tree | undefined> {
-    const app = this.targetApp;
-    if (!app || app === HOME_SCREEN_APP) return undefined;
-    return this.queue.run(async () => {
-      await this.callNow('app.target', { pkg: HOME_SCREEN_APP }, TIMEOUTS.action);
-      try {
-        return (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
-      } finally {
-        await this.callNow('app.target', { pkg: app }, TIMEOUTS.action);
-      }
-    });
+    if (this.targetApp === HOME_SCREEN_APP) return undefined;
+    const t = (await this.call('tree.get', { pkg: HOME_SCREEN_APP }, TIMEOUTS.read)).result;
+    // a runner built before it took a pkg reads the app in front, which is no look at the home screen app
+    if (t.windows[0]?.pkg !== HOME_SCREEN_APP)
+      throw new DeviceError(
+        'AGENT_VERSION_MISMATCH',
+        `the runner read ${t.windows[0]?.pkg ?? 'no app'} where the home screen app was asked for`,
+        'build the iOS runner again from this checkout',
+      );
+    return t;
   }
 
   /** The app a view went over: home closes the view, and it is what is read again. */

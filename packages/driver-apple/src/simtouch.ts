@@ -1,6 +1,15 @@
 import { must } from '@appdyno/core';
 import { type ActParams, type Key, KEY_USAGES, type Modifier } from '@appdyno/protocol';
 
+/** Where an action's first finger comes down, if it has one. */
+export const firstPoint = (a: ActParams) => {
+  if (a.kind === 'tap' || a.kind === 'longPress') return { x: a.x, y: a.y };
+  if (a.kind === 'swipe') return a.from;
+  if (a.kind !== 'gesture') return undefined;
+  const { x, y } = must(a.pointers[0]?.[0], 'a pointer');
+  return { x, y };
+};
+
 export type TouchEvent = {
   p: 0 | 1 | 2;
   x: number;

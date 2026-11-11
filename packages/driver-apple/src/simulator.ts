@@ -22,6 +22,7 @@ import {
   type Method,
   type Modifier,
   type ParamsOf,
+  DeviceError,
 } from '@appdyno/protocol';
 import { SimulatorMirror } from './mirror-sim.js';
 import { SimulatorNetwork } from './network.js';
@@ -30,7 +31,8 @@ import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
 import { DirectSim } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
-import { type Capture, settleAfter } from './simsettle.js';
+import { type Capture, nodesBusy, settleAfter } from './simsettle.js';
+import { firstPoint } from './simtouch.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { helperSeesFront, looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
 import { pasteOnMac, setSimClipboard } from './sim-clipboard.js';
@@ -41,16 +43,6 @@ import { simulatorOps } from './simulator-ops.js';
 import { HOME_SCREEN_APP } from './platform-screen.js';
 
 type Node = Tree['nodes'][number];
-
-const nodesBusy = (t: Tree) => t.nodes.some((n) => n.c === 'ActivityIndicator' && (n.f & 1) !== 0);
-
-const firstPoint = (a: ActParams) => {
-  if (a.kind === 'tap' || a.kind === 'longPress') return { x: a.x, y: a.y };
-  if (a.kind === 'swipe') return a.from;
-  if (a.kind !== 'gesture') return undefined;
-  const { x, y } = must(a.pointers[0]?.[0], 'a pointer');
-  return { x, y };
-};
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 /** A first boot has nothing in front for a few seconds: this is shorter than a runner's start. */
@@ -293,15 +285,17 @@ export class IosSimulatorDevice extends IosDevice {
   /**
    * With the app in front the helper says so at once, and nothing stands over it: a look is no reason to start a runner,
    * which hid seconds, or a first build, in a read. With anything over it the app is not in front, and the read before
-   * this look has brought a runner up.
+   * this look has brought a runner up. A look neither could take is no "nothing over it".
    */
   override async systemTree() {
-    if (!this.targetApp || this.targetApp === HOME_SCREEN_APP) return undefined;
+    if (this.targetApp === HOME_SCREEN_APP) return undefined;
     const r = await this.queue
       .run(() => this.direct.read(HOME_SCREEN_APP))
       .catch(() => ({ refused: 'failed' }));
     if (!('refused' in r)) return r.tree;
-    return this.runnerUp && r.refused !== 'not-foreground' ? super.systemTree() : undefined;
+    if (r.refused === 'not-foreground') return undefined;
+    if (this.runnerUp) return super.systemTree();
+    throw new DeviceError('AGENT_UNAVAILABLE', `no runner to read the home screen: ${r.refused}`);
   }
 
   override async foreground(): Promise<string | undefined> {

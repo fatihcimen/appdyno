@@ -36,10 +36,13 @@ public enum OneValue {
 
 public struct TreeRequest {
     public let maxDepth: Int, maxNodes: Int
+    /// This app's read, whichever is in front, with the target left as it was.
+    public let pkg: String?
 
     public init(_ p: Wire) throws {
         maxDepth = try requiredInt(p, "maxDepth")
         maxNodes = try requiredInt(p, "maxNodes")
+        pkg = p["pkg"] as? String
     }
 }
 

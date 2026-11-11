@@ -296,25 +296,40 @@ describe("whether an iPhone's app runs", () => {
 });
 
 describe("a look at what the home screen app shows over an iPhone's app", () => {
-  it('reads it between its two targets with no other call between them, which would take it for the app', async () => {
+  /** A phone whose runner reads `read` of the app a `tree.get` names, and the target's own read of the rest. */
+  const phone = async (read: string, app: string | undefined = 'dev.app') => {
     const d = new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' });
     const calls: string[] = [];
-    const empty: Tree = { windows: [], nodes: [], truncated: false, elapsedMs: 1, hash: 'h' };
     const callNow = async (method: string, params: { pkg?: string }) => {
       calls.push(params.pkg ? `${method} ${params.pkg}` : method);
       await new Promise((r) => setTimeout(r, 5));
-      return { result: empty };
+      const pkg = params.pkg ? read : 'dev.app';
+      const window = { type: 1, pkg, layer: 0, b: [0, 0, 402, 874], active: true, focused: true };
+      return {
+        result: { windows: [window], nodes: [], truncated: false, elapsedMs: 1, hash: pkg },
+      };
     };
     Object.assign(d, { callNow, keepDump: () => Promise.resolve(undefined) });
-    await d.target('dev.app');
+    if (app) await d.target(app);
     calls.length = 0;
-    await Promise.all([d.systemWords(), d.tree()]);
-    expect(calls).toEqual([
-      'app.target com.apple.springboard',
-      'tree.get',
-      'app.target dev.app',
-      'tree.get',
-    ]);
+    return { d, calls };
+  };
+
+  it("is one read of it, which leaves the runner's target as it was: no cancel can leave the runner on it", async () => {
+    const { d, calls } = await phone('com.apple.springboard');
+    await Promise.all([d.systemTree(), d.tree()]);
+    expect(calls).toEqual(['tree.get com.apple.springboard', 'tree.get']);
+  });
+
+  it('is taken with no app selected too, where the runner reads whichever app iOS has in front', async () => {
+    const { d, calls } = await phone('com.apple.springboard', undefined);
+    expect((await d.systemTree())?.windows[0]?.pkg).toBe('com.apple.springboard');
+    expect(calls).toEqual(['tree.get com.apple.springboard']);
+  });
+
+  it('is refused where the runner read another app, as one built before it took the app to read', async () => {
+    const { d } = await phone('dev.app');
+    await expect(d.systemTree()).rejects.toMatchObject({ code: 'AGENT_VERSION_MISMATCH' });
   });
 });
 

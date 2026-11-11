@@ -1,8 +1,9 @@
-import type { Device } from '@appdyno/core';
-import { NODE_FLAGS, type ActParams, type Point, type Tree } from '@appdyno/protocol';
-import { approvePower } from './approval.js';
+import type { Device, Screen } from '@appdyno/core';
+import { DeviceError, NODE_FLAGS, type ActParams, type Point, type Tree } from '@appdyno/protocol';
+import { approvePower, powerAllowed } from './approval.js';
 import type { Policy } from './policy.js';
 import type { Session } from './session.js';
+import { ToolError } from './tool.js';
 
 /** What an input would reach: the points a finger comes down on, a key, or text typed (at a point, if given). */
 export type Input = { points: Point[]; key?: string; types?: true };
@@ -202,17 +203,44 @@ async function reaches(s: Session, input: Input): Promise<string | undefined> {
   if (input.key && LEAVES.has(input.key)) return undefined;
   // shortcut: the read a touch was aimed by, which may be up to 20 s old when nothing acted since (Session.beforeTouch);
   // a dialog a person opens by hand in that time is not seen: read again here if a person's hand must be allowed for
-  const read = (s.fresh ?? (await s.current())).tree;
+  const screen = s.fresh ?? (await s.current());
+  const read = screen.tree;
   const call = input.points.map((p) => phoneAt(read, p)).find(Boolean);
   if (call) return `a touch on the phone app ${call}, which may place a call`;
   let what = actsOn(controls(read), input);
   // iOS's Control Center and power-off screen over an app may be in no read of it: the home screen app's read has them
   if (!what && s.device.systemTree && !read.windows.some((w) => SYSTEM.test(w.pkg ?? ''))) {
-    const over = await s.device.systemTree().catch(() => undefined);
+    const over = await homeRead(s, screen);
     what = over && actsOn(controls(over), input);
   }
   const how = input.types ? 'typing into' : input.key ? `the ${input.key} key on` : 'a touch on';
   return what && `${how} ${what}, the system's own power, emergency or erase control`;
+}
+
+/**
+ * The home screen app's read for each read of the screen, by that read and not its layout, which Control Center coming
+ * over the app leaves as it was: one look, however many inputs that read aims, as the keys of a `press_key` count.
+ */
+const homeReads = new WeakMap<Screen, Tree | undefined>();
+
+/**
+ * The home screen app's read over the app on `screen`, taken once for it. One that fails sends nothing: no input goes
+ * where the guard cannot tell whether a power, emergency or erase control is under it.
+ */
+async function homeRead(s: Session, screen: Screen) {
+  if (homeReads.has(screen)) return homeReads.get(screen);
+  const over = await s.device.systemTree?.().catch((e: unknown) => {
+    const cause = e instanceof DeviceError ? e : undefined;
+    throw new ToolError(
+      `the home screen app could not be read, to tell whether Control Center or the power-off screen is over the app: ${(e as Error).message}`,
+      cause?.code ?? 'INTERNAL',
+      cause?.hint ??
+        'read the screen and try again: appdyno sends no input where it cannot tell whether a power, emergency or erase control is under it',
+      false,
+    );
+  });
+  homeReads.set(screen, over);
+  return over;
 }
 
 /** What of such controls in a read an input acts on: where a finger comes down, else what a key or text reaches. */
@@ -224,6 +252,8 @@ const actsOn = (found: ReturnType<typeof controls>, input: Input) =>
 export const powerGuard =
   (policy: Policy): InputGuard =>
   async (s, input) => {
+    // what the person allowed ahead needs no look, which could only cost time or refuse what would go anyway
+    if (powerAllowed(policy, s)) return;
     const what = await reaches(s, input);
     if (what) await approvePower(policy, s, what);
   };

@@ -57,7 +57,7 @@ const POWER_AHEAD =
 
 /** As `approve`, for an input that would act on the system's own power, emergency or erase controls: `what` names it. */
 export async function approvePower(policy: Policy, s: Session, what: string) {
-  if (allows(policy.allowPower, s)) return;
+  if (powerAllowed(policy, s)) return;
   await askPerson(
     s,
     what,
@@ -71,6 +71,9 @@ export async function approvePower(policy: Policy, s: Session, what: string) {
 
 const allows = (flag: Policy['allowDataLoss'], s: Session) =>
   flag === 'all' || (flag === 'virtual' && s.device.virtual);
+
+/** The power, emergency and erase controls allowed ahead on this device, by the server's own command line. */
+export const powerAllowed = (policy: Policy, s: Session) => allows(policy.allowPower, s);
 
 /** The person's yes to `name`, asked as `doing` on this device and what is `lost`; else a refusal, with nothing done. */
 async function askPerson(s: Session, name: string, [doing, lost]: [string, string], ahead: string) {

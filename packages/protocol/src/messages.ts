@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TextClip, Traversal } from './a11y.js';
 import { KeyName, MODIFIERS } from './keys.js';
 
 /** The wire's version: a host and an agent of another one do not talk. */
@@ -171,21 +172,6 @@ export const Screenshot = z.object({
 
 export const Foreground = z.object({ pkg: z.string().optional() });
 
-/** Android `a11y.read`: a text node's characters and how many of them are not shown (cut or ellipsized). */
-export const TextClip = z.object({
-  n: z.number().int(),
-  chars: z.number().int(),
-  hidden: z.number().int(),
-});
-export type TextClip = z.infer<typeof TextClip>;
-/** Android `a11y.read`: a node's traversal hints as node indices (a screen reader reads `n` before `before`, after `after`). */
-export const Traversal = z.object({
-  n: z.number().int(),
-  before: z.number().int().optional(),
-  after: z.number().int().optional(),
-});
-export type Traversal = z.infer<typeof Traversal>;
-
 /**
  * The kinds of accessibility issue `audit` reports: the iOS platform audit's types; Android's checks use
  * the same names where they check the same thing, plus `imageContrast` and `duplicateLabel`.
@@ -252,6 +238,8 @@ export const METHODS = {
     params: z.object({
       maxDepth: z.number().int().min(1).max(500).default(128),
       maxNodes: z.number().int().min(1).max(20_000).default(5_000),
+      /** iOS: this app's read, whichever is in front, with the runner's target left as it was. */
+      pkg: z.string().optional(),
     }),
     result: Tree,
   },

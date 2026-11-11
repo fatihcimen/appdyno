@@ -88,9 +88,12 @@ final class RunnerTests: XCTestCase {
         "tree.get": { job, d, _ in
             let start = Date()
             let request = try TreeRequest(job.params)
-            var c = try d.capture(maxDepth: request.maxDepth, maxNodes: request.maxNodes, job: job)
-            d.hideUnreachableCopies(&c)
-            d.remember(c)
+            var c = try d.capture(maxDepth: request.maxDepth, maxNodes: request.maxNodes, job: job, pkg: request.pkg)
+            // another app's read is a look for the host, of no copies a touch reaches nor a screen `before` names
+            if request.pkg == nil {
+                d.hideUnreachableCopies(&c)
+                d.remember(c)
+            }
             return Reply(result: d.treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(start) * 1000)))
         },
         "wait": { job, d, _ in Reply(result: try d.wait(WaitRequest(job.params), job: job)) },

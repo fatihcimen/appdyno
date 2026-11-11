@@ -244,7 +244,11 @@ describe('a runner up on a simulator with no app named', () => {
 
 describe('a look for what stands over the app on a simulator', () => {
   const word = (d: string) => ({ c: 'StaticText', d });
-  const tree = { windows: [], nodes: [word('Face ID'), { c: 'Button', d: 'Cancel' }], hash: 'h' };
+  const tree = {
+    windows: [{ pkg: 'com.apple.springboard' }],
+    nodes: [word('Face ID'), { c: 'Button', d: 'Cancel' }],
+    hash: 'h',
+  };
 
   const device = async (answer: unknown) => {
     const read = vi.fn(() => Promise.resolve(answer));
@@ -279,10 +283,12 @@ describe('a look for what stands over the app on a simulator', () => {
     expect(await d.systemWords()).toEqual(['Face ID']);
   });
 
-  it('starts none for it where the helper has no say', async () => {
-    const { d, callNow } = await device({ refused: 'landscape' });
-    expect(await d.systemWords()).toEqual([]);
-    expect(callNow).not.toHaveBeenCalled();
+  it('starts none for it where the helper has no say, and says it could not look: no "nothing over it"', async () => {
+    for (const refused of ['landscape', 'failed']) {
+      const { d, callNow } = await device({ refused });
+      await expect(d.systemTree()).rejects.toMatchObject({ code: 'AGENT_UNAVAILABLE' });
+      expect(callNow).not.toHaveBeenCalled();
+    }
   });
 });
 

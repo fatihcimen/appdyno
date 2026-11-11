@@ -100,6 +100,8 @@ final class WireFixtureTests: XCTestCase {
         let tree = try TreeRequest(params("tree.get"))
         XCTAssertEqual(tree.maxDepth, 128)
         XCTAssertEqual(tree.maxNodes, 5000)
+        XCTAssertNil(tree.pkg)
+        XCTAssertEqual(try TreeRequest(params("tree.get.pkg")).pkg, "com.apple.springboard")
         let jpeg = try ShotRequest(params("screenshot"))
         XCTAssertFalse(jpeg.png)
         XCTAssertEqual(jpeg.quality, 80)

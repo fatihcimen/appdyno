@@ -1,18 +1,10 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ElicitResult } from '@modelcontextprotocol/client';
 import type { Tree, WireNode } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_POLICY, powerControlAt, ServerContext, type Policy } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { linkedClient } from './helpers.js';
-
-/** A screen read from an emulator or simulator of ours, with the dialog open and dismissed after, never confirmed. */
-const recorded = (name: string) =>
-  JSON.parse(
-    readFileSync(join(import.meta.dirname, 'fixtures/power', `${name}.json`), 'utf8'),
-  ) as Tree;
+import { powerControlAt } from '../src/index.js';
+import { middle, onDevice, recorded } from './power-device.js';
 
 type Made = Partial<WireNode> & { b: [number, number, number, number] };
 
@@ -33,13 +25,6 @@ const button = (d: string, y: number, more: Partial<WireNode> = {}): Made => ({
   b: [16, y, 386, y + 50],
   ...more,
 });
-
-/** The middle of the node whose words are `label`, as a touch by x,y aims. */
-function middle(tree: Tree, label: string) {
-  const n = tree.nodes.find((x) => x.t === label || x.d === label);
-  if (!n) throw new Error(`no ${label}`);
-  return { x: (n.b[0] + n.b[2]) / 2, y: (n.b[1] + n.b[3]) / 2 };
-}
 
 const IOS_POWER = made(
   'com.apple.springboard',
@@ -219,47 +204,6 @@ beforeEach(() => {
   vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-power-state-')));
 });
 
-/** A device showing `screen`; a client that answers each question as `answer` says, or cannot ask. */
-async function onDevice(
-  screen: string,
-  o: { virtual?: boolean; policy?: Partial<Policy>; answer?: ElicitResult['action'] } = {},
-) {
-  const asked: string[] = [];
-  const device = Object.assign(new FakeDevice(), {
-    virtual: o.virtual ?? true,
-    fixture: recorded(screen),
-  });
-  const ctx = new ServerContext(
-    { ...DEFAULT_POLICY, ...o.policy },
-    [
-      {
-        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
-        handles: () => true,
-        open: () => device,
-      },
-    ],
-    { app: 'dev.app' },
-  );
-  const answer = o.answer;
-  const client = await linkedClient(ctx, undefined, answer && ((q) => (asked.push(q), answer)));
-  const call = async (name: string, args: Record<string, unknown>) => {
-    const r = (await client.callTool({ name, arguments: args })) as {
-      isError?: boolean;
-      content: { text?: string }[];
-      structuredContent?: { code?: string; hint?: string };
-    };
-    return {
-      error: r.isError === true,
-      text: r.content.map((c) => c.text).join('\n'),
-      ...r.structuredContent,
-    };
-  };
-  /** What reached the device: its touches and keys. */
-  const sent = () =>
-    device.calls.filter((c) => c.name === 'act' || c.name === 'typeText').map((c) => c.args[0]);
-  return { call, asked, sent, device, tree: device.fixture };
-}
-
 describe('an input on them', () => {
   const restart = middle(recorded('android-power-en'), 'Restart');
 
@@ -398,45 +342,5 @@ describe('an input on them', () => {
     const started = performance.now();
     for (let i = 0; i < 200; i++) powerControlAt(qs, { x: 540, y: 1200 });
     expect((performance.now() - started) / 200).toBeLessThan(1);
-  });
-});
-
-describe("iOS's own views over an app, where a read of the app has none of them", () => {
-  /** The fixture app under Control Center, as a runner read it; the home screen app's read, with `over` up. */
-  const under = async (over: string) => {
-    const o = await onDevice('ios-control-center-app', { answer: 'decline' });
-    const tree = recorded(over);
-    Object.assign(o.device, { systemTree: () => Promise.resolve(tree) });
-    return { ...o, over: tree };
-  };
-
-  it("asks before a touch on Control Center's power button, a window of the home screen app's in an iPhone's read", async () => {
-    const { call, sent, asked, tree } = await onDevice('ios-control-center-tr', {
-      answer: 'decline',
-    });
-    const r = await call('tap', middle(tree, 'Güç'));
-    expect(r.code).toBe('PERMISSION_REQUIRED');
-    expect(asked[0]).toContain('a touch on "Güç"');
-    expect(sent()).toEqual([]);
-  });
-
-  it("asks before a touch on Control Center's power button or the power-off slider, read from the home screen app", async () => {
-    for (const [over, label] of [
-      ['ios-control-center-springboard', 'Power'],
-      ['ios-power-off-springboard', 'slide to power off'],
-    ] as const) {
-      const { call, sent, asked, over: t } = await under(over);
-      const r = await call('tap', middle(t, label));
-      expect(r.code, over).toBe('PERMISSION_REQUIRED');
-      expect(asked[0], over).toContain(`a touch on "${label}"`);
-      expect(sent(), over).toEqual([]);
-    }
-  });
-
-  it('lets a touch elsewhere on them go with nothing asked', async () => {
-    const { call, sent, asked, over } = await under('ios-control-center-springboard');
-    expect((await call('tap', middle(over, 'Add Controls'))).error).toBe(false);
-    expect(asked).toEqual([]);
-    expect(sent()).toHaveLength(1);
   });
 });

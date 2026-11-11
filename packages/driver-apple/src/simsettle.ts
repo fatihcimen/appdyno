@@ -7,6 +7,9 @@ type Node = Tree['nodes'][number];
 /** One read: `askRunner`, what only the runner can tell of it is yet to be asked. */
 export type Capture = { tree: Tree; busy: boolean; byRunner?: boolean; askRunner?: boolean };
 
+export const nodesBusy = (t: Tree) =>
+  t.nodes.some((n) => n.c === 'ActivityIndicator' && (n.f & 1) !== 0);
+
 /** Reads cost about 30 ms here: the settle can look far more often than the runner's 80 ms. */
 const POLL_MS = 20;
 

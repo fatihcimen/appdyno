@@ -15,13 +15,18 @@ extension Device {
         var hash: String { layoutHash(nodes) }
     }
 
-    func capture(maxDepth: Int = 128, maxNodes: Int = 5000, job: Job? = nil) throws -> Capture {
+    private func application(_ id: String) -> XCUIApplication {
+        id == Device.springboardId ? springboard : XCUIApplication(bundleIdentifier: id)
+    }
+
+    /// The app in front, or `pkg`'s whichever is in front: that read alone, with no alert of the home screen app's.
+    func capture(maxDepth: Int = 128, maxNodes: Int = 5000, job: Job? = nil, pkg: String? = nil) throws -> Capture {
         struct Pending {
             let snap: XCUIElementSnapshot
             let parent: Int
             let depth: Int
         }
-        let (app, id) = front()
+        let (app, id) = pkg.map { (application($0), $0) } ?? front()
         var windows: [[String: Any]] = []
         var nodes: [Node] = []
         var truncated = false
@@ -52,8 +57,9 @@ extension Device {
         add(snap, window: 0)
         // `exists` answers at once; a snapshot of a missing element waits for it to appear
         let overQuery = springboard.descendants(matching: .any).matching(Device.overTheApp).firstMatch
-        alertFrame = nil
-        if app !== springboard, overQuery.exists, let over = try? overQuery.snapshot() {
+        // a read for another's look leaves the alert a touch goes to as the app's last read had it
+        if pkg == nil { alertFrame = nil }
+        if pkg == nil, app !== springboard, overQuery.exists, let over = try? overQuery.snapshot() {
             // a system alert (permission, notification prompt) alone; Control Center or the power-off screen as all the
             // home screen app shows, as their power and emergency controls lie outside what the query finds
             let alert = over.elementType == .alert

@@ -9,6 +9,10 @@
     "input": {},
     "params": { "maxDepth": 128, "maxNodes": 5000 }
   },
+  "tree.get.pkg": {
+    "method": "tree.get",
+    "params": { "maxDepth": 128, "maxNodes": 5000, "pkg": "com.apple.springboard" }
+  },
   "act.tap": {
     "method": "act",
     "input": {
