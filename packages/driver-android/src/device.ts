@@ -46,11 +46,8 @@ import { androidScreen } from './platform-screen.js';
 import { AndroidRecorder } from './record.js';
 import { ANDROID_PAGES, openSearch, openSettingsAt } from './settings-pages.js';
 import { AndroidWeb } from './web.js';
-import { FOCUS_READ, KEYGUARD_READ, noWindowHint } from './window-dump.js';
-
-/** How long a phone just woken gets for its focus to hold, and how long it must hold. */
-const WAKE_FOCUS_MS = 5_000;
-const WAKE_STEADY_MS = 600;
+import { currentFocus, focusSteady, lockedError, wakeScreen } from './wake.js';
+import { noWindowHint } from './window-dump.js';
 
 export type AndroidOptions = {
   /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
@@ -96,8 +93,8 @@ export class AndroidDevice extends RpcDevice implements Device {
       adb,
       serial,
       {
-        currentFocus: () => this.currentFocus(),
-        focusSteady: () => this.focusSteady(),
+        currentFocus: () => currentFocus(this.sh),
+        focusSteady: () => focusSteady(this.sh),
         ensureAwake: () => this.ensureAwake(),
         tree: () => this.tree(),
         press: (p, ms) => this.longPress(p, ms, { settle: false }),
@@ -182,76 +179,12 @@ export class AndroidDevice extends RpcDevice implements Device {
     throw cause;
   }
 
-  /**
-   * A screen that went dark or locked comes back: wake it, dismiss a keyguard without a credential, and
-   * swipe it up when dismissing did not work. Says what it did; a locked device with a PIN stays locked.
-   */
-  async ensureAwake(): Promise<{ woke: boolean; unlocked: boolean; locked: boolean }> {
-    const state = async () => {
-      const out = await this.shell(`dumpsys power | grep -m1 'mWakefulness='; ${KEYGUARD_READ}`);
-      return {
-        awake: out.includes('mWakefulness=Awake'),
-        locked: /isKeyguardShowing=true|mShowingLockscreen=true/.test(out),
-      };
-    };
-    let s = await state();
-    let woke = false;
-    let unlocked = false;
-    if (!s.awake) {
-      await this.shell('input keyevent KEYCODE_WAKEUP');
-      await sleep(400);
-      woke = true;
-      s = await state();
-    }
-    if (s.locked) {
-      await this.shell('wm dismiss-keyguard');
-      await sleep(600);
-      s = await state();
-      if (s.locked) {
-        const w = this.helloInfo?.screen ?? { w: 1080, h: 2400 };
-        await this.shell(
-          `input swipe ${Math.round(w.w / 2)} ${Math.round(w.h * 0.9)} ${Math.round(w.w / 2)} ${Math.round(w.h * 0.3)} 250`,
-        );
-        await sleep(600);
-        s = await state();
-      }
-      unlocked = !s.locked;
-    }
-    if (woke || unlocked) await this.focusSteady();
-    return { woke, unlocked, locked: s.locked };
+  /** A screen that went dark or locked comes back, and says what it did (`wake.ts`). */
+  ensureAwake() {
+    return wakeScreen(this.sh, () => this.helloInfo?.screen);
   }
 
-  /**
-   * A phone just woken has the app on its screen before the app can take a touch: a Xiaomi passes through no focus
-   * and its launcher, and a touch meanwhile reaches no window. Until the focus has held for a moment.
-   */
-  private async focusSteady() {
-    const end = Date.now() + WAKE_FOCUS_MS;
-    let last = '';
-    let since = Date.now();
-    while (Date.now() < end) {
-      const focus = await this.currentFocus();
-      if (!focus || focus !== last) {
-        last = focus;
-        since = Date.now();
-      } else if (Date.now() - since >= WAKE_STEADY_MS) return;
-      await sleep(150);
-    }
-  }
-
-  private lockedError() {
-    return new DeviceError(
-      'DEVICE_LOCKED',
-      `${this.serial} is locked behind its PIN, pattern or password`,
-      'unlock it by hand: no tool can answer it',
-    );
-  }
-
-  /** The window that has the focus; none between windows and on a dark screen. */
-  private async currentFocus(): Promise<string> {
-    const focus = /mCurrentFocus=(.*)/.exec(await this.shell(FOCUS_READ))?.[1];
-    return focus === undefined || focus === 'null' ? '' : focus;
-  }
+  private readonly sh = (command: string) => this.shell(command);
 
   async tree({ asItIs, ...limits }: TreeOptions = {}): Promise<Tree> {
     const read = async () =>
@@ -270,7 +203,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     // no app window at all: a dark or locked screen; once awake, read again
     if (t && !t.dark && t.windows.some((w) => w.type === 1)) return t;
     const s = await this.ensureAwake();
-    if (s.locked) throw this.lockedError();
+    if (s.locked) throw lockedError(this.serial);
     if (!s.woke && !s.unlocked) {
       if (t) return t;
       throw refusal;
@@ -283,7 +216,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     return once().catch(async (e: unknown) => {
       // the agent refuses a touch on a dark screen before it is made: it would reach nothing
       if (!(e instanceof DeviceError && e.code === 'SCREEN_OFF')) throw e;
-      if ((await this.ensureAwake()).locked) throw this.lockedError();
+      if ((await this.ensureAwake()).locked) throw lockedError(this.serial);
       return once();
     });
   }
