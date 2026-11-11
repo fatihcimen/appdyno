@@ -77,6 +77,25 @@ describe('act and read', () => {
     });
   });
 
+  it('says text the field read back wrong was not submitted, where the device pressed no Enter', async () => {
+    const home = (await t.textOf('screen')).text;
+    const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;
+    const typed = t.device.typeText.bind(t.device);
+    t.device.typeText = async (text, o) => ({
+      ...(await typed(text, o)),
+      verified: false,
+      submitted: false,
+    });
+    const r = await t.textOf('type_text', {
+      ref: refOf(form, 'Adınız'),
+      text: 'quick',
+      submit: true,
+    });
+    expect(r.text).toMatch(
+      /^typed \(5 characters, the field read back holds other text, so it was not submitted\)/,
+    );
+  });
+
   it(
     'runs steps with one read at the end, and stops at a stale ref before doing anything',
     fakeTimed(async () => {

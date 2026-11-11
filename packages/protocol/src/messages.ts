@@ -99,6 +99,8 @@ export const TextResult = ActResult.extend({
   /** The field read back: true when it holds the text, false when it does not; absent when it cannot be
    * read back (a password, a code entry no element of which has the focus, a field gone after it submitted). */
   verified: z.boolean().optional(),
+  /** False where `submit` was asked and Enter was not pressed, as the field read back holds other text. */
+  submitted: z.boolean().optional(),
   focusMs: z.number(),
 });
 export type TextResult = z.infer<typeof TextResult>;

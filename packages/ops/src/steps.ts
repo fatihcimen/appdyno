@@ -199,7 +199,7 @@ async function typeText(
   // never the text itself (it may be a phone number or a code)
   return {
     r,
-    done: `typed (${Array.from(st.text).length} characters${st.submit ? ', submitted' : ''}${r.verified === false ? ', the field read back holds other text' : r.verified === undefined ? ', not read back' : ''}${started})`,
+    done: `typed (${Array.from(st.text).length} characters${st.submit && r.submitted !== false ? ', submitted' : ''}${r.verified === false ? ', the field read back holds other text' : r.verified === undefined ? ', not read back' : ''}${r.submitted === false ? ', so it was not submitted' : ''}${started})`,
   };
 }
 

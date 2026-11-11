@@ -44,6 +44,8 @@ const SLOW_KEY_GAP_MS = 70;
 const FOCUS_MS = 5_000;
 const ECHO_MS = 1_500;
 const STILL_MS = 500;
+/** What is taken back key by key, a read and up to the echo wait each: more is left `verified: false`, as it is cheap. */
+const TAKE_BACK_MAX = 40;
 
 async function press(k: Keyboard, text: string, gapMs: number) {
   for (const c of text) {
@@ -58,6 +60,7 @@ async function press(k: Keyboard, text: string, gapMs: number) {
 
 /** All of the field's text selected and deleted at once, as one by one would move a formatting field's cursor. */
 async function clear(k: Keyboard) {
+  throwIfCancelled('the text');
   await k.send({ kind: 'key', key: 'a', modifiers: ['command'] });
   await k.send({ kind: 'key', key: 'delete' });
 }
@@ -133,15 +136,25 @@ export async function typeByKeys(
     }
   }
   if (verified === false && !known && (await takeBack(k, at, before))) return 'append' as const;
-  if (opts.submit) await k.send({ kind: 'key', key: 'enter' });
-  return { mode: 'keys' as const, focusMs, ...(verified !== undefined && { verified }) };
+  // other text than asked for is not submitted, which a search or a form would act on
+  const submitted = opts.submit && verified !== false;
+  throwIfCancelled('the text');
+  if (submitted) await k.send({ kind: 'key', key: 'enter' });
+  return {
+    mode: 'keys' as const,
+    focusMs,
+    ...(verified !== undefined && { verified }),
+    ...(opts.submit && !submitted && { submitted: false }),
+  };
 }
 
 /** What keys added after the text a field held, deleted: true once it holds that text alone again. */
 async function takeBack(k: Keyboard, at: Point | undefined, before: string) {
   let now = fieldOf(await k.read(), at)?.t ?? '';
+  if (now.length - before.length > TAKE_BACK_MAX) return false;
   // one at a time, each seen gone: a field that formats may take a separator along with a character
   for (let left = now.length - before.length; left > 0 && now.startsWith(before); left--) {
+    throwIfCancelled('the text');
     const was = now;
     await k.send({ kind: 'key', key: 'delete' });
     if (!(await echoed(k, at, (s) => ((now = s), s !== was), false))) return false;

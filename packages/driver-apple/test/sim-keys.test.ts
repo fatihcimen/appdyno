@@ -163,6 +163,58 @@ describe("typing by a simulator's keys", () => {
     expect(f.text()).toBe('abc');
   });
 
+  it(
+    'takes back no long text, and presses no Enter after a read-back that says the text is wrong, saying so',
+    fakeTimed(async () => {
+      // as a Turkish Q layout types a sentence after what the field held: 300 deletes would hold the device for 30 s
+      const f = field({ focused: true, text: 'Done. ', layout: { i: 'ı' } });
+      const sentence = 'this is a sentence of more than forty letters';
+      const r = await typeByKeys(sentence, { at: AT, submit: true }, f.keyboard);
+      expect(r).toMatchObject({ mode: 'keys', verified: false, submitted: false });
+      const keys = (key: string) => f.sent.filter((a) => a.kind === 'key' && a.key === key);
+      expect([keys('delete'), keys('enter')]).toEqual([[], []]);
+    }),
+  );
+
+  it(
+    'stops taking back once its call is stopped',
+    fakeTimed(async () => {
+      const stop = new AbortController();
+      const f = field({ focused: true, text: 'x', layout: { a: 'q' } });
+      const send = f.keyboard.send;
+      f.keyboard.send = (a) => {
+        if (a.kind === 'key' && a.key === 'delete') stop.abort();
+        return send(a);
+      };
+      const typing = () => typeByKeys('aaaa', { at: AT }, f.keyboard);
+      await expect(inCall({ signal: stop.signal }, typing)).rejects.toMatchObject({
+        code: 'CANCELLED',
+      });
+      expect(f.sent.filter((a) => a.kind === 'key' && a.key === 'delete')).toHaveLength(1);
+    }),
+  );
+
+  it('presses no Enter, and clears nothing, for a call stopped meanwhile', async () => {
+    const stop = new AbortController();
+    const f = field({ focused: true });
+    const read = f.keyboard.read;
+    // the app dies once the last key is typed, while the field is read back
+    f.keyboard.read = () => (f.text() === 'abc' && stop.abort(), read());
+    const typing = () => typeByKeys('abc', { at: AT, submit: true }, f.keyboard);
+    await expect(inCall({ signal: stop.signal }, typing)).rejects.toMatchObject({
+      code: 'CANCELLED',
+    });
+    expect(f.sent.filter((a) => a.kind === 'key' && a.key === 'enter')).toEqual([]);
+    const old = field({ focused: true, text: 'old' });
+    const replacing = () => typeByKeys('new', { at: AT, replace: true }, old.keyboard);
+    const stopped = new AbortController();
+    stopped.abort();
+    await expect(inCall({ signal: stopped.signal }, replacing)).rejects.toMatchObject({
+      code: 'CANCELLED',
+    });
+    expect(old.sent).toEqual([]);
+  });
+
   it('leaves to the runner a point with no field, or no field with the focus', async () => {
     expect(await typeByKeys('a', { at: { x: 300, y: 600 } }, field().keyboard)).toBeUndefined();
     expect(await typeByKeys('a', {}, field().keyboard)).toBeUndefined();

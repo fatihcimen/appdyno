@@ -338,4 +338,22 @@ describe('a touch the input helper gave no answer for on a simulator', () => {
     expect(send).not.toHaveBeenCalled();
     expect(stopped).toMatchObject({ code: 'CANCELLED' });
   });
+
+  it('sends no stroke whose call was stopped while it waited for the app to stop moving', async () => {
+    const send = vi.fn(() => Promise.resolve(true));
+    const stop = new AbortController();
+    const direct = {
+      reads: true,
+      screenKnown: true,
+      status: () => ({ input: 'ok' }),
+      arm: () => Promise.resolve(false),
+      animationsOver: () => (stop.abort(), Promise.resolve(0)),
+      send,
+    };
+    const d = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    const tap = () => d.act({ kind: 'tap', x: 10, y: 500 });
+    const stopped: unknown = await inCall({ signal: stop.signal }, tap).catch((e: unknown) => e);
+    expect(send).not.toHaveBeenCalled();
+    expect(stopped).toMatchObject({ code: 'CANCELLED' });
+  });
 });

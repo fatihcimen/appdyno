@@ -227,6 +227,8 @@ export class IosSimulatorDevice extends IosDevice {
       if (at) await sleep(Math.max(0, this.transitionEnds - Date.now()));
       const touchesBefore = this.direct.touchesEnded;
       const touchedAt = Date.now();
+      // a stop that came in the waits above holds the stroke too
+      throwIfCancelled('the action');
       if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
       const settled = () => settleAfter(this.settleOn(), action, opts).catch(failedAfterSending);
       let out = await settled();
