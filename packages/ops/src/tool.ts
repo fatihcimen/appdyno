@@ -93,6 +93,8 @@ export type Tool = {
   input: z.ZodObject;
   output: z.ZodObject;
   annotations: ToolAnnotations;
+  /** Whether a call of an op that may act only reads, by its arguments: it runs beside the client's actions, as a read. */
+  readsOnly?: (args: Record<string, unknown>) => boolean;
   handler: (args: Record<string, unknown>) => Promise<ToolResult>;
 };
 
@@ -114,11 +116,13 @@ export function defineOp<
   input: S;
   output: O;
   annotations: ToolAnnotations;
+  readsOnly?: (args: z.infer<S>) => boolean;
   run: (args: z.infer<S>) => Promise<ToolResult<z.infer<O>>>;
 }): Omit<Op, 'name' | 'output'> & { name: N; output: O } {
-  const { run, ...rest } = def;
+  const { run, readsOnly, ...rest } = def;
   return {
     ...rest,
+    ...(readsOnly && { readsOnly: (args) => readsOnly(args as z.infer<S>) }),
     handler: async (args) => {
       try {
         const { value, notes } = await noting(() => inOp(() => run(args as z.infer<S>)));

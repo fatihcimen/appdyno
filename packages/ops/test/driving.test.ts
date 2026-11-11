@@ -802,6 +802,29 @@ describe('a ref on a screen an app moved by itself', () => {
     expect(r.text).not.toContain('no change seen');
   });
 
+  it('runs a profile beside an action, and one that scrolls meanwhile in its turn', async () => {
+    for (const [scroll, order] of [
+      [undefined, ['perf_profile', 'tap']],
+      ['down', ['tap', 'perf_profile']],
+    ] as const) {
+      const d = new FakeDevice();
+      const own = d.act.bind(d);
+      d.act = async (a, o) => {
+        if (a.kind === 'tap') await new Promise((r) => setTimeout(r, 300));
+        return own(a, o);
+      };
+      const { call } = await connect(d);
+      await call('screen');
+      const done: string[] = [];
+      const end = (name: string) => () => void done.push(name);
+      await Promise.all([
+        call('tap', { selector: { text: 'Form' } }).then(end('tap')),
+        call('perf_profile', { seconds: 1, ...(scroll && { scroll }) }).then(end('perf_profile')),
+      ]);
+      expect(done, scroll).toEqual(order);
+    }
+  });
+
   it('tells a call that waits its turn why, and one that need not wait nothing of it', async () => {
     const d = new FakeDevice();
     const own = d.act.bind(d);

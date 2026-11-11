@@ -32,8 +32,9 @@ export function perfProfileOp(ctx: ServerContext) {
       })
       .strict(),
     output: ProfileOut,
-    // with scroll it swipes: it waits its turn behind an action, and no client takes it for a read
+    // with scroll it swipes, which waits its turn behind an action, and no client takes it for a read
     annotations: ACT,
+    readsOnly: ({ scroll }) => !scroll,
     run: async ({ app, seconds, scroll, dsym }) => {
       const s = await ctx.session();
       const pkg = measuredApp(s, app);

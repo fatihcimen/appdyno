@@ -72,7 +72,7 @@ const inTurn = (queue: DeviceQueue, op: Op): Op =>
     : {
         ...op,
         handler: (args) => {
-          if (holding.getStore() === queue) return op.handler(args);
+          if (holding.getStore() === queue || op.readsOnly?.(args)) return op.handler(args);
           if (queue.busy)
             reportProgress('waiting its turn: an action this client sent before it still runs');
           return queue.run(() => {
