@@ -13,18 +13,107 @@ The server speaks MCP's revisions from 2024-10-07 to 2025-11-25, which open with
 opens with `server/discover`, over stdio and over `--http` alike: the client's first message says which. The tools
 and what they say of themselves are the same, byte for byte, on each.
 
-| purpose  | tools                                                                                                                      |
-| -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| devices  | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
-| window   | `mirror`, `hand_off`                                                                                                       |
-| read     | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
-| act      | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`, `inspector`                |
-| apps     | `open_link`, `launch_app`, `terminate_app`, `app`, `push`                                                                  |
-| check    | `audit` (accessibility), `logs`, `crashes`, `visual`                                                                       |
-| evidence | `record`, `report`, `network`                                                                                              |
-| inside   | `webview`, `react_native`                                                                                                  |
-| measure  | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`, `perf_compare`, `perf_query`     |
-| replay   | `flow`                                                                                                                     |
+## Every tool
+
+The inputs below are read from each tool's schema. A bold input is required. After a colon come the values an input takes, or its default, which is marked. On a tool that acts, `read` picks how much of the screen its answer holds: what changed (`diff`), all of it (`full`) or none of it (`none`). A target is a `ref`, `x` and `y`, or a `selector`, as [Targets](#targets) says.
+
+### Devices
+
+| tool              | what it does                                                                                                  | inputs                                                                                                                                                                                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `list_devices`    | Connected phones, simulators and emulators: which this server may drive, who holds each, and what blocks each | –                                                                                                                                                                                                                                                                                          |
+| `use_device`      | Selects the device to drive, and the app under test                                                           | **`device`**; `app`; `share`                                                                                                                                                                                                                                                               |
+| `device_info`     | The model, OS version, screen, agent version and the app in front                                             | –                                                                                                                                                                                                                                                                                          |
+| `set_orientation` | Turns the screen, which stays turned until it is turned back                                                  | **`orientation`**: `portrait`, `landscape_left`, `upside_down`, `landscape_right`; `read`: `diff` (default), `full`, `none`                                                                                                                                                                |
+| `set_location`    | A fake GPS location, until `clear` or the session's end                                                       | `lat`; `lon`; `clear`                                                                                                                                                                                                                                                                      |
+| `clipboard`       | Reads the clipboard, or with `text` writes it                                                                 | `text`                                                                                                                                                                                                                                                                                     |
+| `device_setting`  | Reads or sets a condition, such as dark mode, text size or a slow network; with no `value` it reads           | **`name`**: `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `fold`, `thermal`, `restore`, `biometric`, `call`, `sms`, `keychain`; `value`; `title`; `app` |
+| `simulator`       | Lists, boots, creates and shuts down simulators and emulators                                                 | **`action`**: `list`, `boot`, `create`, `shutdown`; `name`                                                                                                                                                                                                                                 |
+
+### The window
+
+| tool       | what it does                                                                             | inputs                                                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `mirror`   | A live window of the device, which a person can watch and touch                          | **`action`**: `open`, `close`, `status`, `stats`; `quality`: `auto` (default), `high`, `standard`; `wifi`: `false` (default) |
+| `hand_off` | Asks the person to do what a tool cannot, such as Face ID, and waits until they are done | **`reason`**; `timeoutS`: `300` (default)                                                                                    |
+
+### Reading
+
+| tool         | what it does                                                                 | inputs                                                                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `screen`     | The screen's elements, each with a ref                                       | –                                                                                                                                                                                               |
+| `find`       | Elements by text, id or role, with their state and bounds                    | `text`; `id`; `role`; `index`                                                                                                                                                                   |
+| `wait_for`   | Waits until an element shows, or with `gone` until it is gone                | `ref`; `text`; `id`; `role`; `index`; `gone`: `false` (default); `timeoutMs`: `5000` (default); `read`: `diff` (default), `full`, `none`                                                        |
+| `assert`     | Checks an element, pass or fail: `CHECK_FAILED` when the check does not hold | `ref`; `text`; `id`; `role`; `index`; `check`: `exists` (default), `absent`, `text`, `enabled`, `checked`, `focused`, `moves`; `equals`; `expect`: `true` (default); `timeoutMs`: `0` (default) |
+| `screenshot` | An image of the screen, or with `watchMs` what moved on it                   | `points`; `width`; `watchMs`; `strip`; `file`; `overwrite`; `inline`                                                                                                                            |
+
+### Acting
+
+| tool        | what it does                                                                 | inputs                                                                                                                                                                                    |
+| ----------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tap`       | Taps a target                                                                | `ref`; `x`; `y`; `selector`; `read`: `diff` (default), `full`, `none`                                                                                                                     |
+| `gesture`   | A double tap, a long press, a drag, a pinch, or a free `plan` of fingers     | **`kind`**: `double_tap`, `long_press`, `drag`, `pinch`, `plan`; `ref`; `x`; `y`; `selector`; `to`; `scale`; `durationMs`; `holdMs`; `pointers`; `read`: `diff` (default), `full`, `none` |
+| `swipe`     | Swipes, from a target if one is given                                        | **`direction`**: `up`, `down`, `left`, `right`; `ref`; `x`; `y`; `selector`; `distance`; `durationMs`; `exact`; `read`: `diff` (default), `full`, `none`                                  |
+| `scroll_to` | Scrolls until an element is on the screen                                    | **`selector`**; `direction`: `up` (default), `down`, `left`, `right`; `maxSwipes`: `10` (default); `x`; `y`; `read`: `diff` (default), `full`, `none`                                     |
+| `type_text` | Types up to 500 characters into the focused field, or into a target          | **`text`**; `ref`; `x`; `y`; `selector`; `replace`; `submit`; `read`: `diff` (default), `full`, `none`                                                                                    |
+| `press_key` | Presses a key or a button                                                    | **`key`**; `count`; `read`: `diff` (default), `full`, `none`                                                                                                                              |
+| `keyboard`  | The on-screen keyboard: whether it is open, closing it, or its enter key     | **`action`**: `status`, `dismiss`, `enter`; `read`: `diff` (default), `full`, `none`                                                                                                      |
+| `steps`     | Up to 30 tools in one call                                                   | **`steps`**; `read`: `diff` (default), `full`, `none`                                                                                                                                     |
+| `alert`     | Reads the open system alert, or answers it                                   | `answer`; `read`: `diff` (default), `full`, `none`                                                                                                                                        |
+| `inspector` | An iPhone's screen with no signing, by the phone's own accessibility service | **`action`**: `list`, `press`; `name`                                                                                                                                                     |
+
+### Apps
+
+| tool            | what it does                                                                   | inputs                                                                                                                                                                                                                                                                                |
+| --------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open_link`     | Opens a link or a Settings page, or lists the links an app opens               | `url`; `settings`; `links`; `read`: `diff` (default), `full`, `none`                                                                                                                                                                                                                  |
+| `launch_app`    | Launches the app, or brings it to the front                                    | `app`; `language`; `read`: `diff` (default), `full`, `none`                                                                                                                                                                                                                           |
+| `terminate_app` | Stops the app                                                                  | `app`                                                                                                                                                                                                                                                                                 |
+| `app`           | Installs, lists and manages apps, their data and their permissions             | **`action`**: `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`, `launch`, `download_data`, `replace_data`, `build_and_run`; `app`; `path`; `service`; `scheme`; `configuration`; `args`; `env`; `all`: `false` (default); `read`: `diff` (default), `full`, `none` |
+| `push`          | Sends the app a push notification; with no `type`, says what this device takes | `app`; `type`; `title`; `body`; `image`; `data`; `payload`; `read`: `diff` (default), `full`, `none`                                                                                                                                                                                  |
+
+### Checks
+
+| tool      | what it does                          | inputs                                                                                                                                                                                      |
+| --------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audit`   | Accessibility issues of the screen    | `types`: `contrast`, `elementDetection`, `hitRegion`, `sufficientElementDescription`, `dynamicType`, `textClipped`, `trait`, `imageContrast`, `duplicateLabel`; `maxIssues`: `50` (default) |
+| `logs`    | The app's log, with secrets hidden    | `app`; `since`; `level`: `verbose`, `debug`, `info` (default), `warn`, `error`; `maxLines`: `200` (default)                                                                                 |
+| `crashes` | The app's crash, ANR and exit reports | `app`; `since`; `limit`: `5` (default); `symbols`                                                                                                                                           |
+| `visual`  | The screen against a saved image      | **`action`**: `baseline`, `compare`; **`name`**; `dir`; `tolerance`: `0.1` (default); `masks`                                                                                               |
+
+### Evidence
+
+| tool      | what it does                                                                                     | inputs                                                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `record`  | A video of the screen                                                                            | **`action`**: `start`, `stop`; `file`; `maxSeconds`: `1800` (default)                                                                                   |
+| `report`  | A test report in one HTML file, a timeline, or an app's last seconds, kept on a crash or a stall | **`action`**: `start`, `timeline`, `flight`, `write`, `stop`; `dir`                                                                                     |
+| `network` | The app's HTTP traffic                                                                           | **`action`**: `paths`, `start`, `read`, `stop`; `via`: `proxy`, `probe`, `packets`, `bytes`; `proxy`; `app`; `har`; `contains`; `limit`: `50` (default) |
+
+### Inside an app
+
+| tool           | what it does                                                           | inputs                                                                                                           |
+| -------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `webview`      | Inside a debuggable app's web view: its elements, a click, a script    | **`action`**: `pages`, `elements`, `click`, `eval`; `page`; `selector`; `js`; `app`                              |
+| `react_native` | A debug React Native app through Metro: its targets, its log, a reload | **`action`**: `targets`, `logs`, `reload`; `metro`: `localhost:8081` (default); `target`; `ms`: `3000` (default) |
+
+### Measuring
+
+| tool            | what it does                                                     | inputs                                                                                                                                                                                                                                                                                       |
+| --------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `perf_snapshot` | CPU, memory and frames now, and the device's load and heat       | `app`; `cpuWindowMs`: `2000` (default); `also`: `threads`, `network`, `energy`, `anonMemory`, `startInfo`, `surface`, `battery`, `exits`, `size`; `batteryWindowMs`: `30000` (default); `scenario`                                                                                           |
+| `perf_scroll`   | Frames, frozen frames and memory as a list scrolls               | `app`; `direction`: `up` (default), `down`; `swipes`: `5` (default); `repeats`; `probe`; `scenario`                                                                                                                                                                                          |
+| `perf_launch`   | Cold, warm or hot launch time, over several launches             | `app`; `mode`: `cold` (default), `warm`, `hot`; `repeats`: `5` (default); `compile`: `speed`, `speed-profile`, `verify`; `trace`; `baselineProfile`; `probe`; `scenario`; `baseline`                                                                                                         |
+| `perf_profile`  | Where the app's CPU time goes, by function                       | `app`; `seconds`: `3` (default); `scroll`: `up`, `down`; `dsym`                                                                                                                                                                                                                              |
+| `perf_heap`     | A heap dump, and on iOS the count of leaks                       | `app`; `profile`: `java_hprof`, `heapprofd`; `seconds`: `5` (default)                                                                                                                                                                                                                        |
+| `perf_trace`    | Why frames were slow, and an iPhone's hangs                      | `app`; `seconds`: `5` (default); `scroll`: `up`, `down`; `what`: `frames` (default), `hangs`, `xct_hitches`, `xct_launch`; `dsym`; `probe`; `scenario`                                                                                                                                       |
+| `perf_compare`  | The performance gate: kept runs against the baseline and budgets | `action`: `compare` (default), `why`, `reference`, `budget`, `baseline`, `dashboard`, `functions`, `prune`; `limitGb`; `dryRun`; `from`; `to`; `app`; `scenario`; `deviceClass`; `last`: `1` (default); `replace`; `kind`; `max`; `min`; `format`: `text` (default), `json`, `junit`; `dsym` |
+| `perf_query`    | A table from a kept trace, by SQL or by its name                 | **`trace`**; `sql`; `table`; `limit`: `50` (default)                                                                                                                                                                                                                                         |
+
+### Replaying
+
+| tool   | what it does                                                                                   | inputs                                                                                                                                   |
+| ------ | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `flow` | Records actions as a repeatable test, replays it with no model, and exports it as Maestro YAML | **`action`**: `start`, `stop`, `save`, `run`, `export`; `file`; `to`; `from`; `params`; `envFile`; `overwrite`; `iterations`; `scenario` |
 
 ## Reading the screen
 

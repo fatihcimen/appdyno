@@ -58,9 +58,9 @@ it('says what it is for first, within what a client keeps of its instructions', 
 it('has every tool in the table of the docs, and what they say of steps as the tool says it', () => {
   const doc = readFileSync(new URL('../../../docs/reference/tools.md', import.meta.url), 'utf8');
   const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
-  const start = doc.indexOf('| purpose');
-  const table = doc.slice(start, doc.indexOf('\n\n', start));
-  expect(Object.keys(ops).filter((name) => !table.includes(`\`${name}\``))).toEqual([]);
+  const start = doc.indexOf('\n## Every tool\n');
+  const tables = doc.slice(start, doc.indexOf('\n## ', start + 1));
+  expect(Object.keys(ops).filter((name) => !tables.includes(`\n| \`${name}\` `))).toEqual([]);
   const limit = /at most (\d+),/.exec(ops.steps?.description ?? '')?.[1];
   assert(limit, 'steps says its limit');
   expect(doc).toContain(`\`steps\` runs up to ${limit} steps`);
