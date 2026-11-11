@@ -57,6 +57,42 @@ describe('stable refs', () => {
     expect(twins[1]).toBe(`${String(twins[0])}-2`);
   });
 
+  it('keep a field with no id while its placeholder comes and its text is typed, by what is around it', () => {
+    const bar: UiElement = {
+      ...root,
+      type: 'Other',
+      ref: '@e2',
+      parent: 0,
+      rect: { x: 0, y: 100, width: 402, height: 50 },
+    };
+    const field = (words: Partial<UiElement>): UiElement[] => [
+      root,
+      bar,
+      {
+        type: 'Button',
+        label: 'search purple',
+        ref: '@e3',
+        parent: 1,
+        rect: { x: 0, y: 100, width: 50, height: 50 },
+      },
+      {
+        type: 'TextField',
+        ref: '@e4',
+        parent: 1,
+        editable: true,
+        rect: { x: 60, y: 100, width: 300, height: 50 },
+        ...words,
+      },
+    ];
+    const refOf = (words: Partial<UiElement>) =>
+      screenElements(withStableRefs(field(words), ios), ios).find((e) => e.role === 'textField')
+        ?.ref;
+    const empty = refOf({});
+    expect(empty).toMatch(/^@[a-z0-9]{4}$/);
+    expect(refOf({ placeholder: 'Search in locals' })).toBe(empty);
+    expect(refOf({ label: 'kahve', placeholder: 'Search in locals' })).toBe(empty);
+  });
+
   it('two identities with the same short form both take the long form, whatever their order', () => {
     const short = new Map<string, string>();
     let pair: [string, string] | undefined;

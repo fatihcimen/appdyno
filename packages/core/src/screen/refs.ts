@@ -1,6 +1,6 @@
 import type { UiElement } from './elements.js';
 import { must } from '../must.js';
-import { screenElements } from './model.js';
+import { screenElements, type ScreenElement } from './model.js';
 import type { ScreenOptions } from './port.js';
 
 /** FNV-1a of `text` in base36, always 7 characters (the 32-bit range): the long form of a ref. */
@@ -34,7 +34,9 @@ function contextOf(
   for (let p = at(i).parent; p !== undefined; p = at(p).parent) {
     // the screen's root holds every text: no context of a card
     if (at(p).parent === undefined) break;
+    // what a field holds is typed, and a field's ref must not change with another's
     const texts = below(p)
+      .filter((n) => !at(n).editable)
       .map((n) => ownText(at(n)))
       .filter((t) => t && t !== self && unique.has(t));
     // a name rather than a price or a count: those change on the same card
@@ -84,6 +86,8 @@ export function withStableRefs(elements: UiElement[], opts: ScreenOptions): UiEl
   );
   const unique = new Set([...texts].filter(([, n]) => n === 1).map(([t]) => t));
   const idCount = count(list.flatMap((e) => (e.id ? [e.id] : [])));
+  // a field's words are what is typed in it, or a placeholder that may come later: it is named by what is around it
+  const field = (e: ScreenElement) => e.role === 'textField';
   const based = list.map((e) => ({
     e,
     base:
@@ -91,7 +95,7 @@ export function withStableRefs(elements: UiElement[], opts: ScreenOptions): UiEl
         ? `${e.role}#${e.id}`
         : e.id
           ? `${e.role}#${e.id}"${e.label}"`
-          : e.label
+          : e.label && !field(e)
             ? `${e.role}"${e.label}"`
             : `${e.role}@`,
   }));
