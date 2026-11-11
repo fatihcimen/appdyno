@@ -1657,6 +1657,39 @@ describe('a turn of the screen', () => {
     expect(r.text).toBe('orientation: upside_down');
   });
 
+  it('waits for the turn of a tablet wide as it stands, and blames no app for the shape it stands in', async () => {
+    /** A Pixel Tablet: Android counts its rotations from its own wide shape, so a quarter turn stands it up. */
+    class Tablet extends FakeDevice {
+      turnedAt = 0;
+      rotation = 0;
+      was = 0;
+      constructor() {
+        super();
+        this.hello = { ...this.hello, screen: { w: 2560, h: 1600, density: 320, rotation: 0 } };
+      }
+      override setOrientation(r: 0 | 1 | 2 | 3) {
+        [this.was, this.rotation, this.turnedAt] = [this.rotation, r, Date.now()];
+        return super.setOrientation(r);
+      }
+      override current(): Tree {
+        const t = super.current();
+        const wide = (Date.now() - this.turnedAt < 500 ? this.was : this.rotation) % 2 === 0;
+        if (wide)
+          for (const n of [...t.windows, ...t.nodes])
+            n.b = [n.b[0], n.b[1], n.b[2] + 1320, Math.min(n.b[3], 1080)];
+        t.hash = `${t.hash}+${String(wide)}`;
+        return t;
+      }
+    }
+    const { call } = await connect(new Tablet());
+    await call('screen');
+    const up = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
+    expect(up.text).toMatch(/"Ana sayfa" 540,150/);
+    const back = await call('set_orientation', { orientation: 'portrait', read: 'full' });
+    expect(back.text).toMatch(/"Ana sayfa" 1200,150/);
+    for (const r of [up, back]) expect(r.text).not.toContain('stayed');
+  });
+
   it('is turned for the next read where its own answer reads nothing', async () => {
     const d = new Turning();
     const { call } = await connect(d);

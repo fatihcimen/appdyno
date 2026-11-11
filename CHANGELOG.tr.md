@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Kendi duruşunda geniş bir Android tabletinde, örneğin bir Pixel Tablet'te, `set_orientation` bir dönüşün verdiği biçimi cihazın kendi biçiminden alır: Android dönüşleri ondan sayar; bu yüzden `landscape_left` böyle bir tableti dikleştirir ve dönüş, pencerenin zaten sahip olduğu bir dönüş sanılıp gelmeden okunuyordu; onu geniş bırakan `portrait` ise dönmüş bir uygulama için "the window stayed wide: the app may keep to one orientation" diyordu.
 - Bir çağrı zaman aşımına uğradıktan sonra takılı diye yeniden başlatılan bir ajan, o çağrının ipucunu "has been restarted" sonrasında korur: XCTest'in sentezleyicisinin yanıt vermediği bir dokunuş metninde önce ekranı okumayı, ipucunda ise yalnızca "try again" diyordu; bu da onu iki kez yaptırıyordu.
 - İstemcisinin ondan önce gönderdiği bir eylemi bekleyen bir eylem bunu ilerlemesinde, "waiting its turn" diye söyler; önceden çalışana kadar hiçbir şey söylemiyordu.
 - Bir eylem neyi değiştirdiğini, nişan aldığı okumaya göre söyler: aynı istemcinin yanında çalışan bir `screen`, `find` ya da `wait_for` o okumayı dokunuştan sonra değiştirebiliyordu; yanında okunan bir ekranı açan bir dokunuş, öncesi açtığı ekran olduğu için `changed: false` ve "no change seen" ile yanıtlanıyordu.

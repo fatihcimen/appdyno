@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `set_orientation` on an Android tablet wide as it stands, as a Pixel Tablet, takes the shape a rotation gives from the device's own: Android counts rotations from it, so `landscape_left` stands such a tablet up, and the turn was taken for one the window already had and read before it came, while `portrait`, which leaves it wide, said "the window stayed wide: the app may keep to one orientation" of an app that had turned.
 - An agent restarted as stuck after a call timed out keeps that call's hint after "has been restarted": a touch XCTest's synthesizer gave no answer for said in its text to read the screen first, and in its hint only "try again", which made it twice.
 - An action that waits for one its client sent before it says so in its progress, "waiting its turn", where it said nothing until it ran.
 - An action says what it changed against the read it aimed by, where a `screen`, `find` or `wait_for` of the same client, which runs beside it, could replace that read after the touch: a tap that opened a screen read beside it was answered `changed: false` with "no change seen", as its before was the screen it opened.

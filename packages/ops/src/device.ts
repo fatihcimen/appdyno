@@ -1,4 +1,11 @@
-import { kindOf, must, osName, type ListedDevice, type Screen } from '@appdyno/core';
+import {
+  kindOf,
+  must,
+  osName,
+  TURNS_FROM_OWN_SHAPE,
+  type ListedDevice,
+  type Screen,
+} from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -127,8 +134,13 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
         const rotation = ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3;
-        const wide = rotation % 2 === 1;
-        // a window of that shape already, upside down or a tablet wide as it stands, has no turn to wait for
+        const own = s.device.hello?.screen;
+        const wideAsItStands =
+          TURNS_FROM_OWN_SHAPE[s.device.platform] &&
+          !!own &&
+          own.w > own.h !== (own.rotation % 2 === 1);
+        const wide = (rotation % 2 === 1) !== wideAsItStands;
+        // a window of that shape already, as upside down, has no turn to wait for
         const was = (
           s.fresh ??
           (await s.device.tree().then(

@@ -37,6 +37,12 @@ export const TRANSITION_MS = 650;
 /** Whether a touch during a slide is lost, as UIKit drops it: Android's agent waits for rest before each action. */
 export const SLIDE_DROPS_TOUCH: Record<Platform, boolean> = { android: false, ios: true };
 
+/**
+ * Whether a rotation counts from the device's own shape, as Android's does, so that a tablet wide as it stands is tall at
+ * a quarter turn: iOS names its orientations as they are, and a phone lying flat says it stands at 0, whatever its frame.
+ */
+export const TURNS_FROM_OWN_SHAPE: Record<Platform, boolean> = { android: true, ios: false };
+
 /** The system's Settings, an app of its own, at whatever page it opens. */
 export const SETTINGS_APP: Record<Platform, string> = {
   android: 'com.android.settings',
