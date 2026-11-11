@@ -56,7 +56,7 @@ Karar veremeyen bir kapı geçit vermez. `few-samples`, `noisy` ve `refused`, ü
 
 ## Bir yolculuk
 
-Uygulamanızın içinden geçen bütün bir yolu ölçmek için bir [akış](flows.tr.md) kaydedin ve [onu `--measure` ile çalıştırın](flows.tr.md#ölçülen-ve-kapıdan-geçen-bir-yolculuk). Her adım kendi süresini alır, böylece kapı yavaşlayan adımı adıyla söyleyebilir.
+Uygulamanızın içinden geçen bütün bir yolu ölçmek için bir [akış](flows.tr.md) kaydedin ve [onu `--measure` ile çalıştırın](flows.tr.md#ölçülen-ve-kapıyla-denetlenen-bir-yolculuk). Her adım kendi süresini alır, böylece kapı yavaşlayan adımı adıyla söyleyebilir.
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # üç kez, sonra:
