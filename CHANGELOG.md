@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The tools reference's push section is in shorter paragraphs: what a push with no type answers, and how a token is read on an iPhone and what it looks like, each start one of their own.
 - The tools reference says what a failed action answers of its touch, that a touch reads the screen first, and how a locked phone is refused, where the performance reference said it under a heading of its own; what was run on a locked phone is on the page of tests.
 - The protocol reference lists every method the wire has, `permission.reset`, `animations.wait` and `locales` among them, `tree.get`'s `pkg`, `act`'s `animationWaitMs`, the keys `mute` and `siri`, and a tree's `dark` and `moving`; each stream method has a row of its own, and its code blocks say their language.
 - The repository's social card carries the README's line, that an AI agent drives, tests and measures an iOS or Android app, where it said only "Real numbers from a real device."
