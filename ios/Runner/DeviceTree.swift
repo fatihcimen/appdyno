@@ -15,6 +15,25 @@ extension Device {
         var hash: String { layoutHash(nodes) }
     }
 
+    /// How long a read waits for XCTest to take an app iOS has in front for running.
+    static let startingWaitS = 1.0
+
+    /// The snapshot of `app`, whose id is `id`. A process just started is in iOS's list of apps in front some 300 ms
+    /// before XCTest takes it for running, and the list's object of it stays not running: XCTest's own object for the
+    /// id is waited for then, up to `startingWaitS` and no longer than the job.
+    private func snapshot(of app: XCUIApplication, id: String, job: Job?) throws -> XCUIElementSnapshot {
+        do { return try KeyedSnapshot.of(app) ?? app.snapshot() } catch {
+            let own = application(id)
+            let end = Date().addingTimeInterval(Device.startingWaitS)
+            // XCTest's wait runs the main run loop, where the news of the process comes; a sleep would hold it out
+            while job?.over != true, Date() < end, !own.wait(for: .runningForeground, timeout: 0.1) {}
+            guard own.state != .notRunning, let again = try? KeyedSnapshot.of(own) ?? own.snapshot() else {
+                throw AgentError("APP_NOT_RUNNING", "the screen could not be read: \(error.localizedDescription)")
+            }
+            return again
+        }
+    }
+
     private func application(_ id: String) -> XCUIApplication {
         id == Device.springboardId ? springboard : XCUIApplication(bundleIdentifier: id)
     }
@@ -47,10 +66,7 @@ extension Device {
                 for c in snap.children { queue.append(Pending(snap: c, parent: index, depth: pending.depth + 1)) }
             }
         }
-        let snap: XCUIElementSnapshot
-        do { snap = try KeyedSnapshot.of(app) ?? app.snapshot() } catch {
-            throw AgentError("APP_NOT_RUNNING", "the screen could not be read: \(error.localizedDescription)")
-        }
+        let snap = try snapshot(of: app, id: id, job: job)
         // the app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480 on a bigger one
         screen = snap.frame
         windows.append(["type": 1, "pkg": id, "layer": 0, "b": box(snap.frame), "active": true, "focused": true])

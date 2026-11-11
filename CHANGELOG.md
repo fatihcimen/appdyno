@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- On an iPhone a read just after the app started, by `launch_app`, `open_link` to a stopped app, `app launch` with arguments or a language, or from outside, waits up to 1 s for XCTest to take the new process for running, where it answered `APP_NOT_RUNNING`, "Application … is not running", for the app in front: iOS lists a process in front some 300 ms before XCTest's own object of it runs.
 - The device suites hold a screenshot saved to a file to the file's own size, on Android, a simulator and an iPhone, where they read the answer's `width`, which is the image shown beside the file since `screenshot` with `file` shows one, and failed on each.
 - `scripts/ci.sh --all-on` on an iPhone runs the 10 suites that gate on the iPhone through `device-tests/helpers.ts`, as `keys`, `scroll` and `small-tools`, where it ran 19 of 29 and the rest went untried.
 - The social card shows the hub at work beside the mark, the name and the README's first line, drawn by `scripts/build-icons.mjs` from `docs/images/hub.webp`.
