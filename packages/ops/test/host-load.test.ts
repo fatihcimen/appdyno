@@ -63,7 +63,7 @@ describe('a loaded Mac', () => {
     const { call, measurements } = phone('the first screen is read');
     const { text, data } = await call('perf_launch');
     expect(data.noise).toEqual(['high-host-load']);
-    expect(text).toContain('noise: high-host-load');
+    expect(text).toContain('noise: this Mac was loaded');
     expect(data.medianMs).toBe(3_000);
     const [key] = await runKeys(measurements, { app: 'dev.app' });
     assert(key);

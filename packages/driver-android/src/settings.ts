@@ -307,7 +307,9 @@ export class AndroidSettings implements DeviceSettings {
         // `default (now off)`: the device's own, put back by deleting what the command writes
         const unset = /^default \(now (\w+)\)$/.exec(value)?.[1];
         const word = unset ?? value;
-        const mode = { on: 'yes', off: 'no' }[word] ?? word;
+        const mode =
+          ({ on: 'yes', true: 'yes', off: 'no', false: 'no' } as Record<string, string>)[word] ??
+          word;
         if (!['yes', 'no', 'auto'].includes(mode))
           throw new DeviceError('INVALID_ARGUMENT', `dark_mode: on or off, not ${value}`);
         await this.sh(`cmd uimode night ${mode}`);

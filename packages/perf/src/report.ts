@@ -93,7 +93,8 @@ export const comparisonLine = (c: Comparison) => {
     c.shift === undefined
       ? ''
       : ` ${c.shift >= 0 ? '+' : ''}${shown(c.shift)} ${c.unit}${c.percent !== undefined ? ` (${c.percent}%)` : ''}, floor ${shown(c.floor)}${c.p !== undefined ? `, p ${c.p}` : ''}`;
-  return `${c.kind}: ${shown(c.current)} ${c.unit} against ${shown(c.baseline)}${change} [n ${c.n.current}/${c.n.baseline}]${marksOf(c)}${c.note ? `: ${c.note}` : ''}`;
+  const against = c.baseline === undefined ? ', no baseline' : ` against ${shown(c.baseline)}`;
+  return `${c.kind}: ${shown(c.current)} ${c.unit}${against}${change} [n ${c.n.current}/${c.n.baseline}]${marksOf(c)}${c.note ? `: ${c.note}` : ''}`;
 };
 
 const line = (c: Comparison) => `${c.verdict.padEnd(11)} ${comparisonLine(c)}`;

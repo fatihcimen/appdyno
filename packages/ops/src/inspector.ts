@@ -24,7 +24,8 @@ export function inspectorOps(ctx: ServerContext) {
       run: async ({ action, name }) => {
         const s = await ctx.session();
         const inspector = s.device.inspector;
-        if (!inspector) throw new ToolError('only an iPhone has this', 'UNSUPPORTED');
+        if (!inspector)
+          throw new ToolError('only an iPhone has this: screen reads this device', 'UNSUPPORTED');
         if (action === 'list') {
           const elements = await inspector.elements();
           const lines = elements.map(

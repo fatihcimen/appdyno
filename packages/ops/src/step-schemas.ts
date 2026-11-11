@@ -52,10 +52,21 @@ const WIRE_KEY: Record<string, Key | undefined> = Object.fromEntries(
 
 export const viewNamed = (words: string) => SYSTEM_VIEWS.find((v): v is SystemView => v === words);
 
-/** `command+a` as the wire has it: what is held, then the key by its name, or a letter or digit. */
+/** What a key is also called. */
+const KEY_WORDS: Record<string, string | undefined> = {
+  return: 'enter',
+  esc: 'escape',
+  backspace: 'delete',
+};
+
+/** `command+a` as the wire has it: what is held, then the key by its name whatever its case, or a letter or digit. */
 export function keyPress(words: string): { key: string; modifiers: Modifier[] } | undefined {
-  const parts = words.split('+');
-  const last = must(parts.pop(), 'a key');
+  const parts = words.split('+').map((p) => p.toLowerCase());
+  // a capital letter alone would be a shift as well: a name is read whatever its case
+  const given = must(words.split('+').pop(), 'a key');
+  const named = given.length > 1 ? given.toLowerCase() : given;
+  parts.pop();
+  const last = KEY_WORDS[named] ?? named;
   const key = WIRE_KEY[last] ?? (/^[a-z0-9]$/.test(last) ? last : undefined);
   const modifiers = parts.filter((m): m is Modifier => MODIFIERS.includes(m as Modifier));
   if (!key || modifiers.length !== parts.length || (parts.length > 0 && BUTTONS.has(key)))
@@ -68,7 +79,7 @@ const KeyWords = z
   .string()
   .refine(
     (k) => !!keyPress(k) || !!viewNamed(k),
-    `a key as press_key lists it, or a letter or digit: command+a`,
+    `a key: ${Object.keys(WIRE_KEY).join(', ')}, or a letter or digit, held keys first: command+a`,
   );
 
 export const WAIT_MS = 5_000;

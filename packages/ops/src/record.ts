@@ -63,7 +63,7 @@ export function recordOps(ctx: ServerContext) {
     defineOp({
       name: 'record',
       title: 'Screen video',
-      description: `Record a screen video, one per device. stop checks that it plays or says why not; a session's end stops it too.`,
+      description: `Screen video, one per device (to record actions for replay: flow). stop checks that it plays or says why not; a session's end stops it too.`,
       input: z
         .object({
           action: z.enum(['start', 'stop']),

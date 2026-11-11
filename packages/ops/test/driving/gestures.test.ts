@@ -61,6 +61,10 @@ describe('gestures, keys, clipboard', () => {
       modifiers: ['control', 'shift'],
     });
     expect(keyPress('7')).toEqual({ key: '7', modifiers: [] });
+    // a name whatever its case, and what else a key is called
+    for (const enter of ['Enter', 'return', 'RETURN'])
+      expect(keyPress(enter)).toEqual({ key: 'enter', modifiers: [] });
+    expect(keyPress('Command+A')).toBeUndefined();
     for (const bad of ['command+home', 'alt+a', 'command+', 'A', 'warp'])
       expect(keyPress(bad)).toBeUndefined();
 
@@ -191,6 +195,16 @@ describe('gestures, keys, clipboard', () => {
     const allowed = await connect(d, { policy: { apps: ['dev.app', 'com.android.settings'] } });
     expect((await allowed.call('open_link', { url: 'package:dev.app', read: 'none' })).text).toBe(
       'opened package:dev.app',
+    );
+  });
+
+  it('says of a link the allowed app declares none like that it may open in another, and how to list its links', async () => {
+    const d = new FakeDevice();
+    // a simulator's: an app opens what it declares, and of anything else nothing is known
+    d.apps = { opener: () => Promise.resolve(undefined) } as unknown as AppManager;
+    const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
+    expect((await call('open_link', { url: 'other://x', read: 'none' })).text).toMatch(
+      /^POLICY_DENIED: dev\.app declares no link like this \(open_link links: lists its links\), so it may open in another app\n/,
     );
   });
 

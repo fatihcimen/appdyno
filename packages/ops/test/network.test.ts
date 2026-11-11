@@ -91,5 +91,11 @@ describe('a proxy export', () => {
     expect(text).toContain('https://a.test/9?token=•••');
     expect(text).not.toContain('https://a.test/6');
     expect(text).toMatch(/bodies: 0 of 3 in the export/);
+    // a start with no way names the ways this device has, and points to what each sees
+    await expect(op.handler(op.input.parse({ action: 'start' }))).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+      message: expect.stringMatching(/^start needs via: this device has proxy/) as unknown,
+      hint: 'network paths says what each sees, and what it costs',
+    });
   });
 });

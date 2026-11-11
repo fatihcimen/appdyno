@@ -45,7 +45,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
     name: 'app',
     title: 'App management',
     description:
-      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (permission: service), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant; args, env as launch_app takes them).',
+      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (service: location, photos, microphone…; a wrong word lists them), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant; args, env as launch_app takes them).',
     input: z
       .object({
         action: z.enum([
@@ -101,14 +101,18 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
         case 'install': {
           if (!path) throw new ToolError('install needs path', 'INVALID_ARGUMENT');
           reportProgress(`installing ${path}`);
-          // the allowlist names apps: the driver reads the file's own before it installs anything
-          const said = await apps.install(
-            path,
-            policy.apps.length > 0 ? (id) => void checkApp(policy, id) : undefined,
-          );
+          // the driver reads the file's own id before it installs anything: the allowlist names apps, and a launch takes it
+          let installed: string | undefined;
+          const said = await apps.install(path, (id) => {
+            installed = id;
+            if (policy.apps.length > 0) checkApp(policy, id);
+          });
           if (said.length > 0) s.acted();
           // what it answered on the device is part of what happened: no read mode shortens this
-          return done([`installed ${path}`, ...said].join('\n'));
+          return done(
+            [`installed ${installed ? `${installed} from ` : ''}${path}`, ...said].join('\n'),
+            { ...(installed && { app: installed }) },
+          );
         }
         case 'build_and_run': {
           if (!path) throw new ToolError('build_and_run needs path', 'INVALID_ARGUMENT');

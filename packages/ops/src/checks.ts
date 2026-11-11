@@ -101,7 +101,7 @@ export function checksFor({
       ? screen.list.find((e) => e.ref === a.ref)
       : sel && selectIn(screen.list, sel)[sel.index ?? 0];
     if ((a.ref || sel) && !element)
-      throw new ToolError('check failed: nothing to watch by those words', 'CHECK_FAILED');
+      throw new ToolError('nothing to watch by those words', 'CHECK_FAILED');
     const box = element && {
       x: element.rect.x,
       y: element.rect.y,
@@ -111,7 +111,7 @@ export function checksFor({
     const { screen: size } = must(s.device.hello, "the agent's hello");
     const moved = movedIn(m, size, box, !a.expect);
     const said = motionText(m, size);
-    if (moved !== a.expect) throw new ToolError(`check failed: ${said}`, 'CHECK_FAILED');
+    if (moved !== a.expect) throw new ToolError(said, 'CHECK_FAILED');
     return { screen, done: `check passed: ${said}` };
   };
 
@@ -127,7 +127,7 @@ export function checksFor({
     const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
     if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
     const v = judge(screen, a);
-    if (!v.pass) throw new ToolError(`check failed: ${v.why}`, 'CHECK_FAILED');
+    if (!v.pass) throw new ToolError(v.why, 'CHECK_FAILED');
     return { screen, done: `check passed: ${v.why}` };
   };
 

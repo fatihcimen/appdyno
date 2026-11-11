@@ -95,7 +95,9 @@ export function stepsOp(
     input: z
       .object({
         steps: z
-          .array(z.object({ action: z.string() }).loose())
+          .array(
+            z.object({ action: z.string({ error: "a tool's name, as tap or type_text" }) }).loose(),
+          )
           .min(1)
           .max(MAX_STEPS),
         read: Read,

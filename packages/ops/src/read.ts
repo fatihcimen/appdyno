@@ -98,7 +98,7 @@ export function readOps(
       name: 'screen',
       title: 'Read screen',
       description:
-        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags; rows alike under one header, what a row holds left to find). A ref keeps naming its element across changes.',
+        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags). Rows alike are folded under one header line; "— words" names the row an element is in; a row\'s inner texts are left out and find reaches them. A ref names an element by what it is, so it holds across scrolls and redraws; one whose label changes gets a new ref, shown in the diff.',
       input: z.object({}).strict(),
       output: ScreenOut,
       annotations: READ,

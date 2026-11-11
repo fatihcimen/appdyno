@@ -186,7 +186,7 @@ function keyboardOp(
         throw new ToolError(
           'the keyboard stayed open: the app keeps it there',
           'UNSUPPORTED',
-          'keyboard enter closes it on a field whose return key does so, and may submit the form',
+          'keyboard enter closes it where its return key does, and may submit the form; a number pad has none: tap what the app closes it with',
         );
       // the keyboard's going is the change, whether or not the app beneath it moved
       const r = await afterChange(s, { ...was, seen: true }, 'closed the keyboard', read);
@@ -217,7 +217,7 @@ function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
     name: 'alert',
     title: 'System alert',
     description:
-      "The open system alert: with no answer its text and buttons; answer: a button's label, or allow or deny on a permission prompt in any language. Never touches the app's own dialogs.",
+      "The open system alert: with no answer its text and buttons; answer: a button's label, or on a permission prompt in any language allow (the least it offers: once, else while using) or deny. Never touches the app's own dialogs.",
     input: z.object({ answer: z.string().min(1).max(200).optional(), read: Read }).strict(),
     output: ActionOut,
     annotations: ACT,

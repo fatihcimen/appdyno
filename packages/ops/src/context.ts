@@ -60,6 +60,10 @@ const Saved = z.object({
 });
 
 /** The server's devices: the sessions opened so far and which one tools act on by default. */
+/** What makes a launch start the app itself, a running one stopped first. */
+const FRESH_STARTS = ['restart', 'args', 'env', 'language'] as const;
+type FreshStart = (typeof FRESH_STARTS)[number];
+
 export class ServerContext {
   private readonly sessions = new Map<string, Session>();
   currentSerial: string | undefined;
@@ -219,15 +223,17 @@ export class ServerContext {
 
   /**
    * The session a launch runs on; when it is the first call, the app starts alongside the agent. A launch in a
-   * `language` starts the app itself: what began alongside would be left for the next launch, which took it for its
-   * own and started nothing. An app named as a person calls it is looked up on the device first, and starts after.
+   * language, a restart or one with arguments starts the app itself: what began alongside would be left for the next
+   * launch, which took it for its own and started nothing. An app named as a person calls it is looked up on the device
+   * first, and starts after.
    */
-  async sessionToLaunch(app: string | undefined, language?: string) {
+  async sessionToLaunch(app: string | undefined, how: Partial<Record<FreshStart, unknown>> = {}) {
     if (app !== undefined && !APP_ID.test(app)) return this.session();
     const wanted = app ?? this.options.app ?? this.saved?.app;
+    const itself = FRESH_STARTS.some((k) => how[k] !== undefined && how[k] !== false);
     return this.session(
       undefined,
-      language ? undefined : wanted && checkLaunch(this.policy, checkApp(this.policy, wanted)),
+      itself ? undefined : wanted && checkLaunch(this.policy, checkApp(this.policy, wanted)),
     );
   }
 

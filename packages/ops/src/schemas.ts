@@ -290,6 +290,8 @@ export const AppOut = ActionOut.partial().extend({
     )
     .optional(),
   state: z.enum(['not_installed', 'stopped', 'running', 'foreground']).optional(),
+  /** The id an install put on the device, which a launch takes. */
+  app: z.string().optional(),
 });
 
 export const VirtualOut = z.object({

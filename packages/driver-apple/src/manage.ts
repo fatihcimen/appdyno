@@ -94,7 +94,11 @@ export async function holdAppLanguage(
 
 export const appLanguage = (device: string, app: string) => appLanguages.read(device)?.[app] ?? '';
 
-export const on = (v: string, yes: string, no: string) => ({ on: yes, off: no })[v] ?? v;
+export function on(v: string, yes: string, no: string) {
+  const word = ({ on: yes, true: yes, off: no, false: no } as Record<string, string>)[v] ?? v;
+  if (word !== yes && word !== no) throw new DeviceError('INVALID_ARGUMENT', `on or off, not ${v}`);
+  return word;
+}
 
 /** iOS's text sizes, as simctl and devicectl both take them. */
 const TEXT_SIZES = [

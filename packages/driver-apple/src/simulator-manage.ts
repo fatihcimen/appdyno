@@ -42,6 +42,23 @@ const copyFolders = (from: string, to: string) => {
   }
 };
 
+/** What `simctl privacy` takes in Xcode 26 and 27, by its help: a newer one may take more, which go to it as given. */
+const PRIVACY_SERVICES = [
+  'all',
+  'calendar',
+  'contacts-limited',
+  'contacts',
+  'location',
+  'location-always',
+  'photos-add',
+  'photos',
+  'media-library',
+  'microphone',
+  'motion',
+  'reminders',
+  'siri',
+];
+
 export class SimulatorApps implements AppManager {
   constructor(
     private readonly simctl: Simctl,
@@ -145,7 +162,16 @@ export class SimulatorApps implements AppManager {
   }
 
   async permission(app: string, grant: boolean, service: string): Promise<undefined> {
-    await this.simctl.privacy(this.udid, grant ? 'grant' : 'revoke', service, app);
+    await this.simctl
+      .privacy(this.udid, grant ? 'grant' : 'revoke', service, app)
+      .catch((e: unknown) => {
+        // simctl's own refusal of a word it does not know names nothing it takes
+        if (PRIVACY_SERVICES.includes(service)) throw e;
+        throw new DeviceError(
+          'INVALID_ARGUMENT',
+          `no service ${service} on a simulator: ${PRIVACY_SERVICES.join(', ')}`,
+        );
+      });
   }
 
   links(app: string) {

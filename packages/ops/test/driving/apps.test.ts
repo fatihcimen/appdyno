@@ -146,7 +146,7 @@ describe('app management', () => {
       policy,
     });
     expect((await ok.call('app', { action: 'install', path: '/tmp/a.apk' })).done).toBe(
-      'installed /tmp/a.apk',
+      'installed dev.app from /tmp/a.apk',
     );
     const other = await connect(Object.assign(new FakeDevice(), { apps: holding('dev.other') }), {
       policy,

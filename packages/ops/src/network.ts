@@ -279,7 +279,14 @@ export function networkOps(ctx: ServerContext) {
           return reply(clean(t), { done: clean(t), paths: ways });
         }
         if (action === 'start') {
-          if (!via) throw new ToolError(`start needs via: ${VIA.join(', ')}`, 'INVALID_ARGUMENT');
+          if (!via) {
+            const here = (await paths(s)).filter((p) => p.sees).map((p) => p.via);
+            throw new ToolError(
+              `start needs via: ${here.length ? `this device has ${here.join(', ')}` : `none of ${VIA.join(', ')} works on this device`}`,
+              'INVALID_ARGUMENT',
+              'network paths says what each sees, and what it costs',
+            );
+          }
           if (now)
             throw new ToolError(
               `${now.via} has been capturing on ${serial} since ${new Date(now.since).toISOString()}: stop it first`,
@@ -316,7 +323,7 @@ export function networkOps(ctx: ServerContext) {
           const handle = await s.device.network.start(via, target);
           captures.write(serial, { via, since: Date.now(), handle, owner: s.owner });
           if (via === 'probe') s.acted();
-          const t = `${via}: ${way?.sees ?? 'started'}`;
+          const t = `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${way?.sees ? `; it sees ${way.sees}` : ''}`;
           return reply(t, { done: t });
         }
         if (action === 'stop') {

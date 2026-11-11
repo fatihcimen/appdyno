@@ -571,6 +571,14 @@ describe('dark mode', () => {
       'default (now off)',
     ]);
     expect(Object.values(held).every((v) => v === 'null')).toBe(true);
+    // true and false as on and off, as a switch is said elsewhere; any other word is refused
+    await settings.set('dark_mode', 'true');
+    expect(mode).toBe('yes');
+    await settings.set('dark_mode', 'false');
+    expect(mode).toBe('no');
+    await expect(settings.set('dark_mode', 'maybe')).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
   });
 });
 

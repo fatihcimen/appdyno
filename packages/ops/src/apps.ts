@@ -104,7 +104,9 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
     throw new ToolError(
       opener
         ? `the link opens in ${opener}, not an allowed app (${policy.apps.join(', ')})`
-        : `this device cannot tell that the link opens in an allowed app (${policy.apps.join(', ')})${held ? `: it is none ${held} says it opens` : ''}`,
+        : held
+          ? `${held} declares no link like this (open_link links: lists its links), so it may open in another app`
+          : `this device cannot tell that the link opens in an allowed app (${policy.apps.join(', ')})`,
       'POLICY_DENIED',
       `${held ? '' : 'use_device with app selects the allowed app it is for; '}${byPerson(
         opener ? `by adding ${opener} to --allow-apps` : 'by --allow-apps',
@@ -149,7 +151,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       name: 'open_link',
       title: 'Open link',
       description:
-        "Open a URL, deep link, universal link or App Link, in the selected app if any. settings: a Settings page (about, privacy, wifi…; a wrong word lists them), or an app's: its id, or app. links: an app's id lists the links it opens.",
+        "Open a URL, deep link, universal link or App Link, in the selected app if any. settings: a Settings page (about, privacy…; a wrong word lists this device's), or an app's: its id, or app. links: an app's id lists the links it opens.",
       input: z
         .object({
           url: z.string().min(3).max(2_000).optional(),
@@ -181,64 +183,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         return afterChange(s, was, linkSaid(s, href), read, undefined, undefined, LINK_SETTLE_MS);
       },
     }),
-    defineOp({
-      name: 'launch_app',
-      title: 'Launch app',
-      description:
-        'Launch the app by its id or the name app list gives, to the front on the screen it was on if it runs. restart: start it fresh, as args (Android: key=value extras), env and language (tr, pt-BR; Android keeps it until changed) do.',
-      input: z
-        .object({
-          app: z.string().max(200).optional(),
-          restart: z.boolean().optional(),
-          args: z.array(z.string().max(500)).max(50).optional(),
-          env: z.record(z.string(), z.string().max(1_000)).optional(),
-          language: Language.optional(),
-          read: Read,
-        })
-        .strict(),
-      output: ActionOut,
-      annotations: DESTRUCTIVE,
-      run: async ({ app, restart, args, env, language, read }) => {
-        const named = app !== undefined && !APP_ID.test(app);
-        const s = await ctx.sessionToLaunch(app, language);
-        const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
-        if (!pkg) throw noApp();
-        checkLaunch(policy, pkg);
-        reportProgress(`launching ${pkg}`);
-        s.leftTheApp(pkg !== s.appId);
-        const ran = await ctx.ranBeforeLaunch(s, pkg);
-        const { apps } = s.device;
-        if (!restart && !args && !env && !language) {
-          const { was } = await changing(s, () => s.device.launch(pkg).catch(notThere(s, pkg)));
-          const out = await afterChange(s, was, launchSaid(pkg, ran), read, pkg);
-          // a recording writes a start as a start, so that its replay starts where this did
-          return ran === undefined ? out : { ...out, data: { ...out.data, wasRunning: ran } };
-        }
-        const held =
-          language && apps.languageStays
-            ? (await setCondition(s, 'locale', language, pkg)).also
-            : undefined;
-        // every platform's launch with these stops a running app first
-        const { was } = await changing(s, () =>
-          apps
-            .launchWith(pkg, {
-              ...(args && { args }),
-              ...(env && { env }),
-              ...(language && { language }),
-            })
-            .catch(notThere(s, pkg)),
-        );
-        const done = [language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true), held]
-          .filter(Boolean)
-          .join('; ');
-        // the system's launch returns as the app starts, and the screen shows its switcher's picture of it a while
-        const front = {
-          met: (x: Screen) => x.foreground === pkg,
-          otherwise: `${pkg} is not in front yet`,
-        };
-        return afterChange(s, was, done, read, pkg, front);
-      },
-    }),
+    launchOp(ctx, { changing, afterChange }, { appNamed, notThere }),
     defineOp({
       name: 'terminate_app',
       title: 'Terminate app',
@@ -258,4 +203,77 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       },
     }),
   ];
+}
+
+/** launch_app: a launch, to the front where the app runs, or a fresh start with what it is to start with. */
+function launchOp(
+  ctx: ServerContext,
+  { changing, afterChange }: Pick<Answers, 'changing' | 'afterChange'>,
+  {
+    appNamed,
+    notThere,
+  }: {
+    appNamed: (s: Session, name: string) => Promise<string>;
+    notThere: (s: Session, pkg: string) => (e: unknown) => Promise<never>;
+  },
+) {
+  const policy = ctx.policy;
+  return defineOp({
+    name: 'launch_app',
+    title: 'Launch app',
+    description:
+      'Launch the app by its id or the name app list gives, to the front on the screen it was on if it runs. restart: start it fresh, as args (Android: key=value extras), env and language (tr, pt-BR; Android keeps it until changed) do.',
+    input: z
+      .object({
+        app: z.string().max(200).optional(),
+        restart: z.boolean().optional(),
+        args: z.array(z.string().max(500)).max(50).optional(),
+        env: z.record(z.string(), z.string().max(1_000)).optional(),
+        language: Language.optional(),
+        read: Read,
+      })
+      .strict(),
+    output: ActionOut,
+    annotations: DESTRUCTIVE,
+    run: async ({ app, restart, args, env, language, read }) => {
+      const named = app !== undefined && !APP_ID.test(app);
+      const s = await ctx.sessionToLaunch(app, { restart, args, env, language });
+      const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
+      if (!pkg) throw noApp();
+      checkLaunch(policy, pkg);
+      reportProgress(`launching ${pkg}`);
+      s.leftTheApp(pkg !== s.appId);
+      const ran = await ctx.ranBeforeLaunch(s, pkg);
+      const { apps } = s.device;
+      if (!restart && !args && !env && !language) {
+        const { was } = await changing(s, () => s.device.launch(pkg).catch(notThere(s, pkg)));
+        const out = await afterChange(s, was, launchSaid(pkg, ran), read, pkg);
+        // a recording writes a start as a start, so that its replay starts where this did
+        return ran === undefined ? out : { ...out, data: { ...out.data, wasRunning: ran } };
+      }
+      const held =
+        language && apps.languageStays
+          ? (await setCondition(s, 'locale', language, pkg)).also
+          : undefined;
+      // every platform's launch with these stops a running app first
+      const { was } = await changing(s, () =>
+        apps
+          .launchWith(pkg, {
+            ...(args && { args }),
+            ...(env && { env }),
+            ...(language && { language }),
+          })
+          .catch(notThere(s, pkg)),
+      );
+      const done = [language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true), held]
+        .filter(Boolean)
+        .join('; ');
+      // the system's launch returns as the app starts, and the screen shows its switcher's picture of it a while
+      const front = {
+        met: (x: Screen) => x.foreground === pkg,
+        otherwise: `${pkg} is not in front yet`,
+      };
+      return afterChange(s, was, done, read, pkg, front);
+    },
+  });
 }

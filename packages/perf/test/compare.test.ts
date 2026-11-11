@@ -313,6 +313,21 @@ describe('store and reports', () => {
       },
     ]);
     expect(text).toContain('(modelled) (timed through the host)');
+    // a number with nothing to compare against says so, where a ? stood for the baseline
+    const alone = toText([
+      {
+        app: 'a',
+        scenario: 's',
+        deviceClass: 'c',
+        run: 'r',
+        at: 't',
+        noise: [],
+        comparisons: [fresh],
+        budgets: [],
+      },
+    ]);
+    expect(alone).toContain('y: 1 ms, no baseline [n 1/0]');
+    expect(alone).not.toContain('against ?');
   });
 
   it('a record says when it was timed through the host', () => {

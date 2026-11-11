@@ -34,6 +34,16 @@ import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
 import { ToolError } from '../tool.js';
 
+/** What each mark of a less sure number means, as an answer says it. */
+const NOISE_WORDS: Record<string, string | undefined> = {
+  'high-host-load': 'this Mac was loaded',
+  'high-device-load': 'the device was busy',
+  'hot-device': 'the device was hot',
+  'debuggable-build': 'a debug build, slower than a release build',
+  mirrored: "the device's screen was mirrored",
+  'device-state-unread': "the device's load and heat could not be read",
+};
+
 /** What to do after the frame probe's relaunch, which left the app on its first screen. */
 export const PROBE_HINT =
   'open the screen to measure again and call once more: the probe stays in until the app stops';
@@ -297,7 +307,8 @@ export function perfTools(ctx: ServerContext) {
     return saved;
   };
   const keep = (s: Session, run: KeptRun) => keepRun(ctx, s, run);
-  const noisy = (noise: string[]) => (noise.length ? [`noise: ${noise.join(', ')}`] : []);
+  const noisy = (noise: string[]) =>
+    noise.length ? [`noise: ${noise.map((n) => NOISE_WORDS[n] ?? n).join('; ')}`] : [];
   /**
    * Frames on a simulator come through the probe unless told otherwise. Its relaunch leaves the app on its first screen,
    * and a measure of that is not of the screen asked for: no way back to it is sure, so the call stops there.
