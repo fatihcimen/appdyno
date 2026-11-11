@@ -135,9 +135,7 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
     fun awaitRest() = transitions.awaitEnd(SLIDE_MAX_MS)
 
     /** The captures sent lately, by digest: a caller's `before` is compared with the layout itself. */
-    private val recent = object : LinkedHashMap<String, Capture>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Capture>?) = size > 8
-    }
+    private val recent = Lately<Capture>(8)
 
     fun treeJson(c: Capture): JSONObject {
         recent[c.hash] = c
@@ -160,5 +158,23 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
         /** A read waits for this long without a layout-moving event (an app already quiet: no wait). */
         const val IDLE_QUIET_MS = 150L
         const val IDLE_MAX_MS = 1_000L
+    }
+}
+
+/**
+ * The last `keep` values, by key, the least lately used going first. Locked: a lane thread given up still reads and writes
+ * it beside the new one until its next look at the job, and a read reorders it too.
+ */
+class Lately<V : Any>(private val keep: Int) {
+    private val byKey = object : LinkedHashMap<String, V>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, V>?) = size > keep
+    }
+
+    @Synchronized
+    operator fun get(key: String): V? = byKey[key]
+
+    @Synchronized
+    operator fun set(key: String, value: V) {
+        byKey[key] = value
     }
 }
