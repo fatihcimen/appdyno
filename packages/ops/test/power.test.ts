@@ -227,7 +227,8 @@ describe('an input on them', () => {
         /^PERMISSION_REQUIRED: .* the system's own power, emergency or erase control asks the person first, and this client cannot ask: nothing was done \(no touch was sent\)\n/,
       );
       expect(r.text, tool).toContain(`hint: ${AHEAD}`);
-      expect(r.hint, tool).toBe(`${AHEAD}; on the command line, --yes`);
+      // a model is shown no command line's yes
+      expect(r.hint, tool).toBe(AHEAD);
       expect(sent(), tool).toEqual([]);
     }
   });

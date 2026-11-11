@@ -1,4 +1,4 @@
-import { callAsk } from '@appdyno/core';
+import { callAsk, callYes } from '@appdyno/core';
 import type { Policy } from './policy.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
@@ -90,11 +90,12 @@ async function askPerson(s: Session, name: string, [doing, lost]: [string, strin
   const model = (await s.device.hardware().catch(() => undefined))?.model ?? s.device.hello?.model;
   const device = model ? `${model} (${s.device.serial})` : s.device.serial;
   const ask = callAsk();
+  const yes = callYes();
   if (!ask)
     throw new ToolError(
       `${name} asks the person first, and this client cannot ask: nothing was done`,
       'PERMISSION_REQUIRED',
-      `${ahead}; on the command line, --yes`,
+      yes ? `${ahead}; on the command line, ${yes}` : ahead,
     );
   // a prompt closed, or one that never came back, is no yes: and a client may answer one itself, with no person shown it
   if (!(await ask(`${doing} on ${device}? ${lost}.`).catch(() => false)))

@@ -13,6 +13,8 @@ export type CallScope = {
   notes?: string[];
   /** When the op being served began, in ms since the epoch: what it set off on the device dates from then. */
   opStartedAt?: number;
+  /** What says yes ahead on this caller's own line, the command line's --yes: none over MCP, as a model shown it could run that. */
+  yes?: string;
 };
 
 const scope = new AsyncLocalStorage<CallScope>();
@@ -65,6 +67,9 @@ export const callClient = () => scope.getStore()?.client;
 
 /** How to ask the person behind this request, if anyone can be asked. */
 export const callAsk = () => scope.getStore()?.ask;
+
+/** What says yes ahead on this caller's own line, if anything does. */
+export const callYes = () => scope.getStore()?.yes;
 
 export const cancelled = (what: string) =>
   new DeviceError('CANCELLED', `${what}: cancelled by the client`, 'the client cancelled the call');

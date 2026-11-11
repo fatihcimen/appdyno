@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- İstemcinin soramadığı yerde kişiye soran bir şeyin MCP üzerinden reddi artık, onu gören bir modelin bir kabukta çalıştırabileceği komut satırının `--yes`'i ile bitmez; komut satırının kendi reddi onu yine adlandırır.
 - Bir girdi, ondan önceki okuma aynı cihaza başka bir istemcinin girdisi yoldayken alındıysa yeni bir okumaya göre değerlendirilir: o okuma ötekinin kaydırmasından önceki ekranı tutabiliyordu ve kaydırmanın getirdiği güç menüsü düğmesine bir dokunuş sorulmadan gidiyordu.
 - Android'de ilk dokunuşu sırasında durdurulan bir çift dokunuş ikincisini yapmaz; önceden ikincisi, çağrı iptal edildi diye yanıtlandıktan sonra gidiyordu.
 - Girdi yardımcısı başlarken, ilk sorusunu yanıtlarken ya da ekranın dönüşünü söylerken durdurulan bir çağrının bir simülatördeki dokunuşu ya da tuşu gönderilmez; önceden yalnızca bu beklemelerden önceki bir durdurma onu tutuyordu.

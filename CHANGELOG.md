@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A refusal over MCP of what asks the person, where the client cannot ask, no longer ends with the command line's `--yes`, which a model shown it could run in a shell; the command line's own refusal still names it.
 - An input is judged on a new read where the read before it was taken while another client's input to the same device was on its way: that read could hold the screen before the other's swipe, and a touch on the power menu's button the swipe brought up went unasked.
 - On Android a double tap stopped during its first tap makes no second, where the second went after the call was answered as cancelled.
 - A simulator's touch or key for a call stopped while the input helper started, answered its first ask or told the screen's turn is not sent, where only a stop before those waits held it.

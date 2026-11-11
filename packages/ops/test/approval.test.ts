@@ -144,7 +144,8 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
         const r = await call(tool, args);
         expect(r.error).toBe(true);
         expect(r.code).toBe('PERMISSION_REQUIRED');
-        expect(r.hint).toBe(`${AHEAD}; on the command line, --yes`);
+        // a model is shown no command line's yes, which it could run
+        expect(r.hint).toBe(AHEAD);
         expect(r.text).toBe(
           `PERMISSION_REQUIRED: ${action} asks the person first, and this client cannot ask: nothing was done\nhint: ${String(r.hint)}`,
         );

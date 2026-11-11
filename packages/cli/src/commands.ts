@@ -220,7 +220,9 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
         }
         const ask = call.yes ? () => Promise.resolve(true) : io.ask;
         try {
-          const { blocks, data } = await inCall(ask ? { ask } : {}, () => op.handler(call.args));
+          const { blocks, data } = await inCall({ ...(ask && { ask }), yes: '--yes' }, () =>
+            op.handler(call.args),
+          );
           for (const b of blocks) {
             if (b.type === 'text') {
               io.out(b.text);
