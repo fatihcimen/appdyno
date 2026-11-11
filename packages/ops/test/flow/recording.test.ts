@@ -33,7 +33,7 @@ describe('flows', () => {
       const call = callerOf(context());
       device.screen = 'settings';
       const { text } = await recorded(call, async () => {
-        const { data } = await call('find', { text: 'Wi-Fi' });
+        const { data } = await call('find', { selector: { text: 'Wi-Fi' } });
         await call('tap', { ref: must(data.matches[0], 'a match').ref });
       });
       expect(text).toContain('text="Wi-Fi"');
@@ -61,7 +61,7 @@ describe('flows', () => {
       const call = callerOf(context());
       device.screen = 'doubled';
       const { text } = await recorded(call, async () => {
-        const { data } = await call('find', { role: 'button', text: 'Camera' });
+        const { data } = await call('find', { selector: { role: 'button', text: 'Camera' } });
         await call('tap', { ref: must((data.matches as { ref: string }[])[0], 'a match').ref });
       });
       expect(text).toContain('tap role=button text="Camera"');
@@ -124,13 +124,13 @@ swipe up
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('screen');
-        await call('find', { text: 'Form' });
+        await call('find', { selector: { text: 'Form' } });
         await call('screenshot');
         await call('device_info');
         await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
-        await refusal(call('assert', { text: 'Nothing like it' }));
-        await refusal(call('wait_for', { text: 'Nothing like it', timeoutMs: 300 }));
-        await call('assert', { text: 'Ana sayfa' });
+        await refusal(call('assert', { selector: { text: 'Nothing like it' } }));
+        await refusal(call('wait_for', { selector: { text: 'Nothing like it' }, timeoutMs: 300 }));
+        await call('assert', { selector: { text: 'Ana sayfa' } });
       });
       expect(text).toBe('app dev.app\n\nassert text="Ana sayfa"\n');
     });
@@ -141,10 +141,10 @@ swipe up
         call('steps', {
           steps: [
             { action: 'tap', selector: { text: 'Form' } },
-            { action: 'wait_for', id: 'name' },
+            { action: 'wait_for', selector: { id: 'name' } },
             { action: 'type_text', text: 'x', selector: { id: 'name' } },
             { action: 'tap', selector: { text: 'Gönder' } },
-            { action: 'assert', id: 'result', check: 'text', equals: 'Gönderildi' },
+            { action: 'assert', selector: { id: 'result' }, check: 'text', equals: 'Gönderildi' },
           ],
         }),
       );
@@ -409,7 +409,7 @@ assert id=result check=text equals="Gönderildi"
       await callerOf(context())('tap', { selector: { text: 'Form' } });
       device = new FakeDevice('emulator-9999');
       device.screen = 'form';
-      await callerOf(context())('assert', { text: 'Bilgiler' });
+      await callerOf(context())('assert', { selector: { text: 'Bilgiler' } });
       device = new FakeDevice();
       const stop = await callerOf(context())('flow', { action: 'stop' });
       expect(stop.data.steps).toBe(1);
@@ -463,8 +463,8 @@ assert id=result check=text equals="Gönderildi"
         replace: true,
         submit: true,
       });
-      await call('wait_for', { id: 'greeting', timeoutMs: 800 });
-      await call('assert', { text: 'Merhaba', check: 'absent', expect: false });
+      await call('wait_for', { selector: { id: 'greeting' }, timeoutMs: 800 });
+      await call('assert', { selector: { text: 'Merhaba' }, check: 'absent', expect: false });
       await call('scroll_to', { selector: { id: 'greeting' }, direction: 'down', maxSwipes: 3 });
       await call('swipe', { direction: 'left', distance: 200 });
       await call('gesture', { kind: 'long_press', selector: { id: 'greeting' }, durationMs: 300 });

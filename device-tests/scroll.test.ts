@@ -26,11 +26,11 @@ function scrollOf(get: () => Call) {
     await call('terminate_app');
     ok(await call('launch_app'));
     ok(await call('open_link', { url: 'appdyno-fixture://open/list' }));
-    ok(await call('wait_for', { text: 'Product 1', timeoutMs: 8_000 }));
+    ok(await call('wait_for', { selector: { text: 'Product 1' }, timeoutMs: 8_000 }));
   };
   /** A list's offset, from a row's number, its place and the rows' spacing. */
   const offset = async (spacing: number) => {
-    const rows = (await call('find', { text: 'Product' })).data.matches;
+    const rows = (await call('find', { selector: { text: 'Product' } })).data.matches;
     const row = rows[Math.floor(rows.length / 2)];
     assert(row);
     const number = /Product (\d+)/.exec(row.label);
@@ -39,7 +39,7 @@ function scrollOf(get: () => Call) {
   };
   const spacing = async () => {
     const y = async (n: number) => {
-      const [row] = (await call('find', { text: `Product ${n}` })).data.matches;
+      const [row] = (await call('find', { selector: { text: `Product ${n}` } })).data.matches;
       assert(row, `Product ${n}`);
       return row.y;
     };

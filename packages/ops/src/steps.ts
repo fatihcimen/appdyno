@@ -1,4 +1,5 @@
 import {
+  cutContext,
   KEYBOARD_REF,
   type Selector as SelectorOf,
   type ScreenElement,
@@ -48,14 +49,18 @@ type Words = {
 };
 
 function wordsOf(clean: (s: string) => string): Words {
+  // what tells like elements apart is the row each is in, where the list has one
   const line = (e: ScreenElement) =>
-    `${e.ref} ${e.role} ${JSON.stringify(clean(e.label || e.id || ''))} ${e.x},${e.y}`;
+    `${e.ref} ${e.role} ${JSON.stringify(clean(e.label || e.id || ''))} ${e.x},${e.y}${e.refContext ? ` — ${cutContext(clean(e.refContext))}` : ''}`;
   const offer = (list: ScreenElement[], want?: string) => {
     const near = nearest(list, want).map(line);
     return near.length > 0 ? `; nearest: ${near.join('; ')}` : '';
   };
   return { clean, line, offer };
 }
+
+/** The matches a refusal lists, of many. */
+const MANY_SHOWN = 10;
 
 /** One element of a selector's matches, or a refusal listing them. */
 function pick(hits: ScreenElement[], sel: SelectorOf, line: Words['line']): ScreenElement {
@@ -70,10 +75,11 @@ function pick(hits: ScreenElement[], sel: SelectorOf, line: Words['line']): Scre
   const hit =
     sel.index === undefined ? (outer.length === 1 ? outer[0] : undefined) : hits[sel.index];
   if (hit) return hit;
+  const more = hits.length > MANY_SHOWN ? `; and ${hits.length - MANY_SHOWN} more` : '';
   throw new ToolError(
-    `${hits.length} elements match ${showSelector(sel)}: ${hits.slice(0, 10).map(line).join('; ')}`,
+    `${hits.length} elements match ${showSelector(sel)}: ${hits.slice(0, MANY_SHOWN).map(line).join('; ')}${more}`,
     'AMBIGUOUS',
-    'give the selector an index, or use a ref',
+    'give the selector an index, 0 for the first listed, or use a ref',
   );
 }
 
@@ -340,7 +346,7 @@ async function call(
       return pressKey(kit, s, st, opts);
     case 'wait_for': {
       const w = await checks.waitFor(s, st);
-      const what = st.ref ?? showSelector(selectorOf(st) ?? {});
+      const what = st.ref ?? showSelector(selectorOf(st.selector) ?? {});
       if (!w.met)
         throw new ToolError(
           `${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms`,

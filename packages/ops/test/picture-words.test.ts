@@ -73,7 +73,7 @@ describe('a screen with no words in its tree', () => {
     const { call } = await connect('blind', () =>
       Promise.resolve(++reads > 2 ? [word('Game Over')] : [word('Start Game')]),
     );
-    const r = await call('wait_for', { text: 'Game Over', timeoutMs: 5_000 });
+    const r = await call('wait_for', { selector: { text: 'Game Over' }, timeoutMs: 5_000 });
     expect(r.text).toContain('found');
     expect(reads).toBeGreaterThan(2);
   });

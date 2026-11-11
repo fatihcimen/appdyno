@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `find`, `wait_for` and `assert`, and the `wait_for` and `assert` steps, take a selector in `selector`, as `tap`, `gesture`, `swipe`, `scroll_to` and `type_text` do, where they took its words at their top: one shape everywhere, and words given at the top are refused with the call in that shape in the hint. A refusal of several matches names the row each is in, says how many more there are past ten, and that `index` counts from 0; an element's line in a refusal names its row too.
 - `launch_app` with `restart`, `args`, `env` or `language` answers once the app is in front, where on a simulator it read the switcher's picture of the app as it started and warned that the home screen app was in front.
 - `type_text` with no target on iOS, with no field holding the focus and no keyboard up, is refused with `NO_FOCUS` before any key is sent, where it answered `typed` on a simulator and its first key could focus a field that took the rest.
 - A read of an iOS screen lists the on-screen keyboard as one element, `@keyboard keyboard`, as Android's is, where every full read held each key, the predictions and the keyboard's own views, 40 lines for letters; a tap that opens it says so in one line of the diff, and a touch on it is refused with what types and what closes it. What lies under the status bar is left out, as a touch there scrolls a list to its top where the answer said the row was tapped. Four or more elements at one point, none holding another, are rows a list has not placed yet, and are left out, where one read held 200 lines of them.

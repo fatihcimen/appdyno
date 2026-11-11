@@ -28,15 +28,15 @@ const LOOKS: Record<string, string[]> = {
   react_native: ['targets', 'logs'],
 };
 
-type FlatSelector = {
+type Selector = {
   text?: string | undefined;
   id?: string | undefined;
   role?: string | undefined;
   index?: number | undefined;
 };
 
-const flatSelector = (a: FlatSelector): FlowSelector | undefined =>
-  a.text || a.id || a.role
+const selectorOf = (a: Selector | undefined): FlowSelector | undefined =>
+  a && (a.text || a.id || a.role)
     ? defined({ id: a.id, role: a.role, text: a.text, index: a.index })
     : undefined;
 
@@ -126,15 +126,25 @@ const scrollRecord = (st: StepOf<'scroll_to'>) => () =>
   );
 
 /** A check keeps the agent's words, which are what it checks; a ref is named for later. */
-async function looked(s: Session, a: { ref?: string | undefined } & FlatSelector): Promise<Aim> {
+async function looked(
+  s: Session,
+  a: { ref?: string | undefined; selector?: Selector | undefined },
+): Promise<Aim> {
   if (a.ref) return aim(s, { ref: a.ref });
-  const selector = flatSelector(a);
-  return { ...(selector && { selector, flags: a.index !== undefined ? ['ambiguous'] : [] }) };
+  const selector = selectorOf(a.selector);
+  return {
+    ...(selector && { selector, flags: selector.index !== undefined ? ['ambiguous'] : [] }),
+  };
 }
 
 async function waitRecord(
   s: Session,
-  a: { ref?: string | undefined; gone: boolean; timeoutMs: number } & FlatSelector,
+  a: {
+    ref?: string | undefined;
+    selector?: Selector | undefined;
+    gone: boolean;
+    timeoutMs: number;
+  },
 ) {
   const at = await looked(s, a);
   return () =>
@@ -154,7 +164,8 @@ async function assertRecord(
     equals?: string | undefined;
     expect: boolean;
     timeoutMs: number;
-  } & FlatSelector,
+    selector?: Selector | undefined;
+  },
 ) {
   const at = await looked(s, a);
   return () =>

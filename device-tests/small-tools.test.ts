@@ -106,7 +106,7 @@ const savedWidth = async (call: Call, dir: string) => {
 /** The language the fixture says it was launched in. */
 const language = async (call: Call) => {
   ok(await call('open_link', { url: 'appdyno-fixture://open/locale' }));
-  const [seen] = ok(await call('find', { id: 'result' })).data.matches;
+  const [seen] = ok(await call('find', { selector: { id: 'result' } })).data.matches;
   assert(seen);
   return seen.label;
 };
@@ -131,7 +131,7 @@ const turns = async (call: Call) => {
   await call('terminate_app');
   ok(await call('launch_app'));
   const y = async () => {
-    const [row] = ok(await call('find', { text: 'Permission' })).data.matches;
+    const [row] = ok(await call('find', { selector: { text: 'Permission' } })).data.matches;
     assert(row);
     return row.y;
   };
@@ -288,7 +288,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
       }),
     );
     expect(Date.now() - at).toBeGreaterThan(1_500);
-    const [travel] = ok(await call('find', { id: 'travel' })).data.matches;
+    const [travel] = ok(await call('find', { selector: { id: 'travel' } })).data.matches;
     assert(travel);
     expect(travel.label).not.toBe('travel: 0');
     ok(await call('launch_app'));
@@ -371,7 +371,7 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
       }),
     );
     expect(Date.now() - at).toBeGreaterThan(1_500);
-    const [travel] = ok(await call('find', { id: 'travel' })).data.matches;
+    const [travel] = ok(await call('find', { selector: { id: 'travel' } })).data.matches;
     assert(travel);
     expect(travel.label).not.toBe('travel: 0');
     ok(await call('launch_app'));

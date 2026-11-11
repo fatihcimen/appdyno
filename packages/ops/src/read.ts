@@ -119,13 +119,17 @@ export function readOps(
       name: 'find',
       title: 'Find',
       description:
-        'Elements matching text, id or role, with enabled, checked, focused, value and bounds. For a pass or fail: assert.',
-      input: Selector,
+        "Elements a selector's text, id or role match, with enabled, checked, focused, value and bounds. For a pass or fail: assert.",
+      input: z.object({ selector: Selector.optional() }).strict(),
       output: FindOut,
       annotations: READ,
-      run: async ({ index, ...sel }) => {
+      run: async ({ selector: { index, ...sel } = {} }) => {
         if (!sel.text && !sel.id && !sel.role)
-          throw new ToolError('give text, id or role', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
+          throw new ToolError(
+            'give the selector text, id or role',
+            'INVALID_ARGUMENT',
+            NAME_AN_ELEMENT,
+          );
         const s = await ctx.session();
         const screen = await s.read();
         const all = selectIn(screen.list, sel);

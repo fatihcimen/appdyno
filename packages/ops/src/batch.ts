@@ -69,7 +69,7 @@ function planned(
     if (!reads.success) throw fail(z.prettifyError(reads.error));
     const p = Step.safeParse(rest);
     if (p.success) return { st: p.data, ...(reads.data && { read: reads.data }) };
-    // a selector's words at the top, as wait_for takes them: shown where a touch takes them
+    // a selector's words at the top: shown where they go
     throw fail(
       z.prettifyError(p.error),
       inSelector(takes, rest, p.error.issues) ?? argumentsHint(p.error.issues),

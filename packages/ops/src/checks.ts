@@ -19,9 +19,9 @@ export const UNREAD = 'screen reads it once more and says what the device answer
 /** How long an `assert` watches with no time of its own. */
 const WATCH_CHECK_MS = 2_000;
 
-/** The selector in flat arguments (the tools that only look at the screen take it that way). */
-export const selectorOf = (a: SelectorOf): SelectorOf | undefined =>
-  a.text || a.id || a.role
+/** A selector that names something: its words, with no key set to nothing. */
+export const selectorOf = (a: SelectorOf | undefined): SelectorOf | undefined =>
+  a && (a.text || a.id || a.role)
     ? {
         ...(a.text && { text: a.text }),
         ...(a.id && { id: a.id }),
@@ -30,8 +30,9 @@ export const selectorOf = (a: SelectorOf): SelectorOf | undefined =>
       }
     : undefined;
 
-type Judged = SelectorOf & {
+type Judged = {
   ref?: string;
+  selector?: SelectorOf;
   check: z.infer<typeof Check>;
   equals?: string;
   expect: boolean;
@@ -51,7 +52,7 @@ export function checksFor({
 }) {
   /** Whether a check holds on this screen, and why or why not in words. */
   const judge = (screen: Screen, a: Judged): { pass: boolean; why: string } => {
-    const sel = selectorOf(a) ?? {};
+    const sel = selectorOf(a.selector) ?? {};
     const what = a.ref ?? showSelector(sel);
     const all = a.ref ? screen.list.filter((e) => e.ref === a.ref) : selectIn(screen.list, sel);
     const hits = sel.index === undefined ? all : all.slice(sel.index, sel.index + 1);
@@ -95,7 +96,7 @@ export function checksFor({
   const movesNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
     const m = await watchScreen(ctx, s, a.timeoutMs || WATCH_CHECK_MS, false);
     const screen = await s.current();
-    const sel = selectorOf(a);
+    const sel = selectorOf(a.selector);
     const element = a.ref
       ? screen.list.find((e) => e.ref === a.ref)
       : sel && selectIn(screen.list, sel)[sel.index ?? 0];
@@ -117,8 +118,12 @@ export function checksFor({
   /** A check on a fresh read, given `timeoutMs` to come true; a refusal when it does not. */
   const checkNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
     if (a.check === 'moves') return movesNow(s, a);
-    if (!a.ref && !selectorOf(a))
-      throw new ToolError('give a ref, text, id or role', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
+    if (!a.ref && !selectorOf(a.selector))
+      throw new ToolError(
+        'give a ref, or a selector with text, id or role',
+        'INVALID_ARGUMENT',
+        NAME_AN_ELEMENT,
+      );
     const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
     if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
     const v = judge(screen, a);
@@ -129,11 +134,15 @@ export function checksFor({
   /** Waits for an element to show or go, on the device where its agent can. */
   const waitFor = async (
     s: Session,
-    a: SelectorOf & { ref?: string; gone: boolean; timeoutMs: number },
+    a: { ref?: string; selector?: SelectorOf; gone: boolean; timeoutMs: number },
   ) => {
-    const sel = selectorOf(a);
+    const sel = selectorOf(a.selector);
     if (!a.ref && !sel)
-      throw new ToolError('give text, id, role or ref', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
+      throw new ToolError(
+        'give a ref, or a selector with text, id or role',
+        'INVALID_ARGUMENT',
+        NAME_AN_ELEMENT,
+      );
     const found = (x: Screen) =>
       (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, must(sel, 'a selector')))[
         sel?.index ?? 0

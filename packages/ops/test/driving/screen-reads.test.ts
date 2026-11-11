@@ -12,12 +12,12 @@ describe('waiting on the device', () => {
   it('says its longest wait in its description, and in the hint of a refusal of a longer one', async () => {
     const { call, ctx } = await connect(new FakeDevice());
     expect(must(opsFor(ctx).wait_for, 'wait_for').description).toContain('at most 15000');
-    const r = await call('wait_for', { text: 'Loaded', timeoutMs: 30000 });
+    const r = await call('wait_for', { selector: { text: 'Loaded' }, timeoutMs: 30000 });
     expect(r.text).toBe(
       'INVALID_ARGUMENT: timeoutMs: Too big: expected number to be <=15000\nhint: timeoutMs is at most 15000: change that and call again: nothing was done',
     );
     const step = await call('steps', {
-      steps: [{ action: 'wait_for', text: 'L', timeoutMs: 20000 }],
+      steps: [{ action: 'wait_for', selector: { text: 'L' }, timeoutMs: 20000 }],
     });
     expect(step.text).toMatch(/\nhint: timeoutMs is at most 15000: change that and call again/);
   });
@@ -41,7 +41,7 @@ describe('waiting on the device', () => {
     d.screen = 'form';
     d.next = d.current();
     d.screen = 'home';
-    const r = await call('wait_for', { text: 'Bilgiler', timeoutMs: 5_000 });
+    const r = await call('wait_for', { selector: { text: 'Bilgiler' }, timeoutMs: 5_000 });
     expect(r.data.met).toBe(true);
     expect(d.waits).toEqual([undefined, 'a']);
     expect(d.calls.filter((c) => c.name === 'tree')).toHaveLength(1);
@@ -50,12 +50,14 @@ describe('waiting on the device', () => {
   it('polls where the agent has no wait, or its wait fails', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const r = await call('wait_for', { text: 'Form', timeoutMs: 1_000 });
+    const r = await call('wait_for', { selector: { text: 'Form' }, timeoutMs: 1_000 });
     expect(r.data.met).toBe(true);
     const f = new Waiting();
     f.waitChange = () => Promise.reject(new DeviceError('INTERNAL', 'no'));
     const { call: call2 } = await connect(f);
-    expect((await call2('wait_for', { text: 'Form', timeoutMs: 1_000 })).data.met).toBe(true);
+    expect(
+      (await call2('wait_for', { selector: { text: 'Form' }, timeoutMs: 1_000 })).data.met,
+    ).toBe(true);
     expect(f.calls.filter((c) => c.name === 'tree').length).toBeGreaterThan(0);
   });
 });
@@ -327,7 +329,7 @@ describe('a folded answer', () => {
   it('leaves what a row holds to find, a selector and the ref find gives', async () => {
     const { d, call } = await folded();
     await call('screen');
-    const { matches } = (await call('find', { text: 'Bluetooth' })).data;
+    const { matches } = (await call('find', { selector: { text: 'Bluetooth' } })).data;
     expect(matches).toMatchObject([{ role: 'text', label: 'Bluetooth', x: 300, y: 430 }]);
     expect((await call('tap', { selector: { text: 'Hotspot' } })).error).toBe(false);
     expect((await call('tap', { ref: matches?.[0]?.ref })).error).toBe(false);
@@ -352,7 +354,8 @@ describe('a folded answer', () => {
     const { text } = await call('screen');
     expect(text.match(/General/g)).toHaveLength(1);
     expect(text).toContain('; 3 inside rows, by find');
-    const { matches } = (await call('find', { role: 'button', text: 'General' })).data;
+    const { matches } = (await call('find', { selector: { role: 'button', text: 'General' } }))
+      .data;
     expect(matches).toMatchObject([{ role: 'button', label: 'General', y: 350 }]);
     await call('tap', { ref: must(matches?.[0], 'a match').ref });
     expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 350 }]);

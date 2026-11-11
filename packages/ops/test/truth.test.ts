@@ -279,7 +279,7 @@ describe('an answer', () => {
   it('is known by its op’s name to what calls it', async () => {
     const { ctx } = await connect();
     const call = callerOf(ctx, onFakeTime);
-    const { data } = await call('find', { text: 'Form' });
+    const { data } = await call('find', { selector: { text: 'Form' } });
     expect(data.matches[0]?.label).toBe('Form');
     // @ts-expect-error: no such key in the schema of find
     expect(data.settled).toBeUndefined();
@@ -355,7 +355,7 @@ describe('cancellation and progress', () => {
     await call('screen');
     const abort = new AbortController();
     const waiting = client.callTool(
-      { name: 'wait_for', arguments: { text: 'never', timeoutMs: 15_000 } },
+      { name: 'wait_for', arguments: { selector: { text: 'never' }, timeoutMs: 15_000 } },
       { signal: abort.signal },
     );
     setTimeout(() => abort.abort(), 50);

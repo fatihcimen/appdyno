@@ -61,7 +61,10 @@ for (const revision of REVISIONS)
       it('says how far a long call has got, as it goes', async () => {
         const seen: (string | undefined)[] = [];
         await client.callTool(
-          { name: 'wait_for', arguments: { text: 'nothing like it', timeoutMs: 6_000 } },
+          {
+            name: 'wait_for',
+            arguments: { selector: { text: 'nothing like it' }, timeoutMs: 6_000 },
+          },
           { onprogress: (p) => seen.push(p.message) },
         );
         expect(seen).toContain('wait_for: still working (5 s)');

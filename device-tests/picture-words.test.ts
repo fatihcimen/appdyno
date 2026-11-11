@@ -28,21 +28,21 @@ function wordsOf(get: () => Call) {
 
   it('reads them, says where they came from, and finds them', async () => {
     await canvas();
-    const r = ok(await call('wait_for', { text: 'Start Game', timeoutMs: 10_000 }));
+    const r = ok(await call('wait_for', { selector: { text: 'Start Game' }, timeoutMs: 10_000 }));
     expect(r.data.met).toBe(true);
     const screen = ok(await call('screen'));
     expect(screen.text).toContain('"Start Game"');
     expect(screen.text).toContain('read from the picture');
-    const [found] = ok(await call('find', { text: 'Start Game' })).data.matches;
+    const [found] = ok(await call('find', { selector: { text: 'Start Game' } })).data.matches;
     assert(found);
     expect(found.bounds.w).toBeGreaterThan(50);
   });
 
   it('taps them by their words, and sees the picture change', async () => {
     await canvas();
-    ok(await call('wait_for', { text: 'Start Game', timeoutMs: 10_000 }));
+    ok(await call('wait_for', { selector: { text: 'Start Game' }, timeoutMs: 10_000 }));
     ok(await call('tap', { selector: { text: 'Start Game' } }));
-    const r = ok(await call('wait_for', { text: 'Game Over', timeoutMs: 10_000 }));
+    const r = ok(await call('wait_for', { selector: { text: 'Game Over' }, timeoutMs: 10_000 }));
     expect(r.data.met).toBe(true);
   });
 }

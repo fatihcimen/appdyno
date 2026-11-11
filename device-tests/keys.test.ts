@@ -27,7 +27,7 @@ function keysOf(get: () => Call) {
     ok(await call('open_link', { url: 'appdyno-fixture://open/form' }));
   };
   const reads = (equals: string) =>
-    call('assert', { id: FIELD, check: 'text', equals, timeoutMs: 3_000 });
+    call('assert', { selector: { id: FIELD }, check: 'text', equals, timeoutMs: 3_000 });
 
   it('moves the cursor with the arrows', async () => {
     await form();
@@ -106,7 +106,9 @@ function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 's
     ok(await call('press_key', { key: 'control_center' }));
     await call('press_key', { key: 'home' });
     ok(await call('launch_app'));
-    expect(ok(await call('assert', { text: 'Form', timeoutMs: 5_000 })).error).toBe(false);
+    expect(ok(await call('assert', { selector: { text: 'Form' }, timeoutMs: 5_000 })).error).toBe(
+      false,
+    );
   });
 }
 
@@ -125,7 +127,14 @@ describe.skipIf(!ANDROID)('keys on Android', () => {
     ok(await o.call('type_text', { selector: { id: FIELD }, text: 'a' }));
     ok(await o.call('press_key', { key: 'arrow_down' }));
     ok(await o.call('press_key', { key: '5' }));
-    ok(await o.call('assert', { id: 'phone_input', check: 'text', equals: '5', timeoutMs: 3_000 }));
+    ok(
+      await o.call('assert', {
+        selector: { id: 'phone_input' },
+        check: 'text',
+        equals: '5',
+        timeoutMs: 3_000,
+      }),
+    );
   });
   viewsOf(() => o.call, {
     control: /elements/,

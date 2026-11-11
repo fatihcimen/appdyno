@@ -40,7 +40,7 @@ const set = async (call: Call, name: string, to: string) => {
   return r;
 };
 const result = async (call: Call, text: string) =>
-  (await call('wait_for', { id: 'result', text, timeoutMs: 8_000 })).data.met;
+  (await call('wait_for', { selector: { id: 'result', text }, timeoutMs: 8_000 })).data.met;
 
 describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
   let call: Call;
@@ -225,12 +225,12 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
 
     await call('open_link', { url: 'appdyno-fixture://open/biometric' });
     await call('tap', { selector: { id: 'authenticate' } });
-    await call('wait_for', { text: 'Fixture sign-in', timeoutMs: 5_000 });
+    await call('wait_for', { selector: { text: 'Fixture sign-in' }, timeoutMs: 5_000 });
     await set(call, 'biometric', 'nomatch');
     // the system's prompt stays up over the fixture, and says it itself
-    expect((await call('wait_for', { text: 'Not recognized', timeoutMs: 8_000 })).data.met).toBe(
-      true,
-    );
+    expect(
+      (await call('wait_for', { selector: { text: 'Not recognized' }, timeoutMs: 8_000 })).data.met,
+    ).toBe(true);
     await set(call, 'biometric', 'match');
     expect(await result(call, 'Authenticated')).toBe(true);
 
@@ -249,7 +249,9 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
       'tr-TR',
     ]);
     await call('open_link', { settings: 'general' });
-    expect((await call('wait_for', { text: 'Ayarlar', timeoutMs: 8_000 })).data.met).toBe(true);
+    expect(
+      (await call('wait_for', { selector: { text: 'Ayarlar' }, timeoutMs: 8_000 })).data.met,
+    ).toBe(true);
     const back = await call('device_setting', { name: 'restore' });
     expect(back.text).toContain(`locale: ${String(was)}`);
     expect(adb('getprop', 'persist.sys.locale')).toBe(was);
@@ -342,7 +344,10 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     // the scan begins a moment after the request, and takes no answer before it
     await new Promise((r) => setTimeout(r, 2_000));
     await set(call, 'biometric', 'nomatch');
-    const miss = await call('wait_for', { text: 'Face Not Recognized', timeoutMs: 8_000 });
+    const miss = await call('wait_for', {
+      selector: { text: 'Face Not Recognized' },
+      timeoutMs: 8_000,
+    });
     expect(miss.data.met).toBe(true);
     await call('alert', { answer: 'Try Face ID Again' });
     await new Promise((r) => setTimeout(r, 2_000));
@@ -370,10 +375,14 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     );
     expect(global()).toBe(before);
     await call('launch_app', { app: PREFS });
-    expect((await call('wait_for', { text: 'Ayarlar', timeoutMs: 10_000 })).data.met).toBe(true);
+    expect(
+      (await call('wait_for', { selector: { text: 'Ayarlar' }, timeoutMs: 10_000 })).data.met,
+    ).toBe(true);
     expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale: ');
     // it ran, so it started again in the simulator's own
-    expect((await call('wait_for', { text: 'Settings', timeoutMs: 10_000 })).data.met).toBe(true);
+    expect(
+      (await call('wait_for', { selector: { text: 'Settings' }, timeoutMs: 10_000 })).data.met,
+    ).toBe(true);
 
     const whole = await call('device_setting', { name: 'locale', value: 'tr-TR', app: '' });
     expect(whole.text).toBe(

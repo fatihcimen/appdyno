@@ -117,7 +117,7 @@ const cli = (serial: string, ...args: string[]) =>
 const stir = async (ok: ReturnType<typeof harness>['ok'], rounds = 3) => {
   for (let i = 0; i < rounds; i++) {
     await ok('open_link', { url: 'appdyno-fixture://open/ticker' });
-    await ok('wait_for', { text: 'Ticker', timeoutMs: 1_000 }).catch(() => undefined);
+    await ok('wait_for', { selector: { text: 'Ticker' }, timeoutMs: 1_000 }).catch(() => undefined);
     await ok('press_key', { key: 'home' }).catch(() => undefined);
     await ok('launch_app');
   }
@@ -322,7 +322,7 @@ const fetchIn = async (ok: ReturnType<typeof harness>['ok'], url: string) => {
   await ok('open_link', { url: 'appdyno-fixture://open/network' });
   await ok('type_text', { selector: { id: 'url_input' }, text: url, replace: true });
   await ok('tap', { selector: { id: 'fetch' } });
-  const r = await ok('wait_for', { text: 'fetched', timeoutMs: 15_000 });
+  const r = await ok('wait_for', { selector: { text: 'fetched' }, timeoutMs: 15_000 });
   expect(r.data.met).toBe(true);
 };
 
@@ -490,7 +490,7 @@ for (const { platform, serial, provider, pageId, other } of [
       await h.ok('terminate_app');
       await h.ok('launch_app');
       await h.ok('open_link', { url: 'appdyno-fixture://open/web' });
-      await h.ok('wait_for', { text: 'Web content' });
+      await h.ok('wait_for', { selector: { text: 'Web content' } });
       return () => h.ctx.close();
     }, 240_000);
 
@@ -517,7 +517,7 @@ for (const { platform, serial, provider, pageId, other } of [
       expect(r.text).toMatch(/input "Card" \d+,\d+ #card/);
       const pay = r.data.elements?.find((e) => e.text === 'Pay');
       assert(pay, 'Pay');
-      const found = await h.ok('find', { text: 'Pay' });
+      const found = await h.ok('find', { selector: { text: 'Pay' } });
       const [inTree] = found.data.matches;
       assert(inTree);
       expect(Math.abs(pay.x - inTree.x)).toBeLessThan(40);
@@ -530,7 +530,7 @@ for (const { platform, serial, provider, pageId, other } of [
       const click = await h.ok('webview', { action: 'click', selector: '#pay' });
       expect(click.text).toBe('clicked button "Pay"');
       expect((await h.ok('webview', { action: 'eval', js: paid })).text).toBe('"Paid"');
-      expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
+      expect((await h.ok('wait_for', { selector: { text: 'Paid' } })).data.met).toBe(true);
 
       const none = await h.call('webview', { action: 'click', selector: '#nothing' });
       expect(none.error).toBe(true);
@@ -555,7 +555,7 @@ for (const { platform, serial, provider, pageId, other } of [
       const pay = r.data.elements?.find((e) => e.text === 'Pay');
       assert(pay, 'Pay');
       await h.ok('tap', { x: pay.x, y: pay.y });
-      expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
+      expect((await h.ok('wait_for', { selector: { text: 'Paid' } })).data.met).toBe(true);
     }, 60_000);
 
     it('adds to the screen what the tree does not hold', async () => {
@@ -583,7 +583,7 @@ for (const { platform, serial, provider } of targets)
     const baselines = join(dir, `baselines-${platform}`);
     const open = async (screen: string, label: string) => {
       await h.ok('open_link', { url: `appdyno-fixture://open/${screen}` });
-      await h.ok('wait_for', { text: label });
+      await h.ok('wait_for', { selector: { text: label } });
     };
     beforeAll(async () => {
       h = harness(serial, provider());
@@ -690,7 +690,7 @@ describe.skipIf(!android)('visual comparison leaves the status bar out', () => {
       await demo('-e command enter');
       await demo('-e command clock -e hhmm 0101');
       await h.ok('open_link', { url: 'appdyno-fixture://open/dialog' });
-      await h.ok('wait_for', { text: 'Open dialog' });
+      await h.ok('wait_for', { selector: { text: 'Open dialog' } });
       const b = join(dir, 'clock');
       await h.ok('visual', { action: 'baseline', name: 'clock', dir: b });
       await demo('-e command clock -e hhmm 2359');

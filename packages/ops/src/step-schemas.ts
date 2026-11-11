@@ -137,7 +137,7 @@ export const WaitStep = z
   .object({
     action: z.literal('wait_for'),
     ref: Ref.optional(),
-    ...Selector.shape,
+    selector: Selector.optional(),
     gone: z.boolean().default(false),
     timeoutMs: z.number().int().min(300).max(MAX_WAIT_MS).default(WAIT_MS),
   })
@@ -147,7 +147,7 @@ export const AssertStep = z
   .object({
     action: z.literal('assert'),
     ref: Ref.optional(),
-    ...Selector.shape,
+    selector: Selector.optional(),
     check: Check.default('exists'),
     equals: z.string().max(2_000).optional(),
     expect: z.boolean().default(true),

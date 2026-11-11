@@ -248,7 +248,7 @@ async function run(s, warmUp) {
   const found = await call(
     '`find`',
     'find',
-    { text: 'Form' },
+    { selector: { text: 'Form' } },
     (r) => r.structuredContent?.matches?.length === 1,
   );
   const at = must(found.result.structuredContent?.matches?.[0], 'the match');
@@ -267,7 +267,12 @@ async function run(s, warmUp) {
     { selector: { id: 'name_input' }, text: 'speed' },
     'speed',
   );
-  await call('`wait_for` an element on the screen', 'wait_for', { text: 'Send' }, 'found');
+  await call(
+    '`wait_for` an element on the screen',
+    'wait_for',
+    { selector: { text: 'Send' } },
+    'found',
+  );
   await call('`screenshot`', 'screenshot', {}, (r) => r.content.some((c) => c.type === 'image'));
   // one line, or none, is a log read too
   /** @param {Result} r */
@@ -282,7 +287,7 @@ async function run(s, warmUp) {
     y: at.y,
     ...none,
   });
-  await call('', 'wait_for', { text: 'Send' }, 'found');
+  await call('', 'wait_for', { selector: { text: 'Send' } }, 'found');
 }
 
 /** @param {number[]} values */

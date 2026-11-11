@@ -7,7 +7,7 @@ Her araç aynı zamanda tirelerle yazılan bir komuttur:
 ```sh
 appdyno devices
 appdyno screen --device emulator-5554
-appdyno wait-for --text Done
+appdyno wait-for --selector '{"text":"Done"}'
 appdyno tap --help
 appdyno --help
 ```

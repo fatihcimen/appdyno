@@ -119,29 +119,29 @@ for (const { platform, serial, form } of targets)
         const home = await call('screen');
         // by ref, as an agent does: the file must not keep it
         await call('tap', { ref: refOf(home.text, form) });
-        await call('wait_for', { id: 'name_input', timeoutMs: 8_000 });
+        await call('wait_for', { selector: { id: 'name_input' }, timeoutMs: 8_000 });
         const screen = await call('screen');
         await call('type_text', { ref: refOf(screen.text, 'Your name'), text: LISTED_SECRET });
         await call('type_text', { selector: { id: 'name_input' }, text: 'Ayşe', replace: true });
         await call('type_text', { selector: { id: 'password_input' }, text: PASSWORD });
         await call('tap', { selector: { id: 'submit' } });
-        await call('assert', { id: 'result', check: 'text', equals: 'Sent: Ayşe' });
+        await call('assert', { selector: { id: 'result' }, check: 'text', equals: 'Sent: Ayşe' });
 
         await call('open_link', { url: 'appdyno-fixture://open/list' });
         await call('scroll_to', { selector: { text: 'Product 25' }, maxSwipes: 15 });
-        const adds = (await call('find', { id: 'add_button' })).data.matches;
+        const adds = (await call('find', { selector: { id: 'add_button' } })).data.matches;
         // from the middle: the first rows of a scrolled iOS list lie under its navigation bar
         const middle = Math.floor(adds.length / 2);
         const add = adds[middle];
         assert(add);
         await call('tap', { ref: add.ref });
-        await call('assert', { text: 'In basket: 1', timeoutMs: 3_000 });
+        await call('assert', { selector: { text: 'In basket: 1' }, timeoutMs: 3_000 });
 
         await call('open_link', { url: 'appdyno-fixture://open/dialog' });
         await call('tap', { selector: { id: 'open_dialog' } });
-        await call('wait_for', { text: 'OK', timeoutMs: 5_000 });
+        await call('wait_for', { selector: { text: 'OK' }, timeoutMs: 5_000 });
         await call('tap', { selector: { text: 'OK' } });
-        await call('assert', { id: 'result', check: 'text', equals: 'Confirmed' });
+        await call('assert', { selector: { id: 'result' }, check: 'text', equals: 'Confirmed' });
 
         const stop = await call('flow', { action: 'stop' });
         expect(stop.data.flagged).toEqual(
@@ -190,7 +190,7 @@ for (const { platform, serial, form } of targets)
           expect(t.settledMs).toBeLessThanOrEqual(t.ms);
         }
         // the app really is where the flow says it ended
-        await call('assert', { id: 'result', check: 'text', equals: 'Confirmed' });
+        await call('assert', { selector: { id: 'result' }, check: 'text', equals: 'Confirmed' });
       },
       LONG_MS,
     );
@@ -211,11 +211,11 @@ for (const { platform, serial, form } of targets)
         // the screen as it was: the home, untouched
         expect(r.text).toContain('appdyno fixture');
         expect(r.text).toContain('--from 3');
-        await call('assert', { text: 'appdyno fixture' });
+        await call('assert', { selector: { text: 'appdyno fixture' } });
 
         const go = await call('flow', { action: 'run', file: flow, from: 4 });
         expect(go.text).toContain('passed: 1 steps');
-        await call('wait_for', { id: 'name_input', timeoutMs: 8_000 });
+        await call('wait_for', { selector: { id: 'name_input' }, timeoutMs: 8_000 });
       },
       LONG_MS,
     );
@@ -232,7 +232,7 @@ for (const { platform, serial, form } of targets)
         expect(r.error).toBe(true);
         expect(r.data.code).toBe('AMBIGUOUS');
         expect(r.text).toContain(`${flow}:3`);
-        await call('assert', { text: 'In basket: 1', check: 'absent' });
+        await call('assert', { selector: { text: 'In basket: 1' }, check: 'absent' });
       },
       LONG_MS,
     );
@@ -350,7 +350,7 @@ for (const { platform, serial, form } of targets)
         const r = await call('flow', { action: 'run', file: androidRecording, params });
         process.stderr.write(`--- the Android recording on iOS\n${r.text}\n---\n`);
         expect(r.text).toMatch(/^passed: \d+ steps$/m);
-        await call('assert', { id: 'result', check: 'text', equals: 'Confirmed' });
+        await call('assert', { selector: { id: 'result' }, check: 'text', equals: 'Confirmed' });
       },
       LONG_MS,
     );

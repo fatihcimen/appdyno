@@ -214,7 +214,7 @@ describe.each(REVISIONS)('a client, on %s', (revision) => {
     const client = await clientAt(url);
     const stop = new AbortController();
     const call = client.callTool(
-      { name: 'wait_for', arguments: { text: 'never', timeoutMs: 10_000 } },
+      { name: 'wait_for', arguments: { selector: { text: 'never' }, timeoutMs: 10_000 } },
       { signal: stop.signal },
     );
     await vi.waitFor(() => expect(device.calls.length).toBeGreaterThan(0));
@@ -231,7 +231,7 @@ describe.each(REVISIONS)('a client, on %s', (revision) => {
     const { url, log, device } = await serving();
     const client = await clientAt(url);
     void client
-      .callTool({ name: 'wait_for', arguments: { text: 'never', timeoutMs: 10_000 } })
+      .callTool({ name: 'wait_for', arguments: { selector: { text: 'never' }, timeoutMs: 10_000 } })
       .catch(() => undefined);
     await vi.waitFor(() => expect(device.calls.length).toBeGreaterThan(0));
     await client.close();
@@ -339,7 +339,7 @@ describe('one client at a time', () => {
     // a call in progress: the seat it took cannot lapse under the second client's
     const running = a.callTool({
       name: 'wait_for',
-      arguments: { text: 'never', timeoutMs: 1_000 },
+      arguments: { selector: { text: 'never' }, timeoutMs: 1_000 },
     });
     await vi.waitFor(() => expect(contexts.length).toBeGreaterThan(1));
     await expect(b.callTool({ name: 'list_devices' })).rejects.toThrow(
@@ -426,7 +426,10 @@ describe('when the client has gone', () => {
         name: 'device_setting',
         arguments: { name: 'dark_mode', value: 'yes' },
       });
-      await client.callTool({ name: 'wait_for', arguments: { text: 'never', timeoutMs: 1_000 } });
+      await client.callTool({
+        name: 'wait_for',
+        arguments: { selector: { text: 'never' }, timeoutMs: 1_000 },
+      });
       expect(dark.value).toBe('yes');
     }),
   );

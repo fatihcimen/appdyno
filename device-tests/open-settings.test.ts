@@ -73,7 +73,7 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
 
   it('goes back to the app by launching it', async () => {
     ok(await call('launch_app'));
-    ok(await call('assert', { text: 'Form', timeoutMs: 5_000 }));
+    ok(await call('assert', { selector: { text: 'Form' }, timeoutMs: 5_000 }));
   });
 });
 

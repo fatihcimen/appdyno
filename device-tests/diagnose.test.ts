@@ -183,7 +183,7 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
   it('cancels a device call and keeps working', async () => {
     const abort = new AbortController();
     const wait = inCall({ signal: abort.signal }, () =>
-      call('wait_for', { text: 'never there', timeoutMs: 15_000, read: 'none' }),
+      call('wait_for', { selector: { text: 'never there' }, timeoutMs: 15_000, read: 'none' }),
     );
     setTimeout(() => abort.abort(), 200);
     const t = Date.now();
@@ -253,7 +253,7 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
     await call('launch_app', { read: 'none' });
     const abort = new AbortController();
     const wait = inCall({ signal: abort.signal }, () =>
-      call('wait_for', { text: 'never there', timeoutMs: 15_000, read: 'none' }),
+      call('wait_for', { selector: { text: 'never there' }, timeoutMs: 15_000, read: 'none' }),
     );
     setTimeout(() => abort.abort(), 200);
     await expect(wait).rejects.toMatchObject({ code: 'CANCELLED' });

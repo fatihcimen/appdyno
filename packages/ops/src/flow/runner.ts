@@ -42,7 +42,6 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
     ...(st.selector && { selector: st.selector }),
     ...(a.x !== undefined && { x: a.x, y: a.y }),
   };
-  const flat = st.selector ?? {};
   switch (st.action) {
     case 'launch': {
       // arguments and an environment start the app anew, as launch_app takes them
@@ -95,13 +94,13 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
     case 'wait_for':
       return [
         'wait_for',
-        { ...flat, ...defined({ gone: a.gone }), timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS },
+        { ...target, ...defined({ gone: a.gone }), timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS },
       ];
     case 'assert':
       return [
         'assert',
         {
-          ...flat,
+          ...target,
           ...defined({ check: a.check, equals: a.equals, expect: a.expect }),
           timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS,
         },
@@ -207,7 +206,7 @@ export function flowRunner(
     if (!st.selector || LOOKS_ONLY.has(st.action) || st.action === 'scroll_to') return;
     await keyboardFirst(s, st.selector);
     // no error here: if it never comes, the op itself refuses, with the nearest candidates
-    await steps.waitFor(s, { ...st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
+    await steps.waitFor(s, { selector: st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
     await steps.holdsStill(s, st.selector);
   };
 

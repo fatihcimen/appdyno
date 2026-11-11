@@ -141,7 +141,7 @@ describe('report', () => {
     });
     await call('steps', {
       steps: [
-        { action: 'wait_for', text: 'Form', timeoutMs: 300 },
+        { action: 'wait_for', selector: { text: 'Form' }, timeoutMs: 300 },
         { action: 'type_text', text: 'hidden-step', x: 5, y: 5 },
       ],
     });

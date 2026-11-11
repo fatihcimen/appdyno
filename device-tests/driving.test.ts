@@ -87,8 +87,8 @@ function shared(
     const r = await call('steps', {
       steps: [
         { action: 'tap', selector: { text: 'Form' } },
-        { action: 'wait_for', ...names.field, timeoutMs: 8_000 },
-        { action: 'assert', ...names.field, check: 'exists' },
+        { action: 'wait_for', selector: names.field, timeoutMs: 8_000 },
+        { action: 'assert', selector: names.field, check: 'exists' },
         { action: 'tap', selector: names.field },
         { action: 'type_text', text: 'İstanbul' },
       ],
@@ -97,8 +97,8 @@ function shared(
     expect(r.text).toContain('5. typed');
     const fail = await call('steps', {
       steps: [
-        { action: 'assert', ...names.field, check: 'enabled' },
-        { action: 'assert', text: 'Nothing here' },
+        { action: 'assert', selector: names.field, check: 'enabled' },
+        { action: 'assert', selector: { text: 'Nothing here' } },
       ],
     });
     expect(fail.error).toBe(true);
@@ -126,9 +126,9 @@ function shared(
   it('waits on the device, whichever way the screen comes', async () => {
     await open('delayed');
     if (names.delayed.start) ok(await call('tap', { selector: { text: names.delayed.start } }));
-    const r = await call('wait_for', { text: names.delayed.shows, timeoutMs: 8_000 });
+    const r = await call('wait_for', { selector: { text: names.delayed.shows }, timeoutMs: 8_000 });
     expect(r.data.met).toBe(true);
-    const absent = await call('wait_for', { text: 'Never', timeoutMs: 600 });
+    const absent = await call('wait_for', { selector: { text: 'Never' }, timeoutMs: 600 });
     expect(absent.error).toBe(true);
     expect(absent.data.code).toBe('TIMEOUT');
   });
@@ -146,15 +146,15 @@ function shared(
     await open('form');
     ok(await call('tap', { selector: names.field }));
     ok(await call('type_text', { text: 'Ayşe' }));
-    const f = ok(await call('find', { ...names.field }));
+    const f = ok(await call('find', { selector: names.field }));
     const [m] = f.data.matches;
     expect(m).toMatchObject({ enabled: true, focused: true, value: 'Ayşe' });
     assert(m);
     expect(m.bounds.w).toBeGreaterThan(0);
-    ok(await call('assert', { ...names.field, check: 'text', equals: 'Ayşe' }));
-    expect((await call('assert', { ...names.field, check: 'text', equals: 'No' })).data.code).toBe(
-      'CHECK_FAILED',
-    );
+    ok(await call('assert', { selector: names.field, check: 'text', equals: 'Ayşe' }));
+    expect(
+      (await call('assert', { selector: names.field, check: 'text', equals: 'No' })).data.code,
+    ).toBe('CHECK_FAILED');
   });
 
   it('says whether the keyboard is open, and closes it or says it cannot', async () => {
@@ -170,8 +170,8 @@ function shared(
     await open('gestures');
     const pad = { selector: { text: 'Gesture pad' } };
     ok(await call('gesture', { kind: 'double_tap', ...pad }));
-    ok(await call('assert', { text: 'double taps: 1' }));
-    const f = ok(await call('find', { text: 'Gesture pad' }));
+    ok(await call('assert', { selector: { text: 'double taps: 1' } }));
+    const f = ok(await call('find', { selector: { text: 'Gesture pad' } }));
     const [b] = f.data.matches;
     assert(b);
     ok(
@@ -183,7 +183,7 @@ function shared(
         durationMs: 600,
       }),
     );
-    const moved = ok(await call('find', { text: 'travel' }));
+    const moved = ok(await call('find', { selector: { text: 'travel' } }));
     const travel = /travel: (-?\d+)/.exec(JSON.stringify(moved.data))?.[1];
     expect(Number(travel)).toBeLessThan(-60);
     const r = await call('gesture', {
@@ -214,7 +214,7 @@ function shared(
     ok(set);
     expect(ok(await call('clipboard')).text).toBe('pano içeriği');
     ok(await call('type_text', { text: 'x', selector: names.field }));
-    ok(await call('assert', { ...names.field, check: 'text', equals: 'x' }));
+    ok(await call('assert', { selector: names.field, check: 'text', equals: 'x' }));
     if (!held.error && held.text !== 'the clipboard is empty')
       ok(await call('clipboard', { text: held.text }));
   });
@@ -282,7 +282,7 @@ describe.skipIf(!android)('driving on Android', () => {
 
   it('counts two fingers in a plan', async () => {
     await open('gestures');
-    const f = ok(await h.call('find', { text: 'Gesture pad' }));
+    const f = ok(await h.call('find', { selector: { text: 'Gesture pad' } }));
     const [b] = f.data.matches;
     assert(b);
     ok(
@@ -300,7 +300,7 @@ describe.skipIf(!android)('driving on Android', () => {
         ],
       }),
     );
-    ok(await h.call('assert', { text: 'fingers: 2' }));
+    ok(await h.call('assert', { selector: { text: 'fingers: 2' } }));
   });
 
   it('reads and answers a permission prompt', async () => {
@@ -525,7 +525,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
 
   it('pinches with two fingers in a plan, as the app sees it', async () => {
     await open('gestures');
-    const f = ok(await h.call('find', { text: 'Gesture pad' }));
+    const f = ok(await h.call('find', { selector: { text: 'Gesture pad' } }));
     const [b] = f.data.matches;
     assert(b);
     ok(
@@ -545,7 +545,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
         ],
       }),
     );
-    ok(await h.call('assert', { text: 'pinches: 1', timeoutMs: 2_000 }));
+    ok(await h.call('assert', { selector: { text: 'pinches: 1' }, timeoutMs: 2_000 }));
   });
 
   it("opens a link of the app's own on the stopped app in one call, with the app's screen", async () => {
@@ -645,7 +645,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     await open('push');
     ok(await h.call('tap', { selector: { id: 'ask_notifications' } }));
     const asked = await h.call('wait_for', {
-      text: 'Would Like to Send You Notifications',
+      selector: { text: 'Would Like to Send You Notifications' },
       timeoutMs: 3_000,
     });
     if (!asked.error) ok(await h.call('alert', { answer: 'allow' }));
@@ -750,7 +750,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     ok(await h.call('press_key', { key: 'lock', read: 'none' }));
     // the next launch must find the phone usable again
     await open('home');
-    ok(await h.call('assert', { text: 'appdyno fixture' }));
+    ok(await h.call('assert', { selector: { text: 'appdyno fixture' } }));
   }, 120_000);
 });
 

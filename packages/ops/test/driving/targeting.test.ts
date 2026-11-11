@@ -48,6 +48,39 @@ describe('targeting', () => {
     expect(act(d).at(-1)).toMatchObject({ y: 350 });
   });
 
+  it('names the row each of many matches is in, ten of them, and how many more', async () => {
+    withScreen(
+      'products',
+      Array.from({ length: 12 }, (_, i) => [
+        { c: 'android.widget.LinearLayout', b: [0, i * 150, 1080, i * 150 + 140] as const },
+        {
+          c: 'android.widget.TextView',
+          t: `Product ${i + 1}`,
+          p: 1 + i * 3,
+          b: [0, i * 150, 600, i * 150 + 140] as const,
+        },
+        {
+          c: 'android.widget.Button',
+          t: 'Add',
+          p: 1 + i * 3,
+          f: 19,
+          b: [800, i * 150, 1080, i * 150 + 140] as const,
+        },
+      ])
+        .flat()
+        .map((n) => ({ ...n, b: [...n.b] as [number, number, number, number] })),
+    );
+    const d = new FakeDevice();
+    d.screen = 'products';
+    const { call } = await connect(d);
+    const many = await call('tap', { selector: { text: 'Add' } });
+    expect(many.text).toMatch(
+      /^AMBIGUOUS: 12 elements match text="Add": @[\w-]+ button "Add" 940,70 — Product 1; /,
+    );
+    expect(many.text).toContain('— Product 10; and 2 more (no touch was sent)');
+    expect(many.data.hint).toBe('give the selector an index, 0 for the first listed, or use a ref');
+  });
+
   it(
     'waits for no match, then refuses with the nearest labels',
     fakeTimed(async () => {
@@ -125,7 +158,7 @@ describe('find and assert', () => {
     const d = new FakeDevice();
     d.screen = 'attrs';
     const { call } = await connect(d);
-    const name = await call('find', { id: 'dev.app:id/name' });
+    const name = await call('find', { selector: { id: 'dev.app:id/name' } });
     expect(name.data.matches?.[0]).toMatchObject({
       role: 'textField',
       enabled: true,
@@ -135,12 +168,12 @@ describe('find and assert', () => {
       bounds: { x: 0, y: 100, w: 500, h: 100 },
     });
     expect(name.text).toContain('focused');
-    const box = await call('find', { text: 'Agree' });
+    const box = await call('find', { selector: { text: 'Agree' } });
     expect(box.data.matches?.[0]).toMatchObject({ enabled: false, checked: true });
     expect(box.text).toContain('disabled');
-    const pw = await call('find', { id: 'dev.app:id/pw' });
+    const pw = await call('find', { selector: { id: 'dev.app:id/pw' } });
     expect(must(pw.data.matches?.[0], 'a match').value).toBeUndefined();
-    expect((await call('find', { role: 'checkbox' })).data.matches).toHaveLength(1);
+    expect((await call('find', { selector: { role: 'checkbox' } })).data.matches).toHaveLength(1);
   });
 
   it('answers a passing check, and refuses a failing one saying what it found', async () => {
@@ -150,15 +183,25 @@ describe('find and assert', () => {
     const d = new FakeDevice();
     d.screen = 'state';
     const { call } = await connect(d);
-    expect((await call('assert', { text: 'Agree', check: 'checked' })).error).toBe(false);
-    expect((await call('assert', { text: 'Agree', check: 'enabled' })).error).toBe(false);
-    expect((await call('assert', { text: 'Nope', check: 'absent' })).error).toBe(false);
-    const off = await call('assert', { text: 'Agree', check: 'checked', expect: false });
+    expect((await call('assert', { selector: { text: 'Agree' }, check: 'checked' })).error).toBe(
+      false,
+    );
+    expect((await call('assert', { selector: { text: 'Agree' }, check: 'enabled' })).error).toBe(
+      false,
+    );
+    expect((await call('assert', { selector: { text: 'Nope' }, check: 'absent' })).error).toBe(
+      false,
+    );
+    const off = await call('assert', {
+      selector: { text: 'Agree' },
+      check: 'checked',
+      expect: false,
+    });
     expect(off.error).toBe(true);
     expect(off.data.code).toBe('CHECK_FAILED');
-    const text = await call('assert', { text: 'Agree', check: 'text', equals: 'No' });
+    const text = await call('assert', { selector: { text: 'Agree' }, check: 'text', equals: 'No' });
     expect(text.text).toContain('reads "Agree", not "No"');
-    const gone = await call('assert', { text: 'Agree', check: 'absent' });
+    const gone = await call('assert', { selector: { text: 'Agree' }, check: 'absent' });
     expect(gone.text).toContain('is on the screen');
   });
 });

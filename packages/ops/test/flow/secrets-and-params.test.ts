@@ -32,7 +32,11 @@ describe('flows', () => {
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('type_text', { text: SECRET, selector: { id: 'pass' } });
-        await call('assert', { id: 'greeting', check: 'text', equals: `Merhaba ${SECRET}` });
+        await call('assert', {
+          selector: { id: 'greeting' },
+          check: 'text',
+          equals: `Merhaba ${SECRET}`,
+        });
         await call('tap', { selector: { id: 'greeting' } });
       });
       expect(device.typed).toEqual([SECRET]);

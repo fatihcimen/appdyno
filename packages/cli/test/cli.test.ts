@@ -95,7 +95,14 @@ describe('commands from the operations', () => {
       y: 350,
       durationMs: 500,
     });
-    const wait = await run('wait-for', '--text', 'nothing', '--gone', '--read', 'none');
+    const wait = await run(
+      'wait-for',
+      '--selector',
+      '{"text":"nothing"}',
+      '--gone',
+      '--read',
+      'none',
+    );
     expect(wait.out).toEqual(['gone']);
   });
 
@@ -192,14 +199,7 @@ describe('commands from the operations', () => {
     expect(r.code).toBe(0);
     const help = r.out.join('\n');
     expect(help).toContain('appdyno wait-for');
-    for (const flag of [
-      '--text',
-      '--id',
-      '--ref',
-      '--gone',
-      '--timeout-ms',
-      '--read <diff|full|none>',
-    ])
+    for (const flag of ['--selector', '--ref', '--gone', '--timeout-ms', '--read <diff|full|none>'])
       expect(help).toContain(flag);
     expect(help).toContain('default "diff"');
     expect(device.calls.length).toBe(before);
@@ -310,7 +310,9 @@ describe('commands from the operations', () => {
     const several = await run('tap', '--json', '{"selector":{"text":"Add"}}');
     expect(several.code).toBe(1);
     expect(several.err[0]).toContain('2 elements match');
-    expect(several.err[1]).toBe('  give the selector an index, or use a ref');
+    expect(several.err[1]).toBe(
+      '  give the selector an index, 0 for the first listed, or use a ref',
+    );
     device.fail = new DeviceError('TIMEOUT', 'the build hung', 'the last lines of its log');
     const failed = await run('screen');
     expect(failed.code).toBe(1);

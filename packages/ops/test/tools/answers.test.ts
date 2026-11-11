@@ -136,7 +136,7 @@ describe('structured answers', () => {
       excessive: false,
       virtualDevice: true,
     });
-    expect(await sc('find', { text: 'Gönder' })).toMatchObject({
+    expect(await sc('find', { selector: { text: 'Gönder' } })).toMatchObject({
       matches: [{ role: 'button', label: 'Gönder' }],
     });
   });
@@ -178,11 +178,11 @@ describe('structured answers', () => {
         const refusal = await both('tap', { selector: { text: 'Add' } });
         expect(refusal.error).toBe(true);
         expect(refusal.said).toMatch(
-          /^AMBIGUOUS: 2 elements match .*\nhint: give the selector an index, or use a ref$/,
+          /^AMBIGUOUS: 2 elements match .*\nhint: give the selector an index, 0 for the first listed, or use a ref$/,
         );
         expect(refusal.sc).toMatchObject({
           code: 'AMBIGUOUS',
-          hint: 'give the selector an index, or use a ref',
+          hint: 'give the selector an index, 0 for the first listed, or use a ref',
           dispatched: false,
         });
       });

@@ -12,10 +12,15 @@ describe('steps across screens', () => {
     const r = await call('steps', {
       steps: [
         { action: 'tap', selector: { text: 'Form' } },
-        { action: 'wait_for', text: 'Bilgiler' },
+        { action: 'wait_for', selector: { text: 'Bilgiler' } },
         { action: 'type_text', text: 'x', selector: { role: 'textField' } },
         { action: 'tap', selector: { text: 'Gönder' } },
-        { action: 'assert', id: 'dev.app:id/result', check: 'text', equals: 'Gönderildi' },
+        {
+          action: 'assert',
+          selector: { id: 'dev.app:id/result' },
+          check: 'text',
+          equals: 'Gönderildi',
+        },
       ],
     });
     expect(r.error).toBe(false);
@@ -66,7 +71,7 @@ describe('steps across screens', () => {
     const r = await call('steps', {
       steps: [
         { action: 'tap', selector: { text: 'Form' } },
-        { action: 'assert', text: 'Nope' },
+        { action: 'assert', selector: { text: 'Nope' } },
         { action: 'tap', selector: { text: 'Gönder' } },
       ],
     });
@@ -103,7 +108,7 @@ describe('steps across screens', () => {
     const { call } = await connect(d);
     const r = await call('steps', {
       steps: [
-        { action: 'find', text: 'Form' },
+        { action: 'find', selector: { text: 'Form' } },
         { action: 'screenshot' },
         { action: 'tap', selector: { text: 'Form' } },
         { action: 'screenshot' },
@@ -136,13 +141,23 @@ describe('steps across screens', () => {
     );
     const r = await call('steps', {
       steps: [
-        { action: 'wait_for', text: 'Form' },
+        { action: 'wait_for', selector: { text: 'Form' } },
         { action: 'tap', text: 'Crash', read: 'full' },
       ],
     });
     expect(r.text).toBe(
       'INVALID_ARGUMENT: step 2: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"action":"tap","selector":{"text":"Crash"}}',
     );
+  });
+
+  it('takes a selector in selector in every tool that looks for an element, and says so of one at the top', async () => {
+    const { call } = await connect(new FakeDevice());
+    for (const tool of ['find', 'wait_for', 'assert'] as const) {
+      expect((await call(tool, { text: 'Form' })).data.hint, tool).toBe(
+        'a target goes in selector: {"selector":{"text":"Form"}}',
+      );
+      expect((await call(tool, { selector: { text: 'Form' } })).error, tool).toBe(false);
+    }
   });
 
   it("says where a tool's target goes by its own selector, as a tap with text at the top has it", async () => {
@@ -445,7 +460,7 @@ describe('steps across screens', () => {
       const { call } = await connect(d, { defaults: { app } });
       const r = await call('steps', {
         steps: [
-          { action: 'wait_for', text: 'Form' },
+          { action: 'wait_for', selector: { text: 'Form' } },
           { action: 'tap', selector: { text: 'Form' }, ...(read && { read }) },
           { action: 'tap', selector: { text: 'Gönder' } },
           { action: 'type_text', text: 'Ada' },
@@ -481,7 +496,7 @@ describe('steps across screens', () => {
   const cutShort = (call: Awaited<ReturnType<typeof connect>>['call']) =>
     call('steps', {
       steps: [
-        { action: 'wait_for', text: 'Form' },
+        { action: 'wait_for', selector: { text: 'Form' } },
         { action: 'tap', selector: { text: 'Form' }, read: 'none' },
         { action: 'tap', selector: { text: 'Kaydet' } },
         { action: 'type_text', text: 'Ada' },

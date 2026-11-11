@@ -7,7 +7,7 @@ Every tool is also a command, with dashes:
 ```sh
 appdyno devices
 appdyno screen --device emulator-5554
-appdyno wait-for --text Done
+appdyno wait-for --selector '{"text":"Done"}'
 appdyno tap --help
 appdyno --help
 ```

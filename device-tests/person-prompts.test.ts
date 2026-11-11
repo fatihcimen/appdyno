@@ -39,7 +39,12 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
 
   const passes = async () => {
     ok(await o.call('device_setting', { name: 'biometric', value: 'match' }));
-    ok(await o.call('wait_for', { id: 'result', text: 'Authenticated', timeoutMs: 8_000 }));
+    ok(
+      await o.call('wait_for', {
+        selector: { id: 'result', text: 'Authenticated' },
+        timeoutMs: 8_000,
+      }),
+    );
   };
 
   // a run's first sheet took 3 to 5 s, after the tap's answer: the next read has it
@@ -102,7 +107,7 @@ describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {
     // a PIN just set takes a moment to count as one
     for (let i = 0; i < 5; i++) {
       adb('am', 'start', '-a', 'android.app.action.CONFIRM_DEVICE_CREDENTIAL');
-      if ((await o.call('wait_for', { id: field, timeoutMs: 2_000 })).data.met) break;
+      if ((await o.call('wait_for', { selector: { id: field }, timeoutMs: 2_000 })).data.met) break;
     }
     expect(ok(await o.call('screen')).text).toContain('needs a person: a passcode');
     ok(await o.call('press_key', { key: 'back' }));
@@ -115,7 +120,12 @@ describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {
     expect(r.text).toContain('needs a person: a fingerprint or a face');
     expect(ok(await o.call('screenshot')).text).toContain('needs a person');
     ok(await o.call('device_setting', { name: 'biometric', value: 'match' }));
-    ok(await o.call('wait_for', { id: 'result', text: 'Authenticated', timeoutMs: 8_000 }));
+    ok(
+      await o.call('wait_for', {
+        selector: { id: 'result', text: 'Authenticated' },
+        timeoutMs: 8_000,
+      }),
+    );
   });
 
   it('a page of the permission controller wants no person for its words', async () => {

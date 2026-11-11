@@ -29,7 +29,7 @@ function stepsOf(get: () => Call) {
         steps: [
           { action: 'screenshot' },
           { action: 'tap', selector: { text: 'Form' }, read: 'diff' },
-          { action: 'wait_for', id: 'name_input' },
+          { action: 'wait_for', selector: { id: 'name_input' } },
           { action: 'type_text', selector: { id: 'name_input' }, text: 'Ali' },
           { action: 'find', id: 'name_input' },
           { action: 'screenshot' },

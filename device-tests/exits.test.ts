@@ -21,7 +21,7 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
   const after = async (cause: () => unknown) => {
     await call('terminate_app');
     await call('open_link', { url: 'appdyno-fixture://open/crash' });
-    await call('wait_for', { id: 'exit', timeoutMs: 8_000 });
+    await call('wait_for', { selector: { id: 'exit' }, timeoutMs: 8_000 });
     const since = new Date().toISOString();
     await cause();
     await sleep(2_000);

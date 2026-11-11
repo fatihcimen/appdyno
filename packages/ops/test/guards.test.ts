@@ -93,7 +93,10 @@ describe('what did not happen is no success', () => {
   );
 
   it('a wait that ran out refuses, with the screen it saw', async () => {
-    const r = await asked(new FakeDevice(), 'wait_for', { text: 'Never', timeoutMs: 300 });
+    const r = await asked(new FakeDevice(), 'wait_for', {
+      selector: { text: 'Never' },
+      timeoutMs: 300,
+    });
     expect(r.isError).toBe(true);
     expect(r.structuredContent.code).toBe('TIMEOUT');
     expect(r.content[0]?.text).toContain('not shown after 300 ms');
@@ -103,7 +106,7 @@ describe('what did not happen is no success', () => {
   it('so does one with nothing asked of the screen', async () => {
     const e = await refusal(
       callerOf(contextOf(new FakeDevice()))('wait_for', {
-        text: 'Never',
+        selector: { text: 'Never' },
         timeoutMs: 300,
         read: 'none',
       }),
@@ -115,7 +118,7 @@ describe('what did not happen is no success', () => {
   it('a wait for what goes refuses while it stays', async () => {
     const e = await refusal(
       callerOf(contextOf(new FakeDevice()))('wait_for', {
-        text: 'Ana sayfa',
+        selector: { text: 'Ana sayfa' },
         gone: true,
         timeoutMs: 300,
       }),

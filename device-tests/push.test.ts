@@ -225,7 +225,8 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
 describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
   const call = server(SIMULATOR);
   afterAll(() => new IosSimulatorDevice(SIMULATOR).stopAgent());
-  const last = async () => /"([^"]*)"/.exec((await call('find', { id: 'push_last' })).text)?.[1];
+  const last = async () =>
+    /"([^"]*)"/.exec((await call('find', { selector: { id: 'push_last' } })).text)?.[1];
 
   it('says which types it takes, and how', async () => {
     const r = await call('push');
@@ -239,11 +240,14 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     await call('open_link', { url: 'appdyno-fixture://open/push' });
     await call('tap', { selector: { id: 'ask_notifications' } });
     // the first time it asks, and its prompt may come after the tap's answer
-    await call('wait_for', { text: 'Would Like to Send You Notifications', timeoutMs: 5_000 });
+    await call('wait_for', {
+      selector: { text: 'Would Like to Send You Notifications' },
+      timeoutMs: 5_000,
+    });
     await call('alert', { answer: 'allow' });
     const alert = await call('push', { type: 'alert', title: 'Order 42', data: { order: '42' } });
     expect(alert.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is in front/);
-    await call('wait_for', { text: 'alert Order 42: order=42', timeoutMs: 8_000 });
+    await call('wait_for', { selector: { text: 'alert Order 42: order=42' }, timeoutMs: 8_000 });
     expect(await last()).toBe('alert Order 42: order=42');
     // APNs' own payload, with a badge, a sound and a category of actions
     const payload = {
@@ -251,7 +255,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
       order: '7',
     };
     await call('push', { type: 'alert', payload: JSON.stringify(payload) });
-    await call('wait_for', { text: 'alert Raw: order=7', timeoutMs: 8_000 });
+    await call('wait_for', { selector: { text: 'alert Raw: order=7' }, timeoutMs: 8_000 });
     expect(await last()).toBe('alert Raw: order=7');
     // the simulator takes no push with nothing to see
     const quiet = await call('push', { type: 'background', data: { sync: '7' } });

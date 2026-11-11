@@ -35,7 +35,7 @@ describe('a refusal of a call that names too little', () => {
   it('says where the words a find may name are, when it names none', async () => {
     const { call } = await connect(new FakeDevice());
     expect((await call('find')).text).toBe(
-      'INVALID_ARGUMENT: give text, id or role\nhint: screen lists the elements, each by its ref, role and words',
+      'INVALID_ARGUMENT: give the selector text, id or role\nhint: screen lists the elements, each by its ref, role and words',
     );
     expect((await call('tap')).data.hint).toBe(
       'screen lists the elements, each by its ref, role and words',
