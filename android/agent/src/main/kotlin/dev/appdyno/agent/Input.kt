@@ -51,12 +51,8 @@ class Input(private val automation: Automation) {
         automation.inject(touch(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y))
     }
 
-    fun doubleTap(x: Float, y: Float, cancelled: () -> Boolean) {
-        tap(x, y, cancelled)
-        // the platform takes a second touch sooner than 40 ms after the first as a separate tap
-        Thread.sleep(40)
-        tap(x, y, cancelled)
-    }
+    // the platform takes a second touch sooner than 40 ms after the first as a separate tap
+    fun doubleTap(x: Float, y: Float, cancelled: () -> Boolean) = twice(cancelled, { Thread.sleep(40) }) { tap(x, y, cancelled) }
 
     fun longPress(x: Float, y: Float, durationMs: Long, cancelled: () -> Boolean) {
         Platform.userActivity()
@@ -248,6 +244,13 @@ class Input(private val automation: Automation) {
     companion object {
         private const val TAP_TRIES = 3
         private const val TAP_RETRY_MS = 100L
+
+        /** `tap`, `pause`, and `tap` again but once the job is cancelled, as its host was told the touch did not go (pure, unit tested). */
+        fun twice(cancelled: () -> Boolean, pause: () -> Unit, tap: () -> Unit) {
+            tap()
+            pause()
+            if (!cancelled()) tap()
+        }
 
         /**
          * `once`, and again after an INTERNAL failure, up to `tries` in all; never again once the job is cancelled, as

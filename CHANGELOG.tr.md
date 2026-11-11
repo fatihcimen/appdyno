@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Android'de ilk dokunuşu sırasında durdurulan bir çift dokunuş ikincisini yapmaz; önceden ikincisi, çağrı iptal edildi diye yanıtlandıktan sonra gidiyordu.
 - Girdi yardımcısı başlarken, ilk sorusunu yanıtlarken ya da ekranın dönüşünü söylerken durdurulan bir çağrının bir simülatördeki dokunuşu ya da tuşu gönderilmez; önceden yalnızca bu beklemelerden önceki bir durdurma onu tutuyordu.
 - `Command+A` gibi büyük bir harfle `press_key`, büyük bir harf aynı zamanda bir shift olacağından bir harfin küçük olduğunu söyleyerek reddedilir; önceden ret, kendisine verilmiş olan bir harfi istiyordu.
 - Sunucunun yönergeleri, `perf_scroll` ve `perf_trace`'in kare probunu bir iOS simülatörünün uygulamasına kendiliğinden (`probe: false`: koymaz), `perf_launch`'un da `probe: true` ile koyduğunu söyler; önceden bunu yalnızca `probe: true`'nun yaptığını söylüyordu. Araç başvurusu, metin `done`'u tuttuğunda onun `structuredContent`'e konmadığını söyler; önceden `done`'un yalnızca metinde olduğunu söylüyordu.

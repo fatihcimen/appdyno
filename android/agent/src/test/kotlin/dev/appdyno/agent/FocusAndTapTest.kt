@@ -69,6 +69,18 @@ class FocusAndTapTest {
     }
 
     @Test
+    fun aDoubleTapTheHostStoppedDuringItsFirstMakesNoSecond() {
+        var made = 0
+        Input.twice({ false }, {}) { made++ }
+        assertEquals(2, made)
+
+        made = 0
+        var stopped = false
+        Input.twice({ stopped }, { stopped = true }) { made++ }
+        assertEquals(1, made)
+    }
+
+    @Test
     fun aTapRefusedForAnotherReasonIsNotMadeAgain() {
         var made = 0
         assertThrows(AgentFailure::class.java) {
