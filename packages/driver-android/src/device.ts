@@ -27,7 +27,7 @@ import {
   type SettingsPage,
   type SystemView,
 } from '@appdyno/core';
-import { Adb, amStartError, assertPkg, assertSerial, shq } from './adb.js';
+import { Adb, amStartError, assertPkg, assertSerial, shq, wholeAnswer } from './adb.js';
 import { androidCrashes, androidCrashing, androidRunning } from './crashes.js';
 import { androidLogs } from './logs.js';
 import { auditAndroid } from './audit.js';
@@ -128,8 +128,9 @@ export class AndroidDevice extends RpcDevice implements Device {
   logs = (q: LogsQuery) => androidLogs(this.adb, this.serial, q);
   crashes = (q: CrashesQuery) => androidCrashes(this.adb, this.serial, q);
   appPid = async (app: string) =>
-    (await this.adb.exec(this.serial, `pidof ${shq(assertPkg(app))}`)).trim().split(/\s+/)[0] ||
-    undefined;
+    (await wholeAnswer(this.adb, this.serial, `pidof ${shq(assertPkg(app))}`))
+      .trim()
+      .split(/\s+/)[0] || undefined;
   appRunning = (app: string) => androidRunning(this.adb, this.serial, app);
   appCrashing = (app: string) => androidCrashing(this.adb, this.serial, app);
   readonly apps: AndroidApps;

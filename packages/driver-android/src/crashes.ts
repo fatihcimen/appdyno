@@ -8,7 +8,7 @@ import {
   type CrashReport,
   type ExitCount,
 } from '@appdyno/core';
-import { type Adb, assertPkg, shq } from './adb.js';
+import { type Adb, assertPkg, shq, wholeAnswer } from './adb.js';
 import { namedTombstone, shortFrame } from './tombstone.js';
 
 /** Reasons that are the app's end as nobody asked for it; the rest (a user's stop, a new install) are left out. */
@@ -214,17 +214,21 @@ export async function androidCrashes(
 
 /**
  * "keeps stopping", as a shell condition: the system marks the process crashing while its dialog is up (`crashing=true`
- * before API 31), and keeps it, dead, until the dialog is answered.
+ * before API 31), and keeps it, dead, until the dialog is answered. The app's own process only, from its record to the
+ * next: another of its processes (`pkg:push`) crashing leaves the app running.
  */
-export const heldForDialog = (app: string) =>
-  `dumpsys activity processes ${shq(assertPkg(app))} | grep -qE '(mC|c)rashing=true'`;
+export const heldForDialog = (app: string) => {
+  const own = `[^ :]*:${assertPkg(app).replace(/\./g, '\\.')}\\/`;
+  // what is written to a pipe grep has closed is said on stderr, which `exec:` gives with the answer
+  return `{ dumpsys activity processes ${shq(app)} | sed -n '/ProcessRecord{[^ ]* ${own}/,/ProcessRecord{/p' | grep -qE '(mC|c)rashing=true'; } 2>/dev/null`;
+};
 
 export async function androidCrashing(adb: Adb, serial: string, app: string) {
-  return (await adb.exec(serial, `${heldForDialog(app)} && echo held`)).trim() === 'held';
+  return (await wholeAnswer(adb, serial, `${heldForDialog(app)} && echo held`)).trim() === 'held';
 }
 
 /** Whether the app has a process: one held for its crash dialog is no running app, dead until the dialog is answered. */
 export async function androidRunning(adb: Adb, serial: string, app: string) {
   const up = `pidof ${shq(assertPkg(app))} >/dev/null && ! ${heldForDialog(app)} && echo up`;
-  return (await adb.exec(serial, up)).trim() === 'up';
+  return (await wholeAnswer(adb, serial, up)).trim() === 'up';
 }

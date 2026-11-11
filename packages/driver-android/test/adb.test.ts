@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type AddressInfo, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -5,6 +6,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
 import { Adb, assertSerial, cableSerial, overNetwork, parseDevices, shq } from '../src/adb.js';
+import { heldForDialog } from '../src/crashes.js';
 import { AndroidDevice } from '../src/device.js';
 
 describe('an agent reached', () => {
@@ -101,18 +103,64 @@ describe('launching an app', () => {
     // only a process held so, and before the start: `am start -W` waited 10 s on one, its dialog still up
     expect(starts(ran)).toEqual([
       expect.stringMatching(
-        /^pidof 'a\.b' >\/dev\/null && dumpsys activity processes 'a\.b' \| grep -qE '\(mC\|c\)rashing=true' && am force-stop 'a\.b'; am start -W /,
+        /^pidof 'a\.b' >\/dev\/null && \{ dumpsys activity processes 'a\.b' \| sed .* \| grep -qE '\(mC\|c\)rashing=true'; \} 2>\/dev\/null && am force-stop 'a\.b'; am start -W /,
       ),
     ]);
   });
 
   it('takes a process held for its crash dialog for no running app', async () => {
-    const held = device('');
+    const held = device(':appdyno-end:\n');
     expect(await held.d.appRunning('a.b')).toBe(false);
     expect(held.ran).toEqual([
-      "pidof 'a.b' >/dev/null && ! dumpsys activity processes 'a.b' | grep -qE '(mC|c)rashing=true' && echo up",
+      `pidof 'a.b' >/dev/null && ! ${heldForDialog('a.b')} && echo up; echo :appdyno-end:`,
     ]);
-    expect(await device('up\n').d.appRunning('a.b')).toBe(true);
+    expect(await device('up\n:appdyno-end:\n').d.appRunning('a.b')).toBe(true);
+  });
+
+  it('takes an answer that a connection ended cleanly in the middle of for a device gone, not for no process', async () => {
+    // adb's server ends a client's connection with no error when the device's transport goes
+    const cut = device('');
+    for (const ask of [
+      () => cut.d.appPid('a.b'),
+      () => cut.d.appRunning('a.b'),
+      () => cut.d.appCrashing('a.b'),
+    ])
+      await expect(ask()).rejects.toMatchObject({ code: 'DEVICE_GONE' });
+    expect(await device('4242\n:appdyno-end:\n').d.appPid('a.b')).toBe('4242');
+    expect(await device(':appdyno-end:\n').d.appPid('a.b')).toBeUndefined();
+  });
+
+  it('holds the app for its crash dialog only where its own process crashed, not another of its processes', () => {
+    /** As `dumpsys activity processes a.b` lists them: the app's own process and its `:push` one, either crashing. */
+    const processes = (own: boolean, push: boolean) =>
+      [
+        'ACTIVITY MANAGER RUNNING PROCESSES (dumpsys activity processes)',
+        '  All known processes:',
+        '  *APP* UID 10190 ProcessRecord{6f1b2a3 5120:a.b/u0a190}',
+        '    user #0 uid=10190 gids={50190, 20190, 9997}',
+        `    mCrashing=${String(own)} mNotResponding=false`,
+        '  *APP* UID 10190 ProcessRecord{1c2d3e4 5188:a.b:push/u0a190}',
+        '    user #0 uid=10190 gids={50190, 20190, 9997}',
+        `    mCrashing=${String(push)} mNotResponding=false`,
+        '  PID mappings:',
+        '    PID #5120: ProcessRecord{6f1b2a3 5120:a.b/u0a190}',
+        '    PID #5188: ProcessRecord{1c2d3e4 5188:a.b:push/u0a190}',
+      ].join('\n');
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-held-'));
+    const held = (own: boolean, push: boolean) => {
+      writeFileSync(join(dir, 'out'), processes(own, push));
+      // the shell line as the device runs it, by adb's `exec:`, which gives stderr with the answer; its dumpsys answers
+      // from the file, and says the pipe closed once grep has its line
+      const dumpsys = `dumpsys() { cat ${shq(join(dir, 'out'))}; echo 'Failed to write while dumping service activity: Broken pipe' >&2; }`;
+      const line = `{ ${dumpsys}; ${heldForDialog('a.b')} && echo held; } 2>&1`;
+      return spawnSync('sh', ['-c', line], { encoding: 'utf8' }).stdout.trim() === 'held';
+    };
+    expect([held(true, false), held(false, true), held(false, false)]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+    rmSync(dir, { recursive: true });
   });
 
   it('says what went wrong, not what it was starting', async () => {

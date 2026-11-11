@@ -67,6 +67,25 @@ export const amStartError = (out: string) =>
 
 export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
+/** Printed after a command whose answer decides something, as its end: a cut-off answer lacks it. */
+const END = ':appdyno-end:';
+
+/**
+ * `command`'s whole answer, for one that decides something, as an empty `pidof` that the app is gone: adb's server ends
+ * a client's connection cleanly when the device's transport goes, and what came would read as all of it.
+ */
+export async function wholeAnswer(adb: Adb, serial: string, command: string) {
+  const out = await adb.exec(serial, `${command}; echo ${END}`);
+  const end = out.lastIndexOf(END);
+  if (end < 0)
+    throw new DeviceError(
+      'DEVICE_GONE',
+      `adb lost the device during ${command.slice(0, 80)}: its answer was cut off`,
+      'check that the device is connected (adb devices)',
+    );
+  return out.slice(0, end);
+}
+
 const PAIR_MS = 30_000;
 
 class Reader {
