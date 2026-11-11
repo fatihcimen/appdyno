@@ -19,9 +19,9 @@ const MOST = 200;
 /** The ways that list requests; the others count bytes. */
 const REQUESTS: readonly NetworkVia[] = ['probe', 'proxy'];
 export const IPHONE_NEEDS =
-  "An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone.";
+  "An iPhone's requests show only through an HTTP proxy you run, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone.";
 export const ANDROID_NEEDS =
-  'Requests show only through a proxy you run, such as Proxyman, set on this device. This window changes no proxy: without one it counts what the app sends and receives.';
+  'Requests show only through an HTTP proxy you run, set on this device. This window changes no proxy: without one it counts what the app sends and receives.';
 export const PROBE_WHILE =
   'The probe restarts the app: stop the recording first, or wait for the measure to end';
 const NO_APP = 'Open an app of yours to capture its requests';

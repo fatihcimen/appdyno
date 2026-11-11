@@ -31,13 +31,13 @@ const literal = (text: string) =>
 
 /** A string Maestro cannot read as ours: a literal `${` has no escape there. */
 const plain = (value: string) => {
-  if (value.includes('$${')) unsupported('a literal ${ has no form in Maestro');
+  if (value.includes('$${')) unsupported('a literal ${ has no form in Maestro YAML');
   return value;
 };
 
 /** Maestro has no role: role and text become text, which may match more than the two did. */
 function maestroSelector(s: FlowSelector | undefined): Record<string, Yaml> {
-  if (!s?.id && !s?.text) return unsupported('Maestro has no selector by role alone');
+  if (!s?.id && !s?.text) return unsupported('Maestro YAML has no selector by role alone');
   return {
     ...(s.id && { id: literal(plain(s.id)) }),
     ...(s.text && { text: literal(plain(s.text)) }),
@@ -52,7 +52,7 @@ const targetOf = (st: FlowStep): Record<string, Yaml> =>
 
 const none = (st: FlowStep, ...args: string[]) => {
   for (const a of args)
-    if (st.args[a] !== undefined) unsupported(`Maestro has no ${a} for ${st.action}`);
+    if (st.args[a] !== undefined) unsupported(`Maestro YAML has no ${a} for ${st.action}`);
 };
 
 function commands(st: FlowStep): Yaml[] {
@@ -75,7 +75,7 @@ function commands(st: FlowStep): Yaml[] {
     case 'double_tap':
       return [{ doubleTapOn: targetOf(st) }];
     case 'type':
-      if (a.replace) unsupported('Maestro erases a count of characters, not the whole field');
+      if (a.replace) unsupported('Maestro YAML erases a count of characters, not the whole field');
       return [
         ...(st.selector || a.x !== undefined ? [{ tapOn: targetOf(st) }] : []),
         { inputText: plain(a.text as string) },
@@ -84,7 +84,7 @@ function commands(st: FlowStep): Yaml[] {
     case 'press_key': {
       if (a.key === 'back') return ['back'];
       const key = MAESTRO_KEYS[a.key as string];
-      return key ? [{ pressKey: key }] : unsupported(`Maestro has no key ${String(a.key)}`);
+      return key ? [{ pressKey: key }] : unsupported(`Maestro YAML has no key ${String(a.key)}`);
     }
     case 'swipe':
       none(st, 'distance', 'x', 'y');
@@ -119,7 +119,7 @@ function commands(st: FlowStep): Yaml[] {
     case 'assert': {
       const yes = a.expect !== false;
       const check = a.check ?? 'exists';
-      if (check === 'moves') unsupported('Maestro has no check of what moves on a screen');
+      if (check === 'moves') unsupported('Maestro YAML has no check of what moves on a screen');
       const sel = maestroSelector(st.selector);
       if (check === 'exists' || check === 'absent') {
         const shows = (check === 'exists') === yes;
@@ -136,20 +136,20 @@ function commands(st: FlowStep): Yaml[] {
       }
       none(st, 'timeoutMs');
       if (check === 'text') {
-        if (!yes) unsupported('Maestro has no check that a text is another');
+        if (!yes) unsupported('Maestro YAML has no check that a text is another');
         return [{ assertVisible: { ...sel, text: literal(plain(a.equals as string)) } }];
       }
       return [{ assertVisible: { ...sel, [check as string]: yes } }];
     }
     case 'open_link':
-      if (a.settings) unsupported('Maestro opens no page of Settings');
+      if (a.settings) unsupported('Maestro YAML opens no page of Settings');
       return [{ openLink: plain(a.url as string) }];
     case 'set_location':
       return [{ setLocation: { latitude: String(a.lat), longitude: String(a.lon) } }];
     case 'hide_keyboard':
       return ['hideKeyboard'];
     case 'alert':
-      return unsupported('Maestro answers a system alert by its words, in one language');
+      return unsupported('Maestro YAML answers a system alert by its words, in one language');
     case 'unrecorded':
       return unsupported(`not recorded: ${String(a.what)}`);
     case 'run':
@@ -177,7 +177,7 @@ function write(value: Yaml, indent: string): string[] {
  * takes a part of a label.
  */
 export function toMaestro(flow: Flow): string {
-  if (!flow.app) throw new FlowError('Maestro needs an app: add app to the flow', 0);
+  if (!flow.app) throw new FlowError('Maestro YAML needs an app: add app to the flow', 0);
   const broken: string[] = [];
   const lines = [
     `appId: ${JSON.stringify(flow.app)}`,
@@ -187,7 +187,7 @@ export function toMaestro(flow: Flow): string {
   for (const [i, st] of flow.steps.entries()) {
     try {
       if (st.selector?.role && (st.selector.id || st.selector.text))
-        lines.push(`# step ${i + 1}: role=${st.selector.role} left out, Maestro has no role`);
+        lines.push(`# step ${i + 1}: role=${st.selector.role} left out, Maestro YAML has no role`);
       for (const c of commands(st)) {
         if (typeof c === 'string') lines.push(`- ${c}`);
         else {
@@ -199,6 +199,7 @@ export function toMaestro(flow: Flow): string {
       broken.push(`step ${i + 1} (line ${st.line}, ${st.action}): ${(e as Error).message}`);
     }
   }
-  if (broken.length > 0) throw new FlowError(`cannot export to Maestro:\n${broken.join('\n')}`, 0);
+  if (broken.length > 0)
+    throw new FlowError(`cannot export to Maestro YAML:\n${broken.join('\n')}`, 0);
   return `${lines.join('\n')}\n`;
 }

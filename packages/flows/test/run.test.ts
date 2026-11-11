@@ -204,7 +204,7 @@ stop`),
     fails('launch\nalert allow', /step 2 \(line 3, alert\)/);
     fails('tap x=1 y=2 !coordinates', /step 1 .*coordinates/);
     fails('type "x" replace', /step 1 .*whole field/);
-    fails('tap role=button', /step 1 .*role alone/);
+    fails('tap role=button', /step 1 .*Maestro YAML has no selector by role alone/);
     fails('press_key app_switch', /step 1 .*app_switch/);
     fails('swipe up distance=300', /step 1 .*distance/);
     fails('scroll_to text="x" maxSwipes=3', /step 1 .*maxSwipes/);

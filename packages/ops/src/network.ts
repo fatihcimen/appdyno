@@ -67,7 +67,7 @@ const QUOTE = 0x22;
 const BACKSLASH = 0x5c;
 
 /**
- * The requests of a HAR file (what Proxyman, Charles and mitmproxy export) from `since` on, one at a time:
+ * The requests of a HAR file (what a debugging proxy exports) from `since` on, one at a time:
  * a proxy's session reaches hundreds of megabytes, past what a string may hold.
  */
 export async function harEntries(file: string, since?: number): Promise<NetworkEntry[]> {
@@ -338,9 +338,9 @@ export function networkOps(ctx: ServerContext) {
         if (now.via === 'proxy') reportProgress('exporting from the proxy');
         const read = await readCapture(s, now);
         if (read)
-          return answer(now, read, contains, limit, now.via === 'proxy' ? 'Proxyman' : now.via);
+          return answer(now, read, contains, limit, now.via === 'proxy' ? 'the proxy' : now.via);
         throw new ToolError(
-          `the traffic went through ${String(now.proxy)}, whose list this tool cannot read: export it as HAR and give har (Charles: File, Export Session; mitmproxy: --set hardump=file)`,
+          `the traffic went through ${String(now.proxy)}, whose list this tool cannot read: export the proxy's session as HAR and give har`,
           'UNSUPPORTED',
         );
       },

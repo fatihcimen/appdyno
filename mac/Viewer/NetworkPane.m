@@ -10,7 +10,7 @@ static const double kDetailHeight = 110;
 /// Each way by its name, as a person reads it, and what it shows.
 static NSString *const kWays[][3] = {
     {@"probe", @"Probe", @"Restarts the app with a probe in it, then lists each request it makes through URLSession: method, address, status, time and size."},
-    {@"proxy", @"Proxy", @"Lists what goes through the proxy this device already uses, where Proxyman runs it. HTTPS shows only its host unless the proxy decrypts it."},
+    {@"proxy", @"Proxy", @"Lists what goes through the proxy this device already uses, where this tool can read the proxy's list. HTTPS shows only its host unless the proxy decrypts it."},
     {@"bytes", @"Bytes", @"Counts what the app sends and receives, with no addresses."},
     {@"packets", @"Packets", @"Counts the app's packets by port when the capture stops, with no addresses."},
 };

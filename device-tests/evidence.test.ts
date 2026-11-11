@@ -290,7 +290,7 @@ for (const { platform, serial, provider } of targets)
     });
   });
 
-/** A local web server and a forward proxy with a list it writes as HAR, as Charles or mitmproxy would. */
+/** A local web server and a forward proxy with a list it writes as HAR, as a debugging proxy would. */
 async function localWeb() {
   const web = createServer((req, res) => res.end(Buffer.alloc(200_000, 7)));
   await new Promise<void>((r) => web.listen(0, '0.0.0.0', r));

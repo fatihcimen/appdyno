@@ -127,8 +127,8 @@ static void checkNetwork(MVWindow *window) {
   [pane show:@{@"op": @"network",
                @"capturing": @NO,
                @"ways": @[],
-               @"needs": @"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone."}];
-  MVCheck(@"network: where nothing lists requests it says what a person needs, and offers nothing to press", [pane.said containsString:MVWord(@"An iPhone's requests show only through a proxy you run, such as Proxyman, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone.")] && [[pane valueForKey:@"_go"] isHidden], pane.said);
+               @"needs": @"An iPhone's requests show only through an HTTP proxy you run, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone."}];
+  MVCheck(@"network: where nothing lists requests it says what a person needs, and offers nothing to press", [pane.said containsString:MVWord(@"An iPhone's requests show only through an HTTP proxy you run, set in the iPhone's Wi-Fi settings, and then they show here. This window changes no setting on a phone.")] && [[pane valueForKey:@"_go"] isHidden], pane.said);
   [window.nsWindow layoutIfNeeded];
   NSView *state = [pane valueForKey:@"_state"], *about = [pane valueForKey:@"_about"];
   double gap = NSMinY([state convertRect:state.bounds toView:nil]) - NSMaxY([about convertRect:about.bounds toView:nil]);
