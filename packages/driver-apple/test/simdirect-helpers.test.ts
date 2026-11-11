@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { must } from '@appdyno/core';
+import { must, stoppable } from '@appdyno/core';
 import { directChecks } from '../src/provider.js';
 import { DirectSim } from '../src/simdirect.js';
 import { onKeyboard, sameTree } from '../src/simtree.js';
@@ -283,6 +283,27 @@ describe('the helpers prove themselves', () => {
     d.touchLost();
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
     expect(d.status().input).toMatch(/did not reach the app/);
+  });
+
+  it('sends no touch for a call stopped while it waited on the helpers', async () => {
+    const { call, helper: hid } = helping(() => ({ ok: true }));
+    const stop = new AbortController();
+    const reading = helper((q) => {
+      // the stop comes as the turns are asked, the last wait before the stroke
+      if (q.op === 'orientation') stop.abort();
+      return q.op === 'read'
+        ? { ok: true, tree: app(cell('A', 0)), screen: [402, 874], touchesEnded: 2, ms: 3 }
+        : { ok: true };
+    });
+    const d = new DirectSim('u', {
+      ax: () => Promise.resolve(reading),
+      hid: () => Promise.resolve(hid),
+    });
+    await d.read('a.b');
+    await expect(
+      stoppable(stop.signal, () => d.send({ kind: 'tap', x: 1, y: 1 })),
+    ).rejects.toMatchObject({ code: 'CANCELLED' });
+    expect(call.mock.calls.map(([q]) => q.op)).toEqual(['ping']);
   });
 
   it('leaves input to the runner when the app cannot report touches, not when one app says no', async () => {

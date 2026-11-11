@@ -1,3 +1,4 @@
+import { throwIfCancelled } from '@appdyno/core';
 import { DeviceError, PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
 import { turnedTouch, turnsOf } from './mirror-sim.js';
 import { type HelperProcess, startSimAx, startSimHid, type HelperAnswer } from './simhelper.js';
@@ -263,6 +264,8 @@ export class DirectSim {
       return false;
     }
     const last = events?.[events.length - 1]?.at ?? 0;
+    // a stop that came while the helper started, answered its ping or told the turns holds the stroke too
+    throwIfCancelled('the action');
     const a = await hid.call(
       key ? { op: 'key', ...key, ...(held && { modifiers: held }) } : { op: 'touch', events },
       last + 5_000,

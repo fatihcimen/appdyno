@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A simulator's touch or key for a call stopped while the input helper started, answered its first ask or told the screen's turn is not sent, where only a stop before those waits held it.
 - `press_key` with a capital letter, as `Command+A`, is refused saying a letter is a small one, as a capital would be a shift too, where the refusal asked for a letter, which it had been given.
 - The server's instructions say that `perf_scroll` and `perf_trace` put the frame probe in an iOS simulator's app by themselves (`probe: false`: not), and `perf_launch` with `probe: true`, where they said only `probe: true` did; the tools reference says `done` is left out of `structuredContent` where the text holds it, where it said `done` was in the text alone.
 - `app` with `launch`, over MCP or as `appdyno app launch`, is refused with where it went: `launch_app` starts an app, and with `restart: true` starts it fresh. A first word on the command line that is no action of its tool is refused with the actions it has, where it said only that the word was unexpected.
