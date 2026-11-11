@@ -57,8 +57,7 @@ function context(
   };
   return new ServerContext({ ...DEFAULT_POLICY, secrets: ['hunter2'] }, [provider], {
     device: 'guarded',
-    ...(alertPerson && { alertPerson }),
-    ...(silent && { silent }),
+    person: { ...(alertPerson && { alertPerson }), ...(silent && { silent }) },
   });
 }
 
@@ -93,7 +92,9 @@ describe('the activity of a device', () => {
 
   it('names the client that drives, as a person knows it', async () => {
     rmSync(activityFile(), { force: true });
-    const ctx = new ServerContext(DEFAULT_POLICY, [], { clientNamed: (s) => `${s} by name` });
+    const ctx = new ServerContext(DEFAULT_POLICY, [], {
+      person: { clientNamed: (s) => `${s} by name` },
+    });
     ctx.currentSerial = 'guarded';
     await inCall({ client: 'said' }, () => activityFor(ctx)(op('tap')).handler({}));
     expect(readActivity()[0]).toMatchObject({ tool: 'tap', client: 'said by name' });

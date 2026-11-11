@@ -44,10 +44,10 @@ export function handoffOps(ctx: ServerContext) {
         const serial = await ctx.defaultSerial();
         const id = randomBytes(4).toString('hex');
         rmSync(doneFile(serial), { force: true });
-        writeState(requestFile(serial), { id, reason, ...(ctx.silent && { silent: true }) });
+        writeState(requestFile(serial), { id, reason, ...(ctx.person.silent && { silent: true }) });
         const window = liveMirror(serial) !== undefined;
         // with a window, its parent shows the banner and sounds it, unless silent; with none, a sound and a notification
-        if (!window) ctx.alertPerson?.(reason);
+        if (!window) ctx.person.alertPerson?.(reason);
         const before = window ? undefined : await screenSign(ctx);
         const started = Date.now();
         const end = started + timeoutS * 1000;

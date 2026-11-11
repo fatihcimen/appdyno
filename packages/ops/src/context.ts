@@ -22,6 +22,16 @@ import { byPerson, checkApp, checkLaunch, type Policy } from './policy.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
 
+/** How a person is reached, and what a client is called to one. */
+type Person = {
+  /** A server run --silent: a request for a person sounds nowhere, in a window or out of one. */
+  silent?: boolean;
+  /** Reaches a person when there is no window to show a request in. */
+  alertPerson?: (reason: string) => void;
+  /** What a person calls the client that named itself this. */
+  clientNamed?: (said: string) => string;
+};
+
 const Saved = z.object({
   serial: z.string(),
   app: z.string().optional(),
@@ -38,6 +48,8 @@ export class ServerContext {
 
   /** Its own copy: a replay's secrets join the list for as long as it runs. */
   readonly policy: Policy;
+
+  readonly person: Person;
 
   constructor(
     policy: Policy,
@@ -64,12 +76,7 @@ export class ServerContext {
       share?: boolean;
       /** How to run this tool again, for a window that outlives the call that opened it. */
       mirrorCommand?: string[];
-      /** A server run --silent: a request for a person sounds nowhere, in a window or out of one. */
-      silent?: boolean;
-      /** Reaches a person when there is no window to show a request in. */
-      alertPerson?: (reason: string) => void;
-      /** What a person calls the client that named itself this. */
-      clientNamed?: (said: string) => string;
+      person?: Person;
       /**
        * Where a flow's names find a value no param and no env file gives: a person's own command line's environment. A
        * server has none, as its own environment is no flow's to type.
@@ -78,6 +85,7 @@ export class ServerContext {
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };
+    this.person = defaults.person ?? {};
     this.saved = defaults.remember ? readState(defaults.remember, Saved) : undefined;
   }
 
@@ -323,18 +331,6 @@ export class ServerContext {
 
   get mirrorCommand() {
     return this.defaults.mirrorCommand;
-  }
-
-  clientNamed(said: string) {
-    return this.defaults.clientNamed?.(said) ?? said;
-  }
-
-  get silent() {
-    return this.defaults.silent === true;
-  }
-
-  get alertPerson() {
-    return this.defaults.alertPerson;
   }
 
   /** A device's driver object, cold: nothing on the device has started. */

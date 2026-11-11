@@ -73,7 +73,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
     execFileSync('xcrun', ['simctl', 'launch', serial, 'dev.appdyno.fixture']);
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^${serial}$`) };
-    const ctx = new ServerContext(policy, [simulatorProvider()], { clientNamed });
+    const ctx = new ServerContext(policy, [simulatorProvider()], { person: { clientNamed } });
     done = runHub(ctx, {
       focus: false,
       behind: true,

@@ -76,7 +76,7 @@ export function activityFor(ctx: ServerContext) {
                   args: shownArgs(op, args, clean),
                   ...(typeof done === 'string' && { done }),
                   ...(touched && { touched }),
-                  ...(client && { client: ctx.clientNamed(client) }),
+                  ...(client && { client: ctx.person.clientNamed?.(client) ?? client }),
                 });
               touched = undefined;
             };

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- How a person is reached and how a client is named to one, `silent`, `alertPerson` and `clientNamed`, are one `person` option of the server's context, read as it is given, where each was an option of its own and a getter that passed it through.
 - What the regression gate looks at on the device, a profile, the main thread, a start and the replay around a step, is functions of their own in `packages/ops/src/perf/looks.ts`, and the gate's `why` and `reference` are in `why.ts`: they were one function of 342 lines, let past the 200-line cap by name.
 - What `perf_snapshot`'s `also` can read, each with how it is read, kept, said and answered, is a file of its own, `packages/ops/src/perf/extras.ts`, beside the op: they shared one file at 449 of its 450 lines.
 - Each tool that acts on the screen, `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `assert` and `alert`, is a function of its own, as the `perf_` tools are, and `steps` is in `packages/ops/src/batch.ts`: they were one function of 378 lines, let past the 200-line cap by name, in a file at 449 of its 450.

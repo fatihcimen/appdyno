@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir kişiye nasıl ulaşıldığı ve bir istemcinin ona nasıl adlandırıldığı, `silent`, `alertPerson` ve `clientNamed`, sunucunun bağlamının verildiği gibi okunan tek bir `person` seçeneğidir; önceden her biri kendi seçeneği ve onu olduğu gibi geçiren bir okuyucuydu.
 - Gerileme kapısının cihazda baktıkları, bir profil, ana iş parçacığı, bir başlatma ve bir adımın çevresindeki yeniden oynatma, `packages/ops/src/perf/looks.ts` içinde kendi işlevleridir; kapının `why` ve `reference`'ı da `why.ts` içindedir: 200 satır sınırını adıyla geçen 342 satırlık tek bir işlevdiler.
 - `perf_snapshot`'ın `also`'sunun okuyabildikleri, her biri nasıl okunduğu, saklandığı, söylendiği ve yanıtlandığıyla, işlemin yanında kendi dosyasındadır, `packages/ops/src/perf/extras.ts`: 450 satırının 449'undaki tek bir dosyayı paylaşıyorlardı.
 - Ekranda eylem yapan her araç, `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `assert` ve `alert`, `perf_` araçları gibi kendi işlevidir; `steps` de `packages/ops/src/batch.ts` içindedir: 450 satırının 449'undaki bir dosyada, 200 satır sınırını adıyla geçen 378 satırlık tek bir işlevdiler.

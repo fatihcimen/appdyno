@@ -113,8 +113,7 @@ function contextFrom(values: ServerFlags, remember?: string, flowEnv?: NodeJS.Pr
     tool: remember ? 'appdyno cli' : values[PUT_BACK_AFTER] ? PUT_BACK_TOOL : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
     // a silent server sounds nowhere: a window that shows its request is told so
-    ...(alertPerson ? { alertPerson } : { silent: true }),
-    clientNamed,
+    person: { ...(alertPerson ? { alertPerson } : { silent: true }), clientNamed },
     ...(flowEnv && { env: flowEnv }),
     mirrorCommand: [
       process.execPath,
