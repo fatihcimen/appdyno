@@ -294,7 +294,8 @@ export class ServerContext {
 
   /** The devices on which this process left what outlives it, as a session's end would put back. */
   leftBehind(): string[] {
-    return this.defaults.remember ? [] : [...this.sessions.keys()].filter(leftHere);
+    if (this.defaults.remember) return [];
+    return [...this.sessions].flatMap(([serial, s]) => (leftHere(s) ? [serial] : []));
   }
 
   /**
