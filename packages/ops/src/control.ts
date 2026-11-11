@@ -48,18 +48,27 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
       'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (service: location, photos, microphone…; a wrong word lists them), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant; args, env as launch_app takes them).',
     input: z
       .object({
-        action: z.enum([
-          'list',
-          'state',
-          'install',
-          'uninstall',
-          'clear',
-          'grant',
-          'revoke',
-          'download_data',
-          'replace_data',
-          'build_and_run',
-        ]),
+        action: z.enum(
+          [
+            'list',
+            'state',
+            'install',
+            'uninstall',
+            'clear',
+            'grant',
+            'revoke',
+            'download_data',
+            'replace_data',
+            'build_and_run',
+          ],
+          {
+            // what app once held, where it went
+            error: (x) =>
+              x.input === 'launch'
+                ? 'app has no launch: launch_app starts an app, and with restart: true starts it fresh'
+                : undefined,
+          },
+        ),
         app: z.string().max(200).optional(),
         path: z.string().max(1_000).optional(),
         service: z.string().max(80).optional(),

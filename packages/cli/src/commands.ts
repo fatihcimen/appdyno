@@ -118,8 +118,8 @@ function parse(op: Op, argv: string[]) {
   let yes = false;
   for (let i = 0; i < argv.length; i++) {
     const word = must(argv[i], 'a word');
-    // `record start`: the first bare word of an op with actions
-    if (i === 0 && !word.startsWith('--') && properties.action?.enum?.includes(word)) {
+    // `record start`: the first bare word of an op with actions, which the op refuses as it does over MCP where it has none
+    if (i === 0 && !word.startsWith('--') && properties.action?.enum) {
       args.action = word;
       continue;
     }

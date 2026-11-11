@@ -47,8 +47,14 @@ describe('commands from the operations', () => {
     const r = await run('report', 'stop');
     expect(r.code).toBe(1);
     expect(r.err.join('')).toMatch(/no report is open/);
-    expect((await run('report', 'nothing')).err.join('')).toMatch(/unexpected word: nothing/);
+    expect((await run('report', 'nothing')).err.join('')).toMatch(
+      /--action: Invalid option: expected one of "start"\|/,
+    );
     expect((await run('report', 'stop', 'stop')).err.join('')).toMatch(/unexpected word: stop/);
+    // an action app had once says where it went
+    expect((await run('app', 'launch')).err.join('')).toMatch(
+      /--action: app has no launch: launch_app starts an app, and with restart: true starts it fresh/,
+    );
   });
 
   it('has one command per operation, named with dashes', () => {

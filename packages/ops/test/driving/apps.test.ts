@@ -45,6 +45,10 @@ describe('app management', () => {
     const apps = manager();
     const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d);
+    // where app's launch went
+    expect((await call('app', { action: 'launch' })).text).toMatch(
+      /^INVALID_ARGUMENT: action: app has no launch: launch_app starts an app, and with restart: true starts it fresh\n/,
+    );
     expect((await call('launch_app', { restart: true })).text).toMatch(
       /^restarted dev\.app, which was running\n/,
     );

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `app` with `launch`, over MCP or as `appdyno app launch`, is refused with where it went: `launch_app` starts an app, and with `restart: true` starts it fresh. A first word on the command line that is no action of its tool is refused with the actions it has, where it said only that the word was unexpected.
 - A tool's step in `steps` with a selector's words at its top, as a `find` step with `text`, is refused with the step in its right shape in the hint, as a touch's step is, where the refusal named only the word not taken.
 - On iOS a row of a list that has scrolled under a navigation bar at the top is left out, as one under the status bar above it is: a touch there reaches the bar, which scrolled the list to its top while the answer said the row was tapped, and `index: 0` picked that row after any scroll. The bar's own buttons stay listed, and so does a sheet over the bar's screen.
 - An iPhone's `inspector` `press`, which presses an element by its words or id alone, passes the guard every input passes: it asks the person each time, as no place on the screen tells whether it is a power, emergency, erase or call control, and under `--allow-apps` or `--no-home` it is refused. It went to the phone unasked, past both flags.
