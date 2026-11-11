@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- CI runs on a push to `main` and on a pull request, so a branch with one runs once where it ran twice; a newer push cancels the run of the same branch or pull request before it, and a job ends at 45 minutes, where a hang took GitHub's six hours.
 - `appdyno test` and the commands that are an operation's are functions of their own beside `main`, which falls from 196 lines to 103 of its 200; the logs, crashes and audit answers are `ops`'s `diagnose.test.ts`, and the JSON and TOML editors' tests `cli`'s `file-edits.test.ts`, where `truth.test.ts` stood at 793 and `install.test.ts` at 791 of 800 lines.
 - `packages/testing` has its type project and `typecheck` back, outside `ops`'s, and the root manifest declares it; each package's manifest declares what its tests and scripts import: the drivers for `hub` and `ops`, `mcp`, `protocol` and the MCP client for `cli`, the MCP client for `ops`, `typescript` for `core` and `appdyno`, and `prettier` for `appdyno`.
 - Each unit test file runs on a state folder of its own within the run's, made by `no-real-state.setup.ts`, where the files of both workers shared one, and a fake device's files by its serial with it; 28 files drop the line that made one by hand, and 9 whose tests each want an empty one keep theirs.

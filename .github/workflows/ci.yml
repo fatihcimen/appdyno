@@ -1,7 +1,9 @@
 name: ci
 
 on:
+  # main as it moves; any other branch runs once, by its pull request
   push:
+    branches: [main]
   pull_request:
   # the gate of a release
   workflow_call:
@@ -9,9 +11,16 @@ on:
 permissions:
   contents: read
 
+# a newer push to a branch or a pull request leaves the run before it nothing to say
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: macos-latest
+    # a run takes 12 to 27 minutes: a hang ends here, not at GitHub's six hours
+    timeout-minutes: 45
     strategy:
       matrix:
         # the long-term release we develop on, and the oldest that engines lets in
