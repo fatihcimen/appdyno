@@ -14,6 +14,7 @@ import {
   must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { devicectlReady } from './first-launch.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 
 const START_MS = 15_000;
@@ -60,7 +61,13 @@ class ToolRecorder implements ScreenRecorder {
     return must(child.pid, "the sleeper's pid");
   }
 
+  /** What must hold before the tool starts. */
+  protected ready(): Promise<void> {
+    return Promise.resolve();
+  }
+
   async start(file: string, { maxSeconds }: { maxSeconds: number }): Promise<RecordingHandle> {
+    await this.ready();
     const dir = join(stateDir(), 'video');
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const log = join(dir, `${randomBytes(4).toString('hex')}.log`);
@@ -166,8 +173,14 @@ export const simulatorRecorder = (udid: string): ScreenRecorder =>
 // shortcut: what `devicectl` prints once it records has not been seen, as the one phone tried (iPhone 13 Pro Max,
 // iOS 27.0.1) lacks the capability and refuses at once; a process still there after QUIET_MS counts as recording.
 // Read its output on a phone that has it and wait for that instead.
+class DevicectlRecorder extends ToolRecorder {
+  protected override ready() {
+    return devicectlReady();
+  }
+}
+
 const devicectlRecorder = (udid: string): ScreenRecorder =>
-  new ToolRecorder(
+  new DevicectlRecorder(
     'mp4',
     (file, maxSeconds) => [
       'devicectl',

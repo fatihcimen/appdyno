@@ -63,6 +63,19 @@ describe("an iPhone's app, to APNs", () => {
     expect(follow).toHaveBeenCalledWith('U', 'dev.app');
   });
 
+  it('follows one console of an app however many ask while it starts', async () => {
+    const child = console_();
+    // a console that starts a moment later, as one does once Xcode's first launch is asked
+    const follow = vi.fn(() => Promise.resolve(child as never));
+    const target = new PhoneApnsTarget({ udid: 'U' } as Devicectl, new Map(), follow);
+    const first = target.lines('dev.app', 'device');
+    expect(await target.lines('dev.app', 'device')).toEqual({ lines: [] });
+    await new Promise((r) => setImmediate(r));
+    child.stderr.write(`device token: ${DEVICE}\n`);
+    expect(await first).toMatchObject({ relaunched: true });
+    expect(follow).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the newest 5,000 of a console's lines, however much the app says", async () => {
     const child = console_();
     const target = new PhoneApnsTarget({ udid: 'U' } as Devicectl, new Map(), () => child as never);

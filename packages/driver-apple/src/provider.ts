@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { run, type Check, type DeviceProvider, must } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
+import { firstLaunchCheck } from './first-launch.js';
 import { IosSimulatorDevice } from './simulator.js';
 import { Simulators } from './simulators.js';
 import { phoneRunnerApp } from './phone.js';
@@ -34,6 +35,8 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
     out.push(warn('xcode', 'not found', 'install Xcode (iOS only)'));
     return out;
   }
+  const firstLaunch = await firstLaunchCheck();
+  if (firstLaunch) out.push(firstLaunch);
   // looked up only: a missing runner is built once on its first use, never by doctor
   const runner = (name: string, kind: 'simulator' | 'device', products?: string, at = products) => {
     if (!products || !at) return warn(name, 'not built yet', RUNNER_NOT_BUILT);

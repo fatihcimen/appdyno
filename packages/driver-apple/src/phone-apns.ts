@@ -3,6 +3,7 @@ import { createInterface } from 'node:readline';
 import { run, type PushTokenKind } from '@appdyno/core';
 import { tokensIn, type ApnsTarget } from './apns-push.js';
 import { phoneFacts, type Devicectl } from './devicectl.js';
+import { devicectlReady } from './first-launch.js';
 import { infoValue } from './sim-links.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
 
@@ -36,8 +37,9 @@ export async function readBuild(app: string): Promise<[bundle: string, PhoneBuil
 }
 
 /** devicectl relaunching the app with its console followed, os_log and NSLog in it too, as under Xcode. */
-const followConsole = (udid: string, app: string): ChildProcess =>
-  spawn(
+async function followConsole(udid: string, app: string): Promise<ChildProcess> {
+  await devicectlReady();
+  return spawn(
     'xcrun',
     [
       'devicectl',
@@ -54,6 +56,7 @@ const followConsole = (udid: string, app: string): ChildProcess =>
     ],
     { env: xcodeEnv(), stdio: ['ignore', 'pipe', 'pipe'] },
   );
+}
 
 /**
  * An iPhone, to APNs. This tool reads no running app's log there, so an app's tokens are what it prints once relaunched
@@ -63,7 +66,8 @@ const followConsole = (udid: string, app: string): ChildProcess =>
 export class PhoneApnsTarget implements ApnsTarget {
   readonly name = 'iPhone';
   readonly production = true;
-  private readonly followed = new Map<string, { child: ChildProcess; lines: string[] }>();
+  /** Each app's console, from when it is asked for: one starting has no process yet. */
+  private readonly followed = new Map<string, { child?: ChildProcess; lines: string[] }>();
 
   constructor(
     private readonly ctl: Devicectl,
@@ -91,10 +95,21 @@ export class PhoneApnsTarget implements ApnsTarget {
 
   async lines(app: string, wanted: PushTokenKind) {
     const kept = this.followed.get(app);
-    if (kept?.child.exitCode === null) return { lines: kept.lines };
+    // one console an app: a call beside one starting or running takes what it has read
+    if (kept && (kept.child?.exitCode ?? null) === null) return { lines: kept.lines };
     const lines: string[] = [];
-    const child = this.follow(this.ctl.udid, app);
-    this.followed.set(app, { child, lines });
+    const entry: { child?: ChildProcess; lines: string[] } = { lines };
+    this.followed.set(app, entry);
+    let child: ChildProcess;
+    try {
+      child = await this.follow(this.ctl.udid, app);
+    } catch (e) {
+      this.followed.delete(app);
+      throw e;
+    }
+    entry.child = child;
+    // closed while it started: what it started goes with it
+    if (this.followed.get(app) !== entry) child.kill('SIGKILL');
     await new Promise<void>((done) => {
       const timer = setTimeout(done, TOKEN_WAIT_MS);
       const take = (line: string) => {
@@ -117,7 +132,7 @@ export class PhoneApnsTarget implements ApnsTarget {
 
   /** devicectl hands a signal it can catch on to the app: SIGKILL alone leaves the app running as it was. */
   close() {
-    for (const { child } of this.followed.values()) child.kill('SIGKILL');
+    for (const { child } of this.followed.values()) child?.kill('SIGKILL');
     this.followed.clear();
   }
 }

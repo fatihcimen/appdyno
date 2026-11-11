@@ -1,5 +1,6 @@
 import { DeviceError } from '@appdyno/protocol';
 import { run } from '@appdyno/core';
+import { devicectlReady } from './first-launch.js';
 import { launchLanguage } from './manage.js';
 import { xcodeEnv, xcodeTool, assertBundle, notRunning } from './simctl.js';
 
@@ -58,8 +59,9 @@ export class Devicectl {
   }
 
   async json(args: string[], timeoutMs = 60_000): Promise<Record<string, unknown>> {
+    const env = xcodeEnv();
+    await devicectlReady(env);
     try {
-      const env = xcodeEnv();
       const { stdout } = await run(
         ...xcodeTool('devicectl', ['--json-output', '-', '--quiet', ...args], env),
         { timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, env },
@@ -145,12 +147,14 @@ export class Devicectl {
 
   /** The text on the phone's pasteboard, '' with none. */
   async readPasteboard() {
+    await devicectlReady();
     const { stdout } = await this.pasteboard('paste');
     // with no text there, the tool says so on the same stream
     return stdout.startsWith('No text content') ? '' : stdout;
   }
 
   async writePasteboard(text: string) {
+    await devicectlReady();
     const copying = this.pasteboard('copy');
     copying.child.stdin?.end(text);
     await copying;
