@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `tool-kinds.ts` imports nothing of the registry: its lists are constants that `registry.ts` holds to the tools there are, so a name that is no tool still fails the build, and the type cycle among ops's files is 21 files again, where it was 62.
 - eslint reads the types of one program over every file it lints, `tsconfig.eslint.json`, where a project of each package checked most of the workspace again: its peak falls from 4.5 GB to 2.3 GB, within a 2 GB heap, and CI lints on Node 22 again, where it ran out of 4 GB.
 - A simulator's input helper lets go of what it holds when it ends, by the end of its input or a SIGTERM in the middle of a request: a key still down goes up and a finger still down ends where it is, as a person's lifted would, and the helper says so on its error output. A simulator that kept them for a helper gone would have held them for the next.
 - The iOS runner looks at its call again once it has waited for the app's animations, before a touch and before its tap on the field it types into, and before the Enter of a text no field took the focus for: a caller told TIMEOUT or CANCELLED during that wait still got the touch or the Enter.

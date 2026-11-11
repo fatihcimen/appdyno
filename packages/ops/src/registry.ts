@@ -26,6 +26,7 @@ import { readOps } from './read.js';
 import { recordOps } from './record.js';
 import { reportFor } from './report.js';
 import { stepsFor, type Steps } from './steps.js';
+import { KIND_NAMES } from './tool-kinds.js';
 import { visualOps } from './visual.js';
 import { webOps } from './web.js';
 import { refused, type Op } from './tool.js';
@@ -107,6 +108,9 @@ function build(ctx: ServerContext) {
 type AnyOp = ReturnType<typeof everyOp>[number];
 
 export type OpName = AnyOp['name'];
+
+/** A name of `tool-kinds.ts` that is no tool fails the build here, where the tools are known. */
+const _kinds: readonly OpName[] = KIND_NAMES;
 
 /** What this op answers, as its output schema says. */
 export type OpData<N extends OpName> = z.infer<Extract<AnyOp, { name: N }>['output']>;
