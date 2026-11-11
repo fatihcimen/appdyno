@@ -33,8 +33,38 @@ export const ERROR_CODES = [
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
-/** Codes worth one retry by the caller (the device may answer the next time). */
-const RETRYABLE: ReadonlySet<ErrorCode> = new Set(['TIMEOUT', 'AGENT_UNAVAILABLE', 'DEVICE_GONE']);
+/**
+ * Where a failed action's touch stands: `refused first` by an agent before it touched anything; `may have gone` from a
+ * device that stopped answering, or a call stopped, which may have touched before it did; `if sent` went if the action
+ * had left for the device.
+ */
+export type TouchByCode = 'refused first' | 'may have gone' | 'if sent';
+
+/** What each code says to its caller: `retryable` is worth one retry, as the device may answer the next time. */
+export const ERROR_TRAITS: Record<ErrorCode, { retryable: boolean; touch: TouchByCode }> = {
+  TIMEOUT: { retryable: true, touch: 'may have gone' },
+  CANCELLED: { retryable: false, touch: 'may have gone' },
+  DEVICE_GONE: { retryable: true, touch: 'may have gone' },
+  AGENT_UNAVAILABLE: { retryable: true, touch: 'may have gone' },
+  AGENT_CONFLICT: { retryable: false, touch: 'refused first' },
+  AGENT_VERSION_MISMATCH: { retryable: false, touch: 'refused first' },
+  UNSUPPORTED: { retryable: false, touch: 'refused first' },
+  PERMISSION_REQUIRED: { retryable: false, touch: 'refused first' },
+  NOT_FOUND: { retryable: false, touch: 'if sent' },
+  NO_FOCUS: { retryable: false, touch: 'refused first' },
+  APP_NOT_RUNNING: { retryable: false, touch: 'if sent' },
+  POLICY_DENIED: { retryable: false, touch: 'refused first' },
+  INVALID_ARGUMENT: { retryable: false, touch: 'refused first' },
+  STALE: { retryable: false, touch: 'refused first' },
+  SCREEN_OFF: { retryable: false, touch: 'refused first' },
+  INTERNAL: { retryable: false, touch: 'may have gone' },
+  AMBIGUOUS: { retryable: false, touch: 'if sent' },
+  CHECK_FAILED: { retryable: false, touch: 'if sent' },
+  BUILD_FAILED: { retryable: false, touch: 'if sent' },
+  DEVICE_CLAIMED: { retryable: false, touch: 'if sent' },
+  DEVICE_LOCKED: { retryable: false, touch: 'if sent' },
+  OFFLINE: { retryable: false, touch: 'if sent' },
+};
 
 /** JSON-RPC error codes on the wire: -32000 minus the index of the code. */
 export const rpcCode = (code: ErrorCode) => -32000 - ERROR_CODES.indexOf(code);
@@ -52,6 +82,6 @@ export class DeviceError extends Error {
   ) {
     super(message, options);
     this.name = 'DeviceError';
-    this.retryable = options?.retryable ?? RETRYABLE.has(code);
+    this.retryable = options?.retryable ?? ERROR_TRAITS[code].retryable;
   }
 }

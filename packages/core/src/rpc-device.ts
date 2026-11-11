@@ -1,9 +1,9 @@
 import {
   DeviceError,
+  ERROR_TRAITS,
   Settle,
   type ActParams,
   type ActResult,
-  type ErrorCode,
   type Hello,
   type Method,
   type Modifier,
@@ -22,22 +22,9 @@ import type { RpcClient } from './rpc.js';
 import { buildScreen, type PlatformScreen, type Screen } from './screen/index.js';
 import { afterTimeout } from './stuck.js';
 
-/** What an agent refuses before it touches anything: any other failure of an action may have come after the touch. */
-const REFUSED_FIRST: ReadonlySet<ErrorCode> = new Set([
-  'AGENT_CONFLICT',
-  'AGENT_VERSION_MISMATCH',
-  'INVALID_ARGUMENT',
-  'NO_FOCUS',
-  'PERMISSION_REQUIRED',
-  'POLICY_DENIED',
-  'SCREEN_OFF',
-  'STALE',
-  'UNSUPPORTED',
-]);
-
-/** The failure of an action that left for the device. */
+/** The failure of an action that left for the device: unless an agent refused it first, it may have come after the touch. */
 export function failedAfterSending(e: unknown): never {
-  if (e instanceof DeviceError && !REFUSED_FIRST.has(e.code)) e.sent = true;
+  if (e instanceof DeviceError && ERROR_TRAITS[e.code].touch !== 'refused first') e.sent = true;
   throw e;
 }
 

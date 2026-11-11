@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir hata kodunun yeniden denemeye değip değmediği ve bir ajanın onunla bir şeye dokunmadan önce reddedip reddetmediği, her kod için derleyicinin eksiksiz tuttuğu tek bir tabloda bir kez söylenir: bunu iki pakette elle tutulan iki liste söylüyordu ve yeni bir kod ikisinin de dışında fark edilmeden kalıyordu.
 - Bir kişiye nasıl ulaşıldığı ve bir istemcinin ona nasıl adlandırıldığı, `silent`, `alertPerson` ve `clientNamed`, sunucunun bağlamının verildiği gibi okunan tek bir `person` seçeneğidir; önceden her biri kendi seçeneği ve onu olduğu gibi geçiren bir okuyucuydu.
 - Gerileme kapısının cihazda baktıkları, bir profil, ana iş parçacığı, bir başlatma ve bir adımın çevresindeki yeniden oynatma, `packages/ops/src/perf/looks.ts` içinde kendi işlevleridir; kapının `why` ve `reference`'ı da `why.ts` içindedir: 200 satır sınırını adıyla geçen 342 satırlık tek bir işlevdiler.
 - `perf_snapshot`'ın `also`'sunun okuyabildikleri, her biri nasıl okunduğu, saklandığı, söylendiği ve yanıtlandığıyla, işlemin yanında kendi dosyasındadır, `packages/ops/src/perf/extras.ts`: 450 satırının 449'undaki tek bir dosyayı paylaşıyorlardı.
