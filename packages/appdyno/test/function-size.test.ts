@@ -13,8 +13,6 @@ const MAX_LINES = 200;
  * each reason says what is long about it.
  */
 const LONGER: Record<string, string> = {
-  'packages/ops/src/steps.ts stepsFor':
-    'finding an element, judging it and one case per kind of step, with no state',
   'packages/ops/src/scroll.ts scrollingFor':
     'three scrolling tools over one context, with no state',
   'packages/ops/src/perf/trace.ts perfTraceOp': 'one op, nearly all of it `run` below',
