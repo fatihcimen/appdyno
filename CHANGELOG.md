@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- How the inspector lists an audit's issue, finds the element under the pointer and writes a check of it are functions of their own in `inspect.ts`, where `windowInspector` held them at 199 lines, one under the function size cap.
 - How the hub tests a client, reads a person's word on one and shows the Connect place are functions of their own in `hub-services.ts`, where `hubServices` held them at 199 lines, one under the function size cap.
 - A step's parts are functions of their own in `steps.ts`: how it names an element, picks one of a selector's matches and aims, the screen's size and edge, typing, a key and one case per kind of step, where one function of 297 lines held them and the function size rule let it pass by name.
 - `keyboard` with `dismiss` says what closing the keyboard changed against the screen before it, where it compared with its own read after the keyboard went and answered `changed: false` and "no change seen". A launch, a link, a turn, a push and `app launch` and `build_and_run` had no such read: each passes the device's call alone.

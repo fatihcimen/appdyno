@@ -55,6 +55,45 @@ const isOf = (issue: AuditIssue, e: ScreenElement) => {
   return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
 };
 
+/** An issue as the Accessibility pane lists it, with where it stands on the picture. */
+function issueShown(i: AuditIssue, o: InspectPort, size: Size | undefined) {
+  const named = i.element?.t ?? i.element?.d;
+  return {
+    type: i.type,
+    rule: i.rule,
+    message: o.clean(i.message),
+    ...(named && { label: o.clean(named) }),
+    ...(i.b &&
+      size && {
+        rect: {
+          x: i.b[0] / size.w,
+          y: i.b[1] / size.h,
+          w: (i.b[2] - i.b[0]) / size.w,
+          h: (i.b[3] - i.b[1]) / size.h,
+        },
+      }),
+  };
+}
+
+/** The point on the newest screen under a place on the picture, and the element there. */
+function under(o: InspectPort, at: { x: number; y: number }) {
+  const screen = o.latest();
+  const size = screen && o.sizeOf(screen);
+  if (!screen || !size) return undefined;
+  const p = { x: Math.round(at.x * size.w), y: Math.round(at.y * size.h) };
+  return { screen, size, p, e: elementUnder(screen.list, p) };
+}
+
+/** A check of an element, as a click that asserts writes it. */
+function assertion(screen: Screen, e: ScreenElement): { step: FlowStep; aim: Aim } {
+  const aim: Aim = { element: e, ...named(screen, e) };
+  const at = attributesOf(screen.elements, e);
+  // what it says is the check, unless its words are already what names it
+  const says = e.role === 'textField' ? at.value : at.text;
+  const check = aim.selector?.text === undefined && says ? { check: 'text', equals: says } : {};
+  return { step: stepOf('assert', aim, check), aim };
+}
+
 /** The element under a person's pointer, by what a tool reads and what a tap there would write. No read of its own. */
 export function windowInspector(o: InspectPort) {
   let audit: Audit | undefined;
@@ -76,24 +115,7 @@ export function windowInspector(o: InspectPort) {
     o.tell({
       op: 'audit',
       state,
-      issues: (a?.issues ?? []).map((i) => {
-        const named = i.element?.t ?? i.element?.d;
-        return {
-          type: i.type,
-          rule: i.rule,
-          message: o.clean(i.message),
-          ...(named && { label: o.clean(named) }),
-          ...(i.b &&
-            size && {
-              rect: {
-                x: i.b[0] / size.w,
-                y: i.b[1] / size.h,
-                w: (i.b[2] - i.b[0]) / size.w,
-                h: (i.b[3] - i.b[1]) / size.h,
-              },
-            }),
-        };
-      }),
+      issues: (a?.issues ?? []).map((i) => issueShown(i, o, size)),
       ...(a?.truncated && { truncated: true }),
       ...(a?.why && { why: a.why }),
     });
@@ -158,20 +180,12 @@ export function windowInspector(o: InspectPort) {
     };
   };
 
-  const under = (at: { x: number; y: number }) => {
-    const screen = o.latest();
-    const size = screen && o.sizeOf(screen);
-    if (!screen || !size) return undefined;
-    const p = { x: Math.round(at.x * size.w), y: Math.round(at.y * size.h) };
-    return { screen, size, p, e: elementUnder(screen.list, p) };
-  };
-
   function hover(at: { x: number; y: number }) {
     last = at;
     clearTimeout(resting);
     resting = setTimeout(rested, REST_MS);
     resting.unref();
-    const u = under(at);
+    const u = under(o, at);
     if (!u) return;
     const { screen, size, p, e } = u;
     const tap = stepLine(stepOf('tap', aimAt(screen, p, size)));
@@ -197,15 +211,6 @@ export function windowInspector(o: InspectPort) {
       ...words(screen, e),
     });
   }
-
-  const assertion = (screen: Screen, e: ScreenElement): { step: FlowStep; aim: Aim } => {
-    const aim: Aim = { element: e, ...named(screen, e) };
-    const at = attributesOf(screen.elements, e);
-    // what it says is the check, unless its words are already what names it
-    const says = e.role === 'textField' ? at.value : at.text;
-    const check = aim.selector?.text === undefined && says ? { check: 'text', equals: says } : {};
-    return { step: stepOf('assert', aim, check), aim };
-  };
 
   return {
     /** The pointer moved over the picture. */
@@ -239,7 +244,7 @@ export function windowInspector(o: InspectPort) {
 
     /** A click that is no touch: it copies what names an element, or checks it. */
     pick(m: ViewerSaid<'pick'>) {
-      const u = under({ x: m.x, y: m.y });
+      const u = under(o, { x: m.x, y: m.y });
       if (!u?.e) {
         o.say('Nothing is named there');
         return;
