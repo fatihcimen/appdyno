@@ -170,9 +170,6 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)sayNote:(NSString *)note;
 - (void)setRecording:(BOOL)on;
 - (void)showPane:(NSInteger)pane;
-- (void)showStats:(NSDictionary *)stats;
-- (void)showPerf:(NSDictionary *)message;
-- (void)showMeasure:(NSDictionary *)message;
 - (void)addActivity:(NSDictionary *)call;
 - (void)showApps:(NSDictionary *)message;
 /// Comes forward, with no keyboard: asked for by a second start, or an agent.
@@ -191,6 +188,13 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(readonly) NSDictionary *look;
 - (void)showState;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
+@end
+
+/// What a window shows of its device's numbers.
+@interface MVWindow (Readings)
+- (void)showStats:(NSDictionary *)stats;
+- (void)showPerf:(NSDictionary *)message;
+- (void)showMeasure:(NSDictionary *)message;
 @end
 
 /// A window's part in a recording and in what is under the pointer.

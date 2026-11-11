@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Bir cihaz penceresinin sayılarından, süren bir ölçümden ve sonucundan gösterdiği kendi dosyasındadır, `WindowReadings.m`; öz sınamanın arka plan renkleri denetimleri de `SelfTestMood.m`'dedir; pencere ve öz sınama aynı sırayla, önceki gibi çalışır.
 - Android ajanının, pencere yöneticisine bir geçişin sürüp sürmediğini soran geçiş izleyicisi, sorduğu UI automation bağlantısının yanında kendi dosyasındadır, `Transitions.kt`; yaptığı hiçbir şey değişmedi.
 - Android 16'da bir döner simge durulmayı yeniden bekletir, çünkü orada belirsiz türde bir aralık bildirir; önceden aralık olmamasına bakan bir denetim onu yerinde duran bir çubuk sanıyordu: Xiaomi'nin Android 16'sında bir dokunuş, döner simgenin beklediği şey gelmeden yanıt veriyordu.
 - Bir oturumun `language` ile ilk `launch_app`'i cihazın başlangıcıyla birlikte bir başlatma başlatmaz, çünkü uygulamayı kendisi başlatır; önceden o başlatma bir sonraki `launch_app`'e kalıyordu, o da onu kendi başlatması sayıp hiçbir şey başlatmıyordu: bir `terminate_app`'ten sonra uygulamanın öldüğünü söylüyordu, bir Samsung'da her seferinde görüldü.

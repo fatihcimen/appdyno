@@ -41,6 +41,8 @@ void MVCheckPipe(void);
 void MVCheckRecorder(void);
 void MVCheckKeyboard(void);
 void MVCheckFrame(void);
+/// The backdrop's mood from a picture; MVCheckFrame's, in its turn.
+void MVCheckMood(void);
 void MVCheckPerfPane(void);
 void MVCheckFlow(void);
 void MVCheckShell(void);
