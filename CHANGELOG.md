@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- A tool's step in `steps`, as `launch_app` or `open_link`, reads the screen as a touch's does: where its step says `read`, or at the last step as the call says, where each printed a screen of its own under `read: none`.
 - A text field with no id of its own keeps its ref while its placeholder comes and as it is typed in, named by the words around it, where its ref changed with either and the next call on it was refused as stale. What another field holds no longer names an element's row.
 - A keyboard that has slid below the screen as it closes is not listed, where a read in the middle of its going showed it at a place past the screen's edge.
 - `network start` with no `via` names the ways this device has, where it listed all four, two of which a simulator cannot use; a start by the probe says it captures and that the app was restarted with it, where it said only what the probe sees.

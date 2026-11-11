@@ -36,7 +36,7 @@ const MAX_STEPS = 30;
 /** One step, whole before anything acts: a touch of this file, or another tool's call. */
 type Planned =
   | { st: Step; read?: ReadMode; op?: undefined }
-  | { op: Op; args: Record<string, unknown>; st?: undefined };
+  | { op: Op; args: Record<string, unknown>; st?: undefined; ownRead: boolean };
 
 const StepRead = z.enum(['diff', 'full', 'none']).optional();
 
@@ -78,7 +78,7 @@ function planned(
   if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);
   const p = op.input.safeParse(args);
   if (!p.success) throw fail(z.prettifyError(p.error));
-  return { op, args: p.data };
+  return { op, args: p.data, ownRead: 'read' in args };
 }
 
 /** Several actions in one call, each a touch of the screen or another tool. */
@@ -91,7 +91,7 @@ export function stepsOp(
   return defineOp({
     name: 'steps',
     title: 'Steps',
-    description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }, as { action: tap, selector: { text: OK } }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a touch reads the screen only with read on its step, or last.`,
+    description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }, as { action: tap, selector: { text: OK } }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
     input: z
       .object({
         steps: z
@@ -131,7 +131,11 @@ export function stepsOp(
           if (p.op) {
             // an image asked for at a step is that step's evidence, even of a screen that has not changed
             if (name === 'screenshot') s.pictured();
-            const r = await p.op.handler(p.args);
+            // a tool's screen is read as a touch's is: where its step says, or at the last as the call says
+            const reads = 'read' in p.op.input.shape && !p.ownRead;
+            const r = await p.op.handler(
+              reads ? { ...p.args, read: last ? read : 'none' } : p.args,
+            );
             done.push(`${i + 1}. ${answerText(r)}`);
             images.push(...r.blocks.filter((b) => b.type === 'image'));
             // it may have selected another device

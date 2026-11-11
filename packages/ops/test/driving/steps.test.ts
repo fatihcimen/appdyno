@@ -48,6 +48,23 @@ describe('steps across screens', () => {
     expect(d.screen).toBe('sent');
   });
 
+  it("reads a tool's screen as a touch's is: where its step says, or at the last as the call says", async () => {
+    const { call } = await connect(new FakeDevice());
+    const r = await call('steps', {
+      steps: [
+        { action: 'open_link', url: 'app://x' },
+        { action: 'launch_app' },
+        { action: 'open_link', url: 'app://y', read: 'full' },
+      ],
+      read: 'none',
+    });
+    expect(r.text.split('\n').slice(0, 2)).toEqual([
+      '1. opened app://x',
+      '2. brought dev.app to the front, on the screen it was on',
+    ]);
+    expect(r.text).toMatch(/\n3\. opened app:\/\/y\nforeground: dev\.app\n3 elements: ref role/);
+  });
+
   it('settles after a step that may change the screen, not between typing', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
