@@ -6,7 +6,7 @@ import { must, startOf } from '@appdyno/core';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { windowMeasures } from '../src/measures.js';
-import { FakeDevice } from '../../ops/test/fake-device.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { DEFAULT_POLICY, holder, ServerContext } from '@appdyno/ops';
 
 const opened = vi.hoisted(() => vi.fn());

@@ -10,8 +10,8 @@ import {
   type DataLoss,
   type Policy,
 } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { linkedClient, REVISIONS, type Revision } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { linkedClient, REVISIONS, type Revision } from '@appdyno/testing/calls.js';
 
 const folder = mkdtempSync(join(tmpdir(), 'appdyno-approval-'));
 

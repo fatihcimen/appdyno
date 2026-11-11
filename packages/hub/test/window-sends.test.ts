@@ -7,7 +7,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { windowSends } from '../src/window-sends.js';
 import { followDevice } from '../src/follow.js';
-import { FakeDevice } from '../../ops/test/fake-device.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
 describe('what a window sends to its device', () => {
   let state: string;

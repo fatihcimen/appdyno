@@ -20,8 +20,8 @@ import {
 import { DeviceError, type ActParams } from '@appdyno/protocol';
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 // the Mac's load is this test's to set: under load the gate calls no regression, and nothing is looked at
 const host = vi.hoisted(() => ({ load: 1 }));

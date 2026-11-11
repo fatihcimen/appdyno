@@ -2,7 +2,7 @@ import type { DeviceProvider } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { FakeDevice } from './fake-device.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
 const provider = (list: Awaited<ReturnType<DeviceProvider['list']>>): DeviceProvider => ({
   list: () => Promise.resolve(list),

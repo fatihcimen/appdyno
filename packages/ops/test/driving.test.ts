@@ -29,8 +29,9 @@ import {
   type Policy,
 } from '../src/index.js';
 import { keyName, keyPress } from '../src/step-schemas.js';
-import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
-import { callerOf, linkedClient } from './helpers.js';
+import { FakeDevice, WithKeyboard } from '@appdyno/testing/fake-device.js';
+import { SCREENS } from '@appdyno/testing/fake-screens.js';
+import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
 
 type Result = {
   isError?: boolean;

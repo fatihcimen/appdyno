@@ -1,8 +1,8 @@
 import { must, TRANSITION_MS, type DeviceProvider } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { linkedClient } from '@appdyno/testing/calls.js';
 
 /** When each touch reached the device, against the first. */
 async function connect(platform: 'ios' | 'android' = 'ios') {

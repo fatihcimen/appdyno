@@ -6,9 +6,9 @@ import { parseFlow } from '@appdyno/flows';
 import { type Adb, AndroidMirror, EmulatorMirror } from '@appdyno/driver-android';
 import { type AuditResult, keyOfUsage } from '@appdyno/protocol';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FakeMirror, FakeViewer, flush } from '../../core/test/mirror-fakes.js';
+import { FakeMirror, FakeViewer, flush } from '@appdyno/testing/mirror-fakes.js';
 import { shownSize, windowFlow } from '../src/flow.js';
-import { FakeDevice, WithKeyboard } from '../../ops/test/fake-device.js';
+import { FakeDevice, WithKeyboard } from '@appdyno/testing/fake-device.js';
 import { DEFAULT_POLICY, flowRecordings, flowsFor, ServerContext } from '@appdyno/ops';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-window-flow-'));

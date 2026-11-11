@@ -7,7 +7,7 @@ import {
   type MirrorSessionOptions,
   type MirrorStatus,
 } from '../src/index.js';
-import { FakeClock, FakeMirror, FakeViewer, flush } from './mirror-fakes.js';
+import { FakeClock, FakeMirror, FakeViewer, flush } from '@appdyno/testing/mirror-fakes.js';
 
 function setup(over: Partial<MirrorSessionOptions> = {}) {
   const clock = new FakeClock();

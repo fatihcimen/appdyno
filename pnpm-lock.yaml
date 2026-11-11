@@ -371,6 +371,36 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/testing:
+    dependencies:
+      '@appdyno/core':
+        specifier: workspace:*
+        version: link:../core
+      '@appdyno/driver-android':
+        specifier: workspace:*
+        version: link:../driver-android
+      '@appdyno/driver-apple':
+        specifier: workspace:*
+        version: link:../driver-apple
+      '@appdyno/mcp':
+        specifier: workspace:*
+        version: link:../mcp
+      '@appdyno/ops':
+        specifier: workspace:*
+        version: link:../ops
+      '@appdyno/perf':
+        specifier: workspace:*
+        version: link:../perf
+      '@appdyno/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@modelcontextprotocol/client':
+        specifier: ^2.4.0
+        version: 2.4.0
+      '@modelcontextprotocol/server':
+        specifier: ^2.4.0
+        version: 2.4.0
+
 packages:
 
   '@cacheable/memory@2.2.0':

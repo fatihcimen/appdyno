@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { must } from '../src/must.js';
 import { box, joinVideos, readVideo } from '../src/video.js';
-import { fakeVideo as video } from './fake-video.js';
+import { fakeVideo as video } from '@appdyno/testing/fake-video.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-video-'));
 const write = (name: string, b: Buffer) => {

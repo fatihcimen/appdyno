@@ -8,8 +8,8 @@ import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { DeviceError } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { FakeDevice } from '../../ops/test/fake-device.js';
-import { checkedOps } from '../../ops/test/helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 import {
   askOnTerminal,
   cliSessionFile,

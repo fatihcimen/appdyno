@@ -19,7 +19,7 @@ import {
   type Op,
   type OpData,
   type OpName,
-} from '../src/index.js';
+} from '@appdyno/ops';
 import { FakeDevice } from './fake-device.js';
 
 /** The operations, each held to its output schema: an answer must be what that says, no more and no less. */

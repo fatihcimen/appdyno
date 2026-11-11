@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
 import { inCall } from '../src/call.js';
-import { HELLO, TOKEN, fakeAgent, wireTree } from './fake-agent.js';
+import { HELLO, TOKEN, fakeAgent, wireTree } from '@appdyno/testing/fake-agent.js';
 
 describe('rpc client', () => {
   it('validates results and passes the deadline to the agent', async () => {

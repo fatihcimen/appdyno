@@ -10,8 +10,8 @@ import {
   type ClientCapabilities,
 } from '@modelcontextprotocol/client';
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FakeDevice } from '../../ops/test/fake-device.js';
-import { REVISIONS, type Revision } from '../../ops/test/helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { REVISIONS, type Revision } from '@appdyno/testing/calls.js';
 import { listenOn, serveHttp } from '../src/http.js';
 
 const TOKEN = 'a-token-of-the-length-it-should-have';

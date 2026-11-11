@@ -1,4 +1,6 @@
-import type { ListedPhone } from '../src/devicectl.js';
+import type { Devicectl } from '@appdyno/driver-apple';
+
+type ListedPhone = NonNullable<Awaited<ReturnType<Devicectl['listed']>>>;
 
 /** A paired phone in Developer Mode, on an iOS the runner takes. */
 export const fine: ListedPhone = {

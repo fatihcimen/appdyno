@@ -40,7 +40,8 @@ const NAME = new RegExp(`'(${words})['-]|\\b(${words}): '`);
 const named = (text: string) => NAME.test(text);
 
 describe('a new platform', () => {
-  const shared = inPackages((p) => !p.startsWith('driver-'));
+  // a fake is a device of one platform, as a driver's is
+  const shared = inPackages((p) => !p.startsWith('driver-') && p !== 'testing');
 
   it('is named only by the files listed', () => {
     expect(shared.length).toBeGreaterThan(100);

@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { ToolError } from '../src/tool.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf, checkedOps } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf, checkedOps } from '@appdyno/testing/calls.js';
 
 /** One text frame from the server. */
 const frame = (text: string) => {

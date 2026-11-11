@@ -3,7 +3,7 @@ import { once } from 'node:events';
 import type { Device, DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core';
 import { must } from '@appdyno/core';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
-import { FakeDevice } from '../../ops/test/fake-device.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
 const names = must(process.argv[2], 'the settings').split(',') as SettingName[];
 const rounds = Number(process.argv[3]);

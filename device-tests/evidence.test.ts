@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
-import { checkedOps } from '../packages/ops/test/helpers.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 import { opCaller, type Call } from './helpers.js';
 import {
   Adb,

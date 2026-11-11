@@ -13,6 +13,7 @@
       "@appdyno/hub": ["./packages/hub/src/index.ts"],
       "@appdyno/mcp": ["./packages/mcp/src/index.ts"],
       "@appdyno/cli": ["./packages/cli/src/index.ts"],
+      "@appdyno/testing/*": ["./packages/testing/src/*"],
       "appdyno": ["./packages/appdyno/src/index.ts"]
     }
   }

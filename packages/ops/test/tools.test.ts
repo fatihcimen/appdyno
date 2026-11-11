@@ -7,10 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
 import { iosScreen, iphoneProvider, simulatorProvider } from '@appdyno/driver-apple';
-import { fine, slowDevicectl } from '../../driver-apple/test/slow-devicectl.js';
+import { fine, slowDevicectl } from '@appdyno/testing/slow-devicectl.js';
 import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
-import { FakeDevice, LACKS } from './fake-device.js';
-import { linkedClient, REVISIONS, type Revision } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { LACKS } from '@appdyno/testing/fake-measures.js';
+import { linkedClient, REVISIONS, type Revision } from '@appdyno/testing/calls.js';
 import { opsFor } from '../src/registry.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's

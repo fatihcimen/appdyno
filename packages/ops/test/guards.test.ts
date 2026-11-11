@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, ToolError } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf, linkedClient } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
 
 const contextOf = (device: FakeDevice) =>
   new ServerContext(

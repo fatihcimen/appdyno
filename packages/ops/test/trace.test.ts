@@ -1,6 +1,6 @@
 import { must } from '@appdyno/core';
 import { describe, expect, it, vi } from 'vitest';
-import { keptBy } from './helpers.js';
+import { keptBy } from '@appdyno/testing/calls.js';
 
 // whether this Mac is loaded right now is no part of these answers
 vi.mock('node:os', async (original) => ({

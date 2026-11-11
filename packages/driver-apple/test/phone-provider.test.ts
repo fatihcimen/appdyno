@@ -3,7 +3,7 @@ import { assert, describe, expect, it } from 'vitest';
 import { must } from '@appdyno/core';
 import { phoneFacts, type ListedPhone } from '../src/devicectl.js';
 import { iphoneProvider, phoneNeed } from '../src/phone-provider.js';
-import { fine, overlapped, slowDevicectl } from './slow-devicectl.js';
+import { fine, overlapped, slowDevicectl } from '@appdyno/testing/slow-devicectl.js';
 
 const phone = '00001234-0123456789ABCDEF';
 

@@ -9,13 +9,13 @@ import {
   type ScreenRecorder,
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fakeVideo } from '../../core/test/fake-video.js';
+import { fakeVideo } from '@appdyno/testing/fake-video.js';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { filming } from '../src/record.js';
 import { VideoRing } from '../src/timeline/ring.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 /** A recorder that writes a real file, and counts what it was asked. */
 const recorder = (over: Partial<ScreenRecorder> = {}) => {

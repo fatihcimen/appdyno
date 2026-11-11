@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
-import { checkedOps } from '../packages/ops/test/helpers.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 import { opCaller, SUITE_POLICY, type Answer, type Call, SIM_FIXTURE } from './helpers.js';
 import {
   Adb,

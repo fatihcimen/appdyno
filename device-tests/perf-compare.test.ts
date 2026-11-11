@@ -7,7 +7,7 @@ import { afterAll, assert, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, iphoneProvider, simulatorProvider, Simctl } from './workspace.js';
 import { latestRuns, rankTest, runKeys, type Comparison } from '@appdyno/perf';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
-import { checkedOps } from '../packages/ops/test/helpers.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 
 /**
  * The gate's two acceptance tests on a device, through the operations: no false alarm across repeated runs

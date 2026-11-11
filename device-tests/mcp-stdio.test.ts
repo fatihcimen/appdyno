@@ -3,7 +3,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { REVISIONS } from '../packages/ops/test/helpers.js';
+import { REVISIONS } from '@appdyno/testing/calls.js';
 import { refIn, toolCaller } from './helpers.js';
 import { IosSimulatorDevice } from './workspace.js';
 

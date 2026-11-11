@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { encodePng } from '../src/png.js';
-import { pictureApart, SAME_PICTURE } from './picture-apart.js';
+import { pictureApart, SAME_PICTURE } from '@appdyno/testing/picture-apart.js';
 
 const W = 360;
 const H = 800;

@@ -12,7 +12,7 @@ import {
 } from '@appdyno/core';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { must, startOf } from '@appdyno/core';
-import { checkedOps } from '../../ops/test/helpers.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 
 const mirrorOp = (ctx: Parameters<typeof checkedOps>[0]) => must(checkedOps(ctx).mirror, 'mirror');
 import { runMirrors, type MirrorRun } from '../src/parent.js';

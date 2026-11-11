@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { deviceStateFile, processAlive, startOf, thisOwner, must } from '@appdyno/core';
-import { fakeAgentStream, HELLO, TOKEN } from '../../core/test/fake-agent.js';
+import { fakeAgentStream, HELLO, TOKEN } from '@appdyno/testing/fake-agent.js';
 import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';

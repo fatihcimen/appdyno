@@ -5,8 +5,8 @@ import { PassThrough } from 'node:stream';
 import type { DeviceProvider, DeviceSettings, SettingName, VirtualDevices } from '@appdyno/core';
 import { conditions, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FakeDevice } from '../../ops/test/fake-device.js';
-import { callerOf } from '../../ops/test/helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 import { endWithClient, putBackAfter } from '../src/lifetime.js';
 
 const providerOf = (device: FakeDevice): DeviceProvider => ({

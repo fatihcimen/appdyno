@@ -6,8 +6,8 @@ import type { Baseline } from '@appdyno/perf';
 import { describe, expect, it } from 'vitest';
 import { leakSignal } from '../src/perf/scroll.js';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { checkedOps } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 
 const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-gate-'));
 

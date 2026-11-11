@@ -6,8 +6,8 @@ import { latestRuns, loadRefusals, MEASURES, runKeys } from '@appdyno/perf';
 import { DeviceError } from '@appdyno/protocol';
 import { assert, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, survey } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { checkedOps } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 
 const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-survey-'));
 

@@ -2,7 +2,7 @@ import { appendFileSync, mkdtempSync, readFileSync, rmSync, statSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect } from 'vitest';
-import { pictureApart, SAME_PICTURE } from '../packages/core/test/picture-apart.js';
+import { pictureApart, SAME_PICTURE } from '@appdyno/testing/picture-apart.js';
 
 const SHOT_MS = 10_000;
 

@@ -9,7 +9,7 @@ import type {
   ViewerLink,
   ViewerMessage,
   ViewerOrder,
-} from '../src/index.js';
+} from '@appdyno/core';
 
 /** A clock run by hand. */
 export class FakeClock implements MirrorClock {

@@ -11,14 +11,14 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import type { Timeline } from '@appdyno/perf';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fakeVideo } from '../../core/test/fake-video.js';
+import { fakeVideo } from '@appdyno/testing/fake-video.js';
 import { ServerContext } from '../src/context.js';
 import { captures } from '../src/network.js';
 import { filming } from '../src/record.js';
 import { openReports } from '../src/report-state.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 const pageOf = (file: string) =>
   JSON.parse(

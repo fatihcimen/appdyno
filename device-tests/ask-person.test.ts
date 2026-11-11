@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { Client, type ElicitResult } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { REVISIONS } from '../packages/ops/test/helpers.js';
+import { REVISIONS } from '@appdyno/testing/calls.js';
 import { toolCaller } from './helpers.js';
 
 /**

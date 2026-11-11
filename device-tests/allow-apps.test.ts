@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '@appdyno/ops';
-import { checkedOps } from '../packages/ops/test/helpers.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 import {
   Adb,
   androidProvider,

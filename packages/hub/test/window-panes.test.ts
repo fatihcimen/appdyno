@@ -7,7 +7,7 @@ import { DEFAULT_POLICY, ServerContext, type Policy } from '@appdyno/ops';
 import { NO_PHONE_LOG, OPEN_AN_APP, windowLogs } from '../src/window-logs.js';
 import { ANDROID_NEEDS, IPHONE_NEEDS, PROBE_WHILE, windowNetwork } from '../src/window-network.js';
 import { windowSends } from '../src/window-sends.js';
-import { FakeDevice } from '../../ops/test/fake-device.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
 let state: string;
 beforeEach(() => {

@@ -13,7 +13,7 @@ import {
   type OpData,
   type OpName,
 } from '@appdyno/ops';
-import { checkedOps } from '../packages/ops/test/helpers.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 import type { Client } from '@modelcontextprotocol/client';
 
 /** What a client sees: the op's data, or with `error` its refusal's code. */

@@ -26,8 +26,9 @@ import {
   ServerContext,
   ToolError,
 } from '../src/index.js';
-import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice, WithKeyboard } from '@appdyno/testing/fake-device.js';
+import { SCREENS } from '@appdyno/testing/fake-screens.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 const SECRET = 's3cr3t-pass';
 

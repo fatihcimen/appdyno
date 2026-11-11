@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import type { ElicitResult } from '@modelcontextprotocol/client';
 import type { Tree } from '@appdyno/protocol';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { linkedClient } from '@appdyno/testing/calls.js';
 
 /** A screen read from an emulator or simulator of ours, with the dialog open and dismissed after, never confirmed. */
 export const recorded = (name: string) =>

@@ -102,6 +102,8 @@ kaynaklardaki her `APPDYNO_` adını belgelere ya da bu tabloya bağlı tutar.
 `protocol`'ü içe aktarabilir, başka hiçbir şeyi değil; `driver-android` ve `driver-apple` de birbirini hiçbir zaman içe aktarmaz. Kurallar
 ve onları uygulayan test `packages/appdyno/test/boundaries.test.ts` içindedir. Bir paketin testleri de, testin adını verdiği
 birkaçı dışında, kendi kuralına uyar. Mimari gerektiriyorsa kuralı orada değiştirin, etrafından dolaşmayın.
+Testlerin paylaştığı sahteler, hiçbir şeyin içinde gönderilmeyen bir paket olan `packages/testing`'tedir; bir test birini
+dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi.
 
 `packages/appdyno/test/structure.test.ts`, `packages/*/src` içindeki bir dosyayı ve bizim yazdığımız her `.kt`, `.swift`, `.m` ve `.h`
 dosyasını, bir gerekçeyle adını verdikleri dışında, tek bir işe ve 450 satıra bağlı tutar ve iki kez geçen 8 satırlık bir diziyi

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import * as library from '../src/index.js';
 import { drive } from '../examples/drive.js';
-import { FakeDevice } from '../../ops/test/fake-device.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
 const device = new FakeDevice();
 

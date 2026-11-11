@@ -14,8 +14,8 @@ import { boundLines } from '../src/diagnose.js';
 import { DEFAULT_POLICY, redactLog, type Policy } from '../src/policy.js';
 import { ActionOut, CrashesOut, LogsOut } from '../src/schemas.js';
 import { defineOp, READ, reply, ToolError } from '../src/tool.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf, linkedClient } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
 
 type Result = {
   isError?: boolean;

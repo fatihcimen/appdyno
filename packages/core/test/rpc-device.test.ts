@@ -20,7 +20,7 @@ import {
   TOKEN,
   wireTree,
   type FakeHandler,
-} from './fake-agent.js';
+} from '@appdyno/testing/fake-agent.js';
 import { mkdtempSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

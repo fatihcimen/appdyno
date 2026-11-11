@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- The fakes the packages' tests share, a fake device and its screens, the server's callers, a fake agent, the mirror's fakes, a fake video, a picture's comparison and a slow `devicectl`, are `packages/testing`, a private package with a rule of its own that each test takes a fake from by its file, where tests reached into other packages' `test` folders by a relative path the boundary rule let through.
 - A step a window's Apps pane makes, a launch, a quit or a removal, is a function of its own in the hub's `flow.ts`, where `windowFlow` stood at 198 lines, two under the function size cap.
 - What a `perf_scroll` round reads and what its rounds found are functions of their own in `perf/scroll.ts`, where `perfScrollOp` stood at 198 lines, two under the function size cap.
 - The iPhone stream's TCP, a connection to a phone's service with its retries, its window and its goodbye, is `tcp.ts` of its own beside the IPv6 and UDP of `ipstack.ts`, which held it over 420 lines; `ipstack.ts` still gives `TcpConnection` and `PortRefused` to what names them there.

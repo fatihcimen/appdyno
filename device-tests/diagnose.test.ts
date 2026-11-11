@@ -22,7 +22,7 @@ import {
   type OpName,
   type ToolResult,
 } from '@appdyno/ops';
-import { checkedOps } from '../packages/ops/test/helpers.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { SIM_FIXTURE } from './helpers.js';
 

@@ -5,8 +5,8 @@ import { must, type MeasureSource } from '@appdyno/core';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import { assert, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, keepRun, ServerContext } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf, checkedOps } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf, checkedOps } from '@appdyno/testing/calls.js';
 
 // far over the limit on any Mac
 vi.mock('node:os', async (original) => ({

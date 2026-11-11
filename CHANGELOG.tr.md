@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Paketlerin testlerinin paylaştığı sahteler, sahte bir cihaz ve ekranları, sunucunun çağırıcıları, sahte bir ajan, yansının sahteleri, sahte bir video, bir resmin karşılaştırması ve yavaş bir `devicectl`, kendine ait bir kuralı olan ve her testin bir sahteyi dosyasıyla aldığı özel bir paket olan `packages/testing`'tedir; önceden testler başka paketlerin `test` klasörlerine, sınır kuralının geçirdiği göreli bir yolla uzanıyordu.
 - Bir pencerenin Uygulamalar bölmesinin yaptığı bir adım, bir başlatma, bir çıkış ya da bir kaldırma, hub'ın `flow.ts`'inde kendi işlevidir; önceden `windowFlow` işlev boyutu sınırının iki altında, 198 satırdaydı.
 - Bir `perf_scroll` turunun okuduğu ve turlarının bulduğu `perf/scroll.ts`'te kendi işlevleridir; önceden `perfScrollOp` işlev boyutu sınırının iki altında, 198 satırdaydı.
 - iPhone akışının TCP'si, bir telefonun hizmetine yeniden denemeleri, penceresi ve vedasıyla bir bağlantı, `ipstack.ts`'in IPv6 ve UDP'sinin yanında kendi `tcp.ts`'idir; önceden o dosya onu 420 satırın üstünde tutuyordu; `ipstack.ts` `TcpConnection` ve `PortRefused`'u onları orada adlandıranlara hâlâ verir.

@@ -9,7 +9,7 @@ import { windowSends } from '../src/window-sends.js';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
 import { IosPhoneDevice, IosSimulatorDevice } from '@appdyno/driver-apple';
 import { CUTS_WHY, personal, switchOf } from '../src/window-conditions.js';
-import { FakeDevice } from '../../ops/test/fake-device.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
 /** A device that reads back what was set, and refuses what its platform has not got. */
 function deviceWith(values: Record<string, string>, refused: Record<string, string> = {}) {

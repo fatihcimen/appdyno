@@ -11,8 +11,8 @@ import {
 } from '@appdyno/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 const tick = () => new Promise((r) => setTimeout(r, 1));
 

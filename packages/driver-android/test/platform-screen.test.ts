@@ -11,7 +11,7 @@ import {
   type UiElement,
 } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
-import { wireTree } from '../../core/test/fake-agent.js';
+import { wireTree } from '@appdyno/testing/fake-agent.js';
 import { androidScreen } from '../src/platform-screen.js';
 
 const window = (type: number, b: [number, number, number, number], pkg = 'dev.app') => ({

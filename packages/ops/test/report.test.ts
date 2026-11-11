@@ -9,8 +9,8 @@ import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { reportFor } from '../src/report.js';
 import { ACT, defineOp, READ, reply, ToolError, type ToolAnnotations } from '../src/tool.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 const SECRET = 's3cr3t-pass';
 

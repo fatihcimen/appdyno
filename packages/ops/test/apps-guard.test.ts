@@ -9,8 +9,8 @@ import type { Tree, WireWindow } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { outsideApps } from '../src/apps-guard.js';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { linkedClient } from '@appdyno/testing/calls.js';
 
 type Win = Pick<WireWindow, 'type' | 'pkg' | 'layer' | 'b'> & { focused?: boolean; c?: string };
 

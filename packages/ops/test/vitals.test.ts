@@ -5,8 +5,8 @@ import type { MeasureSource } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { frameVitals } from '../src/perf/vitals.js';
 import { DEFAULT_POLICY, ServerContext, ToolError } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 describe("a session's frames in Play's words", () => {
   it('reads a screen of slow frames as one that would count', () => {

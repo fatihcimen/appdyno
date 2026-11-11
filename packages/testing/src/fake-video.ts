@@ -1,7 +1,16 @@
-import { box, u32s } from '../src/video.js';
-import { must } from '../src/must.js';
+import { must } from '@appdyno/core';
 
-const u32 = (...v: number[]) => u32s(v);
+/** Written here, apart from the reader under test: a box is its size, its type and its parts. */
+function box(type: string, ...parts: Buffer[]) {
+  const size = Buffer.alloc(4);
+  size.writeUInt32BE(Buffer.concat(parts).length + 8);
+  return Buffer.concat([size, Buffer.from(type, 'latin1'), ...parts]);
+}
+
+const u32 = (...values: number[]) =>
+  Buffer.concat(
+    values.map((v) => Buffer.from([v >>> 24, (v >>> 16) & 255, (v >>> 8) & 255, v & 255])),
+  );
 
 /** A small file as a recorder writes it: ftyp, mdat, moov with a video track and a metadata track. */
 export function fakeVideo(

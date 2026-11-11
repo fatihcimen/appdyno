@@ -6,8 +6,8 @@ import { latestRuns, runKeys, type PerfRecord } from '@appdyno/perf';
 import { DeviceError, type ActParams } from '@appdyno/protocol';
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, flowsFor, ServerContext, ToolError } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 // the Mac's load is this test's to set: what the gate says under it is part of what is tested
 const host = vi.hoisted(() => ({ load: 1 }));

@@ -1,8 +1,8 @@
 import type { DeviceProvider, Startable, VirtualDevices } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { callerOf } from '@appdyno/testing/calls.js';
 
 const SIM = '7A2B6C1D-0000-4000-8000-0000000000AA';
 

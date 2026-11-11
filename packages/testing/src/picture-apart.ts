@@ -1,5 +1,4 @@
-import { decodePng } from '../src/png.js';
-import { must } from '../src/must.js';
+import { decodePng, must } from '@appdyno/core';
 
 const COLUMNS = 54;
 const ROWS = 120;

@@ -1,8 +1,9 @@
 import type { DeviceProvider, PictureText } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
-import { FakeDevice, SCREENS } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { SCREENS } from '@appdyno/testing/fake-screens.js';
+import { linkedClient } from '@appdyno/testing/calls.js';
 
 type Result = { isError?: boolean; content: { text?: string }[] };
 

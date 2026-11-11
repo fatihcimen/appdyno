@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
 import { afterTimeout } from '../src/stuck.js';
-import { fakeAgent } from './fake-agent.js';
+import { fakeAgent } from '@appdyno/testing/fake-agent.js';
 
 const timeout = new DeviceError('TIMEOUT', 'act took longer than 15000 ms');
 

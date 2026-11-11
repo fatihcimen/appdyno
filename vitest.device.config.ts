@@ -17,6 +17,8 @@ export default defineConfig({
       '@appdyno/hub': src('hub'),
       '@appdyno/mcp': src('mcp'),
       '@appdyno/cli': src('cli'),
+      // the fakes are files of their own, each taken by its path
+      '@appdyno/testing': fileURLToPath(new URL('./packages/testing/src', import.meta.url)),
       appdyno: src('appdyno'),
     },
   },

@@ -12,7 +12,7 @@ import {
   withStableRefs,
   type UiElement,
 } from '../src/screen/index.js';
-import { wireTree } from './fake-agent.js';
+import { wireTree } from '@appdyno/testing/fake-agent.js';
 import { plainScreen } from './plain-screen.js';
 
 const ios = { port: plainScreen, appId: 'com.example.app' };

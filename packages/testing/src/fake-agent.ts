@@ -9,7 +9,7 @@ import {
   type Tree,
   type WireNode,
 } from '@appdyno/protocol';
-import { RpcClient } from '../src/rpc.js';
+import { RpcClient } from '@appdyno/core';
 
 /** A connected pair of streams: what one side writes, the other reads. */
 export function streamPair(): [Duplex, Duplex] {

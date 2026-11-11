@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { harEntries } from '../src/network.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { FakeDevice } from './fake-device.js';
-import { checkedOps } from './helpers.js';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { checkedOps } from '@appdyno/testing/calls.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-har-'));
 let files = 0;
