@@ -43,11 +43,18 @@ const ktrace = (dir: string, name: string) => {
   writeFileSync(path, 'x');
   return path;
 };
-/** A process with the file open, as a recording's tool has. */
+/** A process with the file open, as a recording's tool has: it says so once it holds it. */
 const holding = async (path: string) => {
-  const tail = spawn('tail', ['-f', path], { stdio: 'ignore' });
-  await pause(300);
-  return tail;
+  const holder = spawn(
+    process.execPath,
+    [
+      '-e',
+      `require('node:fs').openSync(${JSON.stringify(path)}, 'r'); console.log('open'); setInterval(() => {}, 60_000);`,
+    ],
+    { stdio: ['ignore', 'pipe', 'ignore'] },
+  );
+  await new Promise((r) => holder.stdout.once('data', r));
+  return holder;
 };
 const ended = (p: ReturnType<typeof spawn>) =>
   new Promise((r) => {

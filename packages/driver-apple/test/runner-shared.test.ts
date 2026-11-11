@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { deviceStateFile, processAlive, startOf, thisOwner, must } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '@appdyno/testing/fake-agent.js';
 import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';
 
@@ -78,31 +79,34 @@ describe('a runner of another build on a simulator', () => {
     );
   });
 
-  it('waits for a start under way and shares what it brings, as two would take the phone from each other', async () => {
-    let finish!: () => void;
-    const held = new Promise<void>((r) => (finish = r));
-    const through = transport();
-    vi.mocked(through.port).mockImplementationOnce(async () => {
-      await held;
-      // what a start leaves as its runner answers; a real one goes on to spawn xcodebuild, which no test may
-      writeFileSync(
-        join(state, `ios-${UDID}.json`),
-        JSON.stringify({ port: 1, token: TOKEN, sha256: 'a'.repeat(64) }),
-      );
-      throw new Error('this start ends here');
-    });
-    const first = new IosRunnerLauncher(UDID, through).connect();
-    await vi.waitFor(() => expect(through.port).toHaveBeenCalledOnce());
-    const second = new IosRunnerLauncher(UDID, through).connect();
-    await new Promise((r) => setTimeout(r, 400));
-    expect(through.port).toHaveBeenCalledOnce();
-    finish();
-    await expect(first).rejects.toThrow('this start ends here');
-    const found = await second;
-    found.rpc.close();
-    expect(found.started).toBe(false);
-    expect(through.port).toHaveBeenCalledOnce();
-  });
+  it(
+    'waits for a start under way and shares what it brings, as two would take the phone from each other',
+    fakeTimed(async () => {
+      let finish!: () => void;
+      const held = new Promise<void>((r) => (finish = r));
+      const through = transport();
+      vi.mocked(through.port).mockImplementationOnce(async () => {
+        await held;
+        // what a start leaves as its runner answers; a real one goes on to spawn xcodebuild, which no test may
+        writeFileSync(
+          join(state, `ios-${UDID}.json`),
+          JSON.stringify({ port: 1, token: TOKEN, sha256: 'a'.repeat(64) }),
+        );
+        throw new Error('this start ends here');
+      });
+      const first = new IosRunnerLauncher(UDID, through).connect();
+      await vi.waitFor(() => expect(through.port).toHaveBeenCalledOnce());
+      const second = new IosRunnerLauncher(UDID, through).connect();
+      await new Promise((r) => setTimeout(r, 400));
+      expect(through.port).toHaveBeenCalledOnce();
+      finish();
+      await expect(first).rejects.toThrow('this start ends here');
+      const found = await second;
+      found.rpc.close();
+      expect(found.started).toBe(false);
+      expect(through.port).toHaveBeenCalledOnce();
+    }),
+  );
 });
 
 describe('a start that cannot come', () => {
@@ -304,20 +308,23 @@ setTimeout(() => {}, 30000);
     await runner.stop();
   });
 
-  it('is waited for no longer than one, with who holds it said', async () => {
-    const holder = {
-      ...thisOwner('a runner start'),
-      pid: must(other.pid, 'its pid'),
-      started: startOf(must(other.pid, 'its pid')),
-    };
-    writeFileSync(join(state, `ios-${UDID}.starting`), JSON.stringify(holder));
-    const asked = new IosRunnerLauncher(UDID, through(2)).connect();
-    await new Promise((r) => setTimeout(r, 400));
-    const now = Date.now();
-    vi.spyOn(Date, 'now').mockImplementation(() => now + 181_000);
-    await expect(asked).rejects.toMatchObject({
-      code: 'AGENT_UNAVAILABLE',
-      message: expect.stringContaining(`pid ${must(other.pid, 'its pid')}`) as unknown,
-    });
-  });
+  it(
+    'is waited for no longer than one, with who holds it said',
+    fakeTimed(async () => {
+      const holder = {
+        ...thisOwner('a runner start'),
+        pid: must(other.pid, 'its pid'),
+        started: startOf(must(other.pid, 'its pid')),
+      };
+      writeFileSync(join(state, `ios-${UDID}.starting`), JSON.stringify(holder));
+      const asked = new IosRunnerLauncher(UDID, through(2)).connect();
+      await new Promise((r) => setTimeout(r, 400));
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockImplementation(() => now + 181_000);
+      await expect(asked).rejects.toMatchObject({
+        code: 'AGENT_UNAVAILABLE',
+        message: expect.stringContaining(`pid ${must(other.pid, 'its pid')}`) as unknown,
+      });
+    }),
+  );
 });
