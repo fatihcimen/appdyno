@@ -48,7 +48,7 @@ Through your agent, "keep the cold launch under 200 ms" is `perf_compare` `budge
   <img src="../images/perf-gate.svg" alt="How the gate decides: seven questions in order, each ending in a verdict: new, refused, ok, few-samples, improvement, noisy or regression">
 </picture>
 
-A gate that cannot judge does not pass. `few-samples`, `noisy` and `refused` all exit 1, and each says what to do. [The gate](../reference/perf.md#the-gate) has the method, and why it needs all three tests.
+A gate that cannot judge does not pass. `few-samples`, `noisy` and `refused` all exit 1, and so does a scenario with neither a baseline nor a budget, and each says what to do. [The gate](../reference/perf.md#the-gate) has the method, and why it needs all three tests.
 
 ## Why it got worse
 
@@ -77,7 +77,7 @@ It measures the pull request's base and head in one job, because a baseline from
 
 1. builds the base, measures the flow until three runs are in the baseline, and takes the [reference](../reference/perf.md#why-it-got-worse);
 2. builds the head and measures the flow;
-3. `appdyno perf why`, which fails the job at its end on a regression, a broken budget or a change it could not judge (`few-samples`, `noisy`, `refused`);
+3. `appdyno perf why`, which fails the job at its end on a regression, a broken budget or a change it could not judge (`few-samples`, `noisy`, `refused`, or no baseline at all);
 4. `appdyno perf comment --out perf-comment.md`, whatever the gate said;
 5. uploads that file, and posts it with `gh pr comment` and the repository's own token.
 

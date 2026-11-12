@@ -52,6 +52,7 @@ const report = (comparisons: Comparison[], budgets: KeyReport['budgets'] = []): 
   ...key,
   run: 'run-1',
   at: '2026-11-04T10:00:00.000Z',
+  baselined: true,
   noise: [],
   comparisons,
   budgets,

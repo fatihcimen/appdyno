@@ -252,6 +252,7 @@ describe('what stops the gate', () => {
       deviceClass: 'd',
       run: 'r',
       at: 't',
+      baselined: true,
       noise: [],
       budgets: [],
       comparisons: [{ kind: 'k', unit: 'ms', verdict, n: { current: 5, baseline: 5 }, note }],
@@ -266,9 +267,17 @@ describe('what stops the gate', () => {
     expect(toJUnit([unlike])).toContain('<failure message="refused');
   });
 
-  it('lets through what it has nothing to compare with, and what got better', () => {
+  it('lets through a step put in, and what got better', () => {
     expect(exitCode([report('new'), report('ok'), report('improvement')])).toBe(0);
     expect(toText([report('new')])).not.toContain('could not judge');
+  });
+
+  it('takes a scenario with neither a baseline nor a budget for no pass, as nothing judged it', () => {
+    const none = { ...(report('new') as object), baselined: false } as never;
+    expect(exitCode([none])).toBe(1);
+    expect(toText([none])).toContain('the gate could not judge a s: no baseline and no budget');
+    expect(gateVerdict(toText([none]))).toBe('unjudged');
+    expect(toJUnit([none])).toContain('name="baseline"><failure');
   });
 
   it('reads back in its own words what its text says, which an exit code cannot', () => {
@@ -307,6 +316,7 @@ describe('store and reports', () => {
         deviceClass: 'c',
         run: 'r',
         at: 't',
+        baselined: true,
         noise: [],
         comparisons: [c],
         budgets: [],
@@ -321,6 +331,7 @@ describe('store and reports', () => {
         deviceClass: 'c',
         run: 'r',
         at: 't',
+        baselined: true,
         noise: [],
         comparisons: [fresh],
         budgets: [],
@@ -452,11 +463,12 @@ describe('store and reports', () => {
     expect(
       exitCode([reportKey(key, newest, undefined, [{ kind: 'launch.ttid_ms', max: 2000 }])]),
     ).toBe(0);
+    // a budget of another scenario judges nothing here, and nothing else does
     expect(
       exitCode([
         reportKey(key, newest, undefined, [{ kind: 'launch.ttid_ms', max: 1, scenario: 'other' }]),
       ]),
-    ).toBe(0);
+    ).toBe(1);
   });
 
   it('pools the newest runs of a metric', async () => {

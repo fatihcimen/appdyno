@@ -8,6 +8,7 @@
 
 - The README starts with a quick start: one command, one ask, and a real answer.
 - A measured flow's scenario is named by the file's path in its repository, `journey-flows-login` for `flows/login.flow`, and no longer by its name alone. A baseline 1.0.0 kept under `journey-login` needs keeping again under the new name.
+- The gate exits 1 for a scenario with neither a baseline nor a budget, which nothing judged: it passed, and a job that read only the exit code went green with no comparison made. A step put into a scenario that has a baseline still passes as `new`.
 
 ### Fixed
 

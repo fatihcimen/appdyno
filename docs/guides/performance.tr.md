@@ -48,7 +48,7 @@ Ajanınız üzerinden "soğuk açılışı 200 ms'nin altında tut", `kind` ve `
   <img src="../images/perf-gate.tr.svg" alt="Kapı nasıl karar verir: sırayla yedi soru, her biri bir kararla biter: new, refused, ok, few-samples, improvement, noisy ya da regression">
 </picture>
 
-Karar veremeyen bir kapı geçit vermez. `few-samples`, `noisy` ve `refused`, üçü de 1 ile çıkar ve ne yapılacağını söyler. Yöntem ve neden üç testin de gerektiği [Kapı](../reference/perf.tr.md#kapı) bölümünde.
+Karar veremeyen bir kapı geçit vermez. `few-samples`, `noisy` ve `refused`, üçü de 1 ile çıkar; ne baseline'ı ne bütçesi olan bir senaryo da öyle. Her biri ne yapılacağını söyler. Yöntem ve neden üç testin de gerektiği [Kapı](../reference/perf.tr.md#kapı) bölümünde.
 
 ## Neden kötüleşti
 
@@ -77,7 +77,7 @@ Pull request'in base'ini ve head'ini tek bir job'da ölçer, çünkü başka bir
 
 1. base'i derler, baseline'da üç çalıştırma olana kadar akışı ölçer ve [referansı](../reference/perf.tr.md#neden-kötüleşti) alır;
 2. head'i derler ve akışı ölçer;
-3. `appdyno perf why`; bir gerilemede, aşılan bir bütçede ya da karar veremediği bir değişiklikte (`few-samples`, `noisy`, `refused`) job'ı en sonda başarısız kılar;
+3. `appdyno perf why`; bir gerilemede, aşılan bir bütçede ya da karar veremediği bir değişiklikte (`few-samples`, `noisy`, `refused` ya da hiç baseline yoksa) job'ı en sonda başarısız kılar;
 4. kapı ne demiş olursa olsun `appdyno perf comment --out perf-comment.md`;
 5. o dosyayı yükler ve `gh pr comment` ile, deponun kendi token'ıyla gönderir.
 

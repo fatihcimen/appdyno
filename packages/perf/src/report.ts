@@ -17,6 +17,8 @@ import { xmlText } from '@appdyno/core';
 export type KeyReport = RunKey & {
   run: string;
   at: string;
+  /** Whether the key has a baseline at all: a number new to one that has is a step put in, and passes. */
+  baselined: boolean;
   noise: Noise[];
   comparisons: Comparison[];
   budgets: BudgetResult[];
@@ -46,6 +48,7 @@ export function reportKey(
     ...key,
     run: newest[0]?.run ?? '',
     at: newest[0]?.at ?? '',
+    baselined: baseline !== undefined,
     noise: [...new Set(pooled.flatMap((r) => r.noise))],
     comparisons: [
       ...pooled.map((r) => compareMetric(r.kind, r, baseline?.metrics[r.kind], r.unit, r.better)),
@@ -77,8 +80,16 @@ export const judged = (r: KeyReport) => {
 
 const failed = (r: KeyReport) => [...judged(r).filter(stops), ...r.budgets.filter((b) => !b.ok)];
 
+/** A key with numbers and neither a baseline nor a budget was judged by nothing: that is no pass either. */
+const unjudged = (r: KeyReport) =>
+  !r.baselined && r.budgets.length === 0 && r.comparisons.length > 0;
+
+const NO_BASELINE =
+  'no baseline and no budget, so nothing judged it: keep one with `perf baseline`';
+
 /** Non-zero on a regression, a broken budget or a change the gate could not judge. */
-export const exitCode = (reports: KeyReport[]) => (reports.some((r) => failed(r).length) ? 1 : 0);
+export const exitCode = (reports: KeyReport[]) =>
+  reports.some((r) => failed(r).length || unjudged(r)) ? 1 : 0;
 
 const shown = (x: number | undefined) =>
   x === undefined || Number.isNaN(x) ? '?' : String(Math.round(x * 100) / 100);
@@ -119,6 +130,11 @@ export function toText(reports: KeyReport[]): string {
     ...cannot('few-samples', 'this is no pass, measure more'),
     ...cannot('noisy', 'measured under load or noise, this is no pass, measure again'),
     ...cannot('refused', `the two sides are not comparable, ${unlike.join('; ')}: this is no pass`),
+    ...reports
+      .filter(unjudged)
+      .map(
+        (r) => `the gate could not judge ${r.app} ${r.scenario}: ${NO_BASELINE}, this is no pass`,
+      ),
   ].join('\n');
 }
 
@@ -154,8 +170,14 @@ export function toJUnit(reports: KeyReport[]): string {
         (b) =>
           `<testcase classname="${name}" name="budget ${xmlText(b.kind)}">${b.ok ? '' : `<failure message="${xmlText(`${shown(b.value)} over ${b.limit}`)}"/>`}</testcase>`,
       ),
+      ...(unjudged(r)
+        ? [
+            `<testcase classname="${name}" name="baseline"><failure message="${xmlText(NO_BASELINE)}"/></testcase>`,
+          ]
+        : []),
     ];
-    return `<testsuite name="${name}" tests="${cases.length}" failures="${failed(r).length}">${cases.join('')}</testsuite>`;
+    const failures = failed(r).length + (unjudged(r) ? 1 : 0);
+    return `<testsuite name="${name}" tests="${cases.length}" failures="${failures}">${cases.join('')}</testsuite>`;
   });
   return `<?xml version="1.0" encoding="UTF-8"?>\n<testsuites>${suites.join('')}</testsuites>\n`;
 }
