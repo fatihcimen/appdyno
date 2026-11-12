@@ -22,6 +22,8 @@ jobs:
     # a run takes 12 to 27 minutes: a hang ends here, not at GitHub's six hours
     timeout-minutes: 45
     strategy:
+      # one Node's failure leaves the other's run to its end, so that a run says all that fails on either
+      fail-fast: false
       matrix:
         # the long-term release we develop on, and the oldest that engines lets in
         node: [26, 22]
