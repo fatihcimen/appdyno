@@ -339,8 +339,9 @@ export class IosSimulatorDevice extends IosDevice {
    * alert over the app, and only the runner can tell that apart.
    */
   protected override async untilFront(pkg: string) {
-    if (!(await helperSeesFront(this.direct, pkg, LAUNCH_FRONT_MS))) return super.untilFront(pkg);
-    // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot
+    if (!(await helperSeesFront(this.direct, pkg, LAUNCH_FRONT_MS))) await super.untilFront(pkg);
+    // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot, and the
+    // runner's way too, where it told the front as it first came up (a GitHub runner, 2 of 4 first runs)
     this.transitionEnds = Date.now() + TRANSITION_MS;
   }
 

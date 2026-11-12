@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { inCall } from '@appdyno/core';
+import { inCall, TRANSITION_MS } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/index.js';
 import { Simctl } from '../src/simctl.js';
@@ -121,6 +121,22 @@ describe('an app just stopped on a simulator', () => {
 
   it('is in front under an alert while its process runs', async () => {
     expect(await behind(FIXTURE_UP).foreground()).toBe('dev.appdyno.fixture');
+  });
+});
+
+describe('an app just opened on a simulator', () => {
+  /** When the next touch may go: the app opening takes none, whoever saw it come to the front. */
+  const touchFrom = async (reads: boolean) => {
+    const direct = { reads, front: () => Promise.resolve('dev.app'), close: vi.fn() };
+    const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    const before = Date.now();
+    await (device as unknown as { untilFront: (b: string) => Promise<void> }).untilFront('dev.app');
+    return (device as unknown as { transitionEnds: number }).transitionEnds - before;
+  };
+
+  it('takes no touch while it opens, as the helper or the runner saw it come to the front', async () => {
+    expect(await touchFrom(true)).toBeGreaterThanOrEqual(TRANSITION_MS);
+    expect(await touchFrom(false)).toBeGreaterThanOrEqual(TRANSITION_MS);
   });
 });
 
