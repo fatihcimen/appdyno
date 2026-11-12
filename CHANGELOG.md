@@ -10,7 +10,7 @@ appdyno 1.0.0 is the first public release: an MCP server, a command line and a M
 
 ### Added
 
-- The Mac app, `Appdyno.app`, from a disk image or a Homebrew cask, signed and notarized: it carries its own Node, the Android agent, the device viewer and Perfetto's trace processor, and lives in the menu bar. Google's terms keep adb out of it, and `appdyno tools install adb --accept-license` fetches it.
+- The Mac app, `Appdyno.app`, from a disk image or a Homebrew cask, signed and notarized: it carries its own Node, the Android agent, the device viewer and Perfetto's trace processor, lives in the menu bar, and looks for a newer release when it opens and once a day, which it installs only when you say so. Google's terms keep adb out of it, and `appdyno tools install adb --accept-license` fetches it.
 - `appdyno install` adds the server to the MCP clients on this Mac, changing only its own entry after a backup, with `--dry-run` to see the change and `--remove` to take it out. `appdyno path` puts the app's command on every shell's PATH.
 - `appdyno update` moves to the latest release only once it is verified, by npm's provenance for the package and a signed appcast for the app, and `--check` changes nothing. `appdyno doctor` says the version and how it was installed.
 - `appdyno mcp --http 127.0.0.1:PORT` serves the same tools over Streamable HTTP, for a client that cannot start a program on this Mac: on this Mac's loopback alone, behind a token, to one client at a time.

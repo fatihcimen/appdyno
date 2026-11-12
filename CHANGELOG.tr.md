@@ -10,7 +10,7 @@ appdyno 1.0.0 ilk herkese açık sürümdür: simülatörlerde, emülatörlerde 
 
 ### Eklenenler
 
-- Mac uygulaması `Appdyno.app`, bir disk imajından ya da bir Homebrew cask'inden, imzalı ve noter onayından geçmiş olarak gelir: kendi Node'unu, Android ajanını, cihaz görüntüleyicisini ve Perfetto'nun trace processor'ını taşır ve menü çubuğunda durur. Google'ın koşulları adb'yi onun dışında tutar; onu `appdyno tools install adb --accept-license` indirir.
+- Mac uygulaması `Appdyno.app`, bir disk imajından ya da bir Homebrew cask'inden, imzalı ve noter onayından geçmiş olarak gelir: kendi Node'unu, Android ajanını, cihaz görüntüleyicisini ve Perfetto'nun trace processor'ını taşır, menü çubuğunda durur; açıldığında ve günde bir kez daha yeni bir sürüm arar, onu da ancak siz derseniz kurar. Google'ın koşulları adb'yi onun dışında tutar; onu `appdyno tools install adb --accept-license` indirir.
 - `appdyno install` sunucuyu bu Mac'teki MCP istemcilerine ekler: bir yedek aldıktan sonra yalnızca kendi girdisini değiştirir, değişikliği görmek için `--dry-run`, onu geri almak için `--remove` alır. `appdyno path` uygulamanın komutunu her kabuğun PATH'ine koyar.
 - `appdyno update` en son sürüme ancak o doğrulandıktan sonra geçer, paket için npm'in provenance kaydıyla, uygulama için imzalı bir appcast ile; `--check` hiçbir şeyi değiştirmez. `appdyno doctor` sürümü ve nasıl kurulduğunu söyler.
 - `appdyno mcp --http 127.0.0.1:PORT`, bu Mac'te bir program başlatamayan bir istemci için aynı araçları Streamable HTTP üzerinden sunar: yalnızca bu Mac'in loopback'inde, bir token arkasında, bir seferde tek bir istemciye.

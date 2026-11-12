@@ -7,6 +7,10 @@
 #import <Cocoa/Cocoa.h>
 #import <libproc.h>
 
+/// The person's choice in the menu, on unless turned off; and the release they last said no to, which is not offered again.
+static NSString *const LookByItself = @"checkForUpdatesAutomatically";
+static NSString *const SaidNo = @"declinedUpdate";
+
 static NSString *Command(void) {
   return [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"bin/appdyno"];
 }
@@ -19,6 +23,13 @@ static NSTask *Start(NSArray<NSString *> *words, id output) {
   task.standardOutput = output;
   task.standardError = output;
   return [task launchAndReturnError:NULL] ? task : nil;
+}
+
+/// The release `update --check` names as the latest.
+static NSString *LatestOf(NSString *said) {
+  for (NSString *line in [said componentsSeparatedByString:@"\n"])
+    if ([line hasPrefix:@"latest: "]) return [line substringFromIndex:8];
+  return said;
 }
 
 /// What a command says, whole, on the main queue, once it has ended.
@@ -47,9 +58,12 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   BOOL _behind;
   NSArray<NSDictionary *> *_devices;
   BOOL _noAdb;
+  NSString *_update;
+  NSTimer *_daily;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
+  [NSUserDefaults.standardUserDefaults registerDefaults:@{LookByItself: @YES}];
   NSArray<NSString *> *args = NSProcessInfo.processInfo.arguments;
   _behind = [args containsObject:@"--behind"];
   if ([args containsObject:@"--menu"]) return [self printMenu];
@@ -57,6 +71,32 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   Ask(@[@"install", @"--moved"], ^(__unused int code, __unused NSString *said){});
   [self showItem];
   [self openHub];
+  // a test's app, off every screen, asks no network
+  if (_behind) return;
+  [self lookForUpdate];
+  _daily = [NSTimer scheduledTimerWithTimeInterval:24 * 60 * 60
+                                           repeats:YES
+                                             block:^(__unused NSTimer *timer) {
+                                               [self lookForUpdate];
+                                             }];
+  _daily.tolerance = 60 * 60;
+}
+
+/// On opening, and once a day while it runs: a newer release is offered once, and installed only on the person's word.
+/// No answer, as offline, or a build with no update key, says nothing.
+- (void)lookForUpdate {
+  if (![NSUserDefaults.standardUserDefaults boolForKey:LookByItself]) return;
+  Ask(@[@"update", @"--check"], ^(__unused int code, NSString *said) {
+    self->_update = [said containsString:@"would download"] ? said : nil;
+    if (self->_update && ![LatestOf(said) isEqual:[NSUserDefaults.standardUserDefaults stringForKey:SaidNo]])
+      [self offer:said];
+  });
+}
+
+- (void)lookByItself:(NSMenuItem *)item {
+  BOOL on = item.state != NSControlStateValueOn;
+  [NSUserDefaults.standardUserDefaults setBool:on forKey:LookByItself];
+  if (on) [self lookForUpdate];
 }
 
 - (void)showItem {
@@ -143,7 +183,13 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   [menu addItem:NSMenuItem.separatorItem];
   [self add:@"Put appdyno on the PATH…" to:menu action:@selector(putOnPath)];
   [self add:@"Add to MCP Clients…" to:menu action:@selector(addToClients)];
-  [self add:@"Check for Updates…" to:menu action:@selector(checkForUpdates)];
+  [self add:_update ? @"Update Available…" : @"Check for Updates…" to:menu action:@selector(checkForUpdates)];
+  NSMenuItem *byItself = [menu addItemWithTitle:@"Check for Updates Automatically"
+                                         action:@selector(lookByItself:)
+                                  keyEquivalent:@""];
+  byItself.target = self;
+  byItself.state = [NSUserDefaults.standardUserDefaults boolForKey:LookByItself] ? NSControlStateValueOn
+                                                                                 : NSControlStateValueOff;
   [menu addItem:NSMenuItem.separatorItem];
   [self add:@"Quit Appdyno" to:menu action:@selector(quit)];
 }
@@ -208,19 +254,26 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 - (void)checkForUpdates {
   Ask(@[@"update", @"--check"], ^(__unused int code, NSString *said) {
     if (![said containsString:@"would download"]) return [self tell:@"Updates" saying:said];
-    if (![self confirm:@"Install the new version?" saying:said with:@"Install"]) return;
-    Ask(@[@"update"], ^(int done, NSString *result) {
-      if (done != 0) return [self tell:@"The update did not finish" saying:result];
-      NSWorkspaceOpenConfiguration *config = NSWorkspaceOpenConfiguration.configuration;
-      config.createsNewApplicationInstance = YES;
-      [NSWorkspace.sharedWorkspace openApplicationAtURL:NSBundle.mainBundle.bundleURL
-                                          configuration:config
-                                      completionHandler:^(__unused NSRunningApplication *app, __unused NSError *error) {
-                                        dispatch_async(dispatch_get_main_queue(), ^{
-                                          [NSApp terminate:nil];
-                                        });
-                                      }];
-    });
+    [self offer:said];
+  });
+}
+
+- (void)offer:(NSString *)said {
+  if (![self confirm:@"Install the new version?" saying:said with:@"Install"]) {
+    [NSUserDefaults.standardUserDefaults setObject:LatestOf(said) forKey:SaidNo];
+    return;
+  }
+  Ask(@[@"update"], ^(int done, NSString *result) {
+    if (done != 0) return [self tell:@"The update did not finish" saying:result];
+    NSWorkspaceOpenConfiguration *config = NSWorkspaceOpenConfiguration.configuration;
+    config.createsNewApplicationInstance = YES;
+    [NSWorkspace.sharedWorkspace openApplicationAtURL:NSBundle.mainBundle.bundleURL
+                                        configuration:config
+                                    completionHandler:^(__unused NSRunningApplication *app, __unused NSError *error) {
+                                      dispatch_async(dispatch_get_main_queue(), ^{
+                                        [NSApp terminate:nil];
+                                      });
+                                    }];
   });
 }
 

@@ -12,11 +12,11 @@ Yalnızca son sürüm desteklenir: bir düzeltme yeni bir sürüm olarak çıkar
 
 ## Makineden hiçbir şey çıkmaz
 
-appdyno'da telemetri yoktur ve siz istemedikçe hiçbir yere bir şey göndermez. Neyi ne zaman indirdiği:
+appdyno'da telemetri yoktur ve siz istemedikçe sizden hiçbir şeyi hiçbir yere göndermez. Neyi ne zaman indirdiği:
 
-- Yeni bir sürüm, yalnızca siz `appdyno update` ya da Güncellemeleri Denetle'yi çalıştırırken: paket npm registry'sine, uygulama bu deponun sürümlerine sorar. MCP sunucusu bunu hiç yapmaz.
+- Yeni bir sürüm: paket npm registry'sine yalnızca siz `appdyno update`'i çalıştırırken sorar. Mac uygulaması, menüdeki Check for Updates Automatically kapalı değilse, bu deponun sürümlerine açıldığında ve günde bir kez sorar ve siz demedikçe hiçbir şey kurmaz. MCP sunucusu bunu hiç yapmaz.
 - adb, Google'dan, yalnızca Google'ın koşullarını kabul ettiğinizde: uygulamanın menü çubuğunda ya da `appdyno tools install adb --accept-license` ile.
-- Android'in trace'lerini okuyan, v59.1'e sabitlenmiş Perfetto trace processor'ı. Bir Android trace'i ona ilk kez ihtiyaç duyduğunda, uygulama bir tane taşımıyor ve `APPDYNO_TRACE_PROCESSOR` bir tane göstermiyorsa, Google'ın GitHub'daki sürümünden bir kez indirilir ve sha256'sıyla doğrulanır. Kendiliğinden gelen tek dosya budur.
+- Android'in trace'lerini okuyan, v59.1'e sabitlenmiş Perfetto trace processor'ı. Bir Android trace'i ona ilk kez ihtiyaç duyduğunda, uygulama bir tane taşımıyor ve `APPDYNO_TRACE_PROCESSOR` bir tane göstermiyorsa, Google'ın GitHub'daki sürümünden bir kez indirilir ve sha256'sıyla doğrulanır. Mac uygulamasının sürüm aramasının dışında kendiliğinden gelen tek dosya budur.
 - Apple'ın ya da Google'ın servisi üzerinden bir `push`, bir kişi o servisi `appdyno push setup` ile kurduktan sonra, o servise, bunun için verilen anahtarla imzalanmış olarak gider. Bildirimin içeriği ve cihazın push token'ı bu Mac'ten yalnızca o zaman çıkar.
 
 `npx -y appdyno` çalıştıran bir istemcide npx her açılışta, appdyno çalışmadan önce npm registry'sine sorar. Bu npm'in işidir ve [istemciler rehberinin](docs/guides/clients.tr.md#appdynoyu-güncel-tutmak) dediği gibi global bir kurulum sürümün değişmesini önler. Siz istemedikçe başka hiçbir şey gelmez.

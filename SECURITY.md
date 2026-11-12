@@ -12,11 +12,11 @@ Only the latest release is supported: a fix comes out as a new release, and olde
 
 ## Nothing leaves the machine
 
-appdyno has no telemetry and sends nothing anywhere unless you ask. What it fetches, and when:
+appdyno has no telemetry and sends nothing of yours anywhere unless you ask. What it fetches, and when:
 
-- A release, only while you run `appdyno update` or Check for Updates: the package asks the npm registry, the app asks this repository's releases. The MCP server never does.
+- A release: the package asks the npm registry only while you run `appdyno update`. The Mac app asks this repository's releases when it opens and once a day, unless Check for Updates Automatically is off, and installs nothing until you say so. The MCP server never does.
 - adb, from Google, only when you accept Google's terms: in the app's menu bar, or with `appdyno tools install adb --accept-license`.
-- Perfetto's trace processor, pinned to v59.1, which reads Android's traces. The first time an Android trace needs it, and neither the app carries one nor `APPDYNO_TRACE_PROCESSOR` names one, it is fetched once from Google's release of it on GitHub, and checked by its sha256. This is the one file that comes by itself.
+- Perfetto's trace processor, pinned to v59.1, which reads Android's traces. The first time an Android trace needs it, and neither the app carries one nor `APPDYNO_TRACE_PROCESSOR` names one, it is fetched once from Google's release of it on GitHub, and checked by its sha256. Besides the Mac app's look for a release, this is the one file that comes by itself.
 - A `push` by Apple's or Google's service, once a person has set that service up with `appdyno push setup`, goes to that service, signed with the key given for it. The payload and the device's push token leave this Mac then, and at no other time.
 
 A client that runs `npx -y appdyno` has npx ask the npm registry at each start, before appdyno runs. That is npm's doing, and a global install keeps it from changing the version, as [the clients guide](docs/guides/clients.md#keep-appdyno-current) says. Nothing else comes unless you ask for it.

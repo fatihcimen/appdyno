@@ -58,7 +58,7 @@ appdyno doctor             # says what is here and what is missing
 
 ## Keep appdyno current
 
-`appdyno update` is the one way to move to a newer release. Nothing looks for one in the background, as a look is a network call and appdyno has no telemetry.
+`appdyno update` moves to a newer release. The command line and the MCP server never look for one by themselves, as a look is a network call and appdyno has no telemetry. The Mac app looks, as below.
 
 ```sh
 appdyno update --check     # what is installed, what is latest, what would happen; changes nothing
@@ -83,7 +83,7 @@ It then upgrades with whatever installed appdyno. `appdyno doctor` shows which, 
 
 A failed install leaves the old version working. `update` never moves to an older version, and never to a prerelease, even when the registry's `latest` points at one.
 
-**The Mac app** updates itself with the same guarantee, with Check for Updates in the menu bar, or `appdyno update`. Nothing looks for an update unless you ask. A release publishes a small file, its appcast, signed with a key whose public half is in your app. The app believes nothing else: it downloads the disk image that file names, checks its hash and size, unpacks it beside the app, and checks its code signature, that it is the same program from the same signer, and that it is the version signed. Only then does it swap the two. If any of this fails, your app stays as it was, and a build made with no update key refuses to update at all. Open the app again afterwards.
+**The Mac app** updates itself with the same guarantee, with Check for Updates in the menu bar, or `appdyno update`. It looks for one when it opens and once a day while it runs, and offers a newer release once: nothing is installed until you click Install, and Check for Updates Automatically in the menu turns the look off. The look reads only the small signed file described next, and sends nothing of yours. A release publishes a small file, its appcast, signed with a key whose public half is in your app. The app believes nothing else: it downloads the disk image that file names, checks its hash and size, unpacks it beside the app, and checks its code signature, that it is the same program from the same signer, and that it is the version signed. Only then does it swap the two. If any of this fails, your app stays as it was, and a build made with no update key refuses to update at all. Open the app again afterwards.
 
 **A client that runs `npx -y appdyno mcp`.** npx asks the registry at each start and moves to the latest release by itself, with none of the checks above. If appdyno is installed globally, npx runs that install instead. So run `npm install -g appdyno` once: what your clients run then changes only when you run `appdyno update`.
 

@@ -405,6 +405,7 @@ try {
     const r = say(menu, '--menu');
     if (r.status !== 0) throw new Error(`exit ${String(r.status)}: ${r.stderr}`);
     if (!r.stdout.includes('in the menu bar: yes\nOpen Hub')) throw new Error(r.stdout);
+    if (!r.stdout.includes('Check for Updates Automatically')) throw new Error(r.stdout);
     return r.stdout.trim().split('\n').join(' | ');
   });
   const windows = windowLister();

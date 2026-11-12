@@ -58,7 +58,7 @@ appdyno doctor             # nelerin kurulu olduğunu, neyin eksik olduğunu sö
 
 ## appdyno'yu güncel tutmak
 
-Yeni bir sürüme geçmenin tek yolu `appdyno update`. Arka planda sürüm aranmaz: arama bir ağ çağrısıdır ve appdyno telemetri içermez.
+Yeni bir sürüme `appdyno update` ile geçilir. Komut satırı ve MCP sunucusu kendiliğinden sürüm aramaz, çünkü arama bir ağ çağrısıdır ve appdyno telemetri içermez. Mac uygulaması arar, aşağıda anlatıldığı gibi.
 
 ```sh
 appdyno update --check     # kurulu sürüm, son sürüm, ne olacağı; hiçbir şeyi değiştirmez
@@ -83,7 +83,7 @@ Ardından appdyno'yu hangi araç kurduysa onunla yükseltir. Hangisi olduğunu, 
 
 Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hiçbir zaman daha eski bir sürüme geçmez, npm registry'sindeki `latest` bir ön sürümü gösterse bile ön sürüme de geçmez.
 
-**Mac uygulaması** kendini aynı güvenceyle günceller: menü çubuğundaki Check for Updates ya da `appdyno update` ile. Siz istemedikçe güncelleme aranmaz. Her sürüm, appcast denen küçük bir dosya yayımlar. Bu dosya, açık yarısı uygulamanızda bulunan bir anahtarla imzalıdır ve uygulama başka hiçbir şeye inanmaz: dosyanın gösterdiği disk imajını indirir, hash'ini ve boyutunu denetler, uygulamanın yanına açar, kod imzasını, aynı imzacıdan gelen aynı program olduğunu ve imzalanan sürüm olduğunu denetler. İkisini ancak bundan sonra değiştirir. Bunlardan biri başarısız olursa uygulamanız olduğu gibi kalır, güncelleme anahtarı olmadan yapılmış bir build ise güncellemeyi hiç kabul etmez. Ardından uygulamayı yeniden açın.
+**Mac uygulaması** kendini aynı güvenceyle günceller: menü çubuğundaki Check for Updates ya da `appdyno update` ile. Açıldığında ve açık kaldıkça günde bir kez yeni sürüm arar, daha yeni bir sürümü bir kez önerir: siz Install'a tıklamadan hiçbir şey kurulmaz, menüdeki Check for Updates Automatically de aramayı kapatır. Arama yalnızca birazdan anlatılan küçük, imzalı dosyayı okur ve sizden hiçbir şey göndermez. Her sürüm, appcast denen küçük bir dosya yayımlar. Bu dosya, açık yarısı uygulamanızda bulunan bir anahtarla imzalıdır ve uygulama başka hiçbir şeye inanmaz: dosyanın gösterdiği disk imajını indirir, hash'ini ve boyutunu denetler, uygulamanın yanına açar, kod imzasını, aynı imzacıdan gelen aynı program olduğunu ve imzalanan sürüm olduğunu denetler. İkisini ancak bundan sonra değiştirir. Bunlardan biri başarısız olursa uygulamanız olduğu gibi kalır, güncelleme anahtarı olmadan yapılmış bir build ise güncellemeyi hiç kabul etmez. Ardından uygulamayı yeniden açın.
 
 **`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta npm registry'sine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
 

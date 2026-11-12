@@ -194,6 +194,16 @@ describe('appdyno update, in the app', () => {
     oldStays();
   });
 
+  it('says with --check the words the menu bar app offers a release by', async () => {
+    const { going } = updating(getting(released()), {}, true);
+    await expect(going).resolves.toBe(0);
+    const menu = readFileSync(join(import.meta.dirname, '../../../mac/App/Menu.m'), 'utf8');
+    for (const words of ['would download', 'latest: ']) {
+      expect(menu).toContain(`@"${words}"`);
+      expect(lines.join('\n')).toContain(words);
+    }
+  });
+
   it('never goes back, whatever a signed appcast says', async () => {
     const bytes = cast({ version: '0.9.0' });
     const { going } = updating(getting({ [AT]: bytes, [`${AT}.sig`]: signed(bytes) }));
