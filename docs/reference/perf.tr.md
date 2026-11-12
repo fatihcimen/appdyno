@@ -263,7 +263,7 @@ Bunun nasıl ve hangi cihazlarda sınandığı: [kanıtlar](perf-evidence.tr.md#
 
 ## Bir yolculuk
 
-`appdyno test <flow> --measure` ya da `iterations` ile `flow` `run`. Ölçülen bir açılışın ısınmasını dışarıda bırakması gibi ilk çalıştırma dışarıda bırakılır ve yinelemeler (varsayılan olarak 5: kapı her yanda 5 örneğin altında hiçbir şeye karar vermez) `journey-<file>` senaryosunun saklanan tek bir çalıştırmasını oluşturur:
+`appdyno test <flow> --measure` ya da `iterations` ile `flow` `run`. Ölçülen bir açılışın ısınmasını dışarıda bırakması gibi ilk çalıştırma dışarıda bırakılır ve yinelemeler (varsayılan olarak 5: kapı her yanda 5 örneğin altında hiçbir şeye karar vermez) `journey-<path>` senaryosunun saklanan tek bir çalıştırmasını oluşturur; `<path>`, dosyanın deposundaki yoludur, her `/` yerine `-` ile:
 
 | tür                                                    | ne                                                                                                                                                                                                  |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

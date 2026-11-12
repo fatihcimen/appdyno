@@ -60,9 +60,9 @@ Uygulamanızın içinden geçen bütün bir yolu ölçmek için bir [akış](flo
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # üç kez, sonra:
-appdyno perf baseline --app A --scenario journey-login --last 3
+appdyno perf baseline --app A --scenario journey-flows-login --last 3
 appdyno test flows/login.flow --measure --device <id>
-appdyno perf compare --app A --scenario journey-login       # 1 ile çıkar, adımı adıyla söyler
+appdyno perf compare --app A --scenario journey-flows-login       # 1 ile çıkar, adımı adıyla söyler
 ```
 
 ## Bir pull request'te

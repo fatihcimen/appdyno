@@ -263,7 +263,7 @@ How this was checked, and on which devices: [the evidence](perf-evidence.md#why-
 
 ## A journey
 
-`appdyno test <flow> --measure` or `flow` `run` with `iterations`. A first run is left out, as a measured launch leaves out its warm-up, and the iterations (5 by default: the gate calls nothing under 5 samples a side) make one kept run of the scenario `journey-<file>`:
+`appdyno test <flow> --measure` or `flow` `run` with `iterations`. A first run is left out, as a measured launch leaves out its warm-up, and the iterations (5 by default: the gate calls nothing under 5 samples a side) make one kept run of the scenario `journey-<path>`, the file's path in its repository with `-` for each `/`:
 
 | kind                                                   | what                                                                                                                                                                                              |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

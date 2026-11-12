@@ -110,13 +110,13 @@ The tool answers with the YAML, and `to` (`--to` on the command line) writes it 
 
 ## A journey, measured and gated
 
-`appdyno test login.flow --measure [--iterations 5]`, or `flow` `run` with `iterations`, runs a flow as a performance scenario: a first run left out as a warm-up, then each iteration with a time and what the device reads in a moment for each step. All of it is one kept run of the scenario `journey-login`, and the gate is the usual one:
+`appdyno test flows/login.flow --measure [--iterations 5]`, or `flow` `run` with `iterations`, runs a flow as a performance scenario: a first run left out as a warm-up, then each iteration with a time and what the device reads in a moment for each step. All of it is one kept run of a scenario named by the file's path in its repository, `journey-flows-login`, so that two `smoke.flow` in two folders are two scenarios, and the gate is the usual one:
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # three times, then:
-appdyno perf baseline --app A --scenario journey-login --last 3
+appdyno perf baseline --app A --scenario journey-flows-login --last 3
 appdyno test flows/login.flow --measure --device <id>
-appdyno perf compare --app A --scenario journey-login       # exit 1, naming the step that got slower
+appdyno perf compare --app A --scenario journey-flows-login       # exit 1, naming the step that got slower
 ```
 
 A step's kind comes from its line, `journey.04_tap_id_load.ms`, with a `${NAME}` as it is written, so a value does not change it, and a step put in renumbers the ones after it. On Android a step has its frames (p95, worst) and memory, and on an iPhone its time only, because a read of its memory is a recording of seconds. The answer says so. Both are proven on a phone against a known cost; a simulator or an emulator has not run one yet. Start a flow with `stop` and `launch` to have every iteration start alike. An iteration that fails ends the run: what passed before it is kept, and the file's case fails. On the [dashboard](../reference/perf.md#the-dashboard) a journey is one bar split by step, with a table of each step's numbers.

@@ -1,5 +1,5 @@
 import { existsSync, statSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
-import { extname, join, basename, dirname } from 'node:path';
+import { extname, join, basename, dirname, relative, resolve } from 'node:path';
 import { must, safeName } from '@appdyno/core';
 import {
   type CaseFailure,
@@ -127,6 +127,16 @@ export async function runTests(
     };
   };
 
+  // a file is named by its path under the folder all of this run's share, so two smoke.flow in two folders are two
+  const shared = o.files
+    .map((f) => dirname(resolve(f)))
+    .reduce(
+      (a, b) => {
+        while (relative(a, b).startsWith('..')) a = dirname(a);
+        return a;
+      },
+      dirname(resolve(o.files[0] ?? '.')),
+    );
   const suites: TestSuite[] = [];
   for (const device of o.devices.length > 0 ? o.devices : [undefined]) {
     const cases: TestCase[] = [];
@@ -141,7 +151,7 @@ export async function runTests(
     log(`${name}:`);
     for (const file of o.files) {
       const t0 = Date.now();
-      const label = basename(file);
+      const label = relative(shared, resolve(file));
       const evidence = join(o.artifacts, safeName(name), safeName(label));
       const retried: CaseFailure[] = [];
       let go: Attempt = s

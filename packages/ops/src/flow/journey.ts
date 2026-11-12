@@ -1,4 +1,6 @@
-import { basename, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { median, must, round1, type Capability, type Measured } from '@appdyno/core';
 import type { Flow, RunResult, StepEvent } from '@appdyno/flows';
 import {
@@ -24,9 +26,25 @@ export const JOURNEY_ITERATIONS = 5;
 
 export type JourneyAnswer = NonNullable<import('zod').infer<typeof FlowOut>['journey']>;
 
-/** A file's scenario, as a store's folder holds it. */
-const journeyScenario = (file: string) =>
-  `journey-${keyName(basename(file, '.flow'))}`.slice(0, 60);
+/** The repository a flow is in, by its .git, so that its name is the same from any folder; else its own folder. */
+function rootOf(file: string) {
+  const own = dirname(resolve(file));
+  for (let d = own; ; d = dirname(d)) {
+    if (existsSync(join(d, '.git'))) return d;
+    if (dirname(d) === d) return own;
+  }
+}
+
+/**
+ * A file's scenario, as a store's folder holds it: its path in its repository, so that `login/smoke.flow` and
+ * `checkout/smoke.flow` are two, and a long one keeps a hash of the whole so that two cut alike stay two.
+ */
+export function journeyScenario(file: string) {
+  const path = relative(rootOf(file), resolve(file)).replace(/\.flow$/, '');
+  const name = `journey-${keyName(path.split(sep).join('-'))}`;
+  if (name.length <= 60) return name;
+  return `${name.slice(0, 51)}-${createHash('sha256').update(path).digest('hex').slice(0, 8)}`;
+}
 
 type Held = { unit: Unit; samples: number[]; throughHost: boolean };
 

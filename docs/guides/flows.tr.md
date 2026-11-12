@@ -110,13 +110,13 @@ Araç YAML ile yanıt verir; `to` (komut satırında `--to`) onu ayrıca bir `.y
 
 ## Ölçülen ve kapıyla denetlenen bir yolculuk
 
-`appdyno test login.flow --measure [--iterations 5]` ya da `iterations` ile `flow` `run`, bir akışı bir performans senaryosu olarak çalıştırır: ısınma olarak dışarıda bırakılan ilk çalıştırma, sonra her adım için bir süreyle ve cihazın bir anda okuduklarıyla her yineleme. Hepsi `journey-login` senaryosunun saklanan tek bir çalıştırmasıdır ve kapı her zamankidir:
+`appdyno test flows/login.flow --measure [--iterations 5]` ya da `iterations` ile `flow` `run`, bir akışı bir performans senaryosu olarak çalıştırır: ısınma olarak dışarıda bırakılan ilk çalıştırma, sonra her adım için bir süreyle ve cihazın bir anda okuduklarıyla her yineleme. Hepsi, adını dosyanın deposundaki yolundan alan bir senaryonun, `journey-flows-login`'in, saklanan tek bir çalıştırmasıdır; böylece iki klasördeki iki `smoke.flow` iki ayrı senaryo olur. Kapı her zamankidir:
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # üç kez, sonra:
-appdyno perf baseline --app A --scenario journey-login --last 3
+appdyno perf baseline --app A --scenario journey-flows-login --last 3
 appdyno test flows/login.flow --measure --device <id>
-appdyno perf compare --app A --scenario journey-login       # 1 ile çıkar, yavaşlayan adımı adıyla söyler
+appdyno perf compare --app A --scenario journey-flows-login       # 1 ile çıkar, yavaşlayan adımı adıyla söyler
 ```
 
 Bir adımın türü satırından gelir, `journey.04_tap_id_load.ms`; bir `${NAME}` yazıldığı gibi kalır, böylece bir değer türü değiştirmez, araya eklenen bir adım da kendisinden sonrakileri yeniden numaralar. Android'de bir adımın kareleri (p95, en kötü) ve belleği vardır, bir iPhone'da ise yalnızca süresi, çünkü belleğini okumak saniyeler süren bir kayıttır. Yanıt bunu söyler. İkisi de bir telefonda, bilinen bir maliyete karşı kanıtlandı; bir simülatör ya da emülatör henüz bir tane çalıştırmadı. Her yinelemenin aynı biçimde başlaması için bir akışa `stop` ve `launch` ile başlayın. Başarısız olan bir yineleme çalıştırmayı bitirir: ondan önce geçenler saklanır ve dosyanın case'i başarısız olur. [Dashboard](../reference/perf.tr.md#dashboard) üzerinde bir yolculuk, adımlara bölünmüş tek bir çubuktur ve her adımın sayılarını içeren bir tablosu vardır.

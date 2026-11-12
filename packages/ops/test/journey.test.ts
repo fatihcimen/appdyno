@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must, type ActOptions, type MeasureSource } from '@appdyno/core';
@@ -6,6 +6,7 @@ import { latestRuns, runKeys, type PerfRecord } from '@appdyno/perf';
 import { DeviceError, type ActParams } from '@appdyno/protocol';
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, flowsFor, ServerContext, ToolError } from '../src/index.js';
+import { journeyScenario } from '../src/flow/journey.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf } from '@appdyno/testing/calls.js';
 import { onFakeTime } from '@appdyno/testing/fake-time.js';
@@ -352,6 +353,43 @@ describe('a journey as a performance scenario', () => {
     expect(logged.join('\n')).toContain('journey-a: 2 iterations');
     expect(readFileSync(junit, 'utf8')).toContain('journey-a: 2 iterations');
     expect((await newestRun(measurements))[0]?.scenario).toBe('journey-a');
+  });
+
+  it('keeps two files of one name in two folders apart: their evidence, their cases and their scenarios', async () => {
+    const repo = fresh();
+    mkdirSync(join(repo, '.git'));
+    const smoke = (folder: string) => {
+      mkdirSync(join(repo, 'flows', folder), { recursive: true });
+      const file = join(repo, 'flows', folder, 'smoke.flow');
+      writeFileSync(file, 'launch\nassert text="Nowhere"\n');
+      return file;
+    };
+    const files = [smoke('login'), smoke('checkout')];
+    expect(files.map(journeyScenario)).toEqual([
+      'journey-flows-login-smoke',
+      'journey-flows-checkout-smoke',
+    ]);
+    // the same from the folder of the flows, as a name that moved with the shell would split one history in two
+    expect(journeyScenario(join(repo, 'flows', 'login', '..', 'login', 'smoke.flow'))).toBe(
+      'journey-flows-login-smoke',
+    );
+    expect(journeyScenario(join(repo, 'flows', 'x'.repeat(80) + '.flow'))).toHaveLength(60);
+
+    const { ctx } = phone();
+    const artifacts = fresh();
+    const junit = join(artifacts, 'junit.xml');
+    const r = await onFakeTime(
+      flowsFor(ctx).test({ files, devices: [], artifacts, junit, log: () => undefined }),
+    );
+    expect(r.passed).toBe(false);
+    const cases = readFileSync(junit, 'utf8');
+    expect(cases).toContain('name="login/smoke.flow"');
+    expect(cases).toContain('name="checkout/smoke.flow"');
+    const [device] = readdirSync(artifacts).filter((f) => f !== 'junit.xml');
+    expect(readdirSync(join(artifacts, must(device, 'a device folder'))).sort()).toEqual([
+      'checkout_smoke.flow',
+      'login_smoke.flow',
+    ]);
   });
 });
 
