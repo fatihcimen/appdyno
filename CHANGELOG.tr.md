@@ -4,6 +4,17 @@
 
 ## Yayımlanmamış
 
+### Değişti
+
+- README hızlı bir başlangıçla açılıyor: tek komut, tek istek ve gerçek bir yanıt.
+- Ölçülen bir akışın senaryosu artık yalnızca dosyanın adından değil, deposundaki yolundan adlandırılır: `flows/login.flow` için `journey-flows-login`. 1.0.0'ın `journey-login` altında sakladığı bir baseline'ın yeni adla yeniden saklanması gerekir.
+
+### Düzeltildi
+
+- `check: text` ve `expect: false` ile `assert`, öğe o metni okuduğunda başarısız olur: metin kontrolü `expect`'i dışarıda bıraktığı için geçiyordu.
+- İki klasördeki aynı adlı iki akış, örneğin `login/smoke.flow` ve `checkout/smoke.flow`, artık bir hatanın ekran görüntüsünü ve ağacını, JUnit case'ini ya da performans senaryosunu paylaşmaz.
+- Maestro YAML'a aktarılan bir akış bir tuşun sayısını korur: `press_key back count=3` bir değil üç basıştır.
+
 ## 1.0.0
 
 appdyno 1.0.0 ilk herkese açık sürümdür: simülatörlerde, emülatörlerde ve gerçek telefonlarda iOS ve Android uygulamalarını kullanan, test eden ve ölçen bir MCP sunucusu, bir komut satırı aracı ve bir Mac uygulaması. 48 aracının her biri aynı zamanda bir komut ve kütüphanede bir çağrıdır; 0.6.0'dan geçiyorsanız önce Değişenler'i okuyun.

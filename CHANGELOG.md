@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+### Changed
+
+- The README starts with a quick start: one command, one ask, and a real answer.
+- A measured flow's scenario is named by the file's path in its repository, `journey-flows-login` for `flows/login.flow`, and no longer by its name alone. A baseline 1.0.0 kept under `journey-login` needs keeping again under the new name.
+
+### Fixed
+
+- `assert` with `check: text` and `expect: false` fails when the element reads that text: it passed, as the text check left `expect` out.
+- Two flows of one name in two folders, such as `login/smoke.flow` and `checkout/smoke.flow`, no longer share their failure's screenshot and tree, their JUnit case or their performance scenario.
+- A flow exported to Maestro YAML keeps a key's count: `press_key back count=3` is three presses, not one.
+
 ## 1.0.0
 
 appdyno 1.0.0 is the first public release: an MCP server, a command line and a Mac app that drive, test and measure iOS and Android apps on simulators, emulators and real phones. Each of its 48 tools is also a command and a call in the library; coming from 0.6.0, read Changed first.
