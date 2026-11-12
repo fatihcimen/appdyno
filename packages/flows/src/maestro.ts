@@ -82,9 +82,12 @@ function commands(st: FlowStep): Yaml[] {
         ...(a.submit ? [{ pressKey: 'Enter' }] : []),
       ];
     case 'press_key': {
-      if (a.key === 'back') return ['back'];
-      const key = MAESTRO_KEYS[a.key as string];
-      return key ? [{ pressKey: key }] : unsupported(`Maestro YAML has no key ${String(a.key)}`);
+      const key = a.key === 'back' ? 'Back' : MAESTRO_KEYS[a.key as string];
+      if (!key) return unsupported(`Maestro YAML has no key ${String(a.key)}`);
+      // a count is that many presses, as Maestro's own would be written
+      return Array<Yaml>((a.count as number | undefined) ?? 1).fill(
+        key === 'Back' ? 'back' : { pressKey: key },
+      );
     }
     case 'swipe':
       none(st, 'distance', 'x', 'y');

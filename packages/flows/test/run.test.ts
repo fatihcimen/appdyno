@@ -190,6 +190,17 @@ stop`),
     expect(yaml('assert id=a check=absent timeoutMs=800')).toContain('notVisible:');
   });
 
+  it('presses a key as many times as the flow does', () => {
+    expect(yaml('press_key back count=3\npress_key enter count=2')).toBe(`appId: "dev.x"
+---
+- back
+- back
+- back
+- pressKey: "Enter"
+- pressKey: "Enter"
+`);
+  });
+
   it('leaves placeholders for Maestro to fill, and says what it could not keep', () => {
     const out = toMaestro(
       parseFlow('app a\nsecret S\ntype "${S}"\ntap text="x ${S}."\ntap role=button text="B"\n'),
