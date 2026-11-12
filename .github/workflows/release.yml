@@ -1,10 +1,13 @@
 name: release
 
-# A tag publishes: `git tag v1.2.3 && git push origin v1.2.3`, for the version every package carries.
+# A tag publishes: `git tag v1.2.3 && git push origin v1.2.3`, for the version every package carries. Run by hand, it
+# is the rehearsal: the gate, and the Mac app built, signed and notarized as a release's is, kept with the run for a
+# person to open, with nothing published.
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,18 +19,19 @@ jobs:
   publish:
     needs: gate
     runs-on: macos-latest
+    # a notarization that never answers ends the run here, not after GitHub's 6 hours
+    timeout-minutes: 120
     permissions:
       # the GitHub release
       contents: write
       # what `--provenance` signs with
       id-token: write
-    env:
-      APPDYNO_CERTIFICATE: ${{ secrets.APPDYNO_CERTIFICATE }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: The tag is the version
+        if: github.event_name == 'push'
         run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./packages/appdyno/package.json').version")"
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -52,41 +56,67 @@ jobs:
         run: cd android && ./gradlew --console=plain :agent:assembleDebug
       - run: pnpm build
       - name: The signing certificate
-        if: env.APPDYNO_CERTIFICATE != ''
         env:
+          APPDYNO_CERTIFICATE: ${{ secrets.APPDYNO_CERTIFICATE }}
           APPDYNO_CERTIFICATE_PASSWORD: ${{ secrets.APPDYNO_CERTIFICATE_PASSWORD }}
         run: |
           keychain="$RUNNER_TEMP/signing.keychain-db"
           security create-keychain -p "" "$keychain"
-          security set-keychain-settings -lut 3600 "$keychain"
+          # unlocked longer than the job, as the disk image is signed after the app's notarization, however long it takes
+          security set-keychain-settings -lut 21600 "$keychain"
           security unlock-keychain -p "" "$keychain"
           echo "$APPDYNO_CERTIFICATE" | base64 -d > "$RUNNER_TEMP/certificate.p12"
           security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$APPDYNO_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" "$keychain"
           security list-keychains -d user -s "$keychain" login.keychain-db
       - name: The Mac app
-        # refuses a build that is not signed and notarized
-        run: node scripts/build-app.mjs --release
+        # refuses a build that is not signed and notarized; and one with no update key, which could never update itself
+        run: |
+          test -n "$APPDYNO_UPDATE_KEY" || { echo '::error::APPDYNO_UPDATE_KEY is not set'; exit 1; }
+          node scripts/build-app.mjs --release
         env:
           APPDYNO_SIGN_IDENTITY: ${{ secrets.APPDYNO_SIGN_IDENTITY }}
           APPDYNO_NOTARY_APPLE_ID: ${{ secrets.APPDYNO_NOTARY_APPLE_ID }}
           APPDYNO_NOTARY_PASSWORD: ${{ secrets.APPDYNO_NOTARY_PASSWORD }}
           APPDYNO_NOTARY_TEAM: ${{ secrets.APPDYNO_NOTARY_TEAM }}
           APPDYNO_UPDATE_KEY: ${{ secrets.APPDYNO_UPDATE_KEY }}
+      # before anything that cannot be taken back: the changelog's section of this version, its links made whole, as a
+      # release page is no folder
+      - name: The release notes
+        run: |
+          version="$(node -p "require('./packages/appdyno/package.json').version")"
+          awk -v v="## $version" '$0 == v { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md |
+            sed -E "s#\]\(([A-Za-z][^):]*)\)#](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/v$version/\1)#g" >"$RUNNER_TEMP/notes.md"
+          grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"
+      - name: The rehearsal's Mac app
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rehearsal
+          path: |
+            .app-build/*.dmg
+            .app-build/appdyno.rb
+            .app-build/appcast.json*
+          if-no-files-found: error
+          retention-days: 3
       - name: Publish with provenance
+        if: github.event_name == 'push'
         working-directory: packages/appdyno
-        run: npm publish --provenance --access public
+        # a run again, after a later step failed, finds this version published and goes on to the release
+        run: |
+          this="$(node -p "require('./package.json').name + '@' + require('./package.json').version")"
+          if [ -n "$(npm view "$this" version 2>/dev/null)" ]; then
+            echo "$this is published already"
+          else
+            npm publish --provenance --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: The release
+        if: github.event_name == 'push'
         # with no update key there is no appcast
-        # its notes are the changelog's section of this version, its links made whole, as a release page is no folder
         run: |
           shopt -s nullglob
-          notes="$RUNNER_TEMP/notes.md"
-          awk -v v="## ${GITHUB_REF_NAME#v}" '$0 == v { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md |
-            sed -E "s#\]\(([A-Za-z][^):]*)\)#](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/\1)#g" >"$notes"
-          grep -q '[^[:space:]]' "$notes"
-          gh release create "$GITHUB_REF_NAME" --notes-file "$notes" .app-build/*.dmg .app-build/appdyno.rb .app-build/appcast.json*
+          gh release create "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" .app-build/*.dmg .app-build/appdyno.rb .app-build/appcast.json*
         env:
           GH_TOKEN: ${{ github.token }}

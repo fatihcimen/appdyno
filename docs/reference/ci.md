@@ -64,7 +64,7 @@ scripts/ci.sh --all-on <serial>                    # + every suite that device c
 
 ## Release
 
-A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the Mac app, `npm publish --provenance --access public`, and a GitHub release with the disk image, the cask and the appcast.
+A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the Mac app, `npm publish --provenance --access public`, and a GitHub release with the disk image, the cask and the appcast. The release notes are written before anything that cannot be taken back, and a run again after a later step failed finds the version on npm and goes on to the release. Run by hand from the Actions tab, `release.yml` is a rehearsal: the gate and the Mac app, signed and notarized, kept with the run for 3 days to open, and nothing published.
 
 What a release depends on:
 

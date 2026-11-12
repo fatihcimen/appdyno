@@ -309,7 +309,8 @@ function signAll() {
  * @param {string} path
  */
 function notarize(path, upload = path) {
-  sh('xcrun', 'notarytool', 'submit', upload, ...credentials, '--wait');
+  // its submission id and verdict, which a stapler that fails after it does not say
+  process.stdout.write(sh('xcrun', 'notarytool', 'submit', upload, ...credentials, '--wait'));
   sh('xcrun', 'stapler', 'staple', path);
   sh('xcrun', 'stapler', 'validate', path);
 }

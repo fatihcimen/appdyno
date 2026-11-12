@@ -64,7 +64,7 @@ scripts/ci.sh --all-on <serial>                    # + o cihazın alabildiği he
 
 ## Sürüm
 
-Bir tag yayımlar, başka hiçbir şey yayımlamaz. `.github/workflows/release.yml`, `v1.2.3` üzerinde çalışır: kapı olarak `ci.yml`, sonra tag'in `packages/appdyno/package.json` içindeki sürüm olduğunun denetimi, derlenen ajan ve paket, Mac uygulaması, `npm publish --provenance --access public` ve disk imajı, cask ve appcast ile bir GitHub sürümü.
+Bir tag yayımlar, başka hiçbir şey yayımlamaz. `.github/workflows/release.yml`, `v1.2.3` üzerinde çalışır: kapı olarak `ci.yml`, sonra tag'in `packages/appdyno/package.json` içindeki sürüm olduğunun denetimi, derlenen ajan ve paket, Mac uygulaması, `npm publish --provenance --access public` ve disk imajı, cask ve appcast ile bir GitHub sürümü. Sürüm notları geri alınamayan her şeyden önce yazılır; sonraki bir adım başarısız olduktan sonra yeniden çalıştırılan bir çalışma sürümü npm'de bulur ve GitHub sürümüne geçer. Actions sekmesinden elle çalıştırılan `release.yml` bir provadır: kapı ve imzalanıp noter onayından geçmiş Mac uygulaması, açıp bakmak için çalışmayla birlikte 3 gün tutulur ve hiçbir şey yayımlanmaz.
 
 Bir sürüm şunlara dayanır:
 
