@@ -197,6 +197,27 @@ describe('the system power, emergency and erase controls', () => {
     // the status bar above the erase screen is no part of it
     expect(powerControlAt(recorded('android-erase-en'), { x: 540, y: 30 })).toBeUndefined();
   });
+
+  it("are a restart with more words and a system update, in Settings, Play services and a maker's own, but no app restart", () => {
+    const found: [string, string[]][] = [
+      ['com.android.settings', ['Reboot now', 'Restart now', 'Update now', 'Şimdi Güncelle']],
+      ['com.google.android.gms', ['Restart now', 'Install now']],
+      ['com.apple.Preferences', ['Download and Install', 'İndir ve Yükle']],
+      ['com.oplus.battery', ['Restart']],
+    ];
+    for (const [pkg, labels] of found) {
+      const tree = made(
+        pkg,
+        labels.map((l, i) => button(l, 600 + i * 100)),
+      );
+      for (const label of labels)
+        expect(powerControlAt(tree, middle(tree, label)), `${pkg} ${label}`).toBeDefined();
+    }
+    // Android's own window of an app that stopped
+    const crash = made('android', [button('Restart app', 600), button('Close app', 700)]);
+    for (const label of ['Restart app', 'Close app'])
+      expect(powerControlAt(crash, middle(crash, label)), label).toBeUndefined();
+  });
 });
 
 const AHEAD =
@@ -398,6 +419,86 @@ describe('an input on them', () => {
   });
 });
 
+describe('a language of no words here', () => {
+  const asks =
+    /^PERMISSION_REQUIRED: putting (.+) asks the person first, and this client cannot ask: nothing was done/;
+
+  it('asks before Settings or the whole device is put in it, as its resets and erase would then ask nothing', async () => {
+    for (const [tool, args, target] of [
+      ['launch_app', { app: 'com.android.settings', language: 'de' }, 'com.android.settings in de'],
+      ['device_setting', { name: 'locale', value: 'de-DE', app: '' }, 'the whole device in de-DE'],
+      [
+        'device_setting',
+        { name: 'locale', value: 'ja', app: 'com.android.settings' },
+        'com.android.settings in ja',
+      ],
+    ] as const) {
+      const { call, device } = await onDevice('android-system-en');
+      const r = await call(tool, args);
+      expect(r.text, tool).toMatch(asks);
+      expect(asks.exec(r.text)?.[1], tool).toBe(target);
+      expect(r.hint, tool).toContain('a person sets that language on the device');
+      expect(
+        device.calls.map((c) => c.name),
+        tool,
+      ).not.toContain('launchWith');
+    }
+  });
+
+  /** A device that launches what it is asked to, as the fake has no apps of its own. */
+  const launching = async (o: Parameters<typeof onDevice>[1] = {}) => {
+    const on = await onDevice('android-system-en', o);
+    on.device.apps = { launchWith: () => Promise.resolve() } as unknown as AppManager;
+    return on;
+  };
+
+  it("asks nothing of English or Turkish, nor of an app's own language, but where the whole device takes it", async () => {
+    const { call, asked } = await launching({ answer: 'decline' });
+    for (const args of [
+      { app: 'com.android.settings', language: 'tr-TR' },
+      { app: 'com.android.settings', language: 'en' },
+      { language: 'pt-BR' },
+    ])
+      expect((await call('launch_app', args)).error, JSON.stringify(args)).toBe(false);
+    expect(asked).toEqual([]);
+    // below Android 13 an app has no language of its own
+    const old = await launching();
+    old.device.hello = { ...old.device.hello, sdk: 32 };
+    expect((await old.call('launch_app', { language: 'de' })).text).toMatch(asks);
+  });
+
+  it("goes ahead on the person's yes, or by --allow-power, as the controls it would hide do", async () => {
+    const yes = await launching({ answer: 'accept' });
+    expect(
+      (await yes.call('launch_app', { app: 'com.android.settings', language: 'de' })).error,
+    ).toBe(false);
+    expect(yes.asked).toEqual([
+      "Let appdyno put com.android.settings in de on Fake Phone (emulator-5580)? appdyno knows Settings' reset and erase buttons by their words in English and Turkish, so in de a touch on them asks nothing.",
+    ]);
+    const ahead = await onDevice('android-system-en', { policy: { allowPower: 'virtual' } });
+    const r = await ahead.call('device_setting', { name: 'locale', value: 'de-DE', app: '' });
+    expect(r.text).not.toMatch(/PERMISSION_REQUIRED|asks the person/);
+    expect(ahead.asked).toEqual([]);
+  });
+});
+
+describe('a touch in a contacts or messages app', () => {
+  it('asks the person, as their call buttons dial at once', async () => {
+    for (const pkg of [
+      'com.apple.MobileAddressBook',
+      'com.google.android.apps.messaging',
+      'com.samsung.android.app.contacts',
+    ]) {
+      const { call, sent } = await onDevice(made(pkg, [button('call', 600)]));
+      const r = await call('tap', { x: 200, y: 625 });
+      expect(r.text, pkg).toContain(
+        `a touch on the phone app ${pkg}, which may place a call asks the person first`,
+      );
+      expect(sent(), pkg).toEqual([]);
+    }
+  });
+});
+
 describe('a key or typing into a phone app', () => {
   /** The dial pad of an API 34 emulator's Google dialer, its number field holding the focus. */
   const dialer = JSON.parse(
@@ -430,8 +531,8 @@ describe('a key or typing into a phone app', () => {
 
   it("asks of a touch in the device's own dialer, which no list here names, asking the device once", async () => {
     // a maker's dialer, as Xiaomi's is its contacts app: the app a call's link opens in
-    const { call, sent, device } = await onDevice(made('com.android.contacts', []));
-    const opener = vi.fn(() => Promise.resolve('com.android.contacts'));
+    const { call, sent, device } = await onDevice(made('com.maker.contacts', []));
+    const opener = vi.fn(() => Promise.resolve('com.maker.contacts'));
     device.apps = { opener } as unknown as AppManager;
     for (let i = 0; i < 2; i++)
       expect((await call('tap', { x: 540, y: 1000 })).code).toBe('PERMISSION_REQUIRED');
@@ -444,9 +545,9 @@ describe('a key or typing into a phone app', () => {
   });
 
   it('sends nothing where the device could not say which app places its calls, and asks it again the next time', async () => {
-    const { call, sent, device } = await onDevice(made('com.android.contacts', []));
+    const { call, sent, device } = await onDevice(made('com.maker.contacts', []));
     const gone = new DeviceError('DEVICE_GONE', 'adb lost the device during cmd package');
-    const opener = vi.fn().mockRejectedValueOnce(gone).mockResolvedValue('com.android.contacts');
+    const opener = vi.fn().mockRejectedValueOnce(gone).mockResolvedValue('com.maker.contacts');
     device.apps = { opener } as unknown as AppManager;
     const r = await call('tap', { x: 540, y: 1000 });
     expect(r.code).toBe('DEVICE_GONE');

@@ -17,6 +17,7 @@ import {
 } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import type { Session } from './session.js';
+import { askLanguage } from './power.js';
 import { setCondition } from './settings.js';
 import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
@@ -241,6 +242,7 @@ function launchOp(
       const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
       if (!pkg) throw noApp();
       checkLaunch(policy, pkg);
+      if (language) await askLanguage(policy, s, language, pkg);
       reportProgress(`launching ${pkg}`);
       s.leftTheApp(pkg !== s.appId);
       const ran = await ctx.ranBeforeLaunch(s, pkg);

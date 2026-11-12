@@ -62,6 +62,28 @@ const POWER_AHEAD = `appdyno does not restart, power off, reset or erase a devic
 export const CONTROL_CENTER_AHEAD = `appdyno touches nothing in Control Center, which holds the power button: device_setting changes what it would (airplane mode, Wi-Fi, mobile data, dark mode), and press_key home leaves it; a person allows it ahead in this server's own command line: ${ALLOW_POWER}`;
 
 /**
+ * Settings put in a language whose words for its resets and erase the power guard has none of, by its own or the whole
+ * device's language: asked as those controls are, since a touch on them would then ask nothing.
+ */
+export async function approveLanguage(
+  policy: Policy,
+  s: Session,
+  target: string,
+  language: string,
+) {
+  if (powerAllowed(policy, s)) return;
+  await askPerson(
+    s,
+    `putting ${target} in ${language}`,
+    [
+      `Let appdyno put ${target} in ${language}`,
+      `appdyno knows Settings' reset and erase buttons by their words in English and Turkish, so in ${language} a touch on them asks nothing`,
+    ],
+    `a person sets that language on the device, or allows it ahead in this server's own command line: ${ALLOW_POWER}`,
+  );
+}
+
+/**
  * As `approve`, for an input that would act on the system's own power, emergency or erase controls: `what` names it, and
  * `ahead` says what a person can do instead.
  */

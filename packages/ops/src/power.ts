@@ -7,7 +7,13 @@ import {
   type Point,
   type Tree,
 } from '@appdyno/protocol';
-import { ALLOW_POWER, approvePower, CONTROL_CENTER_AHEAD, powerAllowed } from './approval.js';
+import {
+  ALLOW_POWER,
+  approveLanguage,
+  approvePower,
+  CONTROL_CENTER_AHEAD,
+  powerAllowed,
+} from './approval.js';
 import { LEAVES, SIDE_KEYS } from './keys.js';
 import type { Policy } from './policy.js';
 import type { Session } from './session.js';
@@ -89,13 +95,19 @@ export function guardInputs(
   return guarded(device, INPUTS);
 }
 
-/** The system's own apps: an app under test may call a button Restart, and only these power off or erase a device. */
+/**
+ * The system's own apps: an app under test may call a button Restart, and only these power off or erase a device. Play
+ * services shows Android's system update, and each maker its own power menu and Settings.
+ */
 const SYSTEM =
-  /^(android$|com\.android\.(systemui|settings|phone|emergency)|com\.google\.android\.apps\.safetyhub|com\.(samsung|sec)\.android\.|com\.(miui|xiaomi)\.|com\.apple\.(springboard|Preferences)$)/;
+  /^(android$|com\.android\.(systemui|settings|phone|emergency)|com\.google\.android\.(apps\.safetyhub|gms$)|com\.(samsung|sec)\.android\.|com\.(miui|xiaomi|oplus|coloros|oneplus|huawei|hihonor|motorola|vivo)\.|com\.apple\.(springboard|Preferences)$)/;
 
-/** The phone apps, where a touch may place a call: the dialers, their in-call screens, and FaceTime. */
+/**
+ * The phone apps, where a touch may place a call: the dialers, their in-call screens and FaceTime, and the contacts and
+ * messages apps, whose call buttons dial at once.
+ */
 const PHONE =
-  /^(com\.(google\.)?android\.(dialer|incallui|server\.telecom)|com\.samsung\.android\.(dialer|incallui)|com\.apple\.(mobilephone|facetime|InCallService))$/;
+  /^(com\.(google\.)?android\.(dialer|incallui|server\.telecom|contacts)|com\.android\.mms|com\.google\.android\.apps\.messaging|com\.samsung\.android\.(dialer|incallui|app\.contacts|messaging)|com\.apple\.(mobilephone|facetime|InCallService|MobileAddressBook|MobileSMS))$/;
 
 /** A screen that is all such controls, by an id in any language: the power menu, and Settings' erase-all-data screen. */
 const SCREEN_IDS = /:id\/\w*(global_?actions|main_?clear|master_?clear)\w*$/;
@@ -121,6 +133,8 @@ const IOS_CONTROL_CENTER = 'cc-root-folder-view';
 const WORDS = [
   /^(power( off| menu| options)?|restart|reboot|shut ?down|emergency( call| mode| sos)?|sos|slide to (power off|reboot|restart|shut down)|kapat|gucu kapat|yeniden baslat|acil (durum( modu| sos| aramasi)?|arama|sos)|guc( menusu)?|(kapatmak|yeniden baslatmak) icin kaydirin)$/,
   /^(erase|reset|factory|delete all)\b|\berase all\b|\bsifirla\b|\b(tum verileri|tum icerikleri ve ayarlari|tumunu|iphone'u|simdi) sil\b|\bfabrika\b/,
+  // a restart with more words, as Restart now, but an app's own of a crash; and a system update, which restarts it
+  /^(restart|reboot|shut ?down|power off|yeniden baslat)(?! (the )?app\b)\b|^(download and install|(install|update) now)\b|^(simdi (guncelle|yukle)|indir ve yukle)\b/,
 ];
 
 /** A system alert's button that places a call, in English and Turkish, as `plain` writes it: "Call", "Ara". */
@@ -305,6 +319,23 @@ async function dialerOf(s: Session) {
       'it may place a call',
     );
   });
+}
+
+/** The languages whose words `WORDS` holds. */
+const WORDS_IN = /^(en|tr)([-_]|$)/i;
+
+/**
+ * Settings in a language of no words here leaves its resets and erase to the ids, which iOS's have none of: putting a
+ * system app in one, or the whole device and so Settings with it, asks the person as those controls do. `pkg`: the app
+ * given a language of its own; none, the whole device.
+ */
+export async function askLanguage(policy: Policy, s: Session, language: string, pkg?: string) {
+  if (!language || WORDS_IN.test(language)) return;
+  // a device of an sdk below 33, Android 13, keeps no language for an app: the whole device takes it
+  const sdk = s.device.hello?.sdk;
+  const perApp = sdk === undefined || sdk >= 33;
+  if (pkg && perApp && !SYSTEM.test(pkg)) return;
+  await approveLanguage(policy, s, pkg && perApp ? pkg : 'the whole device', language);
 }
 
 /** What a touch at `p` would act on of the system's power, emergency and erase controls: its words, or undefined. */

@@ -13,6 +13,7 @@ import type { Answers } from './answers.js';
 import { approve } from './approval.js';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
+import { askLanguage } from './power.js';
 import { SettingOut } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
@@ -326,6 +327,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         }
         const pkg = app ?? (name === 'locale' ? s.appId : undefined);
         if (pkg) checkApp(policy, pkg);
+        if (name === 'locale' && value) await askLanguage(policy, s, value, pkg);
         if (value === undefined) {
           const now = await readCondition(s, name, pkg);
           const t = `${name}: ${now}`;

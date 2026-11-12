@@ -165,13 +165,14 @@ These lose what a person may want, so each waits for the person's yes:
 - `device_setting keychain`: every item apps keep in the keychain
 - an input on the system's own power, emergency or erase controls, the device itself: a tap, gesture, swipe, long press,
   typing or key from any tool, `steps` or a flow, on Android's power menu (Power off, Restart, Emergency) or its button in
-  quick settings, a lock screen's emergency call, Settings' resets and its erase-all-data screen, iOS's power-off screen
+  quick settings, a lock screen's emergency call, Settings' resets and its erase-all-data screen, a restart or system update the system offers (Restart now, Update now), iOS's power-off screen
   but its Cancel, any part of Control Center, whose power button has no mark of its own, or Settings' Reset and Erase All Content and Settings, known by the system app, the ids in any
   language and the words in English and Turkish wherever the touch lands; and a third press of the power or side key in
   5 seconds, which calls for help on many phones. appdyno restarts, resets and erases no device, and powers off none but a simulator or emulator, by `simulator` `shutdown`; for the rest the
   answer says the person does it. Reading such a screen asks nothing, nor back and home, which leave it. Only
   `--allow-power virtual` or `all` lets these go ahead with nothing asked, never `--allow-data-loss`
-- a call: `open_link` with a link that places one (`tel:`, `telprompt:`, `facetime:` or `facetime-audio:`), and a touch, key or text in a phone app (a dialer, its call screen or FaceTime, or an Android device's own default dialer) or on a button but Cancel of an iOS system alert whose text is a phone number alone, in any language, or on one that says Call or Ara. appdyno places no call, and `--allow-power` is the flag for these too
+- a call: `open_link` with a link that places one (`tel:`, `telprompt:`, `facetime:` or `facetime-audio:`), and a touch, key or text in a phone app (a dialer, its call screen or FaceTime, the contacts and messages apps, or an Android device's own default dialer) or on a button but Cancel of an iOS system alert whose text is a phone number alone, in any language, or on one that says Call or Ara. appdyno places no call, and `--allow-power` is the flag for these too
+- putting Settings, or the whole device, in a language other than English or Turkish, by `launch_app` `language` or `device_setting` `locale`, as its resets and erase would then be known by no word; `--allow-power` lets it go ahead unasked
 - `inspector` `press` on an iPhone, which presses an element by its words or id alone, with no place on the screen to tell whether it is one of these controls: under `--allow-apps` or `--no-home` it is refused, and `--allow-power all` lets it go ahead with nothing asked
 
 The server asks by the client's own prompt, MCP elicitation, where the client declared it can, at `initialize` on a 2025
