@@ -29,6 +29,29 @@ An agent reads the screen as elements, taps, types and swipes. It sends a push, 
 
 Works with Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Devin Desktop (formerly Windsurf), Antigravity, Gemini CLI, Zed, opencode, Cline and any other MCP client.
 
+## Quick start
+
+On a Mac with Node 22 or newer:
+
+```sh
+npx -y appdyno install     # adds appdyno to the MCP clients on this Mac, asking which
+```
+
+Restart the client, start a simulator or an emulator or connect a phone, and ask your agent:
+
+> Open my app, go through checkout, and tell me what breaks.
+
+Each step answers with what the device showed. When a tap takes the app down, that same answer says so, with the crash and the app's last log lines. A real one, from this repository's test app on an iPhone simulator:
+
+```text
+APP_NOT_RUNNING: tapped @9p29 "Crash"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Fixture-….ips)
+its last log lines:
+2026-11-12 22:46:57.485 Df Fixture[80069:c58417] (libswiftCore.dylib) Fixture/ListScreen.swift:20: Fatal error: fixture crash
+  launch_app starts it again, and crashes says why it died
+```
+
+Ask it as well to send your app a push, to open each link your app opens, or to measure its cold launch and keep it as a baseline. `npx -y appdyno doctor` says what this Mac is missing, and [Install](#install) covers a phone, the Mac app and any other client.
+
 ## One call, one answer
 
 <picture>
@@ -159,32 +182,12 @@ A client opened from the Dock may not find `npx`: if it says `spawn npx ENOENT`,
 ```sh
 appdyno doctor             # what is here, what is missing, and how to fix it
 appdyno devices            # what is connected
-```
-
-[Connecting a client](docs/guides/clients.md) takes each client step by step, and gets a phone ready from nothing, signing included.
-
-## A first run
-
-With a simulator, an emulator or a phone connected, ask your agent:
-
-> Open Settings, turn on dark mode, and show me what changed.
-
-> Send my app a push that says "Order 42 shipped", and show me what the app did with it.
-
-> List the links my app opens, open each one, and tell me where it lands.
-
-> Measure my app's cold launch, and keep it as a baseline.
-
-Or run it yourself:
-
-```sh
-appdyno devices                # what is connected
-appdyno screen                 # what is on the screen
-appdyno hub                    # every device in one window you can touch
+appdyno screen             # what is on the screen
+appdyno hub                # every device in one window you can touch
 appdyno perf survey --app com.example.app   # every measure on this device, then a page of them
 ```
 
-`appdyno doctor` says what is missing, and how to fix it.
+[Connecting a client](docs/guides/clients.md) takes each client step by step, and gets a phone ready from nothing, signing included.
 
 ## Speed
 

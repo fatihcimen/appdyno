@@ -29,6 +29,29 @@ Ajan ekranı öğeler halinde okur; dokunur, yazar, kaydırır. Push bildirimi g
 
 Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Devin Desktop (eski adıyla Windsurf), Antigravity, Gemini CLI, Zed, opencode, Cline ve diğer tüm MCP istemcileriyle çalışır.
 
+## Hızlı başlangıç
+
+Node 22 ya da daha yenisi kurulu bir Mac'te:
+
+```sh
+npx -y appdyno install     # appdyno'yu bu Mac'teki MCP istemcilerine ekler, hangilerine olduğunu sorar
+```
+
+İstemciyi yeniden başlatın, bir simülatör ya da emülatör açın veya bir telefon bağlayın ve ajanınıza sorun:
+
+> Uygulamamı aç, ödeme adımlarından geç ve neyin bozulduğunu söyle.
+
+Her adım, cihazın gösterdiğiyle yanıt verir. Bir dokunuş uygulamayı çökertirse aynı yanıt bunu çökmeyle ve uygulamanın son log satırlarıyla birlikte söyler. Bu deponun test uygulamasından, bir iPhone simülatöründe alınmış gerçek bir yanıt:
+
+```text
+APP_NOT_RUNNING: tapped @9p29 "Crash"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Fixture-….ips)
+its last log lines:
+2026-11-12 22:46:57.485 Df Fixture[80069:c58417] (libswiftCore.dylib) Fixture/ListScreen.swift:20: Fatal error: fixture crash
+  launch_app starts it again, and crashes says why it died
+```
+
+Ajandan uygulamanıza bir push göndermesini, uygulamanızın açtığı her bağlantıyı açmasını ya da soğuk açılışını ölçüp baseline olarak saklamasını da isteyebilirsiniz. `npx -y appdyno doctor` bu Mac'te neyin eksik olduğunu söyler; [Kurulum](#kurulum) telefonu, Mac uygulamasını ve diğer istemcileri anlatır.
+
 ## Tek çağrı, tek yanıt
 
 <picture>
@@ -159,32 +182,12 @@ Dock'tan açılan bir istemci `npx`'i bulamayabilir: `spawn npx ENOENT` derse [U
 ```sh
 appdyno doctor             # neyin kurulu, neyin eksik olduğunu ve nasıl düzeltileceğini söyler
 appdyno devices            # neler bağlı
-```
-
-[İstemci bağlamak](docs/guides/clients.tr.md) her istemciyi adım adım anlatır; hiçbir şey kurulu değilken bir telefonu, imzalama dahil, baştan nasıl hazırlayacağınızı gösterir.
-
-## İlk çalıştırma
-
-Bir simülatör, emülatör ya da telefon bağlıyken ajanınıza şunları sorun:
-
-> Ayarlar'ı aç, karanlık modu aç ve neyin değiştiğini göster.
-
-> Uygulamama "Sipariş 42 yola çıktı" diyen bir push gönder, uygulamanın onunla ne yaptığını göster.
-
-> Uygulamamın açtığı bağlantıları listele, her birini aç ve nereye vardığını söyle.
-
-> Uygulamamın soğuk açılışını ölç ve baseline olarak sakla.
-
-Ya da kendiniz çalıştırın:
-
-```sh
-appdyno devices                # neler bağlı
-appdyno screen                 # ekranda ne var
-appdyno hub                    # bütün cihazlar, dokunabileceğiniz tek pencerede
+appdyno screen             # ekranda ne var
+appdyno hub                # bütün cihazlar, dokunabileceğiniz tek pencerede
 appdyno perf survey --app com.example.app   # bu cihazdaki her ölçüm, ardından hepsini gösteren bir sayfa
 ```
 
-`appdyno doctor` neyin eksik olduğunu ve nasıl düzeltileceğini söyler.
+[İstemci bağlamak](docs/guides/clients.tr.md) her istemciyi adım adım anlatır; hiçbir şey kurulu değilken bir telefonu, imzalama dahil, baştan nasıl hazırlayacağınızı gösterir.
 
 ## Hız
 
