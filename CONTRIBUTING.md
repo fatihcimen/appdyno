@@ -84,7 +84,7 @@ Close the hub, the window of `appdyno hub` and of the Mac app, before a suite us
 
 ## Internal variables
 
-What a person may set is in [the CLI reference](docs/reference/cli.md#server-options) and the pages it leads to. The variables below are internal: one appdyno process hands them to another, or a test sets them. Nothing else should set one, and any of them may change. `packages/appdyno/test/environment.test.ts` holds every `APPDYNO_` name in the sources to the docs or to this table.
+What a person may set is in [the CLI reference](docs/reference/cli.md#server-options) and the pages it leads to. The variables below are internal: one appdyno process hands them to another, or a test sets them. Nothing else should set one, and any of them may change. `packages/appdyno/test/environment.test.ts` holds every `APPDYNO_` name in the TypeScript sources to the docs or to this table.
 
 | variable                   | set by                                | for                                                                                          |
 | -------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |

@@ -114,11 +114,11 @@ Nothing the agent sends counts as a yes, and no tool erases or resets a device. 
 
 ### 1. What you need
 
-| for                           | you need                                                      |
-| ----------------------------- | ------------------------------------------------------------- |
-| appdyno                       | a Mac, and Node 22 or newer. The Mac app carries its own Node |
-| an iOS simulator or an iPhone | Xcode                                                         |
-| an Android emulator or phone  | `adb`, from Android Studio or Google's platform tools         |
+| for                           | you need                                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| appdyno                       | a Mac, and Node 22 or newer. The Mac app carries its own Node; from npm, the hub's window needs Xcode or its Command Line Tools |
+| an iOS simulator or an iPhone | Xcode, and iOS 17 or newer                                                                                                      |
+| an Android emulator or phone  | `adb`, from Android Studio or Google's platform tools, and Android 8.0 (API 26) or newer                                        |
 
 ### 2. Get appdyno
 
@@ -149,7 +149,7 @@ A client opened from the Dock may not find `npx`: if it says `spawn npx ENOENT`,
 
 ### 4. Get a device ready
 
-- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helper ahead of time, as the first action would, which takes a few minutes. It also deletes builds of older versions, except one that a running process still uses.
+- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helpers for a simulator and an iPhone ahead of time, which takes a few minutes; otherwise the first action builds the one it needs. It also deletes builds of older versions, except one that a running process still uses.
 - **Android emulator**: create one in Android Studio's Device Manager and start it.
 - **Android phone**: turn on Developer options (Settings, About phone, tap Build number seven times), then USB debugging in them. Connect the cable and answer Allow on the phone. For Wi-Fi, pair once under Wireless debugging, Pair device with pairing code: `appdyno pair <address> <code>`.
 - **iPhone**: connect the cable and answer Trust, turn on Developer Mode, and give it a development signing identity with a profile: [An iPhone or a simulator](docs/guides/clients.md#an-iphone-or-a-simulator) takes you through it. For Wi-Fi, pair once on the cable: `appdyno pair --device <udid>`.

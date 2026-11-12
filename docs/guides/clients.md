@@ -41,6 +41,7 @@ You need a Mac with Apple silicon and macOS 13.5 or newer. You do not need Node,
 
 ```sh
 brew tap-new you/tools
+mkdir -p "$(brew --repository you/tools)/Casks"
 cp appdyno.rb "$(brew --repository you/tools)/Casks/"
 brew install --cask you/tools/appdyno
 ```

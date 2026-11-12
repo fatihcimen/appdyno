@@ -114,11 +114,11 @@ Her ölçümün her cihazdaki durumu ve nasıl kanıtlandığı: [Ne nerede çal
 
 ### 1. Gerekenler
 
-| ne için                         | gereken                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| appdyno                         | bir Mac ve Node 22 ya da üstü. Mac uygulaması kendi Node'unu taşır       |
-| iOS simülatörü ya da iPhone     | Xcode                                                                    |
-| Android emülatörü ya da telefon | Android Studio'dan ya da Google'ın platform-tools paketinden gelen `adb` |
+| ne için                         | gereken                                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| appdyno                         | bir Mac ve Node 22 ya da üstü. Mac uygulaması kendi Node'unu taşır; npm'den kurulunca merkezin penceresi Xcode'u ya da Command Line Tools'u ister |
+| iOS simülatörü ya da iPhone     | Xcode ve iOS 17 ya da üstü                                                                                                                        |
+| Android emülatörü ya da telefon | Android Studio'dan ya da Google'ın platform-tools paketinden gelen `adb` ve Android 8.0 (API 26) ya da üstü                                       |
 
 ### 2. appdyno'yu edinin
 
@@ -149,7 +149,7 @@ Dock'tan açılan bir istemci `npx`'i bulamayabilir: `spawn npx ENOENT` derse [U
 
 ### 4. Cihazı hazırlayın
 
-- **iOS simülatörü**: başka bir şey gerekmez. Xcode'un Simulator uygulamasından açın ya da ajanınızdan açmasını isteyin. `appdyno ios build`, appdyno'nun yardımcısını ilk işlemin yapacağı gibi önceden derler; birkaç dakika sürer. Eski sürümlerin build'lerini de siler; çalışan bir sürecin hâlâ kullandığı build'e dokunmaz.
+- **iOS simülatörü**: başka bir şey gerekmez. Xcode'un Simulator uygulamasından açın ya da ajanınızdan açmasını isteyin. `appdyno ios build`, appdyno'nun simülatör ve iPhone yardımcılarını önceden derler; birkaç dakika sürer. Derlenmezse ilk işlem gerekeni derler. Eski sürümlerin build'lerini de siler; çalışan bir sürecin hâlâ kullandığı build'e dokunmaz.
 - **Android emülatörü**: Android Studio'nun Device Manager'ında bir sanal cihaz oluşturup başlatın.
 - **Android telefon**: geliştirici seçeneklerini açın (Ayarlar, Telefon hakkında, Derleme numarasına yedi kez dokunun), ardından orada USB hata ayıklamayı açın. Kabloyu takın ve telefonun sorusuna İzin ver deyin. Wi-Fi için bir kez eşleştirin: Kablosuz hata ayıklama altında eşleme koduyla eşleştirmeyi seçin ve telefonun gösterdiğiyle `appdyno pair <address> <code>` çalıştırın.
 - **iPhone**: kabloyu takın ve Güven deyin, Geliştirici Modu'nu açın, bir geliştirme imzası ve ona ait bir profil verin: [iPhone veya simülatör](docs/guides/clients.tr.md#iphone-veya-simülatör) adım adım anlatır. Wi-Fi için kabloluyken bir kez eşleştirin: `appdyno pair --device <udid>`.

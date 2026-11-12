@@ -41,6 +41,7 @@ Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node, Xcode y
 
 ```sh
 brew tap-new you/tools
+mkdir -p "$(brew --repository you/tools)/Casks"
 cp appdyno.rb "$(brew --repository you/tools)/Casks/"
 brew install --cask you/tools/appdyno
 ```

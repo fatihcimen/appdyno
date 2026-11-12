@@ -84,7 +84,7 @@ Bir suite bir cihazı kullanmadan önce hub'ı, yani `appdyno hub`'ın ve Mac uy
 
 ## İç değişkenler
 
-Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#sunucu-seçenekleri) ve onun yönlendirdiği sayfalardadır. Aşağıdaki değişkenler iç değişkenlerdir: appdyno'nun süreçlerinden biri onları bir başkasına verir ya da bir test ayarlar. Başka hiçbir şey onları ayarlamamalıdır ve herhangi biri değişebilir. `packages/appdyno/test/environment.test.ts`, kaynaklardaki her `APPDYNO_` adını belgelere ya da bu tabloya bağlı tutar.
+Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#sunucu-seçenekleri) ve onun yönlendirdiği sayfalardadır. Aşağıdaki değişkenler iç değişkenlerdir: appdyno'nun süreçlerinden biri onları bir başkasına verir ya da bir test ayarlar. Başka hiçbir şey onları ayarlamamalıdır ve herhangi biri değişebilir. `packages/appdyno/test/environment.test.ts`, TypeScript kaynaklarındaki her `APPDYNO_` adını belgelere ya da bu tabloya bağlı tutar.
 
 | değişken                   | ayarlayan                               | ne için                                                                                                     |
 | -------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
