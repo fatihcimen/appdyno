@@ -395,9 +395,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
 
   async terminate(pkg: string) {
     await this.queue.run(() => this.ops.terminate(assertBundle(pkg)));
-    // returns once the app has left the front (the runner may see it there for a moment)
+    // returns once the app has left the front (the runner may see it there for a moment); a look the runner does not
+    // answer, as one just come up on a loaded Mac did not within 15 s, holds up nothing: the app was stopped
     const end = Date.now() + 3_000;
-    while ((await this.frontNow()) === pkg && Date.now() < end) await sleep(100);
+    const front = () => this.frontNow().catch(() => undefined);
+    while ((await front()) === pkg && Date.now() < end) await sleep(100);
   }
 
   async setLocation(lat: number, lon: number) {

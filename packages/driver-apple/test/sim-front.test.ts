@@ -140,6 +140,18 @@ describe('an app just opened on a simulator', () => {
   });
 });
 
+describe('an app stopped on a simulator', () => {
+  it('is stopped though the runner, just come up, does not answer a look at the front', async () => {
+    const direct = { front: () => Promise.resolve(undefined), close: vi.fn() };
+    const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    Object.defineProperty(device, 'runnerUp', { value: true });
+    const call = () =>
+      Promise.reject(new DeviceError('TIMEOUT', 'app.foreground did not answer within 15000 ms'));
+    Object.assign(device, { targetApp: 'dev.app', rpc: { closed: false, call } });
+    await expect(device.terminate('dev.app')).resolves.toBeUndefined();
+  });
+});
+
 describe('what is in front of a simulator with no runner', () => {
   const withFront = (front: string | undefined) => {
     const read = vi.fn(() => Promise.resolve(front));
