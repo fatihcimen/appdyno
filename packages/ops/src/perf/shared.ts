@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { stat, writeFile } from 'node:fs/promises';
 import { loadavg, cpus } from 'node:os';
 import { join } from 'node:path';
@@ -34,6 +35,29 @@ import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
 import { ToolError } from '../tool.js';
 
+let virtualHost: boolean | undefined;
+
+/**
+ * Whether this Mac is itself a virtual machine, as macOS says of one; read once. `APPDYNO_HOST_VIRTUAL` 0 or 1 says
+ * it instead, for a virtual Mac whose load average does say how busy it is.
+ */
+export function hostIsVirtual() {
+  const said = process.env.APPDYNO_HOST_VIRTUAL;
+  if (said === '0' || said === '1') return said === '1';
+  if (virtualHost === undefined) {
+    try {
+      virtualHost =
+        process.platform === 'darwin' &&
+        execFileSync('/usr/sbin/sysctl', ['-n', 'kern.hv_vmm_present'], {
+          encoding: 'utf8',
+        }).trim() === '1';
+    } catch {
+      virtualHost = false;
+    }
+  }
+  return virtualHost;
+}
+
 /** What each mark of a less sure number means, as an answer says it. */
 const NOISE_WORDS: Record<string, string | undefined> = {
   'high-host-load': 'this Mac was loaded',
@@ -42,6 +66,8 @@ const NOISE_WORDS: Record<string, string | undefined> = {
   'debuggable-build': 'a debug build, slower than a release build',
   mirrored: "the device's screen was mirrored",
   'device-state-unread': "the device's load and heat could not be read",
+  'host-load-unread':
+    'this Mac is a virtual machine, whose load average says nothing of how busy it is',
 };
 
 /** What to do after the frame probe's relaunch, which left the app on its first screen. */
@@ -238,6 +264,7 @@ export async function keepRun(
       load: {
         host: loadavg(),
         hostCpus: cpus().length,
+        ...(hostIsVirtual() && { hostVirtual: true }),
         ...(vitals?.load && { device: vitals.load }),
         ...(vitals?.parkedKernelThreads !== undefined && {
           deviceParked: vitals.parkedKernelThreads,

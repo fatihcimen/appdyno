@@ -13,7 +13,7 @@ import type { ServerContext } from '../context.js';
 import { stepTime, type FlowRunner } from '../flow/runner.js';
 import { readFlow } from '../flow/shared.js';
 import type { Session } from '../session.js';
-import { symbolsOf, unlessUnsupported, type perfTools } from './shared.js';
+import { hostIsVirtual, symbolsOf, unlessUnsupported, type perfTools } from './shared.js';
 
 /** How long a look at what has no time of its own records. */
 const LOOK_SECONDS = 8;
@@ -67,7 +67,8 @@ const secondsFor = (ms: number) => Math.min(MOST_SECONDS, Math.ceil(ms / 1000) +
 export const blank = (cannot: string[] = []): Seen => ({
   read: [],
   cannot,
-  hostLoad: Math.round(must(loadavg()[0], 'the load average')),
+  // a virtual Mac's load average says nothing of how busy it is
+  ...(!hostIsVirtual() && { hostLoad: Math.round(must(loadavg()[0], 'the load average')) }),
 });
 
 /** What a device or a replay refuses goes into the answer: a look never fails the gate's own word. */

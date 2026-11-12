@@ -37,6 +37,8 @@ export default defineConfig({
       APPDYNO_STATE_DIR: own,
       APPDYNO_NATIVE_DIR: join(tmpdir(), 'appdyno-test-native'),
       APPDYNO_TOOLS_DIR: join(own, 'tools'),
+      // the Mac a test fakes the load of, and not the runner it runs on, which is a virtual one on CI
+      APPDYNO_HOST_VIRTUAL: '0',
     },
     setupFiles: ['packages/appdyno/test/no-real-state.setup.ts'],
     globalSetup: ['packages/appdyno/test/no-real-state.teardown.ts'],

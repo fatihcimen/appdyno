@@ -9,6 +9,7 @@
 - README hızlı bir başlangıçla açılıyor: tek komut, tek istek ve gerçek bir yanıt.
 - Ölçülen bir akışın senaryosu artık yalnızca dosyanın adından değil, deposundaki yolundan adlandırılır: `flows/login.flow` için `journey-flows-login`. 1.0.0'ın `journey-login` altında sakladığı bir baseline'ın yeni adla yeniden saklanması gerekir.
 - Kapı, ne baseline'ı ne bütçesi olan, yani hiçbir şeyin karar vermediği bir senaryo için 1 ile çıkar: geçiyordu ve yalnızca çıkış koduna bakan bir job hiçbir karşılaştırma yapılmadan yeşil oluyordu. Baseline'ı olan bir senaryoya eklenen bir adım `new` olarak geçmeye devam eder.
+- Kendisi sanal makine olan bir Mac'te, bir CI runner'ında olduğu gibi, bir sayının yanında `host-load-unread` yazar ve Mac'in ne kadar meşgul olduğunu söylemeyen bir load average yüzünden artık `high-host-load` işaretlenmez: 3 çekirdekli bir GitHub runner'ı boştayken 115 ile 650 arası okudu ve her çalıştırmayı baseline olarak reddetti. `APPDYNO_HOST_VIRTUAL=0` onu yine de okutur. Örnek `perf-gate.yml` orada yük beklemez ve başarısız bir adımın ekran görüntüsünü ve ağacını saklar.
 
 ### Düzeltildi
 

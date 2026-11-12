@@ -91,6 +91,9 @@ const readingCell = (r: Reading, now: number) => {
     ...(record.noise.includes('device-state-unread')
       ? ['<span class="m">device state unread</span>']
       : []),
+    ...(record.noise.includes('host-load-unread')
+      ? ['<span class="m">Mac load unread</span>']
+      : []),
   ];
   return `<div class="v">${record.modelled ? '~' : ''}${esc(valueOf(r))}</div><div class="m">${esc(detailOf(r))}, ${esc(scenario.key.scenario)}, ${esc(age(record.at, now))}</div>${notes.join('')}`;
 };

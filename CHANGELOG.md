@@ -9,6 +9,7 @@
 - The README starts with a quick start: one command, one ask, and a real answer.
 - A measured flow's scenario is named by the file's path in its repository, `journey-flows-login` for `flows/login.flow`, and no longer by its name alone. A baseline 1.0.0 kept under `journey-login` needs keeping again under the new name.
 - The gate exits 1 for a scenario with neither a baseline nor a budget, which nothing judged: it passed, and a job that read only the exit code went green with no comparison made. A step put into a scenario that has a baseline still passes as `new`.
+- On a Mac that is itself a virtual machine, as a CI runner is, a number says `host-load-unread` and is no longer marked `high-host-load` by a load average that says nothing of how busy the Mac is: a GitHub runner of 3 cores read 115 to 650 at rest, and refused every run as a baseline. `APPDYNO_HOST_VIRTUAL=0` reads it all the same. The example `perf-gate.yml` waits for no load there, and keeps a failed step's screenshot and tree.
 
 ### Fixed
 

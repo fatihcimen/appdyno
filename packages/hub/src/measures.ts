@@ -83,6 +83,7 @@ const NOISE: Record<string, string> = {
   'hot-device': 'hot device',
   'debuggable-build': 'debug build',
   'device-state-unread': 'device state unread',
+  'host-load-unread': 'Mac load unread',
 };
 
 /** Whether a number is one to judge by: a line for the pane, and all of it for a look closer. */

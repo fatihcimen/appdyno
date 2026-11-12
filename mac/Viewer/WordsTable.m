@@ -301,6 +301,7 @@ const MVWordRow MVWordTable[] = {
     {"hot device", "cihaz sıcak"},
     {"debug build", "debug derlemesi"},
     {"device state unread", "cihaz durumu okunamadı"},
+    {"Mac load unread", "Mac yükü okunamadı"},
     {"Open an app first", "Önce bir uygulama açın"},
     {"No app is in front", "Önde bir uygulama yok"},
     {"%@ is in front", "Önde %@ var"},

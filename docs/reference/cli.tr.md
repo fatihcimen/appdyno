@@ -70,22 +70,23 @@ CI için doğru değer `virtual`'dır. `all` gerçek telefonları da kapsar: `--
 
 Yalnızca değişkeni olan ayarlar:
 
-| ortam                         | ne                                                                                                                                                         |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APPDYNO_HTTP_TOKEN`          | `--http`'nin istediği token, 32 karakter ya da daha uzun: ayarlanmamışsa üretilir ve yazdırılır                                                            |
-| `APPDYNO_STATE_DIR`           | durum klasörü: varsayılan `~/Library/Caches/appdyno`                                                                                                       |
-| `APPDYNO_TOOLS_DIR`           | indirilen araçların tutulduğu yer, durum klasörü ne olursa olsun: varsayılan `~/Library/Caches/appdyno/tools`                                              |
-| `APPDYNO_PERF_DIR`            | baseline'ların ve bütçelerin tutulduğu yer: varsayılan, çalışma klasöründeki `.appdyno/perf`; böylece commit edilebilirler                                 |
-| `APPDYNO_TRACE_PROCESSOR`     | Android'in trace'lerini okumak için, uygulamanınkinin ve indirilen sabit olanın yerine bir `trace_processor_shell`                                         |
-| `APPDYNO_SECRETS=a,b`         | hiçbir zaman geri gösterilmeyen ve panoya konmayan değerler                                                                                                |
-| `APPDYNO_FAST_TAP=0`          | iOS runner'ı XCTest'in olay sentezleyicisi yerine, yaklaşık iki kat uzun süren XCUI'nin kendi dokunuşuyla dokunur                                          |
-| `APPDYNO_ANIMATION_WAIT=0`    | bir iOS dokunuşu uygulamanın animasyonlarının bitmesini beklemeden gider                                                                                   |
-| `APPDYNO_IOS_TEAM`            | Xcode'un iPhone runner'ını hazırlarken kullandığı Apple ekibi: bkz. [Xcode halletsin](../guides/clients.tr.md#xcode-halletsin)                             |
-| `APPDYNO_IOS_PROFILE`         | iPhone runner'ı için bir provisioning profile; `APPDYNO_IOS_KEYCHAIN` ve `APPDYNO_IOS_KEYCHAIN_PASSWORD` ile birlikte                                      |
-| `APPDYNO_EMULATOR_ARGS`       | `simulator` bir emülatör başlatırken verilen seçenekler: bkz. [Bir simülatör ya da emülatör başlatmak](tools.tr.md#bir-simülatör-ya-da-emülatör-başlatmak) |
-| `APPDYNO_ANDROID_AGENT`       | bu checkout'un build'i ya da paketinki yerine kurulacak bir Android ajanı `.apk` dosyası                                                                   |
-| `APPDYNO_IOS_PRODUCTS`        | bu checkout'un build'i ya da ilk kullanımda yapılan yerine, bir simülatör için derlenmiş iOS runner'ını ve onun `.xctestrun` dosyasını tutan bir klasör    |
-| `APPDYNO_IOS_DEVICE_PRODUCTS` | aynısı, bir telefon için                                                                                                                                   |
+| ortam                         | ne                                                                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APPDYNO_HTTP_TOKEN`          | `--http`'nin istediği token, 32 karakter ya da daha uzun: ayarlanmamışsa üretilir ve yazdırılır                                                                  |
+| `APPDYNO_STATE_DIR`           | durum klasörü: varsayılan `~/Library/Caches/appdyno`                                                                                                             |
+| `APPDYNO_TOOLS_DIR`           | indirilen araçların tutulduğu yer, durum klasörü ne olursa olsun: varsayılan `~/Library/Caches/appdyno/tools`                                                    |
+| `APPDYNO_PERF_DIR`            | baseline'ların ve bütçelerin tutulduğu yer: varsayılan, çalışma klasöründeki `.appdyno/perf`; böylece commit edilebilirler                                       |
+| `APPDYNO_TRACE_PROCESSOR`     | Android'in trace'lerini okumak için, uygulamanınkinin ve indirilen sabit olanın yerine bir `trace_processor_shell`                                               |
+| `APPDYNO_SECRETS=a,b`         | hiçbir zaman geri gösterilmeyen ve panoya konmayan değerler                                                                                                      |
+| `APPDYNO_FAST_TAP=0`          | iOS runner'ı XCTest'in olay sentezleyicisi yerine, yaklaşık iki kat uzun süren XCUI'nin kendi dokunuşuyla dokunur                                                |
+| `APPDYNO_ANIMATION_WAIT=0`    | bir iOS dokunuşu uygulamanın animasyonlarının bitmesini beklemeden gider                                                                                         |
+| `APPDYNO_HOST_VIRTUAL=0`      | bu Mac, macOS ne derse desin, sanal makine sayılmaz; load average'ı ne kadar meşgul olduğunu gerçekten söyleyen bir sanal Mac için: bkz. [Kapı](perf.tr.md#kapı) |
+| `APPDYNO_IOS_TEAM`            | Xcode'un iPhone runner'ını hazırlarken kullandığı Apple ekibi: bkz. [Xcode halletsin](../guides/clients.tr.md#xcode-halletsin)                                   |
+| `APPDYNO_IOS_PROFILE`         | iPhone runner'ı için bir provisioning profile; `APPDYNO_IOS_KEYCHAIN` ve `APPDYNO_IOS_KEYCHAIN_PASSWORD` ile birlikte                                            |
+| `APPDYNO_EMULATOR_ARGS`       | `simulator` bir emülatör başlatırken verilen seçenekler: bkz. [Bir simülatör ya da emülatör başlatmak](tools.tr.md#bir-simülatör-ya-da-emülatör-başlatmak)       |
+| `APPDYNO_ANDROID_AGENT`       | bu checkout'un build'i ya da paketinki yerine kurulacak bir Android ajanı `.apk` dosyası                                                                         |
+| `APPDYNO_IOS_PRODUCTS`        | bu checkout'un build'i ya da ilk kullanımda yapılan yerine, bir simülatör için derlenmiş iOS runner'ını ve onun `.xctestrun` dosyasını tutan bir klasör          |
+| `APPDYNO_IOS_DEVICE_PRODUCTS` | aynısı, bir telefon için                                                                                                                                         |
 
 `--allow-devices` ve `--allow-urls` JavaScript düzenli ifadeleridir ve sabitlenmedikçe metnin herhangi bir yerinde eşleşir: `--allow-urls 'https://staging.example.com'`, `https://staging.example.com.evil.test/` ve `evilapp://x?u=https://staging.example.com` bağlantılarını da içeri alır. Onu sabitleyin: `--allow-urls '^https://staging\.example\.com/'` (`/` ana makine adını bitirir) ve `--allow-devices '^emulator-5554$'`; `'^emulator-'` her emülatörü içeri alır. Seçenekle ya da değişkenle boş verilen bir liste, her şeyi içeri alacağından başlangıçta reddedilir; biri tanımsızken `"$A|$B"`'nin verdiği gibi boş metinle eşleşen bir desen de öyle.
 

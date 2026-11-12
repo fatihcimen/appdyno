@@ -57,8 +57,10 @@ jobs:
           xcrun simctl bootstatus "$UDID"
           echo "UDID=$UDID" >> "$GITHUB_ENV"
           # A new simulator works by itself for its first minutes, and a build leaves load behind: wait, up to 10, for
-          # the load the gate takes, as a run measured over it fails the job.
+          # the load the gate takes, as a run measured over it fails the job. A virtual Mac, as GitHub's runners are, has
+          # a load average that says nothing of how busy it is, and appdyno does not read it there: no wait.
           cat > "$RUNNER_TEMP/settle" <<'EOF'
+          [ "$(sysctl -n kern.hv_vmm_present 2>/dev/null)" = 1 ] && exit 0
           for wait in $(seq 1 60); do
             load=$(sysctl -n vm.loadavg | awk '{print int($2 * 10)}')
             if [ "$load" -lt "$(($(sysctl -n hw.ncpu) * 8))" ]; then break; fi
@@ -67,7 +69,7 @@ jobs:
           EOF
           sh "$RUNNER_TEMP/settle"
 
-      # A run under load is refused as a baseline, by a non-zero exit: over 2.4 on a runner of 3 cores, as a build leaves.
+      # On a Mac of your own, a run under load is refused as a baseline, by a non-zero exit: over 0.8 a core.
       # `perf baseline` exits non-zero until the baseline can call a change: three runs. So it measures until then, and
       # stops the job if it cannot get them.
       - name: The base, three runs, and the other side of a later diff
@@ -108,6 +110,14 @@ jobs:
         with:
           name: perf-comment
           path: perf-comment.md
+
+      # A step that failed left the screen's picture and tree of its moment here.
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: appdyno-artifacts
+          path: appdyno-artifacts
+          if-no-files-found: ignore
 
       # A new comment each time: `--edit-last` edits the token's last comment, which may be another workflow's.
       - name: Post it, with this repository's token

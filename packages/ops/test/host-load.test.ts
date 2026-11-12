@@ -5,6 +5,7 @@ import { must, type MeasureSource } from '@appdyno/core';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import { assert, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, keepRun, ServerContext } from '../src/index.js';
+import { hostIsVirtual } from '../src/perf/shared.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf, checkedOps } from '@appdyno/testing/calls.js';
 
@@ -134,5 +135,46 @@ describe('a loaded Mac', () => {
       text: expect.stringContaining('not added, high-host-load: measure loud again') as unknown,
     });
     expect(r.data.exitCode).toBe(1);
+  });
+});
+
+describe('a Mac that is itself a virtual machine', () => {
+  it('reads no noise from its load average, says so, and lets the number into a baseline', async () => {
+    vi.stubEnv('APPDYNO_HOST_VIRTUAL', '1');
+    try {
+      expect(hostIsVirtual()).toBe(true);
+      const { call } = phone('the first screen is read');
+      const { text, data } = await call('perf_launch');
+      expect(data.noise).toEqual(['host-load-unread']);
+      expect(text).toContain('this Mac is a virtual machine');
+      const { ctx } = phone();
+      const s = await ctx.session();
+      const keep = () =>
+        keepRun(ctx, s, {
+          app: 'dev.app',
+          scenario: 'runner',
+          source: 'test',
+          raw: '',
+          metrics: [
+            { kind: 'launch.until_ms', unit: 'ms', samples: [3_000, 3_010], throughHost: true },
+          ],
+        });
+      for (let i = 0; i < 3; i++) await keep();
+      const r = await must(checkedOps(ctx).perf_compare, 'perf_compare').handler({
+        action: 'baseline',
+        scenario: 'runner',
+        format: 'text',
+        last: 3,
+      });
+      expect((r.blocks[0] as { text: string }).text).not.toContain('left out');
+      expect(r.data.exitCode).toBe(0);
+      const baseline = JSON.parse(
+        readFileSync(must((r.data.baselines as string[])[0], 'a baseline'), 'utf8'),
+      ) as { metrics: Record<string, unknown> };
+      expect(Object.keys(baseline.metrics)).toEqual(['launch.until_ms']);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(hostIsVirtual()).toBe(false);
   });
 });

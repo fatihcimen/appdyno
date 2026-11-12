@@ -21,7 +21,8 @@ export type Noise =
   | 'hot-device'
   | 'debuggable-build'
   | 'mirrored'
-  | 'device-state-unread';
+  | 'device-state-unread'
+  | 'host-load-unread';
 
 /** One number of one measurement, with everything needed to judge it later. */
 export type PerfRecord = {
@@ -50,6 +51,8 @@ export type PerfRecord = {
   load: {
     host: number[];
     hostCpus: number;
+    /** This Mac is itself a virtual machine, as a CI runner is, whose load average says nothing of how busy it is. */
+    hostVirtual?: boolean;
     device?: number[];
     devicePressure?: number;
     /** What of the device's load is kernel threads asleep, using no CPU. */
@@ -228,7 +231,9 @@ export function noiseOf(
   throughHost = false,
 ): Noise[] {
   const out: Noise[] = [];
-  if (
+  // a GitHub runner of 3 cores read a load of 115 to 650 at rest: on a virtual Mac the gate's own tests judge the noise
+  if ((r.device.virtual || throughHost) && r.load.hostVirtual) out.push('host-load-unread');
+  else if (
     (r.device.virtual || throughHost) &&
     (r.load.host[0] ?? 0) > r.load.hostCpus * HOST_LOAD_PER_CORE
   )
@@ -249,7 +254,7 @@ export function noiseOf(
 }
 
 /** They say what a number is, beside it, and are no reason to measure again: a build is told apart by `build`. */
-const MARKS: Noise[] = ['debuggable-build', 'device-state-unread'];
+const MARKS: Noise[] = ['debuggable-build', 'device-state-unread', 'host-load-unread'];
 
 /** What stood in a number's way: a reference taken under it would hide every later change. */
 export const loud = (noise: Noise[]) => noise.filter((n) => !MARKS.includes(n));

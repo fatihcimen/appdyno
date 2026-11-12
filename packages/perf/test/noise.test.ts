@@ -137,3 +137,34 @@ describe('the device load a run is judged by', () => {
     expect(atShare(99)).toEqual(['high-device-load']);
   });
 });
+
+describe('a Mac that is itself a virtual machine', () => {
+  const emulator = { ...device, virtual: true };
+  // a GitHub runner of 3 cores read 115 to 650 at rest
+  const runner = { host: [412], hostCpus: 3 };
+
+  it('reads no noise from its load average, and says it did not', () => {
+    const on = (load: typeof runner & { hostVirtual?: boolean }, throughHost = false) =>
+      noiseOf({ device: emulator, build: 'release', load }, throughHost);
+    expect(on(runner)).toEqual(['high-host-load']);
+    expect(on({ ...runner, hostVirtual: true })).toEqual(['host-load-unread']);
+    expect(on({ host: [0.1], hostCpus: 3, hostVirtual: true })).toEqual(['host-load-unread']);
+    expect(
+      noiseOf(
+        { device, build: 'release', load: { ...runner, hostVirtual: true }, thermal: 0 },
+        true,
+      ),
+    ).toEqual(['host-load-unread']);
+  });
+
+  it('keeps no run out of a baseline for it and stops no gate, which its own tests judge', () => {
+    expect(loud(['host-load-unread'])).toEqual([]);
+    expect(loud(['host-load-unread', 'hot-device'])).toEqual(['hot-device']);
+  });
+
+  it('says nothing of a phone timed on its own, which the Mac does not hold up', () => {
+    expect(
+      noiseOf({ device, build: 'release', load: { ...runner, hostVirtual: true }, thermal: 0 }),
+    ).toEqual([]);
+  });
+});
