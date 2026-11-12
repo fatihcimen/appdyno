@@ -218,6 +218,16 @@ describe('find and assert', () => {
     expect(off.data.code).toBe('CHECK_FAILED');
     const text = await call('assert', { selector: { text: 'Agree' }, check: 'text', equals: 'No' });
     expect(text.text).toContain('reads "Agree", not "No"');
+    // each of the four: the text it reads or another, wanted or not
+    const reads = (equals: string, want: boolean) =>
+      call('assert', { selector: { text: 'Agree' }, check: 'text', equals, expect: want });
+    expect((await reads('Agree', true)).error).toBe(false);
+    expect((await reads('No', true)).error).toBe(true);
+    expect((await reads('No', false)).error).toBe(false);
+    const must = await reads('Agree', false);
+    expect(must.error).toBe(true);
+    expect(must.data.code).toBe('CHECK_FAILED');
+    expect(must.text).toContain('reads "Agree", which it must not');
     const gone = await call('assert', { selector: { text: 'Agree' }, check: 'absent' });
     expect(gone.text).toContain('is on the screen');
   });

@@ -78,12 +78,15 @@ export function checksFor({
     if (a.check === 'text') {
       if (a.equals === undefined)
         throw new ToolError('check text needs equals', 'INVALID_ARGUMENT');
-      return at.text === a.equals || at.value === a.equals
-        ? { pass: true, why: `${what} reads ${JSON.stringify(clean(a.equals))}` }
-        : {
-            pass: false,
-            why: `${what} reads ${JSON.stringify(clean(at.value ?? at.text))}, not ${JSON.stringify(clean(a.equals))}`,
-          };
+      const reads = at.text === a.equals || at.value === a.equals;
+      const want = JSON.stringify(clean(a.equals));
+      const why = reads
+        ? `${what} reads ${want}`
+        : `${what} reads ${JSON.stringify(clean(at.value ?? at.text))}, not ${want}`;
+      return {
+        pass: reads === a.expect,
+        why: reads && !a.expect ? `${why}, which it must not` : why,
+      };
     }
     const state = a.check as 'enabled' | 'checked' | 'focused';
     return {
