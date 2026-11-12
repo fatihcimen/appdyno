@@ -78,7 +78,8 @@ jobs:
           xcrun simctl install "$UDID" "$BUILT"
           ready=no
           for try in 1 2 3 4 5 6 7 8; do
-            $APPDYNO test "$FLOW" --device "$UDID" --measure
+            # a run that failed keeps nothing and the next try runs again; one that never passes leaves no baseline
+            $APPDYNO test "$FLOW" --device "$UDID" --measure || true
             if $APPDYNO perf baseline --app "$APP"; then ready=yes; break; fi
           done
           [ "$ready" = yes ]
