@@ -98,6 +98,8 @@ jobs:
             .app-build/appdyno.rb
             .app-build/appcast.json*
           if-no-files-found: error
+          # .app-build is a hidden folder, which the upload leaves out unless told
+          include-hidden-files: true
           retention-days: 3
       - name: Publish with provenance
         if: github.event_name == 'push'
