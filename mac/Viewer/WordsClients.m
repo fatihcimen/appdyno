@@ -72,7 +72,8 @@ const MVWordRow MVWordTableClients[] = {
     {"One client at a time: once it has called a tool, it holds the server until 10 minutes after its last call.", "Aynı anda tek istemci: bir araç çağıran istemci, sunucuyu son çağrısından 10 dakika sonrasına kadar tutar."},
     // what `doctor` can say
     {"set ANDROID_HOME to the Android SDK (Android only)", "ANDROID_HOME'u Android SDK'ya ayarlayın (yalnızca Android için)"},
-    {"appdyno tools install adb, or install the Android SDK platform-tools and set ANDROID_HOME", "appdyno tools install adb çalıştırın ya da Android SDK platform-tools kurup ANDROID_HOME'u ayarlayın"},
+    {"appdyno tools install adb --accept-license, or install the Android SDK platform-tools and set ANDROID_HOME (Android only)", "appdyno tools install adb --accept-license çalıştırın ya da Android SDK platform-tools kurup ANDROID_HOME'u ayarlayın (yalnızca Android için)"},
+    {"install what a warning above names, for the platform you test", "test ettiğiniz platform için yukarıdaki bir uyarının adını verdiğini kurun"},
     {"accept the USB debugging prompt on the phone", "telefondaki USB hata ayıklama isteğini onaylayın"},
     {"reconnect the cable, or restart the emulator", "kabloyu yeniden takın ya da emülatörü yeniden başlatın"},
     {"start the emulator with -gpu host: software rendering makes every read many times slower", "emülatörü -gpu host ile başlatın: yazılımla çizim her okumayı kat kat yavaşlatır"},

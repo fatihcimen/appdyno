@@ -43,4 +43,22 @@ describe('doctor', () => {
     expect(android.asked).toEqual([undefined]);
     expect(apple.asked).toEqual([undefined]);
   });
+
+  it("warns of a platform's missing tool while another platform works, and fails where none does", async () => {
+    const lacking = (name: string, has: boolean) =>
+      ({
+        handles: () => false,
+        doctor: () =>
+          Promise.resolve([
+            has
+              ? { name, ok: true, detail: 'found' }
+              : { name, ok: false, warn: true, blocks: true, detail: 'not found' },
+          ]),
+      }) as unknown as DeviceProvider;
+    const failing = (checks: Check[]) => checks.filter((c) => !c.ok && !c.warn).map((c) => c.name);
+    const some = await doctor({ providers: [lacking('adb', false), lacking('xcode', true)] });
+    expect(failing(some)).toEqual([]);
+    const none = await doctor({ providers: [lacking('adb', false), lacking('xcode', false)] });
+    expect(failing(none)).toContain('devices');
+  });
 });

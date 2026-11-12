@@ -22,7 +22,17 @@ export async function doctor(opts: {
   const { serial } = opts;
   const owner =
     serial === undefined ? undefined : opts.providers.findLast((p) => p.handles(serial));
+  const drivers: Check[][] = [];
   for (const p of opts.providers)
-    if (p.doctor) checks.push(...(await p.doctor(p === owner ? serial : undefined)));
+    if (p.doctor) drivers.push(await p.doctor(p === owner ? serial : undefined));
+  checks.push(...drivers.flat());
+  // each driver lacks what it cannot drive a device without: this machine drives none
+  if (drivers.length > 0 && drivers.every((d) => d.some((c) => c.blocks && !c.ok)))
+    checks.push({
+      name: 'devices',
+      ok: false,
+      detail: 'no platform can be driven here',
+      fix: 'install what a warning above names, for the platform you test',
+    });
   return checks;
 }

@@ -188,8 +188,18 @@ export type Device = {
   readonly measure: MeasureSource;
 };
 
-/** A doctor's finding. */
-export type Check = { name: string; ok: boolean; warn?: boolean; detail: string; fix?: string };
+/**
+ * A doctor's finding. `blocks`: without it its driver drives no device, which is a warning while another driver can, and
+ * a failure where none can.
+ */
+export type Check = {
+  name: string;
+  ok: boolean;
+  warn?: boolean;
+  blocks?: boolean;
+  detail: string;
+  fix?: string;
+};
 
 export type ListedDevice = {
   serial: string;

@@ -36,8 +36,10 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
     checks.push({
       name: 'adb',
       ok: false,
+      warn: true,
+      blocks: true,
       detail: `not found at ${adb.bin}`,
-      fix: 'appdyno tools install adb, or install the Android SDK platform-tools and set ANDROID_HOME',
+      fix: 'appdyno tools install adb --accept-license, or install the Android SDK platform-tools and set ANDROID_HOME (Android only)',
     });
     return checks;
   }

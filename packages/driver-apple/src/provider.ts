@@ -32,7 +32,7 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
     const { stdout } = await run('xcodebuild', ['-version'], { timeout: 30_000, env: xcodeEnv() });
     out.push({ name: 'xcode', ok: true, detail: stdout.trim().split('\n').join(', ') });
   } catch {
-    out.push(warn('xcode', 'not found', 'install Xcode (iOS only)'));
+    out.push({ ...warn('xcode', 'not found', 'install Xcode (iOS only)'), blocks: true });
     return out;
   }
   const firstLaunch = await firstLaunchCheck();

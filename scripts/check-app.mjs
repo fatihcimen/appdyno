@@ -392,15 +392,21 @@ try {
     if (r.status !== 0) throw new Error(r.stderr);
     return r.stdout.trim();
   });
-  await step('doctor says it is the app, and fails on nothing a stranger lacks but adb', () => {
-    const r = say(command, 'doctor');
-    const lines = r.stdout.split('\n');
-    const first = must(lines[0], 'its first line');
-    if (!first.includes('installed by the app')) throw new Error(first);
-    const failing = lines.filter((l) => l.startsWith('FAIL')).filter((l) => !l.includes(' adb:'));
-    if (failing.length) throw new Error(failing.join('; '));
-    return `\n     ${lines.join('\n     ').replaceAll(temp, '')}`;
-  });
+  await step(
+    "doctor says it is the app, and fails on nothing a stranger lacks but a platform's tools",
+    () => {
+      const r = say(command, 'doctor');
+      const lines = r.stdout.split('\n');
+      const first = must(lines[0], 'its first line');
+      if (!first.includes('installed by the app')) throw new Error(first);
+      // with no Xcode nor adb, no platform can be driven: the one failure a stranger may see
+      const failing = lines
+        .filter((l) => l.startsWith('FAIL'))
+        .filter((l) => !l.includes(' devices:'));
+      if (failing.length) throw new Error(failing.join('; '));
+      return `\n     ${lines.join('\n     ').replaceAll(temp, '')}`;
+    },
+  );
   await step('the menu lists what a stranger has', () => {
     const r = say(menu, '--menu');
     if (r.status !== 0) throw new Error(`exit ${String(r.status)}: ${r.stderr}`);

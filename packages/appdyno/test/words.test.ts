@@ -78,6 +78,8 @@ describe('the table of words', () => {
   it('has what doctor can say to do', () => {
     const fixes = [
       'set ANDROID_HOME to the Android SDK (Android only)',
+      'appdyno tools install adb --accept-license, or install the Android SDK platform-tools and set ANDROID_HOME (Android only)',
+      'install what a warning above names, for the platform you test',
       'accept the USB debugging prompt on the phone',
       'reconnect the cable, or restart the emulator',
     ];
