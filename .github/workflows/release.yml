@@ -80,8 +80,13 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: The release
         # with no update key there is no appcast
+        # its notes are the changelog's section of this version, its links made whole, as a release page is no folder
         run: |
           shopt -s nullglob
-          gh release create "$GITHUB_REF_NAME" --generate-notes .app-build/*.dmg .app-build/appdyno.rb .app-build/appcast.json*
+          notes="$RUNNER_TEMP/notes.md"
+          awk -v v="## ${GITHUB_REF_NAME#v}" '$0 == v { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md |
+            sed -E "s#\]\(([A-Za-z][^):]*)\)#](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/\1)#g" >"$notes"
+          grep -q '[^[:space:]]' "$notes"
+          gh release create "$GITHUB_REF_NAME" --notes-file "$notes" .app-build/*.dmg .app-build/appdyno.rb .app-build/appcast.json*
         env:
           GH_TOKEN: ${{ github.token }}
