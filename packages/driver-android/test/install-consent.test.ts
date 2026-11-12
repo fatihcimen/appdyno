@@ -511,8 +511,13 @@ describe('install', () => {
       const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }], {
         opensLater: true,
       });
-      // the prompt said no a moment after the touch
-      const refused = () => new Promise<void>((r) => setTimeout(r, 2_500)).then(restricted);
+      // the prompt said no a moment after the touch: after it, however long the file's names take to read for real while
+      // the fake clock runs on
+      const refused = async () => {
+        while (screen.presses.length === 0) await new Promise((r) => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 500));
+        return restricted();
+      };
       const e = await new AndroidApps(adb(refused), 'phone', screen)
         .install(APK)
         .catch((x: unknown) => x);
