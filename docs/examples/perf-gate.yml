@@ -90,12 +90,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+      # Seven: a step that runs past its deadline keeps no time, and the gate calls nothing under 5 samples a side.
       - name: The pull request, measured
         run: |
           $BUILD
           xcrun simctl install "$UDID" "$BUILT"
           sh "$RUNNER_TEMP/settle"
-          $APPDYNO test "$FLOW" --device "$UDID" --measure
+          $APPDYNO test "$FLOW" --device "$UDID" --measure --iterations 7
 
       - name: The gate, and on a regression its cause
         id: gate
