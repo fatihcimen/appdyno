@@ -224,8 +224,16 @@ function connect(device: FlightDevice, flightSeconds?: number) {
   return { ctx, call: callerOf(ctx) };
 }
 
+/**
+ * Fake time on by at most 20 s, and the real event loop a turn between: a save's files are real, and on a loaded Mac they
+ * were not written within 400 turns of fake time alone. Bounded by 10 s of real time.
+ */
 const until = async (met: () => boolean) => {
-  for (let i = 0; i < 400 && !met(); i++) await vi.advanceTimersByTimeAsync(50);
+  const end = performance.now() + 10_000;
+  for (let i = 0; !met() && performance.now() < end; i++) {
+    if (i < 400) await vi.advanceTimersByTimeAsync(50);
+    await new Promise((r) => setImmediate(r));
+  }
   expect(met()).toBe(true);
 };
 
