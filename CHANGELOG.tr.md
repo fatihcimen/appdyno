@@ -30,6 +30,7 @@
 - Komut satırında `--ref`, başına `@` yazılmadan verilen bir ref'i alır.
 - Açılışı süresini dolduran bir iOS runner'ı, açılmadığını, ne kadar sonra ve nereye kadar geldiğini söyler: onu bitiren öldürme önce geldiği için runner'ın durduğunu, `xcodebuild exit null` diyordu. Runner'ı başlatma aşamasına geçmiş bir açılışa o andan itibaren 90 sn daha verilir: orada öldürülen bir açılış sıfırdan yeniden başlatılıyordu.
 - Android'de takıldığı için yeniden başlatılan agent, sistem yanıt vermeyen bir uygulamayı soruyorsa bunu söyler: o uygulamaya bir dokunuş agent'ı bekletmişti ve cevap yalnızca takıldığını söylüyordu.
+- `perf_snapshot`, takılan kare payının sistemin saydığı biçimde son zamanına geç kalan kareler olduğunu söyler; Play'in 16 ms üstü kare payı onun yanında durur. Cihazın vermediği CPU baskısını, ısı durumunu ya da grafik belleğini yazmaz: `?` ve `0.0 MB` gösteriyordu.
 
 ## 1.0.0
 

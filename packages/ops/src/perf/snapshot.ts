@@ -99,11 +99,11 @@ export function perfSnapshotOp(ctx: ServerContext) {
           `measurement ${saved.id}${virtualNote(s)}`,
           `CPU: ${cpu.value.percent}% (of one core, ${cpu.value.windowMs} ms)${behind ? `, with ${behind} in front: a phone stops an app behind, so this says nothing of it and is not kept` : ''}`,
           m.kind === 'pss'
-            ? `memory: PSS ${kb(m.kb)}, Java ${kb(m.javaHeapKb)}, native ${kb(m.nativeHeapKb)}, graphics ${kb(m.graphicsKb)}`
+            ? `memory: PSS ${kb(m.kb)}, Java ${kb(m.javaHeapKb)}, native ${kb(m.nativeHeapKb)}${m.graphicsKb ? `, graphics ${kb(m.graphicsKb)}` : ''}`
             : `memory: physical footprint ${kb(m.kb)}${m.peakKb !== undefined ? ` (peak ${kb(m.peakKb)})` : ''}`,
           ...(f
             ? [
-                `frames (since the last reset): ${f.totalFrames}, janky ${f.jankyPercent}%, frozen ${f.frozenFrames}${f.p95Ms !== undefined ? `, p95 ${f.p95Ms} ms` : ''}${f.fewFrames ? ' (few frames: the share means little)' : ''}`,
+                `frames (since the last reset): ${f.totalFrames}, janky ${f.jankyPercent}% (late for their deadline, as the system counts them), frozen ${f.frozenFrames}${f.p95Ms !== undefined ? `, p95 ${f.p95Ms} ms` : ''}${f.fewFrames ? ' (few frames: the share means little)' : ''}`,
                 ...(f.frames?.worstWindow
                   ? [
                       `worst second: ${f.frames.worstWindow.slow} missed of ${f.frames.worstWindow.frames} frames, mean ${f.frames.worstWindow.avgMs} ms`,
@@ -126,7 +126,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
           ...play.lines,
           ...(v
             ? [
-                `device: load ${v.load?.join(' ') ?? '?'}${v.parkedKernelThreads ? ` (${v.parkedKernelThreads} of it kernel threads asleep, no CPU)` : ''}, CPU pressure ${v.cpuPressure ?? '?'}, thermal ${v.thermalStatus ?? '?'}`,
+                `device: load ${v.load?.join(' ') ?? '?'}${v.parkedKernelThreads ? ` (${v.parkedKernelThreads} of it kernel threads asleep, no CPU)` : ''}${v.cpuPressure !== undefined ? `, CPU pressure ${v.cpuPressure}` : ''}${v.thermalStatus !== undefined ? `, thermal ${v.thermalStatus}` : ''}`,
               ]
             : []),
           ...got.map((g) => g.line),

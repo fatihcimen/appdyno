@@ -23,6 +23,28 @@ describe('perf tools', () => {
     const stored = JSON.parse(readFileSync(join(MEASUREMENTS, `${id}.json`), 'utf8')) as unknown;
     expect(stored).toMatchObject({ id, kind: 'snapshot', value: { cpu: { percent: 12.5 } } });
     expect(readFileSync(join(MEASUREMENTS, `${id}.txt`), 'utf8')).toContain('TOTAL PSS');
+    expect(r.text).toContain('graphics 9.8 MB');
+    expect(r.text).toContain('CPU pressure 2, thermal 0');
+  });
+
+  it('snapshot: leaves out what the device did not say, where it read as a question mark or nothing', async () => {
+    const dev = new FakeDevice();
+    const at = new Date().toISOString();
+    const memory = dev.measure.memory.bind(dev.measure);
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        vitals: () => Promise.resolve({ value: { load: [1, 1, 1] }, raw: '', at }),
+        memory: async (app: string) => {
+          const m = await memory(app);
+          return { ...m, value: { ...m.value, graphicsKb: 0 } };
+        },
+      },
+    });
+    const r = await (await connect({}, dev)).textOf('perf_snapshot');
+    expect(r.text).toContain('device: load 1 1 1\n');
+    expect(r.text).not.toContain('graphics');
+    expect(r.text).not.toContain('?');
   });
 
   it('scroll: reads one round where it is asked for a reading, and three for a scenario a baseline is kept under', async () => {

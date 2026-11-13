@@ -30,6 +30,7 @@
 - On the command line, `--ref` takes a ref typed without its `@`.
 - An iOS runner whose start runs out of time says that it did not start, after how long, and how far it got: it said the runner had stopped, `xcodebuild exit null`, as the kill that ended it came first. A start that has got on to launching the runner has 90 s more from then: one killed there was started again from nothing.
 - On Android, an agent restarted as stuck says when the system is asking about an app that is not responding: a touch on that app had held the agent up, and the answer said only that it was stuck.
+- `perf_snapshot` says its janky share is of frames late for their deadline, as the system counts them, beside Play's share of frames over 16 ms, and leaves out a CPU pressure, a thermal state or a graphics memory the device did not give: it showed `?` and `0.0 MB`.
 
 ## 1.0.0
 
