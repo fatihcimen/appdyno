@@ -45,8 +45,19 @@ export function surfaceStats(
   { periodNs, presents }: ReturnType<typeof parseLatency>,
   drawing: boolean,
 ): SurfaceFrames {
-  const refreshMs = periodNs / 1e6;
   const gaps = presents.slice(1).map((t, i) => (t - must(presents[i], 'a present')) / 1e6);
+  return statsOfGaps(layer, periodNs, presents.length, gaps, drawing);
+}
+
+/** `surfaceStats` of the gaps between presents, in ms: those across a stretch not read are left out by the caller. */
+function statsOfGaps(
+  layer: string,
+  periodNs: number,
+  frames: number,
+  gaps: number[],
+  drawing: boolean,
+): SurfaceFrames {
+  const refreshMs = periodNs / 1e6;
   const whole = gaps.map((g) => round(Math.round(g / refreshMs) * refreshMs)).sort((a, b) => a - b);
   const slow = (bar: number) =>
     round((whole.filter((g) => g >= bar).length / Math.max(whole.length, 1)) * 100);
@@ -55,10 +66,10 @@ export function surfaceStats(
   return {
     layer,
     refreshMs: round(refreshMs),
-    frames: presents.length,
+    frames,
     fps: round((gaps.length / Math.max(spanMs, 1)) * 1000),
-    p50Ms: quantile(whole, 0.5),
-    p95Ms: quantile(whole, 0.95),
+    p50Ms: round(quantile(whole, 0.5)),
+    p95Ms: round(quantile(whole, 0.95)),
     worstMs: whole.at(-1) ?? 0,
     slow34Percent,
     slow50Percent,
@@ -111,5 +122,94 @@ export async function surfaceFrames(d: PerfDevice, pkg: string): Promise<Measure
     value: surfaceStats(held.layer, held.read, drawing),
     raw: raws.join('\n---\n'),
     at: at(),
+  };
+}
+
+/** How often a surface is read while frames are counted: it keeps its last 127, a second's at 120 Hz. */
+const SURFACE_READ_MS = 500;
+
+/**
+ * Each frame of a `--latency` read, known by the time it was to be shown (else by when it was ready), which a later read
+ * gives again as it was, with the time it was shown: SurfaceFlinger corrects that of its newest frame after a first read
+ * of it, which, taken for a frame of its own, was a second frame a refresh or less after it, once in each read.
+ */
+export function latencyRows(text: string) {
+  const [first = '', ...rows] = text.trim().split('\n');
+  return {
+    periodNs: Number(first.trim()),
+    rows: rows.flatMap((row) => {
+      const [desired = 0, shown = 0, ready = 0] = row.trim().split(/\s+/).map(Number);
+      const key = desired || ready;
+      return key > 0 && shown > 0 && shown < PENDING ? [{ key, shown }] : [];
+    }),
+  };
+}
+
+/**
+ * The app's surfaces read from now until `stop`, every SURFACE_READ_MS, as each keeps only its last 127 frames: the
+ * frames of the one that drew the most, those it held before left out, and no gap across a stretch a late read missed.
+ * None where the app shows no surface, or none drew.
+ */
+export async function watchSurface(d: PerfDevice, pkg: string) {
+  const layers = surfaceLayers(await sh(d, 'dumpsys SurfaceFlinger --list'), assertPkg(pkg));
+  const read = (layer: string) =>
+    d
+      .shellAlongside(`LC_ALL=C dumpsys SurfaceFlinger --latency ${shq(layer)}`, 10_000)
+      .then(latencyRows, () => undefined);
+  let periodNs = 0;
+  type Kept = { since: number; newest: number; shown: Map<number, number>; holes: Set<number> };
+  const kept = new Map<string, Kept>();
+  const take = (layer: string, r: ReturnType<typeof latencyRows> | undefined) => {
+    if (!r) return;
+    periodNs ||= r.periodNs;
+    const k = must(kept.get(layer), 'a layer');
+    const fresh = r.rows.filter((x) => x.key > k.since);
+    if (!fresh.length) return;
+    // a read that came late holds none of the frames the last had: the gap over what it missed is no frame's
+    const after = Math.max(k.since, k.newest);
+    if (!r.rows.some((x) => x.key <= after))
+      k.holes.add(Math.min(...fresh.filter((x) => x.key > after).map((x) => x.key)));
+    for (const x of fresh) k.shown.set(x.key, x.shown);
+    k.newest = Math.max(k.newest, ...fresh.map((x) => x.key));
+  };
+  // what each held before is none of this
+  for (const layer of layers) {
+    const r = await read(layer);
+    kept.set(layer, {
+      since: Math.max(0, ...(r?.rows.map((x) => x.key) ?? [])),
+      newest: 0,
+      shown: new Map(),
+      holes: new Set(),
+    });
+    periodNs ||= r?.periodNs ?? 0;
+  }
+  let on = layers.length > 0;
+  const reading = (async () => {
+    while (on) {
+      await sleep(SURFACE_READ_MS);
+      for (const layer of layers) take(layer, await read(layer));
+    }
+  })();
+  return {
+    async stop(): Promise<SurfaceFrames | undefined> {
+      on = false;
+      await reading;
+      for (const layer of layers) take(layer, await read(layer));
+      const [layer, most] = [...kept].sort((a, b) => b[1].shown.size - a[1].shown.size)[0] ?? [];
+      if (!layer || !most?.shown.size || !periodNs) return undefined;
+      const keys = [...most.shown.keys()].sort((a, b) => a - b);
+      const gaps = keys
+        .slice(1)
+        .flatMap((key, i) =>
+          most.holes.has(key)
+            ? []
+            : [
+                (must(most.shown.get(key), 'a frame') -
+                  must(most.shown.get(must(keys[i], 'a key')), 'a frame')) /
+                  1e6,
+              ],
+        );
+      return statsOfGaps(layer, periodNs, keys.length, gaps, true);
+    },
   };
 }

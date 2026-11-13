@@ -108,6 +108,16 @@ export const ScrollOut = z.object({
       jankyPercent: z.number(),
       frozen: z.number(),
       p95Ms: z.number().optional(),
+      surface: z
+        .object({
+          frames: z.number(),
+          fps: z.number(),
+          p95Ms: z.number(),
+          slow34Percent: z.number(),
+          slow50Percent: z.number(),
+          refreshMs: z.number(),
+        })
+        .optional(),
       memStartKb: z.number(),
       memEndKb: z.number(),
       activities: z.number().optional(),

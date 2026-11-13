@@ -234,10 +234,16 @@ export const NO_EARLIER_RUN = {
 
 export const surface = (over: Record<string, unknown> = {}) =>
   snapshot('surface', 'surfaceFrames', { ...SURFACE, ...over });
+/** A scroll of an app that draws on its own surface: the View toolkit counts none of its frames. */
+export const scrolledSurface = (over: Record<string, unknown> = {}) =>
+  scroll(0, { surface: { ...SURFACE, ...over } });
+
 export const SURFACE_UNREAD = {
   'no surface holds frames': surface({ frames: 0, drawing: false }),
   'it stopped drawing, so its frames are from before this run': surface({ drawing: false }),
   'too few frames were presented': surface({ frames: FEW }),
+  'a scroll presented too few on it': scrolledSurface({ frames: FEW }),
+  'a scroll the View toolkit counted, beside a surface': scroll(MANY, { surface: SURFACE }),
 };
 
 export const network = (rxBytes: number, txBytes: number) =>

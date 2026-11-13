@@ -6,6 +6,7 @@ import {
   type Measured,
   type MemoryReading,
   type ProfileEntry,
+  type SurfaceFrames,
   pause,
   reportProgress,
   median,
@@ -13,6 +14,7 @@ import {
   must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
@@ -20,7 +22,7 @@ import { moved } from '../scroll.js';
 import { ScrollOut } from './schemas.js';
 import { defineOp, ACT, reply, ToolError } from '../tool.js';
 import { perfTools, App, Probe, Scenario, kb } from './shared.js';
-import { frameVitals } from './vitals.js';
+import { frameVitals, playLine } from './vitals.js';
 
 /** Jank above this share of frames is worth a finding: this tool's own line, and none of Play's (`vitals.ts`). */
 const JANK_PERCENT = 10;
@@ -39,12 +41,57 @@ const OBJECTS = [
 ] as const;
 
 /** A round's reading. */
+/** What a scroll keeps of its rounds: the View toolkit's frames, or a surface's own, and memory, stalls and hitches. */
+function scrollMetrics(
+  rounds: Round[],
+  o: { frozen: number; hitches: number[]; stalls: number[] },
+): Metric[] {
+  const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
+  const surfaced = rounds.flatMap((x) => (x.surface ? [x.surface] : []));
+  return [
+    { kind: 'frames.jank_percent', unit: 'percent', samples: counted.map((x) => x.jankyPercent) },
+    {
+      kind: 'frames.p95_ms',
+      unit: 'ms',
+      samples: counted.flatMap((x) => (x.p95Ms === undefined ? [] : [x.p95Ms])),
+    },
+    // the whole run's: one frozen frame in one round is not a median of none
+    {
+      kind: 'frames.frozen',
+      unit: 'count',
+      samples: rounds.some((x) => x.frames > 0) ? [o.frozen] : [],
+    },
+    { kind: 'hitches.worst_ms', unit: 'ms', samples: o.hitches },
+    { kind: 'memory.end_kb', unit: 'kb', samples: rounds.map((x) => x.memEndKb) },
+    { kind: 'stalls.worst_ms', unit: 'ms', samples: o.stalls },
+    // a surface's own, as perf_snapshot keeps them: each round's
+    { kind: 'surface.p95_ms', unit: 'ms', samples: surfaced.map((x) => x.p95Ms) },
+    {
+      kind: 'surface.slow_34_percent',
+      unit: 'percent',
+      samples: surfaced.map((x) => x.slow34Percent),
+    },
+    {
+      kind: 'surface.slow_50_percent',
+      unit: 'percent',
+      samples: surfaced.map((x) => x.slow50Percent),
+    },
+  ];
+}
+
+/** A round's frames on a surface of the app's own, where the View toolkit counted too few. */
+type OnSurface = Pick<
+  SurfaceFrames,
+  'frames' | 'fps' | 'p95Ms' | 'slow34Percent' | 'slow50Percent' | 'refreshMs'
+>;
+
 type Round = {
   rewound?: boolean;
   jankyPercent: number;
   frozen: number;
   frames: number;
   p95Ms?: number;
+  surface?: OnSurface;
   memStartKb: number;
   memEndKb: number;
   activities?: number;
@@ -72,6 +119,19 @@ const roundOf = (f: FrameStats, m0: MemoryReading, m1: MemoryReading, rewound: b
   frames: f.histogram?.rowFrames ?? f.totalFrames,
   ...(rewound && { rewound: true }),
   ...(f.p95Ms !== undefined && { p95Ms: f.p95Ms }),
+  // a Flutter app or a game draws on its own surface, which the View toolkit counts nothing of
+  ...((f.histogram?.rowFrames ?? f.totalFrames) < MIN_FRAMES &&
+    f.surface &&
+    f.surface.frames >= MIN_FRAMES && {
+      surface: {
+        frames: f.surface.frames,
+        fps: f.surface.fps,
+        p95Ms: f.surface.p95Ms,
+        slow34Percent: f.surface.slow34Percent,
+        slow50Percent: f.surface.slow50Percent,
+        refreshMs: f.surface.refreshMs,
+      },
+    }),
   memStartKb: m0.kb,
   memEndKb: m1.kb,
   ...(m1.activities !== undefined && { activities: m1.activities }),
@@ -210,6 +270,10 @@ export function perfScrollOp(ctx: ServerContext) {
           hitches.push(f.value.worstHitchMs);
       }
       const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
+      const surfaced = rounds.flatMap((x) => (x.surface ? [x.surface] : []));
+      /** The median of the surface's rounds: 0 with none, where nothing says it. */
+      const onSurface = (pick: (x: OnSurface) => number) =>
+        surfaced.length ? round1(median(surfaced.map(pick))) : 0;
       const jank = counted.length ? round1(median(counted.map((x) => x.jankyPercent))) : undefined;
       // what the app spent its time on as it janked: one scroll more, under the profiler, where the device has one; it
       // counts in no round, as the profiler costs the frames something
@@ -259,45 +323,47 @@ export function perfScrollOp(ctx: ServerContext) {
         scenario: scenario ?? `scroll-${direction}`,
         source: 'perf_scroll',
         raw: saved.txt,
-        metrics: [
-          {
-            kind: 'frames.jank_percent',
-            unit: 'percent',
-            samples: counted.map((x) => x.jankyPercent),
-          },
-          {
-            kind: 'frames.p95_ms',
-            unit: 'ms',
-            samples: counted.flatMap((x) => (x.p95Ms === undefined ? [] : [x.p95Ms])),
-          },
-          // the whole run's: one frozen frame in one round is not a median of none
-          {
-            kind: 'frames.frozen',
-            unit: 'count',
-            samples: rounds.some((x) => x.frames > 0) ? [frozen] : [],
-          },
-          { kind: 'hitches.worst_ms', unit: 'ms', samples: hitches },
-          { kind: 'memory.end_kb', unit: 'kb', samples: rounds.map((x) => x.memEndKb) },
-          { kind: 'stalls.worst_ms', unit: 'ms', samples: stalls },
-          ...play.metrics,
-        ],
+        metrics: [...scrollMetrics(rounds, { frozen, hitches, stalls }), ...play.metrics],
       });
       return reply(
         [
           `measurement ${saved.id}${virtualNote(s)}`,
-          ...rounds.map(
-            (x, i) =>
-              `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
+          ...rounds.map((x, i) =>
+            x.surface
+              ? `round ${i + 1}: on its own surface, ${x.surface.frames} frames, ${x.surface.fps} a second, p95 ${x.surface.p95Ms} ms, ${x.surface.slow34Percent}% 34 ms or more after the last, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`
+              : `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
           ),
-          `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}; frozen frames: ${frozen}`,
-          ...(notes.length
-            ? notes
-            : counted.length
-              ? ['no threshold exceeded']
-              : [await unjudged(s, pkg)]),
+          ...(surfaced.length && !counted.length
+            ? [
+                `median on its own surface: p95 ${onSurface((x) => x.p95Ms)} ms, ${onSurface((x) => x.slow34Percent)}% 34 ms or more after the last, ${onSurface((x) => x.slow50Percent)}% 50 ms or more`,
+                playLine(
+                  'surface.slow_50_percent',
+                  must(
+                    onSurface((x) => x.slow50Percent),
+                    'a share',
+                  ),
+                ),
+                playLine(
+                  'surface.slow_34_percent',
+                  must(
+                    onSurface((x) => x.slow34Percent),
+                    'a share',
+                  ),
+                ),
+                ...notes,
+              ]
+            : [
+                `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}; frozen frames: ${frozen}`,
+                ...(notes.length
+                  ? notes
+                  : counted.length
+                    ? ['no threshold exceeded']
+                    : [await unjudged(s, pkg)]),
+              ]),
           ...(unprofiled ? [unprofiled] : []),
           ...(limits ? [limits] : []),
-          ...play.lines,
+          // Play's shares of the View toolkit's frames say nothing of a surface's, which it has its own lines of
+          ...(surfaced.length && !counted.length ? [] : play.lines),
           ...noisy(noise),
           `raw output: ${saved.txt}`,
         ].join('\n'),

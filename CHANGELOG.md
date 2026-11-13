@@ -30,7 +30,7 @@ appdyno 1.0.1 fixes what driving seven builds of five open-source apps showed, a
 - `perf_launch` keeps and judges only the starts the system timed as the asked state: a start it called `UNKNOWN`, at 0 ms, or `WARM` in a cold series went into the run's numbers and its longest start, though not into its median.
 - A touch on a web link that wraps over two lines lands on its first line's end: the middle of its box is the text between the lines, so the touch was said to land and opened nothing.
 - A selector that matches a web link and its own text, which take the same box, is one target, the link: it was refused as matching two.
-- `perf_scroll` says it judged nothing where no round drew enough frames, as an app that draws on its own surface does (Flutter, a game engine), and where to read those: it said no threshold was exceeded.
+- `perf_scroll` reads the rounds of an app that draws on its own surface, as a Flutter app does on Android, from that surface, read every 500 ms over each round, and keeps `surface.p95_ms` and the two shares of each, as `perf_snapshot` does: it said no threshold was exceeded of a scroll it counted no frames of. With neither, it says it judged nothing.
 - `perf_scroll` on a list already at its end brings it back for the first round too, as it did for later ones: it was refused as a screen covered by a popup.
 - A memory read the system answered without the app's total, seen once while the app was not responding, is a `TIMEOUT` to ask again, with what the system said: it was a bare error with no code.
 - On the command line, `--ref` takes a ref typed without its `@`, and a flag that takes a list takes its words as they are, `--also surface,battery`, as much as their JSON.

@@ -184,6 +184,45 @@ describe('perf tools', () => {
     expect(r.text).toContain('round 1 ran after the list was brought back');
   });
 
+  it('scroll: reads the rounds of an app that draws on its own surface from that surface', async () => {
+    const dev = new FakeDevice();
+    const counted = dev.measure.framesDuring.bind(dev.measure);
+    const surface = {
+      layer: 'SurfaceView[dev.app](BLAST)#9',
+      refreshMs: 16.7,
+      frames: 180,
+      fps: 58.4,
+      p50Ms: 16.7,
+      p95Ms: 16.7,
+      worstMs: 50,
+      slow34Percent: 1.1,
+      slow50Percent: 0.6,
+      drawing: true,
+    };
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        framesDuring: async (...a: Parameters<typeof counted>) => {
+          const f = await counted(...a);
+          return {
+            ...f,
+            value: { ...f.value, totalFrames: 1, jankyFrames: 0, jankyPercent: 0, surface },
+          };
+        },
+      },
+    });
+    const r = await (await connect({}, dev)).textOf('perf_scroll', { swipes: 2 });
+    expect(r.text).toContain(
+      'round 1: on its own surface, 180 frames, 58.4 a second, p95 16.7 ms, 1.1% 34 ms or more after the last',
+    );
+    expect(r.text).toContain(
+      'median on its own surface: p95 16.7 ms, 1.1% 34 ms or more after the last, 0.6% 50 ms or more',
+    );
+    expect(r.text).toContain('Play: ');
+    expect(r.text).not.toContain('nothing judged');
+    expect(r.text).not.toContain('median jank');
+  });
+
   it('scroll: rounds that drew too few frames are judged by nothing, and no threshold is said to hold', async () => {
     const dev = new FakeDevice();
     const none = dev.measure.framesDuring.bind(dev.measure);

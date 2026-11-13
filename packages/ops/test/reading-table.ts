@@ -33,6 +33,7 @@ import {
   started,
   surface,
   SURFACE_UNREAD,
+  scrolledSurface,
   threads,
   timeline,
   xct,
@@ -136,19 +137,19 @@ export const READINGS = {
   'surface.p95_ms': {
     means: "the time between a surface's presents, by whole refreshes",
     value: 33,
-    reads: [surface()],
+    reads: [surface(), scrolledSurface()],
     notRead: SURFACE_UNREAD,
   },
   'surface.slow_34_percent': {
     means: 'the share of its frames that came 34 ms or more after the last',
     value: 3,
-    reads: [surface()],
+    reads: [surface(), scrolledSurface()],
     notRead: SURFACE_UNREAD,
   },
   'surface.slow_50_percent': {
     means: 'the share of its frames that came 50 ms or more after the last',
     value: 1,
-    reads: [surface()],
+    reads: [surface(), scrolledSurface()],
     notRead: SURFACE_UNREAD,
   },
   'frames.jank_percent': {

@@ -19,7 +19,9 @@ const dump = (histogramMs: number, count: number, rows: string[]) =>
 
 function device(reads: string[]) {
   const left = [...reads];
-  const next = () => Promise.resolve(left.shift() ?? reads.at(-1));
+  // the app shows no surface of its own: what it draws, the View toolkit counts
+  const next = (command: string) =>
+    Promise.resolve(command.includes('SurfaceFlinger') ? '' : (left.shift() ?? reads.at(-1)));
   return {
     serial: 'x',
     readyToMeasure: () => Promise.resolve(),

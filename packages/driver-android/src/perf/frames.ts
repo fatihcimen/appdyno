@@ -24,6 +24,7 @@ import {
   type FrameRow,
 } from './parse.js';
 import { type PerfDevice, pidOf, sh, at } from './shared.js';
+import { watchSurface } from './surface.js';
 import { recordTrace, NAME_NEW_PROCESSES, PROCESS_STATS, queryFile } from './perfetto.js';
 
 const frameStatsSql = (pkg: string) => `
@@ -82,6 +83,8 @@ export async function framesDuring(
   during: () => Promise<unknown>,
 ): Promise<Measured<FrameStats>> {
   await resetFrames(d, pkg);
+  // what the app draws on a surface of its own, past the View toolkit, which counts none of it
+  const surface = await watchSurface(d, pkg).catch(() => undefined);
   const rows = new Map<number, Required<FrameRow>>();
   const keep = (text: string) => {
     for (const r of parseFramestats(text)) rows.set(r.startNs, r);
@@ -103,6 +106,7 @@ export async function framesDuring(
     on = false;
     await reading;
   }
+  const drawn = await surface?.stop().catch(() => undefined);
   const m = await frames(d, pkg);
   keep(m.raw);
   const moments = frozenMoments(
@@ -122,6 +126,7 @@ export async function framesDuring(
       jankyPercent: jankyShare(m.value, rows.size),
       frozenFrames,
       ...(histogram && { histogram }),
+      ...(drawn && { surface: drawn }),
     },
   };
 }
