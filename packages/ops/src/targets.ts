@@ -140,17 +140,26 @@ function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[])
 }
 
 /** The point of a ref (on the device's current screen), a selector or x,y. */
-export async function aim(s: Session, a: Aim, patient: boolean, words: Words) {
-  const { clean } = words;
+export async function aim(s: Session, a: Aim, words: Words) {
+  const { clean, offer } = words;
   if (a.ref) {
     const has = (x: Screen | undefined) => {
       const e = x?.list.find((e) => e.ref === a.ref);
       return e && x && { e, list: x.list };
     };
-    const found =
-      has(await s.justNow()) ??
-      (patient ? has((await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen) : undefined);
-    if (!found) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
+    // a read on a loaded device, or of an app not answering, can come back short of what the last one listed: the ref
+    // is waited for as a selector is, and one still not there is said with its words and what is there in their place
+    const first = await s.justNow();
+    const waited = has(first) ? undefined : await s.until((x) => !!has(x), NO_MATCH_WAIT_MS);
+    const found = has(first) ?? has(waited?.screen);
+    if (!found) {
+      const was = s.refWords.get(a.ref);
+      const now = waited?.screen ?? first;
+      throw new ToolError(
+        `${STALE}: ${a.ref}${was ? ` ${JSON.stringify(clean(was))}` : ''} is not on this screen${was ? offer(now.list, was) : ''}`,
+        'STALE',
+      );
+    }
     return aimedAt(found.e, clean, found.list);
   }
   if (a.selector) {

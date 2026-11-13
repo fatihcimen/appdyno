@@ -42,6 +42,20 @@ describe('act and read', () => {
     expect(r.text).toContain('stale ref');
   });
 
+  it('says what a ref that went away was, and what is there in its place', async () => {
+    const home = (await t.textOf('screen')).text;
+    const form = refOf(home, 'Form');
+    // the screen changed under the agent: another one is in front by the time it taps
+    await t.textOf('tap', { ref: form });
+    const r = await t.textOf('tap', { ref: form });
+    expect(r).toMatchObject({ error: true });
+    expect(r.text).toMatch(
+      new RegExp(
+        `^STALE: stale ref, read the screen again: ${form} "Form" is not on this screen; nearest: `,
+      ),
+    );
+  });
+
   it('answers a small change as a diff and an unchanged screen in one line', async () => {
     const home = (await t.textOf('screen')).text;
     const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;

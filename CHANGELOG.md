@@ -40,6 +40,7 @@ appdyno 1.0.1 fixes what driving seven builds of five open-source apps showed, a
 - `perf_scroll` says when the profile it takes of high jank failed or named no function, and says that it is taking one: an iOS profile ran three minutes, and its answer named nothing and said nothing.
 - `crashes` on iOS keeps the crashes of the app's own extensions, a widget among them, and names which: it kept only the app's own.
 - On iOS, an element of a web page has the focus only where it is a field: every one said `focused`.
+- A ref not on the screen is waited for a moment, as a selector is, before it is called stale, and the refusal says the words it had and what is nearest in their place: a read on a loaded device, of an app not responding, came back without a ref the screen had just listed, twice.
 - An iOS runner start that failed ends the runner app its xcodebuild was launching: it stayed running in the simulator.
 - `scroll_to` whose swipes brought no new rows into view says the list may be at its end that way, and to try the other: at a list's top, a pull to refresh moved the rows, and the answer said the list could still move and to raise `maxSwipes`.
 - On an iOS simulator, a tap's answer waits until a push has taken the old page away: at load 17 a SwiftUI push answered with the old page's elements still there, a third of the screen aside, beside the new page's.

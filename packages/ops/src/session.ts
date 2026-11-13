@@ -44,6 +44,9 @@ const inputsTo = new Map<string, number>();
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
  * newest read (refs resolve on it while no action came after it) and a count of actions.
  */
+/** How many refs' words a session keeps, the newest. */
+const REF_WORDS = 2_000;
+
 export class Session {
   /**
    * Reads until `met` holds or the time is up, the last read with it. On the device where the agent has
@@ -148,7 +151,19 @@ export class Session {
   /** The agent was shown this screen: the next diff is against it. */
   show(list: ScreenElement[]) {
     this.told = list;
+    for (const e of list) {
+      this.refWords.delete(e.ref);
+      this.refWords.set(e.ref, e.label);
+    }
+    // the newest kept: a ref is used on a screen or two after it was shown
+    for (const ref of this.refWords.keys()) {
+      if (this.refWords.size <= REF_WORDS) break;
+      this.refWords.delete(ref);
+    }
   }
+
+  /** The words of the refs the agent was shown, for a refusal of one no longer there. */
+  readonly refWords = new Map<string, string>();
 
   /** The version and layout of the last screenshot sent. */
   get shot() {

@@ -276,7 +276,7 @@ export function stepsFor(
   const words = wordsOf(clean);
   const { line, offer } = words;
   const target = (s: Session, a: Aim, patient = false) =>
-    pastKeyboard(s, a, (p) => aim(s, a, p, words), patient);
+    pastKeyboard(s, a, () => aim(s, a, words), patient);
   const scrolling = scrollingFor({
     windowSize,
     line,
