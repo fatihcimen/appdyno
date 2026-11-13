@@ -116,9 +116,15 @@ function findings(
   ];
 }
 
-/** A scroll whose rounds drew too few frames to judge, which is no pass. */
-const unjudged = (s: Session) =>
-  `nothing judged: no round drew the ${MIN_FRAMES} frames a share takes${s.device.platform === 'android' ? "; an app that draws on its own surface, as Flutter or a game engine does, draws past the frames counted here: perf_snapshot with also: ['surface'] reads them" : ''}`;
+/**
+ * A scroll whose rounds drew too few frames to judge, which is no pass; an app that draws on its own surface, as
+ * Flutter or a game engine does, draws past the frames counted here, and where the device reads that surface it says so.
+ */
+async function unjudged(s: Session, pkg: string) {
+  const surface = await s.device.measure.surfaceFrames(pkg).catch(() => undefined);
+  const drew = surface?.value.frames ?? 0;
+  return `nothing judged: no round drew the ${MIN_FRAMES} frames a share takes${drew > 0 ? `; the app's own surface drew ${drew} frames, which are not counted here: perf_snapshot with also: ['surface'] reads them` : ''}`;
+}
 
 export function perfScrollOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller } =
@@ -270,7 +276,11 @@ export function perfScrollOp(ctx: ServerContext) {
               `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
           ),
           `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}; frozen frames: ${frozen}`,
-          ...(notes.length ? notes : counted.length ? ['no threshold exceeded'] : [unjudged(s)]),
+          ...(notes.length
+            ? notes
+            : counted.length
+              ? ['no threshold exceeded']
+              : [await unjudged(s, pkg)]),
           ...(limits ? [limits] : []),
           ...play.lines,
           ...noisy(noise),

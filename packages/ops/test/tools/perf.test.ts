@@ -35,8 +35,8 @@ describe('perf tools', () => {
       value: {
         ...dev.measure,
         vitals: () => Promise.resolve({ value: { load: [1, 1, 1] }, raw: '', at }),
-        memory: async (app: string) => {
-          const m = await memory(app);
+        memory: async (...a: Parameters<typeof memory>) => {
+          const m = await memory(...a);
           return { ...m, value: { ...m.value, graphicsKb: 0 } };
         },
       },
@@ -178,12 +178,20 @@ describe('perf tools', () => {
           const f = await none(...a);
           return { ...f, value: { ...f.value, totalFrames: 0, jankyFrames: 0, jankyPercent: 0 } };
         },
+        surfaceFrames: () =>
+          Promise.resolve({
+            value: { layer: 'SurfaceView[dev.app]', frames: 127, fps: 49 },
+            raw: '',
+            at: new Date().toISOString(),
+          }),
       },
     });
     const t = await connect({}, dev);
     const r = await t.textOf('perf_scroll', { swipes: 2 });
     expect(r.text).toContain('nothing judged: no round drew the');
-    expect(r.text).toContain("perf_snapshot with also: ['surface']");
+    expect(r.text).toContain(
+      "the app's own surface drew 127 frames, which are not counted here: perf_snapshot with also: ['surface'] reads them",
+    );
     expect(r.text).not.toContain('no threshold exceeded');
   });
 
