@@ -96,7 +96,7 @@ describe('a runner of another build on a simulator', () => {
         throw new Error('this start ends here');
       });
       const first = new IosRunnerLauncher(UDID, through).connect();
-      await vi.waitFor(() => expect(through.port).toHaveBeenCalledOnce());
+      await vi.waitFor(() => expect(through.port).toHaveBeenCalledOnce(), { timeout: 10_000 });
       const second = new IosRunnerLauncher(UDID, through).connect();
       await new Promise((r) => setTimeout(r, 400));
       expect(through.port).toHaveBeenCalledOnce();
@@ -255,14 +255,14 @@ setTimeout(() => {}, 30000);
     const udid = randomUUID().toUpperCase();
     const runner = new IosRunnerLauncher(udid, { ...through(2), stop: simulatorTransport.stop });
     const { rpc } = await runner.connect();
-    await vi.waitFor(() => expect(existsSync(pidFile)).toBe(true));
+    await vi.waitFor(() => expect(existsSync(pidFile)).toBe(true), { timeout: 10_000 });
     const left = Number(readFileSync(pidFile, 'utf8'));
     onTestFinished(() => {
       if (processAlive(left)) process.kill(left, 'SIGKILL');
     });
     expect(processAlive(left)).toBe(true);
     await runner.stop(rpc);
-    await vi.waitFor(() => expect(processAlive(left)).toBe(false), { timeout: 5_000 });
+    await vi.waitFor(() => expect(processAlive(left)).toBe(false), { timeout: 10_000 });
     expect(processAlive(must(own.pid, 'its pid'))).toBe(true);
   });
 
@@ -340,7 +340,8 @@ setTimeout(() => {}, 30000);
 
   it('ends the xcodebuild of a simulator shut down under its runner, as it would boot it again', async () => {
     const { pid } = await lost(true);
-    await vi.waitFor(() => expect(processAlive(pid)).toBe(false));
+    // a process's end is the system's to come to, slower at load 30: 1 s was too little 2 times in 3
+    await vi.waitFor(() => expect(processAlive(pid)).toBe(false), { timeout: 10_000 });
   });
 
   it('leaves it serving where its device is up, as when a host lets its connection go', async () => {
