@@ -15,6 +15,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
+import type { Session } from '../session.js';
 import { moved } from '../scroll.js';
 import { ScrollOut } from './schemas.js';
 import { defineOp, ACT, reply, ToolError } from '../tool.js';
@@ -115,6 +116,10 @@ function findings(
   ];
 }
 
+/** A scroll whose rounds drew too few frames to judge, which is no pass. */
+const unjudged = (s: Session) =>
+  `nothing judged: no round drew the ${MIN_FRAMES} frames a share takes${s.device.platform === 'android' ? "; an app that draws on its own surface, as Flutter or a game engine does, draws past the frames counted here: perf_snapshot with also: ['surface'] reads them" : ''}`;
+
 export function perfScrollOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller } =
     perfTools(ctx);
@@ -166,31 +171,27 @@ export function perfScrollOp(ctx: ServerContext) {
         });
         return f && moved(was.list, (await s.read()).list) ? f : undefined;
       };
-      /** The first round, which a screen the swipes do not move, as a popup over the list, would read as smooth. */
-      const firstRound = async () => {
-        const was = await s.read();
-        const f = await framesOfRound();
-        if (moved(was.list, (await s.read()).list)) return f;
-        throw new ToolError(
-          'the swipes moved nothing on this screen, so no scroll was measured: a popup or a sheet over the list takes them, or there is no list',
-          'NOT_FOUND',
-          'read the screen, close what covers the list or open the one to measure, and call again',
-        );
-      };
       let ended = false;
       for (let r = 0; r < repeats; r++) {
         reportProgress(`scroll round ${r + 1} of ${repeats}`);
         const m0 = await readMemory(pkg);
-        // new rows are the cost a person feels, so a list goes on for as long as it moves, and one that has ended comes
-        // back for each round after; a first round that cannot is a screen that does not scroll, said as it is
-        let f = r === 0 ? await firstRound() : ended ? undefined : await roundThatMoved();
-        if (!f && r > 0) {
+        // new rows are the cost a person feels, so a list goes on for as long as it moves, and one at its end, the first
+        // round's too, comes back for each round after; a screen it moves neither way, as a popup over the list, would
+        // read as smooth, and is refused
+        let f = ended ? undefined : await roundThatMoved();
+        if (!f) {
           ended = true;
           await swipeBack();
           // at rest first, or the round would count the list's coasting
           await pause(COAST_SECONDS * 1_000);
           f = await roundThatMoved();
         }
+        if (!f && r === 0)
+          throw new ToolError(
+            'the swipes moved nothing on this screen, so no scroll was measured: a popup or a sheet over the list takes them, or there is no list',
+            'NOT_FOUND',
+            'read the screen, close what covers the list or open the one to measure, and call again',
+          );
         if (!f) break;
         const m1 = await readMemory(pkg);
         all.push(m0, f, m1);
@@ -269,7 +270,7 @@ export function perfScrollOp(ctx: ServerContext) {
               `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
           ),
           `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}; frozen frames: ${frozen}`,
-          ...(notes.length ? notes : ['no threshold exceeded']),
+          ...(notes.length ? notes : counted.length ? ['no threshold exceeded'] : [unjudged(s)]),
           ...(limits ? [limits] : []),
           ...play.lines,
           ...noisy(noise),

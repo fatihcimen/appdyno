@@ -151,6 +151,8 @@ function parse(op: Op, argv: string[]) {
     else if (flag === 'out') out = value;
     else if (type === 'number' || type === 'integer') args[key] = Number(value);
     else if (type === 'array' || type === 'object') args[key] = json(flag, value);
+    // the screen shows a ref with its @, which a hand typing it on the command line leaves out
+    else if (key === 'ref' && /^[a-z0-9]{1,10}(-\d{1,3})?$/.test(value)) args[key] = `@${value}`;
     else args[key] = value;
   }
   // an op that saves by name itself takes the format from it; bytes written here would be its reply's, and an image it

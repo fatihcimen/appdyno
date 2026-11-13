@@ -22,6 +22,12 @@
 - Maestro YAML'a aktarılan bir akış bir tuşun sayısını korur: `press_key back count=3` bir değil üç basıştır.
 - Android'de iki başlatıcı etkinliği olan bir uygulama, LeakCanary'li bir debug build gibi, açılır: sistem ikisini kendi seçicisine çözüyordu; `launch_app` uygulamanın yerine onu başlatıp uygulamayı ölmüş sayıyor, `perf_launch` da 0 ms'lik soğuk açılış ölçüyordu. Uygulamanın kendi etkinliklerinden manifestinde ilk adı geçen başlatılır.
 - `perf_launch` yalnızca sistemin istenen durumda ölçtüğü açılışları saklar ve değerlendirir: sistemin `UNKNOWN` dediği 0 ms'lik bir açılış ya da soğuk bir seride `WARM` diye ölçülen biri, medyana girmese de çalıştırmanın sayılarına ve en uzun açılışına giriyordu.
+- İki satıra bölünen bir web bağlantısına dokunuş, ilk satırının sonuna iner: kutusunun ortası satırlar arasındaki metindir; dokunuş indi deniyor ama hiçbir şey açılmıyordu.
+- Aynı kutuyu paylaşan bir web bağlantısıyla kendi metnine uyan seçici, tek hedef sayılır, bağlantı: iki öğeye uyduğu için reddediliyordu.
+- `perf_scroll`, hiçbir tur yeterince kare çizmediğinde, kendi yüzeyine çizen bir uygulamada (Flutter, bir oyun motoru) olduğu gibi, hiçbir şeyi değerlendirmediğini ve o kareleri neyin okuduğunu söyler: eşik aşılmadı diyordu.
+- `perf_scroll`, sonuna zaten gelmiş bir listeyi sonraki turlarda olduğu gibi ilk turda da geri getirir: üstünü açılır bir pencere örtmüş bir ekran gibi reddediliyordu.
+- Sistemin uygulamanın toplamı olmadan yanıtladığı bir bellek okuması, bir kez uygulama yanıt vermezken görüldü, yeniden sorulacak bir `TIMEOUT` olur ve sistemin ne dediğini taşır: kodsuz çıplak bir hataydı.
+- Komut satırında `--ref`, başına `@` yazılmadan verilen bir ref'i alır.
 
 ## 1.0.0
 

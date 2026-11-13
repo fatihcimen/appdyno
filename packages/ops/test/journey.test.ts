@@ -475,9 +475,17 @@ describe('a measure during a recording', () => {
       expect(r.text).toContain('1 of 3 rounds');
     });
 
-    it('still refuses a first round that moves nothing: that screen does not scroll', async () => {
+    it('brings back a list at its end before the first round, and measures it', async () => {
       const { call } = refusing([1]);
-      await expect(call('perf_scroll', { swipes: 2, repeats: 3 })).rejects.toThrow('nothing moved');
+      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      expect(rewound(r)).toEqual([true, true, true]);
+    });
+
+    it('still refuses a first round that moves nothing either way: that screen does not scroll', async () => {
+      const { call } = refusing([1, 2]);
+      await expect(call('perf_scroll', { swipes: 2, repeats: 3 })).rejects.toThrow(
+        'the swipes moved nothing on this screen',
+      );
     });
   });
 

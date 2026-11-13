@@ -7,6 +7,7 @@ import { parseExitInfo } from '../src/crashes.js';
 import { THERMAL_READ } from '../src/perf/app.js';
 import { AndroidPerf } from '../src/perf/index.js';
 import { launch } from '../src/perf/launch.js';
+import { memory } from '../src/perf/memory.js';
 import type { PerfDevice } from '../src/perf/shared.js';
 import { assertReadOnlySql, queryTrace, recordTrace } from '../src/perf/perfetto.js';
 import {
@@ -676,5 +677,21 @@ describe('a launch in a compile state', () => {
       launch(d, 'com.example.app', { compile: 'speed; reboot #' as CompileMode }),
     ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     expect(asked).toEqual([]);
+  });
+});
+
+describe('memory the system did not say', () => {
+  it('is a timeout to ask again, with what the system said, and no bare parse error', async () => {
+    const d = {
+      readyToMeasure: () => Promise.resolve(),
+      shell: () =>
+        Promise.resolve('Applications Memory Usage (in Kilobytes):\nUptime: 1 Realtime: 1\n'),
+    } as unknown as PerfDevice;
+    await expect(memory(d, 'com.example.app')).rejects.toMatchObject({
+      code: 'TIMEOUT',
+      message:
+        "the system's answer held no total of com.example.app's memory: Applications Memory Usage (in Kilobytes):",
+      hint: expect.stringContaining('ask again') as unknown,
+    });
   });
 });

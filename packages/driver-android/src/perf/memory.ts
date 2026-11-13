@@ -11,7 +11,7 @@ import {
   type HeapReading,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg } from '../adb.js';
+import { assertPkg, shortFirstLine } from '../adb.js';
 import { traceProcessor } from '../tools.js';
 import { type MemoryStats, parseAnonMemory, parseMeminfo, parseCsv } from './parse.js';
 import { type PerfDevice, sh, at, pidOf } from './shared.js';
@@ -43,6 +43,13 @@ export async function memory(
   const raw = await sh(d, `dumpsys meminfo ${pkg}`);
   if (/No process found/i.test(raw))
     throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`, 'launch it, then ask again');
+  // seen once on a loaded emulator, while the app was not responding, and the next ask had it
+  if (!/TOTAL PSS:|^\s*TOTAL\s+\d/m.test(raw))
+    throw new DeviceError(
+      'TIMEOUT',
+      `the system's answer held no total of ${pkg}'s memory: ${shortFirstLine(raw)}`,
+      'ask again: an app busy or not responding may not answer the system in time',
+    );
   const stats = parseMeminfo(raw);
   return { value: { ...stats, kb: stats.pssKb, kind: 'pss' }, raw, at: at() };
 }

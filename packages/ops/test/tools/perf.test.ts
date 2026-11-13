@@ -102,6 +102,42 @@ describe('perf tools', () => {
     expect(r.text).not.toContain('no threshold exceeded');
   });
 
+  it('scroll: a list at its end before the first round is brought back and measured', async () => {
+    const dev = new FakeDevice();
+    dev.listEnd = 2;
+    const up = {
+      kind: 'swipe',
+      from: { x: 540, y: 1600 },
+      to: { x: 540, y: 600 },
+      durationMs: 300,
+    } as const;
+    await dev.act(up);
+    await dev.act(up);
+    const t = await connect({}, dev);
+    const r = await t.textOf('perf_scroll', { swipes: 2 });
+    expect(r.text).toContain('round 1: 120 frames');
+    expect(r.text).toContain('round 1 ran after the list was brought back');
+  });
+
+  it('scroll: rounds that drew too few frames are judged by nothing, and no threshold is said to hold', async () => {
+    const dev = new FakeDevice();
+    const none = dev.measure.framesDuring.bind(dev.measure);
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        framesDuring: async (...a: Parameters<typeof none>) => {
+          const f = await none(...a);
+          return { ...f, value: { ...f.value, totalFrames: 0, jankyFrames: 0, jankyPercent: 0 } };
+        },
+      },
+    });
+    const t = await connect({}, dev);
+    const r = await t.textOf('perf_scroll', { swipes: 2 });
+    expect(r.text).toContain('nothing judged: no round drew the');
+    expect(r.text).toContain("perf_snapshot with also: ['surface']");
+    expect(r.text).not.toContain('no threshold exceeded');
+  });
+
   it('scroll: goes on into new rows for as long as the list moves', async () => {
     const dev = new FakeDevice();
     const t = await connect({}, dev);

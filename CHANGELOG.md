@@ -22,6 +22,12 @@
 - A flow exported to Maestro YAML keeps a key's count: `press_key back count=3` is three presses, not one.
 - On Android, an app with two launcher activities, as a debug build with LeakCanary has, starts: the system resolved them to its chooser, which `launch_app` started in the app's place and then took the app for dead, and `perf_launch` timed as a cold start of 0 ms. The first of the app's own is started, as its manifest names it.
 - `perf_launch` keeps and judges only the starts the system timed as the asked state: a start it called `UNKNOWN`, at 0 ms, or `WARM` in a cold series went into the run's numbers and its longest start, though not into its median.
+- A touch on a web link that wraps over two lines lands on its first line's end: the middle of its box is the text between the lines, so the touch was said to land and opened nothing.
+- A selector that matches a web link and its own text, which take the same box, is one target, the link: it was refused as matching two.
+- `perf_scroll` says it judged nothing where no round drew enough frames, as an app that draws on its own surface does (Flutter, a game engine), and where to read those: it said no threshold was exceeded.
+- `perf_scroll` on a list already at its end brings it back for the first round too, as it did for later ones: it was refused as a screen covered by a popup.
+- A memory read the system answered without the app's total, seen once while the app was not responding, is a `TIMEOUT` to ask again, with what the system said: it was a bare error with no code.
+- On the command line, `--ref` takes a ref typed without its `@`.
 
 ## 1.0.0
 

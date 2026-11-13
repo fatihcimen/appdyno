@@ -47,7 +47,16 @@ export function pick(hits: ScreenElement[], sel: SelectorOf, line: Words['line']
     a.rect.y >= b.rect.y &&
     a.rect.x + a.rect.width <= b.rect.x + b.rect.width &&
     a.rect.y + a.rect.height <= b.rect.y + b.rect.height;
-  const outer = hits.filter((a) => !hits.some((b) => inside(a, b)));
+  // a web link and its own text take the same box: each inside the other, and the one a touch acts on is the target
+  const boxed = new Map<string, ScreenElement>();
+  for (const e of hits) {
+    const box = `${e.rect.x},${e.rect.y},${e.rect.width},${e.rect.height}`;
+    const had = boxed.get(box);
+    if (!had || (!had.flags.includes('clickable') && e.flags.includes('clickable')))
+      boxed.set(box, e);
+  }
+  const placed = [...boxed.values()];
+  const outer = placed.filter((a) => !placed.some((b) => inside(a, b)));
   const hit =
     sel.index === undefined ? (outer.length === 1 ? outer[0] : undefined) : hits[sel.index];
   if (hit) return hit;
@@ -84,7 +93,7 @@ async function resolve(
   s: Session,
   sel: SelectorOf,
   { line, offer }: Words,
-): Promise<ScreenElement> {
+): Promise<{ e: ScreenElement; list: ScreenElement[] }> {
   const { screen, met } = await s.until((x) => selectIn(x.list, sel).length > 0, NO_MATCH_WAIT_MS);
   if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
   if (!met) {
@@ -95,13 +104,31 @@ async function resolve(
       why.hint ?? 'read the screen, or use scroll_to if it may be further along a list',
     );
   }
-  return pick(selectIn(screen.list, sel), sel, line);
+  return { e: pick(selectIn(screen.list, sel), sel, line), list: screen.list };
 }
 
 export type Aim = { ref?: string; x?: number; y?: number; selector?: SelectorOf };
 
+/**
+ * Where a touch on `e` lands: its middle, but on a web element over two lines, as a link that wraps, its first line's
+ * end, where the middle of its box is the text between the lines. A line is as tall as most of the page's elements.
+ */
+export function landing(e: ScreenElement, list: ScreenElement[]) {
+  if (!e.flags.includes('web')) return { x: e.x, y: e.y };
+  const heights = new Map<number, number>();
+  for (const w of list)
+    if (w.flags.includes('web') && w.label && w.rect.height > 0)
+      heights.set(w.rect.height, (heights.get(w.rect.height) ?? 0) + 1);
+  const [line] = [...heights].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0] ?? [];
+  if (!line || e.rect.height < line * 1.6 || e.rect.height > line * 2.6) return { x: e.x, y: e.y };
+  return {
+    x: Math.round(e.rect.x + e.rect.width - Math.max(4, line / 4)),
+    y: Math.round(e.rect.y + line / 2),
+  };
+}
+
 /** An element as a touch aims at it; the keyboard is listed whole, and a touch on it would type one key. */
-function aimedAt(e: ScreenElement, clean: Words['clean']) {
+function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[]) {
   if (e.ref === KEYBOARD_REF)
     throw new ToolError(
       `${KEYBOARD_REF} is the on-screen keyboard: type_text types, press_key enter presses its return key, and keyboard dismiss closes it`,
@@ -109,21 +136,27 @@ function aimedAt(e: ScreenElement, clean: Words['clean']) {
       undefined,
       false,
     );
-  return { point: { x: e.x, y: e.y }, name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
+  return { point: landing(e, list), name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
 }
 
 /** The point of a ref (on the device's current screen), a selector or x,y. */
 export async function aim(s: Session, a: Aim, patient: boolean, words: Words) {
   const { clean } = words;
   if (a.ref) {
-    const has = (x: Screen | undefined) => x?.list.find((e) => e.ref === a.ref);
-    const e =
+    const has = (x: Screen | undefined) => {
+      const e = x?.list.find((e) => e.ref === a.ref);
+      return e && x && { e, list: x.list };
+    };
+    const found =
       has(await s.justNow()) ??
       (patient ? has((await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen) : undefined);
-    if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
-    return aimedAt(e, clean);
+    if (!found) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
+    return aimedAt(found.e, clean, found.list);
   }
-  if (a.selector) return aimedAt(await resolve(s, a.selector, words), clean);
+  if (a.selector) {
+    const { e, list } = await resolve(s, a.selector, words);
+    return aimedAt(e, clean, list);
+  }
   if (a.x === undefined || a.y === undefined)
     throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
   return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };

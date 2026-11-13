@@ -132,6 +132,15 @@ describe('commands from the operations', () => {
     expect(notes.err[0]).toContain('a .png, .jpg or .jpeg');
   });
 
+  it('takes a ref typed without its @', async () => {
+    const screen = (await run('screen')).out.join('\n');
+    const ref = must(/@([a-z0-9]+) /.exec(screen)?.[1], 'a ref');
+    const tap = await run('tap', '--ref', ref, '--read', 'none');
+    expect(tap.err).toEqual([]);
+    expect(tap.code).toBe(0);
+    expect(device.calls.at(-1)?.name).toBe('act');
+  });
+
   it('takes the arguments as JSON', async () => {
     const r = await run('steps', '--json', '{"steps":[{"action":"tap","x":100,"y":350}]}');
     expect(r.code).toBe(0);

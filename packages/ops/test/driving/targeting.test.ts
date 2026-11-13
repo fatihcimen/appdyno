@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import { connect, act, withScreen } from './shared.js';
+import { landing } from '../../src/targets.js';
 
 describe('targeting', () => {
   it('taps by a selector, folding Turkish and accents, on a fresh read', async () => {
@@ -46,6 +47,21 @@ describe('targeting', () => {
     expect(act(d)).toEqual([]);
     await call('tap', { selector: { text: 'row', index: 1 } });
     expect(act(d).at(-1)).toMatchObject({ y: 350 });
+  });
+
+  it('takes a link and its own text in the same box as one target, the link', async () => {
+    withScreen('article', [
+      { c: 'android.webkit.WebView', b: [0, 0, 1080, 2000] },
+      { c: 'android.widget.TextView', t: 'Hagia Sophia', p: 0, b: [400, 1740, 590, 1800] },
+      { c: 'android.view.View', t: 'Hagia Sophia', p: 0, f: 19, b: [400, 1740, 590, 1800] },
+    ]);
+    const d = new FakeDevice();
+    d.screen = 'article';
+    const { call } = await connect(d);
+    const r = await call('tap', { selector: { text: 'Hagia Sophia' } });
+    expect(r.error).toBe(false);
+    expect(r.text).toMatch(/^tapped @\w+ "Hagia Sophia"/);
+    expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 495, y: 1770 });
   });
 
   it('names the row each of many matches is in, ten of them, and how many more', async () => {
@@ -230,5 +246,42 @@ describe('find and assert', () => {
     expect(must.text).toContain('reads "Agree", which it must not');
     const gone = await call('assert', { selector: { text: 'Agree' }, check: 'absent' });
     expect(gone.text).toContain('is on the screen');
+  });
+});
+
+describe('where a touch lands', () => {
+  const web = (label: string, x: number, y: number, width: number, height: number) => ({
+    ref: `@${label.length}`,
+    role: 'text',
+    label,
+    name: label,
+    nameKind: 'label' as const,
+    rect: { x, y, width, height },
+    x: Math.round(x + width / 2),
+    y: Math.round(y + height / 2),
+    flags: ['web' as const, 'clickable' as const],
+  });
+  // the article's own boxes: lines of 50, a link that wraps over two lines of 903 by 115
+  const page = [
+    web('which was built during the reign of', 162, 1776, 630, 50),
+    web('Justinian I', 788, 1776, 189, 50),
+    web('Nika riots', 451, 2238, 176, 50),
+    web('Byzantine Empire', 43, 1275, 879, 118),
+  ];
+
+  it('is the middle of an element on one line', () => {
+    const one = must(page[1], 'a link');
+    expect(landing(one, page)).toEqual({ x: one.x, y: one.y });
+  });
+
+  it("is the first line's end of a web link that wraps over two, as the middle of its box is the text between", () => {
+    const link = web('Hagia Sophia', 43, 1712, 903, 115);
+    // "Hagia" ends the first line at 840 to 945, 1712 to 1762: the middle (494, 1769) is plain text
+    expect(landing(link, [...page, link])).toEqual({ x: 934, y: 1737 });
+  });
+
+  it('is the middle of a native element whatever its height', () => {
+    const tall = { ...web('Card', 0, 0, 1000, 115), flags: ['clickable' as const] };
+    expect(landing(tall, page)).toEqual({ x: tall.x, y: tall.y });
   });
 });
