@@ -59,7 +59,8 @@ describe('a screen settling after a launch or a link', () => {
     const r = await session.settle(200, 3_000);
     expect(r.settled).toBe(true);
     expect(calls.reads).toBe(2);
-    expect(Date.now() - start).toBeLessThan(700);
+    // under what a read, a 200 ms pause and two reads more take: 713 ms on a GitHub runner for these two
+    expect(Date.now() - start).toBeLessThan(950);
   });
 
   it('counts the window from the last change of layout', async () => {
