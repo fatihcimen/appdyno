@@ -1,6 +1,7 @@
-# SwiftLint for the iOS runner, its core and the fixture, run with --strict: a warning fails as an error does.
+# SwiftLint for the iOS runner, its core, the fixture and the shop example, run with --strict: a warning fails as an error does.
 included:
   - ios
+  - docs/examples/shop
 excluded:
   - ios/RunnerCore/.build
   - ios/.derived

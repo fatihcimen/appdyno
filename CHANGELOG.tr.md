@@ -7,6 +7,7 @@
 ### Değişti
 
 - README hızlı bir başlangıçla açılıyor: tek komut, tek istek ve gerçek bir yanıt.
+- Bir alışveriş örneği, [`docs/examples/shop`](docs/examples/shop/README.tr.md): ödemesinde bırakılmış bir çökmesi olan küçük bir iOS uygulaması, onu bulan akış ve akışın geçtiği tek satırlık düzeltme. README'nin ilk çalıştırması ve hızlı başlangıcının yanıtı ondandır.
 - README, appdyno'yu açık kaynak uygulamalarda gösteriyor: Wikipedia'nın debug build'iyle bir çalıştırma ve beş uygulamanın yedi build'inden ölçtükleri.
 - Ölçülen bir akışın senaryosu artık yalnızca dosyanın adından değil, deposundaki yolundan adlandırılır: `flows/login.flow` için `journey-flows-login`. 1.0.0'ın `journey-login` altında sakladığı bir baseline'ın yeni adla yeniden saklanması gerekir.
 - Kapı, ne baseline'ı ne bütçesi olan, yani hiçbir şeyin karar vermediği bir senaryo için 1 ile çıkar: geçiyordu ve yalnızca çıkış koduna bakan bir job hiçbir karşılaştırma yapılmadan yeşil oluyordu. Baseline'ı olan bir senaryoya eklenen bir adım `new` olarak geçmeye devam eder.

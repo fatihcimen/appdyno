@@ -15,5 +15,6 @@ packages/appdyno/THIRD_PARTY_NOTICES
 ios/*/.build/
 ios/.derived/
 ios/.derived-device/
+docs/examples/shop/build/
 .DS_Store
 .app-build/

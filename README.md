@@ -21,7 +21,7 @@
 
 </div>
 
-![A real run: a terminal of MCP tool calls drives an iPhone simulator in the appdyno hub, which turns the phone to dark mode and back and scrolls Settings, while the Performance pane reads frames, CPU and memory](docs/images/demo.webp)
+![A real run: a terminal of MCP tool calls goes through the checkout of the shop example on an iPhone simulator in the appdyno hub, three bags of coffee beans into the cart and on to Place order, which takes the app down, and the answer says it died, with its last log line: Fatal error: Index out of range](docs/images/checkout.webp)
 
 <p align="center"><sub>A real run, not a mock-up: an MCP client makes the calls in the terminal, with their real times, while the hub shows the phone and reads it.</sub></p>
 
@@ -41,14 +41,16 @@ Restart the client, start a simulator or an emulator or connect a phone, and ask
 
 > Open my app, go through checkout, and tell me what breaks.
 
-Each step answers with what the device showed. When a tap takes the app down, that same answer says so, with the crash and the app's last log lines. A real one, from this repository's test app on an iPhone simulator:
+Each step answers with what the device showed. When a tap takes the app down, that same answer says so, with the crash and the app's last log lines. A real one, from this repository's [shop example](docs/examples/shop/README.md) on an iPhone simulator, where three of one product take the order down:
 
 ```text
-APP_NOT_RUNNING: tapped @9p29 "Crash"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Fixture-….ips)
+APP_NOT_RUNNING: tapped @7rwa "Place order"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Shop-….ips)
 its last log lines:
-2026-11-12 22:46:57.485 Df Fixture[80069:c58417] (libswiftCore.dylib) Fixture/ListScreen.swift:20: Fatal error: fixture crash
+2026-11-13 15:04:41.624 Df Shop[46315:14884fe] (libswiftCore.dylib) Swift/ContiguousArrayBuffer.swift:695: Fatal error: Index out of range
   launch_app starts it again, and crashes says why it died
 ```
+
+`crashes` then names the function, `discount(forQuantity:)`, and the same checkout saved as a flow fails in CI until the bug is fixed.
 
 Ask it as well to send your app a push, to open each link your app opens, or to measure its cold launch and keep it as a baseline. `npx -y appdyno doctor` says what this Mac is missing, and [Install](#install) covers a phone, the Mac app and any other client.
 

@@ -7,6 +7,7 @@
 ### Changed
 
 - The README starts with a quick start: one command, one ask, and a real answer.
+- A shop example, [`docs/examples/shop`](docs/examples/shop/README.md): a small iOS app with a crash left in its checkout, the flow that finds it, and the one-line fix after which the flow passes. The README's first run and its quick start's answer are of it.
 - The README shows appdyno on open-source apps: a run of Wikipedia's debug build, and what it measured of seven builds of five apps.
 - A measured flow's scenario is named by the file's path in its repository, `journey-flows-login` for `flows/login.flow`, and no longer by its name alone. A baseline 1.0.0 kept under `journey-login` needs keeping again under the new name.
 - The gate exits 1 for a scenario with neither a baseline nor a budget, which nothing judged: it passed, and a job that read only the exit code went green with no comparison made. A step put into a scenario that has a baseline still passes as `new`.

@@ -33,6 +33,15 @@ Look things up here.
 | [CI and releases](reference/ci.md)                            | every check, the device suites, how a release is made                          |
 | [The strict lint](reference/lint.md)                          | how the code meets a type-checked rule that leaves a choice                    |
 
+## Examples
+
+Each one runs as it is.
+
+| example                                   | try it to                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| [Shop](examples/shop/README.md)           | find the crash in a checkout with an agent, then keep it fixed with a flow |
+| [`perf-gate.yml`](examples/perf-gate.yml) | fail a pull request that makes the app slower, on a GitHub runner          |
+
 ## How it works
 
 [Architecture](architecture.md) says how the parts fit and why, for someone about to change them.

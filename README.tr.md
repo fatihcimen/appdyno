@@ -21,7 +21,7 @@
 
 </div>
 
-![Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub'ındaki bir iPhone simülatörünü yönetiyor; telefonu karanlık moda alıp geri getiriyor, Ayarlar'ı kaydırıyor, bu sırada Performans paneli kare, CPU ve bellek değerlerini okuyor](docs/images/demo.webp)
+![Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub'ındaki bir iPhone simülatöründe alışveriş örneğinin ödemesinden geçiyor; sepete üç paket kahve çekirdeği koyup Place order'a geliyor, bu uygulamayı düşürüyor ve yanıt öldüğünü son log satırıyla söylüyor: Fatal error: Index out of range](docs/images/checkout.webp)
 
 <p align="center"><sub>Kurgu değil, gerçek bir çalıştırma: çağrıları bir MCP istemcisi yapıyor, süreler gerçek. Hub ise telefonu gösteriyor ve okuyor. Kayıt İngilizce arayüzle alındı; uygulama Türkçe de çalışır.</sub></p>
 
@@ -41,14 +41,16 @@ npx -y appdyno install     # appdyno'yu bu Mac'teki MCP istemcilerine ekler, han
 
 > Uygulamamı aç, ödeme adımlarından geç ve neyin bozulduğunu söyle.
 
-Her adım, cihazın gösterdiğiyle yanıt verir. Bir dokunuş uygulamayı çökertirse aynı yanıt bunu çökmeyle ve uygulamanın son log satırlarıyla birlikte söyler. Bu deponun test uygulamasından, bir iPhone simülatöründe alınmış gerçek bir yanıt:
+Her adım, cihazın gösterdiğiyle yanıt verir. Bir dokunuş uygulamayı çökertirse aynı yanıt bunu çökmeyle ve uygulamanın son log satırlarıyla birlikte söyler. Bu deponun [alışveriş örneğinden](docs/examples/shop/README.tr.md), bir iPhone simülatöründe alınmış gerçek bir yanıt; bir üründen üç tane siparişi düşürüyor:
 
 ```text
-APP_NOT_RUNNING: tapped @9p29 "Crash"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Fixture-….ips)
+APP_NOT_RUNNING: tapped @7rwa "Place order"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Shop-….ips)
 its last log lines:
-2026-11-12 22:46:57.485 Df Fixture[80069:c58417] (libswiftCore.dylib) Fixture/ListScreen.swift:20: Fatal error: fixture crash
+2026-11-13 15:04:41.624 Df Shop[46315:14884fe] (libswiftCore.dylib) Swift/ContiguousArrayBuffer.swift:695: Fatal error: Index out of range
   launch_app starts it again, and crashes says why it died
 ```
+
+Ardından `crashes` fonksiyonun adını verir, `discount(forQuantity:)`; aynı ödeme bir akış olarak kaydedildiğinde de hata düzeltilene kadar CI'da başarısız olur.
 
 Ajandan uygulamanıza bir push göndermesini, uygulamanızın açtığı her bağlantıyı açmasını ya da soğuk açılışını ölçüp baseline olarak saklamasını da isteyebilirsiniz. `npx -y appdyno doctor` bu Mac'te neyin eksik olduğunu söyler; [Kurulum](#kurulum) telefonu, Mac uygulamasını ve diğer istemcileri anlatır.
 

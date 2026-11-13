@@ -1,0 +1,14 @@
+# Three of one product, then the order: what the shop's bug stops, and what passes once it is fixed
+app dev.appdyno.shop
+tag smoke
+
+stop
+launch
+tap text="Coffee beans"
+tap text="Add to cart"
+tap text="Add to cart"
+tap text="Add to cart"
+tap text="Cart (3)"
+tap text="Checkout"
+tap text="Place order"
+assert text="Order placed: $41.33"

@@ -33,6 +33,15 @@ Bir şeye bakmak için burası.
 | [CI ve sürümler](reference/ci.tr.md)                       | her denetim, cihaz suite'leri, bir sürümün nasıl yapıldığı                                        |
 | [Sıkı lint](reference/lint.tr.md)                          | kodun, bir seçim bırakan tipe dayalı bir kuralı nasıl karşıladığı                                 |
 
+## Örnekler
+
+Her biri olduğu gibi çalışır.
+
+| örnek                                     | şunun için deneyin                                                               |
+| ----------------------------------------- | -------------------------------------------------------------------------------- |
+| [Shop](examples/shop/README.tr.md)        | bir ödemedeki çökmeyi bir ajanla bulmak, sonra bir akışla düzeltilmiş tutmak     |
+| [`perf-gate.yml`](examples/perf-gate.yml) | uygulamayı yavaşlatan bir pull request'i bir GitHub runner'ında başarısız saymak |
+
 ## Nasıl çalışır
 
 [Mimari](architecture.tr.md), parçaların nasıl ve neden birleştiğini, onları değiştirmek üzere olan kişi için anlatır.
