@@ -143,7 +143,7 @@ describe('a journey as a performance scenario', () => {
     expect(await newestRun(measurements)).toBeDefined();
   });
 
-  it('keeps no time for a step that never settled, and no whole for its iteration', async () => {
+  it('counts a step that never settled, and its whole, at the deadline, which it took at least', async () => {
     const { device, call, measurements } = phone();
     const r0 = call('flow', { action: 'run', file: flowFile(), iterations: 5 });
     // the warm-up settles, and the first two iterations do not
@@ -156,31 +156,31 @@ describe('a journey as a performance scenario', () => {
     const r = await r0;
     const run = await newestRun(measurements);
     const form = must(named(run, '02_tap_text_Form.ms'), 'the step');
-    expect(form.samples).toHaveLength(3);
-    expect(Math.max(...form.samples)).toBeLessThan(500);
-    expect(named(run, 'journey.total_ms')?.samples).toHaveLength(3);
+    expect(form.samples).toHaveLength(5);
+    // the two that ran to the deadline are the two longest, and alike
+    const [a, b, ...rest] = form.samples;
+    expect(a).toBe(b);
+    for (const x of rest) expect(x).toBeLessThan(must(a, 'a capped time'));
+    expect(named(run, 'journey.total_ms')?.samples).toHaveLength(5);
     expect(named(run, 'journey.unsettled')?.samples).toEqual([1, 1, 0, 0, 0]);
     expect(r.data.journey?.steps[1]).toMatchObject({ unsettled: 2 });
-    expect(r.data.journey?.steps[1]?.ms).toBeLessThan(500);
     expect(r.data.journey?.note).toContain('step 2 never settled in 2 of 5');
-    expect(r.text).toContain('(never settled in 2 of 5)');
-    expect(r.text).toContain('as what ended them was the deadline');
+    expect(r.text).toContain('(never settled in 2 of 5: counted at the deadline)');
+    expect(r.text).toContain('at the deadline, which it took at least');
   });
 
-  it('says a step that never settled at all as no time, with no number to mistake for one', async () => {
+  it('says a step that never settled at all at its deadline, and that it was so', async () => {
     const { device, call, measurements } = phone();
     device.formNeverSettles = Infinity;
     const r = await call('flow', { action: 'run', file: flowFile(), iterations: 5 });
     const run = await newestRun(measurements);
-    expect(named(run, '02_tap_text_Form.ms')).toBeUndefined();
-    expect(named(run, 'journey.total_ms')).toBeUndefined();
-    expect(run[0]?.kind).toBe('journey.unsettled');
-    const j = must(r.data.journey, 'the journey');
-    expect(j.totalMs).toBeUndefined();
-    expect(j.samples).toEqual([]);
-    expect(must(j.steps[1], 'its second step').ms).toBeUndefined();
-    expect(r.text).toContain('no whole: none settled at every step');
-    expect(r.text).toMatch(/2\. tap text="Form": no time \(never settled in 5 of 5\)/);
+    const form = must(named(run, '02_tap_text_Form.ms'), 'the step');
+    expect(new Set(form.samples).size).toBe(1);
+    expect(named(run, 'journey.total_ms')?.samples).toHaveLength(5);
+    expect(run[0]?.kind).toBe('journey.total_ms');
+    expect(r.text).toMatch(
+      /2\. tap text="Form": [\d,]+ ms \(never settled in 5 of 5: counted at the deadline\)/,
+    );
   });
 
   it('calls a step that stopped settling a regression, though it left no time to compare', async () => {

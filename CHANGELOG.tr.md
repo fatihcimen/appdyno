@@ -18,7 +18,7 @@
 - İki klasördeki aynı adlı iki akış, örneğin `login/smoke.flow` ve `checkout/smoke.flow`, artık bir hatanın ekran görüntüsünü ve ağacını, JUnit case'ini ya da performans senaryosunu paylaşmaz.
 - Bir simülatörde, açılıştan hemen sonraki bir dokunuş, uygulamanın öne geldiğini runner gördüğünde de, yardımcının gördüğünde olduğu gibi, uygulamanın açılmasını bekler: runner'ın ilk başlangıcında, CI'da olduğu gibi, dokunuş açılış sırasında gidip kayboluyordu ve akışın sonraki adımı başarısız oluyordu.
 - Bir iPhone'da ya da simülatörde bir uygulamayı durdurmak, yüklü bir Mac'te yeni açılmış runner, uygulamanın önden çekilip çekilmediği sorusunu yanıtlamadığında artık başarısız olmaz: uygulama durdurulmuştu ve bir CI runner'ının ilk `stop`'u bu yüzden 15 sn sonra başarısız oluyordu.
-- Bir adımı süre sınırı içinde durulmayı bırakan bir yolculuk, o adımda, adıyla bir gerilemedir: yanıt yalnızca `journey.unsettled`'ın arttığını söylüyordu.
+- Bir yolculuğun hiç durulmayan adımı da, yinelemesinin bütünü de, en az o kadar sürdükleri aracın süre sınırında sayılır: süre tutmuyordu, bu yüzden sınırı aşacak kadar yavaşlayan bir adım karar için çok az örnek bırakıyordu ve yanıt yalnızca `journey.unsettled`'ın arttığını söylüyordu. Artık o adımda, adıyla bir gerilemedir; bir pencere de böyle bir yolculuğu en az süresiyle söyler.
 - Maestro YAML'a aktarılan bir akış bir tuşun sayısını korur: `press_key back count=3` bir değil üç basıştır.
 
 ## 1.0.0

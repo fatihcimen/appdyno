@@ -174,12 +174,19 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       });
       const { journey: ran } = flow.output.parse(data) as { journey?: JourneyAnswer };
       if (!ran) throw new Error('that flow kept no journey');
+      // a step that never settled is counted at its deadline: the whole took at least that
+      const capped = ran.steps.some((x) => x.unsettled);
       return {
         ran,
         said: {
           title: 'Journey',
-          value: ran.totalMs === undefined ? 'not measured' : `${Math.round(ran.totalMs)} ms`,
-          flagged: ran.totalMs === undefined,
+          value:
+            ran.totalMs === undefined
+              ? 'not measured'
+              : capped
+                ? `at least ${Math.round(ran.totalMs)} ms`
+                : `${Math.round(ran.totalMs)} ms`,
+          flagged: ran.totalMs === undefined || capped,
           ...judged(ran.scenario, `median of ${ran.iterations}`, {
             virtualDevice: device.virtual,
             noise: ran.noise,

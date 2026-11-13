@@ -18,7 +18,7 @@
 - Two flows of one name in two folders, such as `login/smoke.flow` and `checkout/smoke.flow`, no longer share their failure's screenshot and tree, their JUnit case or their performance scenario.
 - On a simulator, a touch right after a launch waits out the app's opening when the runner saw the app come to the front, as it already did when the helper saw it: on a runner's first start, as in CI, the touch went out during the opening and was lost, and the flow's next step failed.
 - On an iPhone or a simulator, stopping an app no longer fails when the runner, just come up on a loaded Mac, does not answer the look at whether the app left the front: the app was stopped, and a CI runner's first `stop` failed on it after 15 s.
-- A journey whose step stopped settling within its deadline is a regression at that step, by name: the answer said only that `journey.unsettled` had gone up.
+- A journey's step that never settled is counted, and its iteration's whole, at the tool's deadline, which it took at least: it kept no time, so a step slowed past the deadline left too few samples to call, and the answer said only that `journey.unsettled` had gone up. It is now a regression at that step, by name, and a window says such a journey as at least its time.
 - A flow exported to Maestro YAML keeps a key's count: `press_key back count=3` is three presses, not one.
 
 ## 1.0.0

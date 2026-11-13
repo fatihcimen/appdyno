@@ -77,12 +77,14 @@ function journeyReader(s: Session) {
     const line = e.result.step;
     const kind = (what: string) => journeyKind(e.n, line, what);
     const { ms, throughHost } = stepTime(e.step.action, e.result);
-    // a step that never settled answers at the tool's own deadline: that is the cap, and no time of the app's
-    if (e.result.settled === false) raw.push(`# ${line}: never settled, gave up at ${ms} ms`);
-    else {
-      add(kind('ms'), 'ms', ms, throughHost);
-      raw.push(`# ${line}: ${ms} ms`);
-    }
+    // a step that never settled answers at the tool's own deadline, which it took at least: counted so, it says slower
+    // as surely as its own time would, and it can make no change look better than it was
+    add(kind('ms'), 'ms', ms, throughHost);
+    raw.push(
+      e.result.settled === false
+        ? `# ${line}: never settled, gave up at ${ms} ms`
+        : `# ${line}: ${ms} ms`,
+    );
     const frames = await read('frames', () => source.frames(app));
     if (frames?.totalFrames) {
       // from one set of frames: the summary's p95 is of a wider span, in its buckets, and can pass the rows' worst
@@ -142,7 +144,6 @@ export async function measureJourney(
     const unsettled = result.steps.filter((r) => r.settled === false);
     for (const r of unsettled) neverSettled.set(r.n, (neverSettled.get(r.n) ?? 0) + 1);
     reader.add(JOURNEY_UNSETTLED, 'count', unsettled.length);
-    if (unsettled.length > 0) continue;
     reader.add(
       JOURNEY_TOTAL,
       'ms',
@@ -210,7 +211,7 @@ export async function measureJourney(
       : []),
     ...(neverSettled.size
       ? [
-          `${[...neverSettled].map(([n, times]) => `step ${n} never settled in ${times} of ${passed}`).join(', ')}: those iterations keep no time for it and no whole, as what ended them was the deadline`,
+          `${[...neverSettled].map(([n, times]) => `step ${n} never settled in ${times} of ${passed}`).join(', ')}: those iterations count it, and the whole, at the deadline, which it took at least`,
         ]
       : []),
   ];
@@ -239,7 +240,7 @@ export const journeyText = (j: JourneyAnswer) =>
     `${j.scenario}: ${j.iterations} iterations, a first one left out, ${j.totalMs === undefined ? 'no whole: none settled at every step' : `${shown(j.totalMs)} ms in all`}`,
     ...j.steps.map(
       (x, i) =>
-        `${i + 1}. ${x.step}: ${x.ms === undefined ? 'no time' : `${shown(x.ms)} ms`}${x.unsettled ? ` (never settled in ${x.unsettled} of ${j.iterations})` : ''}${x.framesP95Ms === undefined ? '' : `, frames p95 ${x.framesP95Ms} ms`}${x.framesWorstMs === undefined ? '' : `, worst ${x.framesWorstMs} ms`}${x.memoryKb === undefined ? '' : `, memory ${(x.memoryKb / 1024).toFixed(1)} MB`}`,
+        `${i + 1}. ${x.step}: ${x.ms === undefined ? 'no time' : `${shown(x.ms)} ms`}${x.unsettled ? ` (never settled in ${x.unsettled} of ${j.iterations}: counted at the deadline)` : ''}${x.framesP95Ms === undefined ? '' : `, frames p95 ${x.framesP95Ms} ms`}${x.framesWorstMs === undefined ? '' : `, worst ${x.framesWorstMs} ms`}${x.memoryKb === undefined ? '' : `, memory ${(x.memoryKb / 1024).toFixed(1)} MB`}`,
     ),
     ...(j.note ? [j.note] : []),
     ...(j.noise.length ? [`noise: ${j.noise.join(', ')}`] : []),
