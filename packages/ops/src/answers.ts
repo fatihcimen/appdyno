@@ -13,8 +13,8 @@ import {
   type ScreenDiff,
   type SystemAlert,
 } from '@appdyno/core';
-import { SETTLE_DEFAULT, type ActResult, type TextResult } from '@appdyno/protocol';
-import { aimedApp, appDeath, diedRefusal, pidInAnswer, watched } from './app-death.js';
+import { DeviceError, SETTLE_DEFAULT, type ActResult, type TextResult } from '@appdyno/protocol';
+import { aimedApp, appDeath, diedRefusal, endedUnder, pidInAnswer, watched } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
@@ -278,8 +278,23 @@ async function act(
     (read !== 'none' && s.appId
       ? await s.device.appPid?.(s.appId).catch(() => undefined)
       : undefined);
-  // a crash under the action is said once its process goes, where the device's answer could wait for long
-  const action = () => run(opts).catch(refusedAction);
+  // a crash under the action is said once its process goes, where the device's answer could wait for long; the device's
+  // own read after the touch can fail first, as the app it reads has just died (an iOS runner's lost connection to it)
+  const action = () =>
+    run(opts).catch(async (e: unknown) => {
+      const app = s.appId;
+      if (app && read !== 'none' && e instanceof DeviceError && e.code === 'APP_NOT_RUNNING') {
+        const died = await endedUnder(s, app, pid, started, clean);
+        if (died)
+          throw await diedRefusal(s, app, typeof done === 'string' ? done : '', died, {
+            wasPid: pid,
+            since: started,
+            clean,
+            cleanLog,
+          });
+      }
+      return refusedAction(e);
+    });
   const { result: r, aimedAt } = await s.aiming((): Promise<ActResult> =>
     read !== 'none' && s.appId && (pid || inFront(s))
       ? watched(s, action, {

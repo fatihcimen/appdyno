@@ -20,7 +20,8 @@ const REPORT_GAP_MS = 700;
 type Clean = (s: string) => string;
 
 /** Why the app ended, and the report that says so; `held`: by its crash dialog, which none is written before. */
-export type Died = { reason: string; file?: string; held?: true };
+/** `unreported`: no report has come of it yet, which the system may still write. */
+export type Died = { reason: string; file?: string; held?: true; unreported?: true };
 
 /**
  * The app a death is looked for in: the one selected, else the one in front as the action aimed, which a launch or a
@@ -82,7 +83,9 @@ async function deathOf(
       reason: 'the system holds its process for its crash dialog, and no crash report says why yet',
       held: true,
     };
-  return seen.pid ? undefined : { reason: 'its process is gone and no crash report says why' };
+  return seen.pid
+    ? undefined
+    : { reason: 'its process is gone, and no crash report says why yet', unreported: true };
 }
 
 /** The process an action's answer names, 0 for none, where it was asked for one: an older agent names none. */
@@ -93,7 +96,10 @@ export const pidInAnswer = (asked: string | undefined, r: { pid?: number | undef
 export const diedHint = (d: Died) =>
   d.held
     ? 'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after'
-    : 'launch_app starts it again, and crashes says why it died';
+    : d.unreported
+      ? // a simulator on a loaded Mac wrote its report a minute after the end
+        'launch_app starts it again, and crashes says why it died once the system has written its report, which can take a minute'
+      : 'launch_app starts it again, and crashes says why it died';
 
 /** An answer's line of the app's end. */
 export const diedLine = ({ reason, file }: Died) =>
@@ -197,6 +203,21 @@ async function deathWhile(
       : 'the app went away during the action: looking for its crash report',
   );
   return deathOf(s, app, since, clean, { held, pid });
+}
+
+/**
+ * The app's end under an action whose own answer failed as the app it was reading ended (an iOS runner that lost it):
+ * its process gone, else a report since the action began, looked for as long as one takes to be written. No read of
+ * the screen goes with it, as that is what failed.
+ */
+export async function endedUnder(
+  s: Session,
+  app: string,
+  wasPid: string | undefined,
+  since: number,
+  clean: Clean,
+) {
+  return (await deathWhile(s, app, wasPid, since, clean)) ?? reportOf(s, app, since, clean);
 }
 
 /** Lines that say why, the surest first: a stack's head, where its tail says only where. */

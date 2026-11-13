@@ -1,4 +1,5 @@
 import type { Device } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boundLines } from '../src/diagnose.js';
 import { DEFAULT_POLICY, redactLog } from '../src/policy.js';
@@ -232,7 +233,45 @@ describe('crashes', () => {
     device.running = false;
     device.permissionUp = true;
     const again = await call('tap', { x: 5, y: 2390 });
-    expect(again.text).toContain('the app died: its process is gone and no crash report says why');
+    expect(again.text).toContain(
+      'the app died: its process is gone, and no crash report says why yet',
+    );
+    // a report may come later, and crashes reads it then
+    expect(again.text).toContain(
+      'crashes says why it died once the system has written its report, which can take a minute',
+    );
+  });
+
+  it("says the app died where the device's own read after the touch failed as it died", async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    await call('screen');
+    const act = device.act.bind(device);
+    device.act = async (...a: Parameters<FakeDevice['act']>) => {
+      await act(...a);
+      device.running = false;
+      // a simulator writes its report some seconds after the end: none at the first look
+      let looked = 0;
+      device.crashes = (q) =>
+        Promise.resolve({
+          reports: (looked++ < 1
+            ? []
+            : [{ at: 'now', reason: 'EXC_BREAKPOINT SIGTRAP', file: '/tmp/Shop.ips' }]
+          ).slice(0, q.limit),
+          source: 'fake reports',
+        });
+      // the runner's read of an app that ended under it
+      throw new DeviceError(
+        'APP_NOT_RUNNING',
+        'the screen could not be read: Lost connection to the application',
+      );
+    };
+    device.logLines = ['Shop: Fatal error: Index out of range'];
+    const r = await call('tap', { x: 5, y: 2390 });
+    expect(r.text).toContain(
+      'the app died: EXC_BREAKPOINT SIGTRAP (/tmp/Shop.ips)\nits last log lines:\nShop: Fatal error: Index out of range',
+    );
+    expect(r).toMatchObject({ isError: true, structuredContent: { code: 'APP_NOT_RUNNING' } });
   });
 
   it('says no app died of one a link opened another app over, where it never ran', async () => {
@@ -251,7 +290,7 @@ describe('crashes', () => {
     // a launch of it that leaves it gone, with no report, is a death at its start
     const launched = await call('launch_app');
     expect(launched.text).toContain(
-      'the app died: its process is gone and no crash report says why',
+      'the app died: its process is gone, and no crash report says why yet',
     );
   });
 

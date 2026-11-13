@@ -35,6 +35,7 @@
 - `perf_scroll`, yüksek takılmada aldığı profil başarısız olursa ya da hiçbir fonksiyon adı vermezse bunu söyler ve profil aldığını da bildirir: bir iOS profili üç dakika sürmüş, cevap hiçbir ad vermemiş ve hiçbir şey söylememişti.
 - iOS'ta `crashes`, uygulamanın kendi uzantılarının, bir widget da dahil, çökmelerini de tutar ve hangisi olduğunu söyler: yalnızca uygulamanın kendisininkileri tutuyordu.
 - iOS'ta bir web sayfasının öğesi yalnızca bir alan olduğunda odaktadır: her biri `focused` diyordu.
+- Uygulaması altında ölen bir eylem, cihazın dokunuştan sonraki kendi okuması önce başarısız olduğunda da bunu çökme raporu ve uygulamanın son log satırlarıyla söyler: runner'ı yeni başlamış bir iOS simülatöründe runner uygulamayı kaybettiği için yalnızca ekranın okunamadığını söylüyordu. Sistemin raporunu henüz yazmadığı bir ölüm, ki yüklü bir Mac'te bu bir dakikayı buldu, bunu ve `crashes`'ın raporu yazılınca okuyacağını söyler.
 - Bir iOS profilinden gelen fonksiyon adı olduğu gibi okunur: bir C++ adı `__func&amp;lt;` diye okunuyor, uygulamanın kendi adları da kaçışlarını koruyordu.
 - Android'de takıldığı için yeniden başlatılan agent, sistem yanıt vermeyen bir uygulamayı soruyorsa bunu söyler: o uygulamaya bir dokunuş agent'ı bekletmişti ve cevap yalnızca takıldığını söylüyordu.
 - `perf_snapshot`, takılan kare payının sistemin saydığı biçimde son zamanına geç kalan kareler olduğunu söyler; Play'in 16 ms üstü kare payı onun yanında durur. Cihazın vermediği CPU baskısını, ısı durumunu ya da grafik belleğini yazmaz: `?` ve `0.0 MB` gösteriyordu.

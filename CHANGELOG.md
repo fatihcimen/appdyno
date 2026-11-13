@@ -35,6 +35,7 @@
 - `perf_scroll` says when the profile it takes of high jank failed or named no function, and says that it is taking one: an iOS profile ran three minutes, and its answer named nothing and said nothing.
 - `crashes` on iOS keeps the crashes of the app's own extensions, a widget among them, and names which: it kept only the app's own.
 - On iOS, an element of a web page has the focus only where it is a field: every one said `focused`.
+- An action whose app dies under it says so, with the crash report and the app's last log lines, also where the device's own read after the touch fails first: on an iOS simulator whose runner had just started, it said only that the screen could not be read, as the runner lost the app. A death whose report the system has not written yet, which took up to a minute on a loaded Mac, says so, and that `crashes` reads it once it is there.
 - A function's name from an iOS profile reads as it is: a C++ name read `__func&amp;lt;`, and the app's own names kept their escapes.
 - On Android, an agent restarted as stuck says when the system is asking about an app that is not responding: a touch on that app had held the agent up, and the answer said only that it was stuck.
 - `perf_snapshot` says its janky share is of frames late for their deadline, as the system counts them, beside Play's share of frames over 16 ms, and leaves out a CPU pressure, a thermal state or a graphics memory the device did not give: it showed `?` and `0.0 MB`.
