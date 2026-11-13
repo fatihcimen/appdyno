@@ -1,7 +1,8 @@
 # A performance gate on a pull request: copy this file to .github/workflows/perf-gate.yml and set the values under `env`.
 #
-# It has been run step by step on a Mac with a simulator, and not yet on a GitHub runner. If it fails there, the fault
-# may be the job's own: please report it.
+# It has run as it is on GitHub's macos-latest runner (Xcode 26.6, an iPhone 17 simulator on iOS 26.5): a pull request
+# that changed no code passed, and one that made a step slower failed as a regression at that step. If it fails on
+# yours, please report it.
 #
 # REAL MEASUREMENT NEEDS A REAL DEVICE. This job runs on a simulator: its numbers are relative to the runner they were
 # read on, and real frame rates, frozen frames, hitches and energy need a phone. What it can do is catch a change between

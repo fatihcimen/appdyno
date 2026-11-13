@@ -69,7 +69,7 @@ appdyno perf compare --app A --scenario journey-flows-login       # exit 1, nami
 
 [`perf-gate.yml`](../examples/perf-gate.yml) is a job to copy to `.github/workflows/perf-gate.yml`. Set the values under its `env`: the app, the flow, the simulator and how the app builds.
 
-The job has been run step by step on a Mac with a simulator, and not yet on a GitHub runner. If it fails there, the fault may be the job's own: please report it.
+The job has run as it is on GitHub's `macos-latest` runner, with Xcode 26.6 and an iPhone 17 simulator on iOS 26.5: a pull request that changed no code passed with no regression, and one that made a step slower failed the job as a regression at that step, by name. If it fails on yours, please report it.
 
 The job runs on a macOS runner with a simulator, so its numbers are relative to that runner. What it does is catch a change between two builds on one machine, and say why.
 

@@ -69,7 +69,7 @@ appdyno perf compare --app A --scenario journey-flows-login       # 1 ile çıka
 
 [`perf-gate.yml`](../examples/perf-gate.yml), `.github/workflows/perf-gate.yml` konumuna kopyalanacak bir job'dır. `env` altındaki değerleri ayarlayın: uygulama, akış, simülatör ve uygulamanın nasıl derlendiği.
 
-Job bir Mac'te bir simülatörle adım adım çalıştırıldı, bir GitHub runner'ında henüz çalıştırılmadı. Orada başarısız olursa hata job'ın kendisinde olabilir: lütfen bildirin.
+Job olduğu gibi GitHub'ın `macos-latest` runner'ında, Xcode 26.6 ve iOS 26.5'li bir iPhone 17 simülatörüyle çalıştı: hiç kod değiştirmeyen bir pull request gerileme olmadan geçti, bir adımı yavaşlatan bir pull request ise job'ı o adımda, adıyla bir gerileme olarak başarısız kıldı. Sizinkinde başarısız olursa lütfen bildirin.
 
 Job, simülatörlü bir macOS runner'ında çalışır, bu yüzden sayıları o runner'a göredir. Yaptığı iş, tek bir makinede iki build arasındaki bir değişikliği yakalamak ve nedenini söylemektir.
 
