@@ -113,7 +113,7 @@ async function launchRun(
     lines: [
       `measurement ${saved.id}${virtualNote(s)}`,
       `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
-      `median: ${med === undefined ? `not measured${samples.some((x) => x.state) ? `: the system timed no start as ${mode.toUpperCase()}, and UNKNOWN where another window came to the front` : ''}` : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
+      `median: ${med === undefined ? `not measured${samples.some((x) => x.state) ? `: the system timed no start as ${mode.toUpperCase()}; a start reads UNKNOWN where another window came to the front` : ''}` : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
       ...(longest === undefined ? [] : [playLine(worstKind, longest)]),
       ...(med !== undefined && !rated ? [UNRATED] : []),
       ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),

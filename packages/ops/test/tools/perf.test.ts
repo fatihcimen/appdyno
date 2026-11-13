@@ -47,6 +47,33 @@ describe('perf tools', () => {
     expect(r.text).not.toContain('?');
   });
 
+  it('launch: says no start was measured where the system timed each as another state', async () => {
+    const dev = new FakeDevice();
+    const at = new Date().toISOString();
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        launch: () =>
+          Promise.resolve({
+            value: {
+              mode: 'cold',
+              samples: [
+                { totalMs: 0, state: 'UNKNOWN' },
+                { totalMs: 0, state: 'UNKNOWN' },
+              ],
+            },
+            raw: 'LaunchState: UNKNOWN (0)',
+            at,
+          }),
+      },
+    });
+    const r = await (await connect({}, dev)).textOf('perf_launch', { repeats: 2 });
+    expect(r.text).toContain(
+      'median: not measured: the system timed no start as COLD; a start reads UNKNOWN where another window came to the front',
+    );
+    expect(r.text).not.toContain('slow cold start');
+  });
+
   it('scroll: reads one round where it is asked for a reading, and three for a scenario a baseline is kept under', async () => {
     const t = await connect({}, new FakeDevice());
     const rounds = async (args: Record<string, unknown>) =>
