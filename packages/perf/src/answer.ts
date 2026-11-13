@@ -52,10 +52,12 @@ export function placesOf(comparisons: Comparison[]): Map<string, Comparison[]> {
   const add = (place: string, c: Comparison) =>
     places.set(place, [...(places.get(place) ?? []), c]);
   const worse = comparisons.filter((c) => c.verdict === 'regression');
-  // a step that stopped settling kept no time in this run: that step is where the count of them went up
-  const unsettledAt = comparisons
-    .filter((c) => journeyStep(c.kind)?.what === 'ms' && c.n.current === 0)
-    .map((c) => must(journeyStep(c.kind), 'a step').step);
+  // more steps never settling goes with the step it slowed, which counts at its deadline, or one with no time at all
+  const stepsOf = (cs: Comparison[]) =>
+    cs.flatMap((c) =>
+      journeyStep(c.kind)?.what === 'ms' ? [must(journeyStep(c.kind), 'a step').step] : [],
+    );
+  const unsettledAt = [...stepsOf(worse), ...stepsOf(comparisons.filter((c) => c.n.current === 0))];
   for (const c of worse.filter((x) => x.kind !== JOURNEY_TOTAL)) {
     const at = c.kind === JOURNEY_UNSETTLED && unsettledAt.length > 0 ? unsettledAt : undefined;
     for (const place of at ?? [journeyStep(c.kind)?.step ?? WHOLE_RUN]) add(place, c);

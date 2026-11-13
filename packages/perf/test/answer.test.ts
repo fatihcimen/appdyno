@@ -130,6 +130,14 @@ describe('where a change is looked for', () => {
     const more = worse('journey.unsettled', { unit: 'count' });
     expect([...placesOf([more, gone]).keys()]).toEqual(['03_tap_id_open_catalog']);
     expect([...placesOf([more]).keys()]).toEqual([WHOLE_RUN]);
+    // counted at its deadline, the step's own time got worse: one finding there, and none for the run
+    const slower = worse('journey.03_tap_id_open_catalog.ms');
+    const places = placesOf([more, slower]);
+    expect([...places.keys()]).toEqual(['03_tap_id_open_catalog']);
+    expect(places.get('03_tap_id_open_catalog')?.map((c) => c.kind)).toEqual([
+      'journey.unsettled',
+      'journey.03_tap_id_open_catalog.ms',
+    ]);
   });
 
   it('takes anything else as the run, and nothing that the gate did not call', () => {
