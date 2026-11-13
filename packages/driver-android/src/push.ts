@@ -7,7 +7,7 @@ import {
   type PushType,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg, shq } from './adb.js';
+import { assertPkg, launcherOf, shq } from './adb.js';
 
 /** What gives an app's code a push on Android: FCM's own message, to the app's own Firebase SDK. */
 const BY_FCM =
@@ -64,13 +64,7 @@ export class AndroidPush {
       );
     let target = `-a ${shq(action ?? '')} -p ${pkg}`;
     if (!action) {
-      const out = await this.sh(
-        `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER -a android.intent.action.MAIN ${pkg}`,
-      );
-      const component = must(out.trim().split('\n').at(-1), 'a line');
-      if (!component.startsWith(`${pkg}/`))
-        throw new DeviceError('NOT_FOUND', `${pkg} has no launcher activity: ${component}`);
-      target = `-n ${component}`;
+      target = `-n ${await launcherOf((c) => this.sh(c), pkg)}`;
     }
     const extras = data.flatMap(([k, v]) => ['--es', k, shq(v)]).join(' ');
     // as Firebase's own tap opens it: the activity on top of the app's task anew, with this intent

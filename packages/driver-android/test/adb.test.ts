@@ -179,6 +179,26 @@ describe('launching an app', () => {
     });
   });
 
+  it('starts the first of two launcher activities, not the chooser they resolve to', async () => {
+    const ran: string[] = [];
+    const adb = {
+      exec: (_serial: string, command: string) => {
+        ran.push(command);
+        if (command.includes('resolve-activity'))
+          return Promise.resolve(
+            'priority=0 preferredOrder=0 match=0x0 specificIndex=-1 isDefault=false\nandroid/com.android.internal.app.ResolverActivity\n',
+          );
+        if (command.includes('query-activities'))
+          return Promise.resolve(
+            '2 activities found:\n  priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true\n  a.b/.Main\n  priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true\n  a.b/leakcanary.internal.activity.LeakLauncherActivity\n',
+          );
+        return Promise.resolve(command.startsWith('ps ') ? '' : `${STARTED}Status: ok\n`);
+      },
+    } as unknown as Adb;
+    await new AndroidDevice('emulator-5640', adb).launch('a.b');
+    expect(starts(ran)).toEqual([expect.stringContaining("am start -W -n 'a.b/.Main' ")]);
+  });
+
   it('says an emulator is virtual and a phone is not', () => {
     const adb = {} as Adb;
     expect(new AndroidDevice('emulator-5640', adb).virtual).toBe(true);

@@ -20,6 +20,7 @@ import {
   NO_EARLIER_RUN,
   NO_FRAMES,
   NO_TIME,
+  OTHER_STATE,
   noRecording,
   plainSnapshot,
   probe,
@@ -60,7 +61,10 @@ export const READINGS = {
     means: 'the time to a first frame the platform reports, the median of the starts',
     value: 600,
     reads: [launch({}, {})],
-    notRead: { 'the platform reported no time': launch({}, NO_TIME) },
+    notRead: {
+      'the platform reported no time': launch({}, NO_TIME),
+      'the platform timed another state than asked': launch({}, OTHER_STATE),
+    },
   },
   'launch.first_frame_ms': {
     means: "a tool's own time to the first frame",
@@ -86,6 +90,7 @@ export const READINGS = {
     reads: [launch({ mode: 'cold' }, {})],
     notRead: {
       'no start was timed': launch({ mode: 'cold' }, NO_TIME),
+      'no start was cold': launch({ mode: 'cold' }, OTHER_STATE),
       "it was a tool's own time, which Play knows nothing of": launch(
         { mode: 'cold' },
         { until: 'the first screen is read' },

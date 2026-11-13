@@ -20,6 +20,8 @@
 - Bir iPhone'da ya da simülatörde bir uygulamayı durdurmak, yüklü bir Mac'te yeni açılmış runner, uygulamanın önden çekilip çekilmediği sorusunu yanıtlamadığında artık başarısız olmaz: uygulama durdurulmuştu ve bir CI runner'ının ilk `stop`'u bu yüzden 15 sn sonra başarısız oluyordu.
 - Bir yolculuğun hiç durulmayan adımı da, yinelemesinin bütünü de, en az o kadar sürdükleri aracın süre sınırında sayılır: süre tutmuyordu, bu yüzden sınırı aşacak kadar yavaşlayan bir adım karar için çok az örnek bırakıyordu ve yanıt yalnızca `journey.unsettled`'ın arttığını söylüyordu. Artık o adımda, adıyla bir gerilemedir; bir pencere de böyle bir yolculuğu en az süresiyle söyler.
 - Maestro YAML'a aktarılan bir akış bir tuşun sayısını korur: `press_key back count=3` bir değil üç basıştır.
+- Android'de iki başlatıcı etkinliği olan bir uygulama, LeakCanary'li bir debug build gibi, açılır: sistem ikisini kendi seçicisine çözüyordu; `launch_app` uygulamanın yerine onu başlatıp uygulamayı ölmüş sayıyor, `perf_launch` da 0 ms'lik soğuk açılış ölçüyordu. Uygulamanın kendi etkinliklerinden manifestinde ilk adı geçen başlatılır.
+- `perf_launch` yalnızca sistemin istenen durumda ölçtüğü açılışları saklar ve değerlendirir: sistemin `UNKNOWN` dediği 0 ms'lik bir açılış ya da soğuk bir seride `WARM` diye ölçülen biri, medyana girmese de çalıştırmanın sayılarına ve en uzun açılışına giriyordu.
 
 ## 1.0.0
 

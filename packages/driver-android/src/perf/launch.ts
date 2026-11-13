@@ -1,6 +1,5 @@
 import {
   COMPILE_MODES,
-  must,
   sleep,
   type LaunchReading,
   median,
@@ -12,7 +11,7 @@ import {
   reportProgress,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg } from '../adb.js';
+import { assertPkg, launcherOf } from '../adb.js';
 import { traceProcessor } from '../tools.js';
 import {
   type LaunchSample,
@@ -94,13 +93,7 @@ export async function launch(
   const mode = opts.mode ?? 'cold';
   const repeats = Math.min(Math.max(opts.repeats ?? 3, 1), 10);
   if (opts.trace) await traceProcessor();
-  const resolved = await sh(
-    d,
-    `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${pkg}`,
-  );
-  const component = must(resolved.trim().split('\n').at(-1), 'a line');
-  if (!component.includes('/'))
-    throw new DeviceError('APP_NOT_RUNNING', `${pkg} has no launcher activity`);
+  const component = await launcherOf((c) => sh(d, c), pkg);
   const flags = mode === 'warm' ? `-f ${RECREATE_ACTIVITY} ` : '';
   const prepare = async () => {
     // measuring takes longer than a phone's screen stays on, and a dark one starts nothing: it reads UNKNOWN (0)

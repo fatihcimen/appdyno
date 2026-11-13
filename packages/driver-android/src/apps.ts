@@ -11,7 +11,7 @@ import {
   TIMEOUTS,
 } from '@appdyno/core';
 import { DeviceError, type ErrorCode } from '@appdyno/protocol';
-import { type Adb, amStartError, assertPkg, shq } from './adb.js';
+import { type Adb, amStartError, assertPkg, launcherOf, shq } from './adb.js';
 import { apkNames } from './apk-names.js';
 import { buildVariant } from './build.js';
 import { heldForDialog } from './crashes.js';
@@ -294,15 +294,7 @@ export class AndroidApps implements AppManager {
 
   /** Starts the app's launcher activity and waits for it (`am start -W`). */
   async start(app: string, args: string[] = []) {
-    const said = await this.sh(
-      `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${assertPkg(app)}`,
-    );
-    const activity = must(said.trim().split('\n').at(-1), 'a line');
-    if (!activity.includes('/'))
-      throw new DeviceError(
-        'APP_NOT_RUNNING',
-        `${app} is not installed or has no launcher activity`,
-      );
+    const activity = await launcherOf((c) => this.sh(c), app);
     // a process held for its crash dialog takes no start (`am start -W` waited 10 s on it, the dialog still up): stopped
     // first, which takes the dialog with it, the start is a new one
     const pkg = shq(app);

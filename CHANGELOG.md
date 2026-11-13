@@ -20,6 +20,8 @@
 - On an iPhone or a simulator, stopping an app no longer fails when the runner, just come up on a loaded Mac, does not answer the look at whether the app left the front: the app was stopped, and a CI runner's first `stop` failed on it after 15 s.
 - A journey's step that never settled is counted, and its iteration's whole, at the tool's deadline, which it took at least: it kept no time, so a step slowed past the deadline left too few samples to call, and the answer said only that `journey.unsettled` had gone up. It is now a regression at that step, by name, and a window says such a journey as at least its time.
 - A flow exported to Maestro YAML keeps a key's count: `press_key back count=3` is three presses, not one.
+- On Android, an app with two launcher activities, as a debug build with LeakCanary has, starts: the system resolved them to its chooser, which `launch_app` started in the app's place and then took the app for dead, and `perf_launch` timed as a cold start of 0 ms. The first of the app's own is started, as its manifest names it.
+- `perf_launch` keeps and judges only the starts the system timed as the asked state: a start it called `UNKNOWN`, at 0 ms, or `WARM` in a cold series went into the run's numbers and its longest start, though not into its median.
 
 ## 1.0.0
 

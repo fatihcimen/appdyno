@@ -37,6 +37,14 @@ export const launch = (args: Record<string, unknown>, over: Record<string, unkno
   },
 });
 export const NO_TIME = { samples: [{ state: 'COLD' }], medianMs: undefined };
+/** Starts the system timed as another state than asked: a chooser in front reads UNKNOWN, at 0 ms. */
+export const OTHER_STATE = {
+  samples: [
+    { totalMs: 0, state: 'UNKNOWN' },
+    { totalMs: 2_000, state: 'WARM' },
+  ],
+  medianMs: undefined,
+};
 
 export const profiled = (without: number[], withIt: number[]): Asked => ({
   tool: 'perf_launch',

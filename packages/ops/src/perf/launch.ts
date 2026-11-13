@@ -61,7 +61,10 @@ async function launchRun(
   const saved = await save('launch', [m], m.value);
   const limit = SLOW_LAUNCH_MS[mode];
   const { medianMs: med, until, samples, startup, fullyDrawnMedianMs } = m.value;
-  const times = samples.flatMap((x) => (x.totalMs === undefined ? [] : [x.totalMs]));
+  // a start the system timed as another state is none of this mode's: a chooser in front reads UNKNOWN, at 0 ms
+  const times = samples.flatMap((x) =>
+    x.totalMs === undefined || (x.state && x.state !== mode.toUpperCase()) ? [] : [x.totalMs],
+  );
   // Play keeps a state's longest start of the day, and only what the platform itself reports is its number
   const worstKind = `launch.worst_${mode}_ms` as const;
   const worst = !until && times.length ? Math.max(...times) : undefined;
@@ -110,7 +113,7 @@ async function launchRun(
     lines: [
       `measurement ${saved.id}${virtualNote(s)}`,
       `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
-      `median: ${med === undefined ? 'not measured' : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
+      `median: ${med === undefined ? `not measured${samples.some((x) => x.state) ? `: the system timed no start as ${mode.toUpperCase()}, and UNKNOWN where another window came to the front` : ''}` : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
       ...(longest === undefined ? [] : [playLine(worstKind, longest)]),
       ...(med !== undefined && !rated ? [UNRATED] : []),
       ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),

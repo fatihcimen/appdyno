@@ -67,6 +67,28 @@ export const amStartError = (out: string) =>
 
 export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
+const LAUNCHER = '-a android.intent.action.MAIN -c android.intent.category.LAUNCHER';
+
+/**
+ * The activity a tap on the app's icon starts. An app with two (a debug build's LeakCanary adds its own) resolves to
+ * the system's chooser, which starts no app: the first of its own is taken, the one its manifest names first.
+ */
+export async function launcherOf(sh: (command: string) => Promise<string>, pkg: string) {
+  const mine = (out: string) =>
+    out
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith(`${pkg}/`));
+  const [resolved] = mine(
+    await sh(`cmd package resolve-activity --brief ${LAUNCHER} ${assertPkg(pkg)}`),
+  );
+  const found =
+    resolved ?? mine(await sh(`cmd package query-activities --brief ${LAUNCHER} ${pkg}`))[0];
+  if (!found)
+    throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not installed or has no launcher activity`);
+  return found;
+}
+
 /** Printed after a command whose answer decides something, as its end: a cut-off answer lacks it. */
 const END = ':appdyno-end:';
 
