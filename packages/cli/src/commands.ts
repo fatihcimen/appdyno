@@ -150,6 +150,8 @@ function parse(op: Op, argv: string[]) {
     if (flag === 'json') Object.assign(args, json(flag, value));
     else if (flag === 'out') out = value;
     else if (type === 'number' || type === 'integer') args[key] = Number(value);
+    // a list of words typed as they are, `--also surface,battery`, as much as its JSON
+    else if (type === 'array' && /^[\w-]+(,[\w-]+)*$/.test(value)) args[key] = value.split(',');
     else if (type === 'array' || type === 'object') args[key] = json(flag, value);
     // the screen shows a ref with its @, which a hand typing it on the command line leaves out
     else if (key === 'ref' && /^[a-z0-9]{1,10}(-\d{1,3})?$/.test(value)) args[key] = `@${value}`;

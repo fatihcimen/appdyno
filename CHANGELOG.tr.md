@@ -27,7 +27,7 @@
 - `perf_scroll`, hiçbir tur yeterince kare çizmediğinde, kendi yüzeyine çizen bir uygulamada (Flutter, bir oyun motoru) olduğu gibi, hiçbir şeyi değerlendirmediğini ve o kareleri neyin okuduğunu söyler: eşik aşılmadı diyordu.
 - `perf_scroll`, sonuna zaten gelmiş bir listeyi sonraki turlarda olduğu gibi ilk turda da geri getirir: üstünü açılır bir pencere örtmüş bir ekran gibi reddediliyordu.
 - Sistemin uygulamanın toplamı olmadan yanıtladığı bir bellek okuması, bir kez uygulama yanıt vermezken görüldü, yeniden sorulacak bir `TIMEOUT` olur ve sistemin ne dediğini taşır: kodsuz çıplak bir hataydı.
-- Komut satırında `--ref`, başına `@` yazılmadan verilen bir ref'i alır.
+- Komut satırında `--ref`, başına `@` yazılmadan verilen bir ref'i alır; liste alan bir bayrak da kelimeleri yazıldığı gibi alır, `--also surface,battery`, JSON'larını da.
 - Açılışı süresini dolduran bir iOS runner'ı, açılmadığını, ne kadar sonra ve nereye kadar geldiğini söyler: onu bitiren öldürme önce geldiği için runner'ın durduğunu, `xcodebuild exit null` diyordu. Runner'ı başlatma aşamasına geçmiş bir açılışa o andan itibaren 90 sn daha verilir: orada öldürülen bir açılış sıfırdan yeniden başlatılıyordu. Açılışın nereye kadar geldiği runner'ın kendi ilk satırından okunur: xcodebuild'in sonuçlarını nereye yazdığını söyleyen ilk satırı, runner'ın başlatıldığı diye okunuyordu.
 - Yardımcısı cevap vermeyen bir simülatörde ilerleme, runner'ın onun yerine başlatıldığını söyler; runner da açılmazsa hata yardımcının cevap vermediğini de söyler.
 - Komut satırından verilen bir komut artık cevabının ardından simülatörün runner'ını başlatmaz; komut bitmeden onu iki dakikaya kadar bekliyordu. Runner, ona ihtiyaç duyan iş için açılır ve sonraki komut için kalır.

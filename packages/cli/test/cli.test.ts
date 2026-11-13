@@ -141,6 +141,14 @@ describe('commands from the operations', () => {
     expect(device.calls.at(-1)?.name).toBe('act');
   });
 
+  it('takes a list of words as they are typed, as much as its JSON', async () => {
+    const one = await run('perf-snapshot', '--also', 'surface');
+    expect(one.err.join('\n')).not.toContain('needs JSON');
+    const two = await run('perf-snapshot', '--also', 'surface,battery');
+    expect(two.err.join('\n')).not.toContain('needs JSON');
+    expect((await run('perf-snapshot', '--also', '{nope')).err.join('\n')).toContain('needs JSON');
+  });
+
   it('takes the arguments as JSON', async () => {
     const r = await run('steps', '--json', '{"steps":[{"action":"tap","x":100,"y":350}]}');
     expect(r.code).toBe(0);

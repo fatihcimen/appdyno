@@ -27,7 +27,7 @@
 - `perf_scroll` says it judged nothing where no round drew enough frames, as an app that draws on its own surface does (Flutter, a game engine), and where to read those: it said no threshold was exceeded.
 - `perf_scroll` on a list already at its end brings it back for the first round too, as it did for later ones: it was refused as a screen covered by a popup.
 - A memory read the system answered without the app's total, seen once while the app was not responding, is a `TIMEOUT` to ask again, with what the system said: it was a bare error with no code.
-- On the command line, `--ref` takes a ref typed without its `@`.
+- On the command line, `--ref` takes a ref typed without its `@`, and a flag that takes a list takes its words as they are, `--also surface,battery`, as much as their JSON.
 - An iOS runner whose start runs out of time says that it did not start, after how long, and how far it got: it said the runner had stopped, `xcodebuild exit null`, as the kill that ended it came first. A start that has got on to launching the runner has 90 s more from then: one killed there was started again from nothing. How far a start got is read from the runner's own first line: xcodebuild's first, where it writes its results, read as the runner launching.
 - On a simulator whose helper does not answer, the progress says the runner starts in its place, and a runner that does not start either says the helper had not answered.
 - A command on the command line no longer starts a simulator's runner behind its answer, which it then waited for before it ended, up to two minutes: the runner starts for what needs it, and stays for the next command.
