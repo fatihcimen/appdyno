@@ -160,6 +160,38 @@ describe('a start that cannot come', () => {
     expect(stopped).toHaveBeenCalledWith(expect.any(Number), 'SIGTERM');
   });
 
+  /** A runner whose port never answers, under an xcodebuild that says `said` and serves nothing. */
+  const silent = (said: string) => {
+    writeFileSync(
+      join(state, 'xcodebuild'),
+      `#!${process.execPath}\nprocess.stdout.write(${JSON.stringify(said)});\nsetTimeout(() => {}, 30000);\n`,
+    );
+    return { ...through(2), open: () => Promise.reject(new Error('connection refused')) };
+  };
+
+  it(
+    'says a start that ran out of time did not start, and how far it got, not that it stopped',
+    fakeTimed(async () => {
+      await expect(new IosRunnerLauncher(UDID, silent('')).connect()).rejects.toMatchObject({
+        code: 'AGENT_UNAVAILABLE',
+        message: expect.stringMatching(
+          /^the iOS runner did not start within 18\d s: xcodebuild is preparing the device/,
+        ) as unknown,
+      });
+    }),
+  );
+
+  it(
+    'says how far a start got as the time ran out',
+    fakeTimed(async () => {
+      await expect(
+        new IosRunnerLauncher(UDID, silent('Testing started\n')).connect(),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('the runner is launching') as unknown,
+      });
+    }),
+  );
+
   it.each([
     ['takes a tunnel on a phone paired for Wi-Fi', true, '1'],
     ['stays on the loopback on any other', false, 'undefined'],
@@ -320,7 +352,7 @@ setTimeout(() => {}, 30000);
       const asked = new IosRunnerLauncher(UDID, through(2)).connect();
       await new Promise((r) => setTimeout(r, 400));
       const now = Date.now();
-      vi.spyOn(Date, 'now').mockImplementation(() => now + 181_000);
+      vi.spyOn(Date, 'now').mockImplementation(() => now + 271_000);
       await expect(asked).rejects.toMatchObject({
         code: 'AGENT_UNAVAILABLE',
         message: expect.stringContaining(`pid ${must(other.pid, 'its pid')}`) as unknown,

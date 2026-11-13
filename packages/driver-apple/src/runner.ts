@@ -28,6 +28,11 @@ import { recordXctMetrics } from './xct-metrics.js';
 
 /** A first start installs the runner (on a phone, UI automation may wait for an approval): allow for it. */
 const START_MS = 180_000;
+/**
+ * What a start that has got on to launching the runner has from then: one killed there at its time, on a Mac at load
+ * 40 to 370, was started again from nothing, seven times.
+ */
+const ON_ITS_WAY_MS = 90_000;
 const POLL_MS = 250;
 const PROGRESS_MS = 5_000;
 
@@ -181,12 +186,12 @@ export class IosRunnerLauncher {
         if (!(e instanceof StartingElsewhere)) throw e;
         if (waitEnds === undefined) {
           reportProgress(`waiting for pid ${e.holder.pid} to start the iOS runner`);
-          waitEnds = Date.now() + START_MS;
+          waitEnds = Date.now() + START_MS + ON_ITS_WAY_MS;
         }
         if (Date.now() >= waitEnds)
           throw new DeviceError(
             'AGENT_UNAVAILABLE',
-            `pid ${e.holder.pid} did not start the iOS runner within ${START_MS} ms`,
+            `pid ${e.holder.pid} did not start the iOS runner within ${START_MS + ON_ITS_WAY_MS} ms`,
             'close that process, or try again',
           );
         await sleep(POLL_MS);
@@ -213,9 +218,10 @@ export class IosRunnerLauncher {
 
   private async start(
     build: { xctestrun: string; sha256: string },
-    deadline: number,
+    until: number,
     target?: string,
   ) {
+    let deadline = until;
     reportProgress('starting the iOS runner');
     const port = await this.transport.port();
     const token = randomBytes(24).toString('hex');
@@ -268,12 +274,13 @@ export class IosRunnerLauncher {
       );
     say('starting the iOS runner: xcodebuild connects, installs and launches it');
     let told = startedAt;
-    let reached = '';
+    let reached = startPhase('');
     for (;;) {
       if (Date.now() - told >= PROGRESS_MS) {
         told = Date.now();
         const now = startPhase(await readFile(this.logPath, 'utf8').catch(() => ''));
-        if (now !== reached) reached = now;
+        if (now !== reached) deadline = Math.max(deadline, Date.now() + ON_ITS_WAY_MS);
+        reached = now;
         say(reached);
       }
       const c = await this.tryConnect(s).catch((e: unknown) =>
@@ -287,6 +294,9 @@ export class IosRunnerLauncher {
       const refused = c instanceof DeviceError && c.code === 'AGENT_VERSION_MISMATCH';
       if (refused || exited !== undefined || Date.now() >= deadline) {
         const log = await readFile(this.logPath, 'utf8').catch(() => '');
+        // the kill below ends it too: what is said is what came first
+        const stopped = exited;
+        const ranS = Math.round((Date.now() - startedAt) / 1000);
         if (child.pid) await this.kill(child.pid);
         if (refused)
           throw new DeviceError(
@@ -296,9 +306,9 @@ export class IosRunnerLauncher {
           );
         throw new DeviceError(
           'AGENT_UNAVAILABLE',
-          exited !== undefined
-            ? `the iOS runner stopped (xcodebuild exit ${String(exited)})`
-            : `the iOS runner did not start within ${START_MS} ms`,
+          stopped !== undefined
+            ? `the iOS runner stopped (xcodebuild exit ${String(stopped)})`
+            : `the iOS runner did not start within ${ranS} s: ${startPhase(log)}`,
           log.trim().split('\n').slice(-6).join(' ').slice(0, 500) || undefined,
         );
       }

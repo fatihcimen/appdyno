@@ -28,6 +28,7 @@
 - `perf_scroll` on a list already at its end brings it back for the first round too, as it did for later ones: it was refused as a screen covered by a popup.
 - A memory read the system answered without the app's total, seen once while the app was not responding, is a `TIMEOUT` to ask again, with what the system said: it was a bare error with no code.
 - On the command line, `--ref` takes a ref typed without its `@`.
+- An iOS runner whose start runs out of time says that it did not start, after how long, and how far it got: it said the runner had stopped, `xcodebuild exit null`, as the kill that ended it came first. A start that has got on to launching the runner has 90 s more from then: one killed there was started again from nothing.
 
 ## 1.0.0
 

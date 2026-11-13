@@ -28,6 +28,7 @@
 - `perf_scroll`, sonuna zaten gelmiş bir listeyi sonraki turlarda olduğu gibi ilk turda da geri getirir: üstünü açılır bir pencere örtmüş bir ekran gibi reddediliyordu.
 - Sistemin uygulamanın toplamı olmadan yanıtladığı bir bellek okuması, bir kez uygulama yanıt vermezken görüldü, yeniden sorulacak bir `TIMEOUT` olur ve sistemin ne dediğini taşır: kodsuz çıplak bir hataydı.
 - Komut satırında `--ref`, başına `@` yazılmadan verilen bir ref'i alır.
+- Açılışı süresini dolduran bir iOS runner'ı, açılmadığını, ne kadar sonra ve nereye kadar geldiğini söyler: onu bitiren öldürme önce geldiği için runner'ın durduğunu, `xcodebuild exit null` diyordu. Runner'ı başlatma aşamasına geçmiş bir açılışa o andan itibaren 90 sn daha verilir: orada öldürülen bir açılış sıfırdan yeniden başlatılıyordu.
 
 ## 1.0.0
 
