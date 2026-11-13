@@ -367,6 +367,29 @@ export function stickingOut(nodes: Node[], width: number): Set<string> {
   );
 }
 
+/**
+ * The page a push is leaving, still read beside the new one: the old page's own elements a third of the screen to the
+ * left of where they stood, at the same height and size. A SwiftUI push at load 17 was read so with the new page in
+ * place, nothing over the side, and the old page left the tree after.
+ */
+export function leftBehind(before: Node[], now: Node[], width: number): boolean {
+  const named = (n: Node) => shown(n) && !!(n.id ?? n.d ?? n.t);
+  const name = (n: Node) => `${n.c}#${n.id ?? ''}#${n.d ?? n.t ?? ''}`;
+  const was = before.filter(named);
+  return now.filter(named).some((n) =>
+    was.some((p) => {
+      const aside = (p.b[0] - n.b[0]) / width;
+      return (
+        name(p) === name(n) &&
+        Math.abs(p.b[1] - n.b[1]) <= 2 &&
+        Math.abs(p.b[2] - p.b[0] - (n.b[2] - n.b[0])) <= 2 &&
+        aside >= 0.2 &&
+        aside <= 0.45
+      );
+    }),
+  );
+}
+
 /** A point on the keyboard: another process may draw it, and its touches are not the app's to report. */
 export function onKeyboard(nodes: Node[], x: number, y: number): boolean {
   return nodes.some(

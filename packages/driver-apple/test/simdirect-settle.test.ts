@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { must } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { settle, settleAfter, type SettleOn } from '../src/simsettle.js';
-import { actionable, sameContent, sameLayout, stickingOut, type RawAx } from '../src/simtree.js';
+import {
+  actionable,
+  leftBehind,
+  sameContent,
+  sameLayout,
+  stickingOut,
+  type RawAx,
+} from '../src/simtree.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import { cell, app, tree } from './sim-trees.js';
 
@@ -212,4 +219,46 @@ describe('a reaction that begins after the settle', () => {
       expect(once.moved).toBe(true);
     }),
   );
+});
+
+describe('a push that leaves its old page in the tree a while', () => {
+  // the product page as it was, and as a push leaves it beside the cart a moment at load 17: a third of the screen left
+  const product = (dx: number) => [
+    { a: 48, l: '$14.50', f: [161 - dx, 450, 80, 22] },
+    { a: 9, l: 'Add to cart', f: [140 - dx, 490, 122, 34] },
+  ];
+  const before = tree(app(...product(0))).tree;
+  const cart = tree(app(cell('Coffee beans, × 3', 170), cell('Checkout', 255))).tree;
+  const mixed = tree(
+    app(...product(121), cell('Coffee beans, × 3', 170), cell('Checkout', 255)),
+  ).tree;
+
+  it(
+    'is waited for until the old page has left, as one sliding over the side is',
+    fakeTimed(async () => {
+      const start = Date.now();
+      const on: SettleOn = {
+        read: () => Promise.resolve({ tree: Date.now() - start < 600 ? mixed : cart, busy: false }),
+        remember: () => undefined,
+        recent: new Map([[before.hash, before.nodes]]),
+        width: 402,
+        clock: Date.now,
+        handled: () => Promise.resolve(undefined),
+      };
+      const r = await settleAfter(
+        on,
+        { kind: 'tap', x: 201, y: 507 },
+        { settle: { quietMs: 200, maxMs: 3_000 }, before: before.hash, read: 'tree' },
+      );
+      const labels = (r.result as { tree: Tree }).tree.nodes.flatMap((n) => (n.d ? [n.d] : []));
+      expect(labels).not.toContain('Add to cart');
+      expect(Date.now() - start).toBeGreaterThanOrEqual(600);
+    }),
+  );
+
+  it('knows the page a push left a third aside from one it took away', () => {
+    expect(leftBehind(before.nodes, mixed.nodes, 402)).toBe(true);
+    expect(leftBehind(before.nodes, cart.nodes, 402)).toBe(false);
+    expect(leftBehind(before.nodes, before.nodes, 402)).toBe(false);
+  });
 });

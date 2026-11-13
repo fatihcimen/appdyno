@@ -1,6 +1,13 @@
 import { sleep as wait, type ActOptions } from '@appdyno/core';
 import { Settle, type ActParams, type Tree } from '@appdyno/protocol';
-import { actionable, hasAlert, sameContent, sameLayout, stickingOut } from './simtree.js';
+import {
+  actionable,
+  hasAlert,
+  leftBehind,
+  sameContent,
+  sameLayout,
+  stickingOut,
+} from './simtree.js';
 
 type Node = Tree['nodes'][number];
 
@@ -139,7 +146,10 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
       if (alertGoneAt !== undefined && now - alertGoneAt < ALERT_GONE_MS)
         return { ...c, busy: true };
     }
-    const sliding = [...stickingOut(c.tree.nodes, on.width)].some((k) => !stuckBefore.has(k));
+    // a push leaves the old page aside, inside the screen, until it ends: only a tap pushes
+    const sliding =
+      [...stickingOut(c.tree.nodes, on.width)].some((k) => !stuckBefore.has(k)) ||
+      (!!tap && leftBehind(seen, c.tree.nodes, on.width));
     if (sliding) {
       slideSince ??= now;
       if (now - slideSince < SLIDE_CAP_MS) return { ...c, busy: true };

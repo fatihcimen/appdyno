@@ -40,6 +40,7 @@ appdyno 1.0.1 fixes what driving seven builds of five open-source apps showed, a
 - `perf_scroll` says when the profile it takes of high jank failed or named no function, and says that it is taking one: an iOS profile ran three minutes, and its answer named nothing and said nothing.
 - `crashes` on iOS keeps the crashes of the app's own extensions, a widget among them, and names which: it kept only the app's own.
 - On iOS, an element of a web page has the focus only where it is a field: every one said `focused`.
+- On an iOS simulator, a tap's answer waits until a push has taken the old page away: at load 17 a SwiftUI push answered with the old page's elements still there, a third of the screen aside, beside the new page's.
 - An action whose app dies under it says so, with the crash report and the app's last log lines, also where the device's own read after the touch fails first: on an iOS simulator whose runner had just started, it said only that the screen could not be read, as the runner lost the app. A death whose report the system has not written yet, which took up to a minute on a loaded Mac, says so, and that `crashes` reads it once it is there.
 - A function's name from an iOS profile reads as it is: a C++ name read `__func&amp;lt;`, and the app's own names kept their escapes.
 - On Android, an agent restarted as stuck says when the system is asking about an app that is not responding: a touch on that app had held the agent up, and the answer said only that it was stuck.
