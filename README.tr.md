@@ -189,6 +189,30 @@ appdyno perf survey --app com.example.app   # bu cihazdaki her ölçüm, ardınd
 
 [İstemci bağlamak](docs/guides/clients.tr.md) her istemciyi adım adım anlatır; hiçbir şey kurulu değilken bir telefonu, imzalama dahil, baştan nasıl hazırlayacağınızı gösterir.
 
+## Gerçek uygulamalarda
+
+Wikipedia'nın kendi deposundan derlenmiş debug build'i, hub'da bir Android emülatöründe: bir MCP istemcisi Istanbul'u arar, makaleyi açar, iki satıra bölünen bir bağlantıya dokunur, o makaleyi okur ve ölçer. Her çağrı gerçektir ve yanında aldığı süre yazar:
+
+![Gerçek bir çalıştırma: bir MCP istemcisi, appdyno hub'ında bir Android emülatöründe Wikipedia'nın debug build'ini sürüyor; Istanbul'u arıyor, makaleyi açıyor, Hagia Sophia bağlantısına dokunup makalesini okuyor, Performance paneli de kareleri, CPU'yu ve belleği okuyor](docs/images/wikipedia.webp)
+
+Makale ve resmi Wikipedia'nındır, kendi lisanslarıyla.
+
+Beş açık kaynak uygulamanın yedi build'i, her biri deposunun derlediği gibi; bir Android emülatöründe (API 34) ve bir iOS simülatöründe (iOS 27.2) debug build'ler, bir M5 Pro'da, 2026-11-13'te:
+
+| uygulama           | ne ile yazılmış                                      | soğuk açılış | bellek | kaydırma                          |
+| ------------------ | ---------------------------------------------------- | ------------ | ------ | --------------------------------- |
+| Wikipedia, Android | Kotlin, view'lar, makaleler bir web view'da          | 2.098 ms     | 197 MB | %4,4 takılan, p95 30 ms           |
+| Now in Android     | Kotlin, Jetpack Compose                              | 1.912 ms     | 179 MB | %3,3 takılan, p95 32 ms           |
+| AntennaPod         | Java, view'lar                                       | 1.451 ms     | 107 MB | %1 takılan, p95 31 ms             |
+| Wonderous, Android | Flutter                                              | 1.345 ms     | 188 MB | kendi yüzeyi: 60 fps, p95 16,7 ms |
+| Wikipedia, iOS     | Swift, Objective-C, UIKit, makaleler bir web view'da | 3.191 ms     | 230 MB | %6,4 takılan, p95 32 ms           |
+| NetNewsWire        | Swift, UIKit                                         | 2.492 ms     | 57 MB  | %2,1 takılan, p95 16,7 ms         |
+| Wonderous, iOS     | Flutter                                              | 3.519 ms     | 298 MB | %2,1 takılan, p95 16,7 ms         |
+
+Soğuk açılış, bir ısınmanın ardından 5 açılışın medyanıdır: Android'de sistemin bildirdiği ilk kareye kadar geçen süre, simülatörde kare probunun gördüğü ilk kareye kadar geçen süre. Bellek, kaydırmadan sonra Android'in PSS'i ve iOS'un fiziksel ayak izidir. Kaydırma, 5 kaydırmalık 3 turun medyanıdır; Android'deki Wonderous kendine ait bir yüzeye, sistemin saydığı karelerin dışında çizer, bu yüzden onun yerine o yüzeyin kareleri okunur. Bir simülatörün ve bir emülatörün sayıları bu Mac'indir ve bir debug build, bir release build'den yavaştır: bir çalıştırmayı bir sonrakiyle karşılaştırırlar, bir telefonun ne kadar hızlı olduğunu söylemezler.
+
+Onları denemek appdyno'da neyin düzeltilmesi gerektiğini gösterdi. LeakCanary'li bir debug build gibi iki başlatıcı etkinliği olan bir uygulama sistemin seçicisini başlatıyor ve 0 ms'lik bir soğuk açılış ölçüyordu; iki satıra bölünen bir bağlantıya dokunuş da satırların arasına iniyordu. Her düzeltme [değişiklik kaydında](CHANGELOG.tr.md).
+
 ## Hız
 
 5 çalıştırmanın medyanı; MCP üzerinden stdio ile, fixture uygulamasında, bir M5 Pro'da, 2026-11-10'da (telefonlar 2026-11-09'da). iPhone bir 13 Pro Max, Android telefon bir Samsung SM-A525F:

@@ -189,6 +189,30 @@ appdyno perf survey --app com.example.app   # every measure on this device, then
 
 [Connecting a client](docs/guides/clients.md) takes each client step by step, and gets a phone ready from nothing, signing included.
 
+## On real apps
+
+Wikipedia's own debug build, from its repository, on an Android emulator in the hub: an MCP client searches for Istanbul, opens the article, taps a link that wraps over two lines, reads that article and measures it. Every call is real, with the time it took:
+
+![A real run: an MCP client drives Wikipedia's debug build on an Android emulator in the appdyno hub, searching for Istanbul, opening the article, tapping the Hagia Sophia link and reading its article, while the Performance pane reads frames, CPU and memory](docs/images/wikipedia.webp)
+
+The article and its picture are Wikipedia's, under their own licenses.
+
+Seven builds of five open-source apps, each as its repository builds it, debug builds on an Android emulator (API 34) and an iOS simulator (iOS 27.2), on an M5 Pro, on 2026-11-13:
+
+| app                | built with                                        | cold start | memory | scroll                               |
+| ------------------ | ------------------------------------------------- | ---------- | ------ | ------------------------------------ |
+| Wikipedia, Android | Kotlin, views, articles in a web view             | 2,098 ms   | 197 MB | 4.4% janky, p95 30 ms                |
+| Now in Android     | Kotlin, Jetpack Compose                           | 1,912 ms   | 179 MB | 3.3% janky, p95 32 ms                |
+| AntennaPod         | Java, views                                       | 1,451 ms   | 107 MB | 1% janky, p95 31 ms                  |
+| Wonderous, Android | Flutter                                           | 1,345 ms   | 188 MB | its own surface: 60 fps, p95 16.7 ms |
+| Wikipedia, iOS     | Swift, Objective-C, UIKit, articles in a web view | 3,191 ms   | 230 MB | 6.4% janky, p95 32 ms                |
+| NetNewsWire        | Swift, UIKit                                      | 2,492 ms   | 57 MB  | 2.1% janky, p95 16.7 ms              |
+| Wonderous, iOS     | Flutter                                           | 3,519 ms   | 298 MB | 2.1% janky, p95 16.7 ms              |
+
+A cold start is the median of 5 after a warm-up: on Android the time to a first frame that the system reports, on the simulator the time to the first frame the frame probe sees. Memory is Android's PSS and iOS's physical footprint, after the scroll. A scroll is the median of 3 rounds of 5 swipes; Wonderous on Android draws on a surface of its own, past the frames the system counts, so that surface's frames are read instead. A simulator's and an emulator's numbers are this Mac's, and a debug build is slower than a release build: they compare one run with the next, and do not say how fast a phone is.
+
+Trying them showed what to fix in appdyno. An app with two launcher activities, as a debug build with LeakCanary has, started the system's chooser and measured a cold start of 0 ms, and a touch on a link over two lines landed between the lines. Each fix is in the [changelog](CHANGELOG.md).
+
 ## Speed
 
 Medians of 5 runs, through MCP over stdio, on the fixture app, on an M5 Pro, on 2026-11-10 (the phones on 2026-11-09). The iPhone is a 13 Pro Max, and the Android phone a Samsung SM-A525F:
