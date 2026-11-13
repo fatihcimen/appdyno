@@ -158,6 +158,9 @@ const scrollTo = async (
   let last: ActResult = { tree: screen.tree };
   let still = 0;
   const what = showSelector(a.selector);
+  // what the swipes brought into view: a pull to refresh at a list's top moves its rows and brings none
+  const seen = new Set(screen.list.map((e) => e.label));
+  let brought = false;
   for (let swipes = 0; ; swipes++) {
     let hits = selectIn(screen.list, a.selector);
     if (hits.length > 0 && swipes > 0) {
@@ -173,12 +176,19 @@ const scrollTo = async (
         found: true,
       };
     if (swipes >= a.maxSwipes)
-      throw new ToolError(
-        `${what} not found after ${swipes} swipes; the list can still move${offer(screen.list, a.selector.text)}`,
-        'NOT_FOUND',
-        'raise maxSwipes',
-        swipes > 0,
-      );
+      throw brought || swipes === 0
+        ? new ToolError(
+            `${what} not found after ${swipes} swipes; the list can still move${offer(screen.list, a.selector.text)}`,
+            'NOT_FOUND',
+            'raise maxSwipes',
+            swipes > 0,
+          )
+        : new ToolError(
+            `${what} not found after ${swipes} swipes, which brought no new rows into view: the list may be at its end this way, as a pull to refresh at its top moves it and brings none${offer(screen.list, a.selector.text)}`,
+            'NOT_FOUND',
+            'try the other direction',
+            true,
+          );
     const vertical = a.direction === 'up' || a.direction === 'down';
     const box = scrollArea(screen, a, await windowSize(s), vertical);
     const { x: cx, y: cy } = strokeCentre(box, a, vertical);
@@ -213,6 +223,11 @@ const scrollTo = async (
     s.acted();
     const next = last.tree ? s.screenOf(last.tree) : await s.read();
     s.remember(next);
+    for (const e of next.list.filter(inner)) {
+      // a refresh's spinner has no words
+      if (e.label && !seen.has(e.label)) brought = true;
+      seen.add(e.label);
+    }
     still = moved(screen.list.filter(inner), next.list.filter(inner)) ? 0 : still + 1;
     if (still >= STILL_STROKES)
       throw new ToolError(

@@ -132,6 +132,39 @@ describe('scroll_to', () => {
     expect(r.data.found).toBe(true);
   });
 
+  it('says swipes that brought no new rows may be at the end, as a pull to refresh at the top moves its rows', async () => {
+    /** At its top, a pull down moves the rows down a while and back, as a refresh does, and brings none. */
+    class Refreshing extends ListDevice {
+      pulled = 0;
+      override current(): Tree {
+        const t = super.current();
+        const by = this.pulled % 2 ? 120 : 0;
+        for (const n of t.nodes)
+          if (n.t?.startsWith('Row ')) n.b = [n.b[0], n.b[1] + by, n.b[2], n.b[3] + by];
+        t.hash = `${t.hash}~${this.pulled % 2}`;
+        return t;
+      }
+      override async act(action: ActParams, opts = {}) {
+        if (action.kind === 'gesture') {
+          const p = must(action.pointers[0], 'a path');
+          if (must(p.at(-1), 'its end').y > must(p[0], 'its start').y) this.pulled++;
+        }
+        return super.act(action, opts);
+      }
+    }
+    const d = new Refreshing();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', {
+      selector: { text: 'Row 99' },
+      direction: 'down',
+      maxSwipes: 3,
+    });
+    expect(r.error).toBe(true);
+    expect(r.text).toContain('brought no new rows into view: the list may be at its end this way');
+    expect(r.text).not.toContain('can still move');
+    expect(r.text).toContain('try the other direction');
+  });
+
   it('stops at the bound, and says it could go on', async () => {
     const d = new ListDevice();
     const { call } = await connect(d);

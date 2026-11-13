@@ -173,12 +173,17 @@ describe('a start that cannot come', () => {
   it(
     'says a start that ran out of time did not start, and how far it got, not that it stopped',
     fakeTimed(async () => {
-      await expect(new IosRunnerLauncher(UDID, silent('')).connect()).rejects.toMatchObject({
+      const leftOver = vi.fn(() => Promise.resolve());
+      await expect(
+        new IosRunnerLauncher(UDID, { ...silent(''), leftOver }).connect(),
+      ).rejects.toMatchObject({
         code: 'AGENT_UNAVAILABLE',
         message: expect.stringMatching(
           /^the iOS runner did not start within 18\d s: xcodebuild is preparing the device/,
         ) as unknown,
       });
+      // the runner app its xcodebuild was launching is ended too, not left running in the simulator
+      expect(leftOver).toHaveBeenCalledWith(UDID);
     }),
   );
 

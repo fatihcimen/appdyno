@@ -95,7 +95,12 @@ export type RunnerTransport = {
   stop?: 'kill';
   /** Whether the device is shutting down or off. */
   down?(udid: string): Promise<boolean>;
+  /** Ends the runner app a start that failed left on the device, its xcodebuild killed under it as it launched. */
+  leftOver?(udid: string): Promise<void>;
 };
+
+/** The runner app as xcodebuild installs it to run its test. */
+const RUNNER_APP = 'dev.appdyno.runner.xctrunner';
 
 /** A simulator: the runner as built, a free port of the Mac's loopback (the simulator shares it). */
 export const simulatorTransport: RunnerTransport = {
@@ -105,6 +110,8 @@ export const simulatorTransport: RunnerTransport = {
   // itself or by SIGTERM: a kill leaves it as it is, and the runner ended within 3 s, 5 of 5
   stop: 'kill',
   down: async (udid) => ((await new Simctl().state(udid)) ?? '').startsWith('Shut'),
+  // one killed as it launched stayed running in the simulator, its xcodebuild gone
+  leftOver: (udid) => new Simctl().terminate(udid, RUNNER_APP),
   open: (port) =>
     new Promise((resolve, reject) => {
       const c = connect({ host: '127.0.0.1', port });
@@ -302,6 +309,7 @@ export class IosRunnerLauncher {
         const stopped = exited;
         const ranS = Math.round((Date.now() - startedAt) / 1000);
         if (child.pid) await this.kill(child.pid);
+        await this.transport.leftOver?.(this.udid).catch(() => undefined);
         if (refused)
           throw new DeviceError(
             c.code,
