@@ -227,7 +227,9 @@ function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
       const facts = s.device.platformScreen;
       const a = facts.systemAlert(screen.tree, screen.elements);
       if (!a) {
-        const t = "no system alert is open (the app's own dialogs are not touched)";
+        const t = answer
+          ? "no system alert is open, so no button was touched (the app's own dialogs are not touched)"
+          : "no system alert is open (the app's own dialogs are not touched)";
         // an answer asked for and not given; a question has its answer here
         if (answer) throw new ToolError(t, 'NOT_FOUND', undefined, false);
         return reply(t, summary(t));
