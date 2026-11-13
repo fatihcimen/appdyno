@@ -6,6 +6,7 @@ import { functionDiff, moved, type FunctionChange, type Profile } from './functi
 import {
   isPhase,
   JOURNEY_TOTAL,
+  JOURNEY_UNSETTLED,
   journeyStep,
   measureOf,
   phaseKind,
@@ -51,8 +52,14 @@ export function placesOf(comparisons: Comparison[]): Map<string, Comparison[]> {
   const add = (place: string, c: Comparison) =>
     places.set(place, [...(places.get(place) ?? []), c]);
   const worse = comparisons.filter((c) => c.verdict === 'regression');
-  for (const c of worse.filter((x) => x.kind !== JOURNEY_TOTAL))
-    add(journeyStep(c.kind)?.step ?? WHOLE_RUN, c);
+  // a step that stopped settling kept no time in this run: that step is where the count of them went up
+  const unsettledAt = comparisons
+    .filter((c) => journeyStep(c.kind)?.what === 'ms' && c.n.current === 0)
+    .map((c) => must(journeyStep(c.kind), 'a step').step);
+  for (const c of worse.filter((x) => x.kind !== JOURNEY_TOTAL)) {
+    const at = c.kind === JOURNEY_UNSETTLED && unsettledAt.length > 0 ? unsettledAt : undefined;
+    for (const place of at ?? [journeyStep(c.kind)?.step ?? WHOLE_RUN]) add(place, c);
+  }
   const whole = worse.find((c) => c.kind === JOURNEY_TOTAL);
   if (whole) {
     const steps = comparisons.filter((c) => journeyStep(c.kind)?.what === 'ms');

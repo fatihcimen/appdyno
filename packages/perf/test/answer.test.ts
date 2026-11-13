@@ -122,6 +122,16 @@ describe('where a change is looked for', () => {
     expect([...places.keys()]).toEqual(['02_b']);
   });
 
+  it('puts more steps never settling at the step that kept no time, and else at the run', () => {
+    const gone = worse('journey.03_tap_id_open_catalog.ms', {
+      verdict: 'few-samples',
+      n: { current: 0, baseline: 15 },
+    });
+    const more = worse('journey.unsettled', { unit: 'count' });
+    expect([...placesOf([more, gone]).keys()]).toEqual(['03_tap_id_open_catalog']);
+    expect([...placesOf([more]).keys()]).toEqual([WHOLE_RUN]);
+  });
+
   it('takes anything else as the run, and nothing that the gate did not call', () => {
     expect([...placesOf([worse('launch.ttid_ms')]).keys()]).toEqual([WHOLE_RUN]);
     expect(placesOf([worse('launch.ttid_ms', { verdict: 'noisy' })]).size).toBe(0);
