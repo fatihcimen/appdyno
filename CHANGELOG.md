@@ -4,9 +4,9 @@
 
 ## Unreleased
 
-## 1.0.1
+## 1.1.0
 
-appdyno 1.0.1 fixes what driving seven builds of five open-source apps showed, and adds a shop example to try an agent on.
+appdyno 1.1.0 fixes what driving seven builds of five open-source apps showed, measures the scroll of an app that draws on its own surface, as a Flutter app does on Android, and adds a shop example to try an agent on.
 
 ### Changed
 

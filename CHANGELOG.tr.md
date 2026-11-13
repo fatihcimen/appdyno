@@ -4,9 +4,9 @@
 
 ## Yayımlanmamış
 
-## 1.0.1
+## 1.1.0
 
-appdyno 1.0.1, beş açık kaynak uygulamanın yedi build'ini sürmenin gösterdiklerini düzeltir ve bir ajanın üzerinde denenebileceği bir alışveriş örneği ekler.
+appdyno 1.1.0, beş açık kaynak uygulamanın yedi build'ini sürmenin gösterdiklerini düzeltir, Android'de bir Flutter uygulaması gibi kendi yüzeyine çizen bir uygulamanın kaydırmasını ölçer ve bir ajanın üzerinde denenebileceği bir alışveriş örneği ekler.
 
 ### Değişti
 
