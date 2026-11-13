@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import {
+  appendFileSync,
   chmodSync,
   existsSync,
   mkdirSync,
@@ -17,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { deviceStateFile, processAlive, startOf, thisOwner, must } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '@appdyno/testing/fake-agent.js';
 import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
-import { fakeTimed } from '@appdyno/testing/fake-time.js';
+import { fakeTimed, onFakeTime } from '@appdyno/testing/fake-time.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';
 
@@ -181,16 +182,25 @@ describe('a start that cannot come', () => {
     }),
   );
 
-  it(
-    'says how far a start got as the time ran out',
-    fakeTimed(async () => {
-      await expect(
-        new IosRunnerLauncher(UDID, silent('Testing started\n')).connect(),
-      ).rejects.toMatchObject({
-        message: expect.stringContaining('the runner is launching') as unknown,
+  it('gives a start that got on to launching the runner 90 s more from then, and says how far it got', async () => {
+    vi.useFakeTimers();
+    try {
+      const asked = new IosRunnerLauncher(UDID, silent('')).connect();
+      asked.catch(() => undefined);
+      const log = join(state, `ios-${UDID}.log`);
+      await vi.waitFor(() => expect(existsSync(log)).toBe(true), { timeout: 10_000 });
+      await vi.advanceTimersByTimeAsync(150_000);
+      // the runner's first line, as xcodebuild writes it, late in the start
+      appendFileSync(log, 'Runner-Runner[91150:20746824] [Default] Running tests...\n');
+      await expect(onFakeTime(asked)).rejects.toMatchObject({
+        message: expect.stringMatching(
+          /^the iOS runner did not start within 2[3-6]\d s: xcodebuild started testing: the runner is launching/,
+        ) as unknown,
       });
-    }),
-  );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it.each([
     ['takes a tunnel on a phone paired for Wi-Fi', true, '1'],

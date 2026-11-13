@@ -136,9 +136,14 @@ describe('the link prompt', () => {
 
 describe('a starting runner', () => {
   it("says where it has got to, by xcodebuild's log", () => {
-    expect(startPhase('Command line invocation:\n')).toMatch(/preparing/);
-    expect(startPhase('Testing started\n')).toMatch(/launching/);
-    expect(startPhase("Test Suite 'Runner' started at 2026\n")).toMatch(/port/);
+    // a real start's log, Xcode 27.1, as far as each milestone
+    const begun =
+      'Command line invocation:\n    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building\n\nWriting result bundle at path:\n\t/tmp/ios.kept/session.xcresult\n\n2026-11-13 12:43:43.280 xcodebuild[91087:20746104] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>\n';
+    const launched = `${begun}2026-11-13 12:43:47.641146+0300 Runner-Runner[91150:20746824] [Default] Running tests...\n`;
+    const running = `${launched}Test Suite 'Selected tests' started at 2026-11-13 12:43:52.904.\n`;
+    expect(startPhase(begun)).toMatch(/preparing/);
+    expect(startPhase(launched)).toMatch(/launching/);
+    expect(startPhase(running)).toMatch(/port/);
   });
 });
 

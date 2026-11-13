@@ -89,6 +89,7 @@ describe('crash reports', () => {
     put('new.ips', ips('dev.app'), 1_000);
     put('old.ips', ips('dev.app'), 60_000);
     put('other-app.ips', ips('dev.other'), 1_000);
+    put('dev.application.ips', ips('dev.application'), 1_000);
     put('other-sim.ips', ips('dev.app', OTHER), 1_000);
     put('note.txt', 'not a report', 1_000);
     const q = { app: 'dev.app', limit: 5 };
@@ -98,6 +99,15 @@ describe('crash reports', () => {
     expect(since.reports).toHaveLength(1);
     expect(await reportsIn(dir, { ...q, limit: 1 })).toHaveLength(1);
     expect((await simulatorCrashes(UDID, q, join(dir, 'none'))).reports).toEqual([]);
+  });
+
+  it("keeps the crashes of the app's own extensions, and names which", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
+    writeFileSync(join(dir, 'Widgets.ips'), ips('dev.app.SpringboardWidgets'));
+    const [report] = (await simulatorCrashes(UDID, { app: 'dev.app', limit: 5 }, dir)).reports;
+    expect(report?.reason).toBe(
+      'EXC_BAD_ACCESS SIGSEGV Segmentation fault: 11, in its extension dev.app.SpringboardWidgets',
+    );
   });
 
   it('says when macOS keeps no more reports of the process, and how to have the next kept', async () => {

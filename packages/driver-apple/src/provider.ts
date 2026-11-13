@@ -112,7 +112,10 @@ const bootedSimulators = (): Promise<Simulator[]> =>
     .catch(() => []);
 
 /** Booted simulators. Xcode's checks, which iPhones stand on too, are this driver's: it is the first of the two. */
-export function simulatorProvider(booted = bootedSimulators): DeviceProvider {
+export function simulatorProvider(
+  booted = bootedSimulators,
+  opts: { behind?: boolean } = {},
+): DeviceProvider {
   return {
     list: async () =>
       (await booted()).map((d) => ({
@@ -123,7 +126,7 @@ export function simulatorProvider(booted = bootedSimulators): DeviceProvider {
       })),
     handles: (serial) => SIMULATOR_ID.test(serial),
     virtual: new Simulators(new Simctl()),
-    open: (serial) => new IosSimulatorDevice(serial),
+    open: (serial) => new IosSimulatorDevice(serial, undefined, undefined, opts),
     doctor: async (serial) => [
       ...(await iosChecks()),
       ...(await booted()).map((s) => ({

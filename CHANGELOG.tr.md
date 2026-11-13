@@ -28,7 +28,13 @@
 - `perf_scroll`, sonuna zaten gelmiş bir listeyi sonraki turlarda olduğu gibi ilk turda da geri getirir: üstünü açılır bir pencere örtmüş bir ekran gibi reddediliyordu.
 - Sistemin uygulamanın toplamı olmadan yanıtladığı bir bellek okuması, bir kez uygulama yanıt vermezken görüldü, yeniden sorulacak bir `TIMEOUT` olur ve sistemin ne dediğini taşır: kodsuz çıplak bir hataydı.
 - Komut satırında `--ref`, başına `@` yazılmadan verilen bir ref'i alır.
-- Açılışı süresini dolduran bir iOS runner'ı, açılmadığını, ne kadar sonra ve nereye kadar geldiğini söyler: onu bitiren öldürme önce geldiği için runner'ın durduğunu, `xcodebuild exit null` diyordu. Runner'ı başlatma aşamasına geçmiş bir açılışa o andan itibaren 90 sn daha verilir: orada öldürülen bir açılış sıfırdan yeniden başlatılıyordu.
+- Açılışı süresini dolduran bir iOS runner'ı, açılmadığını, ne kadar sonra ve nereye kadar geldiğini söyler: onu bitiren öldürme önce geldiği için runner'ın durduğunu, `xcodebuild exit null` diyordu. Runner'ı başlatma aşamasına geçmiş bir açılışa o andan itibaren 90 sn daha verilir: orada öldürülen bir açılış sıfırdan yeniden başlatılıyordu. Açılışın nereye kadar geldiği runner'ın kendi ilk satırından okunur: xcodebuild'in sonuçlarını nereye yazdığını söyleyen ilk satırı, runner'ın başlatıldığı diye okunuyordu.
+- Yardımcısı cevap vermeyen bir simülatörde ilerleme, runner'ın onun yerine başlatıldığını söyler; runner da açılmazsa hata yardımcının cevap vermediğini de söyler.
+- Komut satırından verilen bir komut artık cevabının ardından simülatörün runner'ını başlatmaz; komut bitmeden onu iki dakikaya kadar bekliyordu. Runner, ona ihtiyaç duyan iş için açılır ve sonraki komut için kalır.
+- `perf_scroll`, yüksek takılmada aldığı profil başarısız olursa ya da hiçbir fonksiyon adı vermezse bunu söyler ve profil aldığını da bildirir: bir iOS profili üç dakika sürmüş, cevap hiçbir ad vermemiş ve hiçbir şey söylememişti.
+- iOS'ta `crashes`, uygulamanın kendi uzantılarının, bir widget da dahil, çökmelerini de tutar ve hangisi olduğunu söyler: yalnızca uygulamanın kendisininkileri tutuyordu.
+- iOS'ta bir web sayfasının öğesi yalnızca bir alan olduğunda odaktadır: her biri `focused` diyordu.
+- Bir iOS profilinden gelen fonksiyon adı olduğu gibi okunur: bir C++ adı `__func&amp;lt;` diye okunuyor, uygulamanın kendi adları da kaçışlarını koruyordu.
 - Android'de takıldığı için yeniden başlatılan agent, sistem yanıt vermeyen bir uygulamayı soruyorsa bunu söyler: o uygulamaya bir dokunuş agent'ı bekletmişti ve cevap yalnızca takıldığını söylüyordu.
 - `perf_snapshot`, takılan kare payının sistemin saydığı biçimde son zamanına geç kalan kareler olduğunu söyler; Play'in 16 ms üstü kare payı onun yanında durur. Cihazın vermediği CPU baskısını, ısı durumunu ya da grafik belleğini yazmaz: `?` ve `0.0 MB` gösteriyordu.
 

@@ -112,6 +112,22 @@ describe('perf tools', () => {
     expect(r.text).toContain('high jank: median 98.2% (threshold 10%)');
   });
 
+  it('scroll: says the profile of its jank failed, where it names no top function', async () => {
+    const dev = new FakeDevice();
+    dev.jank = 25;
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        cpuProfile: () => Promise.reject(new Error('the trace tool cannot read its own trace')),
+      },
+    });
+    const r = await (await connect({}, dev)).textOf('perf_scroll', { swipes: 2 });
+    expect(r.text).toContain('high jank');
+    expect(r.text).toContain(
+      'no top function: the profile of one scroll more failed: the trace tool cannot read its own trace',
+    );
+  });
+
   it('scroll: each round resets frames, swipes, reads; jank over the threshold and memory growth are said', async () => {
     const dev = new FakeDevice();
     dev.jank = 25;

@@ -6,12 +6,13 @@ export const deviceProviders = (
   takeover = false,
   animations?: 'on' | 'off',
   installAnswers?: InstallAnswers,
+  simulator: { behind?: boolean } = {},
 ) => [
   androidProvider(new Adb(), {
     takeover,
     ...(animations && { animations }),
     ...(installAnswers && { installAnswers }),
   }),
-  simulatorProvider(),
+  simulatorProvider(undefined, simulator),
   iphoneProvider(),
 ];

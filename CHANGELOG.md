@@ -28,7 +28,13 @@
 - `perf_scroll` on a list already at its end brings it back for the first round too, as it did for later ones: it was refused as a screen covered by a popup.
 - A memory read the system answered without the app's total, seen once while the app was not responding, is a `TIMEOUT` to ask again, with what the system said: it was a bare error with no code.
 - On the command line, `--ref` takes a ref typed without its `@`.
-- An iOS runner whose start runs out of time says that it did not start, after how long, and how far it got: it said the runner had stopped, `xcodebuild exit null`, as the kill that ended it came first. A start that has got on to launching the runner has 90 s more from then: one killed there was started again from nothing.
+- An iOS runner whose start runs out of time says that it did not start, after how long, and how far it got: it said the runner had stopped, `xcodebuild exit null`, as the kill that ended it came first. A start that has got on to launching the runner has 90 s more from then: one killed there was started again from nothing. How far a start got is read from the runner's own first line: xcodebuild's first, where it writes its results, read as the runner launching.
+- On a simulator whose helper does not answer, the progress says the runner starts in its place, and a runner that does not start either says the helper had not answered.
+- A command on the command line no longer starts a simulator's runner behind its answer, which it then waited for before it ended, up to two minutes: the runner starts for what needs it, and stays for the next command.
+- `perf_scroll` says when the profile it takes of high jank failed or named no function, and says that it is taking one: an iOS profile ran three minutes, and its answer named nothing and said nothing.
+- `crashes` on iOS keeps the crashes of the app's own extensions, a widget among them, and names which: it kept only the app's own.
+- On iOS, an element of a web page has the focus only where it is a field: every one said `focused`.
+- A function's name from an iOS profile reads as it is: a C++ name read `__func&amp;lt;`, and the app's own names kept their escapes.
 - On Android, an agent restarted as stuck says when the system is asking about an app that is not responding: a touch on that app had held the agent up, and the answer said only that it was stuck.
 - `perf_snapshot` says its janky share is of frames late for their deadline, as the system counts them, beside Play's share of frames over 16 ms, and leaves out a CPU pressure, a thermal state or a graphics memory the device did not give: it showed `?` and `0.0 MB`.
 

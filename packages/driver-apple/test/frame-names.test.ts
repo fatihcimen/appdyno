@@ -31,10 +31,11 @@ describe('a build’s names for its frames', () => {
     expect(xml).toContain('name="busyMainThread()" addr="0x100391f00"');
   });
 
-  it('reads through to the profile, escapes and all', () => {
+  it('reads through to the profile, escaped in the file and read as it is', () => {
     const xml = renamed(TABLE, '5', new Map([['0x100391f00', 'closure #1 in <Screen>']]));
+    expect(xml).toContain('closure #1 in &lt;Screen&gt;');
     expect(parseTimeProfile(xml, 9).appTop.map((e) => e.symbol)).toContain(
-      'closure #1 in &lt;Screen&gt;',
+      'closure #1 in <Screen>',
     );
   });
 

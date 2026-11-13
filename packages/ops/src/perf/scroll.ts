@@ -213,13 +213,27 @@ export function perfScrollOp(ctx: ServerContext) {
       const jank = counted.length ? round1(median(counted.map((x) => x.jankyPercent))) : undefined;
       // what the app spent its time on as it janked: one scroll more, under the profiler, where the device has one; it
       // counts in no round, as the profiler costs the frames something
-      const busiest =
-        jank !== undefined && jank > JANK_PERCENT
-          ? await measure(s, 'cpuProfile', false)(pkg, roundSeconds * 1_000, swipeAll).then(
-              (p) => p.value.appTop?.[0] ?? p.value.top[0],
-              () => undefined,
-            )
-          : undefined;
+      const profiles = jank !== undefined && jank > JANK_PERCENT;
+      // a profile that does not come is said, as its time was: a device without a profiler says nothing
+      let unprofiled: string | undefined;
+      if (profiles)
+        reportProgress(
+          'one scroll more under the profiler, to name what the app spent its time on',
+        );
+      const busiest = profiles
+        ? await measure(s, 'cpuProfile', false)(pkg, roundSeconds * 1_000, swipeAll).then(
+            (p) => {
+              const top = p.value.appTop?.[0] ?? p.value.top[0];
+              if (!top) unprofiled = 'the profile of one scroll more named no function';
+              return top;
+            },
+            (e: unknown) => {
+              if (!(e instanceof DeviceError && e.code === 'UNSUPPORTED'))
+                unprofiled = `no top function: the profile of one scroll more failed: ${e instanceof Error ? e.message : String(e)}`;
+              return undefined;
+            },
+          )
+        : undefined;
       s.acted();
       const frozen = rounds.reduce((a, x) => a + x.frozen, 0);
       // steady state: the second round's end to the last one's (the first loads images and caches)
@@ -281,6 +295,7 @@ export function perfScrollOp(ctx: ServerContext) {
             : counted.length
               ? ['no threshold exceeded']
               : [await unjudged(s, pkg)]),
+          ...(unprofiled ? [unprofiled] : []),
           ...(limits ? [limits] : []),
           ...play.lines,
           ...noisy(noise),

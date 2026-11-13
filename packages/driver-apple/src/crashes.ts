@@ -94,8 +94,12 @@ export async function reportsIn(
   const out: CrashReport[] = [];
   for (const f of files) {
     const r = parseIps(await readFile(f.file, 'utf8').catch(() => ''));
-    if (r?.bundle !== q.app || (only && !only(r))) continue;
-    out.push({ at: r.at, reason: r.reason, ...(r.detail && { detail: r.detail }), file: f.file });
+    // the app's own extensions (a widget, a share sheet) are named under its id, and crash in its name
+    const bundle = r?.bundle;
+    if (!r || !bundle || (bundle !== q.app && !bundle.startsWith(`${q.app}.`))) continue;
+    if (only && !only(r)) continue;
+    const reason = bundle === q.app ? r.reason : `${r.reason}, in its extension ${bundle}`;
+    out.push({ at: r.at, reason, ...(r.detail && { detail: r.detail }), file: f.file });
     if (out.length >= q.limit) break;
   }
   return out;

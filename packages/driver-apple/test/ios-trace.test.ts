@@ -191,6 +191,16 @@ describe('iOS trace export', () => {
     expect(p.appTop[1]?.symbol).toBe('spin');
   });
 
+  it("reads a C++ name the export escaped twice as it is, the app's own as well", () => {
+    const twice = profile.replace(
+      'name="spin"',
+      'name="__func&amp;lt;fml::Thread(int&amp;amp;)&amp;gt;"',
+    );
+    const p = parseTimeProfile(twice);
+    expect(p.top[0]?.symbol).toBe('__func<fml::Thread(int&)>');
+    expect(p.appTop[1]?.symbol).toBe('__func<fml::Thread(int&)>');
+  });
+
   it('ranks the app’s named functions over the addresses, addresses when all are', () => {
     const binary =
       '<binary id="9" name="F" UUID="X" arch="arm64" load-addr="0x0" path="/x/F.app/F"/>';

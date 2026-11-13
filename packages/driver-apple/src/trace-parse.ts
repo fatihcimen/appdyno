@@ -207,6 +207,17 @@ export type Sample = {
 };
 
 /** The Time Profiler's rows one at a time: a value seen once is a `ref` from then on, each kind with its own ids. */
+const unescape = (s: string) =>
+  s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+
+/** A frame's name as it reads: the export escapes a C++ name twice, `__func&amp;lt;fml::Thread` for `__func<fml::Thread`. */
+const unescaped = (name: string) => unescape(unescape(name));
+
 export function* samplesOf(xml: string): Generator<Sample> {
   const binaries = new Map<string, string>();
   const frames = new Map<string, SampleFrame>();
@@ -241,7 +252,10 @@ export function* samplesOf(xml: string): Generator<Sample> {
         const binary = m[3];
         const path = binary ? must(m[4], "a binary's path") : undefined;
         if (binary && path !== undefined) binaries.set(binary, path);
-        const f = { name: must(m[2], 'a name'), binary: path ?? binaries.get(m[5] ?? '') ?? '' };
+        const f = {
+          name: unescaped(must(m[2], 'a name')),
+          binary: path ?? binaries.get(m[5] ?? '') ?? '',
+        };
         frames.set(must(m[1], 'an id'), f);
         stack.push(f);
       }
@@ -257,10 +271,6 @@ export function* samplesOf(xml: string): Generator<Sample> {
     };
   }
 }
-
-/** A frame's name as the export escapes it, as it reads. */
-const unescaped = (name: string) =>
-  name.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
 /** In the app's own binary, and so what a reader can change. */
 export const inApp = (f: SampleFrame) => f.binary.includes('.app/');
@@ -281,7 +291,7 @@ export function parseTimeProfile(
   for (const { stack, weight, pid: of } of samplesOf(xml)) {
     if (!stack.length || (pid !== undefined && of !== pid)) continue;
     total += weight;
-    const head = unescaped(must(stack[0], 'a frame').name);
+    const head = must(stack[0], 'a frame').name;
     top.set(head, (top.get(head) ?? 0) + weight);
     for (const name of new Set(stack.filter(inApp).map((f) => f.name)))
       app.set(name, (app.get(name) ?? 0) + weight);

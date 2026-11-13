@@ -9,6 +9,7 @@ import {
   type ActOptions,
   type TreeOptions,
   must,
+  reportProgress,
   throwIfCancelled,
 } from '@appdyno/core';
 import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
@@ -67,6 +68,8 @@ export class IosSimulatorDevice extends IosDevice {
     serial: string,
     private readonly simctl: Simctl = new Simctl(),
     direct?: DirectSim,
+    /** `behind: false`: the runner starts only for what needs it, as a command that ends with its answer would wait for it */
+    private readonly opts: { behind?: boolean } = {},
   ) {
     super(serial, simulatorOps(serial, simctl), new IosRunnerLauncher(serial));
     this.direct = direct ?? new DirectSim(serial);
@@ -122,7 +125,7 @@ export class IosSimulatorDevice extends IosDevice {
 
   /** The runner, started behind the helper at the first read or touch: at the choice it slowed a launch 3.4 s. */
   private startBehind() {
-    if (this.behind || !this.helloInfo) return;
+    if (this.behind || !this.helloInfo || this.opts.behind === false) return;
     this.behind = true;
     this.ensure().catch(() => undefined);
   }
@@ -130,10 +133,29 @@ export class IosSimulatorDevice extends IosDevice {
   /** The helper's hello: the runner starts for what needs it, a system alert, text, an image or a control found twice. */
   override async open(): Promise<Hello> {
     if (this.hello) return this.hello;
-    const hello = await this.queue.run(() => this.direct.hello()).catch(() => undefined);
-    if (!hello) return super.open();
-    this.helloInfo = hello;
-    return hello;
+    let why = '';
+    const hello = await this.queue
+      .run(() => this.direct.hello())
+      .catch((e: unknown) => {
+        why = e instanceof Error ? e.message : String(e);
+        return undefined;
+      });
+    if (hello) {
+      this.helloInfo = hello;
+      return hello;
+    }
+    // the runner is the slower way in: what it takes and why it is taken are said, not left to guess
+    reportProgress(
+      `the simulator's helper did not answer (${why}): the iOS runner starts in its place`,
+    );
+    return super.open().catch((e: unknown) => {
+      if (!(e instanceof DeviceError)) throw e;
+      throw new DeviceError(
+        e.code,
+        `${e.message}, after the simulator's helper did not answer: ${why}`,
+        e.hint,
+      );
+    });
   }
 
   /** When the transition the last touch started has ended. */

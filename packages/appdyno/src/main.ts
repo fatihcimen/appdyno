@@ -76,7 +76,12 @@ const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
  * The operations' context, from flags and the environment. `flowEnv`: where a flow's names find a value, a person's own
  * command line's; a server's is no flow's.
  */
-function contextFrom(values: ServerFlags, remember?: string, flowEnv?: NodeJS.ProcessEnv) {
+function contextFrom(
+  values: ServerFlags,
+  remember?: string,
+  flowEnv?: NodeJS.ProcessEnv,
+  oneCall = false,
+) {
   const env = process.env;
   const policy = policyOf(values, env);
   const device = values.device ?? env.APPDYNO_SERIAL;
@@ -98,36 +103,42 @@ function contextFrom(values: ServerFlags, remember?: string, flowEnv?: NodeJS.Pr
       values['accept-install-warnings'] === true || env.APPDYNO_ACCEPT_INSTALL_WARNINGS === '1',
   };
   const alertPerson = alertOf(values.silent);
-  return new ServerContext(policy, providers(values.takeover, animations, installAnswers), {
-    ...(device && { device }),
-    ...(app && { app }),
-    storage: {
-      ...(values.measurements && { measurements: values.measurements }),
-      ...(traceLimitGb !== undefined && { traceLimitGb }),
-      // a run kept in a folder of its own says nothing of the traces here
-      ...(!values.measurements && { autoPrune: true }),
-      ...(remember && { remember }),
+  // a command that ends with its answer would wait for a runner started behind it, which nothing then uses
+  const simulator = { behind: !oneCall };
+  return new ServerContext(
+    policy,
+    providers(values.takeover, animations, installAnswers, simulator),
+    {
+      ...(device && { device }),
+      ...(app && { app }),
+      storage: {
+        ...(values.measurements && { measurements: values.measurements }),
+        ...(traceLimitGb !== undefined && { traceLimitGb }),
+        // a run kept in a folder of its own says nothing of the traces here
+        ...(!values.measurements && { autoPrune: true }),
+        ...(remember && { remember }),
+      },
+      ...(flightSeconds !== undefined && { flightSeconds }),
+      ...((values['full-urls'] || env.APPDYNO_FULL_URLS === '1') && { fullUrls: true }),
+      claims: { share: values.share || env.APPDYNO_SHARE === '1' },
+      // a put-back's hold is one a server started meanwhile waits out
+      tool: remember ? 'appdyno cli' : values[PUT_BACK_AFTER] ? PUT_BACK_TOOL : 'appdyno mcp',
+      // a silent server sounds nowhere: a window that shows its request is told so
+      person: { ...(alertPerson ? { alertPerson } : { silent: true }), clientNamed },
+      ...(flowEnv && { env: flowEnv }),
+      mirrorCommand: [
+        process.execPath,
+        fileURLToPath(import.meta.url),
+        'mirror',
+        ...(values.takeover ? ['--takeover'] : []),
+      ],
     },
-    ...(flightSeconds !== undefined && { flightSeconds }),
-    ...((values['full-urls'] || env.APPDYNO_FULL_URLS === '1') && { fullUrls: true }),
-    claims: { share: values.share || env.APPDYNO_SHARE === '1' },
-    // a put-back's hold is one a server started meanwhile waits out
-    tool: remember ? 'appdyno cli' : values[PUT_BACK_AFTER] ? PUT_BACK_TOOL : 'appdyno mcp',
-    // a silent server sounds nowhere: a window that shows its request is told so
-    person: { ...(alertPerson ? { alertPerson } : { silent: true }), clientNamed },
-    ...(flowEnv && { env: flowEnv }),
-    mirrorCommand: [
-      process.execPath,
-      fileURLToPath(import.meta.url),
-      'mirror',
-      ...(values.takeover ? ['--takeover'] : []),
-    ],
-  });
+  );
 }
 
 /** A person's own command: a flow's names find values in its environment, as no server's do. */
-const commandLine = (values: ServerFlags, remember?: string) =>
-  contextFrom(values, remember, process.env);
+const commandLine = (values: ServerFlags, remember?: string, oneCall = false) =>
+  contextFrom(values, remember, process.env, oneCall);
 
 /** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
 const servicesOfHub = (ctx: ServerContext) => {
@@ -270,6 +281,7 @@ async function operationCommand(command: string | undefined, rest: string[]) {
       ...(measurements && { measurements }),
     },
     cliSessionFile(),
+    true,
   );
   const ops = opsFor(ctx);
   const commands = commandsFor(ops);

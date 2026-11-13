@@ -243,7 +243,11 @@ export function screenElements(
     const id = idOf(i.el.identifier);
     const idOnly = opts.port.listsByIdAlone && i.type === 'other' && id !== undefined;
     const field = i.role === 'textField';
-    if (!all && !control && !label && !idOnly && !i.el.focused && !i.el.checked) continue;
+    // what a web view shows: its coordinates hold, its text is the page's
+    const web = [i.index, ...ancestors(i.index)].some((a) => isWebView(at(a).type));
+    // XCUI says every element of a web view has the focus: there it is a field's, where typing goes
+    const focused = i.el.focused && (!web || i.el.editable);
+    if (!all && !control && !label && !idOnly && !focused && !i.el.checked) continue;
     const x = Math.round(i.r.x + i.r.w / 2);
     const y = Math.round(i.r.y + i.r.h / 2);
     const role = i.role ?? (label ? 'text' : i.type);
@@ -270,11 +274,9 @@ export function screenElements(
       x,
       y,
       flags: [
-        ...(['clickable', 'checked', 'focused'] as const).filter((f) => i.el[f]),
-        // what a web view shows: its coordinates hold, its text is the page's
-        ...([i.index, ...ancestors(i.index)].some((a) => isWebView(at(a).type))
-          ? (['web'] as const)
-          : []),
+        ...(['clickable', 'checked'] as const).filter((f) => i.el[f]),
+        ...(focused ? (['focused'] as const) : []),
+        ...(web ? (['web'] as const) : []),
       ],
     });
     from.push(i.index);

@@ -225,6 +225,19 @@ describe('wire tree to screen', () => {
     expect(s.window).toEqual({ w: 1080, h: 2400 });
   });
 
+  it('says a web element has the focus only where it is a field, as XCUI says every one of a page has it', () => {
+    const tree = wireTree([
+      { c: 'WebView', b: [0, 100, 1080, 2000] },
+      { p: 1, c: 'Link', d: 'Bosphorus', b: [0, 200, 300, 260], f: 1 | 2 | 8 | 16 },
+      { p: 1, c: 'TextField', h: 'Search', b: [0, 300, 1000, 380], f: 1 | 8 | 16 | 128 },
+    ]);
+    const flags = buildScreen(tree, { port: plainScreen }).list.map((e) => [e.label, e.flags]);
+    expect(flags).toEqual([
+      ['Bosphorus', ['clickable', 'web']],
+      ['Search', ['focused', 'web']],
+    ]);
+  });
+
   it('takes no dialog for the screen', () => {
     const tree = wireTree([]);
     must(tree.nodes[0], 'the root').b = [54, 900, 1026, 1500];

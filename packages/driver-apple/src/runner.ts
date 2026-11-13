@@ -43,11 +43,15 @@ const PROGRESS_MS = 5_000;
 const ENDS_MS = 5_000;
 const ENDS_POLL_MS = 20;
 
-/** Where a runner's start has got to, by the last milestone of xcodebuild's log. */
+/**
+ * Where a runner's start has got to, by the last milestone of xcodebuild's log: the runner's own first line once it is
+ * launched (`Runner-Runner[pid:tid] Running tests...`), its test suite once it runs. xcodebuild names where it writes its
+ * result bundle at its very start, and no milestone of a launch.
+ */
 export function startPhase(log: string): string {
   if (/Test Suite .* started|Test Case .* started/.test(log))
     return 'the runner is running: waiting for its port to answer';
-  if (/Testing started|Test session results|Writing result bundle/.test(log))
+  if (/Running tests\.\.\.|Testing started/.test(log))
     return 'xcodebuild started testing: the runner is launching';
   return 'xcodebuild is preparing the device (installing the runner)';
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/index.js';
 import { Simctl } from '../src/simctl.js';
 
@@ -28,6 +29,24 @@ describe("a simulator's runner, started behind the helper", () => {
     await d.tree();
     await d.tree();
     expect(ensure).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start behind a command that ends with its answer, which would wait for it', async () => {
+    const read = vi.fn(() => Promise.resolve({ busy: false, copies: false, tree }));
+    const d = new IosSimulatorDevice(
+      UDID,
+      quiet(),
+      { close: vi.fn(), read, front: () => Promise.resolve(APP) } as never,
+      { behind: false },
+    );
+    const ensure = vi.fn(() => new Promise(() => undefined));
+    Object.assign(d, {
+      ensure,
+      keepDump: () => Promise.resolve(undefined),
+      helloInfo: { screen: { w: 402, h: 874 } },
+    });
+    await d.tree();
+    expect(ensure).not.toHaveBeenCalled();
   });
 
   it('is not waited for by a read of a control found twice while it starts: that read is the helper’s', async () => {
@@ -62,5 +81,26 @@ describe("a simulator's runner, started behind the helper", () => {
     await (d as unknown as { callNow: (m: string) => Promise<unknown> }).callNow('tree.get');
     expect(waited()).toBeGreaterThanOrEqual(25);
     answer.mockRestore();
+  });
+});
+
+describe('a simulator whose helper does not answer', () => {
+  it('says so where the runner taken in its place does not start either', async () => {
+    const hello = () => Promise.reject(new Error('the helper did not answer within 30000 ms'));
+    const d = new IosSimulatorDevice(UDID, quiet(), { close: vi.fn(), hello } as never);
+    let owner: object = Object.getPrototypeOf(IosSimulatorDevice.prototype) as object;
+    while (!Object.prototype.hasOwnProperty.call(owner, 'open'))
+      owner = Object.getPrototypeOf(owner) as object;
+    const runner = vi
+      .spyOn(owner as { open: () => Promise<unknown> }, 'open')
+      .mockRejectedValue(
+        new DeviceError('AGENT_UNAVAILABLE', 'the iOS runner did not start within 181 s'),
+      );
+    await expect(d.open()).rejects.toMatchObject({
+      code: 'AGENT_UNAVAILABLE',
+      message:
+        "the iOS runner did not start within 181 s, after the simulator's helper did not answer: the helper did not answer within 30000 ms",
+    });
+    runner.mockRestore();
   });
 });
