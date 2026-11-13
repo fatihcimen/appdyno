@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+## 1.0.1
+
+appdyno 1.0.1, beş açık kaynak uygulamanın yedi build'ini sürmenin gösterdiklerini düzeltir ve bir ajanın üzerinde denenebileceği bir alışveriş örneği ekler.
+
 ### Değişti
 
 - README hızlı bir başlangıçla açılıyor: tek komut, tek istek ve gerçek bir yanıt.

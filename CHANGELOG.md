@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 1.0.1
+
+appdyno 1.0.1 fixes what driving seven builds of five open-source apps showed, and adds a shop example to try an agent on.
+
 ### Changed
 
 - The README starts with a quick start: one command, one ask, and a real answer.
