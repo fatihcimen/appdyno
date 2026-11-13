@@ -159,6 +159,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
     if (this.rpc === rpc) this.rpc = undefined;
     await this.launcher.stop(rpc);
     rpc.close();
+    return undefined;
   }
 
   async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {

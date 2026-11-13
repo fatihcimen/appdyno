@@ -52,7 +52,7 @@ class TestDevice extends RpcDevice {
   }
 
   protected restartStuck() {
-    return Promise.resolve();
+    return Promise.resolve(undefined);
   }
 
   async tree(): Promise<Tree> {

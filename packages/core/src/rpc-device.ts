@@ -80,7 +80,8 @@ export abstract class RpcDevice extends DeviceActions {
   /** Starts or finds the agent, ready for the commands of this device. */
   protected abstract startAgent(): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }>;
   /** An agent whose work lane stays stuck: stopped, so the next call starts a new one. */
-  protected abstract restartStuck(rpc: RpcClient): Promise<void>;
+  /** Ends an agent stuck on a job; what held it up, where the device can tell. */
+  protected abstract restartStuck(rpc: RpcClient): Promise<string | undefined>;
   abstract tree(opts?: TreeOptions): Promise<Tree>;
 
   /** Whether the device can be asked to `wait`; where not, the caller polls. */

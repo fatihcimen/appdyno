@@ -167,6 +167,15 @@ export class AndroidDevice extends RpcDevice implements Device {
     if (this.rpc === rpc) this.rpc = undefined;
     rpc.close();
     await this.launcher.stop();
+    // a touch on an app that is not responding waits on it, and the agent with it; the system's dialog stays until answered
+    const dialog = await this.sh(
+      "dumpsys window windows 2>/dev/null | grep -m 1 -o 'Application Not Responding: [^ }]*'",
+    ).catch(() => '');
+    const app = /Application Not Responding: (\S+)/.exec(dialog)?.[1];
+    return (
+      app &&
+      `${app} is not responding, and the system asks whether to wait for it or close it: alert answers that`
+    );
   }
 
   /** Waits until adb lists the device as usable again, at most reconnectWaitMs; else rethrows `cause`. */

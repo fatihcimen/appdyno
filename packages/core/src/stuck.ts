@@ -7,13 +7,13 @@ const STUCK_PROBE_MS = 3_000;
 /**
  * After a call timed out: the agent does its device work one job at a time, so a job stuck past its
  * deadline would turn every later call into a TIMEOUT too. A quick call through the same lane tells;
- * when it times out as well, the agent is restarted (`restart`) and the caller's TIMEOUT says so. Any
- * other failure comes back as it was.
+ * when it times out as well, the agent is restarted (`restart`, which may say what held it up) and the
+ * caller's TIMEOUT says so. Any other failure comes back as it was.
  */
 export async function afterTimeout(
   e: unknown,
   rpc: RpcClient | undefined,
-  restart: (rpc: RpcClient) => Promise<void>,
+  restart: (rpc: RpcClient) => Promise<string | undefined>,
   probeMs = STUCK_PROBE_MS,
 ): Promise<unknown> {
   if (!(e instanceof DeviceError) || e.code !== 'TIMEOUT' || !rpc || rpc.closed) return e;
@@ -22,12 +22,12 @@ export async function afterTimeout(
     (x: unknown) => x instanceof DeviceError && x.code === 'TIMEOUT',
   );
   if (!stuck) return e;
-  await restart(rpc).catch(() => undefined);
+  const why = await restart(rpc).catch(() => undefined);
   return new DeviceError(
     'TIMEOUT',
     e.message,
     // what the call said to do still holds: a touch it timed out on may have gone through
-    `the agent was stuck and has been restarted: ${e.hint ?? 'read the screen, then try again'}`,
+    `the agent was stuck and has been restarted: ${why ? `${why}; ` : ''}${e.hint ?? 'read the screen, then try again'}`,
     { cause: e },
   );
 }

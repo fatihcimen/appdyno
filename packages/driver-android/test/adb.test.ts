@@ -433,3 +433,22 @@ describe('what a window calls a device', () => {
     expect(hardware.name).toBeUndefined();
   });
 });
+
+describe('an agent stuck on an app that is not responding', () => {
+  it('says which app the system asks about, as what held it up', async () => {
+    const adb = {
+      exec: (_serial: string, command: string) =>
+        Promise.resolve(
+          command.includes('Application Not Responding')
+            ? 'Application Not Responding: org.wikipedia.alpha\n'
+            : '',
+        ),
+    } as unknown as Adb;
+    const d = new AndroidDevice('emulator-5640', adb) as unknown as {
+      restartStuck(rpc: { close(): void }): Promise<string | undefined>;
+    };
+    await expect(d.restartStuck({ close: () => undefined })).resolves.toBe(
+      'org.wikipedia.alpha is not responding, and the system asks whether to wait for it or close it: alert answers that',
+    );
+  });
+});
