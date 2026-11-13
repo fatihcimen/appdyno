@@ -40,6 +40,9 @@ appdyno 1.0.1, beş açık kaynak uygulamanın yedi build'ini sürmenin gösterd
 - `perf_scroll`, yüksek takılmada aldığı profil başarısız olursa ya da hiçbir fonksiyon adı vermezse bunu söyler ve profil aldığını da bildirir: bir iOS profili üç dakika sürmüş, cevap hiçbir ad vermemiş ve hiçbir şey söylememişti.
 - iOS'ta `crashes`, uygulamanın kendi uzantılarının, bir widget da dahil, çökmelerini de tutar ve hangisi olduğunu söyler: yalnızca uygulamanın kendisininkileri tutuyordu.
 - iOS'ta bir web sayfasının öğesi yalnızca bir alan olduğunda odaktadır: her biri `focused` diyordu.
+- Android'de sistemin görüntüsünü vermediği bir ekran görüntüsü bir kez daha istenir ve yine gelmeyen öyle söylenir: bir sonraki denemede gelen bir ana ekran için güvenli işaretli bir pencere deniyordu.
+- Bir yanıtla verilen ve açık bir sistem uyarısı olmayan `alert`, hiçbir düğmeye dokunulmadığını söyler.
+- Adlı bir kontrolün içinde aynı noktada duran adsız bir kontrol, bir düğmenin ikonu gibi, onun yanında listelenmez: `button ""` parçası olduğu düğmenin yanında duruyordu.
 - Ekranda olmayan bir ref, eskimiş sayılmadan önce bir seçici gibi bir an beklenir ve ret, ref'in taşıdığı sözcükleri ve onların yerine en yakın olanları söyler: yüklü bir cihazda, yanıt vermeyen bir uygulamanın okuması, ekranın az önce listelediği bir ref olmadan iki kez dönmüştü.
 - Başarısız olan bir iOS runner açılışı, xcodebuild'inin başlatmakta olduğu runner uygulamasını da kapatır: simülatörde çalışır halde kalıyordu.
 - Kaydırmaları ekrana hiç yeni satır getirmeyen `scroll_to`, listenin o yönde sonunda olabileceğini ve öbür yönün denenmesini söyler: bir listenin başında aşağı çekip yenileme satırları kaydırıyordu ve yanıt listenin hâlâ kayabileceğini ve `maxSwipes`'ın artırılmasını söylüyordu.

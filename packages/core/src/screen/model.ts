@@ -281,7 +281,12 @@ export function screenElements(
     });
     from.push(i.index);
   }
-  return withoutPiles(out, from, ancestors);
+  const echoes = echoesOf(out, from, ancestors);
+  return withoutPiles(
+    out.filter((_, n) => !echoes.has(n)),
+    from.filter((_, n) => !echoes.has(n)),
+    ancestors,
+  );
 }
 
 /**
@@ -291,6 +296,35 @@ export function screenElements(
 const PILED = 4;
 /** Two centres this close, in tap units, are one point. */
 const ONE_POINT = 4;
+
+/**
+ * A nameless control inside a named one that takes the same touch, as the icon of a button: the named one is the
+ * target, and the icon listed beside it, `button ""` at the same point, is only another line to read. A field, and what
+ * is checked or has the focus, stays.
+ */
+function echoesOf(out: ScreenElement[], from: number[], ancestors: (i: number) => number[]) {
+  const named = new Map<number, ScreenElement>();
+  out.forEach((e, n) => {
+    if (e.label && e.flags.includes('clickable')) named.set(must(from[n], 'its element'), e);
+  });
+  const echoes = new Set<number>();
+  out.forEach((e, n) => {
+    if (
+      e.label ||
+      e.id ||
+      e.role === 'textField' ||
+      e.flags.includes('checked') ||
+      e.flags.includes('focused')
+    )
+      return;
+    const over = ancestors(must(from[n], 'its element')).some((a) => {
+      const p = named.get(a);
+      return !!p && Math.abs(p.x - e.x) <= ONE_POINT && Math.abs(p.y - e.y) <= ONE_POINT;
+    });
+    if (over) echoes.add(n);
+  });
+  return echoes;
+}
 
 function withoutPiles(out: ScreenElement[], from: number[], ancestors: (i: number) => number[]) {
   const key = (e: ScreenElement) => `${Math.round(e.x / ONE_POINT)},${Math.round(e.y / ONE_POINT)}`;

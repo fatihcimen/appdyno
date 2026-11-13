@@ -40,6 +40,9 @@ appdyno 1.0.1 fixes what driving seven builds of five open-source apps showed, a
 - `perf_scroll` says when the profile it takes of high jank failed or named no function, and says that it is taking one: an iOS profile ran three minutes, and its answer named nothing and said nothing.
 - `crashes` on iOS keeps the crashes of the app's own extensions, a widget among them, and names which: it kept only the app's own.
 - On iOS, an element of a web page has the focus only where it is a field: every one said `focused`.
+- On Android, a screenshot the system gives no picture of is asked for once more, and one still missing is said as that: it was said to be of a window marked secure, of a home screen whose next try had it.
+- `alert` with an answer and no system alert open says that no button was touched.
+- A nameless control inside a named one at the same point, as the icon of a button, is not listed beside it: `button ""` stood next to the button it is part of.
 - A ref not on the screen is waited for a moment, as a selector is, before it is called stale, and the refusal says the words it had and what is nearest in their place: a read on a loaded device, of an app not responding, came back without a ref the screen had just listed, twice.
 - An iOS runner start that failed ends the runner app its xcodebuild was launching: it stayed running in the simulator.
 - `scroll_to` whose swipes brought no new rows into view says the list may be at its end that way, and to try the other: at a list's top, a pull to refresh moved the rows, and the answer said the list could still move and to raise `maxSwipes`.

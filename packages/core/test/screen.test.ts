@@ -238,6 +238,24 @@ describe('wire tree to screen', () => {
     ]);
   });
 
+  it('lists a named control once, not the nameless icon inside it at the same point', () => {
+    const tree = wireTree([
+      {
+        c: 'android.widget.FrameLayout',
+        d: 'More options',
+        b: [960, 840, 1074, 950],
+        f: 1 | 2 | 16,
+      },
+      { p: 1, c: 'android.widget.ImageButton', b: [980, 860, 1054, 930], f: 1 | 16 },
+      // a field inside a named row stays, nameless as it is
+      { c: 'android.widget.LinearLayout', d: 'Name', b: [0, 300, 1080, 400], f: 1 | 2 | 16 },
+      { p: 3, c: 'android.widget.EditText', b: [0, 300, 1080, 400], f: 1 | 4 | 16 | 128 },
+    ]);
+    const list = buildScreen(tree, { port: plainScreen }).list.map((e) => `${e.role} "${e.label}"`);
+    expect(list).toContain('tappable "More options"');
+    expect(list.filter((l) => l.endsWith('""')).map((l) => l.split(' ')[0])).toEqual(['textField']);
+  });
+
   it('takes no dialog for the screen', () => {
     const tree = wireTree([]);
     must(tree.nodes[0], 'the root').b = [54, 900, 1026, 1500];
