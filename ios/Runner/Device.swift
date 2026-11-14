@@ -6,7 +6,7 @@ import XCTest
     static let springboardId = "com.apple.springboard"
     let springboard = XCUIApplication(bundleIdentifier: Device.springboardId)
     private(set) var target: XCUIApplication?
-    private var targetId: String?
+    private(set) var targetId: String?
     /// Recent captures by layout digest: what `before` names (compare and hit test).
     var recent: [(hash: String, nodes: [Node])] = []
     /// The copies found out of reach on a recent layout, by its hash (each hittability check costs a query).
@@ -51,6 +51,9 @@ import XCTest
         targetId = id
         target = XCUIApplication(bundleIdentifier: id)
     }
+
+    /// Whether the app under test is the one in front.
+    var targetInFront: Bool { target?.state == .runningForeground }
 
     /// The app on screen: the target when it is in front, else the app iOS has there, else the home screen. Read in
     /// place of another app in front, the home screen app is only that app's card in the switcher.

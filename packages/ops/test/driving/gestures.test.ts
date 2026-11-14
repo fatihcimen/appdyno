@@ -359,6 +359,31 @@ describe('gestures, keys, clipboard', () => {
     );
   });
 
+  it('says which app a touch brought to the front, where the app was in front and runs on', async () => {
+    const d = new FakeDevice();
+    let front = 'dev.app';
+    const shown = d.current.bind(d);
+    d.current = () => {
+      const t = shown();
+      for (const w of t.windows) w.pkg = front;
+      return t;
+    };
+    const act = d.act.bind(d);
+    d.act = (a, o) => {
+      // a link the app opened in Safari
+      front = 'com.apple.mobilesafari';
+      return act(a, o);
+    };
+    const { call } = await connect(d);
+    await call('screen');
+    const r = await call('tap', { x: 10, y: 20 });
+    expect(r.text).toMatch(
+      /^tapped 10,20\ncom\.apple\.mobilesafari came to the front: launch_app brings dev\.app back\n/,
+    );
+    expect(r.text).not.toContain('if it crashed');
+    expect((await call('screen')).text).not.toContain('WARNING');
+  });
+
   it('refuses an app the device does not have by one code on every platform, with how to list them', async () => {
     const d = new FakeDevice();
     let state = 'not_installed';

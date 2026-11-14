@@ -21,7 +21,7 @@ import {
   watched,
 } from './app-death.js';
 import type { ServerContext } from './context.js';
-import { noticed } from './noticed.js';
+import { broughtUp, noticed } from './noticed.js';
 import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
@@ -192,7 +192,8 @@ async function afterAction(
       clean,
       cleanLog,
     });
-  const fg = await noticed(s, screen, changed === false || !!o.launched);
+  const seen = await noticed(s, screen, changed === false || !!o.launched);
+  const fg = o.ran ? broughtUp(s, screen, seen) : seen;
   const busy = o.settled === false ? o.busy : [];
   const moving =
     o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';

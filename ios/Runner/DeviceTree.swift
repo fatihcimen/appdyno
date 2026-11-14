@@ -148,6 +148,9 @@ extension Device {
         // the home screen's copies are a widget and its icon, or a keyboard on its way: asking of them went to a
         // widget's process, and on an iPhone took 7 s and then did not answer
         if id == Device.springboardId { return }
+        // nor of another app than the one under test, come up by its touch: Safari loading a link took seconds a query,
+        // waiting on each web view in turn, and a settle that asked held the action past the host's deadline
+        if let targetId, id != targetId { return }
         let soon = Date().addingTimeInterval(Device.copiesAskS)
         var askedOne = false
         for idxs in repeated.prefix(4) {
