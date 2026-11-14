@@ -29,6 +29,7 @@ import {
 } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
+import { readViews } from './views.js';
 import { webLines } from './web.js';
 
 /** The fixtures' and Settings' smallest text still reads at this size and quality, and an answer costs half as much. */
@@ -150,7 +151,7 @@ function rawNode(e: UiElement, clean: (s: string) => string) {
   };
 }
 
-const ScreenIn = z.object({ raw: z.boolean().optional() }).strict();
+const ScreenIn = z.object({ raw: z.boolean().optional(), views: z.boolean().optional() }).strict();
 
 export function readOps(
   ctx: ServerContext,
@@ -162,12 +163,13 @@ export function readOps(
       name: 'screen',
       title: 'Read screen',
       description:
-        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags). Rows alike fold under one header line; "— words" names an element\'s row; a row\'s inner texts are left out and find reaches them. A ref names an element by what it is, so it holds across scrolls and redraws. raw: every element with rect and parent, as data.',
+        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags); views: its native view hierarchy and framework instead. Rows alike fold under one header line; "— words" names an element\'s row; a row\'s inner texts are left out and find reaches them. A ref names an element by what it is, so it holds across scrolls and redraws. raw: each with rect and parent, as data.',
       input: ScreenIn,
       output: ScreenOut,
       annotations: READ,
-      run: async ({ raw }) => {
+      run: async ({ raw, views }) => {
         const s = await ctx.session();
+        if (views) return readViews(s, clean, raw === true);
         const screen = await s.read();
         s.show(screen.list);
         const fg = await noticed(s, screen);

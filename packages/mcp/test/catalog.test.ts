@@ -31,6 +31,7 @@ const SEARCHED: Record<string, string> = {
   'network traffic': 'network',
   'visual regression': 'visual',
   'accessibility tree': 'screen',
+  'view hierarchy': 'screen',
   performance: 'perf_snapshot',
   jank: 'perf_trace',
   startup: 'perf_launch',
@@ -119,7 +120,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(29_008);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(29_089);
   expect(JSON.stringify(tools)).not.toMatch(
     /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
   );

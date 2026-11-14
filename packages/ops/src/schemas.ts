@@ -52,6 +52,8 @@ export const ActionOut = z.object({
 });
 export type ActionOut = z.infer<typeof ActionOut>;
 
+const Place = z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() });
+
 /** One element of the tree as read, for `screen raw`: what the folded list leaves out, places and parents. */
 export const RawNode = z.object({
   ref: z.string().optional(),
@@ -60,19 +62,34 @@ export const RawNode = z.object({
   text: z.string().optional(),
   identifier: z.string().optional(),
   placeholder: z.string().optional(),
-  rect: z
-    .object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() })
-    .optional(),
+  rect: Place.optional(),
   /** Index of the parent in `nodes`; none for a root. */
   parent: z.number().int().optional(),
   flags: z.array(z.string()),
 });
 
+/** One native view, for `screen views raw`: as the device read it, its words cleaned. */
+const ViewNode = z.object({
+  class: z.string(),
+  rect: Place,
+  id: z.string().optional(),
+  label: z.string().optional(),
+  text: z.string().optional(),
+  hidden: z.boolean().optional(),
+  alpha: z.number().optional(),
+  controller: z.string().optional(),
+  /** Index of the parent in `views`; none for a window's root. */
+  parent: z.number().int().optional(),
+});
+
+/** With views, `elements` counts the views, and `framework` names what draws most of them. */
 export const ScreenOut = z.object({
   elements: z.number().int(),
   foreground: z.string().optional(),
   warnings: z.array(z.string()),
   nodes: z.array(RawNode).optional(),
+  framework: z.string().optional(),
+  views: z.array(ViewNode).optional(),
 });
 
 export const FindOut = z.object({
