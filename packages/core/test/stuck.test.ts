@@ -48,6 +48,18 @@ describe('a call that timed out', () => {
     expect(restart).not.toHaveBeenCalled();
   });
 
+  it('leaves an agent whose lane answers, even that the quick call came too late to start', async () => {
+    const { rpc } = fakeAgent({
+      'app.foreground': () => ({
+        error: 'TIMEOUT',
+        message: 'the deadline passed before the work started',
+      }),
+    });
+    const restart = vi.fn(() => Promise.resolve(undefined));
+    expect(await afterTimeout(timeout, rpc, restart, 50)).toBe(timeout);
+    expect(restart).not.toHaveBeenCalled();
+  });
+
   it('asks nothing after any other failure', async () => {
     const { rpc, seen } = fakeAgent();
     const restart = vi.fn(() => Promise.resolve(undefined));

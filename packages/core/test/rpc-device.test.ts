@@ -26,6 +26,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { plainScreen } from './plain-screen.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 class TestDevice extends RpcDevice {
   readonly platform = 'android' as const;
@@ -343,4 +344,47 @@ describe('an agent state file', () => {
     await writeStateFile(f, { other: 1 });
     await expect(readStateFile(f, State)).resolves.toBeUndefined();
   });
+});
+
+describe('an agent that gets stuck again on the screen that held the last', () => {
+  class Stuck extends TestDevice {
+    protected override readonly stuckRestarts = 2;
+    restarts = 0;
+    protected override restartStuck() {
+      this.restarts++;
+      return Promise.resolve(undefined);
+    }
+  }
+  const never = () => new Promise<never>(() => undefined);
+
+  it(
+    'is restarted twice in a row, then left running, and the timeout says so; an answer counts anew',
+    fakeTimed(async () => {
+      let stuck = true;
+      const agent: Record<string, FakeHandler> = {
+        'tree.get': () => (stuck ? never() : { result: wireTree([{ t: 'Merhaba' }]) }),
+        'app.foreground': () => (stuck ? never() : { result: { pkg: 'a.b' } }),
+      };
+      const d = new Stuck([agent], 'stuck-again');
+      for (const _ of [1, 2])
+        await expect(d.tree()).rejects.toMatchObject({
+          hint: expect.stringMatching(/restarted/) as unknown,
+        });
+      expect(d.restarts).toBe(2);
+      await expect(d.tree()).rejects.toMatchObject({
+        code: 'TIMEOUT',
+        hint: expect.stringMatching(
+          /^the agent was left running: the last 2 restarts in a row/,
+        ) as unknown,
+      });
+      expect(d.restarts).toBe(2);
+      stuck = false;
+      await expect(d.tree()).resolves.toBeDefined();
+      stuck = true;
+      await expect(d.tree()).rejects.toMatchObject({
+        hint: expect.stringMatching(/restarted/) as unknown,
+      });
+      expect(d.restarts).toBe(3);
+    }),
+  );
 });

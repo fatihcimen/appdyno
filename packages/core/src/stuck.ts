@@ -1,5 +1,5 @@
 import { DeviceError } from '@appdyno/protocol';
-import type { RpcClient } from './rpc.js';
+import { noAnswer, type RpcClient } from './rpc.js';
 
 /** How long the agent's work lane gets to answer a quick call after another call timed out. */
 const STUCK_PROBE_MS = 3_000;
@@ -13,16 +13,23 @@ const STUCK_PROBE_MS = 3_000;
 export async function afterTimeout(
   e: unknown,
   rpc: RpcClient | undefined,
-  restart: (rpc: RpcClient) => Promise<string | undefined>,
+  restart: (rpc: RpcClient) => Promise<string | undefined | { left: string }>,
   probeMs = STUCK_PROBE_MS,
 ): Promise<unknown> {
   if (!(e instanceof DeviceError) || e.code !== 'TIMEOUT' || !rpc || rpc.closed) return e;
-  const stuck = await rpc.call('app.foreground', {}, { timeoutMs: probeMs }).then(
-    () => false,
-    (x: unknown) => x instanceof DeviceError && x.code === 'TIMEOUT',
-  );
+  // stuck is no answer at all: one that came too late to start (TIMEOUT) still says the lane moved
+  const stuck = await rpc
+    .call('app.foreground', {}, { timeoutMs: probeMs })
+    .then(() => false, noAnswer);
   if (!stuck) return e;
   const why = await restart(rpc).catch(() => undefined);
+  if (typeof why === 'object')
+    return new DeviceError(
+      'TIMEOUT',
+      e.message,
+      `the agent was left running: ${why.left}; wait, or end the app's work on this screen, then read it again`,
+      { cause: e },
+    );
   return new DeviceError(
     'TIMEOUT',
     e.message,

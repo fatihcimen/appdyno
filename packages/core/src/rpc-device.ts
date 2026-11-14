@@ -82,6 +82,13 @@ export abstract class RpcDevice extends DeviceActions {
   /** An agent whose work lane stays stuck: stopped, so the next call starts a new one. */
   /** Ends an agent stuck on a job; what held it up, where the device can tell. */
   protected abstract restartStuck(rpc: RpcClient): Promise<string | undefined>;
+  /**
+   * Stuck restarts in a row, with no call answered between, before the agent is left as it is: a screen that holds
+   * every new agent as it held the last made a loop of them (a runner's start, then 15 s of nothing, 13 times). None:
+   * no limit.
+   */
+  protected readonly stuckRestarts?: number;
+  private stuckInARow = 0;
   abstract tree(opts?: TreeOptions): Promise<Tree>;
 
   /** Whether the device can be asked to `wait`; where not, the caller polls. */
@@ -175,17 +182,28 @@ export abstract class RpcDevice extends DeviceActions {
     try {
       if (closes !== this.closes) throw closedHere();
       rpc = await this.ensure();
-      return await rpc.call(method, params, { timeoutMs });
+      const answer = await rpc.call(method, params, { timeoutMs });
+      this.stuckInARow = 0;
+      return answer;
     } catch (e) {
       // no connection to lose: a start that failed takes as long again, for the same answer
       if (!this.connectionLost(e, rpc))
-        throw await afterTimeout(e, rpc, (stuck) => this.restartStuck(stuck));
+        throw await afterTimeout(e, rpc, (stuck) => this.restartOrLeave(stuck));
       // closed here is not lost: a connection that dropped is worth a new one, and this one was let go
       if (closes !== this.closes || !this.retrySafe.has(method)) throw e;
       this.rpc = undefined;
       await this.beforeRetry(e);
       return (await this.ensure()).call(method, params, { timeoutMs });
     }
+  }
+
+  private restartOrLeave(rpc: RpcClient): Promise<string | undefined | { left: string }> {
+    if (this.stuckRestarts !== undefined && this.stuckInARow >= this.stuckRestarts)
+      return Promise.resolve({
+        left: `the last ${this.stuckInARow} restarts in a row each got stuck as well, so this one would too`,
+      });
+    this.stuckInARow++;
+    return this.restartStuck(rpc);
   }
 
   protected connectionLost(e: unknown, had: RpcClient | undefined) {

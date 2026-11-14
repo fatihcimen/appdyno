@@ -20,6 +20,10 @@ import { callSignal, cancelled } from './call.js';
 /** Extra time the host gives a request over the agent's own deadline before it gives up itself. */
 const DEADLINE_SLACK_MS = 1_000;
 
+/** The timeouts this host gave up on: an agent's own TIMEOUT is an answer, and its lane moved. */
+const unanswered = new WeakSet<Error>();
+export const noAnswer = (e: unknown) => e instanceof Error && unanswered.has(e);
+
 type Pending = {
   method: string;
   resolve: (v: { result: unknown; binary?: Buffer }) => void;
@@ -113,10 +117,11 @@ export class RpcClient {
           );
         reject(why);
       };
-      const timer = setTimeout(
-        () => giveUp(new DeviceError('TIMEOUT', `${method} did not answer within ${timeoutMs} ms`)),
-        timeoutMs + DEADLINE_SLACK_MS,
-      );
+      const timer = setTimeout(() => {
+        const e = new DeviceError('TIMEOUT', `${method} did not answer within ${timeoutMs} ms`);
+        unanswered.add(e);
+        giveUp(e);
+      }, timeoutMs + DEADLINE_SLACK_MS);
       const abort = () => {
         clearTimeout(timer);
         giveUp(cancelled(method));
