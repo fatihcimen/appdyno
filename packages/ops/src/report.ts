@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { safeName, stateDir } from '@appdyno/core';
 import { z } from 'zod';
@@ -67,6 +67,15 @@ async function keepFlight(flight: RunningFlight) {
 }
 
 /** Where a report goes that was not told. */
+/** A folder named by the caller that already holds a page of its own is not written over. */
+function ownFolder(dir: string | undefined, to: string) {
+  if (dir && existsSync(join(to, 'index.html')))
+    throw new ToolError(
+      `${to} holds an index.html already: give a folder of its own`,
+      'INVALID_ARGUMENT',
+    );
+}
+
 const namedDir = (serial: string, dir: string | undefined) =>
   resolve(
     dir ??
@@ -92,6 +101,7 @@ async function startReport(
     );
   const app = action === 'timeline' ? stayingApp(ctx, s, 'timeline') : undefined;
   const to = namedDir(serial, dir);
+  ownFolder(dir, to);
   mkdirSync(to, { recursive: true });
   openReports.write(serial, { dir: to, since: Date.now(), owner: s.owner });
   const t = app
@@ -113,6 +123,7 @@ async function finishReport(
   const open = openReports.read(serial);
   if (action === 'stop' && !open)
     throw new ToolError(`no report is open on ${serial}`, 'NOT_FOUND');
+  if (!open) ownFolder(dir, namedDir(serial, dir));
   const timeline = action === 'stop' ? await s.timeline?.finish() : undefined;
   const r = await writeReport(ctx, s, open?.dir ?? namedDir(serial, dir), open?.since);
   if (action === 'stop') openReports.remove(serial);

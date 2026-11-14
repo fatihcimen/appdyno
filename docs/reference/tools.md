@@ -86,7 +86,7 @@ The inputs below are read from each tool's schema. A bold input is required. Aft
 
 | tool      | what it does                                                                                     | inputs                                                                                                                                                  |
 | --------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `record`  | A video of the screen                                                                            | **`action`**: `start`, `stop`; `file`; `maxSeconds`: `1800` (default)                                                                                   |
+| `record`  | A video of the screen                                                                            | **`action`**: `start`, `stop`; `file`; `overwrite`; `maxSeconds`: `1800` (default)                                                                      |
 | `report`  | A test report in one HTML file, a timeline, or an app's last seconds, kept on a crash or a stall | **`action`**: `start`, `timeline`, `flight`, `write`, `stop`; `dir`                                                                                     |
 | `network` | The app's HTTP traffic                                                                           | **`action`**: `paths`, `start`, `read`, `stop`; `via`: `proxy`, `probe`, `packets`, `bytes`; `proxy`; `app`; `har`; `contains`; `limit`: `50` (default) |
 

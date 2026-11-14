@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import {
   safeName,
@@ -69,12 +69,13 @@ export function recordOps(ctx: ServerContext) {
         .object({
           action: z.enum(['start', 'stop']),
           file: z.string().max(1_000).optional(),
+          overwrite: z.boolean().optional(),
           maxSeconds: z.number().int().min(1).max(MAX_S).default(DEFAULT_S),
         })
         .strict(),
       output: RecordOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, file, maxSeconds }) => {
+      run: async ({ action, file, overwrite, maxSeconds }) => {
         const s = await ctx.session();
         const recorder = s.device.recorder;
         if (action === 'stop') {
@@ -96,6 +97,18 @@ export function recordOps(ctx: ServerContext) {
               `${safeName(s.device.serial)}-${since.replace(/\W/g, '')}.${recorder.extension}`,
             ),
         );
+        // a file given is a video of this device's kind, and one that is there is replaced only when asked
+        if (file && !to.toLowerCase().endsWith(`.${recorder.extension}`))
+          throw new ToolError(
+            `${to}: a .${recorder.extension} file, as this device records`,
+            'INVALID_ARGUMENT',
+          );
+        if (file && existsSync(to) && !overwrite)
+          throw new ToolError(
+            `${to} is there already`,
+            'INVALID_ARGUMENT',
+            'overwrite replaces it',
+          );
         // a folder that cannot be written is said now, not after the recording
         try {
           mkdirSync(dirname(to), { recursive: true });
