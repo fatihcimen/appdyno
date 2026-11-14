@@ -13,6 +13,7 @@
 
 - Bir iOS simülatöründe appdyno'nun bir uygulamayı her başlatışı, içinde tutulan probe'ları taşır: `launch_app`, yeniden başlatması, bir akışın stop ve launch adımları, perf'in yeniden başlatması ve XCTest'in açılış ölçümü. Kare probe'unun yeniden başlatması süren bir ağ yakalamasını, bir yeniden başlatma ikisini de korur: her yeniden başlatma öbür probe'u düşürüyordu. Oturumun sonu ya da `device_setting restore` onları bırakır; bir probe, çalışan uygulamada bir sonraki başlangıcına kadar kalır. Xcode 26.5'te iki probe bir açılışa 33 ms ekledi (20'ye karşı 20'nin medyanı).
 - Bir iOS simülatöründe `network read`, uygulama probe'un bulunmadığı bir süreç olarak çalıştığında bunu söyler; kareler bunu zaten söylüyordu.
+- Bir soak suite'i, `device-tests/soak.test.ts`, tek bir cihazda 30 dakika ya da daha uzun bir oturum tutar; çağrılar arasında çökmeler, kaybolan bir ajan, dönüşler ve web görünümleri vardır. Her aracın başarı oranını, p50 ve p95'ini, toparlanmaları ve yavaş çağrıları `soak.json` ve `soak.md` dosyalarına yazar. Yalnızca `APPDYNO_SOAK_DEVICE` bir cihazın adını verdiğinde çalışır.
 
 ### Düzeltilenler
 

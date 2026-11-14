@@ -99,7 +99,8 @@ describe('compare', () => {
     },
   );
 
-  it('catches +30 % nearly always and +80 % every time', { timeout: 60_000 }, () => {
+  // 600 permutation tests: a loaded Mac took past a minute for them
+  it('catches +30 % nearly always and +80 % every time', { timeout: 300_000 }, () => {
     const r = rng(2);
     let caught = 0;
     for (let i = 0; i < 300; i++) {

@@ -13,6 +13,7 @@
 
 - On an iOS simulator, every launch appdyno makes of an app carries the probes held in it: `launch_app`, its restart, a flow's stop and launch, perf's relaunch and XCTest's launch metric. The frame probe's relaunch keeps a running network capture, and a restart keeps both: each relaunch dropped the other probe. A session's end or `device_setting restore` lets them go; a probe stays in the running app until it next starts. On Xcode 26.5 the two probes added 33 ms to a launch (median of 20 against 20).
 - On an iOS simulator, `network read` says when the app runs as a process the probe is not in, as frames already did.
+- A soak suite, `device-tests/soak.test.ts`, holds one session on one device for 30 minutes or more, with crashes, a lost agent, turns and web views among the calls, and writes each tool's success rate, p50 and p95, the recoveries and the slow calls to `soak.json` and `soak.md`. It runs only when `APPDYNO_SOAK_DEVICE` names a device.
 
 ### Fixed
 
