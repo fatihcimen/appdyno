@@ -1,5 +1,5 @@
-import { must } from '@appdyno/core';
-import { DeviceError } from '@appdyno/protocol';
+import { must, type ActOptions } from '@appdyno/core';
+import { DeviceError, type ActParams, type Tree } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
@@ -129,6 +129,67 @@ describe('targeting', () => {
       expect(r.text).toMatch(/nearest: @\w+ button "Form"/);
     }),
   );
+
+  describe('after a window came in front by itself', () => {
+    /** As the agent: a touch aimed at a read whose app windows another has replaced since is refused before it goes. */
+    class Windowed extends FakeDevice {
+      private readonly seen = new Map<string, string>();
+      private windows = (t: Tree) =>
+        t.windows
+          .filter((w) => w.type === 1)
+          .map((w) => w.pkg)
+          .join();
+      override async tree() {
+        const t = await super.tree();
+        this.seen.set(t.hash, this.windows(t));
+        return t;
+      }
+      override async act(action: ActParams, opts: ActOptions = {}) {
+        const then = opts.before === undefined ? undefined : this.seen.get(opts.before);
+        if (action.kind !== 'key' && then !== undefined && then !== this.windows(this.current()))
+          throw new DeviceError(
+            'STALE',
+            'the screen changed since it was read: another window is in front',
+          );
+        const r = await super.act(action, opts);
+        if (r.tree) this.seen.set(r.tree.hash, this.windows(r.tree));
+        return r;
+      }
+    }
+    const ALLOW = { text: 'Uygulamayı kullanırken' };
+
+    it('a selector acts on the window it was found on', async () => {
+      const d = new Windowed();
+      const { call } = await connect(d);
+      await call('screen');
+      d.permissionUp = true;
+      const r = await call('tap', { selector: ALLOW });
+      expect(r.text).toMatch(/^tapped @\w+ "Uygulamayı kullanırken"/);
+      expect(d.permissionUp).toBe(false);
+    });
+
+    it('a selector in a sequence acts on the window it was found on', async () => {
+      const d = new Windowed();
+      const { call } = await connect(d);
+      await call('screen');
+      d.permissionUp = true;
+      const r = await call('steps', { steps: [{ action: 'tap', selector: ALLOW }] });
+      expect(r.error).toBe(false);
+      expect(d.permissionUp).toBe(false);
+    });
+
+    it('a ref or a point read before it is still refused, and no touch is sent', async () => {
+      const d = new Windowed();
+      const { call } = await connect(d);
+      const form = must(/@\w+(?= button "Form")/.exec((await call('screen')).text), 'a ref')[0];
+      d.permissionUp = true;
+      for (const aim of [{ ref: form }, { x: 540, y: 350 }]) {
+        const r = await call('tap', aim);
+        expect([r.data.code, r.data.dispatched]).toEqual(['STALE', false]);
+      }
+      expect(act(d)).toEqual([]);
+    });
+  });
 
   it('swipes from an element, and types at coordinates', async () => {
     const d = new FakeDevice();

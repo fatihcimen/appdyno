@@ -18,7 +18,7 @@ import { LOOKS_ONLY, Step, keyPress, showSelector, viewNamed } from './step-sche
 import { scrollingFor } from './scroll.js';
 import { checksFor, selectorOf } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
-import { aim, missed, pick, wordsOf, type Aim } from './targets.js';
+import { aim, missed, pick, wordsOf, type Aim, type Aimed } from './targets.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 export { NO_MATCH_WAIT_MS } from './targets.js';
@@ -68,6 +68,15 @@ type Done = {
   done: string;
   found?: boolean;
   back?: ((x: Screen) => boolean) | undefined;
+};
+
+/**
+ * A touch's options where a selector found each of its targets on one read: the device compares the screen it reaches
+ * with that read, not with the one before the call, which a window that came in front by itself has replaced since.
+ */
+const aimedOn = (opts: ActOptions, ...targets: (Aimed | undefined)[]): ActOptions => {
+  const on = targets[0]?.on;
+  return opts.before && on && targets.every((t) => t?.on === on) ? { ...opts, before: on } : opts;
 };
 
 /** A touch at `at` on the screen just read: on a system alert, what its answer waits for. */
@@ -203,13 +212,13 @@ async function call(
       const screen = s.device.hello?.screen;
       if (screen) noteTouch(t.point.x / screen.w, t.point.y / screen.h);
       const back = await closes(s, t.point);
-      return { r: await s.device.tap(t.point, opts), done: `tapped ${t.name}`, back };
+      return { r: await s.device.tap(t.point, aimedOn(opts, t)), done: `tapped ${t.name}`, back };
     }
     case 'long_press': {
       const t = await target(s, st, patient);
       const back = await closes(s, t.point);
       return {
-        r: await s.device.longPress(t.point, st.durationMs ?? 800, opts),
+        r: await s.device.longPress(t.point, st.durationMs ?? 800, aimedOn(opts, t)),
         done: `long-pressed ${t.name}`,
         back,
       };
@@ -218,7 +227,7 @@ async function call(
       const t = await target(s, st, patient);
       const back = await closes(s, t.point);
       return {
-        r: await s.device.act({ kind: 'doubleTap', ...t.point }, opts),
+        r: await s.device.act({ kind: 'doubleTap', ...t.point }, aimedOn(opts, t)),
         done: `double-tapped ${t.name}`,
         back,
       };
@@ -234,31 +243,29 @@ async function call(
               dragPath(from.point, to.point, st.durationMs ?? 500, st.holdMs ?? DRAG_HOLD_MS),
             ],
           },
-          opts,
+          aimedOn(opts, from, to),
         ),
         done: `dragged ${from.name} to ${to.name}`,
       };
     }
     case 'swipe': {
-      const start = st.ref || st.selector ? (await target(s, st, patient)).point : undefined;
+      const t = st.ref || st.selector ? await target(s, st, patient) : undefined;
       if (st.exact) {
         if (st.distance === undefined)
           throw new ToolError('exact needs distance', 'INVALID_ARGUMENT');
-        return scrolling.scrollBy(s, { ...st, ...start, distance: st.distance });
+        return scrolling.scrollBy(s, { ...st, ...t?.point, distance: st.distance });
       }
-      const { from, to } = swipeLine(await windowSize(s), { ...st, ...start });
+      const { from, to } = swipeLine(await windowSize(s), { ...st, ...t?.point });
       return {
-        r: await s.device.swipe(from, to, st.durationMs ?? 300, opts),
+        r: await s.device.swipe(from, to, st.durationMs ?? 300, aimedOn(opts, t)),
         done: `swiped (${st.direction})`,
       };
     }
     case 'type_text': {
-      const at =
-        st.ref || st.selector || st.x !== undefined
-          ? (await target(s, st, patient)).point
-          : undefined;
-      if (!at) await focusFirst(s);
-      return typeText(s, st, at, opts);
+      const t =
+        st.ref || st.selector || st.x !== undefined ? await target(s, st, patient) : undefined;
+      if (!t) await focusFirst(s);
+      return typeText(s, st, t?.point, aimedOn(opts, t));
     }
     case 'press_key':
       return pressKey(kit, s, st, opts);
