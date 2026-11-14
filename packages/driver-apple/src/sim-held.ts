@@ -27,7 +27,7 @@ export function joinEnv(...envs: Record<string, string>[]): Record<string, strin
 
 /** What a launch of `app` by this tool carries: its language, the probes held in it, then what the launch adds. */
 export function heldLaunch(udid: string, app: string, own: LaunchOptions = {}) {
-  // a library gone from this Mac would end the app as it starts
+  // a probe whose library has gone from this Mac is not in the app: its environment would say otherwise
   const probes = Object.values(held.read(udid)?.apps[app] ?? {}).filter((p) => existsSync(p.lib));
   return {
     args: [...launchLanguage(udid, app, own.language), ...(own.args ?? [])],
