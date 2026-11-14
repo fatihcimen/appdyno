@@ -20,6 +20,9 @@ export const agentMayGo = () => {
   meant++;
 };
 
+/** A soak counts each agent lost as a recovery, rather than failing on it: what was heard so far, taken off the list. */
+export const takeAgentsLost = () => lost.splice(0).length;
+
 afterEach(() => {
   const gone = lost;
   lost = [];

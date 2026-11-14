@@ -29,7 +29,7 @@
 | `--ios <simulator id>`                                                     | `ios`, `mcp-stdio`, sonra `ios-perf`                                                                                                                                                           |
 | `--iphone <UDID>`                                                          | `iphone`, `iphone-mcp`. `APPDYNO_IPHONE_FIXTURE_APP` ister ve o olmadan başlamayı reddeder: fixture olmadan ölçümleri atlanır ve adım ok okunurdu                                              |
 | `--all-on <serial>`                                                        | o cihazın değişkenini okuyan her dosya, her biri bir adım, böylece kimsenin onları hatırlaması gerekmez: Android'de 47, bir simülatörde 38, bir iPhone'da 29                                   |
-| yalnızca adı verildiğinde, her biri kendi kapısıyla                        | `hub.clients`, `hub.connect`, `hub.connect.sim`, `hub.driving`, `hub.room`, `hub.shared`, `mirror.pair`, `trace-temp`: değişkenleri her dosyanın başındadır                                    |
+| yalnızca adı verildiğinde, her biri kendi kapısıyla                        | `hub.clients`, `hub.connect`, `hub.connect.sim`, `hub.driving`, `hub.room`, `hub.shared`, `mirror.pair`, `trace-temp`, `soak`: değişkenleri her dosyanın başındadır                            |
 
 `--all-on` cihazın türünü kendisine verilen kimlikten alır ve ondan başka hiçbir şey istemez. Sahibi olduğunuz bir cihaza ulaşabilenleri çalıştırır, bu yüzden ona başka bir cihaz vermeyin: suite'leri fixture'ı kurar, çökertir ve sıfırlar, bazıları da ayarları değiştirip geri koyar.
 
@@ -44,6 +44,16 @@ tıkladığı bir pencereye yazmak, çünkü bir testin penceresi klavyeyi hiç 
 
 `device-tests/mirror.iphone.test.ts` (`APPDYNO_IPHONE_UDID`) derlenmiş olandan çalışır, çünkü yayının thread'i
 kaynaklardan başlayamaz: önce `pnpm build`. Her dokunuştan önce ekranı okur.
+
+**Soak.** `device-tests/soak.test.ts`, kütüphane üzerinden, bir programın sürdüğü gibi, tek bir cihazda yarım saat boyunca tek bir oturum tutar. Her döngü fixture'ın ekranlarını tohumunun karıştırdığı bir sırayla alır: ekran ve ham ağacı, doldurulup gönderilen bir form, bir listenin dokunuşları ve `scroll_to`, yanıtlanan bir diyalog, yataya dönüş ve geri, web görünümünün okunması ve içinde bir betiğin çalıştırılması, iOS'ta kayan bir afişin altındaki kopyalar, dokunuşun ya da bir sonraki okumanın bildirmesi ve `launch_app`'in geri alması gereken bir çökme, ve cihazın ajanının, appdyno'nun durum dosyasının tuttuğu pid ile oturumun altında sonlandırılması: iOS runner'ının xcodebuild'i ya da bir Android cihazdaki ajan. Başka hiçbir sürece ve başka hiçbir cihaza dokunmaz. Her çağrının aracı, kodu ve süresi saklanır ve her toparlanma sayılır: başlatılan ajanlar, bir diğerinin yerini alan her biri, bir çökmeden ve bir başarısızlıktan sonraki açılışlar. Bir simülatörde çalıştı; Android tarafı henüz çalıştırılmadı.
+
+`APPDYNO_SOAK_DEVICE`, üzerinde fixture olan bir simülatörü, bir emülatörü ya da bir Android telefonu adlandırır; fixture, cihaz suite'lerinin derlediği gibi derlenmiş olmalıdır: `CODE_SIGNING_ALLOWED=NO` ile yapılmış bir iOS build'inin web görünümü başka bir adla listelenir ve `webview` orada hiçbirini bulmaz. `APPDYNO_SOAK_MINUTES` süreyi ayarlar (30), `APPDYNO_SOAK_SEED` bir sırayı yeniden oynatır, `APPDYNO_SOAK_OUT` raporun yazıldığı yerdir (yoksa geçici bir klasör), `APPDYNO_SOAK_MIN_RATE` da başarılı olması gereken çağrıların payıdır (99).
+
+```sh
+APPDYNO_SOAK_DEVICE=<id> APPDYNO_SOAK_MINUTES=60 pnpm test:device device-tests/soak.test.ts
+```
+
+`soak.json` her çağrıyı tutar, `soak.md` de önce okunacak olanı: başarı oranı, her aracın p50 ve p95'i, bilerek konulan her hata ve bildirilip bildirilmediği, toparlanmalar, aracının medyanının 3 katından yavaş her çağrı, başarısızlıklar ve host sürecinin başta ve sondaki belleği. Isınma ve bilerek konulan hatalar orana ve sürelere girmez. O oranın altında ya da gerektiği gibi bildirilmeyen bir hatada başarısız olur.
 
 **Gerileme kapısı** (`scripts/ci-gate.mjs`): her işlemin p50'si, `.ci/history.jsonl` içindeki son beş
 başarılı çalıştırmanın medyan p50'sine karşı; %20 ve 10 ms'den fazla yavaşlama ya da başarısız herhangi bir işlem

@@ -21,15 +21,15 @@ measuring step was postponed, as what never ran is no pass. It needs `mise` and 
 
 **Which suites run where.** No device suite runs by itself: each gates on a variable, and every one a run must take has to be named.
 
-| where                                                          | what runs                                                                                                                                                           |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`, a push to `main` or a pull request | lint, types, unit tests, the agent's unit tests and build, the runner's core. **No device suite**, so a device suite's own rot is seen only below                   |
-| `scripts/ci.sh`, no option                                     | the same, on this Mac                                                                                                                                               |
-| `--device <serial>`                                            | `android`, `smoke`, `mcp-stdio`, then `perf`                                                                                                                        |
-| `--ios <simulator id>`                                         | `ios`, `mcp-stdio`, then `ios-perf`                                                                                                                                 |
-| `--iphone <UDID>`                                              | `iphone`, `iphone-mcp`. Needs `APPDYNO_IPHONE_FIXTURE_APP` and refuses to start without it: with no fixture its measures would skip and the step read ok            |
-| `--all-on <serial>`                                            | every file that reads that device's variable, one step each, so that nobody has to remember them: 47 on Android, 38 on a simulator, 29 on an iPhone                 |
-| only when named, each by its own gate                          | `hub.clients`, `hub.connect`, `hub.connect.sim`, `hub.driving`, `hub.room`, `hub.shared`, `mirror.pair`, `trace-temp`: their variables are at the head of each file |
+| where                                                          | what runs                                                                                                                                                                   |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`, a push to `main` or a pull request | lint, types, unit tests, the agent's unit tests and build, the runner's core. **No device suite**, so a device suite's own rot is seen only below                           |
+| `scripts/ci.sh`, no option                                     | the same, on this Mac                                                                                                                                                       |
+| `--device <serial>`                                            | `android`, `smoke`, `mcp-stdio`, then `perf`                                                                                                                                |
+| `--ios <simulator id>`                                         | `ios`, `mcp-stdio`, then `ios-perf`                                                                                                                                         |
+| `--iphone <UDID>`                                              | `iphone`, `iphone-mcp`. Needs `APPDYNO_IPHONE_FIXTURE_APP` and refuses to start without it: with no fixture its measures would skip and the step read ok                    |
+| `--all-on <serial>`                                            | every file that reads that device's variable, one step each, so that nobody has to remember them: 47 on Android, 38 on a simulator, 29 on an iPhone                         |
+| only when named, each by its own gate                          | `hub.clients`, `hub.connect`, `hub.connect.sim`, `hub.driving`, `hub.room`, `hub.shared`, `mirror.pair`, `trace-temp`, `soak`: their variables are at the head of each file |
 
 `--all-on` takes the kind of device from the id it is given, and asks nothing else of it. It runs what can reach a device you own, so give it no other: its suites install, crash and reset the fixture, and some change settings and put them back.
 
@@ -44,6 +44,16 @@ window a person has clicked, as a test's window never holds the keyboard.
 
 `device-tests/mirror.iphone.test.ts` (`APPDYNO_IPHONE_UDID`) runs from what is built, as the stream's thread cannot start
 from sources: `pnpm build` first. It reads the screen before each touch.
+
+**Soak.** `device-tests/soak.test.ts` holds one session on one device for half an hour, through the library as a program drives it. Each cycle takes the fixture's screens in an order its seed shuffles: the screen and its raw tree, a form typed into and sent, a list's taps and `scroll_to`, a dialog answered, a turn to landscape and back, the web view read and a script run in it, on iOS the copies under a moving banner, a crash, which the tap or the next read must report and `launch_app` must undo, and the device's agent ended under the session by the pid appdyno's state file keeps: the iOS runner's xcodebuild, or the agent on an Android device. It touches no other process and no other device. Each call's tool, code and time is kept, and each recovery counted: the agents started, each that took another's place, the launches after a crash and after a failure. It has run on a simulator; the Android side has not been run yet.
+
+`APPDYNO_SOAK_DEVICE` names a simulator, an emulator or an Android phone with the fixture on it, built as the device suites build it: an iOS build made with `CODE_SIGNING_ALLOWED=NO` has its web view listed under another name, where `webview` finds none. `APPDYNO_SOAK_MINUTES` sets the length (30), `APPDYNO_SOAK_SEED` replays an order, `APPDYNO_SOAK_OUT` is where the report goes (else a temporary folder), and `APPDYNO_SOAK_MIN_RATE` is the share of calls that must succeed (99).
+
+```sh
+APPDYNO_SOAK_DEVICE=<id> APPDYNO_SOAK_MINUTES=60 pnpm test:device device-tests/soak.test.ts
+```
+
+`soak.json` holds every call, and `soak.md` what to read first: the success rate, p50 and p95 of each tool, each fault put in and whether it was reported, the recoveries, each call slower than 3 times its tool's median, the failures, and the host process's memory at the start and the end. The warm-up and the faults put in stay out of the rate and the times. It fails under that rate, or on a fault that was not reported as it should be.
 
 **Regression gate** (`scripts/ci-gate.mjs`): every operation's p50 against the median p50 of the last five
 passing runs in `.ci/history.jsonl`; slower by more than 20 % and 10 ms, or any failed operation, fails
