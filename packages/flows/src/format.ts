@@ -22,6 +22,9 @@
  */
 
 import { SPECS, type Spec } from './specs.js';
+import { FlowError, tokens, type Token } from './tokens.js';
+
+export { FlowError } from './tokens.js';
 
 export type FlowSelector = { id?: string; role?: string; text?: string; index?: number };
 
@@ -53,16 +56,6 @@ export type Flow = {
   steps: FlowStep[];
 };
 
-/** A file that cannot be read as a flow, at its line. */
-export class FlowError extends Error {
-  constructor(
-    message: string,
-    readonly line: number,
-  ) {
-    super(line ? `line ${line}: ${message}` : message);
-  }
-}
-
 export type Action = keyof typeof SPECS;
 
 const NUMERIC_WORDS = new Set(['lat', 'lon']);
@@ -76,60 +69,13 @@ const PLACEHOLDER = /\$\$\{|\$\{([^}]*)\}/g;
 const specOf = (action: string): Spec | undefined =>
   Object.hasOwn(SPECS, action) ? SPECS[action as Action] : undefined;
 
-/** A line's tokens: a word, or `key=value`, with a value in JSON's quotes if it needs them. */
-function tokens(text: string, line: number): { key?: string; value: string; quoted: boolean }[] {
-  const out: { key?: string; value: string; quoted: boolean }[] = [];
-  let i = 0;
-  const quoted = () => {
-    let end = i + 1;
-    while (end < text.length && text[end] !== '"') end += text[end] === '\\' ? 2 : 1;
-    if (end >= text.length) throw new FlowError('a quote is not closed', line);
-    const raw = text.slice(i, end + 1);
-    i = end + 1;
-    try {
-      return JSON.parse(raw) as string;
-    } catch {
-      throw new FlowError(`not a quoted string: ${raw}`, line);
-    }
-  };
-  const word = () => {
-    const start = i;
-    while (i < text.length && !/[\s=]/.test(text.charAt(i))) i++;
-    return text.slice(start, i);
-  };
-  while (i < text.length) {
-    if (/\s/.test(text.charAt(i))) {
-      i++;
-      continue;
-    }
-    if (text[i] === '#') break;
-    if (text[i] === '"') {
-      out.push({ value: quoted(), quoted: true });
-      continue;
-    }
-    const first = word();
-    if (text[i] !== '=') {
-      out.push({ value: first, quoted: false });
-      continue;
-    }
-    i++;
-    if (text[i] === '"') out.push({ key: first, value: quoted(), quoted: true });
-    else {
-      const start = i;
-      while (i < text.length && !/\s/.test(text.charAt(i))) i++;
-      out.push({ key: first, value: text.slice(start, i), quoted: false });
-    }
-  }
-  return out;
-}
-
 const numberOf = (value: string, what: string, line: number) => {
   const n = Number(value);
   if (value === '' || !Number.isFinite(n)) throw new FlowError(`${what} needs a number`, line);
   return n;
 };
 
-function parseStep(action: string, rest: ReturnType<typeof tokens>, line: number): FlowStep {
+function parseStep(action: string, rest: Token[], line: number): FlowStep {
   const spec = specOf(action);
   if (!spec)
     throw new FlowError(`no step ${action}; steps: ${Object.keys(SPECS).join(', ')}`, line);
