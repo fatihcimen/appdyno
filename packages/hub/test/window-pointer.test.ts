@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type AuditResult } from '@appdyno/protocol';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { shownSize } from '../src/flow.js';
+import { shownSize } from '@appdyno/ops';
 import { serialsFrom, setup, FORM_BUTTON } from './window-setup.js';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-window-flow-'));

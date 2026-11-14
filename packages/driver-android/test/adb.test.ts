@@ -62,6 +62,22 @@ describe('an agent reached', () => {
     await expect(device.tree({ asItIs: true })).rejects.toMatchObject({ message: said, hint });
   });
 
+  it('says the screen as it stands now, where its hello is of the screen as it stood then', async () => {
+    const status = { active: 0, on: true, w: 2400, h: 1080, rotation: 1, modes: [], dropped: 0 };
+    const rpc = {
+      closed: false,
+      call: (method: string) =>
+        Promise.resolve({ result: method === 'stream.status' ? status : {} }),
+      close: () => undefined,
+    };
+    const hello = { screen: { w: 1080, h: 2400, density: 420, rotation: 0 } };
+    const device = new AndroidDevice('emulator-5640', {} as Adb);
+    Object.assign(device, {
+      launcher: { connect: () => Promise.resolve({ rpc, hello, started: false }) },
+    });
+    expect(await device.screenNow()).toEqual({ w: 2400, h: 1080, density: 420, rotation: 1 });
+  });
+
   it('asks nothing of one found running with animations on', async () => {
     const { asked, ran, device } = reached('on', false);
     await device.open();

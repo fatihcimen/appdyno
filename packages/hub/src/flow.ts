@@ -25,20 +25,13 @@ import {
   redact,
   type ServerContext,
   type Session,
-  type Size,
+  shownSize,
   startRecording,
   stepOf,
   unrecorded,
 } from '@appdyno/ops';
 
 type FlowSession = Pick<WindowSession, 'tell' | 'status'>;
-
-/** A screen's size as the picture stands: a window's may leave out a bar, and a device's own does not turn with it. */
-export function shownSize(own: Size | undefined, window: Size | undefined) {
-  if (!own) return window;
-  const wide = window ? window.w > window.h : own.w > own.h;
-  return wide === own.w > own.h ? { w: own.w, h: own.h } : { w: own.h, h: own.w };
-}
 
 /** Where a replay of a recording begun on another device must start. */
 const frontNote = (app: string | undefined) =>

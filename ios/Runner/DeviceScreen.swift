@@ -5,16 +5,16 @@ extension Device {
     func screenshot(_ request: ShotRequest) throws -> Reply {
         let shot = XCUIScreen.main.screenshot()
         var image = shot.image
-        if let maxPx = request.maxPx {
-            let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-            let factor = maxPx / max(pixels.width, pixels.height)
-            if factor < 1 {
-                let size = CGSize(width: (pixels.width * factor).rounded(), height: (pixels.height * factor).rounded())
-                let format = UIGraphicsImageRendererFormat()
-                format.scale = 1
-                image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
-                    image.draw(in: CGRect(origin: .zero, size: size))
-                }
+        let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+        let factor = min(1, request.maxPx.map { $0 / max(pixels.width, pixels.height) } ?? 1)
+        // a turned screen's picture is turned by its orientation alone, which pngData and jpegData leave out: drawn, it
+        // stands as the interface does, at full size too
+        if factor < 1 || image.imageOrientation != .up {
+            let size = CGSize(width: (pixels.width * factor).rounded(), height: (pixels.height * factor).rounded())
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+                image.draw(in: CGRect(origin: .zero, size: size))
             }
         }
         let quality = Double(request.quality) / 100

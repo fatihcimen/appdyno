@@ -404,6 +404,25 @@ describe('the helpers prove themselves', () => {
     await expect(d.send({ kind: 'tap', x: 1, y: 1 })).resolves.toBe(false);
   });
 
+  it('says how the app in front stands in landscape too, where it reads nothing, and nothing turned off', async () => {
+    const standing = (orientation: number | undefined, mode?: string) => {
+      const answer = helper((q) =>
+        q.op === 'orientation' && orientation ? { ok: true, orientation } : { ok: false },
+      );
+      const d = new DirectSim(
+        'u',
+        { ax: () => Promise.resolve(answer), hid: () => Promise.resolve(ax()) },
+        mode,
+      );
+      d.setRotation(1);
+      return d.turnsNow();
+    };
+    expect(await standing(3)).toBe(1);
+    expect(await standing(4)).toBe(3);
+    expect(await standing(undefined)).toBeUndefined();
+    expect(await standing(3, 'off')).toBeUndefined();
+  });
+
   it('is reported by the doctor, a failure as a warning', async () => {
     const good = new DirectSim(
       'u',

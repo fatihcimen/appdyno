@@ -414,6 +414,21 @@ export class IosSimulatorDevice extends IosDevice {
     await super.setOrientation(rotation);
   }
 
+  /** As the app in front stands, by the read helper: the runner's hello, as the helper's, is of the screen at its start. */
+  async screenNow() {
+    const own = this.hello?.screen;
+    const turns = own && (await this.direct.turnsNow().catch(() => undefined));
+    if (!own || turns === undefined) return undefined;
+    const [short, long] = [Math.min(own.w, own.h), Math.max(own.w, own.h)];
+    const across = turns % 2 === 1;
+    return {
+      w: across ? long : short,
+      h: across ? short : long,
+      density: own.density,
+      rotation: turns,
+    };
+  }
+
   override close() {
     this.direct.close(this.runnerUp);
     void this.mirror.close();

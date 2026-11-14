@@ -40,7 +40,8 @@ export const SLIDE_DROPS_TOUCH: Record<Platform, boolean> = { android: false, io
 
 /**
  * Whether a rotation counts from the device's own shape, as Android's does, so that a tablet wide as it stands is tall at
- * a quarter turn: iOS names its orientations as they are, and a phone lying flat says it stands at 0, whatever its frame.
+ * a quarter turn, and a named orientation takes the rotation of its shape there: iOS names its orientations as they are,
+ * and a phone lying flat says it stands at 0, whatever its frame.
  */
 export const TURNS_FROM_OWN_SHAPE: Record<Platform, boolean> = { android: true, ios: false };
 
@@ -122,6 +123,11 @@ export type Device = {
   /** An emulator or simulator: numbers compare only with the same kind of device. */
   readonly virtual: boolean;
   readonly hello: Hello | undefined;
+  /**
+   * The screen as it stands now, in tap units, with its quarter turns: the hello's is as it stood at the connect, and a
+   * turn since, the host's or the app's own, changes it. Undefined where the device has no cheap way to say.
+   */
+  screenNow?(): Promise<Hello['screen'] | undefined>;
   /** Whether the last connect started a new agent. */
   lastStartWasCold: boolean;
   open(): Promise<Hello>;

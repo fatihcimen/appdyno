@@ -44,10 +44,15 @@ const tapAt = (scale: number) => {
   return `its pixel x,y is tapped at x${by}, y${by}`;
 };
 
-/** Tap units per pixel of an image `w` pixels wide, to 3 places. */
-const scaleOf = (s: Session, w: number) => {
-  const screen = s.device.hello?.screen.w;
-  return screen && w ? Math.round((screen / w) * 1000) / 1000 : undefined;
+/**
+ * Where an image `w` by `h` of the screen as it stands is tapped: tap units per pixel, to 3 places, and how that is said.
+ * A picture that stands otherwise is of the screen as it was built, whose pixels no tap reaches by a scale.
+ */
+const placed = (screen: { w: number; h: number }, w: number, h: number) => {
+  const scale = w && screen.w > screen.h === w > h ? Math.round((screen.w / w) * 1000) / 1000 : 0;
+  return scale
+    ? { scale, said: tapAt(scale) }
+    : { said: `the screen stands turned from it, ${screen.w}x${screen.h} in tap units` };
 };
 
 /** The whole picture in a file: a folder gets a new name, and what is there stays unless asked. */
@@ -71,28 +76,32 @@ async function saveShot(s: Session, file: string, overwrite: boolean, inline: bo
   mkdirSync(dirname(to), { recursive: true });
   writeFileSync(to, data, { flag: overwrite ? 'w' : 'wx' });
   const size = imageSize(data);
+  const now = await s.standing();
   if (!inline) {
-    const scale = size && scaleOf(s, size.w);
-    return reply(
-      `saved ${to}${size ? ` (${size.w}x${size.h} px${scale ? `; ${tapAt(scale)}` : ''})` : ''}`,
-      {
-        width: size?.w ?? 0,
-        height: size?.h ?? 0,
-        ...(scale && { scale }),
-        warnings: [],
-        file: to,
-      },
-    );
+    const at = size && placed(now, size.w, size.h);
+    return reply(`saved ${to}${size && at ? ` (${size.w}x${size.h} px; ${at.said})` : ''}`, {
+      width: size?.w ?? 0,
+      height: size?.h ?? 0,
+      ...(at?.scale && { scale: at.scale }),
+      warnings: [],
+      file: to,
+    });
   }
   const shown = await s.device.screenshot({
     format: 'jpeg',
     quality: SHOT_QUALITY,
     maxPx: SHOT_PX,
   });
-  const scale = scaleOf(s, shown.meta.w);
+  const at = placed(now, shown.meta.w, shown.meta.h);
   return reply(
-    `saved ${to}${size ? ` (${size.w}x${size.h} px)` : ''}; the image here: ${shown.meta.w}x${shown.meta.h} px${scale ? `; ${tapAt(scale)}` : ''}`,
-    { width: shown.meta.w, height: shown.meta.h, ...(scale && { scale }), warnings: [], file: to },
+    `saved ${to}${size ? ` (${size.w}x${size.h} px)` : ''}; the image here: ${shown.meta.w}x${shown.meta.h} px; ${at.said}`,
+    {
+      width: shown.meta.w,
+      height: shown.meta.h,
+      ...(at.scale && { scale: at.scale }),
+      warnings: [],
+      file: to,
+    },
     [{ type: 'image', data: shown.data.toString('base64'), mimeType: 'image/jpeg' }],
   );
 }
@@ -293,30 +302,27 @@ export function readOps(
             'the screen has not changed since the last image: that image still holds',
             'INVALID_ARGUMENT',
           );
-        const size = s.device.hello?.screen;
-        const wide = width ?? (points ? size?.w : undefined);
+        const size = await s.standing();
+        const wide = width ?? (points ? size.w : undefined);
         const { meta, data } = await s.device.screenshot({
           format: 'jpeg',
           quality: SHOT_QUALITY,
           // a device's limit is on the long side
           maxPx: wide
-            ? Math.min(
-                MAX_SHOT_PX,
-                size ? Math.round((wide * Math.max(size.w, size.h)) / size.w) : wide,
-              )
+            ? Math.min(MAX_SHOT_PX, Math.round((wide * Math.max(size.w, size.h)) / size.w))
             : SHOT_PX,
         });
         const look = await s.current().catch(() => undefined);
         // a sheet over the app is in the picture: no look past the app, which took 4.5 s of an iPhone's after typing
         const fg = look ? await noticed(s, look, false) : '';
         s.pictured(layout ?? '');
-        const scale = scaleOf(s, meta.w);
+        const at = placed(size, meta.w, meta.h);
         return reply(
-          `image ${meta.w}x${meta.h} px${scale ? `; ${tapAt(scale)}` : ''}${fg}`,
+          `image ${meta.w}x${meta.h} px; ${at.said}${fg}`,
           {
             width: meta.w,
             height: meta.h,
-            ...(scale && { scale }),
+            ...(at.scale && { scale: at.scale }),
             warnings: fg ? [fg.trim()] : [],
           },
           [{ type: 'image', data: data.toString('base64'), mimeType: 'image/jpeg' }],

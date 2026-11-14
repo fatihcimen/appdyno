@@ -15,7 +15,7 @@ import { endLocation, fixLocation, turning } from './settings.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
 
-/** In the order of the device's own rotations, a quarter turn each. */
+/** Shapes, a quarter turn each, in the order of a phone's own rotations, which a tablet wide as it stands has at others. */
 const ROTATIONS = ['portrait', 'landscape_left', 'upside_down', 'landscape_right'] as const;
 
 /** The app's window as a turn leaves it: wide in landscape, tall else, with something on it. */
@@ -91,11 +91,14 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
             ].join('')
           : '';
         const h = must(s.device.hello, "the agent's hello");
+        // a device already open may have turned since its hello
+        const screen = (await s.device.screenNow?.().catch(() => undefined)) ?? h.screen;
         return reply(
-          `selected ${serial === device ? device : `${device} (${serial})`}: ${h.model}, ${osName(s.device.platform, h.osVersion)}, screen ${h.screen.w}x${h.screen.h}` +
+          `selected ${serial === device ? device : `${device} (${serial})`}: ${h.model}, ${osName(s.device.platform, h.osVersion)}, screen ${screen.w}x${screen.h}` +
             `${s.device.lastStartWasCold ? ' (agent started)' : ''}${s.appId ? `; app ${s.appId}` : ''}${note}`,
           {
             ...info(s),
+            screen,
             agentStarted: s.device.lastStartWasCold,
             ...(s.appId && { app: s.appId }),
           },
@@ -112,15 +115,16 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
       run: async () => {
         const s = await ctx.session();
         const h = must(s.device.hello, "the agent's hello");
+        const screen = await s.standing();
         const fg = await s.device.foreground();
         return reply(
           [
             `${s.device.serial}: ${h.model}, ${osName(s.device.platform, h.osVersion)}${h.sdk !== undefined ? ` (SDK ${h.sdk})` : ''}`,
-            `screen ${h.screen.w}x${h.screen.h}, density ${h.screen.density}, rotation ${h.screen.rotation}`,
+            `screen ${screen.w}x${screen.h}, density ${screen.density}${screen.rotation === undefined ? '' : `, rotation ${screen.rotation}`}`,
             `agent ${h.agentVersion}, protocol ${h.protocol.major}`,
             `foreground: ${fg ?? 'unknown'}`,
           ].join('\n'),
-          { ...info(s), ...(fg && { foreground: fg }) },
+          { ...info(s), screen, ...(fg && { foreground: fg }) },
         );
       },
     }),
@@ -133,29 +137,37 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
       annotations: ACT,
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
-        const rotation = ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3;
+        const named = ROTATIONS.indexOf(orientation);
         const own = s.device.hello?.screen;
         const wideAsItStands =
           TURNS_FROM_OWN_SHAPE[s.device.platform] &&
           !!own &&
           own.w > own.h !== (own.rotation % 2 === 1);
-        const wide = (rotation % 2 === 1) !== wideAsItStands;
+        // a tablet wide as it stands is tall three quarter turns on, where Android puts its own portrait
+        const rotation = ((named + (wideAsItStands ? 3 : 0)) % 4) as 0 | 1 | 2 | 3;
+        const wide = named % 2 === 1;
         // a window of that shape already, as upside down, has no turn to wait for
-        const was = (
+        const before =
           s.fresh ??
           (await s.device.tree().then(
             (t) => s.screenOf(t),
             () => undefined,
-          ))
-        )?.window;
+          ));
+        const was = before?.window;
         const turned = await changing(s, () =>
           turning(s, (kept) => s.device.setOrientation(rotation, kept)),
         );
         const otherwise = `the window stayed ${wide ? 'tall' : 'wide'}: the app may keep to one orientation`;
+        // the turn is of what is in front, as a home screen: the app, back in front, was seen to take its own
+        const front = before?.foreground;
+        const by =
+          s.appId && front && front !== s.appId
+            ? `, while ${front} is in front: ${s.appId} may come back turned its own way`
+            : '';
         return afterChange(
           s,
           turned.was,
-          `orientation: ${orientation}`,
+          `orientation: ${orientation}${by}`,
           read,
           undefined,
           was && was.w > was.h === wide ? undefined : { met: turnedTo(wide), otherwise },

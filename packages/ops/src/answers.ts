@@ -401,7 +401,8 @@ async function afterChange(
     pid: undefined,
     launched,
     ran,
-    notes,
+    // the screen listed has the last word: a turn slower than the wait for it shows there
+    notes: ready?.met(screen) ? [] : notes,
     seen,
   });
 }

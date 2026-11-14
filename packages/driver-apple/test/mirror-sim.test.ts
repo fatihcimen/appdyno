@@ -1,4 +1,6 @@
+import { writeFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { decodePng, encodePng, must } from '@appdyno/core';
 import { Simctl } from '../src/simctl.js';
 import type { HelperProcess } from '../src/simhelper.js';
 import { onSurface, SimulatorMirror, turnsOf } from '../src/mirror-sim.js';
@@ -6,7 +8,7 @@ import { hidKey, HID_MODIFIERS, usageOf } from '../src/simtouch.js';
 
 const UDID = '11111111-2222-3333-4444-555555555555';
 
-function setup(state = 'Booted') {
+function setup(state = 'Booted', exec?: (args: string[]) => Promise<string>) {
   const calls: Record<string, unknown>[] = [];
   const helper = {
     closed: false,
@@ -34,7 +36,7 @@ function setup(state = 'Booted') {
   const startReader = vi.fn(() => Promise.resolve(reader as unknown as HelperProcess));
   const mirror = new SimulatorMirror(
     UDID,
-    { state: () => Promise.resolve(state) } as unknown as Simctl,
+    { state: () => Promise.resolve(state), exec } as unknown as Simctl,
     start,
     paste,
     startReader,
@@ -222,6 +224,45 @@ describe('a simulator that turns', () => {
     expect(onSurface(0, 0, 2)).toEqual({ x: 1, y: 1 });
     expect(onSurface(0, 0, 3)).toEqual({ x: 0, y: 1 });
     expect(onSurface(1, 0, 3)).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe("a simulator's picture", () => {
+  /** The surface as simctl gives it, two pixels across: red at the left, blue at the right. */
+  const surface = encodePng({
+    width: 2,
+    height: 1,
+    channels: 3,
+    data: Uint8Array.from([255, 0, 0, 0, 0, 255]),
+  });
+  /** Its pixels top to bottom, left to right, by their colour. */
+  const pixels = (png: Buffer) => {
+    const image = must(decodePng(png), 'a picture');
+    const at = Array.from({ length: image.width * image.height }, (_, i) =>
+      image.data[i * image.channels] ? 'red' : 'blue',
+    );
+    return { w: image.width, h: image.height, at };
+  };
+
+  it('stands up as the app in front does, as the surface it is taken from does not turn', async () => {
+    const exec = vi.fn((args: string[]) => {
+      writeFileSync(must(args.at(-1), 'a file'), surface);
+      return Promise.resolve('');
+    });
+    const { mirror, reader } = setup('Booted', exec);
+    const shot = async () => pixels(must(await mirror.screenshot('png'), 'a picture').data);
+    expect(await shot()).toEqual({ w: 2, h: 1, at: ['red', 'blue'] });
+    // turned right, as a quarter turn to the left stands it up: its right edge goes to the top
+    reader.orientation = 3;
+    expect(await shot()).toEqual({ w: 1, h: 2, at: ['blue', 'red'] });
+    reader.orientation = 4;
+    expect(await shot()).toEqual({ w: 1, h: 2, at: ['red', 'blue'] });
+    reader.orientation = 2;
+    expect(await shot()).toEqual({ w: 2, h: 1, at: ['blue', 'red'] });
+    // what will not say how it stands leaves the picture as it is
+    reader.answer = false;
+    expect(await shot()).toEqual({ w: 2, h: 1, at: ['red', 'blue'] });
+    await mirror.close();
   });
 });
 

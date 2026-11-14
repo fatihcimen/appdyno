@@ -237,6 +237,11 @@ export class DirectSim {
     return (a.ok ? turnsOf(a.orientation as number) : undefined) ?? (this.rotated ? undefined : 0);
   }
 
+  /** The same, for a screen said as it stands now: none of a helper turned off. */
+  async turnsNow() {
+    return this.readOff ? undefined : this.turns();
+  }
+
   /**
    * Sends the action straight to the simulator; false, with nothing sent, when the runner must do it. Asked and given no
    * answer, it may have gone through, and the runner's would make it twice: TIMEOUT, sent.

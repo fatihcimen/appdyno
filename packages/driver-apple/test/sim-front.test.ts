@@ -385,3 +385,22 @@ describe('a touch the input helper gave no answer for on a simulator', () => {
     expect(stopped).toMatchObject({ code: 'CANCELLED' });
   });
 });
+
+describe('the screen of a simulator turned since its hello', () => {
+  /** An iPhone 17 as its hello had it, and the app in front stood up by these turns, as the read helper says them. */
+  const turned = (turns: number | undefined) => {
+    const direct = { turnsNow: () => Promise.resolve(turns), close: vi.fn() };
+    const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    Object.assign(device, { helloInfo: { screen: { w: 402, h: 874, density: 3, rotation: 0 } } });
+    return device;
+  };
+
+  it('is as the app in front stands it, in points, with its turns', async () => {
+    expect(await turned(1).screenNow()).toEqual({ w: 874, h: 402, density: 3, rotation: 1 });
+    expect(await turned(2).screenNow()).toEqual({ w: 402, h: 874, density: 3, rotation: 2 });
+  });
+
+  it('is not said where the helper does not say how the app stands', async () => {
+    expect(await turned(undefined).screenNow()).toBeUndefined();
+  });
+});

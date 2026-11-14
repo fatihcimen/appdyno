@@ -226,7 +226,7 @@ describe('device conditions', () => {
       'INVALID_ARGUMENT: locale is held for a.one until it is put back\nhint: device_setting restore first',
     ]);
     expect(settings.values.locale).toBe('de');
-    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale: ');
+    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale');
   });
 
   it('restores on request, and reports what it cannot', async () => {

@@ -50,7 +50,7 @@ export { swipeLine, pinchPaths } from './gesture-paths.js';
 export { SETTLE } from './answers.js';
 export { ServerContext } from './context.js';
 export { deviceNamed } from './device-names.js';
-export { Session } from './session.js';
+export { Session, shownSize } from './session.js';
 export * from './policy.js';
 export { DATA_LOSS, DATA_LOSS_WORDS, type DataLoss } from './approval.js';
 export { powerControlAt } from './power.js';

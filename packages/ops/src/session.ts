@@ -40,6 +40,15 @@ type Latest = { screen: Screen; at: number; taken: number; others: number };
  */
 const inputsTo = new Map<string, number>();
 
+type Size = { w: number; h: number };
+
+/** A screen's size as the picture stands: a window's may leave out a bar, and a device's own does not turn with it. */
+export function shownSize(own: Size | undefined, window: Size | undefined) {
+  if (!own) return window;
+  const wide = window ? window.w > window.h : own.w > own.h;
+  return wide === own.w > own.h ? { w: own.w, h: own.h } : { w: own.h, h: own.w };
+}
+
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
  * newest read (refs resolve on it while no action came after it) and a count of actions.
@@ -310,6 +319,18 @@ export class Session {
   /** The newest read when no action came after it, else a fresh one. */
   async current(): Promise<Screen> {
     return this.fresh ?? this.read();
+  }
+
+  /**
+   * The screen in tap units as it stands now, where a turn since the hello, the host's or the app's own, changed it: as
+   * the device says, else the hello's turned to the shape a read shows, with no turns, which nothing then read.
+   */
+  async standing(): Promise<Size & { density: number; rotation?: number }> {
+    const now = await this.device.screenNow?.().catch(() => undefined);
+    if (now) return now;
+    const own = must(this.device.hello, "the agent's hello").screen;
+    const window = (await this.current().catch(() => undefined))?.window;
+    return { ...must(shownSize(own, window), 'a size'), density: own.density };
   }
 
   /**

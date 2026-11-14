@@ -154,6 +154,15 @@ export class AndroidDevice extends RpcDevice implements Device {
     return agent;
   }
 
+  /** The display as apps see it now, which the agent answers at once, beside any work it does. */
+  async screenNow() {
+    const { result } = await (
+      await this.ensure()
+    ).call('stream.status', {}, { timeoutMs: TIMEOUTS.read });
+    const { density } = must(this.helloInfo, "the agent's hello").screen;
+    return { w: result.w, h: result.h, density, rotation: result.rotation };
+  }
+
   protected override connectionLost(e: unknown, had: RpcClient | undefined) {
     return super.connectionLost(e, had) || (e instanceof DeviceError && e.code === 'DEVICE_GONE');
   }

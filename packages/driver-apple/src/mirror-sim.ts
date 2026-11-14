@@ -1,6 +1,8 @@
+import { execFile } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import {
   type DeviceState,
   type InputEvent,
@@ -26,6 +28,8 @@ const SHOT_MS = 30_000;
 const TURNS_CHECK_MS = 250;
 /** How long a read helper that failed is left alone: at the slow end of a simulator shut down or a busy Mac. */
 const TURNS_RETRY_MS = 5_000;
+
+const run = promisify(execFile);
 
 /**
  * The quarter turns, counterclockwise, that stand up the surface of a simulator whose app in front has this
@@ -210,10 +214,22 @@ export class SimulatorMirror implements Mirror {
     const file = join(dir, `shot.${format}`);
     try {
       await this.simctl.exec(['io', this.udid, 'screenshot', `--type=${format}`, file], SHOT_MS);
+      // the surface keeps the shape it was built in: stood up as the app in front stands, as a viewer stands it
+      const turns = await this.turnsNow().catch(() => undefined);
+      if (turns)
+        await run('sips', ['--rotate', String((4 - turns) * 90), file], { timeout: SHOT_MS });
       return { data: readFileSync(file) };
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  }
+
+  /** The turns that stand the app in front up, of the read helper, started for them where none runs. */
+  private async turnsNow() {
+    const running = await this.reader?.catch(() => undefined);
+    if (!running || running.closed) this.reader = this.startReader(this.udid);
+    const a = await (await must(this.reader, 'the reader')).call({ op: 'orientation' }, INPUT_MS);
+    return a.ok ? turnsOf(a.orientation as number) : undefined;
   }
 
   async close() {

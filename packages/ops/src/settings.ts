@@ -219,7 +219,8 @@ export function restoreConditions(s: Session, whose: Whose) {
       }
       try {
         const reads = await putBack(s, name as SettingName, c);
-        if (reads === undefined) restored.push(`${name}: ${wordOf(name, c.was)}`);
+        // one that read empty, as a locale no app had set, is named alone
+        if (reads === undefined) restored.push(c.was ? `${name}: ${wordOf(name, c.was)}` : name);
         else failed.push(`${name} (was ${c.was}): it reads ${reads}`);
         if (name !== LOCATION) now[name] = wordOf(name, reads ?? c.was);
       } catch (e) {

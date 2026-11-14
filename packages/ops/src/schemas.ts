@@ -121,7 +121,13 @@ export const DeviceOut = z.object({
   model: z.string(),
   os: z.string(),
   sdk: z.number().int().optional(),
-  screen: z.object({ w: z.number(), h: z.number(), density: z.number(), rotation: z.number() }),
+  /** As it stands now: no rotation where nothing read one since the hello. */
+  screen: z.object({
+    w: z.number(),
+    h: z.number(),
+    density: z.number(),
+    rotation: z.number().optional(),
+  }),
   agentVersion: z.string(),
   foreground: z.string().optional(),
   agentStarted: z.boolean().optional(),
