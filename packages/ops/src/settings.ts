@@ -232,7 +232,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       name: 'device_setting',
       title: 'Device conditions',
       description:
-        'Dark mode, text size, reduce motion, slow network, airplane mode, Wi-Fi, mobile data, Face ID, fingerprint, calls, SMS. No value reads one. Put back at the end or by restore.',
+        'Dark mode, text size, reduce motion, slow network, airplane mode, Wi-Fi, mobile data, Face ID, fingerprint, calls, SMS, memory warning, shake, photos. No value reads one. Put back at the end or by restore.',
       input: z
         .object({
           name: z.enum([...SETTINGS, 'restore', ...ONE_SHOT]),
@@ -240,7 +240,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(500)
             .describe(
-              'A switch: on, off; text_size: Android 1.3, iOS extra-large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
+              'A switch: on, off; text_size: Android 1.3, iOS extra-large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset), memory_warning (Android: trim level), shake, media (file or folder in the server folder).',
             )
             .optional(),
           title: z.string().max(200).optional(),
@@ -281,6 +281,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             s,
             value,
             title,
+            app,
             setUp: policy.allowHome
               ? async (n, v) => {
                   await setCondition(s, n, v);

@@ -199,6 +199,15 @@ export type Device = {
   crashes(q: CrashesQuery): Promise<CrashesAnswer>;
   /** Its wall clock now, in ms since the epoch, read once: `measureClock` makes an offset of it, for any kind of device. */
   wallClock(): Promise<number>;
+  /**
+   * A memory warning to `app`, as the system sends one when memory runs short; `level`: Android's trim level. What the
+   * answer should add, as that every app on the device gets it.
+   */
+  memoryWarning?(app: string, level?: string): Promise<string | undefined>;
+  /** The device shaken, as a person shakes one; what the answer should add. */
+  shake?(): Promise<string | undefined>;
+  /** Photos and videos, each a file on this Mac, into the device's library; what the answer should add. */
+  addMedia?(files: string[]): Promise<string | undefined>;
   /** Whether the app has a live process. */
   appRunning(app: string): Promise<boolean>;
   /** Its process id, where reading it is cheap enough to do on every action. */

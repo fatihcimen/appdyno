@@ -18,6 +18,8 @@ const SEARCHED: Record<string, string> = {
   'dark mode': 'device_setting',
   fingerprint: 'device_setting',
   'face id': 'device_setting',
+  'memory warning': 'device_setting',
+  shake: 'device_setting',
   'push notification': 'push',
   'universal link': 'open_link',
   'app link': 'open_link',
@@ -120,7 +122,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(29_089);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(29_243);
   expect(JSON.stringify(tools)).not.toMatch(
     /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
   );

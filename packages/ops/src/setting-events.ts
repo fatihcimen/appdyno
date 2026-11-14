@@ -1,6 +1,7 @@
 import { must, type SettingName } from '@appdyno/core';
 import { approve } from './approval.js';
-import type { Policy } from './policy.js';
+import { mediaFiles } from './media.js';
+import { checkApp, noApp, type Policy } from './policy.js';
 import type { Session } from './session.js';
 import { reply, ToolError } from './tool.js';
 
@@ -9,7 +10,15 @@ const DEFAULT_SENDER = '5551234';
 const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
 
 /** device_setting's one-shot names: each is over once it is said, and nothing of it is put back. */
-export const ONE_SHOT = ['biometric', 'call', 'sms', 'keychain'] as const;
+export const ONE_SHOT = [
+  'biometric',
+  'call',
+  'sms',
+  'keychain',
+  'memory_warning',
+  'shake',
+  'media',
+] as const;
 type OneShot = (typeof ONE_SHOT)[number];
 
 export const isOneShot = (name: string): name is OneShot =>
@@ -24,8 +33,15 @@ export type Asked = {
   s: Session;
   value: string | undefined;
   title: string | undefined;
+  app: string | undefined;
   setUp: ((name: SettingName, value: string) => Promise<void>) | undefined;
 };
+
+/** A one-shot this kind of device has no way to make, refused in its own words. */
+const lacks = (what: string) => new ToolError(`this device takes no ${what}`, 'UNSUPPORTED');
+
+/** What was done, and what the device adds to it. */
+const and = (done: string, said: string | undefined) => [done, said].filter(Boolean).join('; ');
 
 /** Each one-shot, by what its answer says it did. */
 const EVENTS: Record<OneShot, (a: Asked) => Promise<string>> = {
@@ -62,6 +78,28 @@ const EVENTS: Record<OneShot, (a: Asked) => Promise<string>> = {
     await s.device.events.sms(from, value);
     s.acted();
     return `an SMS came from ${from}`;
+  },
+  memory_warning: async ({ policy, s, value, app }) => {
+    if (!s.device.memoryWarning) throw lacks('memory warning');
+    const pkg = checkApp(policy, app ?? s.appId ?? '');
+    if (!pkg) throw noApp();
+    const said = await s.device.memoryWarning(pkg, value);
+    s.acted();
+    return and(`sent ${pkg} a memory warning${value ? ` (${value})` : ''}`, said);
+  },
+  shake: async ({ s }) => {
+    if (!s.device.shake) throw lacks('shake');
+    const said = await s.device.shake();
+    s.acted();
+    return and('the device was shaken', said);
+  },
+  media: async ({ s, value }) => {
+    if (!s.device.addMedia) throw lacks('photos or videos into its library');
+    const files = mediaFiles(value);
+    const said = await s.device.addMedia(files);
+    s.acted();
+    const n = files.length;
+    return and(`added ${n} ${n === 1 ? 'file' : 'files'} to the device's photos`, said);
   },
 };
 
