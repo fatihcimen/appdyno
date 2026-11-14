@@ -12,7 +12,7 @@ import {
 } from '@appdyno/core';
 import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { type Adb, amStartError, assertPkg, launcherOf, shq } from './adb.js';
-import { apkNames } from './apk-names.js';
+import { apkId, apkNames } from './apk-names.js';
 import { buildVariant } from './build.js';
 import { heldForDialog } from './crashes.js';
 import { androidLinks } from './links.js';
@@ -94,7 +94,7 @@ export class AndroidApps implements AppManager {
     if (!path.endsWith('.apk') || !existsSync(path))
       throw new DeviceError('INVALID_ARGUMENT', `not a local .apk file: ${path}`);
     // shortcut: the file is read for its id and then installed, so one swapped in between goes in; copy it first if that matters
-    if (allowed) allowed((await apkNames(path)).id);
+    if (allowed) allowed(await apkId(path));
     const { screen, answers } = this;
     if (answers.prompts) await readyForInstall(screen);
     // a Xiaomi asks on its screen, and asleep it would not say no by itself

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { apkNames } from '../src/apk-names.js';
+import { apkId, apkNames } from '../src/apk-names.js';
 
 // names.apk and plain.apk are aapt2's own output: a label by resource in two languages, and a plain one
 const fixture = (name: string) => join(import.meta.dirname, 'fixtures/install', name);
@@ -18,6 +18,10 @@ describe('apk names', () => {
       id: 'dev.appdyno.fixture',
       names: ['appdyno fixture', 'dev.appdyno.fixture'],
     });
+  });
+
+  it('reads the package alone from the manifest, as an install names it', async () => {
+    expect(await apkId(fixture('names.apk'))).toBe('dev.appdyno.names');
   });
 
   it('fails on a file that is no app', async () => {

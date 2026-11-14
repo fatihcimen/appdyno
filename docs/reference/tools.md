@@ -184,7 +184,7 @@ A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person 
 `--allow-data-loss virtual` on the server's command line lets these go ahead with nothing asked on simulators and emulators, and `all` on phones too. Only a person's registration of the server sets it: no argument, step or file of a tool stands for a yes. A command asks on its terminal and takes `--yes` for the answer; with neither, only the flag lets it go ahead.
 
 `app install` and `build_and_run` are not among them: neither removes an app first.
-Under `--allow-apps`, `app install` installs only an app the list
+`app install` names the app it installed by the id the file holds. Under `--allow-apps`, `app install` installs only an app the list
 names, by the id the file holds, read before anything reaches the device, and refuses another, naming it; `build_and_run` is refused, as what a project builds is not known before it is built. On Android an install the device refuses says why and what a person can do: an app signed with another key is `PERMISSION_REQUIRED`, as only `app uninstall`, which loses all the app keeps and so asks a person, makes room for it; an older version is `INVALID_ARGUMENT`; no room, an Android older than the app's minSdk, or native libraries for another processor are `UNSUPPORTED`.
 
 ## What each platform can do
