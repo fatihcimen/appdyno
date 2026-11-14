@@ -124,6 +124,30 @@ export const strokeCentre = (box: Box, a: { x?: number; y?: number }, vertical: 
   y: Math.round(!vertical && a.y !== undefined ? a.y : box.y + box.height / 2),
 });
 
+/** The share of its like-sized neighbours' length an element shows, at least, to be touched where found. */
+const ENOUGH_SHOWN = 0.5;
+
+/**
+ * Cut by the edge the swipes bring things in from to less than its like-sized neighbours show, the same role and as
+ * wide across: Android gives such an element's rect clipped, so all of what is listed seems on the screen.
+ */
+function cut(hit: ScreenElement, list: ScreenElement[], box: Box, vertical: boolean, sign: number) {
+  const from = (r: Box) => (vertical ? r.y : r.x);
+  const along = (r: Box) => (vertical ? r.height : r.width);
+  const across = (r: Box) => (vertical ? r.width : r.height);
+  const end = (r: Box) => (sign < 0 ? from(r) + along(r) : from(r));
+  const likes = list.filter(
+    (o) =>
+      o !== hit &&
+      o.role === hit.role &&
+      Math.abs(across(o.rect) - across(hit.rect)) <= CLOSE_ENOUGH,
+  );
+  const full = Math.max(0, ...likes.map((o) => along(o.rect)));
+  return (
+    Math.abs(end(hit.rect) - end(box)) <= CLOSE_ENOUGH && along(hit.rect) < full * ENOUGH_SHOWN
+  );
+}
+
 /** Reads until the selector's element has kept its place for a while, the last read with it; it may be gone or still moving at the cap. */
 const holdsStill = async (s: Session, sel: SelectorOf): Promise<Screen> => {
   const end = Date.now() + STILL_CAP_MS;
@@ -162,6 +186,9 @@ const scrollTo = async (
   // what the swipes brought into view: a pull to refresh at a list's top moves its rows and brings none
   const seen = new Set(screen.list.map((e) => e.label));
   let brought = false;
+  const vertical = a.direction === 'up' || a.direction === 'down';
+  const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
+  let pushed = false;
   for (let swipes = 0; ; swipes++) {
     let hits = selectIn(screen.list, a.selector);
     if (hits.length > 0 && swipes > 0) {
@@ -170,13 +197,18 @@ const scrollTo = async (
       last = { ...last, ...(last.tree && { tree: screen.tree }) };
       hits = selectIn(screen.list, a.selector);
     }
+    const box = scrollArea(screen, a, await windowSize(s), vertical);
     if (hits.length > 0) {
       const hit = pick(hits, a.selector, swipes > 0);
-      return {
-        r: last,
-        done: `found ${line(hit)} after ${swipes} swipes${partly(hit, a.selector)}`,
-        found: true,
-      };
+      // what the edge cuts to a sliver takes no touch, as a card 35 px of which show: one more swipe brings it in
+      const more = !pushed && swipes < a.maxSwipes && cut(hit, screen.list, box, vertical, sign);
+      if (!more)
+        return {
+          r: last,
+          done: `found ${line(hit)} after ${swipes} swipes${partly(hit, a.selector)}`,
+          found: true,
+        };
+      pushed = true;
     }
     if (swipes >= a.maxSwipes)
       throw brought || swipes === 0
@@ -192,13 +224,10 @@ const scrollTo = async (
             'try the other direction',
             true,
           );
-    const vertical = a.direction === 'up' || a.direction === 'down';
-    const box = scrollArea(screen, a, await windowSize(s), vertical);
     const { x: cx, y: cy } = strokeCentre(box, a, vertical);
     const inBox = (e: ScreenElement) =>
       e.x >= box.x && e.x <= box.x + box.width && e.y >= box.y && e.y <= box.y + box.height;
     const onLine = (e: ScreenElement) => e.rect.y <= cy && cy <= e.rect.y + e.rect.height;
-    const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
     const dx = vertical ? 0 : Math.round(sign * box.width * SCROLL_REACH);
     const dy = vertical ? Math.round(sign * box.height * SCROLL_REACH) : 0;
     reportProgress(`scrolling (${swipes + 1} of ${a.maxSwipes})`);
