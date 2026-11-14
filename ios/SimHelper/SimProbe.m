@@ -37,9 +37,9 @@ static double nowMs(void) {
   return tv.tv_sec * 1000.0 + tv.tv_usec / 1000.0;
 }
 
-@interface AppdynoProbe : NSObject
+@interface AppdynoFrameProbe : NSObject
 @end
-@implementation AppdynoProbe {
+@implementation AppdynoFrameProbe {
   CFTimeInterval last;
 }
 - (void)tick:(CADisplayLink *)l {
@@ -136,7 +136,7 @@ __attribute__((constructor)) static void start(void) {
                                               }];
 
   dispatch_async(dispatch_get_main_queue(), ^{
-    AppdynoProbe *probe = [AppdynoProbe new];
+    AppdynoFrameProbe *probe = [AppdynoFrameProbe new];
     displayLink = [CADisplayLink displayLinkWithTarget:probe selector:@selector(tick:)];
     [displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
     NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
