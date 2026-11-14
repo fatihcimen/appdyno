@@ -277,6 +277,16 @@ final class ErrorTests: XCTestCase {
         XCTAssertNil(IssueTrap.take())
     }
 
+    func testTheAppsCrashXCTestTellsOfLateIsNoErrorOfTheRequestItCameIn() {
+        _ = IssueTrap.take()
+        // noted during the next job after a crash and relaunch: the crash was answered APP_NOT_RUNNING already
+        XCTAssertFalse(IssueTrap.keep("dev.appdyno.fixture crashed in <external symbol>"))
+        XCTAssertFalse(IssueTrap.keep("Ice Cubes crashed in -[Timeline reload]"))
+        XCTAssertNil(IssueTrap.take())
+        XCTAssertTrue(IssueTrap.keep("Failed to tap \"crashed in\": no element"))
+        XCTAssertEqual(IssueTrap.take(), "Failed to tap \"crashed in\": no element")
+    }
+
     func testAnIssueOutsideAQuestionIsTheRequestsError() {
         _ = IssueTrap.take()
         XCTAssertTrue(IssueTrap.answer { true } ?? false)
