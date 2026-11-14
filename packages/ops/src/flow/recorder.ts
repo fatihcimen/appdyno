@@ -1,5 +1,13 @@
-import { type Screen, type ScreenElement, selectIn } from '@appdyno/core';
-import { type FlowSelector, type FlowStep, type Flag, Recording } from '@appdyno/flows';
+import { basename, extname } from 'node:path';
+import { type Screen, type ScreenElement, safeName, selectIn } from '@appdyno/core';
+import {
+  type FlowSelector,
+  type FlowStep,
+  type Flag,
+  type Mask,
+  maskText,
+  Recording,
+} from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
@@ -8,6 +16,7 @@ import { NO_MATCH_WAIT_MS } from '../steps.js';
 import { byRef } from '../targets.js';
 import type { Op, ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
+import { DEFAULT_TOLERANCE } from '../visual.js';
 import { type Aim, aimAt, fieldName, named, stepOf, unrecorded } from './aim.js';
 import { activeRecording, addSteps, defined } from './shared.js';
 
@@ -19,6 +28,12 @@ type ToStep = (
   a: Record<string, unknown>,
   data: Record<string, unknown>,
 ) => FlowStep | FlowStep[] | undefined;
+
+/** Ops that only look and are steps all the same: a check, a picture kept, a comparison. */
+const LOOKING_STEPS: ReadonlySet<string> = new Set(['wait_for', 'assert', 'screenshot', 'visual']);
+
+/** A picture's file as a `screenshot` step names it. */
+const pictureName = (file: string) => safeName(basename(file, extname(file))).slice(0, 100);
 
 /** What an op that can change things does when it only looks. */
 const LOOKS: Record<string, string[]> = {
@@ -283,10 +298,36 @@ const OPS: Record<string, ToStep> = {
     a.kind === 'pinch' || a.kind === 'plan' ? unrecorded(`gesture ${a.kind}`) : undefined,
   set_orientation: (a) => unrecorded(`set_orientation ${String(a.orientation)}`),
   clipboard: (a) => (a.text !== undefined ? unrecorded('clipboard') : undefined),
+  // a read of a setting is a look
   device_setting: (a) =>
     a.value !== undefined || a.name === 'restore'
-      ? unrecorded(`device_setting ${String(a.name)}`)
+      ? stepOf(
+          'setting',
+          {},
+          {
+            name: a.name as string,
+            value: a.value as string | undefined,
+            app: a.app as string | undefined,
+            title: a.title as string | undefined,
+          },
+        )
       : undefined,
+  // a picture only shown to the agent is a look
+  screenshot: (a, data) =>
+    a.file && !a.watchMs
+      ? stepOf('screenshot', {}, { name: pictureName(data.file as string) || 'screen' })
+      : undefined,
+  // a baseline saved while recording is what a replay compares with, in the flow's own baselines folder
+  visual: (a) =>
+    stepOf(
+      'visual',
+      {},
+      {
+        name: a.name as string,
+        tolerance: a.tolerance === DEFAULT_TOLERANCE ? undefined : (a.tolerance as number),
+        mask: (a.masks as Mask[] | undefined)?.map(maskText),
+      },
+    ),
 };
 
 const unknownOp = (name: string) => (a: Record<string, unknown>) => {
@@ -315,9 +356,8 @@ export function flowRecorder(ctx: ServerContext) {
 
     /** The op as the surfaces see it. */
     wrap: (op: Op): Op => {
-      const checks = op.name === 'wait_for' || op.name === 'assert';
       const elsewhere = BY_STEP.has(op.name) || NOT_ACTIONS.has(op.name);
-      if (!checks && (elsewhere || op.annotations.readOnlyHint)) return op;
+      if (!LOOKING_STEPS.has(op.name) && (elsewhere || op.annotations.readOnlyHint)) return op;
       const toStep = OPS[op.name] ?? unknownOp(op.name);
       return {
         ...op,

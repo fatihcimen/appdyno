@@ -16,7 +16,7 @@ import { defineOp, READ, reply, ToolError } from './tool.js';
 
 const DEFAULT_DIR = 'appdyno-baselines';
 /** Percent of the pixels compared. */
-const DEFAULT_TOLERANCE = 0.1;
+export const DEFAULT_TOLERANCE = 0.1;
 
 const Mask = z
   .object({

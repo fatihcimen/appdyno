@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { flowFiles } from '../../src/index.js';
 import { conditions } from '../../src/settings.js';
-import { flowsFor, flowHelpers } from './harness.js';
+import { callerOf, flowsFor, flowHelpers } from './harness.js';
 
 const W = 108;
 const H = 240;
@@ -22,7 +22,7 @@ describe('screenshot, visual and setting steps', () => {
   let dir: string;
   let device: FakeDevice;
   let screen: Buffer;
-  const { context, refusal } = flowHelpers(
+  const { context, refusal, recorded } = flowHelpers(
     () => device,
     () => dir,
   );
@@ -128,6 +128,37 @@ describe('screenshot, visual and setting steps', () => {
       'setting restore',
     ]);
     expect(held.dark_mode).toBe('off');
+  });
+
+  it('records a setting, a comparison and a picture kept in a file as their steps, a look as none', async () => {
+    settingsOf({ dark_mode: 'off' });
+    const call = callerOf(context());
+    const baselines = join(dir, 'state', 'b');
+    const { text } = await recorded(call, async () => {
+      await call('device_setting', { name: 'dark_mode', value: 'on' });
+      await call('device_setting', { name: 'dark_mode' });
+      await call('device_setting', { name: 'locale', value: 'tr-TR', app: 'org.example' });
+      await call('visual', { action: 'baseline', name: 'home', dir: baselines });
+      await call('visual', {
+        action: 'compare',
+        name: 'home',
+        dir: baselines,
+        tolerance: 0.5,
+        masks: [{ text: 'Ana sayfa' }, { x: 0, y: 2000, w: 1080, h: 400 }],
+      });
+      await call('screenshot', { file: join(dir, 'state', 'shots', 'Home page.png') });
+      await call('screenshot');
+      await call('device_setting', { name: 'restore' });
+    });
+    expect(text).toBe(`app dev.app
+
+setting dark_mode on
+setting locale tr-TR app=org.example
+visual home
+visual home tolerance=0.5 mask="text=\\"Ana sayfa\\"" mask="0,2000,1080,400"
+screenshot Home_page
+setting restore
+`);
   });
 
   describe('a test run', () => {
