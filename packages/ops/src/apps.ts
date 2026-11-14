@@ -203,14 +203,18 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
     defineOp({
       name: 'terminate_app',
       title: 'Terminate app',
-      description: 'Stop the app (force-stop).',
-      input: z.object({ app: z.string().max(200).optional() }).strict(),
+      description:
+        'Stop the app (force-stop). background: end it as the system ends a backgrounded app, its saved state kept.',
+      input: z
+        .object({ app: z.string().max(200).optional(), background: z.boolean().optional() })
+        .strict(),
       output: DoneOut,
       annotations: DESTRUCTIVE,
-      run: async ({ app }) => {
+      run: async ({ app, background }) => {
         const s = await ctx.session();
         const pkg = checkApp(policy, app ?? s.appId ?? '');
         if (!pkg) throw noApp();
+        if (background) return endInBackground(s, pkg);
         await s.device.terminate(pkg);
         if (pkg === s.appId) s.leftTheApp();
         s.acted();
@@ -219,6 +223,24 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       },
     }),
   ];
+}
+
+/** terminate_app background: home, then the app's end as the system makes one, where the device can make it. */
+async function endInBackground(s: Session, pkg: string) {
+  if (!s.device.endInBackground)
+    throw new ToolError(
+      'this device cannot end an app in the background as the system does',
+      'UNSUPPORTED',
+      'terminate_app without background stops it, as a person does',
+    );
+  const said = await s.device.endInBackground(pkg);
+  s.leftTheApp();
+  s.acted();
+  s.forgetProcess();
+  const t = [`ended ${pkg} in the background, as the system does for memory`, said]
+    .filter(Boolean)
+    .join('; ');
+  return reply(t, { done: t });
 }
 
 /** launch_app: a launch, to the front where the app runs, or a fresh start with what it is to start with. */

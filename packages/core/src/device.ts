@@ -189,6 +189,11 @@ export type Device = {
   /** Before `open`, when a first call is to launch this app: `launch` then takes up what began here. */
   launchAlongside(pkg: string): void;
   terminate(pkg: string): Promise<void>;
+  /**
+   * The app sent home and its process ended as the system ends one in the background for memory, what it saved kept for
+   * its next launch; what the answer should add.
+   */
+  endInBackground?(app: string): Promise<string | undefined>;
   setLocation(lat: number, lon: number): Promise<void>;
   /** The device goes back to its real position. */
   clearLocation(): Promise<void>;

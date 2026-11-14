@@ -278,4 +278,24 @@ describe('app management', () => {
     const none = await connect(new FakeDevice());
     expect((await none.call('app', { action: 'list' })).data.code).toBe('UNSUPPORTED');
   });
+
+  it('ends an app in the background where the device can, and says what stops it where it cannot', async () => {
+    const { call } = await connect(new FakeDevice());
+    expect((await call('terminate_app', { background: true })).text).toBe(
+      'UNSUPPORTED: this device cannot end an app in the background as the system does\nhint: terminate_app without background stops it, as a person does',
+    );
+    const ended: string[] = [];
+    const d = Object.assign(new FakeDevice(), {
+      endInBackground: (app: string) => {
+        ended.push(app);
+        return Promise.resolve('its saved state comes back at its next launch');
+      },
+    });
+    const able = await connect(d);
+    expect((await able.call('terminate_app', { background: true, app: 'dev.other' })).text).toBe(
+      'ended dev.other in the background, as the system does for memory; its saved state comes back at its next launch',
+    );
+    expect(ended).toEqual(['dev.other']);
+    expect(d.calls.filter((c) => c.name === 'terminate')).toEqual([]);
+  });
 });
