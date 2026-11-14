@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   run,
@@ -12,6 +13,7 @@ import {
   type NetworkVia,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { probeHead } from './probe.js';
 import { HeldLaunches } from './sim-held.js';
 import { helperBinary } from './simhelper.js';
 import { assertBundle, type Simctl } from './simctl.js';
@@ -69,10 +71,25 @@ export class SimulatorNetwork implements NetworkSource {
     return { via, log, app };
   }
 
-  read(h: NetworkHandle): Promise<NetworkAnswer> {
-    return new Promise((resolve) => {
-      resolve(probeLog(String(h.log)));
-    });
+  async read(h: NetworkHandle): Promise<NetworkAnswer> {
+    const text = await readFile(String(h.log), 'utf8').catch(() => '');
+    const entries = probeEntries(text);
+    const notes = [
+      ...(entries.length === 0
+        ? ['no request has finished in the app since the probe went in']
+        : []),
+      ...(h.app ? [await this.outside(String(h.app), text)] : []),
+    ].filter(Boolean);
+    return { entries, ...(notes.length > 0 && { note: notes.join('; ') }) };
+  }
+
+  /** What a read says where the app runs as another process than the one the probe last went into. */
+  private async outside(app: string, text: string) {
+    const probed = probeHead(text).pid;
+    const pid = await this.simctl.pid(this.udid, app).catch(() => undefined);
+    return probed !== undefined && pid !== undefined && pid !== probed
+      ? `${app} was started again by something other than this tool, without the probe: its requests since are not seen, until this tool starts it afresh with the probe`
+      : undefined;
   }
 
   async stop(h: NetworkHandle): Promise<NetworkAnswer> {
@@ -83,22 +100,13 @@ export class SimulatorNetwork implements NetworkSource {
   }
 }
 
-function probeLog(log: string): NetworkAnswer {
-  if (!existsSync(log))
-    return {
-      entries: [],
-      note: 'no request has finished in the app since the probe went in',
-    };
-  const entries = readFileSync(log, 'utf8')
+/** The requests of the probe's log; a line for a process the probe went into is none. */
+const probeEntries = (text: string): NetworkEntry[] =>
+  text
     .split('\n')
     .filter(Boolean)
-    .map((l) => {
-      const e = JSON.parse(l) as { at: number; error?: string } & NetworkEntry;
-      return {
-        ...e,
-        at: new Date(e.at).toISOString(),
-        ms: Math.round(e.ms ?? 0),
-      };
+    .flatMap((l) => {
+      const e = JSON.parse(l) as { at: number; loaded?: string } & NetworkEntry;
+      if (e.loaded !== undefined) return [];
+      return [{ ...e, at: new Date(e.at).toISOString(), ms: Math.round(e.ms ?? 0) }];
     });
-  return { entries };
-}

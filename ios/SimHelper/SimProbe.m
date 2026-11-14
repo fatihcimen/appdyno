@@ -6,6 +6,7 @@
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
+#import <fcntl.h>
 #import <objc/runtime.h>
 #import <stdatomic.h>
 #import <stdio.h>
@@ -109,7 +110,13 @@ static void flush(void) {
 
 __attribute__((constructor)) static void start(void) {
   const char *path = getenv("APPDYNO_PROBE_OUT");
-  if (!path || !(out = fopen(path, "a"))) return;
+  // each start begins the file afresh: a relaunch by the host keeps the probe in, and the file is this process's alone
+  int fd = path ? open(path, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0600) : -1;
+  if (fd < 0) return;
+  if (!(out = fdopen(fd, "a"))) {
+    close(fd);
+    return;
+  }
   firstCode = nowMs();
   struct kinfo_proc proc;
   size_t size = sizeof proc;

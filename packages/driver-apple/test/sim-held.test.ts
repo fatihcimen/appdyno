@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cannot } from '@appdyno/core';
@@ -200,5 +200,40 @@ describe('what each launch of an app on a simulator carries', () => {
     ).rejects.toThrow("XCTest's launch metric");
     expect(said('args')).toBe('-AppleLanguages\n(tr-TR)\n-AppleLocale\ntr_TR');
     expect(said('env')).toBe(`APPDYNO_PROBE_OUT=/f\nDYLD_INSERT_LIBRARIES=${lib('SimProbe')}`);
+  });
+});
+
+describe('a capture by the network probe', () => {
+  it('reads the requests alone, and says when the app runs as a process the probe never went into', async () => {
+    let pid = 4242;
+    const simctl = Object.assign(new Simctl({}), {
+      exec: () => Promise.resolve(`${APP}: 4242`),
+      pid: () => Promise.resolve(pid),
+    });
+    const network = new SimulatorNetwork(simctl, SIM, new HeldLaunches(SIM));
+    const capture = await network.start('probe', APP);
+    writeFileSync(String(capture.log), `{"loaded":"${APP}","pid":4242,"t":1}\n`);
+    expect(await network.read(capture)).toEqual({
+      entries: [],
+      note: 'no request has finished in the app since the probe went in',
+    });
+    appendFileSync(
+      String(capture.log),
+      `{"at":0,"method":"GET","url":"https://a.test/","status":200,"ms":3.4,"bytes":5}\n`,
+    );
+    const request = {
+      at: '1970-01-01T00:00:00.000Z',
+      method: 'GET',
+      url: 'https://a.test/',
+      status: 200,
+      ms: 3,
+      bytes: 5,
+    };
+    expect(await network.read(capture)).toEqual({ entries: [request] });
+    // started again from its icon: the system's launch carries nothing of this tool's
+    pid = 5151;
+    expect((await network.read(capture)).note).toBe(
+      `${APP} was started again by something other than this tool, without the probe: its requests since are not seen, until this tool starts it afresh with the probe`,
+    );
   });
 });

@@ -1,7 +1,7 @@
 // NetProbe: injected into an app on a simulator (DYLD_INSERT_LIBRARIES), writes a JSON line per finished
-// request to the file APPDYNO_NET_LOG names. An NSURLProtocol sees what the URL loading system loads in the
-// app's process: not background sessions (their requests run in another process), not WKWebView (nor
-// that), not Network.framework (below it). Bodies are not kept.
+// request to the file APPDYNO_NET_LOG names, after one for the process it is in. An NSURLProtocol sees
+// what the URL loading system loads in the app's process: not background sessions (their requests run in
+// another process), not WKWebView (nor that), not Network.framework (below it). Bodies are not kept.
 #import <Foundation/Foundation.h>
 #include <fcntl.h>
 #import <objc/runtime.h>
@@ -127,6 +127,12 @@ __attribute__((constructor)) static void start(void) {
   const char *path = getenv("APPDYNO_NET_LOG");
   if (!path) return;
   logFd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
+  // the process the lines after it come from: one started elsewhere has no probe in it
+  writeEntry(@{
+    @"loaded": NSBundle.mainBundle.bundleIdentifier ?: @"?",
+    @"pid": @(getpid()),
+    @"t": @([[NSDate date] timeIntervalSince1970] * 1000),
+  });
   [NSURLProtocol registerClass:AppdynoNetProtocol.class];
   addToConfiguration(@selector(defaultSessionConfiguration));
   addToConfiguration(@selector(ephemeralSessionConfiguration));
