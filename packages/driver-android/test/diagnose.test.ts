@@ -181,6 +181,54 @@ describe('logs', () => {
     expect(r.source).toBe('logcat --pid=42');
     expect(asked).toEqual([logcatCommand('42', query)]);
   });
+
+  // logcat prints each line of one message with the message's own head
+  const printed = (lines: string[]) =>
+    ({
+      exec: (_serial: string, c: string) =>
+        Promise.resolve(c.startsWith('pidof') ? '42\n' : lines.join('\n')),
+    }) as unknown as Adb;
+  const STACK = [
+    '11-14 22:59:52.313  4242  4250 E RealImageLoader: Failed to load',
+    '11-14 22:59:52.313  4242  4250 E RealImageLoader: java.io.IOException: closed',
+    '11-14 22:59:52.313  4242  4250 E RealImageLoader: \tat com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1)',
+  ];
+
+  it('gives a message of several lines as one, its lines after the first without their head', async () => {
+    const r = await androidLogs(
+      printed([
+        '11-14 22:59:50.001  4242  4242 I App: started',
+        ...STACK,
+        '11-14 22:59:53.000  4242  4242 I App: next',
+      ]),
+      'R1',
+      { ...query, since: 1 },
+    );
+    expect(r.lines).toEqual([
+      '11-14 22:59:50.001  4242  4242 I App: started',
+      '11-14 22:59:52.313  4242  4250 E RealImageLoader: Failed to load\njava.io.IOException: closed\n\tat com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1)',
+      '11-14 22:59:53.000  4242  4242 I App: next',
+    ]);
+  });
+
+  it('places a message of several lines once, by its first', async () => {
+    const epoch = STACK.map((l) => l.replace('11-14 22:59:52.313', '1794685192.313'));
+    const r = await androidLogs(printed(epoch), 'R1', { ...query, since: 1, timed: true });
+    expect(r.lines).toHaveLength(1);
+    expect(r.marks).toEqual([{ at: 1794685192313, level: 'error' }]);
+  });
+
+  it('leaves out what may be the end of a message, where logcat cut the newest lines from it', async () => {
+    const r = await androidLogs(
+      printed([...STACK.slice(1), '11-14 22:59:53.000  4242  4242 I App: next']),
+      'R1',
+      {
+        ...query,
+        maxLines: 3,
+      },
+    );
+    expect(r.lines).toEqual(['11-14 22:59:53.000  4242  4242 I App: next']);
+  });
 });
 
 // as `dumpsys activity exit-info` and `dumpsys dropbox --print` print on API 34
