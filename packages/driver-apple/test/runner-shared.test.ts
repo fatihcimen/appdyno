@@ -188,6 +188,12 @@ describe('a start that cannot come', () => {
   );
 
   it('gives a start that got on to launching the runner 90 s more from then, and says how far it got', async () => {
+    const realTimeout = setTimeout;
+    const said: string[] = [];
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      said.push(String(chunk));
+      return true;
+    });
     vi.useFakeTimers();
     try {
       const asked = new IosRunnerLauncher(UDID, silent('')).connect();
@@ -197,6 +203,13 @@ describe('a start that cannot come', () => {
       await vi.advanceTimersByTimeAsync(150_000);
       // the runner's first line, as xcodebuild writes it, late in the start
       appendFileSync(log, 'Runner-Runner[91150:20746824] [Default] Running tests...\n');
+      // the start reads its log on its own clock and the disk on the real one: on a loaded Mac the read came after the
+      // deadline, so each look is given the real time it takes before the clock goes on
+      const seen = () => said.some((l) => l.includes('the runner is launching'));
+      for (let look = 0; look < 6 && !seen(); look++) {
+        await vi.advanceTimersByTimeAsync(5_000);
+        for (let t = 0; t < 40 && !seen(); t++) await new Promise((r) => realTimeout(r, 50));
+      }
       await expect(onFakeTime(asked)).rejects.toMatchObject({
         message: expect.stringMatching(
           /^the iOS runner did not start within 2[3-6]\d s: xcodebuild started testing: the runner is launching/,
@@ -204,6 +217,7 @@ describe('a start that cannot come', () => {
       });
     } finally {
       vi.useRealTimers();
+      vi.restoreAllMocks();
     }
   });
 

@@ -4,6 +4,11 @@
 
 ## Yayımlanmamış
 
+### Eklenenler
+
+- Akışlarda üç yeni adım var: `screenshot home` ekranın bir resmini saklar (bir testin artifacts klasörü altında, yoksa `./appdyno-screenshots/` altında), `visual home [tolerance=] [mask=]...` ekranı akışın yanındaki `baselines/home.png` ile karşılaştırır, `setting dark_mode on` ya da `setting restore` bir cihaz ayarını `device_setting` gibi değiştirir. `appdyno test` ve `appdyno flow run`, temel görüntüleri kaydetmek için `--update-baselines` alır; eksik bir temel görüntü ilk adımdan önce reddedilir. Bir resim adımı, ekranın 500 ms boyunca aynı görünmesini bekler, en çok 5 sn: `setting dark_mode on`'dan 272 ms sonra alınan koyu bir temel görüntü açık kaydedilmişti. Bir kayıt bu adımları, eskiden `unrecorded` yazdığı yerde yazar; Maestro dışa aktarması `takeScreenshot` yazar, diğer ikisini nedeniyle reddeder.
+- `appdyno test` her akış dosyasının cihazda değiştirdiğini (bir ayar, sabitlenmiş bir konum, döndürme kilidi) bir sonraki dosyadan önce, her yeniden denemeden sonra da geri koyar; ölçülen bir dosyada yinelemelerinden sonra.
+
 ### Değişenler
 
 - Bir iOS simülatöründe appdyno'nun bir uygulamayı her başlatışı, içinde tutulan probe'ları taşır: `launch_app`, yeniden başlatması, bir akışın stop ve launch adımları, perf'in yeniden başlatması ve XCTest'in açılış ölçümü. Kare probe'unun yeniden başlatması süren bir ağ yakalamasını, bir yeniden başlatma ikisini de korur: her yeniden başlatma öbür probe'u düşürüyordu. Oturumun sonu ya da `device_setting restore` onları bırakır; bir probe, çalışan uygulamada bir sonraki başlangıcına kadar kalır. Xcode 26.5'te iki probe bir açılışa 33 ms ekledi (20'ye karşı 20'nin medyanı).

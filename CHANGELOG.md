@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Added
+
+- Flows have three more steps: `screenshot home` keeps a picture of the screen (under a test's artifacts, else `./appdyno-screenshots/`), `visual home [tolerance=] [mask=]...` compares the screen with `baselines/home.png` beside the flow, and `setting dark_mode on` or `setting restore` changes a device setting as `device_setting` does. `appdyno test` and `appdyno flow run` take `--update-baselines` to save the baselines, and a missing one is refused before the first step. A picture step waits until the screen has looked the same for 500 ms, at most 5 s: taken 272 ms after `setting dark_mode on`, a dark baseline was saved light. A recording writes these steps where it wrote `unrecorded`, and the Maestro export writes `takeScreenshot` and refuses the other two with the reason.
+- `appdyno test` puts back what each flow file changed on the device (a setting, a fixed location, the rotation lock) before the next file, after each retry too, and a measured file after its iterations.
+
 ### Changed
 
 - On an iOS simulator, every launch appdyno makes of an app carries the probes held in it: `launch_app`, its restart, a flow's stop and launch, perf's relaunch and XCTest's launch metric. The frame probe's relaunch keeps a running network capture, and a restart keeps both: each relaunch dropped the other probe. A session's end or `device_setting restore` lets them go; a probe stays in the running app until it next starts. On Xcode 26.5 the two probes added 33 ms to a launch (median of 20 against 20).
