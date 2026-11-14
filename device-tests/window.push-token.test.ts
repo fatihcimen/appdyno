@@ -11,7 +11,7 @@ import { apnsKey, IosSimulatorDevice, Simctl } from '../packages/driver-apple/sr
 import type { ApnsRequest } from '../packages/driver-apple/src/apns.js';
 import { ApnsPush } from '../packages/driver-apple/src/apns-push.js';
 import { simulatorApnsTarget } from '../packages/driver-apple/src/sim-apns.js';
-import { SimulatorEvents } from '../packages/driver-apple/src/simulator-manage.js';
+import { SimulatorEvents } from '../packages/driver-apple/src/sim-events.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowSends } from '../packages/hub/src/window-sends.js';
 import { madeUp } from './helpers.js';

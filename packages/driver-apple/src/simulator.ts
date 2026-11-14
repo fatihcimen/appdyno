@@ -8,7 +8,9 @@ import {
   type TreeOptions,
   reportProgress,
 } from '@appdyno/core';
-import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
+import { SimulatorApps } from './simulator-manage.js';
+import { SimulatorEvents } from './sim-events.js';
+import { SimulatorSettings } from './sim-settings.js';
 import { modelOf } from './simulators.js';
 import { typeByKeys, typesByKeys } from './sim-keys.js';
 import {

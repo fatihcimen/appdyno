@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Devicectl } from '../src/devicectl.js';
 import { PhoneSettings } from '../src/phone-manage.js';
 import type { Simctl } from '../src/simctl.js';
-import { SimulatorSettings } from '../src/simulator-manage.js';
+import { SimulatorSettings } from '../src/sim-settings.js';
 
 const SIM = 'AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE';
 /** As `simctl help ui` and `devicectl device settings appearance --help` list them. */

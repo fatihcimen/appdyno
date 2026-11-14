@@ -4,7 +4,8 @@ import { Devicectl } from '../src/devicectl.js';
 import { appLanguage, launchLanguage } from '../src/manage.js';
 import { PhoneApps, PhoneSettings } from '../src/phone-manage.js';
 import type { Simctl } from '../src/simctl.js';
-import { SimulatorApps, SimulatorSettings } from '../src/simulator-manage.js';
+import { SimulatorApps } from '../src/simulator-manage.js';
+import { SimulatorSettings } from '../src/sim-settings.js';
 
 const SIM = 'AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE';
 const PHONE = '00008110-000000000000001E';
