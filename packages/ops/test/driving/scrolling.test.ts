@@ -237,6 +237,23 @@ describe('scroll_to', () => {
     expect(r.text).toContain('can still move');
     expect(d.swipes).toBe(1);
   });
+
+  it('says the swipes it made went, where it then finds several', async () => {
+    /** Rows 14 and 15 read alike. */
+    class Twins extends ListDevice {
+      override current(): Tree {
+        const t = super.current();
+        for (const n of t.nodes) if (n.t === 'Row 14' || n.t === 'Row 15') n.t = 'Twin';
+        return t;
+      }
+    }
+    const d = new Twins();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', { selector: { text: 'Twin' } });
+    expect([r.data.code, r.data.dispatched]).toEqual(['AMBIGUOUS', true]);
+    expect(d.swipes).toBeGreaterThan(0);
+    expect(r.text).not.toContain('no touch was sent');
+  });
 });
 
 describe('swipe exact', () => {

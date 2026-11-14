@@ -5,6 +5,7 @@ import {
   KEYBOARD_REF,
   nearest,
   selectIn,
+  type Rect,
   type Screen,
   type ScreenElement,
   type Selector as SelectorOf,
@@ -41,15 +42,28 @@ export function wordsOf(clean: (s: string) => string): Words {
 /** The matches a refusal lists, of many. */
 const MANY_SHOWN = 10;
 
-/** One element of a selector's matches, or a refusal listing them. */
-export function pick(hits: ScreenElement[], sel: SelectorOf, line: Words['line']): ScreenElement {
+/** `a` lies wholly inside `b`. */
+const within = (a: Rect, b: Rect) =>
+  a.x >= b.x && a.y >= b.y && a.x + a.width <= b.x + b.width && a.y + a.height <= b.y + b.height;
+
+/** One element of a selector's matches, or a refusal listing them; `sent`: swipes went before, as `scroll_to`'s. */
+export function pick(
+  hits: ScreenElement[],
+  sel: SelectorOf,
+  line: Words['line'],
+  sent = false,
+): ScreenElement {
+  const listed = `${hits.slice(0, MANY_SHOWN).map(line).join('; ')}${hits.length > MANY_SHOWN ? `; and ${hits.length - MANY_SHOWN} more` : ''}`;
+  const { index, ...words } = sel;
+  if (index !== undefined && index >= hits.length)
+    throw new ToolError(
+      `only ${hits.length} ${hits.length === 1 ? 'element matches' : 'elements match'} ${showSelector(words)}, so index ${index} names none: ${listed}`,
+      'NOT_FOUND',
+      `give an index below ${hits.length}, 0 for the first listed, or use a ref`,
+      sent || undefined,
+    );
   // a control and its own text inside it, with the same words (an Android row), are one target
-  const inside = (a: ScreenElement, b: ScreenElement) =>
-    a !== b &&
-    a.rect.x >= b.rect.x &&
-    a.rect.y >= b.rect.y &&
-    a.rect.x + a.rect.width <= b.rect.x + b.rect.width &&
-    a.rect.y + a.rect.height <= b.rect.y + b.rect.height;
+  const inside = (a: ScreenElement, b: ScreenElement) => a !== b && within(a.rect, b.rect);
   // a web link and its own text take the same box: each inside the other, and the one a touch acts on is the target
   const boxed = new Map<string, ScreenElement>();
   for (const e of hits) {
@@ -60,14 +74,13 @@ export function pick(hits: ScreenElement[], sel: SelectorOf, line: Words['line']
   }
   const placed = [...boxed.values()];
   const outer = placed.filter((a) => !placed.some((b) => inside(a, b)));
-  const hit =
-    sel.index === undefined ? (outer.length === 1 ? outer[0] : undefined) : hits[sel.index];
+  const hit = index === undefined ? (outer.length === 1 ? outer[0] : undefined) : hits[index];
   if (hit) return hit;
-  const more = hits.length > MANY_SHOWN ? `; and ${hits.length - MANY_SHOWN} more` : '';
   throw new ToolError(
-    `${hits.length} elements match ${showSelector(sel)}: ${hits.slice(0, MANY_SHOWN).map(line).join('; ')}${more}`,
+    `${hits.length} elements match ${showSelector(sel)}: ${listed}`,
     'AMBIGUOUS',
     'give the selector an index, 0 for the first listed, or use a ref',
+    sent || undefined,
   );
 }
 
