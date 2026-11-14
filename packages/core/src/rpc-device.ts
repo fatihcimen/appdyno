@@ -200,7 +200,10 @@ export abstract class RpcDevice extends DeviceActions {
       if (!this.retrySafe.has(method)) throw e;
       this.rpc = undefined;
       await this.beforeRetry(e);
-      return (await this.ensure()).call(method, params, { timeoutMs });
+      const answer = await (await this.ensure()).call(method, params, { timeoutMs });
+      // an agent that answers, on a new connection too, is no longer stuck
+      this.stuckInARow = 0;
+      return answer;
     }
   }
 

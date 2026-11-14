@@ -13,6 +13,8 @@
 
 - On an iOS simulator, the network and frame probes no longer share one Objective-C class name, so both can be in one app: loaded together, the runtime ran one of the two.
 - `record` `start` writes over no file that is there unless `overwrite` asks, and only to a file of the video kind the device records (`.mp4` or `.mov`): given any path, it replaced whatever file stood there, of any kind. `report` with a `dir` that already holds an `index.html` is refused rather than writing over that page.
+- `screen` `raw` and `find` hide a secret the server was told of in an element's id as in its words: `raw` gave `identifier: "account-user@example.test"` beside a label that read `account-•••`.
+- An iOS runner that answered a read again on a new connection counts its stuck restarts anew, as one that answered on its own connection did: after two stuck restarts, a read retried on a new connection and answered, and the next stuck call left the runner running, as if the two had come in a row.
 
 ## 1.1.1
 

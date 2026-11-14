@@ -13,6 +13,8 @@
 
 - Bir iOS simülatöründe ağ ve kare probe'ları artık tek bir Objective-C sınıf adını paylaşmıyor; ikisi bir uygulamada birlikte olabilir: birlikte yüklendiklerinde çalışma zamanı ikisinden yalnızca birini çalıştırıyordu.
 - `record` `start`, `overwrite` istemedikçe orada duran bir dosyanın üstüne yazmaz, ve yalnızca cihazın kaydettiği türde bir video dosyasına yazar (`.mp4` ya da `.mov`): verilen her yolda, orada duran her türden dosyayı değiştiriyordu. Zaten bir `index.html` tutan bir `dir` ile `report`, o sayfanın üstüne yazmak yerine reddedilir.
+- `screen` `raw` ve `find`, sunucuya söylenen bir sırrı bir öğenin kimliğinde de sözlerindeki gibi gizler: `raw`, `account-•••` okunan bir etiketin yanında `identifier: "account-user@example.test"` veriyordu.
+- Yeni bir bağlantıda bir okumayı yeniden yanıtlayan bir iOS runner'ı, kendi bağlantısında yanıtlayan gibi takılma sayacını sıfırlar: iki takılmalı yeniden başlatmanın ardından yeni bir bağlantıda yeniden denenen bir okuma yanıtlanmış, sonraki takılan çağrı ise ikisi art arda gelmiş gibi runner'ı çalışır halde bırakmıştı.
 
 ## 1.1.1
 
