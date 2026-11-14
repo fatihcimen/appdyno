@@ -80,12 +80,21 @@ function gestureOp(ctx: ServerContext, { act }: Answers, { one, onTheScreen, win
           const size = await windowSize(s);
           const c = { x: a.x ?? size.w / 2, y: a.y ?? size.h / 2 };
           const paths = pinchPaths(c, scale, durationMs ?? PINCH_MS, size);
-          return act(
+          const r = await act(
             s,
             read,
             (o) => s.device.act({ kind: 'gesture', pointers: paths }, o),
             `pinched (×${scale})`,
           );
+          // a photo or a map zooms its picture and keeps its elements: "no change" would read as nothing done
+          if (r.data.changed !== false) return r;
+          const note = 'a zoom may change only the picture: screenshot shows it';
+          return {
+            ...r,
+            blocks: r.blocks.map((b, i) =>
+              i === 0 && b.type === 'text' ? { ...b, text: `${b.text}\n${note}` } : b,
+            ),
+          };
         }
         case 'plan': {
           const fingers = pointers ?? [];

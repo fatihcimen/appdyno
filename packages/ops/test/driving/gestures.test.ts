@@ -44,6 +44,13 @@ describe('gestures, keys, clipboard', () => {
     expect((await call('gesture', { kind: 'plan', pointers: [] })).error).toBe(true);
   });
 
+  it('says a pinch that changed no element may have zoomed only the picture', async () => {
+    const { call } = await connect(new FakeDevice());
+    const r = await call('gesture', { kind: 'pinch', scale: 2 });
+    expect(r.data.changed).toBe(false);
+    expect(r.text).toContain('a zoom may change only the picture: screenshot shows it');
+  });
+
   it('takes every key of the wire, under the name a tool gives it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);

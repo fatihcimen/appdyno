@@ -322,6 +322,31 @@ describe('wire tree to screen', () => {
       expect(selectIn(list, { text }).map((e) => e.label)).toEqual([label]);
   });
 
+  it('names a row by its own words before a panel named by every row inside it', () => {
+    const rows = [
+      'Bosphorus Airways v. Ireland, a case of the European Court',
+      'Bosporus Narrow strait in northwestern Turkey',
+    ];
+    // a clickable panel with no words of its own, named by what it holds, the rows clickable in it
+    const tree = wireTree([
+      { c: 'android.view.ViewGroup', b: [0, 200, 1080, 1600], f: 1 | 2 | 16 },
+      { p: 1, t: 'Navigate up', b: [0, 200, 100, 300] },
+      { p: 1, t: 'Bosphorus Clear query Wikipedia languages EN', b: [100, 200, 1080, 300] },
+      { p: 1, t: must(rows[0], 'a row'), b: [0, 400, 1080, 600], f: 1 | 2 | 16 },
+      { p: 1, t: must(rows[1], 'a row'), b: [0, 600, 1080, 800], f: 1 | 2 | 16 },
+    ]);
+    const { list } = buildScreen(tree, { port: plainScreen });
+    expect(selectIn(list, { text: 'Bosporus Narrow strait' }).map((e) => e.label)).toEqual([
+      rows[1],
+    ]);
+  });
+
+  it('matches words however many spaces stand between them', () => {
+    const tree = wireTree([{ t: 'from as early as 7000  BCE', b: [0, 300, 1080, 400] }]);
+    const { list } = buildScreen(tree, { port: plainScreen });
+    expect(selectIn(list, { text: '7000 BC' })).toHaveLength(1);
+  });
+
   it('takes no dialog for the screen', () => {
     const tree = wireTree([]);
     must(tree.nodes[0], 'the root').b = [54, 900, 1026, 1500];
