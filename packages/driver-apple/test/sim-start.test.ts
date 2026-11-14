@@ -73,7 +73,7 @@ describe("a simulator's runner, started behind the helper", () => {
     const answer = vi
       .spyOn(base, 'callNow')
       .mockImplementation(() => new Promise((r) => setTimeout(() => r({ result: {} }), 30)));
-    const waited = () => (d as unknown as { startingMs: number }).startingMs;
+    const waited = () => (d as unknown as { acts: { startingMs: number } }).acts.startingMs;
     Object.defineProperty(d, 'runnerUp', { value: true, configurable: true });
     await (d as unknown as { callNow: (m: string) => Promise<unknown> }).callNow('tree.get');
     expect(waited()).toBe(0);

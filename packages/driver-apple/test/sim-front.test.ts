@@ -132,7 +132,7 @@ describe('an app just opened on a simulator', () => {
     const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
     const before = Date.now();
     await (device as unknown as { untilFront: (b: string) => Promise<void> }).untilFront('dev.app');
-    return (device as unknown as { transitionEnds: number }).transitionEnds - before;
+    return (device as unknown as { acts: { transitionEnds: number } }).acts.transitionEnds - before;
   };
 
   it('takes no touch while it opens, as the helper or the runner saw it come to the front', async () => {

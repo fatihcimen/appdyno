@@ -1,6 +1,4 @@
 import {
-  failedAfterSending,
-  sleep,
   swipeThrough,
   type ScreenRecorder,
   type SystemSwipe,
@@ -8,9 +6,7 @@ import {
   TRANSITION_MS,
   type ActOptions,
   type TreeOptions,
-  must,
   reportProgress,
-  throwIfCancelled,
 } from '@appdyno/core';
 import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
 import { modelOf } from './simulators.js';
@@ -33,8 +29,7 @@ import { SimulatorWeb } from './webinspector.js';
 import { DirectSim, turnedBy } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
 import { type Capture, nodesBusy, settleAfter } from './simsettle.js';
-import { firstPoint } from './simtouch.js';
-import { onKeyboard } from './simtree.js';
+import { HelperActs } from './sim-act.js';
 import { HelperReads } from './sim-read.js';
 import { helperSeesFront, looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
 import { pasteOnMac, setSimClipboard } from './sim-clipboard.js';
@@ -44,20 +39,14 @@ import { IosDevice } from './device.js';
 import { simulatorOps } from './simulator-ops.js';
 import { HOME_SCREEN_APP } from './platform-screen.js';
 
-type Node = Tree['nodes'][number];
-
-/** How long a touch that changed nothing has to be reported, before the runner does it again. */
-const LATE_TOUCH_MS = 4_000;
-
 const LAUNCH_FRONT_MS = 15_000;
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
   readonly direct: DirectSim;
-  /** Layouts recently answered, by hash: what an action's `before` names. */
-  private readonly recent = new Map<string, Node[]>();
   private readonly reads: HelperReads;
+  private readonly acts: HelperActs;
 
   /** Its processes run on this Mac's kernel and read this clock, and a time needs no runner brought up for it. */
   override wallClock() {
@@ -89,6 +78,14 @@ export class IosSimulatorDevice extends IosDevice {
       runnerUp: () => this.runnerUp,
       runnerStarting: () => this.agentStarting,
       runner: async () => (await this.callNow('tree.get', {}, TIMEOUTS.read)).result,
+    });
+    this.acts = new HelperActs({
+      direct: this.direct,
+      reads: this.reads,
+      helperInput: () => this.helperInput,
+      read: (final) => this.readNow(final),
+      byRunner: (action, opts) => this.actByRunner(action, opts),
+      width: () => this.hello?.screen.w ?? Infinity,
     });
   }
 
@@ -158,12 +155,6 @@ export class IosSimulatorDevice extends IosDevice {
     });
   }
 
-  /** When the transition the last touch started has ended. */
-  private transitionEnds = 0;
-
-  /** What calls have waited for the runner to come up: no settle running meanwhile counts it. */
-  private startingMs = 0;
-
   protected override startAgent() {
     this.runnerFront = undefined;
     return super.startAgent();
@@ -198,7 +189,7 @@ export class IosSimulatorDevice extends IosDevice {
       }
       return await super.callNow(method, params, timeoutMs, closes);
     } finally {
-      if (waits !== undefined) this.startingMs += Date.now() - waits;
+      if (waits !== undefined) this.acts.startingMs += Date.now() - waits;
     }
   }
 
@@ -206,13 +197,6 @@ export class IosSimulatorDevice extends IosDevice {
   override async target(bundle: string) {
     if (this.runnerUp) return super.target(bundle);
     this.targetApp = assertBundle(bundle);
-  }
-
-  private remember(t: Tree) {
-    this.recent.delete(t.hash);
-    this.recent.set(t.hash, t.nodes);
-    if (this.recent.size > 8) this.recent.delete(must(this.recent.keys().next().value, 'a read'));
-    return t;
   }
 
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */
@@ -229,44 +213,13 @@ export class IosSimulatorDevice extends IosDevice {
     if (limits.maxDepth !== undefined || limits.maxNodes !== undefined) return super.tree(limits);
     const { tree } = await this.queue.run(() => this.readNow());
     await this.keepDump(tree);
-    return this.remember(tree);
+    return this.acts.remember(tree);
   }
 
   override async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
     this.startBehind();
     await this.wake();
-    return this.queue.run(async () => {
-      // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
-      throwIfCancelled('the action');
-      if (this.helperInput && !this.direct.screenKnown) await this.reads.read(true);
-      const touch = action.kind !== 'key';
-      const at = touch ? firstPoint(action) : undefined;
-      const armed = this.helperInput && !!at && (await this.direct.arm().catch(() => false));
-      const waited =
-        at && this.helperInput
-          ? await this.direct.animationsOver().catch(() => undefined)
-          : undefined;
-      if (at) await sleep(Math.max(0, this.transitionEnds - Date.now()));
-      const touchesBefore = this.direct.touchesEnded;
-      const touchedAt = Date.now();
-      // a stop that came in the waits above holds the stroke too
-      throwIfCancelled('the action');
-      if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
-      const settled = () => settleAfter(this.settleOn(), action, opts).catch(failedAfterSending);
-      let out = await settled();
-      // nothing moved and the app has not seen the touch finish: it never got it, or a loaded Mac has it far behind
-      const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at.x, at.y);
-      if (reports && out.untouched && touchesBefore === this.direct.touchesEnded) {
-        await this.direct.touchHandled(LATE_TOUCH_MS).catch(() => undefined);
-        if (touchesBefore === this.direct.touchesEnded) {
-          this.direct.touchLost();
-          return this.actByRunner(action, opts);
-        }
-        out = await settled();
-      }
-      this.transitionEnds = out.moved ? touchedAt + TRANSITION_MS : 0;
-      return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };
-    });
+    return this.queue.run(() => this.acts.act(action, opts));
   }
 
   /**
@@ -344,7 +297,7 @@ export class IosSimulatorDevice extends IosDevice {
     );
     const opened = await untilOpened(pkg, app.name, looks, LAUNCH_FRONT_MS);
     // the app opening over the home screen takes no touches either
-    if (opened.stayed === false) this.transitionEnds = Date.now() + TRANSITION_MS;
+    if (opened.stayed === false) this.acts.transitionEnds = Date.now() + TRANSITION_MS;
     return opened.answered ? { answered: app.name } : undefined;
   }
 
@@ -372,7 +325,7 @@ export class IosSimulatorDevice extends IosDevice {
       await super.untilFront(pkg);
     // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot, and the
     // runner's way too, where it told the front as it first came up (a GitHub runner, 2 of 4 first runs)
-    this.transitionEnds = Date.now() + TRANSITION_MS;
+    this.acts.transitionEnds = Date.now() + TRANSITION_MS;
   }
 
   protected override async frontNow() {
@@ -382,18 +335,6 @@ export class IosSimulatorDevice extends IosDevice {
   override async hardware() {
     const model = await modelOf(this.simctl, this.serial);
     return { ...(await super.hardware()), ...(model && { model }) };
-  }
-
-  /** What a settle after an action reads and remembers, on the clock that leaves out waits for the runner. */
-  private settleOn() {
-    return {
-      read: (final: boolean) => this.readNow(final),
-      remember: (t: Tree) => this.remember(t),
-      recent: this.recent,
-      width: this.hello?.screen.w ?? Infinity,
-      clock: () => Date.now() - this.startingMs,
-      handled: () => this.direct.touchHandled().catch(() => undefined),
-    };
   }
 
   /** A US keyboard's text by the helper's keys, as touches go (`typeByKeys`); anything else by the runner. */
@@ -408,7 +349,7 @@ export class IosSimulatorDevice extends IosDevice {
         });
         const key = { kind: 'key', key: 'a' } as const; // the settle tells touches apart, and keys are none
         if (!r || typeof r === 'string') return r;
-        return { ...r, ...(await settleAfter(this.settleOn(), key, opts)).result };
+        return { ...r, ...(await settleAfter(this.acts.settleOn(), key, opts)).result };
       });
       if (typed === 'retype') return super.typeText(text, { ...opts, replace: true });
       if (typed === 'append') return super.typeText(text, opts);
