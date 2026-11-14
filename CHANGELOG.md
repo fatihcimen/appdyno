@@ -17,6 +17,8 @@ appdyno 1.1.1 keeps an iOS runner fast on a screen with a control drawn twice un
 - On an iOS simulator or an iPhone, a screen with a control drawn twice and something that moves elsewhere, as a turning banner over a grid of cells, no longer makes every read ask XCUI of each copy again: which copy a tap reaches is kept by the copies' places and what is over them, not by the whole screen's layout, and one read asks for at most half a second more of a few groups (always of one), leaving the rest to the next read. On such a screen a read took 25 s and more, past the 15 s a read has, and taps 15 to 27 s.
 - A runner that answers a quick call with its own TIMEOUT, as one does when the call came too late to start, is not taken for stuck and restarted: only no answer at all is stuck.
 - An iOS runner restarted as stuck twice in a row, with nothing answered between, is left running at the third: a screen that held every new runner as it held the last made a loop of them, a start and then 15 s of nothing, 13 times in one session. The timeout says the runner was left, and why.
+- On an iPhone, a runner restarted as stuck is no longer first asked to shut down: the ask waits on the lane that is stuck, and each restart spent 6 s on it for nothing.
+- On a simulator, a runner started in place of the helper says why the helper was not used when that was a refusal, a turned screen or no screen size: the reason was left empty, and a failed start ended its message with "after the simulator's helper did not answer: ".
 
 ## 1.1.0
 

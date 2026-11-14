@@ -17,6 +17,8 @@ appdyno 1.1.1, bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpı
 - Bir iOS simülatöründe ya da iPhone'da, iki kez çizilmiş bir kontrolü ve başka bir yerde kıpırdayan bir şeyi olan bir ekran (bir hücre ızgarasının üstünde dönen bir banner gibi) artık her okumada XCUI'ye her kopyayı yeniden sordurmuyor: bir dokunuşun hangi kopyaya ulaştığı ekranın bütün düzenine göre değil, kopyaların yerlerine ve üstlerindekine göre tutulur. Bir okuma birkaç gruba en çok yarım saniye daha sorar (her zaman en az birine), gerisini sonraki okumaya bırakır. Böyle bir ekranda bir okuma 25 sn'yi, yani bir okumanın 15 sn'lik süresini aşıyor, dokunuşlar 15 ile 27 sn sürüyordu.
 - Hızlı bir çağrıya kendi TIMEOUT'uyla cevap veren bir runner (çağrı başlamak için geç kaldığında olduğu gibi) takılmış sayılıp yeniden başlatılmıyor: yalnızca hiç cevap vermemek takılmaktır.
 - Arada hiçbir şey cevaplanmadan art arda iki kez takılmış diye yeniden başlatılan bir iOS runner'ı üçüncüsünde çalışır halde bırakılır: her yeni runner'ı bir öncekini tuttuğu gibi tutan bir ekran onları döngüye sokuyordu; bir oturumda 13 kez bir başlangıç ve ardından 15 sn hiçbir şey. Zaman aşımı runner'ın bırakıldığını ve nedenini söyler.
+- Bir iPhone'da takılmış diye yeniden başlatılan bir runner'a artık önce kapanması söylenmiyor: bu istek takılmış hattı bekliyordu ve her yeniden başlatma onun için boşuna 6 sn harcıyordu.
+- Bir simülatörde yardımcının yerine başlatılan runner, yardımcının neden kullanılmadığını bu bir ret, yan çevrilmiş bir ekran ya da ekran boyutunun gelmemesi olduğunda da söylüyor: neden boş kalıyordu ve başarısız bir başlangıcın mesajı "after the simulator's helper did not answer: " ile bitiyordu.
 
 ## 1.1.0
 
