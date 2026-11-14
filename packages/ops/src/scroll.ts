@@ -195,13 +195,9 @@ const scrollTo = async (
     const vertical = a.direction === 'up' || a.direction === 'down';
     const box = scrollArea(screen, a, await windowSize(s), vertical);
     const { x: cx, y: cy } = strokeCentre(box, a, vertical);
-    // sideways, only what the finger's line crosses says the list moved: a banner elsewhere changes by itself
-    const inner = (e: ScreenElement) =>
-      e.x >= box.x &&
-      e.x <= box.x + box.width &&
-      e.y >= box.y &&
-      e.y <= box.y + box.height &&
-      (vertical || (e.rect.y <= cy && cy <= e.rect.y + e.rect.height));
+    const inBox = (e: ScreenElement) =>
+      e.x >= box.x && e.x <= box.x + box.width && e.y >= box.y && e.y <= box.y + box.height;
+    const onLine = (e: ScreenElement) => e.rect.y <= cy && cy <= e.rect.y + e.rect.height;
     const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
     const dx = vertical ? 0 : Math.round(sign * box.width * SCROLL_REACH);
     const dy = vertical ? Math.round(sign * box.height * SCROLL_REACH) : 0;
@@ -226,13 +222,18 @@ const scrollTo = async (
     s.acted();
     const next = last.tree ? s.screenOf(last.tree) : await s.read();
     s.remember(next);
+    // sideways, only what the finger's line crosses says the list moved, as a banner elsewhere changes by itself;
+    // with nothing listed on that line, as cards drawn as one picture, all in the box says
+    const lined = !vertical && [...screen.list, ...next.list].some((e) => inBox(e) && onLine(e));
+    const inner = (e: ScreenElement) => inBox(e) && (!lined || onLine(e));
     for (const e of next.list.filter(inner)) {
       // a refresh's spinner has no words
       if (e.label && !seen.has(e.label)) brought = true;
       seen.add(e.label);
     }
     still = moved(screen.list.filter(inner), next.list.filter(inner)) ? 0 : still + 1;
-    if (still >= STILL_STROKES)
+    // a read that holds the target has found it, whatever is said of the list
+    if (still >= STILL_STROKES && selectIn(next.list, a.selector).length === 0)
       throw new ToolError(
         `${what} not found: the list did not move after ${swipes + 1} swipes, so this is its end${offer(next.list, a.selector.text)}`,
         'NOT_FOUND',

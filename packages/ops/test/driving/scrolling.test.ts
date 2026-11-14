@@ -37,6 +37,35 @@ class SidewaysRow extends FakeDevice {
   }
 }
 
+const WONDERS = ['Great Wall', 'Petra', 'Colosseum', 'Chichen Itza', 'Machu Picchu', 'Taj Mahal'];
+
+/**
+ * Cards drawn as one picture, as Wonderous's on an iOS simulator: no element says it scrolls, nothing listed lies on
+ * the screen's middle, and a stroke anywhere turns one card, whose words change in place, up to the last.
+ */
+class Carousel extends FakeDevice {
+  card = 0;
+  override current(): Tree {
+    const name = must(WONDERS[this.card], 'a card');
+    SCREENS.cards = [
+      { t: 'Open main menu', b: [40, 180, 170, 310] },
+      { t: name, b: [240, 1660, 840, 1960] },
+      { t: `wonder ${this.card + 1} of ${WONDERS.length}.`, b: [0, 2000, 1080, 2080] },
+      { t: `Explore details about ${name}.`, b: [470, 2060, 610, 2280] },
+    ];
+    this.screen = 'cards';
+    return super.current();
+  }
+  override async act(action: ActParams, opts = {}) {
+    if (action.kind === 'gesture') {
+      const p = must(action.pointers[0], 'a path');
+      const by = Math.sign(must(p[0], 'its start').x - must(p.at(-1), 'its end').x);
+      this.card = Math.min(Math.max(this.card + by, 0), WONDERS.length - 1);
+    }
+    return super.act(action, opts);
+  }
+}
+
 describe('scroll_to', () => {
   const ListDevice = ScrollingList;
 
@@ -57,12 +86,47 @@ describe('scroll_to', () => {
     const { call } = await connect(d);
     const r = await call('scroll_to', {
       selector: { text: 'Fruit 9' },
-      direction: 'left',
+      direction: 'right',
+      x: 540,
+      y: 900,
       maxSwipes: 8,
     });
     expect(r.error).toBe(true);
     expect(r.text).toContain('the list did not move');
     expect(d.strokes).toBeLessThan(8);
+  });
+
+  it('turns cards with nothing listed on the finger’s line, by what changes on the screen', async () => {
+    const d = new Carousel();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', { selector: { text: 'Machu Picchu' }, direction: 'left' });
+    expect(r.text).toMatch(/found .*"Machu Picchu" .* after 4 swipes/);
+    const back = await call('scroll_to', { selector: { text: 'Petra' }, direction: 'right' });
+    expect(back.text).toMatch(/found .*"Petra" .* after 3 swipes/);
+  });
+
+  it('says of cards turned to their last that they did not move, with nothing listed on the finger’s line', async () => {
+    const d = new Carousel();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', {
+      selector: { text: 'Christ the Redeemer' },
+      direction: 'left',
+      maxSwipes: 20,
+    });
+    expect(r.error).toBe(true);
+    expect(r.text).toContain('the list did not move after 7 swipes');
+  });
+
+  it('finds what a stroke brought, though what the finger crossed stood still', async () => {
+    const d = new Carousel();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', {
+      selector: { text: 'Colosseum' },
+      direction: 'left',
+      x: 540,
+      y: 240,
+    });
+    expect(r.text).toMatch(/found .*"Colosseum" .* after 2 swipes/);
   });
 
   it('finds a row further down by scrolling, with no flick', async () => {

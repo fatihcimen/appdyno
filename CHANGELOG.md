@@ -66,6 +66,7 @@ appdyno 1.1.1 fixes what a long run of seven builds of five open-source apps sho
 - A system alert is read once when the runner's app is the home screen app: `find text=Open` gave `@4q51` and `@4q51-2` at one point, and a location prompt listed 12 elements for 6.
 - A `tap`, `double_tap` or `long_press` that closes a system alert answers with the app's screen, as `alert` does: it answered with the app's card in the switcher and a warning that the app was not in the foreground (3 of 3).
 - The warning that the app is not in the foreground names the app expected beside the one in front.
+- `scroll_to` sideways turns a carousel past its next card where nothing the screen lists lies on the finger's line, as Wonderous's cards on an iOS simulator, drawn as one picture with their names below: only what that line crosses said the list moved, so every swipe read as still, and a card two to four away answered `NOT_FOUND … the list did not move after 2 swipes` (5 of 5), once with that card in its nearest. With nothing listed on the line, what changes in the list's box says; a row on the line is still judged by itself alone. A swipe whose read holds the target answers `found`.
 
 ## 1.1.0
 

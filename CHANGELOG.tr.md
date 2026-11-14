@@ -66,6 +66,7 @@ appdyno 1.1.1, beş açık kaynak uygulamanın yedi build'inin dört boyutta iOS
 - Runner'ın uygulaması ana ekran uygulaması olduğunda bir sistem uyarısı bir kez okunur: `find text=Open` aynı noktada `@4q51` ve `@4q51-2` veriyor, bir konum istemi 6 öğe için 12 öğe listeliyordu.
 - Bir sistem uyarısını kapatan `tap`, `double_tap` ya da `long_press`, `alert` gibi uygulamanın ekranıyla cevap verir: geçiş ekranındaki uygulama kartıyla ve uygulamanın önde olmadığı uyarısıyla cevap veriyordu (3'te 3).
 - Uygulamanın önde olmadığı uyarısı, öndekinin yanında beklenen uygulamayı da anar.
+- Yana `scroll_to`, ekranın listelediği hiçbir şeyin parmağın çizgisinde durmadığı bir karuseli, bir iOS simülatöründe tek bir resim olarak çizilen ve adları altında duran Wonderous kartları gibi, bir sonraki kartın ötesine çevirir: listenin kıpırdadığını yalnızca o çizginin kestiği söylüyordu, bu yüzden her kaydırma kıpırdamamış okunuyor ve iki ila dört kart ötedeki bir kart `NOT_FOUND … the list did not move after 2 swipes` cevabını alıyordu (5'te 5), bir kez de en yakınları arasında o kartın kendisi varken. Çizgide listelenen bir şey yokken listenin kutusunda değişen söyler; çizgideki bir satır yine yalnızca kendisiyle değerlendirilir. Okuması hedefi tutan bir kaydırma `found` cevabını verir.
 
 ## 1.1.0
 
