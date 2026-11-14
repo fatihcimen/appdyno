@@ -11,12 +11,12 @@ outlives the process that started it, so `appdyno record start` and `appdyno rec
 end stops a recording it left running.
 
 `stop` reads the file, and a file that does not play is a refusal saying why (a recorder killed before it ended leaves no
-index). The answer gives the length, frames and size.
+index). The answer gives how long the file plays, its frames and size.
 
 |           | how                                                      | what to know                                                                                                                                                                                                  |
 | --------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Android   | `screenrecord` on the device, 3 minutes a run, 4 Mbps    | runs are joined into one video by copying their frames, with no dependency; a moment is lost at each join. Runs an encoder change makes unjoinable stay as `name-1.mp4`, `name-2.mp4`, and the answer says so |
-| simulator | `simctl io recordVideo --codec=h264`, a QuickTime `.mov` | a frame is written only when the screen changes, so a still screen gives a very short video, and the answer says so                                                                                           |
+| simulator | `simctl io recordVideo --codec=h264`, a QuickTime `.mov` | a frame is written only when the screen changes, so a still screen gives few frames; the time the answer gives is how long the file plays, past its last frame                                                |
 | iPhone    | its own stream into a movie, with no second encode       | HEVC 4:4:4 at the phone's own size, from a key picture on; a build without the stream uses `devicectl device capture screen-record`, which not every phone offers                                             |
 
 ## Report
@@ -77,10 +77,10 @@ certificate is ever installed: to see HTTPS through a proxy, install its certifi
 `webview`: `pages`, `elements` (the DOM at tap coordinates, to read where the accessibility tree does not), `click` (a CSS
 selector), `eval` (a script). On Android it speaks the DevTools protocol to the `webview_devtools_remote_<pid>` socket of a debuggable
 app, through `adb forward`. On a simulator it speaks to the socket Safari's Web Inspector uses, and from iOS 16.4 a page shows only if the app set
-`isInspectable`. An iPhone is not reached this way.
+`isInspectable`. An iPhone is not reached this way. One connection to a simulator's inspector serves a call and the calls in the minute after it, as the inspector serves a new one only some 10 s after the last one closed; a new one is waited for as long as the inspector takes, up to 15 s and once more on a fresh connection, and a timeout names the inspector. On the command line each call is a process of its own, so a call within 10 s of the last can take up to those 10 s. On a simulator, `pages` marks the tab that shows as `(showing)`, by what each page's own document says, and `webview` and `screen` read that one; on Android it lists each page once. With no page to inspect it says that a page still loading is listed once it has loaded, and to ask again.
 
 `screen` marks what a web view shows as `web`, and adds what the page holds and the accessibility tree does not, by coordinates and
-selector. An app that is not debuggable still shows what its web view tells accessibility.
+selector, waiting at most 3 s for the page, and says when it left it unread. An app that is not debuggable still shows what its web view tells accessibility.
 
 ## Flutter
 

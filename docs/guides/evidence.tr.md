@@ -11,12 +11,12 @@ onu başlatan süreçten uzun yaşar; bu yüzden `appdyno record start` ve `appd
 sonu, oturumun çalışır bıraktığı bir kaydı durdurur.
 
 `stop` dosyayı okur; oynatılamayan bir dosya nedenini söyleyen bir rettir (bitmeden öldürülen bir kaydedici hiç
-index bırakmaz). Yanıt süreyi, kareleri ve boyutu verir.
+index bırakmaz). Yanıt dosyanın ne kadar oynadığını, karelerini ve boyutunu verir.
 
 |           | nasıl                                                      | bilinmesi gerekenler                                                                                                                                                                                                                                                    |
 | --------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Android   | cihazda `screenrecord`, çalıştırma başına 3 dakika, 4 Mbps | çalıştırmalar, kareleri kopyalanarak, hiçbir bağımlılık olmadan tek bir videoda birleştirilir; her birleşme noktasında bir an kaybolur. Bir kodlayıcı değişikliğinin birleştirilemez yaptığı çalıştırmalar `name-1.mp4`, `name-2.mp4` olarak kalır ve yanıt bunu söyler |
-| simülatör | `simctl io recordVideo --codec=h264`, bir QuickTime `.mov` | bir kare yalnızca ekran değiştiğinde yazılır, bu yüzden durgun bir ekran çok kısa bir video verir ve yanıt bunu söyler                                                                                                                                                  |
+| simülatör | `simctl io recordVideo --codec=h264`, bir QuickTime `.mov` | bir kare yalnızca ekran değiştiğinde yazılır, bu yüzden durgun bir ekran az kare verir; yanıtın verdiği süre, dosyanın son karesinin ötesine kadar ne kadar oynadığıdır                                                                                                 |
 | iPhone    | kendi yayını, ikinci bir kodlama olmadan bir filme         | telefonun kendi boyutunda HEVC 4:4:4, bir anahtar kareden itibaren; yayını olmayan bir build `devicectl device capture screen-record` kullanır, bunu her telefon sunmaz                                                                                                 |
 
 ## Rapor
@@ -77,10 +77,10 @@ sertifika asla kurulmaz: HTTPS'i bir proxy üzerinden görmek için onun sertifi
 `webview`: `pages`, `elements` (erişilebilirlik ağacının okuyamadığı yeri okumak için dokunma koordinatlarındaki DOM), `click` (bir CSS
 seçicisi), `eval` (bir betik). Android'de, hata ayıklanabilir bir uygulamanın `webview_devtools_remote_<pid>` soketiyle
 `adb forward` üzerinden DevTools protokolünü konuşur. Simülatörde Safari'nin Web Inspector'ının kullandığı soketle konuşur; iOS 16.4'ten itibaren bir sayfa yalnızca uygulama
-`isInspectable` ayarladıysa görünür. Bir iPhone'a bu yolla ulaşılmaz.
+`isInspectable` ayarladıysa görünür. Bir iPhone'a bu yolla ulaşılmaz. Bir simülatörün denetçisine açılan tek bir bağlantı bir çağrıya ve ardından gelen bir dakikadaki çağrılara hizmet eder, çünkü denetçi yeni bir bağlantıya ancak öncekinin kapanmasından 10 s kadar sonra hizmet eder; yeni bir bağlantı denetçi ne kadar sürerse, 15 s'ye kadar ve bir kez de yeni bir bağlantıda beklenir, zaman aşımı da denetçiyi anar. Komut satırında her çağrı ayrı bir süreçtir, bu yüzden öncekinden 10 s içinde yapılan bir çağrı bu 10 s'ye kadar sürebilir. Bir simülatörde `pages`, her sayfanın kendi belgesinin söylediğine göre görünen sekmeyi `(showing)` diye işaretler, `webview` ve `screen` de onu okur; Android'de her sayfayı bir kez listeler. Denetlenecek sayfa yokken, yüklenmekte olan bir sayfanın yüklenince listelendiğini ve yeniden sormayı söyler.
 
 `screen`, bir web görünümünün gösterdiğini `web` olarak işaretler ve sayfanın tutup erişilebilirlik ağacının tutmadığını koordinatlar ve
-seçiciyle ekler. Hata ayıklanabilir olmayan bir uygulama da web görünümünün erişilebilirliğe söylediğini yine gösterir.
+seçiciyle ekler; sayfayı en çok 3 s bekler ve okumadan bıraktığında bunu söyler. Hata ayıklanabilir olmayan bir uygulama da web görünümünün erişilebilirliğe söylediğini yine gösterir.
 
 ## Flutter
 
