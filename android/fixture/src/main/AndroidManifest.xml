@@ -58,6 +58,8 @@
         <activity android:name=".CanvasActivity" />
         <activity android:name=".MarqueeActivity" />
         <activity android:name=".LocaleActivity" />
+        <activity android:name=".LifecycleActivity" />
+        <activity android:name=".PhotosActivity" />
         <activity android:name=".GesturesActivity" />
         <activity android:name=".A11yActivity" />
         <activity android:name=".CodeActivity" android:windowSoftInputMode="stateVisible" />

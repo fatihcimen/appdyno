@@ -47,6 +47,8 @@ private val LINKED = mapOf(
     "marquee_back" to MarqueeActivity::class.java,
     "marquee_cut" to MarqueeActivity::class.java,
     "locale" to LocaleActivity::class.java,
+    "lifecycle" to LifecycleActivity::class.java,
+    "photos" to PhotosActivity::class.java,
 )
 
 /** The home screen; `appdyno-fixture://open/<screen>` opens a screen directly. */

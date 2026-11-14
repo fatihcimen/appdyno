@@ -65,4 +65,10 @@
     <item name="cpu_steady" type="id" />
     <item name="cpu_stall" type="id" />
     <item name="cpu_taps" type="id" />
+    <item name="trim_levels" type="id" />
+    <item name="shakes" type="id" />
+    <item name="kept_value" type="id" />
+    <item name="process_start" type="id" />
+    <item name="pick_photos" type="id" />
+    <item name="picked" type="id" />
 </resources>
