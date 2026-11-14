@@ -137,6 +137,18 @@ describe('app management', () => {
     }
   });
 
+  it('names the app it installed, by the id the file holds', async () => {
+    const apps = manager({
+      install: (_path: string, named?: (app: string) => void) => {
+        named?.('dev.app');
+        return Promise.resolve([]);
+      },
+    });
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    const r = await call('app', { action: 'install', path: '/tmp/a.apk' });
+    expect([r.done, r.data.app]).toEqual(['installed dev.app from /tmp/a.apk', 'dev.app']);
+  });
+
   it('installs under an allowlist only an app on it, by the id the file holds, and names the one refused', async () => {
     /** A device whose file holds `id`: it asks the check before it installs. */
     const holding = (id: string) =>

@@ -138,6 +138,10 @@ const member = async (path: string, name: string) =>
     })
   ).stdout;
 
+/** This file's app's package, from its manifest alone: an install names it, and what the labels need is not read. */
+export const apkId = async (path: string) =>
+  manifestOf(await member(path, 'AndroidManifest.xml')).id;
+
 /** What this file's app is called on a phone, read from the file (no SDK tool is needed for it). */
 export async function apkNames(path: string): Promise<ApkNames> {
   const { id, label, pool } = manifestOf(await member(path, 'AndroidManifest.xml'));

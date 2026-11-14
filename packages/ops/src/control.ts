@@ -110,16 +110,11 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
         case 'install': {
           if (!path) throw new ToolError('install needs path', 'INVALID_ARGUMENT');
           reportProgress(`installing ${path}`);
-          // under an allowlist the driver reads the file's own id before it installs anything, which a launch takes
+          // the driver reads the file's own id before it installs anything: the answer names it, an allowlist holds it
           let installed: string | undefined;
-          const said = await apps.install(
-            path,
-            policy.apps.length > 0
-              ? (id) => {
-                  installed = checkApp(policy, id);
-                }
-              : undefined,
-          );
+          const said = await apps.install(path, (id) => {
+            installed = policy.apps.length > 0 ? checkApp(policy, id) : id;
+          });
           if (said.length > 0) s.acted();
           // what it answered on the device is part of what happened: no read mode shortens this
           return done(
