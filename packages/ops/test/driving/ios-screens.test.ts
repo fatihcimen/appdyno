@@ -198,4 +198,36 @@ describe('an iOS screen', () => {
       expect.objectContaining({ kind: 'tap', x: 339, y: 137 }),
     ]);
   });
+
+  it("touches a switch row on its own switch, as SwiftUI's Toggle takes no touch on its label", async () => {
+    // Ice Cubes' Display Settings, as a simulator read it: the row's switch, and its control named by its value
+    const toggle: Tree = {
+      windows: [
+        {
+          type: 1,
+          pkg: APP.defaults.app,
+          layer: 0,
+          b: [0, 0, 402, 874],
+          active: true,
+          focused: true,
+        },
+      ],
+      nodes: [
+        { p: -1, w: 0, c: 'Application', b: [0, 0, 402, 874], f: 17 },
+        { p: 0, w: 0, c: 'Window', b: [0, 0, 402, 874], f: 17 },
+        { p: 1, w: 0, c: 'Switch', d: 'Match System', t: '1', b: [16, 415, 386, 467], f: 51 },
+        { p: 2, w: 0, c: 'Switch', d: '1', t: '1', b: [310, 427, 373, 455], f: 51 },
+      ],
+      truncated: false,
+      elapsedMs: 3,
+      hash: 'toggle',
+    };
+    const d = new Simulator(toggle);
+    const { call } = await connect(d, APP);
+    const r = await call('tap', { selector: { text: 'Match System', role: 'switch' } });
+    expect(r.done).toMatch(/^tapped @\w+ "Match System" by its own switch @\w+ "1"$/);
+    expect(d.calls.filter((c) => c.name === 'act').map((c) => c.args[0])).toEqual([
+      expect.objectContaining({ kind: 'tap', x: 342, y: 441 }),
+    ]);
+  });
 });

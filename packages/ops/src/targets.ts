@@ -172,6 +172,47 @@ export const partly = (e: ScreenElement, sel: SelectorOf) =>
     ? ` (only a part of its words: nothing here reads ${JSON.stringify(sel.text)} alone)`
     : '';
 
+/** The roles of a row that holds its own control of that role, as SwiftUI's Toggle: its middle is its label. */
+const TOGGLES = new Set(['switch', 'checkbox']);
+/** Where along its long side a control is touched when a smaller one has its middle. */
+const ASIDE = [0.25, 0.75, 0.1, 0.9];
+
+const area = (r: Rect) => r.width * r.height;
+const holds = (r: Rect, p: Point) =>
+  p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
+
+/**
+ * Where a touch on a listed control goes where its middle is not its own: on its own switch, or clear of a smaller
+ * control of other words at its middle, which would take the touch (a mini player's Pause); `note` says so.
+ */
+function ownPoint(e: ScreenElement, list: ScreenElement[], named: (c: ScreenElement) => string) {
+  if (!list.includes(e) || !e.flags.includes('clickable') || e.flags.includes('web')) return;
+  const smaller = list.filter(
+    (c) => c !== e && within(c.rect, e.rect) && area(c.rect) * 2 <= area(e.rect),
+  );
+  const own = TOGGLES.has(e.role) ? smaller.find((c) => c.role === e.role) : undefined;
+  if (own) return { point: { x: own.x, y: own.y }, note: ` by its own ${e.role} ${named(own)}` };
+  // its own words past the list's cut are its own still
+  const words = (c: ScreenElement) => c.whole ?? c.label;
+  const controls = smaller.filter(
+    (c) => c.flags.includes('clickable') && !(words(c) && words(e).includes(words(c))),
+  );
+  const over = controls.find((c) => holds(c.rect, e));
+  if (!over) return;
+  const { x, y, width, height } = e.rect;
+  const free = ASIDE.map((f) =>
+    width >= height
+      ? { x: Math.round(x + width * f), y: e.y }
+      : { x: e.x, y: Math.round(y + height * f) },
+  ).find((p) => !controls.some((c) => holds(c.rect, p)));
+  return free
+    ? { point: free, note: ` at ${free.x},${free.y}, clear of ${named(over)} at its middle` }
+    : {
+        point: { x: e.x, y: e.y },
+        note: `, whose middle is ${named(over)}'s, which may take the touch`,
+      };
+}
+
 /** An element as a touch aims at it; the keyboard is listed whole, and a touch on it would type one key. */
 function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[]) {
   if (e.ref === KEYBOARD_REF)
@@ -181,7 +222,11 @@ function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[])
       undefined,
       false,
     );
-  return { point: landing(e, list), name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
+  const named = (c: ScreenElement) => `${c.ref} ${JSON.stringify(clean(c.label))}`;
+  const own = ownPoint(e, list, named);
+  return own
+    ? { point: own.point, name: `${named(e)}${own.note}` }
+    : { point: landing(e, list), name: named(e) };
 }
 
 /** Where a touch goes and what its answer calls it; `on`: the read a selector found it on, which the touch is compared with. */
