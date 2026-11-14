@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { connect, type Socket } from 'node:net';
 import { reportProgress, type WebInspector, type WebPage } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertUdid, type Simctl } from './simctl.js';
+import { assertBundle, assertUdid, type Simctl } from './simctl.js';
 
 export * from './bplist.js';
 import { type Plist, plistText, readBplist, writeBplist } from './bplist.js';
@@ -114,6 +114,9 @@ class Conversation {
 }
 
 const bundleOf = (a: App) => a.WIRApplicationBundleIdentifierKey as string | undefined;
+
+/** How the inspector names an app built with no signature, which gives it no bundle id: by its executable. */
+const UNSIGNED = 'process-';
 const appKeyOf = (a: App) => a.WIRApplicationIdentifierKey as string;
 
 /**
@@ -195,7 +198,7 @@ export class SimulatorWeb implements WebInspector {
       const apps = Object.values(
         list.__argument.WIRApplicationDictionaryKey as Record<string, App>,
       );
-      const mine = apps.filter((a) => !app || bundleOf(a) === app);
+      const mine = await this.ofApp(apps, app);
       const host = (a: App) => a.WIRHostApplicationIdentifierKey as string | undefined;
       // a page in another process may hang off the app as its proxy
       const asked = [
@@ -215,14 +218,14 @@ export class SimulatorWeb implements WebInspector {
           string,
           Record<string, unknown>
         >;
-        const app = bundleOf(a);
+        const owner = app && mine.includes(a) ? app : bundleOf(a);
         for (const p of Object.values(listing))
           if (p.WIRTypeKey === 'WIRTypeWebPage' || p.WIRTypeKey === 'WIRTypeWeb')
             pages.push({
               id: `${appKeyOf(a)}/${String(p.WIRPageIdentifierKey)}`,
               title: plistText(p.WIRTitleKey),
               url: plistText(p.WIRURLKey),
-              ...(app && { app }),
+              ...(owner && { app: owner }),
               ...(a.WIRIsApplicationActiveKey === IN_FRONT && { visible: true }),
             });
       }
@@ -237,6 +240,30 @@ export class SimulatorWeb implements WebInspector {
       return pages;
     });
   }
+
+  /**
+   * The listed apps that are `app`, all with none named: by its bundle id, else one built with no signature, as a build
+   * with CODE_SIGNING_ALLOWED=NO is, by the executable its installed bundle names (`process-Fixture`).
+   */
+  private async ofApp(apps: App[], app: string | undefined) {
+    if (!app) return apps;
+    const named = apps.filter((a) => bundleOf(a) === app);
+    if (named.length || !apps.some((a) => bundleOf(a)?.startsWith(UNSIGNED))) return named;
+    // asked once: a stock simulator lists a service of its own so, and every look for a page would ask again
+    if (!this.executables.has(app)) {
+      // an id that is none is no app, with no page, as it was before
+      const info = await Promise.resolve()
+        .then(() => this.simctl.exec(['appinfo', assertUdid(this.udid), assertBundle(app)]))
+        .catch(() => '');
+      const exe = /\bCFBundleExecutable = "?([^";\n]+)"?;/.exec(info)?.[1];
+      if (exe) this.executables.set(app, exe);
+    }
+    const exe = this.executables.get(app);
+    return exe ? apps.filter((a) => bundleOf(a) === `${UNSIGNED}${exe}`) : [];
+  }
+
+  /** Each app's executable, as its installed bundle names it. */
+  private readonly executables = new Map<string, string>();
 
   /** `script` on `page` over `c`, each answer waited for `ms`: the page's own answers, a refusal or a throw, leave it open. */
   private async run(c: Conversation, page: WebPage, script: string, ms = ANSWER_MS) {
