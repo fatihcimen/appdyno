@@ -44,7 +44,7 @@ Every request carries `params._deadlineMs`; one that goes to the device's work w
 tells the work to stop (long loops poll a cancel flag; a call blocked inside the framework still returns
 when the framework gives up). The host waits one second longer than the deadline, then fails the call
 itself and sends `cancel {id}`. Device work runs on one thread in arrival order; `hello`, `ping` and
-`cancel` are answered at once.
+`cancel` are answered at once. A call that times out is followed by a quick one through the same lane, `app.foreground`, given 3 s: no answer at all means the agent is stuck, and it is restarted and the call's `TIMEOUT` says so; any answer, the agent's own `TIMEOUT` for a call that came too late to start among them, says the lane moved, and nothing is restarted. An iOS runner restarted as stuck twice in a row, with nothing answered between, is left running at the third, as a screen that held every new runner as it held the last made a loop of starts, and the `TIMEOUT` says it was left and why. A runner restarted as stuck is not asked to `shutdown` first, as that is a job of the stuck lane.
 
 ## Methods
 
@@ -135,16 +135,16 @@ do it again. Spotlight is Command-Space from the home screen. Each is the home s
   after the last event proves a daemon received them; text stays with the runner for Unicode. A touch that
   changed nothing, and that the app has not reported finished (`TouchEventsCompleted`) within 4 s of the settle, never
   got there (a Device Hub in Resize Mode swallows touches and reports success): the runner does it again and takes
-  over for the session. Portrait only, as that is what was verified; other orientations go to the runner.
+  over for the session. On a turned screen a touch takes the path a window's touch takes there.
 - **Settings**, `SimOpen` inside the simulator through `simctl spawn`: `prefs:` and `settings-navigation:` are private, and `simctl openurl` is refused them (LaunchServices error 115). It opens them with `com.apple.springboard.opensensitiveurl`, linked in as the `__entitlements` section a simulator reads, as a signature holding it does not start. XCUI's `open` reached the page too, then held the runner up for two minutes. An iPhone takes the link as `devicectl`'s `--payload-url` to Settings. An app's own page has no link: the row on Apps is tapped.
 - **Traffic**, `NetProbe` injected into the app with `DYLD_INSERT_LIBRARIES`: an `NSURLProtocol` that writes a JSON line per finished request to the file `APPDYNO_NET_LOG` names. A simulator's app writes to the Mac's files as they are.
-- **Web pages**, the socket `simctl getenv <udid> RWI_LISTEN_SOCKET` names: binary property lists, each after its 4-byte length. `_rpc_reportIdentifier:` brings the applications, `_rpc_forwardGetListing:` a page list, `_rpc_forwardSocketSetup:` a `Target.targetCreated`, and `Target.sendMessageToTarget` wraps what goes to the page.
+- **Web pages**, the socket `simctl getenv <udid> RWI_LISTEN_SOCKET` names: binary property lists, each after its 4-byte length. `_rpc_reportIdentifier:` brings the applications, `_rpc_forwardGetListing:` a page list, `_rpc_forwardSocketSetup:` a `Target.targetCreated`, and `Target.sendMessageToTarget` wraps what goes to the page. One connection is kept for a call and the minute after it, as the inspector serves a new one only some 10 s after the last one closed.
 - **Reads**, `SimAX` inside the simulator through `simctl spawn`: a tree is one request of `XCTAccessibilityFramework`
   `userTestingSnapshotForElement:options:error:`, asked again at half the depth where that depth is refused, and again
   from each node at the depth's edge that came back without its children. It honours modal views as XCUI does, so that what a sheet covers is not in the answer: before it did, a sheet over a list read as 215
   nodes, the list's among them, against the runner's 49. The nodes are built as the runner builds them, by rules both suites read from `packages/driver-apple/test/fixtures/runner-rules.json`, with a test comparing their type tables, so refs, hashes and diffs do not depend
   on who read. Only XCUI tells which copy of a control a tap reaches: a layout with a control found at two or three
-  different places goes to the runner once, and its verdict is kept by the layout's digest. Any other layout needs no
+  different places goes to the runner once, and its verdict is kept by the copies' places and every shown node over them, not by the layout's digest, so a banner turning elsewhere asks nothing again. The runner asks of a few groups of copies a read, for at most half a second more and always of one, and a read it cut short keeps no verdict, so the next asks of the rest; a copy whose hittability XCUI cannot tell stays shown, and that failure, which ended the runner's test, is caught. Any other layout needs no
   runner. Once one is up for something else, a layout not seen yet is also compared with its read (about 100 ms, once per
   layout): where they differ the runner's is the answer, and three differences before a first agreement turn the helper
   off for the session. An app tells the accessibility server nothing while the switches XCTest turns on for its run are
@@ -158,7 +158,7 @@ do it again. Spotlight is Command-Space from the home screen. Each is the home s
   so at once, and a read of an app that is not in front is what brings the runner.
 - **The runner answers a read** when the app named is not the primary app (a system alert over it, the home
   screen, the app's launch), when the app shows an alert, when another process's content reaches the screen
-  (`AXRemoteElement`: a web page, an extension), when the window does not fill the screen, or when the helper fails.
+  (`AXRemoteElement`: a web page, an extension), when the window does not fill the screen, when the screen is in landscape, as the helper reads it upright only, or when the helper fails. Of a screen in landscape the helper gives only a system alert's buttons, where the screen shows them, for a link's "Open in …?".
 - **Settle on the host:** as below, each 20 ms and comparing what can be named or acted on, in any order, not the
   system's nameless views: on iOS 26 a glass bar and scroll edge effects come and go for 200 ms after a
   transition. A direct touch is over in 50 ms where XCTest's took 300-600 ms, in which the app had reacted

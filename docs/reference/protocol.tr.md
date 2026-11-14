@@ -44,7 +44,7 @@ Her istek `params._deadlineMs` taşır; bu değer olmadan cihaz işine giden bir
 işe durmasını söyler (uzun döngüler bir iptal bayrağını yoklar; framework içinde takılan bir çağrı da
 framework vazgeçtiğinde yine döner). Host süre sınırından bir saniye fazla bekler, sonra çağrıyı
 kendisi başarısız sayar ve `cancel {id}` gönderir. Cihaz işi tek bir thread'de geliş sırasıyla çalışır; `hello`, `ping` ve
-`cancel` hemen yanıtlanır.
+`cancel` hemen yanıtlanır. Süresi dolan bir çağrının ardından aynı hattan hızlı bir çağrı, `app.foreground`, 3 s'lik bir süreyle gönderilir: hiç yanıt gelmemesi ajanın takıldığı demektir; ajan yeniden başlatılır ve çağrının `TIMEOUT`'u bunu söyler. Herhangi bir yanıt, başlamak için geç kalan bir çağrıya ajanın kendi verdiği `TIMEOUT` da, hattın ilerlediğini söyler ve hiçbir şey yeniden başlatılmaz. Arada hiçbir şey yanıtlanmadan art arda iki kez takılmış diye yeniden başlatılan bir iOS runner'ı üçüncüsünde çalışır halde bırakılır, çünkü her yeni runner'ı bir öncekini tuttuğu gibi tutan bir ekran başlangıçları döngüye sokuyordu; `TIMEOUT` runner'ın bırakıldığını ve nedenini söyler. Takılmış diye yeniden başlatılan bir runner'a önce `shutdown` gönderilmez, çünkü bu, takılmış hattın bir işidir.
 
 ## Metotlar
 
@@ -135,16 +135,16 @@ yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir. Her biri ana ekran 
   sonraki bir bariyer bir daemon'un onları aldığını kanıtlar; metin Unicode için runner'da kalır. Hiçbir şeyi değiştirmemiş ve
   uygulamanın bittiğini (`TouchEventsCompleted`) durulmadan sonraki 4 s içinde bildirmediği bir dokunuş oraya hiç
   ulaşmamıştır (Resize Mode'daki bir Device Hub dokunuşları yutar ve başarı bildirir): runner onu yeniden yapar ve oturum boyunca
-  işi devralır. Yalnızca dikey, çünkü doğrulanan buydu; diğer yönler runner'a gider.
+  işi devralır. Döndürülmüş bir ekranda bir dokunuş, bir pencerenin dokunuşunun orada izlediği yolu izler.
 - **Ayarlar**, `simctl spawn` ile simülatörün içinde `SimOpen`: `prefs:` ve `settings-navigation:` özeldir ve `simctl openurl` bunlar için reddedilir (LaunchServices hatası 115). Onları, bir simülatörün okuduğu `__entitlements` bölümü olarak içine bağlanmış `com.apple.springboard.opensensitiveurl` ile açar, çünkü bunu taşıyan bir imza başlamaz. XCUI'nin `open`'ı da sayfaya ulaştı, sonra runner'ı iki dakika bekletti. Bir iPhone bağlantıyı Ayarlar'a `devicectl`'in `--payload-url`'i olarak alır. Bir uygulamanın kendi sayfasının bağlantısı yoktur: Uygulamalar'daki satıra dokunulur.
 - **Trafik**, `DYLD_INSERT_LIBRARIES` ile uygulamaya enjekte edilen `NetProbe`: biten her istek için `APPDYNO_NET_LOG`'un gösterdiği dosyaya bir JSON satırı yazan bir `NSURLProtocol`. Bir simülatörün uygulaması Mac'in dosyalarına doğrudan yazar.
-- **Web sayfaları**, `simctl getenv <udid> RWI_LISTEN_SOCKET`'in gösterdiği soket: her biri 4 baytlık uzunluğundan sonra gelen ikili property list'ler. `_rpc_reportIdentifier:` uygulamaları, `_rpc_forwardGetListing:` bir sayfa listesini, `_rpc_forwardSocketSetup:` bir `Target.targetCreated` getirir; `Target.sendMessageToTarget` de sayfaya gideni sarar.
+- **Web sayfaları**, `simctl getenv <udid> RWI_LISTEN_SOCKET`'in gösterdiği soket: her biri 4 baytlık uzunluğundan sonra gelen ikili property list'ler. `_rpc_reportIdentifier:` uygulamaları, `_rpc_forwardGetListing:` bir sayfa listesini, `_rpc_forwardSocketSetup:` bir `Target.targetCreated` getirir; `Target.sendMessageToTarget` de sayfaya gideni sarar. Bir bağlantı bir çağrı ve ardından gelen bir dakika için açık tutulur, çünkü denetçi yeni bir bağlantıya ancak öncekinin kapanmasından 10 s kadar sonra hizmet eder.
 - **Okumalar**, `simctl spawn` ile simülatörün içinde `SimAX`: bir ağaç tek bir `XCTAccessibilityFramework`
   `userTestingSnapshotForElement:options:error:` isteğidir; bir derinlik reddedilirse yarı derinlikle yeniden istenir,
   derinliğin kenarında çocukları olmadan dönen her düğümden de yeniden istenir. Modal görünümleri XCUI gibi dikkate alır, böylece bir sheet'in örttüğü şey yanıtta yer almaz: bunu yapmadan önce bir listenin üstündeki bir sheet, alttaki liste de içinde 215
   düğüm olarak okunuyordu, runner ise 49 düğüm okuyordu. Düğümler, runner'ın kurduğu gibi, iki suite'in de `packages/driver-apple/test/fixtures/runner-rules.json`'dan okuduğu kurallarla kurulur ve bir test tür tablolarını karşılaştırır; böylece ref'ler, hash'ler ve diff'ler kimin okuduğuna
   bağlı olmaz. Bir dokunuşun bir kontrolün hangi kopyasına ulaştığını yalnızca XCUI söyler: iki ya da üç farklı yerde bulunan
-  bir kontrolü olan bir yerleşim bir kez runner'a gider ve onun kararı yerleşimin özeti altında saklanır. Diğer her yerleşim runner'a
+  bir kontrolü olan bir yerleşim bir kez runner'a gider ve onun kararı yerleşimin özeti altında değil, kopyaların yerleri ve üstlerinde gösterilen her düğüm altında saklanır; böylece başka bir yerde dönen bir banner hiçbir şeyi yeniden sordurmaz. Runner bir okumada birkaç kopya grubuna, en çok yarım saniye daha ve her zaman en az birine sorar; kısa kestiği bir okuma karar bırakmaz, böylece sonraki okuma gerisini sorar. XCUI'nin dokunulabilirliğini söyleyemediği bir kopya gösterilmeye devam eder ve runner'ın testini bitiren bu hata yakalanır. Diğer her yerleşim runner'a
   ihtiyaç duymaz. Runner başka bir şey için açıldığında, henüz görülmemiş bir yerleşim onun okumasıyla da karşılaştırılır (yaklaşık 100 ms, yerleşim başına
   bir kez): farklı oldukları yerde yanıt runner'ınkidir ve ilk uyuşmadan önceki üç fark yardımcıyı oturum boyunca
   kapatır. XCTest'in kendi çalışması için açtığı anahtarlar kapalıyken bir uygulama erişilebilirlik sunucusuna hiçbir şey söylemez
@@ -158,7 +158,7 @@ yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir. Her biri ana ekran 
   hemen söyler; önde olmayan bir uygulamanın okunması ise runner'ı getiren şeydir.
 - **Bir okumayı runner yanıtlar**: adı verilen uygulama birincil uygulama olmadığında (üstünde bir sistem uyarısı, ana
   ekran, uygulamanın açılışı), uygulama bir uyarı gösterdiğinde, başka bir sürecin içeriği ekrana ulaştığında
-  (`AXRemoteElement`: bir web sayfası, bir extension), pencere ekranı doldurmadığında ya da yardımcı başarısız olduğunda.
+  (`AXRemoteElement`: bir web sayfası, bir extension), pencere ekranı doldurmadığında, ekran yatayken, çünkü yardımcı ekranı yalnızca dik okur, ya da yardımcı başarısız olduğunda. Yatay bir ekrandan yardımcı yalnızca bir sistem uyarısının düğmelerini, ekranın onları gösterdiği yerde, bir bağlantının "Open in …?" sorusu için verir.
 - **Host'ta durulma:** aşağıdaki gibi, her 20 ms'de ve adlandırılabilen ya da üzerinde işlem yapılabilen şeyleri herhangi bir sırayla karşılaştırarak, sistemin
   adsız görünümlerini değil: iOS 26'da bir cam çubuk ve kaydırma kenarı efektleri bir geçişten sonra 200 ms boyunca
   gelip gider. Doğrudan bir dokunuş 50 ms'de biter, XCTest'inki ise 300-600 ms sürüyordu; bu sürede uygulama, bekleme süresi başlamadan
