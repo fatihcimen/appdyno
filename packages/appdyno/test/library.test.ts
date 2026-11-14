@@ -35,6 +35,17 @@ describe('the library', () => {
     expect(shown).toContain(example.trim());
   });
 
+  it('refuses an allowDevices that is no regular expression, saying what it takes', () => {
+    // plain JavaScript can give anything: a string failed every call with a TypeError
+    expect(() => library.connect({ allowDevices: '^emulator-' as never })).toThrow(
+      expect.objectContaining({
+        code: 'INVALID_ARGUMENT',
+        message: 'allowDevices takes a regular expression, as /^emulator-/, not a string',
+      }),
+    );
+    expect(() => library.connect({ allowDevices: /^emulator-/ })).not.toThrow();
+  });
+
   it('has one name to call, and the rest are types', () => {
     expect(Object.keys(library)).toEqual(['connect']);
   });
