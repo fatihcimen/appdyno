@@ -40,7 +40,7 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 | `bench --serial S`                                        | bir Android cihazda okumaları, dokunuşları ve yazmayı ölçer                                                                              |
 | `path [--remove]`                                         | Mac uygulamasından: `appdyno`'yu her kabuğun PATH'ine koyar ya da çıkarır                                                                |
 
-`test` ve `flow run`, `--update-baselines` alır: bir akışın her `visual` adımı, [Akışlar](../guides/flows.tr.md) sayfasının anlattığı gibi, karşılaştırmak yerine temel görüntüsünü kaydeder.
+`test` ve `flow run`, `--update-baselines` alır: bir akışın her `visual` adımı, [Akışlar](../guides/flows.tr.md#ekran-görüntüleri-görsel-denetimler-ve-ayarlar) sayfasının anlattığı gibi, karşılaştırmak yerine temel görüntüsünü kaydeder.
 
 ## Sunucu seçenekleri
 

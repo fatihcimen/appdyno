@@ -41,6 +41,8 @@ tap id=add_button index=1 !ambiguous
 | `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `wait_for`                                                               |
 | `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `assert`                                                                 |
 | `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | their tools                                                              |
+| `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `screenshot` with `file`, `visual`                                       |
+| `setting dark_mode on [app=]`, `setting restore`                                                                                   | `device_setting`                                                         |
 | `run shared/login.flow`                                                                                                            | that file's steps, in place                                              |
 
 A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, an `arg=` for each argument and an `env=NAME=value` for each variable, as `launch_app` takes `language`, `args` and `env`.
@@ -54,8 +56,8 @@ screen at that moment: the id, else role and text, else text. Refs never reach t
 finds alone keeps its index and is flagged `!ambiguous`. Only a point on no element, a slider or a large
 area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
 size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
-Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting, a click in a web view)
-is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. A `launch_app` with `restart`, `args` or `env` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. `flow stop` and
+Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a click in a web view)
+is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A `device_setting` given a value is `setting`, and its `restore` is `setting restore`; a `visual` is `visual` with its tolerance and masks, which a replay compares with the flow's own baselines, so run it once with `--update-baselines`; a `screenshot` saved to a file is `screenshot` with the file's name. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. A `launch_app` with `restart`, `args` or `env` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. `flow stop` and
 `flow save` list every step to look at.
 
 A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): in every step that typed or read it, before or after, it becomes `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `stop` with `file` saves as `save` does, and `save` writes the last recording again. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
@@ -87,6 +89,14 @@ JUnit (a suite per device, a case per file; default `appdyno-artifacts/junit.xml
 `tree.json` under `<artifacts>/<device>/<file>/` at a failure, goes on to the next file, and exits 1 if any
 failed or if there was nothing to run. Assertions are steps.
 
+## Screenshots, visual checks and settings
+
+`screenshot home` saves the screen as `home.png`: in `appdyno test` under `<artifacts>/<device>/<file>/`, beside what a failure leaves, and in `flow run` under `./appdyno-screenshots/`. A run again takes it anew.
+
+`visual home` compares the screen with `baselines/home.png` in the folder of the flow's file, as the `visual` tool does; a step of a file another flow runs looks in that file's folder. `tolerance=` is the percent of pixels that may differ, `0.1` unless given, and each `mask=` leaves a part out: `x,y,w,h` in tap units, or selector words, as `mask="id=clock"`. The status bar is always left out. A `screenshot` or `visual` step first waits until the screen has looked the same for 500 ms, at most 5 s, as a fade into dark mode would otherwise be in the picture. A screen that differs past the tolerance fails the step, and the failure names the diff, where what differs is red, and the screen it read. `appdyno test` or `appdyno flow run` with `--update-baselines` saves each baseline in place of comparing. A flow whose baseline is missing is refused before its first step, saying so. A baseline is one screen size's: on a device of another size the step fails, saying both sizes, and `--update-baselines` on several `--device`s keeps the last one's.
+
+`setting dark_mode on` changes a device setting as `device_setting` does, with its names and values: `setting text_size accessibility-large`, `setting locale tr-TR app=org.example`, `setting biometric match`, `setting sms "Your code is 1234" title=5551234`. `setting restore` puts back every one changed. `appdyno test` puts back what each file changed, a setting, a fixed location or the rotation lock, once the file has run, after each of its retries too, so that one file's dark mode is not the next one's. A measured file puts back after its iterations, not between them. What was changed before the run is left as it is.
+
 ## Tags
 
 `tag smoke login` before the steps; `--tag smoke` runs the files with any of the tags named, `--exclude-tag slow` leaves out those with any of these. A file that cannot be read stays, and fails, because nobody can tell how it was tagged. Selecting nothing exits 1: a job that ran nothing has not passed.
@@ -101,8 +111,8 @@ failed or if there was nothing to run. Assertions are steps.
 
 ## Export
 
-`flow export` writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, `replace`,
-coordinates, a role with no id or text). A role beside a text is left out, because that format has no role, and the YAML
+`flow export` writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, a `visual`, a `setting`, `replace`,
+coordinates, a role with no id or text); a `screenshot` is its `takeScreenshot`. A role beside a text is left out, because that format has no role, and the YAML
 says so in a comment. A text there matches a whole label, where ours also takes a part of one. There is no
 import.
 

@@ -41,6 +41,8 @@ tap id=add_button index=1 !ambiguous
 | `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `wait_for`                                                                     |
 | `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `assert`                                                                       |
 | `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | kendi araçları                                                                 |
+| `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `file` ile `screenshot`, `visual`                                              |
+| `setting dark_mode on [app=]`, `setting restore`                                                                                   | `device_setting`                                                               |
 | `run shared/login.flow`                                                                                                            | o dosyanın adımları, yerinde                                                   |
 
 Bir seçici `id=`, `role=`, `text=`, `index=` alanlarından herhangi biridir; metin, araçlarda olduğu gibi eşleşir. `launch` bir `language=`, her argüman için bir `arg=` ve her değişken için bir `env=NAME=value` alır; `launch_app` da `language`, `args` ve `env` alır.
@@ -54,8 +56,8 @@ yazar: id, yoksa rol ve metin, yoksa metin. Ref'ler dosyaya asla ulaşmaz. Hiçb
 bulamadığı hedef index'ini korur ve `!ambiguous` olarak işaretlenir. Yalnızca hiçbir öğenin üstünde olmayan bir nokta, bir kaydırıcı ya da büyük bir
 alan koordinat olarak kalır ve geçerli olduğu ekran boyutuyla `!coordinates` olarak işaretlenir; başka boyuttaki bir
 ekran o adımı reddeder. Bir rol, iki platform onu aynı adla andığında korunur (`button`, `textField`...);
-Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir işlem (bir pinch, bir cihaz ayarı, bir web görünümünde bir tıklama)
-`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `language` ile bir `launch_app`, `launch language=tr` olur, böylece bir yeniden oynatma da uygulamayı o dilde başlatır; uygulamayı yeniden başlattığı için işaretlenmez. `restart`, `args` ya da `env` ile bir `launch_app` her platformda çalışan bir uygulamayı başlatmadan önce durdurur, bu yüzden uygulama çalışsa da çalışmasa da argümanları ve ortamıyla `stop`, `launch` olarak yazılır. `flow stop` ve
+Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir işlem (bir pinch, bir web görünümünde bir tıklama)
+`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. Bir değerle verilen bir `device_setting`, `setting` olur, `restore`'u da `setting restore`; bir `visual`, toleransı ve maskeleriyle `visual` olur ve bir yeniden oynatma onu akışın kendi temel görüntüleriyle karşılaştırır, bu yüzden akışı bir kez `--update-baselines` ile çalıştırın; bir dosyaya kaydedilen bir `screenshot`, dosyanın adıyla `screenshot` olur. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `language` ile bir `launch_app`, `launch language=tr` olur, böylece bir yeniden oynatma da uygulamayı o dilde başlatır; uygulamayı yeniden başlattığı için işaretlenmez. `restart`, `args` ya da `env` ile bir `launch_app` her platformda çalışan bir uygulamayı başlatmadan önce durdurur, bu yüzden uygulama çalışsa da çalışmasa da argümanları ve ortamıyla `stop`, `launch` olarak yazılır. `flow stop` ve
 `flow save` bakılması gereken her adımı listeler.
 
 Ajanın yazdığı ya da okuduğu bir değer, `flow start`, `stop` ya da `save` üzerinde `params` ile bir parametre olur (komut satırında `--param NAME=Grace`): yazıldığı ya da okunduğu her yerde, önce ya da sonra, `${NAME}` olur, `param NAME` olarak bildirilir ve `flow run` değerini `params` içinde alır. Hiçbir kaydedilmiş adımın tutmadığı bir ad `stop` ve `save`'de reddedilir. `file` ile `stop`, `save` gibi kaydeder; `save` son kaydı yeniden yazar. `save` dosyayı, `export` `to` gibi, sunucunun çalıştığı klasörün ya da durum klasörünün içine yazar: başka bir yerdeki bir yol ya da bir bağlantının onların dışına çıkardığı bir yol reddedilir; `overwrite` verilmedikçe var olan bir dosya da reddedilir. Yazdığı dosyayla yanıt verir.
@@ -87,6 +89,14 @@ JUnit yazar (cihaz başına bir suite, dosya başına bir case; varsayılan `app
 `tree.json` dosyalarını `<artifacts>/<device>/<file>/` altına kaydeder, sonraki dosyaya geçer ve herhangi biri
 başarısız olduysa ya da çalıştırılacak bir şey yoksa 1 ile çıkar. Doğrulamalar birer adımdır.
 
+## Ekran görüntüleri, görsel denetimler ve ayarlar
+
+`screenshot home` ekranı `home.png` olarak kaydeder: `appdyno test` içinde `<artifacts>/<device>/<file>/` altına, bir hatanın bıraktıklarının yanına, `flow run` içinde ise `./appdyno-screenshots/` altına. Yeniden bir çalıştırma onu yeniden çeker.
+
+`visual home` ekranı, akış dosyasının klasöründeki `baselines/home.png` ile `visual` aracının yaptığı gibi karşılaştırır; başka bir akışın çalıştırdığı bir dosyanın adımı o dosyanın klasörüne bakar. `tolerance=` farklı olabilecek piksellerin yüzdesidir, verilmezse `0.1`; her `mask=` bir parçayı dışarıda bırakır: dokunma birimlerinde `x,y,w,h` ya da `mask="id=clock"` gibi seçici sözcükleri. Durum çubuğu her zaman dışarıda bırakılır. Bir `screenshot` ya da `visual` adımı önce ekranın 500 ms boyunca aynı görünmesini bekler, en çok 5 s; yoksa karanlık moda geçişin solması resimde olurdu. Toleransın ötesinde farklı olan bir ekran adımı başarısız kılar; hata, farklı olanın kırmızı olduğu diff görüntüsünü ve okuduğu ekranı adıyla söyler. `--update-baselines` ile `appdyno test` ya da `appdyno flow run`, karşılaştırmak yerine her temel görüntüyü kaydeder. Temel görüntüsü eksik olan bir akış, ilk adımından önce, bunu söyleyerek reddedilir. Bir temel görüntü tek bir ekran boyutunundur: başka boyutta bir cihazda adım, iki boyutu da söyleyerek başarısız olur; birkaç `--device` üzerinde `--update-baselines` sonuncununkini tutar.
+
+`setting dark_mode on` bir cihaz ayarını `device_setting` gibi, onun adları ve değerleriyle değiştirir: `setting text_size accessibility-large`, `setting locale tr-TR app=org.example`, `setting biometric match`, `setting sms "Your code is 1234" title=5551234`. `setting restore` değiştirilen her birini geri koyar. `appdyno test` her dosyanın değiştirdiğini, bir ayarı, sabitlenmiş bir konumu ya da döndürme kilidini, dosya çalıştıktan sonra, her yeniden denemesinden sonra da geri koyar; böylece bir dosyanın karanlık modu bir sonrakine geçmez. Ölçülen bir dosya yinelemelerinden sonra geri koyar, aralarında değil. Çalıştırmadan önce değiştirilmiş olan olduğu gibi bırakılır.
+
 ## Etiketler
 
 Adımlardan önce `tag smoke login`; `--tag smoke` adı verilen etiketlerden herhangi birini taşıyan dosyaları çalıştırır, `--exclude-tag slow` bunlardan herhangi birini taşıyanları dışarıda bırakır. Okunamayan bir dosya seçimde kalır ve başarısız olur, çünkü nasıl etiketlendiğini kimse bilemez. Hiçbir şey seçilmezse 1 ile çıkılır: hiçbir şey çalıştırmamış bir job geçmiş sayılmaz.
@@ -101,8 +111,8 @@ Adımlardan önce `tag smoke login`; `--tag smoke` adı verilen etiketlerden her
 
 ## Dışa aktarma
 
-`flow export` Maestro YAML'ı yazar ya da karşılığı olmayan her adımı adıyla söyleyerek reddeder (bir `alert`, `replace`,
-koordinatlar, id'si ya da metni olmayan bir rol). Bir metnin yanındaki rol dışarıda bırakılır, çünkü o biçimde rol yoktur ve YAML
+`flow export` Maestro YAML'ı yazar ya da karşılığı olmayan her adımı adıyla söyleyerek reddeder (bir `alert`, bir `visual`, bir `setting`, `replace`,
+koordinatlar, id'si ya da metni olmayan bir rol); bir `screenshot`, `takeScreenshot` olur. Bir metnin yanındaki rol dışarıda bırakılır, çünkü o biçimde rol yoktur ve YAML
 bunu bir yorumda söyler. Oradaki bir metin bütün bir etiketle eşleşir, bizimki ise bir etiketin bir parçasını da kabul eder. İçe
 aktarma yoktur.
 
