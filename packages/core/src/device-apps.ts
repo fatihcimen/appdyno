@@ -1,3 +1,5 @@
+import type { Owner } from './owner.js';
+
 export type AppEntry = { id: string; name?: string; version?: string };
 
 export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
@@ -6,6 +8,19 @@ export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
 export const INSTALLED_APPS = 'app action list names the installed apps';
 
 export type LaunchOptions = { args?: string[]; env?: Record<string, string>; language?: string };
+
+/**
+ * What each launch of an app by this tool carries until it is let go, kept on this Mac as a condition is: a probe held
+ * in the app. A launch made elsewhere carries none.
+ */
+export type LaunchHolds = {
+  /** Who answers for what is held from now: a session's owner; none, a command line's, holds until restore. */
+  owner: Owner | undefined;
+  /** Who holds what launches carry, where anything is held. */
+  holder(): { owner?: Owner | undefined } | undefined;
+  /** What launches carried, let go, each named: a probe stays in its app until the app next starts. */
+  letGo(): string[];
+};
 
 /**
  * A link an installed app opens: one of its URL schemes, a domain it opens web links of (an App Link's, with Android's

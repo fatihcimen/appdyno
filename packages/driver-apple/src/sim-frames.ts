@@ -20,6 +20,7 @@ import {
   probeWindow,
 } from './probe.js';
 import { assertBundle, type Simctl } from './simctl.js';
+import { HeldLaunches } from './sim-held.js';
 import { helperBinary } from './simhelper.js';
 
 const at = () => new Date().toISOString();
@@ -30,13 +31,17 @@ const PROBE_FLUSH_MS = 350;
 /** What a list coasts on after its swipes. */
 const COAST_MS = 1_500;
 
-/** A simulator app's frames by the probe started inside it, which writes them to a file this Mac reads by its clock. */
+/**
+ * A simulator app's frames by the probe started inside it, which writes them to a file this Mac reads by its clock; held
+ * in each launch this tool makes of the app from then on.
+ */
 export class ProbedFrames {
   constructor(
     private readonly udid: string,
     private readonly simctl: Simctl,
     /** The app's process id (it must be running). */
     private readonly pid: (bundle: string) => Promise<number>,
+    private readonly holds = new HeldLaunches(udid),
   ) {}
 
   /** Where the probe in the app writes. */
@@ -66,11 +71,9 @@ export class ProbedFrames {
     await mkdir(dirname(file), { recursive: true, mode: 0o700 });
     await this.simctl.terminate(this.udid, bundle);
     await rm(file, { force: true });
-    const out = await this.simctl.launch(this.udid, bundle, {
-      DYLD_INSERT_LIBRARIES: await helperBinary('SimProbe'),
-      APPDYNO_PROBE_OUT: file,
-      ...vars,
-    });
+    const lib = await helperBinary('SimProbe');
+    this.holds.hold(bundle, 'frames', { lib, env: { APPDYNO_PROBE_OUT: file } });
+    const out = await this.simctl.launch(this.udid, bundle, vars);
     const pid = Number(/:\s*(\d+)/.exec(out)?.[1]);
     for (const end = Date.now() + 20_000; Date.now() < end;) {
       const head = probeHead(await readFile(file, 'utf8').catch(() => ''));

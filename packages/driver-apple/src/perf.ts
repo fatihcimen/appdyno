@@ -30,6 +30,7 @@ import { crashExits, simulatorCrashes } from './crashes.js';
 import { nettopBytes } from './sim-network.js';
 import { simulatorEnergy } from './sim-energy.js';
 import { ProbedFrames } from './sim-frames.js';
+import { HeldLaunches } from './sim-held.js';
 import { memoryGraph } from './sim-heap.js';
 import { profileStart } from './sim-launch.js';
 import { type Simctl, assertBundle } from './simctl.js';
@@ -72,9 +73,10 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
       bundle: string,
       test: 'launch' | 'hitches',
     ) => Promise<Measured<XctMetrics>>,
+    holds = new HeldLaunches(udid),
   ) {
     super();
-    this.probe = new ProbedFrames(udid, simctl, (bundle) => this.pid(bundle));
+    this.probe = new ProbedFrames(udid, simctl, (bundle) => this.pid(bundle), holds);
   }
 
   /** The app's process id (it must be running). */

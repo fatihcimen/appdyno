@@ -12,7 +12,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import { opens, simulatorLinks } from './sim-links.js';
 import { type Simctl, assertBundle } from './simctl.js';
-import { DATA_FOLDERS, installingApp, launchLanguage } from './manage.js';
+import { DATA_FOLDERS, installingApp } from './manage.js';
 
 const copyFolders = (from: string, to: string) => {
   for (const dir of DATA_FOLDERS) {
@@ -169,17 +169,6 @@ export class SimulatorApps implements AppManager {
   }
 
   async launchWith(app: string, opts: LaunchOptions) {
-    await this.simctl.exec(
-      [
-        'launch',
-        '--terminate-running-process',
-        this.udid,
-        assertBundle(app),
-        ...launchLanguage(this.udid, app, opts.language),
-        ...(opts.args ?? []),
-      ],
-      60_000,
-      Object.fromEntries(Object.entries(opts.env ?? {}).map(([k, v]) => [`SIMCTL_CHILD_${k}`, v])),
-    );
+    await this.simctl.restart(this.udid, app, opts);
   }
 }

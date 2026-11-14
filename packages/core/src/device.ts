@@ -23,7 +23,7 @@ import type { Need } from './mirror/need.js';
 import type { SystemView } from './system-swipes.js';
 import type { Mirror } from './mirror/port.js';
 import type { VirtualDevices } from './virtual.js';
-import type { AppManager } from './device-apps.js';
+import type { AppManager, LaunchHolds } from './device-apps.js';
 import type { ScreenInspector, ScreenRecorder } from './device-capture.js';
 import type { DeviceEvents, DeviceSettings, SettingsPage } from './device-conditions.js';
 import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from './device-logs.js';
@@ -97,6 +97,8 @@ export type DeviceHardware = {
 export type Device = {
   readonly platformScreen: PlatformScreen;
   readonly apps: AppManager;
+  /** What this tool's launches of an app carry for a while: none where a launch takes nothing of the kind. */
+  readonly holds?: LaunchHolds;
   readonly settings: DeviceSettings;
   readonly events: DeviceEvents;
   readonly recorder: ScreenRecorder;

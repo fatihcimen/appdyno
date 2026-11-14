@@ -225,6 +225,8 @@ export class Session {
     guard?: InputGuard,
   ) {
     this.app = appId;
+    // what its launches hold from now is this session's to let go, as a condition it set is
+    if (device.holds) device.holds.owner = owner;
     if (guard)
       this.device = guardInputs(
         device,

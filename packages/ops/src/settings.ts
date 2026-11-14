@@ -263,9 +263,16 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             s,
             (owner) => !heldElsewhere(owner),
           );
+          const holds = s.device.holds;
+          const held = holds && !heldElsewhere(holds.holder()?.owner) ? holds.letGo() : [];
           const t =
             [
               ...(restored.length > 0 ? [`restored ${restored.join('; ')}`] : []),
+              ...(held.length > 0
+                ? [
+                    `let go of ${held.join('; ')}: a probe stays in its app until the app next starts`,
+                  ]
+                : []),
               ...failed.map((f) => `could not restore ${f}`),
               ...left.map((l) => `left alone, as its process still runs: ${l}`),
             ].join('\n') || 'nothing was changed';

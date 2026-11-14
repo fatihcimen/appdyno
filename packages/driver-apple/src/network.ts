@@ -12,9 +12,12 @@ import {
   type NetworkVia,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { launchLanguage } from './manage.js';
+import { HeldLaunches } from './sim-held.js';
 import { helperBinary } from './simhelper.js';
 import { assertBundle, type Simctl } from './simctl.js';
+
+/** The network probe's name among what an app's launches carry. */
+const PROBE = 'network';
 
 /** The Mac's HTTP proxy as `host:port`, or `none`: what a simulator's apps go through. */
 export async function macProxy(): Promise<string> {
@@ -25,11 +28,15 @@ export async function macProxy(): Promise<string> {
     : 'none';
 }
 
-/** An app on a simulator with the probe in it (`ios/SimHelper/NetProbe.m`), which logs to a file here. */
+/**
+ * An app on a simulator with the probe in it (`ios/SimHelper/NetProbe.m`), which logs to a file here; held in each launch
+ * this tool makes of it while the capture runs.
+ */
 export class SimulatorNetwork implements NetworkSource {
   constructor(
     private readonly simctl: Simctl,
     private readonly udid: string,
+    private readonly holds = new HeldLaunches(udid),
   ) {}
 
   paths(): Promise<NetworkPath[]> {
@@ -53,21 +60,13 @@ export class SimulatorNetwork implements NetworkSource {
     const dir = join(stateDir(), 'network');
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const log = join(dir, `${randomBytes(4).toString('hex')}.jsonl`);
-    await this.simctl.exec(
-      [
-        'launch',
-        '--terminate-running-process',
-        this.udid,
-        assertBundle(app),
-        ...launchLanguage(this.udid, app),
-      ],
-      60_000,
-      {
-        SIMCTL_CHILD_DYLD_INSERT_LIBRARIES: await helperBinary('NetProbe'),
-        SIMCTL_CHILD_APPDYNO_NET_LOG: log,
-      },
-    );
-    return { via, log };
+    const lib = await helperBinary('NetProbe');
+    this.holds.hold(assertBundle(app), PROBE, { lib, env: { APPDYNO_NET_LOG: log } });
+    await this.simctl.restart(this.udid, app).catch((e: unknown) => {
+      this.holds.drop(app, PROBE);
+      throw e;
+    });
+    return { via, log, app };
   }
 
   read(h: NetworkHandle): Promise<NetworkAnswer> {
@@ -79,6 +78,7 @@ export class SimulatorNetwork implements NetworkSource {
   async stop(h: NetworkHandle): Promise<NetworkAnswer> {
     const answer = await this.read(h);
     rmSync(String(h.log), { force: true });
+    if (h.app) this.holds.drop(String(h.app), PROBE);
     return { ...answer, note: 'the probe stays in the app until it next starts' };
   }
 }

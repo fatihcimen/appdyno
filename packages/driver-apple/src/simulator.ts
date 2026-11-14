@@ -25,6 +25,7 @@ import {
 } from '@appdyno/protocol';
 import { SimulatorMirror } from './mirror-sim.js';
 import { SimulatorNetwork } from './network.js';
+import { HeldLaunches } from './sim-held.js';
 import { IosSimulatorPerf } from './perf.js';
 import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
@@ -71,7 +72,8 @@ export class IosSimulatorDevice extends IosDevice {
     );
     this.recorder = simulatorRecorder(serial);
     this.mirror = new SimulatorMirror(serial, simctl);
-    this.network = new SimulatorNetwork(simctl, serial);
+    this.holds = new HeldLaunches(serial);
+    this.network = new SimulatorNetwork(simctl, serial, this.holds);
     this.web = new SimulatorWeb(simctl, serial);
     this.lock = new SimulatorLock(simctl, serial);
     this.reads = new HelperReads({
@@ -96,6 +98,7 @@ export class IosSimulatorDevice extends IosDevice {
 
   readonly recorder: ScreenRecorder;
   readonly mirror: SimulatorMirror;
+  readonly holds: HeldLaunches;
   readonly network: SimulatorNetwork;
   readonly web: SimulatorWeb;
   readonly apps: SimulatorApps;
@@ -386,6 +389,7 @@ export class IosSimulatorDevice extends IosDevice {
       this.simctl,
       (bundle) => this.appShown(bundle),
       (bundle, test) => this.xctMetrics(bundle, test),
+      this.holds,
     ));
   }
   private perfTools: IosSimulatorPerf | undefined;

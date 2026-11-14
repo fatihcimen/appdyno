@@ -3,7 +3,7 @@ import type { AppManager } from '@appdyno/core';
 import { Devicectl } from '../src/devicectl.js';
 import { appLanguage, launchLanguage } from '../src/manage.js';
 import { PhoneApps, PhoneSettings } from '../src/phone-manage.js';
-import type { Simctl } from '../src/simctl.js';
+import { Simctl } from '../src/simctl.js';
 import { SimulatorApps } from '../src/simulator-manage.js';
 import { SimulatorSettings } from '../src/sim-settings.js';
 
@@ -14,7 +14,8 @@ const APP = 'dev.appdyno.fixture';
 /** A simulator where `running` apps run, and what it was asked. */
 const simulator = (running: string[] = []) => {
   const asked: string[][] = [];
-  const simctl = {
+  // its own launch that starts afresh, with what it is held with, as a real one does
+  const simctl = Object.assign(new Simctl({}), {
     exec: (args: string[]) => Promise.resolve((asked.push(args), '')),
     pid: (_: string, app: string) => Promise.resolve(running.includes(app) ? 42 : 0),
     terminate: (_: string, app: string) => {
@@ -23,9 +24,9 @@ const simulator = (running: string[] = []) => {
     },
     launch: (_: string, app: string) => {
       asked.push(['launch', app]);
-      return Promise.resolve();
+      return Promise.resolve('');
     },
-  } as unknown as Simctl;
+  });
   return {
     settings: new SimulatorSettings(simctl, SIM),
     apps: new SimulatorApps(simctl, SIM),

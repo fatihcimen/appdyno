@@ -23,6 +23,8 @@ import {
 } from '@appdyno/core';
 import { childrenNamed, endLeftBehind, HUB } from './left-behind.js';
 import { runnerBuild } from './runner-build.js';
+import { launchLanguage } from './manage.js';
+import { heldLaunch } from './sim-held.js';
 import { assertUdid, Simctl, xcodeEnv } from './simctl.js';
 import { recordXctMetrics } from './xct-metrics.js';
 
@@ -224,7 +226,12 @@ export class IosRunnerLauncher {
   /** The runner's product running one `measure()` test of `PerfMetricsTests` instead of serving. */
   async xctMetrics(bundle: string, test: 'launch' | 'hitches') {
     const { xctestrun } = await this.transport.build();
-    return recordXctMetrics(this.udid, xctestrun, bundle, test);
+    // a phone's launches carry its language alone: what a simulator's are held with are this Mac's files
+    const launch =
+      this.transport === simulatorTransport
+        ? heldLaunch(this.udid, bundle)
+        : { args: launchLanguage(this.udid, bundle), env: {} };
+    return recordXctMetrics(this.udid, xctestrun, bundle, test, launch);
   }
 
   private async start(

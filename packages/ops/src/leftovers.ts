@@ -72,6 +72,15 @@ const LEFTOVERS: Leftover[] = [
       done: 'network capture stopped',
     },
   },
+  // after the capture, whose stop lets its own probe go
+  {
+    name: 'held launches',
+    ends: {
+      held: (s) => s.device.holds?.holder(),
+      end: (_, s) => Promise.resolve(s.device.holds?.letGo().length),
+      done: "probes let go of this tool's launches: a probe stays in its app until the app next starts",
+    },
+  },
   {
     name: 'report',
     state: openReports,

@@ -2,16 +2,19 @@ import { callSignal, run, tracesDir, type Measured, type XctMetrics } from '@app
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
-import { launchLanguage } from './manage.js';
 import { xcodeEnv } from './simctl.js';
 import { parseXctMetrics } from './trace-parse.js';
 
-/** One `measure()` test of the runner's bundle in a run of its own, and what its result bundle holds. */
+/**
+ * One `measure()` test of the runner's bundle in a run of its own, and what its result bundle holds. `launch`: what the
+ * test's launches of the app carry, as every launch this tool makes does.
+ */
 export async function recordXctMetrics(
   udid: string,
   xctestrun: string,
   bundle: string,
   test: 'launch' | 'hitches',
+  launch: { args: string[]; env: Record<string, string> },
 ): Promise<Measured<XctMetrics>> {
   const name = test === 'hitches' ? 'testHitches' : 'testLaunch';
   const dir = tracesDir();
@@ -44,7 +47,10 @@ export async function recordXctMetrics(
       env: {
         ...xcodeEnv(),
         TEST_RUNNER_APPDYNO_METRICS_APP: bundle,
-        TEST_RUNNER_APPDYNO_METRICS_ARGS: launchLanguage(udid, bundle).join('\n'),
+        TEST_RUNNER_APPDYNO_METRICS_ARGS: launch.args.join('\n'),
+        TEST_RUNNER_APPDYNO_METRICS_ENV: Object.entries(launch.env)
+          .map(([k, v]) => `${k}=${v}`)
+          .join('\n'),
       },
       maxBuffer: 256 * 1024 * 1024,
       timeout: 600_000,

@@ -1,9 +1,9 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { sleep, run, callSignal, cancelled, must } from '@appdyno/core';
+import { sleep, run, callSignal, cancelled, must, type LaunchOptions } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { launchLanguage } from './manage.js';
+import { heldLaunch } from './sim-held.js';
 
 /** An app with no process, where one was to be read. */
 export const notRunning = (bundle: string) =>
@@ -330,10 +330,19 @@ export class Simctl {
    * before its first instruction, as for a debugger.
    */
   launch(udid: string, bundle: string, vars: Record<string, string> = {}, stopped = false) {
-    const child = Object.entries(vars).map(([k, v]): [string, string] => [`SIMCTL_CHILD_${k}`, v]);
-    const wait = stopped ? ['--wait-for-debugger'] : [];
-    const args = [assertUdid(udid), assertBundle(bundle), ...launchLanguage(udid, bundle)];
-    return this.exec(['launch', ...wait, ...args], 60_000, {
+    return this.start(stopped ? ['--wait-for-debugger'] : [], udid, bundle, { env: vars });
+  }
+
+  /** Starts the app afresh, a running one stopped first, with `own` on top of what it is held with. */
+  restart(udid: string, bundle: string, own: LaunchOptions = {}) {
+    return this.start(['--terminate-running-process'], udid, bundle, own);
+  }
+
+  /** Every launch of an app this tool makes, with what it is held with (`heldLaunch`). */
+  private start(flags: string[], udid: string, bundle: string, own: LaunchOptions) {
+    const { args, env } = heldLaunch(assertUdid(udid), assertBundle(bundle), own);
+    const child = Object.entries(env).map(([k, v]): [string, string] => [`SIMCTL_CHILD_${k}`, v]);
+    return this.exec(['launch', ...flags, udid, bundle, ...args], 60_000, {
       ...this.env,
       ...Object.fromEntries(child),
     });

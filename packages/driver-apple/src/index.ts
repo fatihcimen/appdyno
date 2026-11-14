@@ -15,6 +15,7 @@ export { iosProducts, pruneIosBuilds, runnerBuild } from './runner-build.js';
 export { logShowArgs, simulatorLogs, PHONE_LOGS_NOTE } from './logs.js';
 export { parseIps, phoneCrashes, reportsIn, simulatorCrashes } from './crashes.js';
 export { Simctl, xcodeEnv, type Simulator } from './simctl.js';
+export { HeldLaunches } from './sim-held.js';
 export { listPhones } from './usbmux.js';
 export * from './perf.js';
 export * from './perf-parse.js';

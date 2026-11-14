@@ -10,6 +10,7 @@ import {
   type SettingName,
 } from '@appdyno/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HeldLaunches } from '@appdyno/driver-apple';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf } from '@appdyno/testing/calls.js';
@@ -267,6 +268,7 @@ describe('what a process leaves running', () => {
 
   const equipped = () =>
     Object.assign(new FakeDevice(), {
+      holds: new HeldLaunches('emulator-5580'),
       recorder: {
         extension: 'mp4' as const,
         start: () => Promise.resolve({ id: 'r' }),
@@ -302,6 +304,13 @@ describe('what a process leaves running', () => {
       says: 'report written',
       stop: undefined,
     },
+    {
+      kind: "a probe held in an app's launches",
+      folder: 'sim-held',
+      left: { apps: { 'dev.app': { frames: { lib: '/nowhere/SimProbe', env: {} } } } },
+      says: "probes let go of this tool's launches",
+      stop: undefined,
+    },
   ];
 
   const held = (k: (typeof KINDS)[number], owner?: unknown) => ({
@@ -319,7 +328,8 @@ describe('what a process leaves running', () => {
     expect(used.text).toContain(k.says);
     expect(existsSync(file)).toBe(false);
     if (k.stop) expect(k.stop()).toHaveBeenCalledWith({ id: k.folder === 'video' ? 'r' : 'n' });
-    else expect(existsSync(join((left as { dir: string }).dir, 'index.html'))).toBe(true);
+    if (k.folder === 'reports')
+      expect(existsSync(join((left as { dir: string }).dir, 'index.html'))).toBe(true);
     ctx.close();
   });
 
@@ -346,6 +356,23 @@ describe('what a process leaves running', () => {
     expect((await call('use_device', { device: device.serial })).text).not.toContain(k.says);
     expect(await ctx.end()).toEqual([]);
     expect(existsSync(file)).toBe(true);
+    ctx.close();
+  });
+
+  it("lets go of a session's probes at its end, and of a command line's at restore", async () => {
+    const device = equipped();
+    const probe = { lib: '/nowhere/SimProbe', env: {} };
+    const { ctx, call } = connect(device);
+    await call('use_device', { device: device.serial });
+    device.holds.hold('dev.app', 'frames', probe);
+    expect(device.holds.holder()?.owner?.pid).toBe(process.pid);
+    expect(await ctx.end()).toEqual([]);
+    expect(device.holds.holder()).toBeUndefined();
+    leave('sim-held', device.serial, { apps: { 'dev.app': { frames: probe } } });
+    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+      'let go of the frames probe in dev.app: a probe stays in its app until the app next starts',
+    );
+    expect(device.holds.holder()).toBeUndefined();
     ctx.close();
   });
 

@@ -28,9 +28,13 @@ final class PerfMetricsTests: XCTestCase {
 
     @MainActor func testLaunch() throws {
         let app = try target()
-        // the language the host holds the app in, as every launch it makes carries it
-        app.launchArguments = (ProcessInfo.processInfo.environment["APPDYNO_METRICS_ARGS"] ?? "")
-            .split(separator: "\n").map(String.init)
+        let host = ProcessInfo.processInfo.environment
+        // what the host holds the app with, as every launch it makes carries it: its language, a probe's library
+        app.launchArguments = (host["APPDYNO_METRICS_ARGS"] ?? "").split(separator: "\n").map(String.init)
+        let pairs = (host["APPDYNO_METRICS_ENV"] ?? "").split(separator: "\n").map {
+            $0.split(separator: "=", maxSplits: 1).map(String.init)
+        }
+        app.launchEnvironment = Dictionary(pairs.map { ($0[0], $0.count > 1 ? $0[1] : "") }) { $1 }
         measure(metrics: [XCTApplicationLaunchMetric()]) { app.launch() }
     }
 }
