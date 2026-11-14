@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:net';
+import { createServer, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { readBplist, SimulatorWeb, writeBplist } from '../src/webinspector.js';
+import { inCall, must } from '@appdyno/core';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readBplist, SimulatorWeb, writeBplist, type Plist } from '../src/webinspector.js';
 import type { Simctl } from '../src/simctl.js';
 
 /** A plist of arrays by hand: `refs[i]` are what object `i` holds, each given as one byte. */
@@ -53,7 +54,125 @@ describe('a plist that cannot be read to its end', () => {
   });
 });
 
+/** What the code sends, by the keys a fake inspector reads. */
+type Asked = {
+  __selector: string;
+  __argument: {
+    WIRApplicationIdentifierKey: string;
+    WIRSenderKey: string;
+    WIRSocketDataKey: Buffer;
+  };
+};
+
 describe('the Safari inspector of a simulator', () => {
+  const ends: (() => void)[] = [];
+  afterEach(() => {
+    vi.useRealTimers();
+    for (const end of ends.splice(0)) end();
+  });
+
+  const webOn = (path: string) => {
+    const simctl = { exec: () => Promise.resolve(path) } as unknown as Simctl;
+    const web = new SimulatorWeb(simctl, '00000000-0000-0000-0000-000000000000');
+    ends.push(() => web.close());
+    return web;
+  };
+
+  /**
+   * `webinspectord_sim` as it answers: apps, a page in each, and a script's value as `ran <script>`. A connection in
+   * `quiet` is not answered when it names itself, as one opened within 10 s of another's close; one in `shut` is closed
+   * at once, as one opened right at that close; `late` answers each script after a late answer to the one before.
+   */
+  async function fakeInspector({
+    quiet = [] as number[],
+    shut = [] as number[],
+    late = false,
+  } = {}) {
+    const path = join(mkdtempSync(join(tmpdir(), 'appdyno-inspector-')), 's');
+    const apps: Record<string, Plist> = {
+      'PID:1': {
+        WIRApplicationIdentifierKey: 'PID:1',
+        WIRApplicationBundleIdentifierKey: 'com.apple.mobilesafari',
+        WIRIsApplicationActiveKey: 2,
+      },
+    };
+    const sockets: Socket[] = [];
+    const lists: (() => void)[] = [];
+    const naming: (() => void)[] = [];
+    const named = [0, 1, 2, 3].map((n) => new Promise<void>((r) => (naming[n] = r)));
+    let before: string | undefined;
+    const server = createServer((socket) => {
+      const n = sockets.push(socket);
+      socket.on('error', () => undefined);
+      if (shut.includes(n)) socket.destroy();
+      const say = (selector: string, argument: Record<string, Plist>) => {
+        const body = writeBplist({ __selector: selector, __argument: argument });
+        const head = Buffer.alloc(4);
+        head.writeUInt32BE(body.length);
+        socket.write(Buffer.concat([head, body]));
+      };
+      const list = () =>
+        say('_rpc_reportConnectedApplicationList:', { WIRApplicationDictionaryKey: apps });
+      lists[n] = list;
+      const toPage = (sender: string, data: object) =>
+        say('_rpc_applicationSentData:', {
+          WIRDestinationKey: sender,
+          WIRMessageDataKey: Buffer.from(JSON.stringify(data)),
+        });
+      const ran = (sender: string, script: string) =>
+        toPage(sender, {
+          method: 'Target.dispatchMessageFromTarget',
+          params: {
+            targetId: 'page-1',
+            message: JSON.stringify({ id: 2, result: { result: { value: `ran ${script}` } } }),
+          },
+        });
+      let rest = Buffer.alloc(0);
+      socket.on('data', (d) => {
+        rest = Buffer.concat([rest, d]);
+        while (rest.length >= 4 && rest.length >= 4 + rest.readUInt32BE(0)) {
+          const size = rest.readUInt32BE(0);
+          const { __selector, __argument: a } = readBplist(rest.subarray(4, 4 + size)) as Asked;
+          rest = rest.subarray(4 + size);
+          if (__selector === '_rpc_reportIdentifier:') {
+            naming[n]?.();
+            if (!quiet.includes(n)) list();
+          } else if (__selector === '_rpc_getConnectedApplications:') list();
+          else if (__selector === '_rpc_forwardGetListing:')
+            say('_rpc_applicationSentListing:', {
+              WIRApplicationIdentifierKey: a.WIRApplicationIdentifierKey,
+              WIRListingKey: {
+                1: {
+                  WIRPageIdentifierKey: 1,
+                  WIRTypeKey: 'WIRTypeWebPage',
+                  WIRTitleKey: `a page of ${a.WIRApplicationIdentifierKey}`,
+                  WIRURLKey: 'https://example.com/',
+                },
+              },
+            });
+          else if (__selector === '_rpc_forwardSocketSetup:')
+            toPage(a.WIRSenderKey, {
+              method: 'Target.targetCreated',
+              params: { targetInfo: { targetId: 'page-1', type: 'page' } },
+            });
+          else if (__selector === '_rpc_forwardSocketData:') {
+            const { params } = JSON.parse(a.WIRSocketDataKey.toString()) as {
+              params: { message: string };
+            };
+            const script = (JSON.parse(params.message) as { params: { expression: string } }).params
+              .expression;
+            if (late && before) ran(before, 'an earlier script');
+            ran(a.WIRSenderKey, script);
+            before = a.WIRSenderKey;
+          }
+        }
+      });
+    });
+    await new Promise<void>((r) => server.listen(path, r));
+    ends.push(() => server.close());
+    return { path, apps, sockets, named, listOn: (n: number) => lists[n]?.() };
+  }
+
   it('ends on what it cannot read, as a socket that said nothing', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-inspector-'));
     const path = join(dir, 's');
@@ -65,10 +184,81 @@ describe('the Safari inspector of a simulator', () => {
       socket.write(Buffer.concat([head, body]));
     });
     await new Promise<void>((r) => server.listen(path, r));
-    const simctl = { exec: () => Promise.resolve(path) } as unknown as Simctl;
-    const udid = '00000000-0000-0000-0000-000000000000';
-    await expect(new SimulatorWeb(simctl, udid).pages(undefined)).rejects.toThrow(/said nothing/);
+    const failed = (await webOn(path)
+      .pages(undefined)
+      .catch((e: unknown) => e)) as { message: string; hint?: string };
+    expect(failed.message).toBe('the Safari inspector said nothing');
+    // the inspector is what failed, not the device
+    expect(failed.hint).toMatch(/^ask again: the simulator's inspector/);
     server.close();
+  });
+
+  it('lists the pages and runs scripts on them over one connection, as a second is served only seconds after the first closed', async () => {
+    const inspector = await fakeInspector({ quiet: [2, 3] });
+    const web = webOn(inspector.path);
+    const page = must((await web.pages('com.apple.mobilesafari'))[0], 'a page');
+    expect(page).toEqual({
+      id: 'PID:1/1',
+      title: 'a page of PID:1',
+      url: 'https://example.com/',
+      app: 'com.apple.mobilesafari',
+      visible: true,
+    });
+    // a read may run beside an action: each waits its turn on the one connection
+    const both = [web.evaluate(page, 'document.title'), web.evaluate(page, '1 + 1')];
+    expect(await Promise.all(both)).toEqual(['ran document.title', 'ran 1 + 1']);
+    expect(inspector.sockets).toHaveLength(1);
+    web.close();
+    await new Promise((r) => must(inspector.sockets[0], 'the connection').once('close', r));
+  });
+
+  it('waits for an app list that comes late, and says what it waits for', async () => {
+    const inspector = await fakeInspector({ quiet: [1] });
+    const web = webOn(inspector.path);
+    const said: string[] = [];
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const pages = inCall({ progress: (m) => said.push(m) }, () => web.pages(undefined));
+    await inspector.named[1];
+    await vi.advanceTimersByTimeAsync(10_000);
+    inspector.listOn(1);
+    expect((await pages).map((p) => p.id)).toEqual(['PID:1/1']);
+    expect(said.at(-1)).toMatch(/^the Safari inspector has said nothing for 9 s/);
+  });
+
+  it('opens one more connection when the first is never answered', async () => {
+    const inspector = await fakeInspector({ quiet: [1] });
+    const web = webOn(inspector.path);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const pages = web.pages(undefined);
+    await inspector.named[1];
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect((await pages).map((p) => p.id)).toEqual(['PID:1/1']);
+    expect(inspector.sockets).toHaveLength(2);
+  });
+
+  it('opens one more connection when the inspector closes the first at once', async () => {
+    const inspector = await fakeInspector({ shut: [1] });
+    expect((await webOn(inspector.path).pages(undefined)).map((p) => p.id)).toEqual(['PID:1/1']);
+    expect(inspector.sockets).toHaveLength(2);
+  });
+
+  it('lists an app that came after its connection opened', async () => {
+    const inspector = await fakeInspector();
+    const web = webOn(inspector.path);
+    expect(await web.pages('dev.app')).toEqual([]);
+    inspector.apps['PID:2'] = {
+      WIRApplicationIdentifierKey: 'PID:2',
+      WIRApplicationBundleIdentifierKey: 'dev.app',
+    };
+    expect((await web.pages('dev.app')).map((p) => p.id)).toEqual(['PID:2/1']);
+  });
+
+  it("takes a script's answer from its own page, not a late one for the script before", async () => {
+    const inspector = await fakeInspector({ late: true });
+    const web = webOn(inspector.path);
+    const page = must((await web.pages(undefined))[0], 'a page');
+    await web.evaluate(page, 'first');
+    expect(await web.evaluate(page, 'second')).toBe('ran second');
   });
 });
 

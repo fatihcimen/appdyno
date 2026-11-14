@@ -1,174 +1,34 @@
 import { randomUUID } from 'node:crypto';
 import { connect, type Socket } from 'node:net';
-import type { WebInspector, WebPage } from '@appdyno/core';
+import { reportProgress, type WebInspector, type WebPage } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertUdid, type Simctl } from './simctl.js';
 
-export type Plist = string | number | boolean | Buffer | null | Plist[] | { [k: string]: Plist };
+export * from './bplist.js';
+import { type Plist, plistText, readBplist, writeBplist } from './bplist.js';
 
-/** A plist's reference to another object, by the name its XML form gives it. */
-const UID = 'CF$UID';
-export const plistUid = (n: number): Plist => ({ [UID]: n });
-export const uidOf = (v: Plist | undefined): number | undefined =>
-  v && typeof v === 'object' && !Buffer.isBuffer(v) && !Array.isArray(v)
-    ? (v[UID] as number | undefined)
-    : undefined;
-
-/** A device's string or number as text, and '' for what is neither, or missing. */
-export const plistText = (v: unknown) =>
-  typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '';
-
-/** Past any message here: an object may be named twice, so that a few bytes can unfold for as long as there is memory. */
-export const MOST_VALUES = 1 << 20;
-
-/** A binary property list: what the inspector's socket speaks (no dependency, no process per message). */
-export function readBplist(b: Buffer): Plist {
-  if (b.toString('latin1', 0, 8) !== 'bplist00') throw new Error('not a binary plist');
-  const trailer = b.subarray(b.length - 32);
-  const [offsetSize, refSize] = [trailer.readUInt8(6), trailer.readUInt8(7)];
-  const count = Number(trailer.readBigUInt64BE(8));
-  const top = Number(trailer.readBigUInt64BE(16));
-  const table = Number(trailer.readBigUInt64BE(24));
-  let left = MOST_VALUES;
-  const read = (i: number): Plist => {
-    if (--left < 0) throw new Error(`a plist of more than ${MOST_VALUES} values`);
-    let p = b.readUIntBE(table + i * offsetSize, offsetSize);
-    const marker = b.readUInt8(p++);
-    const low = marker & 15;
-    const size = () => {
-      if (low !== 15) return low;
-      const width = 1 << (b.readUInt8(p++) & 15);
-      const n = b.readUIntBE(p, width);
-      p += width;
-      return n;
-    };
-    const refs = (n: number, from: number) => {
-      // room is made before the first is read: a length from the wire, at every level of a list that holds itself
-      if (p + (from + n) * refSize > b.length) throw new Error('a plist list past its end');
-      return Array.from({ length: n }, (_, k) =>
-        read(b.readUIntBE(p + (from + k) * refSize, refSize)),
-      );
-    };
-    switch (marker >> 4) {
-      case 0:
-        return low === 8 ? false : low === 9 ? true : null;
-      case 1:
-        // the long form is 16 bytes, the value in the last 8
-        return low <= 2
-          ? b.readUIntBE(p, 1 << low)
-          : Number(b.readBigInt64BE(low === 4 ? p + 8 : p));
-      case 2:
-        return low === 3 ? b.readDoubleBE(p) : b.readFloatBE(p);
-      case 4: {
-        const n = size();
-        return b.subarray(p, p + n);
-      }
-      case 5: {
-        const n = size();
-        return b.toString('latin1', p, p + n);
-      }
-      case 6: {
-        const n = size();
-        return Buffer.from(b.subarray(p, p + n * 2))
-          .swap16()
-          .toString('utf16le');
-      }
-      case 8:
-        return plistUid(b.readUIntBE(p, low + 1));
-      case 10:
-        return refs(size(), 0);
-      case 13: {
-        const n = size();
-        const keys = refs(n, 0) as string[];
-        const values = refs(n, n);
-        return Object.fromEntries(keys.map((k, j) => [k, values[j] ?? null]));
-      }
-      default:
-        throw new Error(`a plist object of kind ${marker >> 4}`);
-    }
-  };
-  if (count <= top) throw new Error('a plist with no such object');
-  return read(top);
-}
-
-export function writeBplist(root: Plist): Buffer {
-  type Written = { own: Buffer; refs?: number[] };
-  const objects: Written[] = [];
-  const sized = (kind: number, n: number) => {
-    if (n < 15) return Buffer.from([(kind << 4) | n]);
-    const length = Buffer.alloc(6);
-    length[0] = (kind << 4) | 15;
-    length[1] = 0x12;
-    length.writeUInt32BE(n, 2);
-    return length;
-  };
-  const add = (v: Plist): number => {
-    const i = objects.length;
-    const uid = uidOf(v);
-    if (typeof v === 'string') {
-      const ascii = Buffer.byteLength(v) === v.length;
-      const body = ascii ? Buffer.from(v, 'latin1') : Buffer.from(v, 'utf16le').swap16();
-      objects.push({
-        own: Buffer.concat([sized(ascii ? 5 : 6, ascii ? v.length : body.length / 2), body]),
-      });
-    } else if (typeof v === 'number') {
-      const n = Buffer.alloc(9);
-      n[0] = Number.isInteger(v) ? 0x13 : 0x23;
-      if (Number.isInteger(v)) n.writeBigInt64BE(BigInt(v), 1);
-      else n.writeDoubleBE(v, 1);
-      objects.push({ own: n });
-    } else if (typeof v === 'boolean') objects.push({ own: Buffer.from([v ? 9 : 8]) });
-    else if (v === null) objects.push({ own: Buffer.from([0]) });
-    else if (Buffer.isBuffer(v)) objects.push({ own: Buffer.concat([sized(4, v.length), v]) });
-    else if (Array.isArray(v)) {
-      const list: Written = { own: sized(10, v.length) };
-      objects.push(list);
-      list.refs = v.map(add);
-    } else if (uid !== undefined) {
-      const n = Buffer.alloc(5);
-      n[0] = 0x83;
-      n.writeUInt32BE(uid, 1);
-      objects.push({ own: n });
-    } else {
-      const entries = Object.entries(v);
-      const dict: Written = { own: sized(13, entries.length) };
-      objects.push(dict);
-      dict.refs = [...entries.map(([k]) => add(k)), ...entries.map(([, x]) => add(x))];
-    }
-    return i;
-  };
-  add(root);
-  const REF = 4;
-  const parts: Buffer[] = [Buffer.from('bplist00', 'latin1')];
-  let at = 8;
-  const offsets = objects.map(({ own, refs = [] }) => {
-    const refBytes = Buffer.alloc(refs.length * REF);
-    refs.forEach((r, k) => refBytes.writeUInt32BE(r, k * REF));
-    parts.push(own, refBytes);
-    const start = at;
-    at += own.length + refBytes.length;
-    return start;
-  });
-  const table = Buffer.alloc(offsets.length * REF);
-  offsets.forEach((o, k) => table.writeUInt32BE(o, k * REF));
-  const trailer = Buffer.alloc(32);
-  trailer[6] = REF;
-  trailer[7] = REF;
-  trailer.writeBigUInt64BE(BigInt(objects.length), 8);
-  trailer.writeBigUInt64BE(0n, 16);
-  trailer.writeBigUInt64BE(BigInt(at), 24);
-  return Buffer.concat([...parts, table, trailer]);
-}
-
-const CONNECT_MS = 5_000;
+/**
+ * A simulator's inspector serves a new connection some 10 s after the last one closed; one opened at once after a close
+ * it closes, where the one after it is served.
+ */
+const LIST_MS = 15_000;
+/** How often a wait for the app list says it still waits. */
+const PROGRESS_MS = 3_000;
 const ANSWER_MS = 15_000;
 /** An app that holds no page says nothing at all to a request for its listing. */
 const LISTING_MS = 1_500;
+/** How long the connection outlives its last call, for the next call to find it open. */
+const IDLE_MS = 60_000;
 /** `WIRIsApplicationActiveKey`: 2 is in front. */
 const IN_FRONT = 2;
 
+const NOT_LISTED_HINT =
+  "ask again: the simulator's inspector takes a new connection some 10 s after the last one closed, and now and then not at all";
+
 type Rpc = { __selector: string; __argument: Record<string, unknown> };
 type App = Record<string, Plist>;
+
+const isList = (m: Rpc) => m.__selector === '_rpc_reportConnectedApplicationList:';
 
 /** One conversation with a simulator's `webinspectord`: messages each way, and a wait for one. */
 class Conversation {
@@ -176,7 +36,7 @@ class Conversation {
   private rest = Buffer.alloc(0);
   private readonly seen: Rpc[] = [];
   private wake: (() => void) | undefined;
-  private closed = false;
+  closed = false;
 
   private constructor(private readonly socket: Socket) {
     socket.on('data', (d) => this.onData(d));
@@ -195,6 +55,8 @@ class Conversation {
         reject(new DeviceError('AGENT_UNAVAILABLE', `the Safari inspector: ${e.message}`)),
       );
     });
+    // kept between calls: a wait for an answer holds the process, an open connection does not
+    socket.unref();
     const c = new Conversation(socket);
     c.send('_rpc_reportIdentifier:', {});
     return c;
@@ -217,6 +79,8 @@ class Conversation {
   }
 
   send(selector: string, argument: Record<string, Plist>) {
+    // what came before a request is not its answer, and a connection kept open would hold it for ever
+    this.seen.length = 0;
     const body = writeBplist({
       __selector: selector,
       __argument: { WIRConnectionIdentifierKey: this.id, ...argument },
@@ -226,7 +90,7 @@ class Conversation {
     this.socket.write(Buffer.concat([head, body]));
   }
 
-  /** The first message since the last wait that `met` takes, or undefined after `ms`. */
+  /** The first message since the last request that `met` takes, or undefined after `ms`. */
   async until(met: (m: Rpc) => boolean, ms: number): Promise<Rpc | undefined> {
     const end = Date.now() + ms;
     for (;;) {
@@ -257,33 +121,73 @@ const appKeyOf = (a: App) => a.WIRApplicationIdentifierKey as string;
  * iOS 16.4 a web view is listed only if its app set `isInspectable`.
  */
 export class SimulatorWeb implements WebInspector {
+  /** Kept between calls: a page's listing and its script would otherwise be two connections, 10 s apart. */
+  private held: Conversation | undefined;
+  /** One call at a time on it, as each waits for the answer to what it sent. */
+  private turn: Promise<unknown> = Promise.resolve();
+  private idle: NodeJS.Timeout | undefined;
+
   constructor(
     private readonly simctl: Simctl,
     private readonly udid: string,
   ) {}
 
-  private async talking<T>(f: (c: Conversation, apps: App[]) => Promise<T>): Promise<T> {
+  /** A connection the inspector has listed its apps on: one it leaves unserved is closed for another. */
+  private async connect(): Promise<Conversation> {
+    // read again for each: a boot gives the socket a new path
     const path = (
       await this.simctl.exec(['getenv', assertUdid(this.udid), 'RWI_LISTEN_SOCKET'])
     ).trim();
-    const c = await Conversation.open(path);
-    try {
-      const list = await c.until(
-        (m) => m.__selector === '_rpc_reportConnectedApplicationList:',
-        CONNECT_MS,
-      );
-      if (!list) throw new DeviceError('TIMEOUT', 'the Safari inspector said nothing');
-      return await f(
-        c,
-        Object.values(list.__argument.WIRApplicationDictionaryKey as Record<string, App>),
-      );
-    } finally {
+    const started = Date.now();
+    for (let tries = 0; tries < 2; tries++) {
+      const c = await Conversation.open(path);
+      for (let waited = PROGRESS_MS; ; waited += PROGRESS_MS) {
+        if (await c.until(isList, PROGRESS_MS)) return c;
+        if (c.closed || waited >= LIST_MS) break;
+        reportProgress(
+          `the Safari inspector has said nothing for ${Math.round((Date.now() - started) / 1000)} s: a simulator's takes a new connection some 10 s after the last one closed`,
+        );
+      }
       c.close();
     }
+    throw new DeviceError('TIMEOUT', 'the Safari inspector said nothing', NOT_LISTED_HINT);
+  }
+
+  /** `f` on the kept connection, opened if there is none; a call that failed closes it, for the next to open another. */
+  private talking<T>(f: (c: Conversation) => Promise<T>): Promise<T> {
+    const call = this.turn.then(async () => {
+      clearTimeout(this.idle);
+      try {
+        if (this.held?.closed) this.held = undefined;
+        return await f((this.held ??= await this.connect()));
+      } catch (e) {
+        this.close();
+        throw e;
+      } finally {
+        if (this.held) this.idle = setTimeout(() => this.close(), IDLE_MS).unref();
+      }
+    });
+    this.turn = call.catch(() => undefined);
+    return call;
+  }
+
+  /** Closes the kept connection: the next call opens another. */
+  close() {
+    clearTimeout(this.idle);
+    this.held?.close();
+    this.held = undefined;
   }
 
   pages(app: string | undefined): Promise<WebPage[]> {
-    return this.talking(async (c, apps) => {
+    return this.talking(async (c) => {
+      // asked each time: an app may have come or gone since the connection opened
+      c.send('_rpc_getConnectedApplications:', {});
+      const list = await c.until(isList, ANSWER_MS);
+      if (!list)
+        throw new DeviceError('TIMEOUT', 'the Safari inspector said nothing', NOT_LISTED_HINT);
+      const apps = Object.values(
+        list.__argument.WIRApplicationDictionaryKey as Record<string, App>,
+      );
       const mine = apps.filter((a) => !app || bundleOf(a) === app);
       const host = (a: App) => a.WIRHostApplicationIdentifierKey as string | undefined;
       // a page in another process may hang off the app as its proxy
@@ -319,7 +223,7 @@ export class SimulatorWeb implements WebInspector {
     });
   }
 
-  evaluate(page: WebPage, script: string): Promise<unknown> {
+  async evaluate(page: WebPage, script: string): Promise<unknown> {
     const at = page.id.lastIndexOf('/');
     const application = page.id.slice(0, at);
     const pageId = Number(page.id.slice(at + 1));
@@ -329,7 +233,8 @@ export class SimulatorWeb implements WebInspector {
       WIRPageIdentifierKey: pageId,
       WIRSenderKey: sender,
     };
-    return this.talking(async (c) => {
+    // the page's own answers: a refusal or a throw leaves the connection open
+    const r = await this.talking(async (c) => {
       c.send('_rpc_forwardSocketSetup:', {
         ...toPage,
         WIRMessageDataTypeChunkSupportedKey: 0,
@@ -339,11 +244,17 @@ export class SimulatorWeb implements WebInspector {
         met: (j: { method?: string; params?: Record<string, never> }) => boolean,
       ) => {
         const m = await c.until((x) => {
+          // an earlier call's page may still be talking on the same connection
           if (x.__selector !== '_rpc_applicationSentData:') return false;
+          if (x.__argument.WIRDestinationKey !== sender) return false;
           return met(JSON.parse(String(x.__argument.WIRMessageDataKey)) as never);
         }, ANSWER_MS);
         if (!m)
-          throw new DeviceError('TIMEOUT', `the page ${page.title || page.id} did not answer`);
+          throw new DeviceError(
+            'TIMEOUT',
+            `the page ${page.title || page.id} did not answer`,
+            'a dialog or a long script may hold the page, or it is gone: list the pages and ask again',
+          );
         return JSON.parse(String(m.__argument.WIRMessageDataKey)) as {
           params: { targetInfo: { targetId: string }; message: string };
         };
@@ -373,18 +284,19 @@ export class SimulatorWeb implements WebInspector {
           (JSON.parse((j.params as unknown as { message: string }).message) as { id?: number })
             .id === 2,
       );
-      const r = JSON.parse(answer.params.message) as {
+      // the connection outlives the call, and the page's end of it would too; a failure closes both
+      c.send('_rpc_forwardDidClose:', toPage);
+      return JSON.parse(answer.params.message) as {
         result?: { result?: { value?: unknown; description?: string }; wasThrown?: boolean };
         error?: { message?: string };
       };
-      if (r.error)
-        throw new DeviceError('INTERNAL', `the page refused: ${String(r.error.message)}`);
-      if (r.result?.wasThrown)
-        throw new DeviceError(
-          'INVALID_ARGUMENT',
-          `the script threw: ${r.result.result?.description ?? 'an error'}`,
-        );
-      return r.result?.result?.value;
     });
+    if (r.error) throw new DeviceError('INTERNAL', `the page refused: ${String(r.error.message)}`);
+    if (r.result?.wasThrown)
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `the script threw: ${r.result.result?.description ?? 'an error'}`,
+      );
+    return r.result?.result?.value;
   }
 }

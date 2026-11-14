@@ -432,6 +432,7 @@ export class IosSimulatorDevice extends IosDevice {
   override close() {
     this.direct.close(this.runnerUp);
     void this.mirror.close();
+    this.web.close();
     super.close();
   }
 

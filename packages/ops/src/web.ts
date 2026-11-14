@@ -8,6 +8,8 @@ import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ELEMENTS = 200;
 const MAX_ANSWER = 20_000;
+/** How long a screen waits for its web view's page: what it adds is beside what the screen already holds. */
+const WEB_LINES_MS = 3_000;
 
 export type WebElement = {
   tag: string;
@@ -84,10 +86,19 @@ export async function webLines(
   const web = s.device.web;
   const view = webViewRect(screen);
   if (!web || !view) return undefined;
-  const pages = await web.pages(s.appId).catch(() => [] as WebPage[]);
-  const page = pages.find((p) => p.visible) ?? pages[0];
-  if (!page) return undefined;
-  const dom = (await web.evaluate(page, READ_DOM).catch(() => undefined)) as Dom | undefined;
+  const read = async () => {
+    const pages = await web.pages(s.appId).catch(() => [] as WebPage[]);
+    const page = pages.find((p) => p.visible) ?? pages[0];
+    return page && ((await web.evaluate(page, READ_DOM).catch(() => undefined)) as Dom | undefined);
+  };
+  let timer: NodeJS.Timeout | undefined;
+  const late = new Promise<'late'>(
+    (done) => (timer = setTimeout(() => done('late'), WEB_LINES_MS)),
+  );
+  // a simulator's inspector serves a new connection some 10 s after the last closed: the screen does not wait for it
+  const dom = await Promise.race([read(), late]).finally(() => clearTimeout(timer));
+  if (dom === 'late')
+    return `a web view's page not read within ${WEB_LINES_MS / 1000} s: webview reads it`;
   if (!dom) return undefined;
   const known = screen.list.map((e) => fold(e.label));
   const ids = new Set(screen.list.map((e) => e.id && `#${e.id}`));
