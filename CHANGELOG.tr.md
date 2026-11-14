@@ -4,6 +4,15 @@
 
 ## Yayımlanmamış
 
+### Değişenler
+
+- Bir iOS simülatöründe appdyno'nun bir uygulamayı her başlatışı, içinde tutulan probe'ları taşır: `launch_app`, yeniden başlatması, bir akışın stop ve launch adımları, perf'in yeniden başlatması ve XCTest'in açılış ölçümü. Kare probe'unun yeniden başlatması süren bir ağ yakalamasını, bir yeniden başlatma ikisini de korur: her yeniden başlatma öbür probe'u düşürüyordu. Oturumun sonu ya da `device_setting restore` onları bırakır; bir probe, çalışan uygulamada bir sonraki başlangıcına kadar kalır. Xcode 26.5'te iki probe bir açılışa 33 ms ekledi (20'ye karşı 20'nin medyanı).
+- Bir iOS simülatöründe `network read`, uygulama probe'un bulunmadığı bir süreç olarak çalıştığında bunu söyler; kareler bunu zaten söylüyordu.
+
+### Düzeltilenler
+
+- Bir iOS simülatöründe ağ ve kare probe'ları artık tek bir Objective-C sınıf adını paylaşmıyor; ikisi bir uygulamada birlikte olabilir: birlikte yüklendiklerinde çalışma zamanı ikisinden yalnızca birini çalıştırıyordu.
+
 ## 1.1.1
 
 appdyno 1.1.1, beş açık kaynak uygulamanın yedi build'inin dört boyutta iOS simülatöründe ve telefon ile tablet Android emülatörlerinde uzun süre sürülmesinin gösterdiklerini düzeltir ve ekranın ağacının kendisine ihtiyaç duyan bir program için `screen raw` ekler.

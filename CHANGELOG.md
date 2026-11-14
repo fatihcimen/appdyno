@@ -4,6 +4,15 @@
 
 ## Unreleased
 
+### Changed
+
+- On an iOS simulator, every launch appdyno makes of an app carries the probes held in it: `launch_app`, its restart, a flow's stop and launch, perf's relaunch and XCTest's launch metric. The frame probe's relaunch keeps a running network capture, and a restart keeps both: each relaunch dropped the other probe. A session's end or `device_setting restore` lets them go; a probe stays in the running app until it next starts. On Xcode 26.5 the two probes added 33 ms to a launch (median of 20 against 20).
+- On an iOS simulator, `network read` says when the app runs as a process the probe is not in, as frames already did.
+
+### Fixed
+
+- On an iOS simulator, the network and frame probes no longer share one Objective-C class name, so both can be in one app: loaded together, the runtime ran one of the two.
+
 ## 1.1.1
 
 appdyno 1.1.1 fixes what a long run of seven builds of five open-source apps showed on iOS simulators of four sizes and on Android emulators, phone and tablet, and adds `screen raw` for a program that needs the screen's tree itself.

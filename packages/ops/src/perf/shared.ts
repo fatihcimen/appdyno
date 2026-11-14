@@ -75,7 +75,7 @@ const NOISE_WORDS: Record<string, string | undefined> = {
 
 /** What to do after the frame probe's relaunch, which left the app on its first screen. */
 export const PROBE_HINT =
-  'open the screen to measure again and call once more: the probe stays in until the app stops';
+  "open the screen to measure again and call once more: the probe stays in this tool's launches of the app until the session ends";
 
 export const App = z.string().max(200).optional();
 

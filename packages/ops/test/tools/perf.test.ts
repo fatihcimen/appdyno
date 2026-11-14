@@ -439,10 +439,10 @@ describe('perf tools', () => {
       const relaunched = await t.call(name);
       expect(relaunched.structuredContent).toMatchObject({
         code: 'CHECK_FAILED',
-        hint: 'open the screen to measure again and call once more: the probe stays in until the app stops',
+        hint: "open the screen to measure again and call once more: the probe stays in this tool's launches of the app until the session ends",
       });
       expect(relaunched.content[0]?.text).toBe(
-        'CHECK_FAILED: dev.app was relaunched with the frame probe in it, and shows its first screen: nothing was measured\nhint: open the screen to measure again and call once more: the probe stays in until the app stops',
+        "CHECK_FAILED: dev.app was relaunched with the frame probe in it, and shows its first screen: nothing was measured\nhint: open the screen to measure again and call once more: the probe stays in this tool's launches of the app until the session ends",
       );
       expect(dev.calls.some((c) => c.name.startsWith('perf.'))).toBe(false);
       expect((await t.call(name)).isError).toBeUndefined();
