@@ -461,7 +461,8 @@ the same kind of device (the tools say "virtual device: relative, compare only w
 A simulator app is a Mac process: its measures come from the Mac's own tools. A phone's come from Xcode's trace
 tool (`xctrace`), which says when a recording has started (`--notify-tracing-started`, so a scroll runs inside it,
 not after a guessed sleep) and is stopped at most 120 s past its limit. A start took 14-19 s and a stop 4-14 s on
-a phone connected by USB, whatever the recording's length.
+a phone connected by USB, whatever the recording's length. One that has not said so in 90 s hung before it recorded:
+it is stopped then, and the answer says the trace tool did not start.
 
 `perf_profile` on a simulator records with the same tool. An app with no samples in the window, an idle one, is sampled once more by `sample`, for as long again.
 

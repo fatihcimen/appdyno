@@ -461,7 +461,8 @@ aynı türden bir cihazla karşılaştırılırlar (araçlar şunu söyler: "vir
 Bir simülatör uygulaması bir Mac sürecidir: ölçümleri Mac'in kendi araçlarından gelir. Bir telefonunkiler Xcode'un trace
 aracından (`xctrace`) gelir; bu araç bir kaydın ne zaman başladığını söyler (`--notify-tracing-started`, böylece bir kaydırma tahmin edilen bir uykudan sonra değil,
 kaydın içinde çalışır) ve sınırından en çok 120 s sonra durdurulur. USB ile bağlı bir telefonda bir başlatma 14-19 s,
-bir durdurma 4-14 s sürdü, kaydın uzunluğu ne olursa olsun.
+bir durdurma 4-14 s sürdü, kaydın uzunluğu ne olursa olsun. 90 s içinde bunu söylemeyen biri kaydetmeden önce takılmıştır:
+o an durdurulur ve yanıt, trace aracının başlamadığını söyler.
 
 Bir simülatörde `perf_profile` aynı araçla kaydeder. Penceresinde hiç örneği olmayan bir uygulama, boşta olan biri, `sample` ile bir kez daha, aynı süre boyunca örneklenir.
 
