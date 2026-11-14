@@ -2,7 +2,6 @@ package dev.appdyno.agent
 
 import android.app.UiAutomation
 import android.os.SystemClock
-import java.lang.reflect.Method
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -11,17 +10,25 @@ import java.util.concurrent.TimeUnit
  * when nothing animates and no transition is running, 5 s at most, and never calls the app. It returns at once
  * if the transition has not started, and it cannot see animations inside the app. Where the release lacks it
  * (API 30 and below) none is ever reported. The call blocks, so it runs on a thread of its own; its return wakes
- * the settle's sleep.
+ * the settle's sleep. An answer only at WMS's cap (`capMs`) leaves something animating that does not end, as a window
+ * an app keeps moving, in front or behind: no wait sees that out, so none is made and the question out is no
+ * transition, until an answer comes before the cap again.
  */
-class Transitions(private val automation: Automation) {
-    private val method: Method? = try {
-        UiAutomation::class.java.getDeclaredMethod("syncInputTransactions", Boolean::class.javaPrimitiveType).apply { isAccessible = true }
-    } catch (_: Throwable) {
-        null
-    }
+class Transitions(
+    /** The question to WMS; none where the release lacks it. */
+    private val sync: (() -> Unit)?,
+    private val wake: () -> Unit,
+    private val capMs: Long = Settling.SLIDE_MAX_MS,
+    private val clock: () -> Long = SystemClock::uptimeMillis,
+) {
+    constructor(automation: Automation) : this(syncOf(automation), automation::wake)
 
     private var question: CountDownLatch? = null
     private var askedAt = 0L
+
+    /** The last answer came at WMS's cap. */
+    @Volatile
+    private var endless = false
 
     /** The last question is still unanswered: a transition runs. */
     val open: Boolean get() = (question?.count ?: 0L) > 0
@@ -29,18 +36,20 @@ class Transitions(private val automation: Automation) {
     /** Asks WMS unless the last question is still out; the answer comes on its own. */
     fun ask(): CountDownLatch? {
         if (open) return question
-        val m = method ?: return null
+        val call = sync ?: return null
         val done = CountDownLatch(1)
         question = done
-        askedAt = SystemClock.uptimeMillis()
+        val at = clock()
+        askedAt = at
         Thread({
             try {
-                m.invoke(automation.ua, true)
+                call()
             } catch (_: Throwable) {
                 // no answer from WMS: as if nothing ran
             } finally {
+                endless = clock() - at >= capMs
                 done.countDown()
-                automation.wake()
+                wake()
             }
         }, "appdyno-transition").apply { isDaemon = true }.start()
         return done
@@ -51,9 +60,9 @@ class Transitions(private val automation: Automation) {
      * ANSWER_MS; a slow one reads as running until it answers, which delays a read and no more.
      */
     fun running(again: Boolean): Boolean {
-        if (open) return true
+        if (open) return !endless
         if (!again) return false
-        return ask()?.await(ANSWER_MS, TimeUnit.MILLISECONDS) == false
+        return ask()?.await(ANSWER_MS, TimeUnit.MILLISECONDS) == false && !endless
     }
 
     /**
@@ -62,18 +71,28 @@ class Transitions(private val automation: Automation) {
      */
     fun runningNow(): Boolean {
         val q = question ?: return false
-        val left = askedAt + IDLE_ANSWER_MS - SystemClock.uptimeMillis()
+        val left = askedAt + IDLE_ANSWER_MS - clock()
         if (left > 0) q.await(left, TimeUnit.MILLISECONDS)
-        return q.count > 0
+        return q.count > 0 && !endless
     }
 
-    /** Until the running one ended, at most `maxMs`. */
+    /** Until the running one ended, at most `maxMs`; asked all the same while what animates does not end. */
     fun awaitEnd(maxMs: Long) {
-        ask()?.await(maxMs, TimeUnit.MILLISECONDS)
+        val q = ask()
+        if (!endless) q?.await(maxMs, TimeUnit.MILLISECONDS)
     }
 
     private companion object {
         const val ANSWER_MS = 30L
         const val IDLE_ANSWER_MS = 80L
+
+        fun syncOf(automation: Automation): (() -> Unit)? {
+            val m = try {
+                UiAutomation::class.java.getDeclaredMethod("syncInputTransactions", Boolean::class.javaPrimitiveType).apply { isAccessible = true }
+            } catch (_: Throwable) {
+                return null
+            }
+            return { m.invoke(automation.ua, true) }
+        }
     }
 }

@@ -253,7 +253,8 @@ durgun bir ekran sayılmasını önler); bir değişiklik gören bir okumadan 40
 yalnızca okumalarda görünür; değilse bekleme süresinin biteceği anda ya da yerleşimi oynatan bir olay gelirse daha erken.
 `before` biliniyorsa ilk okuma bekleme süresinin sonundadır; bir bekletmenin ardından hemen gelir, yeni bir pencerenin
 ondan sonra gelen ilk yerleşim geçişleri bir sonrakinde görünür. Bir pencerenin yalnızca sınırlarını değiştirmesi,
-API 34+'ta yerleşimi oynatan bir olay değildir.
+API 34+'ta yerleşimi oynatan bir olay değildir. WMS ekrandaki her animasyonu, öndekinin arkasındaki bir uygulamanınkini de, en çok
+5 sn bekler: ancak bu sınırda yanıtladığı biri bitmez, bu yüzden daha erken bir yanıt gelene dek ne dokunuş ne okuma onu bekler.
 
 **Kayma sırasında yanıtlar.** API 34+'ta ekran boyutundaki bir uygulama penceresi ekranı dolduracak şekilde
 durur, bu yüzden düğümlerinin yerleri, pencere o an nerede olursa olsun `getBoundsInWindow`'dan verilir: yanıtın

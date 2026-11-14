@@ -253,7 +253,8 @@ yet from passing for a still screen); after a read that saw a change another 40 
 events shows only in reads; else when the window would be over, or sooner if a layout-moving event arrives.
 With `before` known the first read is at the end of the window; after a hold it comes at once, and a new window's
 first layout passes that land after it show in the next. A window only changing its bounds is not a layout-moving event
-on API 34+.
+on API 34+. WMS waits for every animation on the display, an app's behind the one in front as well, 5 s at most: one it
+answers only at that cap does not end, so neither a touch nor a read waits for it until an answer comes sooner.
 
 **Answers during a slide.** On API 34+ an application window of the display's size comes to rest filling the
 display, so its nodes' places are given from `getBoundsInWindow`, wherever the window is at the moment: the
