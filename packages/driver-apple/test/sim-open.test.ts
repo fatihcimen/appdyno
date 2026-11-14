@@ -96,12 +96,28 @@ describe("a link in a scheme of the app's own on a simulator", () => {
       const { d, send } = linked([HOME, HOME, APP]);
       send.mockResolvedValue(false);
       const byRunner = vi.fn(() => Promise.resolve({}));
-      Object.assign(d, { actByRunner: byRunner });
+      Object.assign(d, { actByRunner: byRunner, callNow: () => Promise.resolve({}) });
       await d.openUrl('appdyno-fixture://open/list', APP);
       expect(byRunner).toHaveBeenCalledExactlyOnceWith(
         { kind: 'tap', x: 275, y: 474 },
         { settle: false, read: 'none' },
       );
+    }),
+  );
+
+  it(
+    'has the runner read the prompt before it touches it, as unread its touch went to the app under it and XCTest answered Cancel',
+    fakeTimed(async () => {
+      // the helper read the prompt, so the runner's last read had none: on a turned screen 0 of 4 opened the app
+      const { d, send } = linked([HOME, HOME, APP]);
+      send.mockResolvedValue(false);
+      const asked: string[] = [];
+      Object.assign(d, {
+        callNow: (method: string) => Promise.resolve(asked.push(method) && {}),
+        actByRunner: () => Promise.resolve(asked.push('act') && {}),
+      });
+      await d.openUrl('appdyno-fixture://open/list', APP);
+      expect(asked).toEqual(['tree.get', 'act']);
     }),
   );
 

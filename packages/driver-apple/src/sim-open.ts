@@ -33,6 +33,7 @@ export type LinkLooks = {
 export const looksOf = (
   direct: DirectSim,
   queue: DeviceQueue,
+  reads: { runner: () => Promise<unknown> },
   byRunner: (tap: Extract<ActParams, { kind: 'tap' }>) => Promise<unknown>,
 ): LinkLooks => ({
   front: () => direct.front().catch(() => undefined),
@@ -46,9 +47,13 @@ export const looksOf = (
   // a touch that may have gone through is told by the next look, the prompt gone or still there
   tap: (at) =>
     queue
-      .run(
-        async () => (await direct.send({ kind: 'tap', ...at })) || byRunner({ kind: 'tap', ...at }),
-      )
+      .run(async () => {
+        if (await direct.send({ kind: 'tap', ...at })) return true;
+        // the runner touches the alert its own read had: with none, its touch went to the app under it on a turned
+        // screen, and XCTest, finding the alert over that app, answered it Cancel itself (0 of 4 opened)
+        await reads.runner();
+        return byRunner({ kind: 'tap', ...at });
+      })
       .catch(() => false),
 });
 

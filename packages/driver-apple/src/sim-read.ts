@@ -26,6 +26,11 @@ export class HelperReads {
 
   constructor(private readonly p: ReadsPort) {}
 
+  /** The runner's own read, by which it places its next touch. */
+  runner() {
+    return this.p.runner();
+  }
+
   /**
    * The named app, else what is in front: a new simulator's home screen needs no runner to be read. While the helper
    * cannot say what that is the home screen is asked for, which it refuses if an app is up after all.

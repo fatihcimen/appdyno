@@ -339,7 +339,7 @@ export class IosSimulatorDevice extends IosDevice {
     if (!pkg || !app || !ownScheme(app.schemes, url)) return super.openUrl(url, pkg);
     await this.target(pkg);
     await this.queue.run(() => this.ops.openUrl(url, pkg));
-    const looks = looksOf(this.direct, this.queue, (tap) =>
+    const looks = looksOf(this.direct, this.queue, this.reads, (tap) =>
       this.actByRunner(tap, { settle: false, read: 'none' }),
     );
     const opened = await untilOpened(pkg, app.name, looks, LAUNCH_FRONT_MS);
