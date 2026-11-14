@@ -20,7 +20,7 @@ static void writeEntry(NSDictionary *entry) {
   write(logFd, line.bytes, line.length);
 }
 
-@interface AppdynoProbe : NSURLProtocol <NSURLSessionDataDelegate>
+@interface AppdynoNetProtocol : NSURLProtocol <NSURLSessionDataDelegate>
 @property(nonatomic, strong) NSURLSession *session;
 @property(nonatomic, strong) NSURLSessionDataTask *task;
 @property(nonatomic) CFAbsoluteTime started;
@@ -28,7 +28,7 @@ static void writeEntry(NSDictionary *entry) {
 @property(nonatomic) int64_t received;
 @end
 
-@implementation AppdynoProbe
+@implementation AppdynoNetProtocol
 
 + (BOOL)canInitWithRequest:(NSURLRequest *)request {
   NSString *scheme = request.URL.scheme.lowercaseString;
@@ -116,7 +116,7 @@ static void addToConfiguration(SEL selector) {
   id replacement = ^NSURLSessionConfiguration *(id self) {
     NSURLSessionConfiguration *config = original(self, selector);
     NSMutableArray *classes = [config.protocolClasses mutableCopy] ?: [NSMutableArray array];
-    if (![classes containsObject:AppdynoProbe.class]) [classes insertObject:AppdynoProbe.class atIndex:0];
+    if (![classes containsObject:AppdynoNetProtocol.class]) [classes insertObject:AppdynoNetProtocol.class atIndex:0];
     config.protocolClasses = classes;
     return config;
   };
@@ -127,7 +127,7 @@ __attribute__((constructor)) static void start(void) {
   const char *path = getenv("APPDYNO_NET_LOG");
   if (!path) return;
   logFd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
-  [NSURLProtocol registerClass:AppdynoProbe.class];
+  [NSURLProtocol registerClass:AppdynoNetProtocol.class];
   addToConfiguration(@selector(defaultSessionConfiguration));
   addToConfiguration(@selector(ephemeralSessionConfiguration));
 }
