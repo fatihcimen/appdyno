@@ -98,6 +98,8 @@ export class ServerContext {
        * server has none, as its own environment is no flow's to type.
        */
       env?: Record<string, string | undefined>;
+      /** A person's own `--update-baselines`: a flow's `visual` steps save their baselines in place of comparing. */
+      updateBaselines?: boolean;
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };

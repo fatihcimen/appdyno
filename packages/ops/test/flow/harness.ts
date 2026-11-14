@@ -24,7 +24,11 @@ export function flowHelpers(deviceOf: () => FakeDevice, dirOf: () => string) {
   /** A server's, or with `env` a command line's; `app: null` selects none. */
   const context = (
     secrets: string[] = [],
-    { app = 'dev.app', env }: { app?: string | null; env?: NodeJS.ProcessEnv } = {},
+    {
+      app = 'dev.app',
+      env,
+      updateBaselines,
+    }: { app?: string | null; env?: NodeJS.ProcessEnv; updateBaselines?: boolean } = {},
   ) => {
     const provider: DeviceProvider = {
       list: () => Promise.resolve([{ serial: deviceOf().serial, state: 'device', ready: true }]),
@@ -34,6 +38,7 @@ export function flowHelpers(deviceOf: () => FakeDevice, dirOf: () => string) {
     return new ServerContext({ ...DEFAULT_POLICY, secrets }, [provider], {
       app: app ?? undefined,
       ...(env && { env }),
+      ...(updateBaselines && { updateBaselines }),
     });
   };
   const refusal = async (p: Promise<unknown>) => {

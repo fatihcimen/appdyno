@@ -10,6 +10,12 @@ export class FlowError extends Error {
 
 export type Token = { key?: string; value: string; quoted: boolean };
 
+/** What a line holds as it is, with no quotes. */
+export const WORD = /^[\w.:/@+-]+$/;
+export const show = (value: string) => (WORD.test(value) ? value : JSON.stringify(value));
+/** A text always in quotes where a word might read as something else. */
+export const quote = (value: string) => JSON.stringify(value);
+
 /** A line's tokens: a word, or `key=value`, with a value in JSON's quotes if it needs them. */
 export function tokens(text: string, line: number): Token[] {
   const out: Token[] = [];

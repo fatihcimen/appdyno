@@ -151,6 +151,13 @@ function commands(st: FlowStep): Yaml[] {
       return [{ setLocation: { latitude: String(a.lat), longitude: String(a.lon) } }];
     case 'hide_keyboard':
       return ['hideKeyboard'];
+    case 'screenshot':
+      return [{ takeScreenshot: a.name as string }];
+    case 'visual':
+      return unsupported('Maestro YAML has no comparison with a saved picture');
+    case 'setting':
+      // a guessed command would pass an export and fail where it runs
+      return unsupported('a device setting has no checked form in Maestro YAML');
     case 'alert':
       return unsupported('Maestro YAML answers a system alert by its words, in one language');
     case 'unrecorded':

@@ -21,8 +21,9 @@
  * is a literal `${`. `!flag` marks a step a person should look at.
  */
 
+import { checkDeviceStep } from './device-steps.js';
 import { SPECS, type Spec } from './specs.js';
-import { FlowError, tokens, type Token } from './tokens.js';
+import { FlowError, quote, show, tokens, WORD, type Token } from './tokens.js';
 
 export { FlowError } from './tokens.js';
 
@@ -59,10 +60,11 @@ export type Flow = {
 export type Action = keyof typeof SPECS;
 
 const NUMERIC_WORDS = new Set(['lat', 'lon']);
+/** Words a file has bare where they can be: a typed text or a URL is always quoted, so it never reads as a word. */
+const BARE_WORDS = new Set(['key', 'direction', 'name', 'value']);
 const SELECTOR_KEYS = ['id', 'role', 'text'] as const;
 const FLAGS: readonly string[] = ['ambiguous', 'coordinates', 'running'] satisfies Flag[];
 const NAME = /^[A-Z_][A-Z0-9_]*$/;
-const WORD = /^[\w.:/@+-]+$/;
 /** A placeholder, or the escape of one. */
 const PLACEHOLDER = /\$\$\{|\$\{([^}]*)\}/g;
 
@@ -138,6 +140,7 @@ function parseStep(action: string, rest: Token[], line: number): FlowStep {
     throw new FlowError(`${action}: raw coordinates are flagged !coordinates`, line);
   if ((spec.target === 'needed' && !named) || (spec.target === 'point-needed' && !named && !placed))
     throw new FlowError(`${action} needs a target: id, role or text`, line);
+  checkDeviceStep(step, line);
   return step;
 }
 
@@ -211,10 +214,6 @@ export function parseFlow(text: string): Flow {
   return flow;
 }
 
-const show = (value: string) => (WORD.test(value) ? value : JSON.stringify(value));
-/** A text always in quotes where a word might read as something else. */
-const quote = (value: string) => JSON.stringify(value);
-
 /** A selector as a flow's file has it. */
 const selectorWords = (s: FlowSelector | undefined) => [
   ...(s?.id !== undefined ? [`id=${show(s.id)}`] : []),
@@ -233,7 +232,7 @@ export function stepLine(st: FlowStep): string {
     const v = st.args[name];
     // a list is never a word
     if (v === undefined || Array.isArray(v)) return [];
-    return typeof v === 'string' ? [name === 'key' || name === 'direction' ? v : quote(v)] : [v];
+    return typeof v === 'string' ? [BARE_WORDS.has(name) ? show(v) : quote(v)] : [v];
   });
   const named = new Set((spec.words ?? []).map((w) => w.replace('?', '')));
   const rest = Object.entries(st.args)

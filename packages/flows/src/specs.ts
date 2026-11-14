@@ -42,6 +42,12 @@ export const SPECS = {
   set_location: { words: ['lat', 'lon'] },
   alert: { words: ['answer'] },
   hide_keyboard: {},
+  /** A picture of the screen, kept as `name`.png where the run keeps what it saves. */
+  screenshot: { words: ['name'] },
+  /** The screen against the baseline of that name, in the `baselines` folder beside the flow's file. */
+  visual: { words: ['name'], number: ['tolerance'], list: ['mask'] },
+  /** A device setting, as `device_setting` takes it; `setting restore` puts back what was changed. */
+  setting: { words: ['name', 'value?'], text: ['app', 'title'] },
   /** An action the format has no step for: replay stops here rather than go on without it. */
   unrecorded: { words: ['what'] },
   /** Another flow's steps go here: `composeFlow` replaces it before anything runs. */

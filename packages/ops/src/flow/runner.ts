@@ -26,7 +26,7 @@ import type { Steps } from '../steps.js';
 import { keyboardFirst } from '../keyboard.js';
 import { refused, ToolError, type Op } from '../tool.js';
 import { WHOLE_STEP } from '../tool-kinds.js';
-import { opCall, REPLAY_WAIT_MS } from './op-call.js';
+import { opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
 import { loadRecording } from './shared.js';
 
 /** What a step took: the device's own count from action to settled where it has one, else the action on this Mac's clock. */
@@ -41,6 +41,8 @@ export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep'> & {
   fromFile?: Record<string, string>;
   /** Where a failure leaves its screenshot and tree. */
   evidence?: string;
+  /** Where a `screenshot` step saves: ./appdyno-screenshots unless a test run keeps its own. */
+  shots?: string;
 };
 
 /** The values a run took from an env file, the empty ones aside: what a param gave is not the file's. */
@@ -89,11 +91,11 @@ export function flowRunner(
   };
 
   /** Every step's arguments, before the first runs: a typo is not found at step 40. */
-  const validate = (flow: Flow, file: string) => {
+  const validate = (flow: Flow, at: StepPlace) => {
     for (const st of flow.steps) {
       if (st.action === 'unrecorded') continue;
-      const [name, args] = opCall(st);
-      opInput(name, args, `${st.file ?? file}:${st.line}`);
+      const [name, args] = opCall(st, at);
+      opInput(name, args, `${st.file ?? at.file}:${st.line}`);
     }
   };
 
@@ -113,8 +115,8 @@ export function flowRunner(
     await steps.holdsStill(s, st.selector);
   };
 
-  const act = async (s: Session, st: FlowStep): Promise<StepOutcome> => {
-    const [name, args] = opCall(st);
+  const act = async (s: Session, st: FlowStep, at: StepPlace): Promise<StepOutcome> => {
+    const [name, args] = opCall(st, at);
     const t0 = Date.now();
     const op = must(ops()[name], `the op ${name}`);
     const answered = await op.handler(opInput(name, args, st.action)).catch(async (e: unknown) => {
@@ -149,7 +151,7 @@ export function flowRunner(
   type Was = ReturnType<typeof asStepBegan> & { since: number; began: number };
 
   // the run's failure is read from what these throw, and a replay from code has no op around it
-  const executor = (s: Session, was: Was): Executor => ({
+  const executor = (s: Session, was: Was, at: StepPlace): Executor => ({
     prepare: (st) => {
       Object.assign(was, {
         ...asStepBegan(s, s.fresh?.foreground),
@@ -158,7 +160,7 @@ export function flowRunner(
       });
       return prepare(s, st).catch(refused);
     },
-    act: (st) => act(s, st).catch(refused),
+    act: (st) => act(s, st, at).catch(refused),
   });
 
   /**
@@ -183,7 +185,12 @@ export function flowRunner(
         `from ${from}: this flow has steps 1 to ${flow.steps.length}`,
         'INVALID_ARGUMENT',
       );
-    validate(flow, file);
+    const at = {
+      file,
+      shots: o.shots ?? SHOTS_DIR,
+      update: ctx.options.updateBaselines === true,
+    };
+    validate(flow, at);
     let values: Record<string, string>;
     try {
       values = valuesFor(flow, o.params ?? {}, { ...ctx.options.env, ...o.fromFile }, from);
@@ -205,7 +212,7 @@ export function flowRunner(
       began: Date.now(),
     };
     try {
-      const result = await runSteps(flow, executor(s, was), {
+      const result = await runSteps(flow, executor(s, was, at), {
         from,
         values,
         ...(o.onStep && { onStep: o.onStep }),

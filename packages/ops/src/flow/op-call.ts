@@ -1,4 +1,6 @@
-import type { FlowStep } from '@appdyno/flows';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { maskOf, type FlowStep } from '@appdyno/flows';
 import { ToolError } from '../tool.js';
 import { defined } from './shared.js';
 
@@ -9,8 +11,42 @@ import { defined } from './shared.js';
  */
 export const REPLAY_WAIT_MS = 10_000;
 
+/** Where a `screenshot` step saves when the run keeps nothing of its own. */
+export const SHOTS_DIR = 'appdyno-screenshots';
+
+/** What a step needs of its run beyond its line. */
+export type StepPlace = {
+  /** The flow's file: its folder holds `baselines`, where a step of a flow it runs has its own file's. */
+  file: string;
+  /** Where a `screenshot` step saves. */
+  shots: string;
+  /** A person's `--update-baselines`: a `visual` step saves its baseline in place of comparing. */
+  update: boolean;
+};
+
+/** A `visual` step's comparison, refused before the run when there is nothing to compare with. */
+function visualCall(st: FlowStep, at: StepPlace): Record<string, unknown> {
+  const dir = join(dirname(st.file ?? at.file), 'baselines');
+  const file = join(dir, `${String(st.args.name)}.png`);
+  if (!at.update && !existsSync(file))
+    throw new ToolError(
+      `${st.file ?? at.file}:${st.line}: no baseline ${file}: appdyno test or flow run with --update-baselines saves it`,
+      'NOT_FOUND',
+      `or visual action baseline with dir ${dir}`,
+    );
+  return {
+    action: at.update ? 'baseline' : 'compare',
+    name: st.args.name,
+    dir,
+    ...defined({
+      tolerance: st.args.tolerance,
+      masks: (st.args.mask as string[] | undefined)?.map((m) => maskOf(m)),
+    }),
+  };
+}
+
 /** One step as the op it runs through. */
-export function opCall(st: FlowStep): [string, Record<string, unknown>] {
+export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unknown>] {
   const a = st.args;
   const target = {
     ...(st.selector && { selector: st.selector }),
@@ -87,6 +123,19 @@ export function opCall(st: FlowStep): [string, Record<string, unknown>] {
       return ['alert', { answer: a.answer }];
     case 'hide_keyboard':
       return ['keyboard', { action: 'dismiss' }];
+    case 'screenshot':
+      // a run again, a retry or a journey's next iteration takes the picture anew
+      return [
+        'screenshot',
+        { file: join(at.shots, `${String(a.name)}.png`), overwrite: true, inline: false },
+      ];
+    case 'visual':
+      return ['visual', visualCall(st, at)];
+    case 'setting':
+      return [
+        'device_setting',
+        defined({ name: a.name, value: a.value, app: a.app, title: a.title }),
+      ];
     case 'unrecorded':
       throw new ToolError(
         `this action has no step and was not recorded: ${String(a.what)}. Replace or delete this line`,
