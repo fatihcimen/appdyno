@@ -123,6 +123,9 @@ const appKeyOf = (a: App) => a.WIRApplicationIdentifierKey as string;
 export class SimulatorWeb implements WebInspector {
   /** Kept between calls: a page's listing and its script would otherwise be two connections, 10 s apart. */
   private held: Conversation | undefined;
+  /** The newest one opened: a close ends it too, as the waits of one not served yet hold the process until it is. */
+  private opening: Conversation | undefined;
+  private closes = 0;
   /** One call at a time on it, as each waits for the answer to what it sent. */
   private turn: Promise<unknown> = Promise.resolve();
   private idle: NodeJS.Timeout | undefined;
@@ -134,14 +137,16 @@ export class SimulatorWeb implements WebInspector {
 
   /** A connection the inspector has listed its apps on: one it leaves unserved is closed for another. */
   private async connect(): Promise<Conversation> {
+    const closes = this.closes;
     // read again for each: a boot gives the socket a new path
     const path = (
       await this.simctl.exec(['getenv', assertUdid(this.udid), 'RWI_LISTEN_SOCKET'])
     ).trim();
     const started = Date.now();
-    for (let tries = 0; tries < 2; tries++) {
-      const c = await Conversation.open(path);
-      for (let waited = PROGRESS_MS; ; waited += PROGRESS_MS) {
+    // a close on the way ends the attempt: no one waits for its answer
+    for (let tries = 0; tries < 2 && this.closes === closes; tries++) {
+      const c = (this.opening = await Conversation.open(path));
+      for (let waited = PROGRESS_MS; this.closes === closes; waited += PROGRESS_MS) {
         if (await c.until(isList, PROGRESS_MS)) return c;
         if (c.closed || waited >= LIST_MS) break;
         reportProgress(
@@ -171,9 +176,11 @@ export class SimulatorWeb implements WebInspector {
     return call;
   }
 
-  /** Closes the kept connection: the next call opens another. */
+  /** Closes the kept connection, and one still being opened: the next call opens another. */
   close() {
     clearTimeout(this.idle);
+    this.closes++;
+    this.opening?.close();
     this.held?.close();
     this.held = undefined;
   }
@@ -219,78 +226,86 @@ export class SimulatorWeb implements WebInspector {
               ...(a.WIRIsApplicationActiveKey === IN_FRONT && { visible: true }),
             });
       }
+      // an app's every tab is listed as in front, as Safari's are: a page's own document says whether it shows
+      const front = pages.filter((p) => p.visible);
+      for (const p of front.length > 1 ? front : []) {
+        const seen = await this.run(c, p, 'document.visibilityState', LISTING_MS).catch(
+          () => undefined,
+        );
+        if (seen?.result?.result?.value !== 'visible') delete p.visible;
+      }
       return pages;
     });
   }
 
-  async evaluate(page: WebPage, script: string): Promise<unknown> {
+  /** `script` on `page` over `c`, each answer waited for `ms`: the page's own answers, a refusal or a throw, leave it open. */
+  private async run(c: Conversation, page: WebPage, script: string, ms = ANSWER_MS) {
     const at = page.id.lastIndexOf('/');
-    const application = page.id.slice(0, at);
-    const pageId = Number(page.id.slice(at + 1));
     const sender = randomUUID().toUpperCase();
     const toPage = {
-      WIRApplicationIdentifierKey: application,
-      WIRPageIdentifierKey: pageId,
+      WIRApplicationIdentifierKey: page.id.slice(0, at),
+      WIRPageIdentifierKey: Number(page.id.slice(at + 1)),
       WIRSenderKey: sender,
     };
-    // the page's own answers: a refusal or a throw leaves the connection open
-    const r = await this.talking(async (c) => {
-      c.send('_rpc_forwardSocketSetup:', {
-        ...toPage,
-        WIRMessageDataTypeChunkSupportedKey: 0,
-        WIRAutomaticallyPause: false,
-      });
-      const fromPage = async (
-        met: (j: { method?: string; params?: Record<string, never> }) => boolean,
-      ) => {
-        const m = await c.until((x) => {
-          // an earlier call's page may still be talking on the same connection
-          if (x.__selector !== '_rpc_applicationSentData:') return false;
-          if (x.__argument.WIRDestinationKey !== sender) return false;
-          return met(JSON.parse(String(x.__argument.WIRMessageDataKey)) as never);
-        }, ANSWER_MS);
-        if (!m)
-          throw new DeviceError(
-            'TIMEOUT',
-            `the page ${page.title || page.id} did not answer`,
-            'a dialog or a long script may hold the page, or it is gone: list the pages and ask again',
-          );
-        return JSON.parse(String(m.__argument.WIRMessageDataKey)) as {
-          params: { targetInfo: { targetId: string }; message: string };
-        };
-      };
-      const created = await fromPage((j) => j.method === 'Target.targetCreated');
-      const targetId = created.params.targetInfo.targetId;
-      c.send('_rpc_forwardSocketData:', {
-        ...toPage,
-        WIRSocketDataKey: Buffer.from(
-          JSON.stringify({
-            id: 1,
-            method: 'Target.sendMessageToTarget',
-            params: {
-              targetId,
-              message: JSON.stringify({
-                id: 2,
-                method: 'Runtime.evaluate',
-                params: { expression: script, returnByValue: true },
-              }),
-            },
-          }),
-        ),
-      });
-      const answer = await fromPage(
-        (j) =>
-          j.method === 'Target.dispatchMessageFromTarget' &&
-          (JSON.parse((j.params as unknown as { message: string }).message) as { id?: number })
-            .id === 2,
-      );
-      // the connection outlives the call, and the page's end of it would too; a failure closes both
-      c.send('_rpc_forwardDidClose:', toPage);
-      return JSON.parse(answer.params.message) as {
-        result?: { result?: { value?: unknown; description?: string }; wasThrown?: boolean };
-        error?: { message?: string };
-      };
+    c.send('_rpc_forwardSocketSetup:', {
+      ...toPage,
+      WIRMessageDataTypeChunkSupportedKey: 0,
+      WIRAutomaticallyPause: false,
     });
+    const fromPage = async (
+      met: (j: { method?: string; params?: Record<string, never> }) => boolean,
+    ) => {
+      const m = await c.until((x) => {
+        // an earlier call's page may still be talking on the same connection
+        if (x.__selector !== '_rpc_applicationSentData:') return false;
+        if (x.__argument.WIRDestinationKey !== sender) return false;
+        return met(JSON.parse(String(x.__argument.WIRMessageDataKey)) as never);
+      }, ms);
+      if (!m)
+        throw new DeviceError(
+          'TIMEOUT',
+          `the page ${page.title || page.id} did not answer`,
+          'a dialog or a long script may hold the page, or it is gone: list the pages and ask again',
+        );
+      return JSON.parse(String(m.__argument.WIRMessageDataKey)) as {
+        params: { targetInfo: { targetId: string }; message: string };
+      };
+    };
+    const created = await fromPage((j) => j.method === 'Target.targetCreated');
+    const targetId = created.params.targetInfo.targetId;
+    c.send('_rpc_forwardSocketData:', {
+      ...toPage,
+      WIRSocketDataKey: Buffer.from(
+        JSON.stringify({
+          id: 1,
+          method: 'Target.sendMessageToTarget',
+          params: {
+            targetId,
+            message: JSON.stringify({
+              id: 2,
+              method: 'Runtime.evaluate',
+              params: { expression: script, returnByValue: true },
+            }),
+          },
+        }),
+      ),
+    });
+    const answer = await fromPage(
+      (j) =>
+        j.method === 'Target.dispatchMessageFromTarget' &&
+        (JSON.parse((j.params as unknown as { message: string }).message) as { id?: number }).id ===
+          2,
+    );
+    // the connection outlives the call, and the page's end of it would too; after a failure it goes with the connection
+    c.send('_rpc_forwardDidClose:', toPage);
+    return JSON.parse(answer.params.message) as {
+      result?: { result?: { value?: unknown; description?: string }; wasThrown?: boolean };
+      error?: { message?: string };
+    };
+  }
+
+  async evaluate(page: WebPage, script: string): Promise<unknown> {
+    const r = await this.talking((c) => this.run(c, page, script));
     if (r.error) throw new DeviceError('INTERNAL', `the page refused: ${String(r.error.message)}`);
     if (r.result?.wasThrown)
       throw new DeviceError(

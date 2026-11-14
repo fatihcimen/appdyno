@@ -229,6 +229,14 @@ describe('device conditions', () => {
     expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale');
   });
 
+  it('reads a locale none holds the app in as none set, not as nothing', async () => {
+    const settings = new Settings();
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    settings.values.locale = '';
+    const r = await call('device_setting', { name: 'locale', app: 'a.one' });
+    expect([r.text, r.data.value]).toEqual(['locale: none set', '']);
+  });
+
   it('restores on request, and reports what it cannot', async () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings });

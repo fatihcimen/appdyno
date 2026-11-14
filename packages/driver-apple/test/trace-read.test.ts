@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
 import { queryTraceFile, traceTable } from '../src/trace.js';
+import { againHint, stoppedLate } from '../src/trace-read.js';
 
 const TABLE =
   '<trace-query-result><node><schema name="t"><col><mnemonic>a</mnemonic></col></schema></node></trace-query-result>';
@@ -50,6 +51,21 @@ describe('reading a trace', () => {
     const reads = fakeTool(`echo 'Document Missing Template Error' >&2\nexit 1`);
     await expect(traceTable('a.trace', 't')).rejects.toThrow(/Document Missing/);
     expect(reads()).toBe(1);
+  });
+
+  it('says the tool did not finish a recording it had to be stopped in', async () => {
+    fakeTool(`echo 'Export failed: Document Missing Template Error' >&2\nexit 1`);
+    stoppedLate('hung.trace', 'did not finish a 3 s recording by itself: it was stopped 213 s in');
+    await expect(traceTable('hung.trace', 't')).rejects.toThrow(
+      'the trace tool did not finish a 3 s recording by itself: it was stopped 213 s in, and cannot read what it left: Export failed: Document Missing Template Error',
+    );
+  });
+
+  it('asks for a quieter Mac only where its load is high', () => {
+    expect(againHint(6, 10)).toBe('nothing is wrong with the device: measure again');
+    expect(againHint(40, 10)).toBe(
+      'nothing is wrong with the device: measure again when this Mac is quieter, at load 40 on 10 cores',
+    );
   });
 
   it('reads the list of tables again too', async () => {

@@ -26,11 +26,13 @@ export type LogsAnswer = {
 
 export type CrashesQuery = {
   app: string;
-  /** Epoch ms; absent: any time. */
+  /** Epoch ms, by when each crash was; absent: any time. */
   since?: number;
   limit: number;
   /** A build's symbols: a `.dSYM` or a folder of them; on Android a folder of libraries that keep theirs. */
   symbols?: string;
+  /** The app's own process alone: its extensions' (iOS), listed under its id, are not its end. */
+  own?: boolean;
 };
 
 export type CrashReport = {
@@ -52,6 +54,8 @@ export type CrashesAnswer = {
   reports: CrashReport[];
   source: string;
   note?: string;
+  /** Why a crash now leaves no report: the system keeps no more of the app's. */
+  unkept?: string;
   /** Every exit the system keeps, by reason, what no one calls a crash too (Android). */
   exits?: ExitCount[];
 };

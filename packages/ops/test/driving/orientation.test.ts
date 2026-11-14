@@ -194,6 +194,11 @@ describe('a turn of the screen', () => {
     expect((await call('screenshot', { file, inline: false })).text).toBe(
       `saved ${file} (2400x1080 px; a pixel of it is a tap unit)`,
     );
+    // a file as wide as asked too, not at full size
+    const narrow = join(dir, 'narrow.png');
+    expect((await call('screenshot', { file: narrow, width: 600, inline: false })).text).toBe(
+      `saved ${narrow} (600x270 px; its pixel x,y is tapped at x × 4.000, y × 4.000)`,
+    );
     const info = await call('device_info');
     expect(info.text).toContain('\nscreen 2400x1080, density 420, rotation 1\n');
     expect(info.data.screen).toEqual({ w: 2400, h: 1080, density: 420, rotation: 1 });

@@ -52,6 +52,15 @@ appdyno 1.1.1, bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpı
 - Hiçbir şeyi değiştirmeyen, ama farkında ekranın ondan önce geçirdiği bir değişikliği listeleyen bir işlem bunu söyler: bir `screen changed` listesinin üstünde `no change seen` diyordu.
 - `record` `stop`, dosyanın ne kadar oynadığını söyler: simülatör ekran dururken kare yazmaz ve yanıt karelerin süresini veriyordu: 9,9 sn oynayan bir dosya için 8,3 sn.
 - Hiçbir öğeyi değiştirmeyen bir pinch, yakınlaştırmanın yalnızca resmi değiştirmiş olabileceğini ve `screenshot`'ın bunu gösterdiğini söyler: yakınlaşan bir fotoğrafta yalnızca `no change seen` diyordu.
+- Başlarken sona eren bir uygulamanın `launch_app`'i ve uygulamanın altında öldüğü bir eylem, uygulamanın o anki kendi çökmesinin raporunu, raporun kendi verdiği zamana göre anar: dosyanın zamanına göre gidiyorlardı; macOS uygulamanın 25 raporunu tuttuktan sonra her yeni çökmede eski bir raporun dosya zamanını ileri alıyor, böylece Wikipedia'nın 16 başlatmasından 11'i üç saatlik bir raporu, 3'ü de widget uzantısınınkini andı. macOS uygulamanın başka raporunu tutmadığında yanıt bir rapor beklemek yerine bunu söyler. `crashes` `since` da her raporun kendi zamanına göre gider.
+- Komut satırında web görünümü olan bir ekranda `screen` yanıt verir vermez biter: bir öncekinden sonraki 10 sn içinde yapılan bir çağrı 10,4–10,7 sn sürüyordu, çünkü süreç web denetçisinin artık hiçbir şeyin beklemediği bir bağlantıya hizmet etmesini bekliyordu. Böyle bir çağrı sayfayı yine okunmamış bırakır.
+- Bir iOS simülatöründe `webview` `pages`, her sayfanın kendi belgesinin söylediğine göre yalnızca görünen sekmeyi `(showing)` diye işaretler, `webview` ve `screen` de onu okur: Safari'nin her sekmesi işaretleniyor, görünsün ya da görünmesin ilki okunuyordu.
+- Denetlenecek sayfası olmayan `webview`, yüklenmekte olan bir sayfanın yüklenince listelendiğini ve yeniden sormayı söyler; listelenenlerden hiçbirine uymayan bir `page` için, başka bir sayfa yüklediyse yeni başlığı ve URL'siyle anıldığı söylenir.
+- Bir uygulamayı hiçbir dilde tutmayan `locale`'i okuyan `device_setting` `none set` der: arkasında hiçbir şey olmayan `locale: ` diyordu.
+- `file` ile `screenshot`, resmi `width`'in istediği genişlikte, `points` ile de bir pikseli bir dokunuş birimi olarak kaydeder: ne istenirse istensin tam boyutta kaydediyordu.
+- Xcode'un iz aracının kaydını kendiliğinden bitirmediği, sonra da okuyamadığı bir iz, aracın bitirmediğini ve ne zaman durdurulduğunu söyler; daha sakin bir Mac'i yalnızca bu Mac'in yükü yüksekken ister: `perf_profile`, 4–8 yükte, takılan bir araçla geçen 244 sn'nin ardından suçu yüke atıyordu.
+- Saklanan bir iz olmayan bir şey, bir ölçümün kimliği gibi, verilen `perf_query` `POLICY_DENIED` ile değil `INVALID_ARGUMENT` ile, sade bir ipucuyla reddedilir.
+- `audit`, kuralı türünden fazlasını söylemeyen bir sorunun türünü bir kez söyler: `textClipped XCUIAccessibilityAuditType.textClipped` artık `textClipped` diye okunur.
 
 ## 1.1.0
 

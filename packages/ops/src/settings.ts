@@ -331,7 +331,8 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         if (name === 'locale' && value) await askLanguage(policy, s, value, pkg);
         if (value === undefined) {
           const now = await readCondition(s, name, pkg);
-          const t = `${name}: ${now}`;
+          // an app's locale none holds it in reads as nothing
+          const t = `${name}: ${now || 'none set'}`;
           return reply(clean(t), { done: clean(t), value: now });
         }
         const { also, moved, now } = await setCondition(s, name, value, pkg);

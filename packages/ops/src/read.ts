@@ -55,12 +55,25 @@ const placed = (screen: { w: number; h: number }, w: number, h: number) => {
     : { said: `the screen stands turned from it, ${screen.w}x${screen.h} in tap units` };
 };
 
+/** The long side of a picture `width` pixels wide, or a pixel to a tap unit: a device's limit is on the long side. */
+const maxPxOf = (size: { w: number; h: number }, width?: number, points?: boolean) => {
+  const wide = width ?? (points ? size.w : undefined);
+  return wide && Math.min(MAX_SHOT_PX, Math.round((wide * Math.max(size.w, size.h)) / size.w));
+};
+
 /** The whole picture in a file: a folder gets a new name, and what is there stays unless asked. */
 /**
- * The screen at full size into a file, and the image as `screenshot` gives one beside it unless `inline` is false: a model
- * that only has the file reads it back with a call of its own, where the image is a few tens of kB.
+ * The screen into a file, at full size unless asked narrower, and the image as `screenshot` gives one beside it unless
+ * `inline` is false: a model that only has the file reads it back with a call of its own, where the image is a few tens
+ * of kB.
  */
-async function saveShot(s: Session, file: string, overwrite: boolean, inline: boolean) {
+async function saveShot(
+  s: Session,
+  file: string,
+  overwrite: boolean,
+  inline: boolean,
+  asked: { width?: number | undefined; points?: boolean | undefined },
+) {
   const given = resolve(file);
   const folder = existsSync(given) && statSync(given).isDirectory();
   const to = folder
@@ -71,12 +84,15 @@ async function saveShot(s: Session, file: string, overwrite: boolean, inline: bo
   if (existsSync(to) && !overwrite)
     throw new ToolError(`${to} is there already`, 'INVALID_ARGUMENT', 'overwrite replaces it');
   const format = /\.png$/i.test(to) ? 'png' : 'jpeg';
-  const own = await s.device.mirror.screenshot?.(format);
-  const { data } = own ?? (await s.device.screenshot({ format, quality: 100 }));
+  const now = await s.standing();
+  const maxPx = maxPxOf(now, asked.width, asked.points);
+  // the mirror's own picture comes at one size
+  const own = maxPx ? undefined : await s.device.mirror.screenshot?.(format);
+  const { data } =
+    own ?? (await s.device.screenshot({ format, quality: 100, ...(maxPx && { maxPx }) }));
   mkdirSync(dirname(to), { recursive: true });
   writeFileSync(to, data, { flag: overwrite ? 'w' : 'wx' });
   const size = imageSize(data);
-  const now = await s.standing();
   if (!inline) {
     const at = size && placed(now, size.w, size.h);
     return reply(`saved ${to}${size && at ? ` (${size.w}x${size.h} px; ${at.said})` : ''}`, {
@@ -293,7 +309,7 @@ export function readOps(
             shown ? [{ type: 'image', data: shown.data, mimeType: 'image/png' }] : [],
           );
         }
-        if (file) return saveShot(s, file, overwrite === true, inline !== false);
+        if (file) return saveShot(s, file, overwrite === true, inline !== false, { width, points });
         const layout = s.fresh
           ? `${String(!!points)} ${String(width)} ${screenStructure(s.fresh.list)}`
           : undefined;
@@ -303,14 +319,10 @@ export function readOps(
             'INVALID_ARGUMENT',
           );
         const size = await s.standing();
-        const wide = width ?? (points ? size.w : undefined);
         const { meta, data } = await s.device.screenshot({
           format: 'jpeg',
           quality: SHOT_QUALITY,
-          // a device's limit is on the long side
-          maxPx: wide
-            ? Math.min(MAX_SHOT_PX, Math.round((wide * Math.max(size.w, size.h)) / size.w))
-            : SHOT_PX,
+          maxPx: maxPxOf(size, width, points) ?? SHOT_PX,
         });
         const look = await s.current().catch(() => undefined);
         // a sheet over the app is in the picture: no look past the app, which took 4.5 s of an iPhone's after typing

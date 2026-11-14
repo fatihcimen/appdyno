@@ -16,7 +16,7 @@ import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
 import { heldTable, hitchSummary, stallSpans, traceDigest } from './trace-parse.js';
-import { exporting, traceTable } from './trace-read.js';
+import { exporting, stoppedLate, traceTable } from './trace-read.js';
 import { childrenNamed, endLeftBehind, HUB } from './left-behind.js';
 import { startWord } from './trace-processes.js';
 import { watchKtraces } from './trace-temp.js';
@@ -173,7 +173,17 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     rec.on('exit', res);
     rec.on('error', () => res(-1));
   });
-  let stop = setTimeout(() => rec.kill('SIGINT'), CAP_MS);
+  const began = Date.now();
+  // a tool still at work at its limit: a read of what it leaves that fails says so
+  const cut = () => {
+    const s = Math.round((Date.now() - began) / 1000);
+    stoppedLate(
+      tracePath,
+      `did not finish a ${r.seconds} s recording by itself: it was stopped ${s} s in`,
+    );
+    rec.kill('SIGINT');
+  };
+  let stop = setTimeout(cut, CAP_MS);
   let end = setTimeout(() => rec.kill('SIGKILL'), CAP_MS + KILL_MS);
   // its limit counts from its start, which took more than a minute on a Mac at load 200
   let over = false;
@@ -183,7 +193,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     const limit = Math.min(r.seconds * 1000 + STOP_MS, CAP_MS);
     clearTimeout(stop);
     clearTimeout(end);
-    stop = setTimeout(() => rec.kill('SIGINT'), limit);
+    stop = setTimeout(cut, limit);
     end = setTimeout(() => rec.kill('SIGKILL'), limit + KILL_MS);
   });
   try {

@@ -59,6 +59,7 @@ type Asked = {
   __selector: string;
   __argument: {
     WIRApplicationIdentifierKey: string;
+    WIRPageIdentifierKey: number;
     WIRSenderKey: string;
     WIRSocketDataKey: Buffer;
   };
@@ -82,11 +83,13 @@ describe('the Safari inspector of a simulator', () => {
    * `webinspectord_sim` as it answers: apps, a page in each, and a script's value as `ran <script>`. A connection in
    * `quiet` is not answered when it names itself, as one opened within 10 s of another's close; one in `shut` is closed
    * at once, as one opened right at that close; `late` answers each script after a late answer to the one before.
+   * `tabs`: the app holds that many pages, as Safari its tabs, and only page `tabs` is the one its document says shows.
    */
   async function fakeInspector({
     quiet = [] as number[],
     shut = [] as number[],
     late = false,
+    tabs = 1,
   } = {}) {
     const path = join(mkdtempSync(join(tmpdir(), 'appdyno-inspector-')), 's');
     const apps: Record<string, Plist> = {
@@ -119,12 +122,24 @@ describe('the Safari inspector of a simulator', () => {
           WIRDestinationKey: sender,
           WIRMessageDataKey: Buffer.from(JSON.stringify(data)),
         });
-      const ran = (sender: string, script: string) =>
+      const ran = (sender: string, script: string, page = 1) =>
         toPage(sender, {
           method: 'Target.dispatchMessageFromTarget',
           params: {
             targetId: 'page-1',
-            message: JSON.stringify({ id: 2, result: { result: { value: `ran ${script}` } } }),
+            message: JSON.stringify({
+              id: 2,
+              result: {
+                result: {
+                  value:
+                    script === 'document.visibilityState'
+                      ? page === tabs
+                        ? 'visible'
+                        : 'hidden'
+                      : `ran ${script}`,
+                },
+              },
+            }),
           },
         });
       let rest = Buffer.alloc(0);
@@ -141,14 +156,17 @@ describe('the Safari inspector of a simulator', () => {
           else if (__selector === '_rpc_forwardGetListing:')
             say('_rpc_applicationSentListing:', {
               WIRApplicationIdentifierKey: a.WIRApplicationIdentifierKey,
-              WIRListingKey: {
-                1: {
-                  WIRPageIdentifierKey: 1,
-                  WIRTypeKey: 'WIRTypeWebPage',
-                  WIRTitleKey: `a page of ${a.WIRApplicationIdentifierKey}`,
-                  WIRURLKey: 'https://example.com/',
-                },
-              },
+              WIRListingKey: Object.fromEntries(
+                Array.from({ length: tabs }, (_, i) => [
+                  i + 1,
+                  {
+                    WIRPageIdentifierKey: i + 1,
+                    WIRTypeKey: 'WIRTypeWebPage',
+                    WIRTitleKey: `${i ? `page ${i + 1}` : 'a page'} of ${a.WIRApplicationIdentifierKey}`,
+                    WIRURLKey: 'https://example.com/',
+                  },
+                ]),
+              ),
             });
           else if (__selector === '_rpc_forwardSocketSetup:')
             toPage(a.WIRSenderKey, {
@@ -162,7 +180,7 @@ describe('the Safari inspector of a simulator', () => {
             const script = (JSON.parse(params.message) as { params: { expression: string } }).params
               .expression;
             if (late && before) ran(before, 'an earlier script');
-            ran(a.WIRSenderKey, script);
+            ran(a.WIRSenderKey, script, a.WIRPageIdentifierKey);
             before = a.WIRSenderKey;
           }
         }
@@ -236,10 +254,34 @@ describe('the Safari inspector of a simulator', () => {
     expect(inspector.sockets).toHaveLength(2);
   });
 
+  it('ends a connection the inspector has not answered yet when it is closed, and opens no other', async () => {
+    const inspector = await fakeInspector({ quiet: [1, 2] });
+    const web = webOn(inspector.path);
+    const pages = web.pages(undefined).then(
+      () => 'listed',
+      () => 'ended',
+    );
+    await inspector.named[1];
+    // a one-shot command's close: a wait left running would hold its process for the inspector's 10 s
+    web.close();
+    expect(await pages).toBe('ended');
+    expect(inspector.sockets).toHaveLength(1);
+  });
+
   it('opens one more connection when the inspector closes the first at once', async () => {
     const inspector = await fakeInspector({ shut: [1] });
     expect((await webOn(inspector.path).pages(undefined)).map((p) => p.id)).toEqual(['PID:1/1']);
     expect(inspector.sockets).toHaveLength(2);
+  });
+
+  it('says only the tab its document shows is showing, where the app in front holds several', async () => {
+    const inspector = await fakeInspector({ tabs: 2 });
+    const pages = await webOn(inspector.path).pages('com.apple.mobilesafari');
+    expect(pages.map((p) => [p.title, p.visible])).toEqual([
+      ['a page of PID:1', undefined],
+      ['page 2 of PID:1', true],
+    ]);
+    expect(inspector.sockets).toHaveLength(1);
   });
 
   it('lists an app that came after its connection opened', async () => {

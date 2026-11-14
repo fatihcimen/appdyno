@@ -9,18 +9,25 @@ import { entriesOf, logShowArgs, placeLines } from '../src/logs.js';
 const UDID = '8BC57F11-901C-4DF6-A2B9-2A3B7DE1B79D';
 const OTHER = '11111111-2222-3333-4444-555555555555';
 
+/** A time `ms` ago as a report says one. */
+const ago = (ms: number) =>
+  new Date(Date.now() - ms).toISOString().replace('T', ' ').replace('Z', ' +0000');
+
 /**
  * A report as a simulator's app leaves one: its path names the simulator, and so does its coalition. A system app's
- * path is in the runtime's volume, which names none; a report of neither names no simulator.
+ * path is in the runtime's volume, which names none; a report of neither names no simulator. `at`: when it was
+ * written, `captured`: when the crash was, some seconds before.
  */
-const ips = (bundle: string, device = UDID, path: 'app' | 'system' = 'app') =>
+const ips = (
+  bundle: string,
+  device = UDID,
+  path: 'app' | 'system' = 'app',
+  { at = '2026-11-03 00:05:11.00 +0300', captured }: { at?: string; captured?: string } = {},
+) =>
   [
+    JSON.stringify({ bundleID: bundle, timestamp: at, bug_type: '309' }),
     JSON.stringify({
-      bundleID: bundle,
-      timestamp: '2026-11-03 00:05:11.00 +0300',
-      bug_type: '309',
-    }),
-    JSON.stringify({
+      ...(captured && { captureTime: captured }),
       procPath:
         path === 'app' && device
           ? `/Users/x/Library/Developer/CoreSimulator/Devices/${device}/data/Containers/Bundle/Application/A/App.app/App`
@@ -109,27 +116,69 @@ describe('crash reports', () => {
     });
   });
 
+  const named = (a: { reports: { file?: string }[] }) =>
+    a.reports.map((r) => r.file?.split('/').pop());
+
+  /** A report of `bundle` written `ageMs` ago, its file as old. */
+  const put = (dir: string, name: string, bundle: string, ageMs: number, device = UDID) => {
+    const f = join(dir, name);
+    writeFileSync(f, ips(bundle, device, 'app', { at: ago(ageMs) }));
+    const t = (Date.now() - ageMs) / 1000;
+    utimesSync(f, t, t);
+  };
+
   it('keeps to the app, the simulator, the time and the limit', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
-    const put = (name: string, text: string, ageMs: number) => {
-      const f = join(dir, name);
-      writeFileSync(f, text);
-      const t = (Date.now() - ageMs) / 1000;
-      utimesSync(f, t, t);
-    };
-    put('new.ips', ips('dev.app'), 1_000);
-    put('old.ips', ips('dev.app'), 60_000);
-    put('other-app.ips', ips('dev.other'), 1_000);
-    put('dev.application.ips', ips('dev.application'), 1_000);
-    put('other-sim.ips', ips('dev.app', OTHER), 1_000);
-    put('note.txt', 'not a report', 1_000);
+    put(dir, 'new.ips', 'dev.app', 1_000);
+    put(dir, 'old.ips', 'dev.app', 60_000);
+    put(dir, 'other-app.ips', 'dev.other', 1_000);
+    put(dir, 'dev.application.ips', 'dev.application', 1_000);
+    put(dir, 'other-sim.ips', 'dev.app', 1_000, OTHER);
+    writeFileSync(join(dir, 'note.txt'), 'not a report');
     const q = { app: 'dev.app', limit: 5 };
-    const a = await simulatorCrashes(UDID, q, dir);
-    expect(a.reports.map((r) => r.file?.split('/').pop())).toEqual(['new.ips', 'old.ips']);
+    expect(named(await simulatorCrashes(UDID, q, dir))).toEqual(['new.ips', 'old.ips']);
     const since = await simulatorCrashes(UDID, { ...q, since: Date.now() - 10_000 }, dir);
-    expect(since.reports).toHaveLength(1);
+    expect(named(since)).toEqual(['new.ips']);
     expect(await reportsIn(dir, { ...q, limit: 1 })).toHaveLength(1);
     expect((await simulatorCrashes(UDID, q, join(dir, 'none'))).reports).toEqual([]);
+  });
+
+  it("goes by a report's own time, not its file's, which macOS moves on at each crash once it keeps no more", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
+    // three hours old, its file touched by the crash a moment ago, which left no report of its own
+    writeFileSync(
+      join(dir, 'Shop-105440.ips'),
+      ips('dev.app', UDID, 'app', { at: ago(3 * 3_600_000) }),
+    );
+    put(dir, 'Shop-141215.ips', 'dev.app', 60_000);
+    const q = { app: 'dev.app', limit: 1 };
+    expect(named(await simulatorCrashes(UDID, q, dir))).toEqual(['Shop-141215.ips']);
+    expect(
+      (await simulatorCrashes(UDID, { ...q, since: Date.now() - 5_000 }, dir)).reports,
+    ).toEqual([]);
+    // a crash from before the time asked whose report was written after it is none of it
+    writeFileSync(
+      join(dir, 'Shop-141300.ips'),
+      ips('dev.app', UDID, 'app', { at: ago(1_000), captured: ago(30_000) }),
+    );
+    expect(
+      (await simulatorCrashes(UDID, { ...q, since: Date.now() - 20_000 }, dir)).reports,
+    ).toEqual([]);
+    expect(named(await simulatorCrashes(UDID, { ...q, since: Date.now() - 50_000 }, dir))).toEqual([
+      'Shop-141300.ips',
+    ]);
+  });
+
+  it("gives the app's own report alone where asked, not its extension's of the same moment", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
+    put(dir, 'Shop.ips', 'dev.app', 2_000);
+    put(dir, 'WidgetsExtension.ips', 'dev.app.Widgets', 1_000);
+    const q = { app: 'dev.app', limit: 1 };
+    expect(named(await simulatorCrashes(UDID, q, dir))).toEqual(['WidgetsExtension.ips']);
+    expect(named(await simulatorCrashes(UDID, { ...q, own: true }, dir))).toEqual(['Shop.ips']);
+    // an extension asked for by its own id is its own
+    const widgets = { app: 'dev.app.Widgets', limit: 1, own: true };
+    expect(named(await simulatorCrashes(UDID, widgets, dir))).toEqual(['WidgetsExtension.ips']);
   });
 
   it("keeps the crashes of the app's own extensions, and names which", async () => {
@@ -149,9 +198,12 @@ describe('crash reports', () => {
     const q = { app: 'dev.app', limit: 5 };
     expect((await simulatorCrashes(UDID, q, dir, 'Fixture')).note).toBeUndefined();
     writeFileSync(join(dir, 'Fixture-2026-11-09-24.ips'), '');
-    expect((await simulatorCrashes(UDID, q, dir, 'Fixture')).note).toBe(
+    const full = await simulatorCrashes(UDID, q, dir, 'Fixture');
+    expect(full.note).toBe(
       'this Mac holds 25 crash reports of Fixture, and macOS saves none past 25: a crash now leaves no report. Move Fixture-*.ips out of ~/Library/Logs/DiagnosticReports, and the next one is kept',
     );
+    // alone, for what waits for a report that will not come
+    expect(full.unkept).toBe(full.note);
     expect((await simulatorCrashes(UDID, q, dir)).note).toBeUndefined();
   });
 
@@ -210,7 +262,7 @@ describe('how an app ended, as a reading', () => {
     expect((await crashExits(some.crashes, 'dev.app', since)).value.held.atLeast).toBeUndefined();
   });
 
-  it('asks a query of no age: its `since` goes by a file’s time, here a copy’s', async () => {
+  it('asks a query of no age: what it holds counts every report', async () => {
     const { crashes, asked } = of();
     await crashExits(crashes, 'dev.app', since);
     const [query] = asked;

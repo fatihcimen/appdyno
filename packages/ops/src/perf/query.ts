@@ -39,8 +39,8 @@ export function perfQueryOp(ctx: ServerContext) {
       if (!inside)
         throw new ToolError(
           `not a kept trace: ${trace}`,
-          'POLICY_DENIED',
-          "give the path a perf_ answer names after trace (perf_query): a measurement's id is none",
+          'INVALID_ARGUMENT',
+          'give the file a perf_ answer names on its "trace (perf_query):" line, not a measurement\'s id',
         );
       let digest: TraceDigest | undefined;
       for (const p of ctx.providers) {

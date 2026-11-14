@@ -21,6 +21,8 @@ const FRAMES = 6;
 type Ips = {
   bundle?: string;
   at: string;
+  /** When it crashed, in ms: its capture's time, else the report's (written seconds after); 0 when it says none. */
+  time: number;
   reason: string;
   detail?: string;
   procPath?: string;
@@ -39,6 +41,7 @@ export function parseIps(text: string): Ips | undefined {
       bug_type?: string;
     };
     const body = JSON.parse(text.slice(nl + 1)) as {
+      captureTime?: string;
       procPath?: string;
       exception?: { type?: string; signal?: string; subtype?: string };
       termination?: { indicator?: string; namespace?: string };
@@ -71,6 +74,7 @@ export function parseIps(text: string): Ips | undefined {
     return {
       ...(bundle && { bundle }),
       at: head.timestamp ?? '',
+      time: Date.parse(body.captureTime ?? head.timestamp ?? '') || 0,
       reason:
         [signal, said].filter(Boolean).join(', ') || `report of type ${head.bug_type ?? 'unknown'}`,
       ...(detail && { detail }),
@@ -100,21 +104,27 @@ export async function reportsIn(
       const file = join(dir, n);
       return { file, mtime: statSync(file).mtimeMs };
     })
+    // a file is written after its crash and only touched since: one older than `since` holds none newer
     .filter((f) => !q.since || f.mtime >= q.since)
     .sort((a, b) => b.mtime - a.mtime)
     .slice(0, MAX_OPENED);
-  const out: CrashReport[] = [];
+  const out: { time: number; report: CrashReport }[] = [];
   for (const f of files) {
     const r = parseIps(await readFile(f.file, 'utf8').catch(() => ''));
     // the app's own extensions (a widget, a share sheet) are named under its id, and crash in its name
     const bundle = r?.bundle;
-    if (!r || !bundle || (bundle !== q.app && !bundle.startsWith(`${q.app}.`))) continue;
+    if (!r || !bundle || (bundle !== q.app && (q.own || !bundle.startsWith(`${q.app}.`)))) continue;
+    // by the crash's own time: macOS at its limit moves an old report's file time on at each new crash
+    if (q.since && r.time < q.since) continue;
     if (only && !only(r)) continue;
     const reason = bundle === q.app ? r.reason : `${r.reason}, in its extension ${bundle}`;
-    out.push({ at: r.at, reason, ...(r.detail && { detail: r.detail }), file: f.file });
-    if (out.length >= q.limit) break;
+    const report = { at: r.at, reason, ...(r.detail && { detail: r.detail }), file: f.file };
+    out.push({ time: r.time, report });
   }
-  return out;
+  return out
+    .sort((a, b) => b.time - a.time)
+    .slice(0, q.limit)
+    .map((o) => o.report);
 }
 
 const SIM_SOURCE = '~/Library/Logs/DiagnosticReports';
@@ -167,11 +177,12 @@ export async function simulatorCrashes(
       ? [`${unnamed} that name no simulator, so none could be told to be this one's`]
       : []),
   ];
+  const unkept = reportLimit(dir, processName);
   const note = [
     ...(left.length > 0 ? [`left out ${left.join(', and ')}`] : []),
-    ...[reportLimit(dir, processName)].filter((n) => n !== undefined),
+    ...(unkept ? [unkept] : []),
   ].join('\n');
-  const answer = { reports, source: SIM_SOURCE, ...(note && { note }) };
+  const answer = { reports, source: SIM_SOURCE, ...(note && { note }), ...(unkept && { unkept }) };
   return q.symbols ? withSymbols(answer, q.symbols) : answer;
 }
 
@@ -209,8 +220,8 @@ const EXIT_REPORTS = 100;
 
 /**
  * A device's crash reports as the reading every platform gives: how the app's processes ended. A run's are told by the
- * time in each report: a query's `since` goes by a file's, which on this Mac is when it was copied here. A report with no
- * time that can be read could be of any age, so with one among them there is no reading of a run.
+ * time in each report, of all it holds, which are asked for with no `since`. A report with no time that can be read
+ * could be of any age, so with one among them there is no reading of a run.
  */
 export async function crashExits(
   crashes: (q: CrashesQuery) => Promise<CrashesAnswer>,

@@ -382,11 +382,11 @@ describe('perf_query', () => {
         'perf_query',
       );
     const none = query(() => Promise.resolve(undefined));
-    // a measurement's id, as a perf_ answer starts with, is no trace
+    // a measurement's id, as a perf_ answer starts with, is no trace: what was given is wrong, nothing denied it
     for (const trace of ['/etc/passwd', 'pm-0123abcd'])
       await expect(none.handler({ trace, sql: 'SELECT 1', limit: 5 })).rejects.toMatchObject({
-        code: 'POLICY_DENIED',
-        hint: expect.stringContaining('trace (perf_query)') as unknown,
+        code: 'INVALID_ARGUMENT',
+        hint: 'give the file a perf_ answer names on its "trace (perf_query):" line, not a measurement\'s id',
       });
     const probe = join(stateDir(), 'traces', 'x.jsonl');
     await expect(none.handler({ trace: probe, limit: 5 })).rejects.toMatchObject({

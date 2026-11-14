@@ -22,8 +22,8 @@ const REPORT_GAP_MS = 700;
 type Clean = (s: string) => string;
 
 /** Why the app ended, and the report that says so; `held`: by its crash dialog, which none is written before. */
-/** `unreported`: no report has come of it yet, which the system may still write. */
-export type Died = { reason: string; file?: string; held?: true; unreported?: true };
+/** `unreported`: no report has come of it yet, which the system may still write; `unkept`: it keeps no more of them. */
+export type Died = { reason: string; file?: string; held?: true; unreported?: true; unkept?: true };
 
 /**
  * The app a death is looked for in: the one selected, else the one in front as the action aimed, which a launch or a
@@ -40,23 +40,28 @@ export function asStepBegan(s: Session, seen: string | undefined) {
   return { app, up: !!app && seen === app, pid: s.appPid };
 }
 
-/** What a report says of the app's end since `since`; a new process with no report is no death. */
+/**
+ * What the report of the app's own process says of its end since `since`, else why none will come; a new process with no
+ * report is no death. An extension's report of the same moment is not why the app ended.
+ */
 async function reportOf(
   s: Session,
   app: string | undefined,
   since: number,
   clean: Clean,
   tries = REPORT_TRIES,
-) {
+): Promise<{ report?: Died; unkept?: string }> {
   for (let i = 0; app && i < tries; i++) {
-    const { reports } = await s.device
-      .crashes({ app, since: since - CLOCK_SLACK_MS, limit: 1 })
-      .catch(() => ({ reports: [] }));
+    const { reports, unkept } = await s.device
+      .crashes({ app, since: since - CLOCK_SLACK_MS, limit: 1, own: true })
+      .catch(() => ({ reports: [], unkept: undefined }));
     const r = reports[0];
-    if (r) return { reason: clean(r.reason), ...(r.file && { file: r.file }) };
+    if (r) return { report: { reason: clean(r.reason), ...(r.file && { file: r.file }) } };
+    // the system keeps no more of the app's reports: none is waited for
+    if (unkept) return { unkept };
     await pause(REPORT_GAP_MS).catch(() => undefined);
   }
-  return undefined;
+  return {};
 }
 
 /**
@@ -78,15 +83,16 @@ async function deathOf(
   clean: Clean,
   seen: { held: boolean; pid?: string | undefined },
 ): Promise<Died | undefined> {
-  const report = await reportOf(s, app, since, clean, seen.held ? 1 : REPORT_TRIES);
+  const { report, unkept } = await reportOf(s, app, since, clean, seen.held ? 1 : REPORT_TRIES);
   if (report) return report;
   if (seen.held)
     return {
       reason: 'the system holds its process for its crash dialog, and no crash report says why yet',
       held: true,
     };
-  return seen.pid
-    ? undefined
+  if (seen.pid) return undefined;
+  return unkept
+    ? { reason: `its process is gone, and no crash report says why: ${unkept}`, unkept: true }
     : { reason: 'its process is gone, and no crash report says why yet', unreported: true };
 }
 
@@ -101,7 +107,9 @@ export const diedHint = (d: Died) =>
     : d.unreported
       ? // a simulator on a loaded Mac wrote its report a minute after the end
         'launch_app starts it again, and crashes says why it died once the system has written its report, which can take a minute'
-      : 'launch_app starts it again, and crashes says why it died';
+      : d.unkept
+        ? 'launch_app starts it again, and logs says why it died'
+        : 'launch_app starts it again, and crashes says why it died';
 
 /** An answer's line of the app's end. */
 export const diedLine = ({ reason, file }: Died) =>
@@ -174,7 +182,7 @@ export async function diedUnder(
   ran: boolean,
 ) {
   const gone = ran ? await appDeath(s, app, foreground, wasPid, since, clean, true) : undefined;
-  return gone ?? reportOf(s, app, since, clean, 1);
+  return gone ?? (await reportOf(s, app, since, clean, 1)).report;
 }
 
 /**
@@ -219,7 +227,10 @@ export async function endedUnder(
   since: number,
   clean: Clean,
 ) {
-  return (await deathWhile(s, app, wasPid, since, clean)) ?? reportOf(s, app, since, clean);
+  return (
+    (await deathWhile(s, app, wasPid, since, clean)) ??
+    (await reportOf(s, app, since, clean)).report
+  );
 }
 
 /** Lines that say why, the surest first: a stack's head, where its tail says only where. */
@@ -256,7 +267,7 @@ export async function diedRefusal(
   o: { wasPid: string | undefined; since: number; clean: Clean; cleanLog: Clean },
 ) {
   const lines = await lastLines(s, app, o.wasPid, o.cleanLog);
-  const said = d.file ? d : ((await reportOf(s, app, o.since, o.clean, 1)) ?? d);
+  const said = d.file ? d : ((await reportOf(s, app, o.since, o.clean, 1)).report ?? d);
   return new AppDied(
     [
       `${done ? `${done}; ` : ''}${diedLine(said)}`,

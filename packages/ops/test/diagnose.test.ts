@@ -1,4 +1,4 @@
-import type { Device } from '@appdyno/core';
+import type { CrashesQuery, Device } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boundLines } from '../src/diagnose.js';
@@ -314,11 +314,8 @@ describe('crashes', () => {
     );
   });
 
-  it('says an app that died as it started died, with read none and with another app selected', async () => {
-    const device = new FakeDevice();
-    const { call } = await connect(device);
-    await call('screen');
-    // the system's launch came back, and the app ended before it was in front: the home screen stays
+  /** The system's launch came back, and the app ended before it was in front: the home screen stays. */
+  const diesAsItStarts = (device: FakeDevice, died: () => void = () => undefined) => {
     const launch = device.launch.bind(device);
     device.launch = async (pkg) => {
       await launch(pkg);
@@ -329,10 +326,18 @@ describe('crashes', () => {
         t.windows = t.windows.filter((w) => w.pkg !== 'dev.app');
         return t;
       })(device.current.bind(device));
-      // its report is written at once, and the launch waits for the app to come in front, which it never does
-      reported = Date.now();
+      died();
+      // the launch waits for the app to come in front, which it never does
       await new Promise((r) => setTimeout(r, 15_000));
     };
+  };
+
+  it('says an app that died as it started died, with read none and with another app selected', async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    await call('screen');
+    // its report is written at once
+    diesAsItStarts(device, () => (reported = Date.now()));
     let reported = Infinity;
     device.crashes = (q) =>
       Promise.resolve({
@@ -356,6 +361,29 @@ describe('crashes', () => {
     expect((await call('launch_app', { app: 'dev.app' })).text).toContain(
       'the app died: EXC_CRASH',
     );
+  });
+
+  it("asks for the app's own report, and says none will come where the system keeps no more", async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    await call('screen');
+    diesAsItStarts(device);
+    const unkept =
+      'this Mac holds 25 crash reports of Shop, and macOS saves none past 25: a crash now leaves no report. Move Shop-*.ips out of ~/Library/Logs/DiagnosticReports, and the next one is kept';
+    const asked: CrashesQuery[] = [];
+    device.crashes = (q) => {
+      asked.push(q);
+      return Promise.resolve({ reports: [], source: 'fake reports', note: unkept, unkept });
+    };
+    const r = await call('launch_app', { read: 'none' });
+    expect(r).toMatchObject({ isError: true, structuredContent: { code: 'APP_NOT_RUNNING' } });
+    expect(r.text).toContain(
+      `the app died: its process is gone, and no crash report says why: ${unkept}`,
+    );
+    // none is waited for, nor promised
+    expect(r.text).not.toContain('can take a minute');
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.every((q) => q.own)).toBe(true);
   });
 
   it('says so when the system restarted the app at once, only with a report to go by', async () => {
@@ -499,5 +527,31 @@ describe('audit', () => {
     expect(r.text).toContain('1 accessibility issue');
     expect(r.text).toContain('android.textContrast: ratio 2.1 "Low" at 50,20');
     expect(r.structuredContent).toMatchObject({ engine: 'rules', truncated: false });
+  });
+
+  it('names a kind once where its rule says no more than it', async () => {
+    const device = new FakeDevice();
+    device.audit = () =>
+      Promise.resolve({
+        engine: 'platform',
+        truncated: false,
+        elapsedMs: 3,
+        issues: [
+          {
+            type: 'textClipped',
+            rule: 'XCUIAccessibilityAuditType.textClipped',
+            message: 'Text clipped',
+            b: [340, 290, 372, 310],
+            element: { c: 'StaticText', t: '418' },
+          },
+        ],
+      });
+    const { call } = await connect(device);
+    const r = await call('audit');
+    expect(r.text).toContain('\ntextClipped: Text clipped "418" at 356,300');
+    // the structure keeps the rule
+    expect(r.structuredContent).toMatchObject({
+      issues: [{ rule: 'XCUIAccessibilityAuditType.textClipped' }],
+    });
   });
 });

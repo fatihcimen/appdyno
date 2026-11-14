@@ -52,6 +52,15 @@ appdyno 1.1.1 keeps an iOS runner fast on a screen with a control drawn twice un
 - An action that changed nothing, whose diff lists a change the screen had before it, says so: it said `no change seen` above a `screen changed` list.
 - `record` `stop` says how long the file plays: a simulator writes no frame while the screen holds still, and the answer gave its frames' time, 8.3 s of a file that plays 9.9 s.
 - A pinch that changed no element says a zoom may change only the picture, which `screenshot` shows: on a photo that zoomed it said only `no change seen`.
+- `launch_app` of an app that ends as it starts, and an action the app dies under, name the report of the app's own crash at that moment, by the time the report itself gives: they went by the file's time, which macOS moves on for an old report at each new crash once it keeps 25 of the app's, so 11 of 16 launches of Wikipedia named a report three hours old, and 3 its widget extension's. Where macOS keeps no more of the app's reports, the answer says so rather than waiting for one. `crashes` `since` goes by each report's own time too.
+- On the command line, `screen` on a screen with a web view ends as soon as it answers: a call within 10 s of the last took 10.4 to 10.7 s, as the process waited for the web inspector to serve a connection nothing needed any more. Such a call still leaves the page unread.
+- On an iOS simulator, `webview` `pages` marks only the tab that shows as `(showing)`, by what each page's own document says, and `webview` and `screen` read that one: every Safari tab was marked, and the first was read, shown or not.
+- `webview` with no page to inspect says that a page that is loading is listed once it has loaded, and to ask again; a `page` that matches none listed is said to go by its new title and URL if it loaded another.
+- `device_setting` reading an app's `locale` that none holds it in says `none set`: it said `locale: ` with nothing after it.
+- `screenshot` with `file` saves the picture as wide as `width` asks, or a pixel to a tap unit with `points`: it saved it at full size whatever was asked.
+- A trace Xcode's trace tool did not finish recording by itself, and then cannot read, says the tool did not finish and when it was stopped, and asks for a quieter Mac only where this Mac's load is high: at load 4 to 8, `perf_profile` blamed the load after 244 s of a hung tool.
+- `perf_query` given what is not a kept trace, as a measurement's id, is refused with `INVALID_ARGUMENT`, not `POLICY_DENIED`, with a plain hint.
+- `audit` names an issue's kind once where its rule says no more: `textClipped XCUIAccessibilityAuditType.textClipped` reads `textClipped`.
 
 ## 1.1.0
 

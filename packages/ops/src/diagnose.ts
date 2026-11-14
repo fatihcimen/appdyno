@@ -88,7 +88,8 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
             head,
             ...issues.map(
               (i) =>
-                `${i.type} ${i.rule}: ${i.message}${i.label ? ` ${JSON.stringify(i.label)}` : ''}${i.x !== undefined && i.y !== undefined ? ` at ${i.x},${i.y}` : ''}`,
+                // iOS's rule is the kind again, `XCUIAccessibilityAuditType.textClipped`
+                `${i.rule.endsWith(`.${i.type}`) ? i.type : `${i.type} ${i.rule}`}: ${i.message}${i.label ? ` ${JSON.stringify(i.label)}` : ''}${i.x !== undefined && i.y !== undefined ? ` at ${i.x},${i.y}` : ''}`,
             ),
           ].join('\n'),
           { engine: r.engine, truncated: r.truncated, issues },

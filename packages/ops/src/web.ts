@@ -10,6 +10,9 @@ const MAX_ELEMENTS = 200;
 const MAX_ANSWER = 20_000;
 /** How long a screen waits for its web view's page: what it adds is beside what the screen already holds. */
 const WEB_LINES_MS = 3_000;
+/** Why no page is listed: a page between two loads is not, as Safari's was not just after a click that navigated. */
+const UNLISTED =
+  "one that is loading shows here once it has loaded, and an app's web view only while it is on the screen and the app is debuggable, or set its debugging on";
 
 export type WebElement = {
   tag: string;
@@ -132,10 +135,17 @@ export function webOps(ctx: ServerContext) {
       ? pages.filter((p) => p.id === wanted || p.title.includes(wanted) || p.url.includes(wanted))
       : pages;
     const page = hits.find((p) => p.visible) ?? hits[0];
+    if (!page && pages.length > 0)
+      throw new ToolError(
+        `no page${app ? ` in ${app}` : ''} matches ${wanted ?? ''}: one that has loaded another since goes by its new title and URL`,
+        'NOT_FOUND',
+        'webview pages lists them as they are now',
+      );
     if (!page)
       throw new ToolError(
-        `no web page to inspect${app ? ` in ${app}` : ''}: an app's web view shows here only while it is on the screen and the app is debuggable, or set its debugging on`,
+        `no web page to inspect${app ? ` in ${app}` : ''}: ${UNLISTED}`,
         'NOT_FOUND',
+        'ask again in a moment',
       );
     return page;
   };
@@ -168,8 +178,7 @@ export function webOps(ctx: ServerContext) {
                 (p) =>
                   `${p.id} ${quoted(clean(p.title))} ${clean(p.url)}${p.app ? ` in ${p.app}` : ''}${p.visible ? ' (showing)' : ''}`,
               )
-              .join('\n') ||
-            `no web page to inspect${target ? ` in ${target}` : ''}: its web view must be showing and the app debuggable`;
+              .join('\n') || `no web page to inspect${target ? ` in ${target}` : ''}: ${UNLISTED}`;
           return reply(t, { done: t, pages });
         }
         const on = await pageOf(s, target, page);
