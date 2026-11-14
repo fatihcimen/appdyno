@@ -1,4 +1,5 @@
 import { fold, INSTALLED_APPS, must, reportProgress, type Screen } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
 import { systemAsks } from './noticed.js';
@@ -95,11 +96,34 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
    * `answered`: the app whose "Open in …?" the device answered on the way.
    */
   const linkSaid =
-    (s: Session, href: string, answered?: string) => (screen: Screen | undefined) => {
+    (s: Session, href: string, answered?: string, notIn?: string) =>
+    (screen: Screen | undefined) => {
       const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
       if (asks) return `sent ${href}, and ${systemAsks(asks)}`;
-      return `opened ${href}${answered ? `, answering the system's "Open in …?" for ${answered} on the way` : ''}`;
+      return `opened ${href}${notIn ? ` in another app: ${notIn} does not open it` : ''}${answered ? `, answering the system's "Open in …?" for ${answered} on the way` : ''}`;
     };
+
+  /**
+   * A link sent held to `app`; with no allowlist, a web link the app does not open goes to whatever does, a browser,
+   * and the app is left on purpose. `notIn`: the app it was not held to then.
+   */
+  const openIn = async (s: Session, href: string, app: string | undefined) => {
+    try {
+      return { result: await s.device.openUrl(href, app) };
+    } catch (e) {
+      if (!(e instanceof DeviceError) || e.code !== 'NOT_FOUND') throw e;
+      const held = new DeviceError(
+        e.code,
+        e.message,
+        e.hint ?? `open_link with links: ${app ?? "an app's id"} lists the links it opens`,
+      );
+      if (!app || !/^https?:/i.test(href) || policy.apps.length > 0) throw held;
+      // what no app opens is said as the app's refusal
+      const result = await s.device.openUrl(href).catch(() => Promise.reject(held));
+      s.leftTheApp();
+      return { result, notIn: app };
+    }
+  };
 
   /** Under --allow-apps a link opens in an allowed app, as the device tells before it is sent, or not at all. */
   const linkApp = async (s: Session, href: string) => {
@@ -185,13 +209,16 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         const app = await linkApp(s, href);
         if (CALL_LINK.test(href))
           await approvePower(policy, s, `the link ${href}, which places a call`);
-        const { result, was } = await changing(s, () => s.device.openUrl(href, app));
+        const {
+          result: { result, notIn },
+          was,
+        } = await changing(s, () => openIn(s, href, app));
         const answered = typeof result === 'object' ? result.answered : undefined;
         // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
         return afterChange(
           s,
           was,
-          linkSaid(s, href, answered),
+          linkSaid(s, href, answered, notIn),
           read,
           undefined,
           undefined,

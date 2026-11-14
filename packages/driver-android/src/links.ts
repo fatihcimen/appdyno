@@ -1,4 +1,5 @@
 import { must, type AppLink } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 
 const VIEW = '"android.intent.action.VIEW"';
 
@@ -44,6 +45,25 @@ export function linkStates(out: string): AppLink[] {
     kind: 'domain' as const,
     state: must(m[2], 'a state'),
   }));
+}
+
+/**
+ * What `am start` said of a link it did not open, in words: that the app it was held to, or any app here, does not open
+ * it, else the system's reason without the intent it was given, which a cut line may leave open.
+ */
+export function linkRefused(url: string, pkg: string | undefined, said: string) {
+  if (said.includes('unable to resolve Intent'))
+    return pkg
+      ? new DeviceError('NOT_FOUND', `${pkg} does not open ${url}`)
+      : new DeviceError(
+          'NOT_FOUND',
+          `no app here opens ${url}`,
+          'install an app that opens it, or check the link',
+        );
+  const reason = said
+    .replace(/\s*Intent \{[^}]*(\}|$)/g, '')
+    .replace(/^(Error: |[\w.]+Exception: )/, '');
+  return new DeviceError('NOT_FOUND', `the system did not open ${url}: ${reason}`);
 }
 
 /** What an installed app says it opens: the filters of its activities, and its App Links as verified. */

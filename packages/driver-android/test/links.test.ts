@@ -1,6 +1,8 @@
+import type { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidApps } from '../src/apps.js';
+import { AndroidDevice } from '../src/device.js';
 import { linkFilters, linkStates } from '../src/links.js';
 
 /** What `dumpsys package` and `pm get-app-links` answered for the fixture on an API 34 emulator, cut to the parts read. */
@@ -133,5 +135,42 @@ describe('the app a link opens in', () => {
       ).apps.opener('https://example.org'),
     ).toBe('android');
     expect(await resolving('No activity found\n').apps.opener('nothing://x')).toBeUndefined();
+  });
+});
+
+describe('a link the system did not open', () => {
+  /** A device whose `am start` answers `said`. */
+  const opening = (said: string) =>
+    new AndroidDevice('emulator-5640', {
+      exec: () => Promise.resolve(`Starting: Intent { act=android.intent.action.VIEW }\n${said}`),
+    } as unknown as Adb);
+  const unresolved = (pkg = '') =>
+    `Error: Activity not started, unable to resolve Intent { act=android.intent.action.VIEW dat=https://example.com/... flg=0x10000000 xflg=0x4${pkg && ` pkg=${pkg}`} }\n`;
+
+  it('says in words that the app it was held to does not open it, or that no app here does', async () => {
+    await expect(
+      opening(unresolved('dev.app')).openUrl('https://example.com/', 'dev.app'),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'dev.app does not open https://example.com/',
+    });
+    await expect(opening(unresolved()).openUrl('https://example.com/')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'no app here opens https://example.com/',
+      hint: 'install an app that opens it, or check the link',
+    });
+  });
+
+  it("says the system's own reason, without the intent it was given", async () => {
+    const denied =
+      'java.lang.SecurityException: Permission Denial: starting Intent { act=android.intent.action.VIEW dat=demo://x/... cmp=dev.app/.Secret } from null (pid=4242, uid=2000) not exported from uid 10190\n';
+    const e = await opening(denied)
+      .openUrl('demo://x', 'dev.app')
+      .catch((x: unknown) => x as DeviceError);
+    expect(e).toMatchObject({
+      code: 'NOT_FOUND',
+      message:
+        'the system did not open demo://x: Permission Denial: starting from null (pid=4242, uid=2000) not exported from uid 10190',
+    });
   });
 });
