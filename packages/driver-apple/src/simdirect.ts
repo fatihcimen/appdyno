@@ -1,6 +1,7 @@
-import { throwIfCancelled } from '@appdyno/core';
+import { must, throwIfCancelled } from '@appdyno/core';
 import { DeviceError, PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
 import { turnedTouch, turnsOf } from './mirror-sim.js';
+import { HOME_SCREEN_APP } from './platform-screen.js';
 import { type HelperProcess, startSimAx, startSimHid, type HelperAnswer } from './simhelper.js';
 import { type DirectRead, type Refusal, toTree, type RawAx, sameTree } from './simtree.js';
 import { hidKey, HID_MODIFIERS, touchEvents } from './simtouch.js';
@@ -31,6 +32,20 @@ export function turnedBy(own: { w: number; h: number; density: number }, turns: 
     density: own.density,
     rotation: turns,
   };
+}
+
+/** A point of the upright screen (`own`, its size) where that screen turned `turns` quarter turns shows it. */
+function turnedPoint(p: { x: number; y: number }, own: { w: number; h: number }, turns: number) {
+  const [x, y] = [p.x / own.w, p.y / own.h];
+  // `onSurface` undone
+  const at = [
+    { x, y },
+    { x: y, y: 1 - x },
+    { x: 1 - x, y: 1 - y },
+    { x: 1 - y, y: x },
+  ][turns % 4] ?? { x, y };
+  const { w, h } = turnedBy({ ...own, density: 1 }, turns);
+  return { x: Math.round(at.x * w), y: Math.round(at.y * h) };
 }
 
 type Starters = {
@@ -163,8 +178,23 @@ export class DirectSim {
     if (!a.ok) return { refused: a.refused ?? 'refused' };
     const size = a.screen as [number, number];
     this.screen = upright(size);
-    if (size[0] > size[1]) return { refused: 'landscape' };
+    if (size[0] > size[1])
+      return bundle === HOME_SCREEN_APP
+        ? this.turnedPrompt(toTree(a.tree as RawAx, bundle, this.screen, 0))
+        : { refused: 'landscape' };
     return toTree(a.tree as RawAx, bundle, this.screen, a.ms ?? 0);
+  }
+
+  /**
+   * In landscape, a system alert's buttons where the screen shows them, as a link's "Open in …?" is answered by them: the
+   * helper reads the home screen app's windows upright, and nothing else is read turned.
+   */
+  private async turnedPrompt(r: DirectRead | Refusal): Promise<Refusal> {
+    const turns = 'prompt' in r && r.prompt ? await this.turns() : undefined;
+    if (!('prompt' in r) || !r.prompt || turns === undefined) return { refused: 'landscape' };
+    const own = must(this.screen, 'the screen');
+    const buttons = r.prompt.buttons.map((b) => ({ ...b, ...turnedPoint(b, own, turns) }));
+    return { refused: 'landscape', prompt: { ...r.prompt, buttons } };
   }
 
   /** Does its read say what the runner's says? Three times no before a first yes: not for this session. */

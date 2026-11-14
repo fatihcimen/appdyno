@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The wire's version: `PROTOCOL.major`.
 public let protocolMajor = 2
@@ -40,6 +41,36 @@ public func synthesized(_ answer: Bool?, _ what: String) throws -> Bool {
                          hint: "read the screen to see whether it did before doing it again")
     }
     return answer
+}
+
+/// A failure XCTest recorded during a request: the request's error, if the runner lives through it. It may not: on an
+/// iPhone a live element's frame read after the element went ended this test, whatever `continueAfterFailure` says, so
+/// a request reads by snapshots, which throw.
+public enum IssueTrap {
+    private static let last = OSAllocatedUnfairLock<String?>(initialState: nil)
+    /// Set while a question is asked whose failure is its answer; true once it failed.
+    private static let asking = OSAllocatedUnfairLock<Bool?>(initialState: nil)
+    public static func take() -> String? { last.withLock { issue in defer { issue = nil }; return issue } }
+
+    /// `question`'s answer, nil where XCTest failed it. That failure goes no further: XCUI marks a hittability it
+    /// cannot tell as one that ends the test (an overlay's point on the edge of an iPad in landscape, 8 of 9 reads).
+    public static func answer<T>(_ question: () -> T) -> T? {
+        asking.withLock { $0 = false }
+        let answer = question()
+        let failed = asking.withLock { failed in defer { failed = nil }; return failed == true }
+        return failed ? nil : answer
+    }
+
+    /// Takes an issue XCTest recorded: true where it goes on to XCTest as the request's error, false where it failed a
+    /// question, whose answer it is.
+    public static func keep(_ issue: String) -> Bool {
+        let ofQuestion = asking.withLock { failed in
+            if failed != nil { failed = true }
+            return failed != nil
+        }
+        if !ofQuestion { last.withLock { $0 = issue } }
+        return !ofQuestion
+    }
 }
 
 /// Constant-time comparison of the launch token.

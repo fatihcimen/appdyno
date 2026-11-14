@@ -1,4 +1,4 @@
-import { reportProgress, throwIfCancelled, type ActOptions } from '@appdyno/core';
+import { reportProgress, throwIfCancelled, type ActOptions, type Screen } from '@appdyno/core';
 import { z } from 'zod';
 import { SETTLE, type Answers, type ReadMode } from './answers.js';
 import {
@@ -202,6 +202,7 @@ export function stepsOp(
           let stepDone = '';
           // a step that only looked, or found what it scrolled to, is no action whose change is to be seen
           let said = LOOKS_ONLY.has(st.action);
+          let back: ((x: Screen) => boolean) | undefined;
           const r = await act(
             s,
             reads,
@@ -209,10 +210,12 @@ export function stepsOp(
               const x = await attempt(o);
               stepDone = x.done;
               said ||= x.found === true;
+              back = x.back;
               return x.r;
             },
             () => stepDone,
             () => said,
+            (x) => back?.(x) ?? true,
           );
           done.push(`${i + 1}. ${answerText(r)}`);
           if (last) ending = r;

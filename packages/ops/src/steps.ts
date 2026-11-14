@@ -11,6 +11,7 @@ import { noteTouch } from './activity.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
+import { backFromAlert } from './noticed.js';
 import { byPerson, type Policy } from './policy.js';
 import { LEAVES_APP, NEEDS_NO_LOOK, NOTHING_TO_READ, SHORTCUT_LEAVES } from './keys.js';
 import { LOOKS_ONLY, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
@@ -58,8 +59,19 @@ async function onTheScreen(s: Session, points: Partial<Point>[]) {
     );
 }
 
-/** What a step did: the device's answer, said in words, and whether `scroll_to` found what it looked for. */
-type Done = { r: ActResult | TextResult; done: string; found?: boolean };
+/**
+ * What a step did: the device's answer, said in words, and whether `scroll_to` found what it looked for; `back`: what
+ * the screen after a touch that closed a system alert waits for (`backFromAlert`).
+ */
+type Done = {
+  r: ActResult | TextResult;
+  done: string;
+  found?: boolean;
+  back?: ((x: Screen) => boolean) | undefined;
+};
+
+/** A touch at `at` on the screen just read: on a system alert, what its answer waits for. */
+const closes = (s: Session, at: Point) => (s.fresh ? backFromAlert(s, s.fresh, at) : undefined);
 
 /** What one step's call takes from the steps around it. */
 type Kit = {
@@ -190,20 +202,25 @@ async function call(
       const t = await target(s, st, patient);
       const screen = s.device.hello?.screen;
       if (screen) noteTouch(t.point.x / screen.w, t.point.y / screen.h);
-      return { r: await s.device.tap(t.point, opts), done: `tapped ${t.name}` };
+      const back = await closes(s, t.point);
+      return { r: await s.device.tap(t.point, opts), done: `tapped ${t.name}`, back };
     }
     case 'long_press': {
       const t = await target(s, st, patient);
+      const back = await closes(s, t.point);
       return {
         r: await s.device.longPress(t.point, st.durationMs ?? 800, opts),
         done: `long-pressed ${t.name}`,
+        back,
       };
     }
     case 'double_tap': {
       const t = await target(s, st, patient);
+      const back = await closes(s, t.point);
       return {
         r: await s.device.act({ kind: 'doubleTap', ...t.point }, opts),
         done: `double-tapped ${t.name}`,
+        back,
       };
     }
     case 'drag': {
@@ -304,6 +321,7 @@ export function stepsFor(
   const one = async (s: Session, st: Step, read: ReadMode) => {
     let done = '';
     let found = false;
+    let back: Done['back'];
     return act(
       s,
       read,
@@ -311,10 +329,12 @@ export function stepsFor(
         const x = await step(s, st, o);
         done = x.done;
         found = x.found === true;
+        back = x.back;
         return x.r;
       },
       () => done,
       () => found,
+      (x) => back?.(x) ?? true,
     );
   };
 

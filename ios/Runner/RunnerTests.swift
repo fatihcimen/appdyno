@@ -6,19 +6,9 @@ let agentVersion = "1.1.1"
 
 /// The runner: one long test that serves the host until it asks to shut down. Port and token come from
 /// the launch environment (APPDYNO_PORT, APPDYNO_TOKEN; xcodebuild passes TEST_RUNNER_-prefixed variables).
-/// A failure XCTest recorded during a request: the request's error, if the runner lives through it. It may not: on an
-/// iPhone a live element's frame read after the element went ended this test, whatever `continueAfterFailure` says, so
-/// a request reads by snapshots, which throw.
-enum IssueTrap {
-    private static let last = OSAllocatedUnfairLock<String?>(initialState: nil)
-    static func record(_ issue: String) { last.withLock { $0 = issue } }
-    static func take() -> String? { last.withLock { issue in defer { issue = nil }; return issue } }
-}
-
 final class RunnerTests: XCTestCase {
     override func record(_ issue: XCTIssue) {
-        IssueTrap.record(issue.compactDescription)
-        super.record(issue)
+        if IssueTrap.keep(issue.compactDescription) { super.record(issue) }
     }
 
     @MainActor func testServe() throws {

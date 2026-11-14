@@ -6,12 +6,18 @@ extension Device {
     /// call's prompt for a link the app opened may come as either; a simulator has no phone to show it), Control Center
     /// (its module grid) and the power-off screen (its slider), by the identifiers iOS 27 gives them.
     static let overTheApp = NSPredicate(format: "elementType IN %@ OR identifier IN %@",
-                                        Device.aloneOverTheApp.map(\.rawValue),
-                                        ["cc-root-folder-view", "actionSlider"])
+                                        Device.aloneOverTheApp.map(\.rawValue), Device.overTheAppIds)
+    private static let overTheAppIds = ["cc-root-folder-view", "actionSlider"]
 
     /// What of the home screen app over the app is read as itself, with the touches in its frame: all else it shows is
     /// read whole.
     static let aloneOverTheApp: [XCUIElement.ElementType] = [.alert, .sheet]
+
+    /// Whether the home screen app's read holds what `overTheApp` finds.
+    static func overAnApp(_ snap: XCUIElementSnapshot) -> Bool {
+        aloneOverTheApp.contains(snap.elementType) || overTheAppIds.contains(snap.identifier)
+            || snap.children.contains(where: overAnApp)
+    }
 
     struct Capture {
         var windows: [[String: Any]]
@@ -57,7 +63,7 @@ extension Device {
         var truncated = false
         var busy = false
         var screen = CGRect.zero
-        func add(_ root: XCUIElementSnapshot, window: Int) {
+        func add(_ root: XCUIElementSnapshot, window: Int, frame: (XCUIElementSnapshot) -> CGRect = { $0.frame }) {
             var queue = [Pending(snap: root, parent: -1, depth: 0)]
             var head = 0
             while head < queue.count {
@@ -65,7 +71,7 @@ extension Device {
                 head += 1
                 if nodes.count >= maxNodes || job?.over == true { truncated = true; break }
                 let index = nodes.count
-                let node = Device.node(snap, parent: pending.parent, window: window, screen: screen)
+                let node = Device.node(snap, frame: frame(snap), parent: pending.parent, window: window, screen: screen)
                 if snap.elementType == .activityIndicator, node.flags & Flag.visible != 0 { busy = true }
                 nodes.append(node)
                 if pending.depth + 1 >= maxDepth { if !snap.children.isEmpty { truncated = true }; continue }
@@ -73,24 +79,29 @@ extension Device {
             }
         }
         let snap = try snapshot(of: app, id: id, job: job)
-        // the app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480 on a bigger one
-        screen = snap.frame
-        windows.append(["type": 1, "pkg": id, "layer": 0, "b": box(snap.frame), "active": true, "focused": true])
-        add(snap, window: 0)
+        // the app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480 on a bigger one. The home
+        // screen app read in place of an app it shows something over: asking that app how it stands held a read 15 s
+        // once it had gone behind the home screen
+        let overAnApp = id == Device.springboardId && Device.overAnApp(snap)
+        let frame = overAnApp ? springboardFrames(snap, root: snap.frame, last: appFrame) : { $0.frame }
+        screen = frame(snap)
+        windows.append(["type": 1, "pkg": id, "layer": 0, "b": box(screen), "active": true, "focused": true])
+        add(snap, window: 0, frame: frame)
         // `exists` answers at once; a snapshot of a missing element waits for it to appear
         let overQuery = springboard.descendants(matching: .any).matching(Device.overTheApp).firstMatch
         // a read for another's look leaves the alert a touch goes to and the app's shape as its last read had them
-        if pkg == nil { (alertFrame, appFrame) = (nil, snap.frame) }
-        if pkg == nil, app !== springboard, overQuery.exists, let over = try? overQuery.snapshot() {
+        if pkg == nil { (alertFrame, appFrame) = (nil, screen) }
+        // by its id: the home screen app as the target is another object, and its alert was read a second time
+        if pkg == nil, id != Device.springboardId, overQuery.exists, let over = try? overQuery.snapshot() {
             // a system alert (permission, notification prompt) or sheet alone; Control Center or the power-off screen
             // as all the home screen app shows, as their power and emergency controls lie outside what the query finds
             let alert = Device.aloneOverTheApp.contains(over.elementType)
-            let shown = alert ? over : try? KeyedSnapshot.of(springboard) ?? springboard.snapshot()
-            if let shown, alert || id != Device.springboardId {
-                alertFrame = shown.frame
-                windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": box(shown.frame),
+            if let shown = alert ? over : try? KeyedSnapshot.of(springboard) ?? springboard.snapshot() {
+                let frame = springboardFrames(shown, root: screen, last: screen)
+                alertFrame = frame(shown)
+                windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": box(frame(shown)),
                                 "active": false, "focused": false])
-                add(shown, window: 1)
+                add(shown, window: 1, frame: frame)
             }
         }
         // a scroll view's bars are no control: shown only while it scrolls, they would name the screen's
@@ -100,6 +111,26 @@ extension Device {
             nodes[index].flags &= ~Flag.visible
         }
         return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
+    }
+
+    /// Where each element of the home screen app's `read` is on a device turned to landscape: its windows stand
+    /// upright under an app in landscape, on an iPhone and an iPad alike, and a frame of theirs had an alert's buttons
+    /// where they are not, or off the screen (`turnsHomeScreen`, by the `root` of the read they are in and the app's
+    /// shape in the `last` read). The home screen app's own root stands as XCTest last saw it, upright or turned.
+    private func springboardFrames(_ read: XCUIElementSnapshot, root: CGRect, last: CGRect?)
+        -> (XCUIElementSnapshot) -> CGRect {
+        let device = XCUIDevice.shared.orientation.rawValue
+        // the window of what is over the app: the home screen app has others, some of them sized in pixels
+        guard device == 3 || device == 4,
+              let window = read.elementType == .application
+                  ? read.children.first(where: { $0.elementType == .window && Device.overAnApp($0) })?.frame
+                  : (try? springboard.windows.containing(Device.overTheApp).firstMatch.snapshot())?.frame,
+              turnsHomeScreen(window: window, device: device, root: root, last: last)
+        else { return { $0.frame } }
+        return { snap in
+            snap.elementType == .application && snap.frame.width > snap.frame.height
+                ? snap.frame : turnedFrame(snap.frame, window: window, device: device)
+        }
     }
 
     /**
@@ -113,10 +144,10 @@ extension Device {
         // scrolling pushed out the screen with copies, which then asked again, 144 to 203 ms on a simulator
         let repeated = repeatedControls(c.nodes)
         if repeated.isEmpty { return }
-        let app = front().0
+        let (app, id) = front()
         // the home screen's copies are a widget and its icon, or a keyboard on its way: asking of them went to a
         // widget's process, and on an iPhone took 7 s and then did not answer
-        if app === springboard { return }
+        if id == Device.springboardId { return }
         let soon = Date().addingTimeInterval(Device.copiesAskS)
         var askedOne = false
         for idxs in repeated.prefix(4) {
@@ -153,8 +184,9 @@ extension Device {
             if Date() >= end { return nil }
             let element = query.element(boundBy: index)
             // what it reads may have gone by now, as a keyboard's does as it closes: a snapshot throws where
-            // a live element's frame ends the runner
-            guard element.exists, !element.isHittable, let snap = try? element.snapshot() else { continue }
+            // a live element's frame ends the runner. A copy XCUI cannot tell of stays shown
+            guard element.exists, IssueTrap.answer({ element.isHittable }) == false,
+                  let snap = try? element.snapshot() else { continue }
             let place = box(snap.frame)
             if let copy = idxs.first(where: { nodes[$0].box == place }) { hidden.append(nodes[copy].copyKey) }
         }

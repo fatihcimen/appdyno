@@ -100,7 +100,7 @@ describe('an iOS screen', () => {
     expect(d.calls.filter((c) => c.name === 'act')).toEqual([]);
   });
 
-  it("answers a system alert with the app's screen, not the home screen's card of it while the app comes back", async () => {
+  it("answers a system alert, by alert or by a tap on it, with the app's screen, not the home screen's card of it while the app comes back", async () => {
     const prompt = JSON.parse(
       readFileSync(
         join(
@@ -141,26 +141,30 @@ describe('an iOS screen', () => {
       ...prompt,
       windows: prompt.windows.map((w, i) => (i ? w : { ...w, pkg: 'com.apple.springboard' })),
     };
-    for (const before of [prompt, alone]) {
-      const d = new Simulator(before);
-      const act = d.act.bind(d);
-      d.act = (action, opts) => {
-        d.fixture = card;
-        return act(action, opts);
-      };
-      const tree = d.tree.bind(d);
-      let cards = 0;
-      d.tree = () => {
-        if (d.fixture === card && ++cards > 2) d.fixture = app;
-        return tree();
-      };
-      const { call } = await connect(d, APP);
-      const r = await call('alert', { answer: 'Allow', read: 'full' });
-      expect(r.text).toContain(
-        'answered the system alert: "Allow"\nforeground: dev.appdyno.fixture',
-      );
-      expect(r.text).not.toMatch(/WARNING|AppSwitcherContentView/);
-    }
+    // by alert, and by a plain tap on its Allow (3 of 3 answered with the card, on an iPad and an iPhone)
+    const answers = [
+      ['alert', { answer: 'Allow' }, 'answered the system alert: "Allow"'],
+      ['tap', { x: 275, y: 518 }, 'tapped 275,518'],
+    ] as const;
+    for (const before of [prompt, alone])
+      for (const [tool, args, said] of answers) {
+        const d = new Simulator(before);
+        const act = d.act.bind(d);
+        d.act = (action, opts) => {
+          d.fixture = card;
+          return act(action, opts);
+        };
+        const tree = d.tree.bind(d);
+        let cards = 0;
+        d.tree = () => {
+          if (d.fixture === card && ++cards > 2) d.fixture = app;
+          return tree();
+        };
+        const { call } = await connect(d, APP);
+        const r = await call(tool, { ...args, read: 'full' });
+        expect(r.text).toContain(`${said}\nforeground: dev.appdyno.fixture`);
+        expect(r.text).not.toMatch(/WARNING|AppSwitcherContentView/);
+      }
   });
 
   it('refuses typing with no field focused and no keyboard, before any key is sent', async () => {

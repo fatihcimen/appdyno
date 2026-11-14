@@ -61,6 +61,11 @@ appdyno 1.1.1 keeps an iOS runner fast on a screen with a control drawn twice un
 - A trace Xcode's trace tool did not finish recording by itself, and then cannot read, says the tool did not finish and when it was stopped, and asks for a quieter Mac only where this Mac's load is high: at load 4 to 8, `perf_profile` blamed the load after 244 s of a hung tool.
 - `perf_query` given what is not a kept trace, as a measurement's id, is refused with `INVALID_ARGUMENT`, not `POLICY_DENIED`, with a plain hint.
 - `audit` names an issue's kind once where its rule says no more: `textClipped XCUIAccessibilityAuditType.textClipped` reads `textClipped`.
+- On an iPad, a runner reading an app in landscape after a sheet or an alert dimmed it no longer ends: XCUI could not tell whether a copy of the dimming overlay on the screen's edge could be touched, and that failure ended the runner's test whatever `continueAfterFailure` says. NetNewsWire replaced its runner at 8 of 9 calls, 7 to 11 s each; a copy XCUI cannot tell of now stays shown, as on a screen with no copy, and 0 of 30 reads replaced it.
+- On an iOS simulator or an iPhone in landscape, a system alert is read where the screen shows it: the home screen app keeps its windows upright, and the alert's frames were given as they stand there. An iPad's notification prompt listed Allow at 356,664 where the picture had it at 664,465, an iPhone's listed no Allow at all, and `alert` said `answered the system alert: "Allow"` while the alert stayed (3 of 3). `open_link` now answers a link's "Open in …?" in landscape too, where it said `the system asks` after 16 to 19 s.
+- A system alert is read once when the runner's app is the home screen app: `find text=Open` gave `@4q51` and `@4q51-2` at one point, and a location prompt listed 12 elements for 6.
+- A `tap`, `double_tap` or `long_press` that closes a system alert answers with the app's screen, as `alert` does: it answered with the app's card in the switcher and a warning that the app was not in the foreground (3 of 3).
+- The warning that the app is not in the foreground names the app expected beside the one in front.
 
 ## 1.1.0
 

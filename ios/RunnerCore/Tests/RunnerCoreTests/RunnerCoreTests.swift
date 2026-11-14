@@ -182,6 +182,35 @@ final class GestureTimelineTests: XCTestCase {
         XCTAssertEqual([1, 2, 3, 4].map { touchTurn(device: $0, app: tall, pad: true) }, [1, 2, 4, 3])
     }
 
+    func testTheHomeScreenAppsUprightFramesTurnToTheLandscapeAppsSpace() {
+        let upright = CGRect(x: 0, y: 0, width: 820, height: 1180), wide = CGRect(x: 0, y: 0, width: 1180, height: 820)
+        // an iPad's notification prompt over an app in landscape: Allow listed at 356,664, drawn at 664,464
+        let allow = CGRect(x: 332, y: 594, width: 48, height: 140)
+        XCTAssertEqual(turnedFrame(allow, window: upright, device: 3), CGRect(x: 594, y: 440, width: 140, height: 48))
+        XCTAssertEqual(turnedFrame(allow, window: upright, device: 4), CGRect(x: 446, y: 332, width: 140, height: 48))
+        // the whole window is the whole screen as it stands
+        XCTAssertEqual(turnedFrame(upright, window: upright, device: 3), wide)
+        XCTAssertEqual(turnedFrame(upright, window: upright, device: 4), wide)
+        // a window that turned with the app, a device upright or lying flat: as it is
+        XCTAssertEqual(turnedFrame(allow, window: wide, device: 3), allow)
+        XCTAssertEqual(turnedFrame(allow, window: upright, device: 1), allow)
+        XCTAssertEqual(turnedFrame(allow, window: upright, device: 5), allow)
+    }
+
+    func testTheHomeScreenAppTurnsWithTheAppItShowsSomethingOver() {
+        let upright = CGRect(x: 0, y: 0, width: 402, height: 874), wide = CGRect(x: 0, y: 0, width: 874, height: 402)
+        // read as itself turned, after a read of the home screen upright: an iPhone's first prompt of a fresh app
+        XCTAssertTrue(turnsHomeScreen(window: upright, device: 3, root: wide, last: upright))
+        // read upright, as XCTest had it under an iPad's app in landscape: as that app stood
+        XCTAssertTrue(turnsHomeScreen(window: upright, device: 4, root: upright, last: wide))
+        XCTAssertTrue(turnsHomeScreen(window: upright, device: 3, root: upright, last: nil))
+        // an app that stayed upright on a turned phone, a device upright or lying flat, a window turned already
+        XCTAssertFalse(turnsHomeScreen(window: upright, device: 3, root: upright, last: upright))
+        XCTAssertFalse(turnsHomeScreen(window: upright, device: 1, root: wide, last: wide))
+        XCTAssertFalse(turnsHomeScreen(window: upright, device: 5, root: wide, last: wide))
+        XCTAssertFalse(turnsHomeScreen(window: wide, device: 3, root: wide, last: wide))
+    }
+
     func testFingersGoDownTogetherAndLiftAfterTheLastSampleOfAny() throws {
         let plan = try gestureTimeline([
             [sample(10, 10, 100), sample(20, 10, 200), sample(30, 10, 300)],
@@ -233,5 +262,25 @@ final class ErrorTests: XCTestCase {
         XCTAssertTrue(try synthesized(true, "a tap"))
         XCTAssertFalse(try synthesized(false, "a tap"))
         XCTAssertThrowsError(try synthesized(nil, "a tap")) { XCTAssertEqual(($0 as? AgentError)?.code, "TIMEOUT") }
+    }
+
+    func testAQuestionXCTestFailedHasNoAnswerAndItsIssueGoesNoFurther() {
+        _ = IssueTrap.take()
+        var kept = true
+        // what the runner's test does with an issue XCTest records while the question is asked
+        let answer = IssueTrap.answer { () -> Bool in
+            kept = IssueTrap.keep("Failed to determine hittability of \"AdditionalDimmingOverlay\" Image")
+            return false
+        }
+        XCTAssertNil(answer)
+        XCTAssertFalse(kept)
+        XCTAssertNil(IssueTrap.take())
+    }
+
+    func testAnIssueOutsideAQuestionIsTheRequestsError() {
+        _ = IssueTrap.take()
+        XCTAssertTrue(IssueTrap.answer { true } ?? false)
+        XCTAssertTrue(IssueTrap.keep("Neither element nor any descendant has keyboard focus"))
+        XCTAssertEqual(IssueTrap.take(), "Neither element nor any descendant has keyboard focus")
     }
 }

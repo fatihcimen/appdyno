@@ -8,8 +8,52 @@ import {
   withoutCopies,
   type RawAx,
 } from '../src/simtree.js';
+import { DirectSim } from '../src/simdirect.js';
+import type { HelperProcess } from '../src/simhelper.js';
 import { touchEvents } from '../src/simtouch.js';
 import { SCREEN, cell, app, tree } from './sim-trees.js';
+
+describe('a link\'s "Open in …?" over an app in landscape', () => {
+  // as the read helper gave it on an iPad turned left: the alert's window and frames upright, the screen turned
+  const alert = {
+    a: 3,
+    e: '_UIAlertControllerPhoneTVMacView',
+    f: [359.5, 430, 126, 320],
+    k: [
+      { a: 48, l: 'Open in “appdyno fixture”?', f: [437, 460, 20, 260] },
+      { a: 9, l: 'Cancel', f: [375, 446, 48, 140] },
+      { a: 9, l: 'Open', f: [375, 594, 48, 140] },
+    ],
+  };
+  const answers: Record<string, unknown> = {
+    read: { ok: true, tree: { a: 1, f: [0, 0, 820, 1180], k: [alert] }, screen: [1180, 820] },
+    orientation: { ok: true, orientation: 3 },
+  };
+  const helper = {
+    closed: false,
+    call: (q: { op: string }) => Promise.resolve(answers[q.op] ?? { ok: true }),
+    close: () => undefined,
+  } as unknown as HelperProcess;
+
+  it('gives its buttons where the turned screen shows them, and reads no app turned', async () => {
+    const d = new DirectSim('u', {
+      ax: () => Promise.resolve(helper),
+      hid: () => Promise.resolve(helper),
+    });
+    // where the runner lists them and the picture has them: 516,421 and 664,421
+    expect(await d.read('com.apple.springboard')).toEqual({
+      refused: 'landscape',
+      prompt: {
+        words: ['Open in “appdyno fixture”?'],
+        buttons: [
+          { label: 'Cancel', x: 516, y: 421 },
+          { label: 'Open', x: 664, y: 421 },
+        ],
+      },
+    });
+    expect(await d.read('dev.appdyno.fixture')).toEqual({ refused: 'landscape' });
+  });
+});
 
 describe('another process on the home screen', () => {
   const HOME = 'com.apple.springboard';

@@ -25,11 +25,12 @@ extension Device {
         return (object.value(forKey: "hasKeyboardFocus") as? Bool) ?? false
     }
 
-    static func node(_ snap: XCUIElementSnapshot, parent: Int, window: Int, screen: CGRect) -> Node {
-        let b = box(snap.frame)
+    /// `frame`: where it is in the screen's space, its own frame but for the home screen app's (`turnedFrame`).
+    static func node(_ snap: XCUIElementSnapshot, frame: CGRect, parent: Int, window: Int, screen: CGRect) -> Node {
+        let b = box(frame)
         let t = snap.elementType
         var f = 0
-        if snap.frame.width > 0, snap.frame.height > 0, snap.frame.intersects(screen) { f |= Flag.visible }
+        if frame.width > 0, frame.height > 0, frame.intersects(screen) { f |= Flag.visible }
         if clickableTypes.contains(t) { f |= Flag.clickable }
         if editableTypes.contains(t) { f |= Flag.editable | Flag.focusable }
         if snap.hasFocus || (editableTypes.contains(t) && hasKeyboardFocus(snap)) { f |= Flag.focused }

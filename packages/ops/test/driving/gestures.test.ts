@@ -346,6 +346,9 @@ describe('gestures, keys, clipboard', () => {
     // back in front, and gone with nothing that took it away
     front = 'launcher';
     expect(await warned('screen')).toBe(true);
+    expect((await call('screen')).text).toContain(
+      'WARNING: the app is not in the foreground (launcher is, not dev.app)',
+    );
   });
 
   it('refuses an app the device does not have by one code on every platform, with how to list them', async () => {

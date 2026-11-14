@@ -1,4 +1,4 @@
-import { alertAnswer, type Screen } from '@appdyno/core';
+import { alertAnswer } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { stepsOp } from './batch.js';
@@ -6,7 +6,7 @@ import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
 import { keyboardGone } from './keyboard.js';
-import { windowAt } from './power.js';
+import { backFromAlert } from './noticed.js';
 import {
   AssertStep,
   Coord,
@@ -258,27 +258,13 @@ function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
           many ? 'AMBIGUOUS' : 'NOT_FOUND',
         );
       const label = clean(hit.label);
-      // an iOS alert over an app is the home screen app's: as it goes, that app is in front a moment, showing only the
-      // app's card in its switcher, and the settle answered with that (5 of 5)
-      const owner = screen.tree.windows[windowAt(screen.tree, hit) ?? -1]?.pkg;
-      // what it is over: the app in front on this read, else the selected one where it runs, as a read of the alert
-      // alone is the home screen app's
-      const alone = screen.foreground === owner;
-      const app = s.appId;
-      const over = !alone
-        ? screen.foreground
-        : app && (await s.device.appRunning(app).catch(() => false))
-          ? app
-          : undefined;
-      const back =
-        owner && over && owner !== over ? (x: Screen) => x.foreground !== owner : undefined;
       const r = await act(
         s,
         read,
         (o) => s.device.tap(hit, o),
         `answered the system alert: ${JSON.stringify(label)}`,
         undefined,
-        back,
+        await backFromAlert(s, screen, hit),
       );
       return { ...r, data: { ...r.data, answered: label } };
     },

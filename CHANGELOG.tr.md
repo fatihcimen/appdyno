@@ -61,6 +61,11 @@ appdyno 1.1.1, bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpı
 - Xcode'un iz aracının kaydını kendiliğinden bitirmediği, sonra da okuyamadığı bir iz, aracın bitirmediğini ve ne zaman durdurulduğunu söyler; daha sakin bir Mac'i yalnızca bu Mac'in yükü yüksekken ister: `perf_profile`, 4–8 yükte, takılan bir araçla geçen 244 sn'nin ardından suçu yüke atıyordu.
 - Saklanan bir iz olmayan bir şey, bir ölçümün kimliği gibi, verilen `perf_query` `POLICY_DENIED` ile değil `INVALID_ARGUMENT` ile, sade bir ipucuyla reddedilir.
 - `audit`, kuralı türünden fazlasını söylemeyen bir sorunun türünü bir kez söyler: `textClipped XCUIAccessibilityAuditType.textClipped` artık `textClipped` diye okunur.
+- Bir iPad'de, bir sayfa ya da uyarı ekranı kararttıktan sonra bir uygulamayı yatayda okuyan runner artık sona ermiyor: XCUI ekranın kenarındaki bir karartma katmanı kopyasına dokunulup dokunulamayacağını söyleyemiyordu ve bu hata, `continueAfterFailure` ne derse desin runner'ın testini bitiriyordu. NetNewsWire 9 çağrının 8'inde runner'ını değiştirtiyordu, her biri 7 ile 11 sn; XCUI'nin söyleyemediği bir kopya artık kopyası olmayan bir ekrandaki gibi gösterilir ve 30 okumanın 0'ı runner'ı değiştirdi.
+- Yatayda bir iOS simülatöründe ya da iPhone'da bir sistem uyarısı ekranın gösterdiği yerde okunur: ana ekran uygulaması pencerelerini dik tutar ve uyarının çerçeveleri orada durdukları gibi veriliyordu. Bir iPad'in bildirim isteminde Allow, resimde 664,465'teyken 356,664'te listeleniyor, bir iPhone'unkinde hiç listelenmiyordu; `alert` da uyarı yerinde dururken `answered the system alert: "Allow"` diyordu (3'te 3). `open_link` artık yatayda da bir bağlantının "Open in …?" sorusunu cevaplar; 16 ile 19 sn sonra `the system asks` diyordu.
+- Runner'ın uygulaması ana ekran uygulaması olduğunda bir sistem uyarısı bir kez okunur: `find text=Open` aynı noktada `@4q51` ve `@4q51-2` veriyor, bir konum istemi 6 öğe için 12 öğe listeliyordu.
+- Bir sistem uyarısını kapatan `tap`, `double_tap` ya da `long_press`, `alert` gibi uygulamanın ekranıyla cevap verir: geçiş ekranındaki uygulama kartıyla ve uygulamanın önde olmadığı uyarısıyla cevap veriyordu (3'te 3).
+- Uygulamanın önde olmadığı uyarısı, öndekinin yanında beklenen uygulamayı da anar.
 
 ## 1.1.0
 
