@@ -330,6 +330,25 @@ describe('an answer', () => {
     expect(nodes.some((n) => n.ref === listed)).toBe(true);
   });
 
+  it('of screen raw and find hides a secret in an element id as in its words', async () => {
+    const device = new FakeDevice();
+    const shown = device.current.bind(device);
+    device.current = () => {
+      const t = shown();
+      const form = t.nodes.find((n) => n.t === 'Form' || n.d === 'Form');
+      if (form) form.id = 'account-user@example.test';
+      return t;
+    };
+    const { ctx } = await connect(device, { secrets: ['user@example.test'] });
+    const call = callerOf(ctx, onFakeTime);
+    const raw = JSON.stringify((await call('screen', { raw: true })).data);
+    const found = JSON.stringify((await call('find', { selector: { text: 'Form' } })).data);
+    for (const answer of [raw, found]) {
+      expect(answer).not.toContain('user@example.test');
+      expect(answer).toContain('account-•••');
+    }
+  });
+
   it('that leaves out what its schema asks for does not compile', () => {
     const op = defineOp({
       name: 'x',

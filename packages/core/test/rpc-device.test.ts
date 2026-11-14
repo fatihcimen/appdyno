@@ -11,7 +11,7 @@ import {
 import { agentLeft } from '../src/agent-hosts.js';
 import { readStateFile, writeStateFile } from '../src/state.js';
 import { assertLatLon, RpcDevice } from '../src/rpc-device.js';
-import { greet } from '../src/rpc.js';
+import { greet, type RpcClient } from '../src/rpc.js';
 import type { ActOptions } from '../src/device.js';
 import {
   fakeAgent,
@@ -52,7 +52,7 @@ class TestDevice extends RpcDevice {
     });
   }
 
-  protected restartStuck() {
+  protected restartStuck(_rpc?: RpcClient): Promise<string | undefined> {
     return Promise.resolve(undefined);
   }
 
@@ -436,6 +436,42 @@ describe('an agent that gets stuck again on the screen that held the last', () =
         ) as unknown,
       });
       expect(d.restarts).toBe(2);
+      stuck = false;
+      await expect(d.tree()).resolves.toBeDefined();
+      stuck = true;
+      await expect(d.tree()).rejects.toMatchObject({
+        hint: expect.stringMatching(/restarted/) as unknown,
+      });
+      expect(d.restarts).toBe(3);
+    }),
+  );
+});
+
+describe('an agent that answers again after it came back', () => {
+  class Stuck extends TestDevice {
+    protected override readonly stuckRestarts = 2;
+    restarts = 0;
+    // as a device does: the stuck connection goes, and the next call makes another
+    protected override restartStuck(rpc?: RpcClient) {
+      this.restarts++;
+      rpc?.close();
+      return Promise.resolve(undefined);
+    }
+  }
+  const never = () => new Promise<never>(() => undefined);
+
+  it(
+    'counts its stuck restarts anew where a read answered on a new connection',
+    fakeTimed(async () => {
+      let stuck = true;
+      const hang: Record<string, FakeHandler> = {
+        'tree.get': () => (stuck ? never() : { result: wireTree([{ t: 'Merhaba' }]) }),
+        'app.foreground': () => (stuck ? never() : { result: { pkg: 'a.b' } }),
+      };
+      const d = new Stuck([hang, hang, { 'tree.get': gone }, hang], 'stuck-then-back');
+      for (const _ of [1, 2]) await expect(d.tree()).rejects.toBeDefined();
+      expect(d.restarts).toBe(2);
+      // the connection drops, and the read retried on a new one answers
       stuck = false;
       await expect(d.tree()).resolves.toBeDefined();
       stuck = true;
