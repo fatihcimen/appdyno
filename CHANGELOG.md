@@ -4,6 +4,16 @@
 
 ## Unreleased
 
+### Changed
+
+- `screen` takes `raw: true` and then also gives every element of the tree in its structured answer: its ref, type, words, rect, flags and its parent's index, for a program that drives the device through appdyno and needs the tree itself rather than the folded list a model reads. Its words are cleaned as the list's are, and a password field's text is left out.
+
+### Fixed
+
+- On an iOS simulator or an iPhone, a screen with a control drawn twice and something that moves elsewhere, as a turning banner over a grid of cells, no longer makes every read ask XCUI of each copy again: which copy a tap reaches is kept by the copies' places and what is over them, not by the whole screen's layout, and one read asks for at most half a second more of a few groups (always of one), leaving the rest to the next read. On such a screen a read took 25 s and more, past the 15 s a read has, and taps 15 to 27 s.
+- A runner that answers a quick call with its own TIMEOUT, as one does when the call came too late to start, is not taken for stuck and restarted: only no answer at all is stuck.
+- An iOS runner restarted as stuck twice in a row, with nothing answered between, is left running at the third: a screen that held every new runner as it held the last made a loop of them, a start and then 15 s of nothing, 13 times in one session. The timeout says the runner was left, and why.
+
 ## 1.1.0
 
 appdyno 1.1.0 fixes what driving seven builds of five open-source apps showed, measures the scroll of an app that draws on its own surface, as a Flutter app does on Android, and adds a shop example to try an agent on.

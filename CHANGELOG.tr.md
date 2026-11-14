@@ -4,6 +4,16 @@
 
 ## Yayımlanmamış
 
+### Değişti
+
+- `screen` `raw: true` alır ve o zaman yapılandırılmış cevabında ağacın her öğesini de verir: ref'i, türü, sözleri, dikdörtgeni, bayrakları ve üst öğesinin sırası. Cihazı appdyno üzerinden süren ve bir modelin okuduğu katlanmış liste yerine ağacın kendisine ihtiyaç duyan bir program içindir. Sözleri listedekiler gibi temizlenir, şifre alanının metni verilmez.
+
+### Düzeltildi
+
+- Bir iOS simülatöründe ya da iPhone'da, iki kez çizilmiş bir kontrolü ve başka bir yerde kıpırdayan bir şeyi olan bir ekran (bir hücre ızgarasının üstünde dönen bir banner gibi) artık her okumada XCUI'ye her kopyayı yeniden sordurmuyor: bir dokunuşun hangi kopyaya ulaştığı ekranın bütün düzenine göre değil, kopyaların yerlerine ve üstlerindekine göre tutulur. Bir okuma birkaç gruba en çok yarım saniye daha sorar (her zaman en az birine), gerisini sonraki okumaya bırakır. Böyle bir ekranda bir okuma 25 sn'yi, yani bir okumanın 15 sn'lik süresini aşıyor, dokunuşlar 15 ile 27 sn sürüyordu.
+- Hızlı bir çağrıya kendi TIMEOUT'uyla cevap veren bir runner (çağrı başlamak için geç kaldığında olduğu gibi) takılmış sayılıp yeniden başlatılmıyor: yalnızca hiç cevap vermemek takılmaktır.
+- Arada hiçbir şey cevaplanmadan art arda iki kez takılmış diye yeniden başlatılan bir iOS runner'ı üçüncüsünde çalışır halde bırakılır: her yeni runner'ı bir öncekini tuttuğu gibi tutan bir ekran onları döngüye sokuyordu; bir oturumda 13 kez bir başlangıç ve ardından 15 sn hiçbir şey. Zaman aşımı runner'ın bırakıldığını ve nedenini söyler.
+
 ## 1.1.0
 
 appdyno 1.1.0, beş açık kaynak uygulamanın yedi build'ini sürmenin gösterdiklerini düzeltir, Android'de bir Flutter uygulaması gibi kendi yüzeyine çizen bir uygulamanın kaydırmasını ölçer ve bir ajanın üzerinde denenebileceği bir alışveriş örneği ekler.
