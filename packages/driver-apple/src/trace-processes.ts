@@ -12,18 +12,18 @@ export const noteWatcher = (note: string, capS: number) =>
   );
 
 /**
- * The trace tool's word that its recording started, by `note`, or `waitMs` on: what a recording's `during` waits for.
- * The watcher ends by itself a little after that, whoever is left to end it.
+ * The trace tool's word that its recording started, by `note`: what a recording's `during` waits for, and whether it
+ * came within `waitMs`. The watcher ends by itself a little after that, whoever is left to end it.
  */
 export function startWord(note: string, waitMs: number) {
   const watcher = noteWatcher(note, waitMs / 1000 + 10);
-  const started = new Promise<void>((resolve) => {
+  const started = new Promise<boolean>((resolve) => {
     // it prints the name when the note comes, and ends
-    watcher.stdout.once('data', () => resolve());
-    watcher.once('exit', () => resolve());
-    watcher.once('error', () => resolve());
-    // a tool that never says: `during` runs anyway, and the result shows what it caught
-    setTimeout(resolve, waitMs).unref();
+    watcher.stdout.once('data', () => resolve(true));
+    // a watcher gone tells nothing either way: the recording goes on as one that started
+    watcher.once('exit', () => resolve(true));
+    watcher.once('error', () => resolve(true));
+    setTimeout(() => resolve(false), waitMs).unref();
   });
   return { started, end: () => watcher.kill() };
 }

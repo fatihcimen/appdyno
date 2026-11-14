@@ -32,7 +32,7 @@ const STOP_MS = 120_000;
 /** The whole recording is cut at this, whatever the tool does. */
 const CAP_MS = 240_000;
 
-/** How long the tool may take to say it has started before `during` runs without it. */
+/** How long the tool may take to say it has started: a minute at load 200; one silent longer never began. */
 const START_MS = 90_000;
 const KILL_MS = 30_000;
 
@@ -187,8 +187,16 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   let end = setTimeout(() => rec.kill('SIGKILL'), CAP_MS + KILL_MS);
   // its limit counts from its start, which took more than a minute on a Mac at load 200
   let over = false;
-  void started.then(() => {
+  void started.then((said) => {
     if (over) return;
+    // a tool this silent hung before it recorded: its time and stop window, waited out as well, made 213 s
+    if (!said) {
+      clearTimeout(stop);
+      clearTimeout(end);
+      rec.kill('SIGINT');
+      end = setTimeout(() => rec.kill('SIGKILL'), KILL_MS);
+      return;
+    }
     void helpers();
     const limit = Math.min(r.seconds * 1000 + STOP_MS, CAP_MS);
     clearTimeout(stop);
@@ -197,8 +205,9 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     end = setTimeout(() => rec.kill('SIGKILL'), limit + KILL_MS);
   });
   try {
-    const atOnce = await Promise.race([started.then(() => false), exited.then(() => true)]);
-    if (r.during && !atOnce) await r.during();
+    // undefined: the tool ended at once; true: it never began
+    const hung = await Promise.race([started.then((said) => !said), exited.then(() => undefined)]);
+    if (r.during && hung === false) await r.during();
     if (r.endWithDuring) {
       await helpers();
       rec.kill('SIGINT');
@@ -218,6 +227,12 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
         'DEVICE_GONE',
         `${r.device} went away during the recording: ${failure(log)}`,
         'check its cable or hub, then measure again',
+      );
+    if (hung)
+      throw new DeviceError(
+        'TIMEOUT',
+        `the trace tool did not start a ${r.seconds} s recording in ${START_MS / 1000} s: it was stopped`,
+        'nothing is wrong with the device: the trace tool hung before it recorded; measure again',
       );
     // a stopped recording still has what it caught
     if (

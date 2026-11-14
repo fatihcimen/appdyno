@@ -21,7 +21,7 @@ import {
 } from '../src/trace-parse.js';
 import { queryTraceFile } from '../src/trace.js';
 import { childrenNamed, endLeftBehind } from '../src/left-behind.js';
-import { noteWatcher } from '../src/trace-processes.js';
+import { noteWatcher, startWord } from '../src/trace-processes.js';
 
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
 
@@ -41,6 +41,24 @@ describe("the wait for the trace tool's word that it started", () => {
       clearInterval(post);
     }
     expect(await exited).toEqual([0, null]);
+  });
+
+  it('says whether the word came, or its wait ran out with none', async () => {
+    const silent = startWord(note(), 300);
+    try {
+      expect(await silent.started).toBe(false);
+    } finally {
+      silent.end();
+    }
+    const name = note();
+    const heard = startWord(name, 30_000);
+    const post = setInterval(() => execFileSync('/usr/bin/notifyutil', ['-p', name]), 200);
+    try {
+      expect(await heard.started).toBe(true);
+    } finally {
+      clearInterval(post);
+      heard.end();
+    }
   });
 
   // a server killed mid-recording runs no `finally`: nothing but the watcher itself can end it
