@@ -50,3 +50,30 @@ struct FormScreen: View {
         .padding()
     }
 }
+
+/// A control drawn twice, one copy under another control, below a banner that turns on its own, as a home screen's
+/// carousel does: the banner changes the layout at every read, and the copies do not move.
+struct CopiesUnderBannerScreen: View {
+    @State private var turn = 0
+    let timer = Timer.publish(every: 0.3, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Button("Kampanya \(turn % 4 + 1)") {}
+                .accessibilityIdentifier("promo_banner")
+                .frame(width: 200, height: 80)
+                .background(Color.orange)
+                .offset(x: CGFloat(turn % 40) * 3)
+            HStack {
+                ZStack {
+                    Button("x-mark") {}.accessibilityIdentifier("dup_close")
+                    Button("Üstteki") {}.frame(width: 120, height: 44).background(Color.purple)
+                }
+                Button("x-mark") {}.accessibilityIdentifier("dup_close")
+            }
+            Spacer()
+        }
+        .padding()
+        .onReceive(timer) { _ in turn += 1 }
+    }
+}

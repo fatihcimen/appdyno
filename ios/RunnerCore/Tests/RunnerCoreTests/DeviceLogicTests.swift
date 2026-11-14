@@ -107,6 +107,37 @@ final class RepeatedControlTests: XCTestCase {
         XCTAssertNotEqual(control("a").copyKey, moved.copyKey)
         XCTAssertEqual(control("a").copyKey, control("a").copyKey)
     }
+
+    func testGroupsComeInTheScreensOrder() {
+        let nodes = [control("b"), control("a"), control("b"), control("a"), control("c"), control("c")]
+        for _ in 0 ..< 20 { XCTAssertEqual(repeatedControls(nodes), [[0, 2], [1, 3], [4, 5]]) }
+    }
+
+    private func at(_ id: String?, _ left: Int, _ top: Int, _ right: Int, _ bottom: Int,
+                    type: String = "Button") -> Node {
+        Node(parent: -1, window: 0, type: type, id: id, left: left, top: top, right: right, bottom: bottom,
+             flags: Flag.visible)
+    }
+
+    /// A grid's two copies of a cell, a banner above them, a sheet that may come over one.
+    private func screen(banner: Int, sheet: Bool = false, cell: Int = 300) -> [Node] {
+        var nodes = [at("cell", 0, cell, 100, cell + 100), at("cell", 0, cell, 100, cell + 100),
+                     at("banner", banner, 0, banner + 400, 200, type: "Image")]
+        if sheet { nodes.append(at("sheet", 0, 250, 400, 800, type: "Other")) }
+        return nodes
+    }
+
+    func testABannerMovingElsewhereKeepsTheCopiesKey() {
+        let group = repeatedControls(screen(banner: 0))[0]
+        XCTAssertEqual(copiesKey(screen(banner: 0), group), copiesKey(screen(banner: -120), group))
+        XCTAssertNotEqual(layoutHash(screen(banner: 0)), layoutHash(screen(banner: -120)))
+    }
+
+    func testWhatComesOverACopyOrMovesItChangesTheKey() {
+        let group = repeatedControls(screen(banner: 0))[0]
+        XCTAssertNotEqual(copiesKey(screen(banner: 0), group), copiesKey(screen(banner: 0, sheet: true), group))
+        XCTAssertNotEqual(copiesKey(screen(banner: 0), group), copiesKey(screen(banner: 0, cell: 320), group))
+    }
 }
 
 final class BoxTests: XCTestCase {

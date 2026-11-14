@@ -137,7 +137,25 @@ public func repeatedControls(_ nodes: [Node]) -> [[Int]] {
     for (index, node) in nodes.enumerated() where node.window == 0 && node.flags & Flag.visible != 0 {
         if let id = node.id { groups["\(node.type)#\(id)", default: []].append(index) }
     }
-    return groups.values.filter { (2 ... 3).contains($0.count) }
+    // in the screen's order: a dictionary's varies, and only the first few are asked
+    return groups.values.filter { (2 ... 3).contains($0.count) }.sorted { $0[0] < $1[0] }
+}
+
+/// What decides which copy of a repeated control a tap reaches: the copies' places and every shown node over any of
+/// them. A banner turning elsewhere on the screen leaves it as it was, as the layout digest does not. FNV-1a 64, hex.
+public func copiesKey(_ nodes: [Node], _ copies: [Int]) -> String {
+    let boxes = copies.map { nodes[$0] }
+    func over(_ node: Node) -> Bool {
+        boxes.contains { node.left < $0.right && $0.left < node.right && node.top < $0.bottom && $0.top < node.bottom }
+    }
+    var h: UInt64 = 0xcbf2_9ce4_8422_2325
+    for node in boxes + nodes.filter({ shown($0) && over($0) }) {
+        for unit in "\(node.copyKey);".utf16 {
+            h ^= UInt64(unit)
+            h = h &* 0x100_0000_01b3
+        }
+    }
+    return String(h, radix: 16)
 }
 
 /// A toolbar as large as the screen is the system's container, no bar (iOS 27 on a phone: XCUI calls it

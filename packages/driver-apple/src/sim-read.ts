@@ -3,7 +3,7 @@ import type { Tree } from '@appdyno/protocol';
 import { HOME_SCREEN_APP } from './platform-screen.js';
 import type { DirectSim } from './simdirect.js';
 import { type Capture, nodesBusy } from './simsettle.js';
-import { learnCopies, withoutCopies } from './simtree.js';
+import { copiesKey, learnCopies, withoutCopies } from './simtree.js';
 
 /** A first boot has nothing in front for a few seconds: this is shorter than a runner's start. */
 const FIRST_FRONT_MS = 10_000;
@@ -47,14 +47,16 @@ export class HelperReads {
    * The helper's read of the app in front, when it can say what the runner would; for one in the queue.
    * `final`: this read is an answer, not one of a settle's looks. Only XCUI tells which copy of a control a
    * tap reaches, so a layout with repeated controls is believed once the runner has read it alike, and that
-   * verdict is kept by the layout's digest. Any other layout needs no runner, and is checked once one is up.
+   * verdict is kept by the copies and what is over them. Any other layout needs no runner, and is checked once one is up.
    */
   async read(final: boolean): Promise<Capture | undefined> {
     const r = await this.front();
     if ('refused' in r) return undefined;
     // with a runner up it reads the widget too: this read is less, and no misread to hold against the helper
     if (r.partial && this.p.runnerUp()) return undefined;
-    const known = this.verdicts.get(r.tree.hash);
+    // kept by what can change it: under a banner that turns, every final read went to the runner
+    const key = copiesKey(r.tree);
+    const known = this.verdicts.get(key);
     if (known) return { tree: withoutCopies(r.tree, known), busy: r.busy };
     // while the runner starts, copies are answered as the helper finds them, all of them, rather than after its seconds
     if (!this.p.runnerUp() && (!r.copies || this.p.runnerStarting()))
@@ -64,8 +66,10 @@ export class HelperReads {
     const verdict = learnCopies(r.tree, runner);
     if (!verdict || !this.p.direct.checkRead(withoutCopies(r.tree, verdict), runner))
       return { tree: runner, busy: nodesBusy(runner), byRunner: true };
-    this.verdicts.delete(r.tree.hash);
-    this.verdicts.set(r.tree.hash, verdict);
+    // the runner ran out of time before it asked of every copy: its read stands, and is asked again
+    if (runner.truncated) return { tree: withoutCopies(r.tree, verdict), busy: r.busy };
+    this.verdicts.delete(key);
+    this.verdicts.set(key, verdict);
     if (this.verdicts.size > 64)
       this.verdicts.delete(must(this.verdicts.keys().next().value, 'a verdict'));
     return { tree: withoutCopies(r.tree, verdict), busy: r.busy };

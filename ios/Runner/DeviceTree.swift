@@ -109,13 +109,6 @@ extension Device {
      * one. XCUI's hittable check decides, only for such duplicates (a few queries).
      */
     func hideUnreachableCopies(_ c: inout Capture) {
-        let key = c.hash
-        if let known = unreachable.first(where: { $0.hash == key }) {
-            for index in c.nodes.indices where known.copies.contains(c.nodes[index].copyKey) {
-                c.nodes[index].flags &= ~Flag.visible
-            }
-            return
-        }
         // a layout with no copy asks nothing, and keeps no place among those that did: the reads of a list
         // scrolling pushed out the screen with copies, which then asked again, 144 to 203 ms on a simulator
         let repeated = repeatedControls(c.nodes)
@@ -124,27 +117,48 @@ extension Device {
         // the home screen's copies are a widget and its icon, or a keyboard on its way: asking of them went to a
         // widget's process, and on an iPhone took 7 s and then did not answer
         if app === springboard { return }
-        var hidden: [String] = []
-        defer {
-            unreachable.removeAll { $0.hash == key }
-            unreachable.append((key, hidden))
-            if unreachable.count > 8 { unreachable.removeFirst() }
-        }
+        let soon = Date().addingTimeInterval(Device.copiesAskS)
+        var askedOne = false
         for idxs in repeated.prefix(4) {
-            guard let id = c.nodes[idxs[0]].id else { continue }
-            let query = app.descendants(matching: .any).matching(identifier: id)
-            for index in 0 ..< min(query.count, 8) {
-                let element = query.element(boundBy: index)
-                // what it reads may have gone by now, as a keyboard's does as it closes: a snapshot throws where
-                // a live element's frame ends the runner
-                guard element.exists, !element.isHittable, let snap = try? element.snapshot() else { continue }
-                let place = box(snap.frame)
-                if let copy = idxs.first(where: { c.nodes[$0].box == place }) {
-                    c.nodes[copy].flags &= ~Flag.visible
-                    hidden.append(c.nodes[copy].copyKey)
+            // kept by what can change the answer, not by the whole layout: a real app's home grid under a turning
+            // banner had a new layout at every read and asked again each time, 25 s a read
+            let key = copiesKey(c.nodes, idxs)
+            var hidden = unreachable.first(where: { $0.hash == key })?.copies
+            // a read asks of one group at least; what is not asked by then stays shown, as a screen with no copy
+            // is, and is asked at the next read
+            if hidden == nil, Date() < soon || !askedOne {
+                askedOne = true
+                if let asked = askCopies(app, c.nodes, idxs, until: Date().addingTimeInterval(Device.copiesGroupS)) {
+                    unreachable.removeAll { $0.hash == key }
+                    unreachable.append((key, asked))
+                    if unreachable.count > 32 { unreachable.removeFirst() }
+                    hidden = asked
                 }
             }
+            // what was left unasked is said, so that no one keeps this read's copies as XCUI's verdict
+            if hidden == nil { c.truncated = true }
+            for index in idxs where hidden?.contains(c.nodes[index].copyKey) == true {
+                c.nodes[index].flags &= ~Flag.visible
+            }
         }
+    }
+
+    /// The copies of one control out of reach, by XCUI's hittable check: nil when time ran out first, as a verdict
+    /// asked in part would keep a copy shown, or hidden, for as long as the screen stays.
+    private func askCopies(_ app: XCUIApplication, _ nodes: [Node], _ idxs: [Int], until end: Date) -> [String]? {
+        guard let id = nodes[idxs[0]].id else { return [] }
+        let query = app.descendants(matching: .any).matching(identifier: id)
+        var hidden: [String] = []
+        for index in 0 ..< min(query.count, 8) {
+            if Date() >= end { return nil }
+            let element = query.element(boundBy: index)
+            // what it reads may have gone by now, as a keyboard's does as it closes: a snapshot throws where
+            // a live element's frame ends the runner
+            guard element.exists, !element.isHittable, let snap = try? element.snapshot() else { continue }
+            let place = box(snap.frame)
+            if let copy = idxs.first(where: { nodes[$0].box == place }) { hidden.append(nodes[copy].copyKey) }
+        }
+        return hidden
     }
 
     func remember(_ c: Capture) {

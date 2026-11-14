@@ -263,6 +263,23 @@ export function learnCopies(direct: Tree, runner: Tree): Set<string> | undefined
   return hidden;
 }
 
+/**
+ * What decides which copy of a repeated control a tap reaches (RunnerCore's `copiesKey`, over every group): the
+ * copies' places and every shown node over any of them. A banner turning elsewhere leaves it as it was, as the layout
+ * digest does not; a screen with no copies is known by that digest.
+ */
+export function copiesKey(t: Tree): string {
+  const groups = new Map<string, Node[]>();
+  for (const n of t.nodes)
+    if (n.w === 0 && (n.f & F.visible) !== 0 && n.id !== undefined)
+      groups.set(`${n.c}#${n.id}`, [...(groups.get(`${n.c}#${n.id}`) ?? []), n]);
+  const copies = [...groups.values()].filter((g) => g.length === 2 || g.length === 3).flat();
+  if (!copies.length) return t.hash;
+  const over = (n: Node) =>
+    copies.some((c) => n.b[0] < c.b[2] && c.b[0] < n.b[2] && n.b[1] < c.b[3] && c.b[1] < n.b[3]);
+  return [...copies, ...t.nodes.filter((n) => shown(n) && over(n))].map(copyKey).join(';');
+}
+
 /** The tree with those copies left out, as the runner's would have them. */
 export function withoutCopies(t: Tree, hidden: Set<string>): Tree {
   if (!hidden.size) return t;

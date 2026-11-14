@@ -22,6 +22,11 @@ import XCTest
     static let animationWaitS = 1.0
     /// How long typed text has to show in its field before it counts as not gone in.
     static let echoWaitS = 1.5
+    /// After this much of a read, no other group of a control's copies is asked of XCUI: each query walks the app's
+    /// whole tree, 0.1 to 0.4 s on a real app's home grid.
+    static let copiesAskS = 0.5
+    /// The most one group's queries take before they are left unasked: a read's own deadline is 15 s.
+    static let copiesGroupS = 3.0
 
     /// The protected resources by the names `app grant` and `revoke` take: a reset is all iOS offers.
     static let resources: [String: XCUIProtectedResource] = [

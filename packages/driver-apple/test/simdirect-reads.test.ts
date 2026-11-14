@@ -1,6 +1,13 @@
 import { assert, describe, expect, it } from 'vitest';
 import { must } from '@appdyno/core';
-import { layoutHash, learnCopies, toTree, withoutCopies, type RawAx } from '../src/simtree.js';
+import {
+  copiesKey,
+  layoutHash,
+  learnCopies,
+  toTree,
+  withoutCopies,
+  type RawAx,
+} from '../src/simtree.js';
 import { touchEvents } from '../src/simtouch.js';
 import { SCREEN, cell, app, tree } from './sim-trees.js';
 
@@ -143,6 +150,18 @@ describe('the helper read in the runner shape', () => {
     expect(must(without.nodes[1], 'a node').f & 1).toBe(1);
     expect(without.hash).toBe(layoutHash(runner.nodes));
     expect(learnCopies(tree(app(copy(0))).tree, runner)).toBeUndefined();
+  });
+
+  it('keeps a verdict by the copies and what is over them, not by a banner turning elsewhere', () => {
+    const copy = (y: number) => ({ a: 9, i: 'close', f: [0, y, 40, 40] }) as RawAx;
+    const banner = (x: number) =>
+      ({ a: 9, i: 'banner', l: 'Sale', f: [x, 400, 300, 100] }) as RawAx;
+    const sheet = { a: 0, i: 'sheet', l: 'Sheet', f: [0, 90, 300, 200] } as RawAx;
+    const at = (...k: RawAx[]) => tree(app(copy(0), copy(100), ...k)).tree;
+    expect(at(banner(0)).hash).not.toBe(at(banner(-120)).hash);
+    expect(copiesKey(at(banner(0)))).toBe(copiesKey(at(banner(-120))));
+    expect(copiesKey(at(banner(0)))).not.toBe(copiesKey(at(banner(0), sheet)));
+    expect(copiesKey(tree(app(copy(0), copy(120))).tree)).not.toBe(copiesKey(at()));
   });
 
   it('has nothing for the runner to tell of a control twice at one place, or of a list’s rows', () => {
