@@ -343,6 +343,14 @@ describe('gestures, keys, clipboard', () => {
     expect(await warned('launch_app', { app: 'dev.other' })).toBe(false);
     front = 'dev.app';
     expect(await warned('launch_app')).toBe(false);
+    // a back that left the app is the person's leaving, as home is
+    front = 'launcher';
+    expect([await warned('press_key', { key: 'back' }), await warned('screen')]).toEqual([
+      false,
+      false,
+    ]);
+    front = 'dev.app';
+    expect(await warned('screen')).toBe(false);
     // back in front, and gone with nothing that took it away
     front = 'launcher';
     expect(await warned('screen')).toBe(true);
