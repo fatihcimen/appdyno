@@ -300,8 +300,16 @@ export function stepsFor(
 ) {
   const words = wordsOf(clean);
   const { line, offer } = words;
-  const target = (s: Session, a: Aim, patient = false) =>
-    pastKeyboard(s, a, () => aim(s, a, words), patient);
+  const target = async (s: Session, a: Aim, patient = false) => {
+    const t = await pastKeyboard(s, a, () => aim(s, a, words), patient);
+    // a ref is named by its words at the touch: where those are not the ones it was shown with, which the answer's diff
+    // is against, both are said, as an old screen's ref read as if the touch had renamed it
+    const was = a.ref ? s.refWords.get(a.ref) : undefined;
+    const shown = was === undefined ? '' : JSON.stringify(clean(was));
+    return shown && !t.name.startsWith(`${a.ref ?? ''} ${shown}`)
+      ? { ...t, name: `${t.name} (shown as ${shown})` }
+      : t;
+  };
   const scrolling = scrollingFor({
     windowSize,
     line,

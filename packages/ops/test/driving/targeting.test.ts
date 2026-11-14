@@ -1,4 +1,4 @@
-import { must, type ActOptions } from '@appdyno/core';
+import { must, pause, type ActOptions } from '@appdyno/core';
 import { DeviceError, type ActParams, type Tree } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
@@ -74,6 +74,48 @@ describe('targeting', () => {
     expect(r.text).toMatch(/^tapped @\w+ "Hagia Sophia"/);
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 495, y: 1770 });
   });
+
+  it(
+    'names a tapped ref by its words at the touch, and by those it was shown with where they changed before it',
+    fakeTimed(async () => {
+      withScreen('player', []);
+      const d = new FakeDevice();
+      d.screen = 'player';
+      let label = 'Play video, duration: Play 02:37';
+      const shown = d.current.bind(d);
+      d.current = () => {
+        const t = shown();
+        t.nodes.push({
+          p: 0,
+          w: 0,
+          c: 'android.widget.FrameLayout',
+          id: 'dev.app:id/player',
+          d: label,
+          b: [0, 300, 1080, 600],
+          f: 19,
+        });
+        return t;
+      };
+      const act = d.act.bind(d);
+      d.act = (a, o) => {
+        // the player starts, and its controls come over the picture
+        label = 'Play video, duration: Pause 00:02';
+        return act(a, o);
+      };
+      const { call } = await connect(d);
+      const ref = must(/(@\w+) \w+ "Play video/.exec((await call('screen')).text)?.[1], 'its ref');
+      expect((await call('tap', { ref })).text).toMatch(
+        /^tapped @\w+ "Play video, duration: Play 02:37"\n/,
+      );
+      // the video ended while no one looked, and a touch after a while reads the screen first: it went to the element
+      // as that read had it
+      label = 'Play video, duration: Replay 02:37';
+      await pause(30_000);
+      expect((await call('tap', { ref })).text).toMatch(
+        /^tapped @\w+ "Play video, duration: Replay 02:37" \(shown as "Play video, duration: Pause 00:02"\)\n/,
+      );
+    }),
+  );
 
   it('names the row each of many matches is in, ten of them, and how many more', async () => {
     withScreen(
