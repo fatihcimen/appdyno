@@ -16,6 +16,9 @@ export function refHash(text: string): string {
 const short = (text: string) => refHash(text).slice(-4);
 
 const ownText = (e: UiElement) => (e.label || e.text || '').trim();
+/** On the screen to be seen: a hidden element, or one of no size, names nothing beside it. */
+const shown = (e: UiElement) =>
+  e.visible !== false && !!e.rect && e.rect.width > 0 && e.rect.height > 0;
 
 /**
  * What tells element `i` apart from identical ones: the nearest ancestor's text that is unique on the
@@ -36,7 +39,7 @@ function contextOf(
     if (at(p).parent === undefined) break;
     // what a field holds is typed, and a field's ref must not change with another's
     const texts = below(p)
-      .filter((n) => !at(n).editable)
+      .filter((n) => !at(n).editable && shown(at(n)))
       .map((n) => ownText(at(n)))
       .filter((t) => t && t !== self && unique.has(t));
     // a name rather than a price or a count: those change on the same card
@@ -48,7 +51,7 @@ function contextOf(
   const cy = r.y + r.height / 2;
   const row = elements
     .flatMap((e) =>
-      e.rect && ownText(e) && ownText(e) !== self && unique.has(ownText(e))
+      e.rect && shown(e) && ownText(e) && ownText(e) !== self && unique.has(ownText(e))
         ? [{ e, rect: e.rect }]
         : [],
     )
