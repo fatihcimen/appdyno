@@ -1,4 +1,11 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DeviceProvider } from '@appdyno/core';
@@ -67,6 +74,19 @@ describe('report', () => {
     expect(html).not.toMatch(/<script|<link|https?:\/\/|<iframe/i);
     // ended: nothing more is kept
     await expect(call('report', { action: 'stop' })).rejects.toThrow(/no report is open/);
+  });
+
+  it("writes over no page of a folder's own: an index.html there already is said", async () => {
+    const { call } = connect();
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), 'kept');
+    await expect(call('report', { action: 'start', dir })).rejects.toThrow(
+      /holds an index\.html already/,
+    );
+    await expect(call('report', { action: 'write', dir })).rejects.toThrow(
+      /holds an index\.html already/,
+    );
+    expect(readFileSync(join(dir, 'index.html'), 'utf8')).toBe('kept');
   });
 
   it('keeps what an install answered on the phone', async () => {

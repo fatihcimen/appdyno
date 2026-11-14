@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must, type DeviceProvider, type ScreenRecorder } from '@appdyno/core';
@@ -62,7 +62,19 @@ describe('record', () => {
     await expect(call({ action: 'start', file })).rejects.toThrow(/stop it first/);
     await expect(call({ action: 'stop' })).rejects.toThrow(/not a playable video/);
     await expect(call({ action: 'stop' })).rejects.toThrow(/no recording runs/);
-    await call({ action: 'start', file });
+    await call({ action: 'start', file, overwrite: true });
+  });
+
+  it('writes over no file that is there, nor one that is not a video, unless asked', async () => {
+    const { call } = connect(recorder(() => Promise.resolve({ files: [] })));
+    const other = join(file, '..', 'notes.txt');
+    writeFileSync(other, 'kept');
+    await expect(call({ action: 'start', file: other })).rejects.toThrow(/a \.mp4 file/);
+    writeFileSync(file, 'kept');
+    await expect(call({ action: 'start', file })).rejects.toThrow(/is there already/);
+    expect(readFileSync(file, 'utf8')).toBe('kept');
+    expect(readFileSync(other, 'utf8')).toBe('kept');
+    await call({ action: 'start', file, overwrite: true });
   });
 
   it('keeps a recording whose device went away, for when it comes back', async () => {

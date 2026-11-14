@@ -12,6 +12,7 @@
 ### Fixed
 
 - On an iOS simulator, the network and frame probes no longer share one Objective-C class name, so both can be in one app: loaded together, the runtime ran one of the two.
+- `record` `start` writes over no file that is there unless `overwrite` asks, and only to a file of the video kind the device records (`.mp4` or `.mov`): given any path, it replaced whatever file stood there, of any kind. `report` with a `dir` that already holds an `index.html` is refused rather than writing over that page.
 
 ## 1.1.1
 

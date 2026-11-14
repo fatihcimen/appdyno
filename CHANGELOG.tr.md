@@ -12,6 +12,7 @@
 ### Düzeltilenler
 
 - Bir iOS simülatöründe ağ ve kare probe'ları artık tek bir Objective-C sınıf adını paylaşmıyor; ikisi bir uygulamada birlikte olabilir: birlikte yüklendiklerinde çalışma zamanı ikisinden yalnızca birini çalıştırıyordu.
+- `record` `start`, `overwrite` istemedikçe orada duran bir dosyanın üstüne yazmaz, ve yalnızca cihazın kaydettiği türde bir video dosyasına yazar (`.mp4` ya da `.mov`): verilen her yolda, orada duran her türden dosyayı değiştiriyordu. Zaten bir `index.html` tutan bir `dir` ile `report`, o sayfanın üstüne yazmak yerine reddedilir.
 
 ## 1.1.1
 
