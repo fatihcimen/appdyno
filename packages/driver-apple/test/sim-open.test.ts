@@ -79,12 +79,41 @@ describe("a link in a scheme of the app's own on a simulator", () => {
     expect(send).toHaveBeenCalledWith({ kind: 'tap', x: 275, y: 474 });
   });
 
-  it('touches nothing with the app in front already', async () => {
-    const { d, send, read } = linked([APP]);
-    await d.openUrl('appdyno-fixture://open/list', APP);
-    expect(read).not.toHaveBeenCalled();
-    expect(send).not.toHaveBeenCalled();
-  });
+  it(
+    'touches nothing with the app in front already',
+    fakeTimed(async () => {
+      const { d, send, read } = linked([APP]);
+      await d.openUrl('appdyno-fixture://open/list', APP);
+      expect(read).not.toHaveBeenCalled();
+      expect(send).not.toHaveBeenCalled();
+    }),
+  );
+
+  it(
+    'answers "Open in …?" by the runner where the helper sends no touch',
+    fakeTimed(async () => {
+      // a simulator whose input service the helper cannot find: "Failed to find service …hid.digitizer"
+      const { d, send } = linked([HOME, HOME, APP]);
+      send.mockResolvedValue(false);
+      const byRunner = vi.fn(() => Promise.resolve({}));
+      Object.assign(d, { actByRunner: byRunner });
+      await d.openUrl('appdyno-fixture://open/list', APP);
+      expect(byRunner).toHaveBeenCalledExactlyOnceWith(
+        { kind: 'tap', x: 275, y: 474 },
+        { settle: false, read: 'none' },
+      );
+    }),
+  );
+
+  it(
+    'answers "Open in …?" that comes over the app in front a moment after the link',
+    fakeTimed(async () => {
+      // the first look came before the prompt: on the simulator it took the front 25 to 35 ms after the link
+      const { d, send } = linked([APP, HOME, HOME, APP]);
+      await d.openUrl('appdyno-fixture://open/list', APP);
+      expect(send).toHaveBeenCalledExactlyOnceWith({ kind: 'tap', x: 275, y: 474 });
+    }),
+  );
 });
 
 describe('a link on a simulator the helper does not read, by the runner', () => {

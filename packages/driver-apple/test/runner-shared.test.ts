@@ -222,6 +222,16 @@ describe('a start that cannot come', () => {
     await runner.stop(rpc);
   });
 
+  it("keeps the last runner's log beside the new one's, which a start wrote over", async () => {
+    const udid = randomUUID().toUpperCase();
+    const log = join(state, `ios-${udid}.log`);
+    writeFileSync(log, 'the last runner\'s: Find the "Toolbar" Any\n');
+    const runner = new IosRunnerLauncher(udid, through(2));
+    const { rpc } = await runner.connect();
+    expect(readFileSync(`${log}.1`, 'utf8')).toBe('the last runner\'s: Find the "Toolbar" Any\n');
+    await runner.stop(rpc);
+  });
+
   it("stops the xcodebuild another host's start left, found by the command line a start gives it", async () => {
     // a device of its own: what stops a runner goes by the device, and another run of these tests has this one's
     const udid = randomUUID().toUpperCase();

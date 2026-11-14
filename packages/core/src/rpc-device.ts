@@ -89,6 +89,8 @@ export abstract class RpcDevice extends DeviceActions {
    */
   protected readonly stuckRestarts?: number;
   private stuckInARow = 0;
+  /** Why the agent was last taken as gone here, for the line that says another took its place. */
+  private goneWhy: string | undefined;
   abstract tree(opts?: TreeOptions): Promise<Tree>;
 
   /** Whether the device can be asked to `wait`; where not, the caller polls. */
@@ -151,7 +153,8 @@ export abstract class RpcDevice extends DeviceActions {
     this.rpc = rpc;
     this.helloInfo = hello;
     this.lastStartWasCold = started;
-    agentMet(this.serial, hello.pid);
+    agentMet(this.serial, hello.pid, this.goneWhy);
+    this.goneWhy = undefined;
     return rpc;
   }
 
@@ -162,6 +165,8 @@ export abstract class RpcDevice extends DeviceActions {
 
   protected ensure(): Promise<RpcClient> {
     if (this.rpc && !this.rpc.closed) return Promise.resolve(this.rpc);
+    // one that closed while nothing was asked of it: why the next is another (this process lets go of it by `close`)
+    if (this.rpc) this.goneWhy ??= this.rpc.closedWhy;
     this.connecting ??= this.connect().finally(() => (this.connecting = undefined));
     return this.connecting;
   }
@@ -190,7 +195,9 @@ export abstract class RpcDevice extends DeviceActions {
       if (!this.connectionLost(e, rpc))
         throw await afterTimeout(e, rpc, (stuck) => this.restartOrLeave(stuck));
       // closed here is not lost: a connection that dropped is worth a new one, and this one was let go
-      if (closes !== this.closes || !this.retrySafe.has(method)) throw e;
+      if (closes !== this.closes) throw e;
+      this.goneWhy ??= (e as Error).message;
+      if (!this.retrySafe.has(method)) throw e;
       this.rpc = undefined;
       await this.beforeRetry(e);
       return (await this.ensure()).call(method, params, { timeoutMs });
@@ -203,6 +210,7 @@ export abstract class RpcDevice extends DeviceActions {
         left: `the last ${this.stuckInARow} restarts in a row each got stuck as well, so this one would too`,
       });
     this.stuckInARow++;
+    this.goneWhy = 'stuck: a call and a quick look after it went unanswered, so it was restarted';
     return this.restartStuck(rpc);
   }
 

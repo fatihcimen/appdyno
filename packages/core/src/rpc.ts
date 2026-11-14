@@ -75,6 +75,11 @@ export class RpcClient {
     return this.closedWith !== undefined;
   }
 
+  /** What closed it. */
+  get closedWhy(): string | undefined {
+    return this.closedWith?.message;
+  }
+
   onClose(fn: (e: DeviceError) => void) {
     this.closeListeners.push(fn);
   }

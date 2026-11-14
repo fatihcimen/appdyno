@@ -78,6 +78,37 @@ describe('crash reports', () => {
     expect(parseIps('not json')).toBeUndefined();
   });
 
+  it("reads an uncaught exception's reason and where it was thrown, not the abort that ended it", () => {
+    const [head = '', body = ''] = ips('dev.app').split('\n');
+    const frame = (imageIndex: number, symbol: string) => ({ imageIndex, symbol });
+    const thrown = {
+      ...(JSON.parse(body) as object),
+      exception: { type: 'EXC_CRASH', signal: 'SIGABRT' },
+      termination: { indicator: 'Abort trap: 6' },
+      faultingThread: 0,
+      usedImages: [{ name: 'libsystem_c.dylib' }, { name: 'CoreFoundation' }, { name: 'WMF' }],
+      threads: [{ frames: [frame(0, '__pthread_kill'), frame(0, 'abort')] }],
+      lastExceptionBacktrace: [
+        frame(1, '__exceptionPreprocess'),
+        frame(1, 'objc_exception_throw'),
+        frame(2, '-[MWKDataStore setupLegacyDataStore]'),
+        frame(2, '-[MWKDataStore init]'),
+      ],
+    };
+    const reason =
+      "*** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '*** -[NSURL initFileURLWithPath:isDirectory:]: nil string parameter'";
+    // a phone's report says the reason; a simulator's has only where it was thrown
+    const asi = { 'libsystem_c.dylib': ['abort() called'], CoreFoundation: [reason] };
+    expect(parseIps(`${head}\n${JSON.stringify({ ...thrown, asi })}`)).toMatchObject({
+      reason: `EXC_CRASH SIGABRT Abort trap: 6, ${reason}`,
+      detail: 'WMF -[MWKDataStore setupLegacyDataStore]\nWMF -[MWKDataStore init]',
+    });
+    expect(parseIps(`${head}\n${JSON.stringify(thrown)}`)).toMatchObject({
+      reason: 'EXC_CRASH SIGABRT Abort trap: 6',
+      detail: 'WMF -[MWKDataStore setupLegacyDataStore]\nWMF -[MWKDataStore init]',
+    });
+  });
+
   it('keeps to the app, the simulator, the time and the limit', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
     const put = (name: string, text: string, ageMs: number) => {

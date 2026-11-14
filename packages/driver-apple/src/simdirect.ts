@@ -21,6 +21,18 @@ const TOUCH_REPORT_MS = 300;
 /** A size as the screen stands upright, as a touch's surface does whatever the app does. */
 const upright = ([a, b]: [number, number]) => ({ w: Math.min(a, b), h: Math.max(a, b) });
 
+/** A screen of `own`'s size turned `turns` quarter turns from upright: its long side across on an odd turn. */
+export function turnedBy(own: { w: number; h: number; density: number }, turns: number) {
+  const { w: short, h: long } = upright([own.w, own.h]);
+  const across = turns % 2 === 1;
+  return {
+    w: across ? long : short,
+    h: across ? short : long,
+    density: own.density,
+    rotation: turns,
+  };
+}
+
 type Starters = {
   ax: (udid: string) => Promise<HelperProcess>;
   hid: (udid: string) => Promise<HelperProcess>;

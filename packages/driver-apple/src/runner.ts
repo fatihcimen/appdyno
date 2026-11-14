@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { closeSync, openSync } from 'node:fs';
-import { mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { connect, createServer, type Socket } from 'node:net';
 import { join } from 'node:path';
 import { DeviceError, type Hello } from '@appdyno/protocol';
@@ -237,6 +237,8 @@ export class IosRunnerLauncher {
     const port = await this.transport.port();
     const token = randomBytes(24).toString('hex');
     await mkdir(stateDir(), { recursive: true, mode: 0o700 });
+    // the last runner's log, kept beside as `.1`: what ended it was in it, and this start writes over it
+    await rename(this.logPath, `${this.logPath}.1`).catch(() => undefined);
     const out = openSync(this.logPath, 'w', 0o600);
     await rm(this.keptPath, { recursive: true, force: true });
     const child = spawn(

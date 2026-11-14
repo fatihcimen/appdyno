@@ -30,7 +30,7 @@ import { SimulatorNetwork } from './network.js';
 import { IosSimulatorPerf } from './perf.js';
 import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
-import { DirectSim } from './simdirect.js';
+import { DirectSim, turnedBy } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
 import { type Capture, nodesBusy, settleAfter } from './simsettle.js';
 import { firstPoint } from './simtouch.js';
@@ -339,10 +339,13 @@ export class IosSimulatorDevice extends IosDevice {
     if (!pkg || !app || !ownScheme(app.schemes, url)) return super.openUrl(url, pkg);
     await this.target(pkg);
     await this.queue.run(() => this.ops.openUrl(url, pkg));
-    const looks = looksOf(this.direct, this.queue);
+    const looks = looksOf(this.direct, this.queue, (tap) =>
+      this.actByRunner(tap, { settle: false, read: 'none' }),
+    );
+    const opened = await untilOpened(pkg, app.name, looks, LAUNCH_FRONT_MS);
     // the app opening over the home screen takes no touches either
-    if ((await untilOpened(pkg, app.name, looks, LAUNCH_FRONT_MS)) === false)
-      this.transitionEnds = Date.now() + TRANSITION_MS;
+    if (opened.stayed === false) this.transitionEnds = Date.now() + TRANSITION_MS;
+    return opened.answered ? { answered: app.name } : undefined;
   }
 
   protected opener(pkg: string) {
@@ -361,7 +364,12 @@ export class IosSimulatorDevice extends IosDevice {
    * alert over the app, and only the runner can tell that apart.
    */
   protected override async untilFront(pkg: string) {
-    if (!(await helperSeesFront(this.direct, pkg, LAUNCH_FRONT_MS))) await super.untilFront(pkg);
+    // an app that ended as it started never comes: the runner's look held such a launch 10 s more
+    if (
+      !(await helperSeesFront(this.direct, pkg, LAUNCH_FRONT_MS)) &&
+      (await this.appRunning(pkg).catch(() => true))
+    )
+      await super.untilFront(pkg);
     // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot, and the
     // runner's way too, where it told the front as it first came up (a GitHub runner, 2 of 4 first runs)
     this.transitionEnds = Date.now() + TRANSITION_MS;
@@ -418,15 +426,7 @@ export class IosSimulatorDevice extends IosDevice {
   async screenNow() {
     const own = this.hello?.screen;
     const turns = own && (await this.direct.turnsNow().catch(() => undefined));
-    if (!own || turns === undefined) return undefined;
-    const [short, long] = [Math.min(own.w, own.h), Math.max(own.w, own.h)];
-    const across = turns % 2 === 1;
-    return {
-      w: across ? long : short,
-      h: across ? short : long,
-      density: own.density,
-      rotation: turns,
-    };
+    return own && turns !== undefined ? turnedBy(own, turns) : undefined;
   }
 
   override close() {

@@ -12,10 +12,19 @@ const u32 = (...values: number[]) =>
     values.map((v) => Buffer.from([v >>> 24, (v >>> 16) & 255, (v >>> 8) & 255, v & 255])),
   );
 
-/** A small file as a recorder writes it: ftyp, mdat, moov with a video track and a metadata track. */
+/**
+ * A small file as a recorder writes it: ftyp, mdat, moov with a video track and a metadata track. `heldMs`: the movie
+ * plays this long, as a simulator's does past its last frame when the screen held still to the end.
+ */
 export function fakeVideo(
   frames: Buffer[],
-  opts: { stsd?: string; torn?: boolean; timescale?: number; oneSize?: boolean } = {},
+  opts: {
+    stsd?: string;
+    torn?: boolean;
+    timescale?: number;
+    oneSize?: boolean;
+    heldMs?: number;
+  } = {},
 ) {
   const ftyp = box('ftyp', Buffer.from('isom'), u32(0), Buffer.from('isom'));
   const payload = Buffer.concat(frames);
@@ -55,6 +64,6 @@ export function fakeVideo(
     box('mdia', mdhd, hdlr('vide'), box('minf', box('vmhd', u32(1, 0, 0)), stbl)),
   );
   const meta = box('trak', tkhd, box('mdia', mdhd, hdlr('meta'), box('minf', box('nmhd', u32(0)))));
-  const mvhd = box('mvhd', u32(0, 0, 0, 1_000, n * 33), Buffer.alloc(80));
+  const mvhd = box('mvhd', u32(0, 0, 0, 1_000, opts.heldMs ?? n * 33), Buffer.alloc(80));
   return Buffer.concat([ftyp, mdat, box('moov', mvhd, trak, meta)]);
 }

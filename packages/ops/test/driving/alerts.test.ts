@@ -81,6 +81,16 @@ describe('system alerts', () => {
     );
   });
 
+  it('says that it answered the "Open in …?" a link to the selected app asked on the way', async () => {
+    const d = new FakeDevice();
+    Object.assign(d, { openUrl: () => Promise.resolve({ answered: 'appdyno fixture' }) });
+    const { call } = await connect(d);
+    for (const read of ['diff', 'none'])
+      expect((await call('open_link', { url: 'app://screen', read })).done).toBe(
+        `opened app://screen, answering the system's "Open in …?" for appdyno fixture on the way`,
+      );
+  });
+
   it('answers a localized permission prompt by allow, and leaves the app’s dialog alone', async () => {
     const d = new FakeDevice();
     d.permissionUp = true;

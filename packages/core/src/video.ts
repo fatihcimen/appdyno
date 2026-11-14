@@ -11,7 +11,10 @@ import { must } from './must.js';
 
 export type VideoInfo = {
   bytes: number;
+  /** The frames' own time, by which joined segments follow each other. */
   durationMs: number;
+  /** How long it plays: the movie's, past its last frame where the screen held still, as a simulator writes no frame then. */
+  playsMs: number;
   frames: number;
   width: number;
   height: number;
@@ -106,9 +109,12 @@ export async function readVideo(file: string): Promise<VideoInfo> {
     if (frames === 0 || timescale === 0) throw new Error('its video track has no frames');
     const stsd = need(moov, stbl, 'stsd');
     const tkhd = need(moov, trak, 'tkhd');
+    const movie = timing(moov, need(moov, root, 'mvhd'));
+    const durationMs = Math.round((duration / timescale) * 1000);
     return {
       bytes: size,
-      durationMs: Math.round((duration / timescale) * 1000),
+      durationMs,
+      playsMs: movie.timescale ? Math.round((movie.duration / movie.timescale) * 1000) : durationMs,
       frames,
       // 16.16 fixed point, the last two words of the box
       width: moov.readUInt32BE(tkhd.end - 8) >>> 16,

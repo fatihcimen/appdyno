@@ -100,6 +100,69 @@ describe('an iOS screen', () => {
     expect(d.calls.filter((c) => c.name === 'act')).toEqual([]);
   });
 
+  it("answers a system alert with the app's screen, not the home screen's card of it while the app comes back", async () => {
+    const prompt = JSON.parse(
+      readFileSync(
+        join(
+          import.meta.dirname,
+          '../../../driver-apple/test/fixtures/ios-notification-prompt.json',
+        ),
+        'utf8',
+      ),
+    ) as Tree;
+    const app: Tree = {
+      ...prompt,
+      windows: prompt.windows.slice(0, 1),
+      nodes: prompt.nodes.filter((n) => n.w === 0),
+      hash: 'app',
+    };
+    // as the runner read it after "Allow", 5 of 5: the home screen app in front, showing the app's card alone
+    const card: Tree = {
+      windows: [
+        {
+          type: 1,
+          pkg: 'com.apple.springboard',
+          layer: 0,
+          b: [0, 0, 402, 874],
+          active: true,
+          focused: true,
+        },
+      ],
+      nodes: [
+        { p: -1, w: 0, c: 'Other', id: 'AppSwitcherContentView', b: [0, 0, 402, 874], f: 17 },
+        { p: 0, w: 0, c: 'StaticText', d: 'appdyno fixture', b: [150, 427, 252, 447], f: 17 },
+      ],
+      truncated: false,
+      elapsedMs: 5,
+      hash: 'card',
+    };
+    // and as a runner told no app reads it: the home screen app's alone, the selected app running under it
+    const alone: Tree = {
+      ...prompt,
+      windows: prompt.windows.map((w, i) => (i ? w : { ...w, pkg: 'com.apple.springboard' })),
+    };
+    for (const before of [prompt, alone]) {
+      const d = new Simulator(before);
+      const act = d.act.bind(d);
+      d.act = (action, opts) => {
+        d.fixture = card;
+        return act(action, opts);
+      };
+      const tree = d.tree.bind(d);
+      let cards = 0;
+      d.tree = () => {
+        if (d.fixture === card && ++cards > 2) d.fixture = app;
+        return tree();
+      };
+      const { call } = await connect(d, APP);
+      const r = await call('alert', { answer: 'Allow', read: 'full' });
+      expect(r.text).toContain(
+        'answered the system alert: "Allow"\nforeground: dev.appdyno.fixture',
+      );
+      expect(r.text).not.toMatch(/WARNING|AppSwitcherContentView/);
+    }
+  });
+
   it('refuses typing with no field focused and no keyboard, before any key is sent', async () => {
     const d = new Simulator(keyboardDown(keyboardUp));
     const { call } = await connect(d, APP);

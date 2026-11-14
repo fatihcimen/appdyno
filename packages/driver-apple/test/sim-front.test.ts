@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { inCall, TRANSITION_MS } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/index.js';
+import { IosDevice } from '../src/device.js';
 import { Simctl } from '../src/simctl.js';
 import { SimulatorApps } from '../src/simulator-manage.js';
 
@@ -137,6 +138,28 @@ describe('an app just opened on a simulator', () => {
   it('takes no touch while it opens, as the helper or the runner saw it come to the front', async () => {
     expect(await touchFrom(true)).toBeGreaterThanOrEqual(TRANSITION_MS);
     expect(await touchFrom(false)).toBeGreaterThanOrEqual(TRANSITION_MS);
+  });
+
+  it('is not waited for by the runner once the home screen stays and its process is gone', async () => {
+    vi.useFakeTimers();
+    const runner = vi.spyOn(
+      IosDevice.prototype as unknown as { untilFront: (b: string) => Promise<void> },
+      'untilFront',
+    );
+    try {
+      const front = () => Promise.resolve('com.apple.springboard');
+      const direct = { reads: true, front, close: vi.fn() };
+      const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+      const opened = (device as unknown as { untilFront: (b: string) => Promise<void> }).untilFront(
+        'dev.app',
+      );
+      await vi.advanceTimersByTimeAsync(30_000);
+      await opened;
+      expect(runner).not.toHaveBeenCalled();
+    } finally {
+      runner.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
 

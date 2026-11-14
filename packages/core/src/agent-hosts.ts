@@ -17,14 +17,15 @@ const lost = channel('appdyno.agent.lost');
 
 /**
  * Says when a device's agent is not the one this process had. A read that loses its agent starts another and tries
- * again, and nothing else would show that: what the agent held went with it, and a person paid for its start.
+ * again, and nothing else would show that: what the agent held went with it, and a person paid for its start. `why`:
+ * what made this process take the last one as gone, where it knows (the log of the last was written over).
  */
-export function agentMet(serial: string, pid: number | undefined) {
+export function agentMet(serial: string, pid: number | undefined, why?: string) {
   if (pid === undefined) return;
   const was = met.get(serial);
   met.set(serial, pid);
   if (was === undefined || was === pid) return;
-  const line = `the agent on ${serial} stopped, and another took its place`;
+  const line = `the agent on ${serial} stopped${why ? ` (${why})` : ''}, and another took its place`;
   reportProgress(line);
   process.stderr.write(`${line}\n`);
   lost.publish({ serial, was, pid });

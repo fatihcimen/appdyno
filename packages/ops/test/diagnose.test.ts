@@ -314,6 +314,50 @@ describe('crashes', () => {
     );
   });
 
+  it('says an app that died as it started died, with read none and with another app selected', async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    await call('screen');
+    // the system's launch came back, and the app ended before it was in front: the home screen stays
+    const launch = device.launch.bind(device);
+    device.launch = async (pkg) => {
+      await launch(pkg);
+      device.permissionUp = true;
+      device.running = false;
+      device.current = ((orig) => () => {
+        const t = orig();
+        t.windows = t.windows.filter((w) => w.pkg !== 'dev.app');
+        return t;
+      })(device.current.bind(device));
+      // its report is written at once, and the launch waits for the app to come in front, which it never does
+      reported = Date.now();
+      await new Promise((r) => setTimeout(r, 15_000));
+    };
+    let reported = Infinity;
+    device.crashes = (q) =>
+      Promise.resolve({
+        reports:
+          (q.since ?? 0) <= reported
+            ? [{ at: 'now', reason: 'EXC_CRASH SIGABRT', file: '/tmp/Shop.ips' }]
+            : [],
+        source: 'fake reports',
+      });
+    // the line that says why, whole: its reason came cut at 200 characters
+    const why =
+      "2026-11-14 09:23:31.337 Df Wikipedia[21835:1ea4688] (CoreFoundation) *** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '*** -[NSURL initFileURLWithPath:isDirectory:]: nil string parameter'";
+    device.logLines = [why];
+    const r = await call('launch_app', { read: 'none' });
+    expect(r).toMatchObject({ isError: true, structuredContent: { code: 'APP_NOT_RUNNING' } });
+    expect(r.text).toContain(
+      `the app died: EXC_CRASH SIGABRT (/tmp/Shop.ips)\nits last log lines:\n${why}\n`,
+    );
+    // the app launched is the one looked at, not the one selected
+    await call('use_device', { device: device.serial, app: 'dev.other' });
+    expect((await call('launch_app', { app: 'dev.app' })).text).toContain(
+      'the app died: EXC_CRASH',
+    );
+  });
+
   it('says so when the system restarted the app at once, only with a report to go by', async () => {
     const device = new FakeDevice();
     device.pid = '100';

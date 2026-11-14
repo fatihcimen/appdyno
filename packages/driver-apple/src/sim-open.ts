@@ -1,4 +1,5 @@
 import { type DeviceQueue, must, sleep } from '@appdyno/core';
+import type { ActParams } from '@appdyno/protocol';
 import { HOME_SCREEN_APP, openButton } from './platform-screen.js';
 import type { Simctl } from './simctl.js';
 import type { DirectSim } from './simdirect.js';
@@ -25,8 +26,15 @@ export type LinkLooks = {
   tap: (at: { x: number; y: number }) => Promise<unknown>;
 };
 
-/** Through the helper, each in the device's queue but the look at what is in front. */
-export const looksOf = (direct: DirectSim, queue: DeviceQueue): LinkLooks => ({
+/**
+ * Through the helper, each in the device's queue but the look at what is in front; a touch the helper does not send goes
+ * `byRunner`, as any other touch does: a simulator whose input service it cannot find left every prompt unanswered.
+ */
+export const looksOf = (
+  direct: DirectSim,
+  queue: DeviceQueue,
+  byRunner: (tap: Extract<ActParams, { kind: 'tap' }>) => Promise<unknown>,
+): LinkLooks => ({
   front: () => direct.front().catch(() => undefined),
   prompt: () =>
     queue
@@ -36,7 +44,12 @@ export const looksOf = (direct: DirectSim, queue: DeviceQueue): LinkLooks => ({
         () => undefined,
       ),
   // a touch that may have gone through is told by the next look, the prompt gone or still there
-  tap: (at) => queue.run(() => direct.send({ kind: 'tap', ...at })).catch(() => false),
+  tap: (at) =>
+    queue
+      .run(
+        async () => (await direct.send({ kind: 'tap', ...at })) || byRunner({ kind: 'tap', ...at }),
+      )
+      .catch(() => false),
 });
 
 /** Whether a link is in one of these schemes. */
@@ -48,16 +61,26 @@ export const ownScheme = (schemes: string[], url: string) => {
 const PROMPT_AGAIN_MS = 1_500;
 
 /**
+ * How long the app in front is watched for its prompt: the prompt took the front 25 to 35 ms after the link (3 of 3, at
+ * load 5), after the first look had taken the app for opened and left it unanswered (4 of 4).
+ */
+const PROMPT_COMES_MS = 1_000;
+
+/**
  * Until `app` is in front, up to `ms`, its "Open in …?" answered on the way if it names it (`name`). A prompt read while
- * it goes away is not answered twice: a second touch would land on the home screen. Whether the app was in front at the
- * first look; undefined if it never came.
+ * it goes away is not answered twice: a second touch would land on the home screen. Whether the app stayed in front
+ * throughout (undefined: it never came), and whether a prompt was answered.
  */
 export async function untilOpened(app: string, name: string, looks: LinkLooks, ms: number) {
-  const end = Date.now() + ms;
+  const start = Date.now();
+  const end = start + ms;
   let answered = 0;
-  for (let first = true; Date.now() < end; first = false) {
+  let stayed = true;
+  while (Date.now() < end) {
     const front = await looks.front();
-    if (front === app) return first;
+    if (front === app && (!stayed || Date.now() - start >= PROMPT_COMES_MS))
+      return { stayed, answered: answered > 0 };
+    if (front !== app) stayed = false;
     if (front === HOME_SCREEN_APP && Date.now() - answered > PROMPT_AGAIN_MS) {
       const open = openButton(await looks.prompt(), name);
       if (open) {
@@ -67,7 +90,7 @@ export async function untilOpened(app: string, name: string, looks: LinkLooks, m
     }
     await sleep(20);
   }
-  return undefined;
+  return { stayed: undefined, answered: answered > 0 };
 }
 
 const HOME_FRONT_MS = 3_000;

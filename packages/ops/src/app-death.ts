@@ -10,6 +10,8 @@ const LAST_LINES = 8;
 /** The newest lines looked through for one that says why. */
 const LOOKED_AT = 60;
 const LINE_CHARS = 200;
+/** The line that says why, as long as its reason: Foundation's came cut at 200, before the words that said it. */
+const WHY_CHARS = 1_000;
 
 /** A report can be stamped a moment before the host's clock says the action began. */
 const CLOCK_SLACK_MS = 2_000;
@@ -239,7 +241,7 @@ async function lastLines(s: Session, app: string, pid: string | undefined, clean
   // the newest: an earlier crash of the app may still be among these lines
   const why = WHY.map((p) => newest.findLastIndex((l) => p.test(l))).find((i) => i >= 0) ?? -1;
   const shown = why < 0 ? newest.slice(-LAST_LINES) : newest.slice(why, why + LAST_LINES);
-  return shown.map((l) => cleanLog(l).slice(0, LINE_CHARS));
+  return shown.map((l, i) => cleanLog(l).slice(0, why >= 0 && i === 0 ? WHY_CHARS : LINE_CHARS));
 }
 
 /**
@@ -264,6 +266,23 @@ export async function diedRefusal(
     diedHint(said),
     true,
   );
+}
+
+/**
+ * The refusal of a launch that read nothing, whose app ended as it started, or nothing: such a launch was said to have
+ * started the app (6 of 10).
+ */
+export async function launchDied(
+  s: Session,
+  app: string,
+  done: string,
+  since: number,
+  clean: Clean,
+  cleanLog: Clean,
+) {
+  const front = await s.device.foreground().catch(() => undefined);
+  const died = await appDeath(s, app, front, undefined, since, clean, true);
+  return died && diedRefusal(s, app, done, died, { wasPid: undefined, since, clean, cleanLog });
 }
 
 /**

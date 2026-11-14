@@ -45,22 +45,34 @@ export function parseIps(text: string): Ips | undefined {
       faultingThread?: number;
       usedImages?: { name?: string }[];
       threads?: { frames?: { imageIndex?: number; symbol?: string }[] }[];
+      lastExceptionBacktrace?: { imageIndex?: number; symbol?: string }[];
+      asi?: Record<string, string[]>;
       bundleInfo?: { CFBundleIdentifier?: string };
       coalitionName?: string;
     };
     const ex = body.exception;
-    const frames = body.threads?.[body.faultingThread ?? 0]?.frames ?? [];
+    // an uncaught exception ends in abort(): where it was thrown says why, past the throw's own frames
+    const frames =
+      body.lastExceptionBacktrace?.filter(
+        (f) => !['__exceptionPreprocess', 'objc_exception_throw'].includes(f.symbol ?? ''),
+      ) ??
+      body.threads?.[body.faultingThread ?? 0]?.frames ??
+      [];
     const detail = frames
       .slice(0, FRAMES)
       .map((f) => `${body.usedImages?.[f.imageIndex ?? -1]?.name ?? '?'} ${f.symbol ?? ''}`.trim())
       .join('\n');
     const bundle = head.bundleID ?? body.bundleInfo?.CFBundleIdentifier;
+    // a phone's report has the exception's reason among what the system noted of the crash; a simulator's does not
+    const said = Object.values(body.asi ?? {})
+      .flat()
+      .find((l) => /exception|fatal error/i.test(l));
+    const signal = [ex?.type, ex?.signal, body.termination?.indicator].filter(Boolean).join(' ');
     return {
       ...(bundle && { bundle }),
       at: head.timestamp ?? '',
       reason:
-        [ex?.type, ex?.signal, body.termination?.indicator].filter(Boolean).join(' ') ||
-        `report of type ${head.bug_type ?? 'unknown'}`,
+        [signal, said].filter(Boolean).join(', ') || `report of type ${head.bug_type ?? 'unknown'}`,
       ...(detail && { detail }),
       ...(body.procPath && { procPath: body.procPath }),
       ...(body.coalitionName && { coalition: body.coalitionName }),

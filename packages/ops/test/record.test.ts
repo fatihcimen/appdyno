@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { fakeVideo } from '@appdyno/testing/fake-video.js';
 import { checkedOps } from '@appdyno/testing/calls.js';
 
 function connect(recorder: ScreenRecorder) {
@@ -32,6 +33,22 @@ describe('record', () => {
     extension: 'mp4',
     start: (to) => Promise.resolve({ file: to }),
     stop,
+  });
+
+  it('says how long the file plays, which a still screen at its end makes longer than its frames', async () => {
+    const { call } = connect(
+      recorder((h) => {
+        writeFileSync(
+          String(h.file),
+          fakeVideo([Buffer.from('aaa'), Buffer.from('bb')], { heldMs: 7_418 }),
+        );
+        return Promise.resolve({ files: [String(h.file)] });
+      }),
+    );
+    await call({ action: 'start', file });
+    const r = await call({ action: 'stop' });
+    expect(r.blocks[0]).toMatchObject({ text: `${file}: 7.4 s, 2 frames, 1080x2400, avc1` });
+    expect(r.data).toMatchObject({ durationMs: 7_418 });
   });
 
   it('refuses a file that does not play, and lets the next recording start', async () => {

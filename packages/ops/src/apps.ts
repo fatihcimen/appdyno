@@ -1,6 +1,7 @@
 import { fold, INSTALLED_APPS, must, reportProgress, type Screen } from '@appdyno/core';
 import { z } from 'zod';
-import { systemAsks, type Answers, type ReadMode } from './answers.js';
+import type { Answers, ReadMode } from './answers.js';
+import { systemAsks } from './noticed.js';
 import type { ServerContext } from './context.js';
 import { approvePower } from './approval.js';
 import {
@@ -89,11 +90,16 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
     throw e;
   };
 
-  /** What a link did, by the screen it left: iOS asks before a scheme first opens an app, and nothing opens until then. */
-  const linkSaid = (s: Session, href: string) => (screen: Screen | undefined) => {
-    const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
-    return asks ? `sent ${href}, and ${systemAsks(asks)}` : `opened ${href}`;
-  };
+  /**
+   * What a link did, by the screen it left: iOS asks before a scheme first opens an app, and nothing opens until then.
+   * `answered`: the app whose "Open in …?" the device answered on the way.
+   */
+  const linkSaid =
+    (s: Session, href: string, answered?: string) => (screen: Screen | undefined) => {
+      const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
+      if (asks) return `sent ${href}, and ${systemAsks(asks)}`;
+      return `opened ${href}${answered ? `, answering the system's "Open in …?" for ${answered} on the way` : ''}`;
+    };
 
   /** Under --allow-apps a link opens in an allowed app, as the device tells before it is sent, or not at all. */
   const linkApp = async (s: Session, href: string) => {
@@ -179,9 +185,18 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         const app = await linkApp(s, href);
         if (CALL_LINK.test(href))
           await approvePower(policy, s, `the link ${href}, which places a call`);
-        const { was } = await changing(s, () => s.device.openUrl(href, app));
+        const { result, was } = await changing(s, () => s.device.openUrl(href, app));
+        const answered = typeof result === 'object' ? result.answered : undefined;
         // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
-        return afterChange(s, was, linkSaid(s, href), read, undefined, undefined, LINK_SETTLE_MS);
+        return afterChange(
+          s,
+          was,
+          linkSaid(s, href, answered),
+          read,
+          undefined,
+          undefined,
+          LINK_SETTLE_MS,
+        );
       },
     }),
     launchOp(ctx, { changing, afterChange }, { appNamed, notThere }),

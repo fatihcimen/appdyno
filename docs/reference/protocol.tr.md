@@ -464,7 +464,9 @@ protokolünü konuşamayan bir host, onu kullananın pid'iyle reddedilir. Bir iO
 kurala uyar ve onu bir seferde tek bir host, durum klasöründeki `ios-<udid>.starting` ile başlatır: bir cihaz tek bir runner'a hizmet eder ve
 runner'ın durumu ancak yanıt verdiğinde yazılır; bu yüzden iki host'un aynı anda başlattığı iki runner telefonu birbirinden aldı ve kaybeden
 3 dakika boyunca hiçbir şey duymadı. Bir iPhone 13 Pro Max'te bir istemcinin ilk çağrısı o zaman 16 denemede 1 ile 6,3 s arasında sürdü, önce hub ya da önce
-istemci. Ajan bağlantısız geçen 30 dakikadan sonra
+istemci. Bir runner durum klasörüne `ios-<udid>.log` yazar ve bir başlatma bir öncekininkini `ios-<udid>.log.1` olarak saklar; elindeki
+runner'ı gitmiş sayıp bir başkasını başlatan bir host bunu tek satırda, bildiği yerde nedeniyle söyler: bağlantısı kapandı ya da takıldığı
+için yeniden başlatıldı. Ajan bağlantısız geçen 30 dakikadan sonra
 kapanır. stderr'de `AGENT_CONFLICT` ile çıkış kodu 3: başka bir UI automation istemcisi cihazı tutuyor
 (bir cihazda tam olarak bir tane vardır). Ajan bunu 4 s denedikten sonra söyler, çünkü sistem UI automation'ı öldürülmüş bir sahip için
 tutar: bir emülatörde süreci gittikten 1,3 s sonra hâlâ tutuluyordu, 2,3 s'de boştu; düz bir `kill`'den sonra ise hemen boştu.

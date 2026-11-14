@@ -43,14 +43,15 @@ export async function endRecording(s: Session) {
   const videos = await Promise.all(files.map((f) => readVideo(f)));
   const lines = files.map((f, i) => {
     const v = must(videos[i], `the video of ${f}`);
-    return `${f}: ${(v.durationMs / 1000).toFixed(1)} s, ${v.frames} frames, ${v.width}x${v.height}, ${v.codec}`;
+    // what a player shows: the frames' own time ended at the last change, 5.3 s of a file that plays 7.4 s
+    return `${f}: ${(v.playsMs / 1000).toFixed(1)} s, ${v.frames} frames, ${v.width}x${v.height}, ${v.codec}`;
   });
   return {
     text: [...lines, ...(note ? [note] : [])].join('\n'),
     data: {
       done: lines.join('\n'),
       files,
-      durationMs: videos.reduce((a, v) => a + v.durationMs, 0),
+      durationMs: videos.reduce((a, v) => a + v.playsMs, 0),
       frames: videos.reduce((a, v) => a + v.frames, 0),
       since: r.since,
       ...(note && { note }),

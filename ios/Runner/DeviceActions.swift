@@ -126,11 +126,25 @@ extension Device {
         switch name {
         case "enter":
             // synthesized: XCUI's typing refuses when no element reports the focus
-            if try !EventShim.type("\n", orientation: Device.keysOrientation()) { front().0.typeText("\n") }
-        case "delete": front().0.typeText(XCUIKeyboardKey.delete.rawValue)
-        case "tab": front().0.typeText("\t")
+            if try !EventShim.type("\n", orientation: Device.keysOrientation()) { try typeFocused("\n", front().0) }
+        case "delete", "tab":
+            let app = front().0
+            // nothing takes either with no field focused and no keyboard up (a hidden code field has the keyboard)
+            guard focusedField(app) != nil || app.keyboards.firstMatch.exists else { throw Device.noFocus }
+            let text = name == "tab" ? "\t" : XCUIKeyboardKey.delete.rawValue
+            if try !EventShim.type(text, orientation: Device.keysOrientation()) { try typeFocused(text, app) }
         default: try press(name)
         }
+    }
+
+    private static let noFocus = AgentError("NO_FOCUS", "no field has the focus and no keyboard is up",
+                                            hint: "tap the field first")
+
+    /// XCUI's typing, where the synthesizer takes no text: with no element focused it fails the runner's own test,
+    /// which ends it (live: `delete` on a screen with no field).
+    private func typeFocused(_ text: String, _ app: XCUIApplication) throws {
+        guard focusedField(app) != nil else { throw Device.noFocus }
+        app.typeText(text)
     }
 
     /// A key that is a button of the device's own.

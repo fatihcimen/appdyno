@@ -69,6 +69,11 @@ describe('readVideo', () => {
     });
   });
 
+  it('reads how long it plays, past its last frame where the screen held still to the end', async () => {
+    const f = write('held.mp4', video([Buffer.from('aaa'), Buffer.from('bb')], { heldMs: 7_418 }));
+    expect(await readVideo(f)).toMatchObject({ frames: 2, durationMs: 67, playsMs: 7_418 });
+  });
+
   it('calls a torn, an empty and a missing file what they are', async () => {
     await expect(
       readVideo(write('torn.mp4', video([Buffer.from('frame')], { torn: true }))),

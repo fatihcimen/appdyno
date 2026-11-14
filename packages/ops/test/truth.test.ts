@@ -50,6 +50,33 @@ describe('changed', () => {
     expect((r.structuredContent?.warnings as string[]).join()).toContain('no change seen');
   });
 
+  it('says a change it lists came before the action, where the action changed nothing', async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    await call('screen');
+    // the app adds a row by itself after that answer, and the touch's own look sees it
+    const shown = device.current.bind(device);
+    device.current = () => {
+      const t = shown();
+      t.nodes.push({
+        p: -1,
+        w: 0,
+        c: 'android.widget.TextView',
+        t: 'Late row',
+        b: [0, 900, 1080, 1000],
+        f: 17,
+      });
+      t.hash = `${t.hash}+late`;
+      return t;
+    };
+    await vi.advanceTimersByTimeAsync(30_000);
+    const r = await call('tap', { x: 5, y: 2390 });
+    expect(r.structuredContent).toMatchObject({ changed: false, screen: 'diff' });
+    expect(r.text).toMatch(
+      /no change seen in \d+ ms after the action: the screen changed before it; if a slow reaction is expected, use wait_for\nscreen changed: \+1 -0 ~0/,
+    );
+  });
+
   it('is unknown when the action asked for no read', async () => {
     const { call } = await connect();
     await call('screen');

@@ -360,7 +360,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
       if (open) {
         // returns once the link's screen has come
         await this.tap(open, { settle: {} });
-        return;
+        return { answered: name };
       }
       await sleep(150);
     }

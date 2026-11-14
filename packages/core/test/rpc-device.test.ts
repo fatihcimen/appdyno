@@ -109,6 +109,64 @@ describe('an agent that stops under a device', () => {
     expect(String(said.mock.calls[0]?.[0])).toContain('lost-under-a-read');
   });
 
+  it('says why the last was taken as gone: its connection closed', async () => {
+    const said = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const closed: FakeHandler = () => ({
+      error: 'AGENT_UNAVAILABLE',
+      message: 'the agent closed the connection',
+    });
+    const d = new TestDevice([{ 'tree.get': closed }, { 'tree.get': tree }], 'closed', [10, 20]);
+    await d.tree();
+    expect(said).toHaveBeenCalledExactlyOnceWith(
+      'the agent on closed stopped (the agent closed the connection), and another took its place\n',
+    );
+  });
+
+  it('says why the last was taken as gone: it closed while nothing was asked of it', async () => {
+    const said = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const ends: (() => void)[] = [];
+    class Ending extends TestDevice {
+      protected override startAgent() {
+        const { rpc, agent } = fakeAgent({ 'tree.get': tree });
+        const pid = [10, 20][ends.push(() => agent.destroy()) - 1];
+        return Promise.resolve({ rpc, hello: { ...HELLO, pid } as Hello, started: true });
+      }
+    }
+    const d = new Ending([], 'closed-idle');
+    await d.tree();
+    ends[0]?.();
+    await new Promise((r) => setTimeout(r, 20));
+    await d.tree();
+    expect(said).toHaveBeenCalledOnce();
+    expect(String(said.mock.calls[0]?.[0])).toMatch(
+      /^the agent on closed-idle stopped \(the agent connection failed: .+\), and another took its place\n$/,
+    );
+  });
+
+  it(
+    'says why the last was taken as gone: it was restarted as stuck',
+    fakeTimed(async () => {
+      const said = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      class Restarted extends TestDevice {
+        protected override restartStuck() {
+          this.rpc = undefined;
+          return Promise.resolve(undefined);
+        }
+      }
+      const never = () => new Promise<never>(() => undefined);
+      const d = new Restarted(
+        [{ 'tree.get': never, 'app.foreground': never }, { 'tree.get': tree }],
+        'restarted',
+        [10, 20],
+      );
+      await expect(d.tree()).rejects.toMatchObject({ code: 'TIMEOUT' });
+      await d.tree();
+      expect(said).toHaveBeenCalledExactlyOnceWith(
+        'the agent on restarted stopped (stuck: a call and a quick look after it went unanswered, so it was restarted), and another took its place\n',
+      );
+    }),
+  );
+
   it("is said to a device made after it, as what a process had is its own and no object's", async () => {
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     await new TestDevice([{}], 'lost-before-this-one', [10]).open();

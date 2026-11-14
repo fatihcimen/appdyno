@@ -170,7 +170,9 @@ export type Device = {
   getClipboard(): Promise<string | undefined>;
   /** `kept`: the host wrote the rotation lock down, and puts it back itself. */
   setOrientation(rotation: 0 | 1 | 2 | 3, kept?: boolean): Promise<void>;
-  openUrl(url: string, pkg?: string): Promise<void>;
+  /** `answered`: the app a system prompt asked to open the link in, answered on the way, as an iOS simulator asks. */
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- a driver whose links ask nothing answers nothing
+  openUrl(url: string, pkg?: string): Promise<{ answered: string } | void>;
   launch(pkg: string): Promise<void>;
   /** Before `open`, when a first call is to launch this app: `launch` then takes up what began here. */
   launchAlongside(pkg: string): void;

@@ -464,7 +464,9 @@ that cannot speak that agent's protocol is refused with the pid of the one that 
 rule, and one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its
 state is written only once it answers, so two runners that two hosts started at once took the phone from each other and the one that lost heard
 nothing for 3 minutes. On an iPhone 13 Pro Max a client's first call then took 1 to 6.3 s over 16, hub first or client
-first. The agent exits after 30 minutes without a
+first. A runner writes `ios-<udid>.log` in the state folder, and a start keeps the last one's as `ios-<udid>.log.1`; a
+host that took the runner it had for gone and started another says so in one line, with why where it knows: its
+connection closed, or it was restarted as stuck. The agent exits after 30 minutes without a
 connection. Exit code 3 with `AGENT_CONFLICT` on stderr: another UI automation client holds the device
 (a device has exactly one). The agent says so after trying for 4 s, as the system keeps UI automation for a holder that was
 killed: held 1.3 s after its process had gone, free at 2.3 s, on an emulator, while after a plain `kill` it was free at once.

@@ -3,19 +3,25 @@ import {
   osName,
   diffScreens,
   diffText,
-  personNeeded,
-  PICTURE_TEXT,
   renderFolded,
   reportProgress,
   UNCHANGED,
   type ActOptions,
   type Screen,
   type ScreenDiff,
-  type SystemAlert,
 } from '@appdyno/core';
 import { DeviceError, SETTLE_DEFAULT, type ActResult, type TextResult } from '@appdyno/protocol';
-import { aimedApp, appDeath, diedRefusal, endedUnder, pidInAnswer, watched } from './app-death.js';
+import {
+  aimedApp,
+  appDeath,
+  diedRefusal,
+  endedUnder,
+  launchDied,
+  pidInAnswer,
+  watched,
+} from './app-death.js';
 import type { ServerContext } from './context.js';
+import { noticed } from './noticed.js';
 import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
@@ -24,11 +30,10 @@ import { refusedAction, reply } from './tool.js';
 /** After an action: quiet window and cap of the on-device settle (the window: docs/reference/protocol.md, measured). */
 export const SETTLE = SETTLE_DEFAULT;
 const MAYBE_MOVING = 'the screen may still be changing';
-const FAST_READ =
-  '; read at the fast level: letters outside English, French, Italian, German, Spanish and Portuguese may be wrong';
 
-const noChange = (ms: number, watchedMs?: number) =>
-  `no change seen in ${ms} ms${watchedMs ? `, and no system alert in ${(watchedMs / 1000).toFixed(1)} s` : ''}; if a slow reaction is expected, use wait_for`;
+/** `earlier`: the diff shown, from the last answer, has a change the screen had before the action. */
+const noChange = (ms: number, watchedMs?: number, earlier = false) =>
+  `no change seen in ${ms} ms${watchedMs ? `, and no system alert in ${(watchedMs / 1000).toFixed(1)} s` : ''}${earlier ? ' after the action: the screen changed before it' : ''}; if a slow reaction is expected, use wait_for`;
 const differs = (d: ScreenDiff) => d.added.length + d.removed.length + d.changed.length > 0;
 
 /** What is known to keep a screen busy: the agent's own reasons, the wait its settle took, a spinner on the screen. */
@@ -48,43 +53,6 @@ export function busyReasons(r: ActResult | undefined, screen: Screen): string[] 
 export type ReadMode = 'diff' | 'full' | 'none';
 
 type Clean = (s: string) => string;
-
-const needsPerson = (what: string) => `\nneeds a person: ${what}. hand_off asks yours, and waits`;
-
-/** A system alert by its own words and buttons, whatever it asks: a permission, or a link's "Open in …?". */
-export const systemAsks = (a: SystemAlert) =>
-  `the system asks: ${a.texts.join(' ')} (${a.buttons.map((b) => b.label).join(', ')}): answer it with alert`;
-
-/** The app check: a system alert points to alert; another app in front is said. */
-function appCheck(s: Session, screen: Screen) {
-  if (screen.foreground === s.appId) s.leftTheApp(false);
-  if (s.wordless && screen.elements.some((e) => e.type === PICTURE_TEXT))
-    return `\nno words in the tree: these were read from the picture, and their places are near${s.pictureLevel === 'fast' ? FAST_READ : ''}`;
-  if (s.pictureFailed)
-    return `\nno words in the tree, and none from the picture: ${s.pictureFailed}`;
-  const person = s.device.platformScreen.personPrompt(screen.tree, screen.elements);
-  if (person) return needsPerson(person);
-  // any the system shows over the app, a permission's or an app's crash ("keeps stopping"), by its words and buttons
-  const asks = s.device.platformScreen.systemAlert(screen.tree, screen.elements);
-  if (asks) return `\n${systemAsks(asks)}`;
-  // an iOS alert of two buttons has an allow by its place, the one a link's "Open in …?" asks with too
-  if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
-    return '\na system alert is open: answer it with alert';
-  if (!s.appId || !screen.foreground || screen.foreground === s.appId || s.leftApp) return '';
-  return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
-}
-
-/**
- * The app check, and what the system shows that no read of the app has. That second look costs a read, so an action
- * takes it only when nothing changed, which is all such a prompt leaves on the app.
- */
-async function noticed(s: Session, screen: Screen, lookFurther = true) {
-  const fg = appCheck(s, screen);
-  if (fg || !lookFurther || !s.device.systemWords) return fg;
-  const words = await s.device.systemWords().catch(() => []);
-  const person = personNeeded({ texts: words, buttons: [] });
-  return person ? needsPerson(person) : '';
-}
 
 function info(s: Session) {
   const h = must(s.device.hello, "the agent's hello");
@@ -230,7 +198,7 @@ async function afterAction(
     o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
   const notes = [
     ...(o.notes ?? []),
-    ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs)] : []),
+    ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs, !!d && differs(d))] : []),
   ];
   return reply(
     [`${done}${fg}${moving}`, ...notes, diff ?? headerOf(screen, clean)].join('\n'),
@@ -249,7 +217,7 @@ async function afterAction(
   );
 }
 
-/** Runs a device action with the settle and read `read` asks for. */
+/** Runs a device action with the settle and read `read` asks for; `ready`: its screen, which can come after the settle. */
 async function act(
   clean: Clean,
   cleanLog: Clean,
@@ -258,6 +226,7 @@ async function act(
   run: (o: ActOptions) => Promise<ActResult | TextResult>,
   done: string | ((r: ActResult | TextResult) => string),
   found: () => boolean = () => false,
+  ready?: (x: Screen) => boolean,
 ) {
   const started = Date.now();
   const before = s.shown;
@@ -318,7 +287,9 @@ async function act(
   const isFound = found();
   if (read === 'none' || !r.tree)
     return reply(said, summaryOf(clean, said, undefined, { found: isFound }));
-  const screen = await s.seen(r.tree);
+  const seen = await s.seen(r.tree);
+  const screen =
+    ready && !ready(seen) ? ((await s.until(ready, SETTLE.maxMs)).screen ?? seen) : seen;
   return afterAction(clean, cleanLog, s, said, read, screen, {
     app,
     pid,
@@ -346,10 +317,10 @@ type Said = string | ((screen: Screen | undefined) => string);
 const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said : said(screen));
 
 /**
- * What a change is compared with, and whether the selected app was in front as it began; `seen`: the action confirmed its
- * effect itself, which the screen's list may not show.
+ * What a change is compared with, whether the selected app was in front as it began, and when it began; `seen`: the
+ * action confirmed its effect itself, which the screen's list may not show.
  */
-type Was = { before: Shown; base: Shown; ran: boolean; seen?: true };
+type Was = { before: Shown; base: Shown; ran: boolean; since: number; seen?: true };
 
 /**
  * A change on the device by its call alone, as a launch, a link or a turn, and what its answer compares with: the newest
@@ -357,25 +328,26 @@ type Was = { before: Shown; base: Shown; ran: boolean; seen?: true };
  */
 async function changing<T>(s: Session, change: () => Promise<T>) {
   const before = s.shown;
+  const since = Date.now();
   const { result, aimedAt } = await s.aiming(change);
   const ran = !!s.appId && aimedAt?.foreground === s.appId;
-  return { result, was: { before, base: aimedAt?.list ?? before, ran } satisfies Was };
+  return { result, was: { before, base: aimedAt?.list ?? before, ran, since } satisfies Was };
 }
 
 async function afterChange(
   clean: Clean,
   cleanLog: Clean,
   s: Session,
-  { before, base, ran: wasInFront, seen }: Was,
+  { before, base, ran: wasInFront, since, seen }: Was,
   said: Said,
   read: ReadMode,
   launched?: string,
   ready?: Ready,
   maxMs: number = SETTLE.maxMs,
 ) {
-  // with no app selected, the one launched is the one whose death is looked for
-  const app = s.appId ?? launched;
-  const ran = wasInFront || (!!launched && launched === app);
+  // the app a launch started is the one whose death is looked for, whichever is selected
+  const app = launched ?? s.appId;
+  const ran = wasInFront || !!launched;
   const started = Date.now();
   s.acted();
   // a launch or a link may start a new process on purpose
@@ -383,11 +355,14 @@ async function afterChange(
   // what the screen shows once the change has reached it, as a turn's call returns before the screen turns: what a read
   // gets meanwhile is the screen before, or a window with nothing on it yet
   const notes = ready && !(await s.until(ready.met, SETTLE.maxMs)).met ? [ready.otherwise] : [];
-  if (read === 'none')
+  if (read === 'none') {
+    const died = launched && (await launchDied(s, launched, saidOf(said), since, clean, cleanLog));
+    if (died) throw died;
     return reply(
       [saidOf(said), ...notes].join('\n'),
       summaryOf(clean, saidOf(said), undefined, { notes }),
     );
+  }
   reportProgress('waiting for the screen to settle');
   const { screen, settled } = await settleRead(s, maxMs);
   return afterAction(clean, cleanLog, s, saidOf(said, screen), read, screen, {
@@ -397,7 +372,8 @@ async function afterChange(
     settled,
     ms: Date.now() - started,
     busy: busyReasons(undefined, screen),
-    started,
+    // a report written while the change waited is of its death: a launch waited 15 s for an app that died at once
+    started: since,
     pid: undefined,
     launched,
     ran,
@@ -425,7 +401,8 @@ export function answersFor(ctx: ServerContext) {
       run: (o: ActOptions) => Promise<ActResult | TextResult>,
       done: string | ((r: ActResult | TextResult) => string),
       found?: () => boolean,
-    ) => act(clean, cleanLog, s, read, run, done, found),
+      ready?: (x: Screen) => boolean,
+    ) => act(clean, cleanLog, s, read, run, done, found, ready),
     settleRead,
     changing,
     afterChange: (
