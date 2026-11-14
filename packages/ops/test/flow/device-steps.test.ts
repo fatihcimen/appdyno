@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { encodePng, type Mirror } from '@appdyno/core';
+import { encodePng, type Device, type Mirror } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { flowFiles } from '../../src/index.js';
+import { LOOK } from '../../src/flow/still.js';
 import { conditions } from '../../src/settings.js';
 import { callerOf, flowsFor, flowHelpers } from './harness.js';
 
@@ -88,6 +89,36 @@ describe('screenshot, visual and setting steps', () => {
     expect(existsSync(join(dir, 'flows', 'shared', 'baselines', 'card.png'))).toBe(true);
   });
 
+  /** A screen whose small looks are each new for the first `moving` of them, and still after. */
+  const settling = (moving: number) => {
+    let looks = 0;
+    device.screenshot = (o?: Parameters<Device['screenshot']>[0]) => {
+      const fresh = o === LOOK && looks++ < moving;
+      const data = fresh ? Buffer.from([looks]) : screen;
+      return Promise.resolve({ meta: { w: W, h: H, format: 'png', bytes: data.length }, data });
+    };
+    return () => looks;
+  };
+
+  it('takes a picture once the screen has looked the same for half a second', async () => {
+    const looks = settling(3);
+    const r = await flowsFor(context()).replay(flowFile('screenshot home'), {
+      shots: join(dir, 'shots'),
+    });
+    expect(r.passed).toBe(true);
+    expect(looks()).toBeGreaterThan(4);
+    expect(r.steps[0]?.ms).toBeGreaterThanOrEqual(500);
+    expect(r.steps[0]?.ms).toBeLessThan(5_000);
+  });
+
+  it('takes a screen that never holds still at five seconds, for its masks to decide', async () => {
+    settling(Infinity);
+    await flowsFor(context([], { updateBaselines: true })).replay(flowFile('visual ticker'));
+    const r = await flowsFor(context()).replay(flowFile('visual ticker'));
+    expect(r.passed).toBe(true);
+    expect(r.steps[0]?.ms).toBeGreaterThanOrEqual(5_000);
+  });
+
   it('refuses a flow with no baseline to compare before its first step, saying how to save one', async () => {
     const file = flowFile('launch\nvisual home');
     const e = await refusal(flowsFor(context()).replay(file));
@@ -98,7 +129,7 @@ describe('screenshot, visual and setting steps', () => {
     expect(device.calls.some((c) => c.name === 'launch')).toBe(false);
   });
 
-  /** Each setting as the device reads it; `seen`: each change, and each picture with the dark mode it was taken in. */
+  /** Each setting as the device reads it; `seen`: each change, and each picture kept with the dark mode it was in. */
   const settingsOf = (held: Record<string, string>, seen: string[] = []) => {
     device.settings = {
       get: (name) => Promise.resolve(held[name] ?? 'none'),
@@ -109,8 +140,9 @@ describe('screenshot, visual and setting steps', () => {
       },
     };
     const take = device.screenshot.bind(device);
-    device.screenshot = () => {
-      seen.push(`picture in dark_mode ${String(held.dark_mode)}`);
+    device.screenshot = (o?: Parameters<Device['screenshot']>[0]) => {
+      // the small looks that wait for a still screen are not the picture a step keeps
+      if (o !== LOOK) seen.push(`picture in dark_mode ${String(held.dark_mode)}`);
       return take();
     };
     return seen;

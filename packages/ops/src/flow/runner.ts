@@ -28,6 +28,7 @@ import { refused, ToolError, type Op } from '../tool.js';
 import { WHOLE_STEP } from '../tool-kinds.js';
 import { opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
 import { loadRecording } from './shared.js';
+import { looksStill } from './still.js';
 
 /** What a step took: the device's own count from action to settled where it has one, else the action on this Mac's clock. */
 export const stepTime = (action: FlowStep['action'], r: StepResult) =>
@@ -100,6 +101,7 @@ export function flowRunner(
   };
 
   const prepare = async (s: Session, st: FlowStep) => {
+    if (st.action === 'visual' || st.action === 'screenshot') await looksStill(s);
     if (st.args.screen) {
       const w = await steps.windowSize(s);
       if (st.args.screen !== `${w.w}x${w.h}`)
