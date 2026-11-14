@@ -49,6 +49,17 @@ describe('targeting', () => {
     expect(act(d).at(-1)).toMatchObject({ y: 350 });
   });
 
+  it('says an index past the last match names none, and how many match', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const r = await call('tap', { selector: { text: 'Form', index: 1 } });
+    expect(r.text).toMatch(
+      /^NOT_FOUND: only 1 element matches text="Form", so index 1 names none: @\w+ button "Form" 540,350 \(no touch was sent\)\n/,
+    );
+    expect(r.data.hint).toBe('give an index below 1, 0 for the first listed, or use a ref');
+    expect(act(d)).toEqual([]);
+  });
+
   it('takes a link and its own text in the same box as one target, the link', async () => {
     withScreen('article', [
       { c: 'android.webkit.WebView', b: [0, 0, 1080, 2000] },

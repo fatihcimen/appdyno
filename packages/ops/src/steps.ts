@@ -304,7 +304,7 @@ export function stepsFor(
   const scrolling = scrollingFor({
     windowSize,
     line,
-    pick: (hits, sel) => pick(hits, sel, line),
+    pick: (hits, sel, sent) => pick(hits, sel, line, sent),
     offer,
   });
   const checks = checksFor({ ctx, clean, line, offer });

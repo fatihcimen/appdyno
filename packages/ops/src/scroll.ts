@@ -91,7 +91,7 @@ function shift(was: ScreenElement[], now: ScreenElement[], box: Box, vertical: b
 type Around = {
   windowSize: (s: Session) => Promise<{ w: number; h: number }>;
   line: (e: ScreenElement) => string;
-  pick: (hits: ScreenElement[], sel: SelectorOf) => ScreenElement;
+  pick: (hits: ScreenElement[], sel: SelectorOf, sent: boolean) => ScreenElement;
   offer: (list: ScreenElement[], want?: string) => string;
 };
 
@@ -171,7 +171,7 @@ const scrollTo = async (
       hits = selectIn(screen.list, a.selector);
     }
     if (hits.length > 0) {
-      const hit = pick(hits, a.selector);
+      const hit = pick(hits, a.selector, swipes > 0);
       return {
         r: last,
         done: `found ${line(hit)} after ${swipes} swipes${partly(hit, a.selector)}`,
