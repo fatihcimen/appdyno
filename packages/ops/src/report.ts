@@ -43,11 +43,21 @@ async function startFlightOn(ctx: ServerContext, s: Session, dir: string | undef
   return reply(t, { done: t, dir: dir ?? '' });
 }
 
-async function stopFlight(s: Session, flight: RunningFlight) {
+async function stopFlight(
+  ctx: ServerContext,
+  s: Session,
+  flight: RunningFlight,
+  dir: string | undefined,
+) {
   await flight.stop();
   s.keepFlight();
   const t = [`flight recorder off, ${flight.saved.length} kept`, ...flight.saved].join('\n');
-  return reply(t, { done: t, dir: '', saved: flight.saved });
+  // one stop ends all that `report` runs: a report open beside the recorder is written with it
+  if (!openReports.read(s.device.serial))
+    return reply(t, { done: t, dir: '', saved: flight.saved });
+  const r = await finishReport(ctx, s, 'stop', dir);
+  const both = `${t}\n${r.data.done}`;
+  return reply(both, { ...r.data, done: both, saved: flight.saved });
 }
 
 async function keepFlight(flight: RunningFlight) {
@@ -149,7 +159,7 @@ export function reportFor(ctx: ServerContext) {
       run: async ({ action, dir }) => {
         const s = await ctx.session();
         if (action === 'flight') return startFlightOn(ctx, s, dir);
-        if (action === 'stop' && s.flight) return stopFlight(s, s.flight);
+        if (action === 'stop' && s.flight) return stopFlight(ctx, s, s.flight, dir);
         if (action === 'write' && s.flight) return keepFlight(s.flight);
         if (action === 'start' || action === 'timeline') return startReport(ctx, s, action, dir);
         return finishReport(ctx, s, action, dir);

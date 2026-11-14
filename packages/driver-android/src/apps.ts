@@ -234,7 +234,8 @@ export class AndroidApps implements AppManager {
   async listApps(all: boolean): Promise<AppEntry[]> {
     const out = await this.sh(`pm list packages${all ? '' : ' -3'}`);
     const labels: { id: string; name: string }[] = await this.labels().catch(() => []);
-    const names = new Map(labels.map((a) => [a.id, a.name]));
+    // an app with two launcher activities, as LeakCanary adds one, is named by the first, its own, which `start` starts
+    const names = new Map(labels.toReversed().map((a) => [a.id, a.name]));
     return out
       .split('\n')
       .flatMap((l) => {

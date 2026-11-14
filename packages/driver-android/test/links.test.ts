@@ -43,6 +43,54 @@ describe("an Android app's links", () => {
     expect(linkFilters(`${DUMP}${DUMP}`)).toHaveLength(2);
   });
 
+  it('name a wildcard host with its *, and each kind of path as it matches', () => {
+    // Wikipedia's and AntennaPod's on an API 35 emulator, LeakCanary's as its manifest has it, and the kinds none has
+    const dump = String.raw`Activity Resolver Table:
+  Schemes:
+      file:
+        3ab7e10 org.wikipedia.alpha/leakcanary.internal.activity.LeakViewerActivity filter 61f0c9d
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          Authority: "": -1 WILD
+          Path: "PatternMatcher{GLOB: .*\.hprof}"
+      https:
+        5c1d2a0 org.wikipedia.alpha/org.wikipedia.page.PageActivity filter 9e1b4c2
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "https"
+          Authority: ".wikipedia.org": -1 WILD
+          Path: "PatternMatcher{PREFIX: /wiki/}"
+          Path: "PatternMatcher{GLOB: /zh.*}"
+        adda57d de.danoeh.antennapod.debug/.OnlineFeedViewActivity filter b241c79
+          Action: "android.intent.action.VIEW"
+          Scheme: "https"
+          Authority: "www.subscribeonandroid.com": -1
+          Path: "PatternMatcher{GLOB: /.*\..*/.*}"
+          AutoVerify=true
+        8f2c98 dev.appdyno.fixture/.MainActivity filter 41d0a7e
+          Action: "android.intent.action.VIEW"
+          Scheme: "https"
+          Authority: "example.com": -1
+          Path: "PatternMatcher{LITERAL: /about}"
+          Path: "PatternMatcher{GLOB: /report.pdf}"
+          Path: "PatternMatcher{ADVANCED: /v[0-9]{1,2}/.*}"
+          Path: "PatternMatcher{SUFFIX: /feed}"
+          Path: "PatternMatcher{PREFIX: /shop/*}"
+`;
+    expect(linkFilters(dump).map((l) => l.url)).toEqual([
+      String.raw`file://*.*\.hprof`,
+      'https://*.wikipedia.org/wiki/*',
+      'https://*.wikipedia.org/zh.*',
+      String.raw`https://www.subscribeonandroid.com/.*\..*/.*`,
+      'https://example.com/about',
+      'https://example.com/report.pdf',
+      'https://example.com/v[0-9]{1,2}/.*',
+      'https://example.com*/feed',
+      'https://example.com/shop/*',
+    ]);
+  });
+
   it('and its App Link domains, as verified', () => {
     expect(linkStates(STATES)).toEqual([
       { url: 'https://example.com', kind: 'domain', state: 'none' },

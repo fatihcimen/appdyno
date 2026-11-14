@@ -22,11 +22,19 @@ function appOf(s: Session, ctx: ServerContext, app?: string) {
   return pkg;
 }
 
+/** A unit of a time given as how long ago, as `5m`, in ms. */
+const AGO: Record<string, number> = { s: 1_000, m: 60_000, h: 3_600_000 };
+
 function sinceOf(given: string | undefined, s: Session) {
   if (!given) return s.lastActionAt;
+  const [, n, unit = ''] = /^(\d+)([smh])$/.exec(given) ?? [];
+  if (n) return Date.now() - Number(n) * must(AGO[unit], 'a unit');
   const t = Date.parse(given);
   if (Number.isNaN(t))
-    throw new ToolError(`not a time: ${given} (give ISO 8601)`, 'INVALID_ARGUMENT');
+    throw new ToolError(
+      `not a time: ${given} (give ISO 8601, or how long ago as 30s, 5m or 2h)`,
+      'INVALID_ARGUMENT',
+    );
   return t;
 }
 

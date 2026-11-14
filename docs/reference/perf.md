@@ -346,7 +346,7 @@ The page's one script is allowed by its hash, so a second script on it does not 
 appdyno flight --app com.example.app --seconds 30    # until Ctrl-C; through the server, report flight, report stop
 ```
 
-It keeps the last N seconds of an app as a timeline, 30 by default, from 20 to 120 (`--flight-seconds`, `APPDYNO_FLIGHT_SECONDS`), and saves them when the app crashes or stalls. It is off until a person turns it on, and it ends with its session.
+It keeps the last N seconds of an app as a timeline, 30 by default, from 20 to 120 (`--flight-seconds`, `APPDYNO_FLIGHT_SECONDS`), and saves them when the app crashes or stalls. It is off until a person turns it on, and it ends with its session, or at `report` `stop`, which also writes a report open beside it.
 
 **What sets it off.** The signals the measures read: a frame of 700 ms or more or a frozen frame, a stop of a main thread in its log, and a process gone with a crash report. It looks every 5 s, as a look costs the device and nothing is lost by waiting: the ring holds the moment, a frozen frame stays counted until it is read, and a log and a crash report stay. A look queues behind what the device is doing: they came 14 and 22 s apart on an emulator at host load 33 to 41, which is why it keeps no less than 20 s. It goes by the process, not by whether the app runs: Android restarts a crashed app within the second, and a look at `pidof` then finds one running. A process gone with no report is one a person closed, and nothing is kept. A stall is saved 2 s after, with the screen coming back, and one that repeats is one to look at: none is saved within N seconds of the last, and at most 20 in a run.
 

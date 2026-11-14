@@ -19,6 +19,11 @@ appdyno 1.1.1, bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpı
 - Arada hiçbir şey cevaplanmadan art arda iki kez takılmış diye yeniden başlatılan bir iOS runner'ı üçüncüsünde çalışır halde bırakılır: her yeni runner'ı bir öncekini tuttuğu gibi tutan bir ekran onları döngüye sokuyordu; bir oturumda 13 kez bir başlangıç ve ardından 15 sn hiçbir şey. Zaman aşımı runner'ın bırakıldığını ve nedenini söyler.
 - Bir iPhone'da takılmış diye yeniden başlatılan bir runner'a artık önce kapanması söylenmiyor: bu istek takılmış hattı bekliyordu ve her yeniden başlatma onun için boşuna 6 sn harcıyordu.
 - Bir simülatörde yardımcının yerine başlatılan runner, yardımcının neden kullanılmadığını bu bir ret, yan çevrilmiş bir ekran ya da ekran boyutunun gelmemesi olduğunda da söylüyor: neden boş kalıyordu ve başarısız bir başlangıcın mesajı "after the simulator's helper did not answer: " ile bitiyordu.
+- Android'de `webview` `pages` bir sayfayı bir kez listeler: sistem bir web görünümünün soketini ona açılan her bağlantı için bir kez daha listeler, appdyno'nun az önce kapanan kendi bağlantıları da aralarındadır, ve her biri ayrı soruluyordu; birkaç saniye arayla yapılan çağrılar tek bir sayfayı 1, 2, 4, sonra 17 kez listeliyor, her biri bir öncekinden yavaş. Sayfaların okunması, portu kaldırıldıktan sonra bağlantısını artık açık tutmaz.
+- Android'de `app` `list`, iki başlatıcı etkinliği olan bir uygulamayı kendi etkinliğinin, `launch_app`'in başlattığı ilkinin adıyla anar: Wikipedia'nın debug build'i, LeakCanary'nin eklediği etkinliğin adıyla "Leaks" diye anılıyordu.
+- Android'de `open_link` `links`, joker bir host'u `*`'ıyla yazar, `https://*.wikipedia.org/wiki/*`, her yolu da eşleştiği gibi: bir glob yazıldığı gibi, bir önek ardında, bir sonek önünde tek bir `*` ile. `http://.wikipedia.org/wiki/*` ve `/zh.**` yazıyor, `}` içeren bir glob'u dışarıda bırakıyordu.
+- Uçuş kaydedicisi ve bir rapor birlikte açıkken `report` `stop` ikisini de bitirir ve raporu yazar: yalnızca `flight recorder off, 0 kept` diyordu, rapor ikinci bir `stop` istiyordu.
+- `logs` ve `crashes`, `since`'i ISO 8601 bir zamanın yanında ne kadar önce olduğu olarak da alır: `30s`, `5m` ya da `2h`. `since: "5m"` reddediliyordu.
 
 ## 1.1.0
 

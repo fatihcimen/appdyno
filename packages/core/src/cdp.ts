@@ -128,6 +128,8 @@ export function onEndpoint(base: string, socket: string) {
 export async function devToolsTargets(base: string): Promise<DevToolsTarget[]> {
   // a redirect is answered as it is: followed, it would send this Mac's request to any host
   const res = await fetch(`${base}/json/list`, {
+    // a connection kept for a next request outlives a port forwarded for this one alone, and holds the app's socket
+    headers: { connection: 'close' },
     redirect: 'manual',
     signal: AbortSignal.timeout(CONNECT_MS),
   });

@@ -393,6 +393,25 @@ describe('the flight recorder', () => {
     await call('report', { action: 'stop' });
   });
 
+  it('ends with a report open beside it at one stop, which writes the report', async () => {
+    // the first stop ended the recorder alone, said nothing of the report, and a second wrote it
+    const d = new FlightDevice();
+    const { call } = connect(d, 20);
+    const dir = join(state, 'report');
+    await call('report', { action: 'start', dir });
+    await call('report', { action: 'flight' });
+    const off = call('report', { action: 'stop' });
+    await vi.advanceTimersByTimeAsync(5_000);
+    const r = await off;
+    expect(r.text.split('\n')).toEqual([
+      'flight recorder off, 0 kept',
+      `report: ${join(dir, 'index.html')} (0 steps, 0 measurements)`,
+    ]);
+    expect(r.data).toMatchObject({ saved: [], file: join(dir, 'index.html') });
+    expect(existsSync(join(dir, 'index.html'))).toBe(true);
+    await expect(call('report', { action: 'stop' })).rejects.toThrow(/no report is open/);
+  });
+
   it('leaves nothing on this Mac, and no recording running, when it is turned off', async () => {
     const d = new FlightDevice();
     d.tracePath = join(state, 'ring.pftrace');

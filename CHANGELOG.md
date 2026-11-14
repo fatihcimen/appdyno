@@ -19,6 +19,11 @@ appdyno 1.1.1 keeps an iOS runner fast on a screen with a control drawn twice un
 - An iOS runner restarted as stuck twice in a row, with nothing answered between, is left running at the third: a screen that held every new runner as it held the last made a loop of them, a start and then 15 s of nothing, 13 times in one session. The timeout says the runner was left, and why.
 - On an iPhone, a runner restarted as stuck is no longer first asked to shut down: the ask waits on the lane that is stuck, and each restart spent 6 s on it for nothing.
 - On a simulator, a runner started in place of the helper says why the helper was not used when that was a refusal, a turned screen or no screen size: the reason was left empty, and a failed start ended its message with "after the simulator's helper did not answer: ".
+- On Android, `webview` `pages` lists a page once: the system lists a web view's socket once more for each connection made to it, appdyno's own just-ended ones among them, and each was asked, so calls a few seconds apart listed one page 1, 2, 4, then 17 times, each slower than the last. Reading the pages no longer keeps its connection open once its port is gone.
+- On Android, `app` `list` names an app with two launcher activities by its own, the first, which `launch_app` starts: Wikipedia's debug build was named "Leaks", the name of the activity LeakCanary adds.
+- On Android, `open_link` `links` writes a wildcard host with its `*`, `https://*.wikipedia.org/wiki/*`, and each path as it matches: a glob as it is written, a prefix with one `*` after it and a suffix with one before. It printed `http://.wikipedia.org/wiki/*` and `/zh.**`, and left out a glob that holds a `}`.
+- `report` `stop` with the flight recorder and a report both open ends both, and writes the report: it said only `flight recorder off, 0 kept`, and the report took a second `stop`.
+- `logs` and `crashes` take `since` as how long ago, `30s`, `5m` or `2h`, as well as an ISO 8601 time: `since: "5m"` was refused.
 
 ## 1.1.0
 

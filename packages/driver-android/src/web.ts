@@ -34,10 +34,13 @@ export class AndroidWeb implements WebInspector {
 
   async pages(app: string | undefined): Promise<WebPage[]> {
     const unix = await this.adb.exec(this.serial, 'cat /proc/net/unix');
+    // a socket is listed once listening and once more for each connection made to it: each is asked once
+    const sockets = new Map(
+      [...unix.matchAll(SOCKET)].map((m) => [must(m[1], 'a socket'), must(m[2], 'a pid')]),
+    );
     const pages: WebPage[] = [];
-    for (const m of unix.matchAll(SOCKET)) {
-      const socket = must(m[1], 'a socket');
-      const cmdline = await this.adb.exec(this.serial, `cat /proc/${must(m[2], 'a pid')}/cmdline`);
+    for (const [socket, pid] of sockets) {
+      const cmdline = await this.adb.exec(this.serial, `cat /proc/${pid}/cmdline`);
       const pkg = must(cmdline.split('\0')[0], 'a name').trim();
       if (app && pkg !== app) continue;
       const targets = await this.through(socket, devToolsTargets).catch(() => []);

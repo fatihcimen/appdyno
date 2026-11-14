@@ -16,14 +16,21 @@ export function linkFilters(dump: string): AppLink[] {
         const m = new RegExp(`^\\s*${key}: "([^"]*)"`).exec(l);
         return m ? [must(m[1], 'a value')] : [];
       });
+    // a host given as `*.example.com` is listed without its `*`, and said WILD
+    const hosts = own.flatMap((l) => {
+      const m = /^\s*Authority: "([^"]*)": -?\d+( WILD)?/.exec(l);
+      return m ? [`${m[2] ? '*' : ''}${must(m[1], 'a host')}`] : [];
+    });
+    // a glob, simple or advanced, matches the whole path as it is written, and may hold a `}` of its own
     const paths = own.flatMap((l) => {
-      const m = /^\s*Path: "PatternMatcher\{(\w+): ([^}]*)\}"/.exec(l);
+      const m = /^\s*Path: "PatternMatcher\{(\w+): (.*)\}"\s*$/.exec(l);
       if (!m) return [];
       const path = must(m[2], 'a path');
-      return [m[1] === 'LITERAL' ? path : `${path}*`];
+      if (m[1] === 'PREFIX') return [path.endsWith('*') ? path : `${path}*`];
+      return [m[1] === 'SUFFIX' ? `*${path}` : path];
     });
     for (const scheme of of('Scheme'))
-      for (const host of of('Authority').length > 0 ? of('Authority') : [''])
+      for (const host of hosts.length > 0 ? hosts : [''])
         for (const path of paths.length > 0 ? paths : ['']) found.add(`${scheme}://${host}${path}`);
   }
   return [...found].map((url) => ({ url, kind: 'filter' as const }));

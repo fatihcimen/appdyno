@@ -73,6 +73,26 @@ describe('logs', () => {
     expect((await call('logs')).text).toContain('devicectl cannot read this');
   });
 
+  it('takes a time as long ago, 30s, 5m or 2h, for logs and crashes alike', async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    for (const [since, ago] of [
+      ['30s', 30_000],
+      ['5m', 300_000],
+      ['2h', 7_200_000],
+    ] as const) {
+      const before = Date.now();
+      const r = await call('logs', { since });
+      expect(r.isError).toBeUndefined();
+      expect(device.logAsked?.since).toBeGreaterThanOrEqual(before - ago);
+      expect(device.logAsked?.since).toBeLessThanOrEqual(Date.now() - ago);
+    }
+    expect((await call('crashes', { since: '5m' })).isError).toBeUndefined();
+    expect((await call('logs', { since: '5 minutes' })).structuredContent).toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
+  });
+
   it('keeps the newest lines that fit', () => {
     const lines = Array.from({ length: 50 }, (_, i) => `line ${i}`);
     expect(boundLines(lines, 3).kept).toEqual(['line 47', 'line 48', 'line 49']);
