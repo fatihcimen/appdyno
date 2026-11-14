@@ -66,7 +66,8 @@ const isWebView = (type: string) => /^web.?view$/.test(bare(type));
 /** `com.android.systemui:id/clock` → `com.android.systemui`. */
 export const packageOf = (id: string | undefined) => /^([A-Za-z][\w.]*):id\//.exec(id ?? '')?.[1];
 const ownName = (el: UiElement) => (el.label || el.text || '').trim();
-const cutAt = (text: string, max: number) => {
+/** At most `max` characters, the last an ellipsis where it was cut. */
+export const cutAt = (text: string, max: number) => {
   const chars = Array.from(text); // code points: never half a surrogate pair
   return chars.length > max ? `${chars.slice(0, max - 1).join('')}…` : text;
 };

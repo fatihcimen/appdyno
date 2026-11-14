@@ -28,6 +28,8 @@ import type { ScreenInspector, ScreenRecorder } from './device-capture.js';
 import type { DeviceEvents, DeviceSettings, SettingsPage } from './device-conditions.js';
 import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from './device-logs.js';
 import type { NetworkSource, WebInspector } from './device-network.js';
+import type { ViewTree } from './device-views.js';
+import type { Framework } from './framework-label.js';
 
 /**
  * UIKit takes no touches during a push or a pop. The tree is final and the app's reports say all is still well
@@ -49,6 +51,12 @@ export const TURNS_FROM_OWN_SHAPE: Record<Platform, boolean> = { android: true, 
 export const SETTINGS_APP: Record<Platform, string> = {
   android: 'com.android.settings',
   ios: 'com.apple.Preferences',
+};
+
+/** What draws a screen of native views where no other framework is over its content. */
+export const NATIVE_TOOLKIT: Record<Platform, Framework> = {
+  android: 'Android views',
+  ios: 'UIKit',
 };
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
@@ -141,6 +149,8 @@ export type Device = {
   close(): void;
   /** `asItIs`: a look that leaves a dark or locked screen so, for what reads with no one asking it to. */
   tree(opts?: TreeOptions): Promise<Tree>;
+  /** The native views of the app in front, where this kind of device can read them. */
+  views?(): Promise<ViewTree>;
   act(action: ActParams, opts?: ActOptions): Promise<ActResult>;
   tap(p: Point, opts?: ActOptions): Promise<ActResult>;
   longPress(p: Point, durationMs?: number, opts?: ActOptions): Promise<ActResult>;
