@@ -159,8 +159,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
   /** A runner whose main thread stays stuck: stopped (its xcodebuild ends), the next call starts one. */
   protected async restartStuck(rpc: RpcClient) {
     if (this.rpc === rpc) this.rpc = undefined;
-    await this.launcher.stop(rpc);
+    // no shutdown asked: it is a job of the lane that is stuck, and on an iPhone waited its 6 s for nothing
     rpc.close();
+    await this.launcher.stop();
     return undefined;
   }
 
