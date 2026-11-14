@@ -33,3 +33,5 @@ export async function drive(flow: string, log: (line: string) => void) {
 ```
 
 `close` puts back what the tools changed on the device, as the end of a session does.
+
+A program that needs the tree itself, rather than the folded list a model reads, asks `screen` with `raw: true`: its answer's `data.nodes` holds every element with its `ref`, `type`, words, `rect`, `flags` and the index of its `parent`, and a `ref` from it is one `tap` takes.

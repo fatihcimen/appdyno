@@ -287,6 +287,22 @@ describe('an answer', () => {
     await expect(call('nothing')).rejects.toThrow();
   });
 
+  it('of screen holds the raw elements, with rects, parents and the refs a tap takes, only when asked', async () => {
+    const { ctx } = await connect();
+    const call = callerOf(ctx, onFakeTime);
+    expect((await call('screen')).data.nodes).toBeUndefined();
+    const { data } = await call('screen', { raw: true });
+    const nodes = data.nodes ?? [];
+    const form = nodes.find((n) => n.label === 'Form' || n.text === 'Form');
+    expect(form?.rect).toMatchObject({
+      x: expect.any(Number) as unknown,
+      width: expect.any(Number) as unknown,
+    });
+    expect(nodes.some((n) => n.parent !== undefined && nodes[n.parent] !== undefined)).toBe(true);
+    const listed = (await call('find', { selector: { text: 'Form' } })).data.matches[0]?.ref;
+    expect(nodes.some((n) => n.ref === listed)).toBe(true);
+  });
+
   it('that leaves out what its schema asks for does not compile', () => {
     const op = defineOp({
       name: 'x',

@@ -33,3 +33,5 @@ export async function drive(flow: string, log: (line: string) => void) {
 ```
 
 `close`, araçların cihazda değiştirdiklerini bir oturumun sonunun yaptığı gibi eski haline getirir.
+
+Bir modelin okuduğu katlanmış liste yerine ağacın kendisine ihtiyaç duyan bir program `screen`'i `raw: true` ile çağırır: cevabının `data.nodes` alanı her öğeyi `ref`, `type`, sözleri, `rect`, `flags` ve `parent` sırasıyla tutar; oradaki bir `ref` `tap`'in aldığı ref'tir.

@@ -11,6 +11,7 @@ import {
   screenStructure,
   selectIn,
   UNCHANGED,
+  type UiElement,
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
@@ -88,6 +89,36 @@ async function saveShot(s: Session, file: string, overwrite: boolean, inline: bo
   );
 }
 
+const RAW_FLAGS = [
+  'clickable',
+  'focusable',
+  'enabled',
+  'visible',
+  'checked',
+  'focused',
+  'selected',
+  'editable',
+  'password',
+  'scrollable',
+] as const;
+
+/** An element as `screen raw` gives it: its words as cleaned as the list's, and no password field's text. */
+function rawNode(e: UiElement, clean: (s: string) => string) {
+  return {
+    ...(e.ref && { ref: e.ref }),
+    type: e.type,
+    ...(e.label !== undefined && { label: clean(e.label) }),
+    ...(e.text !== undefined && !e.password && { text: clean(e.text) }),
+    ...(e.identifier !== undefined && { identifier: e.identifier }),
+    ...(e.placeholder !== undefined && { placeholder: clean(e.placeholder) }),
+    ...(e.rect && { rect: e.rect }),
+    ...(e.parent !== undefined && { parent: e.parent }),
+    flags: RAW_FLAGS.filter((f) => e[f]),
+  };
+}
+
+const ScreenIn = z.object({ raw: z.boolean().optional() }).strict();
+
 export function readOps(
   ctx: ServerContext,
   { clean, noticed, header, show }: Answers,
@@ -98,11 +129,11 @@ export function readOps(
       name: 'screen',
       title: 'Read screen',
       description:
-        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags). Rows alike are folded under one header line; "— words" names the row an element is in; a row\'s inner texts are left out and find reaches them. A ref names an element by what it is, so it holds across scrolls and redraws; one whose label changes gets a new ref, shown in the diff.',
-      input: z.object({}).strict(),
+        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags). Rows alike fold under one header line; "— words" names an element\'s row; a row\'s inner texts are left out and find reaches them. A ref names an element by what it is, so it holds across scrolls and redraws. raw: every element with rect and parent, as data.',
+      input: ScreenIn,
       output: ScreenOut,
       annotations: READ,
-      run: async () => {
+      run: async ({ raw }) => {
         const s = await ctx.session();
         const screen = await s.read();
         s.show(screen.list);
@@ -112,6 +143,7 @@ export function readOps(
           elements: screen.list.length,
           ...(screen.foreground && { foreground: screen.foreground }),
           warnings: fg ? [fg.trim()] : [],
+          ...(raw && { nodes: screen.elements.map((e) => rawNode(e, clean)) }),
         });
       },
     }),

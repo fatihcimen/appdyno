@@ -52,10 +52,27 @@ export const ActionOut = z.object({
 });
 export type ActionOut = z.infer<typeof ActionOut>;
 
+/** One element of the tree as read, for `screen raw`: what the folded list leaves out, places and parents. */
+export const RawNode = z.object({
+  ref: z.string().optional(),
+  type: z.string(),
+  label: z.string().optional(),
+  text: z.string().optional(),
+  identifier: z.string().optional(),
+  placeholder: z.string().optional(),
+  rect: z
+    .object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() })
+    .optional(),
+  /** Index of the parent in `nodes`; none for a root. */
+  parent: z.number().int().optional(),
+  flags: z.array(z.string()),
+});
+
 export const ScreenOut = z.object({
   elements: z.number().int(),
   foreground: z.string().optional(),
   warnings: z.array(z.string()),
+  nodes: z.array(RawNode).optional(),
 });
 
 export const FindOut = z.object({
