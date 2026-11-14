@@ -53,7 +53,19 @@ function appCheck(s: Session, screen: Screen) {
   if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
     return '\na system alert is open: answer it with alert';
   if (!s.appId || !screen.foreground || screen.foreground === s.appId || s.leftApp) return '';
-  return `\nWARNING: the app is not in the foreground (${screen.foreground} is, not ${s.appId}): if it crashed, bring it back with launch_app`;
+  return `${NOT_IN_FRONT} (${screen.foreground} is, not ${s.appId}): if it crashed, bring it back with launch_app`;
+}
+
+const NOT_IN_FRONT = '\nWARNING: the app is not in the foreground';
+
+/**
+ * The app check after an action that began with the app in front, which runs on (a death refuses the action first):
+ * another app in front is one the action brought up, as a link the app opened in Safari, and not a crash.
+ */
+export function broughtUp(s: Session, screen: Screen, fg: string) {
+  if (!fg.startsWith(NOT_IN_FRONT)) return fg;
+  s.leftTheApp();
+  return `\n${screen.foreground ?? ''} came to the front: launch_app brings ${s.appId ?? ''} back`;
 }
 
 /**

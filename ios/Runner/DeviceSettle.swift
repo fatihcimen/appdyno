@@ -2,14 +2,13 @@ import UIKit
 import XCTest
 
 extension Device {
-    /// After an action: settle (when asked) and read what the caller wants.
+    /// After an action: settle (when asked) and read what the caller wants. `inFront`: the app under test was in front
+    /// as the action began, so another app in front after it is one the action brought up.
     func after(_ request: AfterRequest, job: Job, actionAt: Int,
-               tapAt: (x: Double, y: Double)?) throws -> [String: Any] {
+               tapAt: (x: Double, y: Double)?, inFront: Bool = false) throws -> [String: Any] {
         var out: [String: Any] = [:]
         var last: Capture?
-        if let settle = request.settle {
-            let before = request.before.flatMap { h in recent.last { $0.hash == h }?.nodes }
-            let (wire, read) = settled(settle, before: before, job: job, actionAt: actionAt, tapAt: tapAt)
+        if let (wire, read) = settled(request, job: job, actionAt: actionAt, tapAt: tapAt, inFront: inFront) {
             out["settle"] = wire
             last = read
         }
@@ -28,11 +27,16 @@ extension Device {
         return out
     }
 
-    /// The settle an action asked for: what it answers, and its last read.
-    private func settled(_ settle: SettleRequest, before: [Node]?, job: Job, actionAt: Int,
-                         tapAt: (x: Double, y: Double)?) -> (Wire, Capture?) {
+    /// The settle an action asked for, if it asked: what it answers, and its last read.
+    private func settled(_ request: AfterRequest, job: Job, actionAt: Int,
+                         tapAt: (x: Double, y: Double)?, inFront: Bool) -> (Wire, Capture?)? {
+        guard let settle = request.settle else { return nil }
+        let before = request.before.flatMap { h in recent.last { $0.hash == h }?.nodes }
         var quiet = settle.quietMs
         var inert = false
+        // the action sent the app under test away, as a link it opened in Safari: the app come up is read once, as it
+        // loads it is read slowly, and the host gave up on the action at its deadline and restarted the runner
+        var left = false
         if let tapAt, let before, !actionable(before, x: Int(tapAt.x), y: Int(tapAt.y)) {
             quiet = min(quiet, SettleTimes.inertQuietMs)
             inert = true
@@ -42,6 +46,9 @@ extension Device {
         var alertSince: Date? = before.flatMap { hasAlert($0) ? Date.distantPast : nil }
         let read = { () -> Capture in
             var c = (try? self.capture(job: job)) ?? Capture(windows: [], nodes: [], truncated: true, busy: true)
+            if inFront, let id = c.windows.first?["pkg"] as? String, id != self.targetId, id != Device.springboardId {
+                left = true
+            }
             if hasAlert(c.nodes) {
                 let since = alertSince ?? Date()
                 alertSince = since
@@ -53,7 +60,7 @@ extension Device {
         }
         let seen = before.map { Capture(windows: [], nodes: $0, truncated: false, busy: false) }
         let probe = SettleProbe(read: read, same: { sameLayout($0.nodes, $1.nodes) }, busy: { $0.busy },
-                                cancelled: { job.over })
+                                cancelled: { job.over || left })
         let outcome = settler.run(actionAt: actionAt, quietMs: quiet, maxMs: settle.maxMs, before: seen, probe: probe)
         var last: Capture? = outcome.last
         var settled = outcome.settled
@@ -62,7 +69,7 @@ extension Device {
         var idleMs = 0
         // an actionable tap that changed nothing in the app may have asked the system for something (a
         // permission): its alert comes from the home screen app a moment later, while the app is idle
-        if tapAt != nil, !inert, let before {
+        if tapAt != nil, !inert, !left, let before {
             let watch = watchForAlert(before: before, last: &last, job: job, read: read)
             idleMs = watch.ms
             // a reaction that began after the settle, the alert or the app's own, is at its first frame: it is
