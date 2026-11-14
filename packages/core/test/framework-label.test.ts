@@ -18,18 +18,42 @@ const views = (specs: Spec[], more: Partial<NativeView>[] = []) => ({
   })),
 });
 
-const PHONE: [number, number, number, number] = [0, 0, 390, 844];
-const HOSTING =
-  'SwiftUI._UIHostingView<SwiftUI.ModifiedContent<SwiftUI.AnyView, SwiftUI.RootModifier>>';
-const REPRESENTED =
-  'SwiftUI.UIKitPlatformViewHost<SwiftUI.PlatformViewControllerRepresentableAdaptor<Fixture.UIKitScreen>>';
+const PHONE: [number, number, number, number] = [0, 0, 402, 874];
+const BODY: [number, number, number, number] = [0, 116, 402, 724];
+
+// as the fixture's views read on an iOS 26.5 simulator, mangled as the runtime names them
+const ROOT = '_TtGC7SwiftUI14_UIHostingViewGVS_15ModifiedContentVS_7AnyViewVS_12RootModifier__';
+const STACK =
+  '_TtGC7SwiftUI21UIKitPlatformViewHostGVS_42PlatformViewControllerRepresentableAdaptorVS_P10$1d374170828NavigationStackRepresentable__';
+const PAGE =
+  '_TtCGC7SwiftUI32NavigationStackHostingControllerVS_7AnyView_P10$1d374148c11HostingView';
+const LIST =
+  '_TtGC7SwiftUI21UIKitPlatformViewHostGVS_P10$1d3747c1817ListRepresentableGVS_28CollectionViewListDataSourceOs5Never_GOS_19SelectionManagerBoxS3____';
+const TABLE_HOST =
+  '_TtGC7SwiftUI21UIKitPlatformViewHostGVS_42PlatformViewControllerRepresentableAdaptorV7Fixture11UIKitScreen__';
+const WEB_HOST =
+  '_TtGC7SwiftUI21UIKitPlatformViewHostGVS_P10$1d374ce4432PlatformViewRepresentableAdaptorV7Fixture9WebScreen__';
+const FLOATING = '_TtGC5UIKitP10$186ecd81022FloatingBarHostingViewVS_20FloatingBarContainer_';
+
+/** A SwiftUI app's window down to a page of its navigation stack, then `inside` under that page. */
+const swiftUI = (inside: Spec[]) =>
+  views([
+    ['UIWindow', PHONE],
+    [ROOT, PHONE, 0],
+    [STACK, PHONE, 1],
+    ['UILayoutContainerView', PHONE, 2],
+    [PAGE, PHONE, 3],
+    ...inside,
+  ]);
 
 describe('the framework of a screen by its native views', () => {
   it('is UIKit or Android views where nothing else draws over the content', () => {
     const ios = views([
       ['UIWindow', PHONE],
       ['UILayoutContainerView', PHONE, 0],
-      ['UITableView', [0, 100, 390, 744], 1],
+      ['UITableView', BODY, 1],
+      ['_UIFloatingBarContainerView', PHONE, 0],
+      [FLOATING, PHONE, 3],
     ]);
     expect(frameworkOfViews(ios, 'ios')).toEqual({ name: 'UIKit' });
     const android = views([
@@ -40,50 +64,72 @@ describe('the framework of a screen by its native views', () => {
     expect(frameworkOfViews(android, 'android')).toEqual({ name: 'Android views' });
   });
 
-  it('is SwiftUI under a hosting view, by its class demangled or mangled', () => {
-    for (const hosting of [HOSTING, '_TtGC7SwiftUI14_UIHostingViewVS_7AnyView_']) {
-      const tree = views([
-        ['UIWindow', PHONE],
-        ['UITransitionView', PHONE, 0],
-        [hosting, PHONE, 1],
-        ['SwiftUI.UpdateCoalescingCollectionView', [0, 120, 390, 724], 2],
-      ]);
-      expect(frameworkOfViews(tree, 'ios')).toEqual({ name: 'SwiftUI' });
-    }
+  it('is SwiftUI under its hosting views, through the navigation stack and list it hosts in UIKit', () => {
+    expect(frameworkOfViews(swiftUI([]), 'ios')).toEqual({ name: 'SwiftUI' });
+    const list = swiftUI([
+      [LIST, PHONE, 4],
+      ['SwiftUI.UpdateCoalescingCollectionView', PHONE, 5],
+    ]);
+    expect(frameworkOfViews(list, 'ios')).toEqual({ name: 'SwiftUI' });
+    const demangled = views([
+      ['UIWindow', PHONE],
+      [
+        'SwiftUI._UIHostingView<SwiftUI.ModifiedContent<SwiftUI.AnyView, SwiftUI.RootModifier>>',
+        PHONE,
+        0,
+      ],
+      [
+        'SwiftUI.UIKitPlatformViewHost<SwiftUI.PlatformViewControllerRepresentableAdaptor<SwiftUI.(unknown context at $1d374170828).NavigationStackRepresentable>>',
+        PHONE,
+        1,
+      ],
+    ]);
+    expect(frameworkOfViews(demangled, 'ios')).toEqual({ name: 'SwiftUI' });
   });
 
-  it('is UIKit inside SwiftUI where a representable holds most of the content, by any host of one', () => {
+  it('is UIKit inside SwiftUI where a representable the app wrote holds most of the content', () => {
     for (const host of [
-      REPRESENTED,
-      'SwiftUI.PlatformViewHost<X>',
-      '_TtGC7SwiftUI16PlatformViewHostV_',
+      TABLE_HOST,
+      'SwiftUI.UIKitPlatformViewHost<SwiftUI.PlatformViewControllerRepresentableAdaptor<Fixture.UIKitScreen>>',
+      'SwiftUI.PlatformViewHost<SwiftUI.PlatformViewRepresentableAdaptor<Fixture.Chart>>',
     ]) {
-      const tree = views([
-        ['UIWindow', PHONE],
-        [HOSTING, PHONE, 0],
-        [host, [0, 100, 390, 700], 1],
-        ['UITableView', [0, 140, 390, 660], 2],
+      const tree = swiftUI([
+        [host, BODY, 4],
+        ['UITableView', BODY, 5],
       ]);
       expect(frameworkOfViews(tree, 'ios')).toEqual({ name: 'UIKit', inside: 'SwiftUI' });
     }
+  });
+
+  it('is SwiftUI again where the representable hosts SwiftUI, and UIKit where that hosts UIKit', () => {
+    const again = swiftUI([
+      [TABLE_HOST, BODY, 4],
+      [ROOT, BODY, 5],
+    ]);
+    expect(frameworkOfViews(again, 'ios')).toEqual({ name: 'SwiftUI' });
+    const deeper = swiftUI([
+      [TABLE_HOST, BODY, 4],
+      [ROOT, BODY, 5],
+      [TABLE_HOST, BODY, 6],
+      ['UITableView', BODY, 7],
+    ]);
+    expect(frameworkOfViews(deeper, 'ios')).toEqual({ name: 'UIKit', inside: 'SwiftUI' });
   });
 
   it('is UIKit where SwiftUI draws only a part of the screen', () => {
     const tree = views([
       ['UIWindow', PHONE],
       ['UITableView', PHONE, 0],
-      ['UITableViewCell', [0, 100, 390, 80], 1],
-      [HOSTING, [0, 100, 390, 80], 2],
+      ['UITableViewCell', [0, 100, 402, 80], 1],
+      [ROOT, [0, 100, 402, 80], 2],
     ]);
     expect(frameworkOfViews(tree, 'ios')).toEqual({ name: 'UIKit' });
   });
 
   it('names a web view by the framework that holds it, past the island it sits in', () => {
-    const ios = views([
-      ['UIWindow', PHONE],
-      [HOSTING, PHONE, 0],
-      [REPRESENTED, [0, 100, 390, 744], 1],
-      ['WKWebView', [0, 100, 390, 744], 2],
+    const ios = swiftUI([
+      [WEB_HOST, BODY, 4],
+      ['WKWebView', BODY, 5],
     ]);
     expect(frameworkOfViews(ios, 'ios')).toEqual({ name: 'web view', inside: 'SwiftUI' });
     const android = views([
@@ -152,14 +198,14 @@ describe('the framework of a screen by its native views', () => {
     expect(over([{}, {}, { hidden: true }])).toEqual({ name: 'UIKit' });
     expect(over([{}, {}, { alpha: 0 }])).toEqual({ name: 'UIKit' });
     expect(over([{}, { hidden: true }, {}])).toEqual({ name: 'UIKit' });
-    expect(over([{}, {}, {}], [0, 600, 390, 2000])).toEqual({ name: 'UIKit' });
+    expect(over([{}, {}, {}], [0, 600, 402, 2000])).toEqual({ name: 'UIKit' });
   });
 
   it('adds up the roots of one framework, side by side', () => {
     const tree = views([
       ['UIWindow', PHONE],
-      ['WKWebView', [0, 0, 195, 844], 0],
-      ['WKWebView', [195, 0, 195, 844], 0],
+      ['WKWebView', [0, 0, 201, 874], 0],
+      ['WKWebView', [201, 0, 201, 874], 0],
     ]);
     expect(frameworkOfViews(tree, 'ios')).toEqual({ name: 'web view' });
   });
@@ -195,7 +241,7 @@ describe('the framework of a screen by its accessibility tree', () => {
       frameworkOfElements(
         elements([
           ['Application', PHONE],
-          ['WebView', [0, 100, 390, 700], 0],
+          ['WebView', [0, 100, 402, 700], 0],
         ]),
       ),
     ).toEqual({ name: 'web view' });

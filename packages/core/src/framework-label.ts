@@ -1,6 +1,7 @@
 import type { Platform } from '@appdyno/protocol';
 import { NATIVE_TOOLKIT } from './device.js';
 import type { ViewTree } from './device-views.js';
+import { must } from './must.js';
 import type { Rect, UiElement } from './screen/elements.js';
 
 export const FRAMEWORKS = [
@@ -17,18 +18,23 @@ export type Framework = (typeof FRAMEWORKS)[number];
 /** What draws most of a screen's content, and the framework that holds it there, where another does. */
 export type FrameworkLabel = { name: Framework; inside?: Framework };
 
+/** A class of SwiftUI's own, mangled or demangled. */
+const SWIFTUI = String.raw`^(_Tt[A-Z]*7SwiftUI|SwiftUI\.)`;
+
 /**
  * Each framework by the class of a view its content hangs from. A generic Swift class comes mangled or demangled, so
- * SwiftUI's are found by a part of the name. UIKit and Android views have such a view only as an island: a SwiftUI
- * representable's host, and Compose's holder of an Android view.
+ * SwiftUI's are found by their module and a part of the name: a hosting view of SwiftUI's own, never UIKit's (iOS 26
+ * hosts its floating bars in one over the whole screen). UIKit and Android views have such a view only as an island:
+ * the host of a representable the app wrote, as SwiftUI hosts its own navigation stack and lists in representables
+ * too, and Compose's holder of an Android view.
  */
 const ROOTS: readonly (readonly [Framework, RegExp])[] = [
   ['Flutter', /(^|\.)FlutterView$/],
   ['React Native', /^RCT(RootView|SurfaceHosting)|\.React(Root|Surface)View$/],
   ['Compose', /^androidx\.compose\.ui\.platform\.(Android)?ComposeView$/],
   ['web view', /WebView$/],
-  ['SwiftUI', /UIHostingView/],
-  ['UIKit', /PlatformViewHost/],
+  ['SwiftUI', new RegExp(`${SWIFTUI}.*HostingView`)],
+  ['UIKit', new RegExp(`${SWIFTUI}.*PlatformViewHost.*Adaptor(G?[VCO][1-9]|<(?!SwiftUI\\.))`)],
   ['Android views', /^androidx\.compose\.ui\.viewinterop\./],
 ];
 
@@ -46,7 +52,7 @@ const overlap = (a: Rect, b: Rect) =>
   Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
 const kindOf = (cls: string) => ROOTS.find(([, by]) => by.test(cls))?.[0];
 
-/** The framework of each view that roots one, and what is drawn of each view: it, and every view over it. */
+/** What is drawn of each view (it, and every view over it), and each view's ancestors, the nearest first. */
 function readNodes(nodes: Node[]) {
   const seen: (boolean | undefined)[] = [];
   const drawn = (i: number): boolean => {
@@ -65,48 +71,50 @@ function readNodes(nodes: Node[]) {
       out.push(p);
     return out;
   };
-  return { drawn, ancestors, kinds: nodes.map((n) => kindOf(n.cls)) };
+  return { drawn, ancestors };
 }
 
-/** Each framework drawing most of `content`, with the frameworks over its roots, the nearest first. */
-function mostOf(
-  nodes: Node[],
-  content: Rect,
-  { drawn, ancestors, kinds }: ReturnType<typeof readNodes>,
-) {
-  const share = new Map<Framework, number>();
-  const holders = new Map<Framework, Framework[]>();
-  nodes.forEach((n, i) => {
-    const kind = kinds[i];
-    if (!kind || !n.rect || !drawn(i)) return;
-    const over = ancestors(i).flatMap((a) => kinds[a] ?? []);
-    // a root under one of its own kind is drawn by that one already
-    if (over.includes(kind)) return;
-    share.set(kind, (share.get(kind) ?? 0) + overlap(n.rect, content) / area(content));
-    holders.set(kind, [...(holders.get(kind) ?? []), ...over]);
-  });
-  return [...share]
-    .filter(([, part]) => part > MOST)
-    .map(([name]) => ({ name, over: holders.get(name) ?? [] }));
+/**
+ * The frameworks a screen is drawn with, outermost first: at each step the roots right under the last step's (under
+ * none at first), and of them the framework whose roots cover most of the content. Drawn over one another, the later
+ * one is on top.
+ */
+function levelsOf(nodes: Node[], content: Rect) {
+  const { drawn, ancestors } = readNodes(nodes);
+  const kinds = nodes.map((n) => kindOf(n.cls));
+  const roots = nodes.flatMap((n, i) => (kinds[i] && n.rect && drawn(i) ? [i] : []));
+  const above = new Map(roots.map((r) => [r, ancestors(r).find((a) => roots.includes(a))]));
+  const levels: Framework[] = [];
+  for (let under: (number | undefined)[] = [undefined]; ;) {
+    const below = roots.filter((r) => under.includes(above.get(r)));
+    const share = new Map<Framework, number>();
+    for (const r of below) {
+      const kind = must(kinds[r], "a root's framework");
+      const rect = must(nodes[r]?.rect, "a root's place");
+      share.set(kind, (share.get(kind) ?? 0) + overlap(rect, content) / area(content));
+    }
+    const top = [...share].filter(([, part]) => part > MOST).at(-1)?.[0];
+    if (!top) return levels;
+    levels.push(top);
+    under = below.filter((r) => kinds[r] === top);
+  }
 }
 
-/** The innermost of the frameworks drawing most of the content, in the nearest that holds it and is no island. */
+/** The innermost framework drawing most of the content, in the nearest that holds it and is no island. */
 function label(nodes: Node[], otherwise?: Framework): FrameworkLabel | undefined {
-  const read = readNodes(nodes);
-  const roots = nodes.flatMap((n, i) =>
-    n.parent === undefined && n.rect && read.drawn(i) ? [n.rect] : [],
-  );
-  const content = roots.reduce<Rect | undefined>(
-    (a, r) => (a && area(a) >= area(r) ? a : r),
-    undefined,
-  );
+  const { drawn } = readNodes(nodes);
+  const content = nodes
+    .flatMap((n, i) => (n.parent === undefined && n.rect && drawn(i) ? [n.rect] : []))
+    .reduce<Rect | undefined>((a, r) => (a && area(a) >= area(r) ? a : r), undefined);
   if (!content) return undefined;
-  const most = mostOf(nodes, content, read);
-  // drawn over one another and held by neither: the later one is on top
-  const inner = most.filter((m) => !most.some((o) => o.over.includes(m.name))).at(-1);
-  if (!inner) return otherwise && { name: otherwise };
-  const inside = inner.over.find((f) => !ISLANDS.has(f) && f !== inner.name);
-  return { name: inner.name, ...(inside && { inside }) };
+  const levels = levelsOf(nodes, content);
+  const name = levels.at(-1);
+  if (!name) return otherwise && { name: otherwise };
+  const inside = levels
+    .slice(0, -1)
+    .reverse()
+    .find((f) => !ISLANDS.has(f) && f !== name);
+  return { name, ...(inside && { inside }) };
 }
 
 /** What draws most of the screen by the app's native views: a platform's own toolkit where nothing else does. */
