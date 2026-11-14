@@ -80,6 +80,9 @@ struct FixtureApp: App {
         "canvas": { _ in AnyView(CanvasScreen()) },
         "marquee": marquee, "marquee_jumps": marquee, "marquee_back": marquee, "marquee_cut": marquee,
         "locale": { _ in AnyView(LocaleScreen()) },
-        "push": { _ in AnyView(PushScreen()) }
+        "push": { _ in AnyView(PushScreen()) },
+        "uikit": { _ in AnyView(UIKitScreen()) },
+        "lifecycle": { _ in AnyView(LifecycleScreen()) },
+        "photos": { _ in AnyView(PhotosScreen()) }
     ]
 }
