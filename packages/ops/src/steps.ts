@@ -170,7 +170,8 @@ async function pressKey(
       'POLICY_DENIED',
       byPerson('by starting it without --no-home'),
     );
-  if (leaves) s.leftTheApp();
+  // a back that leaves the app is the person's leaving too; one that stays is undone by the app in front again
+  if (leaves || key === 'back') s.leftTheApp();
   const dark = NOTHING_TO_READ.has(key);
   const quiet = { settle: false, read: 'none' } as const;
   const count = st.count ?? 1;
