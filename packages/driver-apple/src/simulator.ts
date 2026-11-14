@@ -137,7 +137,7 @@ export class IosSimulatorDevice extends IosDevice {
     const hello = await this.queue
       .run(() => this.direct.hello())
       .catch((e: unknown) => {
-        why = e instanceof Error ? e.message : String(e);
+        why = (e instanceof Error ? e.message : String(e)) || 'it gave no reason';
         return undefined;
       });
     if (hello) {

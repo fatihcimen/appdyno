@@ -74,18 +74,18 @@ describe('the helpers prove themselves', () => {
       ax: () => Promise.resolve(answer([874, 402])),
       hid: () => Promise.resolve(ax()),
     });
-    expect(await wide.hello()).toBeUndefined();
+    await expect(wide.hello()).rejects.toThrow(/turned/);
     const none = new DirectSim('u', {
       ax: () => Promise.resolve(answer([0, 0])),
       hid: () => Promise.resolve(ax()),
     });
-    expect(await none.hello()).toBeUndefined();
+    await expect(none.hello()).rejects.toThrow(/no screen size/);
     const off = new DirectSim(
       'u',
       { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(ax()) },
       'off',
     );
-    expect(await off.hello()).toBeUndefined();
+    await expect(off.hello()).rejects.toThrow(/APPDYNO_SIM_DIRECT=off/);
   });
 
   it('turns a touch as a window turns one, by what the app in front says of itself', async () => {
@@ -104,7 +104,8 @@ describe('the helpers prove themselves', () => {
         ax: () => Promise.resolve(answer),
         hid: () => Promise.resolve(hid),
       });
-      await d.hello();
+      // a turned screen is refused, and known all the same
+      await d.hello().catch(() => undefined);
       // as in a process of its own after the turn: nothing told it, and it reads what is
       if (must(screen[0], 'a width') < must(screen[1], 'a height'))
         d.setRotation(orientation === 1 ? 0 : 1);

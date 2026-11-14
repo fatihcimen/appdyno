@@ -75,13 +75,15 @@ export class DirectSim {
    * What a host needs to know of this simulator, from the read helper: no test runner has to start for it.
    * Undefined when the helper cannot say, or in landscape, where its read is not verified.
    */
-  async hello(): Promise<Hello | undefined> {
-    if (this.readOff) return undefined;
+  /** Refused with why, which a runner started in its place says: an answer of no hello said nothing. */
+  async hello(): Promise<Hello> {
+    if (this.readOff) throw new Error(`it is off: ${this.readOff}`);
     const a = this.note(await (await this.helperAx()).call({ op: 'hello' }, HELLO_MS));
     const size = a.screen as [number, number] | undefined;
-    if (!a.ok || !size?.[0] || !size[1]) return undefined;
+    if (!a.ok) throw new Error(`it refused: ${a.error ?? a.refused ?? 'no reason given'}`);
+    if (!size?.[0] || !size[1]) throw new Error('it gave no screen size');
     this.screen = upright(size);
-    if (size[0] > size[1]) return undefined;
+    if (size[0] > size[1]) throw new Error('the screen is turned, and it reads it upright only');
     return {
       agentVersion: HELPER_VERSION,
       protocol: PROTOCOL,
