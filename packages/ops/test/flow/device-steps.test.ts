@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { encodePng, type Mirror } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { flowFiles } from '../../src/index.js';
+import { conditions } from '../../src/settings.js';
 import { flowsFor, flowHelpers } from './harness.js';
 
 const W = 108;
@@ -96,15 +98,27 @@ describe('screenshot, visual and setting steps', () => {
     expect(device.calls.some((c) => c.name === 'launch')).toBe(false);
   });
 
-  it('changes a device setting through device_setting, and puts it back with setting restore', async () => {
-    const held: Record<string, string> = { dark_mode: 'off' };
+  /** Each setting as the device reads it; `seen`: each change, and each picture with the dark mode it was taken in. */
+  const settingsOf = (held: Record<string, string>, seen: string[] = []) => {
     device.settings = {
       get: (name) => Promise.resolve(held[name] ?? 'none'),
       set: (name, value) => {
         held[name] = value;
+        seen.push(`${name} ${value}`);
         return Promise.resolve(undefined);
       },
     };
+    const take = device.screenshot.bind(device);
+    device.screenshot = () => {
+      seen.push(`picture in dark_mode ${String(held.dark_mode)}`);
+      return take();
+    };
+    return seen;
+  };
+
+  it('changes a device setting through device_setting, and puts it back with setting restore', async () => {
+    const held: Record<string, string> = { dark_mode: 'off' };
+    settingsOf(held);
     const file = flowFile('setting dark_mode on\nassert text="Ana sayfa"\nsetting restore');
     const r = await flowsFor(context()).replay(file);
     expect(r.passed).toBe(true);
@@ -114,5 +128,59 @@ describe('screenshot, visual and setting steps', () => {
       'setting restore',
     ]);
     expect(held.dark_mode).toBe('off');
+  });
+
+  describe('a test run', () => {
+    const test = (o: { retries?: number; iterations?: number } = {}) => {
+      const artifacts = join(dir, 'artifacts');
+      return flowsFor(context()).test({
+        files: flowFiles([join(dir, 'flows')]),
+        devices: [],
+        artifacts,
+        junit: join(artifacts, 'j.xml'),
+        ...o,
+      });
+    };
+
+    it('puts back what each file changed before the next file’s first step', async () => {
+      const seen = settingsOf({ dark_mode: 'off' });
+      flowFile('setting dark_mode on\nscreenshot dark', 'a.flow');
+      flowFile('screenshot plain', 'b.flow');
+      expect((await test()).passed).toBe(true);
+      expect(seen).toEqual([
+        'dark_mode on',
+        'picture in dark_mode on',
+        'dark_mode off',
+        'picture in dark_mode off',
+      ]);
+      const kept = join(dir, 'artifacts', device.serial);
+      expect(existsSync(join(kept, 'a.flow', 'dark.png'))).toBe(true);
+      expect(existsSync(join(kept, 'b.flow', 'plain.png'))).toBe(true);
+    });
+
+    it('puts back after each attempt of a file it retries, its failure’s picture taken first', async () => {
+      const seen = settingsOf({ dark_mode: 'off' });
+      flowFile('setting dark_mode on\nassert text="Nowhere" timeoutMs=200');
+      expect((await test({ retries: 1 })).passed).toBe(false);
+      const attempt = ['dark_mode on', 'picture in dark_mode on', 'dark_mode off'];
+      expect(seen).toEqual([...attempt, ...attempt]);
+    });
+
+    it('puts back a measured file after its iterations, not between them', async () => {
+      const seen = settingsOf({ dark_mode: 'off' });
+      flowFile('setting dark_mode on\nassert text="Ana sayfa"');
+      expect((await test({ iterations: 2 })).passed).toBe(true);
+      expect(seen).toEqual(['dark_mode on', 'dark_mode on', 'dark_mode on', 'dark_mode off']);
+    });
+
+    it('leaves alone what was changed before the run', async () => {
+      const held = { dark_mode: 'off', text_size: '1.3' };
+      settingsOf(held);
+      conditions.write(device.serial, { text_size: { was: '1.0' } });
+      flowFile('setting dark_mode on');
+      expect((await test()).passed).toBe(true);
+      expect(held).toEqual({ dark_mode: 'off', text_size: '1.3' });
+      expect(conditions.read(device.serial)).toEqual({ text_size: { was: '1.0' } });
+    });
   });
 });

@@ -1,6 +1,6 @@
 import { existsSync, statSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { extname, join, basename, dirname, relative, resolve } from 'node:path';
-import { must, safeName } from '@appdyno/core';
+import { isThisProcess, must, safeName } from '@appdyno/core';
 import {
   type CaseFailure,
   type TestSuite,
@@ -11,6 +11,7 @@ import {
 } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
+import { restoreConditions } from '../settings.js';
 import { ToolError } from '../tool.js';
 import { journeyText, measureJourney, type JourneyAnswer } from './journey.js';
 import type { FlowRunner } from './runner.js';
@@ -78,9 +79,10 @@ type Attempt = { result?: RunResult; journey?: JourneyAnswer; error?: Error };
 
 /**
  * Every file on every device, one after another. A failure leaves the screenshot and tree of its moment
- * under `artifacts`, and the next file still runs. A screenshot shows what the screen shows, a secret
- * typed into a plain field included. A retry is a new run of the whole file, so a failed step never
- * passes within one, and a file that passed only on a retry is reported as flaky with what failed.
+ * under `artifacts`, and the next file still runs, on the settings this run found. A screenshot shows
+ * what the screen shows, a secret typed into a plain field included. A retry is a new run of the whole
+ * file, so a failed step never passes within one, and a file that passed only on a retry is reported as
+ * flaky with what failed.
  */
 export async function runTests(
   ctx: ServerContext,
@@ -95,9 +97,25 @@ export async function runTests(
   const log = o.log ?? (() => undefined);
   const retries = o.retries ?? 0;
 
-  const once = async (s: Session, file: string, evidence: string): Promise<Attempt> => {
+  /** What a file changed on the device goes back once it has run, so that its dark mode is no other file's. */
+  const putBack = async (s: Session, label: string) => {
+    const { failed } = await restoreConditions(s, isThisProcess).catch((e: unknown) => ({
+      failed: [(e as Error).message],
+    }));
+    for (const f of failed) log(`  could not put back after ${label}: ${f}`);
+  };
+
+  /** One go at a file: its pictures in `kept`, a retry's evidence in a folder of its own. */
+  const once = async (
+    s: Session,
+    file: string,
+    label: string,
+    kept: string,
+    attempt: number,
+  ): Promise<Attempt> => {
     const replay = {
-      evidence,
+      evidence: attempt > 1 ? join(kept, `attempt-${attempt}`) : kept,
+      shots: kept,
       ...(o.params && { params: o.params }),
       ...(o.fromFile && { fromFile: o.fromFile }),
     };
@@ -111,6 +129,9 @@ export async function runTests(
     } catch (e) {
       // a file that does not parse, a value missing: this file's failure, not the run's
       return { error: e as Error };
+    } finally {
+      // after a measured file's iterations, not between them: each iteration starts as the one before it ended
+      await putBack(s, label);
     }
   };
 
@@ -155,14 +176,14 @@ export async function runTests(
       const evidence = join(o.artifacts, safeName(name), safeName(label));
       const retried: CaseFailure[] = [];
       let go: Attempt = s
-        ? await once(s, file, evidence)
+        ? await once(s, file, label, evidence, 1)
         : { ...(openError && { error: openError }) };
       // a run that ended on a step may end otherwise; what kept a file from running would again
       while (s && go.result?.failure && retried.length < retries) {
         const failed = failureOf(file, go);
         retried.push(failed);
         log(`  retry ${label}, attempt ${retried.length} of ${retries + 1}: ${failed.message}`);
-        go = await once(s, file, join(evidence, `attempt-${retried.length + 1}`));
+        go = await once(s, file, label, evidence, retried.length + 1);
       }
       const { result, journey } = go;
       const ms = Date.now() - t0;
