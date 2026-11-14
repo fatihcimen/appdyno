@@ -5,6 +5,7 @@ import { type AppManager } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { tree } from '@appdyno/testing/fake-screens.js';
 import { connect } from './shared.js';
 
 describe('app management', () => {
@@ -317,5 +318,48 @@ describe('app management', () => {
     );
     expect(ended).toEqual(['dev.other']);
     expect(d.calls.filter((c) => c.name === 'terminate')).toEqual([]);
+  });
+});
+
+describe('a web link the selected app does not open', () => {
+  /** As Android, where `-p` holds a link to the app named: the app opens its own scheme, a browser the web. */
+  class Held extends FakeDevice {
+    sent: [string, string | undefined][] = [];
+    override apps = { opener: (_url: string, app?: string) => Promise.resolve(app) } as never;
+    override openUrl(url: string, pkg?: string) {
+      this.sent.push([url, pkg]);
+      if (pkg && !url.startsWith('app:'))
+        return Promise.reject(new DeviceError('NOT_FOUND', `${pkg} does not open ${url}`));
+      if (!pkg) this.fixture = tree([{ t: 'Example Domain', b: [0, 300, 1080, 400] }], 'browser');
+      return Promise.resolve();
+    }
+  }
+
+  it('opens in whatever does, as a browser, and says the app does not', async () => {
+    const d = new Held();
+    const { call } = await connect(d);
+    const r = await call('open_link', { url: 'https://example.com/' });
+    expect(r.done).toBe('opened https://example.com/ in another app: dev.app does not open it');
+    expect(r.text).toContain('foreground: browser');
+    expect(r.text).not.toContain('WARNING');
+    expect(d.sent).toEqual([
+      ['https://example.com/', 'dev.app'],
+      ['https://example.com/', undefined],
+    ]);
+  });
+
+  it('stays held to the app for a link of another kind, and under an allowlist', async () => {
+    const cases: [string, string[]][] = [
+      ['other://x', []],
+      ['https://example.com/', ['dev.app']],
+    ];
+    for (const [url, apps] of cases) {
+      const d = new Held();
+      const { call } = await connect(d, { policy: { apps } });
+      expect((await call('open_link', { url })).text).toBe(
+        `NOT_FOUND: dev.app does not open ${url}\nhint: open_link with links: dev.app lists the links it opens`,
+      );
+      expect(d.sent).toEqual([[url, 'dev.app']]);
+    }
   });
 });

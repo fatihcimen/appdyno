@@ -35,6 +35,7 @@ import { AndroidAgentLauncher } from './agent.js';
 import { clearStaleTestLocation, clearTestLocation, setTestLocation } from './location.js';
 import { AndroidApps } from './apps.js';
 import type { InstallAnswers } from './install-consent.js';
+import { linkRefused } from './links.js';
 import { AndroidEvents } from './events.js';
 import { AndroidSettings } from './settings.js';
 import { AndroidNetwork } from './network.js';
@@ -266,7 +267,7 @@ export class AndroidDevice extends RpcDevice implements Device {
       TIMEOUTS.app,
     );
     const error = amStartError(out);
-    if (error) throw new DeviceError('NOT_FOUND', `the link did not open: ${error}`);
+    if (error) throw linkRefused(url, pkg, error);
   }
 
   /** Over another tool's automation this session is refused, and must have left the device alone. */
