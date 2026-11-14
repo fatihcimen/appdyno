@@ -1,7 +1,6 @@
 import {
   deviceState,
   heldElsewhere,
-  must,
   Owner,
   SETTINGS,
   type DeviceSettings,
@@ -10,18 +9,13 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
-import { approve } from './approval.js';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { askLanguage } from './power.js';
 import { SettingOut } from './schemas.js';
+import { isOneShot, oneShot, ONE_SHOT } from './setting-events.js';
 import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
-
-const PHONE_NUMBER = /^\+?\d{3,20}$/;
-const DEFAULT_SENDER = '5551234';
-const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
-const ONE_SHOT = ['restore', 'biometric', 'call', 'sms', 'keychain'] as const;
 
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 const Changes = z.record(
@@ -241,7 +235,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         'Dark mode, text size, reduce motion, slow network, airplane mode, Wi-Fi, mobile data, Face ID, fingerprint, calls, SMS. No value reads one. Put back at the end or by restore.',
       input: z
         .object({
-          name: z.enum([...SETTINGS, ...ONE_SHOT]),
+          name: z.enum([...SETTINGS, 'restore', ...ONE_SHOT]),
           value: z
             .string()
             .max(500)
@@ -257,7 +251,6 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       annotations: DESTRUCTIVE,
       run: async ({ name, value, title, app }) => {
         const s = await ctx.session();
-        const { events } = s.device;
         if (name === 'restore') {
           const { restored, failed, left, reads } = await restoreConditions(
             s,
@@ -282,57 +275,18 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             ...(Object.keys(reads).length > 0 && { reads }),
           });
         }
-        if (name === 'biometric') {
-          const answer = BIOMETRIC.find((b) => b === value);
-          if (!answer)
-            throw new ToolError(
-              `biometric needs value: ${BIOMETRIC.join(', ')}`,
-              'INVALID_ARGUMENT',
-            );
-          // setting one up may leave the app, as Settings' enrolment on an emulator does
-          const also = await events.biometric(
-            answer,
-            policy.allowHome
+        if (isOneShot(name))
+          return oneShot(name, {
+            policy,
+            s,
+            value,
+            title,
+            setUp: policy.allowHome
               ? async (n, v) => {
                   await setCondition(s, n, v);
                 }
               : undefined,
-          );
-          const t = [`biometric: ${answer}`, also].filter(Boolean).join('; ');
-          return reply(t, { done: t });
-        }
-        if (name === 'keychain') {
-          if (value !== 'reset')
-            throw new ToolError('keychain needs value: reset', 'INVALID_ARGUMENT');
-          await approve(policy, s, 'device_setting keychain');
-          const t = `the keychain is empty: it held ${await events.resetKeychain()} items`;
-          return reply(t, { done: t });
-        }
-        if (name === 'call') {
-          const m = /^(end )?(\+?\d{3,20})$/.exec(value ?? '');
-          if (!m)
-            throw new ToolError(
-              'call needs value: a phone number; end and the number hangs up',
-              'INVALID_ARGUMENT',
-            );
-          const number = must(m[2], 'the number');
-          await events.call(number, !!m[1]);
-          s.acted();
-          const t = m[1] ? `the call from ${number} ended` : `a call from ${number} is coming in`;
-          return reply(t, { done: t });
-        }
-        if (name === 'sms') {
-          const from = title ?? DEFAULT_SENDER;
-          if (!value) throw new ToolError('sms needs value: the text', 'INVALID_ARGUMENT');
-          if (!PHONE_NUMBER.test(from))
-            throw new ToolError(
-              'sms needs title: the phone number it comes from',
-              'INVALID_ARGUMENT',
-            );
-          await events.sms(from, value);
-          s.acted();
-          return reply(`an SMS came from ${from}`, { done: `an SMS came from ${from}` });
-        }
+          });
         const pkg = app ?? (name === 'locale' ? s.appId : undefined);
         if (pkg) checkApp(policy, pkg);
         if (name === 'locale' && value) await askLanguage(policy, s, value, pkg);
