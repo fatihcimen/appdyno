@@ -4,7 +4,9 @@ import { FlowError, quote, show, tokens } from './tokens.js';
 /** As the `visual` tool takes a name: no folder in it, so a picture stays in the folder it is kept in. */
 const PICTURE_NAME = /^[\w.-]{1,100}$/;
 const NUMBER = String.raw`(\d+(?:\.\d+)?)`;
-const RECT = new RegExp(`^${NUMBER},${NUMBER},${NUMBER},${NUMBER}$`);
+// a mask may start off the screen's edge
+const PLACE = String.raw`(-?\d+(?:\.\d+)?)`;
+const RECT = new RegExp(`^${PLACE},${PLACE},${NUMBER},${NUMBER}$`);
 const MASK_KEYS = ['id', 'role', 'text'] as const;
 
 /** What a `visual` step leaves out of its comparison, as the `visual` tool takes it. */

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { encodePng, type Device, type Mirror } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseFlow } from '@appdyno/flows';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { flowFiles } from '../../src/index.js';
 import { LOOK } from '../../src/flow/still.js';
@@ -176,21 +177,22 @@ describe('screenshot, visual and setting steps', () => {
         name: 'home',
         dir: baselines,
         tolerance: 0.5,
-        masks: [{ text: 'Ana sayfa' }, { x: 0, y: 2000, w: 1080, h: 400 }],
+        masks: [{ text: 'Ana sayfa' }, { x: -10, y: 2000, w: 1080, h: 400 }],
       });
       await call('screenshot', { file: join(dir, 'state', 'shots', 'Home page.png') });
       await call('screenshot');
-      await call('device_setting', { name: 'restore' });
+      await call('device_setting', { name: 'restore', value: 'all' });
     });
     expect(text).toBe(`app dev.app
 
 setting dark_mode on
 setting locale tr-TR app=org.example
 visual home
-visual home tolerance=0.5 mask="text=\\"Ana sayfa\\"" mask="0,2000,1080,400"
+visual home tolerance=0.5 mask="text=\\"Ana sayfa\\"" mask="-10,2000,1080,400"
 screenshot Home_page
 setting restore
 `);
+    expect(parseFlow(text).steps).toHaveLength(6);
   });
 
   describe('a test run', () => {

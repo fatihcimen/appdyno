@@ -299,19 +299,22 @@ const OPS: Record<string, ToStep> = {
   set_orientation: (a) => unrecorded(`set_orientation ${String(a.orientation)}`),
   clipboard: (a) => (a.text !== undefined ? unrecorded('clipboard') : undefined),
   // a read of a setting is a look
+  // a restore takes nothing else, whatever came beside it
   device_setting: (a) =>
-    a.value !== undefined || a.name === 'restore'
-      ? stepOf(
-          'setting',
-          {},
-          {
-            name: a.name as string,
-            value: a.value as string | undefined,
-            app: a.app as string | undefined,
-            title: a.title as string | undefined,
-          },
-        )
-      : undefined,
+    a.name === 'restore'
+      ? stepOf('setting', {}, { name: 'restore' })
+      : a.value !== undefined
+        ? stepOf(
+            'setting',
+            {},
+            {
+              name: a.name as string,
+              value: a.value as string,
+              app: a.app as string | undefined,
+              title: a.title as string | undefined,
+            },
+          )
+        : undefined,
   // a picture only shown to the agent is a look
   screenshot: (a, data) =>
     a.file && !a.watchMs

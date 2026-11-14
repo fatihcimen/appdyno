@@ -53,6 +53,7 @@ setting restore
     expect(maskOf('0,600,1080,200')).toEqual({ x: 0, y: 600, w: 1080, h: 200 });
     expect(maskOf('id=clock')).toEqual({ id: 'clock' });
     expect(maskOf('role=image text="Last seen"')).toEqual({ role: 'image', text: 'Last seen' });
+    expect(maskOf('-12.5,-4,100,20')).toEqual({ x: -12.5, y: -4, w: 100, h: 20 });
     for (const m of [{ x: 0, y: 600, w: 1080, h: 200 }, { id: 'a b' }, { role: 'r', text: 'T' }])
       expect(maskOf(maskText(m))).toEqual(m);
   });
