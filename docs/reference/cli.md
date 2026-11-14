@@ -40,6 +40,8 @@ A command that loses data asks on its terminal first, as [Tools](tools.md#what-a
 | `bench --serial S`                                        | times reads, taps and typing on an Android device                                                                     |
 | `path [--remove]`                                         | from the Mac app: puts `appdyno` on every shell's PATH, or takes it off                                               |
 
+`test` and `flow run` take `--update-baselines`: each `visual` step of a flow saves its baseline in place of comparing, as [Flows](../guides/flows.md) says.
+
 ## Server options
 
 `appdyno mcp [flags]`. Most flags have an environment variable too, and a few settings have only a variable.

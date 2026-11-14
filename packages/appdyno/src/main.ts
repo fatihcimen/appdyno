@@ -77,7 +77,7 @@ const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
  * command line's; a server's is no flow's.
  */
 function contextFrom(
-  values: ServerFlags,
+  values: ServerFlags & { 'update-baselines'?: boolean },
   remember?: string,
   flowEnv?: NodeJS.ProcessEnv,
   oneCall = false,
@@ -126,6 +126,7 @@ function contextFrom(
       // a silent server sounds nowhere: a window that shows its request is told so
       person: { ...(alertPerson ? { alertPerson } : { silent: true }), clientNamed },
       ...(flowEnv && { env: flowEnv }),
+      ...(values['update-baselines'] && { updateBaselines: true }),
       mirrorCommand: [
         process.execPath,
         fileURLToPath(import.meta.url),
@@ -137,8 +138,11 @@ function contextFrom(
 }
 
 /** A person's own command: a flow's names find values in its environment, as no server's do. */
-const commandLine = (values: ServerFlags, remember?: string, oneCall = false) =>
-  contextFrom(values, remember, process.env, oneCall);
+const commandLine = (
+  values: Parameters<typeof contextFrom>[0],
+  remember?: string,
+  oneCall = false,
+) => contextFrom(values, remember, process.env, oneCall);
 
 /** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
 const servicesOfHub = (ctx: ServerContext) => {
@@ -229,6 +233,7 @@ async function testCommand(rest: string[]) {
   const ctx = commandLine({
     ...(values.share && { share: true }),
     ...(values.measurements && { measurements: values.measurements }),
+    ...(values['update-baselines'] && { 'update-baselines': true }),
   });
   try {
     const { passed } = await flowsFor(ctx).test({
@@ -274,11 +279,16 @@ async function operationCommand(command: string | undefined, rest: string[]) {
   const shareAt = command === 'use-device' ? -1 : rest.indexOf('--share');
   if (shareAt >= 0) rest.splice(shareAt, 1);
   const measurements = takeFlag(rest, 'measurements');
+  // a person's word for this run, which no tool takes: a flow's visual steps make their baselines
+  const updateAt =
+    command === 'flow' && rest[0] === 'run' ? rest.indexOf('--update-baselines') : -1;
+  if (updateAt >= 0) rest.splice(updateAt, 1);
   const ctx = commandLine(
     {
       ...(device && { device }),
       ...(shareAt >= 0 && { share: true }),
       ...(measurements && { measurements }),
+      ...(updateAt >= 0 && { 'update-baselines': true }),
     },
     cliSessionFile(),
     true,
@@ -294,7 +304,7 @@ async function operationCommand(command: string | undefined, rest: string[]) {
 commands:
 ${commandList()}
 
-operations (--device S selects the device, also for the next commands in this folder; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F):
+operations (--device S selects the device, also for the next commands in this folder; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F --update-baselines):
 ${listOf(ops)}`,
     );
     return asked ? 0 : 2;

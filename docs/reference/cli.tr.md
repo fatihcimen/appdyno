@@ -40,6 +40,8 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 | `bench --serial S`                                        | bir Android cihazda okumaları, dokunuşları ve yazmayı ölçer                                                                              |
 | `path [--remove]`                                         | Mac uygulamasından: `appdyno`'yu her kabuğun PATH'ine koyar ya da çıkarır                                                                |
 
+`test` ve `flow run`, `--update-baselines` alır: bir akışın her `visual` adımı, [Akışlar](../guides/flows.tr.md) sayfasının anlattığı gibi, karşılaştırmak yerine temel görüntüsünü kaydeder.
+
 ## Sunucu seçenekleri
 
 `appdyno mcp [flags]`. Seçeneklerin çoğunun bir ortam değişkeni de vardır; birkaç ayarın ise yalnızca değişkeni vardır.
