@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+## 1.1.1
+
+appdyno 1.1.1, bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpırdadığı bir ekranda iOS runner'ını hızlı tutar, böyle bir ekranda runner'ı döngü içinde yeniden başlatmayı bırakır ve bir programın `screen raw` ile ekranın ağacını doğrudan okumasını sağlar.
+
 ### Değişti
 
 - `screen` `raw: true` alır ve o zaman yapılandırılmış cevabında ağacın her öğesini de verir: ref'i, türü, sözleri, dikdörtgeni, bayrakları ve üst öğesinin sırası. Cihazı appdyno üzerinden süren ve bir modelin okuduğu katlanmış liste yerine ağacın kendisine ihtiyaç duyan bir program içindir. Sözleri listedekiler gibi temizlenir, şifre alanının metni verilmez.

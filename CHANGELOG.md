@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 1.1.1
+
+appdyno 1.1.1 keeps an iOS runner fast on a screen with a control drawn twice under something that moves, stops restarting a runner in a loop on such a screen, and lets a program read the screen's tree itself with `screen raw`.
+
 ### Changed
 
 - `screen` takes `raw: true` and then also gives every element of the tree in its structured answer: its ref, type, words, rect, flags and its parent's index, for a program that drives the device through appdyno and needs the tree itself rather than the folded list a model reads. Its words are cleaned as the list's are, and a password field's text is left out.
