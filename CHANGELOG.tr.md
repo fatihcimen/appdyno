@@ -8,11 +8,11 @@
 
 appdyno 1.1.1, beş açık kaynak uygulamanın yedi build'inin dört boyutta iOS simülatöründe ve telefon ile tablet Android emülatörlerinde uzun süre sürülmesinin gösterdiklerini düzeltir: bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpırdadığı bir ekranda iOS runner'ını hızlı ve ayakta tutar, runner'ı döngü içinde yeniden başlatmayı bırakır, sistem uyarılarını ve resimleri döndürülmüş bir ekranın gösterdiği gibi okur, bir seçiciyi bir öğenin bütün sözleriyle eşleştirir ve bir programın `screen raw` ile ekranın ağacını doğrudan okumasını sağlar.
 
-### Değişti
+### Değişenler
 
 - `screen` `raw: true` alır ve o zaman yapılandırılmış cevabında ağacın her öğesini de verir: ref'i, türü, sözleri, dikdörtgeni, bayrakları ve üst öğesinin sırası. Cihazı appdyno üzerinden süren ve bir modelin okuduğu katlanmış liste yerine ağacın kendisine ihtiyaç duyan bir program içindir. Sözleri listedekiler gibi temizlenir, şifre alanının metni verilmez.
 
-### Düzeltildi
+### Düzeltilenler
 
 - Bir iOS simülatöründe ya da iPhone'da, iki kez çizilmiş bir kontrolü ve başka bir yerde kıpırdayan bir şeyi olan bir ekran (bir hücre ızgarasının üstünde dönen bir banner gibi) artık her okumada XCUI'ye her kopyayı yeniden sordurmuyor: bir dokunuşun hangi kopyaya ulaştığı ekranın bütün düzenine göre değil, kopyaların yerlerine ve üstlerindekine göre tutulur. Bir okuma birkaç gruba en çok yarım saniye daha sorar (her zaman en az birine), gerisini sonraki okumaya bırakır. Böyle bir ekranda bir okuma 25 sn'yi, yani bir okumanın 15 sn'lik süresini aşıyor, dokunuşlar 15 ile 27 sn sürüyordu.
 - Hızlı bir çağrıya kendi TIMEOUT'uyla cevap veren bir runner (çağrı başlamak için geç kaldığında olduğu gibi) takılmış sayılıp yeniden başlatılmıyor: yalnızca hiç cevap vermemek takılmaktır.
@@ -72,17 +72,17 @@ appdyno 1.1.1, beş açık kaynak uygulamanın yedi build'inin dört boyutta iOS
 
 appdyno 1.1.0, beş açık kaynak uygulamanın yedi build'ini sürmenin gösterdiklerini düzeltir, Android'de bir Flutter uygulaması gibi kendi yüzeyine çizen bir uygulamanın kaydırmasını ölçer ve bir ajanın üzerinde denenebileceği bir alışveriş örneği ekler.
 
-### Değişti
+### Değişenler
 
 - README hızlı bir başlangıçla açılıyor: tek komut, tek istek ve gerçek bir yanıt.
 - Bir alışveriş örneği, [`docs/examples/shop`](docs/examples/shop/README.tr.md): ödemesinde bırakılmış bir çökmesi olan küçük bir iOS uygulaması, onu bulan akış ve akışın geçtiği tek satırlık düzeltme. README'nin ilk çalıştırması ve hızlı başlangıcının yanıtı ondandır.
 - README, appdyno'yu açık kaynak uygulamalarda gösteriyor: Wikipedia'nın debug build'iyle bir çalıştırma ve beş uygulamanın yedi build'inden ölçtükleri.
 - Ölçülen bir akışın senaryosu artık yalnızca dosyanın adından değil, deposundaki yolundan adlandırılır: `flows/login.flow` için `journey-flows-login`. 1.0.0'ın `journey-login` altında sakladığı bir baseline'ın yeni adla yeniden saklanması gerekir.
 - Kapı, ne baseline'ı ne bütçesi olan, yani hiçbir şeyin karar vermediği bir senaryo için 1 ile çıkar: geçiyordu ve yalnızca çıkış koduna bakan bir job hiçbir karşılaştırma yapılmadan yeşil oluyordu. Baseline'ı olan bir senaryoya eklenen bir adım `new` olarak geçmeye devam eder.
-- Kendisi sanal makine olan bir Mac'te, bir CI runner'ında olduğu gibi, bir sayının yanında `host-load-unread` yazar ve Mac'in ne kadar meşgul olduğunu söylemeyen bir load average yüzünden artık `high-host-load` işaretlenmez: 3 çekirdekli bir GitHub runner'ı boştayken 115 ile 650 arası okudu ve her çalıştırmayı baseline olarak reddetti. `APPDYNO_HOST_VIRTUAL=0` onu yine de okutur. Örnek `perf-gate.yml` orada yük beklemez, başarısız bir adımın ekran görüntüsünü ve ağacını saklar başarısız bir çalıştırmadan sonra job'ı bitirmek yerine tabanı yeniden ölçer ve süre sınırını aşan bir adım süre bırakmadığı için pull request'i yedi kez ölçer.
+- Kendisi sanal makine olan bir Mac'te, bir CI runner'ında olduğu gibi, bir sayının yanında `host-load-unread` yazar ve Mac'in ne kadar meşgul olduğunu söylemeyen bir load average yüzünden artık `high-host-load` işaretlenmez: 3 çekirdekli bir GitHub runner'ı boştayken 115 ile 650 arası okudu ve her çalıştırmayı baseline olarak reddetti. `APPDYNO_HOST_VIRTUAL=0` onu yine de okutur. Örnek `perf-gate.yml` orada yük beklemez, başarısız bir adımın ekran görüntüsünü ve ağacını saklar, başarısız bir çalıştırmadan sonra job'ı bitirmek yerine tabanı yeniden ölçer ve süre sınırını aşan bir adım süre bırakmadığı için pull request'i yedi kez ölçer.
 - Örnek `perf-gate.yml` olduğu gibi GitHub'ın `macos-latest` runner'ında çalıştı: hiç kod değiştirmeyen bir pull request geçti, bir adımı yavaşlatan bir pull request ise o adımda bir gerileme olarak başarısız oldu.
 
-### Düzeltildi
+### Düzeltilenler
 
 - `check: text` ve `expect: false` ile `assert`, öğe o metni okuduğunda başarısız olur: metin kontrolü `expect`'i dışarıda bıraktığı için geçiyordu.
 - İki klasördeki aynı adlı iki akış, örneğin `login/smoke.flow` ve `checkout/smoke.flow`, artık bir hatanın ekran görüntüsünü ve ağacını, JUnit case'ini ya da performans senaryosunu paylaşmaz.
