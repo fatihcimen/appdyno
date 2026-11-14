@@ -3,7 +3,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boundLines } from '../src/diagnose.js';
 import { DEFAULT_POLICY, redactLog } from '../src/policy.js';
-import { CrashesOut, LogsOut } from '../src/schemas.js';
+import { CrashesOut, LogsOut } from '../src/diagnose-schemas.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './truth-client.js';
 

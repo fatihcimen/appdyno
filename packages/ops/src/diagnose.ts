@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp, noApp, redactLog } from './policy.js';
-import { AuditOut, CrashesOut, LogsOut } from './schemas.js';
+import { AuditOut, CrashesOut, LogsOut } from './diagnose-schemas.js';
 import type { Session } from './session.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
 

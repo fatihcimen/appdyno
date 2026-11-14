@@ -3,7 +3,7 @@ import { toMaestro, FlowError, namesOf, type Recording } from '@appdyno/flows';
 import type { ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { FlowOut } from '../schemas.js';
+import { FlowOut } from './schemas.js';
 import { Scenario } from '../perf/shared.js';
 import { ToolError, reply, defineOp, DESTRUCTIVE } from '../tool.js';
 import { journeyText, measureJourney } from './journey.js';

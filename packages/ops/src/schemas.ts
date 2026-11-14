@@ -188,40 +188,6 @@ export const WebOut = z.object({
     .optional(),
 });
 
-export const NetworkOut = z.object({
-  done: z.string().optional(),
-  paths: z
-    .array(
-      z.object({
-        via: z.string(),
-        sees: z.string().optional(),
-        refused: z.string().optional(),
-      }),
-    )
-    .optional(),
-  entries: z
-    .array(
-      z.object({
-        at: z.string().optional(),
-        method: z.string().optional(),
-        url: z.string().optional(),
-        status: z.number().optional(),
-        ms: z.number().optional(),
-        direction: z.string().optional(),
-        host: z.string().optional(),
-        packets: z.number().optional(),
-        bytes: z.number().optional(),
-        body: z.boolean().optional(),
-        error: z.string().optional(),
-      }),
-    )
-    .optional(),
-  dropped: z.number().int().optional(),
-  source: z.string().optional(),
-  bodies: z.string().optional(),
-  note: z.string().optional(),
-});
-
 export const ReportOut = z.object({
   done: z.string(),
   dir: z.string(),
@@ -251,57 +217,6 @@ export const HandOffOut = z.object({
   done: z.string(),
   by: z.enum(['person', 'screen', 'timeout']),
   waitedMs: z.number(),
-});
-
-export const FlowOut = z.object({
-  done: z.string(),
-  /** `export` with `to`: the file it wrote. */
-  file: z.string().optional(),
-  steps: z.number().int().optional(),
-  flagged: z.array(z.string()).optional(),
-  timings: z
-    .array(
-      z.object({
-        n: z.number().int(),
-        line: z.number().int(),
-        file: z.string().optional(),
-        step: z.string(),
-        ms: z.number(),
-        settledMs: z.number().optional(),
-        actMs: z.number().optional(),
-        settled: z.boolean().optional(),
-        changed: z.boolean().optional(),
-        warnings: z.array(z.string()).optional(),
-      }),
-    )
-    .optional(),
-  /** `run` with `iterations`: what each step read, the median of the iterations. */
-  journey: z
-    .object({
-      id: z.string(),
-      raw: z.string(),
-      scenario: z.string(),
-      iterations: z.number().int(),
-      /** None where no iteration settled at every step. */
-      totalMs: z.number().optional(),
-      /** The whole of each iteration that has one, for a test against another run. */
-      samples: z.array(z.number()),
-      steps: z.array(
-        z.object({
-          step: z.string(),
-          /** None where it never settled: what ended it was the tool's deadline. */
-          ms: z.number().optional(),
-          /** In how many iterations it never settled. */
-          unsettled: z.number().int().optional(),
-          framesP95Ms: z.number().optional(),
-          framesWorstMs: z.number().optional(),
-          memoryKb: z.number().optional(),
-        }),
-      ),
-      note: z.string().optional(),
-      noise: z.array(z.string()),
-    })
-    .optional(),
 });
 
 /** `launch` answers with the screen it brings, as an action does. */
@@ -340,50 +255,4 @@ export const SettingOut = z.object({
   notRestored: z.array(z.string()).optional(),
   /** What the device reads, after it, of each condition the call set or put back. */
   reads: z.record(z.string(), z.string()).optional(),
-});
-
-export const AuditOut = z.object({
-  engine: z.string(),
-  truncated: z.boolean(),
-  issues: z.array(
-    z.object({
-      type: z.string(),
-      rule: z.string(),
-      message: z.string(),
-      label: z.string().optional(),
-      x: z.number().optional(),
-      y: z.number().optional(),
-    }),
-  ),
-});
-
-export const LogsOut = z.object({
-  lines: z.number(),
-  dropped: z.number(),
-  source: z.string(),
-  note: z.string().optional(),
-});
-
-export const CrashesOut = z.object({
-  reports: z.array(
-    z.object({
-      at: z.string(),
-      reason: z.string(),
-      detail: z.string().optional(),
-      file: z.string().optional(),
-      symbolicated: z.string().optional(),
-    }),
-  ),
-  source: z.string(),
-  note: z.string().optional(),
-  exits: z
-    .array(
-      z.object({
-        reason: z.string(),
-        count: z.number().int(),
-        newest: z.string(),
-        memory: z.string().optional(),
-      }),
-    )
-    .optional(),
 });

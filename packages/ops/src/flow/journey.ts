@@ -16,7 +16,7 @@ import {
 import type { ServerContext } from '../context.js';
 import { keepRun } from '../perf/shared.js';
 import { checkApp, NO_APP_HINT } from '../policy.js';
-import type { FlowOut } from '../schemas.js';
+import type { FlowOut } from './schemas.js';
 import type { Session } from '../session.js';
 import { ToolError } from '../tool.js';
 import { stepTime, type FlowRunner, type ReplayOptions } from './runner.js';

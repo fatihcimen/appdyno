@@ -17,7 +17,8 @@ import type { ServerContext } from './context.js';
 import { restoreCondition, setCondition } from './settings.js';
 import { boundLines } from './diagnose.js';
 import { checkApp, redactLog } from './policy.js';
-import { Handle, NetworkOut } from './schemas.js';
+import { NetworkOut } from './network-schemas.js';
+import { Handle } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
