@@ -30,6 +30,23 @@ export const markOfLine = (line: string): LogMark | undefined => {
   return { at: Number(m[1]) * 1000 + Number(m[2]), ...(level && { level }) };
 };
 
+/** A line's head as logcat prints it, its time to the millisecond, process, thread, rank and tag: `… E Tag: `. */
+const HEAD = /^\s*\S+(?: \S+)?\s+\d+\s+\d+ [VDIWEFA] .*?: /;
+
+/** Each message whole: logcat prints every line of one with its head, and those after the first are joined without. */
+function messagesOf(lines: string[]) {
+  const out: string[] = [];
+  let last: string | undefined;
+  for (const line of lines) {
+    const head = HEAD.exec(line)?.[0];
+    if (head !== undefined && head === last)
+      out.push(`${out.pop() ?? ''}\n${line.slice(head.length)}`);
+    else out.push(line);
+    last = head;
+  }
+  return out;
+}
+
 export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promise<LogsAnswer> {
   const live = q.pid ?? (await adb.exec(serial, `pidof ${shq(q.app)}`)).trim().split(/\s+/)[0];
   // a phone ends a crashed process at once, where an emulator's dialog holds it, and may start the app anew: what it
@@ -57,7 +74,9 @@ export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promi
   const note = live
     ? undefined
     : `${q.app} is not running: these are the lines of its process that ended; crashes says why it ended`;
-  const lines = out.split(/\r?\n/).filter((l) => l && !l.startsWith('--------- beginning of'));
+  const printed = out.split(/\r?\n/).filter((l) => l && !l.startsWith('--------- beginning of'));
+  // a count of lines can begin inside a message: its oldest is left out once logcat gave as many as it was asked
+  const lines = messagesOf(printed).slice(!q.since && printed.length >= q.maxLines ? 1 : 0);
   if (!q.timed) return { lines, source, ...(note && { note }) };
   const placed = lines.flatMap((line) => {
     const mark = markOfLine(line);
