@@ -170,13 +170,17 @@ describe('what each launch of an app on a simulator carries', () => {
     expect(launches.at(-1)?.env.DYLD_INSERT_LIBRARIES).toBe(lib('SimProbe'));
   });
 
-  it('lets go of the probe of a capture whose launch failed', async () => {
+  it('lets go of a probe whose launch failed', async () => {
     const holds = new HeldLaunches(SIM);
     const simctl = Object.assign(new Simctl({}), {
       exec: () => Promise.reject(new Error('simctl launch: no such app')),
+      terminate: () => Promise.resolve(),
     });
     const network = new SimulatorNetwork(simctl, SIM, holds);
     await expect(network.start('probe', APP)).rejects.toThrow('no such app');
+    expect(holds.holder()).toBeUndefined();
+    const frames = new ProbedFrames(SIM, simctl, () => Promise.resolve(4242), holds);
+    await expect(frames.launch(APP)).rejects.toThrow('no such app');
     expect(holds.holder()).toBeUndefined();
   });
 
@@ -233,7 +237,7 @@ describe('a capture by the network probe', () => {
     // started again from its icon: the system's launch carries nothing of this tool's
     pid = 5151;
     expect((await network.read(capture)).note).toBe(
-      `${APP} was started again by something other than this tool, without the probe: its requests since are not seen, until this tool starts it afresh with the probe`,
+      `${APP} runs as a process the probe is not in: its requests since are not seen`,
     );
   });
 });

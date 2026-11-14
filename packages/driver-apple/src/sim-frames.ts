@@ -73,7 +73,11 @@ export class ProbedFrames {
     await rm(file, { force: true });
     const lib = await helperBinary('SimProbe');
     this.holds.hold(bundle, 'frames', { lib, env: { APPDYNO_PROBE_OUT: file } });
-    const out = await this.simctl.launch(this.udid, bundle, vars);
+    // one that did not start has no probe to keep; one slow to its first frame has it all the same
+    const out = await this.simctl.launch(this.udid, bundle, vars).catch((e: unknown) => {
+      this.holds.drop(bundle, 'frames');
+      throw e;
+    });
     const pid = Number(/:\s*(\d+)/.exec(out)?.[1]);
     for (const end = Date.now() + 20_000; Date.now() < end;) {
       const head = probeHead(await readFile(file, 'utf8').catch(() => ''));

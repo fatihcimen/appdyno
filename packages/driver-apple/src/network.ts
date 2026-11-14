@@ -88,7 +88,7 @@ export class SimulatorNetwork implements NetworkSource {
     const probed = probeHead(text).pid;
     const pid = await this.simctl.pid(this.udid, app).catch(() => undefined);
     return probed !== undefined && pid !== undefined && pid !== probed
-      ? `${app} was started again by something other than this tool, without the probe: its requests since are not seen, until this tool starts it afresh with the probe`
+      ? `${app} runs as a process the probe is not in: its requests since are not seen`
       : undefined;
   }
 
