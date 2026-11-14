@@ -7,7 +7,13 @@ export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
 /** What to do about an app a device does not have, as each platform refuses one. */
 export const INSTALLED_APPS = 'app action list names the installed apps';
 
-export type LaunchOptions = { args?: string[]; env?: Record<string, string>; language?: string };
+/** `probe`: the view probe in the app, which `Device.views` reads, held in this tool's later launches of it too. */
+export type LaunchOptions = {
+  args?: string[];
+  env?: Record<string, string>;
+  language?: string;
+  probe?: boolean;
+};
 
 /**
  * What each launch of an app by this tool carries until it is let go, kept on this Mac as a condition is: a probe held
@@ -37,6 +43,8 @@ export type AppManager = {
   readonly languageStays?: boolean;
   /** A grant resets the permission to ask, as a revoke does, and so takes away the answer the person gave. */
   readonly grantResets?: boolean;
+  /** A launch can put the view probe in the app: `LaunchOptions.probe`. */
+  readonly viewProbe?: boolean;
   /**
    * Installs the file; what it answered on the device along the way, for the caller to keep in its answer. `allowed`
    * refuses an app by the id the file holds, read from it before anything reaches the device.

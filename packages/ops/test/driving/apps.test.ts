@@ -279,6 +279,26 @@ describe('app management', () => {
     expect((await none.call('app', { action: 'list' })).data.code).toBe('UNSUPPORTED');
   });
 
+  it('refuses a launch with the view probe where the device puts none in, before anything is launched', async () => {
+    const apps = manager();
+    const d = Object.assign(new FakeDevice(), { apps });
+    const { call } = await connect(d);
+    expect((await call('launch_app', { probe: true })).text).toBe(
+      'UNSUPPORTED: this device puts no view probe in an app\nhint: screen views reads the views where a device gives them without one; screen reads the accessibility tree',
+    );
+    expect(apps.log).toEqual([]);
+    expect(d.calls.filter((c) => c.name === 'launch')).toEqual([]);
+  });
+
+  it('starts the app afresh with the view probe where the device puts one in', async () => {
+    const apps = manager({ viewProbe: true });
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    expect((await call('launch_app', { probe: true, read: 'none' })).done).toBe(
+      'restarted dev.app, which was running; with the view probe in it',
+    );
+    expect(apps.log).toEqual([['launch', 'dev.app', { probe: true }]]);
+  });
+
   it('ends an app in the background where the device can, and says what stops it where it cannot', async () => {
     const { call } = await connect(new FakeDevice());
     expect((await call('terminate_app', { background: true })).text).toBe(

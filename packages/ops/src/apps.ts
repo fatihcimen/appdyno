@@ -260,7 +260,7 @@ function launchOp(
     name: 'launch_app',
     title: 'Launch app',
     description:
-      'Launch the app by its id or the name app list gives, to the front on the screen it was on if it runs. restart: start it fresh, as args (Android: key=value extras), env and language (tr, pt-BR; Android keeps it until changed) do.',
+      'Launch the app by its id or the name app list gives, to the front on the screen it was on if it runs. restart: start it fresh, as args (Android: key=value extras), env and language (tr, pt-BR; Android keeps it until changed) do. probe: with the view probe screen views reads, held in its launches.',
     input: z
       .object({
         app: z.string().max(200).optional(),
@@ -268,23 +268,30 @@ function launchOp(
         args: z.array(z.string().max(500)).max(50).optional(),
         env: z.record(z.string(), z.string().max(1_000)).optional(),
         language: Language.optional(),
+        probe: z.boolean().optional(),
         read: Read,
       })
       .strict(),
     output: ActionOut,
     annotations: DESTRUCTIVE,
-    run: async ({ app, restart, args, env, language, read }) => {
+    run: async ({ app, restart, args, env, language, probe, read }) => {
       const named = app !== undefined && !APP_ID.test(app);
-      const s = await ctx.sessionToLaunch(app, { restart, args, env, language });
+      const s = await ctx.sessionToLaunch(app, { restart, args, env, language, probe });
       const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
       if (!pkg) throw noApp();
       checkLaunch(policy, pkg);
+      const { apps } = s.device;
+      if (probe && !apps.viewProbe)
+        throw new ToolError(
+          'this device puts no view probe in an app',
+          'UNSUPPORTED',
+          'screen views reads the views where a device gives them without one; screen reads the accessibility tree',
+        );
       if (language) await askLanguage(policy, s, language, pkg);
       reportProgress(`launching ${pkg}`);
       s.leftTheApp(pkg !== s.appId);
       const ran = await ctx.ranBeforeLaunch(s, pkg);
-      const { apps } = s.device;
-      if (!restart && !args && !env && !language) {
+      if (!restart && !args && !env && !language && !probe) {
         const { was } = await changing(s, () => s.device.launch(pkg).catch(notThere(s, pkg)));
         const out = await afterChange(s, was, launchSaid(pkg, ran), read, pkg);
         // a recording writes a start as a start, so that its replay starts where this did
@@ -301,10 +308,15 @@ function launchOp(
             ...(args && { args }),
             ...(env && { env }),
             ...(language && { language }),
+            ...(probe && { probe }),
           })
           .catch(notThere(s, pkg)),
       );
-      const done = [language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true), held]
+      const done = [
+        language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true),
+        held,
+        probe && 'with the view probe in it',
+      ]
         .filter(Boolean)
         .join('; ');
       // the system's launch returns as the app starts, and the screen shows its switcher's picture of it a while

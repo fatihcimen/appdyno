@@ -61,7 +61,7 @@ const Saved = z.object({
 
 /** The server's devices: the sessions opened so far and which one tools act on by default. */
 /** What makes a launch start the app itself, a running one stopped first. */
-const FRESH_STARTS = ['restart', 'args', 'env', 'language'] as const;
+const FRESH_STARTS = ['restart', 'args', 'env', 'language', 'probe'] as const;
 type FreshStart = (typeof FRESH_STARTS)[number];
 
 export class ServerContext {
