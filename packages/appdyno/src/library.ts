@@ -79,6 +79,14 @@ export type Appdyno = {
 /** A device to drive from code: nothing is opened until the first call. */
 export function connect(options: ConnectOptions = {}): Appdyno {
   const { device, app, allowDevices } = options;
+  // plain JavaScript can give anything: said here, not as a TypeError on every call
+  const given: unknown = allowDevices;
+  if (given !== undefined && !(given instanceof RegExp))
+    throw new ToolError(
+      `allowDevices takes a regular expression, as /^emulator-/, not ${typeof given === 'object' ? 'an object' : `a ${typeof given}`}`,
+      'INVALID_ARGUMENT',
+      'new RegExp(text) makes one of a pattern held as text',
+    );
   const ctx = new ServerContext(
     { ...DEFAULT_POLICY, ...(allowDevices && { devices: allowDevices }) },
     deviceProviders(),
