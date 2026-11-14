@@ -72,8 +72,14 @@ describe('the Safari inspector of a simulator', () => {
     for (const end of ends.splice(0)) end();
   });
 
-  const webOn = (path: string) => {
-    const simctl = { exec: () => Promise.resolve(path) } as unknown as Simctl;
+  /** `appinfo`: what simctl says of an installed app, the socket's path being all else it is asked; `asked` its calls. */
+  const webOn = (path: string, appinfo = '', asked: string[][] = []) => {
+    const simctl = {
+      exec: (args: string[]) => {
+        asked.push(args);
+        return Promise.resolve(args[0] === 'appinfo' ? appinfo : path);
+      },
+    } as unknown as Simctl;
     const web = new SimulatorWeb(simctl, '00000000-0000-0000-0000-000000000000');
     ends.push(() => web.close());
     return web;
@@ -293,6 +299,39 @@ describe('the Safari inspector of a simulator', () => {
       WIRApplicationBundleIdentifierKey: 'dev.app',
     };
     expect((await web.pages('dev.app')).map((p) => p.id)).toEqual(['PID:2/1']);
+  });
+
+  it('finds an app built with no signature, which the inspector names by its executable', async () => {
+    const inspector = await fakeInspector();
+    for (const [pid, exe] of [
+      ['3', 'Fixture'],
+      ['4', 'Other'],
+    ] as const)
+      inspector.apps[`PID:${pid}`] = {
+        WIRApplicationIdentifierKey: `PID:${pid}`,
+        WIRApplicationBundleIdentifierKey: `process-${exe}`,
+        WIRApplicationNameKey: exe,
+      };
+    // as `simctl appinfo` prints it
+    const asked: string[][] = [];
+    const web = webOn(
+      inspector.path,
+      '{\n    CFBundleExecutable = Fixture;\n    CFBundleIdentifier = "dev.appdyno.fixture";\n}\n',
+      asked,
+    );
+    expect(await web.pages('dev.appdyno.fixture')).toEqual([
+      {
+        id: 'PID:3/1',
+        title: 'a page of PID:3',
+        url: 'https://example.com/',
+        app: 'dev.appdyno.fixture',
+      },
+    ]);
+    expect(await web.pages('com.apple.mobilesafari')).toHaveLength(1);
+    // the executable is asked of simctl once, and an id that is none is an app with no page
+    expect((await web.pages('dev.appdyno.fixture')).map((p) => p.id)).toEqual(['PID:3/1']);
+    expect(asked.filter((a) => a[0] === 'appinfo')).toHaveLength(1);
+    expect(await web.pages('no app')).toEqual([]);
   });
 
   it("takes a script's answer from its own page, not a late one for the script before", async () => {
