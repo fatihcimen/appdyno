@@ -1,5 +1,7 @@
 import {
+  bare,
   cutContext,
+  inPart,
   KEYBOARD_REF,
   nearest,
   selectIn,
@@ -10,7 +12,7 @@ import {
 import { UNREAD } from './checks.js';
 import type { Session } from './session.js';
 import { NAME_AN_ELEMENT, showSelector } from './step-schemas.js';
-import { ToolError } from './tool.js';
+import { STALE_HINT, ToolError } from './tool.js';
 
 const STALE = 'stale ref, read the screen again';
 
@@ -127,6 +129,35 @@ export function landing(e: ScreenElement, list: ScreenElement[]) {
   };
 }
 
+/**
+ * The element of a ref: one of the list, else one the list leaves out that `screen raw` gives, as a container, at its
+ * middle as a listed one is. It has no words of its own, or the list would hold it.
+ */
+export function byRef(x: Screen, ref: string): ScreenElement | undefined {
+  const listed = x.list.find((e) => e.ref === ref);
+  if (listed) return listed;
+  const el = x.elements.find((e) => e.ref === ref);
+  const rect = el?.rect;
+  if (!el || !rect) return undefined;
+  const at = { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) };
+  return {
+    ref,
+    role: bare(el.type),
+    label: '',
+    name: '',
+    nameKind: 'position',
+    rect,
+    ...at,
+    flags: [],
+  };
+}
+
+/** What a touch's answer adds where a selector's text named its element by only a part of a paragraph. */
+export const partly = (e: ScreenElement, sel: SelectorOf) =>
+  inPart(e, sel)
+    ? ` (only a part of its words: nothing here reads ${JSON.stringify(sel.text)} alone)`
+    : '';
+
 /** An element as a touch aims at it; the keyboard is listed whole, and a touch on it would type one key. */
 function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[]) {
   if (e.ref === KEYBOARD_REF)
@@ -143,9 +174,10 @@ function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[])
 export async function aim(s: Session, a: Aim, words: Words) {
   const { clean, offer } = words;
   if (a.ref) {
+    const ref = a.ref;
     const has = (x: Screen | undefined) => {
-      const e = x?.list.find((e) => e.ref === a.ref);
-      return e && x && { e, list: x.list };
+      const e = x && byRef(x, ref);
+      return e && { e, list: x.list };
     };
     // a read on a loaded device, or of an app not answering, can come back short of what the last one listed: the ref
     // is waited for as a selector is, and one still not there is said with its words and what is there in their place
@@ -158,13 +190,15 @@ export async function aim(s: Session, a: Aim, words: Words) {
       throw new ToolError(
         `${STALE}: ${a.ref}${was ? ` ${JSON.stringify(clean(was))}` : ''} is not on this screen${was ? offer(now.list, was) : ''}`,
         'STALE',
+        STALE_HINT,
       );
     }
     return aimedAt(found.e, clean, found.list);
   }
   if (a.selector) {
     const { e, list } = await resolve(s, a.selector, words);
-    return aimedAt(e, clean, list);
+    const aimed = aimedAt(e, clean, list);
+    return { ...aimed, name: `${aimed.name}${partly(e, a.selector)}` };
   }
   if (a.x === undefined || a.y === undefined)
     throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);

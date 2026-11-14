@@ -14,6 +14,7 @@ import { SETTLE } from './answers.js';
 import { slowingPath } from './gesture-paths.js';
 import type { Session } from './session.js';
 import { type Direction, showSelector } from './step-schemas.js';
+import { partly } from './targets.js';
 import { ToolError } from './tool.js';
 
 /** A scroll's finger travels this share of the list either way from its middle. */
@@ -169,12 +170,14 @@ const scrollTo = async (
       last = { ...last, ...(last.tree && { tree: screen.tree }) };
       hits = selectIn(screen.list, a.selector);
     }
-    if (hits.length > 0)
+    if (hits.length > 0) {
+      const hit = pick(hits, a.selector);
       return {
         r: last,
-        done: `found ${line(pick(hits, a.selector))} after ${swipes} swipes`,
+        done: `found ${line(hit)} after ${swipes} swipes${partly(hit, a.selector)}`,
         found: true,
       };
+    }
     if (swipes >= a.maxSwipes)
       throw brought || swipes === 0
         ? new ToolError(

@@ -99,7 +99,7 @@ describe('what did not happen is no success', () => {
     });
     expect(r.isError).toBe(true);
     expect(r.structuredContent.code).toBe('TIMEOUT');
-    expect(r.content[0]?.text).toContain('not shown after 300 ms');
+    expect(r.content[0]?.text).toContain('text="Never" not shown after 300 ms');
     expect(r.content[0]?.text).toContain('Ana sayfa');
   });
 
@@ -112,7 +112,7 @@ describe('what did not happen is no success', () => {
       }),
     );
     expect(e.code).toBe('TIMEOUT');
-    expect(e.message).toMatch(/^not shown after 300 ms; nearest: /);
+    expect(e.message).toMatch(/^text="Never" not shown after 300 ms; nearest: /);
     expect(e.hint).toBe('call again to wait longer, or read the screen');
   });
 
@@ -125,7 +125,7 @@ describe('what did not happen is no success', () => {
       }),
     );
     expect(e.code).toBe('TIMEOUT');
-    expect(e.message).toContain('still there after 300 ms');
+    expect(e.message).toContain('text="Ana sayfa" still there after 300 ms');
   });
 
   it('an answer to no alert refuses, and touched nothing', async () => {
@@ -178,6 +178,7 @@ describe('a failed action says whether its touch went out', () => {
     const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
     expect(e.code).toBe('STALE');
     expect(e.dispatched).toBe(false);
+    expect(e.hint).toBe('read the screen again, and act on what it shows now');
   });
 
   it.each(['TIMEOUT', 'DEVICE_GONE', 'AGENT_UNAVAILABLE'] as const)(

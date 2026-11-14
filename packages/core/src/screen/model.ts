@@ -170,11 +170,14 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
   const descendants = (i: number): Item[] =>
     family.descendants(i).flatMap((d) => items.get(d) ?? []);
   const { ancestors } = family;
+  // an icon and the text beside it often carry the same words: one right after the same, joined, is said once; a value
+  // with no letter or of one character, as a score of 3 to 3, is each one's own
   const nameOf = (i: Item) =>
     ownName(i.el) ||
     descendants(i.index)
       .map((d) => ownName(d.el))
       .filter(Boolean)
+      .filter((n, k, names) => n !== names[k - 1] || !/\p{L}/u.test(n) || Array.from(n).length < 2)
       .join(' ');
   return { items, descendants, ancestors, nameOf, win };
 }
@@ -189,6 +192,8 @@ export type ScreenElement = {
   name: string;
   nameKind: 'label' | 'id' | 'path' | 'position';
   rect: Rect;
+  /** The words uncut, where `label` is cut short for the list: what a selector's text is matched against. */
+  whole?: string;
   /** A path or a position: the text next to it. */
   context?: string;
   /** The text that tells identical elements apart (the stable refs' context). */
@@ -239,7 +244,8 @@ export function screenElements(
   for (const i of items.values()) {
     if (!i.el.ref) continue;
     const control = i.role !== undefined && i.role !== 'image';
-    const label = cut(control ? nameOf(i) : ownName(i.el));
+    const words = control ? nameOf(i) : ownName(i.el);
+    const label = cut(words);
     const id = idOf(i.el.identifier);
     const idOnly = opts.port.listsByIdAlone && i.type === 'other' && id !== undefined;
     const field = i.role === 'textField';
@@ -252,7 +258,8 @@ export function screenElements(
     const y = Math.round(i.r.y + i.r.h / 2);
     const role = i.role ?? (label ? 'text' : i.type);
     // an empty field is named by its placeholder
-    const shown = label || (field && i.el.placeholder ? cut(i.el.placeholder) : '');
+    const said = words || (field && i.el.placeholder) || '';
+    const shown = cut(said);
     const path = !shown && !id ? pathOf(i, i.role ?? i.type) : undefined;
     const [name, nameKind] = id
       ? ([cut(id), 'id'] as const)
@@ -265,6 +272,7 @@ export function screenElements(
       ref: i.el.ref,
       role,
       label: shown,
+      ...(said !== shown && { whole: said }),
       ...(id && { id: cut(id) }),
       name,
       nameKind,
@@ -281,7 +289,8 @@ export function screenElements(
     });
     from.push(i.index);
   }
-  const echoes = echoesOf(out, from, ancestors);
+  // the list leaves an echo out, and the tree as `screen raw` gives it keeps it, with a ref a tap takes
+  const echoes = all ? new Set<number>() : echoesOf(out, from, ancestors);
   return withoutPiles(
     out.filter((_, n) => !echoes.has(n)),
     from.filter((_, n) => !echoes.has(n)),

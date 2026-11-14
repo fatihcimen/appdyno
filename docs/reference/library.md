@@ -34,4 +34,4 @@ export async function drive(flow: string, log: (line: string) => void) {
 
 `close` puts back what the tools changed on the device, as the end of a session does.
 
-A program that needs the tree itself, rather than the folded list a model reads, asks `screen` with `raw: true`: its answer's `data.nodes` holds every element with its `ref`, `type`, words, `rect`, `flags` and the index of its `parent`, and a `ref` from it is one `tap` takes.
+A program that needs the tree itself, rather than the folded list a model reads, asks `screen` with `raw: true`: its answer's `data.nodes` holds every element of the tree with its `type`, words, `rect`, `flags` and the index of its `parent`. Each element the screen shows carries a `ref`, and `tap` takes it, at the element's middle where the list does not name it. An element has none when it is not the app's, as the keyboard and the system's bars, is marked not visible, has no size, is less than half on the screen, lies under the status bar or a navigation bar at the top on iOS, or is one of the rows a list has not placed yet, piled at one point.

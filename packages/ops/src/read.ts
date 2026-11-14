@@ -15,10 +15,18 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
+import { selectorOf } from './checks.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import type { Session } from './session.js';
-import { MAX_WAIT_MS, NAME_AN_ELEMENT, Read, Selector, WaitStep } from './step-schemas.js';
+import {
+  MAX_WAIT_MS,
+  NAME_AN_ELEMENT,
+  Read,
+  Selector,
+  showSelector,
+  WaitStep,
+} from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
 import { webLines } from './web.js';
@@ -208,11 +216,13 @@ export function readOps(
         const { gone, timeoutMs } = a;
         show(s, last);
         const hit = met && !gone ? must(found, 'what was found') : undefined;
+        // a wait that ran out says what it waited for, as one in steps does
+        const what = a.ref ?? showSelector(selectorOf(a.selector) ?? {});
         const head = hit
           ? `found: ${hit.ref} ${JSON.stringify(clean(hit.label))}`
           : met
             ? 'gone'
-            : `${gone ? 'still there' : 'not shown'} after ${timeoutMs} ms`;
+            : `${what} ${gone ? 'still there' : 'not shown'} after ${timeoutMs} ms`;
         const out = {
           met,
           gone,

@@ -111,7 +111,9 @@ describe('targeting', () => {
     );
     expect(tap.data.hint).toBe('launch_app brings it back, and crashes says why if it crashed');
     const wait = await call('wait_for', { selector: { text: 'Gönder' }, timeoutMs: 300 });
-    expect(wait.text).toMatch(/^TIMEOUT: not shown after 300 ms; dev\.app is not in front/);
+    expect(wait.text).toMatch(
+      /^TIMEOUT: text="Gönder" not shown after 300 ms; dev\.app is not in front/,
+    );
   });
 
   it(

@@ -12,7 +12,7 @@ appdyno tap --help
 appdyno --help
 ```
 
-`action` alan bir araç onu ilk sözcük olarak alır: `appdyno record start`, `appdyno network stop`. Her araç komutu ayrıca argümanlarını JSON olarak vermek için `--json '{...}'`, bir görselin yazılacağı yer için `--out <file>` ve cihazı bu komut ile aynı klasörde çalışan sonraki komutlar için seçen `--device <serial>` alır. `appdyno <command> --help` bir komutun seçeneklerini listeler.
+`action` alan bir araç onu ilk sözcük olarak alır: `appdyno record start`, `appdyno network stop`. Her araç komutu ayrıca argümanlarını JSON olarak vermek için `--json '{...}'`, bir görselin yazılacağı yer için `--out <file>` ve cihazı bu komut ile aynı klasörde çalışan sonraki komutlar için seçen `--device <serial>` alır. `appdyno <command> --help` bir komutun seçeneklerini listeler. Bir komut yanıtının metnini yazar; `appdyno screen --raw` ağacın öğelerini onun ardından, her biri bir JSON satırı olarak, kütüphanenin `data.nodes` alanının tuttuğu gibi yazar.
 
 Çıkış kodu 0 işin yapıldığını, 1 çağrının reddedildiğini, 2 argümanların yanlış olduğunu gösterir. İleti, bir MCP yanıtındaki ipucunun aynısını taşır: örneğin `tap --text OK`'ye bir seçicinin sözcüklerinin nereye yazılacağı söylenir. Seçili cihaz ve bir diff'in karşılaştırıldığı son ekran, komutlar arasında durum klasöründe (`~/Library/Caches/appdyno`) her çalışma klasörü için bir tane olan küçük bir dosyada tutulur; böylece iki klasördeki iki terminal aynı cihazı paylaşmaz.
 

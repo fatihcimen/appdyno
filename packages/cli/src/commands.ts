@@ -241,6 +241,8 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
             await writeFile(file, Buffer.from(b.data, 'base64'));
             io.out(file);
           }
+          // what an answer gives only as data, the tree of `screen --raw`, a command line prints after its text
+          if (Array.isArray(data.nodes)) for (const n of data.nodes) io.out(JSON.stringify(n));
           // a gate says so with its exit code
           return typeof data.exitCode === 'number' ? data.exitCode : 0;
         } catch (e) {

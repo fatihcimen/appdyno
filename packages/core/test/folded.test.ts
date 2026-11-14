@@ -82,6 +82,73 @@ describe('what repeats in an answer', () => {
     expect([...insideRows(twice)].map((e) => e.ref)).toEqual(['@two']);
   });
 
+  it('leaves out the words of a web link and of a footnote, which the link says', () => {
+    const web = (o: Partial<ScreenElement>) => ({
+      ...o,
+      flags: ['web' as const, ...(o.flags ?? [])],
+    });
+    const link = { rect: { x: 100, y: 80, width: 160, height: 40 } };
+    const note = { rect: { x: 300, y: 80, width: 30, height: 40 }, x: 315 };
+    const mark = (x: number) => web({ rect: { x, y: 80, width: 10, height: 40 }, x: x + 5 });
+    const list = [
+      element('@link', 'tappable', 'Constantinople', 100, web({ ...link, flags: ['clickable'] })),
+      element('@note', 'tappable', '[b]', 100, web({ ...note, flags: ['clickable'] })),
+      element('@words', 'text', 'Constantinople', 100, web(link)),
+      element('@open', 'text', '[', 100, mark(300)),
+      element('@b', 'text', 'b', 100, mark(310)),
+      element('@close', 'text', ']', 100, mark(320)),
+      element('@comma', 'text', ',', 100, mark(270)),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@words', '@open', '@b', '@close']);
+  });
+
+  it('says an element the app gives twice at one place once', () => {
+    const bar = { rect: { x: 62, y: 755, width: 278, height: 30 }, x: 201 };
+    const list = [
+      element('@bar', 'text', 'Horizontal scroll bar, 1 page', 770, bar),
+      element('@bar-2', 'text', 'Horizontal scroll bar, 1 page', 770, bar),
+      element('@other', 'text', 'Horizontal scroll bar, 1 page', 900, bar),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@bar-2']);
+  });
+
+  it('keeps a text said once where boxes around it carry its words at its centre', () => {
+    const box = (y: number, height: number, x = 0, width = 400) => ({
+      rect: { x, y, width, height },
+    });
+    const two = [
+      element('@outer', 'text', 'Title', 100, box(60, 80)),
+      element('@inner', 'text', 'Title', 100, box(90, 20, 100, 200)),
+    ];
+    expect(insideRows(two).size).toBe(1);
+    expect(renderFolded(two)).toContain('"Title"');
+    const three = [
+      element('@outer', 'text', 'Title', 100, box(40, 120)),
+      element('@middle', 'text', 'Title', 100, box(60, 80, 50, 300)),
+      element('@inner', 'text', 'Title', 100, box(90, 20, 100, 200)),
+    ];
+    expect([...insideRows(three)].map((e) => e.ref)).toEqual(['@outer', '@middle']);
+  });
+
+  it('says an alert named by its title once, at the title', () => {
+    const title = '“NetNewsWire” Would Like to Send You Notifications';
+    const list = [
+      element('@alert', 'text', title, 451, {
+        rect: { x: 41, y: 344, width: 320, height: 214 },
+        refContext: 'Don’t Allow',
+      }),
+      element('@title', 'text', title, 387, {
+        rect: { x: 71, y: 366, width: 260, height: 42 },
+        refContext: 'Notifications may include alerts',
+      }),
+      element('@body', 'text', 'Notifications may include alerts', 445, {
+        rect: { x: 71, y: 416, width: 260, height: 58 },
+      }),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@alert']);
+    expect(renderFolded(list)).not.toContain(' — ');
+  });
+
   it('knows a long text cut short in the row and in what it holds', () => {
     const list = [
       row('@a', 'Apple Account, Sign in to access your iCloud data, the App …', 100),

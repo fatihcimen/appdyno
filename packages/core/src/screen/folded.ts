@@ -25,8 +25,11 @@ function holds(label: string, part: string) {
   const own = uncut(part);
   const cut = own !== part;
   const at = row.indexOf(cut ? own.slice(0, MIN_OVERLAP) : own);
-  if (at < 0 || !wordEdge(row[at - 1])) return false;
-  return cut ? own.startsWith(row.slice(at)) : wordEdge(label[at + own.length]);
+  // an edge counts only where a letter runs on into another: "[" is a part of "[b]"
+  if (at < 0 || !(wordEdge(own[0]) || wordEdge(row[at - 1]))) return false;
+  return cut
+    ? own.startsWith(row.slice(at))
+    : wordEdge(own.at(-1)) || wordEdge(label[at + own.length]);
 }
 
 /** A row named twice over ("General General") is said once. */
@@ -40,23 +43,42 @@ function once(label: string) {
 const clickable = (e: ScreenElement) => e.flags.includes('clickable');
 
 /**
- * What says nothing the row does not: a plain element whose text its label holds, and a control of the same
- * name at the same place, where a touch on one is a touch on the other. A control elsewhere in the row stays:
- * it may do something else than the row.
+ * What says nothing the row does not: a plain element whose text its label holds, a control of the same
+ * name at the same place, where a touch on one is a touch on the other, what the app gives twice at one place,
+ * and a plain element named by the words of a plain one inside it, which says them where they are.
+ * A control elsewhere in the row stays: it may do something else than the row.
  */
 export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
   const rows = list.filter((e) => e.label && (clickable(e) || e.role === 'textField'));
+  // a web page's words are plain as any: a link's own text is the link's
+  const flagsOf = (e: ScreenElement) => e.flags.filter((f) => f !== 'web').join();
   const plain = (e: ScreenElement) =>
-    (e.role === 'text' || e.role === 'image') && e.flags.length === 0;
+    (e.role === 'text' || e.role === 'image') && flagsOf(e) === '';
+  // a twin takes the same box: a box around a text at its centre, with its words, is said by that text
   const sameAs = (e: ScreenElement, r: ScreenElement) =>
-    r.x === e.x && r.y === e.y && clickable(r) && once(r.label) === once(e.label);
+    r.x === e.x &&
+    r.y === e.y &&
+    once(r.label) === once(e.label) &&
+    (flagsOf(e) === 'clickable'
+      ? clickable(r)
+      : r.role === e.role &&
+        r.flags.join() === e.flags.join() &&
+        within(e.rect, r.rect) &&
+        within(r.rect, e.rect));
+  const area = (e: ScreenElement) => e.rect.width * e.rect.height;
+  // an alert is named by its title
+  const namedByInner = (e: ScreenElement) =>
+    list.some(
+      (t) => t.label === e.label && plain(t) && area(t) < area(e) && within(t.rect, e.rect),
+    );
   return new Set(
     list.filter(
       (e, i) =>
         e.label &&
-        (plain(e)
-          ? rows.some((r) => within(e.rect, r.rect) && holds(r.label, e.label))
-          : e.flags.join() === 'clickable' && list.slice(0, i).some((r) => sameAs(e, r))),
+        ((plain(e) &&
+          (rows.some((r) => within(e.rect, r.rect) && holds(r.label, e.label)) ||
+            namedByInner(e))) ||
+          list.slice(0, i).some((r) => sameAs(e, r))),
     ),
   );
 }

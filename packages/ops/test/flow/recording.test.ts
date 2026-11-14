@@ -98,6 +98,17 @@ swipe up
       expect(text).toContain('tap role=button text="Form"\n');
     });
 
+    it('records a tap on a ref only screen raw gives as what is at its middle', async () => {
+      const call = callerOf(context());
+      const { data } = await call('screen', { raw: true });
+      const root = must(
+        data.nodes?.find((n) => n.type === 'android.widget.FrameLayout')?.ref,
+        'the root ref',
+      );
+      const { text } = await recorded(call, () => call('tap', { ref: root }));
+      expect(text).toContain('tap x=540 y=1200 screen=1080x2400 !coordinates\n');
+    });
+
     it('flags coordinates when nothing is there, with the screen they hold for', async () => {
       const call = callerOf(context());
       const { text } = await recorded(call, () => call('tap', { x: 500, y: 2000 }));

@@ -12,7 +12,7 @@ appdyno tap --help
 appdyno --help
 ```
 
-A tool that has an `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Every tool command also takes `--json '{...}'` for its arguments as JSON, `--out <file>` for where an image goes, and `--device <serial>`, which selects the device for this command and the next ones run in the same folder. `appdyno <command> --help` lists a command's flags.
+A tool that has an `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Every tool command also takes `--json '{...}'` for its arguments as JSON, `--out <file>` for where an image goes, and `--device <serial>`, which selects the device for this command and the next ones run in the same folder. `appdyno <command> --help` lists a command's flags. A command prints its answer's text; `appdyno screen --raw` prints the tree's elements after it, one JSON line each, as the library's `data.nodes` holds them.
 
 Exit code 0 means done, 1 means the call was refused, and 2 means the arguments were wrong. The message carries the same hint an MCP answer has: `tap --text OK`, for one, is told where a selector's words go. The selected device and the last screen a diff is made against are kept between commands in a small file in the state directory (`~/Library/Caches/appdyno`), one for each working directory, so two terminals in two folders do not share a device.
 

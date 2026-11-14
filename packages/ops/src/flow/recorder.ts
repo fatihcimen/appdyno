@@ -5,6 +5,7 @@ import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
 import { NO_MATCH_WAIT_MS } from '../steps.js';
+import { byRef } from '../targets.js';
 import type { Op, ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
 import { type Aim, aimAt, fieldName, named, stepOf, unrecorded } from './aim.js';
@@ -49,10 +50,14 @@ async function aim(s: Session, t: Target): Promise<Aim> {
   let screen: Screen | undefined;
   let e: ScreenElement | undefined;
   if (t.ref) {
-    const has = (x: Screen) => x.list.find((y) => y.ref === t.ref);
+    const ref = t.ref;
+    const has = (x: Screen) => byRef(x, ref);
     screen = await s.current();
     if (!has(screen)) screen = (await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen;
     e = screen && has(screen);
+    // one only `screen raw` gives is named by what a touch at its middle reaches, as a point is
+    if (screen && e && !screen.list.includes(e))
+      return aimAt(screen, { x: e.x, y: e.y }, await size(s));
   } else if (t.selector) {
     const sel = t.selector;
     screen = (await s.until((x) => selectIn(x.list, sel).length > 0, NO_MATCH_WAIT_MS)).screen;

@@ -49,11 +49,13 @@ const NO_FOCUS = 'no editable field has the focus';
 const NO_FOCUS_HINT = 'tap the field first (or give type_text a ref)';
 export const CONNECTION_HINT = 'the device is not connected or its agent stopped; try once more';
 export const NO_ANSWER_HINT = 'the device did not answer; read the screen and try again';
+export const STALE_HINT = 'read the screen again, and act on what it shows now';
 /** What to do, where the driver has nothing better to say (a build's log tail, which process holds the port). */
 const HINTS: Partial<Record<ErrorCode, string>> = {
   TIMEOUT: NO_ANSWER_HINT,
   DEVICE_GONE: CONNECTION_HINT,
   AGENT_UNAVAILABLE: CONNECTION_HINT,
+  STALE: STALE_HINT,
 };
 
 /** A device failure as the agent's error: what failed and what to do, each said once, by `refusalText`. */

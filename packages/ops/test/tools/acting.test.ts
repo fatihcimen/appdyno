@@ -3,6 +3,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { pinchPaths, swipeLine } from '../../src/gesture-paths.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
+import { tree } from '@appdyno/testing/fake-screens.js';
 import { connect, refOf } from './shared.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
@@ -40,6 +41,44 @@ describe('act and read', () => {
     const r = await t.textOf('tap', { ref: '@zzzz' });
     expect(r).toMatchObject({ error: true });
     expect(r.text).toContain('stale ref');
+    expect(r.text).toMatch(/\nhint: \S/);
+  });
+
+  it('taps a ref that only screen raw gives, at its middle', async () => {
+    const r = await t.call('screen', { raw: true });
+    const nodes = (r.structuredContent?.nodes ?? []) as { ref?: string; type: string }[];
+    const root = must(
+      nodes.find((n) => n.type === 'android.widget.FrameLayout')?.ref,
+      'the root ref',
+    );
+    expect(r.content[0]?.text).not.toContain(root);
+    const tap = await t.textOf('tap', { ref: root });
+    expect(tap.error).toBe(false);
+    expect(tap.text).toMatch(new RegExp(`^tapped ${root} `));
+    expect(t.device.calls.find((c) => c.name === 'act')?.args[0]).toEqual({
+      kind: 'tap',
+      x: 540,
+      y: 1200,
+    });
+  });
+
+  it('says a text it tapped held the words asked for only as a part of a paragraph', async () => {
+    const paragraph =
+      'Istanbul is the largest city in Turkey. With a population of over 15 million, it is home to 18% of the people of the country.';
+    t.device.fixture = tree([
+      { t: paragraph, b: [0, 300, 1080, 600] },
+      { c: 'android.widget.Button', t: 'Form', b: [0, 700, 1080, 800], f: 19 },
+    ]);
+    const home = await t.textOf('tap', { selector: { text: 'Home' } });
+    expect(home.text).toMatch(
+      /^tapped @\w+ "Istanbul is the largest city in Turkey\. With a population o…" \(only a part of its words: nothing here reads "Home" alone\)/,
+    );
+    const form = await t.textOf('tap', { selector: { text: 'Form' } });
+    expect(form.text).toMatch(/^tapped @\w+ "Form"(\n|$)/);
+    const scrolled = await t.textOf('scroll_to', { selector: { text: 'population' } });
+    expect(scrolled.text).toMatch(
+      /^found @\w+ text ".*" 540,450 after 0 swipes \(only a part of its words: nothing here reads "population" alone\)/,
+    );
   });
 
   it('says what a ref that went away was, and what is there in its place', async () => {

@@ -34,4 +34,4 @@ export async function drive(flow: string, log: (line: string) => void) {
 
 `close`, araçların cihazda değiştirdiklerini bir oturumun sonunun yaptığı gibi eski haline getirir.
 
-Bir modelin okuduğu katlanmış liste yerine ağacın kendisine ihtiyaç duyan bir program `screen`'i `raw: true` ile çağırır: cevabının `data.nodes` alanı her öğeyi `ref`, `type`, sözleri, `rect`, `flags` ve `parent` sırasıyla tutar; oradaki bir `ref` `tap`'in aldığı ref'tir.
+Bir modelin okuduğu katlanmış liste yerine ağacın kendisine ihtiyaç duyan bir program `screen`'i `raw: true` ile çağırır: cevabının `data.nodes` alanı ağacın her öğesini `type`, sözleri, `rect`, `flags` ve `parent` sırasıyla tutar. Ekranın gösterdiği her öğenin bir `ref`'i vardır ve `tap` onu alır; listenin adlandırmadığı bir öğeye ortasından dokunur. Bir öğenin ref'i yoksa ya uygulamanın değildir (klavye ve sistemin çubukları gibi), ya görünmez olarak işaretlenmiştir, ya boyutu yoktur, ya yarısından azı ekrandadır, ya iOS'te durum çubuğunun ya da üstteki bir gezinme çubuğunun altındadır, ya da bir listenin henüz yerleştirmediği, tek bir noktaya yığılmış satırlarındandır.

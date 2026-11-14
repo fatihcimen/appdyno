@@ -9,9 +9,11 @@ import {
   personNeeded,
   refHash,
   screenElements,
+  selectIn,
   withStableRefs,
   type UiElement,
 } from '../src/screen/index.js';
+import type { WireNode } from '@appdyno/protocol';
 import { wireTree } from '@appdyno/testing/fake-agent.js';
 import { plainScreen } from './plain-screen.js';
 
@@ -254,6 +256,70 @@ describe('wire tree to screen', () => {
     const list = buildScreen(tree, { port: plainScreen }).list.map((e) => `${e.role} "${e.label}"`);
     expect(list).toContain('tappable "More options"');
     expect(list.filter((l) => l.endsWith('""')).map((l) => l.split(' ')[0])).toEqual(['textField']);
+  });
+
+  it('gives a ref to a nameless control inside a named one, which the list leaves out', () => {
+    const tree = wireTree([
+      { c: 'android.view.View', b: [60, 640, 880, 790], f: 1 | 2 | 16 },
+      { p: 1, c: 'android.widget.TextView', t: 'Headlines', b: [260, 690, 700, 740] },
+      { p: 1, c: 'android.view.View', b: [740, 650, 860, 780], f: 1 | 2 | 16 },
+      { p: 3, c: 'android.view.View', d: 'Headlines', b: [760, 680, 830, 750] },
+      { p: 3, c: 'android.widget.CheckBox', b: [750, 665, 850, 765], f: 1 | 16 },
+    ]);
+    const s = buildScreen(tree, { port: plainScreen });
+    const box = s.elements.find((e) => e.type === 'android.widget.CheckBox');
+    expect(box?.ref).toMatch(/^@[a-z0-9]{4}/);
+    expect(s.list.map((e) => e.ref)).not.toContain(box?.ref);
+  });
+
+  it('says each name a row holds once, where it joins them', () => {
+    const tree = wireTree([
+      { c: 'android.view.View', b: [60, 640, 880, 790], f: 1 | 2 | 16 },
+      { p: 1, c: 'android.widget.TextView', t: 'Headlines', b: [260, 690, 700, 740] },
+      { p: 1, c: 'android.view.View', d: 'Headlines', b: [760, 680, 830, 750] },
+      { c: 'android.widget.LinearLayout', b: [0, 250, 1080, 380], f: 1 | 2 | 16 },
+      { p: 4, c: 'android.widget.ImageView', d: 'Search Wikipedia', b: [40, 280, 110, 350] },
+      { p: 4, c: 'android.widget.TextView', t: 'Search Wikipedia', b: [130, 280, 800, 350] },
+      { p: 4, c: 'android.widget.ImageView', d: 'Voice input search', b: [940, 280, 1010, 350] },
+      // what the app itself names twice stays as it says it, and so do words apart
+      { c: 'android.widget.Button', d: 'More More', b: [0, 1000, 1080, 1100], f: 1 | 2 | 16 },
+      { c: 'android.widget.LinearLayout', b: [0, 1200, 1080, 1300], f: 1 | 2 | 16 },
+      ...['Wins', '1', 'Losses', '1'].map((t, n) => ({
+        p: 9,
+        t,
+        b: [n * 200, 1220, n * 200 + 150, 1280] as [number, number, number, number],
+      })),
+      // a value is no name: equal ones side by side, as a score, are each a value of their own
+      ...['3', 'A', '€5'].flatMap((t, r) => {
+        const at = 14 + r * 3;
+        const y = 1400 + r * 200;
+        return [
+          { c: 'android.widget.LinearLayout', b: [0, y, 1080, y + 100], f: 1 | 2 | 16 },
+          { p: at, t, b: [0, y + 20, 150, y + 80] },
+          { p: at, t, b: [200, y + 20, 350, y + 80] },
+        ] as Partial<WireNode>[];
+      }),
+    ]);
+    const labels = buildScreen(tree, { port: plainScreen }).list.map((e) => e.label);
+    expect(labels).toContain('Search Wikipedia Voice input search');
+    expect(labels).toContain('More More');
+    expect(labels).toContain('Wins 1 Losses 1');
+    expect(labels).toContain('3 3');
+    expect(labels).toContain('A A');
+    expect(labels).toContain('€5 €5');
+    expect(labels.filter((l) => l.includes('Headlines Headlines'))).toEqual([]);
+  });
+
+  it('matches a selector past the cut of a long label, and the cut label a flow kept', () => {
+    const words =
+      'The area around Petra has been inhabited from as early as 7000 BC, and the Nabataeans might have settled in what would become the capital city of their kingdom';
+    const tree = wireTree([{ c: 'android.view.View', d: words, b: [0, 300, 1080, 600] }]);
+    const { list } = buildScreen(tree, { port: plainScreen });
+    const label = must(list[0], 'the paragraph').label;
+    expect(label).toMatch(/…$/);
+    expect(label.length).toBeLessThan(words.length);
+    for (const text of ['Nabataeans', 'capital city', '7000 BC', label, words])
+      expect(selectIn(list, { text }).map((e) => e.label)).toEqual([label]);
   });
 
   it('takes no dialog for the screen', () => {

@@ -79,6 +79,17 @@ describe('commands from the operations', () => {
     expect(cli.out[0]).toContain('Form');
   });
 
+  it('prints the nodes of `appdyno screen --raw` after its text, one JSON line each', async () => {
+    const plain = await run('screen');
+    const raw = await run('screen', '--raw');
+    expect(raw.code).toBe(0);
+    expect(raw.out[0]).toBe(plain.out[0]);
+    const nodes = raw.out.slice(1).map((l) => JSON.parse(l) as { ref?: string; type: string });
+    expect(nodes.length).toBeGreaterThan(1);
+    expect(nodes[0]?.type).toBe('android.widget.FrameLayout');
+    expect(nodes.some((n) => n.ref && plain.out[0]?.includes(n.ref))).toBe(true);
+  });
+
   it('types flags by the input schema, with dashes for capitals', async () => {
     expect(
       (

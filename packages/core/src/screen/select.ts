@@ -7,6 +7,9 @@ export type Selector = { text?: string; id?: string; role?: string; index?: numb
 
 const bareId = (id: string) => id.replace(/^.*:id\//, '');
 
+/** What a selector's text is matched against: the whole words, and the label cut short as a flow may have kept it. */
+const textsOf = (e: ScreenElement) => [e.label, ...(e.whole ? [e.whole] : [])].map(fold);
+
 /** The elements a selector names; where some match the text exactly, only those. */
 export function selectIn(list: ScreenElement[], sel: Selector): ScreenElement[] {
   const w = sel.text && fold(sel.text);
@@ -14,10 +17,24 @@ export function selectIn(list: ScreenElement[], sel: Selector): ScreenElement[] 
   const id = sel.id && bareId(sel.id);
   const hits = list.filter(
     (e) =>
-      (!w || fold(e.label).includes(w)) && (!id || e.id === id) && (!role || fold(e.role) === role),
+      (!w || textsOf(e).some((t) => t.includes(w))) &&
+      (!id || e.id === id) &&
+      (!role || fold(e.role) === role),
   );
-  const exact = w ? hits.filter((e) => fold(e.label) === w) : hits;
+  const exact = w ? hits.filter((e) => textsOf(e).includes(w)) : hits;
   return exact.length > 0 ? exact : hits;
+}
+
+/** Longer than this, a text is a paragraph's. */
+const PARAGRAPH = 40;
+
+/**
+ * Whether a selector's text named `e` by only a part of a paragraph, as "Home" names "it is home to 18%": nothing on the
+ * screen read the text alone, or that would have been the match, and a name meant may be elsewhere.
+ */
+export function inPart(e: ScreenElement, sel: Selector): boolean {
+  const w = sel.text && fold(sel.text);
+  return !!w && Array.from(e.whole ?? e.label).length > PARAGRAPH && !textsOf(e).includes(w);
 }
 
 const pairs = (s: string) => {
