@@ -238,6 +238,43 @@ describe('scroll_to', () => {
     expect(d.swipes).toBe(1);
   });
 
+  it('swipes once more for a card the edge cuts to less than half of its neighbours', async () => {
+    /** A carousel of 512-wide cards whose rects come clipped to the screen, as Android gives them. */
+    class Clipped extends FakeDevice {
+      offset = 0;
+      strokes = 0;
+      override current(): Tree {
+        SCREENS.clipped = [
+          { c: 'androidx.recyclerview.widget.RecyclerView', b: [0, 600, 1080, 1232], f: 17 | 256 },
+          ...Array.from({ length: 6 }, (_, i) => {
+            const left = 21 + 512 * i - this.offset;
+            return {
+              c: 'android.widget.FrameLayout',
+              d: `Show ${i}`,
+              b: [Math.max(left, 0), 600, Math.min(left + 512, 1080), 1232] as Bounds,
+              f: 19,
+            };
+          }).filter((n) => n.b[2] > n.b[0]),
+        ];
+        this.screen = 'clipped';
+        return super.current();
+      }
+      override async act(action: ActParams, opts = {}) {
+        if (action.kind === 'gesture') {
+          this.strokes++;
+          const p = must(action.pointers[0], 'a path');
+          this.offset += must(p[0], 'its start').x - must(p.at(-1), 'its end').x;
+        }
+        return super.act(action, opts);
+      }
+    }
+    const d = new Clipped();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', { selector: { text: 'Show 2' }, direction: 'left', y: 916 });
+    expect(r.text).toMatch(/^found @\w+ tappable "Show 2" 545,916 after 1 swipes/);
+    expect(d.strokes).toBe(1);
+  });
+
   it('says the swipes it made went, where it then finds several', async () => {
     /** Rows 14 and 15 read alike. */
     class Twins extends ListDevice {
