@@ -24,9 +24,10 @@ export class CdpSession {
     });
   }
 
-  static open(url: string): Promise<CdpSession> {
+  /** `origin`: the page it comes from, which Metro asks of a debugger; Chrome refuses one it was not told of. */
+  static open(url: string, origin?: string): Promise<CdpSession> {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(url, origin ? { headers: { Origin: origin } } : undefined);
       const fail = (why: string) =>
         reject(new DeviceError('AGENT_UNAVAILABLE', `DevTools at ${url}: ${why}`));
       const timer = setTimeout(() => {

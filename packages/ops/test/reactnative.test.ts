@@ -34,7 +34,12 @@ const unmask = (b: Buffer) => {
 };
 
 /** A Metro as much as the op needs: its list, its reload route and a Hermes that logs on enable. */
-async function fakeMetro(opts: { reloadRoute: boolean; targets?: number; socket?: string }) {
+async function fakeMetro(opts: {
+  reloadRoute: boolean;
+  targets?: number;
+  socket?: string;
+  refuses?: boolean;
+}) {
   const calls: string[] = [];
   let port = 0;
   const targets = Array.from({ length: opts.targets ?? 1 }, (_, i) => ({
@@ -64,6 +69,13 @@ async function fakeMetro(opts: { reloadRoute: boolean; targets?: number; socket?
   const sockets: Socket[] = [];
   server.on('upgrade', (req, socket) => {
     sockets.push(socket as Socket);
+    // React Native 0.88's check: a debugger's socket comes from a page on this Mac, by its Origin
+    const origin = req.headers.origin ?? '';
+    const host = URL.canParse(origin) ? new URL(origin).hostname : '';
+    if (opts.refuses || !['localhost', '127.0.0.1', '0.0.0.0', '[::]'].includes(host)) {
+      socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      return;
+    }
     const accept = createHash('sha1')
       .update(`${String(req.headers['sec-websocket-key'])}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
       .digest('base64');
@@ -248,6 +260,18 @@ describe('react_native', () => {
     } finally {
       other.close();
       sending.close();
+    }
+  });
+
+  it("says a refused runtime socket is Metro's doing, not the device's", async () => {
+    metro = await fakeMetro({ reloadRoute: false, refuses: true });
+    for (const action of ['logs', 'reload']) {
+      const e = await call({ action, metro: metro.metro, ms: 100 }).catch((x: unknown) => x);
+      expect(e).toMatchObject({ code: 'AGENT_UNAVAILABLE' });
+      expect((e as ToolError).message).toMatch(
+        /^the Metro at http:\/\/127\.0\.0\.1:\d+ did not open/,
+      );
+      expect((e as ToolError).hint).not.toMatch(/device/);
     }
   });
 

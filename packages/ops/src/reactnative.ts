@@ -53,6 +53,18 @@ export function reactNativeOps(ctx: ServerContext) {
     return hit;
   };
 
+  // Metro opens a debugger's socket to a page of this Mac's alone, by its Origin: `localhost` whatever `metro` spells
+  const runtime = (base: string, t: DevToolsTarget & { webSocketDebuggerUrl: string }) =>
+    CdpSession.open(t.webSocketDebuggerUrl, `http://localhost:${new URL(base).port}`).catch(
+      (e: unknown) => {
+        throw new ToolError(
+          `the Metro at ${base} did not open the runtime of ${t.id}: ${e instanceof Error ? e.message : String(e)}`,
+          'AGENT_UNAVAILABLE',
+          "Metro's own terminal says why; react_native targets lists the apps connected to it now",
+        );
+      },
+    );
+
   return [
     defineOp({
       name: 'react_native',
@@ -96,7 +108,7 @@ export function reactNativeOps(ctx: ServerContext) {
           }).catch(() => undefined);
           if (r?.ok) return reply('reloaded through Metro', { done: 'reloaded through Metro' });
           const t = await one(base, target);
-          const session = await CdpSession.open(t.webSocketDebuggerUrl);
+          const session = await runtime(base, t);
           try {
             await session.send('Page.reload');
           } finally {
@@ -105,7 +117,7 @@ export function reactNativeOps(ctx: ServerContext) {
           return reply(`reloaded ${t.id}`, { done: `reloaded ${t.id}` });
         }
         const t = await one(base, target);
-        const session = await CdpSession.open(t.webSocketDebuggerUrl);
+        const session = await runtime(base, t);
         const lines: string[] = [];
         try {
           session.on('Runtime.consoleAPICalled', (p) => {
