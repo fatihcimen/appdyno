@@ -6,7 +6,7 @@
 
 ## 1.1.1
 
-appdyno 1.1.1, bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpırdadığı bir ekranda iOS runner'ını hızlı tutar, böyle bir ekranda runner'ı döngü içinde yeniden başlatmayı bırakır ve bir programın `screen raw` ile ekranın ağacını doğrudan okumasını sağlar.
+appdyno 1.1.1, beş açık kaynak uygulamanın yedi build'inin dört boyutta iOS simülatöründe ve telefon ile tablet Android emülatörlerinde uzun süre sürülmesinin gösterdiklerini düzeltir: bir kontrolün iki kez çizildiği ve üstünde bir şeyin kıpırdadığı bir ekranda iOS runner'ını hızlı ve ayakta tutar, runner'ı döngü içinde yeniden başlatmayı bırakır, sistem uyarılarını ve resimleri döndürülmüş bir ekranın gösterdiği gibi okur, bir seçiciyi bir öğenin bütün sözleriyle eşleştirir ve bir programın `screen raw` ile ekranın ağacını doğrudan okumasını sağlar.
 
 ### Değişti
 

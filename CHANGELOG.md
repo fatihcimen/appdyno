@@ -6,7 +6,7 @@
 
 ## 1.1.1
 
-appdyno 1.1.1 keeps an iOS runner fast on a screen with a control drawn twice under something that moves, stops restarting a runner in a loop on such a screen, and lets a program read the screen's tree itself with `screen raw`.
+appdyno 1.1.1 fixes what a long run of seven builds of five open-source apps showed on iOS simulators of four sizes and Android emulators, phone and tablet: it keeps an iOS runner fast and alive on a screen with a control drawn twice under something that moves, stops restarting a runner in a loop, reads system alerts and pictures as a turned screen shows them, matches a selector against an element's whole words, and lets a program read the screen's tree itself with `screen raw`.
 
 ### Changed
 
