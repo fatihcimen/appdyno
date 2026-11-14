@@ -62,8 +62,10 @@ public enum IssueTrap {
     }
 
     /// Takes an issue XCTest recorded: true where it goes on to XCTest as the request's error, false where it failed a
-    /// question, whose answer it is.
+    /// question, whose answer it is, or tells of the app's crash: XCTest notes that late, during whichever request
+    /// comes next (with a runner another process started, a link's after the relaunch), and the host says it itself.
     public static func keep(_ issue: String) -> Bool {
+        if issue.range(of: #"^.+ crashed in "#, options: .regularExpression) != nil { return false }
         let ofQuestion = asking.withLock { failed in
             if failed != nil { failed = true }
             return failed != nil
