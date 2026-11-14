@@ -52,13 +52,20 @@ export function parseGfxSummary(text: string): FrameSummary {
 
 export type FrameRow = { durationMs: number; intervalMs: number; startNs?: number };
 
+/** How long after its `Uptime:` a dump may print a frame that ended meanwhile: a minute is past any. */
+const PRINTING_NS = 60e9;
+
 /**
  * Per-frame rows of `dumpsys gfxinfo <pkg> framestats` (the ring of the last ~120 frames): duration
  * IntendedVsync → FrameCompleted and the frame interval (the vsync period). Flagged rows (not a normal
- * frame) and broken rows are left out. Columns are found by their header: releases add columns.
+ * frame) and broken rows are left out. Columns are found by their header: releases add columns. A row that
+ * ends after the dump's `Uptime:`, on the clock its frames are timed by, is no real frame: an emulator gave
+ * some 2^56 ns on, a frame of two years. Those are `bad`, by their vsync.
  */
-export function parseFramestats(text: string): Required<FrameRow>[] {
+export function readFramestats(text: string): { rows: Required<FrameRow>[]; bad: number[] } {
   const out: Required<FrameRow>[] = [];
+  const bad: number[] = [];
+  const readNs = (num(/^Uptime:\s*(\d+)/m, text) ?? Infinity) * 1e6 + PRINTING_NS;
   // one block per window of the process (an empty one for a window that drew nothing)
   for (const m of text.matchAll(/---PROFILEDATA---\n([\s\S]*?)---PROFILEDATA---/g)) {
     const [head, ...rows] = must(m[1], 'a block').trim().split('\n');
@@ -75,7 +82,9 @@ export function parseFramestats(text: string): Required<FrameRow>[] {
       const iv =
         intervalCols.map((i) => Number(v[i])).find((x) => x > 1e6 && x < 1e9) ?? 16_666_667;
       // Android 16 (seen on a Xiaomi) sets bit 32 on ordinary frames, which a 0 alone would leave out
-      if ((Number(v[flags]) & ~32) === 0 && Number.isFinite(ns) && ns > 0)
+      if ((Number(v[flags]) & ~32) !== 0 || !Number.isFinite(ns) || ns <= 0) continue;
+      if (Number(v[end]) > readNs) bad.push(Number(v[start]));
+      else
         out.push({
           durationMs: Math.round(ns / 1e5) / 10,
           intervalMs: Math.round(iv / 1e5) / 10,
@@ -83,13 +92,19 @@ export function parseFramestats(text: string): Required<FrameRow>[] {
         });
     }
   }
-  return out;
+  return { rows: out, bad };
 }
+
+/** The rows of `readFramestats` that can be real. */
+export const parseFramestats = (text: string) => readFramestats(text).rows;
 
 /** The summary plus what the per-frame rows say, those after `afterNs` only: a frame over two vsync intervals is slow. */
 export function parseFrameStats(text: string, afterNs = -Infinity): FrameStats {
   const out: FrameStats = parseGfxSummary(text);
-  const rows = parseFramestats(text).filter((r) => r.startNs > afterNs);
+  const read = readFramestats(text);
+  const rows = read.rows.filter((r) => r.startNs > afterNs);
+  const bad = read.bad.filter((ns) => ns > afterNs);
+  if (bad.length > 0) out.badRows = bad.length;
   if (rows.length > 0) {
     const ms = rows.map((r) => r.durationMs);
     // a frame finishes about one interval after its vsync even when smooth (the render pipeline): slow is
@@ -104,7 +119,8 @@ export function parseFrameStats(text: string, afterNs = -Infinity): FrameStats {
       p95Ms: round1(quantile(ms, 0.95)),
       worstMs: Math.max(...ms),
       ...(worst && { worstWindow: worst }),
-      newestNs: Math.max(...rows.map((r) => r.startNs)),
+      // past a bad row too, which a reader that goes on would count again
+      newestNs: Math.max(...rows.map((r) => r.startNs), ...bad),
     };
   }
   return out;

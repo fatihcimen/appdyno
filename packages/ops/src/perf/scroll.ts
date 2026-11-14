@@ -6,6 +6,7 @@ import {
   type Measured,
   type MemoryReading,
   type ProfileEntry,
+  type Screen,
   type SurfaceFrames,
   pause,
   reportProgress,
@@ -13,16 +14,21 @@ import {
   round1,
   must,
 } from '@appdyno/core';
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, type Point } from '@appdyno/protocol';
 import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import type { Session } from '../session.js';
+import { redact } from '../policy.js';
 import { moved } from '../scroll.js';
+import { Coord, NAME_AN_ELEMENT, Selector } from '../step-schemas.js';
+import { aim, wordsOf } from '../targets.js';
 import { ScrollOut } from './schemas.js';
 import { defineOp, ACT, reply, ToolError } from '../tool.js';
-import { perfTools, App, Probe, Scenario, kb } from './shared.js';
+import { perfTools, App, Probe, Scenario, kb, BAD_ROWS, appTopOf } from './shared.js';
 import { frameVitals, playLine } from './vitals.js';
+
+/** What a profile's kernel addresses are, which its top function is named past. */
+const HIDDEN_KERNEL = 'the kernel, whose names this device hides';
 
 /** Jank above this share of frames is worth a finding: this tool's own line, and none of Play's (`vitals.ts`). */
 const JANK_PERCENT = 10;
@@ -90,6 +96,7 @@ type Round = {
   jankyPercent: number;
   frozen: number;
   frames: number;
+  badRows?: number;
   p95Ms?: number;
   surface?: OnSurface;
   memStartKb: number;
@@ -117,6 +124,7 @@ const roundOf = (f: FrameStats, m0: MemoryReading, m1: MemoryReading, rewound: b
   jankyPercent: f.jankyPercent,
   frozen: f.frozenFrames,
   frames: f.histogram?.rowFrames ?? f.totalFrames,
+  ...(f.badRows && { badRows: f.badRows }),
   ...(rewound && { rewound: true }),
   ...(f.p95Ms !== undefined && { p95Ms: f.p95Ms }),
   // a Flutter app or a game draws on its own surface, which the View toolkit counts nothing of
@@ -147,7 +155,7 @@ function findings(
     jank: number | undefined;
     frozen: number;
     growth: number | undefined;
-    busiest: ProfileEntry | undefined;
+    busiest: (ProfileEntry & { afterKernel: boolean }) | undefined;
   },
 ) {
   const { repeats, jank, frozen, growth, busiest } = o;
@@ -161,7 +169,7 @@ function findings(
       : []),
     ...(busiest
       ? [
-          `the app's top function as it scrolled: ${busiest.symbol}, ${busiest.percent}% of its samples`,
+          `the app's top function as it scrolled: ${busiest.symbol}, ${busiest.percent}% of its samples${busiest.afterKernel ? `, after the time of ${HIDDEN_KERNEL}` : ''}`,
         ]
       : []),
     ...leakSignal(rounds),
@@ -178,51 +186,121 @@ function findings(
 
 /**
  * A scroll whose rounds drew too few frames to judge, which is no pass; an app that draws on its own surface, as
- * Flutter or a game engine does, draws past the frames counted here, and where the device reads that surface it says so.
+ * Flutter or a game engine does, draws past the frames counted here, and where the device read that surface over a
+ * round it says the most one drew: SurfaceFlinger keeps a surface's last 127 frames, whatever their age, none a round's.
  */
-async function unjudged(s: Session, pkg: string) {
-  const surface = await s.device.measure.surfaceFrames(pkg).catch(() => undefined);
-  const drew = surface?.value.frames ?? 0;
-  return `nothing judged: no round drew the ${MIN_FRAMES} frames a share takes${drew > 0 ? `; the app's own surface drew ${drew} frames, which are not counted here: perf_snapshot with also: ['surface'] reads them` : ''}`;
+const unjudged = (drew: number) =>
+  `nothing judged: no round drew the ${MIN_FRAMES} frames a share takes${drew > 0 ? `, nor did the app's own surface: ${drew} at most in a round` : ''}`;
+
+/** A round's line: the View toolkit's frames, or the app's own surface's. */
+const roundLine = (x: Round, i: number) =>
+  x.surface
+    ? `round ${i + 1}: on its own surface, ${x.surface.frames} frames, ${x.surface.fps} a second, p95 ${x.surface.p95Ms} ms, ${x.surface.slow34Percent}% 34 ms or more after the last, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`
+    : `round ${i + 1}: ${x.frames} frames${x.badRows ? ` (${x.badRows} ${BAD_ROWS})` : ''}, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`;
+
+/** The median of the rounds on the app's own surface, and Play's lines of it. */
+function surfaceLines(surfaced: OnSurface[]) {
+  const on = (pick: (x: OnSurface) => number) => round1(median(surfaced.map(pick)));
+  return [
+    `median on its own surface: p95 ${on((x) => x.p95Ms)} ms, ${on((x) => x.slow34Percent)}% 34 ms or more after the last, ${on((x) => x.slow50Percent)}% 50 ms or more`,
+    playLine(
+      'surface.slow_50_percent',
+      on((x) => x.slow50Percent),
+    ),
+    playLine(
+      'surface.slow_34_percent',
+      on((x) => x.slow34Percent),
+    ),
+  ];
+}
+
+/** The scrollables a refusal names, of many. */
+const LISTS_SHOWN = 4;
+
+/**
+ * Swipes that moved nothing: where they went, where the screen has a scrollable elsewhere, as an iPad's split view
+ * has its list beside a pane the middle of the screen falls in, which a point on the list names.
+ */
+function unmoved(screen: Screen, from: Point, clean: (t: string) => string) {
+  const said = 'the swipes moved nothing on this screen, so no scroll was measured';
+  const lists = screen.elements.flatMap((e) =>
+    e.scrollable && e.rect && e.visible !== false && e.rect.width > 0 && e.rect.height > 0
+      ? [{ e, r: e.rect }]
+      : [],
+  );
+  type List = (typeof lists)[number];
+  const under = ({ r }: List) =>
+    from.x >= r.x && from.x <= r.x + r.width && from.y >= r.y && from.y <= r.y + r.height;
+  const named = ({ e, r }: List) =>
+    `${e.type.split('.').at(-1) ?? e.type}${e.label ? ` ${JSON.stringify(clean(e.label))}` : ''} at ${Math.round(r.x + r.width / 2)},${Math.round(r.y + r.height / 2)}`;
+  const elsewhere = lists.filter((x) => !under(x));
+  if (!elsewhere.length)
+    return new ToolError(
+      `${said}: a popup or a sheet over the list takes them, or there is no list`,
+      'NOT_FOUND',
+      'read the screen, close what covers the list or open the one to measure, and call again',
+    );
+  // the innermost under the finger: what it pressed on
+  const [hit] = lists.filter(under).sort((a, b) => a.r.width * a.r.height - b.r.width * b.r.height);
+  return new ToolError(
+    `${said}: they went at ${from.x},${from.y}, on ${hit ? named(hit) : 'no scrollable'}, and this screen has ${elsewhere.length === 1 ? 'a scrollable' : `${elsewhere.length} scrollables`} elsewhere: ${elsewhere.slice(0, LISTS_SHOWN).map(named).join('; ')}`,
+    'NOT_FOUND',
+    'give x and y or a selector on the list to measure, or close what covers it, and call again',
+  );
 }
 
 export function perfScrollOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller } =
     perfTools(ctx);
+  const clean = (t: string) => redact(ctx.policy, t);
   return defineOp({
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Scroll jank: frames, frozen frames and memory of a list, in rounds of `swipes` swipes into new rows, read once it stops: one, three under a scenario. A list at its end comes back for a round; one the swipes do not move is refused. Jank names its top function. iOS simulator: the first call puts the frame probe in, restarting the app, and measures nothing: open the list again and call again.',
+      'Scroll jank: frames, frozen frames and memory of a list, in rounds of `swipes` swipes into new rows: one, three under a scenario. x and y or a selector name the list. At its end a list comes back; one that does not move is refused.',
     input: z
       .object({
         app: App,
         direction: z.enum(['up', 'down']).default('up'),
         swipes: z.number().int().min(1).max(10).default(5),
         repeats: z.number().int().min(1).max(10).optional(),
+        x: Coord.optional(),
+        y: Coord.optional(),
+        selector: Selector.optional(),
         probe: Probe,
         scenario: Scenario,
       })
       .strict(),
     output: ScrollOut,
     annotations: ACT,
-    run: async ({ app, direction, swipes, repeats: asked, probe, scenario }) => {
+    run: async ({ app, direction, swipes, repeats: asked, x, y, selector, probe, scenario }) => {
+      if (!selector && (x === undefined) !== (y === undefined))
+        throw new ToolError(
+          'x and y go together, a point on the list, or a selector names it',
+          'INVALID_ARGUMENT',
+          NAME_AN_ELEMENT,
+        );
       // a reading is one round; what is kept under a name, for a baseline or a compare, has three to take a median of
       const repeats = asked ?? (scenario ? BASELINE_ROUNDS : 1);
       const s = await ctx.session();
       const pkg = measuredApp(s, app);
       await withProbe(s, pkg, probe);
+      // as swipe aims, after the probe's relaunch: the point of the list asked for
+      const named = selector ? { selector } : x !== undefined && y !== undefined && { x, y };
+      const at = named ? (await aim(s, named, wordsOf(clean))).point : undefined;
       // turned off by the caller, which says nothing of the device
       const row = probe === false ? false : 'frames';
       const readMemory = measure(s, 'memory');
       const all: Measured<unknown>[] = [];
       const rounds: Round[] = [];
       let limits: string | undefined;
+      let drewOnSurface = 0;
       const stalls: number[] = [];
       const hitches: number[] = [];
       const histograms: FrameHistogram[] = [];
-      const swipeAll = await scroller(s, direction, 0, swipes);
-      const swipeBack = await scroller(s, direction === 'up' ? 'down' : 'up', 0, swipes);
+      // aimed once: a point on a row would be on another by the second round
+      const swipeAll = await scroller(s, direction, 0, swipes, at);
+      const swipeBack = await scroller(s, direction === 'up' ? 'down' : 'up', 0, swipes, at);
       const roundSeconds = Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS;
       const framesOfRound = () => measure(s, 'framesDuring', row)(pkg, roundSeconds, swipeAll);
       /**
@@ -252,17 +330,13 @@ export function perfScrollOp(ctx: ServerContext) {
           await pause(COAST_SECONDS * 1_000);
           f = await roundThatMoved();
         }
-        if (!f && r === 0)
-          throw new ToolError(
-            'the swipes moved nothing on this screen, so no scroll was measured: a popup or a sheet over the list takes them, or there is no list',
-            'NOT_FOUND',
-            'read the screen, close what covers the list or open the one to measure, and call again',
-          );
+        if (!f && r === 0) throw unmoved(await s.read(), swipeAll.from, clean);
         if (!f) break;
         const m1 = await readMemory(pkg);
         all.push(m0, f, m1);
         rounds.push(roundOf(f.value, m0.value, m1.value, ended));
         limits = f.value.limits;
+        drewOnSurface = Math.max(drewOnSurface, f.value.surface?.frames ?? 0);
         if (f.value.histogram) histograms.push(f.value.histogram);
         // the worst of no frames is none, and not a good round
         if (f.value.totalFrames > 0 && f.value.stalls) stalls.push(f.value.stalls.worstMs);
@@ -271,9 +345,6 @@ export function perfScrollOp(ctx: ServerContext) {
       }
       const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
       const surfaced = rounds.flatMap((x) => (x.surface ? [x.surface] : []));
-      /** The median of the surface's rounds: 0 with none, where nothing says it. */
-      const onSurface = (pick: (x: OnSurface) => number) =>
-        surfaced.length ? round1(median(surfaced.map(pick))) : 0;
       const jank = counted.length ? round1(median(counted.map((x) => x.jankyPercent))) : undefined;
       // what the app spent its time on as it janked: one scroll more, under the profiler, where the device has one; it
       // counts in no round, as the profiler costs the frames something
@@ -287,9 +358,10 @@ export function perfScrollOp(ctx: ServerContext) {
       const busiest = profiles
         ? await measure(s, 'cpuProfile', false)(pkg, roundSeconds * 1_000, swipeAll).then(
             (p) => {
-              const top = p.value.appTop?.[0] ?? p.value.top[0];
-              if (!top) unprofiled = 'the profile of one scroll more named no function';
-              return top;
+              const { top, afterKernel } = appTopOf(p.value);
+              if (!top)
+                unprofiled = `the profile of one scroll more named no function${afterKernel ? `: its samples were in ${HIDDEN_KERNEL}` : ''}`;
+              return top && { ...top, afterKernel };
             },
             (e: unknown) => {
               if (!(e instanceof DeviceError && e.code === 'UNSUPPORTED'))
@@ -328,37 +400,16 @@ export function perfScrollOp(ctx: ServerContext) {
       return reply(
         [
           `measurement ${saved.id}${virtualNote(s)}`,
-          ...rounds.map((x, i) =>
-            x.surface
-              ? `round ${i + 1}: on its own surface, ${x.surface.frames} frames, ${x.surface.fps} a second, p95 ${x.surface.p95Ms} ms, ${x.surface.slow34Percent}% 34 ms or more after the last, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`
-              : `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
-          ),
+          ...rounds.map(roundLine),
           ...(surfaced.length && !counted.length
-            ? [
-                `median on its own surface: p95 ${onSurface((x) => x.p95Ms)} ms, ${onSurface((x) => x.slow34Percent)}% 34 ms or more after the last, ${onSurface((x) => x.slow50Percent)}% 50 ms or more`,
-                playLine(
-                  'surface.slow_50_percent',
-                  must(
-                    onSurface((x) => x.slow50Percent),
-                    'a share',
-                  ),
-                ),
-                playLine(
-                  'surface.slow_34_percent',
-                  must(
-                    onSurface((x) => x.slow34Percent),
-                    'a share',
-                  ),
-                ),
-                ...notes,
-              ]
+            ? [...surfaceLines(surfaced), ...notes]
             : [
                 `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}; frozen frames: ${frozen}`,
                 ...(notes.length
                   ? notes
                   : counted.length
                     ? ['no threshold exceeded']
-                    : [await unjudged(s, pkg)]),
+                    : [unjudged(drewOnSurface)]),
               ]),
           ...(unprofiled ? [unprofiled] : []),
           ...(limits ? [limits] : []),

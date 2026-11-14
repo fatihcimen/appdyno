@@ -1,10 +1,14 @@
+import type { MemoryReading } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { SnapshotOut } from './schemas.js';
 import { defineOp, READ, reply } from '../tool.js';
 import { EXTRA_NAMES, EXTRAS, type Answered, type ExtraName, type Got } from './extras.js';
-import { perfTools, App, Scenario, unlessUnsupported, kb } from './shared.js';
+import { perfTools, App, Scenario, unlessUnsupported, kb, BAD_ROWS } from './shared.js';
 import { frameVitals } from './vitals.js';
+
+/** Most of the PSS swapped out, as on a loaded emulator: its heaps in RAM then read as next to nothing. */
+const swappedMost = (m: MemoryReading) => m.swapPssKb !== undefined && m.swapPssKb * 2 >= m.kb;
 
 export function perfSnapshotOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, keep, noisy } = perfTools(ctx);
@@ -99,7 +103,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
           `measurement ${saved.id}${virtualNote(s)}`,
           `CPU: ${cpu.value.percent}% (of one core, ${cpu.value.windowMs} ms)${behind ? `, with ${behind} in front: a phone stops an app behind, so this says nothing of it and is not kept` : ''}`,
           m.kind === 'pss'
-            ? `memory: PSS ${kb(m.kb)}, Java ${kb(m.javaHeapKb)}, native ${kb(m.nativeHeapKb)}${m.graphicsKb ? `, graphics ${kb(m.graphicsKb)}` : ''}`
+            ? `memory: PSS ${kb(m.kb)}, Java ${kb(m.javaHeapKb)}, native ${kb(m.nativeHeapKb)}${m.graphicsKb ? `, graphics ${kb(m.graphicsKb)}` : ''}${swappedMost(m) ? `; ${kb(m.swapPssKb)} of it swapped out to compressed memory (zram), which the heaps leave out` : ''}`
             : `memory: physical footprint ${kb(m.kb)}${m.peakKb !== undefined ? ` (peak ${kb(m.peakKb)})` : ''}`,
           ...(f
             ? [
@@ -109,6 +113,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
                       `worst second: ${f.frames.worstWindow.slow} missed of ${f.frames.worstWindow.frames} frames, mean ${f.frames.worstWindow.avgMs} ms`,
                     ]
                   : []),
+                ...(f.badRows ? [`${f.badRows} frames ${BAD_ROWS}`] : []),
               ]
             : [
                 source.framesByProbe

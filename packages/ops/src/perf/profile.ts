@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ProfileOut } from './schemas.js';
 import { ACT, defineOp, reply } from '../tool.js';
-import { perfTools, App, Dsym, symbolsOf } from './shared.js';
+import { perfTools, App, Dsym, symbolsOf, inKernel } from './shared.js';
 
 /** What an answer holds; the measurement keeps them all, for a diff of two runs. */
 const SHOWN = 15;
@@ -15,6 +15,10 @@ const UNNAMED =
   "the app's own functions are addresses: no symbols of this build were found on this Mac. dsym, the build's .dSYM, names them: Xcode writes one where DEBUG_INFORMATION_FORMAT is dwarf-with-dsym, a Release build's default and not a Debug build's, beside the .app in its build folder or in its archive";
 const unnamed = (entries: ProfileEntry[] | undefined) =>
   !!entries?.length && entries.every((e) => /^0x[0-9a-f]+$/i.test(e.symbol));
+
+/** What a line of the kernel's own time is, where simpleperf could name it only by address. */
+const KERNEL =
+  "[kernel.kallsyms][+…] is time in the kernel, by its address: this device hides the kernel's names";
 
 export function perfProfileOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, scroller } = perfTools(ctx);
@@ -47,11 +51,12 @@ export function perfProfileOp(ctx: ServerContext) {
         [
           `measurement ${saved.id}${virtualNote(s)}`,
           `${m.value.samples} samples, ${m.value.durationMs} ms; the most time:`,
-          ...m.value.top.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
+          ...m.value.top.slice(0, 10).map((e) => `${e.percent}% ${e.symbol}`),
+          ...(m.value.top.slice(0, 10).some(inKernel) ? [KERNEL] : []),
           ...(m.value.appTop?.length
             ? [
                 "the app's own functions (with what they call):",
-                ...m.value.appTop.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
+                ...m.value.appTop.slice(0, 10).map((e) => `${e.percent}% ${e.symbol}`),
               ]
             : []),
           ...(s.device.measure.symbolFiles && !dsym && unnamed(m.value.appTop) ? [UNNAMED] : []),

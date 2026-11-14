@@ -99,7 +99,7 @@ type Around = {
  * The biggest scrolling container, the one under x,y if given; else the whole window. Sideways, a row across the
  * page where one says it scrolls, as the page is the bigger and does not move that way.
  */
-const scrollArea = (
+export const scrollArea = (
   screen: Screen,
   a: { x?: number; y?: number },
   w: { w: number; h: number },
@@ -119,7 +119,7 @@ const scrollArea = (
 };
 
 /** Where a finger crosses a box: on the line through the point asked for, as that is what it is to move. */
-const strokeCentre = (box: Box, a: { x?: number; y?: number }, vertical: boolean) => ({
+export const strokeCentre = (box: Box, a: { x?: number; y?: number }, vertical: boolean) => ({
   x: Math.round(vertical && a.x !== undefined ? a.x : box.x + box.width / 2),
   y: Math.round(!vertical && a.y !== undefined ? a.y : box.y + box.height / 2),
 });

@@ -6,6 +6,8 @@ import {
   Cannot,
   type Capability,
   type CompileMode,
+  type CpuProfile,
+  type ProfileEntry,
   type MeasureSource,
   type Measured,
   must,
@@ -26,13 +28,14 @@ import {
   saveRun,
   store,
 } from '@appdyno/perf';
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, type Point } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { liveMirror } from '../mirror-state.js';
 import { checkApp, checkLaunch, noApp } from '../policy.js';
 import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
+import { scrollArea, strokeCentre } from '../scroll.js';
 import { ToolError } from '../tool.js';
 
 let virtualHost: boolean | undefined;
@@ -99,6 +102,7 @@ export const symbolsOf = (s: Session, dsym?: string) => {
     throw new ToolError(
       'dsym is for iOS: on Android the names come from the device',
       'UNSUPPORTED',
+      'leave out dsym',
     );
   return dsym ? { dsym } : undefined;
 };
@@ -124,7 +128,26 @@ export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
   size: 'size',
 };
 
+/** What measures the like where a device has no way of giving a measure: by a tool's name, which a driver does not say. */
+const INSTEAD: Partial<Record<Capability, string>> = {
+  hangs: "perf_trace with what: frames reads the main thread's stalls here",
+  xctMetrics: 'perf_trace with what: frames times the frames here, and perf_launch the starts',
+};
+
 export const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed(1)} MB`);
+
+/** A kernel address simpleperf could not name, on a device that hides the kernel's names: no function of the app. */
+export const inKernel = (e: ProfileEntry) => e.symbol.startsWith('[kernel.kallsyms]');
+
+/** What a profile names as the app's top function: what the app ran, past the kernel's time, and whether that came first. */
+export function appTopOf(p: CpuProfile) {
+  const top = p.appTop?.[0] ?? p.top.find((e) => !inKernel(e));
+  const first = p.appTop?.length ? undefined : p.top[0];
+  return { top, afterKernel: !!first && inKernel(first) };
+}
+
+/** Why a count of frames left rows out, as an emulator times some to end years on. */
+export const BAD_ROWS = 'left out: timed to end after they were read, they cannot be real';
 
 /** How far a measure that records during a scroll swipes. */
 export const SCROLLER_SWIPES = 4;
@@ -303,7 +326,11 @@ export function perfTools(ctx: ServerContext) {
     const run = async (...a: unknown[]) =>
       f.apply(source, a).catch(async (e: unknown) => {
         if (e instanceof Cannot)
-          throw new ToolError(`${s.device.serial} ${e.message}`, 'UNSUPPORTED');
+          throw new ToolError(
+            `${s.device.serial} ${e.message}`,
+            'UNSUPPORTED',
+            e.hint ?? INSTEAD[k],
+          );
         if (row && e instanceof DeviceError && e.code === 'UNSUPPORTED') {
           await keepRefusal(ctx, s, a[0] as string, row, e.message);
           await rewriteDashboard(ctx);
@@ -355,16 +382,22 @@ export function perfTools(ctx: ServerContext) {
     direction: 'up' | 'down',
     waitMs: number,
     swipes = SCROLLER_SWIPES,
+    at?: Point,
   ) => {
     const h = must(s.device.hello, "the agent's hello");
-    const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
-    return async () => {
+    const screen = await s.current();
+    const size = screen.window ?? { w: h.screen.w, h: h.screen.h };
+    // the list under a point, through its middle, as scroll_to strokes it: a split view's other pane moves nothing
+    const box = at && scrollArea(screen, at, size, true);
+    const { from, to } = box
+      ? swipeLine(size, { direction, ...strokeCentre(box, at, true), distance: box.height * 0.4 })
+      : swipeLine(size, { direction, distance: size.h * 0.4 });
+    const swipeAll = async () => {
       await pause(waitMs);
-      for (let i = 0; i < swipes; i++) {
-        const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
-        await s.device.swipe(from, to, 300, { settle: false });
-      }
+      for (let i = 0; i < swipes; i++) await s.device.swipe(from, to, 300, { settle: false });
     };
+    // where it swiped, for a refusal of swipes that moved nothing
+    return Object.assign(swipeAll, { from });
   };
 
   return { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller };

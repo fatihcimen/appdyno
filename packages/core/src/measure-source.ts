@@ -29,15 +29,19 @@ import type {
   FrameTrace,
 } from './measure.js';
 
+/** Why a device has no way of measuring something, and what to do instead where the device can say it. */
+export type CannotWhy = { reason: string; hint?: string };
+
 /** What a device has no way of measuring, as against a measure that refused this time: no row is about it. */
 export class Cannot extends DeviceError {
-  constructor(what: string) {
-    super('UNSUPPORTED', `cannot measure ${what}`);
+  constructor(what: string, why?: CannotWhy) {
+    super('UNSUPPORTED', `cannot measure ${what}${why ? `: ${why.reason}` : ''}`, why?.hint);
   }
 }
 
-/** A member of `MeasureSource` a device does not have, naming what that takes away. */
-export const cannot = (what: string) => (): Promise<never> => Promise.reject(new Cannot(what));
+/** A member of `MeasureSource` a device does not have, naming what that takes away, and why where a call asks for it. */
+export const cannot = (what: string, why?: CannotWhy) => (): Promise<never> =>
+  Promise.reject(new Cannot(what, why));
 
 /** What a device can measure: every member answers, by `cannot` where this device has no way. */
 export type MeasureSource = {

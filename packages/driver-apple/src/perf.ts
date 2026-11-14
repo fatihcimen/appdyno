@@ -59,7 +59,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
   readonly slowReads = [];
   readonly framesByProbe = true;
   vitals = cannot('the device state');
-  hangs = cannot('hangs');
+  hangs = cannot('hangs', { reason: "they are read from an iPhone's Time Profiler trace" });
   private readonly probe: ProbedFrames;
 
   constructor(

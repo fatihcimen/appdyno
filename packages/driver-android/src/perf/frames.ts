@@ -17,7 +17,7 @@ import { frameCauseSql, parseFrameCauses } from './frame-cause.js';
 import {
   jankyShare,
   parseFrameStats,
-  parseFramestats,
+  readFramestats,
   parseAndroidFrameStats,
   parseCsv,
   parseFrameTimelineCsv,
@@ -86,8 +86,12 @@ export async function framesDuring(
   // what the app draws on a surface of its own, past the View toolkit, which counts none of it
   const surface = await watchSurface(d, pkg).catch(() => undefined);
   const rows = new Map<number, Required<FrameRow>>();
+  // by vsync, as rows are: each read of the ring gives one again
+  const bad = new Set<number>();
   const keep = (text: string) => {
-    for (const r of parseFramestats(text)) rows.set(r.startNs, r);
+    const read = readFramestats(text);
+    for (const r of read.rows) rows.set(r.startNs, r);
+    for (const ns of read.bad) bad.add(ns);
   };
   // set by the finally below, which the compiler does not follow into the loop
   let on = true as boolean;
@@ -119,14 +123,16 @@ export async function framesDuring(
     over700: frozenFrames,
     ...(rows.size > 0 && { rowFrames: rows.size }),
   };
+  const { badRows: _last, ...counted } = m.value;
   return {
     ...m,
     value: {
-      ...m.value,
+      ...counted,
       jankyPercent: jankyShare(m.value, rows.size),
       frozenFrames,
       ...(histogram && { histogram }),
       ...(drawn && { surface: drawn }),
+      ...(bad.size > 0 && { badRows: bad.size }),
     },
   };
 }

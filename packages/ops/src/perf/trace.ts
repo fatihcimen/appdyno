@@ -11,6 +11,7 @@ import {
 import { UNEXPLAINED_FRAMES, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
+import type { Session } from '../session.js';
 import { TraceOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Dsym, Probe, Scenario, symbolsOf } from './shared.js';
@@ -162,8 +163,23 @@ function hitchesSaid(v: Extract<FrameTrace, { kind: 'hitches' }>): Said {
   };
 }
 
+/** Of a timeline of few frames, where the app has a surface of its own that drew, as perf_scroll says of its rounds. */
+const OWN_SURFACE =
+  "the app draws on its own surface, as a Flutter app or a game does, and these frames leave it out: perf_scroll reads that surface's frames";
+
+/** Whether the app has a surface of its own that drew: none on a device that reads no surface. */
+const drawsOnItsOwn = (s: Session, pkg: string) =>
+  s.device.measure.surfaceFrames(pkg).then(
+    (x) => x.value.frames > 0,
+    () => false,
+  );
+
 /** Android's frame timeline: each frame's time and why it was late. */
-function timelineSaid(v: Extract<FrameTrace, { kind: 'timeline' }>, virtual: boolean): Said {
+function timelineSaid(
+  v: Extract<FrameTrace, { kind: 'timeline' }>,
+  virtual: boolean,
+  ownSurface: boolean,
+): Said {
   return {
     kind: 'frame-timeline',
     metrics: [
@@ -194,6 +210,7 @@ function timelineSaid(v: Extract<FrameTrace, { kind: 'timeline' }>, virtual: boo
     ],
     lines: [
       ...fewLine(v.frames),
+      ...(ownSurface ? [OWN_SURFACE] : []),
       `${v.frames} frames; late by the app ${v.appDeadlineMissed + (v.appResynced ?? 0)} (${v.appJankPercent}%); any jank ${v.janky} (${v.jankyPercent}%: buffer stuffing ${v.bufferStuffing}, compositor ${v.surfaceFlinger})`,
       ...(virtual
         ? [
@@ -245,7 +262,7 @@ export function perfTraceOp(ctx: ServerContext) {
     name: 'perf_trace',
     title: 'Frame trace',
     description:
-      "Why frames were slow, jank: frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches and causes; iOS simulator: main-thread pacing, by a probe). `what`: hangs (iPhone), or XCTest's hitch or launch metric. Kept for perf_query.",
+      "Why frames were slow, jank: frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches and causes; iOS simulator: main-thread pacing, by a probe). `what`: hangs (iPhone), or XCTest's hitch or launch metric.",
     input: z
       .object({
         app: App,
@@ -308,7 +325,8 @@ export function perfTraceOp(ctx: ServerContext) {
       const v = m.value;
       if (v.kind === 'probe') return answer(m, probeSaid(v));
       if (v.kind === 'hitches') return answer(m, hitchesSaid(v));
-      return answer(m, timelineSaid(v, s.device.virtual));
+      const own = v.frames < MIN_FRAMES && (await drawsOnItsOwn(s, pkg));
+      return answer(m, timelineSaid(v, s.device.virtual, own));
     },
   });
 }

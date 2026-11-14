@@ -68,10 +68,15 @@ export function assertReadOnlySql(sql: string): void {
 /** A bounded table from a kept Perfetto trace; undefined for a file of another kind. */
 export async function queryTrace(
   tracePath: string,
-  q: { sql?: string; limit: number },
+  q: { sql?: string; table?: string; limit: number },
 ): Promise<TraceDigest | undefined> {
   if (!/\.(pftrace|perfetto-trace)$/.test(tracePath)) return undefined;
-  if (!q.sql) throw new DeviceError('INVALID_ARGUMENT', 'a Perfetto trace is asked with sql');
+  if (!q.sql)
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      'a Perfetto trace is asked with sql: table is for an Instruments trace (.trace)',
+      'give sql, one SELECT, as SELECT ts, dur, name FROM slice ORDER BY dur DESC',
+    );
   assertReadOnlySql(q.sql);
   // absolute: a path that starts with a dash would read as an option
   const file = resolve(tracePath);
@@ -79,7 +84,11 @@ export async function queryTrace(
     if (e instanceof DeviceError) throw e;
     const said = (e as { stderr?: string }).stderr ?? (e instanceof Error ? e.message : String(e));
     const why = said.split('\n').slice(-6).join('\n').trim();
-    throw new DeviceError('INVALID_ARGUMENT', `the trace processor refused: ${why}`);
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      `the trace processor refused: ${why}`,
+      "mend the sql as it says: one SELECT of the trace's tables, as slice, thread or process",
+    );
   });
   const { columns, rows } = parseCsv(csv);
   const limit = Math.max(q.limit, 0);

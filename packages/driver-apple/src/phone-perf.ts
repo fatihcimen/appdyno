@@ -61,7 +61,10 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
   readonly framesByProbe = false;
   frames = cannot('frames');
   resetFrames = cannot('frames');
-  attachProbe = cannot('through a frame probe');
+  attachProbe = cannot('through a frame probe', {
+    reason: "the probe goes into a simulator's app",
+    hint: "leave out probe: Instruments times an iPhone's frames",
+  });
 
   constructor(private readonly phone: PerfPhone) {
     super();

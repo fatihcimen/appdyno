@@ -222,11 +222,16 @@ describe('iOS simulators', () => {
     );
   });
 
-  it('words each measure a real device has no way of giving', async () => {
+  it('words each measure a real device has no way of giving, and what measures the like', async () => {
     const t = await connect();
+    const instead = (hint: string) => `\nhint: perf_trace with what: frames ${hint}`;
     for (const [name, args, word] of [
-      ['perf_trace', { what: 'hangs' }, 'hangs'],
-      ['perf_trace', { what: 'xct_launch' }, "XCTest's metrics"],
+      ['perf_trace', { what: 'hangs' }, `hangs${instead("reads the main thread's stalls here")}`],
+      [
+        'perf_trace',
+        { what: 'xct_launch' },
+        `XCTest's metrics${instead('times the frames here, and perf_launch the starts')}`,
+      ],
       ['perf_scroll', { probe: true }, 'through a frame probe'],
       ['perf_heap', { profile: 'java_hprof' }, 'a heap profile'],
       ['perf_launch', { baselineProfile: true }, 'a Baseline Profile'],

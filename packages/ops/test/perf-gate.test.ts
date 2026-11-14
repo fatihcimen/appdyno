@@ -1,7 +1,8 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { must, stateDir, type MeasureSource } from '@appdyno/core';
+import { must, stateDir, type DeviceProvider, type MeasureSource } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import type { Baseline } from '@appdyno/perf';
 import { describe, expect, it } from 'vitest';
 import { leakSignal } from '../src/perf/scroll.js';
@@ -361,6 +362,54 @@ describe('perf_query', () => {
     const r = await query.handler({ trace: inside, sql: 'SELECT 1', limit: 5 });
     expect(text(r)).toBe('a\n1\n(2 more rows left out)\nfrom: trace processor');
     expect(asked).toEqual([[inside, { sql: 'SELECT 1', limit: 5 }]]);
+  });
+
+  it('says why it reads no trace, and what to give it instead', async () => {
+    const device = new FakeDevice();
+    const provider = (queryTrace: NonNullable<DeviceProvider['queryTrace']>): DeviceProvider => ({
+      list: () => Promise.resolve([]),
+      handles: () => false,
+      open: () => device,
+      queryTrace,
+    });
+    const query = (queryTrace: NonNullable<DeviceProvider['queryTrace']>) =>
+      must(
+        checkedOps(
+          new ServerContext(DEFAULT_POLICY, [provider(queryTrace)], {
+            storage: { measurements: fresh() },
+          }),
+        ).perf_query,
+        'perf_query',
+      );
+    const none = query(() => Promise.resolve(undefined));
+    // a measurement's id, as a perf_ answer starts with, is no trace
+    for (const trace of ['/etc/passwd', 'pm-0123abcd'])
+      await expect(none.handler({ trace, sql: 'SELECT 1', limit: 5 })).rejects.toMatchObject({
+        code: 'POLICY_DENIED',
+        hint: expect.stringContaining('trace (perf_query)') as unknown,
+      });
+    const probe = join(stateDir(), 'traces', 'x.jsonl');
+    await expect(none.handler({ trace: probe, limit: 5 })).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+      message: expect.stringContaining('.pftrace') as unknown,
+      hint: expect.stringMatching(/\w/) as unknown,
+    });
+    const bare = query(() =>
+      Promise.reject(new DeviceError('INVALID_ARGUMENT', 'not a table name')),
+    );
+    const inside = join(stateDir(), 'traces', 'x.trace');
+    await expect(bare.handler({ trace: inside, table: 'a"b', limit: 5 })).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+      hint: expect.stringContaining('an Instruments trace (.trace) a table') as unknown,
+    });
+    // as xctrace said of a trace it could not export, on a Mac where its recording hung
+    const unread = query(() =>
+      Promise.reject(new DeviceError('UNSUPPORTED', 'the trace tool could not read the trace')),
+    );
+    await expect(unread.handler({ trace: inside, limit: 5 })).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+      hint: expect.stringContaining('record it again') as unknown,
+    });
   });
 });
 

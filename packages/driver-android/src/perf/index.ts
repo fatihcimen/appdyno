@@ -30,9 +30,12 @@ export class AndroidPerf implements MeasureSource {
   readonly symbolFiles = false;
   readonly logTellsStalls = true;
   readonly energyHolds = 'battery';
-  attachProbe = cannot('through a frame probe');
-  hangs = cannot('hangs');
-  xctMetrics = cannot("XCTest's metrics");
+  attachProbe = cannot('through a frame probe', {
+    reason: "the probe goes into an iOS simulator's app",
+    hint: 'leave out probe: Android times each frame itself',
+  });
+  hangs = cannot('hangs', { reason: "they are read from an iPhone's Time Profiler trace" });
+  xctMetrics = cannot("XCTest's metrics", { reason: 'XCTest runs on iOS' });
 
   pid = this.on(pidOf);
   frames = this.on(frames);

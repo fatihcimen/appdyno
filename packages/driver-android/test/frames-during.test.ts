@@ -60,6 +60,24 @@ describe('frames of what ran, on Android', () => {
   );
 
   it(
+    'counts no frozen frame of a row that ends after the read, and counts that row once over reads',
+    fakeTimed(async () => {
+      // as an emulator gave: its frame ends 2^56 ns on, read 3 s after the boot
+      const garbage = '0,2000000000,2000000000,16666667,72057628414509166';
+      const read = `Uptime: 3000 Realtime: 3000\n${dump(1000, 0, [row(1_000, 8), garbage])}`;
+      const { value } = await framesDuring(
+        device(['', read, read, read]),
+        'dev.app',
+        0,
+        () => new Promise((r) => setTimeout(r, 700)),
+      );
+      expect(value.frozenFrames).toBe(0);
+      expect(value.badRows).toBe(1);
+      expect(value.histogram?.rowFrames).toBe(1);
+    }),
+  );
+
+  it(
     'keeps what the ring has since lost, and counts two stalls apart',
     fakeTimed(async () => {
       const first = dump(1000, 0, [row(1_000, 1_000)]);

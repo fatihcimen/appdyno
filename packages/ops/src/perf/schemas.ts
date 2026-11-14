@@ -105,6 +105,8 @@ export const ScrollOut = z.object({
     z.object({
       rewound: z.boolean().optional(),
       frames: z.number(),
+      /** Rows left out of `frames`: timed to end after they were read. */
+      badRows: z.number().optional(),
       jankyPercent: z.number(),
       frozen: z.number(),
       p95Ms: z.number().optional(),

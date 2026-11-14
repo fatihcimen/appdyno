@@ -62,9 +62,15 @@ async function launchRun(
   const limit = SLOW_LAUNCH_MS[mode];
   const { medianMs: med, until, samples, startup, fullyDrawnMedianMs } = m.value;
   // a start the system timed as another state is none of this mode's: a chooser in front reads UNKNOWN, at 0 ms
-  const times = samples.flatMap((x) =>
-    x.totalMs === undefined || (x.state && x.state !== mode.toUpperCase()) ? [] : [x.totalMs],
+  const counted = samples.filter(
+    (x) => x.totalMs !== undefined && !(x.state && x.state !== mode.toUpperCase()),
   );
+  const times = counted.flatMap((x) => x.totalMs ?? []);
+  // what the median is of, where it is not every start: under load a start timed out, or found the app still running
+  const others = samples.filter((x) => !counted.includes(x)).map((x) => x.state ?? '?');
+  const of = others.length
+    ? `, of ${counted.length} of the ${samples.length} starts: the system timed the others as ${others.join(', ')}, not as ${mode.toUpperCase()}`
+    : '';
   // Play keeps a state's longest start of the day, and only what the platform itself reports is its number
   const worstKind = `launch.worst_${mode}_ms` as const;
   const worst = !until && times.length ? Math.max(...times) : undefined;
@@ -88,7 +94,7 @@ async function launchRun(
       {
         kind: 'launch.ttfd_ms',
         unit: 'ms',
-        samples: samples.flatMap((x) => (x.fullyDrawnMs === undefined ? [] : [x.fullyDrawnMs])),
+        samples: counted.flatMap((x) => (x.fullyDrawnMs === undefined ? [] : [x.fullyDrawnMs])),
       },
       { kind: worstKind, unit: 'ms', samples: worst === undefined ? [] : [worst] },
       ...(startup?.breakdown ?? []).map((b): Metric => ({
@@ -113,7 +119,7 @@ async function launchRun(
     lines: [
       `measurement ${saved.id}${virtualNote(s)}`,
       `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
-      `median: ${med === undefined ? `not measured${samples.some((x) => x.state) ? `: the system timed no start as ${mode.toUpperCase()}; a start reads UNKNOWN where another window came to the front` : ''}` : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
+      `median: ${med === undefined ? `not measured${samples.some((x) => x.state) ? `: the system timed no start as ${mode.toUpperCase()}; a start reads UNKNOWN where another window came to the front, or the system stopped waiting for it` : ''}` : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}${med === undefined ? '' : of}`,
       ...(longest === undefined ? [] : [playLine(worstKind, longest)]),
       ...(med !== undefined && !rated ? [UNRATED] : []),
       ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),

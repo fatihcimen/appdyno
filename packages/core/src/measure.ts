@@ -74,6 +74,8 @@ export type MemoryReading = {
   javaHeapKb?: number;
   nativeHeapKb?: number;
   graphicsKb?: number;
+  /** Android: of `kb`, what is swapped out to compressed memory (zram), which the heaps leave out. */
+  swapPssKb?: number;
   /** Android's live objects: growing across rounds with no change on screen is a leak signal. */
   viewRootImpl?: number;
   appContexts?: number;

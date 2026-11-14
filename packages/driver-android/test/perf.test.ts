@@ -65,6 +65,21 @@ describe('android perf parsers on recorded outputs', () => {
     });
   });
 
+  it('leaves out a frame an emulator timed to end 2^56 ns on, after the read, and counts it', () => {
+    // Now in Android on an API 35 emulator: two rows end at 72904454231491863 and 72057628414510124 ns, read at 2696921 ms
+    const text = fx('android-gfxinfo-framestats-emulator.txt');
+    const s = parseFrameStats(text);
+    assert(s.frames?.worstWindow);
+    expect(s.badRows).toBe(2);
+    expect(s.frames.count).toBe(46);
+    expect(s.frames.worstMs).toBeLessThan(1_500);
+    expect(s.frames.worstWindow.avgMs).toBeLessThan(200);
+    const newest = parseFramestats(text).at(-1)?.startNs;
+    assert(newest !== undefined);
+    expect(parseFrameStats(text, 2_694_000_000_000).badRows).toBe(1);
+    expect(parseFrameStats(text, newest)).not.toHaveProperty('badRows');
+  });
+
   it('reads on from the newest frame a reader saw, with no reset between: the rows a device keeps outlive a second', () => {
     const text = fx('android-gfxinfo-framestats.txt');
     const rows = parseFramestats(text).toSorted((a, b) => a.startNs - b.startNs);
@@ -99,6 +114,18 @@ describe('android perf parsers on recorded outputs', () => {
       'Total frames rendered: 100\nJanky frames: 5 (5.00%)\nHISTOGRAM: 5ms=90 700ms=2 1150ms=1\n';
     expect(parseFrameStats(text)).toMatchObject({ frozenFrames: 3, fewFrames: false });
     expect(() => parseFrameStats('nothing')).toThrow(/no frame summary/);
+  });
+
+  it('reads what of the PSS is swapped out, as a loaded emulator held most of the heaps in zram', () => {
+    // Wikipedia on an API 35 emulator: 191 MB of PSS, 136 MB of it swapped, 28 KB of Java heap in RAM
+    expect(parseMeminfo(fx('android-meminfo-swapped.txt'))).toMatchObject({
+      pssKb: 195_610,
+      swapPssKb: 139_524,
+      javaHeapKb: 28,
+    });
+    expect(parseMeminfo('TOTAL PSS: 100 TOTAL RSS: 200 TOTAL SWAP (KB): 0')).not.toHaveProperty(
+      'swapPssKb',
+    );
   });
 
   it('reads meminfo PSS, heaps and private dirty', () => {
@@ -508,6 +535,14 @@ describe('the read-only guard of trace queries', () => {
       queryTrace('/t/x.perfetto-trace', { sql: 'DROP TABLE t', limit: 1 }),
     ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
+
+  it('says a table is for an Instruments trace, and what sql to give a Perfetto one', async () => {
+    await expect(queryTrace('/t/x.pftrace', { table: 'frames', limit: 5 })).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+      message: expect.stringContaining('table is for an Instruments trace (.trace)') as unknown,
+      hint: expect.stringContaining('SELECT') as unknown,
+    });
+  });
 });
 
 describe('profile and frame windows', () => {
@@ -565,6 +600,18 @@ describe('the measures of a device', () => {
     await expect(perf.attachProbe()).rejects.toThrow('cannot measure through a frame probe');
     await expect(perf.hangs()).rejects.toThrow('cannot measure hangs');
     await expect(perf.xctMetrics()).rejects.toThrow("cannot measure XCTest's metrics");
+  });
+
+  it('says why it has no hangs, XCTest metrics or probe, and to leave out the probe', async () => {
+    const perf = on('R58M', '');
+    for (const read of [perf.hangs, perf.xctMetrics, perf.attachProbe])
+      await expect(read()).rejects.toMatchObject({
+        code: 'UNSUPPORTED',
+        message: expect.stringMatching(/^cannot measure .+: .+/) as unknown,
+      });
+    await expect(perf.attachProbe()).rejects.toMatchObject({
+      hint: expect.stringContaining('leave out probe') as unknown,
+    });
   });
 
   it('reaches the device from a measure taken off the object, as the operations do', async () => {

@@ -46,6 +46,8 @@ export type FrameStats = FrameSummary & {
     /** The newest frame's vsync, on the device's clock in ns: where a reader that resets nothing goes on from. */
     newestNs?: number;
   };
+  /** Rows left out of `frames` as their times cannot be real: a frame said to end after it was read. */
+  badRows?: number;
   /**
    * The frames the app presented on a surface of its own while they were counted, as a Flutter app or a game draws past
    * the View toolkit, which counts none of them: on a device that reads its surfaces.

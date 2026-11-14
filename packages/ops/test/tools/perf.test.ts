@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { must } from '@appdyno/core';
-import { describe, expect, it, vi } from 'vitest';
+import { cannot, must, type ActOptions } from '@appdyno/core';
+import type { ActParams, Tree } from '@appdyno/protocol';
+import { latestRuns, runKeys } from '@appdyno/perf';
+import { assert, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { MEASUREMENTS, connect } from './shared.js';
 
@@ -27,6 +29,25 @@ describe('perf tools', () => {
     expect(r.text).toContain('CPU pressure 2, thermal 0');
   });
 
+  it('snapshot: says when most of the memory is swapped out, which the heaps leave out', async () => {
+    const dev = new FakeDevice();
+    const memory = dev.measure.memory.bind(dev.measure);
+    const swapped = { kb: 195_610, javaHeapKb: 28, nativeHeapKb: 628, swapPssKb: 139_524 };
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        memory: async (...a: Parameters<typeof memory>) => {
+          const m = await memory(...a);
+          return { ...m, value: { ...m.value, ...swapped } };
+        },
+      },
+    });
+    expect((await (await connect({}, dev)).textOf('perf_snapshot')).text).toContain(
+      'memory: PSS 191.0 MB, Java 0.0 MB, native 0.6 MB, graphics 9.8 MB; 136.3 MB of it swapped out to compressed memory (zram), which the heaps leave out',
+    );
+    expect((await (await connect()).textOf('perf_snapshot')).text).not.toContain('swapped');
+  });
+
   it('snapshot: leaves out what the device did not say, where it read as a question mark or nothing', async () => {
     const dev = new FakeDevice();
     const at = new Date().toISOString();
@@ -45,6 +66,66 @@ describe('perf tools', () => {
     expect(r.text).toContain('device: load 1 1 1\n');
     expect(r.text).not.toContain('graphics');
     expect(r.text).not.toContain('?');
+  });
+
+  it('snapshot and scroll: say the frames left out as timed to end after they were read', async () => {
+    const dev = new FakeDevice();
+    const frames = dev.measure.frames.bind(dev.measure);
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        frames: async (...a: Parameters<typeof frames>) => {
+          const f = await frames(...a);
+          const worstWindow = { frames: 19, slow: 19, avgMs: 120.3 };
+          return {
+            ...f,
+            value: {
+              ...f.value,
+              frames: {
+                count: 46,
+                slow: 40,
+                slowPercent: 87,
+                p50Ms: 125,
+                p95Ms: 350,
+                worstMs: 1450,
+                worstWindow,
+              },
+              badRows: 2,
+            },
+          };
+        },
+      },
+    });
+    const t = await connect({}, dev);
+    const snapshot = (await t.textOf('perf_snapshot')).text;
+    expect(snapshot).toContain(
+      'worst second: 19 missed of 19 frames, mean 120.3 ms\n2 frames left out: timed to end after they were read, they cannot be real',
+    );
+    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toContain(
+      'round 1: 120 frames (2 left out: timed to end after they were read, they cannot be real), janky 4%',
+    );
+  });
+
+  it('trace: a measure a device has no way of giving says why, and what measures the like', async () => {
+    const dev = new FakeDevice();
+    const reason = "they are read from an iPhone's trace";
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        hangs: cannot('hangs', { reason }),
+        attachProbe: cannot('through a frame probe', { reason, hint: 'leave out probe' }),
+      },
+    });
+    const t = await connect({}, dev);
+    expect((await t.textOf('perf_trace', { what: 'hangs' })).text).toBe(
+      "UNSUPPORTED: emulator-5580 cannot measure hangs: they are read from an iPhone's trace\nhint: perf_trace with what: frames reads the main thread's stalls here",
+    );
+    expect((await t.textOf('perf_trace', { probe: true })).text).toMatch(
+      /\nhint: leave out probe$/,
+    );
+    expect((await t.textOf('perf_profile', { dsym: '/b/App.app.dSYM' })).text).toMatch(
+      /^UNSUPPORTED: dsym is for iOS.*\nhint: leave out dsym$/s,
+    );
   });
 
   it('launch: says no start was measured where the system timed each as another state', async () => {
@@ -69,9 +150,40 @@ describe('perf tools', () => {
     });
     const r = await (await connect({}, dev)).textOf('perf_launch', { repeats: 2 });
     expect(r.text).toContain(
-      'median: not measured: the system timed no start as COLD; a start reads UNKNOWN where another window came to the front',
+      'median: not measured: the system timed no start as COLD; a start reads UNKNOWN where another window came to the front, or the system stopped waiting for it',
     );
     expect(r.text).not.toContain('slow cold start');
+  });
+
+  it('launch: says how many starts its median is of, where the system timed the others as another state', async () => {
+    const dev = new FakeDevice();
+    const at = new Date().toISOString();
+    // Now in Android on a loaded API 36 emulator: a start that timed out, a cold one, and one the system found warm
+    const samples = [
+      { state: 'UNKNOWN' },
+      { totalMs: 9654, state: 'COLD', fullyDrawnMs: 9900 },
+      { totalMs: 5428, state: 'WARM', fullyDrawnMs: 5600 },
+    ];
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        launch: () =>
+          Promise.resolve({ value: { mode: 'cold', samples, medianMs: 9654 }, raw: '', at }),
+      },
+    });
+    const r = await (
+      await connect({}, dev)
+    ).textOf('perf_launch', {
+      repeats: 3,
+      scenario: 'launch-mixed',
+    });
+    expect(r.text).toContain(
+      'cold launch: ? ms (UNKNOWN), 9654 ms (COLD), 5428 ms (WARM)\nmedian: 9654 ms, longest 9654 ms, of 1 of the 3 starts: the system timed the others as UNKNOWN, WARM, not as COLD',
+    );
+    const [key] = await runKeys(MEASUREMENTS, { app: 'dev.app', scenario: 'launch-mixed' });
+    assert(key);
+    const [run] = await latestRuns(MEASUREMENTS, key, 1);
+    expect(run?.filter((x) => x.kind === 'launch.ttfd_ms').map((x) => x.value)).toEqual([9900]);
   });
 
   it('scroll: reads one round where it is asked for a reading, and three for a scenario a baseline is kept under', async () => {
@@ -167,6 +279,48 @@ describe('perf tools', () => {
     expect(r.text).not.toContain('no threshold exceeded');
   });
 
+  it('scroll: swipes the list under x and y or a selector, through its middle, and names the list its swipes missed', async () => {
+    // an iPad's split view, as NetNewsWire's: the list on the left, a pane that moves nothing beside it
+    class SplitView extends FakeDevice {
+      override current(): Tree {
+        const t = super.current();
+        const [list, at] = ['androidx.recyclerview.widget.RecyclerView', t.nodes.length];
+        t.nodes.push(
+          { p: 0, w: 0, c: list, b: [0, 200, 400, 2200], f: 1 | 16 | 256 },
+          { p: at, w: 0, c: 'android.widget.TextView', t: 'Feeds', b: [0, 1800, 400, 1900], f: 17 },
+        );
+        return t;
+      }
+      override act(action: ActParams, opts?: ActOptions) {
+        const pane = action.kind === 'swipe' && action.from.x >= 400;
+        return super.act(pane ? { ...action, to: action.from } : action, opts);
+      }
+    }
+    const dev = new SplitView();
+    const t = await connect({}, dev);
+    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toBe(
+      'NOT_FOUND: the swipes moved nothing on this screen, so no scroll was measured: they went at 540,1200, on no scrollable, and this screen has a scrollable elsewhere: RecyclerView at 200,1200\nhint: give x and y or a selector on the list to measure, or close what covers it, and call again',
+    );
+    const swiped = async (args: Record<string, unknown>) => {
+      dev.calls.length = 0;
+      expect((await t.textOf('perf_scroll', { swipes: 1, ...args })).text).toContain(
+        'round 1: 120 frames',
+      );
+      return dev.calls.find((c) => c.name === 'act')?.args[0];
+    };
+    expect(await swiped({ x: 120, y: 2000 })).toMatchObject({
+      from: { x: 120, y: 1200 },
+      to: { x: 120, y: 400 },
+    });
+    expect(await swiped({ selector: { text: 'Feeds' } })).toMatchObject({
+      from: { x: 200, y: 1200 },
+      to: { x: 200, y: 400 },
+    });
+    expect((await t.textOf('perf_scroll', { x: 120 })).text).toMatch(
+      /^INVALID_ARGUMENT: x and y go together.*\nhint: \w/s,
+    );
+  });
+
   it('scroll: a list at its end before the first round is brought back and measured', async () => {
     const dev = new FakeDevice();
     dev.listEnd = 2;
@@ -231,8 +385,14 @@ describe('perf tools', () => {
         ...dev.measure,
         framesDuring: async (...a: Parameters<typeof none>) => {
           const f = await none(...a);
-          return { ...f, value: { ...f.value, totalFrames: 0, jankyFrames: 0, jankyPercent: 0 } };
+          // a Flutter app on a loaded emulator: its surface drew 4 a second over the round
+          const surface = { layer: 'SurfaceView[dev.app]', frames: 14, fps: 4 };
+          return {
+            ...f,
+            value: { ...f.value, totalFrames: 0, jankyFrames: 0, jankyPercent: 0, surface },
+          };
         },
+        // what SurfaceFlinger keeps of a surface, whatever its age: no round's
         surfaceFrames: () =>
           Promise.resolve({
             value: { layer: 'SurfaceView[dev.app]', frames: 127, fps: 49 },
@@ -243,10 +403,10 @@ describe('perf tools', () => {
     });
     const t = await connect({}, dev);
     const r = await t.textOf('perf_scroll', { swipes: 2 });
-    expect(r.text).toContain('nothing judged: no round drew the');
     expect(r.text).toContain(
-      "the app's own surface drew 127 frames, which are not counted here: perf_snapshot with also: ['surface'] reads them",
+      "nothing judged: no round drew the 60 frames a share takes, nor did the app's own surface: 14 at most in a round",
     );
+    expect(r.text).not.toContain('127');
     expect(r.text).not.toContain('no threshold exceeded');
   });
 
@@ -301,10 +461,42 @@ describe('perf tools', () => {
   it('profile: the functions taking the CPU; heap: the dump file stays here', async () => {
     const t = await connect();
     expect((await t.textOf('perf_profile', { seconds: 2 })).text).toContain(
-      '%62.1 dev.app.Busy.loop',
+      '\n62.1% dev.app.Busy.loop',
     );
     expect((await t.textOf('perf_heap')).text).toMatch(
       /heap dump: .*heap-dev\.app-\d+\.hprof \(60\.0 MB\)/,
+    );
+  });
+
+  it("profile and scroll: a kernel address is the kernel's time, which this device names by address, and no function of the app", async () => {
+    // Now in Android scrolled on an API 35 emulator
+    const profile = {
+      durationMs: 3000,
+      samples: 948,
+      top: [
+        { percent: 53.06, samples: 503, symbol: '[kernel.kallsyms][+ffffffc07a5f3500]' },
+        { percent: 2.85, samples: 27, symbol: '[kernel.kallsyms][+ffffffc080312164]' },
+        { percent: 1.79, samples: 17, symbol: 'android::uirenderer::RenderNode::prepareTreeImpl' },
+      ],
+    };
+    const dev = new FakeDevice();
+    dev.jank = 40;
+    const at = new Date().toISOString();
+    Object.defineProperty(dev, 'measure', {
+      value: { ...dev.measure, cpuProfile: () => Promise.resolve({ value: profile, raw: '', at }) },
+    });
+    const t = await connect({}, dev);
+    const listed = (await t.textOf('perf_profile', { seconds: 3 })).text;
+    expect(listed).toContain('\n53.06% [kernel.kallsyms][+ffffffc07a5f3500]\n');
+    expect(listed).toContain(
+      "[kernel.kallsyms][+…] is time in the kernel, by its address: this device hides the kernel's names",
+    );
+    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toContain(
+      "the app's top function as it scrolled: android::uirenderer::RenderNode::prepareTreeImpl, 1.79% of its samples, after the time of the kernel, whose names this device hides",
+    );
+    profile.top = profile.top.slice(0, 2);
+    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toContain(
+      'the profile of one scroll more named no function: its samples were in the kernel, whose names this device hides',
     );
   });
 
@@ -338,5 +530,26 @@ describe('perf tools', () => {
     expect(r.text).toContain('50 frames; late by the app 4 (8%)');
     expect(r.text).toContain('frozen frames: 1');
     expect(r.text).toContain("on a virtual device the compositor's jank");
+    expect(r.text).not.toContain('own surface');
+  });
+
+  it('trace: says an app of few frames draws on its own surface, which the timeline leaves out', async () => {
+    const dev = new FakeDevice();
+    const at = new Date().toISOString();
+    const traced = await dev.measure.frameTrace();
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        // Wonderous, a Flutter app, on an API 35 emulator
+        frameTrace: () =>
+          Promise.resolve({ ...traced, value: { ...traced.value, frames: 0, janky: 0 } }),
+        surfaceFrames: () =>
+          Promise.resolve({ value: { layer: 'SurfaceView[dev.app]', frames: 127 }, raw: '', at }),
+      },
+    });
+    const r = await (await connect({}, dev)).textOf('perf_trace', { seconds: 2 });
+    expect(r.text).toContain(
+      "0 frames, of the 60 a share or a percentile needs: none is kept\nthe app draws on its own surface, as a Flutter app or a game does, and these frames leave it out: perf_scroll reads that surface's frames",
+    );
   });
 });

@@ -189,6 +189,17 @@ describe('what a device measures', () => {
     }),
   );
 
+  it('says why a simulator has no hangs, and an iPhone no probe, and to leave out the probe', async () => {
+    await expect(simulator().hangs()).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+      message: expect.stringMatching(/^cannot measure hangs: .+/) as unknown,
+    });
+    await expect(phone().attachProbe()).rejects.toMatchObject({
+      message: expect.stringMatching(/^cannot measure through a frame probe: .+/) as unknown,
+      hint: expect.stringContaining('leave out probe') as unknown,
+    });
+  });
+
   it('each says what it has no way of measuring', async () => {
     const sim = simulator();
     await says(sim.hangs, 'hangs');

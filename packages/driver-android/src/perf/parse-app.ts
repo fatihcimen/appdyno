@@ -18,6 +18,8 @@ export type MemoryStats = {
   nativeHeapKb?: number;
   graphicsKb?: number;
   privateDirtyKb?: number;
+  /** TOTAL SWAP PSS: of `pssKb`, what is swapped out to compressed memory (zram), which the heaps leave out. */
+  swapPssKb?: number;
   /** Live objects from the Objects section: growing across rounds with no other change is a leak. */
   viewRootImpl?: number;
   appContexts?: number;
@@ -36,6 +38,8 @@ export function parseMeminfo(text: string): MemoryStats {
     graphicsKb: num(/^\s*Graphics:\s*(\d+)/m, text),
     // the TOTAL row of the table: Pss Total, Private Dirty, …
     privateDirtyKb: num(/^\s*TOTAL\s+\d+\s+(\d+)/m, text),
+    // `TOTAL SWAP (KB)`, where the system counts no swap in the PSS, is not of it
+    swapPssKb: num(/TOTAL SWAP PSS:\s*(\d+)/, text),
     viewRootImpl: num(/ViewRootImpl:\s*(\d+)/, text),
     appContexts: num(/AppContexts:\s*(\d+)/, text),
     activities: num(/Activities:\s*(\d+)/, text),
