@@ -1,6 +1,6 @@
 import { selectIn, type Screen, type Selector } from '@appdyno/core';
-import type { Point } from '@appdyno/protocol';
 import type { Session } from './session.js';
+import type { Aimed } from './targets.js';
 import { ToolError } from './tool.js';
 
 /** How long a closed keyboard is given to go. */
@@ -30,8 +30,6 @@ export async function keyboardFirst(s: Session, selector: Selector) {
     !selectIn(x.list, selector).length && s.device.platformScreen.keyboardOpen(x.tree);
   if (covered(await s.current()) && covered(await s.justNow())) await hideKeyboard(s);
 }
-
-type Aimed = { point: Point; name: string };
 
 /**
  * A target's point as `aim` finds it, where an element under the keyboard, which a touch would type on, or a selector

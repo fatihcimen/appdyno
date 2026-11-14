@@ -9,6 +9,7 @@ import {
   type ScreenElement,
   type Selector as SelectorOf,
 } from '@appdyno/core';
+import type { Point } from '@appdyno/protocol';
 import { UNREAD } from './checks.js';
 import type { Session } from './session.js';
 import { NAME_AN_ELEMENT, showSelector } from './step-schemas.js';
@@ -90,12 +91,12 @@ export function missed(
   return { said: offer(screen.list, want) };
 }
 
-/** A selector on a fresh read; no match waits a moment, as the screen may still be coming. */
+/** A selector on a fresh read, and that read's hash; no match waits a moment, as the screen may still be coming. */
 async function resolve(
   s: Session,
   sel: SelectorOf,
   { line, offer }: Words,
-): Promise<{ e: ScreenElement; list: ScreenElement[] }> {
+): Promise<{ e: ScreenElement; list: ScreenElement[]; on: string }> {
   const { screen, met } = await s.until((x) => selectIn(x.list, sel).length > 0, NO_MATCH_WAIT_MS);
   if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
   if (!met) {
@@ -106,7 +107,7 @@ async function resolve(
       why.hint ?? 'read the screen, or use scroll_to if it may be further along a list',
     );
   }
-  return { e: pick(selectIn(screen.list, sel), sel, line), list: screen.list };
+  return { e: pick(selectIn(screen.list, sel), sel, line), list: screen.list, on: screen.hash };
 }
 
 export type Aim = { ref?: string; x?: number; y?: number; selector?: SelectorOf };
@@ -170,8 +171,11 @@ function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[])
   return { point: landing(e, list), name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
 }
 
+/** Where a touch goes and what its answer calls it; `on`: the read a selector found it on, which the touch is compared with. */
+export type Aimed = { point: Point; name: string; on?: string };
+
 /** The point of a ref (on the device's current screen), a selector or x,y. */
-export async function aim(s: Session, a: Aim, words: Words) {
+export async function aim(s: Session, a: Aim, words: Words): Promise<Aimed> {
   const { clean, offer } = words;
   if (a.ref) {
     const ref = a.ref;
@@ -196,9 +200,9 @@ export async function aim(s: Session, a: Aim, words: Words) {
     return aimedAt(found.e, clean, found.list);
   }
   if (a.selector) {
-    const { e, list } = await resolve(s, a.selector, words);
+    const { e, list, on } = await resolve(s, a.selector, words);
     const aimed = aimedAt(e, clean, list);
-    return { ...aimed, name: `${aimed.name}${partly(e, a.selector)}` };
+    return { ...aimed, name: `${aimed.name}${partly(e, a.selector)}`, on };
   }
   if (a.x === undefined || a.y === undefined)
     throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
