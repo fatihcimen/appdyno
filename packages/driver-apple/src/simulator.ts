@@ -357,16 +357,15 @@ export class IosSimulatorDevice extends IosDevice {
    * During a launch no app is primary, for seconds on a loaded Mac. The home screen stays so under a system
    * alert over the app, and only the runner can tell that apart.
    */
-  protected override async untilFront(pkg: string) {
+  protected override async untilFront(pkg: string, withinMs?: number) {
     // an app that ended as it started never comes: the runner's look held such a launch 10 s more
-    if (
-      !(await helperSeesFront(this.direct, pkg, LAUNCH_FRONT_MS)) &&
-      (await this.appRunning(pkg).catch(() => true))
-    )
-      await super.untilFront(pkg);
+    const front =
+      (await helperSeesFront(this.direct, pkg, withinMs ?? LAUNCH_FRONT_MS)) ||
+      ((await this.appRunning(pkg).catch(() => true)) && (await super.untilFront(pkg, withinMs)));
     // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot, and the
     // runner's way too, where it told the front as it first came up (a GitHub runner, 2 of 4 first runs)
     this.acts.transitionEnds = Date.now() + TRANSITION_MS;
+    return front;
   }
 
   protected override async frontNow() {

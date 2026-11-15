@@ -37,11 +37,8 @@ import {
   type AuditType,
   type AuditResult,
 } from '@appdyno/protocol';
-import { existsSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { IosRunnerLauncher } from './runner.js';
+import { keepTreeDump } from './tree-dump.js';
 import {
   HOME_SCREEN_APP,
   SPOTLIGHT_APP,
@@ -58,10 +55,8 @@ const ANOTHER_SECTION = 'prefs:root=SCREEN_TIME';
 /** Long enough for Settings to take the first of two links. */
 const SECTION_MS = 700;
 
-/** Diagnostics: while this file exists, iOS tree reads are written to DUMP_DIR. */
-const DUMP_FLAG = join(homedir(), 'Library/Caches/appdyno/dump-trees');
-
-const DUMP_DIR = join(homedir(), 'Library/Caches/appdyno/tree-dumps');
+/** How long Command-Space has to bring Spotlight to the front: by a simulator's keys it came within a second. */
+const KEYS_OPEN_MS = 3_000;
 
 /** How long a field has to report the focus before the keys go to whatever has the keyboard. */
 const KEYS_AFTER_MS = 2_000;
@@ -171,18 +166,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
     return t;
   }
 
-  /** Diagnostics: while the flag file exists, every read is kept (this machine only). */
-  protected async keepDump(t: Tree) {
-    if (existsSync(DUMP_FLAG))
-      await mkdir(DUMP_DIR, { recursive: true, mode: 0o700 })
-        .then(() =>
-          writeFile(
-            join(DUMP_DIR, `${Date.now()}-${this.serial.slice(0, 8)}.json`),
-            JSON.stringify(t),
-            { mode: 0o600 },
-          ),
-        )
-        .catch(() => undefined);
+  /** Diagnostics: a read kept on this machine, where its flag file asks for it. */
+  protected keepDump(t: Tree) {
+    return keepTreeDump(this.serial, t);
   }
 
   async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
@@ -285,7 +271,15 @@ export abstract class IosDevice extends RpcDevice implements Device {
       await super.key('space', { settle: false, read: 'none' }, ['command']);
       // read as the home screen app's it showed nothing of itself, but its keyboard: a second late by the runner's keys
       await this.target(SPOTLIGHT_APP);
-      await this.untilFront(SPOTLIGHT_APP);
+      if (await this.untilFront(SPOTLIGHT_APP, KEYS_OPEN_MS)) return;
+      // on iOS 26.5 and 27.2 simulators at load 300 to 500 the keys brought none every second time: a drag down did
+      await this.drag(SYSTEM_SWIPES.spotlight);
+      if (!(await this.untilFront(SPOTLIGHT_APP)))
+        throw new DeviceError(
+          'TIMEOUT',
+          'Spotlight did not open: neither Command-Space nor a drag down on the home screen brought it',
+          'read the screen: on a loaded Mac it may still be coming',
+        );
     } else
       await this.drag(
         view === 'control_center' ? SYSTEM_SWIPES.controlCenter : SYSTEM_SWIPES.notifications,
@@ -386,10 +380,14 @@ export abstract class IosDevice extends RpcDevice implements Device {
     return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
   }
 
-  /** A read during a launch would get the home screen, slowly. */
-  protected async untilFront(pkg: string) {
-    const end = Date.now() + 10_000;
-    while ((await this.foreground()) !== pkg && Date.now() < end) await sleep(20);
+  /** A read during a launch would get the home screen, slowly. Whether the app came to the front in time. */
+  protected async untilFront(pkg: string, withinMs = 10_000) {
+    const end = Date.now() + withinMs;
+    for (;;) {
+      if ((await this.foreground()) === pkg) return true;
+      if (Date.now() >= end) return false;
+      await sleep(20);
+    }
   }
 
   /** The app in front, if it can be told without starting anything. */

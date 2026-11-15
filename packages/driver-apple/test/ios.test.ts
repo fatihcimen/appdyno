@@ -230,7 +230,8 @@ describe('the app switcher on a simulator', () => {
 describe('Spotlight on a simulator', () => {
   afterEach(() => void vi.restoreAllMocks());
 
-  it('is read as the app it is, once it is in front: as the home screen app it showed only its keyboard', async () => {
+  /** A simulator whose calls are noted, with Spotlight in front at the looks `fronts` says. */
+  const opening = (fronts: boolean[]) => {
     const device = new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951');
     const seen: string[] = [];
     vi.spyOn(device, 'act').mockImplementation((a) => {
@@ -241,19 +242,49 @@ describe('Spotlight on a simulator', () => {
       seen.push(`read ${b}`);
       return Promise.resolve();
     });
-    const waits = device as unknown as { untilFront: (b: string) => Promise<void> };
+    const waits = device as unknown as {
+      untilFront: (b: string) => Promise<boolean>;
+      drag: (way: { from: number; to: number }) => Promise<void>;
+    };
     vi.spyOn(waits, 'untilFront').mockImplementation((b) => {
       seen.push(`until ${b}`);
+      return Promise.resolve(fronts.shift() ?? false);
+    });
+    vi.spyOn(waits, 'drag').mockImplementation((way) => {
+      seen.push(`drag ${String(way.from)} to ${String(way.to)}`);
       return Promise.resolve();
     });
+    return { device, seen };
+  };
+  const BY_KEYS = [
+    'read com.apple.springboard',
+    'home',
+    'space',
+    'read com.apple.Spotlight',
+    'until com.apple.Spotlight',
+  ];
+  const BY_DRAG = [...BY_KEYS, 'drag 0.35 to 0.55', 'until com.apple.Spotlight'];
+
+  it('is read as the app it is, once it is in front: as the home screen app it showed only its keyboard', async () => {
+    const { device, seen } = opening([true]);
     await device.openView('spotlight');
-    expect(seen).toEqual([
-      'read com.apple.springboard',
-      'home',
-      'space',
-      'read com.apple.Spotlight',
-      'until com.apple.Spotlight',
-    ]);
+    expect(seen).toEqual(BY_KEYS);
+  });
+
+  it("opens by the home screen's drag down where the keys brought none", async () => {
+    const { device, seen } = opening([false, true]);
+    await device.openView('spotlight');
+    expect(seen).toEqual(BY_DRAG);
+  });
+
+  it('is refused where neither opened it: a view that is not there is not said opened', async () => {
+    const { device, seen } = opening([false, false]);
+    await expect(device.openView('spotlight')).rejects.toMatchObject({
+      code: 'TIMEOUT',
+      message:
+        'Spotlight did not open: neither Command-Space nor a drag down on the home screen brought it',
+    });
+    expect(seen).toEqual(BY_DRAG);
   });
 });
 
