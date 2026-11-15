@@ -49,7 +49,7 @@ describe('the one element of several matches', () => {
     expect(oneOf([row, other])).toBeUndefined();
     expect(oneOf([row, other], 1)).toBe(other);
     expect(oneOf([row, other], 2)).toBeUndefined();
-    expect(oneOf([])).toBeUndefined();
+    expect(oneOf<typeof row>([])).toBeUndefined();
   });
 });
 

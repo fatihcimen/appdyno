@@ -10,14 +10,17 @@ const bareId = (id: string) => id.replace(/^.*:id\//, '');
 /** Text as a selector compares it: folded, a run of spaces as one, as a text may hold two where one is typed. */
 const words = (s: string) => fold(s).replace(/\s+/g, ' ');
 
+/** What a selector reads of an element. */
+export type Selectable = Pick<ScreenElement, 'label' | 'whole' | 'id' | 'role'>;
+
 /** What a selector's text is matched against: the whole words, and the label cut short as a flow may have kept it. */
-const textsOf = (e: ScreenElement) => [e.label, ...(e.whole ? [e.whole] : [])].map(words);
+const textsOf = (e: Selectable) => [e.label, ...(e.whole ? [e.whole] : [])].map(words);
 
 /**
  * The elements a selector names; where some match the text exactly, only those, else those whose label shows it: a
  * panel named by every row inside it holds a row's words past its cut, and came first, where the row was meant.
  */
-export function selectIn(list: ScreenElement[], sel: Selector): ScreenElement[] {
+export function selectIn<E extends Selectable>(list: E[], sel: Selector): E[] {
   const w = sel.text && words(sel.text);
   const role = sel.role && fold(sel.role);
   const id = sel.id && bareId(sel.id);

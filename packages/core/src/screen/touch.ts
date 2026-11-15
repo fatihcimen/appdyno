@@ -2,6 +2,12 @@ import type { Point } from '@appdyno/protocol';
 import type { Rect, UiElement } from './elements.js';
 import { bare, type ScreenElement } from './model.js';
 
+/** What the rules of a touch read of an element. */
+export type Touchable = Pick<
+  ScreenElement,
+  'role' | 'label' | 'whole' | 'rect' | 'x' | 'y' | 'flags'
+>;
+
 /** `a` lies wholly inside `b`. */
 const within = (a: Rect, b: Rect) =>
   a.x >= b.x && a.y >= b.y && a.x + a.width <= b.x + b.width && a.y + a.height <= b.y + b.height;
@@ -12,10 +18,10 @@ const within = (a: Rect, b: Rect) =>
  * touch acts on is the target. With an index, the match at it. None where several stand apart, or the index is past
  * the last.
  */
-export function oneOf(hits: ScreenElement[], index?: number): ScreenElement | undefined {
+export function oneOf<E extends Touchable>(hits: E[], index?: number): E | undefined {
   if (index !== undefined) return hits[index];
-  const inside = (a: ScreenElement, b: ScreenElement) => a !== b && within(a.rect, b.rect);
-  const boxed = new Map<string, ScreenElement>();
+  const inside = (a: E, b: E) => a !== b && within(a.rect, b.rect);
+  const boxed = new Map<string, E>();
   for (const e of hits) {
     const box = `${e.rect.x},${e.rect.y},${e.rect.width},${e.rect.height}`;
     const had = boxed.get(box);
@@ -31,7 +37,7 @@ export function oneOf(hits: ScreenElement[], index?: number): ScreenElement | un
  * Where a touch on `e` lands: its middle, but on a web element over two lines, as a link that wraps, its first line's
  * end, where the middle of its box is the text between the lines. A line is as tall as most of the page's elements.
  */
-export function landing(e: ScreenElement, list: ScreenElement[]): Point {
+export function landing(e: Touchable, list: Touchable[]): Point {
   if (!e.flags.includes('web')) return { x: e.x, y: e.y };
   const heights = new Map<number, number>();
   for (const w of list)
@@ -85,14 +91,14 @@ const holds = (r: Rect, p: Point) =>
  * a point clear of `other`, a smaller control of other words at its middle, which would take the touch (a mini player's
  * Pause). `covered`: at its middle still, as no point of it is clear of such controls, and `other` may take the touch.
  */
-export type TouchPoint = {
+export type TouchPoint<E extends Touchable = ScreenElement> = {
   point: Point;
   why?: 'own' | 'clear' | 'covered';
-  other?: ScreenElement;
+  other?: E;
 };
 
 /** Where a touch on a listed control goes where its middle is not its own. */
-function ownPoint(e: ScreenElement, list: ScreenElement[]): TouchPoint | undefined {
+function ownPoint<E extends Touchable>(e: E, list: E[]): TouchPoint<E> | undefined {
   if (!list.includes(e) || !e.flags.includes('clickable') || e.flags.includes('web')) return;
   const smaller = list.filter(
     (c) => c !== e && within(c.rect, e.rect) && area(c.rect) * 2 <= area(e.rect),
@@ -100,7 +106,7 @@ function ownPoint(e: ScreenElement, list: ScreenElement[]): TouchPoint | undefin
   const own = TOGGLES.has(e.role) ? smaller.find((c) => c.role === e.role) : undefined;
   if (own) return { point: { x: own.x, y: own.y }, why: 'own', other: own };
   // its own words past the list's cut are its own still
-  const words = (c: ScreenElement) => c.whole ?? c.label;
+  const words = (c: E) => c.whole ?? c.label;
   const controls = smaller.filter(
     (c) => c.flags.includes('clickable') && !(words(c) && words(e).includes(words(c))),
   );
@@ -118,7 +124,7 @@ function ownPoint(e: ScreenElement, list: ScreenElement[]): TouchPoint | undefin
 }
 
 /** Where a touch on `e`, one of `list`, goes: a point of its own where its middle is another control's, else `landing`. */
-export const touchPoint = (e: ScreenElement, list: ScreenElement[]): TouchPoint =>
+export const touchPoint = <E extends Touchable>(e: E, list: E[]): TouchPoint<E> =>
   ownPoint(e, list) ?? { point: landing(e, list) };
 
 /** An element as an answer names it: its ref and its words. */
