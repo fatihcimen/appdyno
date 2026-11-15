@@ -201,29 +201,56 @@ export class SimulatorViews {
   }
 
   /**
-   * The views of `app`, the one reads take, by the probe in it; else, where it has none or is behind, of the one `front`
-   * says is in front. Only then is the screen looked at, as that look waits on the app in front.
+   * The views of the app on the screen, by the probe in it: the app reads take, each this tool's launches hold the probe
+   * in, and the one a look at the screen names are asked at once, and the first to answer with its views is the one. An
+   * app behind another says nothing for 2 s; the look waits on a hung app in front, and names the home screen under a
+   * system alert. A main thread that does not answer, of the app reads take, is said at once.
    */
-  async read(app: string | undefined, front: () => Promise<string | undefined>): Promise<ViewTree> {
-    if (!app) return this.readOf(await front().catch(() => undefined));
-    try {
-      return await this.readOf(app);
-    } catch (e) {
-      const behind =
-        e instanceof NoViewProbe || (e instanceof DeviceError && e.code === 'APP_NOT_RUNNING');
-      const other = behind ? await front().catch(() => undefined) : undefined;
-      if (!other || other === app || other === HOME_SCREEN_APP) throw e;
-      return this.readOf(other);
-    }
+  read(app: string | undefined, front: () => Promise<string | undefined>): Promise<ViewTree> {
+    return new Promise((resolve, reject) => {
+      const failed = new Map<string, Error>();
+      let named: string | undefined;
+      // the look, and each app asked
+      let open = 1;
+      const settle = () => {
+        if (--open > 0) return;
+        // the refusal of the app the look named, else of the one reads take, else the first
+        const why = [named, app, ...failed.keys()]
+          .map((a) => (a === undefined ? undefined : failed.get(a)))
+          .find((e) => e !== undefined);
+        reject(
+          why ??
+            new DeviceError(
+              'APP_NOT_RUNNING',
+              'no app is in front, and the home screen has no views to read',
+              'an app started with the view probe has them',
+            ),
+        );
+      };
+      const asked = new Set<string>();
+      const ask = (a: string | undefined) => {
+        if (!a || a === HOME_SCREEN_APP || asked.has(a)) return;
+        asked.add(a);
+        open++;
+        this.readOf(a).then(resolve, (e: unknown) => {
+          if (a === app && e instanceof DeviceError && e.code === 'TIMEOUT') reject(e);
+          failed.set(a, e instanceof Error ? e : new DeviceError('INTERNAL', String(e)));
+          settle();
+        });
+      };
+      ask(app);
+      for (const a of this.holds.appsWith(PROBE)) ask(a);
+      void front()
+        .catch(() => undefined)
+        .then((f) => {
+          named = f;
+          ask(f);
+          settle();
+        });
+    });
   }
 
-  private async readOf(app: string | undefined): Promise<ViewTree> {
-    if (!app || app === HOME_SCREEN_APP)
-      throw new DeviceError(
-        'APP_NOT_RUNNING',
-        'no app is in front, and the home screen has no views to read',
-        'an app started with the view probe has them',
-      );
+  private async readOf(app: string): Promise<ViewTree> {
     const answer = await ask(viewSocket(this.udid, app), app).catch(async (e: unknown) => {
       if (unheard(e)) throw await this.withoutProbe(app);
       if (e instanceof DeviceError) throw e;

@@ -223,12 +223,11 @@ describe('a read of the views on a simulator', () => {
 
   it('asks the probe in the app, and gives what it answered', async () => {
     await listen(web(APP));
-    const front = vi.fn(none);
-    const tree = await new SimulatorViews(simulator().simctl, SIM).read(APP, front);
+    // a look at the screen waits on a hung app in front, as long as its own limit
+    const hung = () => new Promise<undefined>(() => undefined);
+    const tree = await new SimulatorViews(simulator().simctl, SIM).read(APP, hung);
     expect(tree.views).toHaveLength(48);
     expect(tree.views.some((v) => v.class === 'WKWebView')).toBe(true);
-    // a look at the screen waits on the app in front, which may be hung
-    expect(front).not.toHaveBeenCalled();
   });
 
   it('reads the app in front where the one reads take has no probe in it, or is behind', async () => {
@@ -252,9 +251,39 @@ describe('a read of the views on a simulator', () => {
       unprobed: false,
     });
     expect(Date.now() - from).toBeLessThan(3_000);
+    // the look at the screen tells the app in front first, with no wait for the silence
     await listen(web(OTHER), OTHER);
+    const at = Date.now();
     expect((await views.read(APP, () => Promise.resolve(OTHER))).views).toHaveLength(48);
+    expect(Date.now() - at).toBeLessThan(1_000);
   }, 10_000);
+
+  it("reads an app this tool's launches hold the probe in, where a system alert makes the look name the home screen", async () => {
+    new HeldLaunches(SIM).hold(OTHER, 'view', { lib: join(helpers, 'ViewProbe'), env: {} });
+    await listen(web(OTHER), OTHER);
+    const views = new SimulatorViews(simulator().simctl, SIM);
+    const home = () => Promise.resolve('com.apple.springboard');
+    expect((await views.read(APP, home)).views).toHaveLength(48);
+  });
+
+  it('says at once a main thread of the app reads take that does not answer, while the look waits on it', async () => {
+    await listen(answer({ error: 'main-thread', ms: 2000 }));
+    const hung = () => new Promise<undefined>(() => undefined);
+    const r = await refusal(new SimulatorViews(simulator().simctl, SIM).read(APP, hung));
+    expect([r.code, r.message]).toEqual([
+      'TIMEOUT',
+      `the main thread of ${APP} did not answer the view probe within 2 s`,
+    ]);
+  });
+
+  it('says the refusal of the app the look names before that of the app reads take', async () => {
+    const views = new SimulatorViews(simulator().simctl, SIM);
+    const r = await refusal(views.read(APP, () => Promise.resolve(OTHER)));
+    expect([r.unprobed, r.message.startsWith(`${OTHER} runs without the view probe`)]).toEqual([
+      true,
+      true,
+    ]);
+  });
 
   it('says the refusal of the app reads take where nothing else is in front', async () => {
     const views = new SimulatorViews(simulator().simctl, SIM);

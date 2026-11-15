@@ -63,6 +63,13 @@ export class HeldLaunches implements LaunchHolds {
     return now && { owner: now.owner };
   }
 
+  /** The apps whose launches carry the probe `name`. */
+  appsWith(name: string) {
+    return Object.entries(held.read(this.udid)?.apps ?? {}).flatMap(([app, probes]) =>
+      name in probes ? [app] : [],
+    );
+  }
+
   letGo() {
     const now = held.read(this.udid);
     held.remove(this.udid);
