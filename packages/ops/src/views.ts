@@ -7,8 +7,8 @@ export const frameworkSaid = (l: FrameworkLabel) =>
   l.inside ? `${l.name} inside ${l.inside}` : l.name;
 
 /**
- * `screen views`: the app's native views, folded into lines under the framework that draws most of them; `raw` gives
- * each view as data too, its words cleaned as the lines' are.
+ * `screen views`: the app's native views, folded into lines under the framework that draws most of them, and what the
+ * device says of how to read them after; `raw` gives each view as data too, its words cleaned as the lines' are.
  */
 export async function readViews(s: Session, clean: (t: string) => string, raw: boolean) {
   if (!s.device.views)
@@ -21,9 +21,10 @@ export async function readViews(s: Session, clean: (t: string) => string, raw: b
   const framework = frameworkOfViews(tree, s.device.platform);
   const said = framework && frameworkSaid(framework);
   const lines = viewLines(tree, clean);
-  return reply([said ? `framework: ${said}` : 'no view is drawn', ...lines].join('\n'), {
+  const notes = (tree.notes ?? []).map(clean);
+  return reply([said ? `framework: ${said}` : 'no view is drawn', ...lines, ...notes].join('\n'), {
     elements: tree.views.length,
-    warnings: [],
+    warnings: notes,
     ...(said && { framework: said }),
     ...(raw && {
       views: tree.views.map(({ label, text, ...v }) => ({

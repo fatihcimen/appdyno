@@ -15,6 +15,8 @@ export type NativeView = {
   hidden?: boolean;
   /** 0 to 1, given where it is less than 1. */
   alpha?: number;
+  /** What its toolkit says of its state, each a word: `clickable`, `disabled`, `focused`, `selected`, `gone`. */
+  flags?: string[];
   /** The view controller or activity whose view it is: given at least where it differs from its parent's. */
   controller?: string;
   /** Index of its parent in `views`; none for a window's root. */
@@ -28,4 +30,6 @@ export type ViewTree = {
   framework?: FrameworkLabel;
   /** A limit cut the walk short: views past it are not here. */
   truncated: boolean;
+  /** What to know in reading them, a line each: a place that is the layout's, not the screen's, or what is left out. */
+  notes?: string[];
 };

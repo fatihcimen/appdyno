@@ -75,7 +75,7 @@ const cut = (text: string) => cutAt(text, MAX_LABEL);
 /** What tells an element apart is said only so far: the rest of a paragraph tells nothing more. */
 export const cutContext = (text: string) => cutAt(text, MAX_CONTEXT);
 /** `com.example.shop:id/basket_btn` → `basket_btn`; iOS identifiers stay as they are. */
-const idOf = (identifier: string | undefined) =>
+export const idOf = (identifier: string | undefined) =>
   identifier?.replace(/^[A-Za-z][\w.]*:id\//, '').trim() || undefined;
 const round10 = (n: number) => Math.round(n / 10) * 10;
 

@@ -77,6 +77,7 @@ const ViewNode = z.object({
   text: z.string().optional(),
   hidden: z.boolean().optional(),
   alpha: z.number().optional(),
+  flags: z.array(z.string()).optional(),
   controller: z.string().optional(),
   /** Index of the parent in `views`; none for a window's root. */
   parent: z.number().int().optional(),

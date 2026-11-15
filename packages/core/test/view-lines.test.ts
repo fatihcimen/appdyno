@@ -82,4 +82,22 @@ describe('the native views as lines', () => {
       'the device cut the tree short: views past its limit are not here',
     ]);
   });
+
+  it("says an Android id by its name, as a screen's lines do, and the flags after the place", () => {
+    const at = (x: number, y: number) => ({ x, y, width: 1016, height: 126 });
+    const views = [
+      view('android.widget.FrameLayout', undefined, { id: 'android:id/content' }),
+      view('android.widget.Button', 0, {
+        id: 'dev.app:id/submit',
+        rect: at(32, 922),
+        flags: ['clickable', 'focused'],
+      }),
+      view('android.widget.Button', 0, { rect: at(32, 1048), flags: ['clickable', 'disabled'] }),
+    ];
+    expect(viewLines({ views, truncated: false }, plain)).toEqual([
+      'android.widget.FrameLayout #content 0,0 390x844',
+      ' android.widget.Button #submit 32,922 1016x126 clickable focused',
+      ' android.widget.Button 32,1048 1016x126 clickable disabled',
+    ]);
+  });
 });

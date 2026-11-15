@@ -1,6 +1,6 @@
 import type { NativeView, ViewTree } from './device-views.js';
 import { must } from './must.js';
-import { cutAt } from './screen/model.js';
+import { cutAt, idOf } from './screen/model.js';
 
 /** At most this many lines of views in an answer: the rest is counted. */
 export const MAX_VIEW_LINES = 300;
@@ -17,20 +17,23 @@ const drawn = (v: NativeView) =>
 const wordless = (v: NativeView) => !v.id && !v.label && !v.text;
 
 /**
- * What a line says of the last view of its run: its id, its words (the label, else the text, and a text that differs
- * from the label after it), its place in tap units and how clear it is.
+ * What a line says of the last view of its run: its id (an Android one by its name, as a screen's lines say it), its
+ * words (the label, else the text, and a text that differs from the label after it), its place in tap units, how clear
+ * it is and its flags.
  */
 function described(v: NativeView, clean: (s: string) => string) {
   const label = v.label && cutAt(clean(v.label), MAX_WORDS);
   const text = v.text && cutAt(clean(v.text), MAX_WORDS);
   const words = label || text;
+  const id = idOf(v.id);
   const { x, y, width, height } = v.rect;
   return [
-    ...(v.id ? [`#${v.id}`] : []),
+    ...(id ? [`#${id}`] : []),
     ...(words ? [JSON.stringify(words)] : []),
     ...(label && text && text !== label ? [`text ${JSON.stringify(text)}`] : []),
     `${Math.round(x)},${Math.round(y)} ${Math.round(width)}x${Math.round(height)}`,
     ...(v.alpha !== undefined && v.alpha < 1 ? [`alpha ${v.alpha.toFixed(2)}`] : []),
+    ...(v.flags ?? []),
   ].join(' ');
 }
 
