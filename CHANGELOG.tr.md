@@ -8,6 +8,8 @@
 
 - Akışlarda üç yeni adım var: `screenshot home` ekranın bir resmini saklar (bir testin artifacts klasörü altında, yoksa `./appdyno-screenshots/` altında), `visual home [tolerance=] [mask=]...` ekranı akışın yanındaki `baselines/home.png` ile karşılaştırır, `setting dark_mode on` ya da `setting restore` bir cihaz ayarını `device_setting` gibi değiştirir. `appdyno test` ve `appdyno flow run`, temel görüntüleri kaydetmek için `--update-baselines` alır; eksik bir temel görüntü ilk adımdan önce reddedilir. Bir resim adımı, ekranın 500 ms boyunca aynı görünmesini bekler, en çok 5 sn: `setting dark_mode on`'dan 272 ms sonra alınan koyu bir temel görüntü açık kaydedilmişti. Bir kayıt bu adımları, eskiden `unrecorded` yazdığı yerde yazar; Maestro dışa aktarması `takeScreenshot` yazar, diğer ikisini nedeniyle reddeder.
 - `appdyno test` her akış dosyasının cihazda değiştirdiğini (bir ayar, sabitlenmiş bir konum, döndürme kilidi) bir sonraki dosyadan önce, her yeniden denemeden sonra da geri koyar; ölçülen bir dosyada yinelemelerinden sonra.
+- Android'de `views` ile `screen`, öndeki aktivitenin yerel görünümlerini sistemin ondan aldığı kendi dökümünden, her derlemede ve probe olmadan verir: her görünümün sınıfı, yeri, kaynak kimliği ve bayrakları, ekranın çoğunu çizen çatının altında; ardından dışarıda bıraktıkları: kaydırılan bir kabın altındaki yerler, aktivitenin üstündeki bir diyalog ya da menü ve küçültülmüş bir derlemenin küçültücüsünün verdiği adlar.
+- Android'de `probe` ile `launch_app` istendiği gibi başlatır ve orada `screen views`'in probe gerektirmediğini söyler; görünüm vermeyen bir cihaz onu yine reddeder.
 
 ### Değişenler
 
