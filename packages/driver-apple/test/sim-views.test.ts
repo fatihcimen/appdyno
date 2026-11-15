@@ -214,13 +214,17 @@ describe('a read of the views on a simulator', () => {
   let probes: Server[] = [];
   let held: Socket[] = [];
   /** A probe in `app`, answering each dump as told; none: in an app iOS has suspended, which says nothing. */
-  const listen = async (said: string | undefined, app = APP) => {
+  const listen = async (said: string | undefined, app = APP, stops = false) => {
     const path = viewSocket(SIM, app);
     mkdirSync(dirname(path), { recursive: true });
-    const server = createServer((c) => {
+    // `stops`: a process stopped as it answered, which closes nothing
+    const server = createServer({ allowHalfOpen: stops }, (c) => {
       held.push(c);
       if (said === undefined) return;
-      c.once('data', (d) => c.end(String(d).startsWith('dump') ? said : '{"error":"request"}'));
+      c.once('data', (d) => {
+        if (stops) c.write(said);
+        else c.end(String(d).startsWith('dump') ? said : '{"error":"request"}');
+      });
     });
     await new Promise<void>((resolve) => server.listen(path, resolve));
     probes.push(server);
@@ -270,6 +274,22 @@ describe('a read of the views on a simulator', () => {
     expect((await views.read(APP, () => Promise.resolve(OTHER))).views).toHaveLength(48);
     expect(Date.now() - at).toBeLessThan(2_000);
   }, 10_000);
+
+  it('tells an app stopped as it answered, after it said it runs, by what is in front: iOS suspends one a moment after home', async () => {
+    await listen(`${JSON.stringify({ app: APP, pid: 1 })}\n`, APP, true);
+    const views = new SimulatorViews(simulator().simctl, SIM, undefined, 300);
+    const home = () => Promise.resolve('com.apple.springboard');
+    expect(await refusal(views.read(APP, home))).toMatchObject({
+      code: 'APP_NOT_RUNNING',
+      message: `${APP} does not run: iOS suspends an app behind another, and its view probe with it`,
+    });
+    // in front, or with no look at the screen to say, it is an app that does not answer
+    for (const front of [APP, undefined])
+      expect(await refusal(views.read(APP, () => Promise.resolve(front)))).toMatchObject({
+        code: 'TIMEOUT',
+        message: `the view probe in ${APP} gave no answer within 0.3 s`,
+      });
+  });
 
   it("reads an app this tool's launches hold the probe in, where a system alert makes the look name the home screen", async () => {
     new HeldLaunches(SIM).hold(OTHER, 'view', { lib: join(helpers, 'ViewProbe'), env: {} });

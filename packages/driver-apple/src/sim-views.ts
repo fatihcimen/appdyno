@@ -111,8 +111,16 @@ export function treeOf(answer: string, app: string): ViewTree {
   return { views: dump.views, truncated: dump.truncated };
 }
 
+/** An app iOS has stopped behind another: its probe says nothing, or nothing more. */
+const suspended = (app: string) =>
+  new DeviceError(
+    'APP_NOT_RUNNING',
+    `${app} does not run: iOS suspends an app behind another, and its view probe with it`,
+    'bring it to the front, then ask again',
+  );
+
 /** The probe's answer to a dump; a socket no process listens on fails as it does on connecting. */
-function ask(path: string, app: string): Promise<string> {
+function ask(path: string, app: string, answerMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const socket = createConnection(path);
@@ -124,19 +132,12 @@ function ask(path: string, app: string): Promise<string> {
       else resolve(Buffer.concat(chunks).toString('utf8'));
     };
     const after = (ms: number, e: DeviceError) => timers.push(setTimeout(() => end(e), ms));
+    after(HELLO_MS, suspended(app));
     after(
-      HELLO_MS,
-      new DeviceError(
-        'APP_NOT_RUNNING',
-        `${app} does not run: iOS suspends an app behind another, and its view probe with it`,
-        'bring it to the front, then ask again',
-      ),
-    );
-    after(
-      ANSWER_MS,
+      answerMs,
       new DeviceError(
         'TIMEOUT',
-        `the view probe in ${app} gave no answer within ${String(ANSWER_MS / 1000)} s`,
+        `the view probe in ${app} gave no answer within ${String(answerMs / 1000)} s`,
       ),
     );
     socket.on('connect', () => socket.end('dump\n'));
@@ -185,6 +186,7 @@ export class SimulatorViews {
     private readonly simctl: Simctl,
     private readonly udid: string,
     private readonly holds = new HeldLaunches(udid),
+    private readonly answerMs = ANSWER_MS,
   ) {}
 
   /** `app` started afresh with the probe in it, as `own` says, and held in each launch of it by this tool from now on. */
@@ -232,7 +234,7 @@ export class SimulatorViews {
         if (!a || a === HOME_SCREEN_APP || asked.has(a)) return;
         asked.add(a);
         open++;
-        this.readOf(a).then(resolve, (e: unknown) => {
+        this.readOf(a, front).then(resolve, (e: unknown) => {
           // only a process that runs, its main thread stuck, gives this: the app on the screen
           if (e instanceof DeviceError && e.code === 'TIMEOUT') reject(e);
           failed.set(a, e instanceof Error ? e : new DeviceError('INTERNAL', String(e)));
@@ -251,9 +253,15 @@ export class SimulatorViews {
     });
   }
 
-  private async readOf(app: string): Promise<ViewTree> {
-    const answer = await ask(viewSocket(this.udid, app), app).catch(async (e: unknown) => {
+  private async readOf(app: string, front: () => Promise<string | undefined>): Promise<ViewTree> {
+    const path = viewSocket(this.udid, app);
+    const answer = await ask(path, app, this.answerMs).catch(async (e: unknown) => {
       if (unheard(e)) throw await this.withoutProbe(app);
+      // it said it runs, then nothing: stopped as it answered, as an iOS 27.2 simulator did an app asked 1 s after home
+      // in 2 runs of 4. In front, or where no look says what is, it is an app that does not answer
+      const behind =
+        e instanceof DeviceError && e.code === 'TIMEOUT' && (await front().catch(() => undefined));
+      if (behind && behind !== app) throw suspended(app);
       if (e instanceof DeviceError) throw e;
       throw new DeviceError('INTERNAL', `the view probe in ${app}: ${String(e)}`);
     });
