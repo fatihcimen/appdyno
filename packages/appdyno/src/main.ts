@@ -244,6 +244,7 @@ async function testCommand(rest: string[]) {
       params: paramsOf(values.param),
       ...(values['env-file'] && { fromFile: envValues(values['env-file']) }),
       retries,
+      ...(values['fail-on-flaky'] && { failOnFlaky: true }),
       ...(values.measure && { iterations }),
       log: (line) => console.log(line),
     });

@@ -68,6 +68,8 @@ export type TestOptions = {
   iterations?: number;
   /** How many times a file that failed on a step runs again, whole, from its first step. */
   retries?: number;
+  /** A file that passed only on a retry fails the run: for a job that must not go green on a flaky file. */
+  failOnFlaky?: boolean;
   log?: (line: string) => void;
 };
 
@@ -82,7 +84,7 @@ type Attempt = { result?: RunResult; journey?: JourneyAnswer; error?: Error };
  * under `artifacts`, and the next file still runs, on the settings this run found. A screenshot shows
  * what the screen shows, a secret typed into a plain field included. A retry is a new run of the whole
  * file, so a failed step never passes within one, and a file that passed only on a retry is reported as
- * flaky with what failed.
+ * flaky with what failed. Such a file leaves the run passed, unless `failOnFlaky`.
  */
 export async function runTests(
   ctx: ServerContext,
@@ -218,6 +220,10 @@ export async function runTests(
   const failed = cases.filter((c) => c.failure).length;
   // always, so that a run that exits 0 still shows what it took to
   log(`${cases.length - failed - flaky.length} passed, ${flaky.length} flaky, ${failed} failed`);
-  if (flaky.length > 0) log(`flaky, passed only on a retry: ${flaky.join(', ')}`);
-  return { passed: failed === 0, flaky, suites };
+  const refused = !!o.failOnFlaky && flaky.length > 0;
+  if (flaky.length > 0)
+    log(
+      `${refused ? 'failed by --fail-on-flaky: ' : ''}flaky, passed only on a retry: ${flaky.join(', ')}`,
+    );
+  return { passed: failed === 0 && !refused, flaky, suites };
 }

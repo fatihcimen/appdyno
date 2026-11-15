@@ -161,7 +161,12 @@ describe('flows', () => {
     describe('a retry', () => {
       const flow = 'app dev.app\nopen_link "app://x"\nassert text="Ana sayfa" timeoutMs=200\n';
       /** The test run of one file, on a screen that fails it, with `onRetry` as a retry begins. */
-      const run = async (text: string, retries: number, onRetry: () => void = () => undefined) => {
+      const run = async (
+        text: string,
+        retries: number,
+        onRetry: () => void = () => undefined,
+        failOnFlaky = false,
+      ) => {
         const tests = mkdtempSync(join(dir, 'tests-'));
         writeFileSync(join(tests, 'a.flow'), text);
         const artifacts = join(dir, 'artifacts');
@@ -173,6 +178,7 @@ describe('flows', () => {
           artifacts,
           junit: join(artifacts, 'j.xml'),
           retries,
+          failOnFlaky,
           log: (l) => {
             lines.push(l);
             if (l.includes('retry')) onRetry();
@@ -206,6 +212,24 @@ describe('flows', () => {
         // what failed stays, and a passing retry leaves nothing over it
         expect(existsSync(join(r.kept, 'screen.jpg'))).toBe(true);
         expect(existsSync(join(r.kept, 'attempt-2'))).toBe(false);
+      });
+
+      it('fails the run for a flaky file where asked, and says which', async () => {
+        const r = await run(flow, 2, () => (device.screen = 'home'), true);
+        expect(r.passed).toBe(false);
+        expect(r.flaky).toEqual([`${device.serial}/a.flow`]);
+        expect(r.lines.at(-1)).toBe(
+          `failed by --fail-on-flaky: flaky, passed only on a retry: ${device.serial}/a.flow`,
+        );
+        // the tally a run is counted by, and the report, are a flaky file's as before
+        expect(r.lines.at(-2)).toBe('0 passed, 1 flaky, 0 failed');
+        expect(r.xml).toContain('failures="0" errors="0" flakes="1"');
+      });
+
+      it('passes a run with no flaky file, asked or not', async () => {
+        const r = await run('app dev.app\nopen_link "app://x"\n', 2, undefined, true);
+        expect(r.passed).toBe(true);
+        expect(r.lines.join('\n')).not.toContain('--fail-on-flaky');
       });
 
       it('starts the file over at its first step: a failed step never passes within a run', async () => {
