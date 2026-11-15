@@ -43,7 +43,9 @@ function scrollOf(get: () => Call) {
       assert(row, `Product ${n}`);
       return row.y;
     };
-    return ((await y(7)) - (await y(1))) / 6;
+    // Product 1 lies under the status bar of an edge-to-edge screen (API 35 on), where find names no element, and its
+    // words would find Product 10
+    return ((await y(8)) - (await y(2))) / 6;
   };
 
   it('moves the content by the distance and stops', async () => {
