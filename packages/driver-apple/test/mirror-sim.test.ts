@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodePng, encodePng, must } from '@appdyno/core';
 import { Simctl } from '../src/simctl.js';
-import type { HelperProcess } from '../src/simhelper.js';
+import { HelperProcess } from '../src/simhelper.js';
 import { onSurface, SimulatorMirror, turnsOf } from '../src/mirror-sim.js';
 import { hidKey, HID_MODIFIERS, usageOf } from '../src/simtouch.js';
 
@@ -52,6 +52,18 @@ describe('a simulator mirror', () => {
     });
     await expect(setup().mirror.check()).resolves.toMatchObject({ ok: true });
     await expect(setup().mirror.open()).resolves.toMatchObject({ kind: 'surface', udid: UDID });
+  });
+
+  it("refuses with the reason of a helper that ended, which this Mac's does as it starts", async () => {
+    const why = 'Failed to find service com.apple.coredevice.feature.remote.hid.digitizer';
+    const start = () =>
+      Promise.resolve(new HelperProcess('sh', ['-c', `echo "${why}" >&2; exit 3`]));
+    const mirror = new SimulatorMirror(UDID, {} as Simctl, start, vi.fn(), vi.fn());
+    for (const name of ['siri', 'appSwitch'])
+      await expect(mirror.input({ kind: 'button', name })).rejects.toMatchObject({
+        code: 'UNSUPPORTED',
+        message: `the simulator's input helper ended: ${why}`,
+      });
   });
 
   it('readies the helper with the stream, and sends a touch with no wait for proof', async () => {

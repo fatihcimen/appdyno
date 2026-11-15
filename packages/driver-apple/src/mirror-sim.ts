@@ -13,7 +13,7 @@ import {
   type ViewerOrder,
   must,
 } from '@appdyno/core';
-import { type Key, KEY_USAGES, keyOfUsage } from '@appdyno/protocol';
+import { DeviceError, type Key, KEY_USAGES, keyOfUsage } from '@appdyno/protocol';
 import { applePress } from './mirror-press.js';
 import { Simctl, xcodeEnv } from './simctl.js';
 import { startSimAx, startSimHid, type HelperProcess } from './simhelper.js';
@@ -158,6 +158,13 @@ export class SimulatorMirror implements Mirror {
 
   private async call(request: Record<string, unknown>) {
     const a = await (await this.helper()).call(request, INPUT_MS);
+    // a helper that ended sends nothing, on this Mac at all: a refusal with its reason, not a fault of this tool
+    if (a.refused === 'helper-gone')
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `the simulator's input helper ended${a.error ? `: ${a.error}` : ''}`,
+        'what only it sends, as siri and the app switcher, cannot be pressed on this Mac',
+      );
     if (!a.ok) throw new Error(a.error ?? a.refused ?? 'the input helper failed');
   }
 

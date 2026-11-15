@@ -82,6 +82,8 @@ export class HelperProcess {
   private readonly waiting = new Map<number, (a: HelperAnswer) => void>();
   private next = 1;
   closed = false;
+  /** What it wrote of itself last, which says why it ended: nothing else does. */
+  private said = '';
 
   constructor(command: string, args: string[]) {
     this.child = spawn(command, args, { env: xcodeEnv() });
@@ -94,10 +96,11 @@ export class HelperProcess {
         this.waiting.delete(a.id ?? 0);
       }),
     );
-    this.child.stderr.resume();
+    this.child.stderr.on('data', (d: Buffer) => (this.said = (this.said + String(d)).slice(-500)));
     this.child.stdin.on('error', () => undefined);
     this.child.on('error', () => this.end());
-    this.child.on('exit', () => this.end());
+    // not at its exit: its last words may still be on their way
+    this.child.on('close', () => this.end());
     // a helper must not keep the host alive
     this.child.unref();
     (this.child.stdout as unknown as { unref?: () => void }).unref?.();
@@ -105,14 +108,20 @@ export class HelperProcess {
     (this.child.stdin as unknown as { unref?: () => void }).unref?.();
   }
 
+  /** The answer of a helper that has ended, with its own reason where it gave one. */
+  private gone(): HelperAnswer {
+    const error = this.said.trim().split('\n').at(-1);
+    return { ok: false, refused: 'helper-gone', ...(error && { error }) };
+  }
+
   private end() {
     this.closed = true;
-    for (const w of this.waiting.values()) w({ ok: false, refused: 'helper-gone' });
+    for (const w of this.waiting.values()) w(this.gone());
     this.waiting.clear();
   }
 
   call(request: Record<string, unknown>, timeoutMs: number): Promise<HelperAnswer> {
-    if (this.closed) return Promise.resolve({ ok: false, refused: 'helper-gone' });
+    if (this.closed) return Promise.resolve(this.gone());
     const id = this.next++;
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
