@@ -23,6 +23,7 @@ export * from './call.js';
 export * from './client-calls.js';
 export * from './clock.js';
 export * from './device.js';
+export * from './background-end.js';
 export * from './device-apps.js';
 export * from './device-capture.js';
 export * from './device-conditions.js';
