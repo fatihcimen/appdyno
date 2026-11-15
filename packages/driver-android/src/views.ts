@@ -18,7 +18,7 @@ export const VIEWS_READ = [
   `if [ -n "$c" ]; then echo '${MARK}'; dumpsys activity "$c"; fi`,
 ].join('; ');
 
-/** The activity with the focus by its record, its window's corner, and how many app windows lie over it. */
+/** The activity with the focus by its record, its window's corner, and how many of its dialogs and menus lie over it. */
 export type Focus = {
   record: string;
   component: string;
@@ -58,7 +58,8 @@ export function focusOf(windows: string): Focus | undefined {
   return {
     ...focused,
     ...(frame && { origin: { x: frame[0], y: frame[1] } }),
-    over: Math.max(0, own),
+    // another activity's window above it, as one beside it in split screen, is no dialog over it
+    over: mine.slice(0, Math.max(0, own)).filter((w) => w.type !== 'BASE_APPLICATION').length,
   };
 }
 

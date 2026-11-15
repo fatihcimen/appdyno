@@ -148,6 +148,12 @@ describe('the read of the native views', () => {
       'frame=[100,300][1080,2400] last',
     );
     expect(byId(treeOf(moved), 'submit')?.rect).toMatchObject({ x: 132, y: 1222 });
+    // another app's activity listed above, as in split screen
+    const beside = recorded('form-36').replace(
+      '  Window #0',
+      '  Window #0 Window{c0ffee u0 dev.other/dev.other.Main}:\n    mDisplayId=0\n    mAttrs={(0,0)(fillxfill) ty=BASE_APPLICATION\n    Frames: parent=[0,0][1080,1200] frame=[0,0][1080,1200] last=[0,0][1080,1200]\n  Window #1',
+    );
+    expect(treeOf(beside).notes).toEqual([]);
     const gone = recorded('form-36').replace('ty=BASE_APPLICATION', 'ty=APPLICATION_STARTING');
     expect(treeOf(gone).notes).toEqual([
       "the activity's window is not on the screen: these places are where it was last laid out",
