@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { frameworkOfViews, viewLines, type ViewTree } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
+import type { Adb } from '../src/adb.js';
+import { AndroidDevice } from '../src/device.js';
 import { androidViews, focusOf, VIEWS_READ, viewsOf } from '../src/views.js';
 import { NOT_ANSWERING } from '../src/window-dump.js';
 
@@ -234,5 +236,16 @@ describe('the views of the activity in front', () => {
       code: 'TIMEOUT',
       message: 'dumpsys did not answer for the views in 15 s',
     });
+  });
+
+  it("are the device's, read through adb with no agent", async () => {
+    const asked: [string, number | undefined][] = [];
+    const exec = (_serial: string, command: string, o: { timeoutMs?: number } = {}) => {
+      asked.push([command, o.timeoutMs]);
+      return Promise.resolve(recorded('compose-36'));
+    };
+    const t = await new AndroidDevice('emulator-5554', { exec } as unknown as Adb).views();
+    expect(asked).toEqual([[VIEWS_READ, 15_000]]);
+    expect(frameworkOfViews(t, 'android')).toEqual({ name: 'Compose' });
   });
 });

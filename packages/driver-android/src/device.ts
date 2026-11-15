@@ -48,6 +48,7 @@ import { AndroidRecorder } from './record.js';
 import { ANDROID_PAGES, openSearch, openSettingsAt } from './settings-pages.js';
 import { AndroidWeb } from './web.js';
 import { currentFocus, focusSteady, lockedError, wakeScreen } from './wake.js';
+import { androidViews } from './views.js';
 import { noWindowHint } from './window-dump.js';
 
 export type AndroidOptions = {
@@ -133,6 +134,8 @@ export class AndroidDevice extends RpcDevice implements Device {
       .trim()
       .split(/\s+/)[0] || undefined;
   appRunning = (app: string) => androidRunning(this.adb, this.serial, app);
+  /** The views of the activity in front, from the system's own dump of it: no agent, probe or debuggable build. */
+  views = () => androidViews((command, timeoutMs) => this.shell(command, timeoutMs));
   appCrashing = (app: string) => androidCrashing(this.adb, this.serial, app);
   readonly apps: AndroidApps;
   readonly settings: AndroidSettings;
