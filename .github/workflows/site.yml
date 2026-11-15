@@ -1,0 +1,85 @@
+name: site
+
+# appdyno.dev, built from site/ and docs/. A push to main that changes what a page is made of publishes it to
+# GitHub Pages, and so does a run by hand; a pull request builds and checks it, and publishes nothing.
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - docs/**
+      # what the landing page takes from outside site/: the line of clients, the favicon's mark, the version
+      - README.md
+      - README.tr.md
+      - scripts/icon-art.mjs
+      - packages/appdyno/package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/site.yml
+  pull_request:
+    paths:
+      - site/**
+      - docs/**
+      - README.md
+      - README.tr.md
+      - scripts/icon-art.mjs
+      - packages/appdyno/package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/site.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# a newer push to a pull request leaves the build before it nothing to say; on main a run goes to its end, as it deploys
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # a build takes a minute or two: a hang ends here, not at GitHub's six hours
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          # what is published is built from what the commit holds, and from no cache another run could have written
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      # its types and its own tests
+      - run: pnpm --filter @appdyno/site check
+      - run: pnpm --filter @appdyno/site build
+      # every link, image and anchor inside the site, and each page's head
+      - run: pnpm --filter @appdyno/site check:dist
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: site/dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # the deployment to Pages
+      pages: write
+      # what Pages checks the deployment's origin with
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    # a deployment under way finishes: Pages takes one at a time
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
