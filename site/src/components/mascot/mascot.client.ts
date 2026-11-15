@@ -5,19 +5,16 @@ const KEY = 'appdyno:mascot';
 
 const find = <T extends Element>(selector: string) => document.querySelector<T>(selector);
 const parts = {
-  bench: find<HTMLElement>('.bench'),
-  stage: find<HTMLElement>('.bench .stage'),
   layer: find<HTMLElement>('.mascot-layer'),
   view: find<HTMLCanvasElement>('.mascot-view'),
   body: find<HTMLButtonElement>('.mascot-body'),
-  dyno: find<HTMLElement>('.stage img.dyno'),
-  rig: find<HTMLElement>('.stage img.rig'),
+  still: find<HTMLElement>('.mascot-still'),
 };
-/** The buttons that send it to rest: one on the bench, one at the page's foot, for when it is far from the bench. */
+/** The buttons that send it to rest: one in a corner of the window, one at the page's foot. */
 const rests = [...document.querySelectorAll<HTMLButtonElement>('.mascot-rest')];
 
 const still = matchMedia('(prefers-reduced-motion: reduce)');
-/** A visitor who asked for no motion or for less data gets the pictures, and nothing is fetched. */
+/** A visitor who asked for no motion or for less data gets the picture, and nothing is fetched. */
 const mayMove = () =>
   !still.matches && !(navigator as { connection?: { saveData?: boolean } }).connection?.saveData;
 
@@ -51,12 +48,12 @@ let scene: Promise<{ close: () => void } | undefined> | undefined;
 
 /** Brings the scene, the one large script of the page: after the page has loaded, and only where it may move. */
 const wake = () => {
-  const { bench, stage, layer, view, body, dyno, rig } = parts;
-  if (scene || !bench || !stage || !layer || !view || !body || !dyno || !rig) return;
-  const all: Parts = { bench, stage, layer, view, body, posters: { dyno, bench: rig } };
+  const { layer, view, body, still } = parts;
+  if (scene || !layer || !view || !body || !still) return;
+  const all: Parts = { layer, view, body, still };
   scene = import('./stage.ts')
     .then(({ open }) => open(all))
-    // no WebGL, or a model that did not come: the pictures stay, and there is nothing to send to rest
+    // no WebGL, or a model that did not come: the picture stays, and there is nothing to send to rest
     .catch(() => {
       show(false);
       return undefined;

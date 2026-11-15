@@ -1,11 +1,8 @@
 import {
-  Box3,
   DirectionalLight,
-  Group,
   OrthographicCamera,
   PMREMGenerator,
   Scene,
-  Sphere,
   Vector3,
   WebGLRenderer,
 } from 'three';
@@ -15,64 +12,61 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Body } from './body.ts';
 import { COUGH, Fire, PUFF, type Breath } from './fire.ts';
 import { Flames } from './flames.ts';
-import { Mind, type Point, type Traits } from './mind.ts';
-import { scout } from './perches.ts';
+import { Mind, type Perch, type Point, type Traits } from './mind.ts';
+import { CONTENT, blocks, onPage, perchOf, scout } from './perches.ts';
 import { Rig } from './rig.ts';
 import { GAUGE, HOP } from './signals.ts';
 
-/** What `Mascot.astro` and the bench leave in the page for the scene. */
+/** What `Mascot.astro` and the hero leave in the page for the scene. */
 export interface Parts {
-  bench: HTMLElement;
-  stage: HTMLElement;
-  /** What holds the canvas and the button: over the whole bench at home, a small box that goes with the dragon away from it. */
+  /** What holds the canvas and the button: a small box on the page that goes with the dragon. */
   layer: HTMLElement;
   view: HTMLCanvasElement;
   /** The button that rides on the dragon: a tap or a key on it is a tap on the dragon. */
   body: HTMLButtonElement;
-  /** The still pictures the scene stands in for, each where its model goes. */
-  posters: { dyno: HTMLElement; bench: HTMLElement };
+  /** The still picture the scene stands in for, on the top edge of the block the dragon starts on. */
+  still: HTMLElement;
 }
 
-/** The floor is this far above the stage's bottom edge, in pixels. */
-const FLOOR = 8;
-/** Both models lean their tops toward the eye, as seen from a little above. */
+/** The dragon leans its top toward the eye, as seen from a little above. */
 const LEAN = 0.2;
 /** How far from side-on the dragon turns to the eye when it stands, and when it goes somewhere. */
 const STANDING = 0.6;
 const GOING = 0.3;
-/** The bench as its picture shows it, and how far a screen's height of scroll turns it. */
-const BENCH_TURN = -1.13;
-const SCROLL_TURN = 0.5;
 /** Seconds asleep before the frames stop: the fade into the sleep clip is done by then. */
 const SETTLED = 2;
-/** Depths in the scene: the bench, the dragon in front of it, the fire in front of both. */
+/** Depths in the scene: the dragon, and the fire in front of it. */
 const DRAGON_Z = 300;
 const FIRE_Z = 600;
-/** Away from the bench the canvas is a square of this many body heights, the dragon's feet this share of the way down it. */
-const AWAY = 3.75;
+/** The canvas is a square of this many body heights, the dragon's feet this share of the way down it. */
+const BOX = 3.75;
 const FEET = 0.72;
 /** The page has come to rest when it has not scrolled for this long, in milliseconds. */
 const AT_REST = 900;
+/** A tap or a pointer this many body heights from it is near it. */
+const NEAR = 5;
+/** Under this height, as on a phone, it takes this share of its flights. */
+const SMALL = 96;
+const SMALL_FLIGHTS = 0.4;
+
+/** Whether a frame is to be drawn: none with the tab hidden, once it sleeps, or out of view and not on its way. */
+export const awake = (it: { hidden: boolean; asleep: number; inView: boolean; flying: boolean }) =>
+  !it.hidden && it.asleep < SETTLED && (it.inView || it.flying);
 
 const now = () => performance.now() / 1000;
 
 /**
- * Opens the scene: the dragon and the dynamometer in one canvas, in a world whose units are the
- * page's pixels, so a place on the page is a place in the scene. At home the canvas lies over the
- * bench; when the dragon leaves for a perch the canvas shrinks to a box around it and goes with
- * it, and the bench shows its picture. Rejects when there is no WebGL or a model does not load;
- * the pictures stay then.
+ * Opens the scene: the dragon in a canvas of its own, a small box that goes with it over the page,
+ * in a world whose units are the page's pixels, so a place on the page is a place in the scene.
+ * Rejects when there is no WebGL or the model does not load; the picture stays then.
  */
 export async function open(parts: Parts): Promise<{ close: () => void }> {
-  const { bench, stage, layer, view, body: rider, posters } = parts;
+  const { layer, view, body: rider, still } = parts;
   const renderer = new WebGLRenderer({ canvas: view, alpha: true, antialias: true });
   const ratio = Math.min(2, devicePixelRatio || 1);
   renderer.setPixelRatio(ratio);
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-  const [dyno, dynamometer] = await Promise.all([
-    loader.loadAsync(view.dataset['dyno'] ?? ''),
-    loader.loadAsync(view.dataset['bench'] ?? ''),
-  ]).catch((failed: unknown) => {
+  const dyno = await loader.loadAsync(view.dataset['dyno'] ?? '').catch((failed: unknown) => {
     renderer.dispose();
     throw failed;
   });
@@ -88,21 +82,12 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
   camera.position.z = 1000;
   camera.far = 2000;
 
-  // the dynamometer turns about its own middle
-  const middle = new Box3().setFromObject(dynamometer.scene).getBoundingSphere(new Sphere());
-  dynamometer.scene.position.sub(middle.center);
-  const table = new Group().add(dynamometer.scene);
   const rig = new Rig(dyno);
   const strides = { walk: rig.stride('walk'), run: rig.stride('run') };
   const fire = new Fire();
   const flames = new Flames(FIRE_Z);
-  scene.add(table, rig.holder, flames.points);
+  scene.add(rig.holder, flames.points);
 
-  /** An element's box on the page, not on the screen. */
-  const onPage = (element: Element) => {
-    const { left, top, width, height } = element.getBoundingClientRect();
-    return { left: left + scrollX, top: top + scrollY, width, height };
-  };
   const onScreen = ({ y }: Point, size: number) => y - size > scrollY && y < scrollY + innerHeight;
 
   let pointer: Point | undefined;
@@ -112,82 +97,66 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     walk: 0,
     run: 0,
     reach: 0,
-    scout: () => [
-      ...scout(traits.size, pointer),
-      ...(onScreen({ x: 0, y: mind.home.y }, traits.size) ? [mind.home] : []),
-    ],
+    scout: () => scout(traits.size, pointer),
   };
-  const mind = new Mind({ left: 0, right: 1, y: 0 }, traits);
-  const flesh = new Body();
-  let box = { left: NaN, top: NaN, width: NaN, height: NaN };
-  let home = { ...box };
-  let away = false;
+  /** Its height as the page's styles have it now, and what goes by it. */
+  const measure = () => {
+    const size = parseFloat(getComputedStyle(layer).getPropertyValue('--mascot')) || SMALL;
+    Object.assign(traits, {
+      size,
+      walk: strides.walk * size,
+      run: strides.run * size,
+      reach: size * 0.75,
+      flights: size < SMALL ? SMALL_FLIGHTS : 1,
+    });
+  };
+  measure();
 
-  /** Fits the scene to the page as it is laid out now: the bench's place, the dragon's size, and the canvas. */
+  // it starts where its picture stands: on the top edge of the picture's block
+  const block = still.closest('[data-perch]') ?? still;
+  const edge = onPage(block);
+  const first: Perch = {
+    left: edge.left + traits.size / 2,
+    right: edge.left + edge.width - traits.size / 2,
+    y: edge.top,
+  };
+  blocks.set(first, { block, left: edge.left });
+  const mind = new Mind(first, traits);
+  const picture = onPage(still);
+  mind.x = Math.min(first.right, Math.max(first.left, picture.left + picture.width / 2));
+  const flesh = new Body();
+  let side = NaN;
+
+  /** Fits the scene to the page as it is laid out now: the dragon on its block, and the canvas around the dragon. */
   const fit = () => {
-    const at = onPage(bench);
-    if (
-      at.left !== home.left ||
-      at.top !== home.top ||
-      at.width !== home.width ||
-      at.height !== home.height
-    ) {
-      const first = Number.isNaN(home.left);
-      home = at;
-      // a layout that moved the bench has moved every perch: the one it is on is no longer where it stands
-      if (!first) mind.goHome(now());
-      const size = parseFloat(getComputedStyle(layer).getPropertyValue('--mascot')) || 96;
-      Object.assign(traits, {
-        size,
-        walk: strides.walk * size,
-        run: strides.run * size,
-        reach: size * 0.75,
-      });
-      const cell = onPage(posters.bench);
-      table.scale.setScalar((0.62 * Math.min(cell.width, cell.height)) / middle.radius);
-      table.position.set(cell.left + cell.width / 2, -(cell.top + cell.height / 2), 0);
-      const floor = onPage(stage);
-      mind.stand({
-        left: floor.left + size / 2,
-        right: floor.left + floor.width - size / 2,
-        y: floor.top + floor.height - FLOOR,
-      });
-      if (first) {
-        const picture = onPage(posters.dyno);
-        mind.x = picture.left + picture.width / 2;
+    const held = blocks.get(mind.perch);
+    if (held && !flying()) {
+      // a layout that moved its block has moved its perch
+      const at = onPage(held.block);
+      const dx = at.left - held.left;
+      const dy = at.top - mind.perch.y;
+      // less than a pixel is how a scrolled page rounds, not a move
+      if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
+        held.left = at.left;
+        mind.ride(dx, dy);
       }
     }
-    if (away !== !mind.atHome) {
-      // the canvas and its button go to the page itself to leave the bench, and come back to it
-      away = !mind.atHome;
-      (away ? document.body : bench).append(layer);
-      layer.classList.toggle('away', away);
-      bench.classList.toggle('away', away);
-      table.visible = !away;
-      layer.style.transform = '';
+    const { x, y } = mind.place;
+    if (side !== BOX * traits.size) {
+      side = BOX * traits.size;
+      renderer.setSize(side, side, false);
     }
-    let to = home;
-    if (away) {
-      const { x, y } = mind.place;
-      const side = AWAY * traits.size;
-      const page = document.documentElement;
-      to = {
-        // inside the page, so the box never makes the page wider or longer
-        left: Math.max(0, Math.min(page.clientWidth - side, x - side / 2)),
-        top: Math.max(0, Math.min(page.scrollHeight - side, y - side * FEET)),
-        width: side,
-        height: side,
-      };
-      layer.style.transform = `translate(${to.left}px, ${to.top}px)`;
-    }
-    if (to.width !== box.width || to.height !== box.height)
-      renderer.setSize(to.width, to.height, false);
-    box = to;
-    camera.left = box.left;
-    camera.right = box.left + box.width;
-    camera.top = -box.top;
-    camera.bottom = -(box.top + box.height);
+    const page = document.documentElement;
+    // inside the page, so the box never makes the page wider or longer
+    const left = Math.max(0, Math.min(page.clientWidth - side, x - side / 2));
+    const top = Math.max(0, Math.min(page.scrollHeight - side, y - side * FEET));
+    layer.style.transform = `translate(${left}px, ${top}px)`;
+    camera.left = left;
+    camera.right = left + side;
+    camera.top = -top;
+    camera.bottom = -(top + side);
     camera.updateProjectionMatrix();
+    return { left, top };
   };
 
   // what the visitor does: where the pointer is, taps, scrolling, and the console's numbers
@@ -208,21 +177,19 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
       // a pointer on its own face would have it look every way at once
       if (Math.hypot(pointer.x - x, pointer.y - (y - traits.size * 0.7)) > traits.size * 0.5)
         lookAt(pointer, 6);
-      if (mind.mode !== 'sleep' || bench.contains(event.target as Node)) rouse();
+      if (mind.mode !== 'sleep' || near(pointer)) rouse();
     },
     listen,
   );
   rider.addEventListener('click', () => (mind.tap(now()), rouse()), listen);
-  bench.addEventListener(
+  // a tap near it, on nothing a visitor reads or presses, gets a breath toward the tap
+  document.addEventListener(
     'click',
     (event) => {
-      const on = event.target as Element;
-      if (on.closest('button, a')) return;
       const aim = { x: event.pageX, y: event.pageY };
-      if (mind.atHome) {
-        lookAt(aim, 4);
-        mind.tap(now(), aim);
-      } else mind.goHome(now());
+      if ((event.target as Element).closest(CONTENT) || !near(aim)) return;
+      lookAt(aim, 4);
+      mind.tap(now(), aim);
       rouse();
     },
     listen,
@@ -230,34 +197,45 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
   document.addEventListener(
     GAUGE,
     (event) => {
-      const dial = document.getElementById(`n-${(event as CustomEvent<string>).detail}`);
-      if (!dial) return;
-      const at = onPage(dial.closest('svg') ?? dial);
-      const aim = { x: at.left + at.width / 2, y: at.top + at.height * 0.4 };
+      const number = document.getElementById(`v-${(event as CustomEvent<string>).detail}`);
+      if (!number) return;
+      const at = onPage(number);
+      const aim = { x: at.left + at.width / 2, y: at.top + at.height / 2 };
+      // the top edge of the dials' own block, or else the perch in view that is nearest the number
+      const own = number.closest('[data-perch]');
+      const by =
+        (own && perchOf(own, traits.size)) ??
+        traits
+          .scout?.()
+          .map((perch) => ({ perch, far: Math.abs(perch.y - aim.y) }))
+          .sort((a, b) => a.far - b.far)[0]?.perch;
       lookAt(aim, 4);
-      mind.gauge(now(), aim);
+      mind.gauge(now(), aim, by);
       rouse();
     },
     listen,
   );
+  addEventListener('resize', measure, listen);
   document.addEventListener(HOP, () => (mind.cheer(now()), rouse()), listen);
-  let rest: ReturnType<typeof setTimeout> | undefined;
+  // out of sight once the page has come to rest: it comes in over the edge it was left behind
+  const comeIn = () => {
+    const { x, y } = mind.place;
+    const size = traits.size;
+    if (document.hidden || onScreen({ x, y }, size)) return;
+    const above = y < scrollY + innerHeight / 2;
+    mind.follow(now(), {
+      x: Math.max(scrollX + size, Math.min(scrollX + innerWidth - size, x)),
+      y: above ? scrollY - size * 0.5 : scrollY + innerHeight + size * 1.5,
+    });
+    rouse();
+  };
+  // a page opened part of the way down has it come in too
+  let rest = setTimeout(comeIn, AT_REST);
   addEventListener(
     'scroll',
     () => {
       clearTimeout(rest);
-      rest = setTimeout(() => {
-        // out of sight: it comes in over the edge it was left behind
-        const { x, y } = mind.place;
-        const size = traits.size;
-        if (document.hidden || onScreen({ x, y }, size)) return;
-        const above = y < scrollY + innerHeight / 2;
-        mind.follow(now(), {
-          x: Math.max(scrollX + size, Math.min(scrollX + innerWidth - size, x)),
-          y: above ? scrollY - size * 0.5 : scrollY + innerHeight + size * 1.5,
-        });
-        rouse();
-      }, AT_REST);
+      rest = setTimeout(comeIn, AT_REST);
     },
     listen,
   );
@@ -270,12 +248,18 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
   let yaw = -Math.PI / 2 + STANDING;
   let breath: { is: Breath; from: number; until: number } | undefined;
   let later: [at: number, deed: () => void][] = [];
-  const flying = () => mind.mode === 'fly' || mind.mode === 'hop';
-  const awake = () => !document.hidden && asleep < SETTLED && (inView || flying());
+  function flying() {
+    return mind.mode === 'fly' || mind.mode === 'hop';
+  }
+  function near(point: Point) {
+    const { x, y } = mind.place;
+    return Math.hypot(point.x - x, point.y - y) < NEAR * traits.size;
+  }
+  const drawn = () => awake({ hidden: document.hidden, asleep, inView, flying: flying() });
   function rouse() {
     mind.rouse(now());
     asleep = 0;
-    if (awake() && !frame) {
+    if (drawn() && !frame) {
       last = 0;
       frame = requestAnimationFrame(draw);
     }
@@ -317,7 +301,7 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     later = later.filter(([at, deed]) => at > time || (deed(), false));
     flesh.step(dt);
     asleep = mind.mode === 'sleep' ? asleep + dt : 0;
-    fit();
+    const box = fit();
 
     // the dragon: where its mind has it, as tall as its squash leaves it, turned the way it faces
     const size = traits.size;
@@ -353,17 +337,15 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     flames.show(fire, ratio);
     rig.glow(fire.glow);
 
-    table.rotation.set(LEAN, BENCH_TURN + (SCROLL_TURN * scrollY) / innerHeight, 0);
     rider.style.transform = `translate(${place.x - box.left}px, ${place.y - box.top}px)`;
     renderer.render(scene, camera);
-    frame = awake() ? requestAnimationFrame(draw) : 0;
+    frame = drawn() ? requestAnimationFrame(draw) : 0;
   }
 
-  // the first frame is drawn before the pictures give way to it
-  fit();
+  // the first frame is drawn before the picture gives way to it
   draw(performance.now());
-  bench.classList.add('live');
-  layer.classList.add('live');
+  const root = document.documentElement;
+  root.classList.add('mascot-live');
   rider.hidden = false;
 
   return {
@@ -372,9 +354,7 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
       clearTimeout(rest);
       heard.abort();
       watcher.disconnect();
-      bench.append(layer);
-      layer.style.transform = '';
-      for (const part of [bench, layer]) part.classList.remove('live', 'away');
+      root.classList.remove('mascot-live');
       rider.hidden = true;
       scene.environment?.dispose();
       renderer.dispose();

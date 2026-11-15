@@ -1,45 +1,43 @@
 ---
 import type { Words } from '../../i18n/index.ts';
+import { pathIn, type Lang } from '../../site.ts';
+import Dials from './Dials.astro';
 import type { ConsoleData } from './landing.client.ts';
 import Phone from './Phone.astro';
-import { jobsOf } from './scenarios.ts';
+import { JOBS, jobsOf } from './scenarios.ts';
 
 interface Props {
+  lang: Lang;
   t: Words;
 }
-const { t } = Astro.props;
+const { lang, t } = Astro.props;
 const c = t.console;
-const jobs = jobsOf(t);
-const chips: Record<string, string> = {
-  checkout: c.checkout.chip,
-  push: c.push.chip,
-  link: c.link.chip,
-  perf: c.perf.chip,
-  views: c.views.chip,
-};
-const data: ConsoleData = { jobs, running: c.running, done: c.done };
+const data: ConsoleData = { jobs: jobsOf(t), running: c.running, done: c.done };
 ---
 
+{/* The one demo: a job's calls play on the phone, its answers in the terminal, its numbers on the dials. */}
 <section class="band console" id="console">
   <div class="inner">
-    <h2>{c.title}</h2>
+    <h2 data-perch>{c.title}</h2>
     <p class="sub">{c.sub}</p>
     <div class="chips" role="group" aria-label={c.jobs}>
       {
-        Object.keys(jobs).map((job) => (
+        JOBS.map((job) => (
           <button class="chip" type="button" data-run={job} aria-pressed="false">
-            {chips[job]}
+            {c[job].chip}
           </button>
         ))
       }
     </div>
     <div class="rig">
+      <Dials t={t} />
       <Phone t={t} model="iPhone 17" id="phone" label={c.phone} />
-      <div class="term" aria-live="polite" data-perch>
+      <div class="term" aria-live="polite">
         <div class="bar"><span>{c.client}</span><span id="clock">{c.ready}</span></div>
         <pre id="out"><span class="d">{c.idle}</span></pre>
       </div>
     </div>
+    <p class="more"><a href={pathIn(lang, '/docs/reference/tools/')}>{c.tools}</a></p>
   </div>
 </section>
 <script type="application/json" id="console-data" is:inline set:html={JSON.stringify(data).replaceAll('<', '\\u003c')} />

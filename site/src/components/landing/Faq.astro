@@ -7,18 +7,44 @@ interface Props {
 const { faq } = Astro.props.t;
 ---
 
+{/* The questions, each closed until asked for. Their answers are also the page's FAQPage data. */}
 <section class="band faq" id="faq">
   <div class="inner">
-    <h2>{faq.title}</h2>
-    <dl data-perch>
+    <h2 data-perch>{faq.title}</h2>
+    <div class="list" data-perch>
       {
         faq.items.map((item) => (
-          <div>
-            <dt>{item.q}</dt>
-            <dd>{item.a}</dd>
-          </div>
+          <details>
+            <summary>{item.q}</summary>
+            <p>{item.a}</p>
+          </details>
         ))
       }
-    </dl>
+    </div>
   </div>
 </section>
+
+<style>
+  .inner {
+    max-width: 760px;
+  }
+  h2 {
+    margin-bottom: 24px;
+  }
+  details {
+    border-top: 1px solid var(--line);
+  }
+  details:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  summary {
+    padding: 18px 0;
+    font: 700 17px var(--f-display);
+    cursor: pointer;
+  }
+  p {
+    margin: 0 0 20px;
+    max-width: 62ch;
+    color: var(--soft);
+  }
+</style>

@@ -1,6 +1,6 @@
 ---
 import type { Words } from '../../i18n/index.ts';
-import { INSTALL, REGISTRY, REPO, type Lang } from '../../site.ts';
+import { REGISTRY, REPO, type Lang } from '../../site.ts';
 
 interface Props {
   lang: Lang;
@@ -8,62 +8,56 @@ interface Props {
 }
 const { lang, t } = Astro.props;
 const { source } = t;
-const guide = lang === 'tr' ? 'CONTRIBUTING.tr.md' : 'CONTRIBUTING.md';
-const file = (name: string) => ({ href: `${REPO}/blob/main/${name}`, text: name });
-/** Each card's words, with the file it leads to or the line it shows. */
-const cards: { name: string; text: string; link?: { href: string; text: string }; code?: string }[] =
-  [
-    { ...source.license, link: file('LICENSE') },
-    { ...source.github, link: { href: REPO, text: source.github.star } },
-    { ...source.local },
-    { ...source.install, code: INSTALL },
-    { ...source.registry, code: REGISTRY },
-    { ...source.contribute, link: file(guide) },
-  ];
+const file = (name: string) => `${REPO}/blob/main/${name}`;
 ---
 
-{/* Open source: the license, the repository to star, where it runs, how it installs, where it is listed and how to take part. */}
+{/* Open source, in one band: where it runs, the license, the repository to star, where it is listed and how to take part. */}
 <section class="band source" id="source">
-  <div class="inner">
-    <div class="reveal">
+  <div class="inner" data-perch>
+    <div>
       <h2>{source.title}</h2>
-      <p class="sub">{source.sub}</p>
+      <p class="sub">{source.local}</p>
     </div>
-    <div class="tools reveal">
-      {
-        cards.map((card) => (
-          <div class="tool">
-            <b>{card.name}</b>
-            <p>{card.text}</p>
-            {card.link && (
-              <code>
-                <a href={card.link.href}>
-                  {card.link.href === REPO && (
-                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                      <path d="M8 .6l2.2 4.6 5 .7-3.6 3.5.9 5L8 12l-4.5 2.4.9-5L.8 5.9l5-.7z" />
-                    </svg>
-                  )}
-                  {card.link.text}
-                </a>
-              </code>
-            )}
-            {card.code && <code>{card.code}</code>}
-          </div>
-        ))
-      }
-    </div>
+    <ul>
+      <li><a href={file('LICENSE')}>{source.license}</a></li>
+      <li><a href={REPO}>{source.star}</a></li>
+      <li><a href={file(lang === 'tr' ? 'CONTRIBUTING.tr.md' : 'CONTRIBUTING.md')}>{source.contribute}</a></li>
+      <li>{source.registry} <code>{REGISTRY}</code></li>
+    </ul>
   </div>
 </section>
 
 <style>
-  .source {
-    padding-block: 44px 30px;
+  .inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px 48px;
+    align-items: center;
+    padding: clamp(24px, 4vw, 40px);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: var(--panel);
   }
-  svg {
-    vertical-align: -2px;
-    margin-right: 6px;
-    fill: var(--amber-fill);
-    stroke: var(--amber);
-    stroke-width: 0.8;
+  @media (max-width: 860px) {
+    .inner {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .sub {
+    margin: 0;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+    font-size: 15px;
+    color: var(--soft);
+  }
+  code {
+    font: 400 0.92em var(--f-mono);
+    color: var(--fg);
+    overflow-wrap: anywhere;
   }
 </style>

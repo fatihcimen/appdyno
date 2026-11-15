@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 /**
- * Compresses the landing page's models into public/models. The sources are large and stay out of
- * git: only what this writes is committed. A model's poster, the picture shown until the scene
- * has it, is src/assets/<model>.webp, put there by hand.
+ * Compresses the landing page's model into public/models. The source is large and stays out of
+ * git: only what this writes is committed. The model's poster, the picture shown until the scene
+ * has it, is src/assets/dyno.webp, put there by hand.
  *
  *   pnpm --filter @appdyno/site models <folder>
  *
- * The folder holds dyno.glb, bench.glb or both. Textures become WebP and the geometry is
- * quantized. The dragon is found by its bones and clips, so it keeps its names, loses every
- * channel that only holds a bone where it rests, and is packed with Meshopt, whose decoder is in
- * the page's own script.
+ * The folder holds dyno.glb. Its textures become WebP and its geometry is quantized. The dragon
+ * is found by its bones and clips, so it keeps its names, loses every channel that only holds a
+ * bone where it rests, and is packed with Meshopt, whose decoder is in the page's own script.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -18,7 +17,6 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const MODELS = {
-  bench: { size: 1024, flags: ['--compress', 'quantize'], rigged: false },
   dyno: {
     size: 512,
     // what would join, flatten or thin a mesh is off: the skin and its bones stay as they were made
@@ -30,7 +28,6 @@ const MODELS = {
       ...['--palette', 'false'],
       ...['--simplify', 'false'],
     ],
-    rigged: true,
   },
 };
 const site = fileURLToPath(new URL('..', import.meta.url));
@@ -65,24 +62,15 @@ function read(file) {
 /**
  * @param {string} file
  * @param {ReturnType<typeof read>} glb
- * @param {(key: string, value: unknown) => unknown} [replacer]
  */
-function write(file, { head, scene, rest }, replacer) {
-  const text = Buffer.from(JSON.stringify(scene, replacer));
+function write(file, { head, scene, rest }) {
+  const text = Buffer.from(JSON.stringify(scene));
   const json = Buffer.concat([text, Buffer.alloc((4 - (text.length % 4)) % 4, ' ')]);
   const start = Buffer.from(head);
   start.writeUInt32LE(start.length + json.length + rest.length, 8);
   start.writeUInt32LE(json.length, 12);
   writeFileSync(file, Buffer.concat([start, json, rest]));
 }
-
-/**
- * Takes every name out of a model: nothing shows one, and the names a modelling tool gave say
- * nothing of the model.
- * @param {string} file
- */
-const unname = (file) =>
-  write(file, read(file), (key, value) => (key === 'name' ? undefined : value));
 
 const REST = { translation: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] };
 
@@ -148,16 +136,16 @@ const check = () =>
 const work = mkdtempSync(join(tmpdir(), 'models-'));
 try {
   for (const name of /** @type {(keyof typeof MODELS)[]} */ (names)) {
-    const { size, flags, rigged } = MODELS[name];
+    const { size, flags } = MODELS[name];
     const source = join(from ?? '', `${name}.glb`);
     const out = join(site, 'public/models', `${name}.glb`);
     const moving = join(work, `${name}.glb`);
-    const dropped = rigged ? still(source, moving) : 0;
+    const dropped = still(source, moving);
     execFileSync(
       tool,
       [
         'optimize',
-        rigged ? moving : source,
+        moving,
         out,
         ...flags,
         ...['--texture-compress', 'webp'],
@@ -165,11 +153,8 @@ try {
       ],
       { stdio: ['ignore', 'ignore', 'inherit'] },
     );
-    if (rigged) check();
-    else unname(out);
-    console.log(
-      `${name}.glb: ${kb(source)} -> ${kb(out)}${rigged ? `, ${dropped} still channels dropped` : ''}`,
-    );
+    check();
+    console.log(`${name}.glb: ${kb(source)} -> ${kb(out)}, ${dropped} still channels dropped`);
   }
 } finally {
   rmSync(work, { recursive: true });

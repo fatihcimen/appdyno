@@ -3,6 +3,7 @@ import pkg from '../../../../packages/appdyno/package.json';
 import { words } from '../../i18n/index.ts';
 import Base from '../../layouts/Base.astro';
 import { NPM, REPO, SITE, SHARE_IMAGE, pathIn, type Lang } from '../../site.ts';
+import Mascot from '../mascot/Mascot.astro';
 import Cases from './Cases.astro';
 import Console from './Console.astro';
 import Faq from './Faq.astro';
@@ -11,8 +12,6 @@ import Hero from './Hero.astro';
 import MacApp from './MacApp.astro';
 import Nav from './Nav.astro';
 import OpenSource from './OpenSource.astro';
-import Story from './Story.astro';
-import ToolRack from './ToolRack.astro';
 
 interface Props {
   lang: Lang;
@@ -58,15 +57,14 @@ const jsonLd = [
     </div>
   </div>
   <main>
-    <Story t={t} />
+    <Console lang={lang} t={t} />
     <Cases t={t} />
-    <Console t={t} />
-    <ToolRack t={t} />
     <MacApp lang={lang} t={t} />
     <OpenSource lang={lang} t={t} />
     <Faq t={t} />
   </main>
   <Footer lang={lang} t={t} />
+  <Mascot t={t} />
 </Base>
 <script>
   import './landing.client.ts';

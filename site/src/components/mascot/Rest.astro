@@ -3,13 +3,16 @@ import type { Words } from '../../i18n/index.ts';
 
 interface Props {
   t: Words;
+  /** Held in a corner of the window, where it is in reach wherever the dragon is. */
+  corner?: boolean;
 }
-const { mascot } = Astro.props.t;
+const { t, corner = false } = Astro.props;
+const { mascot } = t;
 ---
 
 {/* sends the dragon to rest, and wakes it: shown by the script where the dragon may move at all */}
 <button
-  class="mascot-rest"
+  class:list={['mascot-rest', { corner }]}
   type="button"
   aria-pressed="false"
   data-rest={mascot.rest}

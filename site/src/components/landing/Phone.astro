@@ -6,23 +6,17 @@ interface Props {
   t: Words;
   /** The device's name, in its status bar. */
   model: string;
-  android?: boolean;
-  id?: string;
-  /** What the phone is, where it is a picture of its own and not a part of one. */
-  label?: string;
+  id: string;
+  /** What the phone is, to one who cannot see it. */
+  label: string;
 }
-const { t, model, android = false, id, label } = Astro.props;
+const { t, model, id, label } = Astro.props;
 const { app } = t.console;
 const cart = `${app.cart} 0`;
 ---
 
 {/* The shop example on a phone. A step of a job names its parts by data-part and its elements by data-ref, and data-rest is what a part says before a job. */}
-<div
-  class:list={['phone', { android }]}
-  id={id}
-  role={label ? 'img' : undefined}
-  aria-label={label}
->
+<div class="phone" id={id} role="img" aria-label={label}>
   <div class="status"><span>9:41</span><span>{model}</span></div>
   <div class="app">
     <header>

@@ -69,7 +69,7 @@ for (const [path, html] of pages) {
     ...valuesOf(html, 'a', 'href'),
     ...valuesOf(html, 'link', 'href'),
     ...valuesOf(html, '(?:img|script|source)', '(?:src|srcset)'),
-    // the models the bench's scene fetches
+    // the model the dragon's scene fetches
     ...valuesOf(html, 'canvas', 'data-[a-z]+'),
     ...valuesOf(html, 'meta', 'content').filter((value) => value.startsWith(SITE)),
   ]

@@ -9,16 +9,12 @@ interface Props {
 const { t } = Astro.props;
 ---
 
-{/* drawn over the bench once the page has loaded: until then, and where nothing may move, the bench shows its pictures */}
+{/* the dragon's own small box, which goes with it over the page once the page has loaded: until then, and where nothing may move, the hero shows its picture */}
 <div class="mascot-layer">
-  <canvas
-    class="mascot-view"
-    aria-hidden="true"
-    data-dyno="/models/dyno.glb"
-    data-bench="/models/bench.glb"></canvas>
+  <canvas class="mascot-view" aria-hidden="true" data-dyno="/models/dyno.glb"></canvas>
   <button class="mascot-body" type="button" aria-label={t.mascot.tap} hidden></button>
 </div>
-<Rest t={t} />
+<Rest t={t} corner />
 <script>
   import './mascot.client.ts';
 </script>

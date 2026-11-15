@@ -4,7 +4,8 @@ import { Body } from '../src/components/mascot/body.ts';
 import { COUGH, Fire, PUFF, heatColor, look } from '../src/components/mascot/fire.ts';
 import { Mind, type Deed, type Perch, type Traits } from '../src/components/mascot/mind.ts';
 import { CLIPS } from '../src/components/mascot/names.ts';
-import { perchOn } from '../src/components/mascot/perches.ts';
+import { CONTENT, empty, perchOn } from '../src/components/mascot/perches.ts';
+import { awake } from '../src/components/mascot/stage.ts';
 
 /** The same numbers at every run. */
 const dice =
@@ -159,12 +160,13 @@ test('left alone it does one thing at a time on its perch, then sleeps until som
   assert.equal(mind.mode, 'idle');
 });
 
-test('a layout that moves its perch moves it along', () => {
-  const mind = new Mind(perch, traits());
+test('a layout that moves the block it stands on moves it along', () => {
+  const mind = new Mind({ ...perch }, traits());
   mind.x = 400;
-  mind.stand({ left: 0, right: 300, y: 200 });
-  assert.equal(mind.x, 150);
-  assert.equal(mind.perch.y, 200);
+  mind.ride(-60, 250);
+  assert.equal(mind.x, 340);
+  assert.deepEqual(mind.perch, { left: 40, right: 640, y: 650 });
+  assert.deepEqual(mind.place, { x: 340, y: 650 });
 });
 
 test("a block's top edge is a perch only where nothing stands over it", () => {
@@ -207,7 +209,7 @@ test('to a near perch it hops, to a far one it flies, and it lands on the edge',
       mind.rouse(now);
       if (mind.mode === way) seen = true;
       highest = Math.min(highest, mind.place.y);
-      if (seen && mind.mode === 'idle' && !mind.atHome) assert.equal(mind.place.y, to.y);
+      if (seen && mind.mode === 'idle' && mind.perch === to) assert.equal(mind.place.y, to.y);
     });
     assert.ok(seen, `it left by a ${way}`);
     assert.ok(
@@ -224,47 +226,126 @@ test('to a near perch it hops, to a far one it flies, and it lands on the edge',
   }
 });
 
-test('with no perch in view it stays on the bench', () => {
+test('with no perch in view it stays where it is', () => {
   const mind = new Mind(
     perch,
     traits(() => []),
   );
-  live(mind, 0, 60, (now) => mind.rouse(now));
-  assert.ok(mind.atHome);
+  live(mind, 0, 60, (now) => {
+    mind.rouse(now);
+    assert.ok(mind.mode !== 'fly' && mind.mode !== 'hop');
+  });
+  assert.equal(mind.perch, perch);
 });
 
-test('away from the bench, a number sent to a gauge brings it home to breathe at it', () => {
-  const away = { left: 200, right: 600, y: 1400 };
+test('left out of sight it flies in from the edge of the screen, and not again so soon', () => {
+  const near = { left: 200, right: 600, y: 1400 };
   const mind = new Mind(
     perch,
-    traits(() => [away, perch]),
+    traits(() => [near]),
   );
   mind.follow(1, { x: 300, y: 1000 });
+  assert.equal(mind.mode, 'fly');
+  assert.deepEqual(mind.place, { x: 300, y: 1000 });
   live(mind, 1, 3);
-  assert.equal(
-    mind.perch,
-    perch,
-    'left behind, it follows a visitor: home first when home is in view',
-  );
-  const lone = new Mind(
-    perch,
-    traits(() => [away]),
-  );
-  lone.follow(1, { x: 300, y: 1000 });
-  assert.equal(lone.mode, 'fly');
-  assert.deepEqual(lone.place, { x: 300, y: 1000 }, 'it comes in from the edge of the screen');
-  live(lone, 1, 3);
-  assert.equal(lone.perch, away);
-  lone.follow(5, { x: 300, y: 1000 });
-  assert.equal(lone.mode, 'idle', 'and not again so soon');
-  const aim = { x: 600, y: 470 };
-  lone.gauge(10, aim);
-  assert.equal(lone.mode, 'fly');
-  const breaths = live(lone, 10, 12).filter(([, deed]) => 'puff' in deed);
+  assert.equal(mind.perch, near);
+  mind.follow(5, { x: 300, y: 1000 });
+  assert.equal(mind.mode, 'idle');
+});
+
+test('a number sent to a dial brings it to the perch by the dial, to breathe at the number', () => {
+  const by = { left: 400, right: 900, y: 1400 };
+  const mind = new Mind(perch, traits());
+  const aim = { x: 600, y: 1470 };
+  // each number comes with the perch as the page finds it then: the same edge, not the same object
+  for (const at of [10, 10.3, 10.6]) {
+    live(mind, at, 0.3, (now) => now === at && mind.gauge(now, aim, { ...by }));
+    assert.equal(mind.mode, 'fly', 'one flight, whatever comes while it is in the air');
+  }
+  const breaths = live(mind, 10.9, 12).filter(([, deed]) => 'puff' in deed);
   assert.deepEqual(
     breaths.map(([, deed]) => deed),
     [{ puff: 'fire', aim }],
   );
-  assert.ok(lone.atHome);
-  assert.equal(Math.round(lone.x), 530);
+  assert.deepEqual(mind.perch, by);
+  assert.equal(Math.round(mind.x), 530, 'beside the number, on the side it came from');
+  assert.deepEqual(mind.place, { x: mind.x, y: by.y });
+});
+
+/** A life of some minutes among some perches, with what it did by itself and how long each flight took. */
+function roam(flights: number, seconds = 600) {
+  const perches = [perch, { left: 760, right: 900, y: 330 }, { left: 200, right: 600, y: 1400 }];
+  const mind = new Mind(perch, { ...traits(() => perches), flights });
+  const acts: string[] = [];
+  let took = 0;
+  let longest = 0;
+  live(mind, 0, seconds, (now) => {
+    mind.rouse(now);
+    if (acts.length < mind.acts) acts.push(mind.act);
+    took = mind.mode === 'fly' ? took + FRAME : 0;
+    longest = Math.max(longest, took);
+    // on the ground it is on a perch, between its ends: nowhere else is a place to rest
+    if (mind.mode !== 'fly' && mind.mode !== 'hop') {
+      assert.ok(perches.includes(mind.perch));
+      assert.equal(mind.place.y, mind.perch.y);
+      assert.ok(mind.x >= mind.perch.left && mind.x <= mind.perch.right);
+    }
+  });
+  return { acts, longest };
+}
+
+test('by itself it does every kind of thing, at random, and none twice in a row', () => {
+  const { acts, longest } = roam(1);
+  assert.deepEqual([...new Set(acts)].sort(), [
+    'look',
+    'puff',
+    'roam',
+    'scratch',
+    'sit',
+    'soar',
+    'stroll',
+  ]);
+  acts.forEach((act, i) => assert.notEqual(act, acts[i - 1], `${act} twice in a row`));
+  assert.notDeepEqual(acts.slice(0, 7), acts.slice(7, 14), 'in no fixed order');
+  // a second in the air at most, after the crouch: what a flight crosses, it crosses quickly
+  assert.ok(longest > 0.5 && longest <= 1.25 + 2 * FRAME, `its longest flight took ${longest} s`);
+});
+
+test('on a small screen it flies less often', () => {
+  const flies = (acts: string[]) =>
+    acts.filter((act) => act === 'roam' || act === 'soar').length / acts.length;
+  const [large, small] = [flies(roam(1).acts), flies(roam(0.4).acts)];
+  assert.ok(
+    small > 0 && small < large * 0.7,
+    `${small.toFixed(2)} of its acts, not ${large.toFixed(2)}`,
+  );
+});
+
+test('nothing a visitor reads or presses is a place to stand over', () => {
+  /** An element as `empty` reads it: what it is, or is inside, and the text that is its own. */
+  const hit = (inside: string, text = '') => ({
+    closest: (selector: string) => (selector.split(', ').includes(inside) ? {} : null),
+    childNodes: [
+      { nodeType: 1, textContent: 'a child, with words of its own' },
+      { nodeType: 3, textContent: text },
+    ],
+  });
+  assert.equal(empty(undefined), false, 'off the screen, nothing is known to be free');
+  assert.equal(empty(hit('div')), true);
+  assert.equal(empty(hit('div', '  \n')), true, 'the space between tags is not text');
+  assert.equal(empty(hit('div', 'A heading')), false);
+  for (const control of ['a', 'button', 'summary', 'input', 'img', 'pre', 'code'])
+    assert.equal(empty(hit(control)), false, control);
+  assert.ok(CONTENT.includes('[role="button"]'));
+});
+
+test('no frame is drawn with the tab hidden, in its sleep, or out of view and not on its way', () => {
+  const seen = { hidden: false, asleep: 0, inView: true, flying: false };
+  assert.equal(awake(seen), true);
+  assert.equal(awake({ ...seen, hidden: true }), false);
+  assert.equal(awake({ ...seen, asleep: 1 }), true, 'it is drawn falling asleep');
+  assert.equal(awake({ ...seen, asleep: 2 }), false);
+  assert.equal(awake({ ...seen, inView: false }), false);
+  assert.equal(awake({ ...seen, inView: false, flying: true }), true, 'a flight back into view');
+  assert.equal(awake({ ...seen, inView: false, flying: true, hidden: true }), false);
 });

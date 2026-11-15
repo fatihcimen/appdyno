@@ -51,25 +51,20 @@ test('the ratio is the one WCAG gives', () => {
 
 test('every text of the landing page has 4.5:1 on its ground, light and dark', () => {
   holds('tokens.css', '@media (prefers-color-scheme: dark)', {
-    // headings, body text, the install line, the cards
+    // headings, body text, the install line, a dial's number, the cards
     '--fg': ['--floor', '--panel', '--term'],
-    '--soft': ['--floor', '--panel', '--gauge-top', '--gauge-bottom'],
-    // the nav, the footer, captions and notes, a step that is not the one playing
+    '--soft': ['--floor', '--panel'],
+    // the nav, the footer, notes, a dial's unit
     '--muted': ['--floor', '--panel', '--term'],
     // links and code
     '--blue-lt': ['--floor', '--panel', '--term'],
-    '--violet': ['--floor', '--panel'],
     '--magenta-lt': ['--floor', '--panel', '--term'],
-    // the kicker, a step's number, a case's headings, a call's time
+    // a case's headings, a call's time
     '--amber': ['--floor', '--panel', '--term'],
     '--green': ['--term'],
     '--term-fg': ['--term'],
     // a button, a pressed chip and a ref's tag
     '--on-accent': ['--blue', '--app-buy', '--app-fg'],
-    // the dial's numbers and unit on the lightest of its face, and its readout
-    '--dial-ink': ['--dial-face'],
-    '--dial-dim': ['--dial-face', '--dial-pit'],
-    '--lcd-ink': ['--dial-pit'],
     // the example app on the phone
     '--app-fg': ['--app', '--app-card'],
     '--app-muted': ['--app-card'],

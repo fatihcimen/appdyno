@@ -1,65 +1,131 @@
 ---
 import type { Words } from '../../i18n/index.ts';
-import Dial from './Dial.astro';
+import { ARC, SCALES, shareOf, type Gauge } from './dials.ts';
+import { READINGS } from './scenarios.ts';
 
 interface Props {
   t: Words;
 }
-const { bench, dials } = Astro.props.t;
+const { t } = Astro.props;
+const dials = (Object.keys(SCALES) as Gauge[]).map((id) => ({ id, ...SCALES[id] }));
 ---
 
-{/* The bench's front panel: cold launch, frames and memory. Every dial of the page takes its gradients from here. */}
-<div class="gauges">
+{/* The demo's three numbers, each on an arc. A step of a job fills #n-<id> to its share and writes #v-<id>; the dragon breathes at the number that landed. */}
+<div class="metrics" data-perch>
   <svg class="defs" width="0" height="0" aria-hidden="true">
     <defs>
-      <linearGradient id="dial-bezel" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#eef1ff"></stop>
-        <stop offset=".45" stop-color="#7c82ad"></stop>
-        <stop offset="1" stop-color="#23264a"></stop>
-      </linearGradient>
-      <linearGradient id="dial-rim" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#1a1d3b"></stop>
-        <stop offset="1" stop-color="#9aa0c6"></stop>
-      </linearGradient>
-      <radialGradient id="dial-face" cx=".5" cy=".4" r=".7">
-        <stop offset="0" style="stop-color: var(--dial-face)"></stop>
-        <stop offset="1" style="stop-color: var(--dial-pit)"></stop>
-      </radialGradient>
-      <radialGradient id="dial-hub" cx=".4" cy=".35" r=".7">
-        <stop offset="0" stop-color="#ffffff"></stop>
-        <stop offset=".5" stop-color="#9aa0c6"></stop>
-        <stop offset="1" stop-color="#2a2e55"></stop>
-      </radialGradient>
-      <linearGradient id="dial-glass" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#fff" stop-opacity=".22"></stop>
-        <stop offset="1" stop-color="#fff" stop-opacity="0"></stop>
+      <linearGradient id="dial-fill" gradientUnits="userSpaceOnUse" x1="27" y1="0" x2="173" y2="0">
+        <stop offset="0" style="stop-color: var(--blue)"></stop>
+        <stop offset=".55" style="stop-color: var(--violet)"></stop>
+        <stop offset="1" style="stop-color: var(--magenta)"></stop>
       </linearGradient>
     </defs>
   </svg>
-  <Dial id="launch" label={bench.launch} />
-  <Dial id="frames" label={bench.frames} />
-  <Dial id="memory" label={bench.memory} />
-  <p class="example">{dials.example}</p>
+  {
+    dials.map(({ id, label, unit }) => (
+      <div class="dial">
+        <svg viewBox="0 0 200 152" aria-hidden="true">
+          <path class="track" d={ARC} />
+          <path
+            class="fill"
+            id={`n-${id}`}
+            d={ARC}
+            pathLength="1"
+            style={`--share: ${shareOf(id, READINGS[id])}`}
+          />
+        </svg>
+        <p class="read">
+          <b id={`v-${id}`}>{READINGS[id]}</b>
+          {unit && <small>{unit}</small>}
+        </p>
+        <p class="l">{label}</p>
+      </div>
+    ))
+  }
+  <p class="example">{t.console.example}</p>
 </div>
 
 <style>
-  .gauges {
+  .metrics {
     position: relative;
+    width: 100%;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    padding: 12px 14px 14px;
-    border-top: 1px solid var(--line);
-    background: linear-gradient(180deg, var(--gauge-top), var(--gauge-bottom));
+    gap: 8px 24px;
+    padding: 20px 24px 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
   }
   .defs {
     position: absolute;
   }
+  .dial {
+    position: relative;
+    max-width: 190px;
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  path {
+    fill: none;
+    stroke-width: 9;
+    stroke-linecap: round;
+  }
+  .track {
+    stroke: var(--line);
+  }
+  .fill {
+    stroke: url(#dial-fill);
+    stroke-dasharray: var(--share) 1;
+    transition: stroke-dasharray 0.6s ease;
+  }
+  /* the number sits in the open middle of its arc */
+  .read {
+    position: absolute;
+    inset: 44% 0 auto;
+    margin: 0;
+    font: 700 clamp(20px, 5.4vw, 34px) / 1 var(--f-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--fg);
+  }
+  .read b {
+    font-weight: inherit;
+  }
+  .read small {
+    margin-left: 0.25em;
+    font-size: 0.42em;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .l {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--soft);
+  }
   .example {
     grid-column: 1 / -1;
-    margin: 4px 0 0;
+    margin: 6px 0 0;
     text-align: center;
     font-size: 12px;
-    color: var(--soft);
+    color: var(--muted);
+  }
+  /* three dials side by side fit a page 320 wide */
+  @media (max-width: 560px) {
+    .metrics {
+      gap: 8px 12px;
+      padding: 16px 12px 12px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fill {
+      transition: none;
+    }
   }
 </style>

@@ -1,7 +1,7 @@
 import type { Perch } from './mind.ts';
 
 /**
- * Where on the page the dragon may stand away from its bench: the top edges of the blocks marked
+ * Where on the page the dragon may stand: the top edges of the blocks marked
  * `data-perch`, and of each only the stretch with nothing over it. A top edge is outside its
  * block's own text by construction; what stands above the block is what this looks for.
  */
@@ -47,16 +47,44 @@ export function perchOn(
 }
 
 /** What a visitor reads or presses: the dragon stands over none of it. */
-const CONTENT =
+export const CONTENT =
   'a, button, input, select, textarea, summary, label, [role="button"], img, svg, canvas, video, pre, code';
 
-/** Whether a point of the page, which must be on the screen, has no text and no control on it. */
-function clear(x: number, y: number) {
-  const hit = document.elementFromPoint(x - scrollX, y - scrollY);
+/** What `empty` reads of an element. */
+type Hit = Pick<Element, 'closest'> & {
+  childNodes: Iterable<{ nodeType: number; textContent: string | null }>;
+};
+const TEXT = 3;
+
+/** Whether what is at a point of the page is neither a control, a picture nor text of its own. */
+export function empty(hit: Hit | undefined) {
   if (!hit || hit.closest(CONTENT)) return false;
-  return ![...hit.childNodes].some(
-    (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+  return ![...hit.childNodes].some((node) => node.nodeType === TEXT && node.textContent?.trim());
+}
+
+/** Whether a point of the page, which must be on the screen, has no text and no control on it. The dragon's own layer is not on the page. */
+const clear = (x: number, y: number) =>
+  empty(
+    document
+      .elementsFromPoint(x - scrollX, y - scrollY)
+      .find((hit) => !hit.closest('.mascot-layer')),
   );
+
+/** The block each perch is the top edge of, and where its left side was, so a perch can go with its block. */
+export const blocks = new WeakMap<Perch, { block: Element; left: number }>();
+
+/** A block's box on the page, not on the screen. */
+export const onPage = (block: Element) => {
+  const { left, top, width, height } = block.getBoundingClientRect();
+  return { left: left + scrollX, top: top + scrollY, width, height };
+};
+
+/** The perch on a block's top edge, where the block is on the screen, or nothing. */
+export function perchOf(block: Element, size: number) {
+  const at = onPage(block);
+  const perch = perchOn(at, size, clear);
+  if (perch) blocks.set(perch, { block, left: at.left });
+  return perch;
 }
 
 /**
@@ -76,7 +104,7 @@ export function scout(size: number, pointer: { x: number; y: number } | undefine
       pointer.y <= top + scrollY + height
     )
       continue;
-    const perch = perchOn({ left: left + scrollX, top: top + scrollY, width, height }, size, clear);
+    const perch = perchOf(block, size);
     if (perch) perches.push(perch);
   }
   return perches;

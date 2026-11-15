@@ -34,8 +34,10 @@ export interface Traits {
   run: number;
   /** How far from a thing it stands to breathe at it. */
   reach: number;
-  /** The perches a visitor can see now, its home among them when that is in view. With none it stays at home. */
+  /** The perches a visitor can see now. With none it stays where it is. */
   scout?: () => Perch[];
+  /** The share of its flights it takes: under 1 on a small screen, where it flies less often. */
+  flights?: number;
   random?: () => number;
 }
 
@@ -50,7 +52,8 @@ const COOL = 1.4;
 const LANDED = 0.45;
 /** Of its own breaths and of those a tap asks for, the share that catches no fire. */
 const FAILS = 0.4;
-const OWN = ['look', 'scratch', 'stroll', 'sit', 'puff', 'roam'] as const;
+/** What it does by itself: `roam` is a hop or a flight to another perch, `soar` a flight across the screen. */
+const OWN = ['look', 'scratch', 'stroll', 'sit', 'puff', 'roam', 'soar'] as const;
 /** A perch nearer than this many body heights is a hop away; a farther one is a flight. */
 const HOP = 3;
 /** A hop's time in the air, long enough for a flap up and one down, and the crouch before it; a flight's speed in heights a second, and its crouch. */
@@ -58,10 +61,14 @@ const HOP_TIME = 0.7;
 const HOP_CROUCH = 0.14;
 const FLIGHT_SPEED = 4;
 const FLIGHT_CROUCH = 0.25;
+/** No flight is longer than its two flaps or this, in seconds: what it crosses, it crosses quickly. */
+const FLIGHT_LONGEST = 1;
 /** It follows a visitor down the page at most this often. */
 const FOLLOWS = 8;
 
-const same = (a: Perch, b: Perch) => a.y === b.y && a.left === b.left && a.right === b.right;
+/** Whether two perches are one edge: within a pixel, as the page gives an edge at two scrolls. */
+const same = (a: Perch, b: Perch) =>
+  Math.abs(a.y - b.y) < 1 && Math.abs(a.left - b.left) < 1 && Math.abs(a.right - b.right) < 1;
 
 export class Mind {
   /** Where it stands along its perch. In the air, `place` says where it is. */
@@ -71,9 +78,11 @@ export class Mind {
   mode: 'idle' | 'walk' | 'run' | 'sit' | 'sleep' | 'hop' | 'fly' = 'idle';
   /** What it has asked of its body since the stage last took them. */
   deeds: Deed[] = [];
-  /** The perch it stands on, or has just left, and the bench's floor, where it lives. */
+  /** The perch it stands on, or has just left. */
   perch: Perch;
-  home: Perch;
+  /** The last thing it did by itself, and how many such things it has done. */
+  act: (typeof OWN)[number] | '' = '';
+  acts = 0;
   readonly traits: Traits;
 
   #goal: number | undefined;
@@ -88,24 +97,19 @@ export class Mind {
   #seen = 0;
   #sitUntil = 0;
   #followed = -FOLLOWS;
-  #lastOwn = '';
   #startled = false;
   readonly #random: () => number;
 
-  constructor(home: Perch, traits: Traits) {
-    this.perch = this.home = home;
+  constructor(perch: Perch, traits: Traits) {
+    this.perch = perch;
     this.traits = traits;
-    this.x = home.left + (home.right - home.left) * 0.3;
+    this.x = perch.left + (perch.right - perch.left) * 0.3;
     this.#random = traits.random ?? Math.random;
   }
 
   /** The clip that loops under its deeds. */
   get base(): Clip {
     return this.mode === 'hop' ? 'idle' : this.mode;
-  }
-
-  get atHome() {
-    return this.perch === this.home && !this.#air;
   }
 
   /** Where its feet are on the page: on its perch, or along its way through the air. */
@@ -122,22 +126,13 @@ export class Mind {
     };
   }
 
-  /** The bench moved or changed size, as a layout does: at home it keeps its share of the way along. */
-  stand(home: Perch) {
-    const { left, right } = this.home;
-    const along = (x: number) =>
-      home.left +
-      Math.min(1, Math.max(0, (x - left) / Math.max(1, right - left))) * (home.right - home.left);
-    if (this.perch === this.home) {
-      this.x = along(this.x);
-      if (this.#goal !== undefined) this.#goal = along(this.#goal);
-      this.perch = home;
-    }
-    if (this.#air?.perch === this.home) {
-      this.#air.perch = home;
-      this.#air.to = { x: along(this.#air.to.x), y: home.y };
-    }
-    this.home = home;
+  /** The block it stands on moved on the page, as a layout does: it goes with it. */
+  ride(dx: number, dy: number) {
+    this.perch.left += dx;
+    this.perch.right += dx;
+    this.perch.y += dy;
+    this.x += dx;
+    if (this.#goal !== undefined) this.#goal += dx;
   }
 
   step(dt: number, now: number) {
@@ -192,13 +187,14 @@ export class Mind {
   }
 
   /**
-   * The console sends a number to a gauge of the bench: it runs there, from wherever it is, and
-   * breathes at the gauge once the number has landed.
+   * The console sends a number to a dial: it goes to the perch by the dial, from wherever it is,
+   * runs along it to the number, and breathes at it once the number has landed. With no perch
+   * there it does so on the one it has.
    */
-  gauge(now: number, aim: Point) {
+  gauge(now: number, aim: Point, by?: Perch) {
     this.rouse(now);
     this.#errand = { aim, landed: now + LANDED };
-    if ((this.#air?.perch ?? this.perch) !== this.home) this.#leave(this.home, this.#beside(aim));
+    if (by && !same(by, this.#air?.perch ?? this.perch)) this.#leave(by, this.#beside(aim, by));
     else if (!this.#air) this.#runTo(aim);
   }
 
@@ -212,20 +208,13 @@ export class Mind {
     this.#next = this.#busy + PAUSE;
   }
 
-  /** Back to the bench, as a visitor asks by a tap on it. */
-  goHome(now: number) {
-    this.rouse(now);
-    if ((this.#air?.perch ?? this.perch) !== this.home) this.#leave(this.home);
-  }
-
   /**
    * The page has come to rest with the dragon out of sight: it flies in from `edge`, a point just
-   * off the screen on its side, to a perch in view, home before any other.
+   * off the screen on its side, to a perch in view.
    */
   follow(now: number, edge: Point) {
     if (this.#air || this.#errand || now - this.#followed < FOLLOWS) return;
-    const perches = this.traits.scout?.() ?? [];
-    const to = perches.find((perch) => same(perch, this.home)) ?? this.#pick(perches);
+    const to = this.#pick(this.traits.scout?.() ?? []);
     if (!to) return;
     this.#followed = now;
     this.rouse(now);
@@ -238,9 +227,8 @@ export class Mind {
     return others.length ? others[Math.floor(this.#random() * others.length)] : undefined;
   }
 
-  /** The place on its home beside a gauge, on the side it comes from if the perch reaches that far. */
-  #beside(aim: Point) {
-    const { left, right } = this.home;
+  /** The place on a perch beside a dial's number, on the side it comes from if the perch reaches that far. */
+  #beside(aim: Point, { left, right } = this.perch) {
     const { reach } = this.traits;
     const side = this.place.x <= aim.x ? -1 : 1;
     const spot = aim.x + side * reach;
@@ -255,14 +243,14 @@ export class Mind {
     this.mode = 'run';
   }
 
-  /** Leaves for a perch through the air: a hop to a near one, a flight to a far one or from off the screen. */
-  #leave(to: Perch, x?: number, edge?: Point) {
+  /** Leaves for a perch through the air: a hop to a near one, a flight to a far one, from off the screen, or when it soars. */
+  #leave(to: Perch, x?: number, edge?: Point, soars = false) {
     if (this.#air?.perch === to) return;
     const from = edge ?? this.place;
     const land = { x: Math.min(to.right, Math.max(to.left, x ?? from.x)), y: to.y };
     const far = Math.hypot(land.x - from.x, land.y - from.y);
     const { size, lengths } = this.traits;
-    const flies = far > HOP * size || edge !== undefined;
+    const flies = far > HOP * size || edge !== undefined || soars;
     this.#goal = undefined;
     this.facing = land.x >= from.x ? 1 : -1;
     this.mode = flies ? 'fly' : 'hop';
@@ -272,7 +260,10 @@ export class Mind {
           to: land,
           perch: to,
           t: -FLIGHT_CROUCH,
-          time: Math.max(lengths.takeoff + lengths.land, far / (FLIGHT_SPEED * size)),
+          time: Math.max(
+            lengths.takeoff + lengths.land,
+            Math.min(FLIGHT_LONGEST, far / (FLIGHT_SPEED * size)),
+          ),
           arc: Math.min(1.2 * size, 0.2 * far),
           down: false,
         }
@@ -305,7 +296,7 @@ export class Mind {
     this.mode = 'idle';
     this.#busy = now + 0.6;
     this.#next = this.#busy + PAUSE;
-    if (this.#errand && this.perch === this.home) this.#runTo(this.#errand.aim);
+    if (this.#errand) this.#runTo(this.#errand.aim);
   }
 
   #breathe(now: number, puff: 'fire' | 'smoke', aim?: Point) {
@@ -317,13 +308,25 @@ export class Mind {
 
   /** By itself, every few seconds, never the same thing twice in a row. */
   #own(now: number) {
-    const elsewhere = this.#pick(this.traits.scout?.() ?? []);
-    const choices = OWN.filter((name) => name !== this.#lastOwn && (name !== 'roam' || elsewhere));
+    const perches = this.traits.scout?.() ?? [];
+    const elsewhere = this.#pick(perches);
+    const across = perches[Math.floor(this.#random() * perches.length)];
+    const flies = this.#random() < (this.traits.flights ?? 1);
+    const may = { roam: flies && elsewhere, soar: flies && across };
+    const choices = OWN.filter(
+      (name) => name !== this.act && (!(name in may) || may[name as keyof typeof may]),
+    );
     const pick = choices[Math.floor(this.#random() * choices.length)] ?? 'look';
-    this.#lastOwn = pick;
+    this.act = pick;
+    this.acts += 1;
     this.#busy = now;
     if (pick === 'roam' && elsewhere) this.#leave(elsewhere);
-    else if (pick === 'stroll') {
+    else if (pick === 'soar' && across) {
+      // to the end of a perch that is farther from where it stands, its own perch among them
+      const to = same(across, this.perch) ? this.perch : across;
+      const far = this.x - to.left > to.right - this.x ? to.left : to.right;
+      this.#leave(to, far, undefined, true);
+    } else if (pick === 'stroll') {
       const { left, right } = this.perch;
       this.#goal = left + this.#random() * (right - left);
       this.mode = 'walk';
@@ -332,7 +335,7 @@ export class Mind {
       this.#sitUntil = now + 6 + 4 * this.#random();
       this.#busy = this.#sitUntil;
     } else if (pick === 'puff') this.#breathe(now, this.#random() < FAILS ? 'smoke' : 'fire');
-    else if (pick !== 'roam') {
+    else if (pick !== 'roam' && pick !== 'soar') {
       this.mode = 'idle';
       this.deeds.push({ clip: pick });
       this.#busy = now + this.traits.lengths[pick];

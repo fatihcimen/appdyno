@@ -145,14 +145,14 @@ Diyagramlar `docs/images` içinde elle yazılmış SVG'lerdir, üreteç yoktur. 
 
 ## Site
 
-[appdyno.dev](https://appdyno.dev), Astro ve Starlight kullanan bir workspace paketi olan `site/` içinden derlenir. Belgeleri `docs/` içindeki dosyalardır ve her derlemede oldukları gibi okunur: `X.md` `/docs/X/` adresindeki, `X.tr.md` ise `/tr/docs/X/` adresindeki sayfadır; yani bir belgedeki değişiklik `site/` içinde hiçbir şey gerektirmez. Açılış sayfası `site/src/components/landing` içindedir ve her sözcüğü, anahtarı anahtarına, `site/src/i18n/en.ts` ile `site/src/i18n/tr.ts` içindedir. Tezgâhtaki ejderha `site/src/components/mascot` içindedir: sayfa, modelinin kemiklerini ve kliplerini `names.ts` içindeki adlarla bulur; `models` bu adları dosyada korur, `check` de commit edilmiş dosyayı bu adlara bağlı tutar.
+[appdyno.dev](https://appdyno.dev), Astro ve Starlight kullanan bir workspace paketi olan `site/` içinden derlenir. Belgeleri `docs/` içindeki dosyalardır ve her derlemede oldukları gibi okunur: `X.md` `/docs/X/` adresindeki, `X.tr.md` ise `/tr/docs/X/` adresindeki sayfadır; yani bir belgedeki değişiklik `site/` içinde hiçbir şey gerektirmez. Açılış sayfası `site/src/components/landing` içindedir ve her sözcüğü, anahtarı anahtarına, `site/src/i18n/en.ts` ile `site/src/i18n/tr.ts` içindedir. Sayfada dolaşan ejderha `site/src/components/mascot` içindedir: sayfa, modelinin kemiklerini ve kliplerini `names.ts` içindeki adlarla bulur; `models` bu adları dosyada korur, `check` de commit edilmiş dosyayı bu adlara bağlı tutar.
 
 ```sh
 pnpm --filter @appdyno/site dev          # site localhost'ta; kaydedilen bir belge ya da bileşen yeniden gösterilir
 pnpm --filter @appdyno/site check        # tipleri ve kendi testleri
 pnpm --filter @appdyno/site build        # bütün site, site/dist içine
 pnpm --filter @appdyno/site check:dist   # derlemedeki her bağlantı, görsel ve çapa, bir de her sayfanın head'i
-pnpm --filter @appdyno/site models DIR   # DIR içindeki dyno.glb ve bench.glb'yi site/public/models içine sıkıştırır
+pnpm --filter @appdyno/site models DIR   # DIR içindeki dyno.glb'yi site/public/models içine sıkıştırır
 ```
 
-`pnpm run ci` sitenin derlemesini dışarıda bırakır. `.github/workflows/site.yml` bunları `site/` ya da `docs/` içine dokunan bir pull request'te çalıştırır ve `main`'e bir push'ta GitHub Pages'e yayımlar. Modellerden yalnızca sıkıştırılmış olanlar commit edilir.
+`pnpm run ci` sitenin derlemesini dışarıda bırakır. `.github/workflows/site.yml` bunları `site/` ya da `docs/` içine dokunan bir pull request'te çalıştırır ve `main`'e bir push'ta GitHub Pages'e yayımlar. Modelin yalnızca sıkıştırılmış hali commit edilir.

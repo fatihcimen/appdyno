@@ -12,12 +12,8 @@ const other: Lang = lang === 'en' ? 'tr' : 'en';
 
 <nav class="top" aria-label={t.nav.label}>
   <a class="brand" href={pathIn(lang, '/')}>appdyno</a>
-  <a href="#story">{t.nav.story}</a>
   <a href="#console">{t.nav.console}</a>
-  <a href="#tools">{t.nav.tools}</a>
   <a href="#mac">{t.nav.mac}</a>
-  <a href="#source">{t.nav.source}</a>
-  <a href="#faq">{t.nav.faq}</a>
   <a href={pathIn(lang, '/docs/')}>{t.nav.docs}</a>
   <a href={pathIn(other, '/')} hreflang={other} lang={other}>{t.meta.other}</a>
   <a class="gh" href={REPO}>{t.nav.github}</a>

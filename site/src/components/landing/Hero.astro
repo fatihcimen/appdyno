@@ -1,27 +1,111 @@
 ---
+import { getImage } from 'astro:assets';
+import dyno from '../../assets/dyno.webp';
 import type { Words } from '../../i18n/index.ts';
-import { clientsLine } from '../../readme.ts';
-import { INSTALL, type Lang } from '../../site.ts';
-import Bench from './Bench.astro';
+import { INSTALL, RELEASES, type Lang } from '../../site.ts';
 
 interface Props {
   lang: Lang;
   t: Words;
 }
-const { lang, t } = Astro.props;
+const { t } = Astro.props;
 const { hero } = t;
+const still = await getImage({ src: dyno, format: 'webp', width: 240 });
 ---
 
+{/* What appdyno is for and how to get it, beside a real run of it. The dragon's picture stands on the run's top edge: where it may move, the dragon itself starts there. */}
 <header class="hero">
   <div>
-    <h1 set:html={hero.title} />
-    <p class="lede">{hero.lede}</p>
-    <div class="kicker">{hero.kicker}</div>
+    <h1>{hero.title}</h1>
+    <p class="lede">{hero.sub}</p>
     <div class="install">
       <code>{INSTALL}</code>
       <button type="button" data-copy={INSTALL} data-copied={hero.copied}>{hero.copy}</button>
     </div>
-    <div class="clients">{clientsLine(lang)}</div>
+    <p class="also"><a href={`${RELEASES}/latest`}>{t.mac.download}</a> · {hero.clients}</p>
   </div>
-  <Bench t={t} />
+  <figure data-perch>
+    <img
+      class="mascot-still"
+      src={still.src}
+      width={still.attributes.width}
+      height={still.attributes.height}
+      alt={t.mascot.picture}
+      decoding="async"
+    />
+    <img
+      class="run"
+      src="/docs/images/checkout.webp"
+      width="1240"
+      height="970"
+      alt={hero.shot}
+      fetchpriority="high"
+      decoding="async"
+    />
+  </figure>
 </header>
+
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: clamp(28px, 5vw, 64px);
+    align-items: center;
+    /* room over the picture for the dragon that stands on it */
+    padding-block: calc(var(--mascot) * 1.4) clamp(56px, 8vw, 96px);
+  }
+  .install {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font: 500 15px var(--f-mono);
+    max-width: 100%;
+  }
+  .install::before {
+    content: '$';
+    color: var(--magenta-lt);
+  }
+  .install code {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .install button {
+    font: 600 12px var(--f-ui);
+    color: var(--fg);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  .also {
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  figure {
+    position: relative;
+    margin: 0;
+  }
+  .run {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 30px 60px -40px var(--shade);
+  }
+  @media (max-width: 860px) {
+    .hero {
+      grid-template-columns: minmax(0, 1fr);
+      padding-top: 28px;
+    }
+    figure {
+      margin-top: calc(var(--mascot) * 1.4);
+    }
+  }
+</style>

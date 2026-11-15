@@ -1,4 +1,4 @@
-/* A dyno lab: the bench with its dragon and its dials, the story of a request, a console where the agent drives a phone, the tool rack, the Mac app and the source. Its colours are tokens.css's, and --f-display and --f-mono come from the fonts of astro.config.ts. */
+/* The landing page: what appdyno is for beside a real run of it, one demo where the agent drives a phone, three cases, the Mac app, the source and the questions. One idea a section, with room around it. Its colours are tokens.css's, and --f-display and --f-mono come from the fonts of astro.config.ts. */
 * {
   box-sizing: border-box;
 }
@@ -51,126 +51,44 @@ nav.top .gh {
   padding: 6px 12px;
 }
 
-/* hero: the bench */
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: 24px;
-  align-items: center;
-  padding-block: 18px 40px;
-}
-@media (max-width: 860px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-.kicker {
-  font: 700 12px var(--f-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 14px;
-}
+/* the page's one large line, and what stands under it */
 h1 {
-  font: 800 clamp(38px, 6vw, 72px)/0.95 var(--f-display);
-  letter-spacing: -0.035em;
-  margin: 6px 0 16px;
+  font: 800 clamp(30px, 3.9vw, 48px) / 1.1 var(--f-display);
+  letter-spacing: -0.025em;
+  margin: 0 0 18px;
   text-wrap: balance;
 }
-h1 em {
-  font-style: normal;
-  color: var(--magenta-lt);
-}
 .lede {
-  max-width: 40ch;
-  margin: 0 0 18px;
-  font-size: 20px;
-  line-height: 1.4;
-}
-.install {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
-  font: 500 15px var(--f-mono);
-  max-width: 100%;
-}
-.install::before {
-  content: '$';
-  color: var(--magenta-lt);
-}
-.install code {
-  overflow-x: auto;
-  white-space: nowrap;
-}
-.install button {
-  font: 600 12px var(--f-ui);
-  color: var(--fg);
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-.clients {
-  margin-top: 16px;
-  color: var(--muted);
-  font-size: 13px;
+  max-width: 44ch;
+  margin: 0 0 28px;
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--soft);
 }
 
-.bench {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  overflow: hidden;
-  background:
-    radial-gradient(70% 55% at 50% 100%, var(--glow), transparent 70%),
-    repeating-linear-gradient(90deg, transparent 0 39px, var(--grid) 39px 40px),
-    repeating-linear-gradient(0deg, transparent 0 39px, var(--grid) 39px 40px), var(--panel);
+/* a section: one idea, with room over and under it */
+main section {
+  padding-block: clamp(44px, 6vw, 76px);
 }
-.stage {
-  display: grid;
-  grid-template-columns: 1fr 1.25fr;
-  align-items: end;
-  min-height: 360px;
-}
-.stage img {
-  display: block;
-  width: 100%;
-  height: 360px;
-  object-fit: contain;
-}
-.stripes {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 6px;
-  background: repeating-linear-gradient(135deg, var(--amber-fill) 0 12px, var(--frame) 12px 24px);
-  opacity: 0.8;
-}
-
-/* console: scenario player */
 section h2 {
-  font: 800 clamp(28px, 4vw, 44px)/1.05 var(--f-display);
+  font: 800 clamp(26px, 3.2vw, 38px) / 1.1 var(--f-display);
   letter-spacing: -0.02em;
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   text-wrap: balance;
 }
 section .sub {
-  color: var(--muted);
-  margin: 0 0 22px;
+  color: var(--soft);
+  font-size: 18px;
+  margin: 0;
   max-width: 62ch;
 }
-.console {
-  padding-block: 40px;
-}
+
+/* the demo: its jobs, then the dials over the terminal, beside the phone */
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-top: 28px;
 }
 .chip {
   font: 600 14px var(--f-ui);
@@ -193,13 +111,24 @@ section .sub {
 .rig {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
-  gap: 22px;
+  gap: 24px;
   align-items: start;
+  /* the room the dragon stands in, on the dials' top edge */
+  margin-top: var(--mascot);
+}
+.rig .phone {
+  grid-area: 1 / 1 / span 2;
+}
+.more {
+  margin: 28px 0 0;
 }
 @media (max-width: 760px) {
   .rig {
     grid-template-columns: minmax(0, 1fr);
     justify-items: center;
+  }
+  .rig .phone {
+    grid-area: auto;
   }
 }
 
@@ -399,19 +328,19 @@ section .sub {
   word-break: break-word;
   color: var(--term-fg);
 }
-:is(.term, .slog) .k {
+.term .k {
   color: var(--magenta-lt);
 }
-:is(.term, .slog) .t {
+.term .t {
   color: var(--amber);
 }
-:is(.term, .slog) .r {
+.term .r {
   color: var(--blue-lt);
 }
-:is(.term, .slog) .ok {
+.term .ok {
   color: var(--green);
 }
-:is(.term, .slog) .d {
+.term .d {
   color: var(--muted);
 }
 .ask {
@@ -422,19 +351,7 @@ section .sub {
 .note {
   color: var(--muted);
   font-size: 13px;
-  margin: 10px 0 0;
-}
-/* a section rises as it comes into view: dimmed only once the script has asked for it, and never gone */
-.rises .reveal {
-  opacity: 0.4;
-  transform: translateY(22px);
-  transition:
-    opacity 0.6s ease,
-    transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-.rises .reveal.in {
-  opacity: 1;
-  transform: none;
+  margin: 14px 0 0;
 }
 
 /* the one thing a section asks for */
@@ -447,72 +364,6 @@ section .sub {
   background: var(--blue);
   border-radius: 12px;
   padding: 11px 16px;
-}
-
-/* tool rack */
-.rack {
-  padding-block: 40px 30px;
-}
-.tools {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 12px;
-}
-.tool {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 16px;
-  display: grid;
-  gap: 6px;
-  align-content: start;
-}
-.tool b {
-  font: 700 16px var(--f-display);
-}
-.tool p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-}
-.tool code {
-  font: 400 12px var(--f-mono);
-  color: var(--blue-lt);
-  overflow-wrap: anywhere;
-}
-.safe {
-  margin-top: 22px;
-  border: 1px dashed var(--line);
-  border-radius: 16px;
-  padding: 16px;
-  color: var(--soft);
-  font-size: 15px;
-}
-
-/* questions */
-.faq {
-  padding-block: 30px 40px;
-}
-.faq dl {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 12px;
-  margin: 0;
-}
-.faq dl > div {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 16px;
-}
-.faq dt {
-  font: 700 16px var(--f-display);
-  margin-bottom: 6px;
-}
-.faq dd {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
 }
 
 /* a page that is not there */

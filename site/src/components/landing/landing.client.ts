@@ -16,10 +16,10 @@ const out = el('out');
 const phone = el('phone');
 const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-run]')];
 
-// the dragon hears a step that worked and a number sent to a dial of the bench, if it is on the page
+// the dragon hears a step that worked and a number sent to a dial, if it is on the page
 const tell = (name: string, detail?: string) =>
   document.dispatchEvent(new CustomEvent(name, { detail }));
-const { play, reset } = playerOf([phone], out, () => tell(HOP));
+const { play, reset } = playerOf(phone, out, () => tell(HOP));
 
 for (const chip of chips)
   chip.addEventListener('click', () => {
