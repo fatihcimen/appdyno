@@ -162,6 +162,7 @@ export const tr: Words = {
     lastLog: 'son log satırı',
     saved: '4 adım flows/checkout.flow olarak kaydedildi',
     replayed: '4 adım, model yok · iPhone’daki gibi Siparişi ver’de başarısız oluyor',
+    example: 'Örnek bir oturum: süreler ve sayılar örnektir.',
   },
   cases: {
     title: 'Üç hata: bildirilmesinden regresyon testine',
@@ -188,8 +189,8 @@ export const tr: Words = {
         name: 'Yerel ekrandan web görünümüne geçişte bir hata',
         problem: 'Ödeme, yerel bir ekrandan web görünümüne geçerken bir değer kayboluyor.',
         evidence:
-          'Geçişin iki yanında da öğeler halinde ekran ve web görünümünün içindeki sayfayı okuyan <code>webview</code>.',
-        test: 'Geçişi aşan ve değeri öbür tarafta denetleyen bir akış.',
+          'Geçişe kadar öğeler halinde ekran ve web görünümünün içindeki sayfayı okuyan <code>webview</code>.',
+        test: 'Yerel adımları geçişe kadar yeniden oynatan bir akış; ardından <code>webview</code> değeri öbür tarafta okur.',
       },
     ],
   },

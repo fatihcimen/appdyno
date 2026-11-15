@@ -49,6 +49,7 @@ const first = scenes[SCENES[0]]?.flatMap((step) => lineOf(step) ?? []).join('\n'
         <pre class="slog" id="story-log" set:html={first} />
       </div>
     </div>
+    <p class="note">{story.example}</p>
   </div>
 </section>
 <script

@@ -160,6 +160,7 @@ export const en = {
     lastLog: 'its last log line',
     saved: 'saved 4 steps as flows/checkout.flow',
     replayed: '4 steps, no model · fails at Place order, as on the iPhone',
+    example: 'An example session: its times and numbers are examples.',
   },
   cases: {
     title: 'Three bugs, from report to regression test',
@@ -186,8 +187,8 @@ export const en = {
         name: 'A bug where native meets web',
         problem: 'A value is lost when the checkout moves from a native screen into a web view.',
         evidence:
-          'The screen as elements on both sides of the switch, and <code>webview</code> reading the page inside the web view.',
-        test: 'A flow that crosses the switch and checks the value on the other side.',
+          'The screen as elements up to the switch, and <code>webview</code> reading the page inside the web view.',
+        test: 'A flow that replays the native steps up to the switch, then <code>webview</code> reads the value on the other side.',
       },
     ],
   },
