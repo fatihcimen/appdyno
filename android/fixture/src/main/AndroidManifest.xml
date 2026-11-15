@@ -57,6 +57,7 @@
         <activity android:name=".SurfaceActivity" />
         <activity android:name=".CanvasActivity" />
         <activity android:name=".MarqueeActivity" />
+        <activity android:name=".BannerActivity" />
         <activity android:name=".LocaleActivity" />
         <activity android:name=".LifecycleActivity" />
         <activity android:name=".PhotosActivity" />

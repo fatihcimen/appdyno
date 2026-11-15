@@ -46,6 +46,7 @@ private val LINKED = mapOf(
     "marquee_jumps" to MarqueeActivity::class.java,
     "marquee_back" to MarqueeActivity::class.java,
     "marquee_cut" to MarqueeActivity::class.java,
+    "banner" to BannerActivity::class.java,
     "locale" to LocaleActivity::class.java,
     "lifecycle" to LifecycleActivity::class.java,
     "photos" to PhotosActivity::class.java,

@@ -24,6 +24,10 @@
     <item name="busy_input" type="id" />
     <item name="ticker" type="id" />
     <item name="stop" type="id" />
+    <item name="banner" type="id" />
+    <item name="banner_count" type="id" />
+    <item name="banner_add" type="id" />
+    <item name="banner_details" type="id" />
     <item name="load" type="id" />
     <item name="loaded" type="id" />
     <item name="ask_permission" type="id" />
