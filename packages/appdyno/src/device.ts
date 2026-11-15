@@ -8,7 +8,7 @@ export type Point = { x: number; y: number };
 
 export type Rect = { x: number; y: number; width: number; height: number };
 
-/** One element a person reads or taps: what it shows, where it is, and what names it. */
+/** One element a person reads or taps. */
 export type ScreenElement = {
   /** Its name on this screen and on the next read of it. */
   ref: string;
@@ -17,20 +17,13 @@ export type ScreenElement = {
   label: string;
   /** Its words uncut, where `label` is cut: what a selector's text is matched against. */
   whole?: string;
-  flags: ('clickable' | 'checked' | 'focused' | 'web')[];
+  /** Its identifier (an Android resource id without its package). */
+  id?: string;
   rect: Rect;
   /** Its middle. */
   x: number;
   y: number;
-  /** Its identifier (an Android resource id without its package). */
-  id?: string;
-  /** Stable across runs: the id, else the label, else a path from the nearest element with an id, else its place. */
-  name: string;
-  nameKind: 'label' | 'id' | 'path' | 'position';
-  /** For a name that is a path or a place: the text next to it. */
-  context?: string;
-  /** The text that tells it from elements of the same words. */
-  refContext?: string;
+  flags: ('clickable' | 'checked' | 'focused' | 'web')[];
 };
 
 /** Names an element by what it shows instead of where it is. `index` picks one of several matches, from 0. */
@@ -128,11 +121,15 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     { ...DEFAULT_POLICY, ...(allowDevices && { devices: allowDevices }) },
     deviceProviders(),
   ).deviceFor(serial);
-  if (!share) await claim(serial, 'appdyno device');
-  const letGo = () => {
+  const letGo = (held = !share) => {
     device.close();
-    if (!share) release(serial);
+    if (held) release(serial);
   };
+  if (!share)
+    await claim(serial, 'appdyno device').catch((e: unknown) => {
+      letGo(false);
+      throw e;
+    });
   await device.open().catch((e: unknown) => {
     letGo();
     throw e;
