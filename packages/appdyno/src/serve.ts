@@ -16,14 +16,30 @@ const listOf = (s: string | undefined) =>
     .map((x) => x.trim())
     .filter(Boolean);
 
+/** What a client puts where a field of its install form has no value: the manifest's own words for it, as they were. */
+const UNFILLED = /^\$\{user_config\.\w+\}$/;
+
+/**
+ * A field of the desktop extension's install form, which its manifest hands over as a variable whatever the person
+ * wrote: one left empty is no list, as the form says, where a script's unset variable is refused.
+ */
+const fieldOf = (said: string | undefined) =>
+  said === undefined || said.trim() === '' || UNFILLED.test(said.trim()) ? undefined : said;
+
+const FIELDS = {
+  'allow-devices': 'APPDYNO_FORM_ALLOW_DEVICES',
+  'allow-apps': 'APPDYNO_FORM_ALLOW_APPS',
+  'allow-urls': 'APPDYNO_FORM_ALLOW_URLS',
+} as const;
+
 /**
  * What this server may do, by its flags, else the environment: no tool call sets any of it. A list given empty, as a
  * script's unset variable gives it, is refused, as it would let in every device, app or link, and so is a pattern that
  * matches the empty text, as `"$A|$B"` with one unset gives, which matches every serial and link.
  */
 export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.env): Policy {
-  const given = (flag: 'allow-devices' | 'allow-apps' | 'allow-urls', name: string) => {
-    const said = values[flag] ?? env[name];
+  const given = (flag: keyof typeof FIELDS, name: string) => {
+    const said = values[flag] ?? env[name] ?? fieldOf(env[FIELDS[flag]]);
     if (said !== undefined && listOf(said).length === 0)
       throw new Error(
         `--${flag} (${name}) is empty, which would let in every one: give what it lets in, or leave it out`,

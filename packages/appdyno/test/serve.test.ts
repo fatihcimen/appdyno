@@ -22,6 +22,40 @@ it('refuses an allow list given empty, by flag or variable, as it would let in e
   expect(policyOf({ 'allow-devices': '^emulator-' }, {}).devices?.test('emulator-5554')).toBe(true);
 });
 
+it("takes an install form's field as the person left it: empty is no list, and what is written is held to the same", () => {
+  const fields = ['DEVICES', 'APPS', 'URLS'].map((f) => `APPDYNO_FORM_ALLOW_${f}`);
+  // empty, and the manifest's own placeholder, which a client leaves where a field has no value
+  for (const empty of ['', '  ', '${user_config.allow_devices}'])
+    for (const name of fields) {
+      const policy = policyOf({}, { [name]: empty });
+      expect(policy.apps).toEqual([]);
+      expect([policy.devices, policy.urls]).toEqual([undefined, undefined]);
+    }
+  const policy = policyOf(
+    {},
+    {
+      APPDYNO_FORM_ALLOW_DEVICES: '^emulator-',
+      APPDYNO_FORM_ALLOW_APPS: 'a.b, c.d',
+      APPDYNO_FORM_ALLOW_URLS: '^https://a\\.test/',
+    },
+  );
+  expect(policy.devices?.test('emulator-5554')).toBe(true);
+  expect(policy.devices?.test('R68')).toBe(false);
+  expect(policy.apps).toEqual(['a.b', 'c.d']);
+  expect(policy.urls?.test('https://a.test/x')).toBe(true);
+  expect(() => policyOf({}, { APPDYNO_FORM_ALLOW_DEVICES: 'emu|' })).toThrow(
+    'matches the empty text',
+  );
+  expect(() => policyOf({}, { APPDYNO_FORM_ALLOW_APPS: ' , ' })).toThrow('is empty');
+  // a flag or the server's own variable comes first, and its empty value is refused as before
+  expect(policyOf({ 'allow-apps': 'x.y' }, { APPDYNO_FORM_ALLOW_APPS: 'a.b' }).apps).toEqual([
+    'x.y',
+  ]);
+  expect(() => policyOf({}, { APPDYNO_ALLOW_APPS: '', APPDYNO_FORM_ALLOW_APPS: 'a.b' })).toThrow(
+    '(APPDYNO_ALLOW_APPS) is empty',
+  );
+});
+
 it('refuses a device or link pattern that matches the empty text, as one side of it unset leaves', () => {
   for (const values of [
     { 'allow-devices': 'emu|' },

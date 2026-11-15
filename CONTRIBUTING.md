@@ -86,14 +86,17 @@ Close the hub, the window of `appdyno hub` and of the Mac app, before a suite us
 
 What a person may set is in [the CLI reference](docs/reference/cli.md#server-options) and the pages it leads to. The variables below are internal: one appdyno process hands them to another, or a test sets them. Nothing else should set one, and any of them may change. `packages/appdyno/test/environment.test.ts` holds every `APPDYNO_` name in the TypeScript sources to the docs or to this table.
 
-| variable                   | set by                                | for                                                                                          |
-| -------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `APPDYNO_HELPERS`          | the Mac app's `appdyno` command       | where the app's viewer and helpers are, built already: nothing is compiled on first use      |
-| `APPDYNO_NATIVE_DIR`       | the tests and `scripts/build-app.mjs` | where the viewer and the helpers are compiled, in place of `~/Library/Caches/appdyno/native` |
-| `APPDYNO_HELD_BY_HUB`      | the hub, for a command it runs        | the command ends with the hub                                                                |
-| `APPDYNO_PROBE_OUT`        | the frame probe's launch, for the app | the file the probe in the app writes its frames to                                           |
-| `APPDYNO_VIEW_SOCKET`      | the view probe's launch, for the app  | the socket the probe in the app answers on                                                   |
-| `APPDYNO_RECORD_SEGMENT_S` | `device-tests/evidence.test.ts`       | an Android recording's segment, 180 s otherwise, so that a test of a long one is short       |
+| variable                     | set by                                | for                                                                                          |
+| ---------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `APPDYNO_HELPERS`            | the Mac app's `appdyno` command       | where the app's viewer and helpers are, built already: nothing is compiled on first use      |
+| `APPDYNO_NATIVE_DIR`         | the tests and `scripts/build-app.mjs` | where the viewer and the helpers are compiled, in place of `~/Library/Caches/appdyno/native` |
+| `APPDYNO_HELD_BY_HUB`        | the hub, for a command it runs        | the command ends with the hub                                                                |
+| `APPDYNO_FORM_ALLOW_DEVICES` | the desktop extension's manifest      | its install form's field for `--allow-devices`: left empty, it is no list                    |
+| `APPDYNO_FORM_ALLOW_APPS`    | the desktop extension's manifest      | the same, for `--allow-apps`                                                                 |
+| `APPDYNO_FORM_ALLOW_URLS`    | the desktop extension's manifest      | the same, for `--allow-urls`                                                                 |
+| `APPDYNO_PROBE_OUT`          | the frame probe's launch, for the app | the file the probe in the app writes its frames to                                           |
+| `APPDYNO_VIEW_SOCKET`        | the view probe's launch, for the app  | the socket the probe in the app answers on                                                   |
+| `APPDYNO_RECORD_SEGMENT_S`   | `device-tests/evidence.test.ts`       | an Android recording's segment, 180 s otherwise, so that a test of a long one is short       |
 
 ## Modules
 
