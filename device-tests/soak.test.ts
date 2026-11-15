@@ -253,7 +253,9 @@ it.skipIf(!DEVICE)(
       },
       web: async () => {
         await link('web');
-        await call('wait_for', { selector: { text: 'Web content' }, timeoutMs: 10_000 });
+        // the page's heading lies under a Pixel 8's status bar (132 px), where Android reads it as not shown
+        const text = platform === 'android' ? 'Payment page' : 'Web content';
+        await call('wait_for', { selector: { text }, timeoutMs: 10_000 });
         await call('screen');
         await call(
           'webview',
@@ -266,7 +268,7 @@ it.skipIf(!DEVICE)(
       crash: async () => {
         await link('crash');
         r.crashesInjected++;
-        await call(
+        const tap = await call(
           'tap',
           { selector: { id: 'crash' } },
           {
@@ -275,13 +277,17 @@ it.skipIf(!DEVICE)(
               o.ok || o.code === 'APP_NOT_RUNNING' ? undefined : `refused with ${o.code ?? ''}`,
           },
         );
+        // Android starts a crashed app again with its task, unless it crashed a short while before: there the app may
+        // be back in front, and only the tap can have said so
+        const restarted = platform === 'android' && tap.code === 'APP_NOT_RUNNING';
         // the tap said so, or the next read must: the app is not the one in front
         await call(
           'screen',
           {},
           {
             injected: true,
-            check: (o) => (o.data.foreground !== APP ? undefined : 'the app read in front'),
+            check: (o) =>
+              o.data.foreground !== APP || restarted ? undefined : 'the app read in front',
           },
         );
         const back = await call(
@@ -290,7 +296,9 @@ it.skipIf(!DEVICE)(
           {
             after: 'the crash',
             check: (o) =>
-              String(o.data.done).startsWith('started') ? undefined : String(o.data.done),
+              String(o.data.done).startsWith('started') || (restarted && o.data.foreground === APP)
+                ? undefined
+                : String(o.data.done),
           },
         );
         if (back.passed) r.crashRelaunches++;

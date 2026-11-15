@@ -28,7 +28,7 @@ export type Recoveries = {
   /** Agent ends after which a new agent took the old one's place within the scenario. */
   agentEndsRecovered: number;
   crashesInjected: number;
-  /** `launch_app` that started the app afresh after its crash. */
+  /** `launch_app` after the crash that has the app in front: started afresh, or brought there where Android started it. */
   crashRelaunches: number;
   /** The app found gone after a scenario that failed, and launched again. */
   unplannedRelaunches: number;
