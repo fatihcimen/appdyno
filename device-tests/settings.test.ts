@@ -88,6 +88,9 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
   it('puts text_size back as the device had it, unset or 1.0, and the languages the system writes beside it', async () => {
     const read = () =>
       ['font_scale', 'system_locales'].map((k) => adb('settings', 'get', 'system', k));
+    // a suite before this one may have left the scale at 1.0: it starts unset, and goes back as it was at the end
+    const before = read();
+    adb('settings', 'delete', 'system', 'font_scale');
     const unset = read();
     for (const start of ['unset', '1.0']) {
       if (start === '1.0') adb('settings', 'put', 'system', 'font_scale', '1.0');
@@ -99,6 +102,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     }
     adb('settings', 'delete', 'system', 'font_scale');
     expect(read()).toEqual(unset);
+    if (before[0] !== 'null') adb('settings', 'put', 'system', 'font_scale', before[0] ?? '1.0');
   });
 
   it('sets the whole device in Turkish and puts it back, with the scale and the languages it had unset still unset', async () => {
