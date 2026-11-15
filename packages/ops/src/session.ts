@@ -19,12 +19,11 @@ import {
 import type { Tree } from '@appdyno/protocol';
 import { appInFront } from './apps-guard.js';
 import { guardInputs, type InputGuard } from './power.js';
+import { settleBy } from './settle.js';
 import type { RunningFlight } from './timeline/flight.js';
 import type { RunningTimeline } from './timeline/run.js';
 
 const WAIT_GAP_MS = 300;
-/** Reads apart while a screen settles after a launch or a link: a simulator's helper reads in 15-30 ms. */
-const SETTLE_POLL_MS = 40;
 /** A phone locks itself about a minute after the last touch: an older read says nothing of the screen a touch will reach. */
 const LOOK_MS = 20_000;
 
@@ -103,26 +102,9 @@ export class Session {
     }
   }
 
-  /**
-   * Reads until the screen's layout has held for `quietMs`, at most `maxMs` (after a launch or a link), by an action's
-   * settle's rule: a read of another layout starts the window again, other words in the same layout do not, and a read
-   * proves the layout still up to when it began. Reads come SETTLE_POLL_MS apart, so a read's own time counts towards
-   * the window. Not by the device's `wait`: on a simulator that is the runner's, far slower than its helper's reads.
-   */
-  async settle(quietMs: number, maxMs: number): Promise<{ screen: Screen; settled: boolean }> {
-    const end = Date.now() + maxMs;
-    let screen: Screen | undefined;
-    let changedAt = 0;
-    for (;;) {
-      throwIfCancelled('settle');
-      if (screen) await pause(Math.min(SETTLE_POLL_MS, Math.max(0, end - Date.now())));
-      const readAt = Date.now();
-      const next = await this.read();
-      if (next.hash !== screen?.hash) changedAt = readAt;
-      screen = next;
-      if (readAt - changedAt >= quietMs) return { screen, settled: true };
-      if (Date.now() >= end) return { screen, settled: false };
-    }
+  /** This session's reads until the layout has held for `quietMs`, at most `maxMs`: see `settleBy`. */
+  settle(quietMs: number, maxMs: number): Promise<{ screen: Screen; settled: boolean }> {
+    return settleBy(() => this.read(), quietMs, maxMs);
   }
 
   // what the agent was shown, and what records: written only by what knows it

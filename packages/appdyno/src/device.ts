@@ -1,5 +1,13 @@
 import { buildScreen, oneOf, refName, selectIn, touchPoint, withShownWords } from '@appdyno/core';
-import { claim, DEFAULT_POLICY, release, ServerContext, ToolError } from '@appdyno/ops';
+import {
+  claim,
+  DEFAULT_POLICY,
+  release,
+  ServerContext,
+  SETTLE,
+  settleBy,
+  ToolError,
+} from '@appdyno/ops';
 import { regularExpression } from './allow.js';
 import { deviceProviders } from './providers.js';
 
@@ -81,7 +89,8 @@ export type Device = {
     text: string,
     options?: { at?: Point; replace?: boolean; submit?: boolean } & TouchOptions,
   ): Promise<Typed>;
-  launch(app: string): Promise<void>;
+  /** Starts the app, or brings it in front, and waits for its first screen to come to rest, as `launch_app` does. */
+  launch(app: string): Promise<Touched>;
   terminate(app: string): Promise<void>;
   /** The app in front. */
   foreground(): Promise<string | undefined>;
@@ -134,17 +143,18 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     letGo();
     throw e;
   });
+  const screen = async (): Promise<Screen> => {
+    const { list, hash, foreground, window } = buildScreen(await device.tree(), {
+      port: device.platformScreen,
+      ...(app && { appId: app }),
+    });
+    return { elements: list, hash, ...(foreground && { foreground }), ...(window && { window }) };
+  };
   return {
     serial,
     platform: device.platform,
     virtual: device.virtual,
-    async screen() {
-      const { list, hash, foreground, window } = buildScreen(await device.tree(), {
-        port: device.platformScreen,
-        ...(app && { appId: app }),
-      });
-      return { elements: list, hash, ...(foreground && { foreground }), ...(window && { window }) };
-    },
+    screen,
     tap: async (at, o) => settled(await device.tap(at, { ...REST, ...o })),
     longPress: async (at, ms, o) => settled(await device.longPress(at, ms, { ...REST, ...o })),
     swipe: async (from, to, ms, o) => settled(await device.swipe(from, to, ms, { ...REST, ...o })),
@@ -157,7 +167,12 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
         ...(r.submitted !== undefined && { submitted: r.submitted }),
       };
     },
-    launch: (id) => device.launch(id),
+    async launch(id) {
+      await device.launch(id);
+      // a read right after a launch catches a screen still laying out, and a touch aimed on it lands elsewhere
+      const { settled } = await settleBy(screen, SETTLE.quietMs, SETTLE.maxMs);
+      return { settled };
+    },
     terminate: (id) => device.terminate(id),
     foreground: () => device.foreground(),
     close() {

@@ -10,6 +10,7 @@ import {
 import { holder } from '@appdyno/ops';
 import { DeviceError } from '@appdyno/protocol';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import * as entry from '../src/device.js';
 import {
   aim,
@@ -87,6 +88,47 @@ describe('appdyno/device', () => {
     const example = readFileSync(new URL('../examples/device.ts', import.meta.url), 'utf8');
     expect(shown).toContain(example.trim());
   });
+
+  /** A launch on a screen that is another on each read up to the `still`th, and one screen from then on. */
+  const launched = async (still: number) => {
+    const d = await openDevice(SERIAL, { share: true });
+    const tree = device.tree.bind(device);
+    let reads = 0;
+    device.tree = () => {
+      reads += 1;
+      device.screen = reads < still && reads % 2 ? 'form' : 'home';
+      return tree();
+    };
+    const t0 = Date.now();
+    const out = await d.launch('dev.app');
+    return { d, out, reads, ms: Date.now() - t0 };
+  };
+
+  it(
+    'waits after a launch for the first screen to come to rest, as launch_app does',
+    fakeTimed(async () => {
+      const { d, out, reads, ms } = await launched(4);
+      expect(out).toEqual({ settled: true });
+      // the screen that held: read first on the 4th read, and for 200 ms more
+      expect(reads).toBeGreaterThan(4);
+      expect(ms).toBeGreaterThanOrEqual(200);
+      expect(ms).toBeLessThan(1_000);
+      expect(device.calls.map((c) => c.name).slice(0, 2)).toEqual(['launch', 'tree']);
+      expect((await d.screen()).elements.some((e) => e.label === 'Form')).toBe(true);
+      await d.close();
+    }),
+  );
+
+  it(
+    'gives up on a screen that never rests after 3 s, and says so',
+    fakeTimed(async () => {
+      const { d, out, ms } = await launched(Infinity);
+      expect(out).toEqual({ settled: false });
+      expect(ms).toBeGreaterThanOrEqual(3_000);
+      expect(ms).toBeLessThan(3_500);
+      await d.close();
+    }),
+  );
 
   it('holds the device until close, and with share holds it from no one', async () => {
     const d = await openDevice('emulator-5656');
