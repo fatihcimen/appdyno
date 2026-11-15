@@ -232,15 +232,21 @@ describe('targeting', () => {
     });
 
     it('a ref or a point read before it is still refused, and no touch is sent', async () => {
-      const d = new Windowed();
-      const { call } = await connect(d);
-      const form = must(/@\w+(?= button "Form")/.exec((await call('screen')).text), 'a ref')[0];
-      d.permissionUp = true;
-      for (const aim of [{ ref: form }, { x: 540, y: 350 }]) {
-        const r = await call('tap', aim);
+      for (const aim of [{ ref: true }, { x: 540, y: 350 }]) {
+        const d = new Windowed();
+        const { call } = await connect(d);
+        const form = must(/@\w+(?= button "Form")/.exec((await call('screen')).text), 'a ref')[0];
+        d.permissionUp = true;
+        const r = await call('tap', 'ref' in aim ? { ref: form } : aim);
         expect([r.data.code, r.data.dispatched]).toEqual(['STALE', false]);
+        expect(act(d)).toEqual([]);
+        // the refusal shows the window that came in front, whole, as a diff names no app
+        expect(r.text).toMatch(
+          /\(no touch was sent\)\nforeground: com\.android\.permissioncontroller\n[^]*"Uygulamayı kullanırken"/,
+        );
+        // so the next touch is aimed at a screen that was shown, and is not refused for it
+        expect((await call('tap', { selector: ALLOW })).error).toBe(false);
       }
-      expect(act(d)).toEqual([]);
     });
   });
 

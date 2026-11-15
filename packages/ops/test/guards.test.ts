@@ -194,6 +194,20 @@ describe('a failed action says whether its touch went out', () => {
     expect(e.hint).toBe('the screen now is above: act on what it shows');
   });
 
+  it('and shows the screen the refused touch left, not the one read before it', async () => {
+    const device = new FakeDevice();
+    const call = callerOf(contextOf(device));
+    await call('screen');
+    // another screen came in front as the touch was aimed: the device refuses, and the read before it is old
+    device.act = () => {
+      device.screen = 'form';
+      return Promise.reject(new DeviceError('STALE', 'another window came in front'));
+    };
+    const e = await refusal(call('tap', { x: 10, y: 10 }));
+    expect(e.message).toContain('"Gönder"');
+    expect(e.message).not.toContain('screen unchanged');
+  });
+
   it.each(['TIMEOUT', 'DEVICE_GONE', 'AGENT_UNAVAILABLE'] as const)(
     'unknown: %s, as it may have made the touch first',
     async (code) => {

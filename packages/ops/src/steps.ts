@@ -347,7 +347,8 @@ export function stepsFor(
   const withScreen = async (s: Session, e: unknown, read: ReadMode) => {
     if (!(e instanceof ToolError) || read === 'none') return e;
     if (e.code !== 'STALE' && e.code !== 'NOT_FOUND') return e;
-    const screen = await s.current().catch(() => undefined);
+    // a fresh read: what the device refused the touch for may be what the last read does not show
+    const screen = await s.read().catch(() => undefined);
     if (!screen) return e;
     return new ToolError(
       `${e.message}\n${left(s, screen, read)}`,

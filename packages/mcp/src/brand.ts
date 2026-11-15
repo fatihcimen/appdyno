@@ -30,7 +30,7 @@ export const INSTRUCTIONS = [
   'Each call is a turn: send the actions you already know as one steps call, with wait_for or assert last where a result takes time.',
   'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement.',
   'A failed answer starts with its code, and ends with a hint where there is one; a touch refused for an element that is not there holds the screen as it is now.',
-  'When the app misbehaves: logs and crashes; an action its app died under already says why, with its last log lines. Installing and managing apps: app. In every tool, app left out means the selected app.',
+  'When the app misbehaves: logs and crashes; an action its app died under already says what is known of why, with its last log lines. Installing and managing apps: app. In every tool, app left out means the selected app.',
   'In the perf_ tools, scenario is the name a measure is kept under, and a baseline takes 3 runs of it (perf_launch baseline: true).',
   'On an iOS simulator perf_scroll and perf_trace put the frame probe in the app (probe: false: not), and perf_launch does with probe: true; putting it in restarts the app once: open the screen again and call again.',
   'Conditions and biometrics: device_setting. Pushes: push. Starting a simulator or emulator: simulator.',
