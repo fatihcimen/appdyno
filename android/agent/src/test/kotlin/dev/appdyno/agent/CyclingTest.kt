@@ -12,8 +12,7 @@ class CyclingTest {
     private val area = 1080L * 2400
     private val banner = "Banner#banner@0,100,1080,500"
 
-    private fun node(parent: Int, cls: String, id: String?, left: Int, top: Int, right: Int, bottom: Int) =
-        CNode(parent, 0, cls, id, null, null, null, left, top, right, bottom, Flags.VISIBLE or Flags.CLICKABLE)
+    private fun node(parent: Int, cls: String, id: String?, left: Int, top: Int, right: Int, bottom: Int) = CNode(parent, 0, cls, id, null, null, null, left, top, right, bottom, Flags.VISIBLE or Flags.CLICKABLE)
 
     /**
      * A screen as a capture lists it, level by level: a banner whose cards stand `shift` to the left over a button.
