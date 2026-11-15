@@ -403,6 +403,23 @@ describe('what a process leaves running', () => {
     ctx.close();
   });
 
+  it('keeps the probe of a capture that still runs at restore, and lets the others go', async () => {
+    const device = equipped();
+    const probe = { lib: '/nowhere/NetProbe', env: {} };
+    const { ctx, call } = connect(device);
+    await call('use_device', { device: device.serial });
+    leave('network', device.serial, { via: 'probe', since: 1, handle: { app: 'dev.app' } });
+    leave('sim-held', device.serial, {
+      apps: { 'dev.app': { frames: probe, network: probe }, 'dev.other': { network: probe } },
+    });
+    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+      'let go of the frames probe in dev.app; the network probe in dev.other: a probe stays in its app until the app next starts\nkept the network probe in dev.app, whose capture still runs: network stop ends it',
+    );
+    expect(device.holds.appsWith('network')).toEqual(['dev.app']);
+    expect(device.holds.appsWith('frames')).toEqual([]);
+    ctx.close();
+  });
+
   it("takes out a session's photos and videos at its end, and a command line's at restore", async () => {
     const media = new Added();
     const device = Object.assign(new FakeDevice(), { addedMedia: media });

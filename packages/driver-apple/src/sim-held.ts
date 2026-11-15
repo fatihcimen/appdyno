@@ -5,6 +5,9 @@ import { launchLanguage } from './manage.js';
 
 const INSERT = 'DYLD_INSERT_LIBRARIES';
 
+/** The name a network capture holds its probe by. */
+export const NETWORK_PROBE = 'network';
+
 /** A probe in an app: the library each launch inserts, and what it reads of its environment. */
 const Probe = z.object({ lib: z.string(), env: z.record(z.string(), z.string()) });
 export type Probe = z.infer<typeof Probe>;
@@ -76,11 +79,16 @@ export class HeldLaunches implements LaunchHolds {
     );
   }
 
-  letGo() {
+  letGo(capturing?: string) {
     const now = held.read(this.udid);
-    held.remove(this.udid);
+    const kept = capturing === undefined ? undefined : now?.apps[capturing]?.[NETWORK_PROBE];
+    if (now && capturing !== undefined && kept)
+      held.write(this.udid, { ...now, apps: { [capturing]: { [NETWORK_PROBE]: kept } } });
+    else held.remove(this.udid);
     return Object.entries(now?.apps ?? {}).flatMap(([app, probes]) =>
-      Object.keys(probes).map((name) => `the ${name} probe in ${app}`),
+      Object.keys(probes)
+        .filter((name) => !(kept && app === capturing && name === NETWORK_PROBE))
+        .map((name) => `the ${name} probe in ${app}`),
     );
   }
 }

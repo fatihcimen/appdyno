@@ -13,6 +13,7 @@ import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { askLanguage } from './power.js';
 import { mediaRestored } from './media.js';
+import { captures } from './network.js';
 import { SettingOut } from './schemas.js';
 import { isOneShot, oneShot, ONE_SHOT } from './setting-events.js';
 import type { Session } from './session.js';
@@ -236,7 +237,10 @@ async function restoreAll(s: Session) {
     (owner) => !heldElsewhere(owner),
   );
   const holds = s.device.holds;
-  const held = holds && !heldElsewhere(holds.holder()?.owner) ? holds.letGo() : [];
+  // a capture that runs on reads its probe in the app's next start too: its stop lets that one go
+  const capture = captures.read(s.device.serial)?.handle?.app;
+  const capturing = typeof capture === 'string' ? capture : undefined;
+  const held = holds && !heldElsewhere(holds.holder()?.owner) ? holds.letGo(capturing) : [];
   const out = await mediaRestored(s.device.addedMedia, (owner) => !heldElsewhere(owner));
   const notRestored = [...failed, ...out.failed];
   const t =
@@ -245,6 +249,9 @@ async function restoreAll(s: Session) {
       ...out.done,
       ...(held.length > 0
         ? [`let go of ${held.join('; ')}: a probe stays in its app until the app next starts`]
+        : []),
+      ...(capturing && holds?.holder()
+        ? [`kept the network probe in ${capturing}, whose capture still runs: network stop ends it`]
         : []),
       ...notRestored.map((f) => `could not restore ${f}`),
       ...left.map((l) => `left alone, as its process still runs: ${l}`),

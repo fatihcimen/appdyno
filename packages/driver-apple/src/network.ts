@@ -14,12 +14,12 @@ import {
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { probeHead } from './probe.js';
-import { HeldLaunches } from './sim-held.js';
+import { HeldLaunches, NETWORK_PROBE } from './sim-held.js';
 import { helperBinary } from './simhelper.js';
 import { assertBundle, type Simctl } from './simctl.js';
 
 /** The network probe's name among what an app's launches carry. */
-const PROBE = 'network';
+const PROBE = NETWORK_PROBE;
 
 /** The Mac's HTTP proxy as `host:port`, or `none`: what a simulator's apps go through. */
 export async function macProxy(): Promise<string> {
