@@ -170,7 +170,41 @@ describe("an Android app's end in the background", () => {
     fakeTimed(async () => {
       const { life, said } = android();
       await life.endInBackground(APP);
-      expect(said).toEqual([`am kill '${APP}'`]);
+      expect(said.filter((c) => c.startsWith('am '))).toEqual([`am kill '${APP}'`]);
+    }),
+  );
+
+  it(
+    "sends home an app another app's window lies over, as its permission prompt, which am kill would not end",
+    fakeTimed(async () => {
+      // what visible-apps listed on an API 36 emulator under Fossify Gallery's photo prompt, then at home
+      const prompt = `  Window #0 Window{af0f06 u0 com.google.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity}:
+  Window #1 Window{c14efe2 u0 ${APP}/${APP}.MainActivity}:`;
+      const home = `  Window #0 Window{13f1f4d u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}:`;
+      let shown = prompt;
+      let running = true;
+      const keys: string[] = [];
+      const sh = (c: string) => {
+        // the system ends an app only once nothing of it is on the screen
+        if (c.startsWith('am kill') && shown !== prompt) running = false;
+        return Promise.resolve(c.startsWith('dumpsys window') ? shown : '');
+      };
+      const device: Backgrounds = {
+        foreground: () =>
+          Promise.resolve(
+            shown === prompt ? 'com.google.android.permissioncontroller' : 'launcher',
+          ),
+        key: (key) => {
+          keys.push(key);
+          shown = home;
+          return Promise.resolve({});
+        },
+        appRunning: () => Promise.resolve(running),
+      };
+      const life = new AndroidLifecycle(sh, () => Promise.resolve(''), true, device);
+      await life.endInBackground(APP);
+      expect(keys).toEqual(['home']);
+      expect(running).toBe(false);
     }),
   );
 });

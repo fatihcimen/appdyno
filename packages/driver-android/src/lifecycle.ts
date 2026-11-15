@@ -140,8 +140,17 @@ export class AndroidLifecycle {
 
   endInBackground(app: string) {
     const pkg = shq(assertPkg(app));
+    // a window of another app over it, as its permission prompt, leaves it on the screen and out of am kill's reach: it
+    // is in front for its end, and is sent home
+    const shown = async () =>
+      (await this.sh(`dumpsys window visible-apps | grep 'Window #'`)).includes(` ${app}/`);
+    const device: Backgrounds = {
+      foreground: async () => ((await shown()) ? app : this.device.foreground()),
+      key: (key, opts) => this.device.key(key, opts),
+      appRunning: (a) => this.device.appRunning(a),
+    };
     return endInBackground(
-      this.device,
+      device,
       app,
       async () => {
         await this.sh(`am kill ${pkg}`);
