@@ -21,6 +21,10 @@ export const EVERY_APP = 'every app that runs on the simulator gets it, as from 
 /** What a simulator's Photos keeps of what was added. */
 export const PHOTOS_KEEP = "a simulator's Photos has no delete: restore leaves them there";
 
+/** What may help a file Photos did not take: each of these went in on an iOS 26.5 simulator. */
+const MEDIA_TAKEN =
+  'a .png or .jpg photo and an H.264 video in an .mp4 or a .mov go in: convert the file, then add it again';
+
 /** iOS warns of memory at one level: a level asked for is Android's, refused. */
 export function noLevel(level: string | undefined) {
   if (level)
@@ -90,8 +94,31 @@ export class SimulatorLifecycle {
     return Number.isInteger(n) ? n : undefined;
   }
 
+  /**
+   * Each file by a call of its own: simctl imports the files it can of several and then ends on an exception that
+   * names none, so one call a file is what tells which did not go in.
+   */
   async addMedia(files: string[]) {
-    await this.simctl.exec(['addmedia', this.udid, ...files]);
+    const refused: string[] = [];
+    let said = '';
+    for (const file of files)
+      await this.simctl.exec(['addmedia', this.udid, file]).catch((e: unknown) => {
+        // a simulator that is gone, a call that ran out of time: not the file's
+        if (!(e instanceof DeviceError) || e.code !== 'INTERNAL') throw e;
+        refused.push(file);
+        said = e.message;
+      });
+    if (refused.length > 0) {
+      const added = files.length - refused.length;
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        [
+          `the simulator's Photos could not import ${refused.join(', ')}${added > 0 ? `; the other ${added} of ${files.length} went in` : ''}`,
+          said,
+        ].join('\n'),
+        MEDIA_TAKEN,
+      );
+    }
     const held = await this.photosHeld().catch(() => undefined);
     return [...(held === undefined ? [] : [`Photos holds ${held}`]), PHOTOS_KEEP].join('; ');
   }

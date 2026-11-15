@@ -5,12 +5,22 @@ import { describe, expect, it } from 'vitest';
 import { Devicectl } from '../src/devicectl.js';
 import { PHONE_CANNOT, PhoneLifecycle } from '../src/phone-lifecycle.js';
 import { EVERY_APP, PHOTOS_KEEP, SimulatorLifecycle } from '../src/sim-lifecycle.js';
-import { Simctl } from '../src/simctl.js';
+import { Simctl, simctlSaid } from '../src/simctl.js';
 
 const SIM = 'AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE';
 const PHONE = '00008110-0011223344556677';
 const APP = 'dev.appdyno.fixture';
 const WARNINGS = `/Users/me/Library/Developer/CoreSimulator/Devices/${SIM}/data/var/run/memory_warning_simulation`;
+
+/** What `simctl addmedia` wrote of a video it could not import, on Xcode 26.5 with iOS 26.5: its stack cut to two rows. */
+const ADDMEDIA_CRASH = `*** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 'Invalid domain=nil in -[NSError initWithDomain:code:userInfo:]'
+*** First throw call stack:
+(
+	0   CoreFoundation                      0x000000018d1911c0 __exceptionPreprocess + 176
+	5   CoreSimulator                       0x00000001007fc4c0 -[SimDevice addMedia:error:] + 172
+)
+libc++abi: terminating due to uncaught exception of type NSException
+`;
 
 /** A device whose app is out of the front, running while `runs` says so. */
 const device = (runs: () => boolean): Backgrounds => ({
@@ -107,7 +117,66 @@ describe("a simulator's shake and photos", () => {
     );
     // a library whose rows cannot be read is counted by nobody
     await expect(life.addMedia(['/p/a.png', '/p/b.mov'])).resolves.toBe(PHOTOS_KEEP);
-    expect(ran[0]).toEqual(['addmedia', SIM, '/p/a.png', '/p/b.mov']);
+    expect(ran.slice(0, 2)).toEqual([
+      ['addmedia', SIM, '/p/a.png'],
+      ['addmedia', SIM, '/p/b.mov'],
+    ]);
+  });
+
+  it('refuses a file Photos does not import by its name, with what may help, and adds the rest', async () => {
+    const crash = simctlSaid(ADDMEDIA_CRASH);
+    expect(crash).toBe(
+      "*** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 'Invalid domain=nil in -[NSError initWithDomain:code:userInfo:]'",
+    );
+    expect(simctlSaid('one\ntwo\nthree\n')).toBe('two three');
+    const { simctl, ran } = simulator({ getenv: '/nowhere' });
+    const exec = simctl.exec.bind(simctl);
+    simctl.exec = (args: string[]) =>
+      exec(args).then((out) => {
+        if (args[2] === '/p/clip.mp4')
+          throw new DeviceError('INTERNAL', `simctl addmedia: ${crash}`);
+        return out;
+      });
+    const life = new SimulatorLifecycle(
+      simctl,
+      SIM,
+      device(() => true),
+    );
+    const e = must(
+      await refusal(life.addMedia(['/p/a.png', '/p/clip.mp4', '/p/b.mov'])),
+      'a refusal',
+    );
+    expect(e.code).toBe('INVALID_ARGUMENT');
+    expect(e.message.split('\n')).toEqual([
+      "the simulator's Photos could not import /p/clip.mp4; the other 2 of 3 went in",
+      `simctl addmedia: ${crash}`,
+    ]);
+    expect(e.hint).toContain('an H.264 video in an .mp4 or a .mov');
+    // the file after it is still tried
+    expect(ran.filter((a) => a[0] === 'addmedia').map((a) => a[2])).toEqual([
+      '/p/a.png',
+      '/p/clip.mp4',
+      '/p/b.mov',
+    ]);
+    const alone = must(await refusal(life.addMedia(['/p/clip.mp4'])), 'a refusal');
+    expect(alone.message.split('\n')[0]).toBe(
+      "the simulator's Photos could not import /p/clip.mp4",
+    );
+  });
+
+  it('passes on what is not the file’s: a simulator that is gone, a call out of time', async () => {
+    for (const code of ['NOT_FOUND', 'TIMEOUT'] as const) {
+      const { simctl, ran } = simulator({ addmedia: new DeviceError(code, 'simctl addmedia: x') });
+      const life = new SimulatorLifecycle(
+        simctl,
+        SIM,
+        device(() => true),
+      );
+      await expect(refusal(life.addMedia(['/p/a.png', '/p/b.png']))).resolves.toMatchObject({
+        code,
+      });
+      expect(ran).toHaveLength(1);
+    }
   });
 });
 

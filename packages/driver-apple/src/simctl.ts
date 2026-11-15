@@ -145,6 +145,16 @@ export const newestRuntimeOf = (runtimes: Runtime[], model: string) =>
     .toSorted((a, b) => a.version.localeCompare(b.version, undefined, { numeric: true }))
     .at(-1);
 
+/**
+ * What a failed simctl said, in a line: its last two, or where it ended on an exception of its own, the line that
+ * names it, as the lines after are its stack.
+ */
+export const simctlSaid = (stderr: string) =>
+  (
+    /^\*\*\* Terminating app due to uncaught exception .*$/m.exec(stderr)?.[0] ??
+    stderr.trim().split('\n').slice(-2).join(' ')
+  ).slice(0, 300);
+
 /** The simulator tool, always for one named simulator (never "booted": other simulators may run). */
 export class Simctl {
   constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
@@ -222,7 +232,7 @@ export class Simctl {
       if (err.name === 'AbortError') throw cancelled(`simctl ${command}`);
       if (err.killed)
         throw new DeviceError('TIMEOUT', `simctl ${command} took over ${timeoutMs} ms`);
-      const msg = (err.stderr || err.message).trim().split('\n').slice(-2).join(' ').slice(0, 300);
+      const msg = simctlSaid(err.stderr || err.message);
       throw new DeviceError(
         /Invalid device|not found/i.test(msg) ? 'NOT_FOUND' : 'INTERNAL',
         `simctl ${command}: ${msg}`,
