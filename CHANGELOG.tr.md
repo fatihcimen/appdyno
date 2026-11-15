@@ -4,6 +4,14 @@
 
 ## Yayımlanmamış
 
+## 1.1.3
+
+appdyno 1.1.3, 1.1.2'nin Android'deki bir gerilemesini düzeltir: `since` verilmeyen `logs` en yeni mesajı dışarıda bırakabiliyordu.
+
+### Düzeltilenler
+
+- Android'de `since` verilmeyen `logs`, `maxLines`'ın istediği kadar en yeni mesajı verir: 1.1.2'den beri logcat istenen kadar satır verdiğinde en eski mesajı dışarıda bırakıyordu; bu yüzden `maxLines` 1 hiç satır vermiyordu, tek bir `E App: Checkout failed` için `[]` gibi, `maxLines` 3 de iki mesaj veriyordu. Artık sayının 200 satır ötesini okur; böylece sayının ortasında başladığı bir mesaj dışarıda kalırken bütün mesajlar korunur.
+
 ## 1.1.2
 
 appdyno 1.1.2, 1.1.1'den sonra iOS simülatörlerinde ve Android emülatörlerinde sürülen başka açık kaynak uygulamaların gösterdiklerini düzeltir. Düzeltmelerden ikisi güvenlikle ilgili: `screen raw` ve `find` bir öğenin kimliğindeki sırrı gizlemeden veriyordu, `record` da kendisine verilen her dosyanın üstüne yazıyordu.
