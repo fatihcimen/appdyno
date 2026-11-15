@@ -17,6 +17,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { selectorOf } from './checks.js';
 import type { ServerContext } from './context.js';
+import { redact } from './policy.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import type { Session } from './session.js';
 import {
@@ -149,6 +150,15 @@ function rawNode(e: UiElement, clean: (s: string) => string) {
     ...(e.parent !== undefined && { parent: e.parent }),
     flags: RAW_FLAGS.filter((f) => e[f]),
   };
+}
+
+/**
+ * The tree of the screen a call left, as `screen` with `raw` gives it: the one the call's own answer read, and a read
+ * of its own only where an action came after that.
+ */
+export async function rawNodes(ctx: ServerContext) {
+  const screen = await (await ctx.session()).current();
+  return screen.elements.map((e) => rawNode(e, (s) => redact(ctx.policy, s)));
 }
 
 const ScreenIn = z.object({ raw: z.boolean().optional(), views: z.boolean().optional() }).strict();

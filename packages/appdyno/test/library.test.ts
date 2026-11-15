@@ -188,6 +188,37 @@ describe('the library', () => {
     }
   });
 
+  it('gives the tree of the screen an action left, from the read its answer made', async () => {
+    device.screen = 'home';
+    const d = library.connect();
+    const reads = () => device.calls.filter((c) => c.name === 'tree').length;
+    try {
+      await d.tool('screen', {});
+      const start = reads();
+      expect((await d.tool('tap', { selector: { text: 'Form' } })).nodes).toBeUndefined();
+      const plain = reads() - start;
+      device.screen = 'home';
+      await d.tool('screen', {});
+      const before = reads();
+      const tapped = await d.tool('tap', { selector: { text: 'Form' } }, { raw: true });
+      // the reads a tap makes of itself, and no other for the tree
+      expect(reads() - before).toBe(plain);
+      const nodes = tapped.nodes ?? [];
+      expect(nodes.length).toBeGreaterThan(Number(tapped.data.elements));
+      expect(nodes.some((n) => n.ref && n.rect && n.parent !== undefined)).toBe(true);
+      // what `screen` with `raw` gives of the same screen, cleaned the same way
+      expect(nodes).toEqual((await d.tool('screen', { raw: true })).data.nodes);
+
+      // an action that reads nothing leaves the tree to a read of its own
+      const settled = reads();
+      const unread = await d.tool('press_key', { key: 'tab', read: 'none' }, { raw: true });
+      expect(reads() - settled).toBe(1);
+      expect(unread.nodes?.length).toBe(nodes.length);
+    } finally {
+      await d.close();
+    }
+  });
+
   it('has one name to call, and the rest are types', () => {
     expect(Object.keys(library)).toEqual(['connect']);
   });

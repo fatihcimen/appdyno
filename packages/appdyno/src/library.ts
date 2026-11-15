@@ -5,6 +5,7 @@ import {
   givenUp,
   inCall,
   opsFor,
+  rawNodes,
   ServerContext,
   ToolError,
 } from '@appdyno/ops';
@@ -39,6 +40,23 @@ export type Answer<N extends ToolName> = {
   text: string;
   images: { data: string; mimeType: string }[];
   data: Tools[N]['data'];
+  /** With `raw`, every element of the screen the call left: see `ScreenNode`. */
+  nodes?: ScreenNode[];
+};
+
+/** One element of the screen's tree, as `screen` with `raw: true` gives it in `data.nodes`. */
+export type ScreenNode = {
+  /** What `tap` takes: none on an element no touch reaches. */
+  ref?: string;
+  type: string;
+  label?: string;
+  text?: string;
+  identifier?: string;
+  placeholder?: string;
+  rect?: { x: number; y: number; width: number; height: number };
+  /** Its parent's index in the list; none for a root. */
+  parent?: number;
+  flags: string[];
 };
 
 /** What a refused call throws. `dispatched`: whether its touch went out, where it had one. */
@@ -81,6 +99,11 @@ export type CallOptions = {
    * `false` where nothing of it had left for the device, and `'unknown'` once an action had: the screen says which.
    */
   signal?: StopSignal;
+  /**
+   * The answer also carries `nodes`, the tree of the screen the call left: the one an action's answer was read from,
+   * with no second read, its words cleaned as the answer's are.
+   */
+  raw?: boolean;
 };
 
 export type ReplayResult = {
@@ -129,16 +152,18 @@ export function connect(options: ConnectOptions = {}): Appdyno {
   const ops = opsFor(ctx);
   const flows = flowsFor(ctx);
   return {
-    async tool(name, args, { signal } = {}) {
+    async tool(name, args, { signal, raw } = {}) {
       const op = ops[name];
       if (!op) throw new ToolError(`no tool ${name}`, 'INVALID_ARGUMENT');
-      const { blocks, data } = await stoppedBy(signal, name, () =>
-        op.handler(argumentsFor(op, args)),
-      );
+      const { blocks, data, nodes } = await stoppedBy(signal, name, async () => {
+        const answer = await op.handler(argumentsFor(op, args));
+        return { ...answer, ...(raw && { nodes: await rawNodes(ctx) }) };
+      });
       return {
         text: blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
         images: blocks.flatMap((b) => (b.type === 'image' ? [b] : [])),
         data,
+        ...(nodes && { nodes }),
       };
     },
     async replay(file, { signal, ...o } = {}) {
