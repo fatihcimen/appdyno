@@ -32,6 +32,7 @@ import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
 import { DirectSim, turnedBy } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
+import { SimulatorLifecycle } from './sim-lifecycle.js';
 import { type Capture, nodesBusy, settleAfter } from './simsettle.js';
 import { HelperActs } from './sim-act.js';
 import { HelperReads } from './sim-read.js';
@@ -78,6 +79,7 @@ export class IosSimulatorDevice extends IosDevice {
     this.network = new SimulatorNetwork(simctl, serial, this.holds);
     this.web = new SimulatorWeb(simctl, serial);
     this.lock = new SimulatorLock(simctl, serial);
+    this.life = new SimulatorLifecycle(simctl, serial, this);
     this.reads = new HelperReads({
       direct: this.direct,
       app: () => this.targetApp,
@@ -97,7 +99,13 @@ export class IosSimulatorDevice extends IosDevice {
 
   private readonly lock: SimulatorLock;
   private readonly viewProbe: SimulatorViews;
+  private readonly life: SimulatorLifecycle;
   private behind = false;
+
+  memoryWarning = (app: string, level?: string) => this.life.memoryWarning(app, level);
+  shake = () => this.life.shake();
+  endInBackground = (app: string) => this.life.endInBackground(app);
+  addMedia = (files: string[]) => this.life.addMedia(files);
 
   readonly recorder: ScreenRecorder;
   readonly mirror: SimulatorMirror;

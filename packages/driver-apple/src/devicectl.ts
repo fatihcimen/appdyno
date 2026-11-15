@@ -221,6 +221,25 @@ export class Devicectl {
     return pid;
   }
 
+  /** A memory warning to the process, as the system sends one when memory runs short. */
+  async sendMemoryWarning(pid: number) {
+    await this.json([
+      'device',
+      'process',
+      'sendMemoryWarning',
+      '--device',
+      this.udid,
+      '--pid',
+      String(pid),
+    ]);
+  }
+
+  /** The process ended by SIGKILL, which it cannot catch, as the system ends one in the background. */
+  async kill(pid: number) {
+    const args = ['device', 'process', 'terminate', '--device', this.udid, '--pid', String(pid)];
+    await this.json([...args, '--kill']);
+  }
+
   /** Stops the app and waits until it is gone: a launch right after must not bring the dying one forward. */
   async terminate(bundle: string) {
     const pids = await this.pids(bundle);

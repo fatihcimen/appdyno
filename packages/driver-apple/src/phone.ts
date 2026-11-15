@@ -23,6 +23,7 @@ import { type RunnerTransport, IosRunnerLauncher } from './runner.js';
 import { BUILD_LINE, iosProducts } from './runner-build.js';
 import { PHONE_CONTROLS } from './mirror-press.js';
 import { PhoneInspector } from './phone-inspector.js';
+import { PhoneLifecycle } from './phone-lifecycle.js';
 import { PHONE_LINKS } from './settings-pages.js';
 import { PhoneLive } from './phone-live.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
@@ -168,9 +169,15 @@ export class IosPhoneDevice extends IosDevice {
     this.inspector = new PhoneInspector(ctl);
     this.liveMetrics = new PhoneLive(serial);
     this.recorder = phoneRecorder(serial);
+    this.life = new PhoneLifecycle(ctl, this);
   }
 
   readonly recorder: ScreenRecorder;
+  private readonly life: PhoneLifecycle;
+  memoryWarning = (app: string, level?: string) => this.life.memoryWarning(app, level);
+  endInBackground = (app: string) => this.life.endInBackground(app);
+  shake = () => this.life.shake();
+  addMedia = () => this.life.addMedia();
 
   /**
    * That point of the text field under a share of the screen, false with none there; undefined when another app is in
