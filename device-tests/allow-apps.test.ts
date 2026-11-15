@@ -143,6 +143,13 @@ function suite(
 }
 
 describe.skipIf(!ANDROID)('--allow-apps on an Android emulator', () => {
+  // the fixture goes in with all it asks for granted (install -g): its location taken back, asking brings the prompt
+  beforeAll(() =>
+    new Adb().exec(
+      ANDROID,
+      `pm revoke ${APP} android.permission.ACCESS_FINE_LOCATION; pm revoke ${APP} android.permission.ACCESS_COARSE_LOCATION`,
+    ),
+  );
   suite(
     () => ({ provider: androidProvider(new Adb(), {}), serial: ANDROID }),
     /Phone|Chrome|Search/,
