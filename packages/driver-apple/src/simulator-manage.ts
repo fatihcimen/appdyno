@@ -138,7 +138,11 @@ export class SimulatorApps implements AppManager {
       .exec(['get_app_container', this.udid, assertBundle(app)])
       .then(
         () => true,
-        () => false,
+        (e: unknown) => {
+          // a look that ran out of time or was stopped tells nothing of the app
+          if (e instanceof DeviceError && ['TIMEOUT', 'CANCELLED'].includes(e.code)) throw e;
+          return false;
+        },
       );
     if (!installed) return 'not_installed';
     return (await this.simctl.running(this.udid, app)) ? 'running' : 'stopped';

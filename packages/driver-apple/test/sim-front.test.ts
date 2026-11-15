@@ -101,6 +101,22 @@ describe('an app just stopped on a simulator', () => {
     expect(await apps(left).appState('com.apple.Preferences')).toBe('stopped');
   });
 
+  it('is not installed where simctl finds no folder of it, and not known where its look ran out of time', async () => {
+    const lookup = (e: DeviceError) =>
+      new SimulatorApps(
+        Object.assign(new Listed(''), { exec: () => Promise.reject(e) }),
+        UDID,
+      ).appState('dev.app');
+    // what simctl says of an app that is not installed
+    const none = new DeviceError(
+      'INTERNAL',
+      'simctl get_app_container: The operation couldn’t be completed. No such file or directory No such file or directory',
+    );
+    expect(await lookup(none)).toBe('not_installed');
+    const slow = new DeviceError('TIMEOUT', 'simctl get_app_container took over 60000 ms');
+    await expect(lookup(slow)).rejects.toBe(slow);
+  });
+
   it("is stopped once its process is gone from this Mac's", async () => {
     expect(await apps('', FIXTURE_UP).appState('dev.appdyno.fixture')).toBe('running');
     expect(await apps('').appState('dev.appdyno.fixture')).toBe('stopped');
