@@ -45,17 +45,17 @@ const inFront = async () => {
     );
 };
 
-const fixtureInFront = async () => {
-  if (udid) execFileSync('xcrun', ['simctl', 'launch', udid, FIXTURE]);
-  else
-    await new Adb().exec(
-      serial,
-      `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/list ${FIXTURE}`,
-    );
-};
-
 describe.runIf(udid || serial)("a window's live numbers", () => {
   const device: Device = udid ? new IosSimulatorDevice(udid) : new AndroidDevice(serial, new Adb());
+  /** The fixture's list in front, which a scroll has rows to move: by its link, whose prompt a simulator's device answers. */
+  const fixtureInFront = async () => {
+    if (udid) await device.openUrl('appdyno-fixture://open/list', FIXTURE);
+    else
+      await new Adb().exec(
+        serial,
+        `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/list ${FIXTURE}`,
+      );
+  };
   const told: Record<string, unknown>[] = [];
   let session: MirrorSession;
   const runs = mkdtempSync(join(tmpdir(), 'appdyno-window-runs-'));
