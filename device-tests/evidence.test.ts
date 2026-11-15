@@ -71,10 +71,10 @@ function assertPlayable(file: string, minSeconds = 0) {
     expect(Number(j.format.duration)).toBeGreaterThanOrEqual(minSeconds);
     return j;
   }
-  const out = execFileSync('mdls', ['-name', 'kMDItemDurationSeconds', '-raw', file], {
-    encoding: 'utf8',
-  });
-  expect(Number(out)).toBeGreaterThanOrEqual(minSeconds);
+  // AVFoundation's reader, on every Mac: Spotlight has no duration (mdls) of a file it never indexed, as a temporary one
+  const out = execFileSync('avmediainfo', [file], { encoding: 'utf8' });
+  expect(out).toContain('System support for decoding this track: Yes');
+  expect(Number(/^Duration: ([\d.]+) seconds/m.exec(out)?.[1])).toBeGreaterThanOrEqual(minSeconds);
   return undefined;
 }
 
@@ -207,7 +207,9 @@ for (const { platform, serial, provider } of targets)
       }, 120_000);
 
       it('says a recording failed when its file cannot be written', async () => {
-        const r = await h.call('record', { action: 'start', file: '/dev/null/x/video.mp4' });
+        // of the kind the device records, as another kind is refused before the folder is tried
+        const kind = platform === 'ios' ? 'mov' : 'mp4';
+        const r = await h.call('record', { action: 'start', file: `/dev/null/x/video.${kind}` });
         expect(r.error).toBe(true);
         expect(r.text).toMatch(/cannot write|did not start/);
         expect((await h.call('record', { action: 'stop' })).text).toMatch(/no recording runs/);
