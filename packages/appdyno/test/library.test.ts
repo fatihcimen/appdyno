@@ -158,6 +158,35 @@ describe('the library', () => {
     }
   });
 
+  it('says a touch may have gone out where its call was stopped while the app it watches was acting', async () => {
+    device.screen = 'home';
+    // with an app in front, an action is watched for the app's end while it runs
+    const d = library.connect({ app: 'dev.app' });
+    const act = device.act.bind(device);
+    try {
+      await d.tool('screen', {});
+      // the touch is made at once, and the device answers later
+      device.act = async (a, o) => {
+        const done = await act(a, o);
+        await new Promise((r) => setTimeout(r, 600));
+        return done;
+      };
+      const stop = new AbortController();
+      setTimeout(() => stop.abort(), 100);
+      const stopped = await d
+        .tool('tap', { selector: { text: 'Form' } }, { signal: stop.signal })
+        .then(
+          () => undefined,
+          (e: unknown) => e as library.Refusal,
+        );
+      expect(stopped).toMatchObject({ code: 'CANCELLED', dispatched: 'unknown' });
+      expect(stopped?.message).toContain('the touch may have been sent');
+    } finally {
+      device.act = act;
+      await d.close();
+    }
+  });
+
   it('stops a replay between its steps, and says a step was done', async () => {
     device.screen = 'home';
     const flow = join(mkdtempSync(join(tmpdir(), 'appdyno-library-')), 'stop.flow');

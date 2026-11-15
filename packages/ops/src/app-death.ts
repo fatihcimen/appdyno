@@ -1,6 +1,7 @@
 import { pause, reportProgress, stoppable } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import type { Session } from './session.js';
-import { ToolError } from './tool.js';
+import { refusedAction, ToolError } from './tool.js';
 
 /** An action this long under way has its app's process watched, as a crash under it can hold the device's answer. */
 const WATCH_AFTER_MS = 1_000;
@@ -331,7 +332,12 @@ export async function watched<T>(
   try {
     // the race is to the death being known, not to its whole answer: one that took the log's seconds lost to the
     // action's answer, and what was read before it was dropped, so that its own check found no app that ran
-    const first = await Promise.race([acting.then((r) => ({ r })), watch().then((d) => ({ d }))]);
+    // a call stopped while its action runs stops the watch first: the action has left, so its touch may have gone
+    const watching = watch().catch((e: unknown) => {
+      if (e instanceof DeviceError && e.code === 'CANCELLED') refusedAction(e);
+      throw e;
+    });
+    const first = await Promise.race([acting.then((r) => ({ r })), watching.then((d) => ({ d }))]);
     if ('r' in first) return first.r;
     over = true;
     // before the refusal's seconds of reading: the call that comes after it may be on the app started again
