@@ -41,6 +41,8 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     d = (await t.ctx.session()).device as IosSimulatorDevice;
     return async () => {
       await d.stopAgent();
+      // the session's end lets its probes go: closed alone, the next suite's launches of the app carried them
+      await t.ctx.end();
       t.ctx.close();
     };
   }, 240_000);
