@@ -19,6 +19,7 @@ describe('where pushed photos go', () => {
       `${MEDIA_DIR}/a_b-2.jpg`,
       `${MEDIA_DIR}/c.mov`,
     ]);
+    expect(placesOf(['/p/a.jpg'], ['a.jpg']).map((p) => p.path)).toEqual([`${MEDIA_DIR}/a-2.jpg`]);
   });
 
   it("reads MediaStore's rows, with whether each is still pending", () => {
@@ -40,8 +41,11 @@ describe("an Android device's photos", () => {
     vi.unstubAllEnvs();
   });
 
-  /** A device whose files are as `sizes` says, each command kept, a push written down as it went. */
-  const device = (sizes: Record<string, number> = {}, rows = ROWS) => {
+  /**
+   * A device whose files are as `sizes` says, its folder holding `there`, each command kept, a push written down as it
+   * went.
+   */
+  const device = (sizes: Record<string, number> = {}, rows = ROWS, there = '') => {
     const said: string[] = [];
     const adb = {
       run: (args: string[]) => {
@@ -52,6 +56,7 @@ describe("an Android device's photos", () => {
     const sh = (c: string) => {
       said.push(c);
       if (c.startsWith('content query')) return Promise.resolve(rows);
+      if (c.startsWith('ls ')) return Promise.resolve(there);
       const stat = /^stat -c %s '(.*)'/.exec(c)?.[1];
       return Promise.resolve(stat && sizes[stat] !== undefined ? `${sizes[stat]}\n` : '');
     };
@@ -68,7 +73,8 @@ describe("an Android device's photos", () => {
     const { media, said } = device();
     const said1 = await media.add([file('one.jpg', 1224), file('two.png', 2346)]);
     expect(said1).toBe('the library lists 1 of them, in Pictures/appdyno');
-    expect(said.slice(0, 3)).toEqual([
+    expect(said.slice(0, 4)).toEqual([
+      `ls -1 ${MEDIA_DIR} 2>/dev/null`,
       `mkdir -p ${MEDIA_DIR}`,
       `push ${MEDIA_DIR}/one.jpg`,
       `content call --uri content://media/ --method scan_file --arg '${MEDIA_DIR}/one.jpg'`,
@@ -91,10 +97,19 @@ describe("an Android device's photos", () => {
     expect(gone.media.holder()).toBeUndefined();
   });
 
+  it('pushes over no file of the folder it did not push, nor one a restore left as changed', async () => {
+    const { media, said } = device({}, ROWS, 'one.jpg\n');
+    await media.add([file('one.jpg', 10)]);
+    expect(said).toContain(`push ${MEDIA_DIR}/one-2.jpg`);
+    const gone = device({ [`${MEDIA_DIR}/one.jpg`]: 7, [`${MEDIA_DIR}/one-2.jpg`]: 10 });
+    expect(await gone.media.takeOut()).toEqual({ removed: [`${MEDIA_DIR}/one-2.jpg`], left: [] });
+  });
+
   it('keeps what a later add pushes under one name once, at its new size', async () => {
     const { media } = device();
     await media.add([file('one.jpg', 10)]);
-    await media.add([file('one.jpg', 20)]);
+    // its own file, which the folder now holds, goes under its name again
+    await device({}, ROWS, 'one.jpg\n').media.add([file('one.jpg', 20)]);
     const now = device({ [`${MEDIA_DIR}/one.jpg`]: 20 });
     expect((await now.media.takeOut()).removed).toEqual([`${MEDIA_DIR}/one.jpg`]);
   });

@@ -18,9 +18,9 @@ const added = deviceState('android-media', Added);
 /** A file's name on the device: letters, digits, dot, dash and underscore, which no shell or link has to quote. */
 export const deviceName = (file: string) => basename(file).replace(/[^\w.-]/g, '_');
 
-/** Where each file goes, two that would take one name told apart. */
-export function placesOf(files: string[]) {
-  const used = new Set<string>();
+/** Where each file goes, two that would take one name told apart, and none by a name `taken` holds. */
+export function placesOf(files: string[], taken: string[] = []) {
+  const used = new Set(taken);
   return files.map((file) => {
     const name = deviceName(file);
     const ext = extname(name);
@@ -61,7 +61,14 @@ export class AndroidMedia implements AddedMedia {
    * the library's sight, until it is scanned. What the library then lists.
    */
   async add(files: string[]) {
-    const places = placesOf(files);
+    // a file there that this tool did not push, or one a restore left as it had changed, is not pushed over: restore
+    // would then delete it
+    const own = new Set(added.read(this.serial)?.files.map((f) => basename(f.path)));
+    const taken = (await this.sh(`ls -1 ${MEDIA_DIR} 2>/dev/null`))
+      .split('\n')
+      .map((n) => n.trim())
+      .filter((n) => n && !own.has(n));
+    const places = placesOf(files, taken);
     const paths = new Set(places.map((p) => p.path));
     // written down before anything goes: a process that dies in between leaves nothing restore cannot find
     added.update(this.serial, (now) => ({
