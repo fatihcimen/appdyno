@@ -55,6 +55,12 @@ jobs:
       - name: Android agent
         run: cd android && ./gradlew --console=plain :agent:assembleDebug
       - run: pnpm build
+      # from the package just built, and run as a client runs it, before anything that cannot be taken back. Unsigned:
+      # the packer signs with a certificate and key in PEM files, and this job's are in a keychain for codesign
+      - name: The desktop extension
+        run: |
+          node scripts/build-mcpb.mjs
+          node scripts/check-mcpb.mjs
       - name: The signing certificate
         env:
           APPDYNO_CERTIFICATE: ${{ secrets.APPDYNO_CERTIFICATE }}
@@ -95,6 +101,7 @@ jobs:
           name: rehearsal
           path: |
             .app-build/*.dmg
+            .app-build/*.mcpb
             .app-build/appdyno.rb
             .app-build/appcast.json*
           if-no-files-found: error
@@ -116,9 +123,9 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: The release
         if: github.event_name == 'push'
-        # with no update key there is no appcast
+        # with no update key there is no appcast; the extension by its whole name, as a glob that finds none says nothing
         run: |
           shopt -s nullglob
-          gh release create "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" .app-build/*.dmg .app-build/appdyno.rb .app-build/appcast.json*
+          gh release create "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" .app-build/*.dmg ".app-build/appdyno-${GITHUB_REF_NAME#v}.mcpb" .app-build/appdyno.rb .app-build/appcast.json*
         env:
           GH_TOKEN: ${{ github.token }}
