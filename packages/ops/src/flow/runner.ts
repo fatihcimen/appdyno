@@ -101,7 +101,8 @@ export function flowRunner(
   };
 
   const prepare = async (s: Session, st: FlowStep) => {
-    if (st.action === 'visual' || st.action === 'screenshot') await looksStill(s);
+    // the visual tool waits for a still screen itself
+    if (st.action === 'screenshot') await looksStill(s);
     if (st.args.screen) {
       const w = await steps.windowSize(s);
       if (st.args.screen !== `${w.w}x${w.h}`)

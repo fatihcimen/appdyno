@@ -10,6 +10,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
+import { looksStill } from './flow/still.js';
 import { VisualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
@@ -60,6 +61,8 @@ export function visualOps(ctx: ServerContext) {
         const s = await ctx.session();
         const folder = resolve(dir ?? DEFAULT_DIR);
         const file = join(folder, `${name}.png`);
+        // a fade a setting began is on a picture taken at once, as a baseline a recording saved, which its replay is not
+        await looksStill(s);
         const screen = await s.read();
         const { png, image } = await shot(s);
         if (action === 'baseline') {

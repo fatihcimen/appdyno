@@ -118,7 +118,16 @@ describe('screenshot, visual and setting steps', () => {
     await flowsFor(context([], { updateBaselines: true })).replay(flowFile('visual ticker'));
     const r = await flowsFor(context()).replay(flowFile('visual ticker'));
     expect(r.passed).toBe(true);
+    // once, by the tool, not again by the replay
     expect(r.steps[0]?.ms).toBeGreaterThanOrEqual(5_000);
+    expect(r.steps[0]?.ms).toBeLessThan(10_000);
+  });
+
+  it('takes the visual tool’s own picture once the screen holds still, as a recording saves the baseline a replay compares', async () => {
+    const looks = settling(3);
+    const call = callerOf(context());
+    await call('visual', { action: 'baseline', name: 'home', dir: join(dir, 'state', 'b') });
+    expect(looks()).toBeGreaterThan(4);
   });
 
   it('refuses a flow with no baseline to compare before its first step, saying how to save one', async () => {
