@@ -58,8 +58,11 @@ export function focusOf(windows: string): Focus | undefined {
   return {
     ...focused,
     ...(frame && { origin: { x: frame[0], y: frame[1] } }),
-    // another activity's window above it, as one beside it in split screen, is no dialog over it
-    over: mine.slice(0, Math.max(0, own)).filter((w) => w.type !== 'BASE_APPLICATION').length,
+    // another activity's window above it, as one beside it in split screen, is no dialog over it, nor is the splash
+    // screen's, listed for a while after the app has drawn over it
+    over: mine
+      .slice(0, Math.max(0, own))
+      .filter((w) => w.type !== 'BASE_APPLICATION' && w.type !== 'APPLICATION_STARTING').length,
   };
 }
 

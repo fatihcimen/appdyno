@@ -154,6 +154,12 @@ describe('the read of the native views', () => {
       '  Window #0 Window{c0ffee u0 dev.other/dev.other.Main}:\n    mDisplayId=0\n    mAttrs={(0,0)(fillxfill) ty=BASE_APPLICATION\n    Frames: parent=[0,0][1080,1200] frame=[0,0][1080,1200] last=[0,0][1080,1200]\n  Window #1',
     );
     expect(treeOf(beside).notes).toEqual([]);
+    // the splash screen's window, as AntennaPod's on API 36 a launch after, while the app drew its own over it
+    const splash = recorded('form-36').replace(
+      '  Window #0',
+      '  Window #0 Window{503faea u0 Splash Screen dev.appdyno.fixture}:\n    mDisplayId=0\n    mAttrs={(0,0)(fillxfill) ty=APPLICATION_STARTING\n    Frames: parent=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400]\n  Window #1',
+    );
+    expect(treeOf(splash).notes).toEqual([]);
     const gone = recorded('form-36').replace('ty=BASE_APPLICATION', 'ty=APPLICATION_STARTING');
     expect(treeOf(gone).notes).toEqual([
       "the activity's window is not on the screen: these places are where it was last laid out",
