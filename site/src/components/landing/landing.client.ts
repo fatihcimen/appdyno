@@ -1,4 +1,4 @@
-import { HOP } from '../mascot/signals.ts';
+import { GAUGE, HOP } from '../mascot/signals.ts';
 import { playerOf } from './player.ts';
 import type { Step } from './scenarios.ts';
 
@@ -16,8 +16,10 @@ const out = el('out');
 const phone = el('phone');
 const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-run]')];
 
-// the dragon hears a step that worked, if it is on the page
-const { play, reset } = playerOf([phone], out, () => document.dispatchEvent(new CustomEvent(HOP)));
+// the dragon hears a step that worked and a number sent to a dial of the bench, if it is on the page
+const tell = (name: string, detail?: string) =>
+  document.dispatchEvent(new CustomEvent(name, { detail }));
+const { play, reset } = playerOf([phone], out, () => tell(HOP));
 
 for (const chip of chips)
   chip.addEventListener('click', () => {
@@ -29,7 +31,10 @@ for (const chip of chips)
       reset();
       el('clock').textContent = data.running;
       try {
-        for (const step of data.jobs[chip.dataset.run ?? ''] ?? []) await play(step);
+        for (const step of data.jobs[chip.dataset.run ?? ''] ?? []) {
+          await play(step);
+          if ('gauge' in step) tell(GAUGE, step.gauge[0]);
+        }
       } finally {
         for (const c of chips) c.disabled = false;
         el('clock').textContent = data.done;

@@ -1,4 +1,3 @@
-import { GAUGE } from '../mascot/signals.ts';
 import { turn } from './dials.ts';
 import { lineOf, type Step } from './scenarios.ts';
 
@@ -37,8 +36,6 @@ export const playerOf = (phones: HTMLElement[], out: HTMLElement, hop = () => {}
       const [id, label, share] = step.gauge;
       document.getElementById(`n-${id}`)?.style.setProperty('transform', turn(share));
       document.getElementById(`v-${id}`)?.replaceChildren(label);
-      // the dragon runs to a gauge a number is sent to, if it is on the page
-      document.dispatchEvent(new CustomEvent(GAUGE, { detail: id }));
     } else if ('wait' in step) await wait(step.wait);
     else if ('next' in step) {
       phone = phones[1];
