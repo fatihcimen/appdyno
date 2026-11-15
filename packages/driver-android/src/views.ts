@@ -162,7 +162,30 @@ const outside = (child: Rect, box: Rect) =>
 /** At most this many containers that scroll are named; one inside another is under its note already. */
 const MAX_SCROLLED = 3;
 
-/** Where a shown container that scrolls holds more than its box, and what of the screen these views leave out. */
+/**
+ * A class its build's shrinker named: R8 names Compose's views `p3` and `pi` and moves them out of their package, as it
+ * did in a minified build of the fixture, so no name tells what draws there.
+ */
+const SHRUNK = /(^|\.)[a-z][a-z0-9]{0,2}$/;
+
+/** The names a shrinker gave the shown views that hold most of the screen, where the label cannot see past them. */
+function shrunkOf(views: NativeView[], shown: boolean[]) {
+  const screen = views[0]?.rect;
+  if (!screen) return [];
+  const area = (r: Rect) => r.width * r.height;
+  const names = new Set(
+    views.flatMap((v, i) =>
+      shown[i] && SHRUNK.test(v.class) && area(v.rect) * 2 > area(screen) ? [v.class] : [],
+    ),
+  );
+  return names.size > 0
+    ? [
+        `${[...names].join(', ')}: named by the build's shrinker, so no name tells what draws there; Compose reads as Android views in such a build`,
+      ]
+    : [];
+}
+
+/** What no name tells, where a container that scrolls holds more than its box, and what these views leave out. */
 function notesOf(views: NativeView[], shown: boolean[], focus: Focus) {
   const scrolls = views.map(
     (v, i) =>
@@ -187,6 +210,7 @@ function notesOf(views: NativeView[], shown: boolean[], focus: Focus) {
       ? 'a window over the activity, as a dialog or a menu, is not in these views: screen reads it'
       : `${focus.over} windows over the activity, as a dialog or a menu, are not in these views: screen reads them`;
   return [
+    ...shrunkOf(views, shown),
     ...scrolled,
     ...(focus.over > 0 ? [over] : []),
     ...(focus.origin

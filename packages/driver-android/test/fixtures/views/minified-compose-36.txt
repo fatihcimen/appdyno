@@ -1,0 +1,30 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{100738030 u0 dev.appdyno.fixture/.ComposeStartActivity t24}
+  Window #0 Window{912d920 u0 dev.appdyno.fixture/dev.appdyno.fixture.ComposeStartActivity}:
+    mDisplayId=0 taskId=24 mSession=Session{b83d078 2724:u0a10213} mClient=android.os.BinderProxy@657b023
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10213:dev.appdyno.fixture id=24 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY dev.appdyno.fixture/.ComposeStartActivity 55ed594 pid=2724 userId=0 uid=10213 displayId=0(type=INTERNAL)
+      mResumed=false mStopped=true mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{1f44657 I.E...... R.....ID 0,0-1080,2400 aid=0}[ComposeStartActivity]
+        android.widget.LinearLayout{baa544 V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{46b462d G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{4dcc762 V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            pi{e8cf0f3 V.E...... ........ 0,0-1080,2400}
+              p3{9372dc2 VFED..... ........ 0,0-1080,2400 aid=1073741824}
+                android.view.View{25ed1b0 V.ED..... ........ 0,0-0,0}
+    Looper (main, tid 2) {4631829}
+  ACTIVITY dev.appdyno.fixture/.ComposeStartActivity 60123ee pid=2724 userId=0 uid=10213 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{ea0951f V.E...... R....... 0,0-1080,2400 aid=1}[ComposeStartActivity]
+        android.widget.LinearLayout{cc9206c V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{90be635 G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{c335aca V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            pi{9c3643b V.E...... ........ 0,0-1080,2400}
+              p3{1617243 VFED..... ........ 0,0-1080,2400 aid=1073741824}
+                android.view.View{15dd758 V.ED..... ........ 0,0-0,0}
+    Looper (main, tid 2) {4631829}

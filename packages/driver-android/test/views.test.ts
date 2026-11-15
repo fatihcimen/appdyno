@@ -11,7 +11,8 @@ import { NOT_ANSWERING } from '../src/window-dump.js';
 
 /**
  * fixtures/views/*.txt are what VIEWS_READ printed on our own emulators, Google APIs arm64 images of API 35 and 36, with
- * only the lines it reads kept: the fixture's screens, then open-source apps' debug builds, each named by its screen.
+ * only the lines it reads kept: the fixture's screens, its release built with R8 (minified-*), then open-source apps'
+ * debug builds, each named by its screen.
  */
 const recorded = (name: string) =>
   readFileSync(join(import.meta.dirname, 'fixtures/views', `${name}.txt`), 'utf8');
@@ -169,6 +170,18 @@ describe('the read of the native views', () => {
     const hex = viewsOf(`${block}\n${other}`, { ...focus, record: '1912070' });
     expect(byId(hex ?? tree('form-36'), 'submit')?.rect.y).toBe(10);
     expect(viewsOf('Bad activity command, or no activities match: x', focus)).toBeUndefined();
+  });
+
+  it("says where a minified build's shrinker named what draws the screen, as it named Compose's views", () => {
+    // the fixture built with R8, its Compose start screen opened twice: the focused one is the second
+    const t = tree('minified-compose-36');
+    expect(t.views.map((v) => v.class).slice(4, 6)).toEqual(['pi', 'p3']);
+    expect(t.views[0]?.hidden).toBeUndefined();
+    expect(frameworkOfViews(t, 'android')).toEqual({ name: 'Android views' });
+    expect(t.notes).toEqual([
+      "pi, p3: named by the build's shrinker, so no name tells what draws there; Compose reads as Android views in such a build",
+    ]);
+    expect(tree('compose-36').notes).toEqual([]);
   });
 
   it('keeps a line of its own making in the tree, at its parent place', () => {
