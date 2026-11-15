@@ -4,6 +4,47 @@
 
 ## Unreleased
 
+## 1.1.2
+
+appdyno 1.1.2 fixes what more open-source apps showed after 1.1.1 on iOS simulators and Android emulators. Two of the fixes are about safety: `screen raw` and `find` gave a secret in an element's id uncleaned, and `record` wrote over whatever file it was given.
+
+### Security
+
+- `screen` `raw` and `find` hide a secret the server was told of in an element's id as in its words: `raw` gave `identifier: "account-user@example.test"` beside a label that read `account-•••`.
+- `record` `start` writes over no file that is there unless `overwrite` asks, and only to a file of the video kind the device records (`.mp4` or `.mov`): given any path, it replaced whatever file stood there, of any kind. `report` with a `dir` that already holds an `index.html` is refused rather than writing over that page.
+
+### Fixed
+
+#### The iOS runner and simulator
+
+- An iOS runner that answered a read again on a new connection counts its stuck restarts anew, as one that answered on its own connection did: after two stuck restarts, a read retried on a new connection and answered, and the next stuck call left the runner running, as if the two had come in a row.
+- On an iOS simulator, a touch that brings another app up, as a link the app opens in Safari, answers once that app is in front and says which app came to the front, and the runner asks no copies of an app that is not the one under test: Ice Cubes' "View in Browser" timed out after 25 s and the runner was restarted.
+- On an iOS simulator, the app's crash that XCTest notes late, during the next request, no longer fails that request with `INTERNAL "XCTest: <app> crashed in …"`: with a runner another process started, a link after a crash and relaunch was refused so.
+- On an iOS simulator, `webview` finds the pages of an app built with no signature (`CODE_SIGNING_ALLOWED=NO`), which the inspector names by its executable (`process-Fixture`): it said there was no web page to inspect with the page there.
+- On iOS, a trace tool that has not said in 90 s that it started recording is stopped then, and `perf_profile` says it did not start, with no word of the Mac's load: a 3 s profile waited 213 s for an `xctrace` that had hung before it recorded.
+
+#### Screen, selectors and touches
+
+- A touch by a selector acts on a window that came in front by itself after the screen was last read, a dialog or a permission prompt, where the selector finds its element there: the touch was refused `STALE`, as aimed at the screen read before, though the selector had been looked up on the new one. A ref or `x`,`y` read before the window came is still refused.
+- A hidden element, or one of no size, no longer names the elements beside it in the list: a gallery's grid cells all read `— handleImage`, the label of its fast scroller's 0×0 hidden thumb.
+- A selector's `index` past its last match says how many match, with `NOT_FOUND`: it was refused `AMBIGUOUS`, as `1 elements match … index=1`. A `scroll_to` that swiped and then found several says its swipes went: it said `no touch was sent`.
+- `scroll_to` swipes once more for an element that the edge its swipes bring things in from cuts to less than half of what its like neighbours show: sideways it said found for a card of which 35 px showed, and a tap on it then missed.
+- A touch on a control whose middle is a smaller control of other words goes to a point of it clear of that one, and says where: a tap on a mini player that opens the full player landed on its Pause at the middle and paused. A switch row that holds its own switch, as SwiftUI's Toggle, is touched on that switch: a tap on the row's middle, its label, changed nothing.
+- A tap on a ref whose words changed before the touch names it by both, its words at the touch and those it was shown with: NewPipe's answer named the element by its new words beside a diff of that change, as if the tap had renamed it.
+
+#### Android
+
+- On Android, `open_link` with a web link the selected app does not open sends it to whatever opens it, a browser most often, and says the app does not open it; under `--allow-apps` it stays held to the app. A link that does not open is said in words, with `open_link` `links` as the hint: it failed with `am`'s own line, `Error: Activity not started, unable to resolve Intent { … }`, and no hint.
+- On Android, `logs` gives a message of several lines whole, a stack's frames joined to its first line, and `maxLines` never starts inside one: NewPipe's answer began with two frames of a throwable.
+- On Android, a window animation that WMS answers only at its 5 s cap, one that does not end, of an app in front or behind, holds the first action and no later one, until WMS answers sooner again: with a React Native dev client running behind, every action took some 5 s more (a swipe with no read 5.5 s against 0.6 s, a tap 8.2 s).
+
+#### Apps and the library
+
+- `app install` names the app it installed, by the id the file holds: it said `installed <path>` alone.
+- `press_key back` that leaves the app no longer warns "if it crashed": a back that takes the app out of the front is the person's leaving, as home is.
+- `react_native` `logs`, and a `reload` through the runtime, send Metro the Origin it asks of a debugger since React Native 0.88 (`http://localhost:<port>`): Metro refused the connection for having none, and the refusal blamed the device and its agent. A runtime socket Metro does not open is said to be Metro's, with its terminal to read.
+- The library's `connect` refuses an `allowDevices` that is not a regular expression with `INVALID_ARGUMENT`, saying what it takes: a string from plain JavaScript made every call throw `TypeError: this.policy.devices.test is not a function`.
+
 ## 1.1.1
 
 appdyno 1.1.1 fixes what a long run of seven builds of five open-source apps showed on iOS simulators of four sizes and on Android emulators, phone and tablet, and adds `screen raw` for a program that needs the screen's tree itself.
