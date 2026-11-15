@@ -69,7 +69,14 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     expect(heavy.data.jankMedianPercent).toBeGreaterThan(light.data.jankMedianPercent);
   }, 240_000);
 
-  it('probe: false turns it off, and its refusal is not kept as what the device cannot do', async () => {
+  it('probe: false puts no probe in: a held one measures and the answer says so, and with none its refusal is not kept as what the device cannot do', async () => {
+    await open('list');
+    const held = await t.call('perf_scroll', { probe: false, repeats: 1 });
+    console.log(held.text);
+    expect(held.error).toBe(false);
+    expect(held.text).toMatch(/probe: false put no probe in and relaunched nothing/);
+    // let go, the next launch carries none
+    await t.call('device_setting', { name: 'restore' });
     await d.terminate(APP);
     await d.launch(APP);
     const off = await t.call('perf_scroll', { probe: false, repeats: 1 });
@@ -77,7 +84,7 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     expect(off.error).toBe(true);
     expect(off.data.code).toBe('UNSUPPORTED');
     expect((await loadRefusals(t.measurements)).map((r) => r.measure)).not.toContain('frames');
-  }, 120_000);
+  }, 240_000);
 
   it('stalls: a 500 ms stall reads within 10 %', async () => {
     await t.call('perf_trace', { seconds: 1 });

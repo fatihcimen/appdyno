@@ -14,7 +14,7 @@ import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
 import { TraceOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
-import { perfTools, App, Dsym, Probe, Scenario, symbolsOf } from './shared.js';
+import { perfTools, App, byHeldProbe, Dsym, Probe, Scenario, symbolsOf } from './shared.js';
 
 /** Why the slow frames were slow, or that the trace cannot say: never a guess. */
 const causeLines = (c: SlowFrameCauses | undefined) => {
@@ -323,10 +323,12 @@ export function perfTraceOp(ctx: ServerContext) {
       const m = await record(pkg, seconds, during);
       if (scroll) s.acted();
       const v = m.value;
-      if (v.kind === 'probe') return answer(m, probeSaid(v));
-      if (v.kind === 'hitches') return answer(m, hitchesSaid(v));
+      const frames = (said: Said) =>
+        answer(m, { ...said, lines: [...said.lines, ...byHeldProbe(s, probe)] });
+      if (v.kind === 'probe') return frames(probeSaid(v));
+      if (v.kind === 'hitches') return frames(hitchesSaid(v));
       const own = v.frames < MIN_FRAMES && (await drawsOnItsOwn(s, pkg));
-      return answer(m, timelineSaid(v, s.device.virtual, own));
+      return frames(timelineSaid(v, s.device.virtual, own));
     },
   });
 }

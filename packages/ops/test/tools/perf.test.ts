@@ -439,15 +439,35 @@ describe('perf tools', () => {
       const relaunched = await t.call(name);
       expect(relaunched.structuredContent).toMatchObject({
         code: 'CHECK_FAILED',
-        hint: "open the screen to measure again and call once more: the probe stays in this tool's launches of the app until the session ends",
+        hint: "open the screen to measure again and call once more: the probe stays in this tool's launches of the app",
       });
       expect(relaunched.content[0]?.text).toBe(
-        "CHECK_FAILED: dev.app was relaunched with the frame probe in it, and shows its first screen: nothing was measured\nhint: open the screen to measure again and call once more: the probe stays in this tool's launches of the app until the session ends",
+        "CHECK_FAILED: dev.app was relaunched with the frame probe in it, and shows its first screen: nothing was measured\nhint: open the screen to measure again and call once more: the probe stays in this tool's launches of the app",
       );
       expect(dev.calls.some((c) => c.name.startsWith('perf.'))).toBe(false);
       expect((await t.call(name)).isError).toBeUndefined();
       dev.calls.length = 0;
     }
+  });
+
+  it('scroll and trace: probe: false puts no probe in, and says so of frames a held one measured', async () => {
+    const dev = new FakeDevice();
+    const attachProbe = vi.fn(() => Promise.resolve(false));
+    Object.defineProperty(dev, 'measure', {
+      value: { ...dev.measure, framesByProbe: true, attachProbe },
+    });
+    const t = await connect({}, dev);
+    const note =
+      'probe: false put no probe in and relaunched nothing: these frames are by the probe the app runs under already, held in its launches by this tool';
+    for (const name of ['perf_scroll', 'perf_trace']) {
+      expect((await t.textOf(name, { probe: false })).text).toContain(note);
+      expect(attachProbe).not.toHaveBeenCalled();
+      expect((await t.textOf(name)).text).not.toContain('probe: false');
+      attachProbe.mockClear();
+    }
+    // a device whose frames are no probe's has nothing to say of one
+    const other = await connect();
+    expect((await other.textOf('perf_scroll', { probe: false })).text).not.toContain('probe');
   });
 
   it('launch: the median against the vitals threshold; only allowed apps', async () => {

@@ -75,7 +75,7 @@ const NOISE_WORDS: Record<string, string | undefined> = {
 
 /** What to do after the frame probe's relaunch, which left the app on its first screen. */
 export const PROBE_HINT =
-  "open the screen to measure again and call once more: the probe stays in this tool's launches of the app until the session ends";
+  "open the screen to measure again and call once more: the probe stays in this tool's launches of the app";
 
 export const App = z.string().max(200).optional();
 
@@ -84,6 +84,17 @@ export const Scenario = z
   .regex(/^[\w.-]{1,60}$/)
   .optional()
   .describe('kept under this name');
+
+/**
+ * What an answer says where the caller turned the probe off and its frames are the probe's all the same: `probe: false`
+ * puts none in, and one a launch by this tool holds in the app measures as before.
+ */
+export const byHeldProbe = (s: Session, probe: boolean | undefined) =>
+  probe === false && s.device.measure.framesByProbe
+    ? [
+        'probe: false put no probe in and relaunched nothing: these frames are by the probe the app runs under already, held in its launches by this tool',
+      ]
+    : [];
 
 export const Probe = z
   .boolean()

@@ -24,7 +24,7 @@ import { Coord, NAME_AN_ELEMENT, Selector } from '../step-schemas.js';
 import { aim, wordsOf } from '../targets.js';
 import { ScrollOut } from './schemas.js';
 import { defineOp, ACT, reply, ToolError } from '../tool.js';
-import { perfTools, App, Probe, Scenario, kb, BAD_ROWS, appTopOf } from './shared.js';
+import { perfTools, App, byHeldProbe, Probe, Scenario, kb, BAD_ROWS, appTopOf } from './shared.js';
 import { frameVitals, playLine } from './vitals.js';
 
 /** What a profile's kernel addresses are, which its top function is named past. */
@@ -413,6 +413,7 @@ export function perfScrollOp(ctx: ServerContext) {
               ]),
           ...(unprofiled ? [unprofiled] : []),
           ...(limits ? [limits] : []),
+          ...byHeldProbe(s, probe),
           // Play's shares of the View toolkit's frames say nothing of a surface's, which it has its own lines of
           ...(surfaced.length && !counted.length ? [] : play.lines),
           ...noisy(noise),
