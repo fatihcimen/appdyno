@@ -272,7 +272,13 @@ export function readOps(
         const why = met ? undefined : missing(s, last, a);
         const told = `${head}${why?.said ?? ''}`;
         const said = read === 'none' ? told : `${told}\n${diff ?? header(last)}`;
-        if (why) throw new ToolError(said, 'TIMEOUT', why.hint);
+        // the screen is in the answer: its hint sends nobody to read it
+        if (why)
+          throw new ToolError(
+            said,
+            'TIMEOUT',
+            read === 'none' ? why.hint : why.hint.replace(', or read the screen', ''),
+          );
         if (read === 'none') return reply(said, { ...out, screen: 'none' });
         return reply(said, {
           ...out,

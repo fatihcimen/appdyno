@@ -116,6 +116,17 @@ describe('what did not happen is no success', () => {
     expect(e.hint).toBe('call again to wait longer, or read the screen');
   });
 
+  it('and one whose answer holds the screen sends nobody to read it', async () => {
+    const e = await refusal(
+      callerOf(contextOf(new FakeDevice()))('wait_for', {
+        selector: { text: 'Never' },
+        timeoutMs: 300,
+      }),
+    );
+    expect(e.message).toMatch(/\nforeground: dev\.app\n3 elements: /);
+    expect(e.hint).toBe('call again to wait longer');
+  });
+
   it('a wait for what goes refuses while it stays', async () => {
     const e = await refusal(
       callerOf(contextOf(new FakeDevice()))('wait_for', {
