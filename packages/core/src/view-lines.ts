@@ -28,7 +28,7 @@ function described(v: NativeView, clean: (s: string) => string) {
   const id = idOf(v.id);
   const { x, y, width, height } = v.rect;
   return [
-    ...(id ? [`#${id}`] : []),
+    ...(id ? [`#${clean(id)}`] : []),
     ...(words ? [JSON.stringify(words)] : []),
     ...(label && text && text !== label ? [`text ${JSON.stringify(text)}`] : []),
     `${Math.round(x)},${Math.round(y)} ${Math.round(width)}x${Math.round(height)}`,
@@ -40,7 +40,7 @@ function described(v: NativeView, clean: (s: string) => string) {
 /**
  * The views as lines, each a space further in than its parent's. A view with one child and no words of its own is joined
  * to it by `>`, a controller named where it changes; what is not drawn is left out with what it holds. `clean` takes a
- * view's words as an answer does, before they are cut.
+ * view's id and words as an answer does, before they are cut.
  */
 export function viewLines(tree: ViewTree, clean: (s: string) => string, max = MAX_VIEW_LINES) {
   const at = (i: number) => must(tree.views[i], 'a view of the tree');
