@@ -64,6 +64,18 @@ describe('a hang, busy or blocked', () => {
     expect(rows[2]?.stack.map((f) => f.name)).toEqual(['a']);
   });
 
+  it("leaves a thunk the Swift compiler made out of the app's functions: the closure it calls says where the time went", () => {
+    // a block given to a queue in a build by Xcode 27.2, whose thunk was on 88.4 % of the samples and the closure on 87.9
+    const thunk = 'thunk for @escaping @callee_guaranteed @Sendable () -&gt; ()';
+    const closure = 'closure #1 in closure #1 in CpuScreen.body.getter';
+    const xml = profile(0, 9, ['sysLeaf', closure, thunk]) + profile(9, 10, ['sysLeaf', thunk]);
+    expect(parseTimeProfile(xml, PID).appTop).toEqual([
+      { symbol: closure, samples: 9, percent: 90 },
+    ]);
+    // with nothing else of the app's on the samples, it is still what ran
+    expect(parseTimeProfile(profile(0, 10, ['sysLeaf', thunk]), PID).appTop[0]?.samples).toBe(10);
+  });
+
   it('leaves the profile of a process as it read', () => {
     const p = parseTimeProfile(profile(0, 10, ['sysLeaf', 'mine']), PID);
     expect(p.top).toEqual([{ symbol: 'sysLeaf', samples: 10, percent: 100 }]);

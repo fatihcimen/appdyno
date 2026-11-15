@@ -13,6 +13,7 @@ import {
   must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { compilerThunk } from './perf-parse.js';
 
 /** One cell of an exported trace table: its value and the tool's formatted text. */
 export type Cell = { value: string; fmt?: string };
@@ -305,8 +306,9 @@ export function parseTimeProfile(
         samples: Math.round(w / 1e6),
         percent: total ? Math.round((w / total) * 1000) / 10 : 0,
       }));
-  // an address (a thunk with no symbol) ties with the function around it: the name says more
-  const named = [...app].filter(([name]) => !name.startsWith('0x'));
+  // an address (a thunk with no symbol) ties with the function around it, and a thunk the compiler named is on a few
+  // samples more than the closure it calls: the function's name says more
+  const named = [...app].filter(([name]) => !name.startsWith('0x') && !compilerThunk(name));
   return {
     durationMs: 0,
     samples: Math.round(total / 1e6),

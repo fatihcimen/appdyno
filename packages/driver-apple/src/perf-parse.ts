@@ -98,6 +98,12 @@ export function parseSampleTop(
 }
 
 /**
+ * A thunk the Swift compiler made between a block's caller and its closure, as a build by Xcode 27.2 has for a block
+ * given to a queue: it is on every sample its closure is on, and names nothing a reader wrote.
+ */
+export const compilerThunk = (symbol: string) => symbol.startsWith('thunk for @');
+
+/**
  * The app's own functions by busy inclusive samples: the call graph's count at the function minus what
  * its callees spent waiting idle. Where the app's time goes even when a debug build spends it in
  * runtime helpers; idle threads (a main thread waiting for events) do not count.
@@ -140,7 +146,8 @@ export function parseSampleApp(report: string, limit = 10): ProfileEntry[] {
   const total = roots.reduce((a, r) => a + busy(r), 0);
   const counts = new Map<string, number>();
   for (const [n, v] of busyOf)
-    if (own.has(n.image)) counts.set(n.symbol, Math.max(counts.get(n.symbol) ?? 0, v));
+    if (own.has(n.image) && !compilerThunk(n.symbol))
+      counts.set(n.symbol, Math.max(counts.get(n.symbol) ?? 0, v));
   return [...counts]
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])

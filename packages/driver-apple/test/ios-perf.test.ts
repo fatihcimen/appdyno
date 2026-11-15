@@ -81,15 +81,17 @@ Call graph:
     +     990 mach_msg2_trap  (in libsystem_kernel.dylib) + 8  [0x6]
     900 Thread_2
     + 900 _dispatch_worker_thread2  (in libdispatch.dylib) + 10  [0x7]
-    +   900 closure #1 in CpuScreen.body.getter  (in Fixture.debug.dylib) + 80  [0x3]
-    +     850 IndexingIterator.next()  (in libswiftCore.dylib) + 12  [0x4]
+    +   900 thunk for @escaping @callee_guaranteed @Sendable () -> ()  (in Fixture.debug.dylib) + 28  [0x8]
+    +     900 closure #1 in CpuScreen.body.getter  (in Fixture.debug.dylib) + 80  [0x3]
+    +       850 IndexingIterator.next()  (in libswiftCore.dylib) + 12  [0x4]
     1000 Thread_3
     + 1000 __workq_kernreturn  (in libsystem_kernel.dylib) + 8  [0x5]
 
 Total number in stack (recursive counted multiple, when >=5):
 `;
     const top = parseSampleApp(report);
-    // the main thread waited: its 10 busy samples rank below the busy loop's 900
+    // the main thread waited: its 10 busy samples rank below the busy loop's 900, whose thunk, the Swift compiler's, is
+    // left out
     expect(top.map((t) => t.symbol)).toEqual(['closure #1 in CpuScreen.body.getter', 'main']);
     expect(top[0]).toEqual({
       symbol: 'closure #1 in CpuScreen.body.getter',
