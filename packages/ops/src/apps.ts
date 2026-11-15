@@ -308,19 +308,25 @@ function launchOp(
       if (!pkg) throw noApp();
       checkLaunch(policy, pkg);
       const { apps } = s.device;
-      if (probe && !apps.viewProbe)
+      // a device that reads its views with no probe launches as asked, so that one call serves either platform
+      const unneeded = probe && !apps.viewProbe && !!s.device.views;
+      if (probe && !apps.viewProbe && !unneeded)
         throw new ToolError(
           'this device puts no view probe in an app',
           'UNSUPPORTED',
           'screen views reads the views where a device gives them without one; screen reads the accessibility tree',
         );
+      const withProbe = probe && !unneeded;
+      const noProbe =
+        unneeded && 'this device reads its views without a probe: screen views needs none';
       if (language) await askLanguage(policy, s, language, pkg);
       reportProgress(`launching ${pkg}`);
       s.leftTheApp(pkg !== s.appId);
       const ran = await ctx.ranBeforeLaunch(s, pkg);
-      if (!restart && !args && !env && !language && !probe) {
+      if (!restart && !args && !env && !language && !withProbe) {
         const { was } = await changing(s, () => s.device.launch(pkg).catch(notThere(s, pkg)));
-        const out = await afterChange(s, was, launchSaid(pkg, ran), read, pkg);
+        const said = [launchSaid(pkg, ran), noProbe].filter(Boolean).join('; ');
+        const out = await afterChange(s, was, said, read, pkg);
         // a recording writes a start as a start, so that its replay starts where this did
         return ran === undefined ? out : { ...out, data: { ...out.data, wasRunning: ran } };
       }
@@ -335,14 +341,15 @@ function launchOp(
             ...(args && { args }),
             ...(env && { env }),
             ...(language && { language }),
-            ...(probe && { probe }),
+            ...(withProbe && { probe }),
           })
           .catch(notThere(s, pkg)),
       );
       const done = [
         language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true),
         held,
-        probe && 'with the view probe in it',
+        withProbe && 'with the view probe in it',
+        noProbe,
       ]
         .filter(Boolean)
         .join('; ');

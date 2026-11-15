@@ -303,6 +303,22 @@ describe('app management', () => {
     expect(d.calls.filter((c) => c.name === 'launch')).toEqual([]);
   });
 
+  it('launches as asked where the device reads its views without a probe, and says so', async () => {
+    const apps = manager();
+    const views = () => Promise.resolve({ views: [], truncated: false });
+    const d = Object.assign(new FakeDevice(), { apps, views });
+    const { call } = await connect(d);
+    expect((await call('launch_app', { probe: true, read: 'none' })).done).toBe(
+      'brought dev.app to the front, on the screen it was on; this device reads its views without a probe: screen views needs none',
+    );
+    expect(apps.log).toEqual([]);
+    expect(d.calls.filter((c) => c.name === 'launch')).toHaveLength(1);
+    expect((await call('launch_app', { probe: true, restart: true, read: 'none' })).done).toBe(
+      'restarted dev.app, which was running; this device reads its views without a probe: screen views needs none',
+    );
+    expect(apps.log).toEqual([['launch', 'dev.app', {}]]);
+  });
+
   it('starts the app afresh with the view probe where the device puts one in', async () => {
     const apps = manager({ viewProbe: true });
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
