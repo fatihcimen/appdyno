@@ -10,7 +10,7 @@ const { faq } = Astro.props.t;
 <section class="band faq" id="faq">
   <div class="inner">
     <h2>{faq.title}</h2>
-    <dl>
+    <dl data-perch>
       {
         faq.items.map((item) => (
           <div>

@@ -1,6 +1,7 @@
 ---
 import type { Words } from '../../i18n/index.ts';
 import { NPM, REPO, pathIn, type Lang } from '../../site.ts';
+import Rest from '../mascot/Rest.astro';
 
 interface Props {
   lang: Lang;
@@ -18,5 +19,6 @@ const changelog = `${REPO}/blob/main/CHANGELOG${lang === 'tr' ? '.tr' : ''}.md`;
       > · <a href={REPO}>{t.footer.github}</a> · <a href={changelog}>{t.footer.changelog}</a>
     </p>
     <p>{t.footer.analytics}</p>
+    <Rest t={t} />
   </div>
 </footer>

@@ -35,7 +35,7 @@ const data: ConsoleData = { jobs, running: c.running, done: c.done };
     </div>
     <div class="rig">
       <Phone t={t} model="iPhone 17" id="phone" label={c.phone} />
-      <div class="term" aria-live="polite">
+      <div class="term" aria-live="polite" data-perch>
         <div class="bar"><span>{c.client}</span><span id="clock">{c.ready}</span></div>
         <pre id="out"><span class="d">{c.idle}</span></pre>
       </div>

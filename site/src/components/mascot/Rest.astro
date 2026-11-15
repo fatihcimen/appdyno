@@ -1,0 +1,18 @@
+---
+import type { Words } from '../../i18n/index.ts';
+
+interface Props {
+  t: Words;
+}
+const { mascot } = Astro.props.t;
+---
+
+{/* sends the dragon to rest, and wakes it: shown by the script where the dragon may move at all */}
+<button
+  class="mascot-rest"
+  type="button"
+  aria-pressed="false"
+  data-rest={mascot.rest}
+  data-wake={mascot.wake}
+  hidden>{mascot.rest}</button
+>

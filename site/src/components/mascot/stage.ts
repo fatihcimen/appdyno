@@ -16,6 +16,7 @@ import { Body } from './body.ts';
 import { COUGH, Fire, PUFF, type Breath } from './fire.ts';
 import { Flames } from './flames.ts';
 import { Mind, type Point, type Traits } from './mind.ts';
+import { scout } from './perches.ts';
 import { Rig } from './rig.ts';
 import { GAUGE, HOP } from './signals.ts';
 
@@ -23,6 +24,8 @@ import { GAUGE, HOP } from './signals.ts';
 export interface Parts {
   bench: HTMLElement;
   stage: HTMLElement;
+  /** What holds the canvas and the button: over the whole bench at home, a small box that goes with the dragon away from it. */
+  layer: HTMLElement;
   view: HTMLCanvasElement;
   /** The button that rides on the dragon: a tap or a key on it is a tap on the dragon. */
   body: HTMLButtonElement;
@@ -45,16 +48,23 @@ const SETTLED = 2;
 /** Depths in the scene: the bench, the dragon in front of it, the fire in front of both. */
 const DRAGON_Z = 300;
 const FIRE_Z = 600;
+/** Away from the bench the canvas is a square of this many body heights, the dragon's feet this share of the way down it. */
+const AWAY = 3.75;
+const FEET = 0.72;
+/** The page has come to rest when it has not scrolled for this long, in milliseconds. */
+const AT_REST = 900;
 
 const now = () => performance.now() / 1000;
 
 /**
- * Opens the scene on the bench: the dragon and the dynamometer in one canvas over the bench, in
- * a world whose units are the page's pixels, so a place on the page is a place in the scene.
- * Rejects when there is no WebGL or a model does not load; the posters stay then.
+ * Opens the scene: the dragon and the dynamometer in one canvas, in a world whose units are the
+ * page's pixels, so a place on the page is a place in the scene. At home the canvas lies over the
+ * bench; when the dragon leaves for a perch the canvas shrinks to a box around it and goes with
+ * it, and the bench shows its picture. Rejects when there is no WebGL or a model does not load;
+ * the pictures stay then.
  */
 export async function open(parts: Parts): Promise<{ close: () => void }> {
-  const { bench, stage, view, body: rider, posters } = parts;
+  const { bench, stage, layer, view, body: rider, posters } = parts;
   const renderer = new WebGLRenderer({ canvas: view, alpha: true, antialias: true });
   const ratio = Math.min(2, devicePixelRatio || 1);
   renderer.setPixelRatio(ratio);
@@ -82,95 +92,135 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
   const middle = new Box3().setFromObject(dynamometer.scene).getBoundingSphere(new Sphere());
   dynamometer.scene.position.sub(middle.center);
   const table = new Group().add(dynamometer.scene);
-  table.rotation.order = 'XYZ';
   const rig = new Rig(dyno);
-  rig.holder.rotation.order = 'XYZ';
   const strides = { walk: rig.stride('walk'), run: rig.stride('run') };
   const fire = new Fire();
   const flames = new Flames(FIRE_Z);
   scene.add(table, rig.holder, flames.points);
-
-  const traits: Traits = { lengths: rig.lengths, walk: 0, run: 0, reach: 0 };
-  const mind = new Mind({ left: 0, right: 1, y: 0 }, traits);
-  const flesh = new Body();
-  let size = 0;
-  let box = { left: NaN, top: NaN, width: NaN, height: NaN };
 
   /** An element's box on the page, not on the screen. */
   const onPage = (element: Element) => {
     const { left, top, width, height } = element.getBoundingClientRect();
     return { left: left + scrollX, top: top + scrollY, width, height };
   };
+  const onScreen = ({ y }: Point, size: number) => y - size > scrollY && y < scrollY + innerHeight;
 
-  /** Fits the scene to the bench as the page has laid it out now. */
+  let pointer: Point | undefined;
+  const traits: Traits = {
+    lengths: rig.lengths,
+    size: 0,
+    walk: 0,
+    run: 0,
+    reach: 0,
+    scout: () => [
+      ...scout(traits.size, pointer),
+      ...(onScreen({ x: 0, y: mind.home.y }, traits.size) ? [mind.home] : []),
+    ],
+  };
+  const mind = new Mind({ left: 0, right: 1, y: 0 }, traits);
+  const flesh = new Body();
+  let box = { left: NaN, top: NaN, width: NaN, height: NaN };
+  let home = { ...box };
+  let away = false;
+
+  /** Fits the scene to the page as it is laid out now: the bench's place, the dragon's size, and the canvas. */
   const fit = () => {
     const at = onPage(bench);
     if (
-      at.left === box.left &&
-      at.top === box.top &&
-      at.width === box.width &&
-      at.height === box.height
-    )
-      return;
-    const first = Number.isNaN(box.left);
-    box = at;
-    renderer.setSize(at.width, at.height, false);
-    camera.left = at.left;
-    camera.right = at.left + at.width;
-    camera.top = -at.top;
-    camera.bottom = -(at.top + at.height);
-    camera.updateProjectionMatrix();
-    size = parseFloat(getComputedStyle(bench).getPropertyValue('--mascot')) || 96;
-    Object.assign(traits, {
-      walk: strides.walk * size,
-      run: strides.run * size,
-      reach: size * 0.75,
-    });
-    const cell = onPage(posters.bench);
-    table.scale.setScalar((0.62 * Math.min(cell.width, cell.height)) / middle.radius);
-    table.position.set(cell.left + cell.width / 2, -(cell.top + cell.height / 2), 0);
-    const floor = onPage(stage);
-    mind.stand({
-      left: floor.left + size / 2,
-      right: floor.left + floor.width - size / 2,
-      y: floor.top + floor.height - FLOOR,
-    });
-    if (first) {
-      const picture = onPage(posters.dyno);
-      mind.x = picture.left + picture.width / 2;
+      at.left !== home.left ||
+      at.top !== home.top ||
+      at.width !== home.width ||
+      at.height !== home.height
+    ) {
+      const first = Number.isNaN(home.left);
+      home = at;
+      const size = parseFloat(getComputedStyle(layer).getPropertyValue('--mascot')) || 96;
+      Object.assign(traits, {
+        size,
+        walk: strides.walk * size,
+        run: strides.run * size,
+        reach: size * 0.75,
+      });
+      const cell = onPage(posters.bench);
+      table.scale.setScalar((0.62 * Math.min(cell.width, cell.height)) / middle.radius);
+      table.position.set(cell.left + cell.width / 2, -(cell.top + cell.height / 2), 0);
+      const floor = onPage(stage);
+      mind.stand({
+        left: floor.left + size / 2,
+        right: floor.left + floor.width - size / 2,
+        y: floor.top + floor.height - FLOOR,
+      });
+      if (first) {
+        const picture = onPage(posters.dyno);
+        mind.x = picture.left + picture.width / 2;
+      }
     }
+    if (away !== !mind.atHome) {
+      // the canvas and its button go to the page itself to leave the bench, and come back to it
+      away = !mind.atHome;
+      (away ? document.body : bench).append(layer);
+      layer.classList.toggle('away', away);
+      bench.classList.toggle('away', away);
+      table.visible = !away;
+      layer.style.transform = '';
+    }
+    let to = home;
+    if (away) {
+      const { x, y } = mind.place;
+      const side = AWAY * traits.size;
+      const page = document.documentElement;
+      to = {
+        // inside the page, so the box never makes the page wider or longer
+        left: Math.max(0, Math.min(page.clientWidth - side, x - side / 2)),
+        top: Math.max(0, Math.min(page.scrollHeight - side, y - side * FEET)),
+        width: side,
+        height: side,
+      };
+      layer.style.transform = `translate(${to.left}px, ${to.top}px)`;
+    }
+    if (to.width !== box.width || to.height !== box.height)
+      renderer.setSize(to.width, to.height, false);
+    box = to;
+    camera.left = box.left;
+    camera.right = box.left + box.width;
+    camera.top = -box.top;
+    camera.bottom = -(box.top + box.height);
+    camera.updateProjectionMatrix();
   };
 
-  // what the visitor does: where the pointer is, taps, and the console's numbers
+  // what the visitor does: where the pointer is, taps, scrolling, and the console's numbers
   const heard = new AbortController();
   const listen = { signal: heard.signal, passive: true };
   const fine = matchMedia('(pointer: fine)');
   let gaze: { at: Vector3; until: number } | undefined;
   const lookAt = (point: Point, seconds: number) => {
-    gaze = { at: new Vector3(point.x, -point.y, DRAGON_Z + size * 1.5), until: now() + seconds };
+    const depth = DRAGON_Z + traits.size * 1.5;
+    gaze = { at: new Vector3(point.x, -point.y, depth), until: now() + seconds };
   };
   addEventListener(
     'pointermove',
     (event) => {
       if (!fine.matches) return;
-      const point = { x: event.pageX, y: event.pageY };
-      const head = { x: mind.x, y: mind.perch.y - size * 0.7 };
+      pointer = { x: event.pageX, y: event.pageY };
+      const { x, y } = mind.place;
       // a pointer on its own face would have it look every way at once
-      if (Math.hypot(point.x - head.x, point.y - head.y) > size * 0.5) lookAt(point, 6);
+      if (Math.hypot(pointer.x - x, pointer.y - (y - traits.size * 0.7)) > traits.size * 0.5)
+        lookAt(pointer, 6);
       if (mind.mode !== 'sleep' || bench.contains(event.target as Node)) rouse();
     },
     listen,
   );
+  rider.addEventListener('click', () => (mind.tap(now()), rouse()), listen);
   bench.addEventListener(
     'click',
     (event) => {
       const on = event.target as Element;
-      if (on === rider) mind.tap(now());
-      else if (!on.closest('button, a')) {
-        const aim = { x: event.pageX, y: event.pageY };
+      if (on.closest('button, a')) return;
+      const aim = { x: event.pageX, y: event.pageY };
+      if (mind.atHome) {
         lookAt(aim, 4);
         mind.tap(now(), aim);
-      }
+      } else mind.goHome(now());
       rouse();
     },
     listen,
@@ -189,8 +239,28 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     listen,
   );
   document.addEventListener(HOP, () => (mind.cheer(now()), rouse()), listen);
+  let rest: ReturnType<typeof setTimeout> | undefined;
+  addEventListener(
+    'scroll',
+    () => {
+      clearTimeout(rest);
+      rest = setTimeout(() => {
+        // out of sight: it comes in over the edge it was left behind
+        const { x, y } = mind.place;
+        const size = traits.size;
+        if (document.hidden || onScreen({ x, y }, size)) return;
+        const above = y < scrollY + innerHeight / 2;
+        mind.follow(now(), {
+          x: Math.max(scrollX + size, Math.min(scrollX + innerWidth - size, x)),
+          y: above ? scrollY - size * 0.5 : scrollY + innerHeight + size * 1.5,
+        });
+        rouse();
+      }, AT_REST);
+    },
+    listen,
+  );
 
-  // the frames: none while the bench is out of view, the tab is hidden, or the dragon sleeps
+  // the frames: none while the dragon is out of view and not on its way, the tab is hidden, or it sleeps
   let inView = true;
   let frame = 0;
   let last = 0;
@@ -198,7 +268,8 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
   let yaw = -Math.PI / 2 + STANDING;
   let breath: { is: Breath; from: number; until: number } | undefined;
   let later: [at: number, deed: () => void][] = [];
-  const awake = () => inView && !document.hidden && asleep < SETTLED;
+  const flying = () => mind.mode === 'fly' || mind.mode === 'hop';
+  const awake = () => !document.hidden && asleep < SETTLED && (inView || flying());
   function rouse() {
     mind.rouse(now());
     asleep = 0;
@@ -211,7 +282,7 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     inView = seen.at(-1)?.isIntersecting ?? true;
     if (inView) rouse();
   });
-  watcher.observe(bench);
+  watcher.observe(layer);
   document.addEventListener('visibilitychange', () => !document.hidden && rouse(), listen);
 
   function draw(ms: number) {
@@ -219,12 +290,12 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     // a long gap between frames is cut, so nothing falls through the floor
     const dt = last ? Math.min(1 / 30, Math.max(0, time - last)) : 0;
     last = time;
-    fit();
 
     mind.step(dt, time);
     for (const deed of mind.deeds.splice(0)) {
       if ('clip' in deed) rig.shot(deed.clip);
       else if ('hop' in deed) flesh.hop(deed.hop);
+      else if ('thud' in deed) flesh.jolt(-deed.thud * 1.6);
       else {
         rig.shot('puff');
         const smoke = deed.puff === 'smoke';
@@ -244,19 +315,23 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     later = later.filter(([at, deed]) => at > time || (deed(), false));
     flesh.step(dt);
     asleep = mind.mode === 'sleep' ? asleep + dt : 0;
+    fit();
 
-    // the dragon: on its perch, as tall as its squash leaves it, turned the way it faces
-    const going = mind.mode === 'walk' || mind.mode === 'run';
+    // the dragon: where its mind has it, as tall as its squash leaves it, turned the way it faces
+    const size = traits.size;
+    const place = mind.place;
+    const going = flying() || mind.mode === 'walk' || mind.mode === 'run';
     const toward = -Math.PI / 2 + mind.facing * (Math.PI / 2 - (going ? GOING : STANDING));
     const turned = (toward - yaw) * Math.min(1, 9 * dt);
     yaw += turned;
     const wide = size / Math.sqrt(flesh.squash);
-    rig.holder.position.set(mind.x, -mind.perch.y + flesh.y * size, DRAGON_Z);
+    rig.holder.position.set(place.x, -place.y + flesh.y * size, DRAGON_Z);
     rig.holder.scale.set(wide, size * flesh.squash, wide);
     rig.holder.rotation.set(LEAN, yaw, 0);
     rig.base(mind.base);
     if (gaze && time > gaze.until) gaze = undefined;
-    rig.update(dt, mind.mode === 'sleep' ? undefined : gaze?.at, dt ? turned / dt : 0);
+    const sees = mind.mode === 'sleep' || flying() ? undefined : gaze?.at;
+    rig.update(dt, sees, dt ? turned / dt : 0);
 
     // the fire leaves the mouth where the frame's pose has put it
     if (breath && time >= breath.from) {
@@ -277,22 +352,27 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     rig.glow(fire.glow);
 
     table.rotation.set(LEAN, BENCH_TURN + (SCROLL_TURN * scrollY) / innerHeight, 0);
-    rider.style.transform = `translate(${mind.x - box.left}px, ${mind.perch.y - box.top}px)`;
+    rider.style.transform = `translate(${place.x - box.left}px, ${place.y - box.top}px)`;
     renderer.render(scene, camera);
     frame = awake() ? requestAnimationFrame(draw) : 0;
   }
 
-  // the first frame is drawn before the posters give way to it
+  // the first frame is drawn before the pictures give way to it
+  fit();
   draw(performance.now());
   bench.classList.add('live');
+  layer.classList.add('live');
   rider.hidden = false;
 
   return {
     close() {
       cancelAnimationFrame(frame);
+      clearTimeout(rest);
       heard.abort();
       watcher.disconnect();
-      bench.classList.remove('live');
+      bench.append(layer);
+      layer.style.transform = '';
+      for (const part of [bench, layer]) part.classList.remove('live', 'away');
       rider.hidden = true;
       scene.environment?.dispose();
       renderer.dispose();

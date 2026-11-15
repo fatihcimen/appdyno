@@ -11,7 +11,7 @@ const { rack } = Astro.props.t;
   <div class="inner">
     <h2>{rack.title}</h2>
     <p class="sub">{rack.sub}</p>
-    <div class="tools">
+    <div class="tools" data-perch>
       {
         rack.tools.map((tool) => (
           <div class="tool">

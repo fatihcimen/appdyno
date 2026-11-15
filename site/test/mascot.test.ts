@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Body } from '../src/components/mascot/body.ts';
 import { COUGH, Fire, PUFF, heatColor, look } from '../src/components/mascot/fire.ts';
-import { Mind, type Deed, type Traits } from '../src/components/mascot/mind.ts';
+import { Mind, type Deed, type Perch, type Traits } from '../src/components/mascot/mind.ts';
 import { CLIPS } from '../src/components/mascot/names.ts';
+import { perchOn } from '../src/components/mascot/perches.ts';
 
 /** The same numbers at every run. */
 const dice =
@@ -71,8 +72,12 @@ test('a hop: a crouch, a rise under gravity, a landing that squashes and settles
   assert.ok(body.grounded && Math.abs(body.squash - 1) < 0.02, 'and it comes to rest');
 });
 
-const traits = (): Traits => ({
-  lengths: Object.fromEntries(CLIPS.map((clip) => [clip, 1.6])) as Traits['lengths'],
+const traits = (scout?: () => Perch[]): Traits => ({
+  lengths: Object.fromEntries(
+    CLIPS.map((clip) => [clip, clip === 'takeoff' || clip === 'land' ? 0.4 : 1.6]),
+  ) as Traits['lengths'],
+  size: 100,
+  ...(scout ? { scout } : {}),
   walk: 40,
   run: 120,
   reach: 70,
@@ -128,7 +133,7 @@ test('a number sent to a gauge: it runs there, waits for it to land, and breathe
         assert.equal(mind.mode, 'run');
       }
   });
-  const breaths = deeds.filter(([, deed]) => 'puff' in deed);
+  const breaths = deeds.filter(([, deed]) => 'puff' in deed && deed.aim);
   assert.equal(breaths.length, 1);
   const [[at, breath] = []] = breaths;
   assert.deepEqual(breath, { puff: 'fire', aim });
@@ -160,4 +165,104 @@ test('a layout that moves its perch moves it along', () => {
   mind.stand({ left: 0, right: 300, y: 200 });
   assert.equal(mind.x, 150);
   assert.equal(mind.perch.y, 200);
+});
+
+test("a block's top edge is a perch only where nothing stands over it", () => {
+  const block = { left: 100, top: 500, width: 800, height: 200 };
+  const size = 100;
+  // a heading over the block's left 300 px
+  const free = (x: number, y: number) => !(x < 400 && y > 420 && y < 500);
+  assert.deepEqual(perchOn(block, size, free), { left: 400, right: 850, y: 500 });
+  assert.equal(
+    perchOn(block, size, () => false),
+    undefined,
+  );
+  // 100 px clear is too short a stretch to stand on
+  assert.equal(
+    perchOn(block, size, (x) => x > 700 && x < 800),
+    undefined,
+  );
+});
+
+/** The deeds that are clips, by name. */
+const clips = (deeds: [number, Deed][]) =>
+  deeds.flatMap(([, deed]) => ('clip' in deed ? [deed.clip] : []));
+
+test('to a near perch it hops, to a far one it flies, and it lands on the edge', () => {
+  const near = { left: 760, right: 900, y: 330 };
+  const far = { left: 200, right: 600, y: 1400 };
+  for (const [to, way, clip] of [
+    [near, 'hop', 'jump'],
+    [far, 'fly', 'takeoff'],
+  ] as const) {
+    const mind = new Mind(
+      perch,
+      traits(() => [to]),
+    );
+    mind.x = 650;
+    mind.rouse(0);
+    let highest = Infinity;
+    let seen = false;
+    const deeds = live(mind, 0, 24, (now) => {
+      mind.rouse(now);
+      if (mind.mode === way) seen = true;
+      highest = Math.min(highest, mind.place.y);
+      if (seen && mind.mode === 'idle' && !mind.atHome) assert.equal(mind.place.y, to.y);
+    });
+    assert.ok(seen, `it left by a ${way}`);
+    assert.ok(clips(deeds).includes(clip));
+    assert.equal(clips(deeds).includes('land'), way === 'fly');
+    assert.ok(
+      deeds.some(([, deed]) => 'thud' in deed),
+      'the landing is felt',
+    );
+    assert.ok(highest < Math.min(perch.y, to.y) - 5, 'its way rises over both edges');
+    assert.equal(mind.perch, to);
+    assert.ok(mind.x >= to.left && mind.x <= to.right);
+  }
+});
+
+test('with no perch in view it stays on the bench', () => {
+  const mind = new Mind(
+    perch,
+    traits(() => []),
+  );
+  live(mind, 0, 60, (now) => mind.rouse(now));
+  assert.ok(mind.atHome);
+});
+
+test('away from the bench, a number sent to a gauge brings it home to breathe at it', () => {
+  const away = { left: 200, right: 600, y: 1400 };
+  const mind = new Mind(
+    perch,
+    traits(() => [away, perch]),
+  );
+  mind.follow(1, { x: 300, y: 1000 });
+  live(mind, 1, 3);
+  assert.equal(
+    mind.perch,
+    perch,
+    'left behind, it follows a visitor: home first when home is in view',
+  );
+  const lone = new Mind(
+    perch,
+    traits(() => [away]),
+  );
+  lone.follow(1, { x: 300, y: 1000 });
+  assert.equal(lone.mode, 'fly');
+  assert.deepEqual(lone.place, { x: 300, y: 1000 }, 'it comes in from the edge of the screen');
+  live(lone, 1, 3);
+  assert.equal(lone.perch, away);
+  lone.follow(5, { x: 300, y: 1000 });
+  assert.equal(lone.mode, 'idle', 'and not again so soon');
+  const aim = { x: 600, y: 470 };
+  lone.gauge(10, aim);
+  assert.equal(lone.mode, 'fly');
+  const breaths = live(lone, 10, 12).filter(([, deed]) => 'puff' in deed);
+  assert.deepEqual(
+    breaths.map(([, deed]) => deed),
+    [{ puff: 'fire', aim }],
+  );
+  assert.ok(lone.atHome);
+  assert.equal(Math.round(lone.x), 530);
 });
