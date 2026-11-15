@@ -96,7 +96,7 @@ describe('what each launch of an app on a simulator carries', () => {
     expect(holds.holder()).toBeUndefined();
   });
 
-  it("keeps a running capture's network probe, and its holder, where the rest is let go", () => {
+  it("keeps a running capture's network probe, with no holder to answer for it, where the rest is let go", () => {
     const holds = new HeldLaunches(SIM);
     const owner = { pid: 1, started: 'then', tool: 'appdyno', since: 'now' };
     holds.owner = owner;
@@ -111,7 +111,7 @@ describe('what each launch of an app on a simulator carries', () => {
       APPDYNO_NET_LOG: '/n',
       DYLD_INSERT_LIBRARIES: lib('NetProbe'),
     });
-    expect(holds.holder()).toEqual({ owner });
+    expect(holds.holder()).toEqual({ owner: undefined });
     // a capture named whose probe is not held keeps nothing
     expect(holds.letGo(OTHER)).toEqual([`the network probe in ${APP}`]);
     expect(holds.holder()).toBeUndefined();

@@ -13,7 +13,7 @@ import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { askLanguage } from './power.js';
 import { mediaRestored } from './media.js';
-import { captures } from './network.js';
+import { capturingApp } from './network.js';
 import { SettingOut } from './schemas.js';
 import { isOneShot, oneShot, ONE_SHOT } from './setting-events.js';
 import type { Session } from './session.js';
@@ -238,8 +238,7 @@ async function restoreAll(s: Session) {
   );
   const holds = s.device.holds;
   // a capture that runs on reads its probe in the app's next start too: its stop lets that one go
-  const capture = captures.read(s.device.serial)?.handle?.app;
-  const capturing = typeof capture === 'string' ? capture : undefined;
+  const capturing = capturingApp(s.device.serial);
   const held = holds && !heldElsewhere(holds.holder()?.owner) ? holds.letGo(capturing) : [];
   const out = await mediaRestored(s.device.addedMedia, (owner) => !heldElsewhere(owner));
   const notRestored = [...failed, ...out.failed];

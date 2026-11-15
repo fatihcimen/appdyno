@@ -26,7 +26,8 @@ export type LaunchHolds = {
   holder(): { owner?: Owner | undefined } | undefined;
   /**
    * What launches carried, let go, each named: a probe stays in its app until the app next starts. `capturing`: the app
-   * of a network capture that still runs, whose probe stays held, as the capture's stop lets it go.
+   * of a network capture that still runs, whose probe stays held with no holder to answer for it, as the capture's stop
+   * lets it go.
    */
   letGo(capturing?: string): string[];
 };

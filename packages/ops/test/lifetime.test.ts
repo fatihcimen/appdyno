@@ -420,6 +420,24 @@ describe('what a process leaves running', () => {
     ctx.close();
   });
 
+  it("keeps at a session's end the probe of a capture it leaves running, as a command line's", async () => {
+    const device = equipped();
+    const probe = { lib: '/nowhere/NetProbe', env: {} };
+    const { ctx, call } = connect(device);
+    await call('use_device', { device: device.serial });
+    // a command line's capture: no owner, so the session's end leaves it
+    leave('network', device.serial, { via: 'probe', since: 1, handle: { app: 'dev.app' } });
+    device.holds.hold('dev.app', 'frames', probe);
+    device.holds.hold('dev.app', 'network', probe);
+    expect(device.holds.holder()?.owner?.pid).toBe(process.pid);
+    expect(await ctx.end()).toEqual([]);
+    expect(device.holds.appsWith('frames')).toEqual([]);
+    expect(device.holds.appsWith('network')).toEqual(['dev.app']);
+    // no session answers for it now: the capture's stop, or a restore once it has stopped, lets it go
+    expect(device.holds.holder()?.owner).toBeUndefined();
+    ctx.close();
+  });
+
   it("takes out a session's photos and videos at its end, and a command line's at restore", async () => {
     const media = new Added();
     const device = Object.assign(new FakeDevice(), { addedMedia: media });

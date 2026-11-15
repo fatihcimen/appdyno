@@ -82,8 +82,9 @@ export class HeldLaunches implements LaunchHolds {
   letGo(capturing?: string) {
     const now = held.read(this.udid);
     const kept = capturing === undefined ? undefined : now?.apps[capturing]?.[NETWORK_PROBE];
-    if (now && capturing !== undefined && kept)
-      held.write(this.udid, { ...now, apps: { [capturing]: { [NETWORK_PROBE]: kept } } });
+    // with no holder to answer for it from here: its capture's stop lets it go
+    if (capturing !== undefined && kept)
+      held.write(this.udid, { apps: { [capturing]: { [NETWORK_PROBE]: kept } } });
     else held.remove(this.udid);
     return Object.entries(now?.apps ?? {}).flatMap(([app, probes]) =>
       Object.keys(probes)

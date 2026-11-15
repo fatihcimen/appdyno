@@ -3,7 +3,7 @@ import type { ServerContext } from './context.js';
 import { dropFlightFolder } from './timeline/flight.js';
 import { flowRecordings } from './flow/shared.js';
 import { takeOutMedia } from './media.js';
-import { captures, endCapture } from './network.js';
+import { captures, capturingApp, endCapture } from './network.js';
 import { endRecording, filming } from './record.js';
 import { reportFor } from './report.js';
 import { openReports } from './report-state.js';
@@ -73,12 +73,12 @@ const LEFTOVERS: Leftover[] = [
       done: 'network capture stopped',
     },
   },
-  // after the capture, whose stop lets its own probe go
+  // after the capture, whose stop lets its own probe go: one left running, as a command line's, keeps its probe
   {
     name: 'held launches',
     ends: {
       held: (s) => s.device.holds?.holder(),
-      end: (_, s) => Promise.resolve(s.device.holds?.letGo().length),
+      end: (_, s) => Promise.resolve(s.device.holds?.letGo(capturingApp(s.device.serial)).length),
       done: "probes let go of this tool's launches: a probe stays in its app until the app next starts",
     },
   },

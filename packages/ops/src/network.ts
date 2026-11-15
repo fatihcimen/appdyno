@@ -41,6 +41,12 @@ type Capture = z.infer<typeof Capture>;
 /** The device's capture. */
 export const captures = deviceState('network', Capture);
 
+/** The app whose network probe a running capture reads: a restore and a session's end leave that probe held. */
+export const capturingApp = (serial: string) => {
+  const app = captures.read(serial)?.handle?.app;
+  return typeof app === 'string' ? app : undefined;
+};
+
 type HarEntry = {
   _id?: unknown;
   startedDateTime?: string;
