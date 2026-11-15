@@ -45,6 +45,15 @@
 - Bir iOS simülatöründe, simctl'in son satırı yalnızca üstündeki satırları gösterdiğinde ("Multiple errors were returned; see stderr"), bir ret o satırları verir: bir WebM ile `device_setting media` artık "File type unsupported." der.
 - Bir iOS simülatöründe, bir sunucu başka probe'lar tutarken komut satırının tuttuğu bir probe (`launch-app --probe`) onları sunucuya bırakır; sunucunun sonu hepsini bırakır: sunucunun sonu probe'larının hiçbirini bırakmıyor, bu uygulamaların sonraki her başlatması `device_setting restore`'a dek onları taşıyordu.
 - Kitaplık: öndeki uygulama sonu için izlenirken sinyaliyle durdurulan bir eylem `dispatched: 'unknown'` ile reddedilir ve dokunuşun gitmiş olabileceğini söyler: hiç `dispatched`'ı yoktu, dokunuş da gitmişti.
+- Bir simülatörde `probe: false` ile `perf_scroll` ve `perf_trace`, kareleri uygulamanın başlatmalarında tutulan ve zaten altında çalıştığı probe ölçtüğünde bunu söyler; perf sayfası `probe: false`'un ne yaptığını anlatır: probe koymaz ve hiçbir şeyi yeniden başlatmaz.
+- Bir simülatörde `home`'un hemen ardından gelen `launch_app` ve kütüphanenin `launch`'ı uygulamayı geri getirir: uygulama hâlâ önde okunduğu için başlatma atlanıyor, ana ekran açık kalıyordu.
+- Bir simülatörde girdi yardımcısı sonlanmışsa `press_key` `app_switch` ve `siri`, `INTERNAL` yerine yardımcının kendi gerekçesiyle `UNSUPPORTED` olarak reddedilir.
+- `views` ile `screen`, uygulamanın görünümlerinin önünde bir sistem uyarısı olduğunda bunu söyler.
+- `device_setting restore` ve oturumun sonu, hâlâ süren bir yakalamanın ağ probe'unu tutulu bırakır ve restore bunu söyler: yakalama sürüyor, uygulamanın bir sonraki başlatması ise artık probe'suz oluyordu.
+- `DEVICE_CLAIMED`, çağıranın kendi paylaşma yolunu adlandırır: kütüphane için `share: true`; önceden `use_device` ve `--share` diyordu.
+- Komut satırının `launch-app --probe`'u, probe'un restore'a ya da o cihazda probe tutan bir sunucu bitene dek kaldığını söyler.
+- Fotoğraf ya da video olmayan bir dosya verilen `device_setting media` bunu söyler.
+- Bir seçici, bir düğme ile ondan bir nokta taşan kendi metni için artık `AMBIGUOUS` yanıtı vermez.
 
 ## 1.1.3
 

@@ -45,6 +45,15 @@
 - On an iOS simulator, where simctl's last line only points at the lines above it ("Multiple errors were returned; see stderr"), a refusal gives those lines: `device_setting media` with a WebM now says "File type unsupported.".
 - On an iOS simulator, a probe the command line holds (`launch-app --probe`) while a server holds others leaves those to the server, whose end lets them all go: the server's end let none of its probes go, and every later launch of those apps carried them until `device_setting restore`.
 - Library: an action stopped by its signal while the app in front was watched for its end rejects with `dispatched: 'unknown'` and says the touch may have been sent: it had no `dispatched`, and the touch had gone out.
+- On a simulator, `perf_scroll` and `perf_trace` with `probe: false` say when their frames are by the probe the app already runs under, held in its launches; the perf page says what `probe: false` does: it puts no probe in and relaunches nothing.
+- On a simulator, `launch_app`, and the library's `launch`, right after `home` bring the app back: the launch was skipped while the app still read as in front, and the home screen stayed up.
+- On a simulator, `press_key` `app_switch` and `siri` whose input helper ended are refused `UNSUPPORTED` with the helper's own reason, not `INTERNAL`.
+- `screen` with `views` says when a system alert is in front of the app's views.
+- `device_setting restore` and a session's end keep the network probe of a capture that still runs, and restore says so: the capture went on, and the app's next launch was no longer probed.
+- `DEVICE_CLAIMED` names the caller's own way to share: `share: true` for the library, where it named `use_device` and `--share`.
+- The command line's `launch-app --probe` says its probe stays until restore, or until a server that holds probes on the device ends.
+- `device_setting media` given a file that is not a photo or video says so.
+- A selector no longer answers `AMBIGUOUS` for a button and its own text that stands a point outside it.
 
 ## 1.1.3
 
