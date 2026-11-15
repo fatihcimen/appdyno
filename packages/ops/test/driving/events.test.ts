@@ -107,7 +107,7 @@ describe('the one-shot events of device_setting', () => {
       );
     });
 
-    it("refuses what is outside the server's folder, missing, or holds no photo or video", async () => {
+    it("refuses what is outside the server's folder, missing, no photo or video, or a folder with none", async () => {
       const { d, got } = taking();
       const { call } = await connect(d);
       const out = await call('device_setting', { name: 'media', value: join(root, 'secret.png') });
@@ -120,7 +120,11 @@ describe('the one-shot events of device_setting', () => {
       );
       expect(
         (await call('device_setting', { name: 'media', value: 'shots/notes.txt' })).text,
-      ).toMatch(/^INVALID_ARGUMENT: .*shots\/notes\.txt holds no photo or video/);
+      ).toMatch(/^INVALID_ARGUMENT: .*shots\/notes\.txt is not a photo or video file$/);
+      mkdirSync(join(root, 'project/empty'));
+      expect((await call('device_setting', { name: 'media', value: 'empty' })).text).toMatch(
+        /^INVALID_ARGUMENT: .*empty holds no photo or video inside this server's folder$/,
+      );
       expect((await call('device_setting', { name: 'media' })).data.code).toBe('INVALID_ARGUMENT');
       expect(got).toEqual([]);
     });

@@ -84,7 +84,9 @@ export function mediaFiles(value: string | undefined) {
   );
   if (media.length === 0)
     throw new ToolError(
-      `${given} holds no photo or video inside this server's folder`,
+      found.length === 1 && found[0] === real
+        ? `${given} is not a photo or video file`
+        : `${given} holds no photo or video inside this server's folder`,
       'INVALID_ARGUMENT',
     );
   return media;
