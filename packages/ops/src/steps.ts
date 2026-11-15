@@ -12,7 +12,7 @@ import type { Answers, ReadMode } from './answers.js';
 import { noteTouch } from './activity.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
-import { ToolError } from './tool.js';
+import { STALE_HINT, ToolError } from './tool.js';
 import { backFromAlert } from './noticed.js';
 import { byPerson, type Policy } from './policy.js';
 import { LEAVES_APP, NEEDS_NO_LOOK, NOTHING_TO_READ, SHORTCUT_LEAVES } from './keys.js';
@@ -20,7 +20,7 @@ import { LOOKS_ONLY, Step, keyPress, showSelector, viewNamed } from './step-sche
 import { scrollingFor } from './scroll.js';
 import { checksFor, selectorOf } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
-import { aim, missed, pick, wordsOf, type Aim, type Aimed } from './targets.js';
+import { aim, missed, NO_MATCH_HINT, pick, wordsOf, type Aim, type Aimed } from './targets.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 export { NO_MATCH_WAIT_MS } from './targets.js';
@@ -293,10 +293,16 @@ async function call(
   }
 }
 
+/** What a refusal says to do in place of a read of the screen, where it holds the screen itself. */
+const WITH_SCREEN: Record<string, string> = {
+  [STALE_HINT]: 'the screen now is above: act on what it shows',
+  [NO_MATCH_HINT]: 'the screen now is above; use scroll_to if it may be further along a list',
+};
+
 /** One step's device call and the action around it, shared by the tools that act on a target. */
 export function stepsFor(
   ctx: ServerContext,
-  { act, clean, settleRead }: Answers,
+  { act, clean, settleRead, left }: Answers,
   through: StepSeam,
 ) {
   const words = wordsOf(clean);
@@ -334,6 +340,23 @@ export function stepsFor(
       return call(kit, s, st, opts, patient);
     });
 
+  /**
+   * A refusal for an element that is not there, with the screen that is: a stale ref or a selector with no match would
+   * else cost a read of the screen and a turn before the next try.
+   */
+  const withScreen = async (s: Session, e: unknown, read: ReadMode) => {
+    if (!(e instanceof ToolError) || read === 'none') return e;
+    if (e.code !== 'STALE' && e.code !== 'NOT_FOUND') return e;
+    const screen = await s.current().catch(() => undefined);
+    if (!screen) return e;
+    return new ToolError(
+      `${e.message}\n${left(s, screen, read)}`,
+      e.code,
+      (e.hint && WITH_SCREEN[e.hint]) ?? e.hint,
+      e.dispatched,
+    );
+  };
+
   const one = async (s: Session, st: Step, read: ReadMode) => {
     let done = '';
     let found = false;
@@ -351,7 +374,9 @@ export function stepsFor(
       () => done,
       () => found,
       (x) => back?.(x) ?? true,
-    );
+    ).catch(async (e: unknown) => {
+      throw await withScreen(s, e, read);
+    });
   };
 
   const { checkNow, waitFor } = checks;

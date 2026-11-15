@@ -178,7 +178,9 @@ describe('a failed action says whether its touch went out', () => {
     const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
     expect(e.code).toBe('STALE');
     expect(e.dispatched).toBe(false);
-    expect(e.hint).toBe('read the screen again, and act on what it shows now');
+    // the refusal holds the screen, so its hint sends nobody to read it
+    expect(e.message).toMatch(/\(no touch was sent\)\nforeground: dev\.app\n3 elements: /);
+    expect(e.hint).toBe('the screen now is above: act on what it shows');
   });
 
   it.each(['TIMEOUT', 'DEVICE_GONE', 'AGENT_UNAVAILABLE'] as const)(

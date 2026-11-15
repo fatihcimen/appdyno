@@ -260,7 +260,14 @@ describe('failed answers', () => {
       /^TIMEOUT: 1\. tapped 5,2390\n2\. tap failed, the rest were not run: act did not answer \(the touch may/,
     );
     expect(r.text).toMatch(/\nhint: the device did not answer; read the screen and try again$/);
-    expect(r.text).toContain('Form');
+    // against the screen shown last, as an action's answer is
+    expect(r.text).toContain('\nscreen unchanged (3 elements)\n');
+    // and whole where the call asked for the whole screen
+    acts = 1;
+    const whole = await call('steps', { steps: [{ action: 'tap', x: 6, y: 2390 }], read: 'full' });
+    expect(whole.text).toMatch(
+      /^TIMEOUT: 1\. tap failed[^\n]+\nforeground: dev\.app\n3 elements: [^\n]+\n[^]*"Form"/,
+    );
     expect(r.structuredContent).toMatchObject({ code: 'TIMEOUT' });
   });
 

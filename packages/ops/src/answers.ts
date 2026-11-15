@@ -158,6 +158,18 @@ const headerOf = (screen: Screen, clean: Clean) =>
   `${screen.foreground ? `foreground: ${screen.foreground}\n` : ''}${renderFolded(screen.list, clean)}`;
 
 /**
+ * The screen a refusal left, as its answer says it: what differs from the one shown last where `read` is diff and the
+ * selected app is in front, else all of it, as a diff names no app. Shown from here on, so what is refused holds the
+ * screen and sends nobody to read it.
+ */
+function leftScreen(clean: Clean, s: Session, screen: Screen, read: ReadMode) {
+  const before = read === 'diff' && screen.foreground === s.appId ? s.shown : undefined;
+  show(s, screen);
+  const diff = before && diffText(diffScreens(before, screen.list), screen.list.length, clean);
+  return diff ?? headerOf(screen, clean);
+}
+
+/**
  * What every action says of the screen after it: changed or not, what kept it busy. An app that died under it refuses
  * it with `APP_NOT_RUNNING`, as the watch during the action does.
  */
@@ -392,6 +404,7 @@ export function answersFor(ctx: ServerContext) {
     clean,
     cleanLog,
     header: (screen: Screen) => headerOf(screen, clean),
+    left: (s: Session, screen: Screen, read: ReadMode) => leftScreen(clean, s, screen, read),
     noticed,
     info,
     show,

@@ -88,7 +88,7 @@ function planned(
 /** Several actions in one call, each a touch of the screen or another tool. */
 export function stepsOp(
   ctx: ServerContext,
-  { act, summary, header, show, clean, cleanLog }: Answers,
+  { act, summary, left, clean, cleanLog }: Answers,
   { step }: Steps,
   tools: () => Record<string, Op>,
 ) {
@@ -223,7 +223,6 @@ export function stepsOp(
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
           const screen = await s.read().catch(() => undefined);
-          if (screen) show(s, screen);
           const own = e instanceof AppDied;
           const appDied = own
             ? undefined
@@ -235,7 +234,8 @@ export function stepsOp(
                 ? `${i + 1}. ${e.message}\nthe app died in step ${i + 1}, ${name}: the rest were not run`
                 : `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
               ...(appDied ? [`${diedLine(appDied)}, by step ${i + 1}`] : []),
-              ...(screen ? [header(screen)] : []),
+              // as the call asked to read: what differs from the screen shown last, or all of it
+              ...(screen ? [left(s, screen, read === 'diff' ? 'diff' : 'full')] : []),
             ].join('\n'),
             own || appDied ? 'APP_NOT_RUNNING' : e.code,
             appDied ? diedHint(appDied) : e.hint,

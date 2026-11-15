@@ -90,9 +90,31 @@ describe('act and read', () => {
     expect(r).toMatchObject({ error: true });
     expect(r.text).toMatch(
       new RegExp(
-        `^STALE: stale ref, read the screen again: ${form} "Form" is not on this screen; nearest: `,
+        `^STALE: stale ref: ${form} "Form" is not on this screen; nearest: [^\\n]+ \\(no touch was sent\\)\\nscreen unchanged \\(3 elements\\)\\nhint: the screen now is above: act on what it shows$`,
       ),
     );
+    // read none asks for no screen, and is told to read it
+    const blind = await t.textOf('tap', { ref: form, read: 'none' });
+    expect(blind.text).toMatch(
+      /\(no touch was sent\)\nhint: read the screen again, and act on what it shows now$/,
+    );
+  });
+
+  it('refuses a selector nothing matches with the screen as it is now, so that no read follows', async () => {
+    await t.textOf('screen');
+    const same = await t.textOf('tap', { selector: { text: 'Gönder' } });
+    expect(same.text).toMatch(
+      /^NOT_FOUND: no element matches text="Gönder" after 1500 ms; nearest: [^\n]+ \(no touch was sent\)\nscreen unchanged \(3 elements\)\nhint: the screen now is above; use scroll_to if it may be further along a list$/,
+    );
+    // the app moved on by itself since the screen was shown: the refusal says what changed
+    t.device.screen = 'form';
+    const moved = await t.textOf('tap', { selector: { text: 'İzin' } });
+    expect(moved.text).toMatch(
+      /\(no touch was sent\)\nforeground: dev\.app\n3 elements: [^]*"Gönder"[^]*\nhint: the screen now is above; /,
+    );
+    // and the next answer's diff is against the screen the refusal showed
+    const next = await t.textOf('tap', { selector: { text: 'Gönder' } });
+    expect(next.text).toMatch(/^tapped @\w+ "Gönder"\nscreen changed: \+1 -0 ~0 /);
   });
 
   it('answers a small change as a diff and an unchanged screen in one line', async () => {

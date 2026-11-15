@@ -20,7 +20,10 @@ import { STALE_HINT, ToolError } from './tool.js';
 
 export { landing } from '@appdyno/core';
 
-const STALE = 'stale ref, read the screen again';
+const STALE = 'stale ref';
+
+/** What to do about a selector nothing matched, where the answer does not hold the screen. */
+export const NO_MATCH_HINT = 'read the screen, or use scroll_to if it may be further along a list';
 
 /** How long a selector with no match waits for its element, as a screen may still be coming. */
 export const NO_MATCH_WAIT_MS = 1_500;
@@ -105,7 +108,7 @@ async function resolve(
     throw new ToolError(
       `no element matches ${showSelector(sel)} after ${NO_MATCH_WAIT_MS} ms${why.said}`,
       'NOT_FOUND',
-      why.hint ?? 'read the screen, or use scroll_to if it may be further along a list',
+      why.hint ?? NO_MATCH_HINT,
     );
   }
   return { e: pick(selectIn(screen.list, sel), sel, line), list: screen.list, on: screen.hash };
