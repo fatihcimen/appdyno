@@ -163,11 +163,13 @@ Masaüstü uygulamasındaki sohbet içindir. Claude Code'un listesini okumaz, Cl
 
 Ya da tek bir dosyadan, bir masaüstü eklentisinden kurun. Her sürümde `appdyno-<version>.mcpb` bulunur; sunucuyu, ajanlarını ve bir simgeyi içerir, bu yüzden uygulama ile appdyno arasında `npx` yoktur.
 
-1. Dosyayı [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirip açın ya da Settings, Extensions üzerine sürükleyin. Install'ı seçin.
+1. Dosyayı [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirip uygulamayla açın; uygulama bir kurulum penceresi gösterir.
 2. Formu doldurun ya da boş bırakın. 3 alanı vardır: sürebileceği cihazlar, dokunabileceği uygulamalar ve açabileceği bağlantılar. Bunlar [Sunucu seçenekleri](../reference/cli.tr.md#sunucu-seçenekleri) bölümündeki `--allow-devices`, `--allow-apps` ve `--allow-urls` seçenekleridir; boş bir alan hiçbir şeyi sınırlamaz.
 3. Yukarıdaki gibi kontrol edin: appdyno araçlarıyla birlikte listelenir.
 
-Dosya imzalı değildir, bu yüzden uygulama onu kimin yaptığını bilemediğini söyleyebilir. Her kurulum gibi Node 22 ya da üstünü ister ve kendini güncellemez: yeni bir sürümün dosyasını onun yerine kurun. Dosyayı ya da yukarıdaki girdiyi kullanın, ikisini birden değil, çünkü her biri kendi sunucusunu başlatır.
+Dosya imzalı değildir. Her kurulum gibi Node 22 ya da üstünü ister. Dosyayı ya da yukarıdaki girdiyi kullanın, ikisini birden değil, çünkü her biri kendi sunucusunu başlatır.
+
+Dosya bir `appdyno` komutu ve düzenlenecek bir girdi getirmez. `adb`'yi önce `ANDROID_HOME` içinde, sonra Android Studio'nun SDK'sında, `~/Library/Android/sdk`, sonra `appdyno tools install adb` ile indirilmiş olanda, sonra `PATH` üzerinde bulur. iOS'ta ilk kullanımdan önce `npx -y appdyno ios build`, ikisi aynı sürümse, yardımcıları onun için de derler: bir derleme onu yapan kopyaya göre değil, yapıldığı kaynaklara göre tutulur.
 
 ### Codex ve ChatGPT masaüstü uygulaması
 
