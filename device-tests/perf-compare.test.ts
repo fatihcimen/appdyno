@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -18,6 +18,8 @@ const APP = 'dev.appdyno.fixture';
 const REPEATS = Number(process.env.APPDYNO_GATE_REPEATS ?? 6);
 const UNCHANGED_RUNS = Number(process.env.APPDYNO_GATE_RUNS ?? 6);
 const run = promisify(execFile);
+// as gate-why does: without it the simulator's tools keep a copy of the environment, and a slow start set here is not seen
+process.env.DEVELOPER_DIR ??= execFileSync('xcode-select', ['-p'], { encoding: 'utf8' }).trim();
 /** Printed and kept: a passing test's output is not shown. */
 const note = (line: string) => {
   mkdirSync('.ci', { recursive: true });
