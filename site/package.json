@@ -19,6 +19,8 @@
   "devDependencies": {
     "@astrojs/starlight": "^0.43.1",
     "@gltf-transform/cli": "^4.5.1",
-    "astro": "^7.4.12"
+    "@types/three": "^0.187.0",
+    "astro": "^7.4.12",
+    "three": "^0.187.0"
   }
 }
