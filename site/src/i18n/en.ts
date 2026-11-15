@@ -159,6 +159,36 @@ export const en = {
     saved: 'saved 4 steps as flows/checkout.flow',
     replayed: '4 steps, no model · fails at Place order, as on the iPhone',
   },
+  cases: {
+    title: 'Three bugs, from report to regression test',
+    problem: 'Problem',
+    evidence: 'Evidence',
+    test: 'Regression test',
+    note: 'The numbers are an example.',
+    items: [
+      {
+        name: 'A list that got slow',
+        problem: 'Frames drop when the product list scrolls.',
+        evidence:
+          '<code>perf_scroll</code> before and after the fix: 41 fps with 38 slow frames of 300, then 59 fps with 2.',
+        test: 'A flow that scrolls the list, with a <code>perf_compare</code> gate that fails when the frames drop again.',
+      },
+      {
+        name: 'A checkout crash',
+        problem: 'The app dies at Place order with three bags in the cart.',
+        evidence:
+          'The tap that took it down, its last log line, <code>Fatal error: Index out of range</code>, and the stack from <code>crashes</code>.',
+        test: 'A flow that replays to the crash, and fails in CI until the bug is fixed.',
+      },
+      {
+        name: 'A bug where native meets web',
+        problem: 'A value is lost when the checkout moves from a native screen into a web view.',
+        evidence:
+          'The screen as elements on both sides of the switch, and <code>webview</code> reading the page inside the web view.',
+        test: 'A flow that crosses the switch and checks the value on the other side.',
+      },
+    ],
+  },
   faq: {
     title: 'Questions',
     items: [

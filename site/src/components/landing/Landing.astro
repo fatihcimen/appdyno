@@ -3,6 +3,7 @@ import pkg from '../../../../packages/appdyno/package.json';
 import { words } from '../../i18n/index.ts';
 import Base from '../../layouts/Base.astro';
 import { NPM, REPO, SITE, SHARE_IMAGE, pathIn, type Lang } from '../../site.ts';
+import Cases from './Cases.astro';
 import Console from './Console.astro';
 import Faq from './Faq.astro';
 import Footer from './Footer.astro';
@@ -56,6 +57,7 @@ const jsonLd = [
   </div>
   <main>
     <Story t={t} />
+    <Cases t={t} />
     <Console t={t} />
     <ToolRack t={t} />
     {/* The sections of the fuller landing page go here, each a component with its words in i18n/: the scroll story, the Mac app, open source. */}

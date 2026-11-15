@@ -161,6 +161,36 @@ export const tr: Words = {
     saved: '4 adım flows/checkout.flow olarak kaydedildi',
     replayed: '4 adım, model yok · iPhone’daki gibi Siparişi ver’de başarısız oluyor',
   },
+  cases: {
+    title: 'Üç hata: bildirilmesinden regresyon testine',
+    problem: 'Sorun',
+    evidence: 'Kanıt',
+    test: 'Regresyon testi',
+    note: 'Sayılar örnektir.',
+    items: [
+      {
+        name: 'Yavaşlayan bir liste',
+        problem: 'Ürün listesi kaydırılırken kareler düşüyor.',
+        evidence:
+          '<code>perf_scroll</code>, düzeltmeden önce ve sonra: önce 41 fps, 300 karenin 38’i yavaş; sonra 59 fps, 2’si yavaş.',
+        test: 'Listeyi kaydıran bir akış ve kareler yeniden düşerse başarısız olan bir <code>perf_compare</code> kapısı.',
+      },
+      {
+        name: 'Ödemede bir çökme',
+        problem: 'Sepette üç paket varken uygulama Siparişi ver’de çöküyor.',
+        evidence:
+          'Uygulamayı düşüren dokunuş, son log satırı (<code>Fatal error: Index out of range</code>) ve <code>crashes</code> ile gelen yığın izi.',
+        test: 'Çökmeye kadar yeniden oynayan bir akış; hata düzeltilene kadar CI’da başarısız olur.',
+      },
+      {
+        name: 'Yerel ekrandan web görünümüne geçişte bir hata',
+        problem: 'Ödeme, yerel bir ekrandan web görünümüne geçerken bir değer kayboluyor.',
+        evidence:
+          'Geçişin iki yanında da öğeler halinde ekran ve web görünümünün içindeki sayfayı okuyan <code>webview</code>.',
+        test: 'Geçişi aşan ve değeri öbür tarafta denetleyen bir akış.',
+      },
+    ],
+  },
   faq: {
     title: 'Sorular',
     items: [
