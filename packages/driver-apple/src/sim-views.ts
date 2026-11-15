@@ -204,7 +204,7 @@ export class SimulatorViews {
    * The views of the app on the screen, by the probe in it: the app reads take, each this tool's launches hold the probe
    * in, and the one a look at the screen names are asked at once, and the first to answer with its views is the one. An
    * app behind another says nothing for 2 s; the look waits on a hung app in front, and names the home screen under a
-   * system alert. A main thread that does not answer, of the app reads take, is said at once.
+   * system alert. A main thread that does not answer is said at once.
    */
   read(app: string | undefined, front: () => Promise<string | undefined>): Promise<ViewTree> {
     return new Promise((resolve, reject) => {
@@ -233,7 +233,8 @@ export class SimulatorViews {
         asked.add(a);
         open++;
         this.readOf(a).then(resolve, (e: unknown) => {
-          if (a === app && e instanceof DeviceError && e.code === 'TIMEOUT') reject(e);
+          // only a process that runs, its main thread stuck, gives this: the app on the screen
+          if (e instanceof DeviceError && e.code === 'TIMEOUT') reject(e);
           failed.set(a, e instanceof Error ? e : new DeviceError('INTERNAL', String(e)));
           settle();
         });

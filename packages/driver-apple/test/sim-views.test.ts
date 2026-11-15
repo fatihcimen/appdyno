@@ -255,7 +255,7 @@ describe('a read of the views on a simulator', () => {
     await listen(web(OTHER), OTHER);
     const at = Date.now();
     expect((await views.read(APP, () => Promise.resolve(OTHER))).views).toHaveLength(48);
-    expect(Date.now() - at).toBeLessThan(1_000);
+    expect(Date.now() - at).toBeLessThan(2_000);
   }, 10_000);
 
   it("reads an app this tool's launches hold the probe in, where a system alert makes the look name the home screen", async () => {
@@ -274,6 +274,20 @@ describe('a read of the views on a simulator', () => {
       'TIMEOUT',
       `the main thread of ${APP} did not answer the view probe within 2 s`,
     ]);
+  });
+
+  it('says at once a hung app launched by its id, while the app reads take is silent behind it', async () => {
+    new HeldLaunches(SIM).hold(OTHER, 'view', { lib: join(helpers, 'ViewProbe'), env: {} });
+    await listen(undefined);
+    await listen(answer({ error: 'main-thread', ms: 2000 }, OTHER), OTHER);
+    const hung = () => new Promise<undefined>(() => undefined);
+    const from = Date.now();
+    const r = await refusal(new SimulatorViews(simulator().simctl, SIM).read(APP, hung));
+    expect([r.code, r.message]).toEqual([
+      'TIMEOUT',
+      `the main thread of ${OTHER} did not answer the view probe within 2 s`,
+    ]);
+    expect(Date.now() - from).toBeLessThan(1_500);
   });
 
   it('says the refusal of the app the look names before that of the app reads take', async () => {

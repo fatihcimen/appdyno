@@ -52,6 +52,8 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
     await new Simctl().install(udid, SIM_FIXTURE);
     d = (await t.ctx.session()).device as IosSimulatorDevice;
     return async () => {
+      // its probe and the slow start the last test asked for end with it
+      await d.terminate(APP);
       await d.stopAgent();
       t.ctx.close();
     };

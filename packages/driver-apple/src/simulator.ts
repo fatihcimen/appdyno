@@ -212,7 +212,7 @@ export class IosSimulatorDevice extends IosDevice {
    * with no runner, as a hung app's probe says its main thread did not answer.
    */
   views() {
-    return this.viewProbe.read(this.targetApp, () => this.foreground());
+    return this.viewProbe.read(this.targetApp, () => this.direct.front());
   }
 
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */
