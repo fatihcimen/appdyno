@@ -26,6 +26,7 @@ import {
 import { SimulatorMirror } from './mirror-sim.js';
 import { SimulatorNetwork } from './network.js';
 import { HeldLaunches } from './sim-held.js';
+import { SimulatorViews } from './sim-views.js';
 import { IosSimulatorPerf } from './perf.js';
 import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
@@ -65,14 +66,15 @@ export class IosSimulatorDevice extends IosDevice {
   ) {
     super(serial, simulatorOps(serial, simctl), new IosRunnerLauncher(serial));
     this.direct = direct ?? new DirectSim(serial);
-    this.apps = new SimulatorApps(simctl, serial);
+    this.holds = new HeldLaunches(serial);
+    this.viewProbe = new SimulatorViews(simctl, serial, this.holds);
+    this.apps = new SimulatorApps(simctl, serial, this.viewProbe);
     this.settings = new SimulatorSettings(simctl, serial);
     this.events = new SimulatorEvents(simctl, serial, () =>
       this.foreground().catch(() => undefined),
     );
     this.recorder = simulatorRecorder(serial);
     this.mirror = new SimulatorMirror(serial, simctl);
-    this.holds = new HeldLaunches(serial);
     this.network = new SimulatorNetwork(simctl, serial, this.holds);
     this.web = new SimulatorWeb(simctl, serial);
     this.lock = new SimulatorLock(simctl, serial);
@@ -94,6 +96,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   private readonly lock: SimulatorLock;
+  private readonly viewProbe: SimulatorViews;
   private behind = false;
 
   readonly recorder: ScreenRecorder;
@@ -202,6 +205,16 @@ export class IosSimulatorDevice extends IosDevice {
   override async target(bundle: string) {
     if (this.runnerUp) return super.target(bundle);
     this.targetApp = assertBundle(bundle);
+  }
+
+  /**
+   * The views of the app a read takes, by the view probe a launch put in it, else of the one in front. Past the queue,
+   * with no runner and no look at the screen, which waits on the app: the probe says a main thread did not answer.
+   */
+  async views() {
+    return this.viewProbe.read(
+      this.targetApp ?? (await this.direct.front().catch(() => undefined)),
+    );
   }
 
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */

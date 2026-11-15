@@ -1,0 +1,90 @@
+{
+  "app": "dev.appdyno.fixture",
+  "ms": 1,
+  "front": true,
+  "views": [
+    { "class": "UIWindow", "rect": { "y": 0, "x": 0, "width": 402, "height": 874 } },
+    {
+      "class": "UITransitionView",
+      "parent": 0,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIDropShadowView",
+      "parent": 1,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "SwiftUI.UIHostingController<SwiftUI.ModifiedContent<SwiftUI.AnyView, SwiftUI.RootModifier>>",
+      "class": "SwiftUI._UIHostingView<SwiftUI.ModifiedContent<SwiftUI.AnyView, SwiftUI.RootModifier>>",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 2
+    },
+    {
+      "class": "SwiftUI.UIKitPlatformViewHost<SwiftUI.PlatformViewControllerRepresentableAdaptor<SwiftUI.(NavigationStackRepresentable in $1d3741708)>>",
+      "parent": 3,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "SwiftUI.UIKitNavigationController",
+      "class": "UILayoutContainerView",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 4
+    },
+    {
+      "class": "UINavigationTransitionView",
+      "parent": 5,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIViewControllerWrapperView",
+      "parent": 6,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "SwiftUI.NavigationStackHostingController<SwiftUI.AnyView>",
+      "class": "SwiftUI.NavigationStackHostingController<SwiftUI.AnyView>.(HostingView in $1d374148c)",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 7
+    },
+    {
+      "class": "SwiftUI.HostingScrollView.PlatformContainer",
+      "parent": 8,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "SwiftUI.HostingScrollView",
+      "parent": 9,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "SwiftUI.HostingScrollView.PlatformGroupContainer",
+      "parent": 10,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 252.30000000000001 }
+    },
+    {
+      "label": "Vertical scroll bar, 1 page",
+      "alpha": 0,
+      "class": "_UIScrollViewScrollIndicator",
+      "rect": { "y": 590.70000000000005, "x": 396, "width": 3, "height": 218.30000000000001 },
+      "parent": 10
+    },
+    {
+      "class": "_UIFloatingBarContainerView",
+      "parent": 5,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIKit.(FloatingBarHostingView in $186ecd810)<UIKit.FloatingBarContainer>",
+      "parent": 13,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "_UIPointerInteractionAssistantEffectContainerView",
+      "parent": 13,
+      "rect": { "y": 0, "x": 0, "width": 0, "height": 0 }
+    }
+  ],
+  "pid": 29925,
+  "truncated": false
+}

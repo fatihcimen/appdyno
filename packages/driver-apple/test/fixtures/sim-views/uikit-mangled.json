@@ -1,0 +1,722 @@
+{
+  "app": "dev.appdyno.fixture",
+  "ms": 17,
+  "front": true,
+  "views": [
+    { "class": "UIWindow", "rect": { "y": 0, "x": 0, "width": 402, "height": 874 } },
+    {
+      "class": "UITransitionView",
+      "parent": 0,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIDropShadowView",
+      "parent": 1,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "_TtGC7SwiftUI19UIHostingControllerGVS_15ModifiedContentVS_7AnyViewVS_12RootModifier__",
+      "class": "_TtGC7SwiftUI14_UIHostingViewGVS_15ModifiedContentVS_7AnyViewVS_12RootModifier__",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 2
+    },
+    {
+      "class": "_TtGC7SwiftUI21UIKitPlatformViewHostGVS_42PlatformViewControllerRepresentableAdaptorVS_P10$1d374170828NavigationStackRepresentable__",
+      "parent": 3,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "SwiftUI.UIKitNavigationController",
+      "class": "UILayoutContainerView",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 4
+    },
+    {
+      "class": "UINavigationTransitionView",
+      "parent": 5,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIViewControllerWrapperView",
+      "parent": 6,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "_TtGC7SwiftUI32NavigationStackHostingControllerVS_7AnyView_",
+      "class": "_TtCGC7SwiftUI32NavigationStackHostingControllerVS_7AnyView_P10$1d374148c11HostingView",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 7
+    },
+    {
+      "class": "_TtGC7SwiftUI21UIKitPlatformViewHostGVS_42PlatformViewControllerRepresentableAdaptorV7Fixture11UIKitScreen__",
+      "parent": 8,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "controller": "_TtCV7Fixture11UIKitScreen15TableController",
+      "class": "UIView",
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 },
+      "parent": 9
+    },
+    {
+      "class": "UIStackView",
+      "parent": 10,
+      "rect": { "y": 116, "x": 16, "width": 370, "height": 724 }
+    },
+    {
+      "text": "UIKit label",
+      "id": "uikit_label",
+      "label": "UIKit label",
+      "class": "UILabel",
+      "rect": { "y": 116, "x": 16, "width": 370, "height": 20.300000000000001 },
+      "parent": 11
+    },
+    {
+      "id": "uikit_table",
+      "class": "UITableView",
+      "rect": { "y": 144.30000000000001, "x": 16, "width": 370, "height": 695.70000000000005 },
+      "parent": 11
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 833.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 14,
+      "rect": { "y": 833.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 15,
+      "rect": { "y": 833.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 14,
+      "rect": { "y": 833.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 14",
+      "label": "UIKit row 14",
+      "class": "UILabel",
+      "rect": { "y": 849.70000000000005, "x": 36, "width": 91, "height": 20.300000000000001 },
+      "parent": 17
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 14,
+      "rect": { "y": 885.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 780.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 20,
+      "rect": { "y": 780.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 21,
+      "rect": { "y": 780.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 20,
+      "rect": { "y": 780.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 13",
+      "label": "UIKit row 13",
+      "class": "UILabel",
+      "rect": { "y": 796.70000000000005, "x": 36, "width": 91, "height": 20.300000000000001 },
+      "parent": 23
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 20,
+      "rect": { "y": 832.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 727.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 26,
+      "rect": { "y": 727.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 27,
+      "rect": { "y": 727.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 26,
+      "rect": { "y": 727.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 12",
+      "label": "UIKit row 12",
+      "class": "UILabel",
+      "rect": {
+        "y": 743.70000000000005,
+        "x": 36,
+        "width": 90.299999999999997,
+        "height": 20.300000000000001
+      },
+      "parent": 29
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 26,
+      "rect": { "y": 779.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 674.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 32,
+      "rect": { "y": 674.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 33,
+      "rect": { "y": 674.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 32,
+      "rect": { "y": 674.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 11",
+      "label": "UIKit row 11",
+      "class": "UILabel",
+      "rect": { "y": 690.70000000000005, "x": 36, "width": 88, "height": 20.300000000000001 },
+      "parent": 35
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 32,
+      "rect": { "y": 726.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 621.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 38,
+      "rect": { "y": 621.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 39,
+      "rect": { "y": 621.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 38,
+      "rect": { "y": 621.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 10",
+      "label": "UIKit row 10",
+      "class": "UILabel",
+      "rect": { "y": 637.70000000000005, "x": 36, "width": 91, "height": 20.300000000000001 },
+      "parent": 41
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 38,
+      "rect": { "y": 673.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 568.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 44,
+      "rect": { "y": 568.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 45,
+      "rect": { "y": 568.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 44,
+      "rect": { "y": 568.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 9",
+      "label": "UIKit row 9",
+      "class": "UILabel",
+      "rect": {
+        "y": 584.70000000000005,
+        "x": 36,
+        "width": 83.700000000000003,
+        "height": 20.300000000000001
+      },
+      "parent": 47
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 44,
+      "rect": { "y": 620.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 515.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 50,
+      "rect": { "y": 515.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 51,
+      "rect": { "y": 515.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 50,
+      "rect": { "y": 515.29999999999995, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 8",
+      "label": "UIKit row 8",
+      "class": "UILabel",
+      "rect": {
+        "y": 531.70000000000005,
+        "x": 36,
+        "width": 83.700000000000003,
+        "height": 20.300000000000001
+      },
+      "parent": 53
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 50,
+      "rect": { "y": 567.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 462.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 56,
+      "rect": { "y": 462.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 57,
+      "rect": { "y": 462.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 56,
+      "rect": { "y": 462.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 7",
+      "label": "UIKit row 7",
+      "class": "UILabel",
+      "rect": {
+        "y": 478.69999999999999,
+        "x": 36,
+        "width": 82.299999999999997,
+        "height": 20.300000000000001
+      },
+      "parent": 59
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 56,
+      "rect": { "y": 514.29999999999995, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 409.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 62,
+      "rect": { "y": 409.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 63,
+      "rect": { "y": 409.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 62,
+      "rect": { "y": 409.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 6",
+      "label": "UIKit row 6",
+      "class": "UILabel",
+      "rect": {
+        "y": 425.69999999999999,
+        "x": 36,
+        "width": 83.700000000000003,
+        "height": 20.300000000000001
+      },
+      "parent": 65
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 62,
+      "rect": { "y": 461.30000000000001, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 356.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 68,
+      "rect": { "y": 356.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 69,
+      "rect": { "y": 356.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 68,
+      "rect": { "y": 356.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 5",
+      "label": "UIKit row 5",
+      "class": "UILabel",
+      "rect": {
+        "y": 372.69999999999999,
+        "x": 36,
+        "width": 83.299999999999997,
+        "height": 20.300000000000001
+      },
+      "parent": 71
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 68,
+      "rect": { "y": 408.30000000000001, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 303.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 74,
+      "rect": { "y": 303.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 75,
+      "rect": { "y": 303.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 74,
+      "rect": { "y": 303.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 4",
+      "label": "UIKit row 4",
+      "class": "UILabel",
+      "rect": {
+        "y": 319.69999999999999,
+        "x": 36,
+        "width": 83.700000000000003,
+        "height": 20.300000000000001
+      },
+      "parent": 77
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 74,
+      "rect": { "y": 355.30000000000001, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 250.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 80,
+      "rect": { "y": 250.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 81,
+      "rect": { "y": 250.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 80,
+      "rect": { "y": 250.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 3",
+      "label": "UIKit row 3",
+      "class": "UILabel",
+      "rect": {
+        "y": 266.69999999999999,
+        "x": 36,
+        "width": 83.299999999999997,
+        "height": 20.300000000000001
+      },
+      "parent": 83
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 80,
+      "rect": { "y": 302.30000000000001, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 197.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 86,
+      "rect": { "y": 197.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 87,
+      "rect": { "y": 197.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 86,
+      "rect": { "y": 197.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 2",
+      "label": "UIKit row 2",
+      "class": "UILabel",
+      "rect": { "y": 213.69999999999999, "x": 36, "width": 83, "height": 20.300000000000001 },
+      "parent": 89
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 86,
+      "rect": { "y": 249.30000000000001, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "class": "UITableViewCell",
+      "parent": 13,
+      "rect": { "y": 144.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "_UISystemBackgroundView",
+      "parent": 92,
+      "rect": { "y": 144.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIView",
+      "parent": 93,
+      "rect": { "y": 144.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "class": "UIListContentView",
+      "parent": 92,
+      "rect": { "y": 144.30000000000001, "x": 16, "width": 370, "height": 53 }
+    },
+    {
+      "text": "UIKit row 1",
+      "label": "UIKit row 1",
+      "class": "UILabel",
+      "rect": {
+        "y": 160.69999999999999,
+        "x": 36,
+        "width": 80.700000000000003,
+        "height": 20.300000000000001
+      },
+      "parent": 95
+    },
+    {
+      "class": "_UITableViewCellSeparatorView",
+      "parent": 92,
+      "rect": { "y": 196.30000000000001, "x": 36, "width": 330, "height": 1 }
+    },
+    {
+      "label": "Vertical scroll bar, 2 pages",
+      "alpha": 0,
+      "class": "_UIScrollViewScrollIndicator",
+      "rect": { "y": 105.3, "x": 380, "width": 3, "height": 36 },
+      "parent": 13
+    },
+    {
+      "label": "Horizontal scroll bar, 1 page",
+      "alpha": 0,
+      "class": "_UIScrollViewScrollIndicator",
+      "rect": { "y": 834, "x": -23, "width": 36, "height": 3 },
+      "parent": 13
+    },
+    {
+      "id": "_TtGC7SwiftUI32NavigationStackHosting",
+      "class": "SwiftUI.UIKitNavigationBar",
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 },
+      "parent": 5
+    },
+    {
+      "class": "_UIBarBackground",
+      "parent": 100,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 116 }
+    },
+    {
+      "class": "UIKit.NavigationBarContentView",
+      "parent": 100,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    {
+      "class": "UIKit.NavigationBarTransitionContainer",
+      "parent": 102,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    {
+      "class": "_UINavigationBarHostedViewContainer",
+      "parent": 103,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    { "class": "UIView", "parent": 103, "rect": { "y": 62, "x": 0, "width": 402, "height": 54 } },
+    {
+      "class": "UIKit.NavigationBarPlatterContainer",
+      "parent": 103,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    {
+      "class": "_UINavigationBarPlatterView",
+      "parent": 106,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 107,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 108,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 109,
+      "rect": {
+        "y": 59.899999999999999,
+        "x": 13.9,
+        "width": 48.200000000000003,
+        "height": 48.200000000000003
+      }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 110,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterContentView",
+      "parent": 111,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterGlassView",
+      "parent": 112,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterSubviewContainerView",
+      "parent": 113,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterItemView",
+      "parent": 114,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "id": "BackButton",
+      "class": "_UIButtonBarButton",
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 },
+      "parent": 115
+    },
+    {
+      "hidden": true,
+      "class": "_TtCC5UIKit29ButtonBarButtonVisualProviderP33_A98CD29F4F6ECA17AFECE41BBB264E5918BackButtonMaskView",
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 },
+      "parent": 116
+    },
+    {
+      "label": "Back",
+      "class": "_TtCC5UIKit29ButtonBarButtonVisualProviderP33_A98CD29F4F6ECA17AFECE41BBB264E596Button",
+      "rect": { "y": 72.700000000000003, "x": 16, "width": 44, "height": 23 },
+      "parent": 116
+    },
+    {
+      "id": "chevron.backward",
+      "label": "Back",
+      "class": "UIImageView",
+      "rect": {
+        "y": 72.700000000000003,
+        "x": 29.699999999999999,
+        "width": 16.300000000000001,
+        "height": 23
+      },
+      "parent": 118
+    },
+    {
+      "class": "_UIPointerInteractionAssistantEffectContainerView",
+      "parent": 100,
+      "rect": { "y": 62, "x": 0, "width": 0, "height": 0 }
+    },
+    {
+      "class": "_UIFloatingBarContainerView",
+      "parent": 5,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "_TtGC5UIKitP10$186ecd81022FloatingBarHostingViewVS_20FloatingBarContainer_",
+      "parent": 121,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "_UIPointerInteractionAssistantEffectContainerView",
+      "parent": 121,
+      "rect": { "y": 0, "x": 0, "width": 0, "height": 0 }
+    }
+  ],
+  "pid": 30408,
+  "truncated": false
+}

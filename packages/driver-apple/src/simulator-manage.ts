@@ -13,6 +13,7 @@ import { buildScheme } from './build.js';
 import { opens, simulatorLinks } from './sim-links.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import { DATA_FOLDERS, installingApp } from './manage.js';
+import { SimulatorViews } from './sim-views.js';
 
 const copyFolders = (from: string, to: string) => {
   for (const dir of DATA_FOLDERS) {
@@ -39,9 +40,12 @@ const PRIVACY_SERVICES = [
 ];
 
 export class SimulatorApps implements AppManager {
+  readonly viewProbe = true;
+
   constructor(
     private readonly simctl: Simctl,
     private readonly udid: string,
+    private readonly views = new SimulatorViews(simctl, udid),
   ) {}
 
   async install(path: string, allowed?: (app: string) => void) {
@@ -168,7 +172,7 @@ export class SimulatorApps implements AppManager {
     return (await this.links(app)).some((l) => opens(l, url)) ? app : undefined;
   }
 
-  async launchWith(app: string, opts: LaunchOptions) {
-    await this.simctl.restart(this.udid, app, opts);
+  async launchWith(app: string, { probe, ...own }: LaunchOptions) {
+    await (probe ? this.views.launch(app, own) : this.simctl.restart(this.udid, app, own));
   }
 }

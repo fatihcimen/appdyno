@@ -1,0 +1,252 @@
+{
+  "app": "dev.appdyno.fixture",
+  "ms": 5.0999999999999996,
+  "front": true,
+  "views": [
+    { "class": "UIWindow", "rect": { "y": 0, "x": 0, "width": 402, "height": 874 } },
+    {
+      "class": "UITransitionView",
+      "parent": 0,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIDropShadowView",
+      "parent": 1,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "SwiftUI.UIHostingController<SwiftUI.ModifiedContent<SwiftUI.AnyView, SwiftUI.RootModifier>>",
+      "class": "SwiftUI._UIHostingView<SwiftUI.ModifiedContent<SwiftUI.AnyView, SwiftUI.RootModifier>>",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 2
+    },
+    {
+      "class": "SwiftUI.UIKitPlatformViewHost<SwiftUI.PlatformViewControllerRepresentableAdaptor<SwiftUI.(NavigationStackRepresentable in $1d3741708)>>",
+      "parent": 3,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "SwiftUI.UIKitNavigationController",
+      "class": "UILayoutContainerView",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 4
+    },
+    {
+      "class": "UINavigationTransitionView",
+      "parent": 5,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIViewControllerWrapperView",
+      "parent": 6,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "controller": "SwiftUI.NavigationStackHostingController<SwiftUI.AnyView>",
+      "class": "SwiftUI.NavigationStackHostingController<SwiftUI.AnyView>.(HostingView in $1d374148c)",
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 },
+      "parent": 7
+    },
+    {
+      "class": "SwiftUI.UIKitPlatformViewHost<SwiftUI.(PlatformViewRepresentableAdaptor in $1d374ce44)<Fixture.WebScreen>>",
+      "parent": 8,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "class": "WKWebView",
+      "parent": 9,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "class": "WKScrollView",
+      "parent": 10,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "class": "WKContentView",
+      "parent": 11,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    { "class": "UIView", "parent": 12, "rect": { "y": 116, "x": 0, "width": 402, "height": 724 } },
+    { "class": "UIView", "parent": 13, "rect": { "y": 116, "x": 0, "width": 402, "height": 724 } },
+    {
+      "class": "WKCompositingView",
+      "parent": 14,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "class": "WKCompositingView",
+      "parent": 15,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "class": "WKCompositingView",
+      "parent": 16,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "class": "WKCompositingView",
+      "parent": 17,
+      "rect": { "y": 116, "x": 0, "width": 0, "height": 0 }
+    },
+    {
+      "class": "WKCompositingView",
+      "parent": 17,
+      "rect": { "y": 116, "x": 0, "width": 402, "height": 724 }
+    },
+    {
+      "class": "WKVisibilityPropagationView",
+      "parent": 12,
+      "rect": { "y": 116, "x": 0, "width": 0, "height": 0 }
+    },
+    { "class": "UIView", "parent": 11, "rect": { "y": 116, "x": 0, "width": 0, "height": 0 } },
+    {
+      "label": "Vertical scroll bar, 1 page",
+      "alpha": 0,
+      "class": "_UIScrollViewScrollIndicator",
+      "rect": { "y": 119, "x": 396, "width": 3, "height": 690 },
+      "parent": 11
+    },
+    {
+      "label": "Horizontal scroll bar, 1 page",
+      "alpha": 0,
+      "class": "_UIScrollViewScrollIndicator",
+      "rect": { "y": 834, "x": 31, "width": 340, "height": 3 },
+      "parent": 11
+    },
+    {
+      "id": "_TtGC7SwiftUI32NavigationStackHosting",
+      "class": "SwiftUI.UIKitNavigationBar",
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 },
+      "parent": 5
+    },
+    {
+      "class": "_UIBarBackground",
+      "parent": 24,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 116 }
+    },
+    {
+      "class": "UIKit.NavigationBarContentView",
+      "parent": 24,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    {
+      "class": "UIKit.NavigationBarTransitionContainer",
+      "parent": 26,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    {
+      "class": "_UINavigationBarHostedViewContainer",
+      "parent": 27,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    { "class": "UIView", "parent": 27, "rect": { "y": 62, "x": 0, "width": 402, "height": 54 } },
+    {
+      "class": "UIKit.NavigationBarPlatterContainer",
+      "parent": 27,
+      "rect": { "y": 62, "x": 0, "width": 402, "height": 54 }
+    },
+    {
+      "class": "_UINavigationBarPlatterView",
+      "parent": 30,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 31,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 32,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 33,
+      "rect": {
+        "y": 59.899999999999999,
+        "x": 13.9,
+        "width": 48.200000000000003,
+        "height": 48.200000000000003
+      }
+    },
+    {
+      "class": "_UINavigationBarPlatterAnimationView",
+      "parent": 34,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterContentView",
+      "parent": 35,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterGlassView",
+      "parent": 36,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterSubviewContainerView",
+      "parent": 37,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "class": "_UINavigationBarPlatterItemView",
+      "parent": 38,
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 }
+    },
+    {
+      "id": "BackButton",
+      "class": "_UIButtonBarButton",
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 },
+      "parent": 39
+    },
+    {
+      "hidden": true,
+      "class": "UIKit.ButtonBarButtonVisualProvider.(BackButtonMaskView in _A98CD29F4F6ECA17AFECE41BBB264E59)",
+      "rect": { "y": 62, "x": 16, "width": 44, "height": 44 },
+      "parent": 40
+    },
+    {
+      "label": "Back",
+      "class": "UIKit.ButtonBarButtonVisualProvider.(Button in _A98CD29F4F6ECA17AFECE41BBB264E59)",
+      "rect": { "y": 72.700000000000003, "x": 16, "width": 44, "height": 23 },
+      "parent": 40
+    },
+    {
+      "id": "chevron.backward",
+      "label": "Back",
+      "class": "UIImageView",
+      "rect": {
+        "y": 72.700000000000003,
+        "x": 29.699999999999999,
+        "width": 16.300000000000001,
+        "height": 23
+      },
+      "parent": 42
+    },
+    {
+      "class": "_UIPointerInteractionAssistantEffectContainerView",
+      "parent": 24,
+      "rect": { "y": 62, "x": 0, "width": 0, "height": 0 }
+    },
+    {
+      "class": "_UIFloatingBarContainerView",
+      "parent": 5,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "UIKit.(FloatingBarHostingView in $186ecd810)<UIKit.FloatingBarContainer>",
+      "parent": 45,
+      "rect": { "y": 0, "x": 0, "width": 402, "height": 874 }
+    },
+    {
+      "class": "_UIPointerInteractionAssistantEffectContainerView",
+      "parent": 45,
+      "rect": { "y": 0, "x": 0, "width": 0, "height": 0 }
+    }
+  ],
+  "pid": 29925,
+  "truncated": false
+}

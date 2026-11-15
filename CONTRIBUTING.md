@@ -92,6 +92,7 @@ What a person may set is in [the CLI reference](docs/reference/cli.md#server-opt
 | `APPDYNO_NATIVE_DIR`       | the tests and `scripts/build-app.mjs` | where the viewer and the helpers are compiled, in place of `~/Library/Caches/appdyno/native` |
 | `APPDYNO_HELD_BY_HUB`      | the hub, for a command it runs        | the command ends with the hub                                                                |
 | `APPDYNO_PROBE_OUT`        | the frame probe's launch, for the app | the file the probe in the app writes its frames to                                           |
+| `APPDYNO_VIEW_SOCKET`      | the view probe's launch, for the app  | the socket the probe in the app answers on                                                   |
 | `APPDYNO_RECORD_SEGMENT_S` | `device-tests/evidence.test.ts`       | an Android recording's segment, 180 s otherwise, so that a test of a long one is short       |
 
 ## Modules
