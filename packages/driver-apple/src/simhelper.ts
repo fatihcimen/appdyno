@@ -50,6 +50,7 @@ const SDK_FLAGS = {
     '-framework',
     'Foundation',
   ],
+  ViewProbe: [...IN_A_SIMULATOR, '-dynamiclib', '-framework', 'UIKit'],
 };
 
 /** The helper's binary, compiled once per source (a Mac without Xcode's tools has no simulator either). */

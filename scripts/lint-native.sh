@@ -81,7 +81,7 @@ compiles app "${macos[@]}" mac/App/Menu.m
 compiles text-scan "${macos[@]}" mac/TextScan/TextScan.m
 compiles sim-hid clang -fobjc-arc ios/SimHelper/SimHID.m
 compiles sim-energy clang ios/SimHelper/SimEnergy.m
-compiles sim-helpers "${simulator[@]}" ios/SimHelper/{SimAX,SimOpen,SimProbe,NetProbe}.m
+compiles sim-helpers "${simulator[@]}" ios/SimHelper/{SimAX,SimOpen,SimProbe,NetProbe,ViewProbe}.m
 
 found=0
 analyzed() { # xcrun's words…, then one file
@@ -96,7 +96,7 @@ analyzed() { # xcrun's words…, then one file
 for f in "${viewer_test[@]}" mac/App/Menu.m mac/TextScan/TextScan.m; do analyzed "${macos[@]}" -DMV_SELFTEST "$f"; done
 analyzed clang -fobjc-arc ios/SimHelper/SimHID.m
 analyzed clang ios/SimHelper/SimEnergy.m
-for f in ios/SimHelper/{SimAX,SimOpen,SimProbe,NetProbe}.m; do analyzed "${simulator[@]}" "$f"; done
+for f in ios/SimHelper/{SimAX,SimOpen,SimProbe,NetProbe,ViewProbe}.m; do analyzed "${simulator[@]}" "$f"; done
 check analyzer test "$found" = 0
 
 exit $failed
