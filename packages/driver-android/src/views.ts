@@ -163,10 +163,11 @@ const outside = (child: Rect, box: Rect) =>
 const MAX_SCROLLED = 3;
 
 /**
- * A class its build's shrinker named: R8 names Compose's views `p3` and `pi` and moves them out of their package, as it
- * did in a minified build of the fixture, so no name tells what draws there.
+ * A class its build's shrinker named, so that no name tells what draws there: one of a few characters out of any
+ * package, as R8 names Compose's views `p3` and `pi` in a minified build of the fixture and the emulator's browser its
+ * own `dH0`, or a short lowercase one left in its package.
  */
-const SHRUNK = /(^|\.)[a-z][a-z0-9]{0,2}$/;
+const SHRUNK = /^[\w$]{1,4}$|\.[a-z][a-z0-9]{0,2}$/;
 
 /** The names a shrinker gave the shown views that hold most of the screen, where the label cannot see past them. */
 function shrunkOf(views: NativeView[], shown: boolean[]) {

@@ -182,6 +182,9 @@ describe('the read of the native views', () => {
       "pi, p3: named by the build's shrinker, so no name tells what draws there; Compose reads as Android views in such a build",
     ]);
     expect(tree('compose-36').notes).toEqual([]);
+    // as another build's shrinker names one, of mixed case
+    const mixed = treeOf(recorded('minified-compose-36').replaceAll(' pi{', ' dH0{'));
+    expect(mixed.notes?.[0]).toMatch(/^dH0, p3: named by the build's shrinker/);
   });
 
   it('keeps a line of its own making in the tree, at its parent place', () => {
