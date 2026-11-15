@@ -497,7 +497,10 @@ for (const { platform, serial, provider, pageId, other } of [
     it('marks what a web view shows in the screen', async () => {
       const s = await h.ok('screen');
       expect(s.text).toMatch(/button "Pay" \d+,\d+ clickable( focused)? web/);
-      expect(s.text).toMatch(/"Web content" \d+,\d+ .*web/);
+      // the page's texts at one x fold under one line, which says their x and web once
+      expect(s.text).toMatch(
+        /"Web content" \d+,\d+ .*web|^text x=\d+ web: ref "label" y\n(@\S+ ".*" \d+\n)*@\S+ "Web content" \d+$/m,
+      );
     });
 
     it('lists the page of a debuggable app, and none of an app that is not', async () => {

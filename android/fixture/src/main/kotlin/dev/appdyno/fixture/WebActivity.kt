@@ -1,9 +1,11 @@
 package dev.appdyno.fixture
 
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowInsets
 import android.webkit.WebView
-import androidx.compose.foundation.layout.width
+import android.widget.FrameLayout
 
 class WebActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,6 +21,17 @@ class WebActivity : Activity() {
             "utf-8",
             null,
         )
-        setContentView(web)
+        // Android 15 draws an app of target 35 and up under the system bars: the page's heading sat under the status bar
+        val page = FrameLayout(this).apply {
+            addView(web)
+            setOnApplyWindowInsetsListener { view, insets ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                }
+                insets
+            }
+        }
+        setContentView(page)
     }
 }

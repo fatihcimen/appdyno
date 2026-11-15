@@ -253,9 +253,7 @@ it.skipIf(!DEVICE)(
       },
       web: async () => {
         await link('web');
-        // the page's heading lies under a Pixel 8's status bar (132 px), where Android reads it as not shown
-        const text = platform === 'android' ? 'Payment page' : 'Web content';
-        await call('wait_for', { selector: { text }, timeoutMs: 10_000 });
+        await call('wait_for', { selector: { text: 'Web content' }, timeoutMs: 10_000 });
         await call('screen');
         await call(
           'webview',
