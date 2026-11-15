@@ -14,6 +14,7 @@ export const tr: Words = {
     story: 'Nasıl çalışır',
     console: 'Deneyin',
     tools: 'Neler yapar',
+    mac: 'Mac uygulaması',
     faq: 'Sorular',
     docs: 'Belgeler',
     github: 'GitHub',
@@ -190,6 +191,47 @@ export const tr: Words = {
         test: 'Geçişi aşan ve değeri öbür tarafta denetleyen bir akış.',
       },
     ],
+  },
+  mac: {
+    title: 'Cihazın başındaki insan için bir Mac uygulaması',
+    sub: 'Ajan cihazda yalnız değil: ne yaptığını izlersiniz, o kullanırken aynı cihazı siz de kullanırsınız.',
+    points: [
+      {
+        name: 'Bütün cihazlar tek pencerede',
+        text: '<code>appdyno hub</code>, bu Mac’teki bütün cihazları tek pencerede açar. Ajan bir cihazı kullanırken siz de fare ve klavyeyle kullanabilirsiniz.',
+      },
+      {
+        name: 'Performans, olduğu anda',
+        text: 'Performans paneli kareleri, CPU’yu ve belleği anında okur.',
+      },
+      {
+        name: 'Yapay zekâ istemcileriniz',
+        text: 'Yapay Zekâ İstemcileri, bu Mac’teki her MCP istemcisini gerçek durumuyla gösterir ve appdyno’yu ona ekler.',
+      },
+      {
+        name: 'Telefonlar kabloyla ya da Wi-Fi ile',
+        text: 'Telefon kabloyla bağlanır; <code>appdyno pair</code> ile bir kez eşleştirildikten sonra Wi-Fi ile de.',
+      },
+    ],
+    download: 'Mac uygulamasını indirin (.dmg)',
+    after:
+      'GitHub’daki son sürümden. Apple silicon, macOS 13.5 ya da üstü. Uygulama kendini günceller.',
+    shots: {
+      hub: {
+        alt: 'Karanlık görünümüyle hub: bir yapay zekâ istemcisi kaydırırken Ayarlar’da canlı bir iPhone simülatörü; Performans paneli görüntüyü saniyede 89 kare olarak, CPU’yu ve belleği okuyor',
+        caption: 'Hub: solda cihazlar, ortada seçili olan canlı, sağda Performans paneli.',
+      },
+      links: {
+        alt: 'Gerçek bir çalıştırma: bir MCP istemcisi, hub’daki bir iPhone simülatöründe bir test uygulamasının açtığı bağlantıları listeliyor, derin bağlantısını açıyor, uygulamanın kendi kodunun gösterdiği bir push gönderiyor, ardından ana ekrana bir tane daha; altta her çağrının gerçek süresi ve yanıtının ilk satırı',
+        caption:
+          'Pencere telefonu gösterirken bir ajan uygulamanın bağlantılarını açıyor ve ona push gönderiyor. Kayıt İngilizce arayüzle alındı.',
+      },
+      checkout: {
+        alt: 'Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub’ındaki bir iPhone simülatöründe Shop örneğinin ödemesinden geçiyor; sepete üç paket kahve çekirdeği koyup Place order’a geliyor, bu uygulamayı düşürüyor ve yanıt öldüğünü son log satırıyla söylüyor: Fatal error: Index out of range',
+        caption:
+          'Kurgu değil, gerçek bir çalıştırma: Shop örneğinin ödemesi, her çağrının gerçek süresiyle. Kayıt İngilizce arayüzle alındı.',
+      },
+    },
   },
   faq: {
     title: 'Sorular',

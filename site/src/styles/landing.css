@@ -450,6 +450,18 @@ section .sub {
   transform: none;
 }
 
+/* the one thing a section asks for */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  font: 700 15px var(--f-ui);
+  text-decoration: none;
+  color: var(--on-accent);
+  background: var(--blue);
+  border-radius: 12px;
+  padding: 11px 16px;
+}
+
 /* tool rack */
 .rack {
   padding-block: 40px 30px;

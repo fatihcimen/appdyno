@@ -1,0 +1,122 @@
+---
+import type { Words } from '../../i18n/index.ts';
+import { RELEASES, type Lang } from '../../site.ts';
+
+interface Props {
+  lang: Lang;
+  t: Words;
+}
+const { lang, t } = Astro.props;
+const { mac } = t;
+/** A screenshot of docs/images, which the site serves at /docs/images, with its words. */
+const shot = (name: keyof typeof mac.shots, file: string, height: number) => ({
+  ...mac.shots[name],
+  src: `/docs/images/${file}`,
+  height,
+});
+// the hub was pictured in each language, the two runs in English
+const hub = shot('hub', lang === 'tr' ? 'hub.tr.webp' : 'hub.webp', 820);
+const runs = [shot('links', 'push-and-link.webp', 950), shot('checkout', 'checkout.webp', 970)];
+---
+
+{/* The Mac app: what the README says of the hub, the real screenshots, and where to download it. */}
+<section class="band mac" id="mac">
+  <div class="inner">
+    <div class="reveal">
+      <h2>{mac.title}</h2>
+      <p class="sub">{mac.sub}</p>
+    </div>
+    <div class="grid reveal">
+      <figure>
+        <img src={hub.src} width="1240" height={hub.height} alt={hub.alt} loading="lazy" decoding="async" />
+        <figcaption>{hub.caption}</figcaption>
+      </figure>
+      <div>
+        <ul>
+          {
+            mac.points.map((point) => (
+              <li>
+                <b>{point.name}</b>
+                <span set:html={point.text} />
+              </li>
+            ))
+          }
+        </ul>
+        <a class="btn" href={`${RELEASES}/latest`}>{mac.download}</a>
+        <p class="note">{mac.after}</p>
+      </div>
+    </div>
+    <div class="runs reveal">
+      {
+        runs.map((run) => (
+          <figure>
+            <img src={run.src} width="1240" height={run.height} alt={run.alt} loading="lazy" decoding="async" />
+            <figcaption>{run.caption}</figcaption>
+          </figure>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .mac {
+    padding-block: 44px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .runs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 16px;
+    margin-top: 22px;
+  }
+  figure {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--term);
+  }
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  figcaption {
+    padding: 10px 14px;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--line);
+  }
+  ul {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  li {
+    padding-left: 18px;
+    border-left: 3px solid var(--violet);
+    color: var(--soft);
+  }
+  li b {
+    display: block;
+    color: var(--fg);
+    font: 700 16px var(--f-display);
+  }
+  li :global(code) {
+    font: 400 0.92em var(--f-mono);
+    color: var(--blue-lt);
+  }
+</style>

@@ -12,6 +12,7 @@ export const en = {
     story: 'How it works',
     console: 'Try it',
     tools: 'What it does',
+    mac: 'Mac app',
     faq: 'Questions',
     docs: 'Docs',
     github: 'GitHub',
@@ -188,6 +189,48 @@ export const en = {
         test: 'A flow that crosses the switch and checks the value on the other side.',
       },
     ],
+  },
+  mac: {
+    title: 'A Mac app, for the person in the room',
+    sub: 'The agent is not alone on the device: you watch what it does, and use the same device while it drives.',
+    points: [
+      {
+        name: 'Every device in one window',
+        text: '<code>appdyno hub</code> opens every device on this Mac in one window, driven by mouse and keyboard while an agent drives it too.',
+      },
+      {
+        name: 'Performance as it happens',
+        text: 'Its Performance pane reads frames, CPU and memory as they happen.',
+      },
+      {
+        name: 'Your AI clients',
+        text: 'AI Clients shows each MCP client on this Mac as it truly stands, and adds appdyno to it.',
+      },
+      {
+        name: 'Phones by cable or Wi-Fi',
+        text: 'A phone joins by cable, or by Wi-Fi once paired with <code>appdyno pair</code>.',
+      },
+    ],
+    download: 'Download the Mac app (.dmg)',
+    after:
+      'From the latest release on GitHub. Apple silicon, macOS 13.5 or newer. The app updates itself.',
+    shots: {
+      hub: {
+        alt: 'The hub in its dark look: an iPhone simulator live in Settings while an AI client scrolls it, and the Performance pane reading the picture at 84 frames a second, CPU and memory',
+        caption:
+          'The hub: the devices on the left, the selected one live in the middle, its Performance pane on the right.',
+      },
+      links: {
+        alt: "A real run: an MCP client lists the links a test app opens on an iPhone simulator in the hub, opens its deep link, sends it a push its own code shows, then another one onto the home screen, with each call's real time and first line of answer below",
+        caption:
+          "An agent opens an app's links and sends it a push while the window shows the phone.",
+      },
+      checkout: {
+        alt: 'A real run: a terminal of MCP tool calls goes through the checkout of the shop example on an iPhone simulator in the appdyno hub, three bags of coffee beans into the cart and on to Place order, which takes the app down, and the answer says it died, with its last log line: Fatal error: Index out of range',
+        caption:
+          "A real run, not a mock-up: the checkout of the shop example, with each call's real time.",
+      },
+    },
   },
   faq: {
     title: 'Questions',
