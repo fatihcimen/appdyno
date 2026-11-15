@@ -325,6 +325,8 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
   });
 
   it('empties the keychain of what an app saved, and counts it', async () => {
+    // a simulator other suites ran on holds items of its own: the count is of the one saved here
+    await set(call, 'keychain', 'reset');
     await call('open_link', { url: 'appdyno-fixture://open/keychain' });
     await call('tap', { selector: { id: 'save' } });
     expect(await result(call, 'Saved')).toBe(true);
