@@ -10,6 +10,12 @@ const src = (p: string) => fileURLToPath(new URL(`./packages/${p}/src/index.ts`,
 const own = mkdtempSync(join(tmpdir(), 'appdyno-unit-'));
 // here, and not in `test.env`: the end of the run reads it in this process, not in a worker
 process.env.APPDYNO_TEST_BREACH_FILE = join(own, 'breaches');
+/**
+ * The run's own temporary folder, which the end of the run takes away with all a test left in it: its name is short,
+ * as a test's Unix socket under it must keep to the 104 bytes a socket's path may have.
+ */
+const scratch = mkdtempSync(join(tmpdir(), 'ad-'));
+process.env.APPDYNO_TEST_RUN_DIRS = [own, scratch].join('\n');
 
 export default defineConfig({
   resolve: {
@@ -41,6 +47,8 @@ export default defineConfig({
       APPDYNO_TOOLS_DIR: join(own, 'tools'),
       // the Mac a test fakes the load of, and not the runner it runs on, which is a virtual one on CI
       APPDYNO_HOST_VIRTUAL: '0',
+      // every folder a test makes under tmpdir() is this run's, and goes with it
+      TMPDIR: scratch,
     },
     setupFiles: ['packages/appdyno/test/no-real-state.setup.ts'],
     globalSetup: ['packages/appdyno/test/no-real-state.teardown.ts'],

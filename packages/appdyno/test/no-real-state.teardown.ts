@@ -1,12 +1,18 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 
-/** Fails a unit test run that reached this Mac's own state, whatever became of the error it was given. */
+/**
+ * Fails a unit test run that reached this Mac's own state, whatever became of the error it was given, and takes away the
+ * run's own folders.
+ */
 export function teardown() {
   const file = process.env.APPDYNO_TEST_BREACH_FILE;
   if (file === undefined)
     throw new Error('APPDYNO_TEST_BREACH_FILE is missing: vitest.config.ts sets it');
   const breaches = existsSync(file) ? readFileSync(file, 'utf8').trim() : '';
   rmSync(file, { force: true });
+  // the run's own folders, and the temporary folders its tests left in them
+  for (const dir of (process.env.APPDYNO_TEST_RUN_DIRS ?? '').split('\n').filter(Boolean))
+    rmSync(dir, { recursive: true, force: true });
   if (breaches) {
     process.exitCode = 1;
     throw new Error(`unit tests reached this Mac's own state:\n${breaches}`);

@@ -96,9 +96,11 @@ describe('what this folder must never do', () => {
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-phone-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-/** Answers one usbmuxd request with this plist. */
+let socket = 0;
+
+/** Answers one usbmuxd request with this plist, on a socket of a short name: a socket's path keeps to 104 bytes. */
 async function usbmuxd(body: string) {
-  const path = join(dir, `mux-${Math.random()}.sock`);
+  const path = join(dir, `m${String((socket += 1))}.sock`);
   const server = createServer((s) => {
     s.once('data', () => {
       const b = Buffer.from(body);
