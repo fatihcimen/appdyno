@@ -8,9 +8,20 @@ export type Touchable = Pick<
   'role' | 'label' | 'whole' | 'rect' | 'x' | 'y' | 'flags'
 >;
 
-/** `a` lies wholly inside `b`. */
-const within = (a: Rect, b: Rect) =>
-  a.x >= b.x && a.y >= b.y && a.x + a.width <= b.x + b.width && a.y + a.height <= b.y + b.height;
+/** `a` lies wholly inside `b`, or stands out of it by no more than `slack`. */
+const within = (a: Rect, b: Rect, slack = 0) =>
+  a.x >= b.x - slack &&
+  a.y >= b.y - slack &&
+  a.x + a.width <= b.x + b.width + slack &&
+  a.y + a.height <= b.y + b.height + slack;
+
+const area = (r: Rect) => r.width * r.height;
+
+/**
+ * How far a control's own text may stand out of it: each frame is rounded by itself, and an iOS button 21 high held its
+ * label 22 high, 1 above it.
+ */
+const OWN_TEXT_SLACK = 2;
 
 /**
  * The one element a selector's matches name, with no index: a control and its own text inside it, with the same words
@@ -20,7 +31,8 @@ const within = (a: Rect, b: Rect) =>
  */
 export function oneOf<E extends Touchable>(hits: E[], index?: number): E | undefined {
   if (index !== undefined) return hits[index];
-  const inside = (a: E, b: E) => a !== b && within(a.rect, b.rect);
+  const inside = (a: E, b: E) =>
+    a !== b && area(a.rect) < area(b.rect) && within(a.rect, b.rect, OWN_TEXT_SLACK);
   const boxed = new Map<string, E>();
   for (const e of hits) {
     const box = `${e.rect.x},${e.rect.y},${e.rect.width},${e.rect.height}`;
@@ -82,7 +94,6 @@ const TOGGLES = new Set(['switch', 'checkbox']);
 /** Where along its long side a control is touched when a smaller one has its middle. */
 const ASIDE = [0.25, 0.75, 0.1, 0.9];
 
-const area = (r: Rect) => r.width * r.height;
 const holds = (r: Rect, p: Point) =>
   p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
 

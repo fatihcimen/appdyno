@@ -37,6 +37,17 @@ describe('the one element of several matches', () => {
     expect(oneOf([text, row])).toBe(row);
   });
 
+  it('is the control whose own text stands a point out of it, as frames rounded apart do', () => {
+    // the keyboard's first-use sheet on an iOS 26.5 simulator, as it was read
+    const button = el('@button', 'Continue', [60, 818, 282, 21]);
+    const label = el('@label', 'Continue', [165, 817, 73, 22], { role: 'text', flags: [] });
+    expect(oneOf([button, label])).toBe(button);
+    expect(oneOf([label, button])).toBe(button);
+    // one that stands further out is another thing of the same words
+    const apart = el('@apart', 'Continue', [165, 810, 73, 22], { role: 'text', flags: [] });
+    expect(oneOf([button, apart])).toBeUndefined();
+  });
+
   it('is the one a touch acts on of two that take the same box, as a web link and its text', () => {
     const words = el('@words', 'Nika riots', [10, 10, 80, 20], { flags: ['web'] });
     const link = el('@link', 'Nika riots', [10, 10, 80, 20], { flags: ['web', 'clickable'] });
