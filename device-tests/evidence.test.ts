@@ -390,7 +390,7 @@ describe.skipIf(!android)('network on Android', () => {
       expect(read.text).toMatch(/bodies: 1 of 1 in the export/);
       const none = await h.call('network', { action: 'read' });
       expect(none.error).toBe(true);
-      expect(none.text).toMatch(/export it as HAR/);
+      expect(none.text).toMatch(/export the proxy's session as HAR/);
       await h.ok('network', { action: 'stop' });
       expect(await proxySetting()).toBe('null');
       expect(await adb.run(['-s', android, 'reverse', '--list'])).not.toContain(`${web.proxyPort}`);
