@@ -1,4 +1,5 @@
 import { NoViewProbe, type ViewTree } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './shared.js';
@@ -36,6 +37,35 @@ describe('the native views of a screen', () => {
     const { call } = await connect(d);
     expect((await call('screen', { views: true })).text).toBe(
       'UNSUPPORTED: dev.app runs without the view probe\nhint: launch_app restart:true probe:true puts it in',
+    );
+  });
+
+  it('say a main thread that did not answer, and an app behind another, as the device said them', async () => {
+    const refusing = (e: DeviceError) =>
+      Object.assign(new FakeDevice(), { views: () => Promise.reject(e) });
+    const said = async (e: DeviceError) =>
+      (await (await connect(refusing(e))).call('screen', { views: true })).text;
+    expect(
+      await said(
+        new DeviceError(
+          'TIMEOUT',
+          'the main thread of dev.app did not answer the view probe within 2 s',
+          'the app is busy or hung: ask again once it answers',
+        ),
+      ),
+    ).toBe(
+      'TIMEOUT: the main thread of dev.app did not answer the view probe within 2 s\nhint: the app is busy or hung: ask again once it answers',
+    );
+    expect(
+      await said(
+        new DeviceError(
+          'APP_NOT_RUNNING',
+          'dev.app does not run: iOS suspends an app behind another, and its view probe with it',
+          'bring it to the front, then ask again',
+        ),
+      ),
+    ).toBe(
+      'APP_NOT_RUNNING: dev.app does not run: iOS suspends an app behind another, and its view probe with it\nhint: bring it to the front, then ask again',
     );
   });
 

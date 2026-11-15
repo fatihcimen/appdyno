@@ -136,6 +136,17 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
     expect(JSON.stringify(form)).not.toContain(SECRET);
   }, 120_000);
 
+  it('refuses an app behind the home screen, which iOS sends to the background and suspends', async () => {
+    expect((await t.call('press_key', { key: 'home' })).error).toBe(false);
+    for (const wait of [1_000, 12_000]) {
+      await sleep(wait);
+      const from = Date.now();
+      const behind = await t.call('screen', { views: true });
+      console.log(`${String(Date.now() - from)} ms ${behind.text}`);
+      expect([behind.error, behind.data.code]).toEqual([true, 'APP_NOT_RUNNING']);
+    }
+  }, 120_000);
+
   it('says a main thread that does not answer within 2 s did not', async () => {
     const env = { APPDYNO_FIXTURE_SLEEP_MS: '4000' };
     expect((await t.call('launch_app', { restart: true, env, read: 'none' })).error).toBe(false);
