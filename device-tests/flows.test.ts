@@ -316,7 +316,7 @@ for (const { platform, serial, form } of targets)
         await run('terminate-app', '--app', APP);
         await run('launch-app', '--app', APP);
         await run('tap', '--json', JSON.stringify({ selector: { text: form } }));
-        await run('assert', '--id', 'name_input', '--timeout-ms', '8000');
+        await run('assert', '--selector', '{"id":"name_input"}', '--timeout-ms', '8000');
         await run('flow', 'stop');
         await run('flow', 'save', flow);
         const text = readFileSync(flow, 'utf8');
