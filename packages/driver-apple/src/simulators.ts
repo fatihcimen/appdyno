@@ -8,12 +8,11 @@ const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{
 /** Kinds of simulator this Mac may have that nothing here drives. */
 const NOT_DRIVEN = /Apple-(Watch|TV|Vision)/;
 
-/** A runtime's id as people name it: iOS 27.2. */
-const runtimeName = (runtime: string) =>
-  runtime
-    .replace(/^.*SimRuntime\./, '')
-    .replace('-', ' ')
-    .replaceAll('-', '.');
+/** A runtime's id as people name it: iOS 27.2, for a runtime of one model's own too (iOS-27-2-iPhone19-4). */
+const runtimeName = (runtime: string) => {
+  const m = /SimRuntime\.([A-Za-z]+)((?:-\d+)+)/.exec(runtime);
+  return m?.[1] && m[2] ? `${m[1]} ${m[2].slice(1).replaceAll('-', '.')}` : runtime;
+};
 
 /** A device type's id as people name it: the same words, with spaces. */
 const typeName = (deviceType: string) =>

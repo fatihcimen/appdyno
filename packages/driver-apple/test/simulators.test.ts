@@ -25,6 +25,14 @@ const simulators = (said: string[] = []) =>
             deviceType: `${TYPE}iPad-Pro-11-inch-M5-12GB`,
           },
           {
+            udid: 'D',
+            name: 'Folds',
+            state: 'Shutdown',
+            // a runtime of one model's own, as Xcode 27.2 has for the iPhone Duo
+            runtime: `${RUNTIME}-iPhone19-4`,
+            deviceType: `${TYPE}iPhone-Duo`,
+          },
+          {
             udid: 'B',
             name: 'A watch',
             state: 'Shutdown',
@@ -50,6 +58,7 @@ describe("a Mac's simulators", () => {
     expect(await simulators().startable()).toEqual([
       { id: 'A', name: 'Mine (iOS 27.2)', state: 'running', serial: 'A', model: 'iPhone 17 Pro' },
       { id: 'C', name: 'Tablet (iOS 27.2)', state: 'stopped', model: 'iPad Pro 11-inch (M5)' },
+      { id: 'D', name: 'Folds (iOS 27.2)', state: 'stopped', model: 'iPhone Duo' },
     ]);
   });
 
