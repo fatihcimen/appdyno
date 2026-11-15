@@ -24,6 +24,8 @@ const ok = <A extends Answer>(r: A) => {
 const asks = async (call: Call) => {
   await call('terminate_app');
   ok(await call('open_link', { url: 'appdyno-fixture://open/biometric' }));
+  // the iOS fixture's first screen names the link while the new one slides over it: a tap then would change the screen
+  ok(await call('wait_for', { selector: { id: 'last_link' }, gone: true, timeoutMs: 5_000 }));
   return ok(await call('tap', { selector: { id: 'authenticate' } }));
 };
 
@@ -48,13 +50,14 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
   };
 
   // a run's first sheet took 3 to 5 s, after the tap's answer: the next read has it
-  it('Face ID: a read and a picture say so, as does a tap once a sheet has been up', async () => {
+  it('Face ID: a read says so, as does a tap once a sheet has been up, and a picture shows it with no look past the app', async () => {
     await asks(o.call);
     await vi.waitFor(
       async () => expect(ok(await o.call('screen')).text).toContain('needs a person: Face ID'),
       { timeout: 10_000, interval: 1_000 },
     );
-    expect(ok(await o.call('screenshot')).text).toContain('needs a person: Face ID');
+    // the sheet is in the picture: a screenshot reads nothing past the app to name it
+    expect(ok(await o.call('screenshot')).text).not.toContain('needs a person');
     await passes();
     const r = await asks(o.call);
     expect(r.text).toContain('needs a person: Face ID');
