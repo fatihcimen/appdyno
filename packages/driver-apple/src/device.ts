@@ -55,9 +55,6 @@ const ANOTHER_SECTION = 'prefs:root=SCREEN_TIME';
 /** Long enough for Settings to take the first of two links. */
 const SECTION_MS = 700;
 
-/** How long Command-Space has to bring Spotlight to the front: by a simulator's keys it came within a second. */
-const KEYS_OPEN_MS = 3_000;
-
 /** How long a field has to report the focus before the keys go to whatever has the keyboard. */
 const KEYS_AFTER_MS = 2_000;
 
@@ -271,15 +268,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
       await super.key('space', { settle: false, read: 'none' }, ['command']);
       // read as the home screen app's it showed nothing of itself, but its keyboard: a second late by the runner's keys
       await this.target(SPOTLIGHT_APP);
-      if (await this.untilFront(SPOTLIGHT_APP, KEYS_OPEN_MS)) return;
-      // on iOS 26.5 and 27.2 simulators at load 300 to 500 the keys brought none every second time: a drag down did
-      await this.drag(SYSTEM_SWIPES.spotlight);
-      if (!(await this.untilFront(SPOTLIGHT_APP)))
-        throw new DeviceError(
-          'TIMEOUT',
-          'Spotlight did not open: neither Command-Space nor a drag down on the home screen brought it',
-          'read the screen: on a loaded Mac it may still be coming',
-        );
+      await this.spotlightFront();
     } else
       await this.drag(
         view === 'control_center' ? SYSTEM_SWIPES.controlCenter : SYSTEM_SWIPES.notifications,
@@ -310,6 +299,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
         'build the iOS runner again from this checkout',
       );
     return t;
+  }
+
+  /** Spotlight after its keys, once it is in front or the wait for it is over. */
+  protected async spotlightFront() {
+    await this.untilFront(SPOTLIGHT_APP);
   }
 
   /** The app a view went over: home closes the view, and it is what is read again. */

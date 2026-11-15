@@ -1,5 +1,6 @@
 import {
   swipeThrough,
+  SYSTEM_SWIPES,
   type ScreenRecorder,
   type SystemSwipe,
   TIMEOUTS,
@@ -42,9 +43,11 @@ import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
 import { IosDevice } from './device.js';
 import { simulatorOps } from './simulator-ops.js';
-import { HOME_SCREEN_APP } from './platform-screen.js';
+import { HOME_SCREEN_APP, SPOTLIGHT_APP } from './platform-screen.js';
 
 const LAUNCH_FRONT_MS = 15_000;
+/** How long Command-Space has to bring Spotlight to the front: it came within a second where it came. */
+const KEYS_OPEN_MS = 3_000;
 
 /**
  * How long after a key the app in front is not taken for one that stays there: after home the helper named the app for
@@ -283,6 +286,22 @@ export class IosSimulatorDevice extends IosDevice {
   /** A touch the app in front never reports is one `act` would take for lost and do again by the runner. */
   protected drag(way: SystemSwipe) {
     return swipeThrough(way, (e) => this.mirror.input(e));
+  }
+
+  /**
+   * Command-Space brought no Spotlight about every second time on iOS 26.5 and 27.2 simulators at load 300 to 500, and
+   * the call said it had: after 3 s without it the icons are dragged down, as a person does, which opened it the once
+   * that was watched. What neither opens is not said opened.
+   */
+  protected override async spotlightFront() {
+    if (await this.untilFront(SPOTLIGHT_APP, KEYS_OPEN_MS)) return;
+    await this.drag(SYSTEM_SWIPES.spotlight);
+    if (!(await this.untilFront(SPOTLIGHT_APP)))
+      throw new DeviceError(
+        'TIMEOUT',
+        'Spotlight did not open: neither Command-Space nor a drag down on the home screen brought it',
+        'read the screen: on a loaded Mac it may still be coming',
+      );
   }
 
   /** A running app comes forward as it is; to start it afresh, terminate it first. */
