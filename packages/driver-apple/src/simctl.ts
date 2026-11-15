@@ -147,13 +147,22 @@ export const newestRuntimeOf = (runtimes: Runtime[], model: string) =>
 
 /**
  * What a failed simctl said, in a line: its last two, or where it ended on an exception of its own, the line that
- * names it, as the lines after are its stack.
+ * names it, as the lines after are its stack; where its last line points at the lines before ("Multiple errors were
+ * returned; see stderr"), those, as `addmedia` names there why it did not take a file.
  */
-export const simctlSaid = (stderr: string) =>
-  (
+export const simctlSaid = (stderr: string) => {
+  const lines = stderr.trim().split('\n');
+  const before = lines.at(-1)?.endsWith('see stderr')
+    ? lines.slice(
+        0,
+        lines.findIndex((l) => l.startsWith('An error was encountered')),
+      )
+    : [];
+  return (
     /^\*\*\* Terminating app due to uncaught exception .*$/m.exec(stderr)?.[0] ??
-    stderr.trim().split('\n').slice(-2).join(' ')
+    (before.some((l) => l.trim()) ? before : lines.slice(-2)).join(' ').trim()
   ).slice(0, 300);
+};
 
 /** The simulator tool, always for one named simulator (never "booted": other simulators may run). */
 export class Simctl {

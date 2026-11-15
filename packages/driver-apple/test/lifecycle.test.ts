@@ -129,6 +129,14 @@ describe("a simulator's shake and photos", () => {
       "*** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 'Invalid domain=nil in -[NSError initWithDomain:code:userInfo:]'",
     );
     expect(simctlSaid('one\ntwo\nthree\n')).toBe('two three');
+    // what it wrote of a WebM, its reason above the line that points at it
+    expect(
+      simctlSaid(
+        "Failed to import '/p/clip.webm', error [NSPOSIXErrorDomain] 22: The operation couldn’t be completed. File type unsupported.\n\nAn error was encountered processing the command (domain=com.apple.CoreSimulator.LaunchdSimError, code=133):\nMultiple errors were returned; see stderr\n",
+      ),
+    ).toBe(
+      "Failed to import '/p/clip.webm', error [NSPOSIXErrorDomain] 22: The operation couldn’t be completed. File type unsupported.",
+    );
     const { simctl, ran } = simulator({ getenv: '/nowhere' });
     const exec = simctl.exec.bind(simctl);
     simctl.exec = (args: string[]) =>
