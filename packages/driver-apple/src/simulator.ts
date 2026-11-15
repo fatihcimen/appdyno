@@ -46,6 +46,12 @@ import { HOME_SCREEN_APP } from './platform-screen.js';
 
 const LAUNCH_FRONT_MS = 15_000;
 
+/**
+ * How long after a key the app in front is not taken for one that stays there: after home the helper named the app for
+ * 0.5 to 1 s more, as it went away, and a launch that took that for "in front already" left the home screen up.
+ */
+const LEAVING_MS = 2_000;
+
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
@@ -284,12 +290,17 @@ export class IosSimulatorDevice extends IosDevice {
     // what a window's control sends: the runner's drag up from the home indicator shows no switcher here
     if (key === 'siri' || key === 'appSwitch') {
       await this.mirror.input({ kind: 'button', name: key });
+      this.pressedAt = Date.now();
       return opts?.read === 'tree' ? { tree: await this.tree() } : {};
     }
     const r = await super.key(key, opts, modifiers);
+    this.pressedAt = Date.now();
     if (key === 'lock' || key === 'power') this.lock.pressed();
     return r;
   }
+
+  /** When a key last went: one that sends the app away, as home, leaves it named as in front a while (`LEAVING_MS`). */
+  private pressedAt = 0;
 
   /** The next read or action wakes it, if this tool locked it. */
   private wake() {
@@ -331,7 +342,13 @@ export class IosSimulatorDevice extends IosDevice {
 
   override async launch(pkg: string) {
     await this.wake();
-    if (this.targetApp === pkg && (await this.direct.front().catch(() => undefined)) === pkg)
+    // an app on its way out is not in front for long: only a launch brings that one back
+    const stays = Date.now() - this.pressedAt >= LEAVING_MS;
+    if (
+      stays &&
+      this.targetApp === pkg &&
+      (await this.direct.front().catch(() => undefined)) === pkg
+    )
       return;
     return super.launch(pkg);
   }

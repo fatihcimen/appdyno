@@ -104,3 +104,47 @@ describe('a simulator whose helper does not answer', () => {
     runner.mockRestore();
   });
 });
+
+describe('a launch of the app the helper names in front', () => {
+  const device = () => {
+    const launched: string[] = [];
+    const simctl = Object.assign(quiet(), {
+      launch: (_: string, app: string) => Promise.resolve(void launched.push(app)),
+    });
+    const d = new IosSimulatorDevice(UDID, simctl, {
+      close: vi.fn(),
+      front: () => Promise.resolve(APP),
+      reads: false,
+    } as never);
+    Object.assign(d, {
+      targetApp: APP,
+      act: () => Promise.resolve({}),
+      target: () => Promise.resolve(),
+      launchedAlongside: () => Promise.resolve(false),
+      appRunning: () => Promise.resolve(false),
+    });
+    return { d, launched };
+  };
+
+  it('has nothing to do while the app stays there', async () => {
+    const { d, launched } = device();
+    await d.launch(APP);
+    expect(launched).toEqual([]);
+  });
+
+  it('is made all the same right after a key, as home leaves the app named in front while it goes away', async () => {
+    vi.useFakeTimers();
+    try {
+      const { d, launched } = device();
+      await d.key('home', { settle: false, read: 'none' });
+      await d.launch(APP);
+      expect(launched).toEqual([APP]);
+      // past the time an app takes to leave, the one in front is one that stayed
+      vi.advanceTimersByTime(2_000);
+      await d.launch(APP);
+      expect(launched).toEqual([APP]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
