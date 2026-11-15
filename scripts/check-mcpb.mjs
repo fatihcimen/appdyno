@@ -2,7 +2,8 @@
 // What a desktop client does with the extension: the .mcpb unpacked into a folder of its own, and its server run over
 // stdio by the manifest's own command, arguments and variables, on an empty HOME with only Node and the system on PATH.
 // Run for an install form left empty, as the packer's own substitution and as a client that leaves a field's
-// placeholder where it was, and for one filled in. It touches no device:
+// placeholder where it was, for one filled in, and for each field given what the server refuses, which must stop it
+// from starting: a field that reached nothing would start. It touches no device:
 //   pnpm build && node scripts/build-mcpb.mjs && node scripts/check-mcpb.mjs
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from 'node:fs';
@@ -108,33 +109,51 @@ async function main() {
     const want = JSON.stringify(manifest.tools);
     const env = strangerEnv(temp);
     const placeholders = must(manifest.server.mcp_config, "the manifest's server");
+    /**
+     * The server's command for a form, by the packer's own substitution.
+     * @param {Record<string, string>} userConfig
+     */
+    const filled = async (userConfig) =>
+      must(
+        await getMcpConfigForManifest({
+          manifest,
+          extensionPath: unpacked,
+          systemDirs: { HOME: env.HOME },
+          userConfig,
+          pathSeparator: '/',
+        }),
+        "the server's command",
+      );
+    /** @param {{ command: string; args?: string[]; env?: Record<string, string> }} config */
+    const served = (config) =>
+      toolsOf(config.command, config.args ?? [], { ...env, ...config.env });
     const forms = {
-      'a form left empty': await getMcpConfigForManifest({
-        manifest,
-        extensionPath: unpacked,
-        systemDirs: { HOME: env.HOME },
-        userConfig: {},
-        pathSeparator: '/',
-      }),
+      'a form left empty': await filled({}),
       'a form left empty, its placeholders left as they were': {
         ...placeholders,
         args: (placeholders.args ?? []).map((a) => a.replace('${__dirname}', unpacked)),
       },
-      'a form filled in': await getMcpConfigForManifest({
-        manifest,
-        extensionPath: unpacked,
-        systemDirs: { HOME: env.HOME },
-        userConfig: {
-          allow_devices: '^emulator-5554$',
-          allow_apps: 'com.example.shop, com.example.shop.dev',
-          allow_urls: '^https://staging\\.example\\.com/',
-        },
-        pathSeparator: '/',
+      'a form filled in': await filled({
+        allow_devices: '^emulator-5554$',
+        allow_apps: 'com.example.shop, com.example.shop.dev',
+        allow_urls: '^https://staging\\.example\\.com/',
       }),
     };
-    for (const [form, given] of Object.entries(forms)) {
-      const config = must(given, `the server's command for ${form}`);
-      const tools = await toolsOf(config.command, config.args ?? [], { ...env, ...config.env });
+    // each field reaches the server: what it refuses of a flag, it refuses of the field, and does not start
+    for (const [field, refused] of Object.entries({
+      allow_devices: 'a|',
+      allow_apps: ' , ',
+      allow_urls: '.*',
+    })) {
+      const started = await served(await filled({ [field]: refused })).then(
+        () => true,
+        () => false,
+      );
+      if (started) throw new Error(`${field}: the server started with ${refused}`);
+      console.log(`ok   ${field} given ${JSON.stringify(refused)}: the server refuses to start`);
+    }
+    for (const [form, config] of Object.entries(forms)) {
+      const tools = await served(config);
       if (tools.length === 0) throw new Error(`${form}: no tools`);
       if (JSON.stringify(tools) !== want)
         throw new Error(`${form}: tools/list and the manifest's tools differ`);
