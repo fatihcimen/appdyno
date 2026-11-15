@@ -54,6 +54,11 @@
 - Komut satırının `launch-app --probe`'u, probe'un restore'a ya da o cihazda probe tutan bir sunucu bitene dek kaldığını söyler.
 - Fotoğraf ya da video olmayan bir dosya verilen `device_setting media` bunu söyler.
 - Bir seçici, bir düğme ile ondan bir nokta taşan kendi metni için artık `AMBIGUOUS` yanıtı vermez.
+- Bir iOS simülatöründe `press_key` `spotlight`, Command-Space 3 s içinde Spotlight'ı getirmediğinde ana ekranı aşağı sürükler; ikisi de açmadıysa `TIMEOUT` ile reddedilir: yoğun ana makine yükünde iOS 26.5 ve 27.2 simülatörlerinde yaklaşık iki denemeden birinde ana ekranın üstünde "opened spotlight" yanıtını veriyordu. iPhone'da eskisi gibidir.
+- Bir iOS simülatöründe, probe'u yanıt verirken iOS'un askıya aldığı bir uygulamanın `views` ile `screen` çağrısı, başka bir uygulamanın arkasındaki gibi `APP_NOT_RUNNING` ile reddedilir: iOS 27.2 simülatöründe `home`'dan 1 s sonra sorulduğunda 10 s bekleyip `TIMEOUT` yanıtını veriyordu.
+- `perf_profile`, Swift derleyicisinin ürettiği thunk'ları uygulamanın kendi işlevleri arasında saymaz: Xcode 27.2 ile derlenmiş bir uygulamada en yoğun işlev olarak, işi yapan closure'ın üstünde bir `thunk for @escaping @callee_guaranteed @Sendable () -> ()` adını veriyordu.
+- Bir iOS simülatöründe `screenshot`, `screen` gibi, bir kişi gerektiren istemi söyler: uygulamanın üstünde Face ID sayfası varken resmin yanıtı bir şey söylemiyordu. Bu bakış orada bir resme yaklaşık 10 ms ekler; iPhone'da eskisi gibi bakılmaz.
+- Tek bir modele özgü çalışma zamanındaki simülatör (Xcode 27.2'nin iPhone Duo için olanı gibi) iOS sürümüyle listelenir: "iOS 27.2.iPhone19.4" yazıyordu.
 
 ## 1.1.3
 

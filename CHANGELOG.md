@@ -54,6 +54,11 @@
 - The command line's `launch-app --probe` says its probe stays until restore, or until a server that holds probes on the device ends.
 - `device_setting media` given a file that is not a photo or video says so.
 - A selector no longer answers `AMBIGUOUS` for a button and its own text that stands a point outside it.
+- On an iOS simulator, `press_key` `spotlight` drags the home screen down where Command-Space brought no Spotlight within 3 s, and is refused with `TIMEOUT` where neither opened it: it answered "opened spotlight" over the home screen, about every second time on iOS 26.5 and 27.2 simulators under heavy host load. An iPhone's is as it was.
+- On an iOS simulator, `screen` with `views` of an app iOS suspended while its probe answered is refused with `APP_NOT_RUNNING`, as an app behind another is: asked 1 s after `home` on an iOS 27.2 simulator it waited 10 s and answered `TIMEOUT`.
+- `perf_profile` leaves the Swift compiler's thunks out of the app's own functions: of an app built with Xcode 27.2 it named a `thunk for @escaping @callee_guaranteed @Sendable () -> ()` the busiest, above the closure that did the work.
+- On an iOS simulator, `screenshot` says a prompt that needs a person, as `screen` does: with a Face ID sheet over the app, the picture's answer said nothing. The look costs a picture about 10 ms there; an iPhone's takes none, as before.
+- A simulator on a runtime of one model's own, as Xcode 27.2's for the iPhone Duo, is listed with its iOS version: it read "iOS 27.2.iPhone19.4".
 
 ## 1.1.3
 

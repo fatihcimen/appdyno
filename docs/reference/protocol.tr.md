@@ -126,7 +126,7 @@ yoksa kontrol olmayan bir yere dokunur; host sonra klavyenin gidip gitmediğini 
 iki kez basılan Home'dur, bir pencerenin kontrolüyle aynı girdi; ikinci basıştan yarım saniye sonra yanıt verir,
 çünkü iOS daha erken gelen bir basışı o ikisinin parçası sayar; bir telefonda ana ekran göstergesinin yukarı doğru yavaş sürüklenmesidir. Denetim Merkezi ve Bildirim Merkezi, bir simülatörde bir pencerenin kontrollerinin yansıtmanın
 girdisiyle gönderdiği sürüklemelerdir: `act`, altlarındaki uygulamanın dokunuşu bildirmesini beklerdi, bildirmeyince onu kayıp sayıp
-yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir. Her biri ana ekran uygulamasına aittir, bu yüzden onu
+yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir; simülatörde bu 3 s içinde getirmezse ana ekranda aşağı sürükleme, ikisi de açmadıysa ret (`TIMEOUT`). Her biri ana ekran uygulamasına aittir, bu yüzden onu
 `home` kapatana kadar okunan odur. Ses, kilit ve güç tuşları bir simülatörde doğrudan girdiyle, bir telefonda
 `XCUIDevice` ile gider; orada kilit ve güç özel `pressLockButton`'u kullanır.
 

@@ -77,3 +77,7 @@ On an emulator with API 36 and a PIN set for the test, at host load 220-250, `sc
 ## Crashes
 
 `crashes` with `symbols` was run on an iPhone 13 Pro Max: a stripped Release build's crash read a bare `Fixture` frame, then `Fixture fixtureCrash(_:)` from its dSYM.
+
+## Xcode 27.2
+
+The simulator suites ran with Xcode 27.2 (27B52), used through `DEVELOPER_DIR` beside Xcode 26.5, on an iPhone 17 simulator with iOS 27.2 (24B8117), on 2026-11-15 and 16, one file at a time at host load 5 to 700 on 10 cores. 34 of the 40 files passed every test they ran, in the sweep or run again after a fix or at a lower load, taps, swipes, typing and keys by the simulator's helpers and by the runner alone among them; `hub.test.ts` and `mirror.hud.test.ts` failed one test each that failed the same on iOS 26.5, `gate-why.test.ts` and `perf-compare.test.ts` wait for a quiet Mac and were not run, `crashes.test.ts` needs a release build, and `simulator-create.test.ts` was left out. A runner and helpers built by Xcode 26.5 drove the same simulator under Xcode 27.2.

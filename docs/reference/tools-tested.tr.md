@@ -77,3 +77,7 @@ API 36'lı ve test için PIN ayarlanmış bir emülatörde, host yükü 220-250'
 ## Çökmeler
 
 `symbols` ile `crashes` bir iPhone 13 Pro Max'te çalıştırıldı: sembolleri ayıklanmış bir Release build'in çökmesinde önce çıplak bir `Fixture` çerçevesi, sonra dSYM'sinden `Fixture fixtureCrash(_:)` okundu.
+
+## Xcode 27.2
+
+Simülatör paketleri, Xcode 26.5'in yanında `DEVELOPER_DIR` ile kullanılan Xcode 27.2 (27B52) ile, iOS 27.2 (24B8117) yüklü bir iPhone 17 simülatöründe, 2026-11-15 ve 16'da, 10 çekirdekte 5-700 ana makine yükünde dosya dosya çalıştırıldı. 40 dosyanın 34'ü çalıştırdığı her testi geçti (ilk turda, bir düzeltmeden sonra ya da daha düşük yükte yeniden çalıştırılınca); dokunma, kaydırma, yazma ve tuşlar hem simülatörün yardımcılarıyla hem yalnızca çalıştırıcıyla denendi. `hub.test.ts` ve `mirror.hud.test.ts` birer testte kaldı, aynı testler iOS 26.5'te de kalıyor; `gate-why.test.ts` ve `perf-compare.test.ts` sakin bir Mac bekler ve çalıştırılmadı; `crashes.test.ts` bir release derlemesi ister; `simulator-create.test.ts` dışarıda bırakıldı. Xcode 26.5 ile derlenmiş çalıştırıcı ve yardımcılar aynı simülatörü Xcode 27.2 altında sürdü.

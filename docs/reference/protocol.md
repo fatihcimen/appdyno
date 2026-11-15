@@ -126,7 +126,7 @@ shows one, else a place with no control; the host then reads whether it went and
 pressed twice on a simulator, the same input as a window's control, and it answers half a second after the second press,
 as iOS takes a press that comes sooner as part of the two; on a phone it is the home indicator's slow drag up. Control Center and Notification Center are the drags a window's controls send, by the mirror's
 input on a simulator: `act` would wait for the app under them to report the touch, take it for lost when it does not, and
-do it again. Spotlight is Command-Space from the home screen. Each is the home screen app's, so that is what is read until
+do it again. Spotlight is Command-Space from the home screen; on a simulator, where that brings none within 3 s, a drag down on the home screen, and a refusal (`TIMEOUT`) where neither opened it. Each is the home screen app's, so that is what is read until
 `home` closes it. The volume, lock and power keys go through direct input on a simulator and through
 `XCUIDevice` on a phone, where lock and power use the private `pressLockButton`.
 
