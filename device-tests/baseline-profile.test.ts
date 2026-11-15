@@ -23,7 +23,8 @@ const DM_FOR_OLDER = join(OUT, 'release/baselineProfiles/1/fixture-release.dm');
 const adb = (...words: string[]) =>
   execFileSync('adb', ['-s', SERIAL, ...words], { encoding: 'utf8' });
 const installed = (...files: string[]) => {
-  adb('uninstall', APP);
+  // an install that failed before left none to uninstall, and the debug build still goes back at the end
+  adb('shell', `pm uninstall ${APP} >/dev/null || true`);
   adb(files.length > 1 ? 'install-multiple' : 'install', '-g', ...files);
 };
 const state = () =>
