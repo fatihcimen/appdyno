@@ -378,7 +378,8 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     expect(
       (await call('wait_for', { selector: { text: 'Ayarlar' }, timeoutMs: 10_000 })).data.met,
     ).toBe(true);
-    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale: ');
+    // the app had no language of its own to go back to
+    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale');
     // it ran, so it started again in the simulator's own
     expect(
       (await call('wait_for', { selector: { text: 'Settings' }, timeoutMs: 10_000 })).data.met,
