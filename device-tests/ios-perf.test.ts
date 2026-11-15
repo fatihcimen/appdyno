@@ -48,8 +48,12 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   beforeAll(async () => {
     await new Simctl().install(udid, SIM_FIXTURE);
     d = new IosSimulatorDevice(udid);
-    // the runner does not stay on a shared simulator after the run, nor after an open that failed
-    return () => d.stopAgent();
+    // the runner does not stay on a shared simulator after the run, nor after an open that failed; nor does the frame
+    // probe, held with no session to let it go, which every later launch of the fixture would carry
+    return () => {
+      d.holds.letGo();
+      return d.stopAgent();
+    };
   }, 240_000);
   beforeAll(() => d.open(), 240_000);
 
