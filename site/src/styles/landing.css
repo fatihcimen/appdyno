@@ -75,6 +75,8 @@ section h2 {
   letter-spacing: -0.02em;
   margin: 0 0 12px;
   text-wrap: balance;
+  /* as wide as its words: the room beside it is free, as the room over a block must be for a perch */
+  width: fit-content;
 }
 section .sub {
   color: var(--soft);

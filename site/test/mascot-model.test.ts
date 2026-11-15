@@ -79,6 +79,11 @@ test('the model has every bone and clip the page finds by name', () => {
   assert.equal(bone('Jaw').parent, bone('Head'));
 });
 
+test('a flap up and one down fit in the second a flight may take', () => {
+  const flaps = clip('takeoff').duration + clip('land').duration;
+  assert.ok(flaps <= 1, `takeoff and land take ${flaps.toFixed(2)} s`);
+});
+
 test('the fire socket rides the head through a clip, pointing out of the mouth', () => {
   const socket = bone('FireSocket');
   const head = bone('Head');

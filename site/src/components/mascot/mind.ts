@@ -247,7 +247,9 @@ export class Mind {
   #leave(to: Perch, x?: number, edge?: Point, soars = false) {
     if (this.#air?.perch === to) return;
     const from = edge ?? this.place;
-    const land = { x: Math.min(to.right, Math.max(to.left, x ?? from.x)), y: to.y };
+    // at the end of the edge nearer to where it comes from: a block's side, not its middle
+    const end = Math.abs(from.x - to.left) <= Math.abs(from.x - to.right) ? to.left : to.right;
+    const land = { x: Math.min(to.right, Math.max(to.left, x ?? end)), y: to.y };
     const far = Math.hypot(land.x - from.x, land.y - from.y);
     const { size, lengths } = this.traits;
     const flies = far > HOP * size || edge !== undefined || soars;

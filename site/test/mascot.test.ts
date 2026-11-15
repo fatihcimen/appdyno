@@ -205,9 +205,11 @@ test('to a near perch it hops, to a far one it flies, and it lands on the edge',
     mind.rouse(0);
     let highest = Infinity;
     let seen = false;
+    let landed: number | undefined;
     const deeds = live(mind, 0, 24, (now) => {
       mind.rouse(now);
       if (mind.mode === way) seen = true;
+      if (mind.perch === to) landed ??= mind.x;
       highest = Math.min(highest, mind.place.y);
       if (seen && mind.mode === 'idle' && mind.perch === to) assert.equal(mind.place.y, to.y);
     });
@@ -222,6 +224,11 @@ test('to a near perch it hops, to a far one it flies, and it lands on the edge',
     );
     assert.ok(highest < Math.min(perch.y, to.y) - 5, 'its way rises over both edges');
     assert.equal(mind.perch, to);
+    assert.equal(
+      landed,
+      to === near ? to.left : to.right,
+      'at the end nearer to where it came from',
+    );
     assert.ok(mind.x >= to.left && mind.x <= to.right);
   }
 });
