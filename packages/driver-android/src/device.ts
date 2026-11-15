@@ -37,7 +37,9 @@ import { AndroidApps } from './apps.js';
 import type { InstallAnswers } from './install-consent.js';
 import { linkRefused } from './links.js';
 import { AndroidEvents } from './events.js';
-import { AndroidSettings } from './settings.js';
+import { AndroidSettings, emulatorConsole } from './settings.js';
+import { AndroidLifecycle } from './lifecycle.js';
+import { AndroidMedia } from './media.js';
 import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf/index.js';
 import { AndroidMirror } from './mirror.js';
@@ -112,6 +114,14 @@ export class AndroidDevice extends RpcDevice implements Device {
       async (set) => (await this.call('locales', set ? { set } : {}, TIMEOUTS.action)).result.tags,
     );
     this.events = new AndroidEvents(adb, serial, () => this.tree());
+    const sh = (command: string) => this.shell(command, TIMEOUTS.app);
+    this.life = new AndroidLifecycle(
+      sh,
+      (what, ...words) => emulatorConsole(adb, serial, what, words),
+      this.virtual,
+      this,
+    );
+    this.addedMedia = new AndroidMedia(adb, serial, sh);
     this.recorder = new AndroidRecorder(adb, serial);
     this.network = new AndroidNetwork(adb, serial);
     this.web = new AndroidWeb(adb, serial);
@@ -140,6 +150,12 @@ export class AndroidDevice extends RpcDevice implements Device {
   readonly apps: AndroidApps;
   readonly settings: AndroidSettings;
   readonly events: AndroidEvents;
+  readonly addedMedia: AndroidMedia;
+  private readonly life: AndroidLifecycle;
+  memoryWarning = (app: string, level?: string) => this.life.memoryWarning(app, level);
+  shake = () => this.life.shake();
+  endInBackground = (app: string) => this.life.endInBackground(app);
+  addMedia = (files: string[]) => this.addedMedia.add(files);
   dismissKeyboard = async () => {
     await this.key('back', { settle: false, read: 'none' });
   };
