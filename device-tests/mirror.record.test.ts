@@ -336,7 +336,8 @@ const clickMs = async (
 const scrolled = async (w: Awaited<ReturnType<typeof windowOn>>) => {
   await w.startRecording();
   await open(w, LIST);
-  await w.element((e) => e.label === 'Product 1', 'the first row');
+  // the first row lies under the status bar of an edge-to-edge screen (API 35 on), which the screen's list leaves out
+  await w.element((e) => e.label === 'Product 2', 'the second row');
   for (let i = 0; i < 2; i++) {
     w.poke({ x: 0.5, y: 0.75, x2: 0.5, y2: 0.3, seconds: 0.25 });
     await pause(1_200);
