@@ -348,7 +348,7 @@ function launchOp(
       const done = [
         language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true),
         held,
-        withProbe && 'with the view probe in it',
+        withProbe && 'with the view probe in it, kept in its launches until the session ends',
         noProbe,
       ]
         .filter(Boolean)

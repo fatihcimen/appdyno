@@ -323,7 +323,7 @@ describe('app management', () => {
     const apps = manager({ viewProbe: true });
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
     expect((await call('launch_app', { probe: true, read: 'none' })).done).toBe(
-      'restarted dev.app, which was running; with the view probe in it',
+      'restarted dev.app, which was running; with the view probe in it, kept in its launches until the session ends',
     );
     expect(apps.log).toEqual([['launch', 'dev.app', { probe: true }]]);
   });
