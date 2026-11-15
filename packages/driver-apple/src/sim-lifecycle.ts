@@ -21,9 +21,9 @@ export const EVERY_APP = 'every app that runs on the simulator gets it, as from 
 /** What a simulator's Photos keeps of what was added. */
 export const PHOTOS_KEEP = "a simulator's Photos has no delete: restore leaves them there";
 
-/** What may help a file Photos did not take: each of these went in on an iOS 26.5 simulator. */
+/** What may help a file Photos did not take: one of each of these went in on an iOS 26.5 simulator, which proves no other. */
 const MEDIA_TAKEN =
-  'a .png or .jpg photo and an H.264 video in an .mp4 or a .mov go in: convert the file, then add it again';
+  'another format may go in, as an H.264 video in an .mp4 or a .mov, or a .png or .jpg photo: convert the file, then add it again';
 
 /** iOS warns of memory at one level: a level asked for is Android's, refused. */
 export function noLevel(level: string | undefined) {
