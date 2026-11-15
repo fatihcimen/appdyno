@@ -96,6 +96,17 @@ describe('what each launch of an app on a simulator carries', () => {
     expect(holds.holder()).toBeUndefined();
   });
 
+  it('keeps the holder that answers for them where a command line, which answers for none, holds one more', () => {
+    const session = new HeldLaunches(SIM);
+    const owner = { pid: 1, started: 'then', tool: 'appdyno mcp', since: 'now' };
+    session.owner = owner;
+    session.hold(APP, 'view', { lib: lib('SimProbe'), env: {} });
+    // a command line's own, with no owner: it took the session's owner away, and that session's end let none go
+    new HeldLaunches(SIM).hold(OTHER, 'view', { lib: lib('SimProbe'), env: {} });
+    expect(session.holder()).toEqual({ owner });
+    expect(session.letGo()).toEqual([`the view probe in ${APP}`, `the view probe in ${OTHER}`]);
+  });
+
   it("puts the app's language and the launch's own over what is held, and leaves out a library gone from this Mac", async () => {
     await holdAppLanguage(SIM, APP, 'tr-TR', () => Promise.resolve());
     const holds = new HeldLaunches(SIM);

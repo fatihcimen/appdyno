@@ -41,12 +41,18 @@ export class HeldLaunches implements LaunchHolds {
 
   constructor(private readonly udid: string) {}
 
-  /** `probe` goes into each launch of `app` by this tool from now on; the newest holder answers for all of them. */
+  /**
+   * `probe` goes into each launch of `app` by this tool from now on; the newest holder answers for all of them. One that
+   * answers for none, as a command line, leaves them with the one that does, whose end lets them go.
+   */
   hold(app: string, name: string, probe: Probe) {
-    held.update(this.udid, (now) => ({
-      apps: { ...now?.apps, [app]: { ...now?.apps[app], [name]: probe } },
-      ...(this.owner && { owner: this.owner }),
-    }));
+    held.update(this.udid, (now) => {
+      const owner = this.owner ?? now?.owner;
+      return {
+        apps: { ...now?.apps, [app]: { ...now?.apps[app], [name]: probe } },
+        ...(owner && { owner }),
+      };
+    });
   }
 
   drop(app: string, name: string) {
