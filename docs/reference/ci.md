@@ -74,7 +74,7 @@ scripts/ci.sh --all-on <serial>                    # + every suite that device c
 
 ## Release
 
-A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the Mac app, `npm publish --provenance --access public`, and a GitHub release with the disk image, the cask and the appcast. The release notes are written before anything that cannot be taken back, and a run again after a later step failed finds the version on npm and goes on to the release. Run by hand from the Actions tab, `release.yml` is a rehearsal: the gate and the Mac app, signed and notarized, kept with the run for 3 days to open, and nothing published.
+A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the desktop extension built and run, the Mac app, `npm publish --provenance --access public`, and a GitHub release with the disk image, the desktop extension, the cask and the appcast. The release notes are written before anything that cannot be taken back, and a run again after a later step failed finds the version on npm and goes on to the release. Run by hand from the Actions tab, `release.yml` is a rehearsal: the gate, the Mac app, signed and notarized, and the desktop extension, kept with the run for 3 days to open, and nothing published.
 
 What a release depends on:
 
@@ -83,6 +83,8 @@ What a release depends on:
 - npm takes the publish from `release.yml` as the package's trusted publisher, set on npmjs.com, or by an `NPM_TOKEN` secret. A package's first publish needs the secret, as a package must exist before it can have a trusted publisher; once one is set, the secret can go. The publish job's Node 26 has an npm that can publish as a trusted publisher.
 
 Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.mjs` installs the tarball on an empty home. It stays out of the workflow, as it refuses to run where a JDK is on its path.
+
+`node scripts/build-mcpb.mjs` makes the desktop extension, `.app-build/appdyno-<version>.mcpb`: the package as `npm pack` makes it, `packages/appdyno/mcpb/manifest.json` with the tools the packed server lists, and the Mac app's icon at 512 px, packed by `mcpb pack`, which validates the manifest. `node scripts/check-mcpb.mjs` unpacks it and runs its server over stdio by the manifest's own command, on an empty home, with the install form left empty and filled in, and holds what `tools/list` answers to the manifest's tools. The file is not signed.
 
 `scripts/check-update.mjs` runs `update` and its verification for real, on public packages in a temporary folder, with no change to this machine: a release with provenance, one without, one whose dependency alone has it, a tampered registry, and a failed install under npm and under pnpm. It needs the network and npm 11.12 or newer.
 

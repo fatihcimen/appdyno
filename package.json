@@ -17,6 +17,7 @@
     "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
+    "@anthropic-ai/mcpb": "^2.1.2",
     "@appdyno/cli": "workspace:*",
     "@appdyno/core": "workspace:*",
     "@appdyno/driver-android": "workspace:*",

@@ -24,7 +24,7 @@ const sh = (command, ...args) => execFileSync(command, args, { stdio: 'pipe', en
  * @param {string} svg
  * @param {string} out
  */
-function render(svg, out) {
+export function render(svg, out) {
   const made = mkdtempSync(join(tmpdir(), 'appdyno-icon-'));
   const source = join(made, 'art.svg');
   writeFileSync(source, svg);

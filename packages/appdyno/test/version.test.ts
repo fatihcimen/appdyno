@@ -34,6 +34,18 @@ describe('release version', () => {
     const server = JSON.parse(read('server.json')) as { version: string; packages: Package[] };
     expect(server.version).toBe(v);
     expect(server.packages.map((p) => p.version)).toEqual([v]);
+    // the desktop extension's, which its build holds to the package's as well
+    expect(JSON.parse(read('packages/appdyno/mcpb/manifest.json'))).toHaveProperty('version', v);
+  });
+
+  it('asks of a desktop client the Node the package asks for, on a Mac alone', () => {
+    const { engines } = JSON.parse(read('packages/appdyno/package.json')) as {
+      engines: { node: string };
+    };
+    expect(JSON.parse(read('packages/appdyno/mcpb/manifest.json'))).toMatchObject({
+      manifest_version: '0.4',
+      compatibility: { platforms: ['darwin'], runtimes: { node: engines.node } },
+    });
   });
 
   it('is the one package the MCP registry lists, as npm has it', () => {

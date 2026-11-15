@@ -74,7 +74,7 @@ scripts/ci.sh --all-on <serial>                    # + o cihazın alabildiği he
 
 ## Sürüm
 
-Bir tag yayımlar, başka hiçbir şey yayımlamaz. `.github/workflows/release.yml`, `v1.2.3` üzerinde çalışır: kapı olarak `ci.yml`, sonra tag'in `packages/appdyno/package.json` içindeki sürüm olduğunun denetimi, derlenen ajan ve paket, Mac uygulaması, `npm publish --provenance --access public` ve disk imajı, cask ve appcast ile bir GitHub sürümü. Sürüm notları geri alınamayan her şeyden önce yazılır; sonraki bir adım başarısız olduktan sonra yeniden çalıştırılan bir çalışma sürümü npm'de bulur ve GitHub sürümüne geçer. Actions sekmesinden elle çalıştırılan `release.yml` bir provadır: kapı ve imzalanıp noter onayından geçmiş Mac uygulaması, açıp bakmak için çalışmayla birlikte 3 gün tutulur ve hiçbir şey yayımlanmaz.
+Bir tag yayımlar, başka hiçbir şey yayımlamaz. `.github/workflows/release.yml`, `v1.2.3` üzerinde çalışır: kapı olarak `ci.yml`, sonra tag'in `packages/appdyno/package.json` içindeki sürüm olduğunun denetimi, derlenen ajan ve paket, derlenip çalıştırılan masaüstü eklentisi, Mac uygulaması, `npm publish --provenance --access public` ve disk imajı, masaüstü eklentisi, cask ve appcast ile bir GitHub sürümü. Sürüm notları geri alınamayan her şeyden önce yazılır; sonraki bir adım başarısız olduktan sonra yeniden çalıştırılan bir çalışma sürümü npm'de bulur ve GitHub sürümüne geçer. Actions sekmesinden elle çalıştırılan `release.yml` bir provadır: kapı, imzalanıp noter onayından geçmiş Mac uygulaması ve masaüstü eklentisi, açıp bakmak için çalışmayla birlikte 3 gün tutulur ve hiçbir şey yayımlanmaz.
 
 Bir sürüm şunlara dayanır:
 
@@ -83,6 +83,8 @@ Bir sürüm şunlara dayanır:
 - npm yayımlamayı, npmjs.com'da ayarlanan güvenilir yayımcı olarak `release.yml`'den ya da bir `NPM_TOKEN` secret'ıyla kabul eder. Bir paketin ilk yayımlaması bu secret'ı ister, çünkü bir paketin güvenilir bir yayımcısı olabilmesi için önce var olması gerekir; yayımcı ayarlandığında secret kaldırılabilir. Yayımlama job'ının Node 26'sında güvenilir yayımcı olarak yayımlayabilen bir npm vardır.
 
 Bir tag'den önce, klasöründe pnpm olmayan bir node'dan, `node scripts/check-package.mjs` tarball'ı boş bir ev klasörüne kurar. Workflow'un dışında kalır, çünkü yolunda bir JDK olan yerde çalışmayı reddeder.
+
+`node scripts/build-mcpb.mjs` masaüstü eklentisini, `.app-build/appdyno-<version>.mcpb` dosyasını üretir: `npm pack`'in ürettiği paket, paketlenen sunucunun listelediği araçlarla `packages/appdyno/mcpb/manifest.json` ve 512 px boyutunda Mac uygulamasının simgesi, manifest dosyasını doğrulayan `mcpb pack` ile paketlenir. `node scripts/check-mcpb.mjs` onu açar ve sunucusunu manifest dosyasının kendi komutuyla, boş bir ev klasöründe, kurulum formu boşken ve doluyken stdio üzerinden çalıştırır; `tools/list` yanıtını manifest dosyasındaki araçlara bağlı tutar. Dosya imzalı değildir.
 
 `scripts/check-update.mjs`, `update`'i ve doğrulamasını gerçekten, geçici bir klasörde, herkese açık paketlerle, bu makinede hiçbir şeyi değiştirmeden çalıştırır: provenance'ı olan bir sürüm, olmayan bir sürüm, yalnızca bağımlılığında olan bir sürüm, kurcalanmış bir registry ve npm ile pnpm altında başarısız bir kurulum. Ağ ve npm 11.12 ya da üstü gerektirir.
 
