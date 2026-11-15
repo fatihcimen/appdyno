@@ -270,6 +270,12 @@ async function endInBackground(s: Session, pkg: string) {
   return reply(t, { done: t });
 }
 
+/** How long a probe stays in an app's launches: a command line's hold is no session's, and ends by another's hand. */
+const probeStays = (s: Session) =>
+  s.owner
+    ? 'until the session ends'
+    : 'until restore, or until a server that holds probes on this device ends';
+
 /** launch_app: a launch, to the front where the app runs, or a fresh start with what it is to start with. */
 function launchOp(
   ctx: ServerContext,
@@ -348,7 +354,7 @@ function launchOp(
       const done = [
         language ? `started ${pkg} in ${language}` : launchSaid(pkg, ran, true),
         held,
-        withProbe && 'with the view probe in it, kept in its launches until the session ends',
+        withProbe && `with the view probe in it, kept in its launches ${probeStays(s)}`,
         noProbe,
       ]
         .filter(Boolean)

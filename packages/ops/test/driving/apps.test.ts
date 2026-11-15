@@ -328,6 +328,17 @@ describe('app management', () => {
     expect(apps.log).toEqual([['launch', 'dev.app', { probe: true }]]);
   });
 
+  it('says of a command line that its probe stays past the command, which is no session', async () => {
+    const apps = manager({ viewProbe: true });
+    const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }), {
+      defaults: { storage: { remember } },
+    });
+    expect((await call('launch_app', { probe: true, read: 'none' })).done).toBe(
+      'restarted dev.app, which was running; with the view probe in it, kept in its launches until restore, or until a server that holds probes on this device ends',
+    );
+  });
+
   it('ends an app in the background where the device can, and says what stops it where it cannot', async () => {
     const { call } = await connect(new FakeDevice());
     expect((await call('terminate_app', { background: true })).text).toBe(
