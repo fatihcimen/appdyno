@@ -161,6 +161,14 @@ For the chat in the desktop app. It does not read Claude Code's list, or the oth
 
 This is the first place to look if it fails with "spawn npx ENOENT" or a server that stays disconnected: see [An app cannot find npx or adb](#an-app-cannot-find-npx-or-adb). The vendor gives a call about 3 to 4 minutes here, so run `appdyno ios build` before a first iOS use.
 
+Or install it from one file, a desktop extension. Each release carries `appdyno-<version>.mcpb`, which holds the server, its agents and an icon, so no `npx` stands between the app and appdyno.
+
+1. Download it from the [latest release](https://github.com/fatihcimen/appdyno/releases/latest) and open it, or drag it onto Settings, Extensions. Choose Install.
+2. Fill in the form, or leave it empty. It has 3 fields: the devices it may drive, the apps it may touch and the links it may open. They are `--allow-devices`, `--allow-apps` and `--allow-urls` of [Server options](../reference/cli.md#server-options), and an empty field limits nothing.
+3. Check as above: appdyno is listed with its tools.
+
+The file is not signed, so the app may say that it cannot tell who made it. It needs Node 22 or newer, as every install does, and it does not update itself: install a newer release's file in its place. Use the file or the entry above, not both, as each starts a server of its own.
+
 ### Codex and the ChatGPT desktop app
 
 The Codex command line, its editor extension and the ChatGPT desktop app share one file, `~/.codex/config.toml`, so one entry reaches all three. appdyno runs on your Mac, in threads that run locally.
@@ -504,4 +512,4 @@ What each client calls itself in `clientInfo`, which is how AI Clients knows it 
 
 Claude Code 2.1.319 shows a tool's structured answer whole, with its images, and a refusal's code and hint. This was read from its headless stream (`claude -p`) on 2026-11-08 and 2026-11-09, on an iPhone 17 Pro simulator with iOS 27.2 and an API 34 emulator.
 
-Not tried, as each needs an account, a licence or a window: the ChatGPT app and web, Claude Desktop and Claude on the web, Secure MCP Tunnel, any public tunnel, a connection from Codex, Cursor, VS Code, Devin Desktop, Antigravity and Zed. Their steps here are from their own documentation. A free Apple ID's signing has not been tried either.
+Not tried, as each needs an account, a licence or a window: the ChatGPT app and web, Claude Desktop and Claude on the web, Secure MCP Tunnel, any public tunnel, a connection from Codex, Cursor, VS Code, Devin Desktop, Antigravity and Zed. Their steps here are from their own documentation. `scripts/check-mcpb.mjs` unpacks the desktop extension and runs its server over stdio as its manifest says, with the form empty and filled in; opening the file in the app, its form and a first call from it were not tried. A free Apple ID's signing has not been tried either.

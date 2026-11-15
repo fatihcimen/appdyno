@@ -173,6 +173,8 @@ It changes only appdyno's own entry, keeps a backup beside the file, and `appdyn
 
 A client opened from the Dock may not find `npx`: if it says `spawn npx ENOENT`, see [An app cannot find npx or adb](docs/guides/clients.md#an-app-cannot-find-npx-or-adb).
 
+Claude Desktop installs appdyno from one file, with no terminal: download `appdyno-<version>.mcpb` from the [latest release](https://github.com/fatihcimen/appdyno/releases/latest) and open it. See [Claude Desktop](docs/guides/clients.md#claude-desktop).
+
 ### 4. Get a device ready
 
 - **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helpers for a simulator and an iPhone ahead of time, which takes a few minutes; otherwise the first action builds the one it needs. It also deletes builds of older versions, except one that a running process still uses.

@@ -161,6 +161,14 @@ Masaüstü uygulamasındaki sohbet içindir. Claude Code'un listesini okumaz, Cl
 
 "spawn npx ENOENT" hatası alıyorsanız ya da sunucu bağlanmıyorsa ilk bakılacak yer burasıdır: bkz. [Uygulama npx'i veya adb'yi bulamıyor](#uygulama-npxi-veya-adbyi-bulamıyor). Burada bir çağrının süresi 3-4 dakika kadardır, bu yüzden iOS'ta ilk kullanımdan önce `appdyno ios build` çalıştırın.
 
+Ya da tek bir dosyadan, bir masaüstü eklentisinden kurun. Her sürümde `appdyno-<version>.mcpb` bulunur; sunucuyu, ajanlarını ve bir simgeyi içerir, bu yüzden uygulama ile appdyno arasında `npx` yoktur.
+
+1. Dosyayı [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirip açın ya da Settings, Extensions üzerine sürükleyin. Install'ı seçin.
+2. Formu doldurun ya da boş bırakın. 3 alanı vardır: sürebileceği cihazlar, dokunabileceği uygulamalar ve açabileceği bağlantılar. Bunlar [Sunucu seçenekleri](../reference/cli.tr.md#sunucu-seçenekleri) bölümündeki `--allow-devices`, `--allow-apps` ve `--allow-urls` seçenekleridir; boş bir alan hiçbir şeyi sınırlamaz.
+3. Yukarıdaki gibi kontrol edin: appdyno araçlarıyla birlikte listelenir.
+
+Dosya imzalı değildir, bu yüzden uygulama onu kimin yaptığını bilemediğini söyleyebilir. Her kurulum gibi Node 22 ya da üstünü ister ve kendini güncellemez: yeni bir sürümün dosyasını onun yerine kurun. Dosyayı ya da yukarıdaki girdiyi kullanın, ikisini birden değil, çünkü her biri kendi sunucusunu başlatır.
+
 ### Codex ve ChatGPT masaüstü uygulaması
 
 Codex komut satırı, editör eklentisi ve ChatGPT masaüstü uygulaması tek dosyayı paylaşır: `~/.codex/config.toml`. Yani tek girdi üçüne de ulaşır. appdyno Mac'inizde, yerel çalışan konuşmalarda çalışır.
@@ -504,4 +512,4 @@ Yapay Zekâ İstemcileri'nin bir istemcinin çağırdığını bilmesini sağlay
 
 Claude Code 2.1.319 bir aracın yapılandırılmış yanıtını görselleriyle birlikte bütünüyle, bir reddi de kodu ve ipucuyla gösterir. Bu, 2026-11-08 ve 2026-11-09'da arayüzsüz akışından (`claude -p`), iOS 27.2'li bir iPhone 17 Pro simülatöründe ve bir API 34 emülatöründe okundu.
 
-Hesap, lisans ya da pencere gerektirdiği için denenmeyenler: ChatGPT uygulaması ve web sürümü, Claude Desktop ve web'deki Claude, Secure MCP Tunnel, herkese açık herhangi bir tünel, Codex'ten bağlantı, Cursor, VS Code, Devin Desktop, Antigravity ve Zed. Buradaki adımlar kendi belgelerinden alındı. Ücretsiz Apple kimliğiyle imzalama da denenmedi.
+Hesap, lisans ya da pencere gerektirdiği için denenmeyenler: ChatGPT uygulaması ve web sürümü, Claude Desktop ve web'deki Claude, Secure MCP Tunnel, herkese açık herhangi bir tünel, Codex'ten bağlantı, Cursor, VS Code, Devin Desktop, Antigravity ve Zed. Buradaki adımlar kendi belgelerinden alındı. `scripts/check-mcpb.mjs` masaüstü eklentisini açar ve sunucusunu manifest dosyasının dediği gibi stdio üzerinden, form boşken ve doluyken çalıştırır; dosyayı uygulamada açmak, formu ve uygulamadan ilk çağrı denenmedi. Ücretsiz Apple kimliğiyle imzalama da denenmedi.

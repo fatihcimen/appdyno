@@ -173,6 +173,8 @@ Yalnızca appdyno'nun girdisini değiştirir, dosyanın yanına bir yedek bırak
 
 Dock'tan açılan bir istemci `npx`'i bulamayabilir: `spawn npx ENOENT` derse [Uygulama npx'i veya adb'yi bulamıyor](docs/guides/clients.tr.md#uygulama-npxi-veya-adbyi-bulamıyor) bölümüne bakın.
 
+Claude Desktop, appdyno'yu terminal olmadan tek bir dosyadan kurar: `appdyno-<version>.mcpb` dosyasını [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirip açın. Bkz. [Claude Desktop](docs/guides/clients.tr.md#claude-desktop).
+
 ### 4. Cihazı hazırlayın
 
 - **iOS simülatörü**: başka bir şey gerekmez. Xcode'un Simulator uygulamasından açın ya da ajanınızdan açmasını isteyin. `appdyno ios build`, appdyno'nun simülatör ve iPhone yardımcılarını önceden derler; birkaç dakika sürer. Derlenmezse ilk işlem gerekeni derler. Eski sürümlerin build'lerini de siler; çalışan bir sürecin hâlâ kullandığı build'e dokunmaz.
