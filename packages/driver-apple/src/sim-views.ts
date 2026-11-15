@@ -22,7 +22,10 @@ const PROBE = 'view';
 /** A socket's path in bytes, the NUL after it making macOS's 104. */
 export const MAX_SOCKET_PATH = 103;
 
-/** The probe answers within 2 s, or says the main thread did not: past this it says nothing at all. */
+/** A process that runs says at once which it is: iOS suspends an app behind another, and its probe with it. */
+const HELLO_MS = 2_000;
+
+/** Then the probe answers within 2 s, or says the main thread did not: past this it says nothing more. */
 const ANSWER_MS = 10_000;
 
 /** Where the probe in `app` listens: a name short enough for a socket, in a folder that is this Mac user's alone. */
@@ -53,11 +56,15 @@ const View = z.object({
   parent: z.number().int().nonnegative().optional(),
 });
 
-/** What the probe answers a dump: the views of the app's windows from the back, each after its parent, read on its main thread. */
+/** The probe's first line: the app and the process it is in. */
+const Hello = z.union([
+  z.object({ app: z.string(), pid: z.number() }),
+  z.object({ error: z.string() }),
+]);
+
+/** Its second: the views of the app's windows from the back, each after its parent, read on its main thread. */
 const Dump = z.union([
   z.object({
-    app: z.string(),
-    pid: z.number(),
     /** Whether any scene of the app is on the screen: the views are those of the scenes that are. */
     front: z.boolean(),
     views: z.array(View),
@@ -67,26 +74,34 @@ const Dump = z.union([
   z.object({ error: z.string(), ms: z.number().optional() }),
 ]);
 
-/** The views of `app` in the probe's answer: its points are a simulator's tap units as they are. */
-export function treeOf(answer: string, app: string): ViewTree {
-  let json: unknown;
+/** One line of the probe's answer, as this version reads it. */
+function lineOf<T>(schema: z.ZodType<T>, line: string | undefined, app: string): T {
   try {
-    json = JSON.parse(answer);
+    return schema.parse(JSON.parse(line ?? ''));
   } catch {
-    throw new DeviceError('INTERNAL', `the view probe in ${app} answered what is not JSON`);
+    throw new DeviceError(
+      'INTERNAL',
+      `the view probe in ${app} answered what this version does not read`,
+      'a probe stays in its app as it went in until the app next starts',
+    );
   }
-  const dump = Dump.parse(json);
-  if ('error' in dump) {
-    if (dump.error === 'main-thread')
-      throw new DeviceError(
-        'TIMEOUT',
-        `the main thread of ${app} did not answer the view probe within ${String((dump.ms ?? 2000) / 1000)} s`,
-        'the app is busy or hung: ask again once it answers',
-      );
-    throw new DeviceError('INTERNAL', `the view probe in ${app} refused: ${dump.error}`);
-  }
-  if (dump.app !== app)
-    throw new DeviceError('INTERNAL', `the view probe that answered for ${app} is in ${dump.app}`);
+}
+
+/** The views of `app` in the probe's two lines: its points are a simulator's tap units as they are. */
+export function treeOf(answer: string, app: string): ViewTree {
+  const [first, second] = answer.split('\n');
+  const hello = lineOf(Hello, first, app);
+  if ('error' in hello)
+    throw new DeviceError('INTERNAL', `the view probe in ${app} refused: ${hello.error}`);
+  if (hello.app !== app)
+    throw new DeviceError('INTERNAL', `the view probe that answered for ${app} is in ${hello.app}`);
+  const dump = lineOf(Dump, second, app);
+  if ('error' in dump)
+    throw new DeviceError(
+      'TIMEOUT',
+      `the main thread of ${app} did not answer the view probe within ${String((dump.ms ?? 2000) / 1000)} s`,
+      'the app is busy or hung: ask again once it answers',
+    );
   if (!dump.front)
     throw new DeviceError(
       'APP_NOT_RUNNING',
@@ -96,26 +111,44 @@ export function treeOf(answer: string, app: string): ViewTree {
   return { views: dump.views, truncated: dump.truncated };
 }
 
-/** The probe's one answer to a dump; a socket no process listens on fails as it does on connecting. */
+/** The probe's answer to a dump; a socket no process listens on fails as it does on connecting. */
 function ask(path: string, app: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const socket = createConnection(path);
-    socket.setTimeout(ANSWER_MS, () => {
+    const timers: NodeJS.Timeout[] = [];
+    const end = (e?: Error) => {
+      for (const t of timers) clearTimeout(t);
       socket.destroy();
-      reject(
-        new DeviceError(
-          'TIMEOUT',
-          `the view probe in ${app} gave no answer within ${String(ANSWER_MS / 1000)} s`,
-        ),
-      );
-    });
+      if (e) reject(e);
+      else resolve(Buffer.concat(chunks).toString('utf8'));
+    };
+    const after = (ms: number, e: DeviceError) => timers.push(setTimeout(() => end(e), ms));
+    after(
+      HELLO_MS,
+      new DeviceError(
+        'APP_NOT_RUNNING',
+        `${app} does not run: iOS suspends an app behind another, and its view probe with it`,
+        'bring it to the front, then ask again',
+      ),
+    );
+    after(
+      ANSWER_MS,
+      new DeviceError(
+        'TIMEOUT',
+        `the view probe in ${app} gave no answer within ${String(ANSWER_MS / 1000)} s`,
+      ),
+    );
     socket.on('connect', () => socket.end('dump\n'));
-    socket.on('data', (c: Buffer) => chunks.push(c));
-    socket.on('end', () => {
-      resolve(Buffer.concat(chunks).toString('utf8'));
+    socket.on('data', (c: Buffer) => {
+      chunks.push(c);
+      // it runs: what is left has the longer limit
+      if (c.includes(0x0a)) clearTimeout(timers[0]);
     });
-    socket.on('error', reject);
+    socket.on('end', () => {
+      end();
+    });
+    socket.on('error', end);
   });
 }
 
@@ -167,12 +200,28 @@ export class SimulatorViews {
     });
   }
 
-  /** The views of `app` on the screen, by the probe in it. */
-  async read(app: string | undefined): Promise<ViewTree> {
+  /**
+   * The views of `app`, the one reads take, by the probe in it; else, where it has none or is behind, of the one `front`
+   * says is in front. Only then is the screen looked at, as that look waits on the app in front.
+   */
+  async read(app: string | undefined, front: () => Promise<string | undefined>): Promise<ViewTree> {
+    if (!app) return this.readOf(await front().catch(() => undefined));
+    try {
+      return await this.readOf(app);
+    } catch (e) {
+      const behind =
+        e instanceof NoViewProbe || (e instanceof DeviceError && e.code === 'APP_NOT_RUNNING');
+      const other = behind ? await front().catch(() => undefined) : undefined;
+      if (!other || other === app || other === HOME_SCREEN_APP) throw e;
+      return this.readOf(other);
+    }
+  }
+
+  private async readOf(app: string | undefined): Promise<ViewTree> {
     if (!app || app === HOME_SCREEN_APP)
       throw new DeviceError(
         'APP_NOT_RUNNING',
-        'no app is named, and the home screen has no views to read',
+        'no app is in front, and the home screen has no views to read',
         'an app started with the view probe has them',
       );
     const answer = await ask(viewSocket(this.udid, app), app).catch(async (e: unknown) => {

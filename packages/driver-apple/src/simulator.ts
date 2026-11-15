@@ -208,13 +208,11 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   /**
-   * The views of the app a read takes, by the view probe a launch put in it, else of the one in front. Past the queue,
-   * with no runner and no look at the screen, which waits on the app: the probe says a main thread did not answer.
+   * The views of the app reads take, by the view probe a launch put in it, else of the one in front. Past the queue and
+   * with no runner, as a hung app's probe says its main thread did not answer.
    */
-  async views() {
-    return this.viewProbe.read(
-      this.targetApp ?? (await this.direct.front().catch(() => undefined)),
-    );
+  views() {
+    return this.viewProbe.read(this.targetApp, () => this.direct.front());
   }
 
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */

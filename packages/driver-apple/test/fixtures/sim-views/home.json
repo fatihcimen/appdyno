@@ -1,6 +1,5 @@
 {
-  "app": "dev.appdyno.fixture",
-  "ms": 1,
+  "ms": 1.8,
   "front": true,
   "views": [
     { "class": "UIWindow", "rect": { "y": 0, "x": 0, "width": 402, "height": 874 } },
@@ -85,6 +84,5 @@
       "rect": { "y": 0, "x": 0, "width": 0, "height": 0 }
     }
   ],
-  "pid": 29925,
   "truncated": false
 }

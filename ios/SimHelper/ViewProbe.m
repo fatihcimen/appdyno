@@ -1,7 +1,7 @@
 // The view probe: injected into a simulator app when it is launched (no change to the app). It listens on the Unix
-// socket APPDYNO_VIEW_SOCKET names, and to "dump" answers one JSON object: the views of the app's scenes on the screen,
-// window by window from the back, each after its parent, read on the main thread. A secure field's text, and the text of
-// all in it, is never read.
+// socket APPDYNO_VIEW_SOCKET names, and to "dump" answers two lines of JSON: the app and process it is in, at once, then
+// the views of the app's scenes on the screen, window by window from the back, each after its parent, read on the main
+// thread. A secure field's text, and the text of all in it, is never read.
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <dlfcn.h>
@@ -170,8 +170,6 @@ static NSDictionary *dump(void) {
     AppdynoViewProbe *probe = [AppdynoViewProbe new];
     BOOL front = [probe walkApp];
     answer = @{
-      @"app": NSBundle.mainBundle.bundleIdentifier ?: @"?",
-      @"pid": @(getpid()),
       @"front": @(front),
       @"views": probe.views,
       @"truncated": @(probe.truncated),
@@ -191,7 +189,19 @@ static NSDictionary *dump(void) {
   return answer;
 }
 
-/** One request and its answer: a client gone early is no signal to the app. */
+/** An object as one line of JSON, written whole: a client gone early is no signal to the app. */
+static void say(int client, NSDictionary *object) {
+  NSMutableData *line = [[NSJSONSerialization dataWithJSONObject:object options:0 error:nil] mutableCopy]
+                            ?: [[@"{\"error\":\"json\"}" dataUsingEncoding:NSUTF8StringEncoding] mutableCopy];
+  [line appendBytes:"\n" length:1];
+  const char *at = line.bytes, *end = at + line.length;
+  for (ssize_t w = 0; at < end && (w = write(client, at, (size_t)(end - at))) > 0;) at += w;
+}
+
+/**
+ * One request and its answer. The process says who it is before the main thread is asked anything: an app iOS has
+ * suspended behind another says nothing at all, and the client tells it so.
+ */
 static void serve(int client) {
   int on = 1;
   setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof on);
@@ -199,11 +209,16 @@ static void serve(int client) {
   setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &CLIENT_WAIT, sizeof CLIENT_WAIT);
   char request[16] = {0};
   ssize_t n = read(client, request, sizeof request - 1);
-  NSDictionary *reply = n >= 4 && strncmp(request, "dump", 4) == 0 ? dump() : @{@"error": @"request"};
-  NSData *json = [NSJSONSerialization dataWithJSONObject:reply options:0 error:nil]
-                     ?: [@"{\"error\":\"json\"}" dataUsingEncoding:NSUTF8StringEncoding];
-  const char *at = json.bytes, *end = at + json.length;
-  for (ssize_t w = 0; at < end && (w = write(client, at, (size_t)(end - at))) > 0;) at += w;
+  if (n >= 4 && strncmp(request, "dump", 4) == 0) {
+    NSDictionary *hello = @{
+      @"app": NSBundle.mainBundle.bundleIdentifier ?: @"?",
+      @"pid": @(getpid()),
+    };
+    say(client, hello);
+    say(client, dump());
+  } else {
+    say(client, @{@"error": @"request"});
+  }
   close(client);
 }
 
@@ -228,7 +243,11 @@ __attribute__((constructor)) static void start(void) {
   listener = dispatch_source_create(DISPATCH_SOURCE_TYPE_READ, (uintptr_t)fd, 0, queue);
   dispatch_source_set_event_handler(listener, ^{
     int client = accept(fd, NULL, NULL);
-    if (client >= 0) serve(client);
+    // each on its own: one waiting on a busy main thread holds no other back
+    if (client >= 0)
+      dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        serve(client);
+      });
   });
   dispatch_resume(listener);
 }
