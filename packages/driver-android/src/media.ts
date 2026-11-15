@@ -31,6 +31,13 @@ export function placesOf(files: string[]) {
   });
 }
 
+/**
+ * MediaProvider's own scan of one path, which gives a file its row, or takes the row of one gone: the scanner's
+ * broadcast scans nothing on API 36.
+ */
+const scan = (path: string) =>
+  `content call --uri content://media/ --method scan_file --arg ${shq(path)}`;
+
 /** The paths a MediaStore query's rows name, and whether each is still pending, out of `content query`'s lines. */
 export function mediaRows(out: string) {
   return out.split('\n').flatMap((line) => {
@@ -67,8 +74,7 @@ export class AndroidMedia implements AddedMedia {
     await this.sh(`mkdir -p ${MEDIA_DIR}`);
     for (const { file, path } of places) {
       await this.adb.run(['-s', this.serial, 'push', file, path]);
-      // MediaProvider's own scan of one file: the scanner's broadcast scans nothing on API 36
-      await this.sh(`content call --uri content://media/ --method scan_file --arg ${shq(path)}`);
+      await this.sh(scan(path));
     }
     const where = `_data LIKE '${MEDIA_DIR}/%'`;
     const rows = mediaRows(
@@ -100,8 +106,9 @@ export class AndroidMedia implements AddedMedia {
       await this.sh(`rm -f ${shq(f.path)}`);
       removed.push(f.path);
     }
-    // the folder goes once nothing else is in it
-    await this.sh(`rmdir ${MEDIA_DIR} 2>/dev/null`);
+    // the folder goes once nothing else is in it, and then a scan of it takes out the library's row of it, which rmdir
+    // leaves on API 35 and 36
+    await this.sh(`rmdir ${MEDIA_DIR} 2>/dev/null && ${scan(MEDIA_DIR)}`);
     added.remove(this.serial);
     return { removed, left };
   }

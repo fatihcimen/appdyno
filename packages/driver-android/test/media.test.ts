@@ -82,9 +82,11 @@ describe("an Android device's photos", () => {
     const gone = device({ [`${MEDIA_DIR}/one.jpg`]: 1224, [`${MEDIA_DIR}/two.png`]: 99 });
     const out = await gone.media.takeOut();
     expect(out).toEqual({ removed: [`${MEDIA_DIR}/one.jpg`], left: [`${MEDIA_DIR}/two.png`] });
+    // the folder's row stays in the library after rmdir, on API 35 and 36, until a scan finds it gone; a folder that
+    // still holds a file is neither removed nor scanned
     expect(gone.said.filter((c) => c.startsWith('rm'))).toEqual([
       `rm -f '${MEDIA_DIR}/one.jpg'`,
-      `rmdir ${MEDIA_DIR} 2>/dev/null`,
+      `rmdir ${MEDIA_DIR} 2>/dev/null && content call --uri content://media/ --method scan_file --arg '${MEDIA_DIR}'`,
     ]);
     expect(gone.media.holder()).toBeUndefined();
   });

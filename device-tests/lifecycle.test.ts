@@ -177,9 +177,10 @@ describe.skipIf(!EMULATOR)('trim levels and photos on an emulator', () => {
   let call: Call;
   const adb = new Adb();
   const sh = (command: string) => adb.exec(EMULATOR, command);
+  // the folder's own row with its files'
   const rows = () =>
     sh(
-      `content query --uri content://media/external/file --projection _data:is_pending --where "_data LIKE '${PICTURES}/%'"`,
+      `content query --uri content://media/external/file --projection _data:is_pending --where "_data LIKE '${PICTURES}%'"`,
     );
   beforeAll(() => {
     o = opsOn(androidProvider(adb), EMULATOR, APP);
