@@ -24,9 +24,60 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
         return SystemClock.uptimeMillis() - automation.lastEventAt >= IDLE_QUIET_MS
     }
 
+    private val cycling = Cycling { SystemClock.uptimeMillis() }
+
+    /** The read last answered with and when, and when the last action went out whose settle was not asked for or never came. */
+    private var answered: Capture? = null
+    private var answeredAt = 0L
+    private var unsettledAt = 0L
+
+    /** When an action last began, and whether what moved on the screen then moved by itself. */
+    private var touchedAt = 0L
+    private var byItself = false
+
+    /**
+     * Before an action: what the app's events tell of now is no doing of ours where no action went out within OWN_MS,
+     * which a row our swipe threw is over in. Then a running transition is waited out.
+     */
+    fun beforeAction() {
+        val now = SystemClock.uptimeMillis()
+        byItself = now - automation.lastEventAt < IDLE_QUIET_MS && now - touchedAt > OWN_MS
+        touchedAt = now
+        awaitRest()
+    }
+
+    private fun screenArea() = Platform.display().let { it.width.toLong() * it.height }
+
+    /**
+     * A read to answer with, once the app is quiet. Where something on the screen is known to keep its events coming
+     * they cannot say so, and a read does: one that shows the rest of the screen as the last answer had it is the
+     * answer, at once. Not within ECHO_MS of an action no settle followed, whose effect the events are the first to tell of. `anyScreen`:
+     * the status bar alone is an answer too.
+     */
+    fun read(job: Job, maxDepth: Int = 128, maxNodes: Int = 5_000, anyScreen: Boolean = false): Capture {
+        val last = answered?.takeIf { SystemClock.uptimeMillis() - answeredAt <= Cycling.KEPT_MS }
+        val area = screenArea()
+        val busy = SystemClock.uptimeMillis() - automation.lastEventAt < IDLE_QUIET_MS
+        if (last != null && busy && cycling.active && SystemClock.uptimeMillis() - unsettledAt > ECHO_MS) {
+            val c = readSettling(maxDepth, maxNodes, yielding = true)
+            if (!c.noApp && !c.busy && cycling.same(c.layout, last.layout, area, byItself = false)) {
+                cycling.stillCycling()
+                return c
+            }
+        }
+        val quiet = idle(job)
+        val take = { capture.capture(maxDepth, maxNodes, yielding = !quiet) }
+        val c = if (anyScreen) take() else aScreen(job, take)
+        // events of what an action of ours set moving name nothing
+        if (!quiet && last != null && SystemClock.uptimeMillis() - touchedAt > OWN_MS + IDLE_MAX_MS) cycling.eventsKeptComing(c.layout, last.layout, area)
+        return c
+    }
+
     /** The settle and the read an action asked for, into its result. `then`: the app's windows before it. */
     fun after(r: AfterRequest, at: Long, job: Job, out: JSONObject, windowsBefore: Set<Int>, inert: Boolean = false): Reply {
         job.goOn()
+        unsettledAt = at
+        val area = screenArea()
         var last: Capture? = null
         if (r.settle != null) {
             val quiet = r.settle.quietMs.let { if (inert) minOf(it, INERT_QUIET_MS) else it }
@@ -46,7 +97,7 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
                         if (before != null && it.sameLayout(before)) then = WindowIds.app(it.windows.map { w -> w.id to w.type })
                     }
                 },
-                { x, y -> x.sameLayout(y) },
+                { x, y -> cycling.same(x.layout, y.layout, area, byItself) },
                 { it.busy },
                 { job.cancelled },
                 { it.nodes.size },
@@ -54,13 +105,15 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
                 { c -> WindowIds.replaced(WindowIds.app(c.windows.map { w -> w.id to w.type }), appWindows()) },
             )
             out.put("settle", Results.settle(o, last?.sliding == true || transitions.runningNow()))
+            // what the action did has been waited for
+            if (o.settled) unsettledAt = 0
         }
         if (r.read != "none") {
             val c = last?.takeUnless { it.noApp } ?: aScreen(job) { capture.capture() }
             if (r.read == "tree") {
                 out.put("tree", treeJson(c))
             } else if (r.read == "hash") {
-                out.put("hash", c.also { recent[it.hash] = it }.hash)
+                out.put("hash", keep(c))
             }
         }
         // as the screen answered with is: after the settle
@@ -69,8 +122,8 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
     }
 
     /** A read in a settle: no window at all (between two screens) is a screen with nothing on it, not a failure. */
-    private fun readSettling(): Capture = try {
-        capture.capture()
+    private fun readSettling(maxDepth: Int = 128, maxNodes: Int = 5_000, yielding: Boolean = false): Capture = try {
+        capture.capture(maxDepth, maxNodes, yielding = yielding)
     } catch (_: AgentFailure) {
         Capture(emptyList(), emptyList(), false, 0, Platform.display())
     }
@@ -137,10 +190,16 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
     /** The captures sent lately, by digest: a caller's `before` is compared with the layout itself. */
     private val recent = Lately<Capture>(8)
 
-    fun treeJson(c: Capture): JSONObject {
-        recent[c.hash] = c
-        return Results.tree(c)
+    /** Keeps an answer's capture by the digest it goes out with. */
+    private fun keep(c: Capture): String {
+        val hash = cycling.digest(c.layout) ?: c.hash
+        recent[hash] = c
+        answered = c
+        answeredAt = SystemClock.uptimeMillis()
+        return hash
     }
+
+    fun treeJson(c: Capture): JSONObject = Results.tree(c, keep(c))
 
     /** The capture a caller's `before` names, if it was sent lately. */
     fun sent(hash: String?) = hash?.let { recent[it] }
@@ -148,6 +207,12 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
     companion object {
         /** The quiet window after a tap on something that cannot react (an immediate touch reaction still shows). */
         const val INERT_QUIET_MS = 80L
+
+        /** An action's effect shows in the app's events before any read has it: within this, they are waited for as ever. */
+        const val ECHO_MS = 1_000L
+
+        /** What an action of ours set moving, a row a swipe threw, is over within this: a settle's own cap. */
+        const val OWN_MS = 3_000L
 
         /** A read to answer with waits this long for a screen. */
         const val NO_SCREEN_MS = 2_000L

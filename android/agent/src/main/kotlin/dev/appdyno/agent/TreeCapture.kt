@@ -88,6 +88,16 @@ class Capture(
 
     fun sameLayout(other: Capture) = LayoutHash.same(appNodes, other.appNodes)
 
+    /** Those nodes with each one's parent among them: a window's nodes are all the app's or none is. */
+    val layout: Layout by lazy {
+        val at = IntArray(nodes.size) { -1 }
+        var next = 0
+        for ((i, n) in nodes.withIndex()) if (inApp(n)) at[i] = next++
+        val parents = IntArray(next)
+        for ((i, n) in nodes.withIndex()) if (at[i] >= 0) parents[at[i]] = if (n.parent >= 0) at[n.parent] else -1
+        Layout(appNodes, parents)
+    }
+
     /**
      * The screen is not done: no app window, an indeterminate progress bar shows (a spinner, a loading bar), or an
      * app window sticks out of the display and its nodes' resting places are not known (a window sliding in

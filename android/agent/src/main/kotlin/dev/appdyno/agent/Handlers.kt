@@ -47,12 +47,11 @@ class Handlers(private val automation: Automation, private val token: String) {
 
     fun handle(method: String, p: JSONObject, job: Job): Reply = when (method) {
         "tree.get" -> {
-            val quiet = settling.idle(job)
             val r = TreeRequest.from(p)
-            Reply(settling.treeJson(settling.aScreen(job) { capture.capture(r.maxDepth, r.maxNodes, yielding = !quiet) }).apply { if (!Platform.display().on) put("dark", true) })
+            Reply(settling.treeJson(settling.read(job, r.maxDepth, r.maxNodes)).apply { if (!Platform.display().on) put("dark", true) })
         }
 
-        "wait" -> WaitFor.handle(WaitRequest.from(p), job, { capture.capture(yielding = !settling.idle(job)) }, settling::treeJson)
+        "wait" -> WaitFor.handle(WaitRequest.from(p), job, { settling.read(job, anyScreen = true) }, settling::treeJson)
 
         "act" -> act(Action.from(p.getJSONObject("action")), AfterRequest.from(p), job)
 
@@ -98,7 +97,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         val touch = a !is Action.Key
         // on a dark screen a touch reaches no window, and nothing says so: the host wakes it and asks again
         if (touch && !Platform.display().on) throw AgentFailure("SCREEN_OFF", "the screen is off")
-        settling.awaitRest()
+        settling.beforeAction()
         val cancelled = { job.cancelled }
         // a touch aimed at a screen that another window has replaced since it was read lands on the wrong one (A/B
         // run 8559e13f: the app restarted into its splash between the read and the tap, and the tap was lost)
@@ -135,7 +134,7 @@ class Handlers(private val automation: Automation, private val token: String) {
     }
 
     private fun textSet(r: TextRequest, job: Job): Reply {
-        settling.awaitRest()
+        settling.beforeAction()
         val then = settling.appWindows()
         val cancelled = { job.cancelled }
         val tapAt = r.at?.let { (x, y) -> { input.tap(x, y, cancelled) } }

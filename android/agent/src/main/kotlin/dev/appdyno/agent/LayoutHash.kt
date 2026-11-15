@@ -84,18 +84,18 @@ object LayoutHash {
     fun same(a: List<CNode>, b: List<CNode>): Boolean {
         val x = a.filter(::shown)
         val y = b.filter(::shown)
-        if (x.size != y.size) return false
-        for (i in x.indices) {
-            val p = x[i]
-            val q = y[i]
-            if (p.cls != q.cls || p.id != q.id) return false
-            fun near(u: Int, v: Int) = kotlin.math.abs(u - v) <= TOLERANCE
-            if (!near(p.top, q.top) || !near(p.bottom, q.bottom)) return false
-            val interactive = p.flags and (Flags.CLICKABLE or Flags.EDITABLE or Flags.CHECKABLE or Flags.SCROLLABLE) != 0
-            val plainText = !interactive && !p.text.isNullOrEmpty()
-            if (!plainText && (!near(p.left, q.left) || !near(p.right, q.right))) return false
-        }
-        return true
+        return x.size == y.size && x.indices.all { alike(x[it], y[it]) }
+    }
+
+    /** Two nodes that are one to a layout: neither on the screen, or both, of one class and id, each side within TOLERANCE. */
+    fun alike(p: CNode, q: CNode): Boolean {
+        if (!shown(p) || !shown(q)) return shown(p) == shown(q)
+        if (p.cls != q.cls || p.id != q.id) return false
+        fun near(u: Int, v: Int) = kotlin.math.abs(u - v) <= TOLERANCE
+        if (!near(p.top, q.top) || !near(p.bottom, q.bottom)) return false
+        val interactive = p.flags and (Flags.CLICKABLE or Flags.EDITABLE or Flags.CHECKABLE or Flags.SCROLLABLE) != 0
+        val plainText = !interactive && !p.text.isNullOrEmpty()
+        return plainText || (near(p.left, q.left) && near(p.right, q.right))
     }
 }
 

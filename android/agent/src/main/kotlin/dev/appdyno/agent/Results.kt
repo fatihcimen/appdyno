@@ -23,7 +23,7 @@ object Results {
 
     fun streamClock(now: Long): JSONObject = JSONObject().put("now", now)
 
-    fun tree(c: Capture): JSONObject {
+    fun tree(c: Capture, hash: String = c.hash): JSONObject {
         val windows = JSONArray()
         for (w in c.windows) {
             windows.put(
@@ -42,7 +42,7 @@ object Results {
             nodes.put(o.put("b", rect(n.left, n.top, n.right, n.bottom)).put("f", n.flags))
         }
         return JSONObject().put("windows", windows).put("nodes", nodes).put("truncated", c.truncated)
-            .put("elapsedMs", c.elapsedMs).put("hash", c.hash).apply { if (c.sliding) put("moving", true) }
+            .put("elapsedMs", c.elapsedMs).put("hash", hash).apply { if (c.sliding) put("moving", true) }
     }
 
     fun settle(o: SettleOutcome<*>, moving: Boolean): JSONObject = JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", o.quietMs)
