@@ -52,8 +52,15 @@ describe.runIf(udid)('the hub', () => {
     await new Promise((r) => setTimeout(r, 1_000));
   };
 
+  /** Booted as the other suites of a sweep leave it: shut down here, and booted again at the end. */
+  let wasBooted = false;
+
   beforeAll(async () => {
-    expect(booted()).toBe(false);
+    wasBooted = booted();
+    if (wasBooted) {
+      execFileSync('xcrun', ['simctl', 'shutdown', udid]);
+      await until('a stopped simulator', () => !booted(), BOOT_MS);
+    }
     const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
     link = new ViewerProcess(await viewerBinary(), ['--hub', '--behind', '--appearance', look]);
     link.onMessage((m) => told.push(m));
@@ -68,14 +75,17 @@ describe.runIf(udid)('the hub', () => {
     });
     done = runHub(ctx, { focus: false, behind: true, log: () => undefined, viewer: () => link });
     await new Promise((r) => setTimeout(r, 3_000));
-  }, 60_000);
+  }, BOOT_MS + 60_000);
 
   afterAll(async () => {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- unset where beforeAll failed
     link?.kill();
     await done;
-    if (udid && booted()) execFileSync('xcrun', ['simctl', 'shutdown', udid]);
-  }, 60_000);
+    // as it was found: a sweep's later suites need it booted
+    if (udid && booted() !== wasBooted)
+      execFileSync('xcrun', ['simctl', wasBooted ? 'boot' : 'shutdown', udid]);
+    if (wasBooted) execFileSync('xcrun', ['simctl', 'bootstatus', udid, '-b']);
+  }, BOOT_MS);
 
   it(
     'starts a simulator, opens a window of its own on it, closes that and stops it',
