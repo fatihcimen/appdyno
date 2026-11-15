@@ -1,6 +1,5 @@
 // The one package: the workspace and every dependency inlined in dist (installing it needs no registry),
 // the workspace's types beside them, and the agents the driver packages made.
-import { execFileSync } from 'node:child_process';
 import {
   chmodSync,
   cpSync,
@@ -21,6 +20,7 @@ import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { build } from 'esbuild';
 import { bundledPackages, inlinedPackages, noticesFor } from './notices.mjs';
 import { publishedReadme } from './published-readme.mjs';
+import { checkAsStranger, EXAMPLES } from './stranger.mjs';
 import { toolsInterface } from './tool-types.mjs';
 
 const pkg = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -39,7 +39,7 @@ const options = {
 
 const main = await build({
   ...options,
-  entryPoints: ['src/main.ts', 'src/index.ts'],
+  entryPoints: ['src/main.ts', 'src/index.ts', 'src/device.ts'],
   bundle: true,
   metafile: true,
   // the CJS code inside (ajv) requires Node's modules
@@ -68,7 +68,7 @@ if (existsSync(stream)) {
 chmodSync(join(dist, 'main.js'), 0o755);
 
 // the public face and nothing behind it: the workspace is inlined, and shows no types
-const PUBLIC = ['index.d.ts', 'library.d.ts'];
+const PUBLIC = ['index.d.ts', 'library.d.ts', 'device.d.ts'];
 for (const f of readdirSync(dist))
   if (f.endsWith('.d.ts') && !PUBLIC.includes(f)) rmSync(join(dist, f));
 const face = join(dist, 'library.d.ts');
@@ -79,30 +79,15 @@ if (!interfaceInSource.test(declared)) throw new Error('library.d.ts has no Tool
 const ops = Object.values(opsFor(new ServerContext(DEFAULT_POLICY, [])));
 writeFileSync(face, declared.replace(interfaceInSource, toolsInterface(ops)));
 
-// a stranger's project: this package's types alone, with no zod in reach and every declaration checked
+// a stranger's project: this package's types alone, by each entry point's example
 const stranger = mkdtempSync(join(tmpdir(), 'appdyno-types-'));
 try {
   const installed = join(stranger, 'node_modules/appdyno');
   mkdirSync(join(installed, 'dist'), { recursive: true });
   for (const f of PUBLIC) cpSync(join(dist, f), join(installed, 'dist', f));
   writeFileSync(join(installed, 'package.json'), readFileSync(join(pkg, 'package.json')));
-  cpSync(join(pkg, 'examples/drive.ts'), join(stranger, 'drive.ts'));
-  writeFileSync(
-    join(stranger, 'tsconfig.json'),
-    JSON.stringify({
-      compilerOptions: {
-        strict: true,
-        noEmit: true,
-        skipLibCheck: false,
-        target: 'es2023',
-        lib: ['es2023'],
-        module: 'nodenext',
-        types: [],
-      },
-      files: ['drive.ts'],
-    }),
-  );
-  execFileSync(join(pkg, '../../node_modules/.bin/tsc'), ['-p', stranger], { stdio: 'inherit' });
+  for (const [to, from] of Object.entries(EXAMPLES)) cpSync(join(pkg, from), join(stranger, to));
+  checkAsStranger(stranger, Object.keys(EXAMPLES));
 } finally {
   rmSync(stranger, { recursive: true, force: true });
 }
@@ -142,5 +127,5 @@ writeFileSync(
   ]),
 );
 
-for (const f of ['main.js', 'index.js'])
+for (const f of ['main.js', 'index.js', 'device.js'])
   console.log(`${f} ${(statSync(join(dist, f)).size / 1e6).toFixed(1)} MB`);

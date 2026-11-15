@@ -4,6 +4,7 @@
 //   pnpm build && node scripts/check-package.mjs [--android <serial>] [--ios <udid>] [--keep]
 import { spawnSync } from 'node:child_process';
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -20,6 +21,7 @@ import { parseArgs } from 'node:util';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { must } from '@appdyno/core';
+import { checkAsStranger, EXAMPLES } from '../packages/appdyno/scripts/stranger.mjs';
 
 const { values: flags } = parseArgs({
   options: {
@@ -199,6 +201,8 @@ try {
       'dist/main.js',
       'dist/index.js',
       'dist/index.d.ts',
+      'dist/device.js',
+      'dist/device.d.ts',
       'README.md',
       'LICENSE',
       'THIRD_PARTY_NOTICES',
@@ -219,6 +223,24 @@ try {
     for (const f of readdirSync(dist, { recursive: true, encoding: 'utf8' }))
       if (f.endsWith('.d.ts') && readFileSync(join(dist, f), 'utf8').includes('@appdyno/'))
         throw new Error(`${f} names a workspace package`);
+  });
+  await step('appdyno and appdyno/device resolve and type-check', () => {
+    for (const [to, from] of Object.entries(EXAMPLES))
+      cpSync(join(repo, 'packages/appdyno', from), join(project, to));
+    // the compiler is this repo's, as the project has none: what it reads is the project's own node_modules
+    checkAsStranger(project, Object.keys(EXAMPLES), env);
+    const names = run(
+      'node',
+      [
+        '--input-type=module',
+        '-e',
+        "for (const entry of ['appdyno', 'appdyno/device']) console.log(entry, Object.keys(await import(entry)).sort().join(' '));",
+      ],
+      project,
+    ).trim();
+    if (names !== 'appdyno connect\nappdyno/device aim nameOf openDevice select')
+      throw new Error(`the entry points export: ${names}`);
+    return names.replace('\n', '; ');
   });
   await step('appdyno --help', () => {
     const r = spawnSync('npx', ['appdyno', '--help'], { cwd: project, env, encoding: 'utf8' });

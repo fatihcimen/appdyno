@@ -26,6 +26,8 @@ export default defineConfig({
       '@appdyno/cli': src('cli'),
       // the fakes are files of their own, each taken by its path
       '@appdyno/testing': fileURLToPath(new URL('./packages/testing/src', import.meta.url)),
+      // before the name it begins with, which would take it
+      'appdyno/device': fileURLToPath(new URL('./packages/appdyno/src/device.ts', import.meta.url)),
       appdyno: src('appdyno'),
     },
   },

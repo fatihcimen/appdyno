@@ -14,7 +14,8 @@
       "@appdyno/mcp": ["./packages/mcp/src/index.ts"],
       "@appdyno/cli": ["./packages/cli/src/index.ts"],
       "@appdyno/testing/*": ["./packages/testing/src/*"],
-      "appdyno": ["./packages/appdyno/src/index.ts"]
+      "appdyno": ["./packages/appdyno/src/index.ts"],
+      "appdyno/device": ["./packages/appdyno/src/device.ts"]
     }
   }
 }
