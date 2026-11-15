@@ -150,7 +150,7 @@ yeni ya da boş bir klasöre `download_data`, bir klasörden `replace_data`
 (uygulamayı durdurur ve klasörde olmayanı kaldırır) ve bu Mac'teki bir projeden `build_and_run` içerir:
 `scheme` ve `configuration` ile bir Xcode projesi ya da modülü `scheme`,
 varyantı `configuration` olan bir Gradle klasörü.
-`device_setting`; `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` ve `fold`'u; tek seferlik `biometric`, `call`, `sms` ve `keychain`'i; ve değiştirileni geri koyan `restore`'u içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`.
+`device_setting`; `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` ve `fold`'u; tek seferlik `biometric`, `call`, `sms`, `keychain`, `memory_warning`, `shake` ve `media`'yı; ve değiştirileni geri koyan `restore`'u içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`.
 
 `launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler; `restart`, `args`, `env` ya da `language` ile çalışan birini önce durdurur ve uygulamayı başlattığını mı, yeniden mi başlattığını söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `app` `list` vardır. Başlarken sona eren bir uygulama, `read` ne olursa olsun ve hangi uygulama seçili olursa olsun, çökme raporunun nedeni ve son günlük satırlarıyla `APP_NOT_RUNNING` ile reddedilir; nedenini söyleyen satır bütün verilir.
 
@@ -195,27 +195,31 @@ bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyara
 
 Bir platformun yapamadığı şey, nedeni söylenerek reddedilir (`UNSUPPORTED`):
 
-| özellik                                 | Android                                           | simülatör                                  | iPhone                                    |
-| --------------------------------------- | ------------------------------------------------- | ------------------------------------------ | ----------------------------------------- |
-| ses düğmeleri                           | evet                                              | evet (geri okumanın yolu yok)              | runner                                    |
-| bir uygulamanın verisini silmek         | `pm clear`                                        | container'ını boşaltır                     | geliştirme imzalı uygulamalar             |
-| imzalamadan okuma                       | gerek yok                                         | gerek yok                                  | `inspector`: sözcükler ve id'ler          |
-| yerel görünümler (`screen` `views`)     | sistemin dökümü, probe yok                        | görünüm probe'u: `launch_app` `probe`      | hayır                                     |
-| uygulama verisini indirmek, değiştirmek | hata ayıklanabilir build'ler                      | evet                                       | geliştirme imzalı uygulamalar             |
-| bir izni vermek, geri almak             | `pm grant`, `pm revoke`                           | `simctl privacy`                           | sorulacak hale sıfırlar, sonra `alert`    |
-| başlatma ortamı                         | hayır: argümanlar intent extra'larıdır            | evet                                       | evet                                      |
-| karanlık mod, metin, hareket, kontrast  | evet                                              | evet                                       | `devicectl`                               |
-| saydamlığı azaltma                      | hayır: bulanıklıkları bir geliştirici seçeneğidir | evet                                       | `devicectl`                               |
-| animasyonlar                            | evet                                              | hayır: `reduce_motion` kullanın            | hayır                                     |
-| dil                                     | uygulama başına, API 33+; altında bütün cihaz     | uygulama başına; `app ""`: bütün simülatör | uygulama başına, aracın başlattıkları     |
-| yavaş ağ, ısıl durum                    | emülatör; bir telefonun indirmeleri, 13+          | hayır                                      | Xcode'un koşulları                        |
-| biyometri                               | bir emülatörün parmak izi                         | evet                                       | hayır: `devicectl` hiçbirini taklit etmez |
-| uçak modu, Wi-Fi, mobil veri            | evet, geri okunur                                 | hayır: Mac'in ağını kullanır               | hayır                                     |
-| anahtar zinciri                         | hayır: Android'de yok                             | boşaltılır, sayılır                        | hayır                                     |
-| katlanma duruşu                         | katlanabilir bir cihaz, API 31+, geri alınır      | hayır: `simctl`'de yok                     | hayır                                     |
-| gelen arama, SMS                        | yalnızca emülatör                                 | hayır: telefon hizmeti yok                 | hayır                                     |
-| pil seviyesi                            | evet                                              | hayır: yalnızca bir tane çizer             | hayır                                     |
-| proxy                                   | evet, geri alınır                                 | Mac'inkini izler                           | hayır: Wi-Fi ayarlarında                  |
+| özellik                                 | Android                                           | simülatör                                  | iPhone                                           |
+| --------------------------------------- | ------------------------------------------------- | ------------------------------------------ | ------------------------------------------------ |
+| ses düğmeleri                           | evet                                              | evet (geri okumanın yolu yok)              | runner                                           |
+| bir uygulamanın verisini silmek         | `pm clear`                                        | container'ını boşaltır                     | geliştirme imzalı uygulamalar                    |
+| imzalamadan okuma                       | gerek yok                                         | gerek yok                                  | `inspector`: sözcükler ve id'ler                 |
+| yerel görünümler (`screen` `views`)     | sistemin dökümü, probe yok                        | görünüm probe'u: `launch_app` `probe`      | hayır                                            |
+| uygulama verisini indirmek, değiştirmek | hata ayıklanabilir build'ler                      | evet                                       | geliştirme imzalı uygulamalar                    |
+| bir izni vermek, geri almak             | `pm grant`, `pm revoke`                           | `simctl privacy`                           | sorulacak hale sıfırlar, sonra `alert`           |
+| başlatma ortamı                         | hayır: argümanlar intent extra'larıdır            | evet                                       | evet                                             |
+| karanlık mod, metin, hareket, kontrast  | evet                                              | evet                                       | `devicectl`                                      |
+| saydamlığı azaltma                      | hayır: bulanıklıkları bir geliştirici seçeneğidir | evet                                       | `devicectl`                                      |
+| animasyonlar                            | evet                                              | hayır: `reduce_motion` kullanın            | hayır                                            |
+| dil                                     | uygulama başına, API 33+; altında bütün cihaz     | uygulama başına; `app ""`: bütün simülatör | uygulama başına, aracın başlattıkları            |
+| yavaş ağ, ısıl durum                    | emülatör; bir telefonun indirmeleri, 13+          | hayır                                      | Xcode'un koşulları                               |
+| biyometri                               | bir emülatörün parmak izi                         | evet                                       | hayır: `devicectl` hiçbirini taklit etmez        |
+| uçak modu, Wi-Fi, mobil veri            | evet, geri okunur                                 | hayır: Mac'in ağını kullanır               | hayır                                            |
+| anahtar zinciri                         | hayır: Android'de yok                             | boşaltılır, sayılır                        | hayır                                            |
+| katlanma duruşu                         | katlanabilir bir cihaz, API 31+, geri alınır      | hayır: `simctl`'de yok                     | hayır                                            |
+| gelen arama, SMS                        | yalnızca emülatör                                 | hayır: telefon hizmeti yok                 | hayır                                            |
+| pil seviyesi                            | evet                                              | hayır: yalnızca bir tane çizer             | hayır                                            |
+| proxy                                   | evet, geri alınır                                 | Mac'inkini izler                           | hayır: Wi-Fi ayarlarında                         |
+| bellek uyarısı                          | uygulamanınkinin üstünde bir trim düzeyi          | oradaki her uygulama, çağrı başına bir     | `devicectl` (henüz bir telefonda çalıştırılmadı) |
+| sallamak                                | bir emülatörün ivmeölçeri                         | evet                                       | hayır: yalnızca elle                             |
+| kitaplığa fotoğraf ve video             | gönderilir, taranır, `restore`'da çıkarılır       | `simctl addmedia`, silme yok               | hayır                                            |
+| arka planda bir son                     | `am kill`                                         | işleminin SIGKILL'i                        | `devicectl` (henüz bir telefonda çalıştırılmadı) |
 
 API 37'yi hedefleyen bir Android uygulaması bu Mac'e, bir emülatörden `10.0.2.2` üzerinden, ya da yerel ağa yalnızca `ACCESS_LOCAL_NETWORK` izniyle ulaşır: o olmadan istekleri takılı kalır, `perf_snapshot` ve `network` de 0 bayt sayar.
 
@@ -295,6 +299,16 @@ Bir emülatörde `biometric` sensörüne dokunur ve yalnızca parmak izi servisi
 Bir iPhone'da `devicectl device simulate biometrics`, `Device does not support any biometric simulation, nothing to do` yanıtını verir ve 0 ile çıkar, bu yüzden kullanılmaz: bir yanıt, hiç olmamış bir dokunuş için tamam derdi.
 
 `keychain` `reset` bir simülatörün anahtar zincirini boşaltır ve uygulamaların kaç öğe tuttuğunu deponun kendi satırlarından söyler; bu satırlar sonrasında boş olduğunu da kanıtlar. Sistemin kendi satırları kalır ve sayılmaz. Tek seferliktir: hiçbir şey onları geri getirmez.
+
+## Bellek uyarıları, sallamalar, fotoğraflar ve arka planda bir son
+
+`memory_warning` uygulamaya, `app`'e ya da seçili olana, sistemin bellek azaldığında gönderdiği uyarıyı gönderir. Bir simülatörde orada çalışan her uygulama onu alır, Simulator'ın kendi menüsündeki gibi, her çağrıda bir kez; bir düzey reddedilir. Android'de `value`, `am send-trim-memory`'nin aldığı trim düzeyidir, verilmezse `RUNNING_CRITICAL`: `RUNNING_MODERATE`, `RUNNING_LOW` ve `RUNNING_CRITICAL` öndeki bir uygulamaya, `HIDDEN`, `BACKGROUND`, `MODERATE` ve `COMPLETE` arka plandakine ulaşır. Android bir düzeyi yalnızca işleme en son verdiğinin üstündeyse alır ve yeni bir işlem hiçbir düzeyde değildir; bu yüzden bir ret uygulamanın hangi düzeyde olduğunu söyler. Sistem ana ekrana gönderilen bir uygulamayı yaklaşık bir saniye daha önde saydığı için bir arka plan düzeyi 3 s boyunca yeniden istenir. Her düzey API 35 ve API 36'da fixture'ın `onTrimMemory`'sine ulaştı. Bir iPhone'da `devicectl device process sendMemoryWarning` onu uygulamanın işlemine gönderir; henüz bir telefonda çalıştırılmadı.
+
+`shake`, bir simülatörün UIKit'inin sallama olarak aldığı bildirimi gönderir; öndeki uygulama onu alır, her çağrıda bir kez. Bir emülatörde ivmeölçer yerçekiminin eksenine dik olarak bir yandan öbür yana, 80 ms'lik dört hamleyle çekilir ve okuması geri konur: fixture her çağrıda bir sallama saydı. Bir telefon ve bir iPhone yalnızca elle sallanır ve onu reddeder.
+
+`media`, sunucunun klasöründeki bir fotoğrafı ya da videoyu, ya da bir klasörün fotoğraf ve videolarını cihazın kitaplığına ekler. Bir simülatör onları `simctl addmedia` ile alır ve yanıt Fotoğraflar'ın sonra kaç öğe tuttuğunu sayar; Fotoğraflar'ında silme yoktur, bu yüzden hiçbir şey onları çıkarmaz. Android'dekiler her biri yolu ve boyutuyla not edilir, `Pictures/appdyno`'ya gönderilir ve MediaProvider'ın kendi `scan_file`'ı ile taranır, çünkü gönderilen bir dosya taranana dek kitaplığın göremeyeceği yerde kalır; yanıt kitaplığın sonra onlardan kaçını listelediğini sayar. `restore` ve oturumun sonu tam olarak bunları, her birini yalnızca gönderildiği boyuttayken siler ve o zamandan beri değişeni adıyla söyler. Bir iPhone reddeder.
+
+`background` ile `terminate_app`, bir uygulamayı sistemin bellek için arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır: ana ekran, uygulama önden çıktıktan sonra durumunu kaydetmesi için 1,5 s, sonra işlemi öldürülür; bir simülatörde SIGKILL ile, Android'de `am kill` ile, bir iPhone'da `devicectl device process terminate --kill` ile, ki henüz bir telefonda çalıştırılmadı. Hâlâ çalışan bir işlem reddedilir, çünkü `am kill` yalnızca sistemin sonlandırabileceği bir işlemi sonlandırır ve bir ön plan hizmeti bir işlemi ayakta tutar. Android'de bulunduğu aktivite, görevi `launch_app` başlattıysa kaydedilmiş örnek durumuyla geri gelir; görevi önce bir bağlantı başlattıysa yeni bir başlatıcı aktivitesinin altında geri gelir. Bir simülatörde fixture'ın `@SceneStorage` ile tuttuğu değer yeni bir işlemde geri geldi; bir başlatmada kaydedilmiş sahneyi bir kez atan bir simülatör, yeniden açılana dek her başlatmada bunu yaptı (iOS 26.5).
 
 ## Bir iPhone'un kendi koşulları, verisi ve izinleri
 

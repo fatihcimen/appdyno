@@ -150,7 +150,7 @@ A selector goes in `selector` in every tool and step that takes one, `find`, `wa
 from one, which stops the app and takes away what the folder does not hold, and `build_and_run` from a
 project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gradle folder with `scheme` as
 its module and `configuration` as its variant.
-`device_setting` holds `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` and `fold`; the one-shot `biometric`, `call`, `sms` and `keychain`; and `restore`, which puts back what was changed. `dark_mode` reads as it is set, `on` or `off`, on both platforms.
+`device_setting` holds `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` and `fold`; the one-shot `biometric`, `call`, `sms`, `keychain`, `memory_warning`, `shake` and `media`; and `restore`, which puts back what was changed. `dark_mode` reads as it is set, `on` or `off`, on both platforms.
 
 `launch_app` says whether it started the app or brought a running one to the front, on the screen it was on; with `restart`, `args`, `env` or `language` it stops a running one first, and says whether it started the app or restarted it. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `app` `list` in its hint. An app that ends as it starts is refused with `APP_NOT_RUNNING`, whatever `read` is and whichever app is selected, with the crash report's reason and its last log lines; the line that says why is given whole.
 
@@ -195,27 +195,31 @@ names, by the id the file holds, read before anything reaches the device, and re
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 
-| feature                           | Android                              | simulator                              | iPhone                         |
-| --------------------------------- | ------------------------------------ | -------------------------------------- | ------------------------------ |
-| volume buttons                    | yes                                  | yes (no way to read back)              | the runner                     |
-| clear an app's data               | `pm clear`                           | empties its container                  | development-signed apps        |
-| reads with no signing             | no need                              | no need                                | `inspector`: words and ids     |
-| native views (`screen` `views`)   | the system's dump, no probe          | the view probe: `launch_app` `probe`   | no                             |
-| download, replace app data        | debuggable builds                    | yes                                    | development-signed apps        |
-| grant, revoke a permission        | `pm grant`, `pm revoke`              | `simctl privacy`                       | reset to ask, then `alert`     |
-| launch environment                | no: args are intent extras           | yes                                    | yes                            |
-| dark mode, text, motion, contrast | yes                                  | yes                                    | `devicectl`                    |
-| reduce transparency               | no: its blurs are a developer option | yes                                    | `devicectl`                    |
-| animations                        | yes                                  | no: use `reduce_motion`                | no                             |
-| locale                            | per app, API 33+; whole device below | per app; `app ""`: the whole simulator | per app, the tool's launches   |
-| slow network, thermal state       | emulator; a phone's downloads, 13+   | no                                     | Xcode's conditions             |
-| biometrics                        | an emulator's fingerprint            | yes                                    | no: `devicectl` simulates none |
-| airplane, Wi-Fi, mobile data      | yes, read back                       | no: it has the Mac's network           | no                             |
-| keychain                          | no: Android has none                 | emptied, counted                       | no                             |
-| fold pose                         | a foldable, API 31+, put back        | no: `simctl` has none                  | no                             |
-| incoming call, SMS                | emulator only                        | no: no telephony                       | no                             |
-| battery level                     | yes                                  | no: it only draws one                  | no                             |
-| proxy                             | yes, put back                        | follows the Mac's                      | no: its Wi-Fi settings         |
+| feature                            | Android                                 | simulator                              | iPhone                               |
+| ---------------------------------- | --------------------------------------- | -------------------------------------- | ------------------------------------ |
+| volume buttons                     | yes                                     | yes (no way to read back)              | the runner                           |
+| clear an app's data                | `pm clear`                              | empties its container                  | development-signed apps              |
+| reads with no signing              | no need                                 | no need                                | `inspector`: words and ids           |
+| native views (`screen` `views`)    | the system's dump, no probe             | the view probe: `launch_app` `probe`   | no                                   |
+| download, replace app data         | debuggable builds                       | yes                                    | development-signed apps              |
+| grant, revoke a permission         | `pm grant`, `pm revoke`                 | `simctl privacy`                       | reset to ask, then `alert`           |
+| launch environment                 | no: args are intent extras              | yes                                    | yes                                  |
+| dark mode, text, motion, contrast  | yes                                     | yes                                    | `devicectl`                          |
+| reduce transparency                | no: its blurs are a developer option    | yes                                    | `devicectl`                          |
+| animations                         | yes                                     | no: use `reduce_motion`                | no                                   |
+| locale                             | per app, API 33+; whole device below    | per app; `app ""`: the whole simulator | per app, the tool's launches         |
+| slow network, thermal state        | emulator; a phone's downloads, 13+      | no                                     | Xcode's conditions                   |
+| biometrics                         | an emulator's fingerprint               | yes                                    | no: `devicectl` simulates none       |
+| airplane, Wi-Fi, mobile data       | yes, read back                          | no: it has the Mac's network           | no                                   |
+| keychain                           | no: Android has none                    | emptied, counted                       | no                                   |
+| fold pose                          | a foldable, API 31+, put back           | no: `simctl` has none                  | no                                   |
+| incoming call, SMS                 | emulator only                           | no: no telephony                       | no                                   |
+| battery level                      | yes                                     | no: it only draws one                  | no                                   |
+| proxy                              | yes, put back                           | follows the Mac's                      | no: its Wi-Fi settings               |
+| memory warning                     | a trim level above the app's            | every app on it, one a call            | `devicectl` (not yet run on a phone) |
+| shake                              | an emulator's accelerometer             | yes                                    | no: only by hand                     |
+| photos and videos into the library | pushed, scanned, taken out at `restore` | `simctl addmedia`, no delete           | no                                   |
+| end in the background              | `am kill`                               | SIGKILL of its process                 | `devicectl` (not yet run on a phone) |
 
 An Android app that targets API 37 reaches this Mac, at `10.0.2.2` from an emulator, or the local network only with the `ACCESS_LOCAL_NETWORK` permission: without it, its requests hang, and `perf_snapshot` and `network` count 0 bytes.
 
@@ -295,6 +299,16 @@ A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state 
 On an iPhone `devicectl device simulate biometrics` answers `Device does not support any biometric simulation, nothing to do` and exits 0, so it is not used: an answer would say done for a touch that never happened.
 
 `keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
+
+## Memory warnings, shakes, photos and an end in the background
+
+`memory_warning` sends the app, `app` or the one selected, the warning the system sends when memory runs short. On a simulator every app that runs there gets it, as from Simulator's own menu, one a call, and a level is refused. On Android `value` is the trim level `am send-trim-memory` takes, `RUNNING_CRITICAL` unless given: `RUNNING_MODERATE`, `RUNNING_LOW` and `RUNNING_CRITICAL` reach an app in front, `HIDDEN`, `BACKGROUND`, `MODERATE` and `COMPLETE` one in the background. Android takes a level only above the one it last gave the process, and a new process is at none, so a refusal says which level the app is at; as the system counts an app sent home as in front for about a second, a background level is asked again for 3 s. Each level reached the fixture's `onTrimMemory` on API 35 and API 36. On an iPhone `devicectl device process sendMemoryWarning` sends it to the app's process; it has not been run on a phone yet.
+
+`shake` posts the notification a simulator's UIKit takes for a shake, which the app in front gets, one a call. On an emulator the accelerometer is pulled from side to side across gravity's axis, four ways of 80 ms, and its reading put back: the fixture counted one shake a call. A phone and an iPhone are shaken only by hand, and refuse it.
+
+`media` adds a photo or a video, or a folder's photos and videos, inside the server's folder, to the device's library. A simulator takes them by `simctl addmedia`, and the answer counts what Photos then holds; its Photos has no delete, so nothing takes them out. Android's are each written down by path and size, pushed into `Pictures/appdyno` and scanned by MediaProvider's own `scan_file`, as a pushed file stays out of the library's sight until it is scanned, and the answer counts how many of them the library then lists. `restore` and the session's end delete exactly those, each only while it has the size it was pushed with, and name any that changed. An iPhone refuses it.
+
+`terminate_app` with `background` ends an app as the system ends one in the background for memory: home, 1.5 s once the app has left the front to save its state, then its process killed, by SIGKILL on a simulator, `am kill` on Android and `devicectl device process terminate --kill` on an iPhone, which has not been run on a phone yet. A process that still runs is refused, as `am kill` ends only a process the system may end, and a foreground service keeps one. On Android the activity it was on comes back with its saved instance state when `launch_app` started the task; one a link started first comes back under a new launcher activity. On a simulator the value the fixture keeps by `@SceneStorage` came back in a new process; a simulator that once discarded the saved scene at a launch did so at every launch until it booted again (iOS 26.5).
 
 ## An iPhone's own conditions, data and permissions
 
