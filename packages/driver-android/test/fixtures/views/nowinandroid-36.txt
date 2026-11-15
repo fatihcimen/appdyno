@@ -1,0 +1,30 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{261851023 u0 com.google.samples.apps.nowinandroid.demo.debug/com.google.samples.apps.nowinandroid.MainActivity t9}
+  Window #0 Window{79551f0 u0 com.google.samples.apps.nowinandroid.demo.debug/com.google.samples.apps.nowinandroid.MainActivity}:
+    mDisplayId=0 taskId=9 mSession=Session{2ec2d6d 5626:u0a10214} mClient=android.os.BinderProxy@3084a33
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10214:com.google.samples.apps.nowinandroid.demo.debug id=9 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY com.google.samples.apps.nowinandroid.demo.debug/com.google.samples.apps.nowinandroid.MainActivity f9b878f pid=5626 userId=0 uid=10214 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{8fd3036 V.E...... R....... 0,0-1080,2400 aid=0}[MainActivity]
+        androidx.core.view.insets.SystemBarStateMonitor$1{8422b37 V.E...... ........ 0,0-1080,2400}
+        android.widget.LinearLayout{e158a4 V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{bcce60d G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{f6419c2 V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            androidx.compose.ui.platform.ComposeView{b8443d3 V.E...... ........ 0,0-1080,2400}
+              androidx.compose.ui.platform.AndroidComposeView{42f9dda VFED..... ........ 0,0-1080,2400 aid=1073741824}
+                android.view.View{c2d5b10 V.ED..... ........ 0,0-0,0}
+        androidx.core.view.insets.ProtectionLayout{f6ed609 V.E...... ........ 0,0-1080,2400}
+          android.view.View{b5e100e V.ED..... ........ 0,0-1080,136}
+          android.view.View{8c54a2f I.ED..... ......ID 0,0-0,2400}
+          android.view.View{7f5183c I.ED..... ......ID 1080,0-1080,2400}
+          android.view.View{b25c9c5 I.ED..... ......ID 0,2400-1080,2400}
+        androidx.core.view.insets.ProtectionLayout{4978897 V.E...... ........ 0,0-1080,2400}
+          android.view.View{bed5a84 V.ED..... ........ 0,0-1080,136}
+          android.view.View{bbbf26d I.ED..... ......ID 0,0-0,2400}
+          android.view.View{319ea2 I.ED..... ......ID 1080,0-1080,2400}
+          android.view.View{6c21733 I.ED..... ......ID 0,2400-1080,2400}
+    Looper (main, tid 2) {5ef1f1a}

@@ -1,0 +1,10 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{51444685 u0 dev.appdyno.fixture/.MainActivity t22}
+  Window #0 Window{3a7b760 u0 dev.appdyno.fixture/dev.appdyno.fixture.MainActivity}:
+    mDisplayId=0 taskId=22 mSession=Session{1ecd31d 7415:u0a10213} mClient=android.os.BinderProxy@7581f63
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10213:dev.appdyno.fixture id=22 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY dev.appdyno.fixture/.MainActivity 310fbcd pid=7415 userId=0 uid=10213 displayId=0(type=INTERNAL)
+    Failure while dumping the activity: java.io.IOException: Timeout

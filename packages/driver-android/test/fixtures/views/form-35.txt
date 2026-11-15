@@ -1,0 +1,28 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{22ba2a6 u0 dev.appdyno.fixture/.FormActivity t19}
+  Window #0 Window{2e84292 u0 dev.appdyno.fixture/dev.appdyno.fixture.FormActivity}:
+    mDisplayId=0 rootTaskId=19 mSession=Session{b7eba00 6458:u0a10207} mClient=android.os.BinderProxy@eb7f01d
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030309
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10207:dev.appdyno.fixture id=19 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY dev.appdyno.fixture/.FormActivity 22ba2a6 pid=6458 userId=0 uid=10207 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{5ec99e1 V.E...... R....... 0,0-1080,2400 aid=0}[FormActivity]
+        android.widget.LinearLayout{1a64306 V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{8da8dc7 G.E...... ......I. 0,0-0,0 #10201cb android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{b2b2ff4 V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            android.widget.ScrollView{4b7f31d VFED.V... ........ 0,0-1080,2400}
+              android.widget.LinearLayout{3d38992 V.E...... ........ 0,0-1080,1131}
+                android.widget.TextView{de83f63 V.ED..... ........ 32,96-1048,159 aid=1073741828}
+                android.widget.EditText{8c55760 VFED..CL. ........ 32,159-1048,277 #7f050078 app:id/name_input aid=1073741824}
+                android.widget.EditText{e5a419 VFED..CL. ........ 32,277-1048,395 #7f050082 app:id/phone_input aid=1073741825}
+                android.widget.LinearLayout{e1cacde V.E...... ........ 32,395-1048,804 #7f05005c app:id/gsm_layout aid=1073741829}
+                  android.widget.TextView{956ebf V.ED..... ........ 0,0-1016,51 aid=1073741830}
+                  android.widget.EditText{e18898c VFED..CL. ........ 0,51-1016,169 #7f05005b app:id/gsm_input aid=1073741826}
+                  android.widget.TextView{8a368d5 V.ED..... ........ 0,169-1016,409 aid=1073741831}
+                android.widget.EditText{142b8ea VFED..CL. ........ 32,804-1048,922 #7f050081 app:id/password_input aid=1073741827}
+                android.widget.Button{cbc37db VFED..C.. ........ 32,922-1048,1048 #7f050093 app:id/submit aid=1073741833}
+                android.widget.TextView{38ab278 V.ED..... ........ 32,1048-1048,1099 #7f050089 app:id/result aid=1073741832}
+    Looper (main, tid 2) {53ebd51}

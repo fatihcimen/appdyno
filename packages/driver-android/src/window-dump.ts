@@ -1,9 +1,12 @@
 import { DeviceError } from '@appdyno/protocol';
 
+/** What to do about an app in front that does not answer a read. */
+export const NOT_ANSWERING =
+  'its main thread is busy: read again in a moment; if it stays, the app hangs: its log says on what, and stopping and launching it again ends it';
+
 /** What to do about a read with no window, by what the agent found there: it says what, and no step. */
 const NO_WINDOW_HINTS: Partial<Record<string, string>> = {
-  'the app in front is not answering':
-    'its main thread is busy: read again in a moment; if it stays, the app hangs: its log says on what, and stopping and launching it again ends it',
+  'the app in front is not answering': NOT_ANSWERING,
   'the screen is off or locked': 'the power key wakes it; a lock is opened by hand',
 };
 

@@ -1,0 +1,18 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{108903559 u0 com.gskinner.flutter.wonders/.MainActivity t12}
+  Window #0 Window{27d256a u0 com.gskinner.flutter.wonders/com.gskinner.flutter.wonders.MainActivity}:
+    mDisplayId=0 taskId=12 mSession=Session{be793f 6160:u0a10217} mClient=android.os.BinderProxy@ec9b755
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x1030001 preferredDisplayMode=1
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK null id=12 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY com.gskinner.flutter.wonders/.MainActivity 67dbc87 pid=6160 userId=0 uid=10217 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{e25b3a V.E...... R....... 0,0-1080,2400 aid=0}[MainActivity]
+        android.widget.LinearLayout{108b3eb V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{a486548 G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{d5f3fe1 V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            io.flutter.embedding.android.FlutterView{af106 VFE...... ........ 0,0-1080,2400 #1}
+              io.flutter.embedding.android.FlutterSurfaceView{60fc593 V.E...... ........ 0,0-1080,2400}
+    Looper (main, tid 2) {abca3c7}

@@ -1,0 +1,240 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{43950660 u0 org.schabi.newpipe.debug/org.schabi.newpipe.MainActivity t14}
+  Window #0 Window{31b4017 u0 org.schabi.newpipe.debug/org.schabi.newpipe.MainActivity}:
+    mDisplayId=0 taskId=14 mSession=Session{4a39258 6317:u0a10219} mClient=android.os.BinderProxy@cac0c96
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10219:org.schabi.newpipe.debug id=14 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY org.schabi.newpipe.debug/org.schabi.newpipe.MainActivity 29ea244 pid=6317 userId=0 uid=10219 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{4798fff V.E...... R....... 0,0-1080,2400 aid=0}[MainActivity]
+        android.widget.LinearLayout{2151991 V.E...... ........ 0,0-1080,2337}
+          android.view.ViewStub{7ec40f6 G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{fa6ccf7 V.E...... ........ 0,136-1080,2337}
+            androidx.appcompat.widget.FitWindowsLinearLayout{a82b764 V.E...... ........ 0,0-1080,2201 #7f0a003a app:id/action_bar_root}
+              androidx.appcompat.widget.ViewStubCompat{8e0bdcd G.E...... ......I. 0,0-0,0 #7f0a0046 app:id/action_mode_bar_stub}
+              androidx.appcompat.widget.ContentFrameLayout{b137682 V.E...... ........ 0,0-1080,2201 #1020002 android:id/content}
+                org.schabi.newpipe.views.FocusAwareDrawerLayout{ff14193 VFE...... ........ 0,0-1080,2201}
+                  org.schabi.newpipe.views.FocusAwareCoordinator{665e5d0 V.E...... ........ 0,0-1080,2201}
+                    androidx.fragment.app.FragmentContainerView{eaec2da V.E...... ........ 0,147-1080,2201 #7f0a01aa app:id/fragment_holder}
+                      android.widget.RelativeLayout{8ddc8fd V.E...... ........ 0,0-1080,2054}
+                        org.schabi.newpipe.views.ScrollableTabLayout{712ac9 VFED..... ........ 0,0-1080,126 #7f0a024a app:id/main_tab_layout}
+                          com.google.android.material.tabs.TabLayout$SlidingTabIndicator{baea5ce V.ED..... ........ 0,0-1080,126}
+                            com.google.android.material.tabs.TabLayout$TabView{b358cef VFE...C.. ........ 0,0-270,126}
+                              androidx.appcompat.widget.AppCompatImageView{69803fc V.ED..... ........ 103,31-166,94}
+                              androidx.appcompat.widget.AppCompatTextView{d8aa85 G.ED..... ......ID 0,0-0,0}
+                            com.google.android.material.tabs.TabLayout$TabView{81350da VFE...C.. ..S..A.. 270,0-540,126}
+                              androidx.appcompat.widget.AppCompatImageView{578090b V.ED..... ..S..A.. 103,31-166,94}
+                              androidx.appcompat.widget.AppCompatTextView{5f63e8 G.ED..... ..S..AID 0,0-0,0}
+                            com.google.android.material.tabs.TabLayout$TabView{67e6a01 VFE...C.. ........ 540,0-810,126}
+                              androidx.appcompat.widget.AppCompatImageView{5e5a0a6 V.ED..... ........ 103,31-166,94}
+                              androidx.appcompat.widget.AppCompatTextView{1c2ae7 G.ED..... ......ID 0,0-0,0}
+                            com.google.android.material.tabs.TabLayout$TabView{6bad694 VFE...C.. ........ 810,0-1080,126}
+                              androidx.appcompat.widget.AppCompatImageView{566a53d V.ED..... ........ 103,31-166,94}
+                              androidx.appcompat.widget.AppCompatTextView{d3b2132 G.ED..... ......ID 0,0-0,0}
+                        androidx.viewpager.widget.ViewPager{109989e VFED..... ........ 0,126-1080,2054 #7f0a02f8 app:id/pager}
+                          android.widget.RelativeLayout{887cff3 V.E...... ........ 0,0-1080,1928}
+                            org.schabi.newpipe.views.NewPipeRecyclerView{4f68e83 VFED.V... ........ 0,0-1080,1928 #7f0a0207 app:id/items_list}
+                              androidx.constraintlayout.widget.ConstraintLayout{8b8c800 VFE...CL. ........ 0,0-1080,248 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{5855e3d V.ED..... ........ 32,32-358,216 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{39d5839 V.ED..... ........ 269,166-353,211 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{ff61e7e V.ED..... ........ 374,34-1048,128 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{c898fdf V.ED..... ........ 374,130-1048,169 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{5e2642c V.ED..... ........ 374,171-1048,214 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{1f23ef5 G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                              androidx.constraintlayout.widget.ConstraintLayout{9d1a48a VFE...CL. ........ 0,248-1080,496 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{2ade93a V.ED..... ........ 32,32-358,216 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{b214afb V.ED..... ........ 269,166-353,211 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{b279718 V.ED..... ........ 374,34-1048,128 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{474d571 V.ED..... ........ 374,130-1048,169 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{52d7f56 V.ED..... ........ 374,171-1048,214 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{3af9bd7 G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                              androidx.constraintlayout.widget.ConstraintLayout{28b0cc4 VFE...CL. ........ 0,496-1080,744 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{7707353 V.ED..... ........ 32,32-358,216 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{6b057ad V.ED..... ........ 269,166-353,211 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{9a3ae2 V.ED..... ........ 374,34-1048,128 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{c681e73 V.ED..... ........ 374,130-1048,169 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{18e3130 V.ED..... ........ 374,171-1048,214 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{7a7c1a9 G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                              androidx.constraintlayout.widget.ConstraintLayout{125232e VFE...CL. ........ 0,744-1080,994 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{bcc88d8 V.ED..... ........ 32,33-358,217 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{11c2ecf V.ED..... ........ 269,167-353,212 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{25d305c V.ED..... ........ 374,32-1048,126 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{991cf65 V.ED..... ........ 374,126-1048,175 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{d64443a V.ED..... ........ 374,175-1048,218 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{f56e8eb G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                              androidx.constraintlayout.widget.ConstraintLayout{3baf648 VFE...CL. ........ 0,994-1080,1244 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{b11dd9 V.ED..... ........ 32,33-358,217 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{154fce1 V.ED..... ........ 269,167-353,212 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{d426a06 V.ED..... ........ 374,32-1048,126 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{83928c7 V.ED..... ........ 374,126-1048,175 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{bad2ef4 V.ED..... ........ 374,175-1048,218 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{1c3861d G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                              androidx.constraintlayout.widget.ConstraintLayout{a8b2092 VFE...CL. ........ 0,1244-1080,1492 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{2681bd V.ED..... ........ 32,32-358,216 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{4158a63 V.ED..... ........ 233,166-353,211 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{8e84660 V.ED..... ........ 374,34-1048,128 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{e976719 V.ED..... ........ 374,130-1048,169 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{e36b3de V.ED..... ........ 374,171-1048,214 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{3cc69bf G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                              androidx.constraintlayout.widget.ConstraintLayout{efb688c VFE...CL. ........ 0,1492-1080,1740 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{c3c096b V.ED..... ........ 32,32-358,216 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{32e5bd5 V.ED..... ........ 269,166-353,211 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{6762fea V.ED..... ........ 374,34-1048,128 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{be7e2db V.ED..... ........ 374,130-1048,169 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{93c8178 V.ED..... ........ 374,171-1048,214 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{905e051 G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                              androidx.constraintlayout.widget.ConstraintLayout{17f60b6 VFE...CL. ........ 0,1740-1080,1988 #7f0a01f0 app:id/itemRoot}
+                                androidx.appcompat.widget.AppCompatImageView{ceace10 V.ED..... ........ 32,32-358,216 #7f0a01f2 app:id/itemThumbnailView}
+                                org.schabi.newpipe.views.NewPipeTextView{577d1b7 V.ED..... ........ 269,166-353,211 #7f0a01ed app:id/itemDurationView}
+                                org.schabi.newpipe.views.NewPipeTextView{743d24 V.ED..... ........ 374,34-1048,128 #7f0a01f5 app:id/itemVideoTitleView}
+                                org.schabi.newpipe.views.NewPipeTextView{9f7308d V.ED..... ........ 374,130-1048,169 #7f0a01f4 app:id/itemUploaderView}
+                                org.schabi.newpipe.views.NewPipeTextView{918d242 V.ED..... ........ 374,171-1048,214 #7f0a01ea app:id/itemAdditionalDetails}
+                                org.schabi.newpipe.views.AnimatedProgressBar{add253 G.ED..... ......ID 0,0-0,0 #7f0a01ef app:id/itemProgressView}
+                            android.widget.ProgressBar{f4a0790 G.ED..... ......I. 477,901-603,1027 #7f0a0244 app:id/loading_progress_bar}
+                            android.widget.LinearLayout{a334889 G.E...... ......I. 0,0-0,0 #7f0a0145 app:id/empty_state_view}
+                              org.schabi.newpipe.views.NewPipeTextView{ae5d08e V.ED..... ......ID 0,0-0,0}
+                              org.schabi.newpipe.views.NewPipeTextView{53940af V.ED..... ......ID 0,0-0,0 #7f0a0144 app:id/empty_state_message}
+                            android.widget.LinearLayout{1700cbc G.E...... ......I. 0,0-0,0 #7f0a015c app:id/error_panel}
+                              org.schabi.newpipe.views.NewPipeTextView{5fee445 V.ED..... ......ID 0,0-0,0 #7f0a015a app:id/error_message_view}
+                              org.schabi.newpipe.views.NewPipeTextView{972679a G.ED..... ......I. 0,0-0,0 #7f0a0159 app:id/error_message_service_info_view}
+                              org.schabi.newpipe.views.NewPipeTextView{c6338cb G.ED..... ......I. 0,0-0,0 #7f0a0158 app:id/error_message_service_explanation_view}
+                              androidx.appcompat.widget.AppCompatButton{98f38a8 GFED..C.. ......I. 0,0-0,0 #7f0a0156 app:id/error_action_button}
+                              androidx.appcompat.widget.AppCompatButton{f2e7fc1 GFED..C.. ......I. 0,0-0,0 #7f0a015d app:id/error_retry_button}
+                              androidx.appcompat.widget.AppCompatButton{1ff6366 GFED..C.. ......I. 0,0-0,0 #7f0a015b app:id/error_open_in_browser}
+                            android.view.View{ea96a7 V.ED..... ........ 0,0-1080,11}
+                          android.widget.RelativeLayout{e5f8ea5 V.E...... ........ 1080,0-2160,1928}
+                            android.widget.RelativeLayout{9f33754 VFE...C.. ........ 0,0-1080,96 #7f0a035a app:id/refresh_root_view}
+                              android.widget.LinearLayout{66256fd V.E...... ........ 32,21-969,72 #7f0a0359 app:id/refresh_info_container}
+                                org.schabi.newpipe.views.NewPipeTextView{30e4ff2 V.ED..... ........ 0,0-937,51 #7f0a035c app:id/refresh_text}
+                                org.schabi.newpipe.views.NewPipeTextView{9ff643 G.ED..... ......ID 0,0-0,0 #7f0a035b app:id/refresh_subtitle_text}
+                              androidx.appcompat.widget.AppCompatImageView{bf674c0 V.ED..... ........ 985,21-1048,72 #7f0a0358 app:id/refreshIcon}
+                              android.view.View{c0265f9 V.ED..... ........ 21,93-1059,96}
+                            androidx.swiperefreshlayout.widget.SwipeRefreshLayout{fad793e V.ED..... ........ 0,96-1080,1928 #7f0a03e8 app:id/swipeRefreshLayout}
+                              androidx.swiperefreshlayout.widget.CircleImageView{bc1b39f G.ED..... ......ID 488,-105-592,0}
+                              androidx.recyclerview.widget.RecyclerView{22e1cec GFED.V... ......I. 0,0-1080,1832 #7f0a0207 app:id/items_list}
+                            androidx.appcompat.widget.AppCompatButton{4fa68b5 GFED..C.. ......I. 0,0-0,0 #7f0a02b7 app:id/new_items_loaded_button}
+                            android.widget.LinearLayout{b83eb4a V.E...... ........ 540,964-540,964}
+                              android.widget.ProgressBar{e17eabb G.ED..... ......I. 0,0-0,0 #7f0a0244 app:id/loading_progress_bar}
+                              org.schabi.newpipe.views.NewPipeTextView{1561bd8 G.ED..... ......I. 0,0-0,0 #7f0a0245 app:id/loading_progress_text}
+                            android.widget.LinearLayout{f35db31 G.E...... ......I. 0,0-0,0 #7f0a015c app:id/error_panel}
+                              org.schabi.newpipe.views.NewPipeTextView{b9d7216 V.ED..... ......ID 0,0-0,0 #7f0a015a app:id/error_message_view}
+                              org.schabi.newpipe.views.NewPipeTextView{dd07797 G.ED..... ......I. 0,0-0,0 #7f0a0159 app:id/error_message_service_info_view}
+                              org.schabi.newpipe.views.NewPipeTextView{bfd1d84 G.ED..... ......I. 0,0-0,0 #7f0a0158 app:id/error_message_service_explanation_view}
+                              androidx.appcompat.widget.AppCompatButton{1dbf96d GFED..C.. ......I. 0,0-0,0 #7f0a0156 app:id/error_action_button}
+                              androidx.appcompat.widget.AppCompatButton{7f699a2 GFED..C.. ......I. 0,0-0,0 #7f0a015d app:id/error_retry_button}
+                              androidx.appcompat.widget.AppCompatButton{c1af633 GFED..C.. ......I. 0,0-0,0 #7f0a015b app:id/error_open_in_browser}
+                            android.widget.LinearLayout{cf08df0 V.E...... ........ 292,796-788,1132 #7f0a0145 app:id/empty_state_view}
+                              org.schabi.newpipe.views.NewPipeTextView{54bbf69 V.ED..... ........ 122,92-374,177}
+                              org.schabi.newpipe.views.NewPipeTextView{9c8adee V.ED..... ........ 0,193-496,244}
+                            android.view.View{384c28f V.ED..... ........ 0,0-1080,11}
+                          android.widget.RelativeLayout{654f8ae V.E...... ........ 2160,0-3240,1928}
+                            androidx.recyclerview.widget.RecyclerView{e77c179 VFED.V... ........ 0,0-1080,1928 #7f0a0207 app:id/items_list}
+                              android.widget.LinearLayout{2866ebe V.E...... ........ 0,0-1080,126}
+                                org.schabi.newpipe.views.NewPipeTextView{def3b1f V.ED..... ........ 0,0-954,121 #7f0a01be app:id/header_title}
+                                androidx.appcompat.widget.AppCompatImageButton{bd9ce6c VFED..C.. ........ 954,0-1080,126 #7f0a01bf app:id/header_toggle_view_mode}
+                                androidx.appcompat.widget.AppCompatImageButton{c29fc35 GFED..C.. ......ID 943,0-1069,126 #7f0a01bd app:id/header_sort}
+                              androidx.recyclerview.widget.RecyclerView{eb6b8ca VFED..... ........ 11,137-1069,433 #7f0a0357 app:id/recycler_view}
+                                androidx.cardview.widget.CardView{6566a3b VFE...CL. ........ 11,11-1047,137}
+                                  android.widget.LinearLayout{bcb6558 V.E...... ........ 0,0-1036,126}
+                                    androidx.appcompat.widget.AppCompatImageView{88b26b1 V.ED..... ........ 0,0-126,126 #7f0a01cb app:id/icon}
+                                    org.schabi.newpipe.views.NewPipeTextView{6ef9796 V.ED..... ........ 126,11-1036,114 #7f0a0424 app:id/title}
+                                androidx.cardview.widget.CardView{8376f17 VFE...CL. ........ 11,159-1047,285}
+                                  android.widget.LinearLayout{63d7f04 V.E...... ........ 0,0-1036,126}
+                                    androidx.appcompat.widget.AppCompatImageView{5fa7ced V.ED..... ........ 0,0-126,126 #7f0a01cb app:id/icon}
+                                    org.schabi.newpipe.views.NewPipeTextView{a059722 V.ED..... ........ 126,0-1036,126 #7f0a0424 app:id/title}
+                              org.schabi.newpipe.views.NewPipeTextView{eb9e5b3 V.ED..... ........ 0,444-1080,565}
+                              android.widget.LinearLayout{4958770 V.E...... ........ 0,565-1080,901}
+                                org.schabi.newpipe.views.NewPipeTextView{38efae9 V.ED..... ........ 414,92-666,177}
+                                org.schabi.newpipe.views.NewPipeTextView{d8a036e V.ED..... ........ 76,193-1003,244}
+                            android.widget.LinearLayout{5e32a0f G.E...... ......I. 0,0-0,0 #7f0a015c app:id/error_panel}
+                              org.schabi.newpipe.views.NewPipeTextView{f23aa9c V.ED..... ......ID 0,0-0,0 #7f0a015a app:id/error_message_view}
+                              org.schabi.newpipe.views.NewPipeTextView{d35ca5 G.ED..... ......I. 0,0-0,0 #7f0a0159 app:id/error_message_service_info_view}
+                              org.schabi.newpipe.views.NewPipeTextView{cd6e87a G.ED..... ......I. 0,0-0,0 #7f0a0158 app:id/error_message_service_explanation_view}
+                              androidx.appcompat.widget.AppCompatButton{ab2582b GFED..C.. ......I. 0,0-0,0 #7f0a0156 app:id/error_action_button}
+                              androidx.appcompat.widget.AppCompatButton{10ed488 GFED..C.. ......I. 0,0-0,0 #7f0a015d app:id/error_retry_button}
+                              androidx.appcompat.widget.AppCompatButton{1421e21 GFED..C.. ......I. 0,0-0,0 #7f0a015b app:id/error_open_in_browser}
+                            android.widget.LinearLayout{cdb1246 G.E...... ......I. 0,0-0,0 #7f0a0145 app:id/empty_state_view}
+                              org.schabi.newpipe.views.NewPipeTextView{fc4c07 V.ED..... ......ID 0,0-0,0}
+                              org.schabi.newpipe.views.NewPipeTextView{f00b134 V.ED..... ......I. 0,0-0,0}
+                            android.view.View{b817b5d V.ED..... ........ 0,0-1080,11}
+                    android.widget.LinearLayout{e63930b V.E...... ........ 0,0-1080,147 #7f0a042b app:id/toolbar_layout}
+                      androidx.appcompat.widget.Toolbar{5903dfa V.E...... ........ 0,0-1080,147 #7f0a042a app:id/toolbar}
+                        android.widget.FrameLayout{aa8bfab G.E...... ......I. 0,0-0,0 #7f0a042e app:id/toolbar_search_container}
+                          org.schabi.newpipe.views.NewPipeEditText{d81e608 VFED..CL. ......ID 0,0-0,0 #7f0a042f app:id/toolbar_search_edit_text}
+                          android.widget.FrameLayout{69591a1 VFE...... ......I. 0,0-0,0 #7f0a042c app:id/toolbar_search_clear}
+                            android.view.View{3943fc6 V.ED..... ......I. 0,0-0,0}
+                            androidx.appcompat.widget.AppCompatImageView{ab1ab87 V.ED..... ......ID 0,0-0,0 #7f0a042d app:id/toolbar_search_clear_icon}
+                        androidx.appcompat.widget.AppCompatTextView{1535ab4 V.ED..... ........ 189,38-464,109}
+                        androidx.appcompat.widget.AppCompatImageButton{158a6dd VFED..C.. ........ 0,0-147,147}
+                        androidx.appcompat.widget.ActionMenuView{1849252 V.E...... ........ 702,0-1080,147}
+                          androidx.appcompat.view.menu.ActionMenuItemView{7737923 VFED..C.. ........ 0,10-126,136 #7f0a004a app:id/action_search}
+                          androidx.appcompat.view.menu.ActionMenuItemView{a60cd2 VFED..C.. ........ 126,10-252,136 #7f0a0270 app:id/menu_item_feed_toggle_played_items}
+                          androidx.appcompat.view.menu.ActionMenuItemView{b07a1a3 VFED..C.. ........ 252,10-378,136 #7f0a026f app:id/menu_item_feed_help}
+                    androidx.fragment.app.FragmentContainerView{cb525e8 V.E...... ........ 0,2201-1080,4402 #7f0a01ab app:id/fragment_player_holder}
+                  com.google.android.material.navigation.NavigationView{f256e20 I.E...... ......ID -735,0-0,2201 #7f0a0137 app:id/drawer_layout}
+                    com.google.android.material.internal.NavigationMenuView{73dd3d9 VFED.V... ......ID 0,0-735,2201 #7f0a00f3 app:id/design_navigation_view}
+                      android.widget.LinearLayout{eb5819e V.E...... ......I. 0,0-735,378 #7f0a02b1 app:id/navigation_header_container}
+                        androidx.constraintlayout.widget.ConstraintLayout{efa847f V.E...... ......ID 0,0-735,357}
+                          androidx.appcompat.widget.AppCompatImageView{e434c4c V.ED..... ......ID 0,0-735,357}
+                          android.widget.LinearLayout{2aed495 V.E...... ......ID 0,42-735,357}
+                            android.widget.LinearLayout{97419aa V.E...... ......ID 42,10-693,199}
+                              androidx.appcompat.widget.AppCompatImageView{9bce99b V.ED..... ......ID 60,31-186,157}
+                              org.schabi.newpipe.views.NewPipeTextView{d7ee138 V.ED..... ......ID 218,0-559,189 #7f0a0134 app:id/drawer_header_newpipe_title}
+                            android.widget.LinearLayout{f52511 V.E...... ......ID 0,231-735,315}
+                              android.widget.LinearLayout{5d22676 V.E...... ......ID 16,0-645,84}
+                                androidx.appcompat.widget.AppCompatImageView{7768477 V.ED..... ......ID 221,10-263,73 #7f0a0135 app:id/drawer_header_service_icon}
+                                org.schabi.newpipe.views.NewPipeTextView{4dcd8e4 V.ED..... ..S...ID 279,16-423,67 #7f0a0136 app:id/drawer_header_service_view}
+                              androidx.appcompat.widget.AppCompatImageView{76014d V.ED..... ......ID 656,10-719,73 #7f0a0132 app:id/drawer_arrow}
+                          androidx.appcompat.widget.AppCompatButton{5323402 VFED..C.. ......ID 0,0-735,357 #7f0a0133 app:id/drawer_header_action_button}
+                      com.google.android.material.internal.NavigationMenuItemView{dc4f113 VFED..C.. ......ID 0,378-735,504}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{6009f50 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{6ae6549 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{a938e4e VFED..C.. ......ID 0,504-735,630}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{4838b6f V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{758607c G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{9ef0d05 VFED..C.. ......ID 0,630-735,756}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{79e415a V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{be76f8b G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{6090868 VFED..C.. ......ID 0,756-735,882}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{ad87481 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{e6f1926 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{85b7967 VFED..C.. ......ID 0,882-735,1008}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{a9a4314 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{996d7bd G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      android.widget.FrameLayout{423a1b2 V.E...... ......I. 0,1008-735,1053}
+                        android.view.View{1c4503 V.ED..... ......ID 0,21-735,24}
+                      com.google.android.material.internal.NavigationMenuItemView{c627c80 VFED..C.. ......ID 0,1053-735,1179}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{2de32b9 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{2626fe G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{6942e5f VFED..C.. ......ID 0,1179-735,1305 #1}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{fb2e0ac V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{a64175 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{439b50a VFED..C.. ......ID 0,1305-735,1431 #2}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{177517b V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{ac35b98 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{aa67ff1 VFED..C.. ......ID 0,1431-735,1557 #3}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{94617d6 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{39f8a57 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{d5e9944 VFED..C.. ......ID 0,1557-735,1683 #4}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{2922a2d V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{ce3db62 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{9a874f3 VFED..C.. ......ID 0,1683-735,1809 #5}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{74e05b0 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{8143c29 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      android.widget.FrameLayout{ba84bae V.E...... ......I. 0,1809-735,1854}
+                        android.view.View{44b6d4f V.ED..... ......ID 0,21-735,24}
+                      com.google.android.material.internal.NavigationMenuItemView{985ccdc VFED..C.. ......ID 0,1854-735,1980}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{8b71e5 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{43174ba G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{c7b8f6b VFED..C.. ......ID 0,1980-735,2106 #1}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{e10dac8 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{e864761 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+                      com.google.android.material.internal.NavigationMenuItemView{ef22286 VFED..C.. ......ID 0,2106-735,2232 #2}
+                        androidx.appcompat.widget.AppCompatCheckedTextView{d41b747 V.ED..... ......ID 42,0-693,126 #7f0a00f2 app:id/design_menu_item_text}
+                        android.view.ViewStub{2bcdb74 G.E...... ......I. 0,0-0,0 #7f0a00f1 app:id/design_menu_item_action_area_stub}
+        android.view.View{4fef89d V.ED..... ........ 0,0-1080,136 #102002f android:id/statusBarBackground}
+    Looper (main, tid 2) {2fa55fb}
+      mCreated=true mResumed=true mStopped=false    Active Fragments:

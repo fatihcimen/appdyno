@@ -1,0 +1,142 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{173248662 u0 org.wikipedia.alpha/org.wikipedia.page.PageActivity t11}
+  Window #0 Window{532e72e u0 PopupWindow:daae244}:
+    mDisplayId=0 taskId=11 mSession=Session{e25a293 5990:u0a10216} mClient=android.os.BinderProxy@80215a9
+    mAttrs={(505,283)(575x380) gr=TOP START CENTER DISPLAY_CLIP_VERTICAL sim={state=unchanged adjust=pan} ty=APPLICATION_PANEL fmt=TRANSPARENT wanim=0x7f14002e surfaceInsets=Rect(11, 11 - 11, 11) (manual)
+    Frames: parent=[0,0][1080,2400] display=[0,136][1080,2337] frame=[505,283][1080,663] last=[505,283][1080,663] insetsChanged=false
+  Window #1 Window{a5c1da0 u0 org.wikipedia.alpha/org.wikipedia.page.PageActivity}:
+    mDisplayId=0 taskId=11 mSession=Session{e25a293 5990:u0a10216} mClient=android.os.BinderProxy@aa136a3
+    mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10216:org.wikipedia.alpha id=11 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY org.wikipedia.alpha/org.wikipedia.page.PageActivity a539096 pid=5990 userId=0 uid=10216 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{af76b42 V.E...... R....... 0,0-1080,2400 aid=1}[PageActivity]
+        android.widget.LinearLayout{a193d5e V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{225f53f G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{89cce0c V.E...... ........ 0,0-1080,2400}
+            androidx.appcompat.widget.FitWindowsFrameLayout{ad39355 V.E...... ........ 0,0-1080,2400 #7f0a0055 app:id/action_bar_root}
+              androidx.appcompat.widget.ContentFrameLayout{bb7d16a V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+                androidx.drawerlayout.widget.FixedDrawerLayout{10ea65b VFE...... ........ 0,136-1080,2337 #7f0a06a5 app:id/navigation_drawer}
+                  org.wikipedia.views.FrameLayoutNavMenuTriggerer{f4ebef8 V.E...... ........ 0,0-1080,2201 #7f0a0193 app:id/container_with_nav_trigger}
+                    androidx.fragment.app.FragmentContainerView{e870fd1 V.E...... ........ 0,0-1080,2201 #7f0a0726 app:id/page_fragment}
+                      org.wikipedia.views.WikiSwipeRefreshLayout{2f99a36 V.ED..... ........ 0,0-1080,2201 #7f0a0737 app:id/page_refresh_container}
+                        androidx.coordinatorlayout.widget.CoordinatorLayout{d074d37 V.E...... ........ 0,0-1080,2201 #7f0a0722 app:id/page_contents_container}
+                          org.wikipedia.views.ObservableWebView{982f3c VFEDHVCL. ........ 0,0-1080,2201 #7f0a0748 app:id/page_web_view}
+                          org.wikipedia.page.leadimages.PageHeaderView{39894c5 V.E...... ........ 0,0-1080,960 #7f0a0727 app:id/page_header_view}
+                            android.widget.FrameLayout{52cd2a4 V.E...... ........ 0,0-1080,960 #7f0a04ba app:id/headerImageContainer}
+                              org.wikipedia.views.FaceAndColorDetectImageView{19d148d VFED..C.. ........ 0,168-1080,960 #7f0a09a0 app:id/view_page_header_image}
+                              android.view.View{b1bd80d G.ED..... ......I. 0,0-0,0 #7f0a09a1 app:id/view_page_header_image_gradient_bottom}
+                              android.widget.LinearLayout{dbd23c2 GFE...C.. ......I. 0,0-0,0 #7f0a00e3 app:id/call_to_action_container}
+                                androidx.appcompat.widget.AppCompatImageView{47985d3 V.ED..... ......ID 0,0-0,0}
+                                com.google.android.material.textview.MaterialTextView{2b67510 V.ED..... ......ID 0,0-0,0 #7f0a00e4 app:id/call_to_action_text}
+                            org.wikipedia.donate.donationreminder.DonationReminderCardView{9bae809 G.E...... ......I. 0,0-0,0 #7f0a01ff app:id/donationReminderCardView}
+                              androidx.core.widget.NestedScrollView{73dba0e VFED..... ......I. 0,0-0,0}
+                                android.widget.LinearLayout{8ccac2f V.E...... ......ID 0,0-0,0}
+                                  android.widget.LinearLayout{6f5d23c G.E...... ......I. 0,0-0,0 #7f0a0a01 app:id/wrapUpContainer}
+                                    com.google.android.material.chip.Chip{320fbc5 VFED..... ......ID 0,0-0,0}
+                                    android.view.View{11f691a V.ED..... ......I. 0,0-0,0}
+                                    androidx.appcompat.widget.AppCompatTextView{81dc4b V.ED..... ......I. 0,0-0,0 #7f0a0578 app:id/learnMoreButton}
+                                  com.google.android.material.textview.MaterialTextView{56bd628 V.ED..... ......ID 0,0-0,0 #7f0a0664 app:id/messageTitleView}
+                                  com.google.android.material.textview.MaterialTextView{51a8f41 V.ED..... ......ID 0,0-0,0 #7f0a0663 app:id/messageTextView}
+                                  com.google.android.flexbox.FlexboxLayout{13afce6 V.E...... ......I. 0,0-0,0 #7f0a00d9 app:id/buttonsContainer}
+                                    com.google.android.material.button.MaterialButton{f0ff227 VFED..C.. ......I. 0,0-0,0 #7f0a0765 app:id/positiveButton}
+                                    com.google.android.material.button.MaterialButton{6bc2cd4 VFED..C.. ......I. 0,0-0,0 #7f0a06a8 app:id/negativeButton}
+                          androidx.appcompat.widget.AppCompatImageView{aa98e1a G.ED..... ......I. 0,0-0,0 #7f0a0729 app:id/page_image_transition_holder}
+                          org.wikipedia.views.WikiErrorView{5999d4b G.E...... ......ID 0,0-0,0 #7f0a0724 app:id/page_error}
+                            androidx.core.widget.NestedScrollView{3bfde7d VFED..... ......I. 0,0-0,0}
+                              android.widget.LinearLayout{2a0172 V.E...... ......I. 0,0-0,0}
+                                android.widget.LinearLayout{e7f89c3 V.E...... ......I. 0,0-0,0}
+                                  android.widget.Space{8194240 G.ED..... ......I. 0,0-0,0 #7f0a09ac app:id/view_wiki_error_article_content_top_offset}
+                                  androidx.appcompat.widget.AppCompatImageView{270e579 V.ED..... ......ID 0,0-0,0 #7f0a09b1 app:id/view_wiki_error_icon}
+                                  com.google.android.material.textview.MaterialTextView{492c2be VFED..CL. ......ID 0,0-0,0 #7f0a09b2 app:id/view_wiki_error_text}
+                                  com.google.android.material.button.MaterialButton{6c6ff1f VFED..C.. ......I. 0,0-0,0 #7f0a09ae app:id/view_wiki_error_button}
+                                android.widget.LinearLayout{570426c V.E...... ......I. 0,0-0,0 #7f0a09af app:id/view_wiki_error_footer_layout}
+                                  com.google.android.material.textview.MaterialTextView{916035 VFED..CL. ......ID 0,0-0,0 #7f0a09b0 app:id/view_wiki_error_footer_text}
+                                  android.widget.Space{7344cca G.ED..... ......I. 0,0-0,0 #7f0a09ad app:id/view_wiki_error_article_tab_layout_offset}
+                          androidx.coordinatorlayout.widget.CoordinatorLayout{3570328 V.E...... ........ 0,2012-1080,2012 #7f0a029e app:id/fragment_page_coordinator}
+                          android.widget.FrameLayout{7f2b841 V.E...... ........ 0,2012-1080,2201 #7f0a071e app:id/page_actions_tab_container}
+                            org.wikipedia.page.PageActionTabLayout{ee66e3b V.E...... ........ 0,0-1080,189 #7f0a071f app:id/page_actions_tab_layout}
+                              com.google.android.material.textview.MaterialTextView{a551958 VFED..C.. ........ 0,0-216,189 #7f0a0738 app:id/page_save}
+                              com.google.android.material.textview.MaterialTextView{604cab1 VFED..C.. ........ 216,0-432,189 #7f0a072b app:id/page_language}
+                              com.google.android.material.textview.MaterialTextView{bb26b96 VFED..C.. ........ 432,0-648,189 #7f0a0725 app:id/page_find_in_article}
+                              com.google.android.material.textview.MaterialTextView{3c3b317 VFED..C.. ........ 648,0-864,189 #7f0a073b app:id/page_theme}
+                              com.google.android.material.textview.MaterialTextView{5ae7304 VFED..C.. ........ 864,0-1080,189 #7f0a0721 app:id/page_contents}
+                            android.view.View{b6a60ed V.ED..... ........ 0,0-1080,1}
+                        androidx.swiperefreshlayout.widget.CircleImageView{a21ab22 G.ED..... ......ID 488,-210-592,-105}
+                    android.widget.FrameLayout{c669b3 V.E...... ........ 0,0-1080,168 #7f0a0743 app:id/page_toolbar_container}
+                      com.google.android.material.appbar.MaterialToolbar{c21bb70 V.E...... ........ 0,0-1080,168 #7f0a073e app:id/page_toolbar}
+                        androidx.appcompat.widget.AppCompatImageButton{a191ee9 VFED..C.. ........ 0,10-147,157}
+                        android.widget.LinearLayout{553576e V.E...... ........ 147,0-1080,168}
+                          com.google.android.material.textview.MaterialTextView{633ee0f VFED..C.. ........ 0,36-670,131 #7f0a0740 app:id/page_toolbar_button_search}
+                          org.wikipedia.views.TabCountsView{53f1e9c VFE...C.. ........ 681,0-807,168 #7f0a0742 app:id/page_toolbar_button_tabs}
+                            com.google.android.material.textview.MaterialTextView{fdbc0a5 V.ED..... ........ 35,57-90,110 #7f0a08b7 app:id/tabsCountText}
+                          org.wikipedia.views.NotificationButtonView{9e17c7a GFE...C.. ......I. 0,0-0,0 #7f0a073f app:id/page_toolbar_button_notifications}
+                            androidx.appcompat.widget.AppCompatImageView{94b5c2b V.ED..... ......ID 0,0-0,0 #7f0a04da app:id/iconImage}
+                            org.wikipedia.views.NotificationDotView{f6d8888 G.E...... ......I. 0,0-0,0 #7f0a095e app:id/unreadDot}
+                              androidx.appcompat.widget.AppCompatImageView{26cc221 V.ED..... ......ID 0,0-0,0 #7f0a095e app:id/unreadDot}
+                              com.google.android.material.textview.MaterialTextView{1fae646 V.ED..... ......ID 0,0-0,0 #7f0a095d app:id/unreadCountText}
+                          androidx.appcompat.widget.AppCompatImageView{a219007 VFED..C.. ........ 807,21-933,147 #7f0a0741 app:id/page_toolbar_button_show_overflow_menu}
+                        androidx.appcompat.widget.ActionMenuView{696a534 V.E...... ......I. 1080,10-1080,157}
+                      com.google.android.material.progressindicator.LinearProgressIndicator{eb25f5d G.ED..... ......I. 0,0-1080,11 #7f0a0736 app:id/page_progress_bar}
+                    org.wikipedia.views.WikiArticleCardView{9ef20d2 G.E...... ......I. 0,0-0,0 #7f0a09d8 app:id/wiki_article_card_view}
+                      android.widget.FrameLayout{b3d25a3 V.E...... ......I. 0,0-0,0 #7f0a0095 app:id/articleImageContainer}
+                        org.wikipedia.views.FaceAndColorDetectImageView{992e0a0 V.ED..... ......I. 0,0-0,0 #7f0a0094 app:id/articleImage}
+                      com.google.android.material.textview.MaterialTextView{fba9459 V.ED..... ......I. 0,0-0,0 #7f0a009c app:id/articleTitle}
+                      org.wikipedia.views.GoneIfEmptyTextView{17a781e G.ED..... ......I. 0,0-0,0 #7f0a008f app:id/articleDescription}
+                      android.view.View{6f278ff V.ED..... ......ID 0,0-0,0 #7f0a0092 app:id/articleDivider}
+                      com.google.android.material.textview.MaterialTextView{a5566cc V.ED..... ......ID 0,0-0,0 #7f0a0093 app:id/articleExtract}
+                  android.widget.FrameLayout{9771d15 I.E...... ......ID 1080,0-1868,2201 #7f0a085e app:id/side_panel_container}
+                    org.wikipedia.views.SwipeableListView{5d1f82a VFED..C.. ......ID 0,0-788,2201 #7f0a092b app:id/toc_list}
+                      android.widget.LinearLayout{e7fa61b V.E...... ......ID 0,168-788,335}
+                        com.google.android.material.textview.MaterialTextView{4d823b8 V.ED..... ......ID 84,42-604,125 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{3397591 V.ED..... ......ID 688,74-709,95 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{6f6cf6 V.E...... ......ID 0,335-788,481}
+                        com.google.android.material.textview.MaterialTextView{ee888f7 V.ED..... ......ID 84,42-604,104 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{8c7c364 V.ED..... ......ID 688,66-709,87 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{deed9cd V.E...... ......ID 0,481-788,627}
+                        com.google.android.material.textview.MaterialTextView{69d6282 V.ED..... ......ID 84,42-604,104 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{792bd93 V.ED..... ......ID 688,66-709,87 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{1efb1d0 V.E...... ......ID 0,627-788,760}
+                        com.google.android.material.textview.MaterialTextView{21c45c9 V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{5c324ce V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{ea19fef V.E...... ......ID 0,760-788,893}
+                        com.google.android.material.textview.MaterialTextView{b661afc V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{19a7585 V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{870bfda V.E...... ......ID 0,893-788,1026}
+                        com.google.android.material.textview.MaterialTextView{f124c0b V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{977eae8 V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{911e501 V.E...... ......ID 0,1026-788,1228}
+                        com.google.android.material.textview.MaterialTextView{2affa6 V.ED..... ......ID 84,42-604,160 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{c979de7 V.ED..... ......ID 688,66-709,87 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{654cd94 V.E...... ......ID 0,1228-788,1361}
+                        com.google.android.material.textview.MaterialTextView{d36d03d V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{ff77032 V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{9363183 V.E...... ......ID 0,1361-788,1494}
+                        com.google.android.material.textview.MaterialTextView{d7b2f00 V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{fc53339 V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{3a85d7e V.E...... ......ID 0,1494-788,1627}
+                        com.google.android.material.textview.MaterialTextView{8a062df V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{1e43b2c V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{83cc9f5 V.E...... ......ID 0,1627-788,1760}
+                        com.google.android.material.textview.MaterialTextView{fe8d38a V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{d524dfb V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{aefde18 V.E...... ......ID 0,1760-788,1893}
+                        com.google.android.material.textview.MaterialTextView{c5d1071 V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{7089e56 V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{b6dced7 V.E...... ......ID 0,1893-788,2039}
+                        com.google.android.material.textview.MaterialTextView{410c3c4 V.ED..... ......ID 84,42-604,104 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{46142ad V.ED..... ......ID 688,66-709,87 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{e8849e2 V.E...... ......ID 0,2039-788,2172}
+                        com.google.android.material.textview.MaterialTextView{d568173 V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{b385830 V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                      android.widget.LinearLayout{6fc5ca9 V.E...... ......ID 0,2172-788,2305}
+                        com.google.android.material.textview.MaterialTextView{165222e V.ED..... ......ID 84,42-604,91 #7f0a073d app:id/page_toc_item_text}
+                        androidx.appcompat.widget.AppCompatImageView{60dc1cf V.ED..... ......ID 688,60-709,81 #7f0a073c app:id/page_toc_item_bullet}
+                    androidx.appcompat.widget.AppCompatImageView{a02c75c V.ED..... ......ID 696,-11-793,2212}
+                    org.wikipedia.views.PageScrollerView{9151a65 VFED..C.. ......ID 640,168-756,284 #7f0a0739 app:id/page_scroller_button}
+              androidx.appcompat.widget.ViewStubCompat{b25333a G.E...... ......I. 0,0-0,0 #7f0a0060 app:id/action_mode_bar_stub}
+    Looper (main, tid 2) {d17f25f}
+      mCreated=true mResumed=true mStopped=false    Active Fragments:

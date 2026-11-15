@@ -1,0 +1,18 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{bac05fb u0 dev.appdyno.fixture/.WebActivity t18}
+  Window #0 Window{41cb04c u0 dev.appdyno.fixture/dev.appdyno.fixture.WebActivity}:
+    mDisplayId=0 rootTaskId=18 mSession=Session{72d3aad 6351:u0a10207} mClient=android.os.BinderProxy@8af87f
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030309
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10207:dev.appdyno.fixture id=18 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY dev.appdyno.fixture/.WebActivity bac05fb pid=6351 userId=0 uid=10207 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{dcd7b42 V.E...... R....... 0,0-1080,2400 aid=0}[WebActivity]
+        android.widget.LinearLayout{52f66ee V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{9f878f G.E...... ......I. 0,0-0,0 #10201cb android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{6d47a1c V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            android.widget.FrameLayout{354b625 V.E...... ........ 0,0-1080,2400}
+              android.webkit.WebView{2f03fa VFEDHVC.. ........ 0,136-1080,2337 #7f0500b2 app:id/web}
+    Looper (main, tid 2) {b98e596}

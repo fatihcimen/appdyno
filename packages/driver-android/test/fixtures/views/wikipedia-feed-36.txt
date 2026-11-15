@@ -1,0 +1,85 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{228245011 u0 org.wikipedia.alpha/org.wikipedia.main.MainActivity t23}
+  Window #0 Window{30b2bcb u0 org.wikipedia.alpha/org.wikipedia.main.MainActivity}:
+    mDisplayId=0 taskId=23 mSession=Session{c5313bc 7622:u0a10216} mClient=android.os.BinderProxy@c6469a
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10216:org.wikipedia.alpha id=23 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY org.wikipedia.alpha/org.wikipedia.main.MainActivity d9abe13 pid=7622 userId=0 uid=10216 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{ee7c01d V.E...... R....... 0,0-1080,2400 aid=2}[MainActivity]
+        android.widget.LinearLayout{f5366f0 V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{d802469 G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{cddaeee V.E...... ........ 0,0-1080,2400}
+            androidx.appcompat.widget.FitWindowsFrameLayout{fc42f8f V.E...... ........ 0,0-1080,2400 #7f0a0055 app:id/action_bar_root}
+              androidx.appcompat.widget.ContentFrameLayout{4a0021c V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+                android.widget.LinearLayout{66d9e25 V.E...... ........ 0,0-1080,2400}
+                  com.google.android.material.appbar.MaterialToolbar{879cbfa G.E...... ......ID 0,136-1080,304 #7f0a05c7 app:id/main_toolbar}
+                    androidx.appcompat.widget.AppCompatImageView{55e35ab V.ED..... ......I. 0,0-0,0 #7f0a05c8 app:id/main_toolbar_wordmark}
+                    androidx.appcompat.widget.ActionMenuView{ab92408 V.E...... ......I. 0,0-0,0}
+                  android.widget.FrameLayout{5d4fa51 V.E...... ........ 0,0-1080,2400 #7f0a0295 app:id/fragment_container}
+                    androidx.constraintlayout.widget.ConstraintLayout{ffef7a1 V.E...... ........ 0,0-1080,2400}
+                      androidx.coordinatorlayout.widget.CoordinatorLayout{688adc6 V.E...... ........ 0,0-1080,2126 #7f0a0299 app:id/fragment_main_coordinator}
+                        androidx.viewpager2.widget.ViewPager2{a1adc99 V.E...... ........ 0,0-1080,2126 #7f0a05c9 app:id/main_view_pager}
+                          androidx.viewpager2.widget.ViewPager2$RecyclerViewImpl{a488187 VFED..... ........ 0,0-1080,2126 #1}
+                            android.widget.FrameLayout{dc078b4 V.E...... ........ 0,0-1080,2126 #2}
+                              androidx.compose.ui.platform.ComposeView{ef26cdd V.E...... ........ 0,0-1080,2126}
+                                androidx.compose.ui.platform.AndroidComposeView{6dd3315 VFED..... ........ 0,0-1080,2126 aid=1073741824}
+                                  android.view.View{a51e052 V.ED..... ........ 0,0-0,0}
+                      android.view.View{8a1af23 V.ED..... ........ 0,2126-1080,2127 #7f0a05c4 app:id/main_nav_tab_border}
+                      android.widget.FrameLayout{8466c20 V.E...... ........ 0,2127-1080,2400 #7f0a05c5 app:id/main_nav_tab_container}
+                        org.wikipedia.navtab.NavTabLayout{badf9d9 V.E...... ........ 0,0-1080,210 #7f0a05c6 app:id/main_nav_tab_layout}
+                          com.google.android.material.bottomnavigation.BottomNavigationMenuView{209af9e V.E...... ........ 0,0-1080,210}
+                            com.google.android.material.bottomnavigation.BottomNavigationItemView{3d61a7f VFE...C.. ..S..... 0,0-216,210 #7f0a0698 app:id/nav_tab_home}
+                              android.widget.LinearLayout{b762a4c V.E...... ..S..... 24,21-192,192 #7f0a069e app:id/navigation_bar_item_content_container}
+                                android.widget.FrameLayout{4fb5a95 V.E...... ..S..... 0,0-168,84 #7f0a069f app:id/navigation_bar_item_icon_container}
+                                  android.view.View{8dd27aa V.ED..... ..S..... 0,0-168,84 #7f0a069d app:id/navigation_bar_item_active_indicator_view}
+                                  android.widget.LinearLayout{fbbdf9b V.E...... ..S..... 52,10-115,73 #7f0a06a1 app:id/navigation_bar_item_inner_content_container}
+                                    androidx.appcompat.widget.AppCompatImageView{e019f38 V.ED..... ..S..... 0,0-63,63 #7f0a06a0 app:id/navigation_bar_item_icon_view}
+                                com.google.android.material.internal.BaselineLayout{2840b11 V.E...... ..S..... 45,95-123,171 #7f0a06a2 app:id/navigation_bar_item_labels_group}
+                                  com.google.android.material.textview.MaterialTextView{dbe1476 I.ED..... ..S...ID 0,0-78,34 #7f0a06a4 app:id/navigation_bar_item_small_label_view}
+                                  com.google.android.material.textview.MaterialTextView{d6eda77 V.ED..... ..S..... 0,0-77,34 #7f0a06a3 app:id/navigation_bar_item_large_label_view}
+                            com.google.android.material.bottomnavigation.BottomNavigationItemView{dcd76e4 VFE...C.. ........ 216,0-432,210 #7f0a069b app:id/nav_tab_reading_lists}
+                              android.widget.LinearLayout{30d474d V.E...... ........ 24,21-192,192 #7f0a069e app:id/navigation_bar_item_content_container}
+                                android.widget.FrameLayout{aef0202 V.E...... ........ 0,0-168,84 #7f0a069f app:id/navigation_bar_item_icon_container}
+                                  android.view.View{9eca713 V.ED..... ........ 0,0-168,84 #7f0a069d app:id/navigation_bar_item_active_indicator_view}
+                                  android.widget.LinearLayout{5d1d50 V.E...... ........ 52,10-115,73 #7f0a06a1 app:id/navigation_bar_item_inner_content_container}
+                                    androidx.appcompat.widget.AppCompatImageView{2740b49 V.ED..... ........ 0,0-63,63 #7f0a06a0 app:id/navigation_bar_item_icon_view}
+                                  android.widget.ImageView{a4f3c4e V.ED..... ........ 97,13-113,29 #7f0a069a app:id/nav_tab_overlay_dot}
+                                com.google.android.material.internal.BaselineLayout{a70a16f V.E...... ........ 44,95-124,171 #7f0a06a2 app:id/navigation_bar_item_labels_group}
+                                  com.google.android.material.textview.MaterialTextView{dfebe7c V.ED..... ........ 0,0-80,34 #7f0a06a4 app:id/navigation_bar_item_small_label_view}
+                                  com.google.android.material.textview.MaterialTextView{3691305 I.ED..... ......I. 0,0-80,34 #7f0a06a3 app:id/navigation_bar_item_large_label_view}
+                            com.google.android.material.bottomnavigation.BottomNavigationItemView{266cf5a VFE...C.. ........ 432,0-648,210 #7f0a069c app:id/nav_tab_search}
+                              android.widget.LinearLayout{28fe58b V.E...... ........ 24,21-192,192 #7f0a069e app:id/navigation_bar_item_content_container}
+                                android.widget.FrameLayout{3b74668 V.E...... ........ 0,0-168,84 #7f0a069f app:id/navigation_bar_item_icon_container}
+                                  android.view.View{8ecda81 V.ED..... ........ 0,0-168,84 #7f0a069d app:id/navigation_bar_item_active_indicator_view}
+                                  android.widget.LinearLayout{8328726 V.E...... ........ 52,10-115,73 #7f0a06a1 app:id/navigation_bar_item_inner_content_container}
+                                    androidx.appcompat.widget.AppCompatImageView{154f67 V.ED..... ........ 0,0-63,63 #7f0a06a0 app:id/navigation_bar_item_icon_view}
+                                com.google.android.material.internal.BaselineLayout{7ee6114 V.E...... ........ 38,95-129,171 #7f0a06a2 app:id/navigation_bar_item_labels_group}
+                                  com.google.android.material.textview.MaterialTextView{b8b9dbd V.ED..... ........ 0,0-91,34 #7f0a06a4 app:id/navigation_bar_item_small_label_view}
+                                  com.google.android.material.textview.MaterialTextView{1afefb2 I.ED..... ......I. 0,0-91,34 #7f0a06a3 app:id/navigation_bar_item_large_label_view}
+                            com.google.android.material.bottomnavigation.BottomNavigationItemView{89d7b03 VFE...C.. ........ 648,0-864,210 #7f0a0697 app:id/nav_tab_edits}
+                              android.widget.LinearLayout{dda7a80 V.E...... ........ 24,21-192,192 #7f0a069e app:id/navigation_bar_item_content_container}
+                                android.widget.FrameLayout{65958b9 V.E...... ........ 0,0-168,84 #7f0a069f app:id/navigation_bar_item_icon_container}
+                                  android.view.View{52954fe V.ED..... ........ 0,0-168,84 #7f0a069d app:id/navigation_bar_item_active_indicator_view}
+                                  android.widget.LinearLayout{4f2c45f V.E...... ........ 52,10-115,73 #7f0a06a1 app:id/navigation_bar_item_inner_content_container}
+                                    androidx.appcompat.widget.AppCompatImageView{3acbeac V.ED..... ........ 0,0-63,63 #7f0a06a0 app:id/navigation_bar_item_icon_view}
+                                  android.widget.ImageView{7adc775 V.ED..... ........ 97,13-113,29 #7f0a069a app:id/nav_tab_overlay_dot}
+                                com.google.android.material.internal.BaselineLayout{141c30a V.E...... ........ 33,95-134,171 #7f0a06a2 app:id/navigation_bar_item_labels_group}
+                                  com.google.android.material.textview.MaterialTextView{629477b V.ED..... ........ 2,0-99,34 #7f0a06a4 app:id/navigation_bar_item_small_label_view}
+                                  com.google.android.material.textview.MaterialTextView{77d1998 I.ED..... ......I. 0,0-101,34 #7f0a06a3 app:id/navigation_bar_item_large_label_view}
+                            com.google.android.material.bottomnavigation.BottomNavigationItemView{1a065f1 VFE...C.. ........ 864,0-1080,210 #7f0a0699 app:id/nav_tab_more}
+                              android.widget.LinearLayout{9c105d6 V.E...... ........ 24,21-192,192 #7f0a069e app:id/navigation_bar_item_content_container}
+                                android.widget.FrameLayout{7ae057 V.E...... ........ 0,0-168,84 #7f0a069f app:id/navigation_bar_item_icon_container}
+                                  android.view.View{ef63744 V.ED..... ........ 0,0-168,84 #7f0a069d app:id/navigation_bar_item_active_indicator_view}
+                                  android.widget.LinearLayout{644702d V.E...... ........ 52,10-115,73 #7f0a06a1 app:id/navigation_bar_item_inner_content_container}
+                                    androidx.appcompat.widget.AppCompatImageView{51fa962 V.ED..... ........ 0,0-63,63 #7f0a06a0 app:id/navigation_bar_item_icon_view}
+                                com.google.android.material.internal.BaselineLayout{7e32af3 V.E...... ........ 50,95-118,171 #7f0a06a2 app:id/navigation_bar_item_labels_group}
+                                  com.google.android.material.textview.MaterialTextView{dc183b0 V.ED..... ........ 0,0-67,34 #7f0a06a4 app:id/navigation_bar_item_small_label_view}
+                                  com.google.android.material.textview.MaterialTextView{ba4e229 I.ED..... ......I. 0,0-68,34 #7f0a06a3 app:id/navigation_bar_item_large_label_view}
+              androidx.appcompat.widget.ViewStubCompat{6d2f9ae G.E...... ......I. 0,0-0,0 #7f0a0060 app:id/action_mode_bar_stub}
+        androidx.activity.EdgeToEdge$enableEdgeToEdge$1$2{a7b834f G.E...... ......I. 0,0-0,0}
+    Looper (main, tid 2) {c1a738b}
+      mCreated=true mResumed=true mStopped=false    Active Fragments:

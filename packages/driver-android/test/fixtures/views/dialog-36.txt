@@ -1,0 +1,25 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{121613961 u0 dev.appdyno.fixture/.DialogActivity t21}
+  Window #0 Window{5bb4ebd u0 dev.appdyno.fixture/dev.appdyno.fixture.DialogActivity}:
+    mDisplayId=0 taskId=21 mSession=Session{ddf36a8 7333:u0a10213} mClient=android.os.BinderProxy@d3a3614
+    mAttrs={(0,0)(wrapxwrap) gr=CENTER sim={adjust=pan forwardNavigation} ty=APPLICATION fmt=TRANSLUCENT wanim=0x103030f surfaceInsets=Rect(84, 84 - 84, 84)
+    Frames: parent=[0,136][1080,2337] display=[0,136][1080,2337] frame=[28,980][1052,1493] last=[28,980][1052,1493] insetsChanged=false
+  Window #1 Window{9731bee u0 dev.appdyno.fixture/dev.appdyno.fixture.DialogActivity}:
+    mDisplayId=0 taskId=21 mSession=Session{ddf36a8 7333:u0a10213} mClient=android.os.BinderProxy@4832569
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10213:dev.appdyno.fixture id=21 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY dev.appdyno.fixture/.DialogActivity 73fae89 pid=7333 userId=0 uid=10213 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{1bcc877 V.E...... R....... 0,0-1080,2400 aid=0}[DialogActivity]
+        android.widget.LinearLayout{57fcce4 V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{42fe54d G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{6d04802 V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            android.widget.LinearLayout{2b7513 V.E...... ........ 0,0-1080,2400}
+              android.widget.Button{fded350 VFED..C.. ........ 32,96-1048,222 #7f05007f app:id/open_dialog}
+              android.widget.Button{6228949 VFED..C.. ........ 32,222-1048,348 #7f050080 app:id/open_field_dialog}
+              android.widget.Button{9fee24e VFED..C.. ........ 32,348-1048,474 #7f05007e app:id/open_busy_dialog}
+              android.widget.TextView{ce4f6f V.ED..... ........ 32,474-1048,525 #7f050089 app:id/result}
+    Looper (main, tid 2) {2e5d47c}

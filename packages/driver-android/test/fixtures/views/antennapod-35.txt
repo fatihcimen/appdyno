@@ -1,0 +1,452 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{f13ad08 u0 de.danoeh.antennapod.debug/de.danoeh.antennapod.activity.MainActivity t12}
+  Window #0 Window{a9a1df7 u0 de.danoeh.antennapod.debug/de.danoeh.antennapod.activity.MainActivity}:
+    mDisplayId=0 rootTaskId=12 mSession=Session{238bfee 5540:u0a10209} mClient=android.os.BinderProxy@e4635f6
+    mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030309
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10209:de.danoeh.antennapod.debug id=12 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY de.danoeh.antennapod.debug/de.danoeh.antennapod.activity.MainActivity f13ad08 pid=5540 userId=0 uid=10209 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{69379b4 V.E...... R....... 0,0-1080,2400 aid=0}[MainActivity]
+        android.widget.LinearLayout{117d9dd V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{9774952 G.E...... ......I. 0,0-0,0 #10201cb android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{78d6423 V.E...... ........ 0,0-1080,2400}
+            androidx.appcompat.widget.FitWindowsFrameLayout{1c87d20 V.E...... ........ 0,0-1080,2400 #7f0a003c app:id/action_bar_root}
+              androidx.appcompat.widget.ContentFrameLayout{f3d36d9 V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+                android.widget.LinearLayout{89ca89e V.E...... ........ 0,0-1080,2400 #7f0a025c app:id/main_view}
+                  androidx.drawerlayout.widget.DrawerLayout{e481f7f VFE...... ........ 0,0-1080,2169 #7f0a0162 app:id/drawer_layout}
+                    androidx.coordinatorlayout.widget.CoordinatorLayout{9884b4c V.E...... ........ 0,0-1080,2169 #7f0a02ff app:id/overview_coordinator_layout}
+                      androidx.fragment.app.FragmentContainerView{f51a184 V.E...... ........ 0,0-1080,2169 #7f0a025b app:id/main_content_view}
+                        android.widget.LinearLayout{591d97c V.E...... ........ 0,0-1080,2169}
+                          com.google.android.material.appbar.AppBarLayout{ec16795 V.E...... ........ 0,0-1080,304 #7f0a006a app:id/appbar}
+                            com.google.android.material.appbar.MaterialToolbar{826b0aa V.E...... ........ 0,136-1080,304 #7f0a044e app:id/toolbar}
+                              androidx.appcompat.widget.AppCompatTextView{fc9349b V.ED..... ........ 42,45-198,123}
+                              androidx.appcompat.widget.ActionMenuView{194d038 V.E...... ........ 848,10-1080,157}
+                                androidx.appcompat.view.menu.ActionMenuItemView{71de811 VFED..C.. ........ 0,10-127,136 #7f0a004e app:id/action_search}
+                                androidx.appcompat.widget.ActionMenuPresenter$OverflowMenuButton{2972d76 VFED..CL. ........ 127,10-232,136}
+                          android.widget.RelativeLayout{97c7f77 V.E...... ........ 0,304-1080,2169 #7f0a04a6 app:id/welcomeContainer}
+                            androidx.appcompat.widget.AppCompatImageView{5e2b7e4 G.ED..... ......I. 0,0-0,0 #7f0a006e app:id/arrowSidebarIcon}
+                            androidx.appcompat.widget.AppCompatImageView{3e7f44d V.ED..... ........ 744,1613-954,1823 #7f0a006d app:id/arrowBottomIcon}
+                            androidx.appcompat.widget.AppCompatImageView{6c0ab02 V.ED..... ........ 456,126-624,294 #7f0a0222 app:id/icon}
+                            com.google.android.material.textview.MaterialTextView{9af9c13 V.ED..... ........ 84,336-996,407 #7f0a044b app:id/titleLabel}
+                            com.google.android.material.textview.MaterialTextView{b056e50 V.ED..... ........ 84,428-996,522}
+                          androidx.swiperefreshlayout.widget.SwipeRefreshLayout{acc8849 G.ED..... ......ID 0,304-1080,2169 #7f0a040e app:id/swipeRefresh}
+                            androidx.swiperefreshlayout.widget.CircleImageView{c12754e G.ED..... ......ID 488,-105-592,0}
+                            androidx.core.widget.NestedScrollView{bede66f VFED..... ......ID 0,0-1080,1865 #7f0a0213 app:id/homeScrollView}
+                              android.widget.LinearLayout{95b1f7c G.E...... ......ID 0,0-1080,2967 #7f0a0212 app:id/homeContainer}
+                                androidx.fragment.app.FragmentContainerView{54c6005 V.E...... ......ID 0,0-1080,683 #7f0a0217 app:id/home_section_queue}
+                                  androidx.constraintlayout.widget.ConstraintLayout{1459205 V.E...... ......ID 0,0-1080,683}
+                                    com.google.android.material.textview.MaterialTextView{fa4985a V.ED..... ........ 42,49-389,106 #7f0a044b app:id/titleLabel}
+                                    androidx.appcompat.widget.AppCompatImageButton{f1c7a8b GFED..C.. ......I. 0,0-0,0 #7f0a03ba app:id/shuffleButton}
+                                    com.google.android.material.textview.MaterialTextView{ef8b768 G.ED..... ......I. 0,0-0,0 #7f0a02da app:id/numNewItemsLabel}
+                                    com.google.android.material.button.MaterialButton{a37f781 VFED..C.. ......ID 828,21-1059,134 #7f0a028b app:id/moreButton}
+                                    androidx.constraintlayout.widget.Barrier{603e026 G.ED..... ......I. 0,134-0,134 #7f0a008e app:id/barrier}
+                                    androidx.recyclerview.widget.RecyclerView{1563467 VFED...L. ......ID 0,134-1080,672 #7f0a034d app:id/recyclerView}
+                                      android.widget.LinearLayout{83d2b5f V.E...... .......D 31,0-391,538}
+                                        androidx.cardview.widget.CardView{d10f7fe VFE...C.. ......ID 11,11-349,527 #7f0a00d2 app:id/card}
+                                          android.widget.LinearLayout{25da7b9 V.E...... .......D 0,0-338,516}
+                                            androidx.cardview.widget.CardView{712a580 V.E...... ......ID 1,1-337,348}
+                                              android.widget.LinearLayout{e3f7203 V.E...... .......D 0,0-336,347}
+                                                android.widget.FrameLayout{75362b2 V.E...... ......ID 0,0-336,336}
+                                                  de.danoeh.antennapod.ui.common.SquareImageView{a98fcbd V.ED..... ......ID 0,0-336,336 #7f0a0114 app:id/cover}
+                                                  androidx.appcompat.widget.AppCompatImageView{455e214 V.ED..... ......ID 199,199-325,325}
+                                                  de.danoeh.antennapod.ui.common.CircularProgressBar{2eb8abd V.ED..... ........ 199,199-325,325 #7f0a00e9 app:id/circularProgressBar}
+                                                  androidx.appcompat.widget.AppCompatImageView{dbdd8b2 VFED..C.. ......ID 199,199-325,325 #7f0a038d app:id/secondaryActionIcon}
+                                                com.google.android.material.progressindicator.LinearProgressIndicator{d87b003 V.ED..... ......ID 0,336-336,347 #7f0a033e app:id/progressBar}
+                                            android.view.View{fb90b80 G.ED..... ......I. 0,0-0,0 #7f0a033f app:id/progressBarReplacementSpacer}
+                                            com.google.android.material.textview.MaterialTextView{84b15b9 V.ED..... ........ 0,360-336,454 #7f0a044b app:id/titleLabel}
+                                            com.google.android.material.textview.MaterialTextView{eaccdfe V.ED..... ........ 0,454-338,505 #7f0a0129 app:id/dateLabel}
+                                      android.widget.LinearLayout{67ee3e0 V.E...... .......D 391,0-751,538}
+                                        androidx.cardview.widget.CardView{4962de3 VFE...C.. ......ID 11,11-349,527 #7f0a00d2 app:id/card}
+                                          android.widget.LinearLayout{ae22212 V.E...... .......D 0,0-338,516}
+                                            androidx.cardview.widget.CardView{7f79d9d V.E...... ......ID 1,1-337,348}
+                                              android.widget.LinearLayout{b4cf474 V.E...... .......D 0,0-336,347}
+                                                android.widget.FrameLayout{60e9447 V.E...... ......ID 0,0-336,336}
+                                                  de.danoeh.antennapod.ui.common.SquareImageView{ba45386 V.ED..... ......ID 0,0-336,336 #7f0a0114 app:id/cover}
+                                                  androidx.appcompat.widget.AppCompatImageView{6cb495f V.ED..... ......ID 199,199-325,325}
+                                                  de.danoeh.antennapod.ui.common.CircularProgressBar{3635fac V.ED..... ........ 199,199-325,325 #7f0a00e9 app:id/circularProgressBar}
+                                                  androidx.appcompat.widget.AppCompatImageView{37e5475 VFED..C.. ......ID 199,199-325,325 #7f0a038d app:id/secondaryActionIcon}
+                                                com.google.android.material.progressindicator.LinearProgressIndicator{203cc0a V.ED..... ......ID 0,336-336,347 #7f0a033e app:id/progressBar}
+                                            android.view.View{d851c7b G.ED..... ......I. 0,0-0,0 #7f0a033f app:id/progressBarReplacementSpacer}
+                                            com.google.android.material.textview.MaterialTextView{27cca98 V.ED..... ........ 0,360-336,454 #7f0a044b app:id/titleLabel}
+                                            com.google.android.material.textview.MaterialTextView{e6cc2f1 V.ED..... ........ 0,454-338,505 #7f0a0129 app:id/dateLabel}
+                                      android.widget.LinearLayout{2e7c2f V.E...... .......D 751,0-1111,538}
+                                        androidx.cardview.widget.CardView{ac4ca0e VFE...C.. ......ID 11,11-349,527 #7f0a00d2 app:id/card}
+                                          android.widget.LinearLayout{9b43809 V.E...... .......D 0,0-338,516}
+                                            androidx.cardview.widget.CardView{c830510 V.E...... ......ID 1,1-337,348}
+                                              android.widget.LinearLayout{a5e55d3 V.E...... .......D 0,0-336,347}
+                                                android.widget.FrameLayout{bf333c2 V.E...... ......ID 0,0-336,336}
+                                                  de.danoeh.antennapod.ui.common.SquareImageView{720280d V.ED..... ......ID 0,0-336,336 #7f0a0114 app:id/cover}
+                                                  androidx.appcompat.widget.AppCompatImageView{f1a9ed6 V.ED..... ......ID 199,199-325,325}
+                                                  de.danoeh.antennapod.ui.common.CircularProgressBar{a3f0557 V.ED..... ........ 199,199-325,325 #7f0a00e9 app:id/circularProgressBar}
+                                                  androidx.appcompat.widget.AppCompatImageView{8bff844 VFED..C.. ......ID 199,199-325,325 #7f0a038d app:id/secondaryActionIcon}
+                                                com.google.android.material.progressindicator.LinearProgressIndicator{ff99d2d V.ED..... ......ID 0,336-336,347 #7f0a033e app:id/progressBar}
+                                            android.view.View{8f9d262 G.ED..... ......I. 0,0-0,0 #7f0a033f app:id/progressBarReplacementSpacer}
+                                            com.google.android.material.textview.MaterialTextView{a449ff3 V.ED..... ........ 0,360-336,454 #7f0a044b app:id/titleLabel}
+                                            com.google.android.material.textview.MaterialTextView{e654b0 V.ED..... ........ 0,454-338,505 #7f0a0129 app:id/dateLabel}
+                                    com.google.android.material.textview.MaterialTextView{fffdf29 V.ED..... ......I. 0,0-0,0 #7f0a0174 app:id/emptyLabel}
+                                androidx.fragment.app.FragmentContainerView{8a6b2ae V.E...... ......ID 0,683-1080,1258 #7f0a0216 app:id/home_section_inbox}
+                                  androidx.constraintlayout.widget.ConstraintLayout{1fae25a V.E...... ......ID 0,0-1080,575}
+                                    com.google.android.material.textview.MaterialTextView{9ff484f V.ED..... ........ 42,49-334,106 #7f0a044b app:id/titleLabel}
+                                    androidx.appcompat.widget.AppCompatImageButton{5d40bdc GFED..C.. ......I. 0,0-0,0 #7f0a03ba app:id/shuffleButton}
+                                    com.google.android.material.textview.MaterialTextView{f0e44e5 G.ED..... ......I. 0,0-0,0 #7f0a02da app:id/numNewItemsLabel}
+                                    com.google.android.material.button.MaterialButton{2f4bba VFED..C.. ......ID 844,21-1059,134 #7f0a028b app:id/moreButton}
+                                    androidx.constraintlayout.widget.Barrier{9121a6b G.ED..... ......I. 0,134-0,134 #7f0a008e app:id/barrier}
+                                    androidx.recyclerview.widget.RecyclerView{a8409c8 VFED...L. ......ID 0,134-1080,564 #7f0a034d app:id/recyclerView}
+                                      android.widget.FrameLayout{19048ff V.E...... .......D 0,0-1080,215}
+                                        android.widget.LinearLayout{fad881e V.E...... ......ID 0,0-1080,215 #7f0a0103 app:id/container}
+                                          android.widget.LinearLayout{de34a61 V.E...... ........ 32,5-43,210 #7f0a024e app:id/left_padding}
+                                            androidx.appcompat.widget.AppCompatImageView{2766986 G.ED..... ......ID 0,0-0,0 #7f0a0161 app:id/drag_handle}
+                                          androidx.cardview.widget.CardView{98fe459 V.E...... ......ID 43,34-190,181 #7f0a0115 app:id/coverHolder}
+                                            android.widget.RelativeLayout{b2b70a0 V.E...... .......D 0,0-147,147}
+                                              com.google.android.material.textview.MaterialTextView{435f247 G.ED..... ......ID 0,0-0,0 #7f0a0472 app:id/txtvPlaceholder}
+                                              androidx.appcompat.widget.AppCompatImageView{89df5a3 V.ED..... ......ID 0,0-147,147 #7f0a022b app:id/imgvCover}
+                                          android.widget.LinearLayout{4b3fa74 V.E...... .......D 232,38-901,176}
+                                            android.widget.LinearLayout{a92b9d V.E...... .......D 0,0-669,40 #7f0a03f1 app:id/status}
+                                              androidx.appcompat.widget.AppCompatImageView{bbf9812 V.ED..... ......ID 0,4-32,36 #7f0a03f2 app:id/statusInbox}
+                                              androidx.appcompat.widget.AppCompatImageView{d56be3 G.ED..... ......ID 0,0-0,0 #7f0a0240 app:id/ivIsVideo}
+                                              androidx.appcompat.widget.AppCompatImageView{65049e0 G.ED..... ......ID 0,0-0,0 #7f0a023a app:id/isFavorite}
+                                              androidx.appcompat.widget.AppCompatImageView{9f1e499 G.ED..... ......ID 0,0-0,0 #7f0a023f app:id/ivInPlaylist}
+                                              com.google.android.material.textview.MaterialTextView{6fb235e V.ED..... ........ 43,0-51,39 #7f0a03a2 app:id/separatorIcons}
+                                              com.google.android.material.textview.MaterialTextView{668e33f V.ED..... ........ 62,0-150,40 #7f0a0478 app:id/txtvPubDate}
+                                              com.google.android.material.textview.MaterialTextView{1a0240c V.ED..... ........ 161,0-169,39}
+                                              com.google.android.material.textview.MaterialTextView{9733155 V.ED..... ......ID 180,0-180,39 #7f0a03bc app:id/size}
+                                            com.google.android.material.textview.MaterialTextView{bd2176a V.ED..... ........ 0,40-218,98 #7f0a047f app:id/txtvTitle}
+                                            android.widget.LinearLayout{192745b V.E...... ........ 0,98-669,138 #7f0a033d app:id/progress}
+                                              com.google.android.material.textview.MaterialTextView{43174f8 G.ED..... ......I. 0,0-0,0 #7f0a0476 app:id/txtvPosition}
+                                              com.google.android.material.progressindicator.LinearProgressIndicator{a828dd1 G.ED..... ......I. 0,0-0,0 #7f0a033e app:id/progressBar}
+                                              com.google.android.material.textview.MaterialTextView{1724036 V.ED..... ........ 0,0-88,40 #7f0a046a app:id/txtvDuration}
+                                          android.widget.FrameLayout{cf9fb37 V.E...C.. ......ID 922,44-1048,170 #7f0a038c app:id/secondaryActionButton}
+                                            androidx.appcompat.widget.AppCompatImageView{484e8a4 V.ED..... ........ 31,31-94,94 #7f0a038d app:id/secondaryActionIcon}
+                                            de.danoeh.antennapod.ui.common.CircularProgressBar{e51360d V.ED..... ........ 10,10-115,115 #7f0a038e app:id/secondaryActionProgress}
+                                      android.widget.FrameLayout{cb36de7 V.E...... .......D 0,215-1080,430}
+                                        android.widget.LinearLayout{3140fa6 V.E...... ......ID 0,0-1080,215 #7f0a0103 app:id/container}
+                                          android.widget.LinearLayout{21a29c2 V.E...... ........ 32,5-43,210 #7f0a024e app:id/left_padding}
+                                            androidx.appcompat.widget.AppCompatImageView{be913d3 G.ED..... ......ID 0,0-0,0 #7f0a0161 app:id/drag_handle}
+                                          androidx.cardview.widget.CardView{b53501 V.E...... ......ID 43,34-190,181 #7f0a0115 app:id/coverHolder}
+                                            android.widget.RelativeLayout{7567ae8 V.E...... .......D 0,0-147,147}
+                                              com.google.android.material.textview.MaterialTextView{e79eb10 G.ED..... ......ID 0,0-0,0 #7f0a0472 app:id/txtvPlaceholder}
+                                              androidx.appcompat.widget.AppCompatImageView{6111c0b V.ED..... ......ID 0,0-147,147 #7f0a022b app:id/imgvCover}
+                                          android.widget.LinearLayout{de82609 V.E...... .......D 232,38-901,176}
+                                            android.widget.LinearLayout{b65200e V.E...... .......D 0,0-669,40 #7f0a03f1 app:id/status}
+                                              androidx.appcompat.widget.AppCompatImageView{2a71a2f V.ED..... ......ID 0,4-32,36 #7f0a03f2 app:id/statusInbox}
+                                              androidx.appcompat.widget.AppCompatImageView{a7aa83c G.ED..... ......ID 0,0-0,0 #7f0a0240 app:id/ivIsVideo}
+                                              androidx.appcompat.widget.AppCompatImageView{fe419c5 G.ED..... ......ID 0,0-0,0 #7f0a023a app:id/isFavorite}
+                                              androidx.appcompat.widget.AppCompatImageView{7572f1a G.ED..... ......ID 0,0-0,0 #7f0a023f app:id/ivInPlaylist}
+                                              com.google.android.material.textview.MaterialTextView{8952a4b V.ED..... ........ 43,0-51,39 #7f0a03a2 app:id/separatorIcons}
+                                              com.google.android.material.textview.MaterialTextView{b680c28 V.ED..... ........ 62,0-150,40 #7f0a0478 app:id/txtvPubDate}
+                                              com.google.android.material.textview.MaterialTextView{df18d41 V.ED..... ........ 161,0-169,39}
+                                              com.google.android.material.textview.MaterialTextView{a2922e6 V.ED..... ......ID 180,0-180,39 #7f0a03bc app:id/size}
+                                            com.google.android.material.textview.MaterialTextView{a2027 V.ED..... ........ 0,40-218,98 #7f0a047f app:id/txtvTitle}
+                                            android.widget.LinearLayout{f45c2d4 V.E...... ........ 0,98-669,138 #7f0a033d app:id/progress}
+                                              com.google.android.material.textview.MaterialTextView{608bc7d G.ED..... ......I. 0,0-0,0 #7f0a0476 app:id/txtvPosition}
+                                              com.google.android.material.progressindicator.LinearProgressIndicator{d48772 G.ED..... ......I. 0,0-0,0 #7f0a033e app:id/progressBar}
+                                              com.google.android.material.textview.MaterialTextView{fee97c3 V.ED..... ........ 0,0-88,40 #7f0a046a app:id/txtvDuration}
+                                          android.widget.FrameLayout{ea63840 V.E...C.. ......ID 922,44-1048,170 #7f0a038c app:id/secondaryActionButton}
+                                            androidx.appcompat.widget.AppCompatImageView{369a379 V.ED..... ........ 31,31-94,94 #7f0a038d app:id/secondaryActionIcon}
+                                            de.danoeh.antennapod.ui.common.CircularProgressBar{c5fa8be V.ED..... ........ 10,10-115,115 #7f0a038e app:id/secondaryActionProgress}
+                                    com.google.android.material.textview.MaterialTextView{b18ed1f V.ED..... ......I. 0,0-0,0 #7f0a0174 app:id/emptyLabel}
+                                androidx.fragment.app.FragmentContainerView{6d6986c V.E...... ......ID 0,1258-1080,1941 #7f0a0219 app:id/home_section_surprise}
+                                  androidx.constraintlayout.widget.ConstraintLayout{465fc8b V.E...... ......ID 0,0-1080,683}
+                                    com.google.android.material.textview.MaterialTextView{b57fe35 V.ED..... ........ 42,49-302,106 #7f0a044b app:id/titleLabel}
+                                    androidx.appcompat.widget.AppCompatImageButton{5e992ca GFED..C.. ......ID 323,46-386,109 #7f0a03ba app:id/shuffleButton}
+                                    com.google.android.material.textview.MaterialTextView{1693c3b G.ED..... ......I. 0,0-0,0 #7f0a02da app:id/numNewItemsLabel}
+                                    com.google.android.material.button.MaterialButton{acacf58 VFED..C.. ......ID 784,21-1059,134 #7f0a028b app:id/moreButton}
+                                    androidx.constraintlayout.widget.Barrier{99748b1 G.ED..... ......I. 0,134-0,134 #7f0a008e app:id/barrier}
+                                    androidx.recyclerview.widget.RecyclerView{7761196 GFED...L. ......ID 0,134-1080,672 #7f0a034d app:id/recyclerView}
+                                      android.widget.LinearLayout{24cff92 V.E...... .......D 31,0-391,538}
+                                        androidx.cardview.widget.CardView{ff5811d VFE...C.. ......ID 11,11-349,527 #7f0a00d2 app:id/card}
+                                          android.widget.LinearLayout{9ce35f4 V.E...... .......D 0,0-338,516}
+                                            androidx.cardview.widget.CardView{badebc7 V.E...... ......ID 1,1-337,348}
+                                              android.widget.LinearLayout{4545906 V.E...... .......D 0,0-336,347}
+                                                android.widget.FrameLayout{8cd47e1 V.E...... ......ID 0,0-336,336}
+                                                  de.danoeh.antennapod.ui.common.SquareImageView{6098d48 V.ED..... ......ID 0,0-336,336 #7f0a0114 app:id/cover}
+                                                  androidx.appcompat.widget.AppCompatImageView{6a56117 V.ED..... ......ID 199,199-325,325}
+                                                  de.danoeh.antennapod.ui.common.CircularProgressBar{6c98904 V.ED..... ........ 199,199-325,325 #7f0a00e9 app:id/circularProgressBar}
+                                                  androidx.appcompat.widget.AppCompatImageView{8a6beed VFED..C.. ......ID 199,199-325,325 #7f0a038d app:id/secondaryActionIcon}
+                                                com.google.android.material.progressindicator.LinearProgressIndicator{579b122 V.ED..... ......ID 0,336-336,347 #7f0a033e app:id/progressBar}
+                                            android.view.View{b14f7b3 G.ED..... ......I. 0,0-0,0 #7f0a033f app:id/progressBarReplacementSpacer}
+                                            com.google.android.material.textview.MaterialTextView{2d83170 V.ED..... ........ 0,360-336,454 #7f0a044b app:id/titleLabel}
+                                            com.google.android.material.textview.MaterialTextView{1bd5ce9 V.ED..... ........ 0,454-338,505 #7f0a0129 app:id/dateLabel}
+                                      android.widget.LinearLayout{d8ab389 V.E...... .......D 391,0-751,538}
+                                        androidx.cardview.widget.CardView{3003e90 VFE...C.. ......ID 11,11-349,527 #7f0a00d2 app:id/card}
+                                          android.widget.LinearLayout{b0e8553 V.E...... .......D 0,0-338,516}
+                                            androidx.cardview.widget.CardView{907142 V.E...... ......ID 1,1-337,348}
+                                              android.widget.LinearLayout{21deb8d V.E...... .......D 0,0-336,347}
+                                                android.widget.FrameLayout{8650424 V.E...... ......ID 0,0-336,336}
+                                                  de.danoeh.antennapod.ui.common.SquareImageView{d2354b7 V.ED..... ......ID 0,0-336,336 #7f0a0114 app:id/cover}
+                                                  androidx.appcompat.widget.AppCompatImageView{525bd6e V.ED..... ......ID 199,199-325,325}
+                                                  de.danoeh.antennapod.ui.common.CircularProgressBar{1dd5c0f V.ED..... ........ 199,199-325,325 #7f0a00e9 app:id/circularProgressBar}
+                                                  androidx.appcompat.widget.AppCompatImageView{fe6f49c VFED..C.. ......ID 199,199-325,325 #7f0a038d app:id/secondaryActionIcon}
+                                                com.google.android.material.progressindicator.LinearProgressIndicator{85dea5 V.ED..... ......ID 0,336-336,347 #7f0a033e app:id/progressBar}
+                                            android.view.View{b74427a G.ED..... ......I. 0,0-0,0 #7f0a033f app:id/progressBarReplacementSpacer}
+                                            com.google.android.material.textview.MaterialTextView{11daa2b V.ED..... ........ 0,360-336,454 #7f0a044b app:id/titleLabel}
+                                            com.google.android.material.textview.MaterialTextView{bbcbe88 V.ED..... ........ 0,454-338,505 #7f0a0129 app:id/dateLabel}
+                                      android.widget.LinearLayout{e0883ec V.E...... .......D 751,0-1111,538}
+                                        androidx.cardview.widget.CardView{479569f VFE...C.. ......ID 11,11-349,527 #7f0a00d2 app:id/card}
+                                          android.widget.LinearLayout{dc1c83e V.E...... .......D 0,0-338,516}
+                                            androidx.cardview.widget.CardView{58a90f9 V.E...... ......ID 1,1-337,348}
+                                              android.widget.LinearLayout{1286bc0 V.E...... .......D 0,0-336,347}
+                                                android.widget.FrameLayout{a136943 V.E...... ......ID 0,0-336,336}
+                                                  de.danoeh.antennapod.ui.common.SquareImageView{32baef2 V.ED..... ......ID 0,0-336,336 #7f0a0114 app:id/cover}
+                                                  androidx.appcompat.widget.AppCompatImageView{69ac021 V.ED..... ......ID 199,199-325,325}
+                                                  de.danoeh.antennapod.ui.common.CircularProgressBar{f40c46 V.ED..... ........ 199,199-325,325 #7f0a00e9 app:id/circularProgressBar}
+                                                  androidx.appcompat.widget.AppCompatImageView{7cabe07 VFED..C.. ......ID 199,199-325,325 #7f0a038d app:id/secondaryActionIcon}
+                                                com.google.android.material.progressindicator.LinearProgressIndicator{7a33b34 V.ED..... ......ID 0,336-336,347 #7f0a033e app:id/progressBar}
+                                            android.view.View{ac23d5d G.ED..... ......I. 0,0-0,0 #7f0a033f app:id/progressBarReplacementSpacer}
+                                            com.google.android.material.textview.MaterialTextView{654a6d2 V.ED..... ........ 0,360-336,454 #7f0a044b app:id/titleLabel}
+                                            com.google.android.material.textview.MaterialTextView{54b33a3 V.ED..... ........ 0,454-338,505 #7f0a0129 app:id/dateLabel}
+                                    com.google.android.material.textview.MaterialTextView{dd2d6a0 V.ED..... ......I. 0,0-0,0 #7f0a0174 app:id/emptyLabel}
+                                androidx.fragment.app.FragmentContainerView{fea5259 V.E...... ......ID 0,1941-1080,2360 #7f0a0218 app:id/home_section_subscriptions}
+                                  androidx.constraintlayout.widget.ConstraintLayout{e11168 V.E...... ......ID 0,0-1080,419}
+                                    com.google.android.material.textview.MaterialTextView{5b25e1e V.ED..... ........ 42,49-424,106 #7f0a044b app:id/titleLabel}
+                                    androidx.appcompat.widget.AppCompatImageButton{ed366ff GFED..C.. ......I. 0,0-0,0 #7f0a03ba app:id/shuffleButton}
+                                    com.google.android.material.textview.MaterialTextView{19ebccc G.ED..... ......I. 0,0-0,0 #7f0a02da app:id/numNewItemsLabel}
+                                    com.google.android.material.button.MaterialButton{fe4bb15 VFED..C.. ......ID 706,21-1059,134 #7f0a028b app:id/moreButton}
+                                    androidx.constraintlayout.widget.Barrier{ca23e2a G.ED..... ......I. 0,134-0,134 #7f0a008e app:id/barrier}
+                                    androidx.recyclerview.widget.RecyclerView{e81741b VFED...L. ......ID 0,134-1080,408 #7f0a034d app:id/recyclerView}
+                                      android.widget.LinearLayout{660d9b8 V.E...... .......D 31,0-305,274}
+                                        androidx.cardview.widget.CardView{5e2f391 V.E...... ......ID 11,11-263,263 #7f0a00d3 app:id/cardView}
+                                          de.danoeh.antennapod.ui.common.SquareImageView{afe12f6 V.ED..... ......ID 0,0-252,252 #7f0a0153 app:id/discovery_cover}
+                                        com.google.android.material.button.MaterialButton{83936f7 GFED..C.. ......I. 0,0-0,0 #7f0a0033 app:id/actionButton}
+                                      android.widget.LinearLayout{925d964 V.E...... .......D 305,0-579,274}
+                                        androidx.cardview.widget.CardView{4b237cd V.E...... ......ID 11,11-263,263 #7f0a00d3 app:id/cardView}
+                                          de.danoeh.antennapod.ui.common.SquareImageView{2706882 V.ED..... ......ID 0,0-252,252 #7f0a0153 app:id/discovery_cover}
+                                        com.google.android.material.button.MaterialButton{404b93 GFED..C.. ......I. 0,0-0,0 #7f0a0033 app:id/actionButton}
+                                      android.widget.LinearLayout{91927d0 V.E...... .......D 579,0-853,274}
+                                        androidx.cardview.widget.CardView{4b783c9 V.E...... ......ID 11,11-263,263 #7f0a00d3 app:id/cardView}
+                                          de.danoeh.antennapod.ui.common.SquareImageView{2c08ace V.ED..... ......ID 0,0-252,252 #7f0a0153 app:id/discovery_cover}
+                                        com.google.android.material.button.MaterialButton{f9a0def GFED..C.. ......I. 0,0-0,0 #7f0a0033 app:id/actionButton}
+                                      android.widget.LinearLayout{ab0f0fc V.E...... .......D 853,0-1127,274}
+                                        androidx.cardview.widget.CardView{5ab9385 V.E...... ......ID 11,11-263,263 #7f0a00d3 app:id/cardView}
+                                          de.danoeh.antennapod.ui.common.SquareImageView{ede85da V.ED..... ......ID 0,0-252,252 #7f0a0153 app:id/discovery_cover}
+                                        com.google.android.material.button.MaterialButton{2239a0b GFED..C.. ......I. 0,0-0,0 #7f0a0033 app:id/actionButton}
+                                    com.google.android.material.textview.MaterialTextView{19a20e8 G.ED..... ......I. 0,0-0,0 #7f0a0174 app:id/emptyLabel}
+                                androidx.fragment.app.FragmentContainerView{16e301 V.E...... ......ID 0,2360-1080,2935 #7f0a0214 app:id/home_section_downloads}
+                                  androidx.constraintlayout.widget.ConstraintLayout{1924981 V.E...... ......ID 0,0-1080,575}
+                                    com.google.android.material.textview.MaterialTextView{6af25a6 V.ED..... ........ 42,49-417,106 #7f0a044b app:id/titleLabel}
+                                    androidx.appcompat.widget.AppCompatImageButton{a6fcbe7 GFED..C.. ......I. 0,0-0,0 #7f0a03ba app:id/shuffleButton}
+                                    com.google.android.material.textview.MaterialTextView{d646394 G.ED..... ......I. 0,0-0,0 #7f0a02da app:id/numNewItemsLabel}
+                                    com.google.android.material.button.MaterialButton{28dae3d VFED..C.. ......ID 751,21-1059,134 #7f0a028b app:id/moreButton}
+                                    androidx.constraintlayout.widget.Barrier{197f632 G.ED..... ......I. 0,134-0,134 #7f0a008e app:id/barrier}
+                                    androidx.recyclerview.widget.RecyclerView{7633f83 VFED...L. ......ID 0,134-1080,564 #7f0a034d app:id/recyclerView}
+                                      android.widget.FrameLayout{7582bf1 V.E...... .......D 0,0-1080,215}
+                                        android.widget.LinearLayout{1c03798 V.E...... ......ID 0,0-1080,215 #7f0a0103 app:id/container}
+                                          android.widget.LinearLayout{4ee2500 V.E...... ........ 32,5-43,210 #7f0a024e app:id/left_padding}
+                                            androidx.appcompat.widget.AppCompatImageView{6abf139 G.ED..... ......ID 0,0-0,0 #7f0a0161 app:id/drag_handle}
+                                          androidx.cardview.widget.CardView{d2e1d7b V.E...... ......ID 43,34-190,181 #7f0a0115 app:id/coverHolder}
+                                            android.widget.RelativeLayout{c9c310a V.E...... .......D 0,0-147,147}
+                                              com.google.android.material.textview.MaterialTextView{5cb437e G.ED..... ......ID 0,0-0,0 #7f0a0472 app:id/txtvPlaceholder}
+                                              androidx.appcompat.widget.AppCompatImageView{3552d75 V.ED..... ......ID 0,0-147,147 #7f0a022b app:id/imgvCover}
+                                          android.widget.LinearLayout{79050df V.E...... .......D 232,38-901,176}
+                                            android.widget.LinearLayout{c90912c V.E...... .......D 0,0-669,40 #7f0a03f1 app:id/status}
+                                              androidx.appcompat.widget.AppCompatImageView{9d167f5 V.ED..... ......ID 0,4-32,36 #7f0a03f2 app:id/statusInbox}
+                                              androidx.appcompat.widget.AppCompatImageView{854198a G.ED..... ......ID 0,0-0,0 #7f0a0240 app:id/ivIsVideo}
+                                              androidx.appcompat.widget.AppCompatImageView{6531bfb G.ED..... ......ID 0,0-0,0 #7f0a023a app:id/isFavorite}
+                                              androidx.appcompat.widget.AppCompatImageView{30b9418 G.ED..... ......ID 0,0-0,0 #7f0a023f app:id/ivInPlaylist}
+                                              com.google.android.material.textview.MaterialTextView{59d8e71 V.ED..... ........ 43,0-51,39 #7f0a03a2 app:id/separatorIcons}
+                                              com.google.android.material.textview.MaterialTextView{1e24456 V.ED..... ........ 62,0-150,40 #7f0a0478 app:id/txtvPubDate}
+                                              com.google.android.material.textview.MaterialTextView{ead7cd7 V.ED..... ........ 161,0-169,39}
+                                              com.google.android.material.textview.MaterialTextView{131d9c4 V.ED..... ......ID 180,0-180,39 #7f0a03bc app:id/size}
+                                            com.google.android.material.textview.MaterialTextView{42ba0ad V.ED..... ........ 0,40-218,98 #7f0a047f app:id/txtvTitle}
+                                            android.widget.LinearLayout{4564fe2 V.E...... ........ 0,98-669,138 #7f0a033d app:id/progress}
+                                              com.google.android.material.textview.MaterialTextView{fe30f73 G.ED..... ......I. 0,0-0,0 #7f0a0476 app:id/txtvPosition}
+                                              com.google.android.material.progressindicator.LinearProgressIndicator{854ce30 G.ED..... ......I. 0,0-0,0 #7f0a033e app:id/progressBar}
+                                              com.google.android.material.textview.MaterialTextView{c0e9aa9 V.ED..... ........ 0,0-88,40 #7f0a046a app:id/txtvDuration}
+                                          android.widget.FrameLayout{d0d882e V.E...C.. ......ID 922,44-1048,170 #7f0a038c app:id/secondaryActionButton}
+                                            androidx.appcompat.widget.AppCompatImageView{fd52fcf V.ED..... ........ 31,31-94,94 #7f0a038d app:id/secondaryActionIcon}
+                                            de.danoeh.antennapod.ui.common.CircularProgressBar{b709d5c V.ED..... ........ 10,10-115,115 #7f0a038e app:id/secondaryActionProgress}
+                                      android.widget.FrameLayout{135ad99 V.E...... .......D 0,215-1080,430}
+                                        android.widget.LinearLayout{e9196e0 V.E...... ......ID 0,0-1080,215 #7f0a0103 app:id/container}
+                                          android.widget.LinearLayout{d3865 V.E...... ........ 32,5-43,210 #7f0a024e app:id/left_padding}
+                                            androidx.appcompat.widget.AppCompatImageView{fedf93a G.ED..... ......ID 0,0-0,0 #7f0a0161 app:id/drag_handle}
+                                          androidx.cardview.widget.CardView{947cce3 V.E...... ......ID 43,34-190,181 #7f0a0115 app:id/coverHolder}
+                                            android.widget.RelativeLayout{8eadd12 V.E...... .......D 0,0-147,147}
+                                              com.google.android.material.textview.MaterialTextView{71ef9eb G.ED..... ......ID 0,0-0,0 #7f0a0472 app:id/txtvPlaceholder}
+                                              androidx.appcompat.widget.AppCompatImageView{812649d V.ED..... ......ID 0,0-147,147 #7f0a022b app:id/imgvCover}
+                                          android.widget.LinearLayout{f183348 V.E...... .......D 232,38-901,176}
+                                            android.widget.LinearLayout{e9df5e1 V.E...... .......D 0,0-669,40 #7f0a03f1 app:id/status}
+                                              androidx.appcompat.widget.AppCompatImageView{7326f06 V.ED..... ......ID 0,4-32,36 #7f0a03f2 app:id/statusInbox}
+                                              androidx.appcompat.widget.AppCompatImageView{2f149c7 G.ED..... ......ID 0,0-0,0 #7f0a0240 app:id/ivIsVideo}
+                                              androidx.appcompat.widget.AppCompatImageView{c213bf4 G.ED..... ......ID 0,0-0,0 #7f0a023a app:id/isFavorite}
+                                              androidx.appcompat.widget.AppCompatImageView{d230f1d G.ED..... ......ID 0,0-0,0 #7f0a023f app:id/ivInPlaylist}
+                                              com.google.android.material.textview.MaterialTextView{3f67592 V.ED..... ........ 43,0-51,39 #7f0a03a2 app:id/separatorIcons}
+                                              com.google.android.material.textview.MaterialTextView{8aebb63 V.ED..... ........ 62,0-150,40 #7f0a0478 app:id/txtvPubDate}
+                                              com.google.android.material.textview.MaterialTextView{1102360 V.ED..... ........ 161,0-169,39}
+                                              com.google.android.material.textview.MaterialTextView{ae68019 V.ED..... ......ID 180,0-180,39 #7f0a03bc app:id/size}
+                                            com.google.android.material.textview.MaterialTextView{b8258de V.ED..... ........ 0,40-218,98 #7f0a047f app:id/txtvTitle}
+                                            android.widget.LinearLayout{747aabf V.E...... ........ 0,98-669,138 #7f0a033d app:id/progress}
+                                              com.google.android.material.textview.MaterialTextView{e44158c G.ED..... ......I. 0,0-0,0 #7f0a0476 app:id/txtvPosition}
+                                              com.google.android.material.progressindicator.LinearProgressIndicator{7d604d5 G.ED..... ......I. 0,0-0,0 #7f0a033e app:id/progressBar}
+                                              com.google.android.material.textview.MaterialTextView{d5724ea V.ED..... ........ 0,0-88,40 #7f0a046a app:id/txtvDuration}
+                                          android.widget.FrameLayout{25633db V.E...C.. ......ID 922,44-1048,170 #7f0a038c app:id/secondaryActionButton}
+                                            androidx.appcompat.widget.AppCompatImageView{8e2fe78 V.ED..... ........ 31,31-94,94 #7f0a038d app:id/secondaryActionIcon}
+                                            de.danoeh.antennapod.ui.common.CircularProgressBar{aff1951 V.ED..... ........ 10,10-115,115 #7f0a038e app:id/secondaryActionProgress}
+                                    com.google.android.material.textview.MaterialTextView{dfaa5b6 V.ED..... ......I. 0,0-0,0 #7f0a0174 app:id/emptyLabel}
+                      androidx.fragment.app.FragmentContainerView{5102d6d G.E...... ......ID 0,0-0,0 #7f0a0075 app:id/audioplayerFragment}
+                        android.widget.FrameLayout{eb5d667 V.E...... ......I. 0,0-0,0}
+                          androidx.fragment.app.FragmentContainerView{2fa32b7 V.E...... ......ID 0,0-0,0 #7f0a0324 app:id/playerFragment}
+                            android.widget.LinearLayout{569dc14 VFE...C.. ......I. 0,0-0,0 #7f0a01f3 app:id/fragmentLayout}
+                              android.widget.LinearLayout{858a24 V.E...... ......I. 0,0-0,0}
+                                androidx.appcompat.widget.AppCompatImageView{4caf98d V.ED..... ......I. 0,0-0,0 #7f0a022b app:id/imgvCover}
+                                android.widget.LinearLayout{2836742 V.E...... ......I. 0,0-0,0}
+                                  com.google.android.material.textview.MaterialTextView{a754353 V.ED..... ......I. 0,0-0,0 #7f0a047f app:id/txtvTitle}
+                                  com.google.android.material.textview.MaterialTextView{3a32490 V.ED..... ......I. 0,0-0,0 #7f0a0467 app:id/txtvAuthor}
+                                de.danoeh.antennapod.ui.screen.playback.PlayButton{8faa189 VFED..C.. ......I. 0,0-0,0 #7f0a00bc app:id/butPlay}
+                              com.google.android.material.progressindicator.LinearProgressIndicator{8e4b58e V.ED..... ......I. 0,0-0,0 #7f0a0182 app:id/episodeProgress}
+                          android.widget.RelativeLayout{286c1af V.E...... ......I. 0,0-0,0 #7f0a0323 app:id/playerContent}
+                            com.google.android.material.appbar.MaterialToolbar{ebdf9bc V.E...... ......ID 0,0-0,0 #7f0a044e app:id/toolbar}
+                              androidx.appcompat.widget.AppCompatImageButton{c62cd45 VFED..C.. ......I. 0,0-0,0}
+                              androidx.appcompat.widget.ActionMenuView{8fa9c9a V.E...... ......I. 0,0-0,0}
+                                androidx.appcompat.view.menu.ActionMenuItemView{787c9cb VFED..C.. ......I. 0,0-0,0 #7f0a0057 app:id/add_to_favorites_item}
+                                androidx.appcompat.view.menu.ActionMenuItemView{24ef5a8 VFED..C.. ......I. 0,0-0,0 #7f0a0356 app:id/remove_from_favorites_item}
+                                androidx.appcompat.view.menu.ActionMenuItemView{267f8c1 VFED..C.. ......I. 0,0-0,0 #7f0a03a6 app:id/set_sleeptimer_item}
+                                androidx.appcompat.view.menu.ActionMenuItemView{a55e866 VFED..C.. ......I. 0,0-0,0 #7f0a03ab app:id/share_item}
+                                androidx.appcompat.widget.ActionMenuPresenter$OverflowMenuButton{84737a7 VFED..CL. ......I. 0,0-0,0}
+                            androidx.viewpager2.widget.ViewPager2{b71c454 V.E...... ......I. 0,0-0,0 #7f0a0301 app:id/pager}
+                              androidx.viewpager2.widget.ViewPager2$RecyclerViewImpl{63a5ffd VFED..... ......I. 0,0-0,0 #1}
+                            androidx.appcompat.widget.AppCompatImageView{ac824f2 V.ED..... ......ID 0,0-0,0}
+                            androidx.cardview.widget.CardView{7a5a743 V.E...... ......ID 0,0-0,0 #7f0a00d4 app:id/cardViewSeek}
+                              com.google.android.material.textview.MaterialTextView{b50d1c0 V.ED..... ......I. 0,0-0,0 #7f0a047c app:id/txtvSeek}
+                            android.widget.LinearLayout{bd1fef9 V.E...... ......I. 0,0-0,0 #7f0a0329 app:id/playtime_layout}
+                              de.danoeh.antennapod.ui.screen.playback.audio.ChapterSeekBar{1af9e3e VFED..C.. ......I. 0,0-0,0 #7f0a0370 app:id/sbPosition}
+                              android.widget.RelativeLayout{bf1749f V.E...... ......I. 0,0-0,0}
+                                de.danoeh.antennapod.ui.screen.playback.audio.NoRelayoutTextView{95149ec V.ED..... ......ID 0,0-0,0 #7f0a0476 app:id/txtvPosition}
+                                de.danoeh.antennapod.ui.screen.playback.audio.NoRelayoutTextView{4aa91b5 VFED..C.. ......ID 0,0-0,0 #7f0a0470 app:id/txtvLength}
+                              android.widget.RelativeLayout{c03604a V.E...... ......I. 0,0-0,0 #7f0a0325 app:id/player_control}
+                                de.danoeh.antennapod.ui.screen.playback.PlayButton{802bbbb VFED..C.. ......I. 0,0-0,0 #7f0a00bc app:id/butPlay}
+                                de.danoeh.antennapod.ui.common.CircularProgressBar{bff18d8 V.ED..... ......I. 0,0-0,0}
+                                android.widget.ProgressBar{43f9431 G.ED..... ......I. 0,0-0,0 #7f0a033a app:id/progLoading}
+                                androidx.appcompat.widget.AppCompatImageButton{d1f3716 VFED..CL. ......I. 0,0-0,0 #7f0a00c2 app:id/butRev}
+                                com.google.android.material.textview.MaterialTextView{a175897 V.ED..... ......ID 0,0-0,0 #7f0a047b app:id/txtvRev}
+                                androidx.appcompat.widget.AppCompatImageButton{4b8ea84 VFED..C.. ......I. 0,0-0,0 #7f0a00be app:id/butPlaybackSpeed}
+                                com.google.android.material.textview.MaterialTextView{48426d V.ED..... ......ID 0,0-0,0 #7f0a0473 app:id/txtvPlaybackSpeed}
+                                androidx.appcompat.widget.AppCompatImageButton{4faea2 VFED..CL. ......I. 0,0-0,0 #7f0a00b6 app:id/butFF}
+                                com.google.android.material.textview.MaterialTextView{c6ee733 V.ED..... ......ID 0,0-0,0 #7f0a046d app:id/txtvFF}
+                                androidx.appcompat.widget.AppCompatImageButton{a1c2af0 VFED..C.. ......I. 0,0-0,0 #7f0a00c6 app:id/butSkip}
+                    androidx.fragment.app.FragmentContainerView{8b39869 I.E...... ......ID -912,0-0,2169 #7f0a02ae app:id/navDrawerFragment}
+                      android.widget.RelativeLayout{874ca26 V.E...... ......ID 0,0-912,2169 #7f0a02b1 app:id/nav_layout}
+                        android.widget.LinearLayout{71e12ee VFE...C.. ......ID 0,2043-912,2169 #7f0a02b3 app:id/nav_settings}
+                          androidx.appcompat.widget.AppCompatImageView{3a6c38f V.ED..... ......ID 42,11-147,116}
+                          com.google.android.material.textview.MaterialTextView{d31061c V.ED..... ......ID 189,34-912,91}
+                        android.view.View{3645225 V.ED..... ......ID 0,2040-912,2043 #7f0a0155 app:id/divider}
+                        androidx.recyclerview.widget.RecyclerView{5c6ffa VFED..... ......ID 0,136-912,2040 #7f0a02b2 app:id/nav_list}
+                          android.widget.RelativeLayout{6d609ab VFE...CL. ..S...ID 21,21-891,147}
+                            androidx.appcompat.widget.AppCompatImageView{5566808 V.ED..... ..S...ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{7aceba1 V.ED..... ..S...ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{3f191c6 V.E...... ..S...ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{d699587 G.ED..... ..S...I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{eedfcb4 G.ED..... ..S...I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{58ba0dd VFE...CL. ......ID 21,147-891,273}
+                            androidx.appcompat.widget.AppCompatImageView{f650452 V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{ec00323 V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{8c83020 V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{4a66dd9 G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{f2b139e G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{f85ae7f VFE...CL. ......ID 21,273-891,399}
+                            androidx.appcompat.widget.AppCompatImageView{c502e4c V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{7070e95 V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{b0cbaa V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{8d0b39b G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{c77e338 G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{b96ff11 VFE...CL. ......ID 21,399-891,525}
+                            androidx.appcompat.widget.AppCompatImageView{927f876 V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{4fcee77 V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{763fae4 V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{c5b7b4d G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{d132602 G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{e47fb13 VFE...CL. ......ID 21,525-891,651}
+                            androidx.appcompat.widget.AppCompatImageView{6d7e150 V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{4717f49 V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{491a04e V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{b2d356f G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{b61c27c G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{9c9c705 VFE...CL. ......ID 21,651-891,777}
+                            androidx.appcompat.widget.AppCompatImageView{86b735a V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{481b98b V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{e468a68 V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{6a4ce81 G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{3dd6b26 G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{1506367 VFE...CL. ......ID 21,777-891,903}
+                            androidx.appcompat.widget.AppCompatImageView{62de514 V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{eced1bd V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{72513b2 V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{475cf03 G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{a8e3e80 G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{c9bccb9 VFE...CL. ......ID 21,903-891,1029}
+                            androidx.appcompat.widget.AppCompatImageView{6ccb8fe V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{7fc585f V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{1d8c2ac V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{1a37b75 G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{3b7670a G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{2381b7b VFE...CL. ......ID 21,1029-891,1155}
+                            androidx.appcompat.widget.AppCompatImageView{6655d98 V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{73d59f1 V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{7ece9d6 V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{a2f457 G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{e1ebb44 G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.RelativeLayout{abca42d VFE...CL. ......ID 21,1155-891,1281}
+                            androidx.appcompat.widget.AppCompatImageView{425cd62 V.ED..... ......ID 42,11-147,115 #7f0a022b app:id/imgvCover}
+                            com.google.android.material.textview.MaterialTextView{4787ef3 V.ED..... ......ID 189,34-807,91 #7f0a047f app:id/txtvTitle}
+                            android.widget.LinearLayout{ee47b0 V.E...... ......ID 849,63-849,63 #7f0a0364 app:id/rightGroup}
+                              androidx.appcompat.widget.AppCompatImageView{16c5629 G.ED..... ......I. 0,0-0,0 #7f0a023e app:id/itxtvFailure}
+                              com.google.android.material.textview.MaterialTextView{a175dae G.ED..... ......I. 0,0-0,0 #7f0a0468 app:id/txtvCount}
+                          android.widget.LinearLayout{d12174f V......L. ......I. 0,1281-912,1326}
+                            android.view.View{9e82edc V.ED..... ......ID 0,21-912,24}
+                            android.widget.LinearLayout{4b2be5 G.E...... ......I. 0,0-0,0 #7f0a02af app:id/nav_feeds_filtered_message}
+                              androidx.appcompat.widget.AppCompatImageView{f7fa6ba V.ED..... ......ID 0,0-0,0}
+                              com.google.android.material.textview.MaterialTextView{c02d96b V.ED..... ......I. 0,0-0,0 #7f0a02b0 app:id/nav_feeds_filtered_message_text}
+                        android.widget.ProgressBar{f375cc8 G.ED..... ......ID 0,1021-912,1147 #7f0a033e app:id/progressBar}
+                  com.google.android.material.bottomnavigation.BottomNavigationView{387a161 V.E...... ........ 0,2169-1080,2337 #7f0a0099 app:id/bottomNavigationView}
+                    com.google.android.material.bottomnavigation.BottomNavigationMenuView{5f17486 V.E...... ........ 0,-21-1080,189}
+                      com.google.android.material.bottomnavigation.BottomNavigationItemView{ef3a147 VFE...C.. ..S..... 0,0-216,210 #7f0a00a0 app:id/bottom_navigation_home}
+                        android.widget.LinearLayout{cc97d74 V.E...... ..S..... 24,32-192,168 #7f0a02b5 app:id/navigation_bar_item_content_container}
+                          android.widget.FrameLayout{1bbf29d V.E...... ..S..... 0,0-168,84 #7f0a02b6 app:id/navigation_bar_item_icon_container}
+                            android.view.View{3605312 V.ED..... ..S..... 0,0-168,84 #7f0a02b4 app:id/navigation_bar_item_active_indicator_view}
+                            android.widget.LinearLayout{b3f0ae3 V.E...... ..S..... 52,10-115,73 #7f0a02b8 app:id/navigation_bar_item_inner_content_container}
+                              androidx.appcompat.widget.AppCompatImageView{dbafce0 V.ED..... ..S..... 0,0-63,63 #7f0a02b7 app:id/navigation_bar_item_icon_view}
+                          com.google.android.material.internal.BaselineLayout{6ea1b99 V.E...... ..S..... 44,84-123,136 #7f0a02b9 app:id/navigation_bar_item_labels_group}
+                            com.google.android.material.textview.MaterialTextView{76c8e5e I.ED..... ..S...ID 0,0-79,41 #7f0a02bb app:id/navigation_bar_item_small_label_view}
+                            com.google.android.material.textview.MaterialTextView{74d723f V.ED..... ..S..... 0,0-78,41 #7f0a02ba app:id/navigation_bar_item_large_label_view}
+                      com.google.android.material.bottomnavigation.BottomNavigationItemView{83070c VFE...C.. ........ 216,0-432,210 #7f0a00a3 app:id/bottom_navigation_queue}
+                        android.widget.LinearLayout{337d855 V.E...... ........ 24,32-192,168 #7f0a02b5 app:id/navigation_bar_item_content_container}
+                          android.widget.FrameLayout{96f326a V.E...... ........ 0,0-168,84 #7f0a02b6 app:id/navigation_bar_item_icon_container}
+                            android.view.View{db0f35b V.ED..... ........ 0,0-168,84 #7f0a02b4 app:id/navigation_bar_item_active_indicator_view}
+                            android.widget.LinearLayout{1df87f8 V.E...... ........ 52,10-115,73 #7f0a02b8 app:id/navigation_bar_item_inner_content_container}
+                              androidx.appcompat.widget.AppCompatImageView{96aa4d1 V.ED..... ........ 0,0-63,63 #7f0a02b7 app:id/navigation_bar_item_icon_view}
+                          com.google.android.material.internal.BaselineLayout{b460b36 V.E...... ........ 41,84-126,136 #7f0a02b9 app:id/navigation_bar_item_labels_group}
+                            com.google.android.material.textview.MaterialTextView{6016a37 V.ED..... ........ 0,0-85,41 #7f0a02bb app:id/navigation_bar_item_small_label_view}
+                            com.google.android.material.textview.MaterialTextView{a812ba4 I.ED..... ......I. 0,0-85,41 #7f0a02ba app:id/navigation_bar_item_large_label_view}
+                      com.google.android.material.bottomnavigation.BottomNavigationItemView{923bd0d VFE...C.. ........ 432,0-648,210 #7f0a00a1 app:id/bottom_navigation_inbox}
+                        android.widget.LinearLayout{cdfa4c2 V.E...... ........ 24,32-192,168 #7f0a02b5 app:id/navigation_bar_item_content_container}
+                          android.widget.FrameLayout{f7872d3 V.E...... ........ 0,0-168,84 #7f0a02b6 app:id/navigation_bar_item_icon_container}
+                            android.view.View{b775e10 V.ED..... ........ 0,0-168,84 #7f0a02b4 app:id/navigation_bar_item_active_indicator_view}
+                            android.widget.LinearLayout{dc1d09 V.E...... ........ 52,10-115,73 #7f0a02b8 app:id/navigation_bar_item_inner_content_container}
+                              androidx.appcompat.widget.AppCompatImageView{c874b0e V.ED..... ........ 0,0-63,63 #7f0a02b7 app:id/navigation_bar_item_icon_view}
+                          com.google.android.material.internal.BaselineLayout{94d692f V.E...... ........ 47,84-120,136 #7f0a02b9 app:id/navigation_bar_item_labels_group}
+                            com.google.android.material.textview.MaterialTextView{55c4b3c V.ED..... ........ 0,0-72,41 #7f0a02bb app:id/navigation_bar_item_small_label_view}
+                            com.google.android.material.textview.MaterialTextView{3a080c5 I.ED..... ......I. 0,0-73,41 #7f0a02ba app:id/navigation_bar_item_large_label_view}
+                      com.google.android.material.bottomnavigation.BottomNavigationItemView{ff10a1a VFE...C.. ........ 648,0-864,210 #7f0a00a6 app:id/bottom_navigation_subscriptions}
+                        android.widget.LinearLayout{4d1694b V.E...... ........ 16,32-199,168 #7f0a02b5 app:id/navigation_bar_item_content_container}
+                          android.widget.FrameLayout{640df28 V.E...... ........ 7,0-175,84 #7f0a02b6 app:id/navigation_bar_item_icon_container}
+                            android.view.View{e8d6441 V.ED..... ........ 0,0-168,84 #7f0a02b4 app:id/navigation_bar_item_active_indicator_view}
+                            android.widget.LinearLayout{205ade6 V.E...... ........ 52,10-115,73 #7f0a02b8 app:id/navigation_bar_item_inner_content_container}
+                              androidx.appcompat.widget.AppCompatImageView{d4b4f27 V.ED..... ........ 0,0-63,63 #7f0a02b7 app:id/navigation_bar_item_icon_view}
+                          com.google.android.material.internal.BaselineLayout{a58c5d4 V.E...... ........ 0,84-183,136 #7f0a02b9 app:id/navigation_bar_item_labels_group}
+                            com.google.android.material.textview.MaterialTextView{a0b037d V.ED..... ........ 1,0-181,41 #7f0a02bb app:id/navigation_bar_item_small_label_view}
+                            com.google.android.material.textview.MaterialTextView{16ec272 I.ED..... ......I. 0,0-183,41 #7f0a02ba app:id/navigation_bar_item_large_label_view}
+                      com.google.android.material.bottomnavigation.BottomNavigationItemView{193b6c3 VFE...C.. ........ 864,0-1080,210 #7f0a00a2 app:id/bottom_navigation_more}
+                        android.widget.LinearLayout{b666b40 V.E...... ........ 24,32-192,168 #7f0a02b5 app:id/navigation_bar_item_content_container}
+                          android.widget.FrameLayout{2c95a79 V.E...... ........ 0,0-168,84 #7f0a02b6 app:id/navigation_bar_item_icon_container}
+                            android.view.View{be293be V.ED..... ........ 0,0-168,84 #7f0a02b4 app:id/navigation_bar_item_active_indicator_view}
+                            android.widget.LinearLayout{b70fc1f V.E...... ........ 52,10-115,73 #7f0a02b8 app:id/navigation_bar_item_inner_content_container}
+                              androidx.appcompat.widget.AppCompatImageView{ae6fb6c V.ED..... ........ 0,0-63,63 #7f0a02b7 app:id/navigation_bar_item_icon_view}
+                          com.google.android.material.internal.BaselineLayout{67c2535 V.E...... ........ 49,84-118,136 #7f0a02b9 app:id/navigation_bar_item_labels_group}
+                            com.google.android.material.textview.MaterialTextView{2302dca V.ED..... ........ 0,0-68,41 #7f0a02bb app:id/navigation_bar_item_small_label_view}
+                            com.google.android.material.textview.MaterialTextView{b33b3b I.ED..... ......I. 0,0-69,41 #7f0a02ba app:id/navigation_bar_item_large_label_view}
+                  android.view.View{2fe6258 V.ED..... ........ 0,2337-1080,2400 #7f0a00a7 app:id/bottom_padding}
+              androidx.appcompat.widget.ViewStubCompat{56dfb1 G.E...... ......I. 0,0-0,0 #7f0a004b app:id/action_mode_bar_stub}
+    Looper (main, tid 2) {10b5c96}
+      mCreated=true mResumed=true mStopped=false    Active Fragments:

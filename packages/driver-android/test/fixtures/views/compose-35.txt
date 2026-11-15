@@ -1,0 +1,19 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{88f57 u0 dev.appdyno.fixture/.ComposeActivity t17}
+  Window #0 Window{176a60c u0 dev.appdyno.fixture/dev.appdyno.fixture.ComposeActivity}:
+    mDisplayId=0 rootTaskId=17 mSession=Session{6ed1929 6297:u0a10207} mClient=android.os.BinderProxy@1602d3f
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030309
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10207:dev.appdyno.fixture id=17 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY dev.appdyno.fixture/.ComposeActivity 88f57 pid=6297 userId=0 uid=10207 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{cbde5e9 V.E...... R....... 0,0-1080,2400 aid=0}[ComposeActivity]
+        android.widget.LinearLayout{41e126e V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{97f8d0f G.E...... ......I. 0,0-0,0 #10201cb android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{e3d19c V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            androidx.compose.ui.platform.ComposeView{585f7a5 V.E...... ........ 0,0-1080,2400}
+              androidx.compose.ui.platform.AndroidComposeView{55735a9 VFED..... ........ 0,0-1080,2400 aid=1073741824}
+                android.view.View{a1ce77a V.ED..... ........ 0,0-0,0}
+    Looper (main, tid 2) {f31eb2b}

@@ -1,0 +1,73 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{207619800 u0 dev.appdyno.fixture/.ListActivity t20}
+  Window #0 Window{3a1a113 u0 dev.appdyno.fixture/dev.appdyno.fixture.ListActivity}:
+    mDisplayId=0 taskId=20 mSession=Session{17d8d33 7204:u0a10213} mClient=android.os.BinderProxy@ad3a402
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x103030e
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10213:dev.appdyno.fixture id=20 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY dev.appdyno.fixture/.ListActivity c6006d8 pid=7204 userId=0 uid=10213 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{f16f7ce V.E...... R....... 0,0-1080,2400 aid=0}[ListActivity]
+        android.widget.LinearLayout{39c76ef V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{1b5a5fc G.E...... ......I. 0,0-0,0 #10201ed android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{fd2a485 V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            android.widget.ListView{eaec2da VFED.VC.. ........ 0,0-1080,2400 #7f05006d app:id/list}
+              android.widget.LinearLayout{34018cf V.E...... ........ 0,-17-1080,157}
+                android.widget.TextView{8f3d25c V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{910c965 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{2a0b63a VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{cf72eb V.E...... ........ 0,160-1080,334}
+                android.widget.TextView{a19b848 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{2c996e1 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{ed3fc06 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{9b052c7 V.E...... ........ 0,337-1080,511}
+                android.widget.TextView{63610f4 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{ee7c01d V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{8a3d292 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{6d55463 V.E...... ........ 0,514-1080,688}
+                android.widget.TextView{1d4860 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{2c54119 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{a2885de VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{3bed3bf V.E...... ........ 0,691-1080,865}
+                android.widget.TextView{17e8a8c V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{55fd5d5 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{4b321ea VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{996ecdb V.E...... ........ 0,868-1080,1042}
+                android.widget.TextView{dcfc378 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{5d4fa51 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{b9972b6 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{d7bb7 V.E...... ........ 0,1045-1080,1219}
+                android.widget.TextView{7f99f24 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{d9dea8d V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{fc20442 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{10265fe V.E...... ........ 0,1222-1080,1396}
+                android.widget.TextView{98d015f V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{5eeb7ac V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{da2cc75 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{1ae40a V.E...... ........ 0,1399-1080,1573}
+                android.widget.TextView{6aa547b V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{e65a298 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{260baf1 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{38b36d6 V.E...... ........ 0,1576-1080,1750}
+                android.widget.TextView{c7fbd57 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{65e5044 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{b35152d VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{fdbea62 V.E...... ........ 0,1753-1080,1927}
+                android.widget.TextView{bd8d7f3 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{6122cb0 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{f7ad729 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{7924aae V.E...... ........ 0,1930-1080,2104}
+                android.widget.TextView{c9f004f V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{de563dc V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{740bce5 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{e3c63ba V.E...... ........ 0,2107-1080,2281}
+                android.widget.TextView{1f5526b V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{e52e1c8 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{2c54261 VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+              android.widget.LinearLayout{3d0186 V.E...... ........ 0,2284-1080,2458}
+                android.widget.TextView{414aa47 V.ED..... ........ 24,61-636,112 #7f05008d app:id/row_name}
+                android.widget.TextView{2985274 V.ED..... ........ 636,61-825,112 #7f05008c app:id/row_count}
+                android.widget.Button{db2a39d VFED..C.. ........ 825,24-1056,150 #7f050032 app:id/add_button}
+    Looper (main, tid 2) {ff41c53}
