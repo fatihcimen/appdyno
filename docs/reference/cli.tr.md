@@ -42,6 +42,8 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 
 `test` ve `flow run`, `--update-baselines` alır: bir akışın her `visual` adımı, [Akışlar](../guides/flows.tr.md#ekran-görüntüleri-görsel-denetimler-ve-ayarlar) sayfasının anlattığı gibi, karşılaştırmak yerine temel görüntüsünü kaydeder.
 
+`test`, `--retries N` yanında `--fail-on-flaky` alır: bir dosyanın yalnızca yeniden denemede geçtiği bir çalıştırma 1 ile çıkar ve son satırında her birini adıyla söyler; bayrak olmadan 0 ile çıkar. Bkz. [Akışlar](../guides/flows.tr.md#yeniden-denemeler).
+
 ## Sunucu seçenekleri
 
 `appdyno mcp [flags]`. Seçeneklerin çoğunun bir ortam değişkeni de vardır; birkaç ayarın ise yalnızca değişkeni vardır.

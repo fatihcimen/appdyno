@@ -19,19 +19,24 @@
 - Library: `connect({ share: true })` drives a device another process holds, as `--share` does for a server; `APPDYNO_SHARE=1` asks the same.
 - Library: an `AbortSignal` stops a call or a replay (`tool(name, args, { signal })`, `replay(file, { signal })`). It rejects with `CANCELLED`, and `dispatched` says whether its touch went out. A call cancelled while it waited its turn now says no touch was sent, over MCP too.
 - Library: `tool(name, args, { raw: true })` adds `nodes`, the tree of the screen the call left, from the read its answer made.
-- Claude Desktop extension: each release carries `appdyno-<version>.mcpb`. Open it to install appdyno in Claude Desktop, with no terminal and no `npx`. Its install form takes the devices it may drive, the apps it may touch and the links it may open, each optional. The file is not signed.
+- A desktop extension: each release carries `appdyno-<version>.mcpb`. Open it to install appdyno in an MCP client that takes `.mcpb` extensions, with no terminal and no `npx`; docs/guides/clients.md says which. Its install form takes the devices it may drive, the apps it may touch and the links it may open, each optional. The file is not signed.
 - appdyno.dev: a website with the landing page and the docs in English and Turkish, built from `docs/` by the new `site/` package and published to GitHub Pages.
+- `appdyno test` takes `--fail-on-flaky` beside `--retries`: a run in which a file passed only on a retry exits 1, and its last line names each such file. Without it a flaky file still exits 0.
+- While a flow is recorded, an action it keeps no step of (a pinch, a drag, `set_orientation`, a clipboard's text, a push, a click in a web view) says so in its own answer, in a line that begins `not recorded:`, and names the action that is recorded in its place where there is one: `swipe` for a straight drag, `type_text` for a clipboard's text, `tap` for a click in a web view. The end of the recording lists them as before.
 
 ### Changed
 
 - On an iOS simulator, every launch appdyno makes of an app carries the probes held in it: `launch_app`, its restart, a flow's stop and launch, perf's relaunch and XCTest's launch metric. The frame probe's relaunch keeps a running network capture, and a restart keeps both: each relaunch dropped the other probe. A session's end or `device_setting restore` lets them go; a probe stays in the running app until it next starts. On Xcode 26.5 the two probes added 33 ms to a launch (median of 20 against 20).
 - On an iOS simulator, `network read` says when the app runs as a process the probe is not in, as frames already did.
 - A soak suite, `device-tests/soak.test.ts`, holds one session on one device for 30 minutes or more, with crashes, a lost agent, turns and web views among the calls, and writes each tool's success rate, p50 and p95, the recoveries and the slow calls to `soak.json` and `soak.md`. It runs only when `APPDYNO_SOAK_DEVICE` names a device.
+- In `appdyno/device`, `launch` waits for the app's first screen to come to rest, as `launch_app` does (its layout held for 200 ms, 3 s at most), and answers `settled`, where it returned nothing. A read right after it on iOS could catch a screen still laying out, and a tap aimed on it opened another row.
+- `appdyno test` takes out the photos and videos a file's `setting media` added before the next file, with the conditions it puts back, where the device can take them out (Android). They stayed until the session ended.
 
 ### Fixed
 
 - On an iOS simulator, the network and frame probes no longer share one Objective-C class name, so both can be in one app: loaded together, the runtime ran one of the two.
 - On Android, a screen with a part that keeps moving by itself, such as a banner that turns, no longer holds reads for a second and settles for three: on an API 35 emulator a read went from 1.1 s to 25 ms and a tap from 4.2 s, unsettled, to 0.6 s, settled. A screen that changes as a whole is still waited for.
+- On a simulator, `device_setting` `media` refuses a file that Photos cannot import by its name (`INVALID_ARGUMENT`), with what may help (an H.264 video in an `.mp4` or a `.mov`, a `.png` or `.jpg` photo) and simctl's own line under it, where it answered `INTERNAL` with the last lines of simctl's crash. Each file now goes by a call of its own, so the others of a folder still go in, and the answer says how many.
 
 ## 1.1.3
 

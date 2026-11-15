@@ -42,6 +42,8 @@ A command that loses data asks on its terminal first, as [Tools](tools.md#what-a
 
 `test` and `flow run` take `--update-baselines`: each `visual` step of a flow saves its baseline in place of comparing, as [Flows](../guides/flows.md#screenshots-visual-checks-and-settings) says.
 
+`test` takes `--fail-on-flaky` beside `--retries N`: a run with a file that passed only on a retry exits 1 and names each in its last line, where it exits 0 without the flag; see [Flows](../guides/flows.md#retries).
+
 ## Server options
 
 `appdyno mcp [flags]`. Most flags have an environment variable too, and a few settings have only a variable.

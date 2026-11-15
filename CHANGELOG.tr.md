@@ -19,19 +19,24 @@
 - Kütüphane: `connect({ share: true })`, başka bir sürecin tuttuğu bir cihazı, bir sunucu için `--share`'in yaptığı gibi kullanır; `APPDYNO_SHARE=1` de aynısını ister.
 - Kütüphane: bir `AbortSignal` bir çağrıyı ya da bir yeniden oynatmayı durdurur (`tool(name, args, { signal })`, `replay(file, { signal })`). Çağrı `CANCELLED` ile reddedilir ve `dispatched` dokunuşun gidip gitmediğini söyler. Sırasını beklerken iptal edilen bir çağrı artık MCP üzerinden de dokunuş gönderilmediğini söyler.
 - Kütüphane: `tool(name, args, { raw: true })`, yanıta `nodes` ekler: çağrının bıraktığı ekranın ağacı, yanıtın yaptığı okumadan alınır.
-- Claude Desktop eklentisi: her sürümde `appdyno-<version>.mcpb` bulunur. appdyno'yu Claude Desktop'a terminal ve `npx` olmadan kurmak için dosyayı açın. Kurulum formu sürebileceği cihazları, dokunabileceği uygulamaları ve açabileceği bağlantıları alır; her biri isteğe bağlıdır. Dosya imzalı değildir.
+- Bir masaüstü eklentisi: her sürümde `appdyno-<version>.mcpb` bulunur. appdyno'yu `.mcpb` eklentilerini alan bir MCP istemcisine terminal ve `npx` olmadan kurmak için dosyayı açın; hangileri olduğunu docs/guides/clients.md söyler. Kurulum formu sürebileceği cihazları, dokunabileceği uygulamaları ve açabileceği bağlantıları alır; her biri isteğe bağlıdır. Dosya imzalı değildir.
 - appdyno.dev: açılış sayfasını ve belgeleri İngilizce ve Türkçe sunan bir web sitesi; yeni `site/` paketi onu `docs/` içinden derler ve GitHub Pages'e yayımlar.
+- `appdyno test`, `--retries` yanında `--fail-on-flaky` alır: bir dosyanın yalnızca yeniden denemede geçtiği bir çalıştırma 1 ile çıkar ve son satırı bu dosyaların her birini adıyla söyler. Bu bayrak olmadan kararsız bir dosya yine 0 ile çıkar.
+- Bir akış kaydedilirken, adımı tutulmayan bir işlem (bir pinch, bir sürükleme, `set_orientation`, panoya konan bir metin, bir push, bir web görünümündeki tıklama) bunu kendi yanıtında, `not recorded:` ile başlayan bir satırda söyler ve yerine kaydedilen bir işlem varsa onu adıyla verir: düz bir sürükleme için `swipe`, panodaki metin için `type_text`, bir web görünümündeki tıklama için `tap`. Kaydın sonu bunları eskisi gibi listeler.
 
 ### Değişenler
 
 - Bir iOS simülatöründe appdyno'nun bir uygulamayı her başlatışı, içinde tutulan probe'ları taşır: `launch_app`, yeniden başlatması, bir akışın stop ve launch adımları, perf'in yeniden başlatması ve XCTest'in açılış ölçümü. Kare probe'unun yeniden başlatması süren bir ağ yakalamasını, bir yeniden başlatma ikisini de korur: her yeniden başlatma öbür probe'u düşürüyordu. Oturumun sonu ya da `device_setting restore` onları bırakır; bir probe, çalışan uygulamada bir sonraki başlangıcına kadar kalır. Xcode 26.5'te iki probe bir açılışa 33 ms ekledi (20'ye karşı 20'nin medyanı).
 - Bir iOS simülatöründe `network read`, uygulama probe'un bulunmadığı bir süreç olarak çalıştığında bunu söyler; kareler bunu zaten söylüyordu.
 - Bir soak suite'i, `device-tests/soak.test.ts`, tek bir cihazda 30 dakika ya da daha uzun bir oturum tutar; çağrılar arasında çökmeler, kaybolan bir ajan, dönüşler ve web görünümleri vardır. Her aracın başarı oranını, p50 ve p95'ini, toparlanmaları ve yavaş çağrıları `soak.json` ve `soak.md` dosyalarına yazar. Yalnızca `APPDYNO_SOAK_DEVICE` bir cihazın adını verdiğinde çalışır.
+- `appdyno/device` içinde `launch`, uygulamanın ilk ekranının durulmasını `launch_app` gibi bekler (yerleşim 200 ms boyunca değişmeyene kadar, en çok 3 s) ve `settled` yanıtını verir; önceden hiçbir şey döndürmüyordu. iOS'te hemen ardından yapılan bir okuma hâlâ yerleşen bir ekranı yakalayabiliyor, ona göre yapılan bir dokunuş başka bir satırı açıyordu.
+- `appdyno test`, bir dosyanın `setting media` ile eklediği fotoğraf ve videoları, geri koyduğu koşullarla birlikte, bir sonraki dosyadan önce çıkarır; cihazın onları çıkarabildiği yerde (Android). Önceden oturum bitene dek kalıyorlardı.
 
 ### Düzeltilenler
 
 - Bir iOS simülatöründe ağ ve kare probe'ları artık tek bir Objective-C sınıf adını paylaşmıyor; ikisi bir uygulamada birlikte olabilir: birlikte yüklendiklerinde çalışma zamanı ikisinden yalnızca birini çalıştırıyordu.
 - Android'de kendi kendine dönen bir afiş gibi durmadan hareket eden bir parçası olan ekran, artık okumaları bir saniye, durulmaları üç saniye tutmuyor: API 35 emülatöründe bir okuma 1.1 s'den 25 ms'ye, bir dokunuş durulmadan 4.2 s'den durularak 0.6 s'ye indi. Bütünüyle değişen bir ekran yine beklenir.
+- Bir simülatörde `device_setting` `media`, Fotoğraflar'ın içe aktaramadığı bir dosyayı adıyla reddeder (`INVALID_ARGUMENT`); neyin işe yarayabileceğini (bir `.mp4` ya da `.mov` içinde H.264 video, `.png` ya da `.jpg` fotoğraf) ve altında simctl'in kendi satırını verir. Önceden simctl'in çökmesinin son satırlarıyla `INTERNAL` yanıtını veriyordu. Artık her dosya kendi çağrısıyla gider; böylece bir klasörün öteki dosyaları yine eklenir ve yanıt kaçının eklendiğini söyler.
 
 ## 1.1.3
 
