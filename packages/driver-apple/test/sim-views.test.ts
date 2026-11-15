@@ -189,6 +189,18 @@ describe('launch_app probe on a simulator', () => {
     expect(new HeldLaunches(SIM).letGo()).toEqual([`the view probe in ${APP}`]);
   });
 
+  it('names the app it started, with the probe or other options, as the one reads take', async () => {
+    const { simctl } = simulator();
+    const started: string[] = [];
+    const apps = new SimulatorApps(simctl, SIM, new SimulatorViews(simctl, SIM), (app) => {
+      started.push(app);
+      return Promise.resolve();
+    });
+    await apps.launchWith(APP, { probe: true });
+    await apps.launchWith(OTHER, { args: ['-x'] });
+    expect(started).toEqual([APP, OTHER]);
+  });
+
   it('lets go of the probe where the app did not start', async () => {
     const { simctl } = simulator(true);
     await expect(new SimulatorApps(simctl, SIM).launchWith(APP, { probe: true })).rejects.toThrow(

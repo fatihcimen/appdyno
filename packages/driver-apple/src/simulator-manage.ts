@@ -46,6 +46,8 @@ export class SimulatorApps implements AppManager {
     private readonly simctl: Simctl,
     private readonly udid: string,
     private readonly views = new SimulatorViews(simctl, udid),
+    /** The app a launch with options started, as the device's plain launch names it: the app reads take from then on. */
+    private readonly started: (app: string) => Promise<void> = () => Promise.resolve(),
   ) {}
 
   async install(path: string, allowed?: (app: string) => void) {
@@ -178,5 +180,6 @@ export class SimulatorApps implements AppManager {
 
   async launchWith(app: string, { probe, ...own }: LaunchOptions) {
     await (probe ? this.views.launch(app, own) : this.simctl.restart(this.udid, app, own));
+    await this.started(app);
   }
 }
