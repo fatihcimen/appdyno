@@ -90,7 +90,13 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
       adb('install', '-g', RELEASE);
       return;
     }
-    installed(RELEASE, DM_FOR_OLDER);
+    try {
+      installed(RELEASE, DM_FOR_OLDER);
+    } catch (e) {
+      // adb 37 exits 1 for the warning it prints of a .dm the device could not load; the app is installed all the same
+      const { stdout = '', stderr = '' } = e as { stdout?: string; stderr?: string };
+      expect(`${stdout}${stderr}`).toMatch(/Completed with warning/);
+    }
     expect(state()).toContain('reason=install-dm');
     const r = await call('perf_launch', { baselineProfile: true, repeats: 1 });
     expect(r.data.baselineProfile?.applied).toBe(false);
