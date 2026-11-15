@@ -71,13 +71,13 @@ describe.skipIf(!ANDROID)('the native views on Android', () => {
   it('says where a scroll leaves places as laid out, and that a dialog over the activity is not there', async () => {
     await viewsOf('showcase', 'ShowcaseActivity');
     ok(await call('swipe', { direction: 'up', distance: 600, read: 'none' }));
-    expect(ok(await call('screen', { views: true })).data.warnings).toContainEqual(
-      expect.stringMatching(/^under android\.widget\.ScrollView at 0,0 .* places are its layout's/),
+    expect(ok(await call('screen', { views: true })).text).toMatch(
+      /\nunder android\.widget\.ScrollView at 0,0 .* places are its layout's/,
     );
     await viewsOf('dialog', 'DialogActivity');
     ok(await call('tap', { selector: { id: 'open_dialog' }, read: 'none' }));
     await vi.waitFor(async () =>
-      expect(ok(await call('screen', { views: true })).data.warnings).toContain(
+      expect(ok(await call('screen', { views: true })).text).toContain(
         'a window over the activity, as a dialog or a menu, is not in these views: screen reads it',
       ),
     );

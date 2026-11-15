@@ -72,7 +72,7 @@ describe('a turn of the screen', () => {
         const r = await call('set_orientation', { orientation: 'landscape_left', read });
         const kept = 'the window stayed tall: the app may keep to one orientation';
         expect(r.text, read).toContain(kept);
-        expect(r.data.warnings, read).toContain(kept);
+        expect(r.data.warnings, read).toBeUndefined();
       }
     }),
   );

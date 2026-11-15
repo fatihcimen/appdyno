@@ -25,8 +25,8 @@ describe('changed', () => {
       const r = await call('tap', { ref: refOf(home.text, 'Form'), read });
       expect(r.structuredContent).toMatchObject({ changed: true, settled: true });
       expect(r.text).not.toContain('no change seen');
-      // what was done is the text's first line, and said there only
-      ActionOut.omit({ done: true }).parse(r.structuredContent);
+      // what was done is the text's first line, and said there only, as a warning is: none here
+      ActionOut.omit({ done: true, warnings: true }).parse(r.structuredContent);
     }
   });
 
@@ -47,7 +47,8 @@ describe('changed', () => {
     expect(r.text).toMatch(
       /no change seen in \d+ ms; if a slow reaction is expected, use wait_for/,
     );
-    expect((r.structuredContent?.warnings as string[]).join()).toContain('no change seen');
+    // once: in the text the structured content holds, and not again beside it
+    expect(r.structuredContent).not.toHaveProperty('warnings');
   });
 
   it('says a change it lists came before the action, where the action changed nothing', async () => {

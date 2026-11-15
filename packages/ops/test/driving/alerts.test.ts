@@ -63,9 +63,8 @@ describe('system alerts', () => {
     expect(r.text).toContain(
       '\nthe system asks: Pixel keeps stopping (Close app, App info): answer it with alert',
     );
-    expect(r.data.warnings).toEqual([
-      'the system asks: Pixel keeps stopping (Close app, App info): answer it with alert',
-    ]);
+    // said once: the structured content holds the text, and no warning the text says
+    expect(r.data.warnings).toBeUndefined();
   });
 
   it("says with the app's native views that a system alert is in front of them", async () => {
@@ -73,13 +72,13 @@ describe('system alerts', () => {
       views: () => Promise.resolve({ views: [], truncated: false }),
     });
     const { call } = await connect(d);
-    expect((await call('screen', { views: true })).data.warnings).toEqual([]);
+    expect((await call('screen', { views: true })).text).toBe('no view is drawn');
     d.add = dialog('android', 3);
     const r = await call('screen', { views: true });
     const said =
       "a system alert is in front of these views, which are the app's: the system asks: Pixel keeps stopping (Close app, App info): answer it with alert";
     expect(r.text).toBe(`no view is drawn\n${said}`);
-    expect(r.data.warnings).toEqual([said]);
+    expect(r.data.warnings).toBeUndefined();
   });
 
   it('says of a link the system asks about first that nothing opened yet, and how to answer', async () => {

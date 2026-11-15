@@ -84,7 +84,7 @@ describe('the native views of a screen', () => {
     expect(JSON.stringify([lines, raw])).not.toContain('hunter2');
   });
 
-  it("adds what the device says of how to read them, as warnings too, and each view's flags as data", async () => {
+  it("adds what the device says of how to read them, once, and each view's flags as data", async () => {
     const note =
       "places inside android.widget.ScrollView at 0,0 are its layout's, before its scroll";
     const tree: ViewTree = {
@@ -101,7 +101,7 @@ describe('the native views of a screen', () => {
     expect(r.text).toBe(
       `framework: Android views\nandroid.widget.ScrollView > android.widget.Button 0,0 1080x2400 clickable\n${note}`,
     );
-    expect(r.data.warnings).toEqual([note]);
+    expect(r.data.warnings).toBeUndefined();
     expect(r.data.views?.[1]?.flags).toEqual(['clickable']);
   });
 

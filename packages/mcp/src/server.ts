@@ -66,12 +66,21 @@ const refusal = (e: ToolError): CallToolResult => {
 
 /**
  * An answer's structured content: its whole text, as a client may hand a model this in place of the text, and beside it
- * the summary but for `done`, the words the text starts with, which a listing's or `steps`' is the whole of.
+ * the summary but for what the text says in the same words: `done`, the words the text starts with, which a listing's or
+ * `steps`' is the whole of, and each warning, so that a client that shows this alone reads none of them twice.
  */
 export const structuredOf = ({ blocks, data }: ToolResult): Record<string, unknown> => {
   const said = textOf(blocks);
-  const { done, ...rest } = data;
-  return { text: said, ...(typeof done === 'string' && !said.includes(done) && { done }), ...rest };
+  const { done, warnings, ...rest } = data;
+  const unsaid = Array.isArray(warnings)
+    ? warnings.filter((w) => typeof w !== 'string' || !said.includes(w))
+    : [];
+  return {
+    text: said,
+    ...(typeof done === 'string' && !said.includes(done) && { done }),
+    ...rest,
+    ...(unsaid.length > 0 && { warnings: unsaid }),
+  };
 };
 
 /** What many tools would each say of an argument: the server's instructions say it once. */

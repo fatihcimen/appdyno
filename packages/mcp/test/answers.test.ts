@@ -17,6 +17,22 @@ it('holds the whole text and the summary, and no words of the text twice', () =>
     text: 'tapped @k3f9 "Add"\nscreen unchanged',
     changed: false,
   });
+  // a warning the text says is not said again, and one it does not say stays
+  expect(
+    structuredOf({
+      blocks: text('tapped 5,5\nno change seen in 120 ms'),
+      data: {
+        done: 'tapped 5,5',
+        warnings: ['no change seen in 120 ms', 'the report was not written'],
+      },
+    }),
+  ).toEqual({
+    text: 'tapped 5,5\nno change seen in 120 ms',
+    warnings: ['the report was not written'],
+  });
+  expect(structuredOf({ blocks: text('saved'), data: { done: 'saved', warnings: [] } })).toEqual({
+    text: 'saved',
+  });
   // words the text does not hold stay
   expect(structuredOf({ blocks: text('saved'), data: { done: 'exported' } })).toEqual({
     text: 'saved',

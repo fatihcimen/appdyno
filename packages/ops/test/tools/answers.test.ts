@@ -117,7 +117,7 @@ describe('structured answers', () => {
         }
       ).structuredContent;
     const home = (await t.textOf('screen')).text;
-    expect(await sc('screen')).toMatchObject({ elements: 3, foreground: 'dev.app', warnings: [] });
+    expect(await sc('screen')).toMatchObject({ elements: 3, foreground: 'dev.app' });
     expect(await sc('tap', { ref: refOf(home, 'Form') })).toMatchObject({
       screen: 'full',
       settled: true,

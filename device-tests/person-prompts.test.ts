@@ -61,7 +61,6 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
     await passes();
     const r = await asks(o.call);
     expect(r.text).toContain('needs a person: Face ID');
-    expect(r.data.warnings.join()).toContain('Face ID');
     await passes();
     expect(ok(await o.call('screen')).text).not.toContain('needs a person');
   });
