@@ -134,6 +134,8 @@ export async function open(parts: Parts): Promise<{ close: () => void }> {
     ) {
       const first = Number.isNaN(home.left);
       home = at;
+      // a layout that moved the bench has moved every perch: the one it is on is no longer where it stands
+      if (!first) mind.goHome(now());
       const size = parseFloat(getComputedStyle(layer).getPropertyValue('--mascot')) || 96;
       Object.assign(traits, {
         size,
