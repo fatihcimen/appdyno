@@ -28,6 +28,8 @@ export type ConnectOptions = {
   app?: string;
   /** Devices it may drive; with none, any. */
   allowDevices?: RegExp;
+  /** Drives a device another process holds, beside it, and holds it against none. `APPDYNO_SHARE=1` says so too. */
+  share?: boolean;
 };
 
 /** What a tool answered: the words a person would read, its images, and its data. */
@@ -79,7 +81,7 @@ export type Appdyno = {
 
 /** A device to drive from code: nothing is opened until the first call. */
 export function connect(options: ConnectOptions = {}): Appdyno {
-  const { device, app } = options;
+  const { device, app, share = process.env.APPDYNO_SHARE === '1' } = options;
   const allowDevices = regularExpression(options.allowDevices);
   const ctx = new ServerContext(
     { ...DEFAULT_POLICY, ...(allowDevices && { devices: allowDevices }) },
@@ -88,7 +90,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
     {
       ...(device && { device }),
       ...(app && { app }),
-      claims: { share: false },
+      claims: { share },
       tool: 'appdyno library',
       env: process.env,
     },

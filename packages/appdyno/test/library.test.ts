@@ -1,7 +1,9 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import * as library from '../src/index.js';
 import { drive } from '../examples/drive.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
@@ -44,6 +46,47 @@ describe('the library', () => {
       }),
     );
     expect(() => library.connect({ allowDevices: /^emulator-/ })).not.toThrow();
+  });
+
+  it('is refused a device another process holds, and drives it beside that process when it shares', async () => {
+    const other = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+    const pid = must(other.pid, "the other process's pid");
+    try {
+      const started = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
+        encoding: 'utf8',
+      }).trim();
+      const claims = join(must(process.env.APPDYNO_STATE_DIR, 'APPDYNO_STATE_DIR'), 'claims');
+      mkdirSync(claims, { recursive: true });
+      const claim = join(claims, `${device.serial}.json`);
+      const held = JSON.stringify({
+        pid,
+        started,
+        tool: 'appdyno mcp',
+        since: '2026-11-15T00:00:00Z',
+      });
+      writeFileSync(claim, held);
+
+      const alone = library.connect();
+      await expect(alone.tool('screen', {})).rejects.toMatchObject({
+        code: 'DEVICE_CLAIMED',
+        message: expect.stringContaining(`pid ${pid}`) as unknown,
+      });
+      await alone.close();
+
+      const beside = library.connect({ share: true });
+      expect((await beside.tool('screen', {})).data.elements).toBeGreaterThan(0);
+      await beside.close();
+      // the other's hold stands: sharing takes nothing from it
+      expect(readFileSync(claim, 'utf8')).toBe(held);
+
+      vi.stubEnv('APPDYNO_SHARE', '1');
+      const byEnv = library.connect();
+      expect((await byEnv.tool('screen', {})).data.elements).toBeGreaterThan(0);
+      await byEnv.close();
+    } finally {
+      vi.unstubAllEnvs();
+      other.kill('SIGKILL');
+    }
   });
 
   it('has one name to call, and the rest are types', () => {
