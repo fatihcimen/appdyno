@@ -1,4 +1,5 @@
 import { frameworkOfViews, NoViewProbe, viewLines, type FrameworkLabel } from '@appdyno/core';
+import { systemAsks } from './noticed.js';
 import type { Session } from './session.js';
 import { reply, ToolError } from './tool.js';
 
@@ -25,7 +26,15 @@ export async function readViews(s: Session, clean: (t: string) => string, raw: b
   const framework = frameworkOfViews(tree, s.device.platform);
   const said = framework && frameworkSaid(framework);
   const lines = viewLines(tree, clean);
-  const notes = (tree.notes ?? []).map(clean);
+  // the views are the app's own: an alert the system shows over them is in none, and a read of the screen has it
+  const look = await s.read().catch(() => undefined);
+  const asks = look && s.device.platformScreen.systemAlert(look.tree, look.elements);
+  const notes = [
+    ...(tree.notes ?? []).map(clean),
+    ...(asks
+      ? [`a system alert is in front of these views, which are the app's: ${systemAsks(asks)}`]
+      : []),
+  ];
   return reply([said ? `framework: ${said}` : 'no view is drawn', ...lines, ...notes].join('\n'), {
     elements: tree.views.length,
     warnings: notes,

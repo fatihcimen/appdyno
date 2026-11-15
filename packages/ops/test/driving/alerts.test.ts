@@ -68,6 +68,20 @@ describe('system alerts', () => {
     ]);
   });
 
+  it("says with the app's native views that a system alert is in front of them", async () => {
+    const d = Object.assign(new WithDialog(), {
+      views: () => Promise.resolve({ views: [], truncated: false }),
+    });
+    const { call } = await connect(d);
+    expect((await call('screen', { views: true })).data.warnings).toEqual([]);
+    d.add = dialog('android', 3);
+    const r = await call('screen', { views: true });
+    const said =
+      "a system alert is in front of these views, which are the app's: the system asks: Pixel keeps stopping (Close app, App info): answer it with alert";
+    expect(r.text).toBe(`no view is drawn\n${said}`);
+    expect(r.data.warnings).toEqual([said]);
+  });
+
   it('says of a link the system asks about first that nothing opened yet, and how to answer', async () => {
     const d = new WithDialog();
     const { call } = await connect(d);
