@@ -71,6 +71,7 @@ describe('the library', () => {
       await expect(alone.tool('screen', {})).rejects.toMatchObject({
         code: 'DEVICE_CLAIMED',
         message: expect.stringContaining(`pid ${pid}`) as unknown,
+        hint: expect.stringContaining('share: true in the options') as unknown,
       });
       await alone.close();
 

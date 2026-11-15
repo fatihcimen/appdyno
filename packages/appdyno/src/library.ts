@@ -7,6 +7,7 @@ import {
   opsFor,
   rawNodes,
   ServerContext,
+  SHARE_BY_LIBRARY,
   ToolError,
 } from '@appdyno/ops';
 import { regularExpression } from './allow.js';
@@ -144,7 +145,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
     {
       ...(device && { device }),
       ...(app && { app }),
-      claims: { share },
+      claims: { share, how: SHARE_BY_LIBRARY },
       tool: 'appdyno library',
       env: process.env,
     },

@@ -32,6 +32,7 @@ describe('device claims', () => {
       expect(r.data.code).toBe('DEVICE_CLAIMED');
       expect(r.text).toContain(`pid ${pid}`);
       expect(r.text).toContain('other agent');
+      expect(r.text).toContain('use_device with share: true, --share on the command line');
       expect((await call('list_devices')).data.devices?.[0]?.heldBy?.pid).toBe(pid);
       expect((await call('use_device', { device: d.serial, share: true })).error).toBe(false);
       ctx.close();
@@ -63,7 +64,7 @@ describe('device claims', () => {
     const pid = must(child.pid, "the child's pid");
     try {
       claimOf(pid, PUT_BACK_TOOL);
-      await expect(claim('emulator-5580', 'appdyno mcp', 300)).rejects.toMatchObject({
+      await expect(claim('emulator-5580', 'appdyno mcp', undefined, 300)).rejects.toMatchObject({
         code: 'DEVICE_CLAIMED',
         message: expect.stringContaining(`pid ${pid} (${PUT_BACK_TOOL})`) as unknown,
       });

@@ -8,7 +8,7 @@ export { keepRun, PROBE_HINT } from './perf/shared.js';
 export { survey } from './survey.js';
 // what the hub, a package of its own, takes from the operations
 export { activityFollower, appendActivity, type ActivityLine } from './activity.js';
-export { claim, holder, PUT_BACK_TOOL, release } from './claims.js';
+export { claim, holder, PUT_BACK_TOOL, release, SHARE_BY_LIBRARY } from './claims.js';
 export { rawNodes } from './read.js';
 export {
   aimAt,

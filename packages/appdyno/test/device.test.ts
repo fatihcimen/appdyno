@@ -178,7 +178,11 @@ describe('appdyno/device', () => {
       device.close = () => {
         closed++;
       };
-      await expect(openDevice(SERIAL)).rejects.toMatchObject({ code: 'DEVICE_CLAIMED' });
+      // its own way to share, not a server's tool
+      await expect(openDevice(SERIAL)).rejects.toMatchObject({
+        code: 'DEVICE_CLAIMED',
+        hint: 'use another device, or share this one: share: true in the options',
+      });
       expect(closed).toBe(1);
       expect(holder(SERIAL)).toMatchObject({ pid });
       const shared = await openDevice(SERIAL, { share: true });

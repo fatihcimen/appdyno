@@ -6,6 +6,7 @@ import {
   ServerContext,
   SETTLE,
   settleBy,
+  SHARE_BY_LIBRARY,
   ToolError,
 } from '@appdyno/ops';
 import { regularExpression } from './allow.js';
@@ -135,7 +136,7 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     if (held) release(serial);
   };
   if (!share)
-    await claim(serial, 'appdyno device').catch((e: unknown) => {
+    await claim(serial, 'appdyno device', SHARE_BY_LIBRARY).catch((e: unknown) => {
       letGo(false);
       throw e;
     });
