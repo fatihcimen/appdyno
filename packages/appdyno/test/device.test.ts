@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenElement as CoreElement, Selector as CoreSelector } from '@appdyno/core';
 import { holder } from '@appdyno/ops';
@@ -65,7 +66,7 @@ describe('appdyno/device', () => {
     expect([sameElement, sameSelector]).toEqual([true, true]);
   });
 
-  it('runs its example: a read, a tap compared with it, and the screen after', async () => {
+  it('runs the example the docs show: a read, a tap compared with it, and the screen after', async () => {
     const lines: string[] = [];
     const after = await tapByWords('emulator-5580', 'Form', (l) => lines.push(l));
     expect(lines).toEqual([expect.stringMatching(/^tapped @\S+ "Form" at 540,350$/)]);
@@ -73,6 +74,12 @@ describe('appdyno/device', () => {
     const tap = device.calls.find((c) => c.name === 'act');
     expect(tap?.args[0]).toEqual({ kind: 'tap', x: 540, y: 350 });
     expect(tap?.args[1]).toMatchObject({ before: expect.any(String) as string, settle: {} });
+    const shown = readFileSync(
+      new URL('../../../docs/reference/library.md', import.meta.url),
+      'utf8',
+    );
+    const example = readFileSync(new URL('../examples/device.ts', import.meta.url), 'utf8');
+    expect(shown).toContain(example.trim());
   });
 
   it('holds the device until close, and with share holds it from no one', async () => {
