@@ -10,6 +10,7 @@ import Footer from './Footer.astro';
 import Hero from './Hero.astro';
 import MacApp from './MacApp.astro';
 import Nav from './Nav.astro';
+import OpenSource from './OpenSource.astro';
 import Story from './Story.astro';
 import ToolRack from './ToolRack.astro';
 
@@ -62,7 +63,7 @@ const jsonLd = [
     <Console t={t} />
     <ToolRack t={t} />
     <MacApp lang={lang} t={t} />
-    {/* The sections of the fuller landing page go here, each a component with its words in i18n/: the scroll story, the Mac app, open source. */}
+    <OpenSource lang={lang} t={t} />
     <Faq t={t} />
   </main>
   <Footer lang={lang} t={t} />

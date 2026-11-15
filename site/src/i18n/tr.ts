@@ -15,6 +15,7 @@ export const tr: Words = {
     console: 'Deneyin',
     tools: 'Neler yapar',
     mac: 'Mac uygulaması',
+    source: 'Açık kaynak',
     faq: 'Sorular',
     docs: 'Belgeler',
     github: 'GitHub',
@@ -231,6 +232,35 @@ export const tr: Words = {
         caption:
           'Kurgu değil, gerçek bir çalıştırma: Shop örneğinin ödemesi, her çağrının gerçek süresiyle. Kayıt İngilizce arayüzle alındı.',
       },
+    },
+  },
+  source: {
+    title: 'Açık kaynak, tamamı',
+    sub: 'Sunucu, komut satırı, Mac uygulaması ve cihazlarda çalışan ajanlar tek bir açık depoda. Okuyun, derleyin, değiştirin.',
+    license: {
+      name: 'MIT lisansı',
+      text: 'İşinizde kullanın, değiştirin, dağıtın. Lisans tek bir kısa dosya.',
+    },
+    github: {
+      name: 'Kod GitHub’da',
+      text: 'Kaynak, belgeler, testler ve değişiklik günlüğüyle her sürüm.',
+      star: 'GitHub’da yıldız verin',
+    },
+    local: {
+      name: 'Mac’inizde çalışır',
+      text: 'appdyno telemetri göndermez ve bulut gerektirmez: Mac’inizde çalışır.',
+    },
+    install: {
+      name: 'Tek komutla kurulur',
+      text: 'Bu Mac’teki MCP istemcilerini bulur ve appdyno’yu seçtiklerinize ekler.',
+    },
+    registry: {
+      name: 'Resmî MCP registry’sinde',
+      text: 'Kendi adıyla listelenir; registry’yi okuyan bir istemci onu bulur.',
+    },
+    contribute: {
+      name: 'Katkıya açık',
+      text: 'Hata bildirimleri, düzeltmeler ve yeni fikirler. Nasıl derlenip test edileceği kılavuzda yazıyor.',
     },
   },
   faq: {

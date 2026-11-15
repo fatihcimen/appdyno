@@ -14,6 +14,8 @@ export const ANALYTICS = {
 
 /** What a person runs first: a command, the same in every language. */
 export const INSTALL = 'npx -y appdyno install';
+/** The name appdyno is listed under in the official MCP registry, as server.json has it. */
+export const REGISTRY = 'io.github.fatihcimen/appdyno';
 
 /**
  * The 3D viewer, the one script the site takes from another host, fetched after the page has

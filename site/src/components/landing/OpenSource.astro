@@ -1,0 +1,69 @@
+---
+import type { Words } from '../../i18n/index.ts';
+import { INSTALL, REGISTRY, REPO, type Lang } from '../../site.ts';
+
+interface Props {
+  lang: Lang;
+  t: Words;
+}
+const { lang, t } = Astro.props;
+const { source } = t;
+const guide = lang === 'tr' ? 'CONTRIBUTING.tr.md' : 'CONTRIBUTING.md';
+const file = (name: string) => ({ href: `${REPO}/blob/main/${name}`, text: name });
+/** Each card's words, with the file it leads to or the line it shows. */
+const cards: { name: string; text: string; link?: { href: string; text: string }; code?: string }[] =
+  [
+    { ...source.license, link: file('LICENSE') },
+    { ...source.github, link: { href: REPO, text: source.github.star } },
+    { ...source.local },
+    { ...source.install, code: INSTALL },
+    { ...source.registry, code: REGISTRY },
+    { ...source.contribute, link: file(guide) },
+  ];
+---
+
+{/* Open source: the license, the repository to star, where it runs, how it installs, where it is listed and how to take part. */}
+<section class="band source" id="source">
+  <div class="inner">
+    <div class="reveal">
+      <h2>{source.title}</h2>
+      <p class="sub">{source.sub}</p>
+    </div>
+    <div class="tools reveal">
+      {
+        cards.map((card) => (
+          <div class="tool">
+            <b>{card.name}</b>
+            <p>{card.text}</p>
+            {card.link && (
+              <code>
+                <a href={card.link.href}>
+                  {card.link.href === REPO && (
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                      <path d="M8 .6l2.2 4.6 5 .7-3.6 3.5.9 5L8 12l-4.5 2.4.9-5L.8 5.9l5-.7z" />
+                    </svg>
+                  )}
+                  {card.link.text}
+                </a>
+              </code>
+            )}
+            {card.code && <code>{card.code}</code>}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .source {
+    padding-block: 44px 30px;
+  }
+  svg {
+    vertical-align: -2px;
+    margin-right: 6px;
+    fill: var(--amber-fill);
+    stroke: var(--amber);
+    stroke-width: 0.8;
+  }
+</style>

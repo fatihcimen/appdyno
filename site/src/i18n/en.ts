@@ -13,6 +13,7 @@ export const en = {
     console: 'Try it',
     tools: 'What it does',
     mac: 'Mac app',
+    source: 'Open source',
     faq: 'Questions',
     docs: 'Docs',
     github: 'GitHub',
@@ -230,6 +231,35 @@ export const en = {
         caption:
           "A real run, not a mock-up: the checkout of the shop example, with each call's real time.",
       },
+    },
+  },
+  source: {
+    title: 'Open source, all of it',
+    sub: 'The server, the command line, the Mac app and the agents that run on the devices are in one public repository. Read it, build it, change it.',
+    license: {
+      name: 'MIT license',
+      text: 'Use it at work, change it, ship it. The license is one short file.',
+    },
+    github: {
+      name: 'The code is on GitHub',
+      text: 'Source, docs, tests and every release, with its changelog.',
+      star: 'Star on GitHub',
+    },
+    local: {
+      name: 'It runs on your Mac',
+      text: 'appdyno sends no telemetry and needs no cloud: it runs on your Mac.',
+    },
+    install: {
+      name: 'One command to install',
+      text: 'It finds the MCP clients on this Mac and adds appdyno to the ones you pick.',
+    },
+    registry: {
+      name: 'On the official MCP registry',
+      text: 'Listed under its own name, so a client that reads the registry finds it.',
+    },
+    contribute: {
+      name: 'Contributions welcome',
+      text: 'Bug reports, fixes and new ideas. The guide says how to build and test.',
     },
   },
   faq: {
