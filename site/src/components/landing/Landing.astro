@@ -8,6 +8,7 @@ import Faq from './Faq.astro';
 import Footer from './Footer.astro';
 import Hero from './Hero.astro';
 import Nav from './Nav.astro';
+import Story from './Story.astro';
 import ToolRack from './ToolRack.astro';
 
 interface Props {
@@ -54,6 +55,7 @@ const jsonLd = [
     </div>
   </div>
   <main>
+    <Story t={t} />
     <Console t={t} />
     <ToolRack t={t} />
     {/* The sections of the fuller landing page go here, each a component with its words in i18n/: the scroll story, the Mac app, open source. */}

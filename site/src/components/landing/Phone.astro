@@ -1,0 +1,48 @@
+---
+import type { Words } from '../../i18n/index.ts';
+import { refOf } from './scenarios.ts';
+
+interface Props {
+  t: Words;
+  /** The device's name, in its status bar. */
+  model: string;
+  android?: boolean;
+  id?: string;
+  /** What the phone is, where it is a picture of its own and not a part of one. */
+  label?: string;
+}
+const { t, model, android = false, id, label } = Astro.props;
+const { app } = t.console;
+const cart = `${app.cart} 0`;
+---
+
+{/* The shop example on a phone. A step of a job names its parts by data-part and its elements by data-ref, and data-rest is what a part says before a job. */}
+<div
+  class:list={['phone', { android }]}
+  id={id}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+>
+  <div class="status"><span>9:41</span><span>{model}</span></div>
+  <div class="app">
+    <header>
+      <span data-part="title" data-rest={app.name}>{app.name}</span>
+      <span class="cart ref" data-ref="@cart" data-part="cart" data-rest={cart}>{cart}</span>
+    </header>
+    {
+      app.products.map((name, i) => (
+        <div class="item ref" data-ref={refOf(i)}>
+          <i />
+          <div>
+            <b>{name}</b>
+            <small>{app.prices[i]}</small>
+          </div>
+          <span class="add">{app.add}</span>
+        </div>
+      ))
+    }
+    <span class="place ref" data-ref="@place">{app.place}</span>
+  </div>
+  <div class="banner" data-part="banner"><b>{app.name}</b><span>{app.pushBody}</span></div>
+  <div class="overlay" data-part="crash"><div><b>{app.stopped}</b>{app.stoppedAt}</div></div>
+</div>

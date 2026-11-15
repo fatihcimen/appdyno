@@ -9,6 +9,7 @@ export const en = {
   },
   nav: {
     label: 'Site',
+    story: 'How it works',
     console: 'Try it',
     tools: 'What it does',
     faq: 'Questions',
@@ -121,6 +122,42 @@ export const en = {
   },
   dials: {
     example: 'The dials show an example session.',
+  },
+  story: {
+    title: 'What happens on the dyno',
+    sub: 'One request, six moves. Scroll, and the phones do what the agent does on yours.',
+    ios: 'iPhone 17 · simulator',
+    android: 'Pixel 9 · emulator',
+    steps: {
+      read: {
+        name: 'It reads the screen',
+        text: 'Not pixels: the elements on the screen, each with a ref the agent can act on. <code>screen</code> gives them folded, so the answer stays short.',
+      },
+      tap: {
+        name: 'It taps and types',
+        text: 'By text, id or ref. Every action answers with the screen once it has settled, so the agent sees what it did in the same call.',
+      },
+      push: {
+        name: 'It sends a push and opens a link',
+        text: "A push of each type a simulator or an emulator takes, and the deep links your app opens. The banner is the app's own.",
+      },
+      measure: {
+        name: 'It measures the launch',
+        text: "Cold launch, frames while a list scrolls, memory: read with the platform's own tools, and kept as a baseline a CI gate holds.",
+      },
+      crash: {
+        name: 'It finds the crash',
+        text: "When a tap takes the app down, the same answer says so, with the app's last log line. <code>crashes</code> then gives the stack, down to the function.",
+      },
+      replay: {
+        name: 'It replays the flow on Android',
+        text: 'What the agent did once is saved as a flow. It runs again with no model: on an Android emulator, on a phone, in CI.',
+      },
+    },
+    died: 'tapped "Place order", and the app died',
+    lastLog: 'its last log line',
+    saved: 'saved 4 steps as flows/checkout.flow',
+    replayed: '4 steps, no model · fails at Place order, as on the iPhone',
   },
   faq: {
     title: 'Questions',

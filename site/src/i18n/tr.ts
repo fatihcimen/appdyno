@@ -11,6 +11,7 @@ export const tr: Words = {
   },
   nav: {
     label: 'Site',
+    story: 'Nasıl çalışır',
     console: 'Deneyin',
     tools: 'Neler yapar',
     faq: 'Sorular',
@@ -123,6 +124,42 @@ export const tr: Words = {
   },
   dials: {
     example: 'Göstergeler örnek bir oturumu gösterir.',
+  },
+  story: {
+    title: 'Dyno’da neler olur',
+    sub: 'Tek istek, altı hamle. Sayfayı kaydırın; telefonlar, ajanın sizin cihazınızda yaptığını yapsın.',
+    ios: 'iPhone 17 · simülatör',
+    android: 'Pixel 9 · emülatör',
+    steps: {
+      read: {
+        name: 'Ekranı okur',
+        text: 'Piksel olarak değil: ekrandaki öğeler olarak, her biri ajanın kullanabileceği bir ref ile. <code>screen</code> bunları katlayarak verir, yanıt kısa kalır.',
+      },
+      tap: {
+        name: 'Dokunur ve yazar',
+        text: 'Metinle, id ile ya da ref ile. Her işlem, ekranın durulduktan sonraki haliyle yanıtlanır; ajan ne yaptığını aynı çağrıda görür.',
+      },
+      push: {
+        name: 'Push gönderir, bağlantı açar',
+        text: 'Simülatörün ya da emülatörün kabul ettiği her türde push ve uygulamanızın açtığı derin bağlantılar. Bildirim, uygulamanın kendi bildirimidir.',
+      },
+      measure: {
+        name: 'Açılışı ölçer',
+        text: 'Soğuk açılış, liste kayarken kareler, bellek: platformun kendi araçlarıyla okunur ve bir CI kapısının koruduğu baseline olarak saklanır.',
+      },
+      crash: {
+        name: 'Çökmeyi bulur',
+        text: 'Bir dokunuş uygulamayı düşürdüğünde aynı yanıt bunu, uygulamanın son log satırıyla birlikte söyler. Ardından <code>crashes</code>, fonksiyona kadar yığın izini verir.',
+      },
+      replay: {
+        name: 'Akışı Android’de yeniden oynatır',
+        text: 'Ajanın bir kez yaptığı şey akış olarak kaydedilir. Model olmadan yeniden çalışır: bir Android emülatöründe, bir telefonda, CI’da.',
+      },
+    },
+    died: '"Siparişi ver"e dokunuldu; uygulama kapandı',
+    lastLog: 'son log satırı',
+    saved: '4 adım flows/checkout.flow olarak kaydedildi',
+    replayed: '4 adım, model yok · iPhone’daki gibi Siparişi ver’de başarısız oluyor',
   },
   faq: {
     title: 'Sorular',

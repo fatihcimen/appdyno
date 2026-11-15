@@ -1,7 +1,8 @@
 ---
 import type { Words } from '../../i18n/index.ts';
 import type { ConsoleData } from './landing.client.ts';
-import { jobsOf, refOf } from './scenarios.ts';
+import Phone from './Phone.astro';
+import { jobsOf } from './scenarios.ts';
 
 interface Props {
   t: Words;
@@ -17,7 +18,6 @@ const chips: Record<string, string> = {
   views: c.views.chip,
 };
 const data: ConsoleData = { jobs, running: c.running, done: c.done };
-const cart = `${c.app.cart} 0`;
 ---
 
 <section class="band console" id="console">
@@ -34,30 +34,7 @@ const cart = `${c.app.cart} 0`;
       }
     </div>
     <div class="rig">
-      <div class="phone" id="phone" role="img" aria-label={c.phone}>
-        <div class="status"><span>9:41</span><span>iPhone 17</span></div>
-        <div class="app">
-          <header>
-            <span id="title" data-rest={c.app.name}>{c.app.name}</span>
-            <span class="cart ref" data-ref="@cart" id="cart" data-rest={cart}>{cart}</span>
-          </header>
-          {
-            c.app.products.map((name, i) => (
-              <div class="item ref" data-ref={refOf(i)}>
-                <i />
-                <div>
-                  <b>{name}</b>
-                  <small>{c.app.prices[i]}</small>
-                </div>
-                <span class="add">{c.app.add}</span>
-              </div>
-            ))
-          }
-          <span class="place ref" data-ref="@place">{c.app.place}</span>
-        </div>
-        <div class="banner" id="banner"><b>{c.app.name}</b><span>{c.app.pushBody}</span></div>
-        <div class="overlay" id="crash"><div><b>{c.app.stopped}</b>{c.app.stoppedAt}</div></div>
-      </div>
+      <Phone t={t} model="iPhone 17" id="phone" label={c.phone} />
       <div class="term" aria-live="polite">
         <div class="bar"><span>{c.client}</span><span id="clock">{c.ready}</span></div>
         <pre id="out"><span class="d">{c.idle}</span></pre>
