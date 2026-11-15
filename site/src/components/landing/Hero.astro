@@ -14,9 +14,9 @@ const { hero } = t;
 
 <header class="hero">
   <div>
-    <div class="kicker">{hero.kicker}</div>
     <h1 set:html={hero.title} />
     <p class="lede">{hero.lede}</p>
+    <div class="kicker">{hero.kicker}</div>
     <div class="install">
       <code>{INSTALL}</code>
       <button type="button" data-copy={INSTALL} data-copied={hero.copied}>{hero.copy}</button>

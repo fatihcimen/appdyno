@@ -3,7 +3,7 @@ import { getImage } from 'astro:assets';
 import benchPoster from '../../assets/bench.webp';
 import dinoPoster from '../../assets/dino.webp';
 import type { Words } from '../../i18n/index.ts';
-import { READINGS, turn, type Gauge } from './scenarios.ts';
+import Dials from './Dials.astro';
 
 interface Props {
   t: Words;
@@ -23,11 +23,6 @@ const models = [
     poster: await poster(benchPoster),
     orbit: '65deg 75deg auto',
   },
-];
-const gauges: [Gauge, string, string][] = [
-  ['launch', bench.launch, '#ffbe3d'],
-  ['frames', bench.frames, '#5fd3a6'],
-  ['memory', bench.memory, '#7ea2ff'],
 ];
 ---
 
@@ -59,36 +54,6 @@ const gauges: [Gauge, string, string][] = [
       ))
     }
   </div>
-  <div class="gauges">
-    {
-      gauges.map(([id, label, color]) => (
-        <div class="gauge">
-          <svg viewBox="0 0 120 70" aria-hidden="true">
-            <path
-              d="M10 60 A50 50 0 0 1 110 60"
-              fill="none"
-              stroke="#272b52"
-              stroke-width="8"
-              stroke-linecap="round"
-            />
-            <line
-              class="needle"
-              id={`n-${id}`}
-              x1="60"
-              y1="60"
-              x2="60"
-              y2="18"
-              stroke={color}
-              stroke-width="4"
-              stroke-linecap="round"
-              style={`transform: ${turn(READINGS[id][1])}`}
-            />
-          </svg>
-          <div class="v" id={`v-${id}`}>{READINGS[id][0]}</div>
-          <div class="l">{label}</div>
-        </div>
-      ))
-    }
-  </div>
+  <Dials t={Astro.props.t} />
   <div class="stripes"></div>
 </div>

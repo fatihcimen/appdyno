@@ -40,6 +40,7 @@ export default defineConfig({
       // one 404.html is all GitHub Pages serves: src/pages/404.astro says it in both languages
       disable404Route: true,
       components: { Footer: './src/components/starlight/Footer.astro' },
+      customCss: ['./src/styles/docs.css'],
       sidebar: [
         { ...group('guides'), items: [{ autogenerate: { directory: 'docs/guides' } }] },
         { ...group('reference'), items: [{ autogenerate: { directory: 'docs/reference' } }] },

@@ -20,7 +20,7 @@ export const tr: Words = {
   hero: {
     kicker: 'MCP sunucusu · CLI · Mac uygulaması',
     title: 'Uygulamanızı <em>dyno</em>’ya bağlayın.',
-    lede: 'Mobil uygulamanızı bir yapay zekâ ajanı kullansın, test etsin, ölçsün: iOS simülatörleri, Android emülatörleri ve gerçek telefonlar, tek bir MCP sunucusundan.',
+    lede: 'Bir mobil hatayı yeniden üretin, nedenini ölçümlerle bulun ve aynı akışı yeniden çalışan bir teste dönüştürün.',
     copy: 'Kopyala',
     copied: 'Kopyalandı',
   },
@@ -120,6 +120,9 @@ export const tr: Words = {
       },
     ],
     safe: 'Varsayılan olarak güvenli: appdyno bir telefonu asla sıfırlamaz ya da silmez, veri yok eden her işlemden önce bir kişiye sorar ve adını verdiğiniz gizli değerleri saklar. Bulut yok, telemetri yok, MIT.',
+  },
+  dials: {
+    example: 'Göstergeler örnek bir oturumu gösterir.',
   },
   faq: {
     title: 'Sorular',

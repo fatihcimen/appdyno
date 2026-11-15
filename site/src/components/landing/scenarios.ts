@@ -1,4 +1,5 @@
 import type { Words } from '../../i18n/en.ts';
+import { SCALES, type Gauge } from './dials.ts';
 
 /** One thing the console does: `landing.client.ts` plays a job's steps in order. */
 export type Step =
@@ -13,23 +14,19 @@ export type Step =
   | { wait: number }
   | { hop: true };
 
-export type Gauge = 'launch' | 'frames' | 'memory';
-
 const span = (kind: string) => (text: string) => `<span class="${kind}">${text}</span>`;
 const ref = span('r');
 const ok = span('ok');
 const warn = span('t');
 
-/** The gauges at rest and in the launch job, as [label, share of the dial]. */
+/** The dials at rest and in the launch job, as [label, share of the dial]. */
 // shortcut: these are the example session's numbers, swap in a real run of the shop example before the launch
 export const READINGS = {
-  launch: ['412 ms', 412 / 600],
-  frames: ['59', 59 / 60],
-  memory: ['182 MB', 182 / 400],
+  launch: ['412 ms', 412 / SCALES.launch.max],
+  frames: ['59 fps', 59 / SCALES.frames.max],
+  memory: ['182 MB', 182 / SCALES.memory.max],
+  story: ['412 ms', 412 / SCALES.story.max],
 } as const satisfies Record<Gauge, readonly [string, number]>;
-
-/** A dial's needle goes from -80° to 80° over its whole range. */
-export const turn = (share: number) => `rotate(${-80 + Math.min(share, 1) * 160}deg)`;
 
 const PRODUCTS = ['guji', 'huila', 'kenya'] as const;
 export const refOf = (i: number) => `@${PRODUCTS[i] ?? ''}`;
@@ -88,7 +85,7 @@ export const jobsOf = ({ console: c }: Words): Record<string, Step[]> => {
       ask(c.perf.ask),
       { call: 'perf_launch', args: '{"mode":"cold","repeats":5}', took: '6.8 s' },
       ...[455, 431, 412, 418, 409].flatMap((ms): Step[] => [
-        { gauge: ['launch', `${ms} ms`, ms / 600] },
+        { gauge: ['launch', `${ms} ms`, ms / SCALES.launch.max] },
         { wait: 300 },
       ]),
       { gauge: ['launch', ...READINGS.launch] },

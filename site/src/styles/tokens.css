@@ -1,0 +1,67 @@
+/* The landing page's colours: a bright ground first, the dark set under the system's setting. Every text colour here is held to 4.5:1 on each ground it is written on by test/contrast.test.ts. */
+:root {
+  color-scheme: light;
+  --floor: #f4f6fe;
+  --panel: #ffffff;
+  --line: #d5daf3;
+  --fg: #14163a;
+  --soft: #30345e;
+  --muted: #555a86;
+  --blue: #3358f0;
+  --blue-lt: #2745d2;
+  --violet: #6a3de0;
+  --magenta: #b3208d;
+  --magenta-lt: #a3177f;
+  --amber: #855600;
+  --amber-fill: #ffbe3d;
+  --green: #0c7450;
+  --on-accent: #ffffff;
+  --term: #eef1fc;
+  --term-fg: #2a2e58;
+  --grid: #1b1f5a0f;
+  --glow: color-mix(in oklab, var(--blue) 16%, transparent);
+  --gauge-top: #ffffff;
+  --gauge-bottom: #d3d8ef;
+
+  /* an instrument's face is dark under either set, as the phone on the page is light */
+  --dial-face: #1a1e44;
+  --dial-pit: #05060f;
+  --dial-ink: #dfe3fb;
+  --dial-dim: #9aa0c6;
+  --dial-good: #5fd3a6;
+  --dial-warn: #ffbe3d;
+  --dial-slow: #f06ccb;
+  --dial-needle: #ff5a4d;
+  --lcd-ink: #bfe9ff;
+  --app: #f7f5f2;
+  --app-card: #ffffff;
+  --app-fg: #1b1b1f;
+  --app-muted: #6b6b75;
+  --app-buy: #b3208d;
+  --frame: #1c1f3d;
+
+  --f-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --floor: #090a14;
+    --panel: #11132a;
+    --line: #272b52;
+    --fg: #eceefb;
+    --soft: #c6cbea;
+    --muted: #9aa0c6;
+    --blue-lt: #7ea2ff;
+    --violet: #a78bfa;
+    --magenta: #c92aa0;
+    --magenta-lt: #f06ccb;
+    --amber: #ffbe3d;
+    --green: #5fd3a6;
+    --term: #070814;
+    --term-fg: #cfd3f0;
+    --grid: #ffffff08;
+    --glow: color-mix(in oklab, var(--blue) 30%, transparent);
+    --gauge-top: #23274a;
+    --gauge-bottom: #0d0f22;
+  }
+}

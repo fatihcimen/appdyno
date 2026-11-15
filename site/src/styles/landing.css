@@ -1,18 +1,4 @@
-/* A night-shift dyno lab: the bench in 3D with its gauges, a console where the agent drives a phone, then the tool rack. One dark world, in the app's Nocturne colors. --f-display and --f-mono come from the fonts of astro.config.ts. */
-:root {
-  color-scheme: dark;
-  --floor: #090a14;
-  --panel: #11132a;
-  --line: #272b52;
-  --fg: #eceefb;
-  --muted: #9aa0c6;
-  --blue: #3358f0;
-  --blue-lt: #7ea2ff;
-  --magenta: #c92aa0;
-  --amber: #ffbe3d;
-  --green: #5fd3a6;
-  --f-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
+/* A dyno lab: the bench in 3D with its dials, the story of a request, a console where the agent drives a phone, the tool rack, the Mac app and the source. Its colours are tokens.css's, and --f-display and --f-mono come from the fonts of astro.config.ts. */
 * {
   box-sizing: border-box;
 }
@@ -83,22 +69,23 @@ nav.top .gh {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--amber);
+  margin-bottom: 14px;
 }
 h1 {
   font: 800 clamp(38px, 6vw, 72px)/0.95 var(--f-display);
   letter-spacing: -0.035em;
-  margin: 12px 0 16px;
+  margin: 6px 0 16px;
   text-wrap: balance;
 }
 h1 em {
   font-style: normal;
-  color: var(--magenta);
+  color: var(--magenta-lt);
 }
 .lede {
-  color: #c6cbea;
-  max-width: 46ch;
-  margin: 0 0 22px;
-  font-size: 18px;
+  max-width: 40ch;
+  margin: 0 0 18px;
+  font-size: 20px;
+  line-height: 1.4;
 }
 .install {
   display: inline-flex;
@@ -113,7 +100,7 @@ h1 em {
 }
 .install::before {
   content: '$';
-  color: var(--magenta);
+  color: var(--magenta-lt);
 }
 .install code {
   overflow-x: auto;
@@ -140,13 +127,9 @@ h1 em {
   border-radius: 22px;
   overflow: hidden;
   background:
-    radial-gradient(
-      70% 55% at 50% 100%,
-      color-mix(in oklab, var(--blue) 35%, transparent),
-      transparent 70%
-    ),
-    repeating-linear-gradient(90deg, transparent 0 39px, #ffffff08 39px 40px),
-    repeating-linear-gradient(0deg, transparent 0 39px, #ffffff08 39px 40px), #0c0e20;
+    radial-gradient(70% 55% at 50% 100%, var(--glow), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 39px, var(--grid) 39px 40px),
+    repeating-linear-gradient(0deg, transparent 0 39px, var(--grid) 39px 40px), var(--panel);
 }
 .stage {
   display: grid;
@@ -173,44 +156,12 @@ model-viewer#dino {
 model-viewer#dino.hop {
   transform: translateY(-18px);
 }
-.gauges {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  padding: 0 14px 14px;
-}
-.gauge {
-  background: #0a0c1d;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 8px 8px 10px;
-  text-align: center;
-}
-.gauge svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.gauge .v {
-  font: 700 18px var(--f-mono);
-  font-variant-numeric: tabular-nums;
-}
-.gauge .l {
-  font: 400 11px var(--f-mono);
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.needle {
-  transform-origin: 60px 60px;
-  transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-}
 .stripes {
   position: absolute;
   inset: auto 0 0 0;
   height: 6px;
-  background: repeating-linear-gradient(135deg, var(--amber) 0 12px, #0c0e20 12px 24px);
-  opacity: 0.7;
+  background: repeating-linear-gradient(135deg, var(--amber-fill) 0 12px, var(--frame) 12px 24px);
+  opacity: 0.8;
 }
 
 /* console: scenario player */
@@ -246,6 +197,7 @@ section .sub {
 .chip[aria-pressed='true'] {
   background: var(--blue);
   border-color: var(--blue);
+  color: var(--on-accent);
 }
 .chip:disabled {
   opacity: 0.5;
@@ -270,12 +222,12 @@ section .sub {
   max-width: 100%;
   aspect-ratio: 9 / 19;
   border-radius: 38px;
-  border: 10px solid #1c1f3d;
-  background: #f7f5f2;
+  border: 10px solid var(--frame);
+  background: var(--app);
   position: relative;
   overflow: hidden;
-  color: #1b1b1f;
-  box-shadow: 0 30px 60px -30px #000;
+  color: var(--app-fg);
+  box-shadow: 0 30px 60px -34px #14163a99;
 }
 .phone .status {
   display: flex;
@@ -298,8 +250,8 @@ section .sub {
 .cart {
   position: relative;
   font: 600 12px var(--f-ui);
-  background: #1b1b1f;
-  color: #fff;
+  background: var(--app-fg);
+  color: var(--on-accent);
   border-radius: 999px;
   padding: 4px 10px;
 }
@@ -308,7 +260,7 @@ section .sub {
   grid-template-columns: 44px 1fr auto;
   gap: 10px;
   align-items: center;
-  background: #fff;
+  background: var(--app-card);
   border-radius: 14px;
   padding: 8px;
   box-shadow: 0 1px 0 #0001;
@@ -324,12 +276,13 @@ section .sub {
   font-size: 13px;
 }
 .item small {
-  color: #6b6b75;
+  color: var(--app-muted);
 }
 .add {
+  position: relative;
   font: 700 12px var(--f-ui);
-  background: #1b1b1f;
-  color: #fff;
+  background: var(--app-fg);
+  color: var(--on-accent);
   border: 0;
   border-radius: 999px;
   padding: 6px 10px;
@@ -339,8 +292,8 @@ section .sub {
   text-align: center;
   margin-top: 4px;
   font: 700 14px var(--f-ui);
-  background: var(--magenta);
-  color: #fff;
+  background: var(--app-buy);
+  color: var(--on-accent);
   border: 0;
   border-radius: 14px;
   padding: 12px;
@@ -361,12 +314,14 @@ section .sub {
   top: -9px;
   font: 700 9px var(--f-mono);
   background: var(--blue);
-  color: #fff;
+  color: var(--on-accent);
   padding: 1px 4px;
   border-radius: 4px;
 }
 .tapdot {
   position: absolute;
+  left: 50%;
+  top: 50%;
   width: 34px;
   height: 34px;
   margin: -17px 0 0 -17px;
@@ -390,7 +345,7 @@ section .sub {
   left: 8px;
   right: 8px;
   top: -90px;
-  background: #ffffffee;
+  background: var(--app-card);
   border-radius: 16px;
   padding: 10px 12px;
   box-shadow: 0 10px 30px -10px #0006;
@@ -417,7 +372,7 @@ section .sub {
   opacity: 1;
 }
 .overlay div {
-  background: #fff;
+  background: var(--app-card);
   border-radius: 16px;
   padding: 14px;
   width: 80%;
@@ -432,7 +387,7 @@ section .sub {
 
 /* the terminal */
 .term {
-  background: #070814;
+  background: var(--term);
   border: 1px solid var(--line);
   border-radius: 16px;
   overflow: hidden;
@@ -455,22 +410,22 @@ section .sub {
   font: 400 13px/1.7 var(--f-mono);
   white-space: pre-wrap;
   word-break: break-word;
-  color: #cfd3f0;
+  color: var(--term-fg);
 }
-.term .k {
-  color: var(--magenta);
+:is(.term, .slog) .k {
+  color: var(--magenta-lt);
 }
-.term .t {
+:is(.term, .slog) .t {
   color: var(--amber);
 }
-.term .r {
+:is(.term, .slog) .r {
   color: var(--blue-lt);
 }
-.term .ok {
+:is(.term, .slog) .ok {
   color: var(--green);
 }
-.term .d {
-  color: #6f7499;
+:is(.term, .slog) .d {
+  color: var(--muted);
 }
 .ask {
   color: var(--fg);
@@ -505,13 +460,14 @@ section .sub {
 .tool code {
   font: 400 12px var(--f-mono);
   color: var(--blue-lt);
+  overflow-wrap: anywhere;
 }
 .safe {
   margin-top: 22px;
   border: 1px dashed var(--line);
   border-radius: 16px;
   padding: 16px;
-  color: #c6cbea;
+  color: var(--soft);
   font-size: 15px;
 }
 
@@ -566,7 +522,6 @@ footer {
   border-top: 1px solid var(--line);
 }
 @media (prefers-reduced-motion: reduce) {
-  .needle,
   model-viewer#dino,
   .banner,
   .overlay {

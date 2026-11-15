@@ -1,5 +1,6 @@
 import { MODEL_VIEWER } from '../../site.ts';
-import { turn, type Step } from './scenarios.ts';
+import { turn } from './dials.ts';
+import type { Step } from './scenarios.ts';
 
 // the 3D viewer comes once the page has loaded: until then each model shows its poster
 addEventListener('load', () => {

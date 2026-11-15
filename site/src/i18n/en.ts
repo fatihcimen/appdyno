@@ -18,7 +18,7 @@ export const en = {
   hero: {
     kicker: 'MCP server · CLI · Mac app',
     title: 'Put your app on the <em>dyno</em>.',
-    lede: 'Let an AI agent drive, test and measure your mobile app: iOS simulators, Android emulators and real phones, from one MCP server.',
+    lede: 'Reproduce a mobile bug, find its cause with measurements, and turn the same flow into a test that runs again.',
     copy: 'Copy',
     copied: 'Copied',
   },
@@ -118,6 +118,9 @@ export const en = {
       },
     ],
     safe: 'Safe by default: appdyno never resets or erases a phone, asks a person before anything that destroys data, and hides the secrets you name. No cloud, no telemetry, MIT.',
+  },
+  dials: {
+    example: 'The dials show an example session.',
   },
   faq: {
     title: 'Questions',
