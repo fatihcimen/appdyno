@@ -6,11 +6,12 @@ import { linkedClient } from '@appdyno/testing/calls.js';
 
 type Result = { isError?: boolean; content: { text?: string }[] };
 
-/** A device like an iPhone's, whose system words no read of the app has. */
-async function connect(words: string[]) {
+/** A device whose system words no read of the app has: an iPhone's, or with `virtual` a simulator's. */
+async function connect(words: string[], virtual = false) {
   const device = new FakeDevice();
   let looks = 0;
   Object.assign(device, {
+    virtual,
     systemWords: () => {
       looks++;
       return Promise.resolve(words);
@@ -37,6 +38,12 @@ describe('a prompt over the app that no read of it has', () => {
     const before = looks();
     expect(await call('screenshot')).toContain('image');
     expect(looks()).toBe(before);
+  });
+
+  it("is said with a simulator's picture too, where the look past the app costs no seconds", async () => {
+    const { call, looks } = await connect(['Face ID'], true);
+    expect(await call('screenshot')).toContain('needs a person: Face ID');
+    expect(looks()).toBe(1);
   });
 
   it('is said by an action that changed nothing, which is all it leaves', async () => {

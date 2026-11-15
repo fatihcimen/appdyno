@@ -337,8 +337,9 @@ export function readOps(
           maxPx: maxPxOf(size, width, points) ?? SHOT_PX,
         });
         const look = await s.current().catch(() => undefined);
-        // a sheet over the app is in the picture: no look past the app, which took 4.5 s of an iPhone's after typing
-        const fg = look ? await noticed(s, look, false) : '';
+        // a sheet over the app is in the picture: no look past the app on a phone, which took 4.5 s of an iPhone's after
+        // typing. A simulator's is quick, and its reads by the helper have no sheet in them: a Face ID sheet went unsaid
+        const fg = look ? await noticed(s, look, s.device.virtual) : '';
         s.pictured(layout ?? '');
         const at = placed(size, meta.w, meta.h);
         return reply(
