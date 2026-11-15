@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { encodePng, type Device, type Mirror } from '@appdyno/core';
+import { encodePng, type AddedMedia, type Device, type Mirror } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseFlow } from '@appdyno/flows';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
@@ -42,6 +42,7 @@ describe('screenshot, visual and setting steps', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   const flowFile = (body: string, name = 'a.flow') => {
@@ -236,7 +237,9 @@ stop background
   });
 
   describe('a test run', () => {
-    const test = (o: { retries?: number; iterations?: number } = {}) => {
+    const test = (
+      o: { retries?: number; iterations?: number; log?: (line: string) => void } = {},
+    ) => {
       const artifacts = join(dir, 'artifacts');
       return flowsFor(context()).test({
         files: flowFiles([join(dir, 'flows')]),
@@ -261,6 +264,56 @@ stop background
       const kept = join(dir, 'artifacts', device.serial);
       expect(existsSync(join(kept, 'a.flow', 'dark.png'))).toBe(true);
       expect(existsSync(join(kept, 'b.flow', 'plain.png'))).toBe(true);
+    });
+
+    /** A device that takes out what it added, as an Android one: each of the two said in `seen`, `left` not its to delete. */
+    const takingMedia = (seen: string[], left: string[] = []) => {
+      const root = realpathSync(dir);
+      vi.spyOn(process, 'cwd').mockReturnValue(root);
+      writeFileSync(join(root, 'photo.png'), 'x');
+      let held: ReturnType<AddedMedia['holder']>;
+      const addedMedia: AddedMedia = {
+        owner: undefined,
+        holder: () => held,
+        takeOut: () => {
+          seen.push('photo taken out');
+          held = undefined;
+          return Promise.resolve({ removed: left.length > 0 ? [] : ['photo.png'], left });
+        },
+      };
+      Object.assign(device, {
+        addedMedia,
+        addMedia: () => {
+          seen.push('photo added');
+          held = { owner: addedMedia.owner };
+          return Promise.resolve(undefined);
+        },
+      });
+    };
+
+    it('takes out the photos a file added before the next file’s first step', async () => {
+      const seen = settingsOf({ dark_mode: 'off' });
+      takingMedia(seen);
+      flowFile('setting media photo.png', 'a.flow');
+      flowFile('screenshot plain', 'b.flow');
+      const lines: string[] = [];
+      expect((await test({ log: (l) => lines.push(l) })).passed).toBe(true);
+      expect(seen).toEqual(['photo added', 'photo taken out', 'picture in dark_mode off']);
+      expect(lines.join('\n')).not.toContain('could not put back');
+    });
+
+    it('says a photo it could not take out, and takes nothing where a file added none', async () => {
+      const seen = settingsOf({ dark_mode: 'off' });
+      takingMedia(seen, ['/sdcard/Pictures/appdyno/photo.png']);
+      flowFile('setting media photo.png', 'a.flow');
+      flowFile('screenshot plain', 'b.flow');
+      const lines: string[] = [];
+      expect((await test({ log: (l) => lines.push(l) })).passed).toBe(true);
+      expect(lines).toContain(
+        '  could not put back after a.flow: media: left /sdcard/Pictures/appdyno/photo.png in the library: changed since it was added',
+      );
+      // b.flow added nothing: nothing is asked of the library after it
+      expect(seen.filter((x) => x === 'photo taken out')).toHaveLength(1);
     });
 
     it('puts back after each attempt of a file it retries, its failure’s picture taken first', async () => {

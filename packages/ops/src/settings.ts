@@ -237,12 +237,7 @@ async function restoreAll(s: Session) {
   );
   const holds = s.device.holds;
   const held = holds && !heldElsewhere(holds.holder()?.owner) ? holds.letGo() : [];
-  const media = s.device.addedMedia;
-  const added = media?.holder();
-  const out =
-    media && added && !heldElsewhere(added.owner)
-      ? await mediaRestored(media)
-      : { done: [], failed: [] };
+  const out = await mediaRestored(s.device.addedMedia, (owner) => !heldElsewhere(owner));
   const notRestored = [...failed, ...out.failed];
   const t =
     [

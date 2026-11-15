@@ -10,6 +10,7 @@ import {
   junitXml,
 } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
+import { mediaRestored } from '../media.js';
 import type { Session } from '../session.js';
 import { restoreConditions } from '../settings.js';
 import { ToolError } from '../tool.js';
@@ -99,12 +100,15 @@ export async function runTests(
   const log = o.log ?? (() => undefined);
   const retries = o.retries ?? 0;
 
-  /** What a file changed on the device goes back once it has run, so that its dark mode is no other file's. */
+  /**
+   * What a file changed on the device goes back once it has run, so that its dark mode is no other file's, and the
+   * photos it added come out where the device takes them out.
+   */
   const putBack = async (s: Session, label: string) => {
-    const { failed } = await restoreConditions(s, isThisProcess).catch((e: unknown) => ({
-      failed: [(e as Error).message],
-    }));
-    for (const f of failed) log(`  could not put back after ${label}: ${f}`);
+    const not = (e: unknown) => ({ failed: [(e as Error).message] });
+    const { failed } = await restoreConditions(s, isThisProcess).catch(not);
+    const media = await mediaRestored(s.device.addedMedia, isThisProcess).catch(not);
+    for (const f of [...failed, ...media.failed]) log(`  could not put back after ${label}: ${f}`);
   };
 
   /** One go at a file: its pictures in `kept`, a retry's evidence in a folder of its own. */

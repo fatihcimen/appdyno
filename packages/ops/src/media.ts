@@ -1,6 +1,6 @@
 import { readdirSync, realpathSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
-import type { AddedMedia } from '@appdyno/core';
+import type { AddedMedia, Owner } from '@appdyno/core';
 import { ToolError } from './tool.js';
 
 /** What changed on the device since it was added: not this tool's to delete. */
@@ -17,8 +17,16 @@ export async function takeOutMedia(media: AddedMedia) {
   return removed.length;
 }
 
-/** The same at a restore: what its answer says was done, and what it could not restore, as a condition's. */
-export async function mediaRestored(media: AddedMedia) {
+/**
+ * The same at a restore, where `whose` takes the one who holds it: what its answer says was done, and what it could not
+ * restore, as a condition's. Nothing of either on a device that takes nothing out, as a simulator, or holds nothing.
+ */
+export async function mediaRestored(
+  media: AddedMedia | undefined,
+  whose: (owner: Owner | undefined) => boolean,
+): Promise<{ done: string[]; failed: string[] }> {
+  const held = media?.holder();
+  if (!media || !held || !whose(held.owner)) return { done: [], failed: [] };
   const { removed, left } = await media.takeOut();
   const n = removed.length;
   return {
