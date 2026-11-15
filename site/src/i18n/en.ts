@@ -27,7 +27,7 @@ export const en = {
   },
   bench: {
     label: 'The appdyno test bench: a small dragon looks after a phone on a dynamometer',
-    dragon: 'A small blue dragon with a cyan belly and magenta wings, standing on the bench',
+    dragon: 'A small navy dragon with a cyan belly and magenta wings, standing on the bench',
     phone: 'A smartphone clamped on a dynamometer test bench with gauges',
     launch: 'cold launch',
     frames: 'frames / s',

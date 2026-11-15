@@ -23,7 +23,6 @@ export const CLIPS = [
   'idle',
   'walk',
   'run',
-  'jump',
   'look',
   'scratch',
   'sit',

@@ -115,7 +115,7 @@ test('a tap on the stage is one breath toward it, and taps in a row do not stack
 test('a tap on the dragon startles it into a hop, and the next one gets a breath', () => {
   const mind = new Mind(perch, traits());
   mind.tap(1);
-  assert.deepEqual(mind.deeds.splice(0), [{ hop: 2.2 }, { clip: 'jump' }]);
+  assert.deepEqual(mind.deeds.splice(0), [{ hop: 2.2 }, { clip: 'takeoff' }]);
   mind.tap(8);
   const [deed] = mind.deeds.splice(0);
   assert.ok(deed && 'puff' in deed && !deed.aim);
@@ -191,9 +191,9 @@ const clips = (deeds: [number, Deed][]) =>
 test('to a near perch it hops, to a far one it flies, and it lands on the edge', () => {
   const near = { left: 760, right: 900, y: 330 };
   const far = { left: 200, right: 600, y: 1400 };
-  for (const [to, way, clip] of [
-    [near, 'hop', 'jump'],
-    [far, 'fly', 'takeoff'],
+  for (const [to, way] of [
+    [near, 'hop'],
+    [far, 'fly'],
   ] as const) {
     const mind = new Mind(
       perch,
@@ -210,8 +210,10 @@ test('to a near perch it hops, to a far one it flies, and it lands on the edge',
       if (seen && mind.mode === 'idle' && !mind.atHome) assert.equal(mind.place.y, to.y);
     });
     assert.ok(seen, `it left by a ${way}`);
-    assert.ok(clips(deeds).includes(clip));
-    assert.equal(clips(deeds).includes('land'), way === 'fly');
+    assert.ok(
+      clips(deeds).includes('takeoff') && clips(deeds).includes('land'),
+      'a flap up and one down',
+    );
     assert.ok(
       deeds.some(([, deed]) => 'thud' in deed),
       'the landing is felt',

@@ -53,8 +53,8 @@ const FAILS = 0.4;
 const OWN = ['look', 'scratch', 'stroll', 'sit', 'puff', 'roam'] as const;
 /** A perch nearer than this many body heights is a hop away; a farther one is a flight. */
 const HOP = 3;
-/** A hop's time in the air, and the crouch before it; a flight's speed in heights a second, and its crouch. */
-const HOP_TIME = 0.5;
+/** A hop's time in the air, long enough for a flap up and one down, and the crouch before it; a flight's speed in heights a second, and its crouch. */
+const HOP_TIME = 0.7;
 const HOP_CROUCH = 0.14;
 const FLIGHT_SPEED = 4;
 const FLIGHT_CROUCH = 0.25;
@@ -183,8 +183,9 @@ export class Mind {
     this.#startled = !aim && !this.#startled;
     if (this.#startled) {
       this.mode = 'idle';
-      this.deeds.push({ hop: 2.2 }, { clip: 'jump' });
-      this.#busy = now + this.traits.lengths.jump;
+      // the hop is its body's own, under gravity: the wings give it a flap
+      this.deeds.push({ hop: 2.2 }, { clip: 'takeoff' });
+      this.#busy = now + 0.9;
     } else this.#breathe(now, this.#random() < FAILS ? 'smoke' : 'fire', aim);
     this.#cool = this.#busy + COOL;
     this.#next = this.#busy + PAUSE;
@@ -283,9 +284,9 @@ export class Mind {
           time: HOP_TIME,
           // over the higher of the two edges
           arc: 0.5 * size + Math.max(0, from.y - land.y) / 2,
-          down: true,
+          down: false,
         };
-    this.deeds.push({ clip: flies ? 'takeoff' : 'jump' });
+    this.deeds.push({ clip: 'takeoff' });
   }
 
   #travel(dt: number, now: number) {

@@ -30,7 +30,7 @@ export const tr: Words = {
   bench: {
     label: 'appdyno test tezgâhı: küçük bir ejderha dinamometredeki telefona göz kulak oluyor',
     dragon:
-      'Tezgâhın üzerinde duran; mavi gövdeli, camgöbeği karınlı, macenta kanatlı küçük bir ejderha',
+      'Tezgâhın üzerinde duran; lacivert gövdeli, camgöbeği karınlı, macenta kanatlı küçük bir ejderha',
     phone: 'Göstergeli bir dinamometre tezgâhına bağlanmış bir akıllı telefon',
     launch: 'soğuk açılış',
     frames: 'kare / sn',
