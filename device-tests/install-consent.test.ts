@@ -257,7 +257,7 @@ describe.skipIf(!serial || asks)('a device where nothing asks', () => {
         const t = Date.now();
         const r = await call('app', { action: 'install', path: APK });
         ms.push(Date.now() - t);
-        expect(r.text).toBe(`installed ${APK}`);
+        expect(r.text).toBe(`installed ${APP} from ${APK}`);
         ctx.close();
       }
       return stats(ms, 0).p50;
