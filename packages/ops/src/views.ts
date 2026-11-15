@@ -1,4 +1,4 @@
-import { frameworkOfViews, viewLines, type FrameworkLabel } from '@appdyno/core';
+import { frameworkOfViews, NoViewProbe, viewLines, type FrameworkLabel } from '@appdyno/core';
 import type { Session } from './session.js';
 import { reply, ToolError } from './tool.js';
 
@@ -17,7 +17,11 @@ export async function readViews(s: Session, clean: (t: string) => string, raw: b
       'UNSUPPORTED',
       'screen without views reads its accessibility tree',
     );
-  const tree = await s.device.views();
+  const tree = await s.device.views().catch((e: unknown) => {
+    if (e instanceof NoViewProbe)
+      throw new ToolError(e.message, e.code, 'launch_app restart:true probe:true puts it in');
+    throw e;
+  });
   const framework = frameworkOfViews(tree, s.device.platform);
   const said = framework && frameworkSaid(framework);
   const lines = viewLines(tree, clean);

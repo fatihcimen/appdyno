@@ -1,3 +1,4 @@
+import { DeviceError } from '@appdyno/protocol';
 import type { FrameworkLabel } from './framework-label.js';
 import type { Rect } from './screen/elements.js';
 
@@ -33,3 +34,10 @@ export type ViewTree = {
   /** What to know in reading them, a line each: a place that is the layout's, not the screen's, or what is left out. */
   notes?: string[];
 };
+
+/** A read of the views of an app with no view probe in it: what puts one in is for the operations to say. */
+export class NoViewProbe extends DeviceError {
+  constructor(message: string) {
+    super('UNSUPPORTED', message);
+  }
+}

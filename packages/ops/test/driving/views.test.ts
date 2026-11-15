@@ -1,4 +1,4 @@
-import type { ViewTree } from '@appdyno/core';
+import { NoViewProbe, type ViewTree } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './shared.js';
@@ -26,6 +26,16 @@ describe('the native views of a screen', () => {
     const { call } = await connect(new FakeDevice());
     expect((await call('screen', { views: true })).text).toBe(
       'UNSUPPORTED: this device gives no native view hierarchy\nhint: screen without views reads its accessibility tree',
+    );
+  });
+
+  it('are refused, with what puts the probe in, where the app has none that its views need', async () => {
+    const d = Object.assign(new FakeDevice(), {
+      views: () => Promise.reject(new NoViewProbe('dev.app runs without the view probe')),
+    });
+    const { call } = await connect(d);
+    expect((await call('screen', { views: true })).text).toBe(
+      'UNSUPPORTED: dev.app runs without the view probe\nhint: launch_app restart:true probe:true puts it in',
     );
   });
 
