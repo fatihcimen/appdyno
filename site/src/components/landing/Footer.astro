@@ -1,0 +1,22 @@
+---
+import type { Words } from '../../i18n/index.ts';
+import { NPM, REPO, pathIn, type Lang } from '../../site.ts';
+
+interface Props {
+  lang: Lang;
+  t: Words;
+}
+const { lang, t } = Astro.props;
+const changelog = `${REPO}/blob/main/CHANGELOG${lang === 'tr' ? '.tr' : ''}.md`;
+---
+
+<footer class="band">
+  <div class="inner">
+    <p>
+      appdyno · <a href={pathIn(lang, '/docs/')}>{t.footer.docs}</a> · <a href={NPM}
+        >{t.footer.npm}</a
+      > · <a href={REPO}>{t.footer.github}</a> · <a href={changelog}>{t.footer.changelog}</a>
+    </p>
+    <p>{t.footer.analytics}</p>
+  </div>
+</footer>

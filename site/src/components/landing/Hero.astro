@@ -1,0 +1,27 @@
+---
+import type { Words } from '../../i18n/index.ts';
+import { clientsLine } from '../../readme.ts';
+import { INSTALL, type Lang } from '../../site.ts';
+import Bench from './Bench.astro';
+
+interface Props {
+  lang: Lang;
+  t: Words;
+}
+const { lang, t } = Astro.props;
+const { hero } = t;
+---
+
+<header class="hero">
+  <div>
+    <div class="kicker">{hero.kicker}</div>
+    <h1 set:html={hero.title} />
+    <p class="lede">{hero.lede}</p>
+    <div class="install">
+      <code>{INSTALL}</code>
+      <button type="button" data-copy={INSTALL} data-copied={hero.copied}>{hero.copy}</button>
+    </div>
+    <div class="clients">{clientsLine(lang)}</div>
+  </div>
+  <Bench t={t} />
+</header>

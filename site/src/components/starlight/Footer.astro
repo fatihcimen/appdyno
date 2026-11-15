@@ -1,0 +1,19 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+import { words } from '../../i18n/index.ts';
+import { langOf } from '../../site.ts';
+
+const t = words[langOf(Astro.url.pathname)];
+---
+
+<Default><slot /></Default>
+<p class="counted">{t.footer.analytics}</p>
+
+<style>
+  .counted {
+    margin-top: 1.5rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+    text-align: center;
+  }
+</style>

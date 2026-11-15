@@ -1,0 +1,24 @@
+---
+import type { Words } from '../../i18n/index.ts';
+
+interface Props {
+  t: Words;
+}
+const { faq } = Astro.props.t;
+---
+
+<section class="band faq" id="faq">
+  <div class="inner">
+    <h2>{faq.title}</h2>
+    <dl>
+      {
+        faq.items.map((item) => (
+          <div>
+            <dt>{item.q}</dt>
+            <dd>{item.a}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </div>
+</section>

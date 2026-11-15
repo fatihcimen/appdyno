@@ -1,0 +1,66 @@
+---
+import pkg from '../../../../packages/appdyno/package.json';
+import { words } from '../../i18n/index.ts';
+import Base from '../../layouts/Base.astro';
+import { NPM, REPO, SITE, SHARE_IMAGE, pathIn, type Lang } from '../../site.ts';
+import Console from './Console.astro';
+import Faq from './Faq.astro';
+import Footer from './Footer.astro';
+import Hero from './Hero.astro';
+import Nav from './Nav.astro';
+import ToolRack from './ToolRack.astro';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = words[lang];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'appdyno',
+    description: t.meta.description,
+    url: SITE + pathIn(lang, '/'),
+    image: SITE + SHARE_IMAGE.path,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'macOS',
+    softwareVersion: pkg.version,
+    license: 'https://opensource.org/license/mit',
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    downloadUrl: NPM,
+    sameAs: [REPO, NPM],
+    inLanguage: lang,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: t.faq.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+---
+
+<Base lang={lang} title={t.meta.title} description={t.meta.description} path="/" jsonLd={jsonLd}>
+  <div class="band">
+    <div class="inner">
+      <Nav lang={lang} t={t} />
+      <Hero lang={lang} t={t} />
+    </div>
+  </div>
+  <main>
+    <Console t={t} />
+    <ToolRack t={t} />
+    {/* The sections of the fuller landing page go here, each a component with its words in i18n/: the scroll story, the Mac app, open source. */}
+    <Faq t={t} />
+  </main>
+  <Footer lang={lang} t={t} />
+</Base>
+<script>
+  import './landing.client.ts';
+</script>

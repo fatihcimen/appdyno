@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - site
 # its postinstall only checks the binary its platform package already put in place
 allowBuilds:
   esbuild: false

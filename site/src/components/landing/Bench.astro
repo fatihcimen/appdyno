@@ -1,0 +1,94 @@
+---
+import { getImage } from 'astro:assets';
+import benchPoster from '../../assets/bench.webp';
+import dinoPoster from '../../assets/dino.webp';
+import type { Words } from '../../i18n/index.ts';
+import { READINGS, turn, type Gauge } from './scenarios.ts';
+
+interface Props {
+  t: Words;
+}
+const { bench } = Astro.props.t;
+const poster = async (src: ImageMetadata) => getImage({ src, format: 'webp', width: 640 });
+const models = [
+  {
+    id: 'dino',
+    alt: bench.dino,
+    poster: await poster(dinoPoster),
+    orbit: '115deg 80deg auto',
+  },
+  {
+    id: 'bench',
+    alt: bench.phone,
+    poster: await poster(benchPoster),
+    orbit: '65deg 75deg auto',
+  },
+];
+const gauges: [Gauge, string, string][] = [
+  ['launch', bench.launch, '#ffbe3d'],
+  ['frames', bench.frames, '#5fd3a6'],
+  ['memory', bench.memory, '#7ea2ff'],
+];
+---
+
+<div class="bench" role="group" aria-label={bench.label}>
+  <div class="stage">
+    {
+      models.map((model) => (
+        <model-viewer
+          id={model.id}
+          src={`/models/${model.id}.glb`}
+          alt={model.alt}
+          camera-controls
+          disable-zoom
+          interaction-prompt="none"
+          camera-orbit={model.orbit}
+          shadow-intensity="1"
+          exposure="1.1"
+        >
+          {/* the page's picture until the viewer is here, and the viewer's poster after */}
+          <img
+            slot="poster"
+            src={model.poster.src}
+            width={model.poster.attributes.width}
+            height={model.poster.attributes.height}
+            alt={model.alt}
+            decoding="async"
+          />
+        </model-viewer>
+      ))
+    }
+  </div>
+  <div class="gauges">
+    {
+      gauges.map(([id, label, color]) => (
+        <div class="gauge">
+          <svg viewBox="0 0 120 70" aria-hidden="true">
+            <path
+              d="M10 60 A50 50 0 0 1 110 60"
+              fill="none"
+              stroke="#272b52"
+              stroke-width="8"
+              stroke-linecap="round"
+            />
+            <line
+              class="needle"
+              id={`n-${id}`}
+              x1="60"
+              y1="60"
+              x2="60"
+              y2="18"
+              stroke={color}
+              stroke-width="4"
+              stroke-linecap="round"
+              style={`transform: ${turn(READINGS[id][1])}`}
+            />
+          </svg>
+          <div class="v" id={`v-${id}`}>{READINGS[id][0]}</div>
+          <div class="l">{label}</div>
+        </div>
+      ))
+    }
+  </div>
+  <div class="stripes"></div>
+</div>

@@ -1,0 +1,34 @@
+---
+import { words } from '../i18n/index.ts';
+import Base from '../layouts/Base.astro';
+import { LANGS, pathIn } from '../site.ts';
+
+// GitHub Pages serves this one file for every address it has no page for, so it says it in each
+// language, and the script below leaves only the one of the address asked for
+const title = LANGS.map((lang) => words[lang].notFound.title).join(' · ');
+---
+
+<Base lang="en" title={`${title} | appdyno`} description={words.en.notFound.text}>
+  <main class="band missing">
+    {
+      LANGS.map((lang) => (
+        <section class="inner" lang={lang}>
+          <h1>{words[lang].notFound.title}</h1>
+          <p class="lede">{words[lang].notFound.text}</p>
+          <p>
+            <a href={pathIn(lang, '/')}>{words[lang].notFound.home}</a> ·{' '}
+            <a href={pathIn(lang, '/docs/')}>{words[lang].notFound.docs}</a>
+          </p>
+          <p class="counted">{words[lang].footer.analytics}</p>
+        </section>
+      ))
+    }
+  </main>
+  <script is:inline>
+    {
+      const lang = /^\/tr(\/|$)/.test(location.pathname) ? 'tr' : 'en';
+      document.documentElement.lang = lang;
+      for (const said of document.querySelectorAll('main > [lang]')) said.hidden = said.lang !== lang;
+    }
+  </script>
+</Base>

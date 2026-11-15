@@ -1,0 +1,71 @@
+---
+import { Font } from 'astro:assets';
+import { SITE_HEAD } from '../head.ts';
+import { words } from '../i18n/index.ts';
+import { LANGS, SITE, pathIn, type Lang } from '../site.ts';
+import '../styles/landing.css';
+
+interface Props {
+  lang: Lang;
+  title: string;
+  description: string;
+  /** The page's path with no language. A page with none, as the 404, is in no index. */
+  path?: string;
+  jsonLd?: object[];
+}
+const { lang, title, description, path, jsonLd = [] } = Astro.props;
+const urlIn = (l: Lang) => SITE + pathIn(l, path ?? '/');
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {
+      path ? (
+        <>
+          <link rel="canonical" href={urlIn(lang)} />
+          {LANGS.map((l) => (
+            <link rel="alternate" hreflang={l} href={urlIn(l)} />
+          ))}
+          <link rel="alternate" hreflang="x-default" href={urlIn('en')} />
+          <link rel="sitemap" href="/sitemap-index.xml" />
+          <meta property="og:url" content={urlIn(lang)} />
+        </>
+      ) : (
+        <meta name="robots" content="noindex" />
+      )
+    }
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="appdyno" />
+    <meta property="og:locale" content={words[lang].meta.locale} />
+    {
+      LANGS.filter((l) => l !== lang).map((l) => (
+        <meta property="og:locale:alternate" content={words[l].meta.locale} />
+      ))
+    }
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {SITE_HEAD.map(({ tag: Tag, attrs }) => <Tag {...attrs} />)}
+    <Font cssVariable="--f-display" preload />
+    <Font cssVariable="--f-mono" />
+    {
+      jsonLd.map((thing) => (
+        <script
+          type="application/ld+json"
+          is:inline
+          set:html={JSON.stringify(thing).replaceAll('<', '\\u003c')}
+        />
+      ))
+    }
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

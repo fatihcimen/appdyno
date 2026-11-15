@@ -1,0 +1,24 @@
+{
+  "name": "@appdyno/site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "appdyno.dev: the landing page and the docs, built from docs/ with Astro and Starlight.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro build && cp dist/sitemap-index.xml dist/sitemap.xml",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro sync && pnpm -w exec tsc -p site/tsconfig.json --noEmit && node --test",
+    "check:dist": "node scripts/check-dist.mjs",
+    "models": "node scripts/compress-models.mjs"
+  },
+  "devDependencies": {
+    "@astrojs/starlight": "^0.43.1",
+    "@gltf-transform/cli": "^4.5.1",
+    "astro": "^7.4.12"
+  }
+}

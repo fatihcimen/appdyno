@@ -1,0 +1,21 @@
+---
+import type { Words } from '../../i18n/index.ts';
+import { REPO, pathIn, type Lang } from '../../site.ts';
+
+interface Props {
+  lang: Lang;
+  t: Words;
+}
+const { lang, t } = Astro.props;
+const other: Lang = lang === 'en' ? 'tr' : 'en';
+---
+
+<nav class="top" aria-label={t.nav.label}>
+  <a class="brand" href={pathIn(lang, '/')}>appdyno</a>
+  <a href="#console">{t.nav.console}</a>
+  <a href="#tools">{t.nav.tools}</a>
+  <a href="#faq">{t.nav.faq}</a>
+  <a href={pathIn(lang, '/docs/')}>{t.nav.docs}</a>
+  <a href={pathIn(other, '/')} hreflang={other} lang={other}>{t.meta.other}</a>
+  <a class="gh" href={REPO}>{t.nav.github}</a>
+</nav>
