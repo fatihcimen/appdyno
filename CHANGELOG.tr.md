@@ -15,6 +15,12 @@
 - `device_setting` `media`, bir fotoğrafı ya da videoyu, ya da sunucunun klasöründeki bir klasörün fotoğraf ve videolarını cihazın kitaplığına ekler: bir simülatörün Fotoğraflar'ına `simctl addmedia` ile, sonra kaç öğe tuttuğuyla; Android'in `Pictures/appdyno`'suna, MediaStore'a taranarak, kaçını listelediğiyle. Android'de `restore` ve oturumun sonu tam olarak gönderdiği dosyaları yolları ve boyutlarıyla siler; bir simülatörün Fotoğraflar'ında silme yoktur, bir iPhone da reddeder.
 - `background` ile `terminate_app`, bir uygulamayı sistemin bellek için arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır: ana ekran, önden çıktıktan sonra durumunu kaydetmesi için 1,5 s, sonra işlemi öldürülür; hâlâ çalışıyorsa reddedilir. Fixture'ın kaydettiği durum bir sonraki `launch_app`'te, yeni bir işlemde, API 35 ve 36 emülatörlerinde ve bir iOS 26.5 simülatöründe geri geldi; bir başlatmada kaydedilmiş sahneyi bir kez atan bir simülatör, yeniden açılana dek bunu yapar.
 - Akışlar `stop background`, `launch probe` ve değersiz `setting shake` ile `setting memory_warning`'i kaydeder ve yeniden oynatır; bir kayıt bunların yerine düz bir durdurma yazıyor, probe'u yok sayıyor ya da ayarı atlıyordu. Maestro dışa aktarımı `background` ve `probe`'u nedeniyle reddeder.
+- Kütüphane: `appdyno/device`, cihazı doğrudan süren bir program için ikinci bir giriş noktası: `openDevice` ekranı öğeler olarak okur ve bir noktaya dokunur; `aim`, `select` ve `nameOf` araçların kullandığı dokunma noktası, seçici ve adlandırma kurallarını verir. Anlamsal sürümlemeye uyar; bir sürümün neyi değiştirebileceğini docs/reference/library.md söyler.
+- Kütüphane: `connect({ share: true })`, başka bir sürecin tuttuğu bir cihazı, bir sunucu için `--share`'in yaptığı gibi kullanır; `APPDYNO_SHARE=1` de aynısını ister.
+- Kütüphane: bir `AbortSignal` bir çağrıyı ya da bir yeniden oynatmayı durdurur (`tool(name, args, { signal })`, `replay(file, { signal })`). Çağrı `CANCELLED` ile reddedilir ve `dispatched` dokunuşun gidip gitmediğini söyler. Sırasını beklerken iptal edilen bir çağrı artık MCP üzerinden de dokunuş gönderilmediğini söyler.
+- Kütüphane: `tool(name, args, { raw: true })`, yanıta `nodes` ekler: çağrının bıraktığı ekranın ağacı, yanıtın yaptığı okumadan alınır.
+- Claude Desktop eklentisi: her sürümde `appdyno-<version>.mcpb` bulunur. appdyno'yu Claude Desktop'a terminal ve `npx` olmadan kurmak için dosyayı açın. Kurulum formu sürebileceği cihazları, dokunabileceği uygulamaları ve açabileceği bağlantıları alır; her biri isteğe bağlıdır. Dosya imzalı değildir.
+- appdyno.dev: açılış sayfasını ve belgeleri İngilizce ve Türkçe sunan bir web sitesi; yeni `site/` paketi onu `docs/` içinden derler ve GitHub Pages'e yayımlar.
 
 ### Değişenler
 
@@ -25,6 +31,7 @@
 ### Düzeltilenler
 
 - Bir iOS simülatöründe ağ ve kare probe'ları artık tek bir Objective-C sınıf adını paylaşmıyor; ikisi bir uygulamada birlikte olabilir: birlikte yüklendiklerinde çalışma zamanı ikisinden yalnızca birini çalıştırıyordu.
+- Android'de kendi kendine dönen bir afiş gibi durmadan hareket eden bir parçası olan ekran, artık okumaları bir saniye, durulmaları üç saniye tutmuyor: API 35 emülatöründe bir okuma 1.1 s'den 25 ms'ye, bir dokunuş durulmadan 4.2 s'den durularak 0.6 s'ye indi. Bütünüyle değişen bir ekran yine beklenir.
 
 ## 1.1.3
 

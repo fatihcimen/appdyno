@@ -15,6 +15,12 @@
 - `device_setting` `media` adds a photo or a video, or a folder of them inside the server's folder, to the device's library: a simulator's Photos by `simctl addmedia`, with how many it then holds, and Android's `Pictures/appdyno`, scanned into MediaStore, with how many it lists. On Android `restore` and the session's end delete exactly the files it pushed, by path and size; a simulator's Photos has no delete, and an iPhone refuses it.
 - `terminate_app` with `background` ends an app as the system ends one in the background for memory: home, 1.5 s once it has left the front to save its state, then its process killed, refused where it still runs. The fixture's saved state came back at the next `launch_app`, in a new process, on API 35 and 36 emulators and an iOS 26.5 simulator; a simulator that once discards the saved scene at a launch does so until it boots again.
 - Flows record and replay `stop background`, `launch probe`, and `setting shake` and `setting memory_warning` with no value, where a recording wrote a plain stop, ignored the probe or dropped the setting; the Maestro export refuses `background` and `probe` with the reason.
+- Library: `appdyno/device`, a second entry point for a program that drives the device itself: `openDevice` reads the screen as elements and touches a point, and `aim`, `select` and `nameOf` give the touch point, selector and naming rules the tools use. It follows semantic versioning; docs/reference/library.md says what a release may change.
+- Library: `connect({ share: true })` drives a device another process holds, as `--share` does for a server; `APPDYNO_SHARE=1` asks the same.
+- Library: an `AbortSignal` stops a call or a replay (`tool(name, args, { signal })`, `replay(file, { signal })`). It rejects with `CANCELLED`, and `dispatched` says whether its touch went out. A call cancelled while it waited its turn now says no touch was sent, over MCP too.
+- Library: `tool(name, args, { raw: true })` adds `nodes`, the tree of the screen the call left, from the read its answer made.
+- Claude Desktop extension: each release carries `appdyno-<version>.mcpb`. Open it to install appdyno in Claude Desktop, with no terminal and no `npx`. Its install form takes the devices it may drive, the apps it may touch and the links it may open, each optional. The file is not signed.
+- appdyno.dev: a website with the landing page and the docs in English and Turkish, built from `docs/` by the new `site/` package and published to GitHub Pages.
 
 ### Changed
 
@@ -25,6 +31,7 @@
 ### Fixed
 
 - On an iOS simulator, the network and frame probes no longer share one Objective-C class name, so both can be in one app: loaded together, the runtime ran one of the two.
+- On Android, a screen with a part that keeps moving by itself, such as a banner that turns, no longer holds reads for a second and settles for three: on an API 35 emulator a read went from 1.1 s to 25 ms and a tap from 4.2 s, unsettled, to 0.6 s, settled. A screen that changes as a whole is still waited for.
 
 ## 1.1.3
 
