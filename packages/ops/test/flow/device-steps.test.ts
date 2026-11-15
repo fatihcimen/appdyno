@@ -195,6 +195,46 @@ setting restore
     expect(parseFlow(text).steps).toHaveLength(6);
   });
 
+  it('records a shake, a memory warning with no level and an end in the background, and replays them so', async () => {
+    const got: string[] = [];
+    device = Object.assign(new FakeDevice(), {
+      shake: () => {
+        got.push('shake');
+        return Promise.resolve(undefined);
+      },
+      memoryWarning: (app: string, level?: string) => {
+        got.push(`memory warning to ${app}${level ? ` at ${level}` : ''}`);
+        return Promise.resolve(undefined);
+      },
+      endInBackground: (app: string) => {
+        got.push(`${app} ended in the background`);
+        return Promise.resolve(undefined);
+      },
+    });
+    const call = callerOf(context());
+    const { file, text } = await recorded(call, async () => {
+      await call('device_setting', { name: 'shake' });
+      await call('device_setting', { name: 'memory_warning' });
+      await call('device_setting', { name: 'memory_warning', value: 'RUNNING_LOW' });
+      await call('terminate_app', { background: true });
+    });
+    expect(text).toBe(`app dev.app
+
+setting shake
+setting memory_warning
+setting memory_warning RUNNING_LOW
+stop background
+`);
+    got.length = 0;
+    await call('flow', { action: 'run', file });
+    expect(got).toEqual([
+      'shake',
+      'memory warning to dev.app',
+      'memory warning to dev.app at RUNNING_LOW',
+      'dev.app ended in the background',
+    ]);
+  });
+
   describe('a test run', () => {
     const test = (o: { retries?: number; iterations?: number } = {}) => {
       const artifacts = join(dir, 'artifacts');

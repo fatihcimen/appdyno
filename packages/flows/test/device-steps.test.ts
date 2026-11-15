@@ -49,6 +49,29 @@ setting restore
     expect(body(parseFlow(text))).toEqual(body(once));
   });
 
+  it('reads a shake and a memory warning with no value, a stop in the background and a launch with the probe', () => {
+    const text = `app dev.x
+
+setting shake
+setting memory_warning
+setting memory_warning RUNNING_LOW app=dev.other
+stop background
+launch probe
+`;
+    const f = parseFlow(text);
+    expect(f.steps.map((s) => [s.action, s.args])).toEqual([
+      ['setting', { name: 'shake' }],
+      ['setting', { name: 'memory_warning' }],
+      ['setting', { name: 'memory_warning', value: 'RUNNING_LOW', app: 'dev.other' }],
+      ['stop', { background: true }],
+      ['launch', { probe: true }],
+    ]);
+    expect(flowText(f)).toBe(text);
+    const yaml = (line: string) => () => toMaestro(parseFlow(`app dev.x\n${line}\n`));
+    expect(yaml('stop background')).toThrow('Maestro YAML has no background for stop');
+    expect(yaml('launch probe')).toThrow('Maestro YAML has no probe for launch');
+  });
+
   it('reads a mask as a place or as selector words, and writes it back as it was', () => {
     expect(maskOf('0,600,1080,200')).toEqual({ x: 0, y: 600, w: 1080, h: 200 });
     expect(maskOf('id=clock')).toEqual({ id: 'clock' });

@@ -415,6 +415,28 @@ assert id=result check=text equals="Gönderildi"
       expect(stepsOf(plain.text)).toEqual(['stop', 'launch']);
     });
 
+    it('writes a launch that put the view probe in as a start with it, and replays it so', async () => {
+      const launched: unknown[] = [];
+      device.apps = {
+        viewProbe: true,
+        launchWith: (app: string, o: unknown) => {
+          launched.push([app, o]);
+          return Promise.resolve();
+        },
+      } as unknown as AppManager;
+      const call = callerOf(context());
+      const { file, text } = await recorded(call, () => call('launch_app', { probe: true }));
+      expect(text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual([
+        'stop',
+        'launch probe',
+      ]);
+      await call('flow', { action: 'run', file });
+      expect(launched).toEqual([
+        ['dev.app', { probe: true }],
+        ['dev.app', { probe: true }],
+      ]);
+    });
+
     it('holds across the processes of a command line, on the device it began on', async () => {
       await callerOf(context())('flow', { action: 'start' });
       await callerOf(context())('tap', { selector: { text: 'Form' } });

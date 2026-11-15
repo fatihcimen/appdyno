@@ -49,6 +49,9 @@ export function maskText(m: Mask): string {
   return words.length > 0 ? words.join(' ') : [m.x, m.y, m.w, m.h].map(Number).join(',');
 }
 
+/** The settings a line names with no value, each a one-shot that takes none, or none it needs. */
+export const VALUELESS_SETTINGS: readonly string[] = ['shake', 'memory_warning'];
+
 /** What a `screenshot`, `visual` or `setting` line needs beyond its words, refused as its line's error. */
 export function checkDeviceStep(st: FlowStep, line: number) {
   const a = st.args;
@@ -68,7 +71,7 @@ export function checkDeviceStep(st: FlowStep, line: number) {
       'setting restore puts back every setting changed: it takes nothing more',
       line,
     );
-  if (a.name !== 'restore' && a.value === undefined)
+  if (a.name !== 'restore' && a.value === undefined && !VALUELESS_SETTINGS.includes(String(a.name)))
     throw new FlowError(
       `setting ${String(a.name)} needs a value, as in setting dark_mode on`,
       line,

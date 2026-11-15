@@ -13,8 +13,10 @@ export type Spec = {
 
 /** Each step of a flow's file, and the words and arguments its line takes. */
 export const SPECS = {
-  launch: { words: ['app?'], text: ['language'], list: ['arg', 'env'] },
-  stop: { words: ['app?'] },
+  /** `probe`: with the view probe in the app, as `launch_app` puts it in. */
+  launch: { words: ['app?'], text: ['language'], list: ['arg', 'env'], bool: ['probe'] },
+  /** `background`: ended as the system ends an app in the background, its saved state kept. */
+  stop: { words: ['app?'], bool: ['background'] },
   tap: { target: 'point-needed' },
   long_press: { target: 'point-needed', number: ['durationMs'] },
   double_tap: { target: 'point-needed' },

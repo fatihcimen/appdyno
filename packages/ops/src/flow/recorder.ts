@@ -7,6 +7,7 @@ import {
   type Mask,
   maskText,
   Recording,
+  VALUELESS_SETTINGS,
 } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
@@ -234,7 +235,7 @@ const swipes = (a: Record<string, unknown>, count: number) =>
   );
 const restarts = (
   a: Record<string, unknown>,
-  how: Record<string, string | string[] | undefined> = {},
+  how: Record<string, string | string[] | boolean | undefined> = {},
 ) => [
   stepOf('stop', {}, { app: a.app as string | undefined }),
   stepOf('launch', {}, { app: a.app as string | undefined, ...how }),
@@ -264,23 +265,32 @@ const MEASURES: Record<string, ToStep> = {
 const OPS: Record<string, ToStep> = {
   ...MEASURES,
   // a launch that started the app is a start in a replay too, where a plain launch brings a running app forward as it is;
-  // a restart, arguments and an environment stop a running app first on every platform: a start, whether it ran or not
+  // a restart, arguments and an environment stop a running app first on every platform: a start, whether it ran or not.
+  // A probe the launch put in is one more such start, which says nothing of whether the app ran
   launch_app: (a, data) => {
     const env = a.env as Record<string, string> | undefined;
+    const probe = (a.probe as boolean | undefined) || undefined;
     const how = {
       language: a.language as string | undefined,
       arg: a.args as string[] | undefined,
       env: env && Object.entries(env).map(([k, v]) => `${k}=${v}`),
+      probe,
     };
-    return data.wasRunning === false || a.restart || a.args || a.env
+    const probed = probe && data.wasRunning === undefined;
+    return data.wasRunning === false || a.restart || a.args || a.env || probed
       ? restarts(a, how)
       : stepOf(
           'launch',
           { flags: data.wasRunning ? ['running'] : [] },
-          { app: a.app as string | undefined, language: how.language },
+          { app: a.app as string | undefined, language: how.language, probe },
         );
   },
-  terminate_app: (a) => stepOf('stop', {}, { app: a.app as string | undefined }),
+  terminate_app: (a) =>
+    stepOf(
+      'stop',
+      {},
+      { app: a.app as string | undefined, background: (a.background as boolean) || undefined },
+    ),
   // what an app opens is read, and nothing opened: no step
   open_link: (a) =>
     a.links
@@ -298,18 +308,18 @@ const OPS: Record<string, ToStep> = {
     a.kind === 'pinch' || a.kind === 'plan' ? unrecorded(`gesture ${a.kind}`) : undefined,
   set_orientation: (a) => unrecorded(`set_orientation ${String(a.orientation)}`),
   clipboard: (a) => (a.text !== undefined ? unrecorded('clipboard') : undefined),
-  // a read of a setting is a look
+  // a read of a setting is a look, where a one-shot that takes no value acts all the same;
   // a restore takes nothing else, whatever came beside it
   device_setting: (a) =>
     a.name === 'restore'
       ? stepOf('setting', {}, { name: 'restore' })
-      : a.value !== undefined
+      : a.value !== undefined || VALUELESS_SETTINGS.includes(a.name as string)
         ? stepOf(
             'setting',
             {},
             {
               name: a.name as string,
-              value: a.value as string,
+              value: a.value as string | undefined,
               app: a.app as string | undefined,
               title: a.title as string | undefined,
             },

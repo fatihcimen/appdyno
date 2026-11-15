@@ -66,11 +66,12 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
           args: a.arg,
           env: env && Object.fromEntries(env),
           language: a.language,
+          probe: a.probe,
         }),
       ];
     }
     case 'stop':
-      return ['terminate_app', defined({ app: a.app })];
+      return ['terminate_app', defined({ app: a.app, background: a.background })];
     case 'tap':
       return ['tap', target];
     case 'long_press':

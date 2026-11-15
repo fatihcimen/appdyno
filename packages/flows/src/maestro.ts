@@ -60,12 +60,13 @@ function commands(st: FlowStep): Yaml[] {
   const a = st.args as Record<string, string | number | boolean>;
   switch (st.action) {
     case 'launch':
-      none(st, 'language', 'arg', 'env');
+      none(st, 'language', 'arg', 'env', 'probe');
       // Maestro's launchApp stops the app first; our launch brings a running one forward as it is
       return [
         { launchApp: { ...(a.app ? { appId: plain(a.app as string) } : {}), stopApp: false } },
       ];
     case 'stop':
+      none(st, 'background');
       return a.app ? [{ stopApp: plain(a.app as string) }] : ['stopApp'];
     case 'tap':
       return [{ tapOn: targetOf(st) }];
