@@ -155,6 +155,8 @@ describe('logs', () => {
     return { adb, asked };
   };
   const query = { app: 'dev.appdyno.fixture', level: 'info' as const, maxLines: 50 };
+  /** The count logcat is asked: past the one asked, so that a message it begins inside leaves as many whole ones. */
+  const widened = { ...query, maxLines: 250 };
 
   it('reads what a process wrote as it died, by the pid the system says ended', async () => {
     const { adb, asked } = afterCrash('');
@@ -162,7 +164,7 @@ describe('logs', () => {
     expect(r.lines).toEqual([FATAL]);
     expect(r.source).toBe('logcat --pid=6374');
     expect(r.note).toContain('not running');
-    expect(asked.at(-1)).toBe(`[ -e /proc/6374 ] || ${logcatCommand('6374', query)}`);
+    expect(asked.at(-1)).toBe(`[ -e /proc/6374 ] || ${logcatCommand('6374', widened)}`);
   });
 
   it('reads the process that died before the one started after it', async () => {
@@ -171,7 +173,7 @@ describe('logs', () => {
     expect(r.source).toBe('logcat --pid=6374,7001');
     expect(r.note).toBeUndefined();
     expect(asked.at(-1)).toBe(
-      `[ -e /proc/6374 ] || ${logcatCommand('6374', query)}; ${logcatCommand('7001', query)}`,
+      `[ -e /proc/6374 ] || ${logcatCommand('6374', widened)}; ${logcatCommand('7001', widened)}`,
     );
   });
 
@@ -179,7 +181,7 @@ describe('logs', () => {
     const { adb, asked } = afterCrash('');
     const r = await androidLogs(adb, 'R1', { ...query, pid: '42' });
     expect(r.source).toBe('logcat --pid=42');
-    expect(asked).toEqual([logcatCommand('42', query)]);
+    expect(asked).toEqual([logcatCommand('42', widened)]);
   });
 
   // logcat prints each line of one message with the message's own head
@@ -218,16 +220,58 @@ describe('logs', () => {
     expect(r.marks).toEqual([{ at: 1794685192313, level: 'error' }]);
   });
 
-  it('leaves out what may be the end of a message, where logcat cut the newest lines from it', async () => {
-    const r = await androidLogs(
-      printed([...STACK.slice(1), '11-14 22:59:53.000  4242  4242 I App: next']),
-      'R1',
-      {
-        ...query,
-        maxLines: 3,
+  /** A device's log by process, of which `logcat -t <n>` prints the last n lines, as the shell runs the read. */
+  const kept = (logs: Record<string, string[]>, running = '42') =>
+    ({
+      exec: (_serial: string, c: string) => {
+        if (c.startsWith('pidof')) return Promise.resolve(`${running}\n`);
+        if (c.includes('exit-info')) return Promise.resolve(running === '42' ? '' : EXIT_INFO);
+        const out = c.split('; ').flatMap((step) => {
+          const read = /logcat -d --pid=(\d+) .*-t (\d+) /.exec(step);
+          return read ? (logs[read[1] ?? ''] ?? []).slice(-Number(read[2])) : [];
+        });
+        return Promise.resolve(out.join('\n'));
       },
-    );
-    expect(r.lines).toEqual(['11-14 22:59:53.000  4242  4242 I App: next']);
+    }) as unknown as Adb;
+  const line = (n: number, pid = '4242') =>
+    `11-14 22:59:${String(n % 60).padStart(2, '0')}.000  ${pid}  ${pid} I App: line ${n}`;
+  /** One message of many lines, as a long stack prints, each line under the same head. */
+  const long = (lines: number, pid = '4242') =>
+    Array.from({ length: lines }, (_, i) => `11-14 22:58:00.000  ${pid}  ${pid} E App: frame ${i}`);
+
+  it('gives the one message asked for, where the log holds no more', async () => {
+    const failed = '11-14 22:59:54.000  4242  4242 E App: Checkout failed';
+    const r = await androidLogs(kept({ '42': [failed] }), 'R1', { ...query, maxLines: 1 });
+    expect(r.lines).toEqual([failed]);
+  });
+
+  it('gives as many of the newest messages as asked, where the log holds more', async () => {
+    const log = Array.from({ length: 400 }, (_, i) => line(i));
+    const one = await androidLogs(kept({ '42': log }), 'R1', { ...query, maxLines: 1 });
+    expect(one.lines).toEqual([line(399)]);
+    const five = await androidLogs(kept({ '42': log }), 'R1', { ...query, maxLines: 5 });
+    expect(five.lines).toEqual(log.slice(-5));
+  });
+
+  it('leaves out what may be the end of a message, where the lines logcat gave begin inside it', async () => {
+    const last = [line(1), line(2), line(3)];
+    for (const maxLines of [1, 3]) {
+      const r = await androidLogs(kept({ '42': [...long(250), ...last] }), 'R1', {
+        ...query,
+        maxLines,
+      });
+      expect(r.lines).toEqual(last.slice(-maxLines));
+    }
+  });
+
+  it('leaves out no message of the process that died, where it and the one after fit', async () => {
+    const died = '11-14 22:59:33.000  6374  6374 E App: died';
+    const started = '11-14 22:59:40.000  7001  7001 I App: started again';
+    const r = await androidLogs(kept({ '6374': [died], '7001': [started] }, '7001'), 'R1', {
+      ...query,
+      maxLines: 2,
+    });
+    expect(r.lines).toEqual([died, started]);
   });
 });
 

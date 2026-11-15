@@ -33,6 +33,12 @@ export const markOfLine = (line: string): LogMark | undefined => {
 /** A line's head as logcat prints it, its time to the millisecond, process, thread, rank and tag: `… E Tag: `. */
 const HEAD = /^\s*\S+(?: \S+)?\s+\d+\s+\d+ [VDIWEFA] .*?: /;
 
+/**
+ * How many more lines logcat is asked for than a count wants: a count can begin inside a message, and the oldest of
+ * those read, that one among them, are then left out.
+ */
+const PAST = 200;
+
 /** Each message whole: logcat prints every line of one with its head, and those after the first are joined without. */
 function messagesOf(lines: string[]) {
   const out: string[] = [];
@@ -63,11 +69,12 @@ export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promi
     };
   // shortcut: an ended pid the system gave another process is left out only while that one runs; `since` keeps the
   // rest to the time after the last action
+  const asked = { ...q, maxLines: q.maxLines + PAST };
   const out = await adb.exec(
     serial,
     [
-      ...(ended ? [`[ -e /proc/${ended} ] || ${logcatCommand(ended, q)}`] : []),
-      ...(live ? [logcatCommand(live, q)] : []),
+      ...(ended ? [`[ -e /proc/${ended} ] || ${logcatCommand(ended, asked)}`] : []),
+      ...(live ? [logcatCommand(live, asked)] : []),
     ].join('; '),
   );
   const source = `logcat --pid=${[ended, live].filter(Boolean).join(',')}`;
@@ -75,8 +82,10 @@ export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promi
     ? undefined
     : `${q.app} is not running: these are the lines of its process that ended; crashes says why it ended`;
   const printed = out.split(/\r?\n/).filter((l) => l && !l.startsWith('--------- beginning of'));
-  // a count of lines can begin inside a message: its oldest is left out once logcat gave as many as it was asked
-  const lines = messagesOf(printed).slice(!q.since && printed.length >= q.maxLines ? 1 : 0);
+  const messages = messagesOf(printed);
+  // the newest as many as asked, of more read: a message the count began inside is among those left out. shortcut: one
+  // of more than PAST lines, that the count began inside, is given from where the count began
+  const lines = q.since ? messages : messages.slice(-q.maxLines);
   if (!q.timed) return { lines, source, ...(note && { note }) };
   const placed = lines.flatMap((line) => {
     const mark = markOfLine(line);

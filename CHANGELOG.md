@@ -26,6 +26,14 @@
 
 - On an iOS simulator, the network and frame probes no longer share one Objective-C class name, so both can be in one app: loaded together, the runtime ran one of the two.
 
+## 1.1.3
+
+appdyno 1.1.3 fixes one regression of 1.1.2 on Android: `logs` with no `since` could leave out the newest message.
+
+### Fixed
+
+- On Android, `logs` with no `since` gives as many of the newest messages as `maxLines` asks: since 1.1.2 it left out the oldest message whenever logcat gave as many lines as were asked, so `maxLines` 1 gave no line, as `[]` for a lone `E App: Checkout failed`, and `maxLines` 3 gave two. It now reads 200 lines past the count, so that a message the count begins inside is left out while whole ones are kept.
+
 ## 1.1.2
 
 appdyno 1.1.2 fixes what more open-source apps showed after 1.1.1 on iOS simulators and Android emulators. Two of the fixes are about safety: `screen raw` and `find` gave a secret in an element's id uncleaned, and `record` wrote over whatever file it was given.
