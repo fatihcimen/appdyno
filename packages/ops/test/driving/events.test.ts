@@ -94,6 +94,19 @@ describe('the one-shot events of device_setting', () => {
       expect(files.map((f) => f.split('/').at(-1))).toEqual(['a.MOV', 'b.png']);
     });
 
+    it('says when a device that takes them out again does so', async () => {
+      const { d } = taking();
+      const addedMedia = {
+        owner: undefined,
+        holder: () => undefined,
+        takeOut: () => Promise.resolve({ removed: [], left: [] }),
+      };
+      const { call } = await connect(Object.assign(d, { addedMedia }));
+      expect((await call('device_setting', { name: 'media', value: 'shots' })).text).toBe(
+        "added 2 files to the device's photos; the library holds 2; taken out when this session ends, or by restore",
+      );
+    });
+
     it("refuses what is outside the server's folder, missing, or holds no photo or video", async () => {
       const { d, got } = taking();
       const { call } = await connect(d);

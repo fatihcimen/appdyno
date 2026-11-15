@@ -25,7 +25,12 @@ import type { Mirror } from './mirror/port.js';
 import type { VirtualDevices } from './virtual.js';
 import type { AppManager, LaunchHolds } from './device-apps.js';
 import type { ScreenInspector, ScreenRecorder } from './device-capture.js';
-import type { DeviceEvents, DeviceSettings, SettingsPage } from './device-conditions.js';
+import type {
+  AddedMedia,
+  DeviceEvents,
+  DeviceSettings,
+  SettingsPage,
+} from './device-conditions.js';
 import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from './device-logs.js';
 import type { NetworkSource, WebInspector } from './device-network.js';
 import type { ViewTree } from './device-views.js';
@@ -213,6 +218,8 @@ export type Device = {
   shake?(): Promise<string | undefined>;
   /** Photos and videos, each a file on this Mac, into the device's library; what the answer should add. */
   addMedia?(files: string[]): Promise<string | undefined>;
+  /** What `addMedia` added, where this kind of device can take it out again. */
+  readonly addedMedia?: AddedMedia;
   /** Whether the app has a live process. */
   appRunning(app: string): Promise<boolean>;
   /** Its process id, where reading it is cheap enough to do on every action. */

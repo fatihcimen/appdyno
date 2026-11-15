@@ -2,6 +2,7 @@ import { heldElsewhere, isThisProcess, must, ownerGone, type Owner } from '@appd
 import type { ServerContext } from './context.js';
 import { dropFlightFolder } from './timeline/flight.js';
 import { flowRecordings } from './flow/shared.js';
+import { takeOutMedia } from './media.js';
 import { captures, endCapture } from './network.js';
 import { endRecording, filming } from './record.js';
 import { reportFor } from './report.js';
@@ -79,6 +80,14 @@ const LEFTOVERS: Leftover[] = [
       held: (s) => s.device.holds?.holder(),
       end: (_, s) => Promise.resolve(s.device.holds?.letGo().length),
       done: "probes let go of this tool's launches: a probe stays in its app until the app next starts",
+    },
+  },
+  {
+    name: 'media',
+    ends: {
+      held: (s) => s.device.addedMedia?.holder(),
+      end: (_, s) => takeOutMedia(must(s.device.addedMedia, 'the media added')),
+      done: 'the photos and videos it added taken out of the library',
     },
   },
   {

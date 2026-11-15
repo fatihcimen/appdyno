@@ -4,9 +4,11 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
   must,
+  type AddedMedia,
   type Device,
   type DeviceProvider,
   type DeviceSettings,
+  type Owner,
   type SettingName,
 } from '@appdyno/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -32,6 +34,31 @@ class Settings implements DeviceSettings {
     }
     this.values[name] = value;
   };
+}
+
+/** What a device added to its library, as a driver keeps it: whose it is, and each file out again but one that changed. */
+class Added implements AddedMedia {
+  owner: Owner | undefined;
+  files: string[] = [];
+  changed: string[] = [];
+  private held: { owner?: Owner | undefined } | undefined;
+
+  add(...files: string[]) {
+    this.files.push(...files);
+    this.held = { owner: this.owner };
+  }
+
+  holder() {
+    return this.held;
+  }
+
+  takeOut() {
+    const removed = this.files.filter((f) => !this.changed.includes(f));
+    const left = this.files.filter((f) => this.changed.includes(f));
+    this.files = [];
+    this.held = undefined;
+    return Promise.resolve({ removed, left });
+  }
 }
 
 const withSettings = () => {
@@ -373,6 +400,41 @@ describe('what a process leaves running', () => {
       'let go of the frames probe in dev.app: a probe stays in its app until the app next starts',
     );
     expect(device.holds.holder()).toBeUndefined();
+    ctx.close();
+  });
+
+  it("takes out a session's photos and videos at its end, and a command line's at restore", async () => {
+    const media = new Added();
+    const device = Object.assign(new FakeDevice(), { addedMedia: media });
+    const { ctx, call } = connect(device);
+    await call('use_device', { device: device.serial });
+    media.add('/sdcard/Pictures/appdyno/a.png');
+    expect(media.holder()?.owner?.pid).toBe(process.pid);
+    expect(await ctx.end()).toEqual([]);
+    expect(media.files).toEqual([]);
+    media.owner = undefined;
+    media.add('/sdcard/Pictures/appdyno/b.png', '/sdcard/Pictures/appdyno/c.mp4');
+    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+      'took out the 2 photos and videos it added',
+    );
+    expect(media.holder()).toBeUndefined();
+    ctx.close();
+  });
+
+  it('leaves a photo that changed since it was added, and says so at restore and at the end', async () => {
+    const media = new Added();
+    const device = Object.assign(new FakeDevice(), { addedMedia: media });
+    const { ctx, call } = connect(device);
+    await call('use_device', { device: device.serial });
+    media.add('/p/a.png', '/p/b.png');
+    media.changed = ['/p/b.png'];
+    const r = await call('device_setting', { name: 'restore' });
+    const left = 'media: left /p/b.png in the library: changed since it was added';
+    expect(r.text).toBe(`took out the 1 photo or video it added\ncould not restore ${left}`);
+    expect(r.data.notRestored).toEqual([left]);
+    media.add('/p/c.png');
+    media.changed = ['/p/c.png'];
+    expect(await ctx.end()).toEqual([left.replace('/p/b.png', '/p/c.png')]);
     ctx.close();
   });
 

@@ -12,6 +12,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { askLanguage } from './power.js';
+import { mediaRestored } from './media.js';
 import { SettingOut } from './schemas.js';
 import { isOneShot, oneShot, ONE_SHOT } from './setting-events.js';
 import type { Session } from './session.js';
@@ -225,6 +226,41 @@ export function restoreConditions(s: Session, whose: Whose) {
   });
 }
 
+/**
+ * `restore`: the conditions this tool changed put back, the probes its launches hold let go, and the photos and videos
+ * it added taken out, each where no other live process holds it.
+ */
+async function restoreAll(s: Session) {
+  const { restored, failed, left, reads } = await restoreConditions(
+    s,
+    (owner) => !heldElsewhere(owner),
+  );
+  const holds = s.device.holds;
+  const held = holds && !heldElsewhere(holds.holder()?.owner) ? holds.letGo() : [];
+  const media = s.device.addedMedia;
+  const added = media?.holder();
+  const out =
+    media && added && !heldElsewhere(added.owner)
+      ? await mediaRestored(media)
+      : { done: [], failed: [] };
+  const notRestored = [...failed, ...out.failed];
+  const t =
+    [
+      ...(restored.length > 0 ? [`restored ${restored.join('; ')}`] : []),
+      ...out.done,
+      ...(held.length > 0
+        ? [`let go of ${held.join('; ')}: a probe stays in its app until the app next starts`]
+        : []),
+      ...notRestored.map((f) => `could not restore ${f}`),
+      ...left.map((l) => `left alone, as its process still runs: ${l}`),
+    ].join('\n') || 'nothing was changed';
+  return reply(t, {
+    done: t,
+    ...(notRestored.length > 0 && { notRestored }),
+    ...(Object.keys(reads).length > 0 && { reads }),
+  });
+}
+
 export function settingOps(ctx: ServerContext, { clean }: Answers) {
   const policy = ctx.policy;
   return [
@@ -251,30 +287,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       annotations: DESTRUCTIVE,
       run: async ({ name, value, title, app }) => {
         const s = await ctx.session();
-        if (name === 'restore') {
-          const { restored, failed, left, reads } = await restoreConditions(
-            s,
-            (owner) => !heldElsewhere(owner),
-          );
-          const holds = s.device.holds;
-          const held = holds && !heldElsewhere(holds.holder()?.owner) ? holds.letGo() : [];
-          const t =
-            [
-              ...(restored.length > 0 ? [`restored ${restored.join('; ')}`] : []),
-              ...(held.length > 0
-                ? [
-                    `let go of ${held.join('; ')}: a probe stays in its app until the app next starts`,
-                  ]
-                : []),
-              ...failed.map((f) => `could not restore ${f}`),
-              ...left.map((l) => `left alone, as its process still runs: ${l}`),
-            ].join('\n') || 'nothing was changed';
-          return reply(t, {
-            done: t,
-            ...(failed.length > 0 && { notRestored: failed }),
-            ...(Object.keys(reads).length > 0 && { reads }),
-          });
-        }
+        if (name === 'restore') return restoreAll(s);
         if (isOneShot(name))
           return oneShot(name, {
             policy,

@@ -9,7 +9,10 @@ const PHONE_NUMBER = /^\+?\d{3,20}$/;
 const DEFAULT_SENDER = '5551234';
 const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
 
-/** device_setting's one-shot names: each is over once it is said, and nothing of it is put back. */
+/**
+ * device_setting's one-shot names: each is over once it is said, and nothing of it is put back but the photos and
+ * videos a device can take out of its library again, which restore and the session's end take (`addedMedia`).
+ */
 export const ONE_SHOT = [
   'biometric',
   'call',
@@ -99,7 +102,14 @@ const EVENTS: Record<OneShot, (a: Asked) => Promise<string>> = {
     const said = await s.device.addMedia(files);
     s.acted();
     const n = files.length;
-    return and(`added ${n} ${n === 1 ? 'file' : 'files'} to the device's photos`, said);
+    // a command line's stays, as each command is a process of its own
+    const out = s.owner
+      ? 'taken out when this session ends, or by restore'
+      : 'restore takes them out';
+    return and(
+      `added ${n} ${n === 1 ? 'file' : 'files'} to the device's photos`,
+      [said, ...(s.device.addedMedia ? [out] : [])].filter(Boolean).join('; '),
+    );
   },
 };
 

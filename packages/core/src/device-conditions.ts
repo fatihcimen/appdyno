@@ -1,4 +1,5 @@
 import { DeviceError } from '@appdyno/protocol';
+import type { Owner } from './owner.js';
 export const SETTINGS = [
   'dark_mode',
   'text_size',
@@ -167,6 +168,19 @@ export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
 
 /** What happens to a device once that a window offers a person beside its conditions. */
 export type DeviceEvent = 'biometric' | 'call' | 'sms';
+
+/**
+ * The photos and videos this tool added to a device's library, kept on this Mac as a condition is, to be taken out at
+ * a restore or the session's end.
+ */
+export type AddedMedia = {
+  /** Who answers for what is added from now: a session's owner; none, a command line's, holds until restore. */
+  owner: Owner | undefined;
+  /** Who holds what was added, where anything is. */
+  holder(): { owner?: Owner | undefined } | undefined;
+  /** Each file added, taken out of the library: `left`, one that changed since, which is not this tool's to delete. */
+  takeOut(): Promise<{ removed: string[]; left: string[] }>;
+};
 
 /** What happens to a device once: a condition holds and is put back, an event is over when it is said. */
 export type DeviceEvents = {
