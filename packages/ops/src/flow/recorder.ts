@@ -1,5 +1,5 @@
 import { basename, extname } from 'node:path';
-import { type Screen, type ScreenElement, safeName, selectIn } from '@appdyno/core';
+import { byRef, type Screen, type ScreenElement, safeName, selectIn } from '@appdyno/core';
 import {
   type FlowSelector,
   type FlowStep,
@@ -14,7 +14,6 @@ import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
 import { NO_MATCH_WAIT_MS } from '../steps.js';
-import { byRef } from '../targets.js';
 import type { Op, ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
 import { DEFAULT_TOLERANCE } from '../visual.js';

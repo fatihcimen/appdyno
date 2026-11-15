@@ -13,6 +13,7 @@ export * from './diff.js';
 export * from './fold.js';
 export * from './folded.js';
 export * from './select.js';
+export * from './touch.js';
 
 /** One read of the screen: the agent's tree, its elements with stable refs, and the list a tester sees. */
 export type Screen = {

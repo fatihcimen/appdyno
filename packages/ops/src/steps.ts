@@ -1,8 +1,10 @@
 import {
   type Selector as SelectorOf,
   type Screen,
+  comparedWith,
   must,
   throwIfCancelled,
+  withShownWords,
   type ActOptions,
 } from '@appdyno/core';
 import { DeviceError, type ActResult, type Point, type TextResult } from '@appdyno/protocol';
@@ -70,14 +72,9 @@ type Done = {
   back?: ((x: Screen) => boolean) | undefined;
 };
 
-/**
- * A touch's options where a selector found each of its targets on one read: the device compares the screen it reaches
- * with that read, not with the one before the call, which a window that came in front by itself has replaced since.
- */
-const aimedOn = (opts: ActOptions, ...targets: (Aimed | undefined)[]): ActOptions => {
-  const on = targets[0]?.on;
-  return opts.before && on && targets.every((t) => t?.on === on) ? { ...opts, before: on } : opts;
-};
+/** A touch's options, compared with the read a selector found each of its targets on. */
+const aimedOn = (opts: ActOptions, ...targets: (Aimed | undefined)[]): ActOptions =>
+  comparedWith(opts, ...targets.map((t) => t?.on));
 
 /** A touch at `at` on the screen just read: on a system alert, what its answer waits for. */
 const closes = (s: Session, at: Point) => (s.fresh ? backFromAlert(s, s.fresh, at) : undefined);
@@ -305,9 +302,8 @@ export function stepsFor(
     // a ref is named by its words at the touch: where those are not the ones it was shown with, which the answer's diff
     // is against, both are said, as an old screen's ref read as if the touch had renamed it
     const was = a.ref ? s.refWords.get(a.ref) : undefined;
-    const shown = was === undefined ? '' : JSON.stringify(clean(was));
-    return shown && !t.name.startsWith(`${a.ref ?? ''} ${shown}`)
-      ? { ...t, name: `${t.name} (shown as ${shown})` }
+    return a.ref && was !== undefined
+      ? { ...t, name: withShownWords(t.name, a.ref, clean(was)) }
       : t;
   };
   const scrolling = scrollingFor({
