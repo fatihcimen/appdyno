@@ -155,8 +155,8 @@ describe("the view probe's socket", () => {
   });
 });
 
-/** A simulator whose launches are kept with what went into the app's environment. */
-const simulator = (fails = false) => {
+/** A simulator whose launches are kept with what went into the app's environment, every app running but `stopped`. */
+const simulator = (fails = false, stopped: string[] = []) => {
   const launches: Record<string, string>[] = [];
   const simctl = Object.assign(new Simctl({}), {
     exec: (args: string[], _ms?: number, env: Record<string, string | undefined> = {}) => {
@@ -168,6 +168,7 @@ const simulator = (fails = false) => {
       return fails ? Promise.reject(new Error('no such app')) : Promise.resolve(`${APP}: 4242`);
     },
     appContainer: () => Promise.resolve(bundle),
+    running: (_udid: string, app: string) => Promise.resolve(!stopped.includes(app)),
   });
   return { simctl, launches };
 };
@@ -328,6 +329,21 @@ describe('a read of the views on a simulator', () => {
     await new Promise((resolve) => ended.once('exit', resolve));
     expect(existsSync(path)).toBe(true);
     expect((await refusal(views.read(APP, none))).unprobed).toBe(true);
+  });
+
+  it('says an app that does not run is not running, and what starts it with the probe, held or not', async () => {
+    const views = new SimulatorViews(simulator(false, [APP]).simctl, SIM);
+    expect(await refusal(views.read(APP, none))).toEqual({
+      code: 'APP_NOT_RUNNING',
+      message: `${APP} is not running`,
+      hint: 'start it with the view probe',
+      unprobed: false,
+    });
+    // the probe held for its next launch, as after terminate_app
+    new HeldLaunches(SIM).hold(APP, 'view', { lib: join(helpers, 'ViewProbe'), env: {} });
+    expect((await refusal(views.read(APP, none))).hint).toBe(
+      "start it: this tool's launches of it hold the view probe",
+    );
   });
 
   it('names Flutter or React Native by what the bundle holds, read once per installed app', async () => {

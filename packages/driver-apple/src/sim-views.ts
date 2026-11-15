@@ -260,8 +260,19 @@ export class SimulatorViews {
     return treeOf(answer, app);
   }
 
-  /** The refusal of a read with no probe in the app, with what its bundle tells of the whole app. */
+  /**
+   * The refusal of a read with no probe in the app, with what its bundle tells of the whole app; an app that does not run
+   * has no process for a probe, held or not, and its next launch is what puts one in.
+   */
   private async withoutProbe(app: string) {
+    if (!(await this.simctl.running(this.udid, app).catch(() => true)))
+      return new DeviceError(
+        'APP_NOT_RUNNING',
+        `${app} is not running`,
+        this.holds.appsWith(PROBE).includes(app)
+          ? "start it: this tool's launches of it hold the view probe"
+          : 'start it with the view probe',
+      );
     const kind = await this.appLevel(app).catch(() => undefined);
     const by = kind
       ? `app-level, by its bundle: ${kind}`
