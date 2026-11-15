@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { callSignal, cancelled, reportProgress, type DeviceQueue } from '@appdyno/core';
+import { callSignal, reportProgress, type DeviceQueue } from '@appdyno/core';
 import { inspectorOps } from './inspector.js';
 import type { z } from 'zod';
 import { actOps } from './act.js';
@@ -29,7 +29,7 @@ import { stepsFor, type Steps } from './steps.js';
 import { KIND_NAMES } from './tool-kinds.js';
 import { visualOps } from './visual.js';
 import { webOps } from './web.js';
-import { refused, type Op } from './tool.js';
+import { givenUp, type Op } from './tool.js';
 
 const everyOp = (
   ctx: ServerContext,
@@ -78,7 +78,7 @@ const inTurn = (queue: DeviceQueue, op: Op): Op =>
             reportProgress('waiting its turn: an action this client sent before it still runs');
           return queue.run(() => {
             // a call its client gave up while it waited does nothing
-            if (callSignal()?.aborted) refused(cancelled(op.name));
+            if (callSignal()?.aborted) throw givenUp(op.name);
             return holding.run(queue, () => op.handler(args));
           });
         },

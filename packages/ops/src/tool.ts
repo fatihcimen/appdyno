@@ -1,4 +1,4 @@
-import { inOp, noting } from '@appdyno/core';
+import { cancelled, inOp, noting } from '@appdyno/core';
 import { DeviceError, ERROR_TRAITS, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 
@@ -63,6 +63,12 @@ export function refused(err: unknown): never {
   if (!(err instanceof DeviceError)) throw err;
   if (err.code === 'NO_FOCUS') throw new ToolError(NO_FOCUS, err.code, NO_FOCUS_HINT);
   throw new ToolError(err.message, err.code, err.hint ?? HINTS[err.code]);
+}
+
+/** The refusal of a call given up before anything of it left for the device: it says no touch was sent. */
+export function givenUp(what: string) {
+  const { message, code, hint } = cancelled(what);
+  return new ToolError(message, code, hint, false);
 }
 
 /** A refusal in words, whole for a client that reads only them: its code first, its hint last. */

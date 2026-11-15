@@ -34,6 +34,8 @@ export async function drive(flow: string, log: (line: string) => void) {
 
 `close`, araçların cihazda değiştirdiklerini bir oturumun sonunun yaptığı gibi eski haline getirir.
 
+Bir `AbortSignal` bir çağrıyı durdurur: `tool` üçüncü argümanı olarak `{ signal }` alır, `replay` de seçenekleri arasında `signal` alır. Bir sunucunun, istemcisi bir çağrıyı iptal ettiğinde yaptığı şey burada da olur; cihazın kendi beklemesine kadar iner. Durdurulan çağrı `CANCELLED` koduyla reddedilir. Çağrı başlamadan ya da kendinden önceki eylemi beklerken durdurulduysa `dispatched` değeri `false` olur, yani cihaza hiçbir şey ulaşmamıştır; eylemi cihaza doğru yola çıktıysa `'unknown'` olur, çünkü cihaz dokunuşu yapmış olabilir: yeniden denemeden önce ekranı okuyun. Durdurulan bir `replay` de aynı şekilde reddedilir; bir adım tamamlandıysa `dispatched` değeri `true` olur.
+
 Bir modelin okuduğu katlanmış liste yerine ağacın kendisine ihtiyaç duyan bir program `screen`'i `raw: true` ile çağırır: cevabının `data.nodes` alanı ağacın her öğesini `type`, sözleri, `rect`, `flags` ve `parent` sırasıyla tutar. Ekranın gösterdiği her öğenin bir `ref`'i vardır ve `tap` onu alır; listenin adlandırmadığı bir öğeye ortasından dokunur. Bir öğenin ref'i yoksa ya uygulamanın değildir (klavye ve sistemin çubukları gibi), ya görünmez olarak işaretlenmiştir, ya boyutu yoktur, ya yarısından azı ekrandadır, ya iOS'te durum çubuğunun ya da üstteki bir gezinme çubuğunun altındadır, ya da bir listenin henüz yerleştirmediği, tek bir noktaya yığılmış satırlarındandır.
 
 ## Cihazın kendisi

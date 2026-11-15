@@ -2,6 +2,8 @@ import {
   argumentsFor,
   DEFAULT_POLICY,
   flowsFor,
+  givenUp,
+  inCall,
   opsFor,
   ServerContext,
   ToolError,
@@ -54,6 +56,12 @@ export type StepEvent =
       result: { step: string; ms: number; settledMs?: number };
     };
 
+/** An `AbortSignal`, by what a call needs of it: these types stand without a library that declares one. */
+export type StopSignal = {
+  readonly aborted: boolean;
+  addEventListener(type: 'abort', listener: () => void): void;
+};
+
 export type ReplayOptions = {
   /** The step to begin at, from 1. */
   from?: number;
@@ -62,6 +70,17 @@ export type ReplayOptions = {
   onStep?: (e: StepEvent) => void | Promise<void>;
   /** Where a failure leaves its screenshot and tree. */
   evidence?: string;
+  /** Stops the run as it stops a call: `dispatched` is `true` once a step's action was done. */
+  signal?: StopSignal;
+};
+
+/** What a call takes beside its arguments. */
+export type CallOptions = {
+  /**
+   * Stops the call when it aborts: the call rejects with a `Refusal` whose `code` is `CANCELLED`. Its `dispatched` is
+   * `false` where nothing of it had left for the device, and `'unknown'` once an action had: the screen says which.
+   */
+  signal?: StopSignal;
 };
 
 export type ReplayResult = {
@@ -72,12 +91,24 @@ export type ReplayResult = {
 
 export type Appdyno = {
   /** A tool of the MCP server, by its name. A refusal throws: see `Refusal`. */
-  tool<N extends ToolName>(name: N, args: Tools[N]['args']): Promise<Answer<N>>;
+  tool<N extends ToolName>(
+    name: N,
+    args: Tools[N]['args'],
+    options?: CallOptions,
+  ): Promise<Answer<N>>;
   /** Runs a flow file on this device. */
   replay(file: string, options?: ReplayOptions): Promise<ReplayResult>;
   /** Puts back what it changed on the device, and lets it go. */
   close(): Promise<void>;
 };
+
+/** `run` as a call that `signal` stops, the way a client's cancel stops a server's: one stopped before it began does nothing. */
+function stoppedBy<T>(signal: StopSignal | undefined, what: string, run: () => Promise<T>) {
+  if (!signal) return run();
+  if (signal.aborted) return Promise.reject(givenUp(what));
+  // the type asks for less than the signal a program has to give
+  return inCall({ signal: signal as AbortSignal }, run);
+}
 
 /** A device to drive from code: nothing is opened until the first call. */
 export function connect(options: ConnectOptions = {}): Appdyno {
@@ -98,17 +129,42 @@ export function connect(options: ConnectOptions = {}): Appdyno {
   const ops = opsFor(ctx);
   const flows = flowsFor(ctx);
   return {
-    async tool(name, args) {
+    async tool(name, args, { signal } = {}) {
       const op = ops[name];
       if (!op) throw new ToolError(`no tool ${name}`, 'INVALID_ARGUMENT');
-      const { blocks, data } = await op.handler(argumentsFor(op, args));
+      const { blocks, data } = await stoppedBy(signal, name, () =>
+        op.handler(argumentsFor(op, args)),
+      );
       return {
         text: blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
         images: blocks.flatMap((b) => (b.type === 'image' ? [b] : [])),
         data,
       };
     },
-    replay: (file, o) => flows.replay(file, o),
+    async replay(file, { signal, ...o } = {}) {
+      if (!signal) return flows.replay(file, o);
+      const seen = { before: 0, after: 0 };
+      const stopped = () => {
+        const refusal = givenUp(file);
+        // a step that was done touched the screen, and one that had begun may have
+        refusal.dispatched = seen.after > 0 || (seen.before > 0 && 'unknown');
+        return refusal;
+      };
+      const run = await stoppedBy(signal, file, () =>
+        flows.replay(file, {
+          ...o,
+          onStep: async (e) => {
+            seen[e.phase]++;
+            await o.onStep?.(e);
+          },
+        }),
+      ).catch((e: unknown) => {
+        throw signal.aborted && (e as Refusal).code === 'CANCELLED' ? stopped() : e;
+      });
+      // a step its signal stopped is no failure of the flow
+      if (signal.aborted && run.failure?.code === 'CANCELLED') throw stopped();
+      return run;
+    },
     async close() {
       await ctx.end().catch(() => []);
       ctx.close();

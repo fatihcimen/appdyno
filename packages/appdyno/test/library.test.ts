@@ -1,9 +1,10 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { must } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import * as library from '../src/index.js';
 import { drive } from '../examples/drive.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
@@ -51,13 +52,13 @@ describe('the library', () => {
   it('is refused a device another process holds, and drives it beside that process when it shares', async () => {
     const other = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
     const pid = must(other.pid, "the other process's pid");
+    const claims = join(must(process.env.APPDYNO_STATE_DIR, 'APPDYNO_STATE_DIR'), 'claims');
+    const claim = join(claims, `${device.serial}.json`);
     try {
       const started = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
         encoding: 'utf8',
       }).trim();
-      const claims = join(must(process.env.APPDYNO_STATE_DIR, 'APPDYNO_STATE_DIR'), 'claims');
       mkdirSync(claims, { recursive: true });
-      const claim = join(claims, `${device.serial}.json`);
       const held = JSON.stringify({
         pid,
         started,
@@ -86,6 +87,104 @@ describe('the library', () => {
     } finally {
       vi.unstubAllEnvs();
       other.kill('SIGKILL');
+      // a killed process is listed for a moment more: its hold would refuse the tests after this one
+      rmSync(claim, { force: true });
+    }
+  });
+
+  it('stops a long call by its signal, and takes the next one', async () => {
+    device.screen = 'home';
+    const d = library.connect();
+    const stop = new AbortController();
+    const started = Date.now();
+    const waiting = d.tool(
+      'wait_for',
+      { selector: { text: 'Never on this screen' }, timeoutMs: 15_000 },
+      { signal: stop.signal },
+    );
+    setTimeout(() => stop.abort(), 100);
+    await expect(waiting).rejects.toMatchObject({ code: 'CANCELLED' });
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect((await d.tool('screen', {})).data.elements).toBeGreaterThan(0);
+    await d.close();
+  });
+
+  it('says of a stopped action whether its touch went out', async () => {
+    device.screen = 'home';
+    const d = library.connect();
+    const act = device.act.bind(device);
+    const acts = () => device.calls.filter((c) => c.name === 'act').length;
+    const tap = (signal: AbortSignal) =>
+      d.tool('tap', { selector: { text: 'Form' } }, { signal }).then(
+        () => undefined,
+        (e: unknown) => e as library.Refusal,
+      );
+    try {
+      await d.tool('screen', {});
+      const before = acts();
+      // stopped before it began, and while it waited for the action before it: nothing left for the device
+      expect(await tap(AbortSignal.abort())).toMatchObject({
+        code: 'CANCELLED',
+        dispatched: false,
+      });
+      device.act = async (a, o) => {
+        await new Promise((r) => setTimeout(r, 200));
+        return act(a, o);
+      };
+      const first = d.tool('press_key', { key: 'tab' });
+      const gaveUp = new AbortController();
+      const second = tap(gaveUp.signal);
+      gaveUp.abort();
+      await first;
+      expect(await second).toMatchObject({ code: 'CANCELLED', dispatched: false });
+      expect(acts()).toBe(before + 1);
+
+      // stopped once the action had left: the device may have made the touch
+      const sent = new AbortController();
+      device.act = () =>
+        new Promise((_, reject) => {
+          const gone = Object.assign(new DeviceError('CANCELLED', 'act: cancelled by the client'), {
+            sent: true,
+          });
+          sent.signal.addEventListener('abort', () => reject(gone));
+          setTimeout(() => sent.abort(), 50);
+        });
+      const stopped = await tap(sent.signal);
+      expect(stopped).toMatchObject({ code: 'CANCELLED', dispatched: 'unknown' });
+      expect(stopped?.message).toContain('the touch may have been sent');
+    } finally {
+      device.act = act;
+      await d.close();
+    }
+  });
+
+  it('stops a replay between its steps, and says a step was done', async () => {
+    device.screen = 'home';
+    const flow = join(mkdtempSync(join(tmpdir(), 'appdyno-library-')), 'stop.flow');
+    writeFileSync(flow, 'tap text="Form"\nassert text="Bilgiler"\n');
+    const d = library.connect();
+    try {
+      await expect(d.replay(flow, { signal: AbortSignal.abort() })).rejects.toMatchObject({
+        code: 'CANCELLED',
+        dispatched: false,
+      });
+      const stop = new AbortController();
+      const steps: string[] = [];
+      await expect(
+        d.replay(flow, {
+          signal: stop.signal,
+          onStep: (e) => {
+            steps.push(`${e.phase} ${e.n}`);
+            if (e.phase === 'after') stop.abort();
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'CANCELLED', dispatched: true });
+      expect(steps).toEqual(['before 1', 'after 1']);
+      // with a signal that never stops it, a run is what it is without one
+      const whole = await d.replay(flow, { signal: new AbortController().signal, from: 2 });
+      expect(whole).toMatchObject({ passed: true, steps: [{ n: 2 }] });
+    } finally {
+      await d.close();
     }
   });
 
