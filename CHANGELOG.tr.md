@@ -21,26 +21,47 @@
 ### Düzeltilenler
 
 - Bir iOS simülatöründe ağ ve kare probe'ları artık tek bir Objective-C sınıf adını paylaşmıyor; ikisi bir uygulamada birlikte olabilir: birlikte yüklendiklerinde çalışma zamanı ikisinden yalnızca birini çalıştırıyordu.
-- `record` `start`, `overwrite` istemedikçe orada duran bir dosyanın üstüne yazmaz, ve yalnızca cihazın kaydettiği türde bir video dosyasına yazar (`.mp4` ya da `.mov`): verilen her yolda, orada duran her türden dosyayı değiştiriyordu. Zaten bir `index.html` tutan bir `dir` ile `report`, o sayfanın üstüne yazmak yerine reddedilir.
+
+## 1.1.2
+
+appdyno 1.1.2, 1.1.1'den sonra iOS simülatörlerinde ve Android emülatörlerinde sürülen başka açık kaynak uygulamaların gösterdiklerini düzeltir. Düzeltmelerden ikisi güvenlikle ilgili: `screen raw` ve `find` bir öğenin kimliğindeki sırrı gizlemeden veriyordu, `record` da kendisine verilen her dosyanın üstüne yazıyordu.
+
+### Güvenlik
+
 - `screen` `raw` ve `find`, sunucuya söylenen bir sırrı bir öğenin kimliğinde de sözlerindeki gibi gizler: `raw`, `account-•••` okunan bir etiketin yanında `identifier: "account-user@example.test"` veriyordu.
+- `record` `start`, `overwrite` istemedikçe orada duran bir dosyanın üstüne yazmaz, ve yalnızca cihazın kaydettiği türde bir video dosyasına yazar (`.mp4` ya da `.mov`): verilen her yolda, orada duran her türden dosyayı değiştiriyordu. Zaten bir `index.html` tutan bir `dir` ile `report`, o sayfanın üstüne yazmak yerine reddedilir.
+
+### Düzeltilenler
+
+#### iOS runner'ı ve simülatör
+
 - Yeni bir bağlantıda bir okumayı yeniden yanıtlayan bir iOS runner'ı, kendi bağlantısında yanıtlayan gibi takılma sayacını sıfırlar: iki takılmalı yeniden başlatmanın ardından yeni bir bağlantıda yeniden denenen bir okuma yanıtlanmış, sonraki takılan çağrı ise ikisi art arda gelmiş gibi runner'ı çalışır halde bırakmıştı.
-- Bir seçiciyle yapılan dokunuş, ekran son okunduktan sonra kendiliğinden öne gelen bir pencerede, bir diyalogda ya da bir izin isteminde, seçici öğesini orada bulduğunda o pencereye dokunur: seçici yeni ekranda aranmış olsa da dokunuş önceki okunan ekrana yöneltilmiş sayılıp `STALE` ile reddediliyordu. Pencere gelmeden önce okunan bir ref ya da `x`,`y` yine reddedilir.
-- Android'de `open_link`, seçili uygulamanın açmadığı bir web bağlantısını onu açan uygulamaya, çoğu zaman bir tarayıcıya gönderir ve uygulamanın onu açmadığını söyler; `--allow-apps` ile uygulamaya bağlı kalır. Açılmayan bir bağlantı sözcüklerle, ipucu olarak `open_link` `links` ile söylenir: `am`'in kendi satırıyla, `Error: Activity not started, unable to resolve Intent { … }`, ipucusuz başarısız oluyordu.
-- `app install`, kurduğu uygulamayı dosyanın tuttuğu kimlikle adlandırır: yalnızca `installed <path>` diyordu.
-- Kütüphanenin `connect`'i, düzenli ifade olmayan bir `allowDevices`'ı ne aldığını söyleyerek `INVALID_ARGUMENT` ile reddeder: düz JavaScript'ten gelen bir dize her çağrıyı `TypeError: this.policy.devices.test is not a function` ile düşürüyordu.
-- Gizli ya da boyutsuz bir öğe artık listede yanındaki öğeleri adlandırmaz: bir galerinin ızgara hücrelerinin hepsi, hızlı kaydırıcısının 0×0 gizli tutamacının etiketiyle `— handleImage` okunuyordu.
-- Bir seçicinin son eşleşmesinin ötesindeki `index`'i, kaç eşleşme olduğunu `NOT_FOUND` ile söyler: `1 elements match … index=1` diye `AMBIGUOUS` ile reddediliyordu. Kaydırıp sonra birden çok eşleşme bulan bir `scroll_to` kaydırmalarının gittiğini söyler: `no touch was sent` diyordu.
-- `scroll_to`, kaydırmalarının yeni şeyleri getirdiği kenarın benzer komşularının gösterdiğinin yarısından azına kestiği bir öğe için bir kez daha kaydırır: yana doğru, 35 px'i görünen bir kart için found diyordu ve ona dokunuş sonra boşa gidiyordu.
-- Ortası, başka sözcükleri olan daha küçük bir denetim olan bir denetime dokunuş, onun o denetimden uzak bir noktasına gider ve nereye gittiğini söyler: tam oynatıcıyı açan bir mini oynatıcıya dokunuş ortadaki Pause'a düşüp oynatmayı duraklatıyordu. Kendi anahtarını tutan bir anahtar satırına, SwiftUI'ın Toggle'ı gibi, o anahtardan dokunulur: satırın ortasına, etiketine dokunmak hiçbir şeyi değiştirmiyordu.
-- `react_native` `logs` ve runtime üzerinden bir `reload`, Metro'ya React Native 0.88'den beri bir hata ayıklayıcıdan istediği Origin'i (`http://localhost:<port>`) gönderir: Metro, Origin'i olmadığı için bağlantıyı reddediyordu ve ret cihazı ve ajanını suçluyordu. Metro'nun açmadığı bir runtime soketi, okunacak terminaliyle birlikte Metro'nunki olarak söylenir.
-- Android'de `logs`, birkaç satırlık bir iletiyi bütün verir, bir yığının kareleri ilk satırına eklenir, ve `maxLines` hiçbirinin içinden başlamaz: NewPipe'ın yanıtı bir throwable'ın iki karesiyle başlıyordu.
-- Android'de WMS'in ancak 5 sn'lik sınırında yanıtladığı bir pencere animasyonu, öndeki ya da arkadaki bir uygulamanın bitmeyen animasyonu, ilk işlemi bekletir, sonrakileri bekletmez, WMS yeniden daha erken yanıtlayana dek: arkada bir React Native dev client çalışırken her işlem 5 sn kadar uzun sürüyordu (okumasız bir kaydırma 0,6 sn'ye karşı 5,5 sn, bir dokunuş 8,2 sn).
-- Uygulamadan çıkaran `press_key back` artık "if it crashed" uyarısı vermez: uygulamayı önden çıkaran bir back, home gibi, kişinin çıkışıdır.
 - Bir iOS simülatöründe başka bir uygulamayı öne getiren bir dokunuş, uygulamanın Safari'de açtığı bir bağlantı gibi, o uygulama öne gelince yanıtlar ve hangi uygulamanın öne geldiğini söyler; runner, test edilen uygulama olmayan bir uygulamanın kopyalarını sormaz: Ice Cubes'un "View in Browser"ı 25 sn sonra zaman aşımına uğruyor ve runner yeniden başlatılıyordu.
 - Bir iOS simülatöründe XCTest'in geç, bir sonraki istek sırasında not ettiği uygulama çökmesi artık o isteği `INTERNAL "XCTest: <app> crashed in …"` ile düşürmez: başka bir sürecin başlattığı bir runner ile bir çökme ve yeniden başlatmanın ardından açılan bir bağlantı böyle reddediliyordu.
 - Bir iOS simülatöründe `webview`, imzasız derlenmiş (`CODE_SIGNING_ALLOWED=NO`) bir uygulamanın sayfalarını bulur; inspector böyle bir uygulamayı çalıştırılabilir dosyasının adıyla (`process-Fixture`) adlandırır: sayfa orada olduğu halde incelenecek web sayfası yok diyordu.
 - iOS'ta kayda başladığını 90 sn içinde söylemeyen bir trace aracı o an durdurulur ve `perf_profile`, Mac'in yüküne değinmeden, aracın başlamadığını söyler: 3 sn'lik bir profil, kaydetmeden önce takılmış bir `xctrace` için 213 sn bekliyordu.
+
+#### Ekran, seçiciler ve dokunuşlar
+
+- Bir seçiciyle yapılan dokunuş, ekran son okunduktan sonra kendiliğinden öne gelen bir pencerede, bir diyalogda ya da bir izin isteminde, seçici öğesini orada bulduğunda o pencereye dokunur: seçici yeni ekranda aranmış olsa da dokunuş önceki okunan ekrana yöneltilmiş sayılıp `STALE` ile reddediliyordu. Pencere gelmeden önce okunan bir ref ya da `x`,`y` yine reddedilir.
+- Gizli ya da boyutsuz bir öğe artık listede yanındaki öğeleri adlandırmaz: bir galerinin ızgara hücrelerinin hepsi, hızlı kaydırıcısının 0×0 gizli tutamacının etiketiyle `— handleImage` okunuyordu.
+- Bir seçicinin son eşleşmesinin ötesindeki `index`'i, kaç eşleşme olduğunu `NOT_FOUND` ile söyler: `1 elements match … index=1` diye `AMBIGUOUS` ile reddediliyordu. Kaydırıp sonra birden çok eşleşme bulan bir `scroll_to` kaydırmalarının gittiğini söyler: `no touch was sent` diyordu.
+- `scroll_to`, kaydırmalarının yeni şeyleri getirdiği kenarın benzer komşularının gösterdiğinin yarısından azına kestiği bir öğe için bir kez daha kaydırır: yana doğru, 35 px'i görünen bir kart için found diyordu ve ona dokunuş sonra boşa gidiyordu.
+- Ortası, başka sözcükleri olan daha küçük bir denetim olan bir denetime dokunuş, onun o denetimden uzak bir noktasına gider ve nereye gittiğini söyler: tam oynatıcıyı açan bir mini oynatıcıya dokunuş ortadaki Pause'a düşüp oynatmayı duraklatıyordu. Kendi anahtarını tutan bir anahtar satırına, SwiftUI'ın Toggle'ı gibi, o anahtardan dokunulur: satırın ortasına, etiketine dokunmak hiçbir şeyi değiştirmiyordu.
 - Sözleri dokunuştan önce değişmiş bir ref'e dokunuş onu ikisiyle de adlandırır, dokunuştaki sözleriyle ve gösterildiği sözlerle: NewPipe'ın yanıtı öğeyi, o değişikliğin diff'inin yanında yeni sözleriyle adlandırıyordu, sanki dokunuş onu yeniden adlandırmış gibi.
+
+#### Android
+
+- Android'de `open_link`, seçili uygulamanın açmadığı bir web bağlantısını onu açan uygulamaya, çoğu zaman bir tarayıcıya gönderir ve uygulamanın onu açmadığını söyler; `--allow-apps` ile uygulamaya bağlı kalır. Açılmayan bir bağlantı sözcüklerle, ipucu olarak `open_link` `links` ile söylenir: `am`'in kendi satırıyla, `Error: Activity not started, unable to resolve Intent { … }`, ipucusuz başarısız oluyordu.
+- Android'de `logs`, birkaç satırlık bir iletiyi bütün verir, bir yığının kareleri ilk satırına eklenir, ve `maxLines` hiçbirinin içinden başlamaz: NewPipe'ın yanıtı bir throwable'ın iki karesiyle başlıyordu.
+- Android'de WMS'in ancak 5 sn'lik sınırında yanıtladığı bir pencere animasyonu, öndeki ya da arkadaki bir uygulamanın bitmeyen animasyonu, ilk işlemi bekletir, sonrakileri bekletmez, WMS yeniden daha erken yanıtlayana dek: arkada bir React Native dev client çalışırken her işlem 5 sn kadar uzun sürüyordu (okumasız bir kaydırma 0,6 sn'ye karşı 5,5 sn, bir dokunuş 8,2 sn).
+
+#### Uygulamalar ve kütüphane
+
+- `app install`, kurduğu uygulamayı dosyanın tuttuğu kimlikle adlandırır: yalnızca `installed <path>` diyordu.
+- Uygulamadan çıkaran `press_key back` artık "if it crashed" uyarısı vermez: uygulamayı önden çıkaran bir back, home gibi, kişinin çıkışıdır.
+- `react_native` `logs` ve runtime üzerinden bir `reload`, Metro'ya React Native 0.88'den beri bir hata ayıklayıcıdan istediği Origin'i (`http://localhost:<port>`) gönderir: Metro, Origin'i olmadığı için bağlantıyı reddediyordu ve ret cihazı ve ajanını suçluyordu. Metro'nun açmadığı bir runtime soketi, okunacak terminaliyle birlikte Metro'nunki olarak söylenir.
+- Kütüphanenin `connect`'i, düzenli ifade olmayan bir `allowDevices`'ı ne aldığını söyleyerek `INVALID_ARGUMENT` ile reddeder: düz JavaScript'ten gelen bir dize her çağrıyı `TypeError: this.policy.devices.test is not a function` ile düşürüyordu.
 
 ## 1.1.1
 
