@@ -27,8 +27,12 @@ export { NO_MATCH_WAIT_MS } from './targets.js';
 
 const DRAG_HOLD_MS = 150;
 
-/** What every step passes through on its way to the device (the recorder). */
-export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promise<T>;
+/** What every step passes through on its way to the device (the recorder), which may add a line to what it says it did. */
+export type StepSeam = <T extends { done: string }>(
+  s: Session,
+  st: Step,
+  run: () => Promise<T>,
+) => Promise<T>;
 
 async function windowSize(s: Session) {
   const w =

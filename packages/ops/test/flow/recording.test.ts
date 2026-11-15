@@ -191,6 +191,64 @@ assert id=result check=text equals="Gönderildi"
       expect(text).toContain('unrecorded "gesture pinch"');
     });
 
+    describe('an action with no step', () => {
+      const NOT = (what: string) =>
+        `not recorded: ${what}. A flow has no step for it, so a replay stops there`;
+      /** The line under what the action says it did. */
+      const second = (r: { text: string }) => must(r.text.split('\n')[1], 'a second line');
+
+      it('says so in its own answer, in a line, and again at the end of the recording', async () => {
+        const call = callerOf(context());
+        await call('flow', { action: 'start' });
+        const pinch = await call('gesture', { kind: 'pinch', scale: 2, read: 'full' });
+        expect(pinch.text.split('\n')[0]).toBe(pinch.data.done);
+        expect(second(pinch)).toBe(NOT('gesture pinch'));
+        expect(pinch.text.split('\n').length).toBeGreaterThan(2);
+        const turned = await call('set_orientation', { orientation: 'landscape_left' });
+        expect(second(turned)).toBe(NOT('set_orientation landscape_left'));
+        const stop = await call('flow', { action: 'stop' });
+        expect(stop.text).toContain('step 1: not recorded: gesture pinch');
+        expect(stop.text).toContain('step 2: not recorded: set_orientation landscape_left');
+      });
+
+      it('names the step that does the same, where the flow has one', async () => {
+        const call = callerOf(context());
+        await call('flow', { action: 'start' });
+        const drag = await call('gesture', { kind: 'drag', x: 10, y: 20, to: { x: 500, y: 600 } });
+        expect(second(drag)).toBe(
+          `${NOT('gesture drag')}: a straight drag made by \`swipe\` is recorded, as a \`swipe\` step`,
+        );
+        const copy = await call('clipboard', { text: 'Merhaba' });
+        expect(second(copy)).toBe(
+          `${NOT('clipboard')}: the same text typed by \`type_text\` is recorded, as a \`type\` step`,
+        );
+        // each step named is one a flow's file takes, and each action one that leaves it
+        const named = [second(drag), second(copy)].map((line) =>
+          must(/as a `(\w+)` step$/.exec(line)?.[1], 'a step'),
+        );
+        expect(named).toEqual(['swipe', 'type']);
+        await call('swipe', { direction: 'up' });
+        await call('type_text', { text: 'Merhaba' });
+        await call('flow', { action: 'stop' });
+        const file = join(dir, 'state', 'named.flow');
+        await call('flow', { action: 'save', file });
+        const kept = parseFlow(readFileSync(file, 'utf8')).steps.map((st) => st.action);
+        expect(kept.slice(-2)).toEqual(named);
+      });
+
+      it('adds nothing to an action a recording keeps, nor to one made with no recording', async () => {
+        const call = callerOf(context());
+        expect((await call('gesture', { kind: 'pinch', scale: 2 })).text).not.toContain(
+          'not recorded',
+        );
+        await call('flow', { action: 'start' });
+        expect((await call('tap', { selector: { text: 'Form' } })).text).not.toContain(
+          'not recorded',
+        );
+        expect((await call('clipboard', {})).text).not.toContain('not recorded');
+      });
+    });
+
     it('leaves a window and a person out: neither is a step of the app, nor stops a replay', async () => {
       const call = callerOf(context());
       await expect(
@@ -233,10 +291,11 @@ assert id=result check=text equals="Gönderildi"
         },
       });
       const call = callerOf(context());
+      let clicked = '';
       const { text } = await recorded(call, async () => {
         await call('webview', { action: 'pages' });
         await call('webview', { action: 'elements' });
-        await call('webview', { action: 'click', selector: '#go' });
+        clicked = (await call('webview', { action: 'click', selector: '#go' })).text;
         await call('webview', { action: 'eval', js: 'secretWork()' });
         await call('network', { action: 'paths' });
         await call('network', { action: 'start', via: 'bytes' });
@@ -251,6 +310,9 @@ assert id=result check=text equals="Gönderildi"
         'unrecorded "network start"',
         'unrecorded "network stop"',
       ]);
+      expect(clicked).toContain(
+        'not recorded: webview click. A flow has no step for it, so a replay stops there: a `tap` at the x, y that `screen` gives the element is recorded, as a `tap` step',
+      );
       expect(text).not.toContain('secretWork');
     });
 

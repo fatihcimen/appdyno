@@ -17,7 +17,7 @@ import { NO_MATCH_WAIT_MS } from '../steps.js';
 import type { Op, ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
 import { DEFAULT_TOLERANCE } from '../visual.js';
-import { type Aim, aimAt, fieldName, named, stepOf, unrecorded } from './aim.js';
+import { type Aim, aimAt, fieldName, named, notReplayed, stepOf, unrecorded } from './aim.js';
 import { activeRecording, addSteps, defined } from './shared.js';
 
 /** A target as the flat form the ops take. */
@@ -350,20 +350,43 @@ const unknownOp = (name: string) => (a: Record<string, unknown>) => {
     : unrecorded(action ? `${name} ${action}` : name);
 };
 
+/** An answer with one more line: under what it says it did, where its words begin with that, as a step's has it. */
+function withLine(out: ToolResult, line: string | undefined): ToolResult {
+  if (!line) return out;
+  const at = out.blocks.findIndex((b) => b.type === 'text');
+  if (at < 0) return { ...out, blocks: [{ type: 'text', text: line }, ...out.blocks] };
+  const done = typeof out.data.done === 'string' ? out.data.done : '';
+  const under = (text: string) =>
+    done && text.startsWith(done)
+      ? `${done}\n${line}${text.slice(done.length)}`
+      : `${text}\n${line}`;
+  const blocks = out.blocks.map((b, i) =>
+    i === at && b.type === 'text' ? { ...b, text: under(b.text) } : b,
+  );
+  return { ...out, blocks };
+}
+
 /**
  * The one place the recorder touches the operations: every step an action runs passes `through`, every
- * other op passes `wrap`. Nothing is written unless the action succeeded.
+ * other op passes `wrap`. Nothing is written unless the action succeeded, and an action that left no step
+ * says so in its own answer.
  */
 export function flowRecorder(ctx: ServerContext) {
   return {
     /** Around one step of `tap`, `steps` and the like. */
-    through: async <T>(s: Session, st: Step, run: () => Promise<T>): Promise<T> => {
+    through: async <T extends { done: string }>(
+      s: Session,
+      st: Step,
+      run: () => Promise<T>,
+    ): Promise<T> => {
       const r = activeRecording(ctx, s.device.serial);
       if (!r) return run();
       const record = await recordOf(r, s, st);
       const out = await run();
-      addSteps(r, record());
-      return out;
+      const step = record();
+      addSteps(r, step);
+      const line = notReplayed(step);
+      return line ? { ...out, done: `${out.done}\n${line}` } : out;
     },
 
     /** The op as the surfaces see it. */
@@ -389,8 +412,9 @@ export function flowRecorder(ctx: ServerContext) {
           if (s && op.name === 'wait_for') record = await waitRecord(s, args as never);
           if (s && op.name === 'assert') record = await assertRecord(s, args as never);
           const out = await op.handler(args);
-          addSteps(r, record ? record() : toStep(args, out.data));
-          return out;
+          const steps = record ? record() : toStep(args, out.data);
+          addSteps(r, steps);
+          return withLine(out, notReplayed(steps));
         },
       };
     },
