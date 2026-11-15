@@ -230,9 +230,13 @@ describe('the app switcher on a simulator', () => {
 describe('Spotlight on a simulator', () => {
   afterEach(() => void vi.restoreAllMocks());
 
-  /** A simulator whose calls are noted, with Spotlight in front at the looks `fronts` says. */
-  const opening = (fronts: boolean[]) => {
-    const device = new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951');
+  /** A device, a simulator unless given, whose calls are noted, with Spotlight in front at the looks `fronts` says. */
+  const opening = (
+    fronts: boolean[],
+    device: IosSimulatorDevice | IosPhoneDevice = new IosSimulatorDevice(
+      '7994F239-7CD7-4247-9FC0-4F92C7CFC951',
+    ),
+  ) => {
     const seen: string[] = [];
     vi.spyOn(device, 'act').mockImplementation((a) => {
       seen.push(a.kind === 'key' ? a.key : a.kind);
@@ -275,6 +279,13 @@ describe('Spotlight on a simulator', () => {
     const { device, seen } = opening([false, true]);
     await device.openView('spotlight');
     expect(seen).toEqual(BY_DRAG);
+  });
+
+  it('is waited for on an iPhone as it was, with no drag and no refusal: neither was tried there', async () => {
+    const phone = new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' });
+    const { device, seen } = opening([false], phone);
+    await device.openView('spotlight');
+    expect(seen).toEqual(BY_KEYS);
   });
 
   it('is refused where neither opened it: a view that is not there is not said opened', async () => {
