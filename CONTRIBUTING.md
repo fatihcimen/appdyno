@@ -139,3 +139,17 @@ Every doc is in English and in Turkish, `X.md` and `X.tr.md`, and a change to on
 Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its own ground, so it reads on any page, and comes as two files, `X.svg` light and `X.dark.svg` dark, which a page shows in a `<picture>` whose `<source media="(prefers-color-scheme: dark)">` picks by GitHub's theme: a media query inside an SVG follows the system's theme, not GitHub's. A Turkish page shows `X.tr.svg` and `X.tr.dark.svg`. To draw one, copy the style block of another and keep to its shapes: blue is your Mac, teal or violet the device, pink whoever is asking. Look at it in both themes.
 
 `packages/appdyno/test/docs.test.ts` holds the diagrams to the code, and every link in the docs to a real target.
+
+## The site
+
+[appdyno.dev](https://appdyno.dev) is built from `site/`, a workspace package with Astro and Starlight. Its docs are the files of `docs/`, read as they stand at each build: `X.md` is the page at `/docs/X/` and `X.tr.md` the one at `/tr/docs/X/`, so a change to a doc needs nothing in `site/`. The landing page is `site/src/components/landing`, and every word of it is in `site/src/i18n/en.ts` and `site/src/i18n/tr.ts`, key for key.
+
+```sh
+pnpm --filter @appdyno/site dev          # the site on localhost, a saved doc or component shown again
+pnpm --filter @appdyno/site check        # its types and its own tests
+pnpm --filter @appdyno/site build        # the whole site, into site/dist
+pnpm --filter @appdyno/site check:dist   # every link, image and anchor of the build, and each page's head
+pnpm --filter @appdyno/site models DIR   # compresses DIR's dino.glb and bench.glb into site/public/models
+```
+
+`pnpm run ci` leaves the site's build out. `.github/workflows/site.yml` runs these on a pull request that touches `site/` or `docs/`, and publishes to GitHub Pages on a push to `main`. Of the models, only the compressed ones are committed.
