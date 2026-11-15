@@ -28,12 +28,18 @@ export const tr: Words = {
     copied: 'Kopyalandı',
   },
   bench: {
-    label: 'appdyno test tezgâhı: bir dinozor teknisyen bir telefonu dinamometrede çalıştırıyor',
-    dino: 'Lacivert tulumlu, elinde tablet tutan küçük bir dinozor teknisyen',
+    label: 'appdyno test tezgâhı: küçük bir ejderha dinamometredeki telefona göz kulak oluyor',
+    dragon:
+      'Tezgâhın üzerinde duran; mavi gövdeli, camgöbeği karınlı, macenta kanatlı küçük bir ejderha',
     phone: 'Göstergeli bir dinamometre tezgâhına bağlanmış bir akıllı telefon',
     launch: 'soğuk açılış',
     frames: 'kare / sn',
     memory: 'bellek',
+  },
+  mascot: {
+    tap: 'Tezgâhın ejderhası. Küçük bir alev üflemesi için basın.',
+    rest: 'Ejderhayı dinlendir',
+    wake: 'Ejderhayı uyandır',
   },
   console: {
     title: 'Sorun. Kullanışını izleyin.',

@@ -1,59 +1,40 @@
 ---
 import { getImage } from 'astro:assets';
 import benchPoster from '../../assets/bench.webp';
-import dinoPoster from '../../assets/dino.webp';
+import dynoPoster from '../../assets/dyno.webp';
 import type { Words } from '../../i18n/index.ts';
+import Mascot from '../mascot/Mascot.astro';
 import Dials from './Dials.astro';
 
 interface Props {
   t: Words;
 }
-const { bench } = Astro.props.t;
+const { t } = Astro.props;
+const { bench } = t;
 const poster = async (src: ImageMetadata) => getImage({ src, format: 'webp', width: 640 });
-const models = [
-  {
-    id: 'dino',
-    alt: bench.dino,
-    poster: await poster(dinoPoster),
-    orbit: '115deg 80deg auto',
-  },
-  {
-    id: 'bench',
-    alt: bench.phone,
-    poster: await poster(benchPoster),
-    orbit: '65deg 75deg auto',
-  },
+// each model's picture, where the scene draws the model once it is there
+const pictures = [
+  { id: 'dyno', alt: bench.dragon, poster: await poster(dynoPoster) },
+  { id: 'rig', alt: bench.phone, poster: await poster(benchPoster) },
 ];
 ---
 
 <div class="bench" role="group" aria-label={bench.label}>
   <div class="stage">
     {
-      models.map((model) => (
-        <model-viewer
-          id={model.id}
-          src={`/models/${model.id}.glb`}
-          alt={model.alt}
-          camera-controls
-          disable-zoom
-          interaction-prompt="none"
-          camera-orbit={model.orbit}
-          shadow-intensity="1"
-          exposure="1.1"
-        >
-          {/* the page's picture until the viewer is here, and the viewer's poster after */}
-          <img
-            slot="poster"
-            src={model.poster.src}
-            width={model.poster.attributes.width}
-            height={model.poster.attributes.height}
-            alt={model.alt}
-            decoding="async"
-          />
-        </model-viewer>
+      pictures.map(({ id, alt, poster }) => (
+        <img
+          class={id}
+          src={poster.src}
+          width={poster.attributes.width}
+          height={poster.attributes.height}
+          alt={alt}
+          decoding="async"
+        />
       ))
     }
   </div>
-  <Dials t={Astro.props.t} />
+  <Dials t={t} />
   <div class="stripes"></div>
+  <Mascot t={t} />
 </div>

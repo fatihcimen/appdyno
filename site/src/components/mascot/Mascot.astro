@@ -1,0 +1,25 @@
+---
+import type { Words } from '../../i18n/index.ts';
+import './mascot.css';
+
+interface Props {
+  t: Words;
+}
+const { mascot } = Astro.props.t;
+---
+
+{/* drawn over the bench once the page has loaded: until then, and where nothing may move, the bench shows its pictures */}
+<canvas class="mascot-view" aria-hidden="true" data-dyno="/models/dyno.glb" data-bench="/models/bench.glb"
+></canvas>
+<button class="mascot-body" type="button" aria-label={mascot.tap} hidden></button>
+<button
+  class="mascot-rest"
+  type="button"
+  aria-pressed="false"
+  data-rest={mascot.rest}
+  data-wake={mascot.wake}
+  hidden>{mascot.rest}</button
+>
+<script>
+  import './mascot.client.ts';
+</script>

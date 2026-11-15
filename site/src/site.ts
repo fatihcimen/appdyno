@@ -17,15 +17,6 @@ export const INSTALL = 'npx -y appdyno install';
 /** The name appdyno is listed under in the official MCP registry, as server.json has it. */
 export const REGISTRY = 'io.github.fatihcimen/appdyno';
 
-/**
- * The 3D viewer, the one script the site takes from another host, fetched after the page has
- * loaded and held to this hash. The models need no decoder, so it fetches nothing more.
- */
-export const MODEL_VIEWER = {
-  src: 'https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js',
-  integrity: 'sha384-Ftcjj/GNLxPvzNDftO/oryXB9aGxsGZY9JGqsXG0uUKgQDl9RfDgsx9NJ/4IVNPe',
-};
-
 export const LANGS = ['en', 'tr'] as const;
 export type Lang = (typeof LANGS)[number];
 

@@ -1,16 +1,6 @@
-import { MODEL_VIEWER } from '../../site.ts';
+import { HOP } from '../mascot/signals.ts';
 import { playerOf } from './player.ts';
 import type { Step } from './scenarios.ts';
-
-// the 3D viewer comes once the page has loaded: until then each model shows its poster
-addEventListener('load', () => {
-  const viewer = document.createElement('script');
-  viewer.type = 'module';
-  viewer.src = MODEL_VIEWER.src;
-  viewer.integrity = MODEL_VIEWER.integrity;
-  viewer.crossOrigin = 'anonymous';
-  setTimeout(() => document.head.append(viewer), 0);
-});
 
 /** What `Console.astro` leaves in the page for this script: each job's steps and the clock's words. */
 export type ConsoleData = { jobs: Record<string, Step[]>; running: string; done: string };
@@ -26,13 +16,8 @@ const out = el('out');
 const phone = el('phone');
 const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-run]')];
 
-const hop = () => {
-  const dino = document.getElementById('dino');
-  dino?.classList.add('hop');
-  setTimeout(() => dino?.classList.remove('hop'), 350);
-};
-
-const { play, reset } = playerOf([phone], out, hop);
+// the dragon hears a step that worked, if it is on the page
+const { play, reset } = playerOf([phone], out, () => document.dispatchEvent(new CustomEvent(HOP)));
 
 for (const chip of chips)
   chip.addEventListener('click', () => {

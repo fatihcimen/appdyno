@@ -68,7 +68,9 @@ for (const [path, html] of pages) {
   const links = [
     ...valuesOf(html, 'a', 'href'),
     ...valuesOf(html, 'link', 'href'),
-    ...valuesOf(html, '(?:img|script|source|model-viewer)', '(?:src|srcset)'),
+    ...valuesOf(html, '(?:img|script|source)', '(?:src|srcset)'),
+    // the models the bench's scene fetches
+    ...valuesOf(html, 'canvas', 'data-[a-z]+'),
     ...valuesOf(html, 'meta', 'content').filter((value) => value.startsWith(SITE)),
   ]
     // an address of the site said whole, as a canonical one or a share's image, is inside it too

@@ -145,14 +145,14 @@ Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its 
 
 ## The site
 
-[appdyno.dev](https://appdyno.dev) is built from `site/`, a workspace package with Astro and Starlight. Its docs are the files of `docs/`, read as they stand at each build: `X.md` is the page at `/docs/X/` and `X.tr.md` the one at `/tr/docs/X/`, so a change to a doc needs nothing in `site/`. The landing page is `site/src/components/landing`, and every word of it is in `site/src/i18n/en.ts` and `site/src/i18n/tr.ts`, key for key.
+[appdyno.dev](https://appdyno.dev) is built from `site/`, a workspace package with Astro and Starlight. Its docs are the files of `docs/`, read as they stand at each build: `X.md` is the page at `/docs/X/` and `X.tr.md` the one at `/tr/docs/X/`, so a change to a doc needs nothing in `site/`. The landing page is `site/src/components/landing`, and every word of it is in `site/src/i18n/en.ts` and `site/src/i18n/tr.ts`, key for key. The dragon on the bench is `site/src/components/mascot`: the page finds its model's bones and clips by the names in `names.ts`, which `models` keeps in the file and `check` holds the committed file to.
 
 ```sh
 pnpm --filter @appdyno/site dev          # the site on localhost, a saved doc or component shown again
 pnpm --filter @appdyno/site check        # its types and its own tests
 pnpm --filter @appdyno/site build        # the whole site, into site/dist
 pnpm --filter @appdyno/site check:dist   # every link, image and anchor of the build, and each page's head
-pnpm --filter @appdyno/site models DIR   # compresses DIR's dino.glb and bench.glb into site/public/models
+pnpm --filter @appdyno/site models DIR   # compresses DIR's dyno.glb and bench.glb into site/public/models
 ```
 
 `pnpm run ci` leaves the site's build out. `.github/workflows/site.yml` runs these on a pull request that touches `site/` or `docs/`, and publishes to GitHub Pages on a push to `main`. Of the models, only the compressed ones are committed.

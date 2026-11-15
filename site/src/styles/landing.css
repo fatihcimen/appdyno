@@ -1,4 +1,4 @@
-/* A dyno lab: the bench in 3D with its dials, the story of a request, a console where the agent drives a phone, the tool rack, the Mac app and the source. Its colours are tokens.css's, and --f-display and --f-mono come from the fonts of astro.config.ts. */
+/* A dyno lab: the bench with its dragon and its dials, the story of a request, a console where the agent drives a phone, the tool rack, the Mac app and the source. Its colours are tokens.css's, and --f-display and --f-mono come from the fonts of astro.config.ts. */
 * {
   box-sizing: border-box;
 }
@@ -137,24 +137,11 @@ h1 em {
   align-items: end;
   min-height: 360px;
 }
-model-viewer {
+.stage img {
   display: block;
   width: 100%;
   height: 360px;
-  --poster-color: transparent;
-  background: transparent;
-}
-model-viewer img {
-  width: 100%;
-  height: 100%;
   object-fit: contain;
-}
-model-viewer#dino {
-  height: 300px;
-  transition: transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
-}
-model-viewer#dino.hop {
-  transform: translateY(-18px);
 }
 .stripes {
   position: absolute;
@@ -553,7 +540,6 @@ footer {
   border-top: 1px solid var(--line);
 }
 @media (prefers-reduced-motion: reduce) {
-  model-viewer#dino,
   .banner,
   .overlay {
     transition: none;

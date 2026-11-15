@@ -26,12 +26,17 @@ export const en = {
     copied: 'Copied',
   },
   bench: {
-    label: 'The appdyno test bench: a dino technician runs a phone on a dynamometer',
-    dino: 'A small dinosaur mechanic in a navy jumpsuit, holding a tablet',
+    label: 'The appdyno test bench: a small dragon looks after a phone on a dynamometer',
+    dragon: 'A small blue dragon with a cyan belly and magenta wings, standing on the bench',
     phone: 'A smartphone clamped on a dynamometer test bench with gauges',
     launch: 'cold launch',
     frames: 'frames / s',
     memory: 'memory',
+  },
+  mascot: {
+    tap: 'The bench dragon. Press it for a small puff of fire.',
+    rest: 'Rest the dragon',
+    wake: 'Wake the dragon',
   },
   console: {
     title: 'Ask. Watch it drive.',
