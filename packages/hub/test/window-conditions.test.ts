@@ -200,6 +200,28 @@ describe("a window's Device pane", () => {
     expect(switchOf('dark_mode', 'auto')).toBeUndefined();
   });
 
+  it("offers a foldable's own poses on its row, and none on a row that has no list", async () => {
+    const { device } = deviceWith({ fold: 'default (now open)' });
+    const poses = ['closed', 'half_opened', 'open', 'rear_display'];
+    device.settings.choices = (name) => Promise.resolve(name === 'fold' ? poses : undefined);
+    const { said, rowOf } = paneOn(device);
+    const list = await said('deviceList');
+    expect(rowOf(list, 'fold')).toEqual({
+      name: 'fold',
+      value: 'default (now open)',
+      choices: poses,
+    });
+    expect(rowOf(list, 'thermal')).toEqual({ name: 'thermal', value: 'off' });
+    // a pose a person picks goes by the op an agent calls, and the row comes back with the list
+    const set = await said('deviceSet', { args: { name: 'fold', value: 'half_opened' } });
+    expect(set).toMatchObject({ ok: true, moved: true });
+    expect(rowOf(set, 'fold')).toMatchObject({
+      value: 'half_opened',
+      choices: poses,
+      changed: true,
+    });
+  });
+
   it("says each reason a driver gives for what the pane shows in a person's words, with no setting id", async () => {
     const refusal = (asked: Promise<unknown>) =>
       asked.then(

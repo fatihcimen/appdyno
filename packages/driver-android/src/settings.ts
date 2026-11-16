@@ -120,6 +120,10 @@ export class AndroidSettings implements DeviceSettings {
     return this.adb.exec(this.serial, ON_DISK).then(() => undefined);
   }
 
+  async choices(name: SettingName) {
+    return name === 'fold' ? this.fold.poses() : undefined;
+  }
+
   async willChange(name: SettingName) {
     if (name === 'animations' || name === 'reduce_motion') await this.releaseAnimations();
   }
@@ -372,8 +376,7 @@ export class AndroidSettings implements DeviceSettings {
         return;
       }
       case 'fold':
-        await this.fold.set(value);
-        return;
+        return this.fold.set(value);
       case 'thermal':
         throw new DeviceError('UNSUPPORTED', NO_THERMAL);
     }

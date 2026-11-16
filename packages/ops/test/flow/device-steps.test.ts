@@ -200,6 +200,16 @@ describe('screenshot, visual and setting steps', () => {
     expect(held.dark_mode).toBe('off');
   });
 
+  it('records a fold as its step, by the pose asked for', async () => {
+    settingsOf({ fold: 'default (now open)' });
+    const call = callerOf(context());
+    const { text } = await recorded(call, async () => {
+      await call('device_setting', { name: 'fold' });
+      await call('device_setting', { name: 'fold', value: 'half_opened' });
+    });
+    expect(text).toBe('app dev.app\n\nsetting fold half_opened\n');
+  });
+
   it('records a setting, a comparison and a picture kept in a file as their steps, a look as none', async () => {
     settingsOf({ dark_mode: 'off' });
     const call = callerOf(context());
@@ -285,6 +295,17 @@ stop background
         ...o,
       });
     };
+
+    it('replays a fold a flow asks for, and puts it back before the next file’s first step', async () => {
+      const seen = settingsOf({ fold: 'default (now open)' });
+      flowFile('setting fold half_opened\nscreenshot half', 'a.flow');
+      flowFile('screenshot open', 'b.flow');
+      expect((await test()).passed).toBe(true);
+      expect(seen.filter((s) => s.startsWith('fold'))).toEqual([
+        'fold half_opened',
+        'fold default (now open)',
+      ]);
+    });
 
     it('puts back what each file changed before the next file’s first step', async () => {
       const seen = settingsOf({ dark_mode: 'off' });

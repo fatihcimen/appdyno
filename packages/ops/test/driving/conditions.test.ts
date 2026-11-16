@@ -134,6 +134,27 @@ describe('device conditions', () => {
     );
   });
 
+  it('reads a fold with the poses the device lists, and answers a change with what the device adds', async () => {
+    const settings = new Settings();
+    settings.values.fold = 'default (now open)';
+    const poses = ['closed', 'half_opened', 'open', 'rear_display'];
+    Object.assign(settings, {
+      choices: (name: SettingName) => Promise.resolve(name === 'fold' ? poses : undefined),
+      set: (name: SettingName, value: string) => {
+        settings.values[name] = value;
+        return Promise.resolve('display 1080x2424 at 390 dpi; app/.Main was recreated');
+      },
+    });
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    const read = await call('device_setting', { name: 'fold' });
+    expect(read.text).toBe('fold: default (now open); of closed, half_opened, open, rear_display');
+    expect(read.data.value).toBe('default (now open)');
+    expect((await call('device_setting', { name: 'dark_mode' })).text).toBe('dark_mode: off');
+    expect((await call('device_setting', { name: 'fold', value: 'closed' })).text).toBe(
+      'fold: closed; display 1080x2424 at 390 dpi; app/.Main was recreated; put back when this session ends, or by restore; it cannot be kept past the session',
+    );
+  });
+
   it('keeps a change written down when the device refused after making it, and forgets one it never made', async () => {
     const settings = new Settings();
     settings.values.fold = 'default (now open)';

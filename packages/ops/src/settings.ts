@@ -277,7 +277,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(500)
             .describe(
-              'A switch: on, off; text_size: Android 1.3, iOS extra-large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset), memory_warning (Android: trim level), shake, media (file or folder in the server folder).',
+              'Switch: on, off; text_size: Android 1.3, iOS extra-large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: closed, half, open. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset), memory_warning (Android: trim level), shake, media (file or folder in server folder).',
             )
             .optional(),
           title: z.string().max(200).optional(),
@@ -308,7 +308,8 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         if (value === undefined) {
           const now = await readCondition(s, name, pkg);
           // an app's locale none holds it in reads as nothing
-          const t = `${name}: ${now || 'none set'}`;
+          const choices = await s.device.settings.choices?.(name);
+          const t = `${name}: ${now || 'none set'}${choices ? `; of ${choices.join(', ')}` : ''}`;
           return reply(clean(t), { done: clean(t), value: now });
         }
         const { also, moved, now } = await setCondition(s, name, value, pkg);

@@ -135,9 +135,12 @@ export function conditionSends(
       const on = SWITCHES.includes(name) ? switchOf(name, value) : undefined;
       // read, and yet not set from here: a simulator follows the Mac's proxy
       const why = await s.device.settings.cannotSet?.(name);
+      // a foldable's own poses, which no other device shares
+      const choices = await s.device.settings.choices?.(name);
       return {
         name,
         value,
+        ...(choices && { choices }),
         ...(on !== undefined && { on }),
         ...(why && { why: personal(why) }),
         ...also,
