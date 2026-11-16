@@ -121,6 +121,9 @@ export type Aimed = {
   on: string;
 };
 
+/** How `nameOf` says an element: `clean`, what its words pass through; `shownAs`, what writes the part in brackets. */
+export type NameWords = { clean?: (text: string) => string; shownAs?: (was: string) => string };
+
 export type ShotOptions = {
   /** `png` with none given. */
   format?: 'png' | 'jpeg';

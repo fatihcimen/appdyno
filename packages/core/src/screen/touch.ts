@@ -161,11 +161,14 @@ export const refName = (ref: string, words: string) => `${ref} ${JSON.stringify(
 /**
  * What a touch calls the element of `ref`: `name`, which begins with its words at the touch, and where those are not
  * the words it was shown with, `was`, those too, as a ref of an older screen read as if the touch had renamed it.
+ * `shownAs` writes that part, for a caller that says it in another language.
  */
-export const withShownWords = (name: string, ref: string, was: string | undefined) =>
-  was === undefined || name.startsWith(refName(ref, was))
-    ? name
-    : `${name} (shown as ${JSON.stringify(was)})`;
+export const withShownWords = (
+  name: string,
+  ref: string,
+  was: string | undefined,
+  shownAs = (words: string) => `(shown as ${JSON.stringify(words)})`,
+) => (was === undefined || name.startsWith(refName(ref, was)) ? name : `${name} ${shownAs(was)}`);
 
 /**
  * A touch's options where a selector found each of its targets on one read, `found`: the device compares the screen it

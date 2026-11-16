@@ -283,4 +283,13 @@ describe('aiming on a read', () => {
     expect(nameOf(pause, 'Pause')).toBe('@pause "Pause"');
     expect(nameOf(pause, 'Play')).toBe('@pause "Pause" (shown as "Play")');
   });
+
+  it("says it in a caller's language, with a caller's secrets hidden in both its words", () => {
+    const shownAs = (was: string) => `(önce «${was}»)`;
+    expect(nameOf(pause, 'Play', { shownAs })).toBe('@pause "Pause" (önce «Play»)');
+    expect(nameOf(pause, 'Pause', { shownAs })).toBe('@pause "Pause"');
+    const clean = (text: string) => text.replace(/Pa\w+|Pl\w+/g, '•••');
+    expect(nameOf(pause, 'Play', { clean })).toBe('@pause "•••"');
+    expect(nameOf(pause, 'Stop', { clean, shownAs })).toBe('@pause "•••" (önce «Stop»)');
+  });
 });

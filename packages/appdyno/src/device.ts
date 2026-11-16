@@ -37,6 +37,7 @@ import { deviceProviders } from './providers.js';
 import type {
   Aimed,
   Device,
+  NameWords,
   OpenOptions,
   Screen,
   ScreenElement,
@@ -264,7 +265,15 @@ function aimed(got: Sought<Screen, ScreenElement>, target: Selector | { ref: str
 
 /**
  * An element by its ref and its words, as `@a1 "Play"`, and where `shown`, the words it was read with before, are not
- * its words now, by both: `@a1 "Close" (shown as "Play")`.
+ * its words now, by both: `@a1 "Close" (shown as "Play")`. `words.clean`: what both pass through first, as a caller's
+ * masking. `words.shownAs`: writes the part in brackets from the words it was shown with, for another language.
  */
-export const nameOf = (element: ScreenElement, shown?: string): string =>
-  withShownWords(refName(element.ref, element.label), element.ref, shown);
+export function nameOf(element: ScreenElement, shown?: string, words: NameWords = {}): string {
+  const clean = words.clean ?? ((text: string) => text);
+  return withShownWords(
+    refName(element.ref, clean(element.label)),
+    element.ref,
+    shown === undefined ? undefined : clean(shown),
+    words.shownAs,
+  );
+}
