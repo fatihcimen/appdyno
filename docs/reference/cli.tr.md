@@ -44,6 +44,8 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 
 `test`, `--retries N` yanında `--fail-on-flaky` alır: bir dosyanın yalnızca yeniden denemede geçtiği bir çalıştırma 1 ile çıkar ve son satırında her birini adıyla söyler; bayrak olmadan 0 ile çıkar. Bkz. [Akışlar](../guides/flows.tr.md#yeniden-denemeler).
 
+`test`, bir klasörün `_setup.flow` dosyasını altındaki her akıştan önce, `_teardown.flow` dosyasını da sonra çalıştırır; adı `_` ile başlayan bir dosyayı test olarak çalıştırmaz. Bir akışın `prepare` komutlarını sormadan çalıştırır, çünkü onu çalıştıran kişi projenin kendi komutlarını çalıştırmıştır, ve her birini önce yazdırır: bkz. [Veri hazırlamak](../guides/flows.tr.md#veri-hazırlamak).
+
 ## Sunucu seçenekleri
 
 `appdyno mcp [flags]`. Seçeneklerin çoğunun bir ortam değişkeni de vardır; birkaç ayarın ise yalnızca değişkeni vardır.

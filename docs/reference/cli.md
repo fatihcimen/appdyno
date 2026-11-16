@@ -44,6 +44,8 @@ A command that loses data asks on its terminal first, as [Tools](tools.md#what-a
 
 `test` takes `--fail-on-flaky` beside `--retries N`: a run with a file that passed only on a retry exits 1 and names each in its last line, where it exits 0 without the flag; see [Flows](../guides/flows.md#retries).
 
+`test` runs a folder's `_setup.flow` before each flow under it and its `_teardown.flow` after, and does not run a file whose name starts with `_` as a test. It runs a flow's `prepare` commands with nothing asked, as the person who ran it ran the project's own commands, and prints each first: see [Preparing data](../guides/flows.md#preparing-data).
+
 ## Server options
 
 `appdyno mcp [flags]`. Most flags have an environment variable too, and a few settings have only a variable.
