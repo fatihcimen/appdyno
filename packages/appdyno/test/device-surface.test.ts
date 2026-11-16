@@ -548,3 +548,89 @@ describe('what a touch waits for and answers', () => {
     }),
   );
 });
+
+describe('a touch aimed on a read that is no longer in front, on an iPhone', () => {
+  /** The fake as an iPhone, showing `pkg` in front, with an alert of the app's up or not. */
+  const shows = (pkg: string, alert = false) => {
+    Object.defineProperty(device, 'platform', { value: 'ios' });
+    const t = tree(
+      [
+        { t: 'Buy', c: 'Button', b: [0, 100, 300, 200], f: 3 },
+        ...(alert
+          ? [{ c: 'Alert', b: [40, 300, 350, 500] as [number, number, number, number] }]
+          : []),
+      ],
+      pkg,
+      `${pkg}${alert ? '+alert' : ''}`,
+    );
+    device.fixture = t;
+  };
+  const sent = () => device.calls.filter((c) => c.name !== 'tree').map((c) => c.name);
+  const stale = { code: 'STALE', hint: 'read the screen again, and aim on that read' };
+
+  it('is refused with nothing sent once another app is in front, and goes while the same one is', async () => {
+    shows('dev.shop');
+    const d = await openDevice(SERIAL, { share: true });
+    const { point, on } = await d.aim({ text: 'Buy' });
+    await d.tap(point, { before: on });
+    expect(sent()).toEqual(['act']);
+    shows('com.apple.mobilesafari');
+    await expect(d.tap(point, { before: on })).rejects.toMatchObject(stale);
+    await expect(d.longPress(point, 600, { before: on })).rejects.toMatchObject(stale);
+    await expect(d.swipe(point, { x: 5, y: 5 }, 300, { before: on })).rejects.toMatchObject(stale);
+    await expect(d.typeText('a', { at: point, before: on })).rejects.toMatchObject(stale);
+    expect(sent()).toEqual(['act']);
+    await d.close();
+  });
+
+  it('is refused once an alert came up over the app, and after it went for one aimed on the alert', async () => {
+    shows('dev.shop');
+    const d = await openDevice(SERIAL, { share: true });
+    const under = await d.aim({ text: 'Buy' });
+    shows('dev.shop', true);
+    await expect(d.tap(under.point, { before: under.on })).rejects.toMatchObject(stale);
+    const over = await d.aim({ text: 'Buy' });
+    await d.tap(over.point, { before: over.on });
+    shows('dev.shop');
+    await expect(d.tap(over.point, { before: over.on })).rejects.toMatchObject(stale);
+    expect(sent()).toEqual(['act']);
+    await d.close();
+  });
+
+  it('is not compared for a key, a text into the focused field, a read it did not give or one past the last 8', async () => {
+    shows('dev.shop');
+    const d = await openDevice(SERIAL, { share: true });
+    const { point, on } = await d.aim({ text: 'Buy' });
+    shows('com.apple.mobilesafari');
+    await d.key('home', { before: on });
+    await d.typeText('a', { before: on });
+    await d.tap(point, { before: 'a hash of another object' });
+    for (let n = 0; n < 8; n++) {
+      shows(`dev.other${n}`);
+      await d.screen();
+    }
+    const reads = device.calls.filter((c) => c.name === 'tree').length;
+    await d.tap(point, { before: on });
+    expect(device.calls.filter((c) => c.name === 'tree')).toHaveLength(reads);
+    expect(sent()).toEqual(['act', 'typeText', 'act', 'act', 'act']);
+    await d.close();
+  });
+
+  it('costs one read before the touch there, and none on Android, whose agent compares as it sends', async () => {
+    const d = await opened();
+    const { point, on } = await d.aim({ text: 'Form' });
+    const reads = () => device.calls.filter((c) => c.name === 'tree').length;
+    const before = reads();
+    await d.tap(point, { before: on });
+    expect(reads()).toBe(before);
+    await d.close();
+    device = new FakeDevice(SERIAL);
+    shows('dev.shop');
+    const phone = await openDevice(SERIAL, { share: true });
+    const aimed = await phone.aim({ text: 'Buy' });
+    const then = reads();
+    await phone.tap(aimed.point, { before: aimed.on });
+    expect(reads()).toBe(then + 1);
+    await phone.close();
+  });
+});

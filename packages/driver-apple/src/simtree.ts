@@ -405,5 +405,4 @@ export function onKeyboard(nodes: Node[], x: number, y: number): boolean {
   );
 }
 
-export const hasAlert = (nodes: Node[]) =>
-  nodes.some((n) => (n.c === 'Alert' || n.c === 'Sheet') && (n.f & F.visible) !== 0);
+export { hasAlert } from '@appdyno/core';

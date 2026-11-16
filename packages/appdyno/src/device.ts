@@ -1,6 +1,9 @@
 import {
+  AGENT_REFUSES_STALE,
   buildScreen,
   claim,
+  frontChanged,
+  frontOf,
   refName,
   release,
   seek,
@@ -14,6 +17,7 @@ import {
   withFamily,
   withShownWords,
   type ActOptions,
+  type Front,
   type Reads,
   type ScreenElement as Listed,
   type Sought,
@@ -64,6 +68,9 @@ function acts({ before, quietMs, maxMs, tree }: TouchOptions = {}): ActOptions {
   };
 }
 
+/** The reads a `before` can name, the newest: as many as a device's agent keeps. */
+const READS_KEPT = 8;
+
 /**
  * A device by its serial, opened by the driver that takes it and held for this process until `close`: one another
  * process holds is refused `DEVICE_CLAIMED`, and one `allowDevices` does not name `POLICY_DENIED`.
@@ -90,7 +97,12 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     throw e;
   });
   const reads = { port: device.platformScreen, ...(app && { appId: app }) };
+  /** What was in front on the reads this object gave, the last `READS_KEPT`, by their hash: what `before` names. */
+  const fronts = new Map<string, Front>();
   const shown = (tree: Tree, traversal?: Traversal[]): Screen => {
+    fronts.delete(tree.hash);
+    fronts.set(tree.hash, frontOf(tree));
+    for (const old of [...fronts.keys()].slice(0, -READS_KEPT)) fronts.delete(old);
     const { list, elements, hash, foreground, window } = buildScreen(tree, reads, traversal);
     return {
       elements: withFamily(list, elements).map((e) => hidden(e, clean)),
@@ -100,6 +112,20 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     };
   };
   const screen = async () => shown(await device.tree());
+  /**
+   * Refuses a touch aimed on a read that no longer has in front what it had, with nothing sent. Android's agent does
+   * this itself as it sends the touch; an iPhone's does not, so there it is one more read here, just before.
+   */
+  const aimedStill = async ({ before }: TouchOptions = {}) => {
+    const then = before === undefined ? undefined : fronts.get(before);
+    if (AGENT_REFUSES_STALE[device.platform] || !then) return;
+    if (frontChanged(then, frontOf(await device.tree())))
+      throw new DeviceError(
+        'STALE',
+        'the screen changed since it was read: what is in front is another',
+        'read the screen again, and aim on that read',
+      );
+  };
   /** What an action answered, with the screen it left where that was asked: the one its settle read, else a new read. */
   const touched = async (r: ActResult, o: TouchOptions = {}): Promise<Touched> => ({
     settled: r.settle?.settled === true,
@@ -132,13 +158,28 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     platform: device.platform,
     virtual: device.virtual,
     screen,
-    tap: async (at, o) => touched(await device.tap(at, acts(o)), o),
-    longPress: async (at, ms, o) => touched(await device.longPress(at, ms, acts(o)), o),
-    swipe: async (from, to, ms, o) => touched(await device.swipe(from, to, ms, acts(o)), o),
+    async tap(at, o) {
+      const given = acts(o);
+      await aimedStill(o);
+      return touched(await device.tap(at, given), o);
+    },
+    async longPress(at, ms, o) {
+      const given = acts(o);
+      await aimedStill(o);
+      return touched(await device.longPress(at, ms, given), o);
+    },
+    async swipe(from, to, ms, o) {
+      const given = acts(o);
+      await aimedStill(o);
+      return touched(await device.swipe(from, to, ms, given), o);
+    },
     key: async (key, o) => touched(await device.key(key, acts(o)), o),
     async typeText(text, { at, replace, submit, ...o } = {}) {
+      const given = acts(o);
+      // into the field that has the focus, a text goes to whatever is in front, as a key does
+      if (at) await aimedStill(o);
       const r = await device.typeText(text, {
-        ...acts(o),
+        ...given,
         ...(at && { at }),
         ...(replace !== undefined && { replace }),
         ...(submit !== undefined && { submit }),

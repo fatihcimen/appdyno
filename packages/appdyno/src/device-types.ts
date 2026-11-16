@@ -75,12 +75,15 @@ export type OpenOptions = {
 
 export type TouchOptions = {
   /**
-   * The `hash` of the read the touch was aimed on: the screen after the touch is settled against it. On Android a
-   * touch whose `before` is a read from before another window of an app came in front is refused `STALE`, with
-   * nothing sent, while that read is among the last 8 the device gave. iOS makes no such comparison: there the touch
-   * is sent, so read again and aim again after a dialog came up by itself. `key` goes to whatever is in front, and is
-   * never refused so. On `launch` and `openLink` it names the screen the call began on, which is then no rest
-   * however long it holds.
+   * The `hash` of the read the touch was aimed on: the screen after the touch is settled against it. A touch (`tap`,
+   * `longPress`, `swipe`, and `typeText` with `at`) whose `before` is a read that no longer has in front what it had
+   * is refused `STALE`, with nothing sent, while that read is among the last 8. Android compares on the device, as
+   * the touch is sent, by the app windows of the two reads. iOS compares on this Mac, by one more read just before
+   * the touch, of the reads this device object gave: another app in front, a system alert that came or went, an
+   * alert or a sheet of the app's that came up or went away. What comes in front between that read and the touch is
+   * not caught there, and a cover the app draws that is no alert or sheet is not seen as one. `key` goes to whatever
+   * is in front, and is never refused so. On `launch` and `openLink` it names the screen the call began on, which is
+   * then no rest however long it holds.
    */
   before?: string;
   /** How long the layout must hold to count as at rest, in ms: 200 with none given, 5000 at most. */

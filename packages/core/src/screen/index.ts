@@ -14,6 +14,7 @@ export * from './fold.js';
 export * from './folded.js';
 export * from './select.js';
 export * from './family.js';
+export * from './front.js';
 export * from './target.js';
 export * from './touch.js';
 

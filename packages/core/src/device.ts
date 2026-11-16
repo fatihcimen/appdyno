@@ -52,6 +52,12 @@ export const SLIDE_DROPS_TOUCH: Record<Platform, boolean> = { android: false, io
  */
 export const TURNS_FROM_OWN_SHAPE: Record<Platform, boolean> = { android: true, ios: false };
 
+/**
+ * Whether a device's agent refuses a touch aimed on a read that no longer has in front what it had: Android's does, as
+ * it sends the touch. An iPhone's does not, and what drives one compares the two reads itself first.
+ */
+export const AGENT_REFUSES_STALE: Record<Platform, boolean> = { android: true, ios: false };
+
 /** The orientations a device is turned to by name, each a quarter turn on from the one before. */
 export const ORIENTATIONS = [
   'portrait',
