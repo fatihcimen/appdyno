@@ -121,7 +121,7 @@ class Automation private constructor(private val looper: Looper) {
         } catch (e: Throwable) {
             System.err.println("UI automation did not disconnect: $e")
         }
-        if (turn != null) sh("sh", "-c", SettingsScript.restore("system", ROTATION.zip(turn)))
+        if (turn != null) sh("sh", "-c", SettingsScript.restoreTurn(ROTATION.zip(turn)))
     }
 
     private fun open(): UiAutomation {

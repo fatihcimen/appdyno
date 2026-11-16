@@ -18,6 +18,16 @@ class SettingsScriptTest {
     }
 
     @Test
+    fun aTurnPutBackWritesTheLockAgainAfterTheSystemsOwn() {
+        val script = SettingsScript.restoreTurn(listOf("user_rotation" to "0", "accelerometer_rotation" to "1"))
+        assertEquals(
+            "settings put system user_rotation 0; settings put system accelerometer_rotation 1; " +
+                "for i in 1 2 3; do sleep 1; settings put system accelerometer_rotation 1; done",
+            script,
+        )
+    }
+
+    @Test
     fun anythingButANumberIsLeftAlone() {
         assertEquals("true", SettingsScript.restore("global", listOf("a" to "1; reboot")))
     }

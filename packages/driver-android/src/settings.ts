@@ -23,6 +23,9 @@ const NIGHT_WORDS: Partial<Record<string, string>> = { yes: 'on', no: 'off' };
 
 /** What a turn of the screen sets, the rotation lock (`1` turns by the sensor) and the user rotation. */
 const ROTATION_KEYS = ['accelerometer_rotation', 'user_rotation'];
+/** How long the system may take to write a lock of its own after a user rotation, and how often the lock is asked again. */
+const ROTATION_HOLDS_MS = 300;
+const ROTATION_ASKS = 3;
 
 /** Android's own: high contrast text, the nearest it has to increasing contrast. */
 const HIGH_CONTRAST = 'high_text_contrast_enabled';
@@ -373,6 +376,12 @@ export class AndroidSettings implements DeviceSettings {
         const put = (k: string, v = '') =>
           v === 'null' ? `settings delete system ${k}` : `settings put system ${k} ${v}`;
         await this.sh(`${put('user_rotation', turn)}; ${put('accelerometer_rotation', lock)}`);
+        // a Xiaomi answers a new user rotation with a lock of its own, a moment after ours: asked again until it holds
+        for (let i = 0; i < ROTATION_ASKS; i++) {
+          await sleep(ROTATION_HOLDS_MS);
+          if ((await this.get('orientation')) === value) return;
+          await this.sh(put('accelerometer_rotation', lock));
+        }
         return;
       }
       case 'fold':

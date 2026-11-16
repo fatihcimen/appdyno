@@ -628,6 +628,28 @@ describe('the rotation lock', () => {
   });
 });
 
+describe('the rotation lock on a phone that locks at a user rotation', () => {
+  it('asks for the lock again once the system has written its own after ours', async () => {
+    const held: Record<string, string> = { accelerometer_rotation: '0', user_rotation: '1' };
+    const exec = (_serial: string, command: string) => {
+      const out = command.split('; ').map((one) => {
+        const [, verb, key = '', v = ''] =
+          /^settings (get|put|delete) system (\w+) ?(\S*)/.exec(one) ?? [];
+        if (verb === 'get') return held[key] ?? 'null';
+        held[key] = verb === 'put' ? v : 'null';
+        return '';
+      });
+      // as a REDMI 15C with HyperOS 3.0 did: its lock comes after the whole line that wrote a user rotation
+      if (command.includes('put system user_rotation')) held.accelerometer_rotation = '0';
+      return Promise.resolve(out.join('\n'));
+    };
+    const settings = new AndroidSettings({ exec } as unknown as Adb, 'Y9');
+    await settings.set('orientation', 'auto-rotate 1, rotation 0');
+    expect(held).toEqual({ accelerometer_rotation: '1', user_rotation: '0' });
+    expect(await settings.get('orientation')).toBe('auto-rotate 1, rotation 0');
+  });
+});
+
 describe('high contrast text', () => {
   it('goes back to 0 where the device had 0, and to unset where it had none', async () => {
     for (const start of ['0', 'null']) {

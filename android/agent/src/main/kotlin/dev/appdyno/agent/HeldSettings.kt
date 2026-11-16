@@ -47,5 +47,12 @@ object SettingsScript {
         }
     }
 
+    /**
+     * A turn put back. A phone that answers a new user rotation with a lock of its own (a REDMI 15C with HyperOS 3.0)
+     * writes it some time after ours, so the lock is written again, each second for three.
+     */
+    fun restoreTurn(old: List<Pair<String, String>>) =
+        "${restore("system", old)}; for i in 1 2 3; do sleep 1; ${restore("system", old.filter { it.first == "accelerometer_rotation" })}; done"
+
     fun watch(pid: Int, namespace: String, old: List<Pair<String, String>>) = "while kill -0 $pid 2>/dev/null; do sleep 1; done; ${restore(namespace, old)}"
 }
