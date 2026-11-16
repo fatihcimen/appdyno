@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { must } from '../src/must.js';
-import { sharedAgent } from '../src/agent-hosts.js';
+import { agentEnded, agentMet, sharedAgent } from '../src/agent-hosts.js';
 import { startOf, thisOwner, type Owner } from '../src/owner.js';
 import type { RpcClient } from '../src/rpc.js';
 import { deviceState } from '../src/state.js';
@@ -126,6 +126,26 @@ describe('an agent found on a device', () => {
         await sharedAgent(SERIAL, { sha256: THIS_BUILD }, THIS_BUILD, late, dead),
       ).toBeUndefined();
     });
+  });
+
+  it('says why another host ended the agent this one had, where it finds another in its place', () => {
+    const said = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const ended = deviceState('agent-ended', { parse: (x: unknown) => x as object });
+    agentMet(SERIAL, 10);
+    ended.write(SERIAL, { pid: 10, by: 4242, why: 'stuck: it was restarted' });
+    agentMet(SERIAL, 20, 'the agent connection closed');
+    expect(said).toHaveBeenLastCalledWith(
+      `the agent on ${SERIAL} stopped (pid 4242 ended it: stuck: it was restarted), and another took its place\n`,
+    );
+    // its own ending is its own to say, and a note of an agent before the last says nothing of this one
+    agentEnded(SERIAL, 20, 'stuck: mine');
+    agentMet(SERIAL, 30, 'as this process has it');
+    agentMet(SERIAL, 40, 'closed');
+    expect(said.mock.calls.slice(-2).map(([line]) => line)).toEqual([
+      `the agent on ${SERIAL} stopped (as this process has it), and another took its place\n`,
+      `the agent on ${SERIAL} stopped (closed), and another took its place\n`,
+    ]);
+    said.mockRestore();
   });
 
   it('counts this process as nobody else, however often it asks', async () => {

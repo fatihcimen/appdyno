@@ -146,8 +146,6 @@ export abstract class IosDevice extends RpcDevice implements Device {
     return agent;
   }
 
-  protected override readonly stuckRestarts = 2;
-
   /** A runner whose main thread stays stuck: stopped (its xcodebuild ends), the next call starts one. */
   protected async restartStuck(rpc: RpcClient) {
     if (this.rpc === rpc) this.rpc = undefined;

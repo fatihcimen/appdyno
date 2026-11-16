@@ -14,13 +14,21 @@ import {
   type TextResult,
   type Tree,
 } from '@appdyno/protocol';
-import { agentMet } from './agent-hosts.js';
+import { agentEnded, agentMet } from './agent-hosts.js';
 import { must } from './must.js';
 import { TIMEOUTS, type ActOptions, type TreeOptions } from './device.js';
 import { DeviceQueue } from './queue.js';
 import type { RpcClient } from './rpc.js';
 import { buildScreen, type PlatformScreen, type Screen } from './screen/index.js';
 import { afterTimeout } from './stuck.js';
+
+/**
+ * Stuck restarts in a row, with no call answered between, before the agent is left as it is, on every platform: a
+ * screen that holds every new agent as it held the last made a loop of them (a runner's start, then 15 s of nothing,
+ * 13 times).
+ */
+const STUCK_RESTARTS = 2;
+const STUCK_WHY = 'stuck: a call and a quick look after it went unanswered, so it was restarted';
 
 /** The failure of an action that left for the device: unless an agent refused it first, it may have come after the touch. */
 export function failedAfterSending(e: unknown): never {
@@ -82,12 +90,6 @@ export abstract class RpcDevice extends DeviceActions {
   /** An agent whose work lane stays stuck: stopped, so the next call starts a new one. */
   /** Ends an agent stuck on a job; what held it up, where the device can tell. */
   protected abstract restartStuck(rpc: RpcClient): Promise<string | undefined>;
-  /**
-   * Stuck restarts in a row, with no call answered between, before the agent is left as it is: a screen that holds
-   * every new agent as it held the last made a loop of them (a runner's start, then 15 s of nothing, 13 times). None:
-   * no limit.
-   */
-  protected readonly stuckRestarts?: number;
   private stuckInARow = 0;
   /** Why the agent was last taken as gone here, for the line that says another took its place. */
   private goneWhy: string | undefined;
@@ -208,12 +210,14 @@ export abstract class RpcDevice extends DeviceActions {
   }
 
   private restartOrLeave(rpc: RpcClient): Promise<string | undefined | { left: string }> {
-    if (this.stuckRestarts !== undefined && this.stuckInARow >= this.stuckRestarts)
+    if (this.stuckInARow >= STUCK_RESTARTS)
       return Promise.resolve({
         left: `the last ${this.stuckInARow} restarts in a row each got stuck as well, so this one would too`,
       });
     this.stuckInARow++;
-    this.goneWhy = 'stuck: a call and a quick look after it went unanswered, so it was restarted';
+    this.goneWhy = STUCK_WHY;
+    // the other hosts of this agent lose it with no word: they read why where they find another in its place
+    agentEnded(this.serial, this.helloInfo?.pid, STUCK_WHY);
     return this.restartStuck(rpc);
   }
 

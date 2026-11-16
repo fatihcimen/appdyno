@@ -406,7 +406,6 @@ describe('an agent state file', () => {
 
 describe('an agent that gets stuck again on the screen that held the last', () => {
   class Stuck extends TestDevice {
-    protected override readonly stuckRestarts = 2;
     restarts = 0;
     protected override restartStuck() {
       this.restarts++;
@@ -449,7 +448,6 @@ describe('an agent that gets stuck again on the screen that held the last', () =
 
 describe('an agent that answers again after it came back', () => {
   class Stuck extends TestDevice {
-    protected override readonly stuckRestarts = 2;
     restarts = 0;
     // as a device does: the stuck connection goes, and the next call makes another
     protected override restartStuck(rpc?: RpcClient) {

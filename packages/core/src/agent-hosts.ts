@@ -11,6 +11,25 @@ import { deviceState } from './state.js';
 /** The processes of this Mac that use a device's agent: it has no word on who is connected, and a process's end says it left. */
 const hosts = deviceState('agent-hosts', z.array(Owner));
 
+/** The agent a host of this Mac ended, and why: all the others see of it is a connection that closed. */
+const ended = deviceState(
+  'agent-ended',
+  z.object({ pid: z.number(), by: z.number(), why: z.string() }),
+);
+
+/** This process ended the device's agent, `pid`: said for the hosts that find another in its place. */
+export function agentEnded(serial: string, pid: number | undefined, why: string) {
+  if (pid !== undefined) ended.write(serial, { pid, by: process.pid, why });
+}
+
+/** Why another host ended the agent this process had, if one did. */
+function endedBy(serial: string, pid: number) {
+  const note = ended.read(serial);
+  return note?.pid === pid && note.by !== process.pid
+    ? `pid ${note.by} ended it: ${note.why}`
+    : undefined;
+}
+
 /** The agent each device last gave this process. */
 const met = new Map<string, number>();
 /** By name: a process can hold this module twice, as what is built and what is not, and a test hears both. */
@@ -19,14 +38,16 @@ const lost = channel('appdyno.agent.lost');
 /**
  * Says when a device's agent is not the one this process had. A read that loses its agent starts another and tries
  * again, and nothing else would show that: what the agent held went with it, and a person paid for its start. `why`:
- * what made this process take the last one as gone, where it knows (the log of the last was written over).
+ * what made this process take the last one as gone, where it knows (the log of the last was written over). Where
+ * another host ended it, what that host said of it is the reason.
  */
 export function agentMet(serial: string, pid: number | undefined, why?: string) {
   if (pid === undefined) return;
   const was = met.get(serial);
   met.set(serial, pid);
   if (was === undefined || was === pid) return;
-  const line = `the agent on ${serial} stopped${why ? ` (${why})` : ''}, and another took its place`;
+  const said = endedBy(serial, was) ?? why;
+  const line = `the agent on ${serial} stopped${said ? ` (${said})` : ''}, and another took its place`;
   reportProgress(line);
   process.stderr.write(`${line}\n`);
   lost.publish({ serial, was, pid });
