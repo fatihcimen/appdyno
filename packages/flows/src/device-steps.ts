@@ -78,6 +78,9 @@ export function checkDeviceStep(st: FlowStep, line: number) {
     throw new FlowError('network: strict, strict on or strict off', line);
   if (st.action === 'request' && a.status !== undefined && !STATUS.test(String(a.status)))
     throw new FlowError(`request: status is 404, 4xx or failed: ${String(a.status)}`, line);
+  for (const name of st.action === 'prepare' ? ((a.gives as string[] | undefined) ?? []) : [])
+    if (!/^[A-Z_][A-Z0-9_]*$/.test(name))
+      throw new FlowError(`prepare: gives names are like MY_NAME: ${name}`, line);
   if ((st.action === 'screenshot' || st.action === 'visual') && !PICTURE_NAME.test(String(a.name)))
     throw new FlowError(
       `${st.action}: a name is letters, digits, dot, dash and underscore: ${String(a.name)}`,

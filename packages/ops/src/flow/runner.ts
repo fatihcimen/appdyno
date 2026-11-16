@@ -12,6 +12,7 @@ import {
   valuesFor,
   fillApp,
   runSteps,
+  stepsInOrder,
   type RunFailure,
 } from '@appdyno/flows';
 import { z } from 'zod';
@@ -30,6 +31,7 @@ import { dropRules, heldNow } from '../network-capture.js';
 import { requestsFrom } from '../network-check.js';
 import { failedSince } from '../network-watch.js';
 import { mockLine, opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
+import { prepared, preparedCommand, type PreparePlace } from './prepare.js';
 import { loadRecording } from './shared.js';
 import { looksStill } from './still.js';
 
@@ -47,6 +49,8 @@ export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep'> & {
   evidence?: string;
   /** Where a `screenshot` step saves: ./appdyno-screenshots unless a test run keeps its own. */
   shots?: string;
+  /** A person at a terminal started this run: a `prepare` step's command, the project's own, runs with nothing asked. */
+  prepares?: boolean;
 };
 
 /** The values a run took from an env file, the empty ones aside: what a param gave is not the file's. */
@@ -81,23 +85,78 @@ const keepEvidence = async (s: Session, dir: string, clean: (s: string) => strin
 };
 
 const lineOf = (r: RunResult['steps'][number]) =>
-  `${r.n}. ${r.step}: ${r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;
+  `${r.phase ? `${r.phase} ` : ''}${r.n}. ${r.step}: ${r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;
+
+/** A failure's first line: where it is, and of which part of the run. */
+const failedAt = (file: string, f: RunFailure) =>
+  `${f.file ?? file}:${f.line}: ${f.phase ? `${f.phase} ` : ''}step ${f.n} failed: ${f.step}`;
 
 const failureText = (file: string, f: RunFailure) =>
   [
-    `${f.file ?? file}:${f.line}: step ${f.n} failed: ${f.step}`,
+    failedAt(file, f),
     f.message,
     ...(f.screen ? [f.screen] : []),
-    `to go on from here: appdyno run-flow run ${file} --from ${f.n}`,
+    // a setup runs whole on every run: there is no going on from inside it
+    ...(f.phase ? [] : [`to go on from here: appdyno run-flow run ${file} --from ${f.n}`]),
   ].join('\n');
+
+/** Every step that ran to its end, in order: the setup's, the flow's own, the teardown's. */
+const linesOf = (r: RunResult) =>
+  [...(r.setup ?? []), ...r.steps, ...(r.teardown?.steps ?? [])].map(lineOf);
+
+/**
+ * A teardown's failures, apart from how the flow's own steps ended: what it was to clean up is still there, so the
+ * next run starts from it.
+ */
+const teardownText = (file: string, r: RunResult) =>
+  r.teardown && !r.teardown.ok
+    ? [
+        'the teardown failed, so what runs next starts from what it left:',
+        ...r.teardown.failed.map((f) => `${failedAt(file, f)}\n${f.message}`),
+      ].join('\n')
+    : undefined;
+
+/** What a `prepare` step needs of its run beside a step's place. */
+type Place = StepPlace & PreparePlace;
+
+/** The app as the step began, and when the step before it began: a step that fails as the app is gone failed for its death. */
+type Was = ReturnType<typeof asStepBegan> & { since: number; began: number };
+
+/** The failure's own moment, read before a teardown changes the screen it left: its screen, the app's death, the evidence. */
+async function seenAsItFailed(
+  s: Session,
+  f: RunFailure,
+  was: Was,
+  evidence: string | undefined,
+  { header, clean, show }: Answers,
+) {
+  f.message = clean(f.message);
+  const screen = await s.read().catch(() => undefined);
+  if (screen) {
+    show(s, screen);
+    f.screen = header(screen);
+  }
+  const appDied =
+    f.code === 'APP_NOT_RUNNING'
+      ? undefined
+      : await diedUnder(s, was.app, screen?.foreground, was.pid, was.since, clean, was.up);
+  if (appDied)
+    Object.assign(f, {
+      message: `${f.message}\n${diedLine(appDied)}, by step ${f.n}`,
+      code: 'APP_NOT_RUNNING',
+      hint: diedHint(appDied),
+    });
+  if (evidence) f.saved = await keepEvidence(s, evidence, clean);
+}
 
 /** Runs flows through the operations themselves, as an agent's calls would. */
 export function flowRunner(
   ctx: ServerContext,
   ops: () => Record<string, Op>,
-  { header, clean, show }: Answers,
+  answers: Answers,
   steps: Steps,
 ) {
+  const { clean } = answers;
   const opInput = (name: string, args: Record<string, unknown>, where: string) => {
     const p = must(ops()[name], `the op ${name}`).input.safeParse(args);
     if (!p.success)
@@ -112,8 +171,12 @@ export function flowRunner(
    */
   const validate = (flow: Flow, at: StepPlace) => {
     let picked: FlowStep | undefined;
-    for (const st of flow.steps) {
+    for (const st of stepsInOrder(flow)) {
       if (st.action === 'unrecorded') continue;
+      if (st.action === 'prepare') {
+        preparedCommand(st, at.file);
+        continue;
+      }
       const where = `${st.file ?? at.file}:${st.line}`;
       if (at.update && st.action === 'visual' && picked)
         throw new ToolError(
@@ -146,9 +209,13 @@ export function flowRunner(
     await steps.holdsStill(s, st.selector);
   };
 
-  const act = async (s: Session, st: FlowStep, at: StepPlace): Promise<StepOutcome> => {
-    const [name, args] = opCall(st, at);
+  const act = async (s: Session, st: FlowStep, at: Place): Promise<StepOutcome> => {
     const t0 = Date.now();
+    if (st.action === 'prepare') {
+      const values = await prepared(ctx, s, st, at, clean);
+      return { actMs: Date.now() - t0, values };
+    }
+    const [name, args] = opCall(st, at);
     const op = must(ops()[name], `the op ${name}`);
     const answered = await op.handler(opInput(name, args, st.action)).catch(async (e: unknown) => {
       if (!(e instanceof ToolError)) throw e;
@@ -184,11 +251,8 @@ export function flowRunner(
     };
   };
 
-  /** The app as the step began, and when the step before it began: a step that fails as the app is gone failed for its death. */
-  type Was = ReturnType<typeof asStepBegan> & { since: number; began: number };
-
   // the run's failure is read from what these throw, and a replay from code has no op around it
-  const executor = (s: Session, was: Was, at: StepPlace): Executor => ({
+  const executor = (s: Session, was: Was, at: Place): Executor => ({
     prepare: (st) => {
       Object.assign(was, {
         ...asStepBegan(s, s.fresh?.foreground),
@@ -222,14 +286,17 @@ export function flowRunner(
         `from ${from}: this flow has steps 1 to ${flow.steps.length}`,
         'INVALID_ARGUMENT',
       );
-    const at: StepPlace = {
+    const at: Place = {
       file,
       shots: o.shots ?? SHOTS_DIR,
       update: ctx.options.updateBaselines === true,
       mocked: [],
+      prepares: o.prepares === true,
+      secrets: flow.secrets,
+      kept: new Set(Object.keys(o.params ?? {})),
     };
     validate(flow, at);
-    if (flow.steps.some((st) => st.action === 'request')) at.after = await requestsFrom(s);
+    if (stepsInOrder(flow).some((st) => st.action === 'request')) at.after = await requestsFrom(s);
     let values: Record<string, string>;
     try {
       values = valuesFor(flow, o.params ?? {}, { ...ctx.options.env, ...o.fromFile }, from);
@@ -255,32 +322,14 @@ export function flowRunner(
       const result = await runSteps(flow, executor(s, was, at), {
         from,
         values,
+        onFailure: (f) => seenAsItFailed(s, f, was, o.evidence, answers),
         ...(o.onStep && { onStep: o.onStep }),
         checkpoint: (n, total, st) => {
           throwIfCancelled('flow');
           reportProgress(`step ${n} of ${total}: ${st.action}`);
         },
       });
-      const f = result.failure;
-      if (f) {
-        f.message = clean(f.message);
-        const screen = await s.read().catch(() => undefined);
-        if (screen) {
-          show(s, screen);
-          f.screen = header(screen);
-        }
-        const appDied =
-          f.code === 'APP_NOT_RUNNING'
-            ? undefined
-            : await diedUnder(s, was.app, screen?.foreground, was.pid, was.since, clean, was.up);
-        if (appDied)
-          Object.assign(f, {
-            message: `${f.message}\n${diedLine(appDied)}, by step ${f.n}`,
-            code: 'APP_NOT_RUNNING',
-            hint: diedHint(appDied),
-          });
-        if (o.evidence) f.saved = await keepEvidence(s, o.evidence, clean);
-      }
+      for (const f of result.teardown?.failed ?? []) f.message = clean(f.message);
       return result;
     } finally {
       undo();
@@ -289,7 +338,7 @@ export function flowRunner(
     }
   };
 
-  return { run, lineOf, failureText };
+  return { run, linesOf, failureText, teardownText };
 }
 
 export type FlowRunner = ReturnType<typeof flowRunner>;

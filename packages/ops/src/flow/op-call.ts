@@ -187,6 +187,11 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
           timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS,
         },
       ];
+    case 'prepare':
+      throw new ToolError(
+        `prepare ${String(a.name)} is the run's own to carry out, by no tool`,
+        'INVALID_ARGUMENT',
+      );
     case 'unrecorded':
       throw new ToolError(
         `this action has no step and was not recorded: ${String(a.what)}. Replace or delete this line`,

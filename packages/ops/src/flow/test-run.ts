@@ -8,6 +8,7 @@ import {
   type RunResult,
   isFlaky,
   junitXml,
+  stepsInOrder,
 } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import { mediaRestored } from '../media.js';
@@ -16,17 +17,21 @@ import { restoreConditions } from '../settings.js';
 import { ToolError } from '../tool.js';
 import { journeyText, measureJourney, type JourneyAnswer } from './journey.js';
 import type { FlowRunner } from './runner.js';
-import { readFlow } from './shared.js';
+import { preparedCommand } from './prepare.js';
+import { isShared, readFlow } from './shared.js';
 
 /** The `.flow` files the words name: a file, or every one under a directory, in name order. */
 export function flowFiles(paths: string[]): string[] {
   const files = paths.flatMap((p) => {
     if (!existsSync(p)) throw new ToolError(`no such file or directory: ${p}`, 'NOT_FOUND');
     if (!statSync(p).isDirectory()) return [p];
-    return (readdirSync(p, { recursive: true }) as string[])
-      .filter((f) => extname(f) === '.flow')
-      .sort()
-      .map((f) => join(p, f));
+    return (
+      (readdirSync(p, { recursive: true }) as string[])
+        // a folder's shared setup and teardown, and what else a project marks so, are no tests of their own
+        .filter((f) => extname(f) === '.flow' && !isShared(f))
+        .sort()
+        .map((f) => join(p, f))
+    );
   });
   // a CI job that found nothing to run has not passed
   if (files.length === 0) throw new ToolError(`no .flow files in ${paths.join(', ')}`, 'NOT_FOUND');
@@ -74,6 +79,10 @@ export type TestOptions = {
   log?: (line: string) => void;
 };
 
+/** What stands between two goes at a file, said at the first retry of a run. */
+const RETRY_RESETS =
+  "a retry is a new run of the whole file: the failed attempt's teardown runs, the mock rules, device settings and added media its steps changed are put back, then the setup runs again and the file from its first step; the app keeps running with its data unless the setup stops or clears it, and other apps and a server's data are not touched";
+
 /** What a report line shows of a message, whose next lines are for a person reading the one failure. */
 const firstLine = (s: string) => must(s.split('\n')[0], 'a first line');
 
@@ -85,7 +94,9 @@ type Attempt = { result?: RunResult; journey?: JourneyAnswer; error?: Error };
  * under `artifacts`, and the next file still runs, on the settings this run found. A screenshot shows
  * what the screen shows, a secret typed into a plain field included. A retry is a new run of the whole
  * file, so a failed step never passes within one, and a file that passed only on a retry is reported as
- * flaky with what failed. Such a file leaves the run passed, unless `failOnFlaky`.
+ * flaky with what failed. Such a file leaves the run passed, unless `failOnFlaky`. A file's setup and teardown run
+ * around each go at it, and a teardown that failed is a case of its own, beside the file's: the file's own result
+ * stays what its steps came to, and the run fails, as the next file starts from what the teardown left.
  */
 export async function runTests(
   ctx: ServerContext,
@@ -122,6 +133,7 @@ export async function runTests(
     const replay = {
       evidence: attempt > 1 ? join(kept, `attempt-${attempt}`) : kept,
       shots: kept,
+      prepares: true,
       ...(o.params && { params: o.params }),
       ...(o.fromFile && { fromFile: o.fromFile }),
     };
@@ -141,6 +153,13 @@ export async function runTests(
     }
   };
 
+  /** What a go's teardown could not clean up, a line a failure: none where it ran clean or there is none. */
+  const leftBy = (file: string, { result }: Attempt) =>
+    (result?.teardown?.failed ?? []).map(
+      (f) =>
+        `teardown ${basename(f.file ?? file)} line ${f.line}, step ${f.n}: ${firstLine(f.message)}`,
+    );
+
   const failureOf = (file: string, { result, error }: Attempt): CaseFailure => {
     const f = result?.failure;
     return {
@@ -153,6 +172,24 @@ export async function runTests(
       ].join('\n'),
     };
   };
+
+  // the project's own commands this run will start, said before any does, once each
+  const commands = new Set<string>();
+  for (const file of o.files) {
+    try {
+      for (const st of stepsInOrder(readFlow(file)))
+        if (st.action === 'prepare') {
+          const c = preparedCommand(st, file);
+          commands.add(
+            `prepare ${c.name} runs the project's own command: ${c.line} (in ${c.root})`,
+          );
+        }
+    } catch {
+      // a file that cannot be read, or names no command, fails as its own case
+    }
+  }
+  for (const line of commands) log(line);
+  let resetsSaid = false;
 
   // a file is named by its path under the folder all of this run's share, so two smoke.flow in two folders are two
   const shared = o.files
@@ -189,13 +226,16 @@ export async function runTests(
         const failed = failureOf(file, go);
         retried.push(failed);
         log(`  retry ${label}, attempt ${retried.length} of ${retries + 1}: ${failed.message}`);
+        for (const line of leftBy(file, go)) log(`       ${line}`);
+        if (!resetsSaid) log(`       ${RETRY_RESETS}`);
+        resetsSaid = true;
         go = await once(s, file, label, evidence, retried.length + 1);
       }
       const { result, journey } = go;
       const ms = Date.now() - t0;
       const attempts = retried.length > 0 ? ` on attempt ${retried.length + 1}` : '';
       const said = attempts && `passed${attempts} of ${retries + 1}`;
-      const steps = journey ? journeyText(journey) : result?.steps.map(runner.lineOf).join('\n');
+      const steps = journey ? journeyText(journey) : result && runner.linesOf(result).join('\n');
       const out = [...(result?.passed && said ? [`flaky: ${said}`] : []), steps]
         .filter(Boolean)
         .join('\n');
@@ -208,12 +248,21 @@ export async function runTests(
             : `  ok   ${label} (${result.steps.length} steps, ${ms} ms)`,
         );
         cases.push(held);
-        continue;
+      } else {
+        const failure = failureOf(file, go);
+        log(`  FAIL ${label}: ${failure.message}`);
+        for (const x of result?.failure?.saved ?? []) log(`       ${x}`);
+        cases.push({ ...held, failure });
       }
-      const failure = failureOf(file, go);
-      log(`  FAIL ${label}: ${failure.message}`);
-      for (const x of result?.failure?.saved ?? []) log(`       ${x}`);
-      cases.push({ ...held, failure });
+      const left = leftBy(file, go);
+      const [first] = left;
+      if (first === undefined) continue;
+      log(`  TEARDOWN FAILED ${label}: ${first}`);
+      cases.push({
+        name: `${label} (teardown)`,
+        ms: 0,
+        failure: { message: first, detail: left.join('\n') },
+      });
     }
     suites.push({ name, cases });
   }

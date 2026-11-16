@@ -165,6 +165,8 @@ function commands(st: FlowStep): Yaml[] {
       return unsupported("Maestro YAML has no rule for an app's requests");
     case 'alert':
       return unsupported('Maestro YAML answers a system alert by its words, in one language');
+    case 'prepare':
+      return unsupported("Maestro YAML runs no command of a project's own");
     case 'unrecorded':
       return unsupported(`not recorded: ${String(a.what)}`);
     case 'run':
@@ -193,7 +195,8 @@ function write(value: Yaml, indent: string): string[] {
  */
 export function toMaestro(flow: Flow): string {
   if (!flow.app) throw new FlowError('Maestro YAML needs an app: add app to the flow', 0);
-  const broken: string[] = [];
+  // left out, the YAML would pass on a start the flow never had
+  const broken = flow.setup || flow.teardown ? ['its setup and teardown have no form there'] : [];
   const lines = [
     `appId: ${JSON.stringify(flow.app)}`,
     ...(flow.tags.length > 0 ? ['tags:', ...flow.tags.map((t) => `  - ${t}`)] : []),

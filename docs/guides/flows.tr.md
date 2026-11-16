@@ -47,6 +47,7 @@ tap id=add_button index=1 !ambiguous
 | `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `check` ile `capture_network`                                                    |
 | `network strict`, `network strict off`                                                                                             | `strict` ile `capture_network`                                                   |
 | `run shared/login.flow`                                                                                                            | o dosyanın adımları, yerinde                                                     |
+| `prepare seed-user [gives=NAME]...`                                                                                                | projenin o adı taşıyan kendi komutu: [Veri hazırlamak](#veri-hazırlamak)         |
 
 Bir seçici `id=`, `role=`, `text=`, `index=` alanlarından herhangi biridir; metin, araçlarda olduğu gibi eşleşir. `launch` bir `language=`, her argüman için bir `arg=`, her değişken için bir `env=NAME=value` ve `probe` alır; `launch_app` da `language`, `args`, `env` ve `probe` alır. `stop background` uygulamayı sistemin arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır; `background` ile `manage_app stop` da öyle yapar.
 
@@ -137,9 +138,42 @@ Adımlardan önce `tag smoke login`; `--tag smoke` adı verilen etiketlerden her
 
 `run shared/login.flow` o dosyanın adımlarını kendi yerine koyar; yolu, onu anan dosyaya göre alınır. Adımlar ilk adım iş yapmadan önce okunur; böylece eksik bir dosya, bozuk bir satır ya da doğrudan ya da başka dosyalar üzerinden kendini çalıştıran bir dosya, döngü adıyla söylenerek reddedilir ve hiçbir şey çalışmaz. Bir ad hepsinde tek bir şey anlamına gelir, çünkü hepsi değerlerini tek bir yerden alır. Tek bir çalıştırmaya değer geçiremezsiniz ve bir dosyada gizli olan bir ad hepsinde gizlidir. Başka bir uygulamaya ait bir dosya reddedilir. Bir hata, bulunduğu dosyayı ve satırı adıyla söyler; adımlar `--from`, rapor ve bir yolculuğun türleri için çalıştıkça sayılır. Bir dışa aktarma adımları yerinde yazar. Bir etiket içinde bulunduğu dosyaya aittir.
 
+## Kurulum ve temizlik
+
+Bir akış, ilk satırları arasında, adımları kendi adımlarından önce çalışan bir dosyayı ve adımları sonra çalışan bir dosyayı adlandırabilir:
+
+```text
+app dev.appdyno.fixture
+setup shared/sign-in.flow
+teardown shared/sign-out.flow
+
+tap id=open_basket
+```
+
+Bir klasör aynısını, içindeki ve altındaki klasörlerdeki her akış için iki dosyayla söyler: `_setup.flow` ve `_teardown.flow`. Klasörler, akışın kendi klasöründen projesinin köküne kadar sayılır; kök, yukarıda `.appdyno` ya da `.git` tutan en yakın klasördür; ikisi de yoksa yalnızca akışın kendi klasörü. Kurulumlar en dıştakinden başlar, sonra dosyanın kendisininki çalışır; temizliklerde önce dosyanın kendisininki, sonra klasörlerinki en içtekinden başlayarak çalışır. Adı `_` ile başlayan bir dosyayı `appdyno test` asla test olarak çalıştırmaz ve onun kendi ortak dosyaları olmaz. Yalnızca bir çalıştırmanın başladığı dosyanın kurulumu ve temizliği vardır: `run` ile içeri alınan bir dosya yalnızca adımlarını getirir.
+
+Temizlik son adımdan sonra, başarısız bir adımdan sonra ve başarısız bir kurulumdan sonra çalışır; her adımı, bir önceki ne yapmış olursa olsun çalışır, çünkü her biri tek bir şeyi temizler. Bir hatanın ekranı, ekran görüntüsü ve ağacı, temizlik onları değiştirmeden önce alınır. Başarısız bir kurulum akışı başarısız kılar, hatası `setup step 1 failed` diye okunur ve akışın kendi adımlarından hiçbiri çalışmaz. Başarısız olan bir temizlik akışın kendi sonucundan ayrı söylenir: akışın vakası adımlarının vardığı sonuçta kalır, JUnit dosyasında `login.flow (teardown)` adlı ayrı bir vaka başarısız olur, satır `TEARDOWN FAILED login.flow` diye okunur ve çalıştırma 1 ile çıkar, çünkü sonraki dosya temizliğin bıraktığı yerden başlar. `run_flow run` da, adımların geçtiğini söyledikten sonra, `CHECK_FAILED` ile aynı biçimde reddeder. Adımlar her bölümde ayrı sayılır; bu yüzden `--from 3` yine akışın üçüncü adımı demektir ve kurulum ondan önce çalışır. Ölçülen bir akış kurulumunu ve temizliğini her yinelemenin çevresinde çalıştırır ve hiçbirini ölçmez. Maestro YAML'a aktarım, ikisinden birine sahip bir akışı reddeder. İptal edilen bir çalıştırma olduğu yerde durur ve temizlik çalıştırmaz.
+
+## Veri hazırlamak
+
+`prepare seed-user gives=USER_EMAIL`, kendisinden sonraki adımlardan önce projenin kendi komutlarından birini çalıştırır: bir sunucuda bir kullanıcı oluşturmak ya da bir sepeti boşaltmak için. Akış yalnızca adı tutar. Komut, projenin kökündeki `.appdyno/test.json` dosyasındadır:
+
+```json
+{
+  "prepare": {
+    "seed-user": ["node", "scripts/seed-user.mjs"],
+    "signed-in": "flows/shared/sign-in.flow"
+  }
+}
+```
+
+Listesi olan bir ad bir komut ve argümanlarıdır; kabuk olmadan, projenin kökünde, ortamında `APPDYNO_DEVICE`, `APPDYNO_PLATFORM`, `APPDYNO_APP` ve `APPDYNO_FLOW` ile çalışır. Her `gives=`, komutun bir değer yazdırdığı bir addır, `USER_EMAIL=ada@example.com` gibi bir satırla; sonraki adımlar onu `${USER_EMAIL}` olarak alır, her ad gibi `param` ya da `secret` olarak bildirilir ve bir `secret` her gizli değer gibi gizlenir. `--param` ile verilen bir değer, komutun yazdırdığının üstündedir. Hatayla çıkan, 120 saniyeden uzun süren ya da bir ad için değer yazdırmayan bir komut adımı başarısız kılar. Yolu olan bir ad bir akıştır; `run` yapacağı gibi adımın yerinde çalışır. Her dosyanın ve her yeniden denemenin çevresinde olmaları için bir `prepare` satırını `_setup.flow` içine, temizleyeni de `_teardown.flow` içine koyun.
+
+Bir komut, projenin bu Mac'te çalışan kendi kodudur; bu yüzden onu kimin başlatabileceğine akışın dışında karar verilir. `appdyno test` onu çalıştırır, çünkü o komutu çalıştıran kişi projenin komutlarını çalıştırmıştır, ve her birini önce söyler: `prepare seed-user runs the project's own command: node scripts/seed-user.mjs`. Bir araç çağrısı, `run` ile `run_flow`, her seferinde önce kişiye sorar ve istemcinin soramadığı yerde reddedilir; `--allow-build` ile başlatılan bir sunucu onu hiçbir şey sormadan çalıştırır. Projenin dosyası, sunucunun yazdığı klasörlerin içinde olmalıdır. Dosyanın tutmadığı bir ad ilk adımdan önce reddedilir.
+
 ## Yeniden denemeler
 
-`--retries N`, bir adımda başarısız olan bir dosyayı ilk adımından başlayarak bütünüyle, kendi çalıştırmasında yeniden çalıştırır: bir çalıştırmanın içinde başarısız bir adım başarısız kalır. Bir yeniden denemede geçen dosya kararsızdır (flaky), geçmiş değildir. Satır `FLAKY login.flow: passed on attempt 2 of 3` der, çalıştırma çalıştırdığı her şeyin sayısıyla biter (`2 passed, 1 flaky, 0 failed`, yeşil bir çalıştırmada da) ve onu adıyla söyler, JUnit case'i her başarısız denemeyi `<flakyFailure>` olarak tutar ve suite'inde `flakes="1"` bulunur, her başarısız denemenin kanıtı da kalır, sonrakiler `attempt-<n>/` altında. Kararsız bir dosya 0 ile çıkar, yoksa yeniden deneme boşuna olurdu. Birinde durmak için `--fail-on-flaky` ekleyin: çalıştırma o zaman 1 ile çıkar ve son satırı her birini adıyla söyler, `failed by --fail-on-flaky: flaky, passed only on a retry: emulator-5554/login.flow` gibi; ya da `flakes`'i okuyun, ya da `--retries`'ı kullanmayın. Her denemede başarısız olan bir dosya, denemeleri `<rerunFailure>` olarak taşır. Bir dosyanın hiç çalışmasını engelleyen şey (ayrıştırılamayan bir satır, eksik bir değer) yeniden çalıştırılmaz ve `--measure`, `--retries`'ı reddeder, çünkü kapı başarısız bir denemenin bıraktığını sonrakinin okuduğuyla karşılaştırırdı.
+`--retries N`, bir adımda başarısız olan bir dosyayı ilk adımından başlayarak bütünüyle, kendi çalıştırmasında yeniden çalıştırır: bir çalıştırmanın içinde başarısız bir adım başarısız kalır. Bir yeniden denemede geçen dosya kararsızdır (flaky), geçmiş değildir. Satır `FLAKY login.flow: passed on attempt 2 of 3` der, çalıştırma çalıştırdığı her şeyin sayısıyla biter (`2 passed, 1 flaky, 0 failed`, yeşil bir çalıştırmada da) ve onu adıyla söyler, JUnit case'i her başarısız denemeyi `<flakyFailure>` olarak tutar ve suite'inde `flakes="1"` bulunur, her başarısız denemenin kanıtı da kalır, sonrakiler `attempt-<n>/` altında. Kararsız bir dosya 0 ile çıkar, yoksa yeniden deneme boşuna olurdu. Birinde durmak için `--fail-on-flaky` ekleyin: çalıştırma o zaman 1 ile çıkar ve son satırı her birini adıyla söyler, `failed by --fail-on-flaky: flaky, passed only on a retry: emulator-5554/login.flow` gibi; ya da `flakes`'i okuyun, ya da `--retries`'ı kullanmayın. Her denemede başarısız olan bir dosya, denemeleri `<rerunFailure>` olarak taşır. Bir dosyanın hiç çalışmasını engelleyen şey (ayrıştırılamayan bir satır, eksik bir değer) yeniden çalıştırılmaz ve `--measure`, `--retries`'ı reddeder, çünkü kapı başarısız bir denemenin bıraktığını sonrakinin okuduğuyla karşılaştırırdı. İlk yeniden denemede çalıştırma, iki deneme arasında ne olduğunu söyler: başarısız denemenin temizliği çalışır, adımlarının değiştirdiği sahte yanıt kuralları, ayarlar ve medya geri konur, kurulum yeniden çalışır ve dosya ilk adımından başlar. Kurulum durdurmadıkça uygulama verisiyle çalışmayı sürdürür; başka uygulamalara ve bir sunucunun verisine dokunulmaz: onlar kurulumdaki bir `prepare` satırının işidir.
 
 ## Dışa aktarma
 

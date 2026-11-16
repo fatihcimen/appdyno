@@ -17,6 +17,9 @@
  *   launch language=tr arg=-UITests env=API_URL=https://staging.example
  *   run shared/logout.flow
  *
+ * `setup shared/sign-in.flow` and `teardown shared/sign-out.flow` among the first lines name a file whose steps run
+ * before and after this one's: see `composeFlow`.
+ *
  * Values of `param` and `secret` come from `--param` or the environment and are never in the file. `$${`
  * is a literal `${`. `!flag` marks a step a person should look at.
  */
@@ -55,6 +58,12 @@ export type Flow = {
   params: string[];
   secrets: string[];
   steps: FlowStep[];
+  /** The files its `setup` and `teardown` lines name, as written: paths from this file. */
+  setupFile?: string;
+  teardownFile?: string;
+  /** Their steps once read in, with the folders' own: what runs before the first step, and after the last or a failure. */
+  setup?: FlowStep[];
+  teardown?: FlowStep[];
 };
 
 export type Action = keyof typeof SPECS;
@@ -67,6 +76,8 @@ const FLAGS: readonly string[] = ['ambiguous', 'coordinates', 'running'] satisfi
 const NAME = /^[A-Z_][A-Z0-9_]*$/;
 /** A placeholder, or the escape of one. */
 const PLACEHOLDER = /\$\$\{|\$\{([^}]*)\}/g;
+
+const isPhase = (word: string) => word === 'setup' || word === 'teardown';
 
 const specOf = (action: string): Spec | undefined =>
   Object.hasOwn(SPECS, action) ? SPECS[action as Action] : undefined;
@@ -163,6 +174,10 @@ const stringsOf = (st: FlowStep) => [
 /** The names a step needs a value for. */
 export const namesOf = (st: FlowStep) => stringsOf(st).flatMap((v) => namesIn(v, st.line));
 
+/** The names a `prepare` step gives a value to, for the steps after it. */
+export const givesOf = (st: FlowStep) =>
+  st.action === 'prepare' ? ((st.args.gives as string[] | undefined) ?? []) : [];
+
 export function parseFlow(text: string): Flow {
   const flow: Flow = { tags: [], params: [], secrets: [], steps: [] };
   const lines = text.split(/\r?\n/);
@@ -183,11 +198,19 @@ export function parseFlow(text: string): Flow {
       flow.tags.push(...tags.map((t) => t.value));
       continue;
     }
-    if (word === 'app' || word === 'param' || word === 'secret') {
+    if (word === 'app' || word === 'param' || word === 'secret' || isPhase(word)) {
       if (flow.steps.length > 0) throw new FlowError(`${word} comes before the steps`, line);
       const value = toks[1];
       if (!value || toks.length !== 2 || value.key !== undefined)
         throw new FlowError(`${word} takes one word`, line);
+      if (isPhase(word)) {
+        const key = word === 'setup' ? 'setupFile' : 'teardownFile';
+        if (flow[key] !== undefined) throw new FlowError(`one ${word} per flow`, line);
+        if (!value.value.endsWith('.flow'))
+          throw new FlowError(`${word} names a .flow file: ${value.value}`, line);
+        flow[key] = value.value;
+        continue;
+      }
       if (word === 'app') {
         if (flow.app !== undefined) throw new FlowError('one app per flow', line);
         flow.app = value.value;
@@ -209,7 +232,8 @@ export function parseFlow(text: string): Flow {
       throw new FlowError(`\${${name}} is not declared: add param ${name} or secret ${name}`, line);
   };
   if (flow.app) for (const n of namesIn(flow.app, appLine)) undeclared(n, appLine);
-  for (const st of flow.steps) for (const n of namesOf(st)) undeclared(n, st.line);
+  for (const st of flow.steps)
+    for (const n of [...namesOf(st), ...givesOf(st)]) undeclared(n, st.line);
   if (flow.steps.length === 0) throw new FlowError('a flow has at least one step', 0);
   return flow;
 }
@@ -247,16 +271,21 @@ export function stepLine(st: FlowStep): string {
 }
 
 /** A flow as its file; `parseFlow` reads it back. */
-export const flowText = (flow: Flow) =>
-  [
+export const flowText = (flow: Flow) => {
+  const headed =
+    flow.app || flow.tags.length || flow.params.length || flow.secrets.length || flow.setupFile;
+  return [
     ...(flow.app ? [`app ${show(flow.app)}`] : []),
     ...(flow.tags.length > 0 ? [`tag ${flow.tags.join(' ')}`] : []),
     ...flow.params.map((p) => `param ${p}`),
     ...flow.secrets.map((p) => `secret ${p}`),
-    ...(flow.app || flow.tags.length || flow.params.length || flow.secrets.length ? [''] : []),
+    ...(flow.setupFile ? [`setup ${show(flow.setupFile)}`] : []),
+    ...(flow.teardownFile ? [`teardown ${show(flow.teardownFile)}`] : []),
+    ...(headed || flow.teardownFile ? [''] : []),
     ...flow.steps.map(stepLine),
     '',
   ].join('\n');
+};
 
 /** A literal as a flow's string: only what would read as a placeholder changes. */
 export const escapeLiteral = (s: string) => s.replace(/\$\{/g, '$$$${');
@@ -299,10 +328,17 @@ export const isName = (name: string) => NAME.test(name);
 /** The app's id with its placeholders filled. */
 export const fillApp = (app: string, values: Record<string, string>) => fill(app, values);
 
+/** A flow's steps in the order a run takes them: its setup, its own from `from`, its teardown. */
+export const stepsInOrder = (flow: Flow, from = 1) => [
+  ...(flow.setup ?? []),
+  ...flow.steps.slice(from - 1),
+  ...(flow.teardown ?? []),
+];
+
 /**
  * Values for the names of a flow's steps from `--param`, then `env`: an env file's, and a command line's own
  * environment. A missing one is refused before anything runs, by name: a value in the message would be stored by
- * whatever keeps the log.
+ * whatever keeps the log. A name a `prepare` step gives needs none in the steps after it.
  */
 export function valuesFor(
   flow: Flow,
@@ -310,11 +346,15 @@ export function valuesFor(
   env: Record<string, string | undefined>,
   from = 1,
 ): Record<string, string> {
-  const needed = new Set([
-    ...flow.steps.slice(from - 1).flatMap(namesOf),
-    ...(flow.app ? namesIn(flow.app, 0) : []),
-  ]);
+  const needed = new Set(flow.app ? namesIn(flow.app, 0) : []);
+  const given = new Set<string>();
+  for (const st of stepsInOrder(flow, from)) {
+    for (const n of namesOf(st)) if (!given.has(n)) needed.add(n);
+    for (const n of givesOf(st)) given.add(n);
+  }
   const values: Record<string, string> = {};
+  // a value a person gave by name stands, whatever a prepare step prints for it
+  for (const name of given) if (params[name] !== undefined) values[name] = params[name];
   const missing: string[] = [];
   for (const name of needed) {
     const v = params[name] ?? env[name];

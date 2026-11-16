@@ -205,7 +205,15 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
                 (result.failure.code ?? 'NOT_FOUND') as ErrorCode,
                 result.failure.hint,
               );
-            const t = result.steps.map(runner.lineOf).join('\n');
+            // its own steps passed, and that is said; what its teardown left is the refusal
+            const left = runner.teardownText(path, result);
+            if (left)
+              throw new ToolError(
+                `passed: ${result.steps.length} steps\n${left}`,
+                'CHECK_FAILED',
+                'the next run starts from what the teardown left: put that right first',
+              );
+            const t = runner.linesOf(result).join('\n');
             return reply(
               journey ? journeyText(journey) : `${t}\npassed: ${result.steps.length} steps`,
               {

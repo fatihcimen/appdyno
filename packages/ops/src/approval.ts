@@ -73,6 +73,23 @@ export async function approveBuild(policy: Policy, s: Session, project: string) 
 }
 
 /**
+ * A flow's `prepare` step runs a command the project names in its own file, on this Mac, as this user: asked as a
+ * build is, and allowed ahead by the same flag, since both run the project's own scripts.
+ */
+export async function approvePrepare(policy: Policy, s: Session, name: string, command: string) {
+  if (policy.allowBuild) return;
+  await askPerson(
+    s,
+    `prepare ${name}`,
+    [
+      `Run the project's own command for prepare ${name} on this Mac (${onLine(command)}), for a flow`,
+      'It runs with all that this user may do',
+    ],
+    "appdyno test at a terminal runs a project's preparations, as the person who ran it asked; or a person allows them ahead in this server's own command line: --allow-build (APPDYNO_ALLOW_BUILD=1)",
+  );
+}
+
+/**
  * A link by a scheme the selected app does not say it opens: whatever app or part of the system has that scheme takes
  * it, as `itms-services:` installs an app, `shortcuts:` runs a shortcut and `sms:` or `mailto:` writes a message. Asked
  * of the person each time; `--allow-urls` is how one allows links ahead.

@@ -72,6 +72,11 @@ export const SPECS = {
    * what its body holds. It looks only at requests since the run began.
    */
   request: { words: ['part?'], text: ['method', 'status', 'has'], number: ['timeoutMs'] },
+  /**
+   * A preparation the project names in `.appdyno/test.json`, whose command runs on this Mac: each `gives=` is a name
+   * it prints a value for, as a `NAME=value` line, which the steps after it take.
+   */
+  prepare: { words: ['name'], list: ['gives'] },
   /** An action the format has no step for: replay stops here rather than go on without it. */
   unrecorded: { words: ['what'] },
   /** Another flow's steps go here: `composeFlow` replaces it before anything runs. */

@@ -47,6 +47,7 @@ tap id=add_button index=1 !ambiguous
 | `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `capture_network` with `check`                                             |
 | `network strict`, `network strict off`                                                                                             | `capture_network` with `strict`                                            |
 | `run shared/login.flow`                                                                                                            | that file's steps, in place                                                |
+| `prepare seed-user [gives=NAME]...`                                                                                                | the project's own command of that name: [Preparing data](#preparing-data)  |
 
 A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, an `arg=` for each argument, an `env=NAME=value` for each variable and `probe`, as `launch_app` takes `language`, `args`, `env` and `probe`. `stop background` ends the app as the system ends one in the background, as `manage_app stop` with `background` does.
 
@@ -137,9 +138,42 @@ While a capture by the network probe runs on a simulator, a step under which a r
 
 `run shared/login.flow` puts that file's steps in its place, its path taken from the file that names it. They are read before the first step acts, so a missing file, a bad line or a file that runs itself, directly or through other files, is refused with the loop named, and nothing runs. A name means one thing in all of them, because all take their values from one place. You cannot pass a value to one run, and a name that is secret in one file is secret in all. A file for another app is refused. A failure names the file and line it is on, and steps are counted as they run, for `--from`, the report and a journey's kinds. An export writes the steps in place. A tag belongs to the file it is in.
 
+## Setup and teardown
+
+A flow may name a file whose steps run before its own and one whose steps run after, among its first lines:
+
+```text
+app dev.appdyno.fixture
+setup shared/sign-in.flow
+teardown shared/sign-out.flow
+
+tap id=open_basket
+```
+
+A folder says the same for every flow in it and in the folders under it, by two files: `_setup.flow` and `_teardown.flow`. The folders count from the flow's own up to its project's root, which is the nearest folder above that holds `.appdyno` or `.git`; with neither, the flow's own folder alone. The setups run outermost first and then the file's own; the teardowns run the file's own first and then the folders', innermost first. A file whose name starts with `_` is never run as a test by `appdyno test`, and has no shared files of its own. Only the file a run starts from has a setup and a teardown: a file that `run` brings in brings its steps alone.
+
+The teardown runs after the last step, after a failed step and after a failed setup, and every step of it runs whatever the one before it did, because each cleans up one thing. A failure's screen, screenshot and tree are taken before the teardown changes them. A failed setup fails the flow, its failure reads `setup step 1 failed`, and none of the flow's own steps run. A teardown that fails is told apart from the flow's own result: the flow's case stays what its steps came to, a case of its own named `login.flow (teardown)` fails in the JUnit file, the line reads `TEARDOWN FAILED login.flow`, and the run exits 1, as the next file starts from what the teardown left. `run_flow run` refuses the same way, with `CHECK_FAILED`, after saying that the steps passed. Steps are counted on their own in each part, so `--from 3` still means the flow's third step, and the setup runs before it. A measured flow runs its setup and teardown around each iteration and times neither. An export to Maestro YAML refuses a flow that has either. A cancelled run stops where it is and runs no teardown.
+
+## Preparing data
+
+`prepare seed-user gives=USER_EMAIL` runs a command of the project's own before the steps after it, to make a user or empty a basket on a server. The flow holds only the name. The command is in `.appdyno/test.json` at the project's root:
+
+```json
+{
+  "prepare": {
+    "seed-user": ["node", "scripts/seed-user.mjs"],
+    "signed-in": "flows/shared/sign-in.flow"
+  }
+}
+```
+
+A name with a list is a command and its arguments, run with no shell in the project's root, with `APPDYNO_DEVICE`, `APPDYNO_PLATFORM`, `APPDYNO_APP` and `APPDYNO_FLOW` in its environment. Each `gives=` is a name the command prints a value for, as a line `USER_EMAIL=ada@example.com`; the steps after it take it as `${USER_EMAIL}`, declared `param` or `secret` as any name is, and a `secret` is hidden as any secret is. A value given by `--param` stands over what the command printed. A command that exits with an error, takes longer than 120 s or prints no value for a name fails the step. A name with a path is a flow, run in the step's place as `run` would. Put a `prepare` in `_setup.flow` and one that cleans up in `_teardown.flow` to have them around every file and every retry.
+
+A command is the project's own code running on this Mac, so who may start it is decided outside the flow. `appdyno test` runs it, as the person who ran that ran the project's commands, and says each first: `prepare seed-user runs the project's own command: node scripts/seed-user.mjs`. A tool call, `run_flow` with `run`, asks the person first each time and is refused where the client cannot ask; a server started with `--allow-build` runs it with nothing asked. The project's file has to be inside the folders the server writes in. A name the file does not hold is refused before the first step.
+
 ## Retries
 
-`--retries N` runs a file that failed on a step again, whole, from its first step, on a run of its own: within a run a failed step stays failed. A file that passes on a retry is flaky, not passed. The line reads `FLAKY login.flow: passed on attempt 2 of 3`, the run ends with a count of all it ran (`2 passed, 1 flaky, 0 failed`, in a green run too) and names it, the JUnit case holds each failed attempt as `<flakyFailure>` and its suite has `flakes="1"`, and each failed attempt's evidence stays, the later ones under `attempt-<n>/`. A flaky file exits 0, or a retry would be for nothing. To stop on one, add `--fail-on-flaky`: the run then exits 1, and its last line names each, as `failed by --fail-on-flaky: flaky, passed only on a retry: emulator-5554/login.flow`; or read `flakes`, or leave `--retries` out. A file that fails every attempt has the attempts as `<rerunFailure>`. What kept a file from running at all (a line that does not parse, a value missing) is not run again, and `--measure` refuses `--retries`, because the gate would compare what a failed attempt left with what a later one read.
+`--retries N` runs a file that failed on a step again, whole, from its first step, on a run of its own: within a run a failed step stays failed. A file that passes on a retry is flaky, not passed. The line reads `FLAKY login.flow: passed on attempt 2 of 3`, the run ends with a count of all it ran (`2 passed, 1 flaky, 0 failed`, in a green run too) and names it, the JUnit case holds each failed attempt as `<flakyFailure>` and its suite has `flakes="1"`, and each failed attempt's evidence stays, the later ones under `attempt-<n>/`. A flaky file exits 0, or a retry would be for nothing. To stop on one, add `--fail-on-flaky`: the run then exits 1, and its last line names each, as `failed by --fail-on-flaky: flaky, passed only on a retry: emulator-5554/login.flow`; or read `flakes`, or leave `--retries` out. A file that fails every attempt has the attempts as `<rerunFailure>`. What kept a file from running at all (a line that does not parse, a value missing) is not run again, and `--measure` refuses `--retries`, because the gate would compare what a failed attempt left with what a later one read. At the first retry the run says what stands between two attempts: the failed attempt's teardown runs, the mock rules, settings and media its steps changed are put back, the setup runs again, and the file starts from its first step. The app keeps running with its data unless the setup stops it, and other apps and a server's data are not touched: a `prepare` in the setup owns those.
 
 ## Export
 

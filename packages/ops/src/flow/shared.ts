@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { parseEnv } from 'node:util';
 import { deviceState, Owner } from '@appdyno/core';
 import {
@@ -6,14 +7,18 @@ import {
   type RecordingState,
   type Flow,
   type FlowStep,
+  type SharedFiles,
   composeFlow,
   parseFlow,
   FlowError,
+  SETUP_FILE,
+  TEARDOWN_FILE,
 } from '@appdyno/flows';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 import { writeNew } from '../writes.js';
+import { preparedFlow, projectRoot } from './prepare.js';
 
 export const FLOW_FILE = /\.flow$/;
 
@@ -121,17 +126,45 @@ const parsedFile = (file: string): Flow => {
     throw new ToolError(`a flow's file ends in .flow: ${file}`, 'INVALID_ARGUMENT');
   const text = textOf(file);
   try {
-    return parseFlow(text);
+    const flow = parseFlow(text);
+    // a preparation the project names as a flow is that flow run in its place, as `run` with its path would
+    const steps = flow.steps.map((st): FlowStep => {
+      const named = st.action === 'prepare' ? preparedFlow(st, file) : undefined;
+      if (named && st.args.gives)
+        throw new FlowError(
+          `prepare ${String(st.args.name)} is a flow: it gives no value`,
+          st.line,
+        );
+      return named ? { ...st, action: 'run', args: { file: named } } : st;
+    });
+    return { ...flow, steps };
   } catch (e) {
     if (e instanceof FlowError) throw new ToolError(`${file}: ${e.message}`, 'INVALID_ARGUMENT');
     throw e;
   }
 };
 
-/** A flow file with the flows it runs in place: all a run, a test or an export is given. */
+/** A file no run starts from: a folder's shared setup or teardown, or any other a project keeps aside by that mark. */
+export const isShared = (file: string) => basename(file).startsWith('_');
+
+/**
+ * The shared files that hold for a flow: `_setup.flow` and `_teardown.flow` of its own folder and of each above it,
+ * up to its project's root. A shared file has none of its own.
+ */
+function sharedFiles(file: string): SharedFiles {
+  if (isShared(file)) return { setup: [], teardown: [] };
+  const own = dirname(resolve(file));
+  const root = projectRoot(own);
+  const folders = [own];
+  while (folders[0] !== root && folders[0] !== undefined) folders.unshift(dirname(folders[0]));
+  const there = (name: string) => folders.map((d) => join(d, name)).filter((f) => existsSync(f));
+  return { setup: there(SETUP_FILE), teardown: there(TEARDOWN_FILE).reverse() };
+}
+
+/** A flow file with the flows it runs in place, and its setup and teardown: all a run, a test or an export is given. */
 export const readFlow = (file: string): Flow => {
   try {
-    return composeFlow(file, parsedFile);
+    return composeFlow(file, parsedFile, sharedFiles(file));
   } catch (e) {
     if (e instanceof FlowError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
     throw e;
