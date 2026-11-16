@@ -1,4 +1,5 @@
 // The Inspector beside a device and the panes it holds.
+#import "Style.h"
 #import "Viewer.h"
 #import <AppKit/AppKit.h>
 
@@ -225,34 +226,56 @@ NSString *MVNetworkDetailText(NSDictionary *detail);
 @property(nonatomic, readonly) BOOL moved;
 @end
 
-/// What is done with the requests listed: the words that narrow the list, a request copied as a command or made a
-/// rule of, the capture kept as a file, the list emptied, and whether what was sent shows as it was sent.
-@interface MVNetworkActions : NSView
-@property(nonatomic, readonly) NSString *filter;
-/// A person chose to see real values: held while the window is open, and never kept.
-@property(nonatomic, readonly) BOOL real;
-@property(nonatomic) BOOL hasRequest;
-/// A capture runs: without one, what reads the capture is off, and `ended` is what the pane says of it.
-@property(nonatomic) BOOL live;
-@property(nonatomic, readonly) NSString *ended;
-/// The filter or that choice changed; and a button pressed, by the control's name.
-@property(nonatomic, copy, nullable) void (^onChange)(void);
-@property(nonatomic, copy, nullable) void (^onPress)(NSString *name);
-- (void)copied:(NSString *)text;
+/// A button that is a symbol, in its own ink in either look and in a window behind others, named for a screen reader.
+@interface MVSymbolButton : MVBarButton
++ (instancetype)buttonNamed:(NSString *)name symbol:(NSString *)symbol size:(CGFloat)size label:(NSString *)label target:(id)target action:(SEL)action;
+- (void)paint:(NSString *)symbol color:(NSColor *)color;
 @end
 
-/// The app's requests as `network` gives them, the ways this device has to see them, and what a person needs where none.
-/// By the probe it also keeps headers and bodies, holds rules and slows the app's network.
-@interface MVNetworkPane : NSView <MVWatches>
+/// One choice among a few sections, each found by its name and said to a screen reader as one of a group: the section
+/// chosen, and how many each holds where that is known.
+@interface MVSegments : NSView
+- (instancetype)initWithNames:(NSArray<NSString *> *)names titles:(NSArray<NSString *> *)titles small:(BOOL)small;
+@property(nonatomic) NSInteger chosen;
+/// A person chose another.
+@property(nonatomic, copy, nullable) void (^onChoose)(NSInteger at);
+- (void)setCount:(nullable NSString *)count at:(NSInteger)at;
+@end
+
+/// The words that narrow a list, with the scope of what failed beside them: its count, and whether it is on.
+@interface MVFilterField : NSView
+@property(nonatomic, copy) NSString *words;
+@property(nonatomic) BOOL failedOnly;
+@property(nonatomic) NSUInteger failed;
+/// The words or the scope changed.
+@property(nonatomic, copy, nullable) void (^onChange)(void);
+/// The field takes the keyboard.
+- (void)focus;
+@end
+
+/// A pane with a control of its own on the line of its name, which the Inspector places there while the pane shows.
+@protocol MVTitled <NSObject>
+@property(nonatomic, readonly) NSView *titleTool;
+@end
+
+/// The app's requests as `capture_network` gives them, the ways this device has to see them, and what a person needs
+/// where none. By the probe it also keeps headers and bodies, holds rules and slows the app's network.
+@interface MVNetworkPane : NSView <MVWatches, MVTitled>
 @property(nonatomic, readonly) MVAnswerView *answer;
 /// The requests listed, without the headings of their hosts.
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
 /// What it says of the capture, and of the request chosen.
 @property(nonatomic, readonly) NSString *said, *detail;
-/// That it lists the latest of more requests, where it does.
-@property(nonatomic, readonly) NSString *cut;
+/// What it says under the filter: that it lists the latest of more requests, that the capture ended, that nothing matches.
+@property(nonatomic, readonly) NSString *note;
 @property(nonatomic, readonly) MVNetworkRules *rules;
-@property(nonatomic, readonly) MVNetworkActions *actions;
+@property(nonatomic, readonly) MVFilterField *filter;
+/// A person chose to see real values: held while the capture runs in this window, and never kept.
+@property(nonatomic, readonly) BOOL real;
+/// An item of the pane's own menu, by the name the parent takes it by: `networkSave`, `networkClear`, `networkReal`.
+- (void)choose:(NSString *)name;
+/// The filter takes the keyboard, where it shows.
+- (void)focusFilter;
 @end
 
 /// What `audit` finds on the screen shown, by kind; one chosen is marked on the device's picture.

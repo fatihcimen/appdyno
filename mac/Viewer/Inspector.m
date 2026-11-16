@@ -46,6 +46,7 @@ static NSString *ms(id v) {
 @implementation MVInspector {
   NSArray<NSButton *> *_tabs;
   NSTextField *_paneName;
+  NSView *_paneTool;
   NSView *_panes[MVPanes];
   NSTextField *_fps, *_fpsNote;
   NSMutableDictionary<NSString *, NSTextField *> *_tiles;
@@ -318,6 +319,18 @@ static NSString *ms(id v) {
     tab.accessibilityValue = chosen ? MVWord(@"selected") : nil;
   }
   _paneName.stringValue = MVWord(@(kTabs[pane].title));
+  // a pane's own control stands at the end of the line of its name, while it is the pane that shows
+  [_paneTool removeFromSuperview];
+  _paneTool = [_panes[pane] conformsToProtocol:@protocol(MVTitled)] ? ((id<MVTitled>)_panes[pane]).titleTool : nil;
+  if (_paneTool) {
+    _paneTool.translatesAutoresizingMaskIntoConstraints = NO;
+    [self addSubview:_paneTool];
+    [NSLayoutConstraint activateConstraints:@[
+      [_paneTool.trailingAnchor constraintEqualToAnchor:self.trailingAnchor
+                                               constant:-kInset],
+      [_paneTool.centerYAnchor constraintEqualToAnchor:_paneName.centerYAnchor],
+    ]];
+  }
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
   _chosen = pane;
   [self watchPanes];

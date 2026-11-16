@@ -1,82 +1,17 @@
-// The Network pane: the app's requests as `capture_network` gives them, by the capture that op keeps for the device, so an agent's
-// and this pane's are one. The parent offers only the ways this device has, a proxy only where one is set already, and
-// says what a person needs where none lists requests: no window sets a proxy.
+// The Network pane: the app's requests as `capture_network` gives them, by the capture that op keeps for the device, so
+// an agent's and this pane's are one. Four bands stand over the list, and no more: what the capture is doing and how
+// fast its network is, the requests or the rules, and the words that narrow the list. What a way does is said where a
+// capture starts, in the card that holds Start; what failed stays at the pane's foot until it is read. The parent offers
+// only the ways this device has, a proxy only where one is set already: no window sets a proxy.
+#import "NetworkPane.h"
 #import "Place.h"
-#import "Window.h"
 #import "Words.h"
 
-static const double kDetailHeight = 150;
+static const double kDetailHeight = 150, kBand = 28;
 
-/// How slow the probe makes the app's network: the op's word, and its name here.
-static NSString *const kSpeeds[][2] = {
-    {@"full", @"Full Speed"},
-    {@"slow", @"Slow"},
-    {@"gsm", @"GSM"},
-    {@"gprs", @"GPRS"},
-    {@"edge", @"EDGE"},
-    {@"3g", @"3G"},
-    {@"hsdpa", @"HSDPA"},
-    {@"lte", @"LTE"},
-    {@"offline", @"Offline"},
-};
-enum { kSpeedCount = sizeof kSpeeds / sizeof kSpeeds[0] };
+static NSString *const kBodiesKept = @"networkBodies";
 
-/// Each way by its name, as a person reads it, and what it shows.
-static NSString *const kWays[][3] = {
-    {@"probe", @"Probe", @"Restarts the app with a probe in it, then lists each request it makes through URLSession: method, address, status, time and size. While it is in, the app's own certificate check (pinning) is not asked."},
-    {@"proxy", @"Proxy", @"Lists what goes through the proxy this device already uses, where this tool can read the proxy's list. HTTPS shows only its host unless the proxy decrypts it."},
-    {@"bytes", @"Bytes", @"Counts what the app sends and receives, with no addresses."},
-    {@"packets", @"Packets", @"Counts the app's packets by port when the capture stops, with no addresses."},
-};
-enum { kWayCount = sizeof kWays / sizeof kWays[0] };
-
-/// What a capture by this way is doing, from a time.
-static NSString *const kCapturing[kWayCount] = {@"Capturing by the probe since %@", @"Capturing through the proxy since %@", @"Counting bytes since %@", @"Counting packets since %@"};
-
-static NSInteger wayAt(NSString *via) {
-  for (NSInteger i = 0; i < kWayCount; i++)
-    if ([kWays[i][0] isEqual:via]) return i;
-  return -1;
-}
-
-/// What the app made that no way here sees, by the op's word for each kind, as a person reads it.
-static NSString *const kUnseen[][2] = {
-    {@"webview", @"web views: %@"},
-    {@"background", @"background sessions: %@"},
-    {@"websocket", @"WebSocket tasks: %@"},
-};
-
-/// Those counts as one line, or none where the app made none of them.
-static NSString *unseenLine(NSDictionary *unseen) {
-  NSMutableArray<NSString *> *parts = [NSMutableArray array];
-  for (NSUInteger i = 0; i < sizeof kUnseen / sizeof kUnseen[0]; i++)
-    if ([unseen[kUnseen[i][0]] integerValue] > 0) [parts addObject:MVFormat(kUnseen[i][1], @[[unseen[kUnseen[i][0]] description]])];
-  return parts.count ? MVFormat(@"Not seen here: %@", @[[parts componentsJoinedByString:@", "]]) : nil;
-}
-
-@implementation MVNetworkPane {
-  NSTextField *_state, *_about, *_cut;
-  NSPopUpButton *_way;
-  NSButton *_go, *_again, *_bodies;
-  NSPopUpButton *_throttle;
-  MVNetworkRules *_rules;
-  MVNetworkActions *_actions;
-  NSArray<MVRow *> *_allRows;
-  NSArray<MVAccentButton *> *_sections;
-  NSView *_sectionRow;
-  BOOL _onRules;
-  NSArray<NSString *> *_ways;
-  NSString *_cutSays;
-  NSString *_capturing, *_needs, *_note, *_unseen, *_proxy, *_wholeKey, *_whole, *_askedKey;
-  BOOL _keeps;
-  /// The capture that ended was the probe's, and its requests still stand in the list.
-  BOOL _wasProbe;
-  NSDate *_since;
-  NSArray<NSDictionary *> *_entries;
-  MVList *_list;
-  NSView *_none, *_detailCard, *_slack;
-  NSTextView *_detail;
-}
+@implementation MVNetworkPane
 
 @synthesize onSend = _onSend, watching = _watching, answer = _answer;
 
@@ -84,147 +19,155 @@ static NSString *unseenLine(NSDictionary *unseen) {
   if ((self = [super initWithFrame:frame])) {
     _ways = @[];
     _entries = @[];
-    _state = MVText(@"Not capturing", MVStyleStrong);
+    __weak MVNetworkPane *weak = self;
+    _go = MVPlacePrimary(@"Start", @"networkGo", self, @selector(go:));
+    _again = MVPlaceButton(@"Read Again", @"networkRead", self, @selector(readAgain:));
+    _dot = [[MVInk alloc] initWithSymbol:@"circle.fill" color:MVGreen() size:8];
+    _state = MVText(@"", MVStyleCallout);
+    _state.font = [NSFont monospacedDigitSystemFontOfSize:12 weight:NSFontWeightRegular];
+    _state.textColor = MVQuietColor();
+    MVHoldContent(_state);
+    [_state setContentCompressionResistancePriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_state setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _tortoise = [[MVInk alloc] initWithSymbol:@"tortoise.fill" color:MVOrange() size:12];
+    _tortoise.toolTip = MVWord(@"The app's network is slowed");
+    _throttle = [NSPopUpButton new];
+    _throttle.identifier = @"networkThrottle";
+    _throttle.accessibilityLabel = MVWord(@"Network speed");
+    _throttle.toolTip = MVWord(@"Network speed");
+    _throttle.target = self;
+    _throttle.action = @selector(throttleChosen:);
+    [self fillSpeeds];
     _way = [NSPopUpButton new];
     _way.identifier = @"networkWay";
     _way.accessibilityLabel = MVWord(@"Way to capture");
     _way.target = self;
     _way.action = @selector(wayChosen:);
-    [_way setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
-    _go = MVPlacePrimary(@"Start", @"networkGo", self, @selector(go:));
-    _again = MVPlaceButton(@"Read Again", @"networkRead", self, @selector(readAgain:));
-    NSStackView *controls = [NSStackView stackViewWithViews:@[_way, _go, _again]];
-    controls.spacing = 8;
-    _bodies = [NSButton checkboxWithTitle:MVWord(@"Keep headers and bodies") target:self action:@selector(wayChosen:)];
-    _bodies.identifier = @"networkBodies";
-    _throttle = [NSPopUpButton new];
-    _throttle.identifier = @"networkThrottle";
-    _throttle.accessibilityLabel = MVWord(@"Network speed");
-    _throttle.target = self;
-    _throttle.action = @selector(throttleChosen:);
-    for (NSInteger i = 0; i < kSpeedCount; i++) [_throttle addItemWithTitle:MVWord(kSpeeds[i][1])];
-    _rules = [MVNetworkRules new];
-    // the requests or the rules: both at once leave neither the room to be read
-    _sections = @[(MVAccentButton *)MVPlaceButton(@"Requests", @"networkShowRequests", self, @selector(sectionChosen:)), (MVAccentButton *)MVPlaceButton(@"Rules", @"networkShowRules", self, @selector(sectionChosen:))];
-    _sections[1].tag = 1;
-    _sectionRow = MVPaneRow(_sections);
-    _about = MVPaneNote(@"");
-    _about.maximumNumberOfLines = 0;
-    MVHoldContent(_about);
+    for (NSView *sized in @[_dot, _tortoise, _throttle, _again, _go]) [sized setContentHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_throttle setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_dot.widthAnchor constraintEqualToConstant:10].active = YES;
+    [_tortoise.widthAnchor constraintEqualToConstant:18].active = YES;
+    _captureRow = [NSStackView stackViewWithViews:@[_go, _again, _dot, _state, _tortoise, _throttle]];
+    _captureRow.spacing = 6;
+    [_captureRow.heightAnchor constraintEqualToConstant:kBand].active = YES;
+    _sections = [[MVSegments alloc] initWithNames:@[@"networkShowRequests", @"networkShowRules"] titles:@[@"Requests", @"Rules"] small:NO];
+    _sections.onChoose = ^(NSInteger at) {
+      [weak sectionChosen:at];
+    };
+    _filter = [MVFilterField new];
+    _filter.onChange = ^{
+      [weak sifted];
+    };
+    _note = MVPaneNote(@"");
+    _note.maximumNumberOfLines = 0;
+    MVHoldContent(_note);
+    [self makeCard];
     _answer = [MVAnswerView new];
-    _cut = MVPaneNote(@"");
-    _cut.hidden = YES;
-    MVHoldContent(_cut);
-    _none = MVEmptyCard(@"network", @"Requests show here while a capture runs.");
     _list = [MVList new];
     _list.accessibilityLabel = MVWord(@"Requests");
     [_list setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-    __weak MVNetworkPane *weak = self;
     _list.onSelect = ^(MVRow *row) {
       [weak showDetail:row.key];
     };
+    _curl = MVPlaceButton(@"Copy as cURL", @"networkCurl", self, @selector(pressed:));
+    _mock = MVPlaceButton(@"Mock This Answer", @"networkMockFrom", self, @selector(pressed:));
+    _requestTools = MVPaneRow(@[_curl, _mock]);
     NSView *card;
     _detail = MVReadText(@"networkDetail", @"The request chosen", &card);
     _detailCard = card;
     [_detailCard.heightAnchor constraintEqualToConstant:kDetailHeight].active = YES;
-    _detailCard.hidden = YES;
-    // with no list, what is left goes under it all, where it went to the empty row of controls and stood the note at the
-    // pane's foot
+    // with no list, what is left goes under it all, and the answer stands at the pane's foot
     _slack = [NSView new];
     [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+    _rules = [MVNetworkRules new];
     _rules.onSend = ^(NSDictionary *message) {
       MVPaneSend(weak, message);
     };
-    _actions = [MVNetworkActions new];
-    _actions.onChange = ^{
-      [weak sifted];
-    };
-    _actions.onPress = ^(NSString *name) {
-      [weak pressed:name];
-    };
-    MVPaneFill(self, @[_state, controls, _bodies, _throttle, _about, _answer, _sectionRow, _actions, _cut, _none, _list, _detailCard, _rules, _slack], 8);
+    [self makeMenu];
+    MVPaneFill(self, @[_captureRow, _sections, _filter, _note, _card, _list, _requestTools, _detailCard, _rules, _slack, _answer], 8);
     [self layOut];
   }
   return self;
+}
+
+/// Where a capture starts, and what there is to say while none lists a request: what the way does, with Start in it.
+- (void)makeCard {
+  _cardTitle = MVText(@"", MVStyleStrong);
+  MVHoldContent(_cardTitle);
+  _cardWords = MVWrappedText(@"", MVStyleCallout);
+  _cardWords.textColor = MVQuietColor();
+  _cardWords.maximumNumberOfLines = 0;
+  _cardWords.preferredMaxLayoutWidth = MVInspectorWidth - 2 * 16 - 2 * 14;
+  MVHoldContent(_cardWords);
+  _bodies = [NSButton checkboxWithTitle:MVWord(@"Keep headers and bodies") target:self action:@selector(bodiesChosen:)];
+  _bodies.identifier = @"networkBodies";
+  _bodies.toolTip = MVWord(@"Keeps each request's headers and text bodies while the capture runs, for its detail. They are deleted when it stops.");
+  // on unless a person turned it off: a request's detail is what one opens it for
+  _bodies.state = [NSUserDefaults.standardUserDefaults objectForKey:kBodiesKept] && ![NSUserDefaults.standardUserDefaults boolForKey:kBodiesKept] ? NSControlStateValueOff : NSControlStateValueOn;
+  _cardRows = MVPaneStack(@[_cardTitle, _cardWords, _bodies], 8);
+  _card = MVCard(_cardRows, 14);
+}
+
+/// What is done to the whole capture, behind the pane's own button: each by the name the parent takes it by.
+- (void)makeMenu {
+  _menu = [NSMenu new];
+  _menu.autoenablesItems = YES;
+  for (NSArray<NSString *> *one in @[@[@"networkSave", @"Save HAR", @"square.and.arrow.down"], @[@"networkClear", @"Clear List", @"trash"], @[@"networkReal", @"Show Real Values", @"eye"]]) {
+    NSMenuItem *item = [_menu addItemWithTitle:MVWord(one[1]) action:@selector(menuChosen:) keyEquivalent:@""];
+    item.target = self;
+    item.identifier = one[0];
+    item.image = [NSImage imageWithSystemSymbolName:one[2] accessibilityDescription:nil];
+  }
+  [_menu itemAtIndex:1].toolTip = MVWord(@"Empties this window's list. The capture keeps its requests, and an AI client still reads them all.");
+  [_menu itemAtIndex:2].toolTip = MVWord(@"Shows headers, cookies and bodies as they were sent, here only. An AI client still gets them hidden.");
+  _more = [MVSymbolButton buttonNamed:@"networkMore" symbol:@"ellipsis.circle" size:15 label:@"More" target:self action:@selector(openMenu:)];
+}
+
+- (NSView *)titleTool {
+  return _more;
 }
 
 - (void)setWatching:(BOOL)watching {
   if (watching == _watching) return;
   _watching = watching;
   MVPaneWatch(self, @"network", watching, nil);
+  [self keepTime];
 }
 
-/// One at a time: a second press would race the first for what the pane says.
-- (void)go:(id)sender {
-  if (_answer.waiting) return;
-  NSInteger chosen = _way.indexOfSelectedItem;
-  if (!_capturing && (chosen < 0 || chosen >= (NSInteger)_ways.count)) return;
-  _go.enabled = NO;
-  [_answer sending:MVWord(_capturing ? @"Stopping the capture" : @"Starting the capture")];
-  if (_capturing) MVPaneSend(self, @{@"op": @"control", @"name": @"networkStop"});
-  else if (!_bodies.hidden && _bodies.state == NSControlStateValueOn) MVPaneSend(self, @{@"op": @"control", @"name": @"networkStart", @"via": _ways[chosen], @"bodies": @YES});
-  else MVPaneSend(self, @{@"op": @"control", @"name": @"networkStart", @"via": _ways[chosen]});
+/// The time gone ticks only while it is looked at.
+- (void)keepTime {
+  BOOL ticks = _watching && _capturing && self.window;
+  if (ticks == (_tick != nil)) return;
+  [_tick invalidate];
+  __weak MVNetworkPane *weak = self;
+  _tick = ticks ? [NSTimer scheduledTimerWithTimeInterval:1
+                                                  repeats:YES
+                                                    block:^(__unused NSTimer *timer) {
+                                                      [weak sayState];
+                                                    }]
+                : nil;
 }
 
-/// The rows a person's words leave: each word in a row's method and address, in its figures or in how it stands, in any
-/// case and with or without the marks on a letter.
-- (void)listRows {
-  NSArray<NSString *> *words = [MVFolded(_actions.filter) componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
-  NSString *chosen = _list.selected.key;
-  // those left stand under their hosts, a host with none left gone with them
-  _list.rows = MVNetworkGrouped([_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, __unused NSDictionary *bindings) {
-                                            NSString *all = MVFolded([NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.finds ?: @""]);
-                                            for (NSString *word in words)
-                                              if (word.length && ![all containsString:word]) return NO;
-                                            return YES;
-                                          }]]);
-  [_list selectKey:chosen];
+- (void)viewDidMoveToWindow {
+  [super viewDidMoveToWindow];
+  [self keepTime];
 }
 
-/// The filter changed, or whether real values show: the list again, and the request chosen asked for again.
-- (void)sifted {
-  _askedKey = nil;
-  _whole = nil;
-  [self listRows];
-  [self layOut];
+- (void)choose:(NSString *)name {
+  if (!self.probing) return;
+  if (![name isEqual:@"networkReal"]) return [self send:name];
+  self.real = !_real;
   [self showDetail:_list.selected.key];
 }
 
-/// A button of the requests: what is done to one names it, and says whether real values are wanted.
-- (void)pressed:(NSString *)name {
-  NSString *key = _list.selected.key;
-  BOOL one = [name isEqual:@"networkCurl"] || [name isEqual:@"networkMockFrom"];
-  if (one && !key) return;
-  NSMutableDictionary *m = [@{@"op": @"control", @"name": name} mutableCopy];
-  if (one) m[@"id"] = @(key.integerValue);
-  if ([name isEqual:@"networkCurl"] && _actions.real) m[@"real"] = @YES;
-  MVPaneSend(self, m);
-}
-
-- (void)sectionChosen:(NSButton *)sender {
-  _onRules = sender.tag == 1;
-  [self layOut];
-  [self showDetail:_list.selected.key];
-}
-
-/// A speed chosen is the probe's throttle, by the op an agent sets it with.
-- (void)throttleChosen:(id)sender {
-  NSInteger at = _throttle.indexOfSelectedItem;
-  if (at >= 0 && at < kSpeedCount) MVPaneSend(self, @{@"op": @"control", @"name": @"networkThrottle", @"value": kSpeeds[at][0]});
-}
-
-- (void)readAgain:(id)sender {
-  MVPaneSend(self, @{@"op": @"control", @"name": @"networkRead"});
-}
-
-- (void)wayChosen:(id)sender {
-  [self layOut];
+- (BOOL)real {
+  return _real;
 }
 
 /// The parent's `network`, and the answer of a start or a stop.
 - (void)show:(NSDictionary *)m {
   if ([m[@"op"] isEqual:@"answer"]) {
-    [_answer show:m];
+    [self foot:m];
     _go.enabled = !_answer.waiting;
     return;
   }
@@ -236,7 +179,10 @@ static NSString *unseenLine(NSDictionary *unseen) {
     [self showDetail:_list.selected.key];
     return;
   }
-  if ([m[@"curl"] isKindOfClass:NSString.class]) return [_actions copied:m[@"curl"]];
+  if ([m[@"curl"] isKindOfClass:NSString.class]) {
+    MVCopyText(m[@"curl"], MVPlaceBoard());
+    return MVSayCopied(_curl);
+  }
   // a rule made of a request's answer stands in the rules' field, for a person to set
   if ([m[@"rule"] isKindOfClass:NSString.class]) {
     _onRules = YES;
@@ -249,11 +195,9 @@ static NSString *unseenLine(NSDictionary *unseen) {
   if ([m[@"rules"] isKindOfClass:NSArray.class]) [_rules show:m[@"rules"]];
   else if (!capturing) [_rules show:@[]];
   if ([m[@"throttle"] isKindOfClass:NSString.class]) [self showThrottle:m[@"throttle"]];
+  else if (!capturing) [self showThrottle:@"full"];
   // set by an agent, or in another window, since this one was last told: said once, and to a screen reader
-  if ([m[@"elsewhere"] boolValue]) {
-    [_answer show:@{@"ok": @YES, @"text": @"The rules or the speed were changed elsewhere"}];
-    MVAnnounce(MVWord(@"The rules or the speed were changed elsewhere"));
-  }
+  if ([m[@"elsewhere"] boolValue]) [self foot:@{@"ok": @YES, @"text": @"The rules or the speed were changed elsewhere"}];
   if (m[@"strict"] || m[@"unmatched"]) [_rules showStrict:[m[@"strict"] boolValue] unmatched:[m[@"unmatched"] isEqual:@"fail"]];
   if (m[@"ways"]) {
     _ways = [m[@"ways"] isKindOfClass:NSArray.class] ? m[@"ways"] : @[];
@@ -261,17 +205,18 @@ static NSString *unseenLine(NSDictionary *unseen) {
     _needs = [m[@"needs"] isKindOfClass:NSString.class] ? m[@"needs"] : nil;
     [_way removeAllItems];
     for (NSString *via in _ways) {
-      NSInteger at = wayAt(via);
-      NSString *title = MVWord(at < 0 ? via : kWays[at][1]);
+      NSString *title = MVNetworkWayTitle(via);
       [_way addItemWithTitle:[via isEqual:@"proxy"] && _proxy ? [NSString stringWithFormat:@"%@ %@", title, _proxy] : title];
     }
   }
   if (capturing) _wasProbe = NO;
   else if (m[@"was"]) _wasProbe = [m[@"was"] isEqual:@"probe"];
+  if (_capturing && !capturing) _stopped = NSDate.date;
+  if (!capturing && _real) self.real = NO;
   _capturing = capturing;
   _since = [m[@"since"] isKindOfClass:NSNumber.class] ? [NSDate dateWithTimeIntervalSince1970:[m[@"since"] doubleValue] / 1000] : _since;
-  _note = [m[@"note"] isKindOfClass:NSString.class] ? m[@"note"] : nil;
-  _unseen = [m[@"unseen"] isKindOfClass:NSDictionary.class] ? unseenLine(m[@"unseen"]) : nil;
+  _noteSaid = [m[@"note"] isKindOfClass:NSString.class] ? m[@"note"] : nil;
+  _unseen = [m[@"unseen"] isKindOfClass:NSDictionary.class] ? MVNetworkUnseenLine(m[@"unseen"]) : nil;
   if ([m[@"entries"] isKindOfClass:NSArray.class]) _entries = m[@"entries"];
   else if (!capturing) _entries = @[];
   // the list is the latest of what the capture holds, and says so where it holds more
@@ -279,8 +224,8 @@ static NSString *unseenLine(NSDictionary *unseen) {
                                  return [e isKindOfClass:NSDictionary.class] && ![e[@"inFlight"] boolValue];
                                }]]
                          .count;
-  NSUInteger total = [m[@"total"] isKindOfClass:NSNumber.class] ? [m[@"total"] unsignedIntegerValue] : ended;
-  _cutSays = total > ended && ended > 0 ? MVFormat(@"Showing the latest %@ of %@ requests", @[MVCount(ended), MVCount(total)]) : nil;
+  _total = [m[@"total"] isKindOfClass:NSNumber.class] ? [m[@"total"] unsignedIntegerValue] : ended;
+  _cutSays = _total > ended && ended > 0 ? MVFormat(@"Showing the latest %@ of %@ requests", @[MVCount(ended), MVCount(_total)]) : nil;
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   [_entries enumerateObjectsUsingBlock:^(NSDictionary *e, NSUInteger at, __unused BOOL *stop) {
     if ([e isKindOfClass:NSDictionary.class]) [rows addObject:MVNetworkRow(e, at)];
@@ -290,113 +235,82 @@ static NSString *unseenLine(NSDictionary *unseen) {
   [self listRows];
   [self layOut];
   [self showDetail:_list.selected.key];
+  [self keepTime];
 }
 
-/// The speed the probe holds, chosen in the list: one set in other words, as an agent may, stands there as it was set.
-- (void)showThrottle:(NSString *)value {
-  NSInteger at = 0;
-  while (at < kSpeedCount && ![kSpeeds[at][0] isEqual:value]) at++;
-  while (_throttle.numberOfItems > kSpeedCount) [_throttle removeItemAtIndex:kSpeedCount];
-  if (at == kSpeedCount) [_throttle addItemWithTitle:value];
-  [_throttle selectItemAtIndex:at];
+/// A control stands in the card that starts a capture, or in the row of one that runs or has ended.
+static void stand(NSView *view, NSStackView *stack, NSUInteger at, BOOL wide) {
+  if (view.superview == stack) return;
+  [view removeFromSuperview];
+  // as wide as the card, or as wide as its own words in a row
+  [view setContentHuggingPriority:wide ? 1 : NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+  [stack insertArrangedSubview:view atIndex:MIN(at, stack.arrangedSubviews.count)];
 }
 
 /// What the pane says and offers, from what it was last told.
 - (void)layOut {
   NSString *via = _capturing;
   if (!via && _ways.count) via = _ways[MAX(0, _way.indexOfSelectedItem)];
-  NSInteger chosen = wayAt(via ?: @"");
-  if (_capturing && chosen >= 0) {
-    NSDateFormatter *clock = [NSDateFormatter new];
-    clock.dateStyle = NSDateFormatterNoStyle;
-    clock.timeStyle = NSDateFormatterShortStyle;
-    _state.stringValue = [NSString stringWithFormat:kCapturing[chosen], [clock stringFromDate:_since ?: NSDate.date]];
-  } else _state.stringValue = @"Not capturing";
-  // what a capture says of itself keeps an address or an app as it came
-  NSString *about = chosen >= 0 ? MVWord(kWays[chosen][2]) : @"";
-  if (_note.length) about = MVSentence(_note);
-  // what the app made that this way cannot see, so that a short list is not read as an app that asked for little
-  if (_unseen.length && _capturing) about = about.length ? [NSString stringWithFormat:@"%@\n%@", about, _unseen] : _unseen;
-  // what lists no requests says what would, while it counts too
-  BOOL counts = _capturing && ![@[@"probe", @"proxy"] containsObject:_capturing];
-  if (_needs && !_capturing) about = MVWord(_needs);
-  else if (_needs && counts) about = [NSString stringWithFormat:@"%@\n%@", about, MVWord(_needs)];
-  _about.stringValue = about;
-  _about.hidden = !about.length;
-  _way.hidden = _capturing || !_ways.count;
-  _go.hidden = !_capturing && !_ways.count;
-  _go.title = MVWord(_capturing ? @"Stop" : @"Start");
-  _again.hidden = !_capturing || [_capturing isEqual:@"probe"];
-  // the probe's own: bodies are asked for before it starts, and its rules and its speed hold while it runs
-  _bodies.hidden = _capturing || ![via isEqual:@"probe"];
-  BOOL probe = [_capturing isEqual:@"probe"];
-  if (!probe) _onRules = NO;
-  _throttle.hidden = _sectionRow.hidden = !probe;
-  for (MVAccentButton *section in _sections) {
-    BOOL chosen = (section.tag == 1) == _onRules;
-    section.hue = chosen ? MVAccent() : nil;
-    section.accessibilityValue = chosen ? MVWord(@"selected") : nil;
-  }
-  _rules.hidden = !_onRules;
+  BOOL probe = self.probing, any = _allRows.count > 0;
   // a capture that ended leaves its list, and the words that narrow it
-  BOOL left = !_capturing && _wasProbe && _allRows.count;
-  _actions.hidden = !(probe || left) || _onRules;
-  _actions.live = probe;
+  BOOL left = !_capturing && any, starts = !_capturing && !any;
+  if (!probe) _onRules = NO;
+  _sections.chosen = _onRules;
+  [_sections setCount:any || probe ? MVCount(_total) : nil at:0];
+  [_sections setCount:_rules.rows.count ? MVCount(_rules.rows.count) : nil at:1];
+  // Start stands in the card while nothing has been captured, with the way where the device has more than one; then in
+  // the capture's row, as Stop, and as Start again beside the list a capture left
+  stand(_go, starts ? _cardRows : _captureRow, starts ? NSUIntegerMax : 0, starts);
+  stand(_way, starts ? _cardRows : _captureRow, starts ? 2 : NSUIntegerMax, starts);
+  _go.title = MVWord(_capturing ? @"Stop" : @"Start");
+  _go.hidden = !_capturing && !_ways.count;
+  _way.hidden = _capturing || _ways.count < 2;
+  _bodies.hidden = _capturing || ![via isEqual:@"probe"];
+  _captureRow.hidden = starts;
+  _again.hidden = !_capturing || probe;
+  _dot.hidden = !_capturing;
+  _throttle.hidden = !probe;
+  if (!probe) _tortoise.hidden = YES;
+  else _tortoise.hidden = _throttle.indexOfSelectedItem == 0;
+  [self sayState];
+  _sections.hidden = !probe;
+  _filter.hidden = _onRules || !(any || _filter.words.length || _filter.failedOnly);
+  _rules.hidden = !_onRules;
   _list.hidden = _onRules || !_list.rows.count;
-  _none.hidden = _onRules || _list.rows.count;
-  // the rules with their fields take the room the note of the way would
-  if (_onRules) _about.hidden = YES;
-  _slack.hidden = !_list.hidden;
-  _cut.stringValue = _cutSays ?: @"";
-  _cut.hidden = _onRules || !_cutSays;
+  _card.hidden = _onRules || any;
+  if (!_card.hidden) [self sayCard:via];
+  // the list is the latest of more; and what a capture that ended can no longer do, with why
+  NSMutableArray<NSString *> *notes = [NSMutableArray array];
+  if (_cutSays) [notes addObject:_cutSays];
+  if (left && _wasProbe) [notes addObject:MVWord(@"The capture has ended. Its requests can still be searched; copying, mocking and saving need a capture that runs.")];
+  if (any && !_list.rows.count) [notes addObject:MVWord(@"No request here matches the filter.")];
+  _note.stringValue = [notes componentsJoinedByString:@"\n"];
+  _note.hidden = _onRules || !notes.count;
+  _slack.hidden = !_list.hidden || _onRules;
+  _more.hidden = !(probe || (left && _wasProbe));
+  _more.enabled = probe;
+  if (!probe) _more.toolTip = _wasProbe ? MVWord(@"The capture has ended. Its requests can still be searched; copying, mocking and saving need a capture that runs.") : MVWord(@"More");
 }
 
-/// The request chosen, whole: its address, what came back, when, and what failed.
-- (void)showDetail:(nullable NSString *)key {
-  NSUInteger at = [_entries indexOfObjectPassingTest:^BOOL(NSDictionary *one, NSUInteger i, __unused BOOL *stop) {
-    return [one isKindOfClass:NSDictionary.class] && [MVNetworkKey(one, i) isEqual:key];
-  }];
-  NSDictionary *e = at == NSNotFound ? nil : _entries[at];
-  _detailCard.hidden = !e || _onRules;
-  _actions.hasRequest = e != nil;
-  if (!e) return;
-  // its headers and bodies are asked for once, where the capture keeps them, and stand in place of the line
-  if (_keeps && key && ![key isEqual:_askedKey]) {
-    _askedKey = key;
-    if (_actions.real) MVPaneSend(self, @{@"op": @"control", @"name": @"networkDetail", @"id": @(key.integerValue), @"real": @YES});
-    else MVPaneSend(self, @{@"op": @"control", @"name": @"networkDetail", @"id": @(key.integerValue)});
-  }
-  if (_whole && [key isEqual:_wholeKey]) {
-    if (![_detail.string isEqual:_whole]) _detail.string = _whole;
-    _detail.textColor = MVInkColor();
-    return;
-  }
-  NSMutableArray<NSString *> *lines = [NSMutableArray array];
-  if ([e[@"url"] length]) [lines addObject:[NSString stringWithFormat:@"%@ %@", e[@"method"] ?: @"GET", e[@"url"]]];
-  else [lines addObject:MVNetworkRow(e, 0).title];
-  [lines addObject:MVNetworkFigures(e)];
-  if ([e[@"at"] length]) [lines addObject:MVFormat(@"At %@", @[e[@"at"]])];
-  if ([e[@"body"] boolValue]) [lines addObject:MVWord(@"Its body is in the proxy's export")];
-  // the same words again keep what a person selected in them
-  NSString *words = [lines componentsJoinedByString:@"\n"];
-  if (![_detail.string isEqual:words]) _detail.string = words;
-  _detail.textColor = MVInkColor();
+- (void)focusFilter {
+  if (!_filter.hidden) [_filter focus];
 }
 
 - (NSArray<MVRow *> *)rows {
   return [_list.rows filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"header == NO"]];
 }
 
-- (NSString *)cut {
-  return _cut.hidden ? @"" : _cut.stringValue;
-}
-
 - (NSString *)said {
-  return _about.hidden ? _state.stringValue : [NSString stringWithFormat:@"%@\n%@", _state.stringValue, _about.stringValue];
+  NSString *state = _captureRow.hidden ? MVWord(@"Not capturing") : _state.accessibilityLabel;
+  return _card.hidden || _cardWords.hidden ? state : [NSString stringWithFormat:@"%@\n%@\n%@", state, _cardTitle.stringValue, _cardWords.stringValue];
 }
 
-- (MVNetworkActions *)actions {
-  return _actions;
+- (NSString *)note {
+  return _note.hidden ? @"" : _note.stringValue;
+}
+
+- (MVFilterField *)filter {
+  return _filter;
 }
 
 - (MVNetworkRules *)rules {

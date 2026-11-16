@@ -65,8 +65,10 @@ void MVPokeListRow(MVList *list, NSString *title);
 /// The same on the hub's sidebar.
 void MVPokeRow(MVHub *hub, NSString *title);
 @class MVNetworkPane, MVWindow;
-/// The Network pane by the probe: bodies, rules and a speed; `sent` is what the pane has asked of its parent.
-void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent);
+/// The Network pane, shown: its states, a capture, the list and what narrows it; `sent` is what the pane has asked of its parent.
+void MVCheckNetwork(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent);
+/// Its rules, by the probe.
+void MVCheckNetworkRules(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent);
 /// Tools, on the hub Connect a Phone's checks leave.
 void MVCheckTools(MVHub *hub);
 /// A check of what a real click on a table's row did: said by name, with why, where a table takes no click from this test.

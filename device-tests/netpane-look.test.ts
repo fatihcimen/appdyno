@@ -184,7 +184,7 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
       await until('the ways it has', () => network((m) => Array.isArray(m.ways)).length > 0);
       await looked('empty');
 
-      await click('networkBodies');
+      // headers and bodies are kept unless a person says not
       await click('networkGo');
       await until(
         'a capture by the probe',
@@ -232,10 +232,12 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
       await choose('POST /v1/login');
       await until('its headers and bodies', () => network((m) => !!m.detail).length > 0);
       await looked('detail');
-      await click('networkReal');
+      poke({ choose: 'networkReal' });
+      await quiet(500);
       await quiet(1_500);
       await looked('detail-real');
-      await click('networkReal');
+      poke({ choose: 'networkReal' });
+      await quiet(500);
 
       await choose('POST /v1/pay');
       await click('networkMockFrom');

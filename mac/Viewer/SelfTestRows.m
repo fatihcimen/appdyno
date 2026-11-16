@@ -1,5 +1,5 @@
-// A row of a list in a device's window, chosen by a message: in the test build alone, for what looks at a pane with a
-// row chosen in it. A table in a window kept behind takes a test's click on some versions of macOS and not on others.
+// A row of a list in a device's window, and an item of the Network pane's menu, chosen by a message: in the test build
+// alone, for what looks at a pane with a row chosen in it. A table in a window kept behind takes a test's click on some versions of macOS and not on others.
 #import "SelfTest.h"
 #import "Viewer.h"
 #import "Window.h"
@@ -24,6 +24,9 @@ static MVList *_Nullable listWith(NSView *view, NSString *title) {
 
 /// `row` names a row by what it says; every other poke is the stage's own.
 - (void)pokeOrRow:(NSDictionary *)m {
+  MVWindow *shown = [self valueForKey:@"_window"];
+  // an item of the Network pane's own menu, by its name: a menu opened in a window kept behind would open on a person's screen
+  if ([m[@"choose"] isKindOfClass:NSString.class]) return [shown.inspector.network choose:m[@"choose"]];
   NSString *title = [m[@"row"] isKindOfClass:NSString.class] ? m[@"row"] : nil;
   // exchanged at load: this is the stage's own `poke:`
   if (!title) return [self pokeOrRow:m];
