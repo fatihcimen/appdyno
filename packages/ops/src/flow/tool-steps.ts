@@ -4,8 +4,9 @@ import { type FlowStep, type Mask, maskText, VALUELESS_SETTINGS } from '@appdyno
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { HIDE_KEYBOARD } from '../touch.js';
 import { DEFAULT_TOLERANCE } from '../visual.js';
-import { CLIPBOARD, stepOf, unrecorded } from './aim.js';
+import { stepOf, unrecorded } from './aim.js';
 import { networkSteps } from './network-steps.js';
+import { auditStep, pushStep, webClickStep } from './recorder-gaps.js';
 
 /** What an op that ran comes to in a flow: its arguments and answer, as steps. */
 type ToStep = (
@@ -132,8 +133,9 @@ const OPS: Record<string, ToStep> = {
   set_device: (a) => {
     const value = a.value as string | undefined;
     if (a.name === 'restore') return stepOf('setting', {}, { name: 'restore' });
-    if (a.name === 'orientation') return unrecorded(`set_device orientation ${String(value)}`);
-    if (a.name === 'clipboard') return value === undefined ? undefined : unrecorded(CLIPBOARD);
+    // a read of the clipboard changed nothing; a text put there is a step of its own
+    if (a.name === 'clipboard')
+      return value === undefined ? undefined : stepOf('clipboard', {}, { text: value });
     if (a.name === 'location') {
       const [lat, lon] = (value ?? '').split(',').map(Number);
       return value === 'none'
@@ -153,6 +155,9 @@ const OPS: Record<string, ToStep> = {
         )
       : undefined;
   },
+  send_push: pushStep,
+  inspect_app: (a, data) =>
+    a.action === 'web_click' ? webClickStep(a, data) : unknownOp('inspect_app')(a, {}),
   capture_network: (a, data) => networkSteps(a, LOOKS.capture_network ?? [], data),
   // a picture only shown to the agent is a look
   take_screenshot: (a, data) =>
@@ -160,9 +165,9 @@ const OPS: Record<string, ToStep> = {
       ? stepOf('screenshot', {}, { name: pictureName(data.file as string) || 'screen' })
       : undefined,
   // a baseline saved while recording is what a replay compares with, in the flow's own baselines folder
-  check_screen: (a) =>
+  check_screen: (a, data) =>
     a.check === 'accessibility'
-      ? undefined
+      ? auditStep(a, data)
       : stepOf(
           'visual',
           {},

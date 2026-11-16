@@ -12,6 +12,16 @@ const RECT = new RegExp(`^${PLACE},${PLACE},${NUMBER},${NUMBER}$`);
 export const STATUS = /^(\d{3}|\dxx|failed)$/;
 const MASK_KEYS = ['id', 'role', 'text'] as const;
 
+const POINT = new RegExp(`^${NUMBER},${NUMBER}$`);
+
+/** Where a `drag` step lets go: a point `x,y` in tap units, or an element by selector words, as `id=bin`. */
+export function dropOf(value: string, line = 0): { x: number; y: number } | { selector: Mask } {
+  const [x, y] = POINT.exec(value)?.slice(1).map(Number) ?? [];
+  if (x !== undefined && y !== undefined) return { x, y };
+  const wrong = new FlowError(`to is x,y or id=, role=, text=: ${value}`, line);
+  return { selector: wordsOf(value, line, wrong) };
+}
+
 /** What a `visual` step leaves out of its comparison, as the `visual` tool takes it. */
 export type Mask = {
   x?: number;
@@ -32,14 +42,19 @@ export function maskOf(value: string, line = 0): Mask {
     if (!w || !h) throw new FlowError(`a mask has a width and a height: ${value}`, line);
     return { x, y, w, h };
   }
-  const mask: Mask = {};
+  return wordsOf(value, line, wrong());
+}
+
+/** Selector words in one value, `id=clock` or `role=image text="Map"`: what names an element inside a step's argument. */
+function wordsOf(value: string, line: number, wrong: FlowError) {
+  const words: Mask = {};
   for (const t of tokens(value, line)) {
     const key = MASK_KEYS.find((k) => k === t.key);
-    if (!key) throw wrong();
-    mask[key] = t.value;
+    if (!key) throw wrong;
+    words[key] = t.value;
   }
-  if (Object.keys(mask).length === 0) throw wrong();
-  return mask;
+  if (Object.keys(words).length === 0) throw wrong;
+  return words;
 }
 
 /** A mask as a flow writes it, which `maskOf` reads back. */
@@ -117,6 +132,14 @@ export function checkDeviceStep(st: FlowStep, line: number) {
     throw new FlowError('network: strict, strict on or strict off', line);
   if (st.action === 'request' && a.status !== undefined && !STATUS.test(String(a.status)))
     throw new FlowError(`request: status is 404, 4xx or failed: ${String(a.status)}`, line);
+  if (st.action === 'drag') {
+    if (a.to === undefined)
+      throw new FlowError('drag needs to: a point x,y or an element, as to="id=bin"', line);
+    // a name is filled when the flow runs
+    const drop = String(a.to).includes('${') ? undefined : dropOf(String(a.to), line);
+    if (drop && 'x' in drop && !st.flags.includes('coordinates'))
+      throw new FlowError('drag: a point to let go at is flagged !coordinates', line);
+  }
   for (const name of st.action === 'prepare' ? ((a.gives as string[] | undefined) ?? []) : [])
     if (!/^[A-Z_][A-Z0-9_]*$/.test(name))
       throw new FlowError(`prepare: gives names are like MY_NAME: ${name}`, line);

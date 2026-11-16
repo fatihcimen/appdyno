@@ -35,9 +35,10 @@ export type FlowSelector = { id?: string; role?: string; text?: string; index?: 
 
 /**
  * `ambiguous`: picked by its index among several. `coordinates`: nothing named it. `running`: a launch that found the
- * app running, on a screen a replay goes on from only if the app is on it then.
+ * app running, on a screen a replay goes on from only if the app is on it then. `review`: a number a recording took from
+ * what it found, for a person to set.
  */
-export type Flag = 'ambiguous' | 'coordinates' | 'running';
+export type Flag = 'ambiguous' | 'coordinates' | 'running' | 'review';
 
 /** The platforms a step may be kept to: `only ios` before it, or around several lines closed by `end`. */
 export const PLATFORMS = ['ios', 'android'] as const;
@@ -81,9 +82,9 @@ export type Action = keyof typeof SPECS;
 
 const NUMERIC_WORDS = new Set(['lat', 'lon']);
 /** Words a file has bare where they can be: a typed text or a URL is always quoted, so it never reads as a word. */
-const BARE_WORDS = new Set(['key', 'direction', 'name', 'value']);
+const BARE_WORDS = new Set(['key', 'direction', 'name', 'value', 'type']);
 const SELECTOR_KEYS = ['id', 'role', 'text'] as const;
-const FLAGS: readonly string[] = ['ambiguous', 'coordinates', 'running'] satisfies Flag[];
+const FLAGS: readonly string[] = ['ambiguous', 'coordinates', 'running', 'review'] satisfies Flag[];
 const NAME = /^[A-Z_][A-Z0-9_]*$/;
 /** A placeholder, or the escape of one. */
 const PLACEHOLDER = /\$\$\{|\$\{([^}]*)\}/g;
@@ -136,8 +137,8 @@ function parseStep(action: string, rest: Token[], line: number): FlowStep {
     } else if (point && k === 'screen') {
       step.args.screen = t.value;
     } else if (spec.list?.includes(k)) {
-      if (k === 'env' && t.value.indexOf('=') < 1)
-        throw new FlowError(`env is NAME=value: ${t.value}`, line);
+      if ((k === 'env' || k === 'data') && t.value.indexOf('=') < 1)
+        throw new FlowError(`${k} is NAME=value: ${t.value}`, line);
       step.args[k] = [...((step.args[k] as string[] | undefined) ?? []), t.value];
     } else if (spec.text?.includes(k)) {
       step.args[k] = t.value;

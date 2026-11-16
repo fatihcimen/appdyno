@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { maskOf, stepLine, type FlowStep } from '@appdyno/flows';
+import { dropOf, maskOf, stepLine, type FlowStep } from '@appdyno/flows';
 import { LONG_PRESS_MS } from '../step-schemas.js';
 import { ToolError } from '../tool.js';
 import { HIDE_KEYBOARD } from '../touch.js';
@@ -62,6 +62,16 @@ export function mockLine(st: FlowStep, at: Pick<StepPlace, 'file'>) {
   return stepLine({ ...st, args }).replace(/^mock /, '');
 }
 
+/** `NAME=value` words as a record, the name up to the first `=`. */
+const pairs = (words: unknown) =>
+  words &&
+  Object.fromEntries(
+    (words as string[]).map((w): [string, string] => [
+      w.slice(0, w.indexOf('=')),
+      w.slice(w.indexOf('=') + 1),
+    ]),
+  );
+
 /** One step as the op it runs through. */
 export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unknown>] {
   const a = st.args;
@@ -72,16 +82,12 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
   switch (st.action) {
     case 'launch': {
       // arguments and an environment start the app anew, as launch_app takes them
-      const env = (a.env as string[] | undefined)?.map((e): [string, string] => [
-        e.slice(0, e.indexOf('=')),
-        e.slice(e.indexOf('=') + 1),
-      ]);
       return [
         'launch_app',
         defined({
           app: a.app,
           args: a.arg,
-          env: env && Object.fromEntries(env),
+          env: pairs(a.env),
           language: a.language,
           probe: a.probe,
         }),
@@ -99,6 +105,33 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
       return ['tap_screen', { ...target, holdMs: a.durationMs ?? LONG_PRESS_MS }];
     case 'double_tap':
       return ['tap_screen', { ...target, count: 2 }];
+    case 'drag':
+      return [
+        'swipe_screen',
+        {
+          ...target,
+          to: dropOf(String(a.to)),
+          ...defined({ holdMs: a.holdMs, durationMs: a.durationMs }),
+        },
+      ];
+    case 'push':
+      return [
+        'send_push',
+        defined({
+          type: a.type,
+          app: a.app,
+          title: a.title,
+          body: a.body,
+          image: a.image,
+          data: pairs(a.data),
+          payload: a.payload,
+        }),
+      ];
+    case 'web_click':
+      return [
+        'inspect_app',
+        { action: 'web_click', selector: a.css, ...defined({ page: a.page }) },
+      ];
     case 'type':
       return [
         'type_text',

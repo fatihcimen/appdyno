@@ -167,6 +167,12 @@ function commands(st: FlowStep): Yaml[] {
       return unsupported("Maestro YAML has no rule for an app's requests");
     case 'alert':
       return unsupported('Maestro YAML answers a system alert by its words, in one language');
+    case 'drag':
+      return unsupported('a drag from an element to a place has no checked form in Maestro YAML');
+    case 'push':
+      return unsupported('Maestro YAML sends no push');
+    case 'web_click':
+      return unsupported('Maestro YAML has no click by a CSS selector in a web view');
     case 'clipboard':
       return unsupported('the clipboard has no checked form in Maestro YAML');
     case 'audit':

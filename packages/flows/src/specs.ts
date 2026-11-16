@@ -67,6 +67,16 @@ export const SPECS = {
     list: ['header', 'has', 'when'],
     bool: ['off'],
   },
+  /** A press at the target, carried in a straight line to `to=`: a point `x,y`, or an element by selector words. */
+  drag: { target: 'point-needed', text: ['to'], number: ['holdMs', 'durationMs'] },
+  /** A push to the app, as the `push` tool sends one of that type: each `data=` is a `key=value` of its data. */
+  push: {
+    words: ['type'],
+    text: ['app', 'title', 'body', 'image', 'payload'],
+    list: ['data'],
+  },
+  /** A click in a web view, on what the CSS selector finds in the page showing, or in the one `page=` names. */
+  web_click: { words: ['css'], text: ['page'] },
   /**
    * `network strict`: from here a step fails when a request of the app's got a 5xx or failed on its way, and no rule
    * made it; `network strict off` ends that. It holds until the file ends.

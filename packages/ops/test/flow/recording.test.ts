@@ -215,36 +215,15 @@ assert id=result check=text equals="Gönderildi"
         expect(pinch.text.split('\n')[0]).toBe(pinch.data.done);
         expect(second(pinch)).toBe(NOT('swipe_screen scale'));
         expect(pinch.text.split('\n').length).toBeGreaterThan(2);
-        const turned = await call('set_device', { name: 'orientation', value: 'landscape_left' });
-        expect(second(turned)).toBe(NOT('set_device orientation landscape_left'));
+        const path = [
+          { x: 100, y: 100, t: 0 },
+          { x: 300, y: 500, t: 200 },
+        ];
+        const drawn = await call('swipe_screen', { pointers: [path] });
+        expect(second(drawn)).toBe(NOT('swipe_screen pointers'));
         const stop = await call('run_flow', { action: 'stop' });
         expect(stop.text).toContain('step 1: not recorded: swipe_screen scale');
-        expect(stop.text).toContain('step 2: not recorded: set_device orientation landscape_left');
-      });
-
-      it('names the step that does the same, where the flow has one', async () => {
-        const call = callerOf(context());
-        await call('run_flow', { action: 'record' });
-        const drag = await call('swipe_screen', { x: 10, y: 20, to: { x: 500, y: 600 } });
-        expect(second(drag)).toBe(
-          `${NOT('swipe_screen to')}: a straight drag made by \`swipe_screen\` with direction is recorded, as a \`swipe\` step`,
-        );
-        const copy = await call('set_device', { name: 'clipboard', value: 'Merhaba' });
-        expect(second(copy)).toBe(
-          `${NOT('set_device clipboard')}: the same text typed by \`type_text\` is recorded, as a \`type\` step`,
-        );
-        // each step named is one a flow's file takes, and each action one that leaves it
-        const named = [second(drag), second(copy)].map((line) =>
-          must(/as a `(\w+)` step$/.exec(line)?.[1], 'a step'),
-        );
-        expect(named).toEqual(['swipe', 'type']);
-        await call('swipe_screen', { direction: 'up' });
-        await call('type_text', { text: 'Merhaba' });
-        await call('run_flow', { action: 'stop' });
-        const file = join(dir, 'state', 'named.flow');
-        await call('run_flow', { action: 'save', file });
-        const kept = parseFlow(readFileSync(file, 'utf8')).steps.map((st) => st.action);
-        expect(kept.slice(-2)).toEqual(named);
+        expect(stop.text).toContain('step 2: not recorded: swipe_screen pointers');
       });
 
       it('adds nothing to an action a recording keeps, nor to one made with no recording', async () => {
@@ -257,6 +236,157 @@ assert id=result check=text equals="Gönderildi"
         expect((await call('set_device', { name: 'clipboard' })).text).not.toContain(
           'not recorded',
         );
+      });
+    });
+
+    describe('what had no step', () => {
+      const page = { id: 'p7', title: 'Pay', url: 'https://x.test/pay', visible: true };
+      const pushed: unknown[] = [];
+      const scripts: string[] = [];
+      let found = 0;
+      beforeEach(() => {
+        pushed.length = 0;
+        scripts.length = 0;
+        found = 0;
+        device = Object.assign(new FakeDevice(), {
+          web: {
+            pages: () => Promise.resolve([page]),
+            evaluate: (_page: unknown, js: string) => {
+              scripts.push(js);
+              return Promise.resolve({ tag: 'a', text: 'Go' });
+            },
+          },
+          events: {
+            pushRoutes: () =>
+              Promise.resolve([
+                {
+                  type: 'alert',
+                  route: 'by hand',
+                  fields: ['title', 'body', 'data'],
+                  template: '',
+                },
+                { type: 'background', route: 'by hand', fields: ['data'], template: '' },
+              ]),
+            push: (_app: string, push: unknown) => {
+              pushed.push(push);
+              return Promise.resolve('pushed');
+            },
+          },
+        });
+        device.audit = () =>
+          Promise.resolve({
+            engine: 'rules',
+            issues: Array<{ type: string; rule: string; message: string }>(found).fill({
+              type: 'contrast',
+              rule: 'TextContrast',
+              message: 'low',
+            }),
+            truncated: false,
+            elapsedMs: 1,
+          }) as ReturnType<FakeDevice['audit']>;
+      });
+      const did = (name: string) =>
+        device.calls.filter((c) => c.name === name).map((c) => c.args[0]);
+
+      it('records a push, a turn, a web click, a text on the clipboard and an audit, and replays each', async () => {
+        const call = callerOf(context());
+        found = 2;
+        const { text, file } = await recorded(call, async () => {
+          // a listing sent nothing, and a read of the clipboard changed nothing
+          await call('send_push', {});
+          await call('set_device', { name: 'clipboard' });
+          await call('send_push', { title: 'Order', body: 'On its way', data: { orderId: '43' } });
+          await call('send_push', { type: 'background', data: { link: 'app://x?a=b' } });
+          await call('set_device', { name: 'orientation', value: 'landscape_left' });
+          await call('inspect_app', { action: 'web_click', selector: '#pay' });
+          await call('inspect_app', { action: 'web_click', selector: 'a[href]', page: 'p7' });
+          await call('inspect_app', { action: 'web_click', selector: '#pay', page: 'Pay' });
+          await call('set_device', { name: 'clipboard', value: 'Merhaba dünya' });
+          await call('check_screen', { check: 'accessibility', types: ['contrast', 'hitRegion'] });
+        });
+        expect(text.trim().split('\n').slice(2)).toEqual([
+          'push alert title=Order body="On its way" data="orderId=43"',
+          'push background data="link=app://x?a=b"',
+          'setting orientation landscape_left',
+          'web_click "#pay"',
+          'web_click "a[href]"',
+          'web_click "#pay" page=Pay',
+          'clipboard "Merhaba dünya"',
+          'audit types="contrast,hitRegion" max=2 !review',
+        ]);
+        const sent = [...pushed];
+        const [turned] = did('setOrientation');
+        device.calls.length = 0;
+        pushed.length = 0;
+        scripts.length = 0;
+        const out = await call('run_flow', { action: 'run', file });
+        expect(out.text).toContain('passed: 8 steps');
+        expect(pushed).toEqual(sent);
+        expect(pushed[1]).toMatchObject({ type: 'background', data: { link: 'app://x?a=b' } });
+        expect(did('setOrientation')).toEqual([turned]);
+        expect(scripts).toHaveLength(3);
+        expect(did('setClipboard')).toEqual(['Merhaba dünya']);
+        // one more issue than the recording found fails the step, until a person sets the number
+        found = 3;
+        const e = await refusal(call('run_flow', { action: 'run', file }));
+        expect(e.message).toContain('step 8 failed: audit');
+        expect(e.message).toContain('this step allows 2');
+      });
+
+      it('says at a save that the number an audit kept is for a person to set', async () => {
+        const call = callerOf(context());
+        await call('run_flow', { action: 'record' });
+        await call('check_screen', { check: 'accessibility' });
+        const stop = await call('run_flow', { action: 'stop' });
+        expect(stop.text).toContain('audit max=0 !review');
+        expect(stop.text).toContain(
+          'look at step 1: review: the number is what the recording found',
+        );
+      });
+
+      it('keeps a push whose data name holds an equals sign unrecorded: no line reads back as it', async () => {
+        const call = callerOf(context());
+        const { text } = await recorded(call, () =>
+          call('send_push', { type: 'background', data: { 'a=b': 'c' } }),
+        );
+        expect(text).toContain('unrecorded "send_push"');
+      });
+
+      it('records a drag from its target to where it was let go, an element or a point, and replays it', async () => {
+        const call = callerOf(context());
+        const { text, file } = await recorded(call, async () => {
+          const { data } = await call('read_screen', { selector: { text: 'İzin' } });
+          const ref = must(data.matches[0], 'a match').ref;
+          await call('swipe_screen', { selector: { text: 'Form' }, to: { ref } });
+          await call('swipe_screen', {
+            selector: { text: 'Form' },
+            to: { x: 500, y: 900 },
+            holdMs: 400,
+            durationMs: 800,
+          });
+          await call('swipe_screen', { x: 540, y: 2000, to: { selector: { text: 'Form' } } });
+        });
+        const lines = text.trim().split('\n').slice(2);
+        expect(lines).toEqual([
+          'drag role=button text="Form" to="role=button text=\\"İzin\\""',
+          'drag role=button text="Form" to="500,900" holdMs=400 durationMs=800 screen=1080x2400 !coordinates',
+          'drag to="role=button text=\\"Form\\"" x=540 y=2000 screen=1080x2400 !coordinates',
+        ]);
+        const drags = () =>
+          device.calls.filter((c) => c.name === 'act').map((c) => JSON.stringify(c.args[0]));
+        const made = drags();
+        expect(made).toHaveLength(3);
+        device.calls.length = 0;
+        await call('run_flow', { action: 'run', file });
+        expect(drags()).toEqual(made);
+      });
+
+      it('refuses a drag line with no place to let go, or a point not flagged as one', () => {
+        expect(() => parseFlow('drag id=card\n')).toThrow('drag needs to');
+        expect(() => parseFlow('drag id=card to=10,20\n')).toThrow('is flagged !coordinates');
+        expect(() => parseFlow('drag id=card to="colour=red"\n')).toThrow('to is x,y or id=');
+        expect(() => parseFlow('push alert data=nokey\n')).toThrow('data is NAME=value');
+        expect(parseFlow('drag id=card to="id=bin"\n').steps).toHaveLength(1);
       });
     });
 
@@ -316,14 +446,12 @@ assert id=result check=text equals="Gönderildi"
       });
       const unrecorded = text.split('\n').filter((l) => l.startsWith('unrecorded'));
       expect(unrecorded).toEqual([
-        'unrecorded "inspect_app web_click"',
         'unrecorded "inspect_app web_eval"',
         'unrecorded "capture_network start"',
         'unrecorded "capture_network stop"',
       ]);
-      expect(clicked).toContain(
-        'not recorded: inspect_app web_click. A flow has no step for it, so a replay stops there: a `tap_screen` at the x, y that `read_screen` gives the element is recorded, as a `tap` step',
-      );
+      expect(text).toContain('web_click "#go"');
+      expect(clicked).not.toContain('not recorded');
       expect(text).not.toContain('secretWork');
     });
 

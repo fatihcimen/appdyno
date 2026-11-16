@@ -64,18 +64,6 @@ export const unrecorded = (what: string): FlowStep => ({
   flags: [],
 });
 
-/** The action that does the same and is recorded, with the step it leaves, by what `unrecorded` calls the one that is not. */
-/** What `unrecorded` calls a drag, and text put on the clipboard. */
-export const DRAG = 'swipe_screen to';
-export const CLIPBOARD = 'set_device clipboard';
-
-const IN_ITS_PLACE: Record<string, string> = {
-  [DRAG]: 'a straight drag made by `swipe_screen` with direction is recorded, as a `swipe` step',
-  [CLIPBOARD]: 'the same text typed by `type_text` is recorded, as a `type` step',
-  'inspect_app web_click':
-    'a `tap_screen` at the x, y that `read_screen` gives the element is recorded, as a `tap` step',
-};
-
 /**
  * What the answer of an action says at once where a recording kept no step of it, a line for each: the end of the
  * recording says it again, by then steps later.
@@ -84,9 +72,8 @@ export const notReplayed = (steps: FlowStep | FlowStep[] | undefined) =>
   [steps ?? []]
     .flat()
     .filter((st) => st.action === 'unrecorded')
-    .map((st) => {
-      const what = String(st.args.what);
-      const instead = IN_ITS_PLACE[what];
-      return `not recorded: ${what}. A flow has no step for it, so a replay stops there${instead ? `: ${instead}` : ''}`;
-    })
+    .map(
+      (st) =>
+        `not recorded: ${String(st.args.what)}. A flow has no step for it, so a replay stops there`,
+    )
     .join('\n') || undefined;

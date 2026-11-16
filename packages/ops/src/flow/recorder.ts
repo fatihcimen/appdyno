@@ -6,12 +6,10 @@ import { LONG_PRESS_MS, SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.j
 import { NO_MATCH_WAIT_MS } from '../steps.js';
 import { onlyReads, type Op, type ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
-import { type Aim, aimAt, DRAG, fieldName, named, notReplayed, stepOf, unrecorded } from './aim.js';
+import { type Aim, aimAt, fieldName, named, notReplayed, stepOf, unrecorded } from './aim.js';
+import { dragRecord, type Target } from './recorder-gaps.js';
 import { toolStep } from './tool-steps.js';
 import { activeRecording, addSteps, defined } from './shared.js';
-
-/** A target as the flat form the ops take. */
-type Target = { ref?: string; x?: number; y?: number; selector?: FlowSelector };
 
 /** Ops that only look and are steps all the same: a check, a picture kept, a comparison. */
 const LOOKING_STEPS: ReadonlySet<string> = new Set([
@@ -185,7 +183,7 @@ async function recordOf(r: Recording, s: Session, st: Step): Promise<() => FlowS
     case 'long_press':
       return pressRecord(s, st);
     case 'drag':
-      return () => unrecorded(DRAG);
+      return dragRecord(aim, size, s, st);
     case 'swipe':
       return swipeRecord(s, st);
     case 'type_text':
