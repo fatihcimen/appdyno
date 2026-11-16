@@ -1,5 +1,14 @@
-import { idOf, TIMEOUTS, type NativeView, type Rect, type ViewTree } from '@appdyno/core';
+import {
+  frameworkOfViews,
+  idOf,
+  TIMEOUTS,
+  type Framework,
+  type NativeView,
+  type Rect,
+  type ViewTree,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { assertPkg } from './adb.js';
 import { NOT_ANSWERING } from './window-dump.js';
 
 /** Where the read of the windows ends and the focused activity's own dump begins. */
@@ -115,9 +124,10 @@ function viewOf(line: string, from: Rect, pkg: string): NativeView {
 
 /**
  * The focused activity's views from its dump, each place added up through its parents from its window's corner, in
- * the screen's pixels, Android's tap units. Undefined where the dump holds no block of that record.
+ * the screen's pixels, Android's tap units. Undefined where the dump holds no block of that record. `ships`: what
+ * `shipsRead` printed of the app, which names the framework where a shrinker named the views that hold the screen.
  */
-export function viewsOf(dump: string, focus: Focus): ViewTree | undefined {
+export function viewsOf(dump: string, focus: Focus, ships?: string): ViewTree | undefined {
   const block = blockOf(dump, focus.record);
   if (!block) return undefined;
   const failed = /Failure while dumping the activity: (.*)/.exec(block)?.[1];
@@ -135,6 +145,7 @@ export function viewsOf(dump: string, focus: Focus): ViewTree | undefined {
   const corner = { ...(focus.origin ?? { x: 0, y: 0 }), width: 0, height: 0 };
   const views: NativeView[] = [];
   const shown: boolean[] = [];
+  const composes: boolean[] = [];
   const stack: number[] = [];
   for (const line of lines.slice(start + 1)) {
     const indent = line.search(/\S/);
@@ -149,9 +160,26 @@ export function viewsOf(dump: string, focus: Focus): ViewTree | undefined {
     if (parent === undefined && activity) view.controller = activity;
     else view.parent = parent;
     shown.push(!view.hidden && (parent === undefined || !!shown[parent]));
+    composes.push(COMPOSES.test(line));
     stack.push(views.push(view) - 1);
   }
-  return { views, truncated: false, notes: notesOf(views, shown, focus) };
+  const shrunk = shrunkOf(views, shown);
+  const plain = frameworkOfViews({ views, truncated: false }, 'android');
+  // a web view or a root that kept its name tells the screen by itself
+  const told = plain?.name !== 'Android views' || !!plain.inside;
+  const shipped =
+    ships === undefined || shrunk.length === 0 || told
+      ? undefined
+      : shippedOf(
+          ships,
+          shrunk.some((i) => composes[i]),
+        );
+  return {
+    views,
+    truncated: false,
+    ...(shipped && { framework: { name: shipped } }),
+    notes: notesOf(views, shown, focus, shrunk, shipped),
+  };
 }
 
 /** A container that scrolls by moving what it draws, not its children's places: theirs stay where its layout put them. */
@@ -173,25 +201,57 @@ const MAX_SCROLLED = 3;
  */
 const SHRUNK = /^[\w$]{1,4}$|\.[a-z][a-z0-9]{0,2}$/;
 
-/** The names a shrinker gave the shown views that hold most of the screen, where the label cannot see past them. */
+/** The shown views a shrinker named that hold most of the screen, where the label cannot see past their names. */
 function shrunkOf(views: NativeView[], shown: boolean[]) {
   const screen = views[0]?.rect;
   if (!screen) return [];
   const area = (r: Rect) => r.width * r.height;
-  const names = new Set(
-    views.flatMap((v, i) =>
-      shown[i] && SHRUNK.test(v.class) && area(v.rect) * 2 > area(screen) ? [v.class] : [],
-    ),
+  return views.flatMap((v, i) =>
+    shown[i] && SHRUNK.test(v.class) && area(v.rect) * 2 > area(screen) ? [i] : [],
   );
-  return names.size > 0
-    ? [
-        `${[...names].join(', ')}: named by the build's shrinker, so no name tells what draws there; Compose reads as Android views in such a build`,
-      ]
-    : [];
 }
 
+/** What `shipsRead` lists of each framework that draws a screen itself: its engine, or the file its library leaves. */
+const SHIPPED: readonly (readonly [Framework, RegExp])[] = [
+  ['Flutter', /\/libflutter\.so$/m],
+  ['React Native', /\/lib(reactnative|hermes)[^/]*\.so$/m],
+  ['Compose', /androidx\.compose\.ui_ui\.version$/m],
+];
+
+/** A view as Compose's own writes itself: one that takes the focus and draws, as a view an app made seldom does both. */
+const COMPOSES = /^\s*[^\s{]+\{[0-9a-f]+ VFED/;
+
+/**
+ * The framework an app ships that draws where a shrinker named the views. An engine in the package draws its screens;
+ * Compose is in many an app whose screens are views, so it is told only where a renamed view is as its own.
+ */
+const shippedOf = (ships: string, composes: boolean) =>
+  SHIPPED.find(([name, file]) => file.test(ships) && (name !== 'Compose' || composes))?.[0];
+
+/**
+ * The files of the app's package, base and splits, that tell a framework: no class of theirs keeps its name in a
+ * minified build, and these do. Nothing where the phone has no unzip.
+ */
+export const shipsRead = (pkg: string) =>
+  `for a in $(pm path ${assertPkg(pkg)} | cut -d: -f2); do unzip -l "$a" 'lib/*/libflutter.so' 'lib/*/libreactnative*.so' 'lib/*/libhermes*.so' 'META-INF/androidx.compose.ui_ui.version'; done 2>/dev/null; true`;
+
+const BY_SHRINKER = "named by the build's shrinker";
+
+/** Whether a shrinker named what holds the screen, so that only what the app ships tells its framework. */
+const namedByShrinker = (tree: ViewTree) => !!tree.notes?.[0]?.includes(BY_SHRINKER);
+
 /** What no name tells, where a container that scrolls holds more than its box, and what these views leave out. */
-function notesOf(views: NativeView[], shown: boolean[], focus: Focus) {
+function notesOf(
+  views: NativeView[],
+  shown: boolean[],
+  focus: Focus,
+  shrunk: number[],
+  shipped: Framework | undefined,
+) {
+  const names = [...new Set(shrunk.map((i) => views[i]?.class))].join(', ');
+  const unnamed = shipped
+    ? `${names}: ${BY_SHRINKER}; the app ships ${shipped}, which the label goes by`
+    : `${names}: ${BY_SHRINKER}, so no name tells what draws there`;
   const scrolls = views.map(
     (v, i) =>
       !!shown[i] &&
@@ -215,7 +275,7 @@ function notesOf(views: NativeView[], shown: boolean[], focus: Focus) {
       ? 'a window over the activity, as a dialog or a menu, is not in these views: screen reads it'
       : `${focus.over} windows over the activity, as a dialog or a menu, are not in these views: screen reads them`;
   return [
-    ...shrunkOf(views, shown),
+    ...(shrunk.length > 0 ? [unnamed] : []),
     ...scrolled,
     ...(focus.over > 0 ? [over] : []),
     ...(focus.origin
@@ -262,6 +322,11 @@ export async function androidViews(sh: (command: string, timeoutMs: number) => P
         'the screen may be dark or locked, or an app starting: screen wakes it and reads what is there',
       );
     const tree = viewsOf(dump, focus);
+    if (tree && namedByShrinker(tree)) {
+      const [pkg = ''] = focus.component.split('/');
+      const ships = await sh(shipsRead(pkg), TIMEOUTS.read).catch(() => '');
+      return viewsOf(dump, focus, ships) ?? tree;
+    }
     if (tree) return tree;
     if (tries <= 1)
       throw new DeviceError(

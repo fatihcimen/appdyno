@@ -6,7 +6,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidDevice } from '../src/device.js';
-import { androidViews, focusOf, VIEWS_READ, viewsOf } from '../src/views.js';
+import { androidViews, focusOf, shipsRead, VIEWS_READ, viewsOf } from '../src/views.js';
 import { NOT_ANSWERING } from '../src/window-dump.js';
 
 /**
@@ -191,12 +191,57 @@ describe('the read of the native views', () => {
     expect(t.views[0]?.hidden).toBeUndefined();
     expect(frameworkOfViews(t, 'android')).toEqual({ name: 'Android views' });
     expect(t.notes).toEqual([
-      "pi, p3: named by the build's shrinker, so no name tells what draws there; Compose reads as Android views in such a build",
+      "pi, p3: named by the build's shrinker, so no name tells what draws there",
     ]);
     expect(tree('compose-36').notes).toEqual([]);
     // as another build's shrinker names one, of mixed case
     const mixed = treeOf(recorded('minified-compose-36').replaceAll(' pi{', ' dH0{'));
     expect(mixed.notes?.[0]).toMatch(/^dH0, p3: named by the build's shrinker/);
+  });
+
+  /** A line of `unzip -l`, as `shipsRead` prints one of each file it finds. */
+  const listed = (...files: string[]) =>
+    files.map((f) => `  11763360  1981-01-01 01:01   ${f}`).join('\n');
+  const COMPOSE_FILE = 'META-INF/androidx.compose.ui_ui.version';
+  const shipping = (name: string, ships: string, edit = (text: string) => text) => {
+    const { windows, dump } = halves(edit(recorded(name)));
+    const focus = focusOf(windows);
+    return focus && viewsOf(dump, focus, ships);
+  };
+
+  it('labels a minified screen by the engine its app ships', () => {
+    // FluffyChat 2.4.1 of F-Droid, whose FlutterView R8 named V4.G and its surface V4.v, on API 35
+    const flutter = shipping('minified-flutter-35', listed('lib/arm64-v8a/libflutter.so'));
+    expect(flutter?.framework).toEqual({ name: 'Flutter' });
+    expect(flutter?.notes).toEqual([
+      "V4.v: named by the build's shrinker; the app ships Flutter, which the label goes by",
+    ]);
+    const asReactNative = (libs: string) => shipping('minified-flutter-35', libs)?.framework;
+    expect(asReactNative(listed('lib/x86_64/libreactnative.so'))).toEqual({ name: 'React Native' });
+    expect(asReactNative(listed('lib/arm64-v8a/libhermes_executor.so'))).toEqual({
+      name: 'React Native',
+    });
+    // a library of another name, and a package that could not be read
+    const none = shipping('minified-flutter-35', listed('lib/arm64-v8a/libflutter_helper.so'));
+    expect(none?.framework).toBeUndefined();
+    expect(shipping('minified-flutter-35', '')?.framework).toBeUndefined();
+    expect(none?.notes).toEqual([
+      "V4.v: named by the build's shrinker, so no name tells what draws there",
+    ]);
+  });
+
+  it('labels a minified screen Compose only where a renamed view is as Compose writes its own', () => {
+    const compose = shipping('minified-compose-36', listed(COMPOSE_FILE));
+    expect(compose?.framework).toEqual({ name: 'Compose' });
+    expect(compose?.notes?.[0]).toMatch(/the app ships Compose, which the label goes by$/);
+    // an app that ships Compose, on a screen a view of its own draws: that one takes no focus
+    const own = shipping('minified-compose-36', listed(COMPOSE_FILE), (text) =>
+      text.replaceAll(' VFED..... ', ' V.ED..... '),
+    );
+    expect(own?.framework).toBeUndefined();
+    expect(own && frameworkOfViews(own, 'android')).toEqual({ name: 'Android views' });
+    // and a screen whose views kept their names is told by them, whatever the app ships
+    expect(shipping('form-36', listed('lib/arm64-v8a/libflutter.so'))?.framework).toBeUndefined();
   });
 
   it('keeps a line of its own making in the tree, at its parent place', () => {
@@ -263,6 +308,30 @@ describe('the views of the activity in front', () => {
     await expect(androidViews(answering(slow))).rejects.toMatchObject({
       code: 'TIMEOUT',
       message: 'dumpsys did not answer for the views in 15 s',
+    });
+  });
+
+  it('asks what the app ships only where a shrinker named what holds the screen', async () => {
+    const asked: string[] = [];
+    const sh = (outs: string[]) => (command: string) => {
+      asked.push(command);
+      return Promise.resolve(outs.shift() ?? '');
+    };
+    const engine = '  11763360  1981-01-01 01:01   lib/arm64-v8a/libflutter.so\n';
+    const t = await androidViews(sh([recorded('minified-flutter-35'), engine]));
+    expect(asked).toEqual([VIEWS_READ, shipsRead('chat.fluffy.fluffychat')]);
+    expect(asked[1]).toContain('pm path chat.fluffy.fluffychat | cut -d: -f2); do unzip -l');
+    expect(frameworkOfViews(t, 'android')).toEqual({ name: 'Flutter' });
+    asked.length = 0;
+    await androidViews(sh([recorded('form-36')]));
+    expect(asked).toEqual([VIEWS_READ]);
+    // a package that cannot be read leaves the views as they are
+    const failing = (command: string) =>
+      command === VIEWS_READ
+        ? Promise.resolve(recorded('minified-flutter-35'))
+        : Promise.reject(new DeviceError('TIMEOUT', 'adb command timed out'));
+    expect(frameworkOfViews(await androidViews(failing), 'android')).toEqual({
+      name: 'Android views',
     });
   });
 

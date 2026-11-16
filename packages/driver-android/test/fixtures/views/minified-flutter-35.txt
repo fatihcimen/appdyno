@@ -1,0 +1,19 @@
+  Display: mDisplayId=0 (organized)
+  mFocusedApp=ActivityRecord{f99e2fc u0 chat.fluffy.fluffychat/.MainActivity t8}
+  Window #0 Window{3069297 u0 chat.fluffy.fluffychat/chat.fluffy.fluffychat.MainActivity}:
+    mDisplayId=0 rootTaskId=8 mSession=Session{40faad8 4463:u0a10207} mClient=android.os.BinderProxy@7bf1916
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x1030001
+    Frames: parent=[0,0][1080,2400] display=[0,0][1080,2400] frame=[0,0][1080,2400] last=[0,0][1080,2400] insetsChanged=false
+@@ activity
+TASK 10207:chat.fluffy.fluffychat id=8 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY chat.fluffy.fluffychat/.MainActivity f99e2fc pid=4463 userId=0 uid=10207 displayId=0(type=INTERNAL)
+      mResumed=true mStopped=false mFinished=false
+    View Hierarchy:
+      com.android.internal.policy.DecorView{1a379ac V.E...... R....... 0,0-1080,2400 aid=0}[MainActivity]
+        android.widget.LinearLayout{8b56675 V.E...... ........ 0,0-1080,2400}
+          android.view.ViewStub{df2760a G.E...... ......I. 0,0-0,0 #10201cb android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{5ef7e7b V.E...... ........ 0,0-1080,2400 #1020002 android:id/content}
+            android.widget.FrameLayout{503e63 V.E...... ........ 0,0-1080,2400 #1}
+              V4.G{da48498 VFE...... ........ 0,0-1080,2400 #2}
+                V4.v{502f4f1 V.E...... ........ 0,0-1080,2400}
+    Looper (main, tid 2) {c49e8d6}
