@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
-import { harEntries } from '../src/network.js';
+import { harEntries } from '../src/network-har.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { checkedOps } from '@appdyno/testing/calls.js';
