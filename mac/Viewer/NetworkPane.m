@@ -69,6 +69,8 @@ static NSString *unseenLine(NSDictionary *unseen) {
   NSString *_cutSays;
   NSString *_capturing, *_needs, *_note, *_unseen, *_proxy, *_wholeKey, *_whole, *_askedKey;
   BOOL _keeps;
+  /// The capture that ended was the probe's, and its requests still stand in the list.
+  BOOL _wasProbe;
   NSDate *_since;
   NSArray<NSDictionary *> *_entries;
   MVList *_list;
@@ -262,6 +264,8 @@ static NSString *unseenLine(NSDictionary *unseen) {
       [_way addItemWithTitle:[via isEqual:@"proxy"] && _proxy ? [NSString stringWithFormat:@"%@ %@", title, _proxy] : title];
     }
   }
+  if (capturing) _wasProbe = NO;
+  else if (m[@"was"]) _wasProbe = [m[@"was"] isEqual:@"probe"];
   _capturing = capturing;
   _since = [m[@"since"] isKindOfClass:NSNumber.class] ? [NSDate dateWithTimeIntervalSince1970:[m[@"since"] doubleValue] / 1000] : _since;
   _note = [m[@"note"] isKindOfClass:NSString.class] ? m[@"note"] : nil;
@@ -332,7 +336,10 @@ static NSString *unseenLine(NSDictionary *unseen) {
     section.accessibilityValue = chosen ? MVWord(@"selected") : nil;
   }
   _rules.hidden = !_onRules;
-  _actions.hidden = !probe || _onRules;
+  // a capture that ended leaves its list, and the words that narrow it
+  BOOL left = !_capturing && _wasProbe && _allRows.count;
+  _actions.hidden = !(probe || left) || _onRules;
+  _actions.live = probe;
   _list.hidden = _onRules || !_list.rows.count;
   _none.hidden = _onRules || _list.rows.count;
   // the rules with their fields take the room the note of the way would

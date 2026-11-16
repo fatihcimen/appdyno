@@ -248,6 +248,32 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
   field.stringValue = @"";
   [pane show:both];
   MVCheckRuleFields(window, pane, sent);
+  // the capture ends: its requests stay, and so do the words that narrow them
+  [pane show:again];
+  [window pokeClick:@"networkShowRequests"];
+  MVPump(0.1);
+  [pane show:@{@"op": @"network",
+               @"capturing": @NO,
+               @"was": @"probe",
+               @"ways": @[@"probe"],
+               @"entries": again[@"entries"]}];
+  [window.nsWindow layoutIfNeeded];
+  NSButton *curl = [actions valueForKey:@"_curl"], *har = [actions valueForKey:@"_save"];
+  MVCheck(@"stopped: the requests stay with the words that narrow them", pane.rows.count == 2 && !actions.hidden && !filter.isHiddenOrHasHiddenAncestor, nil);
+  filter.stringValue = @"pay";
+  actions.onChange();
+  MVCheck(@"stopped: and those words still narrow the list", pane.rows.count == 1 && [pane.rows[0].title isEqual:@"POST /pay"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  MVPokeListRow([pane valueForKey:@"_list"], @"POST /pay");
+  MVPump(0.1);
+  [sent removeAllObjects];
+  [window pokeClick:@"networkCurl"];
+  [window pokeClick:@"networkSave"];
+  MVPump(0.1);
+  MVCheck(@"stopped: what reads the capture is off, asks for nothing, and the pane says why", !curl.enabled && !har.enabled && sent.count == 0 && [actions.ended hasPrefix:MVWord(@"The capture has ended.")] && [curl.toolTip isEqual:actions.ended] && [pane.detail hasPrefix:@"POST https://b.test/pay"], [NSString stringWithFormat:@"%@ | %@", sent, actions.ended]);
+  filter.stringValue = @"";
+  actions.onChange();
+  [pane show:again];
+  MVCheck(@"stopped: a capture that runs again has them back", curl.enabled && har.enabled && !actions.ended.length, actions.ended);
   [speed selectItemAtIndex:1];
   [speed sendAction:speed.action to:speed.target];
   NSDictionary *slowed = @{@"op": @"control", @"name": @"networkThrottle", @"value": @"slow"};

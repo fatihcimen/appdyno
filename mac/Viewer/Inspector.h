@@ -222,6 +222,9 @@ NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows);
 /// A person chose to see real values: held while the window is open, and never kept.
 @property(nonatomic, readonly) BOOL real;
 @property(nonatomic) BOOL hasRequest;
+/// A capture runs: without one, what reads the capture is off, and `ended` is what the pane says of it.
+@property(nonatomic) BOOL live;
+@property(nonatomic, readonly) NSString *ended;
 /// The filter or that choice changed; and a button pressed, by the control's name.
 @property(nonatomic, copy, nullable) void (^onChange)(void);
 @property(nonatomic, copy, nullable) void (^onPress)(NSString *name);

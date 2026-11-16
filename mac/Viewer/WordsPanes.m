@@ -63,6 +63,7 @@ const MVWordRow MVWordTablePanes[] = {
     {"Copy as cURL", "cURL Olarak Kopyala"},
     {"Mock This Answer", "Bu Yanıtı Sahtele"},
     {"Save HAR", "HAR Kaydet"},
+    {"The capture has ended. Its requests can still be searched; copying, mocking and saving need a capture that runs.", "Yakalama bitti. İstekleri hâlâ aranabilir; kopyalamak, sahtelemek ve kaydetmek için süren bir yakalama gerekir."},
     {"Show real values", "Gerçek değerleri göster"},
     {"Shows headers, cookies and bodies as they were sent, here only. An AI client still gets them hidden.", "Başlıkları, çerezleri ve gövdeleri gönderildikleri gibi, yalnızca burada gösterir. Bir yapay zekâ istemcisi onları yine gizli alır."},
     {"That request is no longer in the capture", "O istek artık yakalamada değil"},
