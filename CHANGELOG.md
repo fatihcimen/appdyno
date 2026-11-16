@@ -36,6 +36,10 @@
 - **Body tools.** `network read id` with `path` gives one value, `shape` the JSON shape with no values, `diff` what differs from another request.
 - `network read` ends with what the app made that the probe cannot see: web views, background sessions and WebSocket tasks, counted.
 - **Mac app.** The Network pane lists requests under their hosts, shows a request in flight, edits a rule by fields beside its line, and has switches for strict and for failing unmatched requests.
+- **A release is held to a device run.** CI gains a simulator job: on each pull request, on `main` and before every release it boots an iOS simulator on GitHub's runner, builds the runner and the fixture, and runs 18 named cases of the `ios`, `keys`, `views.simulator` and `flows-ci` suites: reads, taps, typing, an alert, a settle, keys, native views and flows replayed. A tag whose commit fails it publishes nothing, and each release carries that run's `device-summary.md`: the device, its OS, the Xcode, the date, whether the simulator's helpers or the runner alone did the input and the reads, and each suite's counts. The Android suites and the rest of the simulator's still run on a Mac, by `scripts/ci.sh`.
+- **A release's files can be checked.** Each release has `SHA256SUMS` for its files, and GitHub keeps a build provenance for the disk image and the desktop extension: `shasum -a 256 --ignore-missing -c SHA256SUMS`, and `gh attestation verify appdyno-<version>.mcpb --repo fatihcimen/appdyno`.
+- npm takes a release from the release workflow as the package's trusted publisher, and the repository keeps no npm token. Provenance is as before.
+- [How the tools were tested](docs/reference/tools-tested.md#tested-versions) lists the device, OS, Xcode and date of each run in one table.
 
 ### Changed
 

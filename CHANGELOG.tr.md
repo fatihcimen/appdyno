@@ -36,6 +36,10 @@
 - **Gövde araçları.** `network read id` ile `path` tek bir değer, `shape` değerler olmadan JSON biçimini, `diff` başka bir istekten farkı verir.
 - `network read`, uygulamanın yaptığı ama probe'un göremediği şeylerle biter: web görünümleri, arka plan oturumları ve WebSocket görevleri, sayılarıyla.
 - **Mac uygulaması.** Ağ bölmesi istekleri ana makinelerinin altında listeler, yoldaki isteği gösterir, bir kuralı satırının yanında alanlarla düzenler; strict için ve eşleşmeyen istekleri başarısız kılmak için anahtarları vardır.
+- **Bir sürüm bir cihaz çalıştırmasına bağlıdır.** CI'a bir simülatör job'ı eklendi: her pull request'te, `main`'de ve her sürümden önce GitHub'ın runner'ında bir iOS simülatörü başlatır, runner'ı ve fixture'ı derler, `ios`, `keys`, `views.simulator` ve `flows-ci` suite'lerinden adı yazılı 18 durumu çalıştırır: okumalar, dokunuşlar, yazma, bir uyarı, durulma, tuşlar, native view'lar ve yeniden oynatılan flow'lar. Commit'i bunda başarısız olan bir tag hiçbir şey yayımlamaz ve her sürüm o çalıştırmanın `device-summary.md` dosyasını taşır: cihaz, işletim sistemi, Xcode, tarih, girdiyi ve okumaları simülatörün yardımcılarının mı yoksa yalnızca runner'ın mı yaptığı ve her suite'in sayıları. Android suite'leri ve simülatörün geri kalanı bir Mac'te, `scripts/ci.sh` ile çalışmaya devam eder.
+- **Bir sürümün dosyaları doğrulanabilir.** Her sürümde dosyaları için `SHA256SUMS` vardır, GitHub da disk imajı ve masaüstü eklentisi için bir derleme provenance'ı tutar: `shasum -a 256 --ignore-missing -c SHA256SUMS` ve `gh attestation verify appdyno-<version>.mcpb --repo fatihcimen/appdyno`.
+- npm bir sürümü, paketin güvenilir yayımcısı olarak sürüm workflow'undan kabul eder ve depoda npm token'ı tutulmaz. Provenance eskisi gibidir.
+- [Araçlar nasıl test edildi](docs/reference/tools-tested.tr.md#test-edilen-sürümler) her çalıştırmanın cihazını, işletim sistemini, Xcode'unu ve tarihini tek bir tabloda listeler.
 
 ### Değişenler
 
