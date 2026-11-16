@@ -48,6 +48,7 @@
 - Each error code keeps its own number on the wire. `ErrorCode` is exported by `appdyno` and `appdyno/device`.
 - `TouchOptions.before`: a stale touch is refused on Android only, as the library page says.
 - Android: the launcher activity is quoted in every command it goes into.
+- **iOS: a tap beside a part that never stops moving settles.** A carousel or a turning banner moved the layout at every read, so a tap on such a screen ran to `maxMs` and answered `settled: false`. The runner and the host's settle of a simulator now learn the part, as the Android agent does since 1.2.0: reads that differ only under one view under half the screen, or, where SwiftUI gives a row no view of its own, only in one strip across it, for 1 s with never 300 ms between two reads, make the part known to cycle for 30 s, and a change under it alone no longer holds the settle. Only a tap, a press or a key with no action in the 3 s before can teach it; a row thrown by a swipe, a slide that ends and a change anywhere else are waited for as before. On the fixture's carousel on an iOS 26.5 simulator a tap took 3.1 s and never settled; a tap that changes the layout now takes about 0.3 s (0.66 s by the runner alone), settled every time, after 1.4 s the first time. A tap there that changes nothing in the layout is watched 800 ms for a system alert, as on a still screen, so a permission prompt that comes after the tap is in the answer. A launch or a link onto such a screen still waits its full `maxMs`.
 
 ## 1.2.0
 
