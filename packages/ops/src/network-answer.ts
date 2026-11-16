@@ -1,4 +1,4 @@
-import type { NetworkAnswer, NetworkDetail, NetworkEntry } from '@appdyno/core';
+import type { NetworkAnswer, NetworkDetail, NetworkEntry, NetworkTimings } from '@appdyno/core';
 import type { ServerContext } from './context.js';
 import { boundLines } from './diagnose.js';
 import { writeInside } from './flow/shared.js';
@@ -22,11 +22,16 @@ const HOW: Record<string, (e: NetworkEntry) => string> = {
 };
 const howOf = (e: NetworkEntry) => (e.how ? ` [${HOW[e.how]?.(e) ?? e.how}]` : '');
 
+/** How long a request has been under way, as a person says it. */
+const since = (ms = 0) => (ms < 10_000 ? `${ms} ms` : `${Math.round(ms / 1000)} s`);
+
 /** A request, or a count, as one line; a request whose headers and bodies can be asked for starts with its id. */
 export const line = (e: NetworkEntry, ids = false) =>
-  e.url
-    ? `${ids && e.id !== undefined ? `${e.id} ` : ''}${e.method ?? 'GET'} ${e.url}${e.status ? ` ${e.status}` : ''}${e.ms !== undefined ? ` ${e.ms} ms` : ''}${e.bytes !== undefined ? ` ${e.bytes} B` : ''}${e.body ? ' (body in the export)' : ''}${e.error ? ` failed: ${e.error}` : ''}${howOf(e)}`
-    : `${e.direction ?? ''} ${e.host ?? ''}: ${e.packets !== undefined ? `${e.packets} packets, ` : ''}${e.bytes ?? 0} B`.trim();
+  e.inFlight
+    ? `${ids && e.id !== undefined ? `${e.id} ` : ''}${e.method ?? 'GET'} ${e.url ?? ''} in flight ${since(e.ms)}`
+    : e.url
+      ? `${ids && e.id !== undefined ? `${e.id} ` : ''}${e.method ?? 'GET'} ${e.url}${e.status ? ` ${e.status}` : ''}${e.ms !== undefined ? ` ${e.ms} ms` : ''}${e.bytes !== undefined ? ` ${e.bytes} B` : ''}${e.body ? ' (body in the export)' : ''}${e.error ? ` failed: ${e.error}` : ''}${howOf(e)}`
+      : `${e.direction ?? ''} ${e.host ?? ''}: ${e.packets !== undefined ? `${e.packets} packets, ` : ''}${e.bytes ?? 0} B`.trim();
 
 export type Filter = {
   contains?: string | undefined;
@@ -63,17 +68,58 @@ const body = (what: string, text: string | undefined, size: number | undefined) 
         text.slice(0, BODY_CHARS),
       ];
 
+/** The requests that have started and not ended, as an answer's last line: one that hangs, a stream that stays open. */
+export function flightLine(entries: NetworkEntry[]) {
+  const flying = entries.filter((e) => e.inFlight);
+  const shown = flying
+    .slice(-5)
+    .map((e) => `${e.method ?? 'GET'} ${e.url ?? ''} ${since(e.ms)}`)
+    .join(', ');
+  return flying.length > 0 ? [`in flight: ${flying.length} (${shown})`] : [];
+}
+
+const phase = (name: string, ms: number) => (ms >= 0 ? [`${name} ${Math.round(ms)} ms`] : []);
+
+/**
+ * What the session measured of a request, in a line. Its connection and protocol are the probe's session's, and say
+ * nothing of how the app keeps its own connections: the line says so.
+ */
+export function timingLine(t: NetworkTimings | undefined) {
+  if (!t) return [];
+  if (t.cache) return ['from the cache'];
+  const parts = [
+    ...(t.proto ? [t.proto] : []),
+    `connection ${t.reused ? 'reused' : 'new'}`,
+    ...phase('dns', t.dns),
+    ...phase('connect', t.connect),
+    ...phase('tls', t.tls),
+    ...phase('wait', t.wait),
+    ...phase('receive', t.receive),
+    ...(t.wire > 0 ? [`${t.wire} B on the wire`] : []),
+    ...(t.ip ? [t.ip] : []),
+  ];
+  return [`${parts.join(', ')} (the probe's own connection, not the app's)`];
+}
+
 /** One request whole: its line, then its headers and bodies as they were kept, cleaned. */
 export function detailLines(
   e: NetworkEntry,
   d: NetworkDetail | undefined,
   clean: (text: string) => string,
 ) {
-  if (!d) return [line(e, true), 'its headers and bodies were not kept: start with bodies: true'];
+  if (!d)
+    return [
+      line(e, true),
+      ...timingLine(e.timings),
+      e.inFlight
+        ? 'it has not ended: its headers and bodies are kept when it does'
+        : 'its headers and bodies were not kept: start with bodies: true',
+    ];
   const headers = (h: Record<string, string>) =>
     cleanHeaders(clean, h).map(({ name, value }) => `  ${name}: ${value}`);
   return [
     line(e, true),
+    ...timingLine(e.timings),
     'request headers:',
     ...headers(d.requestHeaders),
     ...body('request', d.requestBody && clean(d.requestBody), d.requestBodySize),
@@ -113,7 +159,7 @@ export function networkAnswers(ctx: ServerContext) {
     asked: Asked,
   ) => {
     if (!asked.save) return undefined;
-    const hits = entries.map(shownOf).filter((e) => e.url && fits(e, asked));
+    const hits = entries.map(shownOf).filter((e) => e.url && !e.inFlight && fits(e, asked));
     const file = writeInside(
       /\.har$/i.test(asked.save) ? asked.save : `${asked.save}.har`,
       JSON.stringify(await harOf(hits, detailOf(s, c), clean)),
@@ -131,7 +177,8 @@ export function networkAnswers(ctx: ServerContext) {
     saved?: string,
   ) => {
     saved ??= await exportHar(s, c, entries, asked);
-    const hits = entries.map(shownOf).filter((e) => fits(e, asked));
+    const hits = entries.map(shownOf).filter((e) => !e.inFlight && fits(e, asked));
+    const flying = flightLine(entries.map(shownOf));
     const ids = c?.bodies === true;
     const { kept, dropped } = boundLines(
       hits.map((e) => line(e, ids)),
@@ -151,7 +198,7 @@ export function networkAnswers(ctx: ServerContext) {
       ...(saved ? [saved] : []),
     ];
     const rules = controlLines(c, entries).map((l) => redact(ctx.policy, l));
-    return reply([...head, ...kept, ...rules].join('\n'), {
+    return reply([...head, ...kept, ...flying, ...rules].join('\n'), {
       entries: list,
       dropped,
       source,

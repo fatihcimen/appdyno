@@ -29,6 +29,8 @@ export const NetworkOut = z.object({
         how: z.string().optional(),
         rule: z.string().optional(),
         to: z.string().optional(),
+        inFlight: z.boolean().optional(),
+        timings: z.record(z.string(), z.union([z.number(), z.boolean(), z.string()])).optional(),
       }),
     )
     .optional(),

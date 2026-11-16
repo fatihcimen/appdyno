@@ -59,10 +59,13 @@ export async function helperBinary(name: keyof typeof SDK_FLAGS): Promise<string
   // what SimOpen may do, in the section a simulator reads
   const allowed = source.replace(/\.m$/, '.plist');
   const linked = existsSync(allowed);
+  // what a helper reads into itself, where it is too long for one file
+  const parts = source.replace(/\.m$/, 'Parts.h');
+  const headers = [...(linked ? [allowed] : []), ...(existsSync(parts) ? [parts] : [])];
   return nativeBinary({
     name,
     sources: [source],
-    ...(linked && { headers: [allowed] }),
+    ...(headers.length > 0 && { headers }),
     flags: [
       ...SDK_FLAGS[name],
       ...(linked ? [`-Wl,-sectcreate,__TEXT,__entitlements,${allowed}`] : []),

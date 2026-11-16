@@ -84,7 +84,9 @@ export class SimulatorNetwork implements NetworkSource {
   }
 
   async detail(h: NetworkHandle, id: number): Promise<NetworkDetail | undefined> {
-    const name = probeEntries(await readFile(String(h.log), 'utf8').catch(() => ''))[id]?.detail;
+    const name = probeEntries(await readFile(String(h.log), 'utf8').catch(() => '')).find(
+      (e) => e.id === id,
+    )?.detail;
     // a name of the probe's own making, and nothing that leaves the folder
     if (!name || !/^[\d-]+$/.test(name)) return undefined;
     const text = await readFile(join(String(h.dir), 'bodies', `${name}.json`), 'utf8').catch(
@@ -97,7 +99,7 @@ export class SimulatorNetwork implements NetworkSource {
     const text = await readFile(String(h.log), 'utf8').catch(() => '');
     const entries = probeEntries(text);
     const notes = [
-      ...(entries.length === 0
+      ...(!entries.some((e) => !e.inFlight)
         ? ['no request has finished in the app since the probe went in']
         : []),
       ...(h.app ? [await this.outside(String(h.app), text)] : []),
@@ -126,14 +128,49 @@ export class SimulatorNetwork implements NetworkSource {
   }
 }
 
-/** The requests of the probe's log; a line for a process the probe went into is none. */
-const probeEntries = (text: string): (NetworkEntry & { detail?: string })[] =>
-  text
-    .split('\n')
-    .filter(Boolean)
-    .flatMap((l) => {
-      const e = JSON.parse(l) as { at: number; loaded?: string; detail?: string } & NetworkEntry;
-      return e.loaded !== undefined ? [] : [e];
-    })
-    // numbered once the lines of other processes are out: an id is a request's place among requests
-    .map((e, id) => ({ ...e, id, at: new Date(e.at).toISOString(), ms: Math.round(e.ms ?? 0) }));
+type Probed = NetworkEntry & { detail?: string };
+type Line = Probed & { at: number; loaded?: string; begin?: number; n?: number };
+
+/**
+ * The requests of the probe's log, each numbered as it starts: a request has a line when it starts and one when it
+ * ends, by its number in its process, and one with no end yet is in flight. A line for a process the probe went into
+ * is no request: what the process before it left under way ended with it.
+ */
+export function probeEntries(text: string, now = Date.now()): Probed[] {
+  const out: Probed[] = [];
+  let open = new Map<number, Probed>();
+  for (const l of text.split('\n')) {
+    let e: Line;
+    try {
+      e = JSON.parse(l) as Line;
+    } catch {
+      // empty, or the last line half written
+      continue;
+    }
+    if (e.loaded !== undefined) {
+      for (const left of open.values())
+        Object.assign(left, { inFlight: undefined, error: 'the app ended before it did' });
+      open = new Map();
+    } else if (e.begin !== undefined) {
+      const { begin, ...start } = e;
+      const entry: Probed = {
+        ...start,
+        id: out.length,
+        at: new Date(e.at).toISOString(),
+        ms: Math.max(0, Math.round(now - e.at)),
+        inFlight: true,
+      };
+      out.push(entry);
+      open.set(begin, entry);
+    } else {
+      const { n, ...end } = e;
+      const done = { ...end, at: new Date(e.at).toISOString(), ms: Math.round(e.ms ?? 0) };
+      const begun = n === undefined ? undefined : open.get(n);
+      if (begun && n !== undefined) {
+        open.delete(n);
+        Object.assign(begun, done, { inFlight: undefined });
+      } else out.push({ ...done, id: out.length });
+    }
+  }
+  return out.map(({ inFlight, ...e }) => (inFlight ? { ...e, inFlight } : e));
+}

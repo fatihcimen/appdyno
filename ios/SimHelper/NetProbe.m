@@ -4,154 +4,12 @@
 // rules that answer, fail, delay or send elsewhere a request, and how slow the network is. Once control.json is
 // gone the probe does nothing more in this process. An NSURLProtocol sees what the URL loading system loads in the
 // app's process: not background sessions (their requests run in another process), not WKWebView (nor that), not
-// Network.framework (below it).
+// Network.framework (below it). A request has a line when it starts and one when it ends, by one number, so that
+// one still under way shows. Its parts are in NetProbeParts.h.
 #import <Foundation/Foundation.h>
-#include <fcntl.h>
 #import <objc/runtime.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
-static NSString *const kHandled = @"dev.appdyno.netprobe.handled";
-/// A text body is kept to here, and all the bodies of a capture to there.
-static const NSUInteger kBodyCap = 64 * 1024;
-static const int64_t kCaptureCap = 20 * 1024 * 1024;
-
-static NSString *folder;
-static int logFd = -1;
-static BOOL inert;
-static NSObject *lock;
-static struct timespec controlChanged;
-static NSDictionary *control;
-static NSArray<NSDictionary *> *rules;
-static NSMutableDictionary<NSString *, NSNumber *> *ruleUses;
-/// When the link is next free, down and up: requests in parallel share it.
-static CFAbsoluteTime linkFree[2];
-static int64_t bodiesKept;
-static int detailCount;
-static dispatch_queue_t paced;
-
-static void writeEntry(NSDictionary *entry) {
-  if (logFd < 0) return;
-  NSData *json = [NSJSONSerialization dataWithJSONObject:entry options:0 error:nil];
-  if (!json) return;
-  NSMutableData *line = [json mutableCopy];
-  [line appendBytes:"\n" length:1];
-  // one write of an O_APPEND file: lines of concurrent requests do not mix
-  write(logFd, line.bytes, line.length);
-}
-
-static NSRegularExpression *pattern(id source) {
-  return [source isKindOfClass:NSString.class] ? [NSRegularExpression regularExpressionWithPattern:source options:NSRegularExpressionCaseInsensitive error:nil] : nil;
-}
-
-/// What control.json says now, read again when it has changed; nil once it is gone, and from then on.
-static NSDictionary *controlNow(void) {
-  @synchronized(lock) {
-    if (inert) return nil;
-    struct stat s;
-    if (stat([folder stringByAppendingPathComponent:@"control.json"].fileSystemRepresentation, &s) != 0) {
-      inert = YES;
-      close(logFd);
-      logFd = -1;
-      control = nil;
-      rules = nil;
-      return nil;
-    }
-    if (control && s.st_mtimespec.tv_sec == controlChanged.tv_sec && s.st_mtimespec.tv_nsec == controlChanged.tv_nsec) return control;
-    NSData *data = [NSData dataWithContentsOfFile:[folder stringByAppendingPathComponent:@"control.json"]];
-    NSDictionary *read = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
-    // half written: what held before holds until it reads whole
-    if (![read isKindOfClass:NSDictionary.class]) return control ?: @{};
-    controlChanged = s.st_mtimespec;
-    control = read;
-    NSMutableArray *compiled = [NSMutableArray array];
-    for (NSDictionary *rule in [read[@"rules"] isKindOfClass:NSArray.class] ? read[@"rules"] : @[]) {
-      NSMutableDictionary *one = [rule mutableCopy];
-      one[@"hostPattern"] = pattern(rule[@"host"]);
-      one[@"pathPattern"] = pattern(rule[@"path"]);
-      [compiled addObject:one];
-    }
-    rules = compiled;
-    return control;
-  }
-}
-
-static BOOL whole(NSRegularExpression *re, NSString *text) {
-  return [re firstMatchInString:text options:0 range:NSMakeRange(0, text.length)] != nil;
-}
-
-/// The first rule that takes this request, and one use of it counted.
-static NSDictionary *ruleFor(NSURLRequest *request) {
-  NSURL *url = request.URL;
-  NSString *host = url.host.lowercaseString ?: @"";
-  NSString *withPort = url.port ? [NSString stringWithFormat:@"%@:%@", host, url.port] : host;
-  NSString *path = url.path.length ? url.path : @"/";
-  NSArray<NSURLQueryItem *> *query = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO].queryItems ?: @[];
-  @synchronized(lock) {
-    for (NSDictionary *rule in rules) {
-      if ([rule[@"off"] boolValue]) continue;
-      NSString *method = rule[@"method"];
-      if (method && [method caseInsensitiveCompare:request.HTTPMethod ?: @"GET"] != NSOrderedSame) continue;
-      NSRegularExpression *hosts = rule[@"hostPattern"], *paths = rule[@"pathPattern"];
-      if (hosts && !whole(hosts, host) && !whole(hosts, withPort)) continue;
-      if (paths && !whole(paths, path)) continue;
-      BOOL asked = YES;
-      for (NSArray<NSString *> *pair in rule[@"query"]) {
-        NSUInteger at = [query indexOfObjectPassingTest:^BOOL(NSURLQueryItem *item, __unused NSUInteger i, __unused BOOL *stop) {
-          return [item.name isEqual:pair[0]] && [item.value ?: @"" isEqual:pair[1]];
-        }];
-        if (at == NSNotFound) asked = NO;
-      }
-      if (!asked) continue;
-      NSString *ruleId = rule[@"id"] ?: @"";
-      NSInteger used = ruleUses[ruleId].integerValue;
-      if (rule[@"times"] && used >= [rule[@"times"] integerValue]) continue;
-      ruleUses[ruleId] = @(used + 1);
-      return rule;
-    }
-  }
-  return nil;
-}
-
-/// When `bytes` more have passed a link of `rate` bytes a second, 0 down and 1 up; now where it has no limit.
-static CFAbsoluteTime linkPassed(int way, double rate, NSUInteger bytes) {
-  CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-  if (rate <= 0 || bytes == 0) return now;
-  @synchronized(lock) {
-    linkFree[way] = MAX(now, linkFree[way]) + bytes / rate;
-    return linkFree[way];
-  }
-}
-
-static BOOL isText(NSString *type) {
-  return type && [type rangeOfString:@"^text/|json|xml|javascript|x-www-form-urlencoded|graphql" options:NSRegularExpressionSearch | NSCaseInsensitiveSearch].location != NSNotFound;
-}
-
-/// A body as the detail keeps it: its text to the cap where its type is one, and its size and type always.
-static void keepBody(NSMutableDictionary *detail, NSString *key, NSData *body, int64_t size, NSString *type) {
-  detail[[key stringByAppendingString:@"BodySize"]] = @(size);
-  if (!body.length || !isText(type)) return;
-  @synchronized(lock) {
-    if (bodiesKept + (int64_t)body.length > kCaptureCap) {
-      detail[@"note"] = @"over the capture's 20 MB of bodies: not kept";
-      return;
-    }
-    bodiesKept += body.length;
-  }
-  NSString *text = nil;
-  // a cut may fall inside a character: it ends at the one before
-  for (NSUInteger cut = 0; !text && cut < 4 && cut < body.length; cut++) text = [[NSString alloc] initWithData:[body subdataWithRange:NSMakeRange(0, body.length - cut)] encoding:NSUTF8StringEncoding];
-  detail[[key stringByAppendingString:@"Body"]] = text ?: [[NSString alloc] initWithData:body encoding:NSISOLatin1StringEncoding];
-}
-
-static NSData *drained(NSInputStream *stream) {
-  NSMutableData *all = [NSMutableData data];
-  uint8_t part[16384];
-  [stream open];
-  for (NSInteger n; (n = [stream read:part maxLength:sizeof part]) > 0;) [all appendBytes:part length:(NSUInteger)n];
-  [stream close];
-  return all;
-}
+#import "NetProbeParts.h"
 
 @class AppdynoNetProtocol;
 
@@ -175,6 +33,10 @@ static AppdynoNetRouter *router;
 @property(nonatomic) CFAbsoluteTime started;
 @property(nonatomic) CFAbsoluteTime due;
 @property(nonatomic) int64_t received;
+/// Its number in this process, on its first line and its last; the size of what it sends; what the session measured.
+@property(nonatomic) int number;
+@property(nonatomic) int64_t sentSize;
+@property(nonatomic, strong) NSDictionary *timings;
 @property(atomic) BOOL stopped;
 /// The loader's own thread and the modes its run loop was in: what it is told, it is told there.
 @property(nonatomic, strong) NSThread *loader;
@@ -231,16 +93,24 @@ static AppdynoNetRouter *router;
   NSRunLoopMode mode = NSRunLoop.currentRunLoop.currentMode;
   self.modes = mode && ![mode isEqual:NSDefaultRunLoopMode] ? @[NSDefaultRunLoopMode, mode] : @[NSDefaultRunLoopMode];
   NSDictionary *now = controlNow();
+  @synchronized(lock) {
+    self.number = ++requestCount;
+  }
+  // said as it starts: one that hangs, or a stream that stays open, is in the log before it ends
+  if (now) writeEntry(@{@"begin": @(self.number), @"at": @([[NSDate date] timeIntervalSince1970] * 1000), @"method": self.request.HTTPMethod ?: @"GET", @"url": self.request.URL.absoluteString ?: @""});
   NSDictionary *slow = [now[@"throttle"] isKindOfClass:NSDictionary.class] ? now[@"throttle"] : nil;
   self.rule = now ? ruleFor(self.request) : nil;
   self.keeps = [now[@"bodies"] boolValue];
   self.down = [slow[@"down"] doubleValue];
   NSMutableURLRequest *inner = [self.request mutableCopy];
   [NSURLProtocol setProperty:@YES forKey:kHandled inRequest:inner];
-  // shortcut: with bodies kept an upload is read whole into memory, and one the app still writes is waited for; tee the stream if uploads grow
-  if (self.keeps && inner.HTTPBodyStream) inner.HTTPBody = drained(inner.HTTPBodyStream);
+  NSUInteger length = (NSUInteger)MAX(0, [[inner valueForHTTPHeaderField:@"Content-Length"] integerValue]);
+  // an upload by a stream is read to be kept only where it says it is no longer than what is kept: a longer one, or
+  // one of no stated length, goes on as it came, untouched, and only its size is known
+  if (self.keeps && inner.HTTPBodyStream && length > 0 && length <= kBodyCap) inner.HTTPBody = drained(inner.HTTPBodyStream);
   self.sent = inner.HTTPBody;
-  NSUInteger up = inner.HTTPBody.length ?: (NSUInteger)[[inner valueForHTTPHeaderField:@"Content-Length"] integerValue];
+  NSUInteger up = inner.HTTPBody.length ?: length;
+  self.sentSize = (int64_t)up;
   NSArray<NSNumber *> *latency = slow[@"delayMs"];
   double wait = [self.rule[@"delayMs"] doubleValue] / 1000;
   if (latency.count == 2) wait += (latency[0].doubleValue + arc4random_uniform((uint32_t)(latency[1].doubleValue - latency[0].doubleValue) + 1)) / 1000;
@@ -319,7 +189,9 @@ static AppdynoNetRouter *router;
     @"status": @(self.answer.statusCode),
     @"ms": @((CFAbsoluteTimeGetCurrent() - self.started) * 1000),
     @"bytes": @(self.received),
+    @"n": @(self.number),
   } mutableCopy];
+  if (self.timings) entry[@"timings"] = self.timings;
   if (error) entry[@"error"] = error.localizedDescription;
   if (self.how) entry[@"how"] = self.how;
   if (self.rule[@"id"]) entry[@"rule"] = self.rule[@"id"];
@@ -328,7 +200,7 @@ static AppdynoNetRouter *router;
     NSMutableDictionary *detail = [NSMutableDictionary dictionary];
     detail[@"requestHeaders"] = self.request.allHTTPHeaderFields ?: @{};
     detail[@"responseHeaders"] = self.answer.allHeaderFields ?: @{};
-    keepBody(detail, @"request", self.sent.length > kBodyCap ? [self.sent subdataWithRange:NSMakeRange(0, kBodyCap)] : self.sent, (int64_t)self.sent.length, [self.request valueForHTTPHeaderField:@"Content-Type"]);
+    keepBody(detail, @"request", self.sent.length > kBodyCap ? [self.sent subdataWithRange:NSMakeRange(0, kBodyCap)] : self.sent, self.sentSize, [self.request valueForHTTPHeaderField:@"Content-Type"]);
     keepBody(detail, @"response", self.kept, self.received, [self.answer valueForHTTPHeaderField:@"Content-Type"]);
     NSString *name;
     @synchronized(lock) {
@@ -380,6 +252,10 @@ static AppdynoNetRouter *router;
   [NSURLProtocol removePropertyForKey:kHandled inRequest:next];
   [owner.client URLProtocol:owner wasRedirectedToRequest:next redirectResponse:response];
   completion(nil);
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didFinishCollectingMetrics:(NSURLSessionTaskMetrics *)metrics {
+  [self ownerOf:task].timings = timingsOf(metrics.transactionMetrics.lastObject);
 }
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {

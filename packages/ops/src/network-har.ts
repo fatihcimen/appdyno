@@ -121,8 +121,8 @@ const queryOf = (url: string) => {
 
 /**
  * A capture as HAR 1.2, what a proxy's viewer or `network` `read` with `har` opens: each request with its headers and
- * text bodies where the capture kept them, all of it cleaned as an answer is. The probe knows a request's whole time
- * and not its phases, nor its HTTP version; what a rule did to one is in `_how`.
+ * text bodies where the capture kept them, all of it cleaned as an answer is, with the phases, the protocol and the
+ * address the session measured where it sent the request; what a rule did to one is in `_how`.
  */
 export async function harOf(
   entries: NetworkEntry[],
@@ -135,13 +135,15 @@ export async function harOf(
       const d = e.id === undefined ? undefined : await detail(e.id);
       const url = clean(e.url ?? '');
       const ms = e.ms ?? 0;
+      const t = e.timings;
+      const known = (n: number | undefined) => (n !== undefined && n >= 0 ? Math.round(n) : -1);
       return {
         startedDateTime: new Date((e.at ? Date.parse(e.at) : 0) - ms).toISOString(),
         time: ms,
         request: {
           method: e.method ?? 'GET',
           url,
-          httpVersion: 'unknown',
+          httpVersion: t?.proto ?? 'unknown',
           cookies: [],
           headers: cleanHeaders(clean, d?.requestHeaders ?? {}),
           queryString: queryOf(url),
@@ -154,7 +156,7 @@ export async function harOf(
         response: {
           status: e.status ?? 0,
           statusText: '',
-          httpVersion: 'unknown',
+          httpVersion: t?.proto ?? 'unknown',
           cookies: [],
           headers: cleanHeaders(clean, d?.responseHeaders ?? {}),
           content: {
@@ -167,7 +169,17 @@ export async function harOf(
           bodySize: e.bytes ?? -1,
         },
         cache: {},
-        timings: { send: 0, wait: ms, receive: 0 },
+        // send, wait and receive are never unknown in a HAR: the whole time is the wait where no phase was measured
+        timings: {
+          blocked: -1,
+          dns: known(t?.dns),
+          connect: known(t?.connect),
+          ssl: known(t?.tls),
+          send: 0,
+          wait: t && t.wait >= 0 ? Math.round(t.wait) : ms,
+          receive: t && t.receive >= 0 ? Math.round(t.receive) : 0,
+        },
+        ...(t?.ip && { serverIPAddress: t.ip }),
         ...(e.how && { _how: e.how }),
         ...(e.error && { _error: clean(e.error) }),
       };

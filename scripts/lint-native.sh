@@ -48,7 +48,7 @@ check swiftlint swiftlint lint --strict --quiet
 check ktlint ktlint --relative 'android/*/src/**/*.kt' 'android/*.kts' 'android/*/*.kts'
 check android-lint android/gradlew -p android --console=plain --quiet :agent:lintDebug :fixture:lintDebug :push-fixture:lintDebug
 
-objc=(mac/Viewer/*.m mac/Viewer/*.h mac/App/*.m mac/TextScan/*.m ios/SimHelper/*.m)
+objc=(mac/Viewer/*.m mac/Viewer/*.h mac/App/*.m mac/TextScan/*.m ios/SimHelper/*.m ios/SimHelper/*.h)
 check clang-format clang-format --dry-run --Werror "${objc[@]}"
 
 # Xcode's recommended warnings, on top of -Wall -Wextra. Here and not in the flags a user's Mac compiles with on

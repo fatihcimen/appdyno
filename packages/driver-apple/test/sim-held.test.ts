@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { cannot } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { holdAppLanguage } from '../src/manage.js';
-import { SimulatorNetwork } from '../src/network.js';
+import { SimulatorNetwork, probeEntries } from '../src/network.js';
 import { IosSimulatorPerf } from '../src/perf.js';
 import { ProbedFrames } from '../src/sim-frames.js';
 import { HeldLaunches, heldLaunch, joinEnv } from '../src/sim-held.js';
@@ -280,6 +280,45 @@ describe('a capture by the network probe', () => {
     expect((await network.read(capture)).note).toBe(
       `${APP} runs as a process the probe is not in: its requests since are not seen`,
     );
+  });
+
+  it('numbers a request as it starts, has one with no end yet in flight, and ends it with its process', () => {
+    const at = (ms: number) => new Date(ms).toISOString();
+    const log = [
+      `{"loaded":"${APP}","pid":7,"t":1}`,
+      '{"begin":1,"at":1000,"method":"GET","url":"https://a.test/events"}',
+      '{"begin":2,"at":2000,"method":"POST","url":"https://a.test/pay"}',
+      '{"at":2500,"method":"POST","url":"https://a.test/pay","status":201,"ms":480.2,"bytes":9,"n":2,"timings":{"wait":120,"reused":true}}',
+    ].join('\n');
+    // the last line half written is no request yet
+    expect(
+      probeEntries(`${log}\n{"begin":3,"at":3000,"method":"GET","url":"https://a.te`, 61_000),
+    ).toEqual([
+      {
+        id: 0,
+        at: at(1000),
+        method: 'GET',
+        url: 'https://a.test/events',
+        ms: 60_000,
+        inFlight: true,
+      },
+      {
+        id: 1,
+        at: at(2500),
+        method: 'POST',
+        url: 'https://a.test/pay',
+        status: 201,
+        ms: 480,
+        bytes: 9,
+        timings: { wait: 120, reused: true },
+      },
+    ]);
+    const again = `${log}\n{"loaded":"${APP}","pid":8,"t":2}\n{"begin":1,"at":5000,"method":"GET","url":"https://a.test/x"}`;
+    expect(probeEntries(again, 5_100).map((e) => [e.id, e.inFlight, e.error])).toEqual([
+      [0, undefined, 'the app ended before it did'],
+      [1, undefined, undefined],
+      [2, true, undefined],
+    ]);
   });
 
   it('keeps all of a capture in one folder of its own, for this user alone, and leaves none of it', async () => {

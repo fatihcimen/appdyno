@@ -25,6 +25,27 @@ export type NetworkEntry = {
   /** The rule that took it. */
   rule?: string;
   to?: string;
+  /** It has started and not ended: `ms` is how long ago. */
+  inFlight?: boolean;
+  timings?: NetworkTimings;
+};
+
+/**
+ * What the session that sent a request measured of it: each phase in milliseconds, -1 where it had none, as a
+ * connection that was there already has no connect; whether the answer came from the cache; the body's bytes as they
+ * came. The connection and the protocol are those of the session it went through, which under a probe is the probe's.
+ */
+export type NetworkTimings = {
+  dns: number;
+  connect: number;
+  tls: number;
+  wait: number;
+  receive: number;
+  reused: boolean;
+  cache: boolean;
+  wire: number;
+  proto?: string;
+  ip?: string;
 };
 
 /** A rule as the probe reads it: what it takes, by patterns over the whole host and path, and what it does. */

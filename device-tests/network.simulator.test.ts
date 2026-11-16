@@ -32,12 +32,15 @@ process.env.APPDYNO_STATE_DIR = stateDir;
 /** A server that counts what reaches it: JSON with a cookie on /json, the body back on /echo, 200 kB elsewhere. */
 async function server(name: string) {
   const seen: string[] = [];
+  const held: (() => void)[] = [];
   const web = createServer((req, res) => {
     seen.push(`${req.method ?? ''} ${req.url ?? ''}`);
     const chunks: Buffer[] = [];
     req.on('data', (c: Buffer) => chunks.push(c));
     req.on('end', () => {
       if (req.url?.startsWith('/big')) return res.end(Buffer.alloc(200_000, 7));
+      // answered only when the test lets it go
+      if (req.url?.startsWith('/hang')) return void held.push(() => res.end('late'));
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Set-Cookie', 'session=server-cookie-55; Path=/');
       res.end(
@@ -49,7 +52,7 @@ async function server(name: string) {
   });
   await new Promise<void>((r) => web.listen(0, '127.0.0.1', r));
   const at = `127.0.0.1:${(web.address() as AddressInfo).port}`;
-  return { at, seen, close: () => web.close() };
+  return { at, seen, held, close: () => web.close() };
 }
 
 describe.skipIf(!udid)('the network probe on a simulator', () => {
@@ -145,9 +148,31 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(bytes.text).toContain('response body: 200000 B, not text or not kept');
   }, 180_000);
 
+  it('shows a request that has not ended, and what the session measured of one that has', async () => {
+    await ok('open_link', { url: 'appdyno-fixture://open/network' });
+    await ok('type_text', {
+      selector: { id: 'url_input' },
+      text: `http://${a.at}/hang`,
+      replace: true,
+    });
+    await ok('tap', { selector: { id: 'fetch' } });
+    await sleep(1500);
+    const during = await ok('network', { action: 'read' });
+    expect(during.text).toMatch(/\nin flight: 1 \(GET http:\/\/127\.0\.0\.1:\d+\/hang \d+ ms\)$/);
+    a.held.splice(0).forEach((end) => end());
+    await sleep(1000);
+    const after = await ok('network', { action: 'read', contains: '/hang' });
+    expect(after.text).not.toContain('in flight');
+    const id = Number(/^(\d+) GET .*\/hang 200 (\d+) ms 4 B$/m.exec(after.text)?.[1]);
+    const one = await ok('network', { action: 'read', id });
+    expect(one.text.split('\n')[1]).toMatch(
+      /^http\/1\.1, connection (reused|new), (connect \d+ ms, )?wait \d+ ms, receive \d+ ms, 4 B on the wire, 127\.0\.0\.1 \(the probe's own connection, not the app's\)$/,
+    );
+  }, 120_000);
+
   it('writes the capture as a HAR that reads back, as clean as an answer', async () => {
     const saved = await ok('network', { action: 'read', save: 'capture.har' });
-    expect(saved.text).toMatch(/saved 3 requests as HAR 1\.2 in .*capture\.har/);
+    expect(saved.text).toMatch(/saved 4 requests as HAR 1\.2 in .*capture\.har/);
     const text = readFileSync(join(dir, 'capture.har'), 'utf8');
     const har = JSON.parse(text) as {
       log: {
@@ -175,7 +200,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     const back = await ok('network', { action: 'read', har: join(dir, 'capture.har') });
     console.log(back.text);
     expect(back.text).toMatch(/POST http:\/\/127\.0\.0\.1:\d+\/echo\?token=••• 200/);
-    expect(back.text).toContain('3 of 3 from');
+    expect(back.text).toContain('4 of 4 from');
   });
 
   it('leaves no file once the capture stops, and the probe left in the app does nothing more', async () => {

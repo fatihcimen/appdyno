@@ -46,6 +46,18 @@ const POST: NetworkEntry = {
   ms: 85,
   bytes: 31,
 };
+const TIMINGS = {
+  dns: -1,
+  connect: -1,
+  tls: -1,
+  wait: 118.4,
+  receive: 12,
+  reused: true,
+  cache: false,
+  wire: 31,
+  proto: 'h2',
+  ip: '192.0.2.7',
+};
 const DETAIL: NetworkDetail = {
   requestHeaders: {
     'Content-Type': 'application/json',
@@ -116,12 +128,39 @@ describe('the network probe through its tool and a flow', () => {
       'its headers and bodies were not kept',
     );
     expect((await refusal(call('network', { action: 'read', id: 7 }))).code).toBe('NOT_FOUND');
+    // one that started and has not ended is no line of the list: it stands after it, and has its number
+    probe.entries = [
+      { ...POST, timings: TIMINGS },
+      {
+        at: POST.at,
+        method: 'GET',
+        url: 'https://api.test/events?token=abc123',
+        ms: 41_200,
+        inFlight: true,
+      },
+    ];
+    const flying = await call('network', { action: 'read' });
+    expect(flying.text).toMatch(/^1 of 1 from probe/);
+    expect(flying.text).toMatch(
+      /\nin flight: 1 \(GET https:\/\/api\.test\/events\?token=••• 41 s\)$/,
+    );
+    expect((await call('network', { action: 'read', id: 1 })).text).toBe(
+      '1 GET https://api.test/events?token=••• in flight 41 s\nit has not ended: its headers and bodies are kept when it does',
+    );
+    // what the session measured, said as the probe's own
+    expect((await call('network', { action: 'read', id: 0 })).text.split('\n')[1]).toBe(
+      "h2, connection reused, wait 118 ms, receive 12 ms, 31 B on the wire, 192.0.2.7 (the probe's own connection, not the app's)",
+    );
   });
 
   it('writes a HAR that hides what an answer hides, and reads it back', async () => {
     const call = callerOf(context(['s3cr3t-pass']));
     await call('network', { action: 'start', via: 'probe', bodies: true });
-    probe.entries = [POST, { ...POST, how: 'mocked', rule: 'abc' }];
+    probe.entries = [
+      { ...POST, timings: TIMINGS },
+      { ...POST, how: 'mocked', rule: 'abc' },
+      { ...POST, inFlight: true },
+    ];
     probe.details = { 0: DETAIL };
     const saved = await call('network', { action: 'stop', save: 'out/capture' });
     const file = join(dir, 'out/capture.har');
@@ -141,7 +180,18 @@ describe('the network probe through its tool and a flow', () => {
       },
       response: { status: 200, content: { size: 31, mimeType: 'application/json' } },
     });
-    expect(har.log.entries[1]).toMatchObject({ _how: 'mocked' });
+    // what was measured is in it, and what was not is the whole time as its wait; one under way is not in it
+    expect(har.log.entries[0]).toMatchObject({
+      request: { httpVersion: 'h2' },
+      serverIPAddress: '192.0.2.7',
+      timings: { blocked: -1, dns: -1, connect: -1, ssl: -1, send: 0, wait: 118, receive: 12 },
+    });
+    expect(har.log.entries[1]).toMatchObject({
+      _how: 'mocked',
+      request: { httpVersion: 'unknown' },
+      timings: { send: 0, wait: 85, receive: 0 },
+    });
+    expect(har.log.entries).toHaveLength(2);
     const back = await call('network', { action: 'read', har: file });
     expect(back.text).toMatch(/^2 of 2 from/);
     expect(back.text).toContain('POST https://api.test/login?token=••• 200 85 ms 31 B');
