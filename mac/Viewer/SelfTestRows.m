@@ -16,6 +16,15 @@ static MVList *_Nullable listWith(NSView *view, NSString *title) {
   return nil;
 }
 
+/// The field of that name under a view takes those words, and says it changed, as typing in it would.
+static void typeIn(NSView *view, NSString *name, NSString *words) {
+  if ([view isKindOfClass:NSTextField.class] && [view.identifier isEqual:name]) {
+    ((NSTextField *)view).stringValue = words;
+    [NSNotificationCenter.defaultCenter postNotificationName:NSControlTextDidChangeNotification object:view];
+  }
+  for (NSView *child in view.subviews) typeIn(child, name, words);
+}
+
 @implementation MVStage (Rows)
 
 + (void)load {
@@ -27,6 +36,8 @@ static MVList *_Nullable listWith(NSView *view, NSString *title) {
   MVWindow *shown = [self valueForKey:@"_window"];
   // an item of the Network pane's own menu, by its name: a menu opened in a window kept behind would open on a person's screen
   if ([m[@"choose"] isKindOfClass:NSString.class]) return [shown.inspector.network choose:m[@"choose"]];
+  // words in a field of the window, by the field's name, as if a person had typed them: a window kept behind has no keyboard
+  if ([m[@"field"] isKindOfClass:NSString.class]) return typeIn(shown.nsWindow.contentView, m[@"field"], [m[@"value"] description] ?: @"");
   NSString *title = [m[@"row"] isKindOfClass:NSString.class] ? m[@"row"] : nil;
   // exchanged at load: this is the stage's own `poke:`
   if (!title) return [self pokeOrRow:m];

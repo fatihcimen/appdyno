@@ -117,6 +117,10 @@ static NSString *const kBodiesKept = @"networkBodies";
     _rules.onSend = ^(NSDictionary *message) {
       MVPaneSend(weak, message);
     };
+    [_rules setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _rules.onDone = ^{
+      [weak sectionChosen:0];
+    };
     [self makeMenu];
     MVPaneFill(self, @[_captureRow, _sections, _filter, _note, _card, _split, _rules, _slack, _answer], 8);
     [self layOut];
@@ -185,6 +189,12 @@ static NSString *const kBodiesKept = @"networkBodies";
 - (void)viewDidMoveToWindow {
   [super viewDidMoveToWindow];
   [self keepTime];
+}
+
+/// What the capture's row has room for is known once it is laid out.
+- (void)layout {
+  [super layout];
+  [self sayState];
 }
 
 - (void)choose:(NSString *)name {
@@ -292,7 +302,7 @@ static void stand(NSView *view, NSStackView *stack, NSUInteger at, BOOL wide) {
   if (!probe) _onRules = NO;
   _sections.chosen = _onRules;
   [_sections setCount:any || probe ? MVCount(_total) : nil at:0];
-  [_sections setCount:_rules.rows.count ? MVCount(_rules.rows.count) : nil at:1];
+  [_sections setCount:_rules.count ? MVCount(_rules.count) : nil at:1];
   // Start stands in the card while nothing has been captured, with the way where the device has more than one; then in
   // the capture's row, as Stop, and as Start again beside the list a capture left
   stand(_go, starts ? _cardRows : _captureRow, starts ? NSUIntegerMax : 0, starts);

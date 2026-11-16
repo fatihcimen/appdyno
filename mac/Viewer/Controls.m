@@ -20,6 +20,7 @@ static const MVControlRow kControls[] = {
     {"openLink", "Open Link…", "link", 'o', kCmd, "File"},
     {"push", "Send Push…", "bell.badge", 'p', kCmd | kShift, "File"},
     {"paste", "Paste", "doc.on.clipboard", 'v', kCmd, "Edit"},
+    {"find", "Find in Requests", "magnifyingglass", 'f', kCmd, "Edit"},
     {"zoomFit", "Zoom to Fit", "arrow.up.left.and.down.right.magnifyingglass", '9', kCmd, "View"},
     {"zoomActual", "Actual Size", "1.magnifyingglass", '0', kCmd, "View"},
     {"zoomIn", "Zoom In", "plus.magnifyingglass", '=', kCmd, "View"},

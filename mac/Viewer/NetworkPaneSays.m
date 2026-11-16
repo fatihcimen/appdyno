@@ -127,14 +127,22 @@ NSString *MVNetworkWayTitle(NSString *via) {
   _throttle.accessibilityValue = _throttle.titleOfSelectedItem;
 }
 
-/// What the capture's row says: the time gone and how many requests, or when it stopped.
+/// What the capture's row says: the time gone, or when it stopped, and how many requests where the row has the room
+/// and nothing else says it. By the probe the sections say how many, beside a speed that takes the row's end; a screen
+/// reader is told all of it either way.
 - (void)sayState {
   NSInteger chosen = wayAt(_capturing ?: @"");
   BOOL lists = [@[@"probe", @"proxy"] containsObject:_capturing ?: @""] || (!_capturing && _allRows.count);
   NSString *count = MVFormat(_total == 1 ? @"%@ request" : @"%@ requests", @[MVCount(_total)]);
   NSString *first = _capturing ? elapsed(_since ?: NSDate.date) : _stopped ? MVFormat(@"Stopped at %@", @[timeOf(_stopped)])
                                                                            : MVWord(@"Not capturing");
-  _state.stringValue = lists ? [NSString stringWithFormat:@"%@ · %@", first, count] : first;
+  NSString *whole = [NSString stringWithFormat:@"%@ · %@", first, count];
+  CGFloat room = NSWidth(_captureRow.bounds);
+  for (NSView *other in _captureRow.arrangedSubviews)
+    if (other != _state && !other.hidden) room -= other.fittingSize.width + _captureRow.spacing;
+  BOOL fits = room <= 0 || [whole sizeWithAttributes:@{NSFontAttributeName: _state.font}].width + 6 <= room;
+  NSString *shown = lists && !self.probing && fits ? whole : first;
+  if (![_state.stringValue isEqual:shown]) _state.stringValue = shown;
   NSString *spoken = _capturing && chosen >= 0 ? MVFormat(kCapturing[chosen], @[timeOf(_since ?: NSDate.date)]) : first;
   _state.accessibilityLabel = lists ? [NSString stringWithFormat:@"%@, %@", spoken, count] : spoken;
 }

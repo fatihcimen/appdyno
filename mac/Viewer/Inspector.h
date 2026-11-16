@@ -203,7 +203,11 @@ NSString *_Nullable MVNetworkNotKept(NSDictionary *detail);
 /// One request whole as text, from the parts the parent gives, each part named in the Mac's language.
 NSString *MVNetworkDetailText(NSDictionary *detail);
 
-/// A rule as fields beside its line: what it takes and what it does, each in its own. The parent reads a line into
+/// A way a rule fails a request, and a rule whole, as a person reads them: what it takes, and then what it does.
+NSString *MVNetworkFailWord(NSString *fail);
+NSString *MVNetworkRuleSentence(NSDictionary *rule);
+
+/// A rule as fields, each under its name, with its line for who would rather type it. The parent reads a line into
 /// them and writes them as one.
 @interface MVNetworkRuleForm : NSView
 /// A field changed; and enter was pressed in one.
@@ -211,22 +215,31 @@ NSString *MVNetworkDetailText(NSDictionary *detail);
 @property(nonatomic, copy, nullable) void (^onSubmit)(void);
 /// What the fields hold, by the names the parent reads a rule's parts by: none for one left empty.
 @property(nonatomic, readonly) NSDictionary<NSString *, NSString *> *fields;
-- (void)show:(nullable NSDictionary *)fields;
+/// The rule's line, whether it shows, and whether it was typed in last: then it is what is saved, and not the fields.
+@property(nonatomic, copy) NSString *line;
+@property(nonatomic) BOOL asText;
+@property(nonatomic, readonly) BOOL typed;
+- (void)show:(nullable NSDictionary *)fields line:(nullable NSString *)line;
 @end
 
+/// The probe's rules, each as a sentence with its switch; one chosen, or a new one, opens under the list to be written.
 @interface MVNetworkRules : NSView
 /// Where a change goes: one rule saved, removed or switched, by its name.
 @property(nonatomic, copy, nullable) void (^onSend)(NSDictionary *message);
-/// The parent's rules, each with its line, what it took, and whether it is off.
+/// A rule made of a request's answer was added: the person goes back to the request.
+@property(nonatomic, copy, nullable) void (^onDone)(void);
+/// The parent's rules, each with its line, its parts, what it took, and whether it is off.
 - (void)show:(NSArray<NSDictionary *> *)rules;
-/// A line put in the field for a person to set or change, as one made of a request's answer, with its parts.
+/// A rule opened to be added, as one made of a request's answer, by its line and its parts.
 - (void)fill:(NSString *)line fields:(nullable NSDictionary *)fields;
 /// What the capture holds beside its rules: whether a failed request fails an action, and one no rule takes fails.
 - (void)showStrict:(BOOL)strict unmatched:(BOOL)fails;
 @property(nonatomic, readonly) MVNetworkRuleForm *form;
-@property(nonatomic, readonly) NSArray<MVRow *> *rows;
-/// The rule in the field went from the list by another's doing, and the pane says so.
-@property(nonatomic, readonly) BOOL moved;
+@property(nonatomic, readonly) NSUInteger count;
+/// What each rule's row says, whole.
+@property(nonatomic, readonly) NSArray<NSString *> *says;
+/// A rule is open under the list; it went from the list by another's doing, and the pane says so; it was made of a request's answer.
+@property(nonatomic, readonly) BOOL editing, moved, fromRequest;
 @end
 
 /// A button that is a symbol, in its own ink in either look and in a window behind others, named for a screen reader.

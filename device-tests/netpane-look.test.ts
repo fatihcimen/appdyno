@@ -19,7 +19,8 @@ import { untilWithin } from './until.js';
  * names. APPDYNO_HUB_LOOK and APPDYNO_HUB_LANGUAGE say how it is drawn, and name each file. The window is the test
  * build's, which alone chooses a row by a message. Beside each picture stands every word it shows and where.
  *
- * Nothing here opens a menu: one would open on a person's screen. No request is copied: that is the pasteboard's.
+ * Nothing here opens a menu: one would open on a person's screen, so an item of the pane's menu is chosen by its name and
+ * a field is typed in by its name, both by a message the test build alone takes. No request is copied: that is the pasteboard's.
  */
 const udid = process.env.APPDYNO_NETPANE_SIM ?? '';
 const shots = process.env.APPDYNO_NETPANE_SHOTS ?? '';
@@ -204,14 +205,12 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
       await send(TRUSTED);
       // a port nothing listens on: refused on its way
       await send('http://127.0.0.1:9/v1/health');
-      await ok('capture_network', {
-        action: 'mock',
-        rules: [
-          `"localhost:${port}/v1/profile" status=200 type="application/json" body="{\\"name\\":\\"Grace\\",\\"plan\\":\\"pro\\"}"`,
-          `"localhost:${port}/v1/ads*" fail=offline`,
-          `"127.0.0.1:${port}/v1/search*" delayMs=800 off`,
-        ],
-      });
+      const mine = [
+        `"localhost:${port}/v1/profile" status=200 type="application/json" body="{\\"name\\":\\"Grace\\",\\"plan\\":\\"pro\\"}"`,
+        `"localhost:${port}/v1/ads*" fail=offline`,
+        `"127.0.0.1:${port}/v1/search*" delayMs=800 off`,
+      ];
+      await ok('capture_network', { action: 'mock', rules: mine });
       await send(`${named}/v1/profile`);
       await send(`${named}/v1/ads/banner`);
       await send(`${here}/v1/feed`);
@@ -223,37 +222,49 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
       expect(new Set(entries().map((e) => new URL(e.url ?? '').host)).size).toBeGreaterThan(2);
       await looked('list');
 
-      await choose('POST /v1/pay');
-      await looked('failed');
-      await choose('GET /v1/health');
-      await looked('failed-on-its-way');
-      await choose('GET /v1/profile');
-      await looked('mocked');
-      await choose('POST /v1/login');
-      await until('its headers and bodies', () => network((m) => !!m.detail).length > 0);
-      await looked('detail');
+      /** A request chosen, its card filled with what the capture kept of it. */
+      const chosen = async (row: string, state: string) => {
+        const from = sent.length;
+        await choose(row);
+        await until(`the parts of ${row}`, () =>
+          sent.slice(from).some((m) => m.op === 'network' && !!m.detail),
+        );
+        await looked(state);
+      };
+      await chosen('POST /v1/pay', 'failed');
+      await chosen('GET /v1/health', 'failed-on-its-way');
+      await chosen('GET /v1/profile', 'mocked');
+      await chosen('POST /v1/login', 'detail');
+      const before = sent.length;
       poke({ choose: 'networkReal' });
-      await quiet(500);
-      await quiet(1_500);
+      await until('its real values', () =>
+        sent.slice(before).some((m) => m.op === 'network' && !!m.detail),
+      );
+      await click('networkRequest');
       await looked('detail-real');
       poke({ choose: 'networkReal' });
       await quiet(500);
 
+      // a rule of the 500's answer, opened to be added, with its line beside its fields
       await choose('POST /v1/pay');
       await click('networkMockFrom');
       await until(
         'a rule of its answer',
         () => network((m) => typeof m.rule === 'string').length > 0,
       );
+      await click('networkRuleAsText');
       await looked('rules-line');
-      // the first rule, as the op wrote its line
-      const { rules } = network((m) => Array.isArray(m.rules)).at(-1) as {
-        rules: { rule: string }[];
-      };
-      await choose(String(rules[0]?.rule));
-      await click('networkRuleFields');
+      await click('networkRuleCancel');
+      await click('networkRule.0');
       await looked('rules-fields');
-      await click('networkRuleFields');
+      poke({ field: 'networkRuleStatus', value: '418' });
+      poke({ field: 'networkRuleDelay', value: '250' });
+      await looked('rules-edit');
+      // an agent sets the rules anew under the person's hands: what was typed stays, and the pane says what happened
+      await ok('capture_network', { action: 'mock', rules: [mine[1], mine[2]] });
+      await until('the change of another', () => network((m) => m.elsewhere === true).length > 0);
+      await looked('changed-elsewhere');
+      await click('networkRuleCancel');
 
       await click('networkShowRequests');
       await ok('capture_network', { action: 'throttle', throttle: '3g' });
@@ -262,10 +273,10 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
 
       for (const answer of held.splice(0)) answer();
       await ok('capture_network', { action: 'throttle', throttle: 'full' });
-      const before = sent.length;
+      const stopping = sent.length;
       await click('networkGo');
       await until('the capture to stop', () =>
-        sent.slice(before).some((m) => m.op === 'network' && m.capturing === false),
+        sent.slice(stopping).some((m) => m.op === 'network' && m.capturing === false),
       );
       await looked('stopped');
     },

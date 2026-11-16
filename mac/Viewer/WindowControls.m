@@ -92,6 +92,11 @@
   if ([name isEqual:@"hud"]) return [self toggleHud];
   if ([@[@"screenshot", @"copy", @"record", @"recordFlow", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmitFrom(_view, @{@"op": @"control", @"name": name});
   if ([name isEqual:@"paste"]) return [_view paste:self];
+  // the Network pane's filter takes the keyboard: a key typed anywhere else goes to the device
+  if ([name isEqual:@"find"]) {
+    [self showPane:MVPaneNetwork];
+    return [_inspector.network focusFilter];
+  }
   if ([name isEqual:@"both"]) return MVEmitFrom(_view, @{@"op": @"control", @"name": name});
   if ([name isEqual:@"journey"]) return [self askJourney];
   if ([name isEqual:@"openLink"] || [name isEqual:@"push"]) {

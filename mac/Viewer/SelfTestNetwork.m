@@ -110,7 +110,7 @@ static void checkCapture(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
                             @"unseen": @{@"webview": @2, @"websocket": @1}})];
   MVCheck(@"listening: with no request yet the card says it listens, and what the app made that it cannot see", [pane.said containsString:MVWord(@"Listening")] && [pane.said hasSuffix:@"Not seen here: web views: 2, WebSocket tasks: 1"] && MVStands(card, pane), pane.said);
   MVLook(window, @"listening");
-  MVCheck(@"capture: its row holds Stop, the time gone and how many requests, and says since when to a screen reader", MVStands(go, row) && [go.title isEqual:MVWord(@"Stop")] && [state.stringValue hasSuffix:@" · 0 requests"] && [state.accessibilityLabel hasPrefix:@"Capturing by the probe since "], [NSString stringWithFormat:@"%@ | %@", state.stringValue, state.accessibilityLabel]);
+  MVCheck(@"capture: its row holds Stop and the time gone, and says since when and how many requests to a screen reader", MVStands(go, row) && [go.title isEqual:MVWord(@"Stop")] && ![state.stringValue containsString:@"·"] && [state.stringValue containsString:@":"] && [state.accessibilityLabel hasPrefix:@"Capturing by the probe since "] && [state.accessibilityLabel hasSuffix:@", 0 requests"], [NSString stringWithFormat:@"%@ | %@", state.stringValue, state.accessibilityLabel]);
   MVCheck(@"capture: the speed stands in its row, named, with no mark while the network is as it is", MVStands(speed, row) && [speed.titleOfSelectedItem isEqual:MVWord(@"Full Speed")] && tortoise.hidden && [speed.accessibilityLabel isEqual:MVWord(@"Network speed")], speed.titleOfSelectedItem);
   [pane show:probing(@[], @{@"throttle": @"edge"})];
   MVCheck(@"capture: a speed set stands chosen, with the mark of a slowed network beside it", [speed.titleOfSelectedItem isEqual:@"EDGE"] && MVStands(tortoise, row), speed.titleOfSelectedItem);
@@ -159,10 +159,10 @@ static void checkList(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDi
   MVLook(window, @"list");
   MVCheck(@"requests: one still under way stands with its host's, and says for how long", [titles(pane) isEqual:@"GET /x|GET /feed|POST /pay"] && [pane.rows[1].detail isEqual:MVFormat(@"In flight for %@", @[@"41.0 s"])] && pane.rows[1].spins && [pane.rows[1].symbol isEqual:@"hourglass"], [[pane.rows valueForKey:@"detail"] componentsJoinedByString:@"|"]);
   NSTextField *state = [pane valueForKey:@"_state"];
-  MVCheck(@"requests: a list that is the latest of more says how many it shows of how many, and the capture's row how many there are", [pane.note isEqual:@"Showing the latest 2 of 1,234 requests"] && [state.stringValue hasSuffix:@" · 1,234 requests"], [NSString stringWithFormat:@"%@ | %@", pane.note, state.stringValue]);
+  MVCheck(@"requests: a list that is the latest of more says how many it shows of how many, and the capture's row how many there are", [pane.note isEqual:@"Showing the latest 2 of 1,234 requests"] && [state.accessibilityLabel hasSuffix:@", 1,234 requests"], [NSString stringWithFormat:@"%@ | %@", pane.note, state.stringValue]);
   MVTestTurkish(YES);
   [pane show:probing(two, @{@"total": @1234})];
-  MVCheck(@"requests: and in Turkish, its thousands set apart as Turkish sets them", [pane.note isEqual:@"1.234 isteğin son 2 tanesi gösteriliyor"] && [state.stringValue hasSuffix:@" · 1.234 istek"], [NSString stringWithFormat:@"%@ | %@", pane.note, state.stringValue]);
+  MVCheck(@"requests: and in Turkish, its thousands set apart as Turkish sets them", [pane.note isEqual:@"1.234 isteğin son 2 tanesi gösteriliyor"] && [state.accessibilityLabel hasSuffix:@", 1.234 istek"], [NSString stringWithFormat:@"%@ | %@", pane.note, state.stringValue]);
   // the op's words for how a request stands find it in either language, however they are typed
   NSString * (^found)(NSString *) = ^(NSString *typed) {
     filter.words = typed;
@@ -360,10 +360,21 @@ static void checkRequest(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
   [pane show:@{@"op": @"network",
                @"rule": @"\"a.test/x\" status=200 body=ok",
                @"fields": @{@"host": @"a.test", @"path": @"/x", @"status": @"200", @"body": @"ok"}}];
-  MVCheck(@"request: and the rule stands in the rules' field and in its fields, to be set or changed", !pane.rules.hidden && [[[pane.rules valueForKey:@"_field"] stringValue] isEqual:@"\"a.test/x\" status=200 body=ok"] && [pane.rules.form.fields isEqual:(@{@"host": @"a.test", @"path": @"/x", @"status": @"200", @"body": @"ok"})], pane.rules.form.fields.description);
+  MVCheck(@"request: and the rule opens under the rules in its fields, to be added or changed", !pane.rules.hidden && pane.rules.editing && pane.rules.fromRequest && [pane.rules.form.line isEqual:@"\"a.test/x\" status=200 body=ok"] && [pane.rules.form.fields isEqual:(@{@"host": @"a.test", @"path": @"/x", @"status": @"200", @"body": @"ok"})], pane.rules.form.fields.description);
+  [sent removeAllObjects];
+  [window pokeClick:@"networkRuleSave"];
+  MVPump(0.1);
+  NSDictionary *made = @{@"op": @"control",
+                         @"name": @"networkRuleSave",
+                         @"fields": @{@"host": @"a.test", @"path": @"/x", @"status": @"200", @"body": @"ok"}};
+  MVCheck(@"request: added, it is sent as a new rule, and the person is back at the request", [sent.lastObject isEqual:made] && pane.rules.hidden && [list.selected.key isEqual:@"7"] && pane.detail.length, [sent.lastObject description]);
+  [pane show:@{@"op": @"network",
+               @"rule": @"\"a.test/x\" status=200 body=ok",
+               @"fields": @{@"host": @"a.test"}}];
+  [window pokeClick:@"networkRuleCancel"];
+  MVPump(0.1);
   [window pokeClick:@"networkShowRequests"];
   MVPump(0.1);
-  [[pane.rules valueForKey:@"_field"] setStringValue:@""];
   MVCheck(@"capture: the requests stand first, and the rules in their place when asked for", pane.rules.hidden && !list.hidden, nil);
   // a probe's requests are read again every 3 s; past the most a read holds, the oldest go and every place moves
   MVPokeListRow(list, @"POST /pay");
@@ -416,4 +427,5 @@ void MVCheckNetwork(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDict
   [window pokeClick:@"networkShowRequests"];
   MVPump(0.1);
   checkStopped(window, pane, sent);
+  MVCheckNetworkFits(window, pane);
 }

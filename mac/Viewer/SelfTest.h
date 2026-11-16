@@ -73,6 +73,8 @@ void MVCheckNetworkCard(MVWindow *window, MVNetworkPane *pane, NSDictionary *par
 /// APPDYNO_NETPANE_LOOK names, for a state to be judged by eye: with no folder named it does nothing.
 BOOL MVStands(NSView *part, NSView *pane);
 void MVLook(MVWindow *window, NSString *name);
+/// That nothing of it is cut at the Inspector's width, in English and in Turkish; and what was refused, at its foot.
+void MVCheckNetworkFits(MVWindow *window, MVNetworkPane *pane);
 /// Its rules, by the probe.
 void MVCheckNetworkRules(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent);
 /// Tools, on the hub Connect a Phone's checks leave.
