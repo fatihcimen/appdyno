@@ -27,8 +27,14 @@ export function bestSelector(screen: Pick<Screen, 'list' | 'elements'>, e: Scree
   ];
   const hits = (c: FlowSelector) => selectIn(screen.list, c);
   // alone as a replay finds it: a control and its own text inside it are one target there, and counted as two, a
-  // text that named the control alone gave way to an id on several, picked by an index that another screen shifts
-  const unique = candidates.find((c) => hits(c).some((x) => x.ref === e.ref) && oneOf(hits(c)));
+  // text that named the control alone gave way to an id on several, picked by an index that another screen shifts.
+  // The text is the control's to a touch; a control inside another of the same words is not, and keeps its own name
+  const itsOwn = (c: FlowSelector) => {
+    const one = oneOf(hits(c));
+    const inside = !e.flags.includes('clickable') && hits(c).some((x) => x.ref === e.ref);
+    return !!one && (one.ref === e.ref || inside);
+  };
+  const unique = candidates.find(itsOwn);
   if (unique) return { selector: unique };
   const within = must(
     [...candidates, { role: e.role }].find((c) => hits(c).some((x) => x.ref === e.ref)),

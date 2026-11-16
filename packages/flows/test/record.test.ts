@@ -70,7 +70,7 @@ describe('the selector a target is recorded with', () => {
   });
 
   it('takes a text that finds a control and its own text inside it, as a replay takes the two for one', () => {
-    // a Compose tab, as Now in Android's: one test tag on every tab, and the tab's words on a text inside it too
+    // tabs of Compose with one test tag on each, and each tab's words on a text inside it too
     const tab = (ref: string, label: string, x: number): ScreenElement[] => [
       {
         ...el(ref, 'tappable', label, 'NiaNavItem', { x, y: 2200, width: 300, height: 200 }),
@@ -82,9 +82,26 @@ describe('the selector a target is recorded with', () => {
     const [forYou, itsText] = list;
     assert(forYou && itsText);
     expect(selectIn(list, { text: 'For you' })).toEqual([forYou, itsText]);
-    // not `id=NiaNavItem index=0`: the tab chosen leaves that id's matches on another screen, and index 0 is Saved
+    // not `id=NiaNavItem index=0`, an index among the tabs that holds only while the same ones match that id
     expect(bestSelector(on(list), forYou)).toEqual({ selector: { text: 'For you' } });
     expect(bestSelector(on(list), itsText)).toEqual({ selector: { text: 'For you' } });
+    // a button inside a card of the same words is no text of the card's: a touch on it is not one on the card
+    const card = {
+      ...el('@k', 'tappable', 'Open', undefined, { x: 0, y: 0, width: 600, height: 300 }),
+    };
+    const inner = el('@i', 'button', 'Open', undefined, { x: 400, y: 200, width: 150, height: 60 });
+    const nested = [card, inner].map((x) => ({ ...x, flags: ['clickable' as const] }));
+    const [, button] = nested;
+    assert(button);
+    expect(bestSelector(on(nested), button)).toEqual({
+      selector: { role: 'button', text: 'Open' },
+    });
+    const plain = nested.map((x) => ({ ...x, role: 'tappable' }));
+    assert(plain[1]);
+    expect(bestSelector(on(plain), plain[1])).toEqual({
+      selector: { text: 'Open', index: 1 },
+      ambiguous: 2,
+    });
     // two rows of the same words stand apart, and are still told by an index
     const twice = [...list, ...tab('@c', 'For you', 720)];
     expect(bestSelector(on(twice), forYou)).toEqual({
