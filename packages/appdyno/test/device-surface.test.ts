@@ -224,6 +224,8 @@ describe('the log of an app', () => {
       { text: 'a', at: 5 },
       { text: 'b', at: 9, level: 'error' },
     ]);
+    // a driver that gave more than was asked for: the newest are kept, each with its own time
+    expect((await d.logs({ maxLines: 1 })).lines).toEqual([{ text: 'b', at: 9, level: 'error' }]);
     await d.close();
   });
 

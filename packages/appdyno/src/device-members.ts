@@ -100,13 +100,16 @@ export function membersOf({
       if (!of) throw wrong('logs takes an app', 'give app, or open the device with one');
       if (!Number.isInteger(maxLines) || maxLines < 1 || maxLines > LINES.most)
         throw wrong(`maxLines is a whole number from 1 to ${LINES.most}`);
-      const { lines, marks, source, note } = await device.logs({
+      const read = await device.logs({
         app: checkApp(policy, of),
         level,
         maxLines,
         timed: true,
         ...(since !== undefined && { since }),
       });
+      // the newest as many as asked: a driver may give every line since a time, or more than it was asked for
+      const { source, note } = read;
+      const [lines, marks] = [read.lines.slice(-maxLines), read.marks?.slice(-maxLines)];
       return {
         lines: lines.map((line, n) => {
           const mark = marks?.[n];
