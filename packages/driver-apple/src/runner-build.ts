@@ -7,6 +7,7 @@ import { createInterface } from 'node:readline';
 import { DeviceError } from '@appdyno/protocol';
 import { inCheckout, inPackage, reportProgress, run, stateDir, must } from '@appdyno/core';
 import { brandSimulatorRunner } from './brand.js';
+import { fetchRunner } from './runner-fetch.js';
 import { xcodeEnv } from './simctl.js';
 
 const buildIds = new Map<string, { mtime: number; sha256: string }>();
@@ -55,7 +56,10 @@ export function checkoutBehind(
     : undefined;
 }
 
-/** The runner's products for a simulator or a phone: a development build, else built once from the packaged sources. */
+/**
+ * The runner's products for a simulator or a phone: a development build, else the release's own for a simulator, fetched
+ * once, else built once from the packaged sources.
+ */
 export async function iosProducts(kind: Kind, build = true): Promise<string | undefined> {
   const env =
     kind === 'simulator'
@@ -83,23 +87,27 @@ export async function iosProducts(kind: Kind, build = true): Promise<string | un
   // one build per folder: a client that timed out and asks again joins it (xcodebuild would refuse a second)
   let building = builds.get(out);
   if (!building) {
-    building = xcodebuildTelling(
-      [
-        'build-for-testing',
-        '-project',
-        join(src, 'Appdyno.xcodeproj'),
-        '-scheme',
-        'Runner',
-        '-destination',
-        kind === 'simulator' ? 'generic/platform=iOS Simulator' : 'generic/platform=iOS',
-        '-derivedDataPath',
-        out,
-        ...(kind === 'device'
-          ? ['CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=']
-          : []),
-      ],
-      `building the iOS runner for the ${kind} once (a few minutes)`,
-    )
+    const fromSources = () =>
+      xcodebuildTelling(
+        [
+          'build-for-testing',
+          '-project',
+          join(src, 'Appdyno.xcodeproj'),
+          '-scheme',
+          'Runner',
+          '-destination',
+          kind === 'simulator' ? 'generic/platform=iOS Simulator' : 'generic/platform=iOS',
+          '-derivedDataPath',
+          out,
+          ...(kind === 'device'
+            ? ['CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=']
+            : []),
+        ],
+        `building the iOS runner for the ${kind} once (a few minutes)`,
+      );
+    // a simulator's is the release's own where that can be had, in seconds: another process may have fetched it meanwhile
+    building = (kind === 'simulator' ? fetchRunner(src, id, out) : Promise.resolve(false))
+      .then((fetched) => (fetched || has(products) ? undefined : fromSources()))
       // what other sources built goes once this one is there; a build that stays is no failure of this one
       .then(() => pruneIosBuilds(id).catch(() => 0))
       .then(() => undefined)

@@ -1,11 +1,12 @@
 import { join } from 'node:path';
-import { run, type Check, type DeviceProvider, must } from '@appdyno/core';
+import { run, stateDir, type Check, type DeviceProvider, must } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { firstLaunchCheck } from './first-launch.js';
 import { IosSimulatorDevice } from './simulator.js';
 import { Simulators } from './simulators.js';
 import { phoneRunnerApp } from './phone.js';
 import { checkoutBehind, iosProducts } from './runner-build.js';
+import { fetchedFor } from './runner-fetch.js';
 import { DirectSim } from './simdirect.js';
 import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js';
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
@@ -13,7 +14,7 @@ import { queryTraceFile } from './trace.js';
 import { listPhones } from './usbmux.js';
 
 const RUNNER_NOT_BUILT =
-  'built once on first use (a few minutes), or build it now: appdyno ios build';
+  "at first use a simulator's is fetched or built, and an iPhone's built (a few minutes); or now: appdyno ios build";
 
 /** A simulator is named by its id. */
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
@@ -37,13 +38,19 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
   }
   const firstLaunch = await firstLaunchCheck();
   if (firstLaunch) out.push(firstLaunch);
-  // looked up only: a missing runner is built once on its first use, never by doctor
+  // of a runner kept in the state folder: a checkout's, or a folder a person named, is theirs to know
+  const obtained = (products: string) => {
+    const version = fetchedFor(products);
+    if (version) return `, fetched for v${version}`;
+    return products.startsWith(stateDir()) ? ', built here' : '';
+  };
+  // looked up only: a missing runner is fetched or built once on its first use, never by doctor
   const runner = (name: string, kind: 'simulator' | 'device', products?: string, at = products) => {
     if (!products || !at) return warn(name, 'not built yet', RUNNER_NOT_BUILT);
     const behind = checkoutBehind(kind, products);
     return behind
       ? warn(name, `older than its sources in ios/: ${at}`, behind)
-      : { name, ok: true, detail: at };
+      : { name, ok: true, detail: `${at}${obtained(products)}` };
   };
   const sim = await iosProducts('simulator', false).catch(() => undefined);
   out.push(runner('ios runner (simulator)', 'simulator', sim));

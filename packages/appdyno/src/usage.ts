@@ -49,6 +49,7 @@ export const COMMANDS = {
       'full-urls': on,
       'no-install-consent': on,
       'accept-install-warnings': on,
+      'no-fetch': on,
       http: value('127.0.0.1:PORT'),
       'end-with-parent': unsaidOn,
       'put-back-after': unsaidValue,
@@ -90,7 +91,10 @@ export const COMMANDS = {
     what: 'replay flows, one after another, on each device; --retries runs a failed file again and calls it flaky, which --fail-on-flaky fails the run for (exit 1); --update-baselines saves what visual steps compare with; --measure keeps each as a scenario, by step',
   },
   doctor: { flags: { serial: value('S') }, what: 'what this machine and that device lack' },
-  'ios build': { what: 'build the iOS runners now' },
+  'ios build': {
+    flags: { 'no-fetch': on },
+    what: "fetch or build the iOS runners now; --no-fetch builds the simulator's here and asks the network for nothing",
+  },
   'push setup': {
     takes: 'apns|fcm',
     flags: { forget: on },

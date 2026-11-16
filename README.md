@@ -177,7 +177,7 @@ Claude Desktop installs appdyno from one file, with no terminal: download `appdy
 
 ### 4. Get a device ready
 
-- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. `appdyno ios build` builds appdyno's helpers for a simulator and an iPhone ahead of time, which takes a few minutes; otherwise the first action builds the one it needs. It also deletes builds of older versions, except one that a running process still uses.
+- **iOS simulator**: nothing more. Start one in Xcode's Simulator, or ask your agent to. The first action that needs appdyno's helper fetches the one its release built, under 1 MB, from the release's page on GitHub, and uses it only if its sha256 is the one the package carries; where it cannot, it builds one, which takes a few minutes. `--no-fetch` or `APPDYNO_NO_FETCH=1` turns the fetch off. `appdyno ios build` does this ahead of time for a simulator and an iPhone, whose helper is always built. It also deletes builds of older versions, except one that a running process still uses.
 - **Android emulator**: create one in Android Studio's Device Manager and start it.
 - **Android phone**: turn on Developer options (Settings, About phone, tap Build number seven times), then USB debugging in them. Connect the cable and answer Allow on the phone. For Wi-Fi, pair once under Wireless debugging, Pair device with pairing code: `appdyno pair <address> <code>`.
 - **iPhone**: connect the cable and answer Trust, turn on Developer Mode, and give it a development signing identity with a profile: [An iPhone or a simulator](docs/guides/clients.md#an-iphone-or-a-simulator) takes you through it. For Wi-Fi, pair once on the cable: `appdyno pair --device <udid>`.

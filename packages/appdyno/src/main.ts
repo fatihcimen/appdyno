@@ -83,6 +83,8 @@ function contextFrom(
   oneCall = false,
 ) {
   const env = process.env;
+  // by the environment, as the runner's products are looked for far from here, and by a window's process too
+  if (values['no-fetch']) env.APPDYNO_NO_FETCH = '1';
   const policy = policyOf(values, env);
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;
@@ -363,7 +365,11 @@ async function main(): Promise<number> {
         err(usage('ios build'));
         return 2;
       }
-      // both runners now, so a device session never waits for a build
+      if (
+        parseArgs({ args: rest.slice(1), options: COMMANDS['ios build'].flags }).values['no-fetch']
+      )
+        process.env.APPDYNO_NO_FETCH = '1';
+      // both runners now, so a device session never waits for one
       for (const kind of ['simulator', 'device'] as const)
         console.log(`${kind}: ${(await iosProducts(kind)) ?? 'no packaged sources'}`);
       console.log(`older builds removed: ${await pruneIosBuilds()}`);

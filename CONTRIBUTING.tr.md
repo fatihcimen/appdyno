@@ -98,6 +98,7 @@ Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#su
 | ---------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `APPDYNO_HELPERS`            | Mac uygulamasının `appdyno` komutu            | uygulamanın hazır derlenmiş görüntüleyicisinin ve yardımcılarının yeri: ilk kullanımda hiçbir şey derlenmez |
 | `APPDYNO_NATIVE_DIR`         | testler ve `scripts/build-app.mjs`            | görüntüleyicinin ve yardımcıların `~/Library/Caches/appdyno/native` yerine derlendiği yer                   |
+| `APPDYNO_RUNNER_URL`         | testler                                       | simülatör runner'ının zip'inin, sürümün sayfası yerine istendiği yer: sha256'sı yine paketinkidir           |
 | `APPDYNO_HELD_BY_HUB`        | hub, çalıştırdığı bir komut için              | komut hub ile birlikte biter                                                                                |
 | `APPDYNO_FORM_ALLOW_DEVICES` | masaüstü eklentisinin manifest dosyası        | kurulum formunun `--allow-devices` alanı: boş bırakılırsa liste yoktur                                      |
 | `APPDYNO_FORM_ALLOW_APPS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-apps` için                                                                                 |

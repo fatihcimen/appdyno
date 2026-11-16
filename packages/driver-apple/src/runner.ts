@@ -24,6 +24,7 @@ import {
 } from '@appdyno/core';
 import { childrenNamed, endLeftBehind, HUB } from './left-behind.js';
 import { runnerBuild } from './runner-build.js';
+import { dropFetched } from './runner-fetch.js';
 import { launchLanguage } from './manage.js';
 import { heldLaunch } from './sim-held.js';
 import { assertUdid, Simctl, xcodeEnv } from './simctl.js';
@@ -98,6 +99,8 @@ export type RunnerTransport = {
   stop?: 'kill';
   /** Whether the device is shutting down or off. */
   down?(udid: string): Promise<boolean>;
+  /** A build that did not start and was fetched, not built here: it is removed, so `build` builds one. Whether it was. */
+  unfit?(xctestrun: string): Promise<boolean>;
   /** Ends the runner app a start that failed left on the device, its xcodebuild killed under it as it launched. */
   leftOver?(udid: string): Promise<void>;
 };
@@ -108,6 +111,7 @@ const RUNNER_APP = 'dev.appdyno.runner.xctrunner';
 /** A simulator: the runner as built, a free port of the Mac's loopback (the simulator shares it). */
 export const simulatorTransport: RunnerTransport = {
   build: runnerBuild,
+  unfit: dropFetched,
   port: freePort,
   // an xcodebuild that booted its simulator again, after a person shut it down under it, shuts it down as it ends by
   // itself or by SIGTERM: a kill leaves it as it is, and the runner ended within 3 s, 5 of 5
@@ -194,7 +198,18 @@ export class IosRunnerLauncher {
       await beforeStart?.();
       await this.killServing();
       const deadline = waitEnds ?? Date.now() + START_MS;
-      return { ...(await this.start(build, deadline, target)), started: true };
+      const started = await this.start(build, deadline, target).catch(async (e: unknown) => {
+        // a device going down ends any runner: only one that would not start on a device that is up is taken for unfit
+        const unfit =
+          e instanceof DeviceError &&
+          e.code === 'AGENT_UNAVAILABLE' &&
+          !(await this.transport.down?.(this.udid).catch(() => false)) &&
+          (await this.transport.unfit?.(build.xctestrun));
+        if (!unfit) throw e;
+        reportProgress(`the fetched iOS runner did not start (${e.message}): one is built here`);
+        return this.start(await this.transport.build(), Date.now() + START_MS, target);
+      });
+      return { ...started, started: true };
     };
     for (;;) {
       const there = await running();

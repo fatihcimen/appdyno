@@ -161,6 +161,22 @@ describe('a start that cannot come', () => {
     expect(stopped).toHaveBeenCalledWith(expect.any(Number), 'SIGTERM');
   });
 
+  it('builds a runner in place of a fetched one that did not start, once', async () => {
+    writeFileSync(join(state, 'xcodebuild'), `#!${process.execPath}\nprocess.exit(65);\n`);
+    const builds = ['/fetched/x.xctestrun', '/built/x.xctestrun'];
+    const build = vi.fn(() =>
+      Promise.resolve({ xctestrun: must(builds.shift(), 'a build'), sha256: 'a'.repeat(64) }),
+    );
+    const unfit = vi.fn((xctestrun: string) => Promise.resolve(xctestrun.startsWith('/fetched')));
+    const open = () => Promise.reject(new Error('connection refused'));
+    await expect(
+      new IosRunnerLauncher(UDID, { ...through(2), open, build, unfit }).connect(),
+    ).rejects.toMatchObject({ message: 'the iOS runner stopped (xcodebuild exit 65)' });
+    // the built one stopped too, and is what the person hears of: nothing is built a second time
+    expect(unfit.mock.calls).toEqual([['/fetched/x.xctestrun']]);
+    expect(build).toHaveBeenCalledTimes(2);
+  });
+
   /** A runner whose port never answers, under an xcodebuild that says `said` and serves nothing. */
   const silent = (said: string) => {
     writeFileSync(

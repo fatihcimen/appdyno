@@ -58,6 +58,10 @@ jobs:
       - name: Android agent
         run: cd android && ./gradlew --console=plain :agent:assembleDebug
       - run: pnpm build
+      # before anything packs the package, which names this runner by its sha256: a first use on a simulator fetches it
+      # from the release and builds none
+      - name: The simulator runner
+        run: node scripts/build-runner.mjs
       # from the package just built, and run as a client runs it, before anything that cannot be taken back. Unsigned:
       # the packer signs with a certificate and key in PEM files, and this job's are in a keychain for codesign
       - name: The desktop extension
@@ -109,8 +113,10 @@ jobs:
           shopt -s nullglob
           version="$(node -p "require('../packages/appdyno/package.json').version")"
           cp "$RUNNER_TEMP/sim-smoke/device-summary.md" .
-          shasum -a 256 -- *.dmg "appdyno-$version.mcpb" appdyno.rb appcast.json* device-summary.md >SHA256SUMS
+          shasum -a 256 -- *.dmg "appdyno-$version.mcpb" appdyno-runner-simulator-*.zip appdyno.rb appcast.json* device-summary.md >SHA256SUMS
           cat SHA256SUMS
+          # the runner the package names is the one attached
+          grep -q "^$(node -p "require('../packages/appdyno/agents/ios-src/prebuilt.json').sha256")  appdyno-runner-simulator-" SHA256SUMS
       - name: The rehearsal's Mac app
         if: github.event_name != 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -119,6 +125,7 @@ jobs:
           path: |
             .app-build/*.dmg
             .app-build/*.mcpb
+            .app-build/appdyno-runner-simulator-*.zip
             .app-build/appdyno.rb
             .app-build/appcast.json*
             .app-build/device-summary.md
@@ -146,6 +153,10 @@ jobs:
           this="$(node -p "require('./package.json').name + '@' + require('./package.json').version")"
           if [ -n "$(npm view "$this" version 2>/dev/null)" ]; then
             echo "$this is published already"
+            # this run built the runner again, and the published package names the sha256 of the one built then
+            published="$(curl -sSfL "$(npm view "$this" dist.tarball)" | tar -xzO package/agents/ios-src/prebuilt.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).sha256")"
+            test "$published" = "$(node -p "require('./agents/ios-src/prebuilt.json').sha256")" ||
+              echo "::warning::the published package names another runner than the one this run attaches: its first use on a simulator builds one"
           else
             npm publish --provenance --access public
           fi

@@ -392,7 +392,11 @@ appdyno ilk kullanımda cihaza kendi ajanını kurar. Xiaomi her yeni kurulumda 
 
 App Store'dan [Xcode](https://apps.apple.com/app/xcode/id497799835) kurun, bir kez açıp sorduklarını onaylayın. Bulunduğunu görmek için `appdyno doctor` çalıştırın.
 
-**Simülatör için başka bir şey gerekmez**: ne hesap ne imzalama. Xcode'un Simulator uygulamasıyla açın ya da istemcinizden başlatmasını isteyin. appdyno'nun yardımcısını gerektiren ilk işlem onu derler, bu birkaç dakika sürer. Bunu önceden yapmak için:
+**Simülatör için başka bir şey gerekmez**: ne hesap ne imzalama. Xcode'un Simulator uygulamasıyla açın ya da istemcinizden başlatmasını isteyin. appdyno'nun yardımcısını gerektiren ilk işlem, sürümün derlediği yardımcıyı (1 MB'tan küçük) sürümün GitHub'daki sayfasından indirir ve yalnızca sha256'sı paketin taşıdığıyla aynıysa kullanır. Mac'te hiç yardımcı yokken bu ilk yanıt 5 s'de geldi; yardımcı indirilmeyip derlendiğinde, Xcode'u onu daha önce derlemiş bir Mac'te 21 s'de. Hiç derlememiş bir Mac'te birkaç dakika sürer.
+
+Sürümün yardımcısı kullanılamıyorsa appdyno yardımcıyı derler ve nedenini tek satırda söyler: indirme başarısız olur ya da sha256'sı farklıdır, Mac Intel'dir, Xcode'u sürümünkinden birden fazla ana sürüm uzaktadır ya da indirilen yardımcı başlamaz. Xcode 26.5'in derlediği Xcode 27.2 altında, 27.2'nin derlediği 26.5 altında çalıştı. Sunucuda ya da `appdyno ios build`'de `--no-fetch`, ya da `APPDYNO_NO_FETCH=1`, ağdan hiçbir şey istemez ve derler. `appdyno doctor` buradaki yardımcının indirildiğini mi derlendiğini mi söyler.
+
+İndirme, herkese açık bir dosyanın indirilmesidir ve sizden hiçbir şey göndermez: GitHub isteğin geldiği adresi, dosyanın adından da sürümü ve yardımcının kaynaklarını görür. Telemetri değildir; yardımcı zaten buradaysa hiçbir şey gönderilmez. Yardımcıyı önceden almak için:
 
 ```sh
 appdyno ios build

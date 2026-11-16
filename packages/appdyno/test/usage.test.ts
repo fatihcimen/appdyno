@@ -5,9 +5,10 @@ import { commandList, COMMANDS, helpFor, line, usage } from '../src/usage.js';
 describe('usage', () => {
   it('says a command as its table has it', () => {
     expect(line('mcp')).toBe(
-      'mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--allow-data-loss virtual|all] [--allow-power virtual|all] [--allow-write dir]... [--allow-build] [--no-home] [--silent] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--flight-seconds N] [--full-urls] [--no-install-consent] [--accept-install-warnings] [--http 127.0.0.1:PORT]',
+      'mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--allow-data-loss virtual|all] [--allow-power virtual|all] [--allow-write dir]... [--allow-build] [--no-home] [--silent] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--flight-seconds N] [--full-urls] [--no-install-consent] [--accept-install-warnings] [--no-fetch] [--http 127.0.0.1:PORT]',
     );
     expect(line('install')).toBe('install [--yes] [--dry-run] [--remove]');
+    expect(line('ios build')).toBe('ios build [--no-fetch]');
     expect(line('test')).toBe(
       'test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--share] [--retries N [--fail-on-flaky]] [--update-baselines] [--measure [--iterations N] [--measurements dir]]',
     );
@@ -86,13 +87,14 @@ describe('usage', () => {
       ['appdyno', 'perf', 'dashboard', '[--app'],
       ['appdyno', 'perf', 'survey', '--app'],
     ]);
-    expect(usage('ios build')).toBe('usage: appdyno ios build');
+    expect(usage('ios build')).toBe('usage: appdyno ios build [--no-fetch]');
   });
 
   it('lists a short command beside what it does, a long one above it', () => {
     const list = commandList().split('\n');
     expect(list).toContain('  devices          the connected devices');
-    expect(list).toContain('  ios build        build the iOS runners now');
+    const ios = list.indexOf('  ios build [--no-fetch]');
+    expect(list[ios + 1]).toMatch(/^ {19}fetch or build the iOS runners now/);
     const mcp = list.findIndex((l) => l.startsWith('  mcp '));
     expect(list[mcp + 1]).toMatch(/^ {19}the MCP server over stdio/);
   });

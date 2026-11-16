@@ -392,7 +392,11 @@ appdyno installs its own agent on the device the first time it is used. A Xiaomi
 
 Install [Xcode](https://apps.apple.com/app/xcode/id497799835) from the App Store, open it once, and accept what it asks. Run `appdyno doctor` to confirm it was found.
 
-**A simulator needs nothing more**, no account and no signing. Open one with Xcode's Simulator app, or ask your client to boot one. The first action that needs appdyno's helper builds it, which takes a few minutes. To do that ahead of time:
+**A simulator needs nothing more**, no account and no signing. Open one with Xcode's Simulator app, or ask your client to boot one. The first action that needs appdyno's helper fetches the one its release built, under 1 MB, from the release's page on GitHub, and uses it only if its sha256 is the one the package carries. With no helper on the Mac, that first answer came in 5 s, and in 21 s when the helper was built instead, on a Mac whose Xcode had built it before; one that never has takes a few minutes.
+
+appdyno builds the helper, and says why in one line, where the release's cannot be used: the download fails or has another sha256, the Mac is an Intel one, its Xcode is more than one major version from the release's, or the fetched helper does not start. One built by Xcode 26.5 ran under Xcode 27.2, and one built by 27.2 under 26.5. `--no-fetch` on the server or on `appdyno ios build`, or `APPDYNO_NO_FETCH=1`, asks the network for nothing and builds. `appdyno doctor` says whether the helper here was fetched or built.
+
+The fetch is a download of a public file and sends nothing of yours: GitHub sees the address it comes from, and the release and the helper's sources in the file's name. It is not telemetry, and nothing is sent when the helper is already here. To get the helper ahead of time:
 
 ```sh
 appdyno ios build
