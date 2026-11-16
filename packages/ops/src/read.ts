@@ -60,7 +60,7 @@ const maxPxOf = (size: { w: number; h: number }, width?: number, points?: boolea
 
 /** The whole picture in a file: a folder gets a new name, and what is there stays unless asked. */
 /**
- * The screen into a file, at full size unless asked narrower, and the image as `screenshot` gives one beside it unless
+ * The screen into a file, at full size unless asked narrower, and the image as `take_screenshot` gives one beside it unless
  * `inline` is false: a model that only has the file reads it back with a call of its own, where the image is a few tens
  * of kB.
  */
@@ -139,7 +139,7 @@ const RAW_FLAGS = [
   'scrollable',
 ] as const;
 
-/** An element as `screen raw` gives it: its words as cleaned as the list's, and no password field's text. */
+/** An element as `read_screen raw` gives it: its words as cleaned as the list's, and no password field's text. */
 function rawNode(e: UiElement, clean: (s: string) => string) {
   return {
     ...(e.ref && { ref: e.ref }),
@@ -155,7 +155,7 @@ function rawNode(e: UiElement, clean: (s: string) => string) {
 }
 
 /**
- * The tree of the screen a call left, as `screen` with `raw` gives it: the one the call's own answer read, and a read
+ * The tree of the screen a call left, as `read_screen` with `raw` gives it: the one the call's own answer read, and a read
  * of its own only where an action came after that.
  */
 export async function rawNodes(ctx: ServerContext) {

@@ -77,7 +77,7 @@ function placed(dom: Dom, view: Rect | undefined) {
 
 /**
  * A screen with a web view gets what its page holds and the accessibility tree does not show, marked as
- * web: tap goes by x,y, and `webview` by selector. Undefined when it cannot be read: not debuggable.
+ * web: tap goes by x,y, and `inspect_app` by selector. Undefined when it cannot be read: not debuggable.
  */
 export async function webLines(
   s: Session,

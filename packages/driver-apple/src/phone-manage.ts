@@ -166,7 +166,7 @@ export class PhoneApps implements AppManager {
     return (await this.ctl.pids(app)).length > 0 ? 'running' : 'stopped';
   }
 
-  /** iOS has no grant: the answer is forgotten, so that the app asks again and `alert` answers it. */
+  /** iOS has no grant: the answer is forgotten, so that the app asks again and its alert is answered. */
   async permission(app: string, grant: boolean, service: string) {
     await this.resetPermission(assertBundle(app), service);
     return `${service} for ${app} is reset to ask: when the app asks, alert ${grant ? 'allow' : 'deny'}`;

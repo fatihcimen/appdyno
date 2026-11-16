@@ -1,5 +1,5 @@
 /**
- * What stands between a device and a live picture, in one table: a viewer's banner, `mirror status`,
+ * What stands between a device and a live picture, in one table: a viewer's banner, `show_mirror status`,
  * `doctor` and a refusal all say the same words.
  */
 export const NEEDS = {

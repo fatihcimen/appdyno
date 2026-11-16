@@ -15,7 +15,7 @@ import { windowMovie } from './window-movie.js';
 import { windowPerf } from './window-perf.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
-/** What an agent's `app` call does that puts an app on the device or takes one off. */
+/** What an agent's `manage_app` call does that puts an app on the device or takes one off. */
 const APPS_CHANGE = new Set(['install', 'uninstall', 'build_and_run']);
 /** A turn shows in the picture's shape by then, or the app in front refused it. */
 const TURN_MS = 2_000;

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" width="960" height="500" role="img" aria-labelledby="title desc">
   <title id="title">Bir araç çağrısı nasıl ilerler</title>
-  <desc id="desc">Bir MCP istemcisi bir seçiciyle tap çağırır. mcp paketi onu, argümanlarının sıkı denetlendiği ops’taki araca iletir. Araç öğeyi bulmak için ekranı yeniden okur, sonra sürücü üzerinden ajana ya da runner’a tek bir act isteği gönderir: oraya dokun, durul, oku. Ajan ekran 200 ms boyunca durgun kalana kadar bekler ve durulmuş ağacı geri gönderir. İstemci neyin değiştiğini alır.</desc>
+  <desc id="desc">Bir MCP istemcisi bir seçiciyle tap_screen çağırır. mcp paketi onu, argümanlarının sıkı denetlendiği ops’taki araca iletir. Araç öğeyi bulmak için ekranı yeniden okur, sonra sürücü üzerinden ajana ya da runner’a tek bir act isteği gönderir: oraya dokun, durul, oku. Ajan ekran 200 ms boyunca durgun kalana kadar bekler ve durulmuş ağacı geri gönderir. İstemci neyin değiştiğini alır.</desc>
   <style>
     svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -72,7 +72,7 @@
 
   <!-- there -->
   <path class="line s-p" marker-end="url(#ap)" d="M107 164H289"/>
-  <text class="text" x="118" y="154">tap { selector }</text>
+  <text class="text" x="118" y="154">tap_screen { selector }</text>
 
   <path class="line s-h" marker-end="url(#ah)" d="M291 204H473"/>
   <text class="text" x="302" y="194">sıkı denetlenir</text>

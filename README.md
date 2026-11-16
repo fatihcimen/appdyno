@@ -50,7 +50,7 @@ its last log lines:
   launch_app starts it again; why it died is above, with its last log lines, and crashes has the whole report
 ```
 
-`crashes` then names the function, `discount(forQuantity:)`, and the same checkout saved as a flow fails in CI until the bug is fixed.
+`read_logs` with `source: crashes` then names the function, `discount(forQuantity:)`, and the same checkout saved as a flow fails in CI until the bug is fixed.
 
 Ask it as well to send your app a push, to open each link your app opens, or to measure its cold launch and keep it as a baseline. `npx -y appdyno doctor` says what this Mac is missing, and [Install](#install) covers a phone, the Mac app and any other client.
 
@@ -65,19 +65,19 @@ There is no second call to look, and no fixed sleep: an answer says `settled` wh
 
 ## What an agent can do
 
-| what an agent can do                                                                                                                                                                                                                                                                       | its tools                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| **See and act.** Read the screen as elements and act on one by text, id or ref: tap, type, swipe, scroll to it, long press, drag, pinch, press a key. Up to 30 steps in one call.                                                                                                          | `screen` `find` `tap` `type_text` `swipe` `gesture` `steps` `wait_for` |
-| **Native views.** The view tree under the framework that draws it: SwiftUI, UIKit, Compose, Flutter, React Native or a web view, on a simulator and on Android.                                                                                                                            | `screen` `views`                                                       |
-| **Push notifications.** Send a push of each type the device takes, from a title and a body or from the platform's own JSON.                                                                                                                                                                | `push`                                                                 |
-| **Links.** Open a deep link, a universal link or an App Link. List the links an installed app opens.                                                                                                                                                                                       | `open_link`                                                            |
-| **Conditions.** Dark mode, text size, language, a slow network, airplane mode and biometrics, each put back when the session ends. A location, and the way the screen is turned. A memory warning, a shake, photos into the library, and an end in the background as the system makes one. | `device_setting` `set_location` `set_orientation` `terminate_app`      |
-| **Measure.** Launch time, frames, memory, CPU, network bytes and energy, read from the platform's own tools and kept with their raw output. A gate fails a change that made the app slower.                                                                                                | `perf_launch` `perf_scroll` `perf_snapshot` `perf_compare` and more    |
-| **Evidence.** Video, a report of each step, logs, crashes, network traffic, accessibility audits and visual diffs.                                                                                                                                                                         | `record` `report` `logs` `crashes` `network` `audit` `visual`          |
-| **Flows.** What an agent did once runs again with no model, on another device, and in CI.                                                                                                                                                                                                  | `flow`                                                                 |
-| **A person, too.** A live window you can touch while the agent drives. When only a person can go on, such as at Face ID, the agent asks one and waits until they say done.                                                                                                                 | `mirror` `hand_off`                                                    |
+| what an agent can do                                                                                                                                                                                                                                                                       | its tools                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| **See and act.** Read the screen as elements and act on one by text, id or ref: tap, type, swipe, scroll to it, long press, drag, pinch, press a key. Up to 30 steps in one call.                                                                                                          | `read_screen` `tap_screen` `type_text` `swipe_screen` `press_key` `run_steps` `check_element` |
+| **Native views.** The view tree under the framework that draws it: SwiftUI, UIKit, Compose, Flutter, React Native or a web view, on a simulator and on Android.                                                                                                                            | `read_screen` `views`                                                                         |
+| **Push notifications.** Send a push of each type the device takes, from a title and a body or from the platform's own JSON.                                                                                                                                                                | `send_push`                                                                                   |
+| **Links.** Open a deep link, a universal link or an App Link. List the links an installed app opens.                                                                                                                                                                                       | `open_link`                                                                                   |
+| **Conditions.** Dark mode, text size, language, a slow network, airplane mode and biometrics, each put back when the session ends. A location, and the way the screen is turned. A memory warning, a shake, photos into the library, and an end in the background as the system makes one. | `set_device` `transfer_files` `manage_app`                                                    |
+| **Measure.** Launch time, frames, memory, CPU, network bytes and energy, read from the platform's own tools and kept with their raw output. A gate fails a change that made the app slower.                                                                                                | `measure_performance` `compare_performance`                                                   |
+| **Evidence.** Video, a report of each step, logs, crashes, network traffic, accessibility audits and visual diffs.                                                                                                                                                                         | `record_session` `read_logs` `capture_network` `check_screen`                                 |
+| **Flows.** What an agent did once runs again with no model, on another device, and in CI.                                                                                                                                                                                                  | `run_flow`                                                                                    |
+| **A person, too.** A live window you can touch while the agent drives. When only a person can go on, such as at Face ID, the agent asks one and waits until they say done.                                                                                                                 | `show_mirror` `ask_person`                                                                    |
 
-All 28 tools are in [Tools](docs/reference/tools.md). Each is also [a command](docs/reference/cli.md), and a call in [the library](docs/reference/library.md).
+All 28 tools are in [Tools](docs/reference/tools.md), with [the names from before 1.3.0](docs/reference/tools.md#names-before-130). Each is also [a command](docs/reference/cli.md), and a call in [the library](docs/reference/library.md).
 
 ### Push notifications and links
 
@@ -85,7 +85,7 @@ All 28 tools are in [Tools](docs/reference/tools.md). Each is also [a command](d
 
 <p align="center"><sub>A real run on a simulator, through MCP, with the times it took on a busy Mac.</sub></p>
 
-`push` sends a push by type, and answers with the screen after it. Asked with no type, it says which types this device takes, how each one is delivered, and the payload it would send.
+`send_push` sends a push by type, and answers with the screen after it. Asked with no type, it says which types this device takes, how each one is delivered, and the payload it would send.
 
 - **On a simulator** an alert goes by `simctl` and reaches the app's own code, from fields or from APNs' own payload with a badge, a sound and a category.
 - **On Android** a push always goes to the app itself. A debuggable build that includes Firebase Messaging takes alert, rich, background and Live Activity pushes as real FCM messages, handed straight to its Firebase SDK, with no Firebase project or key. `tapped` opens the app as a tapped notification does, with the push's data in the intent that launches it. Any other build takes `tapped` only, and the answer says what the rest need.
@@ -187,7 +187,7 @@ Claude Desktop installs appdyno from one file, with no terminal: download `appdy
 ```sh
 appdyno doctor             # what is here, what is missing, and how to fix it
 appdyno devices            # what is connected
-appdyno screen             # what is on the screen
+appdyno read-screen        # what is on the screen
 appdyno hub                # every device in one window you can touch
 appdyno perf survey --app com.example.app   # every measure on this device, then a page of them
 ```

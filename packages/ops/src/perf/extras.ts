@@ -106,7 +106,7 @@ const anonLines = (v: AnonMemory) => {
     : [`Play: no limit for a ${v.state} process with ${v.ramMb} MB of RAM`];
 };
 
-/** What perf_snapshot's `also` can read beside its CPU, memory and frames, each by its name. */
+/** What the snapshot metric's `also` can read beside its CPU, memory and frames, each by its name. */
 export const EXTRAS = {
   threads: extra({
     read: (a) => a.measure(a.s, 'threads')(a.pkg, a.windowMs),

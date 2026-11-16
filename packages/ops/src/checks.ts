@@ -16,7 +16,7 @@ import { motionText, movedIn, watchScreen } from './watch.js';
 /** A wait that read nothing: screen says why the device refuses it. */
 export const UNREAD = 'screen reads it once more and says what the device answered';
 
-/** How long an `assert` watches with no time of its own. */
+/** How long a check watches with no time of its own. */
 const WATCH_CHECK_MS = 2_000;
 
 /** A selector that names something: its words, with no key set to nothing. */

@@ -23,7 +23,7 @@ export type Policy = {
   allowDataLoss?: 'virtual' | 'all';
   /** An input on the system's own power, emergency or erase controls goes ahead with no question asked, as above. */
   allowPower?: 'virtual' | 'all';
-  /** `app build_and_run` runs a project's own build on this Mac with no question asked: `--allow-build`. */
+  /** `manage_app build_and_run` runs a project's own build on this Mac with no question asked: `--allow-build`. */
   allowBuild?: boolean;
   /** Folders a tool call may write in beside the project's and the state folder: `--allow-write`. */
   writeDirs?: string[];
@@ -168,7 +168,7 @@ export function checkApp(policy: Policy, pkg: string): string {
 
 /**
  * A new simulator's id is not known before it is made, so no allow list names it: none is made only to be refused, by
- * `simulator create` or the hub's New Simulator alike.
+ * `manage_simulator create` or the hub's New Simulator alike.
  */
 export function checkCreate(policy: Policy) {
   if (policy.devices)

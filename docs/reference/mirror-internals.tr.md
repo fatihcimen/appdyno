@@ -9,13 +9,13 @@
 Emülatörün karesi, tam kendi boyutundaki bir dosyada RGBA'dır, en üst satır önce (proto'nun yorumu aşağıdan yukarı der,
 `screencap` ile karşılaştırılan bir kare öyle olmadığını söyler). Boyut verilmeden ya da daha büyük bir dosyaya istendiğinde her kareye yanıt verir ve
 hiçbir şey yazmaz. Dönen bir misafir sistem aynı biçimdeki bir karede yana yatık çizer; bu yüzden görüntü, yeni bir oturum açılmadan
-görüntüleyicide dik çevrilir. Bir simülatör de yüzeyinde aynısını yapar, geri çağrı olmadan: okuma yardımcısı öndeki uygulamanın nasıl çizildiğini saniyede dört kez söyler; böylece dönmeyen bir uygulama döndürülmüş bir cihazda dik kalır ve bir dokunuş inerken geri döndürülür. `simulator` ile başlatılan bir emülatör, `APPDYNO_EMULATOR_ARGS` yanında `-grpc <free port> -grpc-use-token` alır (bunlar
+görüntüleyicide dik çevrilir. Bir simülatör de yüzeyinde aynısını yapar, geri çağrı olmadan: okuma yardımcısı öndeki uygulamanın nasıl çizildiğini saniyede dört kez söyler; böylece dönmeyen bir uygulama döndürülmüş bir cihazda dik kalır ve bir dokunuş inerken geri döndürülür. `manage_simulator` ile başlatılan bir emülatör, `APPDYNO_EMULATOR_ARGS` yanında `-grpc <free port> -grpc-use-token` alır (bunlar
 `-grpc` içermiyorsa). Port, adb'ninki adb'ye ait olduğu gibi, emülatöre aittir. Görüntünün dosyası `0600` izniyle durum
 klasöründedir ve oturumla birlikte gider.
 
 ## Durumlar ve her birini neyin test ettiği
 
-Bir pencerenin neyi beklediği tek bir tablodadır, `packages/core/src/mirror/need.ts` içindeki `NEEDS`; bunu pencerenin uyarı bandı, `mirror status` ve bir ret kullanır.
+Bir pencerenin neyi beklediği tek bir tablodadır, `packages/core/src/mirror/need.ts` içindeki `NEEDS`; bunu pencerenin uyarı bandı, `show_mirror status` ve bir ret kullanır.
 
 | ne olur                             | neyle test edildi                                              |
 | ----------------------------------- | -------------------------------------------------------------- |
@@ -58,7 +58,7 @@ Yayın önce uzak masaüstü profilini ister, yapılandırmaya göre 20 ile 60 M
 `--quality standard` isterse daha düşük olanı, 4:2:0 olarak alır. Görüntüler görüntüleyiciye `0600` izinli adlandırılmış bir pipe ile gider; pipe,
 iki uç da onu tuttuğu anda diskten kaldırılır. Paketlerdeki bir boşluk, bir anahtar görüntü gelene kadar görüntüyü tutar: donma olur, asla
 bozuk görüntü olmaz. En çok üç görüntü bekler; ötesinde biri atılır ve bu da görüntüyü bir anahtar görüntüye kadar tutar.
-`mirror stats`, yayın başladığından beri `lostPackets`, `latePackets`, `heldPictures` ve `droppedPictures` değerlerini verir.
+`show_mirror stats`, yayın başladığından beri `lostPackets`, `latePackets`, `heldPictures` ve `droppedPictures` değerlerini verir.
 
 Bir yayının teklifi, telefondan, varsayılan bir saatlik süre yerine, bizden 30 s boyunca rapor gelmezse yayını bitirmesini ister: doğrudan
 öldürülen bir süreç telefonun yayınını 28 ile 30 s arasında açık bıraktı, tek çalıştırmada, göstergesini de onunla birlikte. Başlattığımız yayınlar hatırlanır,
@@ -277,11 +277,11 @@ Söyledikleri:
 
 Bir akış kaydetmek:
 
-- Bir iPhone'da bir kayıt ve panel, ilk kullanımın başlattığı runner'ı ile okur: `inspector` yerleri olmadan sözler ve id'ler verir, bu yüzden runner yokken bir tıklamanın adlandırılacağı bir öğe olmaz ve pencere nedenini söyler.
+- Bir iPhone'da bir kayıt ve panel, ilk kullanımın başlattığı runner'ı ile okur: `inspect_app` `ax_list` yerleri olmadan sözler ve id'ler verir, bu yüzden runner yokken bir tıklamanın adlandırılacağı bir öğe olmaz ve pencere nedenini söyler.
 - Bir iPhone'da ya da bir Xiaomi'de yapılan bir akış orada, bir simülatörde ve bir emülatörde yeniden oynatıldı. Bir simülatörde ya da emülatörde yapılan, diğerinde yeniden oynatıldı, hiçbir telefonda değil.
 - Bir cihazın kendi klavyesindeki tıklamalar yalnızca yerine geçen bir cihazda kaydedildi. Gerçek bir imlecin üzerinde durması, bir tekerlek ve bir trackpad elle denenmedi: bir testin penceresine gönderilmiş tıklamalar, sürüklemeler ve üzerinde durmalar verilir.
 - Cihazın kendi klavyesindeki tıklamalar sonradan alandan anlaşılır, bu yüzden Return tuşu görülmez: onu Mac'in klavyesi kaydeder ve pencere bunu söyler.
-- Başka bir süreçten gelen `flow start` bir pencereye çeyrek saniye içinde ulaşır ve bu sürede yapılan tıklamalar kaydedilmez. Aynı anda tek bir kayda yazan iki süreç bir adım kaybedebilir.
+- Başka bir süreçten gelen `run_flow record` bir pencereye çeyrek saniye içinde ulaşır ve bu sürede yapılan tıklamalar kaydedilmez. Aynı anda tek bir kayda yazan iki süreç bir adım kaybedebilir.
 - Üzerinde durma ve bir doğrulama en son okunana göre gider; bu yüzden son okumanın süresi içinde değişen bir ekran eski halini gösterir ve o zamandan beri gelen bir şeyin üstünde duran imleç hareket edene kadar hiçbir şey söylemez.
 
 ## Wi-Fi, çalıştırıldığı haliyle

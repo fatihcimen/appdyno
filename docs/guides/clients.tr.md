@@ -142,6 +142,8 @@ Kenar çubuğundaki **Yardım** ya da command-?, en son önde olan cihaz ve uygu
 
 `--scope user` sunucuyu bütün projelerde kullanılır yapar. Bu seçenek olmadan sunucu yalnızca bulunduğunuz klasöre eklenir.
 
+Bir araç için 1.3.0'dan önceki bir adla kaydedilmiş bir izin, örneğin `mcp__appdyno__screen`, artık hiçbir araçla eşleşmez: bunun yerine bütün sunucuya izin verin, `permissions.allow` içinde `mcp__appdyno` olarak.
+
 ### Claude Desktop
 
 Masaüstü uygulamasındaki sohbet içindir. Claude Code'un listesini okumaz, Claude Code da bunu okumaz.
@@ -277,7 +279,7 @@ Ayarlarında "MCP" kelimesini arayın. Bir komut istiyorsa yukarıdakini verin. 
 
 Bunlar üreticisinin bulutunda çalışır. Mac'inizde bir program başlatamaz, `127.0.0.1` adresini de göremezler. appdyno'ya ulaşmaları için bir giriş kapısı gerekir ve appdyno bunu kendiliğinden açmaz: arada bize ait bir servis yoktur, tüneli siz çalıştırır, siz kapatırsınız.
 
-**Önce bunu okuyun. Adresi ve token'ı bilen herkes cihazlarınızı kullanabilir.** Yalnızca tek bir uygulamayı değil: ekranda görünen her şeyi okuyabilir, yazı yazabilir, uygulama kurup kaldırabilir, bağlantı açabilir, ayarları değiştirebilir ve bir aracın yol aldığı yerlerde bu Mac'te dosya okuyup yazabilir (`record`, `report`, `visual`, `flow`, `app install`). Araçların döndürdüğünü istemcinin üreticisi de görür, yani ekranı gördüğünü varsayın.
+**Önce bunu okuyun. Adresi ve token'ı bilen herkes cihazlarınızı kullanabilir.** Yalnızca tek bir uygulamayı değil: ekranda görünen her şeyi okuyabilir, yazı yazabilir, uygulama kurup kaldırabilir, bağlantı açabilir, ayarları değiştirebilir ve bir aracın yol aldığı yerlerde bu Mac'te dosya okuyup yazabilir (`record_session`, `check_screen`, `run_flow`, `manage_app install`). Araçların döndürdüğünü istemcinin üreticisi de görür, yani ekranı gördüğünü varsayın.
 
 Tünel açmadan önce:
 
@@ -324,12 +326,12 @@ Bir çağrı sürerken bağlantı koparsa, çağrı cihazda da durur.
 
 Tarayıcıdaki ChatGPT yalnızca uzak sunuculara ulaşır. Plugins altından bağlanır ve token gönderemez: formu OAuth, No authentication ya da ikisini birden sunar.
 
-| plan            | ne elde edersiniz                                                                                                                                                                                                                                                                                                |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Business        | her şey. Sunucuyu yalnızca yönetici ya da sahip ekleyebilir                                                                                                                                                                                                                                                      |
-| Enterprise, Edu | her şey. Kimin ekleyebileceğine yönetici karar verir                                                                                                                                                                                                                                                             |
-| Pro             | yalnızca salt okunur işaretli araçlar: `screen`, `find`, `screenshot`, `wait_for`, `assert`, `logs`, `crashes`, `audit`, `device_info`, `list_devices`, `visual` ve okuma yapan `perf_` araçları. `tap` yok, yazı yazma yok, `use_device` de yok: sunucuyu `--device` ile ya da tek cihaza izin vererek başlatın |
-| Plus, Free      | OpenAI'ın sayfaları bir şey söylemiyor. Yokmuş gibi düşünün ve masaüstü uygulamasını kullanın                                                                                                                                                                                                                    |
+| plan            | ne elde edersiniz                                                                                                                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business        | her şey. Sunucuyu yalnızca yönetici ya da sahip ekleyebilir                                                                                                                                                                 |
+| Enterprise, Edu | her şey. Kimin ekleyebileceğine yönetici karar verir                                                                                                                                                                        |
+| Pro             | yalnızca salt okunur işaretli araçlar: `list_devices`, `read_screen`, `check_element` ve `read_logs`. `tap_screen` yok, yazı yazma yok, `use_device` de yok: sunucuyu `--device` ile ya da tek cihaza izin vererek başlatın |
+| Plus, Free      | OpenAI'ın sayfaları bir şey söylemiyor. Yokmuş gibi düşünün ve masaüstü uygulamasını kullanın                                                                                                                               |
 
 Masaüstü uygulamasında bunların hiçbiri yoktur: appdyno'yu Mac'inizde çalıştırır. Mümkünse [onu kullanın](#codex-ve-chatgpt-masaüstü-uygulaması).
 
@@ -355,7 +357,7 @@ Her isteğin **120 saniyesi vardır, ne kadar ilerleme bildirirse bildirsin**, b
 
 **Kendi tünelinizle.** [HTTP sunucusunu](#http-sunucusu) ve bir tüneli başlatın, sonra özel sunucuyu Server URL olarak `https://<your tunnel>/mcp/<token>` ve No authentication ile ekleyin. Bu adrese sahip olan herkes içeridedir, onu parola gibi saklayın.
 
-ChatGPT her yazma işleminde varsayılan olarak onay ister. Bir telefonun araçları için bunu değiştirmek sizin kararınızdır. Bir kullanıcı bildirimine göre bir aracın görselini boş gösteriyor: `screenshot` boş dönerse `screen` kullanın.
+ChatGPT her yazma işleminde varsayılan olarak onay ister. Bir telefonun araçları için bunu değiştirmek sizin kararınızdır. Bir kullanıcı bildirimine göre bir aracın görselini boş gösteriyor: `take_screenshot` boş dönerse `read_screen` kullanın.
 
 ### Tarayıcıda Claude
 

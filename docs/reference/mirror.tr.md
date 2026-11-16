@@ -20,8 +20,8 @@ appdyno mirror close | status | stats
 
 `--detach` ile pencere `--quality` ve `--wifi` seçeneklerini alır; bu komutun yanında kaldığı bir pencere için olan `--codec`, `--no-input`, `--headless`, `--seconds`, `--record` ve `--focus` seçeneklerinin hiçbirini almaz. `--pair` tam iki `--device` ister ve `--detach` ile kullanılmaz.
 
-`mirror` aracında `open`, `close`, `status` ve `stats` vardır. MCP üzerinden hiçbir kare geçmez: bir ajanın `screenshot`
-ve `record` araçları vardır. `hand_off`, bir ajanın yapamadığını bir kişiden ister.
+`show_mirror` aracında `open`, `close`, `status` ve `stats` vardır. MCP üzerinden hiçbir kare geçmez: bir ajanın `take_screenshot`
+ve `record_session` araçları vardır. `ask_person`, bir ajanın yapamadığını bir kişiden ister.
 
 ## Görüntü nereden gelir
 
@@ -34,7 +34,7 @@ ve `record` araçları vardır. `hand_off`, bir ajanın yapamadığını bir ki�
 
 ## Bir pencerenin durumları
 
-`connecting`, `live`, `waiting {need}`, `reconnecting {attempt}`, `stopped {why}`. Bir pencerenin neyi beklediği uyarı bandında, `mirror status`'ta ve bir retta aynı biçimde, her seferinde kendi sözleri ve çözümüyle söylenir. Bir bekleme her saniye yeniden sorar ve engel kalkınca kendiliğinden sürer.
+`connecting`, `live`, `waiting {need}`, `reconnecting {attempt}`, `stopped {why}`. Bir pencerenin neyi beklediği uyarı bandında, `show_mirror status`'ta ve bir retta aynı biçimde, her seferinde kendi sözleri ve çözümüyle söylenir. Bir bekleme her saniye yeniden sorar ve engel kalkınca kendiliğinden sürer.
 
 | ne olur                             | ne yapar                                                                                                                           |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -113,15 +113,15 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 #### Loglar ve Çökmeler
 
-- **Loglar**, öndeki uygulamanın logunu geldikçe gösterir: `logs` aracının okuduğu satırları aynı gizlemeyle; bir satırdaki belirteç, parola ya da anahtar gizlenir.
+- **Loglar**, öndeki uygulamanın logunu geldikçe gösterir: `read_logs` aracının okuduğu satırları aynı gizlemeyle; bir satırdaki belirteç, parola ya da anahtar gizlenir.
 - Öndeki uygulamayı Performans gibi izler, her 5 s'de bir sorar ve başka bir uygulama için baştan başlar. Kişinin kendi uygulaması olmayan ya da sunucunun uygulama listesinde bulunmayan bir uygulama adıyla söylenir ve hiçbir şey okunmaz.
 - Ayrıntılı'dan Hatalar'a bir düzeyi, bir araması, durduğu yerden okumayı sürdüren Duraklat ve Sürdür'ü, bir seçimin dokunduğu satırların tamamını alan Kopyala'sı ve görünümü boşaltıp cihazın logunu asla silmeyen Temizle'si vardır.
-- Yanındaki **Çökmeler**, uygulamanın son 5 raporunu `crashes` aracının verdiği gibi listeler; her biri ilk satırlarına ve raporun tamamının bu Mac'teki yoluna açılır.
+- Yanındaki **Çökmeler**, uygulamanın son 5 raporunu `read_logs` aracının `source: crashes` ile verdiği gibi listeler; her biri ilk satırlarına ve raporun tamamının bu Mac'teki yoluna açılır.
 - Log yalnızca panel görünürken ve duraklatılmamışken 2 s'de bir okunur ve arkada çalışan bir şey bırakılmaz. Bir iPhone'da çalışan uygulamanın bu Mac'in okuyabileceği bir logu yoktur; panel bunu, neyin okunabildiğiyle birlikte söyler.
 
 #### Ağ
 
-- Uygulamanın isteklerini `network` aracının verdiği gibi, o aracın cihaz için tuttuğu yakalamadan gösterir: bir ajanın başlattığı yakalama burada, burada başlatılan da ajana görünür ve ikisi de aynı biçimde gizlenir. Her isteğin yöntemi, adresi, durumu, süresi ve boyutu vardır; seçilen istek tam olarak görünür.
+- Uygulamanın isteklerini `capture_network` aracının verdiği gibi, o aracın cihaz için tuttuğu yakalamadan gösterir: bir ajanın başlattığı yakalama burada, burada başlatılan da ajana görünür ve ikisi de aynı biçimde gizlenir. Her isteğin yöntemi, adresi, durumu, süresi ve boyutu vardır; seçilen istek tam olarak görünür.
 - Yalnızca bu cihazın sahip olduğu yolları sunar: simülatörde uygulamayı yeniden başlatan, bu yüzden bir kayıt ya da ölçüm sürerken reddedilen sonda; Android'de baytlar ve build'in kaydettiği yerlerde Android 14'ten itibaren paketler; ikisi de adres olmadan sayar.
 - Proxy yalnızca cihaz zaten birinden geçiyorsa sunulur ve listesi, bu araç proxy'nin kendi dışa aktarımını okuyabiliyorsa okunur. Hiçbir pencere, hiçbir cihazda proxy ayarlamaz.
 - Hiçbir yolun istekleri listelemediği yerde, bir iPhone'da ya da proxy'si olmayan bir Android'de, panel kişinin neye ihtiyacı olduğunu söyler.
@@ -129,7 +129,7 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 #### Erişilebilirlik
 
-- `audit` aracının gösterilen ekranda bulduklarını türlerine göre, her türü sayarak gösterir. İmlecin altındaki öğenin kontrastını söyleyen denetim de odur: tek denetim, asla iki.
+- `check_screen` aracının `check: accessibility` ile gösterilen ekranda bulduklarını türlerine göre, her türü sayarak gösterir. İmlecin altındaki öğenin kontrastını söyleyen denetim de odur: tek denetim, asla iki.
 - Ekran panel görünürken okunur ve bir saniye aynı kaldığında denetlenir, çünkü bir denetim cihazın sırasını saniyelerce tutar. Yeni bir ekran yeniden denetlenir, **Yeniden Denetle** de gösterileni denetler.
 - Kayıt sürerken hiçbir denetim çalışmaz, çünkü bir tıklama o zaman kendi yaptığı ekranla adlandırılırdı; panel bunu söyler.
 - Seçilen bir sorun, imlecin altındaki öğe gibi, cihazın görüntüsünde işaretlenir.
@@ -145,7 +145,7 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 #### Bildirim
 
-- Bir ajanın çağırdığı araç olan `push` ile bir uygulamaya push gönderir. Dosya menüsünde ve Diğer Denetimler içinde bulunan **Bildirim Gönder…** (⇧⌘P) onu gösterir ve her seferinde araca bu cihazın neleri aldığını sorar.
+- Bir ajanın çağırdığı araç olan `send_push` ile bir uygulamaya push gönderir. Dosya menüsünde ve Diğer Denetimler içinde bulunan **Bildirim Gönder…** (⇧⌘P) onu gösterir ve her seferinde araca bu cihazın neleri aldığını sorar.
 - Aracın listelediği her tür sunulur; cihazın almadığı bir tür nedeniyle birlikte durur ve seçilemez. Alanlar türü izler; **Yük** de aracın o tür için kendi şablonundan başlar ve alanların yerine gönderilir.
 - Uygulama, cihazın bir kişinin kendi uygulaması olduğunu söylediği öndeki uygulamadır ya da yazılan uygulamadır. Bir kişi birini yazmayı bitirince türleri yeniden sorulur, çünkü bir Android uygulamasının build'i başka bir yol izleyebilir.
 - Bir alanda Return gönderir ve yanıt bir bağlantınınki gibi gelir, bir ret tam olarak.
@@ -153,10 +153,10 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 #### Cihaz
 
-- Bir ajanın çağırdığı araç olan `device_setting` ile cihazın koşullarını ayarlar: karanlık mod, metin boyutu, dil, hareketi azaltma, kontrastı artırma, saydamlığı azaltma, animasyonlar, ağın hızı, Wi-Fi, mobil veri, uçak modu, bir proxy, pil düzeyi, ısıl durum ve katlama; `set_location`'ın ayarladığı gibi bir konum; cihaz alıyorsa Face ID ya da parmak izi, gelen bir arama ve bir kısa mesaj. Kendi sözü olmayan bir mesaj, pencerenin dilinde "Pencereden gönderildi" der.
+- Bir ajanın çağırdığı araç olan `set_device` ile cihazın koşullarını ayarlar: karanlık mod, metin boyutu, dil, hareketi azaltma, kontrastı artırma, saydamlığı azaltma, animasyonlar, ağın hızı, Wi-Fi, mobil veri, uçak modu, bir proxy, pil düzeyi, ısıl durum ve katlama; `set_device` `location`'ın ayarladığı gibi bir konum; cihaz alıyorsa Face ID ya da parmak izi, gelen bir arama ve bir kısa mesaj. Kendi sözü olmayan bir mesaj, pencerenin dilinde "Pencereden gönderildi" der.
 - Her denetim, panel her gösterildiğinde yeniden sorulan, cihazın okuduğu değeri gösterir. Bu cihazın yapamadığı şey, bir kişinin okuyacağı sözlerle kısa bir nedenle, örneğin "Bu cihaz katlanmaz.", devre dışı durur; bir ajana ise sürücünün nedeni söylenir. Pencerenin sözü olmayan bir neden, sürücünün verdiği gibi gösterilir.
 - Bir telefonda Wi-Fi, uçak modu, mobil veri ve proxy de devre dışı durur, çünkü her biri hub'ın ona Wi-Fi ya da Wi-Fi üzerinden adb ile giden bağlantısını kesebilir.
-- Bir değişiklik, bir ajanın değişikliklerinin girdiği tek kayda girer ve burada değiştirilen şeyi bir nokta gösterir. **Tümünü Geri Al**, `device_setting` `restore`'un geri aldığını geri alır; çalışan bir ajanın değiştirdiğini o ajana bırakır.
+- Bir değişiklik, bir ajanın değişikliklerinin girdiği tek kayda girer ve burada değiştirilen şeyi bir nokta gösterir. **Tümünü Geri Al**, `set_device` `restore`'un geri aldığını geri alır; çalışan bir ajanın değiştirdiğini o ajana bırakır.
 - Pencerenin değiştirdiği, cihazı pencereden ayrıldığında, yani pencere kapanınca ya da hub'da başka bir cihaz seçilince geri alınır ve hub ancak bundan sonra biter.
 
 ## Canlı sayılar
@@ -176,13 +176,13 @@ Bir iPhone'un kare hızı ekranınınkidir; tek başına bir yansıtma onu 20 ci
 
 Bir simülatörün bunların hiçbiri için runner'a ihtiyacı yoktur: öndeki uygulamayı okuma yardımcısıyla okur ve ana ekran da herhangi bir uygulama gibi ölçülür. Ajanı olmadan önde ne olduğunu söyleyemeyen bir cihaz, kartlar açılınca ajanı başlatır ve kartlar ajan ayağa kalkana kadar bunu söyler.
 
-Denetçi'deki **Performans**, aynı okumaları gösterildiği süre boyunca on dakikaya kadar tutar ve öndeki uygulamanın gerçek bir ölçümünü alır. **Açılışı Ölç** `perf_launch`, **Kaydırmayı Ölç** de `perf_scroll`'dur; bir ajanın çağırdığı gibi, varsayılanlarıyla: uygulama yeniden başlar ve çalıştırma diğer hepsiyle birlikte, yayın açıkken okunmuş olarak işaretlenip saklanır. **Gösterge Panelini Aç**, saklanan tüm çalıştırmaların sayfasını yazar ve açar. Bir ölçüm sürerken okumalar durur, çünkü ölçümün saydığını sıfırlarlardı. Bir ölçüm cihazı bir ajanın oturumu gibi tutar ve cihazı başka bir şey tutarken adıyla reddedilir. Sisteme ait olan, örneğin bir ana ekran, ölçülmez.
+Denetçi'deki **Performans**, aynı okumaları gösterildiği süre boyunca on dakikaya kadar tutar ve öndeki uygulamanın gerçek bir ölçümünü alır. **Açılışı Ölç** `measure_performance launch`, **Kaydırmayı Ölç** de `measure_performance scroll`'dur; bir ajanın çağırdığı gibi, varsayılanlarıyla: uygulama yeniden başlar ve çalıştırma diğer hepsiyle birlikte, yayın açıkken okunmuş olarak işaretlenip saklanır. **Gösterge Panelini Aç**, saklanan tüm çalıştırmaların sayfasını yazar ve açar. Bir ölçüm sürerken okumalar durur, çünkü ölçümün saydığını sıfırlarlardı. Bir ölçüm cihazı bir ajanın oturumu gibi tutar ve cihazı başka bir şey tutarken adıyla reddedilir. Sisteme ait olan, örneğin bir ana ekran, ölçülmez.
 
 ## Bir akış kaydetmek
 
-**Akışı Kayda Al** (⌥⌘T), bir kişinin pencerede yaptığını bir akış olarak, yani `flow run`'ın yeniden oynattığı dosya olarak yazar. **Akışlar** paneli cihazın yanında açılır ve her adımı yazıldıkça listeler. İkinci bir basış kaydı durdurur ve Masaüstüne `<device> <date>.flow` olarak kaydeder; pencereyi kapatmak da bir film için olduğu gibi aynısını yapar.
+**Akışı Kayda Al** (⌥⌘T), bir kişinin pencerede yaptığını bir akış olarak, yani `run_flow run`'ın yeniden oynattığı dosya olarak yazar. **Akışlar** paneli cihazın yanında açılır ve her adımı yazıldıkça listeler. İkinci bir basış kaydı durdurur ve Masaüstüne `<device> <date>.flow` olarak kaydeder; pencereyi kapatmak da bir film için olduğu gibi aynısını yapar.
 
-Bir kişinin ne demek istediğini, yerle değil öğeyle yazar. Her tıklama, `flow start`'ın kuralıyla, bir aracın o tıklamanın indiği ekranda kullanacağı seçiciyle adlandırılır; böylece bir cihazda yapılan bir akış, seçicinin tuttuğu her yerde aynı uygulamanın başka bir cihazında çalışır.
+Bir kişinin ne demek istediğini, yerle değil öğeyle yazar. Her tıklama, `run_flow record`'un kuralıyla, bir aracın o tıklamanın indiği ekranda kullanacağı seçiciyle adlandırılır; böylece bir cihazda yapılan bir akış, seçicinin tuttuğu her yerde aynı uygulamanın başka bir cihazında çalışır.
 
 | pencerede                                    | dosyada                                                                                                                                                                                                                                                               |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -203,9 +203,9 @@ Bir kayıt söylemeden hiçbir şeyi atlamaz. Adımı olmayan şey (bir kıstır
 
 **Bir tıklamanın kastettiği ekran.** Bir tıklama, tıklamadan hemen önceki ekrana göre adlandırılır. Pencere bir tıklamayı duyduğunda cihaz çoktan tepki vermeye başlamıştır. Bu yüzden bir kayıt sürerken ya da panel açıkken ekran, dokunuşların yanında sürekli okunur: bir dokunuş, buradaki herhangi bir şey onu duymadan önce cihaza yola çıkmıştır; parmak basılıyken ya da sonraki 100 ms boyunca hiçbir okuma başlamaz ve bir okuma zamanın en çok yarısını alır. Bir tıklama son girdiden bu yana en yeni okumayı, yoksa sürmekte olanı alır. İmleci üzerinde tutmak cihaza hiçbir şey sormaz. İkisi de kullanımda değilken, yayın kapalıyken ya da bir ölçüm sürerken hiçbir şey okunmaz. Böyle bir okuma bir bakıştır: bir araç için `tree`'nin yaptığı gibi, karanlık bir ekranı uyandırmaz ve kilit açmaz.
 
-**İmlecin altında.** Akışlar paneli açıkken cihazın üzerindeki imleç, altındaki öğeyi görüntü üzerinde işaretleyerek gösterir: rolünü, sözlerini, ref'ini ve id'sini, oraya bir tıklamanın ne yazacağını ve `audit`'in kontrastı hakkında ne dediğini; bu, ekran başına bir kez okunur. Bir denetim imlecin durmasını bekler, bir simülatörün runner'ını başlatabilir ve panel, bitene kadar okuduğunu söyler. Bir kayıt sırasında hiçbir denetim çalışmaz, çünkü bir denetimin arkasında bekleyen bir okuma, adlandıracağı tıklamadan sonra gelirdi; panel bunu söyler. Cihazdaki bir tıklamanın ne yapacağı orada seçilir: cihaza **Dokunur**, öğenin seçicisini **Kopyalar** ya da kayda bir doğrulama ekleyen ve hiçbir şeye dokunmayan **Doğrular**: `assert id=result check=text equals="Sent: Ada"` ya da öğeyi sözleri adlandırıyorsa `assert text="Bilgiler"`.
+**İmlecin altında.** Akışlar paneli açıkken cihazın üzerindeki imleç, altındaki öğeyi görüntü üzerinde işaretleyerek gösterir: rolünü, sözlerini, ref'ini ve id'sini, oraya bir tıklamanın ne yazacağını ve `check_screen`'in kontrastı hakkında ne dediğini; bu, ekran başına bir kez okunur. Bir denetim imlecin durmasını bekler, bir simülatörün runner'ını başlatabilir ve panel, bitene kadar okuduğunu söyler. Bir kayıt sırasında hiçbir denetim çalışmaz, çünkü bir denetimin arkasında bekleyen bir okuma, adlandıracağı tıklamadan sonra gelirdi; panel bunu söyler. Cihazdaki bir tıklamanın ne yapacağı orada seçilir: cihaza **Dokunur**, öğenin seçicisini **Kopyalar** ya da kayda bir doğrulama ekleyen ve hiçbir şeye dokunmayan **Doğrular**: `assert id=result check=text equals="Sent: Ada"` ya da öğeyi sözleri adlandırıyorsa `assert text="Bilgiler"`.
 
-Kayıt, `flow`'un tuttuğu kayıttır, cihaz başına bir dosya. Bu yüzden bir ajandan ya da komut satırından gelen `flow start` bir kişinin tıklamalarını da alır, bir pencerenin kaydı da bir ajanın çağrılarını alır; her biri geldiği sırayla. Bir akışın `stop` ve `save`'i ikisinde de çalışır.
+Kayıt, `run_flow`'un tuttuğu kayıttır, cihaz başına bir dosya. Bu yüzden bir ajandan ya da komut satırından gelen `run_flow record` bir kişinin tıklamalarını da alır, bir pencerenin kaydı da bir ajanın çağrılarını alır; her biri geldiği sırayla. Bir akışın `stop` ve `save`'i ikisinde de çalışır.
 
 ## Hub
 
@@ -267,11 +267,11 @@ CI ya da betikler için oldukları ya da bir oturuma ait oldukları için bilere
 | `perf reference`                                                                                                                 | Baseline'ın build'inin cihaza geri kurulmasını gerektirir: bir betiğin adımı                                                                    |
 | `perf functions`                                                                                                                 | Saklanmış iki profil kimliği alır; bir kişinin burada bunların listesi yoktur                                                                   |
 | `perf prune`                                                                                                                     | Saklanan trace'ler kendiliğinden budanır                                                                                                        |
-| `report`                                                                                                                         | Bir oturumun kendi adımlarından yazılır, bu yüzden bir ajana aittir. Zaman Çizelgesi, Uçuş Kaydedici ve Gösterge Paneli kendi sayfalarını yazar |
+| `record-session report`                                                                                                          | Bir oturumun kendi adımlarından yazılır, bu yüzden bir ajana aittir. Zaman Çizelgesi, Uçuş Kaydedici ve Gösterge Paneli kendi sayfalarını yazar |
 | stdio üzerinden `mcp`                                                                                                            | Bir istemcinin kendisi için başlattığı                                                                                                          |
 | `version`                                                                                                                        | `update --check` bunu söyler                                                                                                                    |
 | `--junit`, `--format`, `--retries`, `--tag`, `--env-file`, `--param`, `--share`, `--measurements` ve `--allow-*` gibi seçenekler | Bir pipeline içindir ve her birinin burada mantıklı tek bir varsayılanı vardır                                                                  |
-| `tap` ya da `screen` gibi tek işlemler                                                                                           | Cihazın penceresi bunları elle, bir istemci de araçlarıyla yapar                                                                                |
+| `tap-screen` ya da `read-screen` gibi tek işlemler                                                                               | Cihazın penceresi bunları elle, bir istemci de araçlarıyla yapar                                                                                |
 
 ## İki cihaz
 
@@ -281,7 +281,7 @@ Hub'ın kenar çubuğundaki bir satırda bulunan **Bunun Yanında Göster**, pen
 
 Her cihaz bir dokunuşun nereye gittiğini ve ona ne olduğunu söyler. Alt başlık, cihazın çevresinde vurgu renginde bir kenarla **İkisine de** ya da bağlantı denetimi kapalıysa **Yalnızca burada** der ve bir halka bir dokunuşun her ekranda nereye indiğini gösterir. Başarısız olduğu yerde cihazın kenarı kırmızıya döner ve alt başlık, bir dokunuş yerine ulaşana kadar nedenini söyler: o cihazda öyle bir şey yoksa "Burada Send yok" ve başka hiçbir şeye dokunulmaz, "iPhone 17 Pro canlı değil", "Dokunuş yerine ulaşmadı". Böyle bir şeyin üstünde başlayan bir sürükleme aynı yerden sürer, çünkü tek bir şeyi kastetmez. Çubuğu bir tarafı anlatan hub penceresinde her görüntü, altında kimin olduğunu ve bir dokunuşun nereye gittiğini ya da neyin başarısız olduğunu kırmızıyla söyler, kenar çubuğu da çubuğu açık olan cihazı seçer.
 
-Performans'taki **Yolculuğu Ölç…**, bir akışı `iterations` ile `flow` `run`'ın yaptığı gibi ölçer: ilk çalıştırma dışarıda bırakılır, beşi saklanır, aynı depoda: `perf_compare` onu kapıdan geçirir ve dashboard onu diğer her cihazın yanında gösterir. Uygulama adı vermeyen bir akış öndeki uygulamanızı alır, böylece iki kimlik altındaki build'ler tek bir dosyayı çalıştırabilir. İki pencerede önce bir cihazda sonra diğerinde çalışır, çünkü ikisi aynı anda birbirine yük bindirirdi; bu arada dokunuşlar kendi pencerelerinde kalır. Her pencere sonra durumunu söyler: "97 % slower, 1641 ms there" ve en çok değişen adım, kapının sırayla ölçülen iki koşul için kullandığı sıra testi ve tabana göre; ya da "Belirgin fark yok". Her adımın sayıları satırın araç ipucundadır. Yolculuğun başarısız olduğu pencere bunu kırmızıyla söyler, diğerinin karşılaştıracak bir şeyi yoktur.
+Performans'taki **Yolculuğu Ölç…**, bir akışı `iterations` ile `run_flow` `run`'ın yaptığı gibi ölçer: ilk çalıştırma dışarıda bırakılır, beşi saklanır, aynı depoda: `compare_performance` onu kapıdan geçirir ve dashboard onu diğer her cihazın yanında gösterir. Uygulama adı vermeyen bir akış öndeki uygulamanızı alır, böylece iki kimlik altındaki build'ler tek bir dosyayı çalıştırabilir. İki pencerede önce bir cihazda sonra diğerinde çalışır, çünkü ikisi aynı anda birbirine yük bindirirdi; bu arada dokunuşlar kendi pencerelerinde kalır. Her pencere sonra durumunu söyler: "97 % slower, 1641 ms there" ve en çok değişen adım, kapının sırayla ölçülen iki koşul için kullandığı sıra testi ve tabana göre; ya da "Belirgin fark yok". Her adımın sayıları satırın araç ipucundadır. Yolculuğun başarısız olduğu pencere bunu kırmızıyla söyler, diğerinin karşılaştıracak bir şeyi yoktur.
 
 ## İmleç ve trackpad
 
@@ -301,7 +301,7 @@ Bir nokta imlecin dokunduğu yeri gösterir, kıstırmada iki nokta. Çerçeve y
 Bir pencere klavyeyi asla kendiliğinden almaz: ne açılırken, ne yeniden bağlanırken ya da yeniden başlarken, ne de bir ajan onu açtığında.
 Klavyeyi bir kişinin tıklaması ya da ilk açılışta `--focus` verir. Klavyesi olmayan bir pencereye ulaşan bir tuş hiçbir
 yere gitmez. Bir ajanın açtığı bir pencere de bir kişinin tıklamasına kadar tüm girdiyi tutar ve o tıklama daha öteye gitmez.
-Yazılan cihaza ulaşır, başka hiçbir yere değil: ne bir log, ne Etkinlik paneli ne de `report` onu tutar. Bir iPhone'da runner, XCTest'in her tuştan tutacağını kapatır, böylece orada da böyledir.
+Yazılan cihaza ulaşır, başka hiçbir yere değil: ne bir log, ne Etkinlik paneli ne de `record_session` onu tutar. Bir iPhone'da runner, XCTest'in her tuştan tutacağını kapatır, böylece orada da böyledir.
 
 Yazma sistemin kendi metin girişinden geçer, bu yüzden ölü tuş, basılı tutulan bir aksan ve bir giriş yöntemi çalışır. ⌘V, Mac'in metnini aynı yolla, en çok 4.096 karakter gönderir ve bir metni kısa kestiğinde pencere bunu söyler, çünkü uzun bir metin tuş tuş gider. Bir simülatör, ABD klavyesinde tuşu olanı tuş olarak, geri kalan her şeyi panosu ve command V ile yazar; bu yüzden bir uygulama Yapıştırmaya İzin Ver diye sorabilir.
 
@@ -319,12 +319,12 @@ bir istemciye pencerenin açık olduğu söylenir. Bu build'ler arasında da ge�
 ajanı korur ve sonradan başlayan, hub kapanana kadar o ajanı kullanır.
 
 Bir kişinin girdisi her zaman kendine ait bir bağlantıdan geçer ve bir ajanın yaptığı işin arkasında
-sıraya girmez. `mirror status`, bir ajana bir kişinin pencereye en son ne zaman dokunduğunu söyler. Çağrılar geldikçe pencere bir ajanın yönettiğini söyler. Etkinlik paneli her çağrıyı listeler: zaman, araç, ne kadar sürdüğü, sonucu;
-yazılan metin uzunluğuyla, gizli değerler gizlenmiş olarak, `report`'un kullandığı kodla. Panel, durum klasöründeki
+sıraya girmez. `show_mirror status`, bir ajana bir kişinin pencereye en son ne zaman dokunduğunu söyler. Çağrılar geldikçe pencere bir ajanın yönettiğini söyler. Etkinlik paneli her çağrıyı listeler: zaman, araç, ne kadar sürdüğü, sonucu;
+yazılan metin uzunluğuyla, gizli değerler gizlenmiş olarak, `record_session`'ın kullandığı kodla. Panel, durum klasöründeki
 `activity/<serial>.jsonl` dosyasını okur: soket yok, süreçler arasında.
 
 Yalnızca bir kişinin yanıtlayabileceği bir uyarı (Face ID, Touch ID, bir parola, bir Apple Hesabı, Yapıştırmaya İzin Ver, bir VPN, bir profil, bir
-satın alma), ekranı okuyan yanıtta söylenir: `needs a person: Face ID`. `hand_off {reason, timeoutS}`, pencereye bir sesle, Dock'ta bir sıçramayla ve "Bitti" ile bir uyarı bandı koyar, `--silent` ile çalışan bir sunucuda ses ve sıçrama olmadan. Pencere
+satın alma), ekranı okuyan yanıtta söylenir: `needs a person: Face ID`. `ask_person {reason, timeoutS}`, pencereye bir sesle, Dock'ta bir sıçramayla ve "Bitti" ile bir uyarı bandı koyar, `--silent` ile çalışan bir sunucuda ses ve sıçrama olmadan. Pencere
 yoksa bir ses ve elden geldiğince nedeni gösteren bir bildirim verir, böyle bir sunucuda hiçbirini vermez, ve ekranın değişmesini bekler. Beklemeyi kimin bitirdiğini
 ya da kimsenin bitirmediğini yanıtlar. Varsayılan olarak 300 s, en çok 3.600 s bekler.
 
@@ -333,7 +333,7 @@ bir yayın cihazda bir kodlayıcı çalıştırır.
 
 ## Gizlilik: bir pencere ekranın tamamını gösterir
 
-Yansıtma ekranın gösterdiğini gösterir: `report` gizli değerlerin üstünü boyar, bir pencere boyamaz. **Ekran Görüntüsünü Kaydet** ve **Ekranı Kayda Al** da boyamaz: kaydettikleri, ekranın o anki halidir, düz alanlardaki parolalar dahil. Ajanın token'ı görüntüleyiciye stdin'i üzerinden gider, asla argümanlarıyla değil.
+Yansıtma ekranın gösterdiğini gösterir: `record_session` gizli değerlerin üstünü boyar, bir pencere boyamaz. **Ekran Görüntüsünü Kaydet** ve **Ekranı Kayda Al** da boyamaz: kaydettikleri, ekranın o anki halidir, düz alanlardaki parolalar dahil. Ajanın token'ı görüntüleyiciye stdin'i üzerinden gider, asla argümanlarıyla değil.
 
 ## Bir telefonun görüntüsünün boyutu
 

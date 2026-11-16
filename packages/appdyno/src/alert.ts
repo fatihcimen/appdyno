@@ -26,6 +26,6 @@ function alertPerson(reason: string) {
   ]);
 }
 
-/** What `hand_off` sounds and shows with no window: nothing on a server run `--silent` or with APPDYNO_SILENT=1, as CI and a shared Mac are. */
+/** What `ask_person` sounds and shows with no window: nothing on a server run `--silent` or with APPDYNO_SILENT=1, as CI and a shared Mac are. */
 export const alertOf = (silent: boolean | undefined, env: NodeJS.ProcessEnv = process.env) =>
   silent === true || env.APPDYNO_SILENT === '1' ? undefined : alertPerson;

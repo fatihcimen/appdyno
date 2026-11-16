@@ -378,7 +378,7 @@ export class Session {
     this.pid = undefined;
   }
 
-  /** When the op of the last device action began (epoch ms): `logs` starts there, with what it set off. */
+  /** When the op of the last device action began (epoch ms): `read_logs` starts there, with what it set off. */
   get lastActionAt() {
     return this.actedAt;
   }

@@ -6,8 +6,8 @@ Bir ajanın ne olduğunu göstermek için geride bırakabildikleri ve bunun bir 
 
 ## Video
 
-`record`, `action` olarak `start` (`file`, `maxSeconds`, varsayılan 1.800) ve `stop` alır; cihaz başına bir kayıt. Kayıt,
-onu başlatan süreçten uzun yaşar; bu yüzden `appdyno record start` ve `appdyno record stop` iki ayrı komut olarak çalışır. Bir oturumun
+`record_session`, `kind` olarak `video` ve `action` olarak `start` (`file`, `maxSeconds`, varsayılan 1.800) ve `stop` alır; cihaz başına bir kayıt. Kayıt,
+onu başlatan süreçten uzun yaşar; bu yüzden `appdyno record-session video start` ve `appdyno record-session video stop` iki ayrı komut olarak çalışır. Bir oturumun
 sonu, oturumun çalışır bıraktığı bir kaydı durdurur.
 
 `stop` dosyayı okur; oynatılamayan bir dosya nedenini söyleyen bir rettir (bitmeden öldürülen bir kaydedici hiç
@@ -21,7 +21,7 @@ index bırakmaz). Yanıt dosyanın ne kadar oynadığını, karelerini ve boyutu
 
 ## Rapor
 
-`report` `start` (`dir`) o andan itibaren her çağrıyı saklar: argümanlarını, yanıtını ve düz bir okuma olmayan her şeyden sonra
+`record_session` `report` `start` (`dir`) o andan itibaren her çağrıyı saklar: argümanlarını, yanıtını ve düz bir okuma olmayan her şeyden sonra
 ekranı ve onun bir görüntüsünü. `stop` o klasöre, bu arada kaydedilen videoyla, uygulamanın loguyla, çökmeleriyle
 ve alınan ölçümlerle birlikte `index.html` yazar. Bir oturumun sonu da yazar. `write` onu herhangi bir anda yazar; `start` olmadan ise ekranın
 o anki halinin raporudur.
@@ -32,7 +32,7 @@ parola alanı olduğu yerde görüntünün üstü boyanır; üstü boyanamıyors
 
 ## Zaman çizelgesi
 
-`report` `timeline`, ardından yolculuk, ardından `report` `stop`, raporun yanına `timeline.html` yazar: video, dokunuşlar, kareler, istekler, log ve bellek tek bir saatte, gönderilebilecek tek bir dosyada. `report` `flight`, bir uygulamanın son saniyelerini tutar ve bir çökmede ya da takılmada kaydeder. Terminalden: `appdyno timeline` ve `appdyno flight`. Bkz. performans başvurusunda [Tek bir zaman çizelgesi](../reference/perf.tr.md#tek-bir-zaman-çizelgesi); dosyayı göndermeden önce içinde ne olduğunu da orada söyler.
+`record_session` `timeline` `start`, ardından yolculuk, ardından `record_session` `timeline` `stop`, raporun yanına `timeline.html` yazar: video, dokunuşlar, kareler, istekler, log ve bellek tek bir saatte, gönderilebilecek tek bir dosyada. `record_session` `flight` `start`, bir uygulamanın son saniyelerini tutar ve bir çökmede ya da takılmada kaydeder. Terminalden: `appdyno timeline` ve `appdyno flight`. Bkz. performans başvurusunda [Tek bir zaman çizelgesi](../reference/perf.tr.md#tek-bir-zaman-çizelgesi); dosyayı göndermeden önce içinde ne olduğunu da orada söyler.
 
 ## Dashboard
 
@@ -45,21 +45,21 @@ Bir uygulamanın bütün cihazlarınızdaki performansı tek sayfada: neyin ilgi
 
 Bir emülatörün ya da simülatörün sayılarının bu Mac'e göre olduğunu ve gerçek kare hızlarının, donmuş karelerin, takılmaların ve enerjinin bir telefon gerektirdiğini söyler. Bir sayı bir cihazda başka bir şey anlatıyorsa neyi anlattığını söyler: bir simülatörün kareleri ana thread'in temposudur, enerjisi de bu Mac'inkidir. Bir uygulama için hiçbir telefon ölçülmemişse bunun komutunu verir.
 
-Sayfa `<measurements dir>/dashboard/index.html` dosyasıdır, saklanan her çalıştırmadan sonra yeniden yazılır ve açık bir sayfa kendini yeniden yükler. Sunucu yoktur: betiği olmayan, hiçbir şey yüklemeyen tek bir dosya. `action: dashboard` ile `perf_compare` de onu yazar, Mac uygulamasındaki **Gösterge Panelini Aç** da onu açar. Bkz. performans başvurusunda [Dashboard](../reference/perf.tr.md#dashboard).
+Sayfa `<measurements dir>/dashboard/index.html` dosyasıdır, saklanan her çalıştırmadan sonra yeniden yazılır ve açık bir sayfa kendini yeniden yükler. Sunucu yoktur: betiği olmayan, hiçbir şey yüklemeyen tek bir dosya. `action: dashboard` ile `compare_performance` de onu yazar, Mac uygulamasındaki **Gösterge Panelini Aç** da onu açar. Bkz. performans başvurusunda [Dashboard](../reference/perf.tr.md#dashboard).
 
 Okunacak başka şeyler, her biri [performans başvurusunda](../reference/perf.tr.md):
 
-- `perf_snapshot` `also: surface`, `gfxinfo`'nun hiç görmediği bir `SurfaceView`'un ya da bir oyunun karelerini Google Play'in yavaş oturumlarına karşı okur.
-- `baselineProfile: true` ile `perf_launch`, bir Android release build'i için Baseline Profile'ının APK'da olup olmadığını, uygulanıp uygulanmadığını ve onunla ve onsuz soğuk açılışlarda ne kazandırdığını söyler: [Bir Baseline Profile](../reference/perf.tr.md#bir-baseline-profile).
-- `perf_snapshot` `also: battery`, bir Android uygulamasının pil sinyallerini verir: etikete göre wake lock'lar, uyanmalar ve job'lar; güç modeli olmadan.
-- `perf_snapshot` `also: anonMemory`, belleğini Google Play'in değerlendirdiği haliyle verir: süreç durumuna göre anon RSS ve swap, bir de bitmap'ler.
-- `perf_snapshot` `also: startInfo`, Android 15'ten itibaren uygulamanın en son neden başladığını söyler.
-- `perf_trace`, yavaş karelerin ve donmaların neden yavaş olduğunu söyler.
-- `perf_compare` `action: functions`, iki profil arasında hangi fonksiyonların kaydığını söyler.
+- `measure_performance snapshot` `also: surface`, `gfxinfo`'nun hiç görmediği bir `SurfaceView`'un ya da bir oyunun karelerini Google Play'in yavaş oturumlarına karşı okur.
+- `baselineProfile: true` ile `measure_performance launch`, bir Android release build'i için Baseline Profile'ının APK'da olup olmadığını, uygulanıp uygulanmadığını ve onunla ve onsuz soğuk açılışlarda ne kazandırdığını söyler: [Bir Baseline Profile](../reference/perf.tr.md#bir-baseline-profile).
+- `measure_performance snapshot` `also: battery`, bir Android uygulamasının pil sinyallerini verir: etikete göre wake lock'lar, uyanmalar ve job'lar; güç modeli olmadan.
+- `measure_performance snapshot` `also: anonMemory`, belleğini Google Play'in değerlendirdiği haliyle verir: süreç durumuna göre anon RSS ve swap, bir de bitmap'ler.
+- `measure_performance snapshot` `also: startInfo`, Android 15'ten itibaren uygulamanın en son neden başladığını söyler.
+- `measure_performance frames`, yavaş karelerin ve donmaların neden yavaş olduğunu söyler.
+- `compare_performance` `action: functions`, iki profil arasında hangi fonksiyonların kaydığını söyler.
 
 ## Ağ
 
-`network` `paths`, her yolun bu cihazda neyi gördüğünü, görmüyorsa nedenini söyler. `start` birini seçer, `read` ve `stop` sınırlı bir liste verir.
+`capture_network` `paths`, her yolun bu cihazda neyi gördüğünü, görmüyorsa nedenini söyler. `start` birini seçer, `read` ve `stop` sınırlı bir liste verir.
 
 | yol       | nerede                                                                                                                                                                                                            | ne görür                                                                                                                 | gövdeler                                                              |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
@@ -76,30 +76,30 @@ Sonda listelemekten fazlasını yapar. Bütün isteklerinin bir `read` çağrıs
 
 ## Web görünümleri
 
-`webview`: `pages`, `elements` (erişilebilirlik ağacının okuyamadığı yeri okumak için dokunma koordinatlarındaki DOM), `click` (bir CSS
-seçicisi), `eval` (bir betik). Android'de, hata ayıklanabilir bir uygulamanın `webview_devtools_remote_<pid>` soketiyle
+`inspect_app`: `web_pages`, `web_elements` (erişilebilirlik ağacının okuyamadığı yeri okumak için dokunma koordinatlarındaki DOM), `web_click` (bir CSS
+seçicisi), `web_eval` (bir betik). Android'de, hata ayıklanabilir bir uygulamanın `webview_devtools_remote_<pid>` soketiyle
 `adb forward` üzerinden DevTools protokolünü konuşur. Simülatörde Safari'nin Web Inspector'ının kullandığı soketle konuşur; iOS 16.4'ten itibaren bir sayfa yalnızca uygulama
-`isInspectable` ayarladıysa görünür. Bir iPhone'a bu yolla ulaşılmaz. Bir simülatörün denetçisine açılan tek bir bağlantı bir çağrıya ve ardından gelen bir dakikadaki çağrılara hizmet eder, çünkü denetçi yeni bir bağlantıya ancak öncekinin kapanmasından 10 s kadar sonra hizmet eder; yeni bir bağlantı denetçi ne kadar sürerse, 15 s'ye kadar ve bir kez de yeni bir bağlantıda beklenir, zaman aşımı da denetçiyi anar. Komut satırında her çağrı ayrı bir süreçtir, bu yüzden öncekinden 10 s içinde yapılan bir çağrı bu 10 s'ye kadar sürebilir. Bir simülatörde `pages`, her sayfanın kendi belgesinin söylediğine göre görünen sekmeyi `(showing)` diye işaretler, `webview` ve `screen` de onu okur; Android'de her sayfayı bir kez listeler. Denetlenecek sayfa yokken, yüklenmekte olan bir sayfanın yüklenince listelendiğini ve yeniden sormayı söyler.
+`isInspectable` ayarladıysa görünür. Bir iPhone'a bu yolla ulaşılmaz. Bir simülatörün denetçisine açılan tek bir bağlantı bir çağrıya ve ardından gelen bir dakikadaki çağrılara hizmet eder, çünkü denetçi yeni bir bağlantıya ancak öncekinin kapanmasından 10 s kadar sonra hizmet eder; yeni bir bağlantı denetçi ne kadar sürerse, 15 s'ye kadar ve bir kez de yeni bir bağlantıda beklenir, zaman aşımı da denetçiyi anar. Komut satırında her çağrı ayrı bir süreçtir, bu yüzden öncekinden 10 s içinde yapılan bir çağrı bu 10 s'ye kadar sürebilir. Bir simülatörde `web_pages`, her sayfanın kendi belgesinin söylediğine göre görünen sekmeyi `(showing)` diye işaretler, `inspect_app` ve `read_screen` de onu okur; Android'de her sayfayı bir kez listeler. Denetlenecek sayfa yokken, yüklenmekte olan bir sayfanın yüklenince listelendiğini ve yeniden sormayı söyler.
 
-`screen`, bir web görünümünün gösterdiğini `web` olarak işaretler ve sayfanın tutup erişilebilirlik ağacının tutmadığını koordinatlar ve
+`read_screen`, bir web görünümünün gösterdiğini `web` olarak işaretler ve sayfanın tutup erişilebilirlik ağacının tutmadığını koordinatlar ve
 seçiciyle ekler; sayfayı en çok 3 s bekler ve okumadan bıraktığında bunu söyler. Hata ayıklanabilir olmayan bir uygulama da web görünümünün erişilebilirliğe söylediğini yine gösterir.
 
 ## Flutter
 
-Bir Flutter uygulamasının semantiği erişilebilirlik ağacındadır, bu yüzden `screen`, seçiciler ve dokunuşlar onda çalışır. Dart VM
+Bir Flutter uygulamasının semantiği erişilebilirlik ağacındadır, bu yüzden `read_screen`, seçiciler ve dokunuşlar onda çalışır. Dart VM
 servisinin daha zengin ağacı henüz yapılmadı: bu araç yalnızca test ettiğini gönderir ve onu test edecek bir Flutter test uygulaması yok.
-`webview`'un yaptığı gibi olurdu: bir debug build'in logunda `Observatory` ya da `Dart VM service` satırını bulmak, portunu
+`inspect_app`'in bir web görünümü için yaptığı gibi olurdu: bir debug build'in logunda `Observatory` ya da `Dart VM service` satırını bulmak, portunu
 yönlendirmek ve WebSocket'i üzerinden `ext.flutter.inspector.getRootWidgetSummaryTree` çağırmak.
 
 ## React Native
 
-`react_native` bu Mac'teki Metro ile konuşur ve cihaz gerektirmez: `targets`, `logs` (Hermes çalışma zamanının DevTools
-protokolü üzerinden JS konsolu, `ms` boyunca, gizli değerler gizlenmiş) ve `reload` (Metro'nun yolu, yoksa çalışma zamanınınki). Yalnızca Metro'nun yerine geçen bir taklide karşı test edildi, gerçek bir uygulamaya karşı değil. Dışarıda kalanlar:
+React Native için `inspect_app` bu Mac'teki Metro ile konuşur ve cihaz gerektirmez: `rn_targets`, `rn_logs` (Hermes çalışma zamanının DevTools
+protokolü üzerinden JS konsolu, `ms` boyunca, gizli değerler gizlenmiş) ve `rn_reload` (Metro'nun yolu, yoksa çalışma zamanınınki). Yalnızca Metro'nun yerine geçen bir taklide karşı test edildi, gerçek bir uygulamaya karşı değil. Dışarıda kalanlar:
 bileşen ağacı ve JS profilleri. Android'de bir cihaz Metro'ya sizin kendi `adb reverse tcp:8081 tcp:8081` komutunuzla ulaşır. `metro`, `localhost`, `127.0.0.1` ya da `[::1]` ve bir porttur; böylece bu Mac başka bir sunucuyu aramaz; Metro'nun başka bir sunucuda ya da portta adlandırdığı bir çalışma zamanı soketi açılmaz.
 
 ## Görsel karşılaştırma
 
-`visual` `baseline` ekranı `dir` altında `name` olarak kaydeder (varsayılan `./appdyno-baselines`, projenizle commit etmek için). `compare`,
+`check_screen` `visual_baseline` ekranı `dir` altında `name` olarak kaydeder (varsayılan `./appdyno-baselines`, projenizle commit etmek için). `visual`,
 `tolerance` aşılınca `CHECK_FAILED` ile reddeder (piksellerin yüzdesi, varsayılan 0,1; bir kanal 16'dan fazla farklıysa piksel sayılır) ve
 `name.diff.png` (farklı olan kırmızı, maskeler mavi) ile `name.actual.png` yazar. `masks`, dokunma birimlerinde `x,y,w,h` ya da `text`, `id`, `role`'dür; durum çubuğu her zaman dışarıda bırakılır.
 Bir baseline tek bir ekran boyutu için geçerlidir ve ret bunu söyler.

@@ -20,8 +20,8 @@ appdyno mirror close | status | stats
 
 With `--detach` the window takes `--quality` and `--wifi`, and none of `--codec`, `--no-input`, `--headless`, `--seconds`, `--record` and `--focus`, which are for a window this command stays with. `--pair` takes exactly two `--device` and no `--detach`.
 
-The `mirror` tool has `open`, `close`, `status` and `stats`. No frames pass over MCP: an agent has `screenshot`
-and `record`. `hand_off` asks a person for what an agent cannot do.
+The `show_mirror` tool has `open`, `close`, `status` and `stats`. No frames pass over MCP: an agent has `take_screenshot`
+and `record_session`. `ask_person` asks a person for what an agent cannot do.
 
 ## Where the picture comes from
 
@@ -34,7 +34,7 @@ and `record`. `hand_off` asks a person for what an agent cannot do.
 
 ## States of a window
 
-`connecting`, `live`, `waiting {need}`, `reconnecting {attempt}`, `stopped {why}`. What a window waits for is said alike in its banner, by `mirror status` and in a refusal, each time with its words and its fix. A wait asks again each second and goes on by itself when it clears.
+`connecting`, `live`, `waiting {need}`, `reconnecting {attempt}`, `stopped {why}`. What a window waits for is said alike in its banner, by `show_mirror status` and in a refusal, each time with its words and its fix. A wait asks again each second and goes on by itself when it clears.
 
 | what happens                  | what it does                                                                                                             |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -113,15 +113,15 @@ The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, a
 
 #### Logs and Crashes
 
-- **Logs** shows the log of the app in front as it comes: the lines `logs` reads, with the same redaction, so a token, a password or a key in a line is hidden.
+- **Logs** shows the log of the app in front as it comes: the lines `read_logs` reads, with the same redaction, so a token, a password or a key in a line is hidden.
 - It follows the app in front as Performance does, asking every 5 s, and starts over for another app. An app that is not a person's own, or not on the server's list of apps, is named and nothing is read.
 - It has a level from Verbose to Errors, a search, Pause and Resume, which reads on from where it stopped, Copy, which takes the whole lines a selection touches, and Clear, which empties the view and never the device's log.
-- **Crashes**, beside it, lists the app's last 5 reports as `crashes` gives them, each opening to its first lines and the path of the whole report on this Mac.
+- **Crashes**, beside it, lists the app's last 5 reports as `read_logs` with `source: crashes` gives them, each opening to its first lines and the path of the whole report on this Mac.
 - The log is read every 2 s only while the pane shows and is not paused, and nothing is left running. An iPhone's running app has no log this Mac can read, and the pane says so, with what can.
 
 #### Network
 
-- It shows the app's requests as `network` gives them, from the capture that tool keeps for the device: a capture an agent started shows here, and one started here shows to an agent, redacted alike. Each request has its method, address, status, time and size, and the one chosen shows whole.
+- It shows the app's requests as `capture_network` gives them, from the capture that tool keeps for the device: a capture an agent started shows here, and one started here shows to an agent, redacted alike. Each request has its method, address, status, time and size, and the one chosen shows whole.
 - It offers only the ways this device has: on a simulator the probe, which restarts the app and so is refused while a recording or a measure runs; on Android bytes, and packets from Android 14 where the build registers them, both counting with no addresses.
 - A proxy is offered only where the device already goes through one, and its list is read where this tool can read the proxy's own export. No window sets a proxy, on any device.
 - Where nothing lists requests, on an iPhone or an Android with no proxy, the pane says what a person needs.
@@ -129,7 +129,7 @@ The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, a
 
 #### Accessibility
 
-- It shows what `audit` finds on the screen shown, by kind, each kind counted. It is the same audit that names the contrast of the element under the pointer: one audit, never two.
+- It shows what `check_screen` with `check: accessibility` finds on the screen shown, by kind, each kind counted. It is the same audit that names the contrast of the element under the pointer: one audit, never two.
 - The screen is read while the pane shows, and audited once it has stayed the same for a second, as an audit holds the device's queue for seconds. A new screen is audited again, and **Check Again** audits the one shown.
 - No audit runs during a recording, as a click would then be named by the screen it made, and the pane says so.
 - An issue chosen is marked on the device's picture, as the element under the pointer is.
@@ -145,7 +145,7 @@ The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, a
 
 #### Push
 
-- It sends a push to an app by `push`, the tool an agent calls. **Send Push…** (⇧⌘P), in the File menu and in More Controls, shows it, and it asks the tool each time what this device takes.
+- It sends a push to an app by `send_push`, the tool an agent calls. **Send Push…** (⇧⌘P), in the File menu and in More Controls, shows it, and it asks the tool each time what this device takes.
 - Each type the tool lists is offered; one the device does not take stands with why, and cannot be chosen. The fields follow the type, and **Payload** starts from the tool's own template for it, sent in place of the fields.
 - The app is the one in front where the device says it is a person's own, or the one typed. Its types are asked again once a person is done typing one, as an Android app's build may take another route.
 - Return in a field sends, and the answer comes as a link's does, a refusal whole.
@@ -153,10 +153,10 @@ The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, a
 
 #### Device
 
-- It sets the device's conditions by `device_setting`, the tool an agent calls: dark mode, text size, the language, reduce motion, increase contrast, reduce transparency, animations, the network's speed, Wi-Fi, mobile data, airplane mode, a proxy, the battery level, the thermal state and the fold; a location, as `set_location` sets it; and Face ID or a fingerprint, an incoming call and a text message where the device takes them. A message with no words of its own says "Sent from the window", in the window's language.
+- It sets the device's conditions by `set_device`, the tool an agent calls: dark mode, text size, the language, reduce motion, increase contrast, reduce transparency, animations, the network's speed, Wi-Fi, mobile data, airplane mode, a proxy, the battery level, the thermal state and the fold; a location, as `set_device` `location` sets it; and Face ID or a fingerprint, an incoming call and a text message where the device takes them. A message with no words of its own says "Sent from the window", in the window's language.
 - Each control shows what the device reads, asked again each time the pane shows. What this device cannot do stands disabled with a short reason in a person's words, such as "This device does not fold.", where an agent is told the driver's; a reason the window has no words for is shown as the driver gives it.
 - On a phone, Wi-Fi, airplane mode, mobile data and the proxy stand disabled as well, as each can cut the hub's link to it, over Wi-Fi or by adb over Wi-Fi.
-- A change goes into the one record an agent's changes go into, and a dot marks what was changed here. **Put Back All** puts back what `device_setting` `restore` puts back, and leaves what a running agent changed to that agent.
+- A change goes into the one record an agent's changes go into, and a dot marks what was changed here. **Put Back All** puts back what `set_device` `restore` puts back, and leaves what a running agent changed to that agent.
 - What the window changed goes back when its device leaves it, the window closed or another device chosen in the hub, and the hub ends only after that.
 
 ## Live numbers
@@ -176,13 +176,13 @@ An iPhone's frame rate is its display's, with a mirror alone keeping it near 20,
 
 A simulator needs no runner for any of this: it reads the app in front by its read helper, and the home screen is measured as any app is. A device that cannot say what is in front without its agent starts it when the cards open, and they say so until it is up.
 
-**Performance**, in the Inspector, keeps the same readings for as long as ten minutes of being shown, and takes a real measure of the app in front. **Measure Launch** is `perf_launch` and **Measure Scroll** is `perf_scroll`, as an agent calls them, with their defaults: the app restarts, and the run is kept with every other, marked as read with a stream running. **Open Dashboard** writes the page of every kept run and opens it. Readings stop while a measure runs, as they would reset what it counts. A measure holds the device as an agent's session does, and is refused by name while something else holds it. What is the system's, such as a home screen, is not measured.
+**Performance**, in the Inspector, keeps the same readings for as long as ten minutes of being shown, and takes a real measure of the app in front. **Measure Launch** is `measure_performance launch` and **Measure Scroll** is `measure_performance scroll`, as an agent calls them, with their defaults: the app restarts, and the run is kept with every other, marked as read with a stream running. **Open Dashboard** writes the page of every kept run and opens it. Readings stop while a measure runs, as they would reset what it counts. A measure holds the device as an agent's session does, and is refused by name while something else holds it. What is the system's, such as a home screen, is not measured.
 
 ## Recording a flow
 
-**Record Flow** (⌥⌘T) writes what a person does on the window as a flow, the file `flow run` replays. The **Flows** pane opens beside the device and lists each step as it is written. A second press stops it and saves it to the Desktop as `<device> <date>.flow`, and closing the window does the same, as it does for a movie.
+**Record Flow** (⌥⌘T) writes what a person does on the window as a flow, the file `run_flow run` replays. The **Flows** pane opens beside the device and lists each step as it is written. A second press stops it and saves it to the Desktop as `<device> <date>.flow`, and closing the window does the same, as it does for a movie.
 
-It writes what a person meant, by the element and not the place. Each click is named by the selector a tool would use on the screen that click landed on, by the rule of `flow start`, so that a flow made on one device runs on another of the same app wherever the selector holds.
+It writes what a person meant, by the element and not the place. Each click is named by the selector a tool would use on the screen that click landed on, by the rule of `run_flow record`, so that a flow made on one device runs on another of the same app wherever the selector holds.
 
 | on the window                       | in the file                                                                                                                                                                                                                       |
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -203,9 +203,9 @@ A recording drops nothing without saying so. What has no step (a pinch, a rotati
 
 **Which screen a click means.** A click is named by the screen as it was just before the click. By the time the window hears of a click, the device has already begun to react. So while a recording runs or the pane is open, the screen is read all the time, beside touches: a touch has left for the device before anything here hears of it, no read starts with a finger down or for 100 ms after, and a read takes at most half of the time. A click takes the newest read since the last input, else the one under way. A hover asks the device nothing. Nothing is read with neither in use, nor while the stream is down or a measure runs. Such a read is a look: it wakes no dark screen and opens no lock, as `tree` does for a tool.
 
-**Under the pointer.** With the Flows pane open, the pointer over the device shows the element under it, marked on the picture: its role, words, ref and id, what a click there would write, and what `audit` says of its contrast, read once per screen. An audit waits for the pointer to rest, may start a simulator's runner, and the pane says it is reading until it is done. No audit runs during a recording, as a read waiting behind one would come after the click it was to name, and the pane says so. What a click on the device does is chosen there: it **Touches** the device, **Copies** the element's selector, or **Asserts**, which adds a check to the recording and touches nothing: `assert id=result check=text equals="Sent: Ada"`, or `assert text="Bilgiler"` where its words are what names it.
+**Under the pointer.** With the Flows pane open, the pointer over the device shows the element under it, marked on the picture: its role, words, ref and id, what a click there would write, and what `check_screen` says of its contrast, read once per screen. An audit waits for the pointer to rest, may start a simulator's runner, and the pane says it is reading until it is done. No audit runs during a recording, as a read waiting behind one would come after the click it was to name, and the pane says so. What a click on the device does is chosen there: it **Touches** the device, **Copies** the element's selector, or **Asserts**, which adds a check to the recording and touches nothing: `assert id=result check=text equals="Sent: Ada"`, or `assert text="Bilgiler"` where its words are what names it.
 
-The recording is the one `flow` keeps, a file per device. So `flow start` from an agent or the command line takes a person's clicks too, and a window's recording takes an agent's calls, each in the order they came. A flow's `stop` and `save` work on either.
+The recording is the one `run_flow` keeps, a file per device. So `run_flow record` from an agent or the command line takes a person's clicks too, and a window's recording takes an agent's calls, each in the order they came. A flow's `stop` and `save` work on either.
 
 ## The hub
 
@@ -267,11 +267,11 @@ Left out on purpose, as they are for CI or scripts, or belong to a session:
 | `perf reference`                                                                                                                | Needs the baseline's build put back on the device: a step of a script                                                            |
 | `perf functions`                                                                                                                | Takes two kept profile ids, which a person has no list of here                                                                   |
 | `perf prune`                                                                                                                    | Kept traces are pruned by themselves                                                                                             |
-| `report`                                                                                                                        | Written from a session's own steps, so it belongs to an agent. Timeline, Flight Recorder and Dashboard each write their own page |
+| `record-session report`                                                                                                         | Written from a session's own steps, so it belongs to an agent. Timeline, Flight Recorder and Dashboard each write their own page |
 | `mcp` over stdio                                                                                                                | What a client starts for itself                                                                                                  |
 | `version`                                                                                                                       | `update --check` says it                                                                                                         |
 | Flags such as `--junit`, `--format`, `--retries`, `--tag`, `--env-file`, `--param`, `--share`, `--measurements` and `--allow-*` | For a pipeline, and each has one sensible default here                                                                           |
-| Single operations such as `tap` or `screen`                                                                                     | The device's window does these by hand, and a client by its tools                                                                |
+| Single operations such as `tap-screen` or `read-screen`                                                                         | The device's window does these by hand, and a client by its tools                                                                |
 
 ## Two devices
 
@@ -281,7 +281,7 @@ A touch on either window goes to both. It waits for both screens to be read, so 
 
 Each device says where a touch goes, and what became of it. The subtitle says **To both** with an edge of the accent's colour around the device, or **Here only** once the link control is off, and a ring shows where a touch landed on each screen. Where it failed the device's edge goes red and the subtitle says why, until a touch lands: "No Send here" where that device has no such thing, and nothing else is touched, "iPhone 17 Pro is not live", "That did not land". A drag that begins on such a thing goes on from the same place, as it means no one thing. In the hub's window, whose bar speaks of one side, each picture says under it whose it is and where a touch goes, or what failed, in red, and the sidebar chooses the device whose bar is up.
 
-**Measure Journey…** in Performance measures a flow as `flow` `run` with `iterations` does, a first run left out and five kept, in the same store: `perf_compare` gates it, and the dashboard has it beside every other device. A flow that names no app takes your app in front, so builds under two ids can run one file. On two windows it runs on one device and then the other, as two at once would load each other, and touches stay on their own window meanwhile. Each window then says how it stands: "97 % slower, 1641 ms there", and the step that moved most, by the rank test and the floor the gate uses for two conditions measured in turns, or "No clear difference". Every step's numbers are in the row's tooltip. A window where the journey failed says so in red, and the other has nothing to compare.
+**Measure Journey…** in Performance measures a flow as `run_flow` `run` with `iterations` does, a first run left out and five kept, in the same store: `compare_performance` gates it, and the dashboard has it beside every other device. A flow that names no app takes your app in front, so builds under two ids can run one file. On two windows it runs on one device and then the other, as two at once would load each other, and touches stay on their own window meanwhile. Each window then says how it stands: "97 % slower, 1641 ms there", and the step that moved most, by the rank test and the floor the gate uses for two conditions measured in turns, or "No clear difference". Every step's numbers are in the row's tooltip. A window where the journey failed says so in red, and the other has nothing to compare.
 
 ## Pointer and trackpad
 
@@ -301,7 +301,7 @@ A dot shows where the pointer touches, and two for a pinch. With no frame, a dra
 A window never takes the keyboard by itself: not when it opens, reconnects or restarts, and not when an agent opens it.
 A person's click gives it, or `--focus` at the first opening. A key that reaches a window without the keyboard goes
 nowhere. A window an agent opened also holds all input until a person's click, and that click goes no further. What
-is typed reaches the device and nothing else: no log, the Activity pane or `report` holds it. On an iPhone the runner turns off what XCTest would keep of each key, so that holds there too.
+is typed reaches the device and nothing else: no log, the Activity pane or `record_session` holds it. On an iPhone the runner turns off what XCTest would keep of each key, so that holds there too.
 
 Typing goes through the system's own text input, so a dead key, an accent held down and an input method all work. ⌘V sends the Mac's text the same way, 4,096 characters at most, and the window says when it cut one short, as a long text goes one key at a time. A simulator types what a US keyboard has as keys and anything else by its pasteboard and command V, so an app may ask Allow Paste.
 
@@ -319,12 +319,12 @@ device standing in the hub is told it is open. That holds across builds too: a h
 agent it started, and what starts later uses that one until the hub has closed.
 
 A person's input always goes through, on a connection of its own, and it does not queue behind what an agent
-does. `mirror status` tells an agent when a person last touched the window. While calls come, the window says an agent is driving. Its Activity pane lists each call: time, tool, how long, its result, with
-typed text by its length and secrets hidden, by the code `report` uses. It reads
+does. `show_mirror status` tells an agent when a person last touched the window. While calls come, the window says an agent is driving. Its Activity pane lists each call: time, tool, how long, its result, with
+typed text by its length and secrets hidden, by the code `record_session` uses. It reads
 `activity/<serial>.jsonl` in the state directory: no socket, across processes.
 
 An alert that only a person can answer (Face ID, Touch ID, a passcode, an Apple Account, Allow Paste, a VPN, a profile, a
-purchase) is said in the answer that read the screen: `needs a person: Face ID`. `hand_off {reason, timeoutS}` puts a banner on the window with a sound, a Dock bounce and "I'm Done", with no sound or bounce on a server run with `--silent`. With no
+purchase) is said in the answer that read the screen: `needs a person: Face ID`. `ask_person {reason, timeoutS}` puts a banner on the window with a sound, a Dock bounce and "I'm Done", with no sound or bounce on a server run with `--silent`. With no
 window, a sound and a best-effort notification of the reason, neither on such a server, and it waits for the screen to change. It answers who ended the
 wait, or that no one did. It waits 300 s by default, and at most 3,600.
 
@@ -333,7 +333,7 @@ a stream runs an encoder on the device.
 
 ## Privacy: a window shows the whole screen
 
-A mirror shows what the screen shows: `report` paints over secrets, and a window does not. Neither do **Save Screenshot** and **Record Screen**: what they save is the screen as it was, passwords in plain fields included. The agent's token goes to a viewer by its stdin, never by its arguments.
+A mirror shows what the screen shows: `record_session` paints over secrets, and a window does not. Neither do **Save Screenshot** and **Record Screen**: what they save is the screen as it was, passwords in plain fields included. The agent's token goes to a viewer by its stdin, never by its arguments.
 
 ## The size of a phone's picture
 

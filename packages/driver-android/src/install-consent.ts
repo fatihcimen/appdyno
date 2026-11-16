@@ -2,7 +2,7 @@ import { alertButtonOf, elementsOf, must, sleep, type UiElement } from '@appdyno
 import { DeviceError, type Point, type Tree } from '@appdyno/protocol';
 import type { ApkNames } from './apk-names.js';
 
-/** What the person running the server lets `app install` answer on the phone. */
+/** What the person running the server lets an install answer on the phone. */
 export type InstallAnswers = { prompts: boolean; warnings: boolean };
 
 /** The device as the prompts need it, with its wake and its touches. */

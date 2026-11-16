@@ -102,7 +102,7 @@ function shared(
       ],
     });
     expect(fail.error).toBe(true);
-    expect(fail.text).toContain('2. assert failed');
+    expect(fail.text).toContain('2. check_element failed');
     expect(fail.text).toMatch(/@\w+/);
   });
 
@@ -134,7 +134,7 @@ function shared(
     expect(r.data.met).toBe(true);
     const absent = await call('check_element', { selector: { text: 'Never' }, timeoutMs: 600 });
     expect(absent.error).toBe(true);
-    expect(absent.data.code).toBe('TIMEOUT');
+    expect(absent.data.code).toBe('CHECK_FAILED');
   });
 
   it('scrolls to a row, and stops at the list’s end', async () => {

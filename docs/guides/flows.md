@@ -5,13 +5,13 @@
 What an agent does once can run again with no model, on this device or another, and in CI.
 
 ```sh
-appdyno flow start            # or the flow tool, action start: every action from here on is logged
-appdyno tap --json '{"selector":{"text":"Form"}}'
-appdyno flow stop login.flow  # saves the flow, and prints it with any step to look at
-appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
+appdyno run-flow record           # or the run_flow tool, action record: every action from here on is logged
+appdyno tap-screen --json '{"selector":{"text":"Form"}}'
+appdyno run-flow stop login.flow  # saves the flow, and prints it with any step to look at
+appdyno run-flow run login.flow --param PASSWORD_INPUT=... --from 3
 appdyno test flows/ --tag smoke --env-file ci.env --retries 1 \
   --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
-appdyno flow export login.flow > login.yaml
+appdyno run-flow export login.flow > login.yaml
 ```
 
 A flow is a text file, one step per line:
@@ -32,23 +32,23 @@ assert id=result check=text equals="Sent: ${NAME}"
 tap id=add_button index=1 !ambiguous
 ```
 
-| step                                                                                                                               | runs                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `launch [app] [language=] [arg=] [env=] [probe]`, `stop [app] [background]`                                                        | `launch_app`, with `args` or `env` for `arg=` or `env=`, `terminate_app` |
-| `tap`, `long_press [durationMs=]`, `double_tap`                                                                                    | `tap`, `gesture`                                                         |
-| `type "text" [target] [replace] [submit]`                                                                                          | `type_text`                                                              |
-| `press_key back [count=]`, `swipe up [target] [distance=] [durationMs=] [exact]`, `scroll_to <selector> [direction=] [maxSwipes=]` | the tool of that name                                                    |
-| `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `wait_for`                                                               |
-| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `assert`                                                                 |
-| `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | their tools                                                              |
-| `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `screenshot` with `file`, `visual`                                       |
-| `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `device_setting`                                                         |
-| `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `network` with `mock`                                                    |
-| `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `network` with `check`                                                   |
-| `network strict`, `network strict off`                                                                                             | `network` with `strict`                                                  |
-| `run shared/login.flow`                                                                                                            | that file's steps, in place                                              |
+| step                                                                                                                               | runs                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `launch [app] [language=] [arg=] [env=] [probe]`, `stop [app] [background]`                                                        | `launch_app`, with `args` or `env` for `arg=` or `env=`, `manage_app stop` |
+| `tap`, `long_press [durationMs=]`, `double_tap`                                                                                    | `tap_screen`, with `holdMs` or `count: 2`                                  |
+| `type "text" [target] [replace] [submit]`                                                                                          | `type_text`                                                                |
+| `press_key back [count=]`, `swipe up [target] [distance=] [durationMs=] [exact]`, `scroll_to <selector> [direction=] [maxSwipes=]` | `press_key`, `swipe_screen`, with `until` for `scroll_to`                  |
+| `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `check_element` with `timeoutMs`                                           |
+| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `check_element`                                                            |
+| `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | `open_link`, `set_device`, `answer_alert`, `press_key`                     |
+| `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `take_screenshot` with `file`, `check_screen`                              |
+| `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `set_device`                                                               |
+| `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `capture_network` with `mock`                                              |
+| `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `capture_network` with `check`                                             |
+| `network strict`, `network strict off`                                                                                             | `capture_network` with `strict`                                            |
+| `run shared/login.flow`                                                                                                            | that file's steps, in place                                                |
 
-A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, an `arg=` for each argument, an `env=NAME=value` for each variable and `probe`, as `launch_app` takes `language`, `args`, `env` and `probe`. `stop background` ends the app as the system ends one in the background, as `terminate_app` with `background` does.
+A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, an `arg=` for each argument, an `env=NAME=value` for each variable and `probe`, as `launch_app` takes `language`, `args`, `env` and `probe`. `stop background` ends the app as the system ends one in the background, as `manage_app stop` with `background` does.
 
 A `#` starts a comment, to the end of its line. Where a step takes a target, `tap`, `long_press`, `double_tap`, `type` and `swipe` also take `x= y=` with `screen=` and `!coordinates`, which a recording writes where nothing names the place. A `ref=` is refused, as a ref names an element for one session only. Three flags mark a step to look at: `!ambiguous`, `!coordinates` and `!running`, each explained in [Recording](#recording).
 
@@ -61,10 +61,10 @@ finds alone keeps its index and is flagged `!ambiguous`. Only a point on no elem
 area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
 size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
 Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a click in a web view)
-is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. Its own answer says so at once, in a line that begins `not recorded:`, with the action that is recorded in its place where there is one: `swipe` for a straight drag, `type_text` for a text put on the clipboard, `tap` for a click in a web view. A `network` `mock` that sets rules is a `mock` line for each, while its other actions that change something are not recorded. A `device_setting` given a value is `setting`, as are `shake` and `memory_warning`, which need none, and its `restore` is `setting restore`; a `terminate_app` with `background` is `stop background`; a `visual` is `visual` with its tolerance and masks, which a replay compares with the flow's own baselines, so run it once with `--update-baselines`; a `screenshot` saved to a file is `screenshot` with the file's name. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. A `launch_app` with `restart`, `args` or `env` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. A `launch_app` with `probe` is `launch probe`, after a `stop` where the probe started the app anew. `flow stop` and
-`flow save` list every step to look at.
+is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. Its own answer says so at once, in a line that begins `not recorded:`, with the action that is recorded in its place where there is one: `swipe_screen` with `direction` for a straight drag, `type_text` for a text put on the clipboard, `tap_screen` for a click in a web view. A `capture_network` `mock` that sets rules is a `mock` line for each, while its other actions that change something are not recorded. A `set_device` given a value is `setting`, as are `shake` and `memory_warning`, which need none, and its `restore` is `setting restore`; a `manage_app stop` with `background` is `stop background`; a `check_screen` `visual` is `visual` with its tolerance and masks, which a replay compares with the flow's own baselines, so run it once with `--update-baselines`; a `take_screenshot` saved to a file is `screenshot` with the file's name. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`measure_performance launch` cold: `stop`, `launch`; `measure_performance scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. A `launch_app` with `restart`, `args` or `env` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. A `launch_app` with `probe` is `launch probe`, after a `stop` where the probe started the app anew. `run_flow stop` and
+`run_flow save` list every step to look at.
 
-A value the agent typed or read becomes a parameter by `params` on `flow start`, `stop` or `save` (`--param NAME=Grace` on the command line): in every step that typed or read it, before or after, it becomes `${NAME}`, declared `param NAME`, and `flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `stop` with `file` saves as `save` does, and `save` writes the last recording again. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
+A value the agent typed or read becomes a parameter by `params` on `run_flow record`, `stop` or `save` (`--param NAME=Grace` on the command line): in every step that typed or read it, before or after, it becomes `${NAME}`, declared `param NAME`, and `run_flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `stop` with `file` saves as `save` does, and `save` writes the last recording again. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
 
 ## Secrets
 
@@ -95,7 +95,7 @@ failed or if there was nothing to run. Assertions are steps.
 
 ## Mock rules
 
-`mock` sets a rule for the app's requests on a simulator, as `network` with `mock` does, and the line after `mock` is the rule as that tool takes it:
+`mock` sets a rule for the app's requests on a simulator, as `capture_network` with `mock` does, and the line after `mock` is the rule as that tool takes it:
 
 ```
 mock api.example.com/v1/items* status=200 body=@items.json
@@ -111,7 +111,7 @@ Two patterns come up often. A request that fails once and then works, as a retry
 
 A run can replay what was recorded. `network` `read` with `save` keeps a capture's answers as a HAR file, and `mock from=checkout.har` makes a rule of each answer in it, the file found from the flow's folder: a request asked twice is answered as it was last, one asked with several queries has a rule for each, and the bodies are written to `appdyno-network/checkout/`, which is to be kept out of git as the HAR is. So `mock from=checkout.har unmatched=fail` runs a flow with no server, and fails it on the day the app asks for something the recording lacks. A HAR this tool saved has what names a credential hidden (`•••`), and that is what a rule made of it answers with: a login that must return a working token needs a rule of its own. At most 50 rules hold at once.
 
-The rules go into the app by the network probe, so the first `mock` starts a capture by it where none runs, which restarts the app: put the `mock` lines before `launch`. A rule holds until its file has run, on a pass and on a failure, and then that rule alone is taken out: one set before the run, by an agent or in the Mac app, stays. The capture runs on until `network` `stop` or the session's end. Only the app's own URLSession requests are taken: not a web view's, not a background session's, and the system still reads the Mac's network as it is. An Android device and an iPhone refuse the step.
+The rules go into the app by the network probe, so the first `mock` starts a capture by it where none runs, which restarts the app: put the `mock` lines before `launch`. A rule holds until its file has run, on a pass and on a failure, and then that rule alone is taken out: one set before the run, by an agent or in the Mac app, stays. The capture runs on until `capture_network` `stop` or the session's end. Only the app's own URLSession requests are taken: not a web view's, not a background session's, and the system still reads the Mac's network as it is. An Android device and an iPhone refuse the step.
 
 ## Requests that fail
 
@@ -123,11 +123,11 @@ While a capture by the network probe runs on a simulator, a step under which a r
 
 ## Screenshots, visual checks and settings
 
-`screenshot home` saves the screen as `home.png`: in `appdyno test` under `<artifacts>/<device>/<file>/`, beside what a failure leaves, and in `flow run` under `./appdyno-screenshots/`. A run again takes it anew.
+`screenshot home` saves the screen as `home.png`: in `appdyno test` under `<artifacts>/<device>/<file>/`, beside what a failure leaves, and in `run_flow run` under `./appdyno-screenshots/`. A run again takes it anew.
 
-`visual home` compares the screen with `baselines/home.png` in the folder of the flow's file, as the `visual` tool does; a step of a file another flow runs looks in that file's folder. `tolerance=` is the percent of pixels that may differ, `0.1` unless given, and each `mask=` leaves a part out: `x,y,w,h` in tap units, or selector words, as `mask="id=clock"`. The status bar is always left out. A `screenshot` or `visual` step first waits until the screen has looked the same for 500 ms, at most 5 s, as a fade into dark mode would otherwise be in the picture. A screen that differs past the tolerance fails the step, and the failure names the diff, where what differs is red, and the screen it read. `appdyno test` or `appdyno flow run` with `--update-baselines` saves each baseline in place of comparing. It saves none of a flow whose `visual` step comes after a step flagged `!ambiguous` that acts, as a `tap` does and an `assert` or a `wait_for` does not: that step may reach another element on that run, so the flow is refused before its first step, naming both lines. A flow whose baseline is missing is refused before its first step, saying so. A baseline is one screen size's: on a device of another size the step fails, saying both sizes, and `--update-baselines` on several `--device`s keeps the last one's.
+`visual home` compares the screen with `baselines/home.png` in the folder of the flow's file, as `check_screen` `visual` does; a step of a file another flow runs looks in that file's folder. `tolerance=` is the percent of pixels that may differ, `0.1` unless given, and each `mask=` leaves a part out: `x,y,w,h` in tap units, or selector words, as `mask="id=clock"`. The status bar is always left out. A `screenshot` or `visual` step first waits until the screen has looked the same for 500 ms, at most 5 s, as a fade into dark mode would otherwise be in the picture. A screen that differs past the tolerance fails the step, and the failure names the diff, where what differs is red, and the screen it read. `appdyno test` or `appdyno run-flow run` with `--update-baselines` saves each baseline in place of comparing. It saves none of a flow whose `visual` step comes after a step flagged `!ambiguous` that acts, as a `tap` does and an `assert` or a `wait_for` does not: that step may reach another element on that run, so the flow is refused before its first step, naming both lines. A flow whose baseline is missing is refused before its first step, saying so. A baseline is one screen size's: on a device of another size the step fails, saying both sizes, and `--update-baselines` on several `--device`s keeps the last one's.
 
-`setting dark_mode on` changes a device setting as `device_setting` does, with its names and values: `setting text_size accessibility-large`, `setting locale tr-TR app=org.example`, `setting biometric match`, `setting sms "Your code is 1234" title=5551234`, and with no value `setting shake` and `setting memory_warning`, which takes Android's trim level as its value. `setting restore` puts back every one changed. `appdyno test` puts back what each file changed, a setting, a fixed location or the rotation lock, once the file has run, after each of its retries too, so that one file's dark mode is not the next one's. A measured file puts back after its iterations, not between them. What was changed before the run is left as it is. The photos and videos a `setting media` step added come out the same way where the device can take them out (an Android device or emulator); a simulator's Photos has no delete, and keeps them.
+`setting dark_mode on` changes a device setting as `set_device` does, with its names and values: `setting text_size accessibility-large`, `setting locale tr-TR app=org.example`, `setting biometric match`, `setting sms "Your code is 1234" title=5551234`, and with no value `setting shake` and `setting memory_warning`, which takes Android's trim level as its value. `setting restore` puts back every one changed. `appdyno test` puts back what each file changed, a setting, a fixed location or the rotation lock, once the file has run, after each of its retries too, so that one file's dark mode is not the next one's. A measured file puts back after its iterations, not between them. What was changed before the run is left as it is. The photos and videos a `setting media` step added come out the same way where the device can take them out (an Android device or emulator); a simulator's Photos has no delete, and keeps them.
 
 ## Tags
 
@@ -143,7 +143,7 @@ While a capture by the network probe runs on a simulator, a step under which a r
 
 ## Export
 
-`flow export` writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, a `visual`, a `setting`, `replace`,
+`run_flow export` writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, a `visual`, a `setting`, `replace`,
 coordinates, a role with no id or text); a `screenshot` is its `takeScreenshot`. A role beside a text is left out, because that format has no role, and the YAML
 says so in a comment. A text there matches a whole label, where ours also takes a part of one. There is no
 import.
@@ -152,7 +152,7 @@ The tool answers with the YAML, and `to` (`--to` on the command line) writes it 
 
 ## A journey, measured and gated
 
-`appdyno test flows/login.flow --measure [--iterations 5]`, or `flow` `run` with `iterations`, runs a flow as a performance scenario: a first run left out as a warm-up, then each iteration with a time and what the device reads in a moment for each step. All of it is one kept run of a scenario named by the file's path in its repository, `journey-flows-login`, so that two `smoke.flow` in two folders are two scenarios, and the gate is the usual one:
+`appdyno test flows/login.flow --measure [--iterations 5]`, or `run_flow` `run` with `iterations`, runs a flow as a performance scenario: a first run left out as a warm-up, then each iteration with a time and what the device reads in a moment for each step. All of it is one kept run of a scenario named by the file's path in its repository, `journey-flows-login`, so that two `smoke.flow` in two folders are two scenarios, and the gate is the usual one:
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # three times, then:

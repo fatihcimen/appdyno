@@ -6,8 +6,8 @@ What an agent can leave behind to show what happened, and how it looks inside an
 
 ## Video
 
-`record` with `action` `start` (`file`, `maxSeconds`, default 1,800) and `stop`, one recording per device. It
-outlives the process that started it, so `appdyno record start` and `appdyno record stop` work as two commands. A session's
+`record_session` with `kind` `video` and `action` `start` (`file`, `maxSeconds`, default 1,800) and `stop`, one recording per device. It
+outlives the process that started it, so `appdyno record-session video start` and `appdyno record-session video stop` work as two commands. A session's
 end stops a recording it left running.
 
 `stop` reads the file, and a file that does not play is a refusal saying why (a recorder killed before it ended leaves no
@@ -21,7 +21,7 @@ index). The answer gives how long the file plays, its frames and size.
 
 ## Report
 
-`report` `start` (`dir`) keeps every call from then on: its arguments, its answer and, after anything that is not a plain read,
+`record_session` `report` `start` (`dir`) keeps every call from then on: its arguments, its answer and, after anything that is not a plain read,
 the screen and an image of it. `stop` writes `index.html` in that folder, with the video recorded meanwhile, the app's log, its
 crashes and the measurements taken. So does the end of a session. `write` writes it at any moment, and with no `start` it is a report
 of the screen as it is.
@@ -32,7 +32,7 @@ element holds a secret or is a password field, and left out if it cannot be pain
 
 ## Timeline
 
-`report` `timeline`, then the journey, then `report` `stop` writes `timeline.html` beside the report: the video, touches, frames, requests, the log and memory on one clock, in one file to send. `report` `flight` keeps the last seconds of an app and saves them on a crash or a stall. From a terminal: `appdyno timeline` and `appdyno flight`. See [One timeline](../reference/perf.md#one-timeline) in the performance reference, which also says what the file holds before you send it.
+`record_session` `timeline` `start`, then the journey, then `record_session` `timeline` `stop` writes `timeline.html` beside the report: the video, touches, frames, requests, the log and memory on one clock, in one file to send. `record_session` `flight` `start` keeps the last seconds of an app and saves them on a crash or a stall. From a terminal: `appdyno timeline` and `appdyno flight`. See [One timeline](../reference/perf.md#one-timeline) in the performance reference, which also says what the file holds before you send it.
 
 ## Dashboard
 
@@ -45,21 +45,21 @@ One page of an app's performance on all your devices: what needs attention, what
 
 It says that an emulator's or a simulator's numbers are relative to this Mac, and that real frame rates, frozen frames, hitches and energy need a phone. Where a number means something else on a device, it says what: a simulator's frames are main-thread pacing, and its energy is this Mac's. With no phone measured for an app, it gives the command for one.
 
-The page is `<measurements dir>/dashboard/index.html`, rewritten after each kept run, and an open page reloads itself. There is no server: one file with no script, which loads nothing. `perf_compare` with `action: dashboard` writes it too, and **Open Dashboard** in the Mac app opens it. See [the dashboard](../reference/perf.md#the-dashboard) in the performance reference.
+The page is `<measurements dir>/dashboard/index.html`, rewritten after each kept run, and an open page reloads itself. There is no server: one file with no script, which loads nothing. `compare_performance` with `action: dashboard` writes it too, and **Open Dashboard** in the Mac app opens it. See [the dashboard](../reference/perf.md#the-dashboard) in the performance reference.
 
 More to read, each in the [performance reference](../reference/perf.md):
 
-- `perf_snapshot` `also: surface` reads the frames of a `SurfaceView` or a game, which `gfxinfo` never sees, against Google Play's slow sessions.
-- `perf_launch` with `baselineProfile: true` says of an Android release build whether its Baseline Profile is in the APK, whether it is applied, and what it is worth in cold starts with it and without: [A Baseline Profile](../reference/perf.md#a-baseline-profile).
-- `perf_snapshot` `also: battery` gives an Android app's battery signals: wake locks by tag, wakeups and jobs, with no power model.
-- `perf_snapshot` `also: anonMemory` gives its memory as Google Play judges it: anon RSS and swap by process state, and bitmaps.
-- `perf_snapshot` `also: startInfo` says why it last started, from Android 15.
-- `perf_trace` says why slow frames and hangs were slow.
-- `perf_compare` `action: functions` says which functions moved between two profiles.
+- `measure_performance snapshot` `also: surface` reads the frames of a `SurfaceView` or a game, which `gfxinfo` never sees, against Google Play's slow sessions.
+- `measure_performance launch` with `baselineProfile: true` says of an Android release build whether its Baseline Profile is in the APK, whether it is applied, and what it is worth in cold starts with it and without: [A Baseline Profile](../reference/perf.md#a-baseline-profile).
+- `measure_performance snapshot` `also: battery` gives an Android app's battery signals: wake locks by tag, wakeups and jobs, with no power model.
+- `measure_performance snapshot` `also: anonMemory` gives its memory as Google Play judges it: anon RSS and swap by process state, and bitmaps.
+- `measure_performance snapshot` `also: startInfo` says why it last started, from Android 15.
+- `measure_performance frames` says why slow frames and hangs were slow.
+- `compare_performance` `action: functions` says which functions moved between two profiles.
 
 ## Network
 
-`network` `paths` says what each way sees on this device, and why not. `start` picks one, `read` and `stop` give a bounded list.
+`capture_network` `paths` says what each way sees on this device, and why not. `start` picks one, `read` and `stop` give a bounded list.
 
 | way       | where                                                                                                                                                                                                 | sees                                                                                                              | bodies                                                |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -76,30 +76,30 @@ The probe does more than list. A `read` of all its requests is folded: the faile
 
 ## Web views
 
-`webview`: `pages`, `elements` (the DOM at tap coordinates, to read where the accessibility tree does not), `click` (a CSS
-selector), `eval` (a script). On Android it speaks the DevTools protocol to the `webview_devtools_remote_<pid>` socket of a debuggable
+`inspect_app`: `web_pages`, `web_elements` (the DOM at tap coordinates, to read where the accessibility tree does not), `web_click` (a CSS
+selector), `web_eval` (a script). On Android it speaks the DevTools protocol to the `webview_devtools_remote_<pid>` socket of a debuggable
 app, through `adb forward`. On a simulator it speaks to the socket Safari's Web Inspector uses, and from iOS 16.4 a page shows only if the app set
-`isInspectable`. An iPhone is not reached this way. One connection to a simulator's inspector serves a call and the calls in the minute after it, as the inspector serves a new one only some 10 s after the last one closed; a new one is waited for as long as the inspector takes, up to 15 s and once more on a fresh connection, and a timeout names the inspector. On the command line each call is a process of its own, so a call within 10 s of the last can take up to those 10 s. On a simulator, `pages` marks the tab that shows as `(showing)`, by what each page's own document says, and `webview` and `screen` read that one; on Android it lists each page once. With no page to inspect it says that a page still loading is listed once it has loaded, and to ask again.
+`isInspectable`. An iPhone is not reached this way. One connection to a simulator's inspector serves a call and the calls in the minute after it, as the inspector serves a new one only some 10 s after the last one closed; a new one is waited for as long as the inspector takes, up to 15 s and once more on a fresh connection, and a timeout names the inspector. On the command line each call is a process of its own, so a call within 10 s of the last can take up to those 10 s. On a simulator, `web_pages` marks the tab that shows as `(showing)`, by what each page's own document says, and `inspect_app` and `read_screen` read that one; on Android it lists each page once. With no page to inspect it says that a page still loading is listed once it has loaded, and to ask again.
 
-`screen` marks what a web view shows as `web`, and adds what the page holds and the accessibility tree does not, by coordinates and
+`read_screen` marks what a web view shows as `web`, and adds what the page holds and the accessibility tree does not, by coordinates and
 selector, waiting at most 3 s for the page, and says when it left it unread. An app that is not debuggable still shows what its web view tells accessibility.
 
 ## Flutter
 
-A Flutter app's semantics are in the accessibility tree, so `screen`, selectors and taps work on it. The richer tree of the Dart VM
+A Flutter app's semantics are in the accessibility tree, so `read_screen`, selectors and taps work on it. The richer tree of the Dart VM
 service is not built yet: this tool ships only what it has tested, and there is no Flutter test app to test it against.
-It would go as `webview` does: find the `Observatory` or `Dart VM service` line in the log of a debug build, forward its
+It would go as `inspect_app` does for a web view: find the `Observatory` or `Dart VM service` line in the log of a debug build, forward its
 port, and call `ext.flutter.inspector.getRootWidgetSummaryTree` over its WebSocket.
 
 ## React Native
 
-`react_native` talks to Metro on this Mac and needs no device: `targets`, `logs` (the JS console over the Hermes
-runtime's DevTools protocol, for `ms`, secrets hidden) and `reload` (Metro's route, else the runtime's). Tested against a stand-in for Metro only, not a real app. Left out: the
+For React Native, `inspect_app` talks to Metro on this Mac and needs no device: `rn_targets`, `rn_logs` (the JS console over the Hermes
+runtime's DevTools protocol, for `ms`, secrets hidden) and `rn_reload` (Metro's route, else the runtime's). Tested against a stand-in for Metro only, not a real app. Left out: the
 component tree and JS profiles. On Android, a device reaches Metro through your own `adb reverse tcp:8081 tcp:8081`. `metro` is `localhost`, `127.0.0.1` or `[::1]` and a port, so this Mac calls no other host, and a runtime's socket that Metro names on another host or port is not opened.
 
 ## Visual comparison
 
-`visual` `baseline` saves the screen as `name` under `dir` (default `./appdyno-baselines`, to commit with your project). `compare` refuses
+`check_screen` `visual_baseline` saves the screen as `name` under `dir` (default `./appdyno-baselines`, to commit with your project). `visual` refuses
 with `CHECK_FAILED` past `tolerance` (percent of pixels, default 0.1; a pixel counts if a channel differs by more than 16), and writes
 `name.diff.png` (what differs in red, masks in blue) and `name.actual.png`. `masks` are `x,y,w,h` in tap units or `text`, `id`, `role`; the status bar is always left out.
 A baseline holds for one size of screen, and the refusal says so.

@@ -5,7 +5,7 @@ import type { Session } from './session.js';
 
 /**
  * An iOS alert over an app is the home screen app's: as a touch at `at` on `screen` closes one, that app is in front a
- * moment, showing only the app's card in its switcher, and the settle answered with that (`alert` 5 of 5, a tap 3 of 3).
+ * moment, showing only the app's card in its switcher, and the settle answered with that (`answer_alert` 5 of 5, a tap 3 of 3).
  * Until another app is in front again; undefined for a touch on no such alert.
  */
 export async function backFromAlert(s: Session, screen: Screen, at: Point) {

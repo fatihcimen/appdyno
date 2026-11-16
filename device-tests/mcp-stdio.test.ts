@@ -67,7 +67,7 @@ for (const revision of REVISIONS)
           },
           { onprogress: (p) => seen.push(p.message) },
         );
-        expect(seen).toContain('wait_for: still working (5 s)');
+        expect(seen).toContain('check_element: still working (5 s)');
       }, 60_000);
 
       it('starts as appdyno and lists its tools', async () => {

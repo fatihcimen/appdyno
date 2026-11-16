@@ -43,8 +43,9 @@
   <text class="name" x="52" y="98">Asks</text>
   <text class="text" x="52" y="122">Start the app over:</text>
   <text class="text" x="52" y="142">clear its data.</text>
-  <text class="code" x="52" y="176">app {"action":"clear",</text>
-  <text class="code" x="52" y="196">"app":"dev.appdyno.fixture"}</text>
+  <text class="code" x="52" y="170">manage_app {</text>
+  <text class="code" x="52" y="188">"action":"clear",</text>
+  <text class="code" x="52" y="206">"app":"dev.appdyno.fixture"}</text>
 
   <rect class="card s-p" x="32" y="236" width="250" height="196" rx="12"/>
   <text class="name" x="52" y="268">Gets back</text>

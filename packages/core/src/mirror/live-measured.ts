@@ -94,7 +94,7 @@ async function sampleOf(
     read(
       FRAME_FIELDS,
       'frames',
-      // the counters only grow here: a reset would cut the window a measure such as perf_scroll counts from its own
+      // the counters only grow here: a reset would cut the window a measure such as measure_performance scroll counts from its own
       () =>
         measure.frames(app, {
           reset: false,

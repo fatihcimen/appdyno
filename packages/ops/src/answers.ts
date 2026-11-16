@@ -139,7 +139,7 @@ type Aftermath = {
   /** The app's process once the action was over, as its agent told it with the answer: none to ask after it. */
   pidNow?: { pid: string | undefined } | undefined;
   settleMs?: number | undefined;
-  /** What a `scroll_to` looked for is there: it compares with its own last swipe, not with before the call. */
+  /** What a scroll to an element looked for is there: it compares with its own last swipe, not with before the call. */
   found?: boolean;
   /** The app a launch started: a launch of what is in front expects no change. */
   launched?: string | undefined;

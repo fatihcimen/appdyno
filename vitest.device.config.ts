@@ -25,7 +25,7 @@ export default defineConfig({
   test: {
     include: ['device-tests/**/*.test.ts'],
     setupFiles: ['device-tests/one-agent.ts'],
-    // a server a suite starts plays no sound and posts no notification for a hand_off: a run is no one's to answer
+    // a server a suite starts plays no sound and posts no notification for an ask_person: a run is no one's to answer
     env: { APPDYNO_SILENT: '1' },
     fileParallelism: false,
     testTimeout: 120_000,

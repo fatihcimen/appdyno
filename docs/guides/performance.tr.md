@@ -11,9 +11,9 @@ appdyno performans sayılarını cihazın kendisinden okur, saklar ve bir uygula
 Ajanınıza sorun ya da komut satırını kullanın. `A` uygulamanızın kimliğidir: `com.example.app`.
 
 ```sh
-appdyno perf-launch --app A --mode cold --repeats 6     # açılış süresi, tekrarlarla
-appdyno perf-snapshot --app A                           # CPU, bellek, kareler, cihazın yükü
-appdyno perf survey --app A                             # bu cihazdaki her ölçüm, sonra bir sayfa
+appdyno measure-performance launch --app A --mode cold --repeats 6  # açılış süresi, tekrarlarla
+appdyno measure-performance snapshot --app A                        # CPU, bellek, kareler, cihazın yükü
+appdyno perf survey --app A                                         # bu cihazdaki her ölçüm, sonra bir sayfa
 ```
 
 Her çalıştırma geldiği ham çıktıyla birlikte saklanır. Mac'inizden hiçbir şey çıkmaz.
@@ -25,13 +25,13 @@ Her çalıştırma geldiği ham çıktıyla birlikte saklanır. Mac'inizden hiç
 Bir kapı, bir çalıştırmayı daha önce sakladığınızla karşılaştırır. Uygulamanızın kendi kendine ne kadar oynadığını bilmek için üç çalıştırmaya ihtiyaç duyar.
 
 ```sh
-appdyno perf-launch --app A --mode cold --repeats 6     # üç kez, sonra:
+appdyno measure-performance launch --app A --mode cold --repeats 6  # üç kez, sonra:
 appdyno perf baseline --app A --last 3
-appdyno perf-launch --app A --mode cold --repeats 6     # değişikliğinizden sonra
-appdyno perf compare --app A                            # gerilemede 1 ile çıkar
+appdyno measure-performance launch --app A --mode cold --repeats 6  # değişikliğinizden sonra
+appdyno perf compare --app A                                        # gerilemede 1 ile çıkar
 ```
 
-Ajanınız üzerinden `baseline` ile `perf_launch` üç çalıştırmayı ölçer ve onları tek çağrıda baseline olarak saklar. Diğer her çalıştırmanın yanıtındaki `next` satırı, çalıştırmanın ne olarak saklandığını ve onu hangi çağrının baseline yapacağını söyler: tek bir çalıştırma baseline değildir.
+Ajanınız üzerinden `baseline` ile `measure_performance launch` üç çalıştırmayı ölçer ve onları tek çağrıda baseline olarak saklar. Diğer her çalıştırmanın yanıtındaki `next` satırı, çalıştırmanın ne olarak saklandığını ve onu hangi çağrının baseline yapacağını söyler: tek bir çalıştırma baseline değildir.
 
 Baseline `.appdyno/perf/baselines/` altına gider. Onu commit edin. Kendi sınırlarınız `.appdyno/perf/budgets.json` içine girer:
 
@@ -39,7 +39,7 @@ Baseline `.appdyno/perf/baselines/` altına gider. Onu commit edin. Kendi sını
 [{ "kind": "launch.ttid_ms", "max": 2000 }]
 ```
 
-Ajanınız üzerinden "soğuk açılışı 200 ms'nin altında tut", `kind` ve `max` ile `perf_compare` `budget`'tır; ölçülmüş bir çalıştırma olsun ya da olmasın o dosyayı yazar: Android'de `launch.ttid_ms`, bir iPhone'da ya da simülatörde `launch.until_ms`.
+Ajanınız üzerinden "soğuk açılışı 200 ms'nin altında tut", `kind` ve `max` ile `compare_performance` `budget`'tır; ölçülmüş bir çalıştırma olsun ya da olmasın o dosyayı yazar: Android'de `launch.ttid_ms`, bir iPhone'da ya da simülatörde `launch.until_ms`.
 
 ## Kapı nasıl karar verir
 

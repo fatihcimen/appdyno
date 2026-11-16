@@ -108,7 +108,7 @@ type Called = { answer: { ok: boolean; text: string; hint?: string }; data: unkn
 type Reads = Partial<Record<string, string>>;
 
 /**
- * The Device pane: each condition as the device reads it, or why it cannot be, and a change by `device_setting`, the op
+ * The Device pane: each condition as the device reads it, or why it cannot be, and a change by `set_device`, the op
  * an agent calls, so that the one record of what to put back holds what a person changed here too.
  */
 export function conditionSends(
@@ -206,7 +206,7 @@ export function conditionSends(
         conditions: [location()],
       }),
 
-    /** Put Back All: what `device_setting restore` puts back, a location among them, and what it leaves to a process still running. */
+    /** Put Back All: what `set_device restore` puts back, a location among them, and what it leaves to a process still running. */
     deviceRestore: async () => {
       const { answer, data } = await call('device', 'set_device', { name: 'restore' }, '');
       // what went back is as the restore read it back, and nothing else moved: a refusal reads every row again

@@ -50,7 +50,7 @@ its last log lines:
   launch_app starts it again; why it died is above, with its last log lines, and crashes has the whole report
 ```
 
-Ardından `crashes` fonksiyonun adını verir, `discount(forQuantity:)`; aynı ödeme bir akış olarak kaydedildiğinde de hata düzeltilene kadar CI'da başarısız olur.
+Ardından `source: crashes` ile `read_logs` fonksiyonun adını verir, `discount(forQuantity:)`; aynı ödeme bir akış olarak kaydedildiğinde de hata düzeltilene kadar CI'da başarısız olur.
 
 Ajandan uygulamanıza bir push göndermesini, uygulamanızın açtığı her bağlantıyı açmasını ya da soğuk açılışını ölçüp baseline olarak saklamasını da isteyebilirsiniz. `npx -y appdyno doctor` bu Mac'te neyin eksik olduğunu söyler; [Kurulum](#kurulum) telefonu, Mac uygulamasını ve diğer istemcileri anlatır.
 
@@ -65,19 +65,19 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 
 ## Bir ajan neler yapabilir
 
-| bir ajan neler yapabilir                                                                                                                                                                                                                                         | araçları                                                                |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Görmek ve dokunmak.** Ekranı öğeler halinde okur, bir öğeyi metniyle, id'siyle ya da ref'iyle bulur: dokunur, yazar, kaydırır, öğeyi bulana kadar kaydırır, uzun basar, sürükler, pinch yapar, tuşa basar. Tek çağrıda 30 adıma kadar.                         | `screen` `find` `tap` `type_text` `swipe` `gesture` `steps` `wait_for`  |
-| **Yerel görünümler.** Görünüm ağacını onu çizen çatının altında verir: SwiftUI, UIKit, Compose, Flutter, React Native ya da bir web görünümü; bir simülatörde ve Android'de.                                                                                     | `screen` `views`                                                        |
-| **Push bildirimleri.** Cihazın kabul ettiği her türde push gönderir; bir başlık ve metinden ya da platformun kendi JSON'undan.                                                                                                                                   | `push`                                                                  |
-| **Bağlantılar.** Deep link, universal link ya da App Link açar. Kurulu bir uygulamanın açtığı bağlantıları listeler.                                                                                                                                             | `open_link`                                                             |
-| **Cihaz koşulları.** Karanlık mod, yazı boyutu, dil, yavaş ağ, uçak modu ve biyometri; her biri oturum bitince eski haline döner. Konum ve ekranın yönü de. Bir bellek uyarısı, bir sallama, kitaplığa fotoğraflar ve sistemin yaptığı gibi arka planda bir son. | `device_setting` `set_location` `set_orientation` `terminate_app`       |
-| **Ölçüm.** Açılış süresi, kareler, bellek, CPU, ağ verisi ve enerji; platformun kendi araçlarından okunur, ham çıktısıyla saklanır. Performans kapısı, uygulamayı yavaşlatan bir değişikliği başarısız kılar.                                                    | `perf_launch` `perf_scroll` `perf_snapshot` `perf_compare` ve diğerleri |
-| **Kanıt.** Video, her adımın raporu, loglar, çökme kayıtları, ağ trafiği, erişilebilirlik denetimi ve görsel karşılaştırma.                                                                                                                                      | `record` `report` `logs` `crashes` `network` `audit` `visual`           |
-| **Akışlar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                                               | `flow`                                                                  |
-| **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                                          | `mirror` `hand_off`                                                     |
+| bir ajan neler yapabilir                                                                                                                                                                                                                                         | araçları                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Görmek ve dokunmak.** Ekranı öğeler halinde okur, bir öğeyi metniyle, id'siyle ya da ref'iyle bulur: dokunur, yazar, kaydırır, öğeyi bulana kadar kaydırır, uzun basar, sürükler, pinch yapar, tuşa basar. Tek çağrıda 30 adıma kadar.                         | `read_screen` `tap_screen` `type_text` `swipe_screen` `press_key` `run_steps` `check_element` |
+| **Yerel görünümler.** Görünüm ağacını onu çizen çatının altında verir: SwiftUI, UIKit, Compose, Flutter, React Native ya da bir web görünümü; bir simülatörde ve Android'de.                                                                                     | `read_screen` `views`                                                                         |
+| **Push bildirimleri.** Cihazın kabul ettiği her türde push gönderir; bir başlık ve metinden ya da platformun kendi JSON'undan.                                                                                                                                   | `send_push`                                                                                   |
+| **Bağlantılar.** Deep link, universal link ya da App Link açar. Kurulu bir uygulamanın açtığı bağlantıları listeler.                                                                                                                                             | `open_link`                                                                                   |
+| **Cihaz koşulları.** Karanlık mod, yazı boyutu, dil, yavaş ağ, uçak modu ve biyometri; her biri oturum bitince eski haline döner. Konum ve ekranın yönü de. Bir bellek uyarısı, bir sallama, kitaplığa fotoğraflar ve sistemin yaptığı gibi arka planda bir son. | `set_device` `transfer_files` `manage_app`                                                    |
+| **Ölçüm.** Açılış süresi, kareler, bellek, CPU, ağ verisi ve enerji; platformun kendi araçlarından okunur, ham çıktısıyla saklanır. Performans kapısı, uygulamayı yavaşlatan bir değişikliği başarısız kılar.                                                    | `measure_performance` `compare_performance`                                                   |
+| **Kanıt.** Video, her adımın raporu, loglar, çökme kayıtları, ağ trafiği, erişilebilirlik denetimi ve görsel karşılaştırma.                                                                                                                                      | `record_session` `read_logs` `capture_network` `check_screen`                                 |
+| **Akışlar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                                               | `run_flow`                                                                                    |
+| **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                                          | `show_mirror` `ask_person`                                                                    |
 
-28 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
+28 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında; [1.3.0'dan önceki adlar](docs/reference/tools.tr.md#130dan-önceki-adlar) da orada. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
 
 ### Push bildirimleri ve bağlantılar
 
@@ -85,7 +85,7 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 
 <p align="center"><sub>Bir simülatörde, MCP üzerinden gerçek bir çalıştırma; süreler, yükü yüksek bir Mac'te ölçüldüğü gibi.</sub></p>
 
-`push`, bildirimi türüne göre gönderir ve sonraki ekranla yanıt verir. Tür verilmezse bu cihazın hangi türleri kabul ettiğini, her birinin hangi yoldan gittiğini ve göndereceği payload'u söyler.
+`send_push`, bildirimi türüne göre gönderir ve sonraki ekranla yanıt verir. Tür verilmezse bu cihazın hangi türleri kabul ettiğini, her birinin hangi yoldan gittiğini ve göndereceği payload'u söyler.
 
 - **Simülatörde** alert `simctl` ile gider ve doğrudan uygulamanın koduna ulaşır: alanlardan ya da badge, ses ve kategori içeren APNs payload'unun kendisinden.
 - **Android'de** push her zaman uygulamanın kendisine gider. Firebase Messaging içeren debuggable bir build alert, rich, background ve Live Activity push'larını gerçek FCM mesajları olarak, doğrudan Firebase SDK'sına teslim edilmiş halde alır; Firebase projesi ya da anahtar gerekmez. `tapped`, uygulamayı dokunulmuş bir bildirimin açtığı gibi, push'un verisi onu başlatan intent'te olacak şekilde açar. Başka bir build yalnızca `tapped` alır; yanıt, diğerleri için neyin gerektiğini söyler.
@@ -187,7 +187,7 @@ Claude Desktop, appdyno'yu terminal olmadan tek bir dosyadan kurar: `appdyno-<ve
 ```sh
 appdyno doctor             # neyin kurulu, neyin eksik olduğunu ve nasıl düzeltileceğini söyler
 appdyno devices            # neler bağlı
-appdyno screen             # ekranda ne var
+appdyno read-screen        # ekranda ne var
 appdyno hub                # bütün cihazlar, dokunabileceğiniz tek pencerede
 appdyno perf survey --app com.example.app   # bu cihazdaki her ölçüm, ardından hepsini gösteren bir sayfa
 ```

@@ -71,7 +71,7 @@ export function nearest(list: ScreenElement[], want: string | undefined, n = 5):
     .map((x) => x.e);
 }
 
-/** What `find` reports and `assert` checks of an element, beyond its place on the list. */
+/** What `read_screen` reports of a selector's match and `check_element` checks of an element, beyond its place on the list. */
 export type Attributes = {
   /** The whole text (a list's label is cut short). */
   text: string;

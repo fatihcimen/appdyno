@@ -11,9 +11,9 @@ appdyno reads performance numbers from the device itself, keeps them, and tells 
 Ask your agent, or use the command line. `A` is your app's id: `com.example.app`.
 
 ```sh
-appdyno perf-launch --app A --mode cold --repeats 6     # launch time, with repeats
-appdyno perf-snapshot --app A                           # CPU, memory, frames, the device's load
-appdyno perf survey --app A                             # every measure on this device, then a page
+appdyno measure-performance launch --app A --mode cold --repeats 6  # launch time, with repeats
+appdyno measure-performance snapshot --app A                        # CPU, memory, frames, the device's load
+appdyno perf survey --app A                                         # every measure on this device, then a page
 ```
 
 Each run is kept with the raw output it came from. Nothing leaves your Mac.
@@ -25,13 +25,13 @@ Each run is kept with the raw output it came from. Nothing leaves your Mac.
 A gate compares a run against what you kept before. It needs three runs to know how far your app moves by itself.
 
 ```sh
-appdyno perf-launch --app A --mode cold --repeats 6     # three times, then:
+appdyno measure-performance launch --app A --mode cold --repeats 6  # three times, then:
 appdyno perf baseline --app A --last 3
-appdyno perf-launch --app A --mode cold --repeats 6     # after your change
-appdyno perf compare --app A                            # exit 1 on a regression
+appdyno measure-performance launch --app A --mode cold --repeats 6  # after your change
+appdyno perf compare --app A                                        # exit 1 on a regression
 ```
 
-Through your agent, `perf_launch` with `baseline` measures the three runs and keeps them as the baseline in one call. Every other run's answer has a `next` line that says what the run was kept as, and which call makes a baseline of it: one run alone is no baseline.
+Through your agent, `measure_performance launch` with `baseline` measures the three runs and keeps them as the baseline in one call. Every other run's answer has a `next` line that says what the run was kept as, and which call makes a baseline of it: one run alone is no baseline.
 
 The baseline goes to `.appdyno/perf/baselines/`. Commit it. Limits of your own go in `.appdyno/perf/budgets.json`:
 
@@ -39,7 +39,7 @@ The baseline goes to `.appdyno/perf/baselines/`. Commit it. Limits of your own g
 [{ "kind": "launch.ttid_ms", "max": 2000 }]
 ```
 
-Through your agent, "keep the cold launch under 200 ms" is `perf_compare` `budget` with `kind` and `max`, which writes that file, with or without a run measured: `launch.ttid_ms` on Android, `launch.until_ms` on an iPhone or a simulator.
+Through your agent, "keep the cold launch under 200 ms" is `compare_performance` `budget` with `kind` and `max`, which writes that file, with or without a run measured: `launch.ttid_ms` on Android, `launch.until_ms` on an iPhone or a simulator.
 
 ## How the gate decides
 

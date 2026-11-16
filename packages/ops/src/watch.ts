@@ -138,7 +138,7 @@ const cuts = (r: MotionRegion, w: number, h: number, ms: number) => {
   ];
 };
 
-/** One line for a region, in the units a `tap` takes. */
+/** One line for a region, in the units a `tap_screen` takes. */
 export function regionLine(r: MotionRegion, screen: { w: number; h: number }, ms: number) {
   const { w, h } = screen;
   if (r.kind === 'changes')

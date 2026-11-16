@@ -308,7 +308,7 @@ export function screenElements(
     });
     from.push(i.index);
   }
-  // the list leaves an echo out, and the tree as `screen raw` gives it keeps it, with a ref a tap takes
+  // the list leaves an echo out, and the tree as `read_screen raw` gives it keeps it, with a ref a tap takes
   const echoes = all ? new Set<number>() : echoesOf(out, from, ancestors);
   return withoutPiles(
     out.filter((_, n) => !echoes.has(n)),

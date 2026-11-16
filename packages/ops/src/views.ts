@@ -9,7 +9,7 @@ export const frameworkSaid = (l: FrameworkLabel) =>
   l.inside ? `${l.name} inside ${l.inside}` : l.name;
 
 /**
- * `screen views`: the app's native views, folded into lines under the framework that draws most of them, and what the
+ * `read_screen views`: the app's native views, folded into lines under the framework that draws most of them, and what the
  * device says of how to read them after; `raw` gives each view as data too, its id and words cleaned as the lines' are.
  */
 export async function readViews(s: Session, clean: (t: string) => string, raw: boolean) {

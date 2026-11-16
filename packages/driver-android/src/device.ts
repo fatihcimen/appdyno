@@ -59,7 +59,7 @@ export type AndroidOptions = {
   takeover?: boolean | undefined;
   /** Off: the device's animations are off while this host is connected (docs/reference/protocol.md "Animations"). */
   animations?: 'on' | 'off' | undefined;
-  /** What `app install` may answer on the phone (docs/reference/protocol.md "A phone's install prompts"). */
+  /** What an install may answer on the phone (docs/reference/protocol.md "A phone's install prompts"). */
   installAnswers?: InstallAnswers | undefined;
 };
 

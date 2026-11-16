@@ -211,7 +211,9 @@ async function run(s, warmUp) {
   const read = must(first.message.result, 'the answer of the first read');
   if (read.isError) throw new Error(`the first read was refused: ${String(read.content[0]?.text)}`);
   timed(
-    warmUp ? '`screen`, first of all: starts what the device needs' : '`screen`, first of a server',
+    warmUp
+      ? '`read_screen`, first of all: starts what the device needs'
+      : '`read_screen`, first of a server',
     first.ms,
     await s.servedLast(),
   );

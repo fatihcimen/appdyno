@@ -43,7 +43,7 @@
   <text class="name" x="52" y="98">Sorar</text>
   <text class="text" x="52" y="122">Karanlık modu aç, neyin</text>
   <text class="text" x="52" y="142">değiştiğini göster.</text>
-  <text class="code" x="52" y="176">tap {"selector":</text>
+  <text class="code" x="52" y="176">tap_screen {"selector":</text>
   <text class="code" x="68" y="196">{"text":"Dark"}}</text>
 
   <rect class="card s-p" x="32" y="236" width="250" height="164" rx="12"/>

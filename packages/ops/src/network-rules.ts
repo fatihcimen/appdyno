@@ -104,7 +104,7 @@ export function ruleHits(lines: string[], entries: NetworkEntry[]) {
 const KBIT = 125;
 /** A slow network by name, as an emulator's console has them: bytes a second up and down, and the wait it adds. */
 const SPEEDS: Record<string, [up: number, down: number, min: number, max: number]> = {
-  // an EDGE speed with the short wait `device_setting network slow` gives an emulator
+  // an EDGE speed with the short wait `set_device network slow` gives an emulator
   slow: [118.4 * KBIT, 236.8 * KBIT, 40, 100],
   gsm: [14.4 * KBIT, 14.4 * KBIT, 150, 550],
   gprs: [40 * KBIT, 80 * KBIT, 150, 550],

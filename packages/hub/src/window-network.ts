@@ -60,7 +60,7 @@ async function waysOf(device: Device) {
 }
 
 /**
- * A window's Network pane: the capture `network` keeps for the device, read by that op so an agent's and the pane's are
+ * A window's Network pane: the capture `capture_network` keeps for the device, read by that op so an agent's and the pane's are
  * one, and the ways the device has. A proxy is offered only where the device already goes through one: no window sets one.
  */
 export function windowNetwork(

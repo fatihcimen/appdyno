@@ -69,7 +69,7 @@ const refusal = (e: ToolError): CallToolResult => {
 /**
  * An answer's structured content: its whole text, as a client may hand a model this in place of the text, and beside it
  * the summary but for what the text says in the same words: `done`, the words the text starts with, which a listing's or
- * `steps`' is the whole of, and each warning, so that a client that shows this alone reads none of them twice.
+ * `run_steps`' is the whole of, and each warning, so that a client that shows this alone reads none of them twice.
  */
 export const structuredOf = ({ blocks, data }: ToolResult): Record<string, unknown> => {
   const said = textOf(blocks);

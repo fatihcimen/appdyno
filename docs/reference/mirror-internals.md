@@ -9,13 +9,13 @@ What [The window and the hub](mirror.md) leaves out: how the picture and the inp
 The emulator's frame is RGBA in a file of exactly its size, top row first (the proto's comment says bottom up, and
 a frame compared with `screencap` says not). Asked with no size or into a larger file, it answers every frame and writes
 nothing. A guest that rotates draws sideways in a frame of the same shape, so the picture is stood up in the
-viewer, with no new session. A simulator does the same in its surface, with no callback: its read helper says how the app in front is drawn, four times a second, so an app that does not turn stays upright on a turned device, and a touch is turned back on its way down. An emulator booted by `simulator` gets `-grpc <free port> -grpc-use-token` beside `APPDYNO_EMULATOR_ARGS` (unless
+viewer, with no new session. A simulator does the same in its surface, with no callback: its read helper says how the app in front is drawn, four times a second, so an app that does not turn stays upright on a turned device, and a touch is turned back on its way down. An emulator booted by `manage_simulator` gets `-grpc <free port> -grpc-use-token` beside `APPDYNO_EMULATOR_ARGS` (unless
 those name `-grpc`). The port is the emulator's own, as adb's is adb's. The picture's file is `0600` in the state
 directory and goes with the session.
 
 ## States, and what tests each
 
-What a window waits for is one table, `NEEDS` in `packages/core/src/mirror/need.ts`, which the window's banner, `mirror status` and a refusal use.
+What a window waits for is one table, `NEEDS` in `packages/core/src/mirror/need.ts`, which the window's banner, `show_mirror status` and a refusal use.
 
 | what happens                  | tested by                                                 |
 | ----------------------------- | --------------------------------------------------------- |
@@ -58,7 +58,7 @@ The stream asks for the remote desktop profile first, 20 to 60 Mbit/s as configu
 in 4:2:0, if a phone refuses it or `--quality standard` asks. Pictures go to the viewer by a named pipe, `0600`, off the
 disk as soon as both ends hold it. A gap in the packets holds the picture until a key picture comes: a freeze, never
 garbage. Three pictures wait at most, and past them one is dropped, which also holds the picture until a key.
-`mirror stats` has `lostPackets`, `latePackets`, `heldPictures` and `droppedPictures`, since the stream began.
+`show_mirror stats` has `lostPackets`, `latePackets`, `heldPictures` and `droppedPictures`, since the stream began.
 
 A stream's offer asks the phone to end it after 30 s with no report from us, in place of its default hour: a process killed
 outright left the phone's stream for 28 to 30 s, one run, and its indicator with it. Streams we started are remembered,
@@ -277,11 +277,11 @@ What it says:
 
 Recording a flow:
 
-- On an iPhone a recording and the pane read by its runner, which the first use starts: `inspector` gives words and ids with no places, so with no runner a click has no element to be named by, and the window says why.
+- On an iPhone a recording and the pane read by its runner, which the first use starts: `inspect_app` `ax_list` gives words and ids with no places, so with no runner a click has no element to be named by, and the window says why.
 - A flow made on an iPhone or a Xiaomi has been replayed there, on a simulator and on an emulator. One made on a simulator or an emulator has been replayed on the other, and on no phone.
 - Clicks on a device's own keyboard have been recorded on a stand-in device only. A real pointer's hover, a wheel and a trackpad have not been run by hand: a test's window is given posted clicks, drags and hovers.
 - Clicks on the device's own keyboard are told from the field afterwards, so its Return key is not seen: the Mac's keyboard records it, and the window says so.
-- `flow start` from another process reaches a window within a quarter of a second, and clicks in that time are not recorded. Two processes writing to one recording in the same instant can lose a step.
+- `run_flow record` from another process reaches a window within a quarter of a second, and clicks in that time are not recorded. Two processes writing to one recording in the same instant can lose a step.
 - A hover and an assertion go by what was last read, so a screen that changed in the last read's time shows what it was, and a pointer resting on what came since says nothing until it moves.
 
 ## Wi-Fi, as run

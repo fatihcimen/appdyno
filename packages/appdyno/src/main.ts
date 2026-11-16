@@ -65,7 +65,7 @@ import { flightCommand, timelineCommand } from './timeline.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
-/** The tool's own `mirror`, which `appdyno mirror` hands what is not a window's. */
+/** The tool `show_mirror`, which `appdyno mirror` hands what is not a window's. */
 const mirrorTool = (ctx: ServerContext, words: string[]) =>
   must(commandsFor(opsFor(ctx)).mirror, 'the mirror command').run(words, {
     out: (s) => console.log(s),

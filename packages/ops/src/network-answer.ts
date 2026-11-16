@@ -168,7 +168,7 @@ export type Asked = Filter & {
   overwrite?: boolean | undefined;
 };
 
-/** What `network` answers with, cleaned as this server's policy has it. */
+/** What `capture_network` answers with, cleaned as this server's policy has it. */
 export function networkAnswers(ctx: ServerContext) {
   const clean = (t: string) => redactLog(ctx.policy, t);
 

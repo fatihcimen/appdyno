@@ -299,7 +299,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
   ];
 }
 
-/** terminate_app background: home, then the app's end as the system makes one, where the device can make it. */
+/** manage_app stop with background: home, then the app's end as the system makes one, where the device can make it. */
 async function endInBackground(s: Session, pkg: string) {
   if (!s.device.endInBackground)
     throw new ToolError(

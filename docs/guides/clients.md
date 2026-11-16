@@ -142,6 +142,8 @@ The name a client gave is also what the status capsule says while it drives a de
 
 `--scope user` makes it available in every project. Without it the server is added to the current folder only.
 
+A permission saved for a tool by a name from before 1.3.0, such as `mcp__appdyno__screen`, no longer matches a tool: allow the whole server instead, as `mcp__appdyno` in `permissions.allow`.
+
 ### Claude Desktop
 
 For the chat in the desktop app. It does not read Claude Code's list, or the other way round.
@@ -277,7 +279,7 @@ Look for "MCP" in its settings. If it takes a command, give it the one above. Mo
 
 These run in their maker's cloud, so they cannot start a program on your Mac, and they cannot see `127.0.0.1`. To reach appdyno they need a way in, and appdyno opens none itself: no service of ours sits in between, and any tunnel is one you run and stop.
 
-**Read this first. Whoever has the address and the token drives your devices.** Not just one app: they can read whatever a screen shows, type, install and remove apps, open links, change settings, and read and write files on this Mac where a tool takes a path (`record`, `report`, `visual`, `flow`, `app install`). The client's maker sees what the tools return, so assume it sees the screen.
+**Read this first. Whoever has the address and the token drives your devices.** Not just one app: they can read whatever a screen shows, type, install and remove apps, open links, change settings, and read and write files on this Mac where a tool takes a path (`record_session`, `check_screen`, `run_flow`, `manage_app install`). The client's maker sees what the tools return, so assume it sees the screen.
 
 Before you open a tunnel:
 
@@ -324,12 +326,12 @@ If a connection breaks in the middle of a call, the call stops on the device.
 
 ChatGPT in a browser reaches remote servers only. It connects to one under Plugins, and it can send no token: its form offers OAuth, No authentication, or both.
 
-| plan            | what you get                                                                                                                                                                                                                                                                                |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Business        | everything. Only an admin or owner can add the server                                                                                                                                                                                                                                       |
-| Enterprise, Edu | everything. An admin decides who can add it                                                                                                                                                                                                                                                 |
-| Pro             | only tools marked read-only: `screen`, `find`, `screenshot`, `wait_for`, `assert`, `logs`, `crashes`, `audit`, `device_info`, `list_devices`, `visual`, the reading `perf_` tools. No `tap`, no typing, and no `use_device`, so start the server with `--device` or with one device allowed |
-| Plus, Free      | OpenAI's pages do not say. Plan on it not being there, and use the desktop app                                                                                                                                                                                                              |
+| plan            | what you get                                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Business        | everything. Only an admin or owner can add the server                                                                                                                                                        |
+| Enterprise, Edu | everything. An admin decides who can add it                                                                                                                                                                  |
+| Pro             | only tools marked read-only: `list_devices`, `read_screen`, `check_element` and `read_logs`. No `tap_screen`, no typing, and no `use_device`, so start the server with `--device` or with one device allowed |
+| Plus, Free      | OpenAI's pages do not say. Plan on it not being there, and use the desktop app                                                                                                                               |
 
 The desktop app has none of this: it runs appdyno on your Mac. [Use that](#codex-and-the-chatgpt-desktop-app) if you can.
 
@@ -355,7 +357,7 @@ Each request has **120 seconds, however much progress it reports**, and 10 MiB. 
 
 **With a tunnel of your own.** Start the [HTTP server](#the-http-server) and a tunnel, then add the custom server with Server URL `https://<your tunnel>/mcp/<token>` and No authentication. Anyone with that URL is in, so treat it as a password.
 
-ChatGPT asks you to confirm each write action by default. Changing that on a phone's tools is your choice to make. One report says it shows a tool's image as nothing: if `screenshot` comes back empty, use `screen`.
+ChatGPT asks you to confirm each write action by default. Changing that on a phone's tools is your choice to make. One report says it shows a tool's image as nothing: if `take_screenshot` comes back empty, use `read_screen`.
 
 ### Claude in a browser
 

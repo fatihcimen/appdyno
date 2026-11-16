@@ -3,7 +3,7 @@ import { Traversal } from './a11y.js';
 import { Tree, WireNode } from './tree.js';
 
 /**
- * The kinds of accessibility issue `audit` reports: the iOS platform audit's types; Android's checks use
+ * The kinds of accessibility issue an audit reports: the iOS platform audit's types; Android's checks use
  * the same names where they check the same thing, plus `imageContrast` and `duplicateLabel`.
  */
 export const AUDIT_TYPES = [

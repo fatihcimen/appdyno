@@ -95,7 +95,7 @@ const STATES = {
       needsDone: true,
     },
   ],
-  driving: [live, { op: 'agent', driving: true, tool: 'tap' }],
+  driving: [live, { op: 'agent', driving: true, tool: 'tap_screen' }],
   frameless: [live, { op: 'poke', control: 'frame' }],
 };
 

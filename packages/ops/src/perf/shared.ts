@@ -399,7 +399,7 @@ export function perfTools(ctx: ServerContext) {
     const h = must(s.device.hello, "the agent's hello");
     const screen = await s.current();
     const size = screen.window ?? { w: h.screen.w, h: h.screen.h };
-    // the list under a point, through its middle, as scroll_to strokes it: a split view's other pane moves nothing
+    // the list under a point, through its middle, as a scroll to an element strokes it: a split view's other pane moves nothing
     const box = at && scrollArea(screen, at, size, true);
     const { from, to } = box
       ? swipeLine(size, { direction, ...strokeCentre(box, at, true), distance: box.height * 0.4 })

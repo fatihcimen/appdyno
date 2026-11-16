@@ -48,7 +48,7 @@ Bunu üç karar biçimlendirir.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/tool-call.tr.dark.svg">
-  <img src="images/tool-call.tr.svg" alt="Bir araç çağrısı: istemci tap çağırır; mcp onu ops'taki araca iletir; araç ekranı okur, sonra sürücü üzerinden ajana tek bir act isteği gönderir; ajan ekranın durulmasını bekler ve yanıt verir">
+  <img src="images/tool-call.tr.svg" alt="Bir araç çağrısı: istemci tap_screen çağırır; mcp onu ops'taki araca iletir; araç ekranı okur, sonra sürücü üzerinden ajana tek bir act isteği gönderir; ajan ekranın durulmasını bekler ve yanıt verir">
 </picture>
 
 Bir ajanın en çok yaptığı şey bakmak, işlem yapmak ve yeniden bakmaktır. Tasarımın büyük kısmı bu döngüye hizmet eder.

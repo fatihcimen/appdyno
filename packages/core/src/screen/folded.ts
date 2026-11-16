@@ -88,7 +88,7 @@ const alike = (a: ScreenElement, b: ScreenElement) =>
 
 /**
  * The screen as an answer says it: what repeats is folded, and only in this text. The list itself stays
- * whole, so `find`, selectors, refs, diffs and flows still reach every element.
+ * whole, so `read_screen` with a selector, selectors, refs, diffs and flows still reach every element.
  */
 export function renderFolded(
   list: ScreenElement[],

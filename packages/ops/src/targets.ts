@@ -55,7 +55,7 @@ export function wordsOf(clean: (s: string) => string): Words {
 /** The matches a refusal lists, of many. */
 const MANY_SHOWN = 10;
 
-/** One element of a selector's matches, or a refusal listing them; `sent`: swipes went before, as `scroll_to`'s. */
+/** One element of a selector's matches, or a refusal listing them; `sent`: swipes went before, as a scroll to an element's. */
 export function pick(
   hits: ScreenElement[],
   sel: SelectorOf,

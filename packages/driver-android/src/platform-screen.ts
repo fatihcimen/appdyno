@@ -56,7 +56,7 @@ export const androidScreen: PlatformScreen = {
     );
   },
 
-  /** A permission prompt is `alert`'s to answer, and the controller's own pages speak of passwords in passing. */
+  /** A permission prompt is a system alert, answered as one, and the controller's own pages speak of passwords in passing. */
   personPrompt(tree, elements) {
     const ids = elements.map((e) => e.identifier ?? '');
     if (ids.some((id) => CREDENTIAL_PROMPT.test(id))) return 'a passcode';

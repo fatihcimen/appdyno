@@ -252,7 +252,7 @@ export class FakeDevice extends DeviceActions implements Device {
     this.agentUp = false;
     return Promise.resolve();
   }
-  /** What `logs` finds, and what it was asked. */
+  /** What a read of the log finds, and what it was asked. */
   logLines: string[] = [];
   logNote: string | undefined;
   logAsked: LogsQuery | undefined;

@@ -120,7 +120,7 @@ const queryOf = (url: string) => {
 };
 
 /**
- * A capture as HAR 1.2, what a proxy's viewer or `network` `read` with `har` opens: each request with its headers and
+ * A capture as HAR 1.2, what a proxy's viewer or `capture_network` `read` with `har` opens: each request with its headers and
  * text bodies where the capture kept them, all of it cleaned as an answer is, with the phases, the protocol and the
  * address the session measured where it sent the request; what a rule did to one is in `_how`.
  */

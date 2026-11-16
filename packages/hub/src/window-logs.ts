@@ -12,7 +12,7 @@ import type { WindowSession } from './controls.js';
 const LOG_LOOK_MS = 2_000;
 /** How often what is in front is asked again, as the Performance pane asks. */
 const APP_LOOK_MS = 5_000;
-/** What one read brings at most, as the `logs` tool's default, and how long a line may be, as it cuts one. */
+/** What one read brings at most, as the `read_logs` tool's default, and how long a line may be, as it cuts one. */
 const MOST_LINES = 200;
 const LONGEST = 2_000;
 const CRASHES = 5;
@@ -27,8 +27,8 @@ const personal = (said: string) =>
 type Front = { id?: string; name?: string; why?: string };
 
 /**
- * A window's Logs pane: the log of the app in front, read as `logs` reads it, redacted as it redacts, and its crash
- * reports as `crashes` gives them. Nothing is read while the pane does not show, and nothing is cleared on the device.
+ * A window's Logs pane: the log of the app in front, read as `read_logs` reads it, redacted as it redacts, and its crash
+ * reports as its `source: crashes` gives them. Nothing is read while the pane does not show, and nothing is cleared on the device.
  */
 export function windowLogs(
   ctx: ServerContext,
@@ -96,7 +96,7 @@ export function windowLogs(
     startOver();
   };
 
-  /** The app's crash reports, as `crashes` gives them: its reason and the head of each, redacted. */
+  /** The app's crash reports, as `read_logs` with `source: crashes` gives them: its reason and the head of each, redacted. */
   const crashes = async () => {
     const id = app?.id;
     if (!id) {

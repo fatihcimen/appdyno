@@ -29,7 +29,7 @@ its last log lines:
   launch_app starts it again; why it died is above, with its last log lines, and crashes has the whole report
 ```
 
-`crashes` fonksiyonun adını verir: `total(of:)` içinden çağrılan `discount(forQuantity:)`.
+`source: crashes` ile `read_logs` fonksiyonun adını verir: `total(of:)` içinden çağrılan `discount(forQuantity:)`.
 
 ## Düzeltin ve düzeltilmiş kalsın
 

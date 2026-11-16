@@ -10,7 +10,7 @@ export const DEFAULT_TRACE_LIMIT_GB = 10;
 
 /** A run's trace stays while the run is one of its key's newest this many, which is what a trend shows. */
 const RECENT_RUNS = 30;
-/** Nothing younger goes: `perf_query` may be about to read it, and it may not be a run's yet. */
+/** Nothing younger goes: a query of the gate may be about to read it, and it may not be a run's yet. */
 const GRACE_MS = 86_400_000;
 
 /** A flight recorder's saved pages, and a simulator's frame probe's reads, go by the same rules: nobody named them. */

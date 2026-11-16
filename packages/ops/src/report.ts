@@ -53,7 +53,7 @@ async function stopFlight(
   await flight.stop();
   s.keepFlight();
   const t = [`flight recorder off, ${flight.saved.length} kept`, ...flight.saved].join('\n');
-  // one stop ends all that `report` runs: a report open beside the recorder is written with it
+  // one stop ends all that `record_session` runs but a video: a report open beside the recorder is written with it
   if (!openReports.read(s.device.serial))
     return reply(t, { done: t, dir: '', saved: flight.saved });
   const r = await finishReport(ctx, s, 'stop', dir);

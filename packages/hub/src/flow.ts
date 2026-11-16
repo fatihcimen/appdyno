@@ -53,8 +53,8 @@ function fromPane(m: ViewerSaid<'app'>): FlowStep | undefined {
 
 /**
  * A window's flow: what a person does on it, written as a flow's steps, and what is under the pointer. It reads the
- * screen only while one of them is in use, as a read costs the device. The recording is the one `flow` keeps, on disk,
- * so that an agent's `flow start` takes a person's clicks too, and a window's takes an agent's calls.
+ * screen only while one of them is in use, as a read costs the device. The recording is the one `run_flow` keeps, on disk,
+ * so that an agent's `run_flow record` takes a person's clicks too, and a window's takes an agent's calls.
  */
 export function windowFlow(
   ctx: ServerContext,

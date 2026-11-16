@@ -28,20 +28,20 @@ export const ActionOut = z.object({
   changed: z.boolean().optional(),
   /** What is known to keep the screen busy, when it did not settle. */
   busy: z.array(z.string()).optional(),
-  /** `keyboard status`. */
+  /** Whether the on-screen keyboard is open. */
   open: z.boolean().optional(),
-  /** `alert` with no answer. */
+  /** `answer_alert` with no answer. */
   alert: z
     .object({
       texts: z.array(z.string()),
       buttons: z.array(z.object({ label: z.string(), x: z.number(), y: z.number() })),
     })
     .optional(),
-  /** `alert`: the label of the button it pressed. */
+  /** `answer_alert`: the label of the button it pressed. */
   answered: z.string().optional(),
-  /** `keyboard dismiss`: it was open and closed. */
+  /** `press_key hide_keyboard`: it was open and closed. */
   closed: z.boolean().optional(),
-  /** `scroll_to`: what it looked for is on the screen. */
+  /** `swipe_screen until`: what it looked for is on the screen. */
   found: z.boolean().optional(),
   /** `launch_app`: the app ran before, and came to the front on the screen it was on; absent when unknown. */
   wasRunning: z.boolean().optional(),
@@ -54,7 +54,7 @@ export type ActionOut = z.infer<typeof ActionOut>;
 
 const Place = z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() });
 
-/** One element of the tree as read, for `screen raw`: what the folded list leaves out, places and parents. */
+/** One element of the tree as read, for `read_screen raw`: what the folded list leaves out, places and parents. */
 export const RawNode = z.object({
   ref: z.string().optional(),
   type: z.string(),
@@ -68,7 +68,7 @@ export const RawNode = z.object({
   flags: z.array(z.string()),
 });
 
-/** One native view, for `screen views raw`: as the device read it, its words cleaned. */
+/** One native view, for `read_screen views raw`: as the device read it, its words cleaned. */
 const ViewNode = z.object({
   class: z.string(),
   rect: Place,

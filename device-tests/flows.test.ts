@@ -336,7 +336,7 @@ for (const { platform, serial, form } of targets)
         expect(text).toContain(
           platform === 'android' ? 'tap role=button text="FORM"' : 'tap id=open_form',
         );
-        expect(text).toContain('assert id=name_input');
+        expect(text).toContain('wait_for id=name_input timeoutMs=8000');
         const again = await run('run-flow', 'run', flow);
         expect(again.out).toContain('passed: 4 steps');
       },

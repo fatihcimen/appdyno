@@ -20,7 +20,7 @@ export const ERROR_CODES = [
   'INTERNAL',
   /** More than one element matches a selector. Host only, never on the wire. */
   'AMBIGUOUS',
-  /** An `assert` that does not hold. Host only, never on the wire. */
+  /** A check that does not hold: `check_element`, or a comparison of `check_screen`. Host only, never on the wire. */
   'CHECK_FAILED',
   /** A project's own build failed, with what it said. Host only, never on the wire. */
   'BUILD_FAILED',

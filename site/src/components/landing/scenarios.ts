@@ -48,27 +48,27 @@ const movesOf = ({ console: c }: Words) => {
   return {
     cart,
     read: [
-      { call: 'screen', took: '84 ms' },
+      { call: 'read_screen', took: '84 ms' },
       { reading: true },
       {
         say: `  ${ref('@cart')} "${c.app.cart} 0"  ${names.map((n, i) => `${ref(refOf(i))} "${n}"`).join('  ')}  ${ref('@place')} "${c.app.place}"`,
       },
     ],
     add: PRODUCTS.flatMap((_, i): Step[] => [
-      { call: 'tap', args: `{"ref":"${refOf(i)}"}`, took: '190 ms' },
+      { call: 'tap_screen', args: `{"ref":"${refOf(i)}"}`, took: '190 ms' },
       { tap: refOf(i) },
       cart(i + 1),
       { hop: true },
       { say: `  ${c.checkout.tapped} · ${ok('+')} ${ref('@cart')} "${c.app.cart} ${i + 1}"` },
     ]),
     place: [
-      { call: 'tap', args: '{"ref":"@place"}', took: '205 ms' },
+      { call: 'tap_screen', args: '{"ref":"@place"}', took: '205 ms' },
       { tap: '@place' },
       { show: 'crash' },
     ],
     push: [
       {
-        call: 'push',
+        call: 'send_push',
         args: JSON.stringify({ type: 'alert', title: c.app.name, body: c.app.pushBody }),
         took: '640 ms',
       },
@@ -86,7 +86,11 @@ const movesOf = ({ console: c }: Words) => {
     ],
     /** Five cold launches, read on their dial. */
     launches: [
-      { call: 'perf_launch', args: '{"mode":"cold","repeats":5}', took: '6.8 s' },
+      {
+        call: 'measure_performance',
+        args: '{"metric":"launch","mode":"cold","repeats":5}',
+        took: '6.8 s',
+      },
       ...[455, 431, 412, 418, 409].flatMap((ms): Step[] => [
         { gauge: ['launch', ms] },
         { wait: 300 },
@@ -95,7 +99,7 @@ const movesOf = ({ console: c }: Words) => {
       { hop: true },
       { say: `  ${c.perf.launch} ${ok(`${READINGS.launch} ms`)}, p95 455 ms` },
     ],
-    crashes: { call: 'crashes', args: '{"limit":1}', took: '1.2 s' },
+    crashes: { call: 'read_logs', args: '{"source":"crashes","limit":1}', took: '1.2 s' },
   } satisfies Record<string, Step | Step[] | ((of: never) => Step)>;
 };
 
@@ -108,7 +112,7 @@ export const jobsOf = (t: Words): Record<(typeof JOBS)[number], Step[]> => {
   const moves = movesOf(t);
   const ask = (line: string): Step => ({ say: `<span class="ask">${c.you}: ${line}</span>` });
   const flow = (action: string, took: string): Step => ({
-    call: 'flow',
+    call: 'run_flow',
     args: JSON.stringify({ action, file: FLOW }),
     took,
   });
@@ -129,14 +133,14 @@ export const jobsOf = (t: Words): Record<(typeof JOBS)[number], Step[]> => {
     perf: [
       ask(c.perf.ask),
       ...moves.launches,
-      { call: 'perf_scroll', args: '{"swipes":5}', took: '9.4 s' },
+      { call: 'measure_performance', args: '{"metric":"scroll","swipes":5}', took: '9.4 s' },
       { gauge: ['frames', READINGS.frames] },
       { gauge: ['memory', READINGS.memory] },
       { say: `  ${c.perf.scroll}` },
     ],
     views: [
       ask(c.views.ask),
-      { call: 'screen', args: '{"views":true}', took: '12 ms' },
+      { call: 'read_screen', args: '{"views":true}', took: '12 ms' },
       {
         say: `  ${c.views.framework} ${ok('SwiftUI')}\n  UIWindow > UIHostingController 0,0 402x874\n   UIKitNavigationBar 0,62 402x54\n   UICollectionView #products 0,116 402x620`,
       },

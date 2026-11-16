@@ -48,7 +48,7 @@ Three decisions shape this.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/tool-call.dark.svg">
-  <img src="images/tool-call.svg" alt="A tool call: the client calls tap; mcp passes it to the tool in ops; the tool reads the screen, then sends one act request through the driver to the agent; the agent waits for the screen to settle and answers">
+  <img src="images/tool-call.svg" alt="A tool call: the client calls tap_screen; mcp passes it to the tool in ops; the tool reads the screen, then sends one act request through the driver to the agent; the agent waits for the screen to settle and answers">
 </picture>
 
 What an agent does most is look, act, and look again. Most of the design serves that loop.

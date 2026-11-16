@@ -46,7 +46,7 @@ export type ConnectOptions = {
    */
   allowWrite?: string[];
   /**
-   * `app` `build_and_run` runs a project's own build scripts on this Mac, as `--allow-build` lets a server: without it
+   * `manage_app` `build_and_run` runs a project's own build scripts on this Mac, as `--allow-build` lets a server: without it
    * the call is refused `PERMISSION_REQUIRED`, as a program has no person to ask. Only a project inside the folders
    * above is built.
    */
@@ -96,9 +96,9 @@ export type Answer<N extends ToolName> = {
   nodes?: ScreenNode[];
 };
 
-/** One element of the screen's tree, as `screen` with `raw: true` gives it in `data.nodes`. */
+/** One element of the screen's tree, as `read_screen` with `raw: true` gives it in `data.nodes`. */
 export type ScreenNode = {
-  /** What `tap` takes: none on an element no touch reaches. */
+  /** What `tap_screen` takes: none on an element no touch reaches. */
   ref?: string;
   type: string;
   label?: string;

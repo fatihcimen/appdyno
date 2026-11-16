@@ -73,7 +73,7 @@ async function onTheScreen(s: Session, points: Partial<Point>[]) {
 }
 
 /**
- * What a step did: the device's answer, said in words, and whether `scroll_to` found what it looked for; `back`: what
+ * What a step did: the device's answer, said in words, and whether a scroll to an element found what it looked for; `back`: what
  * the screen after a touch that closed a system alert waits for (`backFromAlert`).
  */
 type Done = {
