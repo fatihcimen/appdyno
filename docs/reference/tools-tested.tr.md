@@ -8,11 +8,11 @@
 
 Bu sayfadaki bir çalıştırmanın eksiksiz adlandırdığı her cihaz, işletim sistemi ve Xcode, en yeniden eskiye. [CI ve sürümler](ci.tr.md) sayfasındaki simülatör smoke'u aynı dört sütunu, her sürümün bir dosya olarak taşıdığı `device-summary.md` dosyasının başına yazar: orada olup burada olmayan bir satır, yalnızca smoke'un suite'lerinin çalıştığı bir ikiliyi adlandırır.
 
-| cihaz               | işletim sistemi                         | Xcode        | tarih      | ne çalıştı                                                                                                        |
-| ------------------- | --------------------------------------- | ------------ | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.5 (17F42) | 2026-11-16 | bir Mac'te simülatör smoke'u, 4 suite'inin 63 testi 11 dakikada geçti, 10 çekirdekte host yükü 7 ile 476 arasında |
-| iPhone 17 simulator | iOS 27.2 (24B8117)                      | 27.2 (27B52) | 2026-11-16 | simülatör suite'leri, her seferinde bir dosya: [Xcode 27.2](#xcode-272)                                           |
-| Android emulator    | Android 17, API 37 (CE2A.260420.051.A3) | yok          | 2026-11-08 | her Android suite'i: [Android 17](#android-17)                                                                    |
+| cihaz               | işletim sistemi                         | Xcode        | tarih      | ne çalıştı                                                                                                                                                    |
+| ------------------- | --------------------------------------- | ------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.5 (17F42) | 2026-11-16 | bir Mac'te simülatör smoke'u: 18 durumu simülatörün yardımcılarıyla 189 s'de, yalnızca runner ile 219 s'de geçti, 10 çekirdekte host yükü 40 ile 329 arasında |
+| iPhone 17 simulator | iOS 27.2 (24B8117)                      | 27.2 (27B52) | 2026-11-16 | simülatör suite'leri, her seferinde bir dosya: [Xcode 27.2](#xcode-272)                                                                                       |
+| Android emulator    | Android 17, API 37 (CE2A.260420.051.A3) | yok          | 2026-11-08 | her Android suite'i: [Android 17](#android-17)                                                                                                                |
 
 ## Android 17
 

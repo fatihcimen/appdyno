@@ -1,9 +1,11 @@
-// The simulator smoke: a few device suites on an iOS simulator this makes for itself, boots with no window and deletes
-// after, whatever happened. It builds the runner and the fixture as scripts/ci.sh does, and writes what ran to
-// .ci/smoke: report.json as vitest gives it, and device-summary.md, which names the device, its OS, the Xcode and the
-// date beside each suite's counts. Exits as vitest did, and 3 where a suite ran nothing, which vitest calls a pass.
-// `.github/workflows/ci.yml` runs it; on a Mac, after `pnpm build`:
+// The simulator smoke: a few cases of the device suites on an iOS simulator this makes for itself, boots with no window
+// and deletes after, whatever happened. It builds the runner and the fixture as scripts/ci.sh does, asks once whether
+// the simulator's helpers answer on this host, and where one does not it runs the cases by the runner alone and says so.
+// It writes what ran to .ci/smoke: report.json as vitest gives it, and device-summary.md, which names the device, its
+// OS, the Xcode and the date, the path the input and the reads took, and each suite's counts. Exits as vitest did, and 3
+// where a case did not run, which vitest calls a pass. `.github/workflows/ci.yml` runs it; on a Mac, after `pnpm build`:
 //   node scripts/sim-smoke.mjs [a folder for what it writes, in place of .ci/smoke]
+// APPDYNO_SIM_DIRECT=off runs it by the runner alone on a Mac whose helpers answer, as a hosted runner's do not.
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -11,17 +13,50 @@ import { fileURLToPath } from 'node:url';
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Reads, taps, typing and a settle on a moving screen; keys; native views; flows replayed by the built command line. */
-const SUITES = ['ios', 'keys', 'views.simulator', 'flows-ci'].map(
-  (name) => `device-tests/${name}.test.ts`,
-);
+/**
+ * What a release is held to, by suite: reads, taps, typing, an alert, a settle on a moving screen, plain keys, native views
+ * and flows replayed by the built command line. Each holds whichever path its input and its reads take. The long cases,
+ * those of one iOS's own words and those that prove the helpers' path are left to scripts/ci.sh.
+ */
+const CASES = {
+  ios: [
+    'reads the fixture home with the app in front',
+    'taps into a screen, types Turkish text and reads the result',
+    'reports the field the keyboard types into as focused',
+    'replaces the text of a field that formats what is typed (a phone number)',
+    'answers an alert',
+    'settles on a screen whose text keeps ticking',
+    'waits for a spinner to go',
+    'opens a deep link into the app',
+    'takes a screenshot',
+    'reads the home screen when the app is gone',
+  ],
+  // the keys with a modifier are left out: by the runner alone one lost its modifier on a busy Mac
+  keys: ['moves the cursor with the arrows'],
+  'views.simulator': [
+    'reads the home screen as SwiftUI once launch_app puts the probe in',
+    'reads UIKit inside SwiftUI, at the places and with the words the accessibility tree has',
+    'reads a web view inside SwiftUI',
+    "never says what a secure field holds, the field's own views' text among it",
+  ],
+  'flows-ci': [
+    'calls a flake flaky, with values from a file, by tag, through flows that run flows',
+    'says which file a failure is in, and that a file ran itself, before touching anything',
+    'exits 1 when the tags select nothing',
+  ],
+};
+const SUITES = Object.keys(CASES).map((name) => `device-tests/${name}.test.ts`);
+const TITLES = Object.values(CASES).flat();
+/** The cases alone, by the end of a test's whole name. */
+const ONLY = `(?:${TITLES.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`;
+const FIXTURE_APP = 'ios/.derived/Build/Products/Debug-iphonesimulator/Fixture.app';
 
 /**
  * A runtime as `simctl list runtimes -j` lists it, a file of vitest's JSON report, and what a summary says of a run.
  * @typedef {{ name: string; identifier: string }} DeviceType
  * @typedef {{ name: string; version: string; buildversion: string; identifier: string; isAvailable: boolean; supportedDeviceTypes: DeviceType[] }} Runtime
  * @typedef {{ name: string; startTime: number; endTime: number; assertionResults: { status: string }[] }} FileResult
- * @typedef {{ device: string; os: string; xcode: string; date: string; commit: string; seconds: Record<string, number> }} Facts
+ * @typedef {{ device: string; os: string; xcode: string; date: string; commit: string; path: string; seconds: Record<string, number> }} Facts
  */
 
 /** @param {string} a @param {string} b */
@@ -78,7 +113,10 @@ function summary(files, facts) {
       ['device', 'OS', 'Xcode', 'date'],
       [facts.device, facts.os, facts.xcode, facts.date],
     ]),
-    `Commit \`${facts.commit}\`. ${Object.entries(facts.seconds)
+    `Input and reads: ${facts.path}.`,
+    `Commit \`${facts.commit}\`. ${String(TITLES.length)} cases of ${String(SUITES.length)} suites. ${Object.entries(
+      facts.seconds,
+    )
       .map(([what, s]) => `${what} ${String(s)} s`)
       .join(', ')}.`,
     table([
@@ -105,6 +143,27 @@ function said(command, ...args) {
  * @returns {unknown}
  */
 const parsed = (text) => JSON.parse(text);
+
+/**
+ * Why the simulator's helpers are not this run's path, where they are not: the shell said so, or `doctor` asked each
+ * once and one did not answer, as on a host with no HID service for a simulator. A read helper that says no app is in
+ * front has answered: a simulator just booted has none.
+ * @param {string} udid
+ */
+function noHelpers(udid) {
+  if (process.env.APPDYNO_SIM_DIRECT === 'off') return 'APPDYNO_SIM_DIRECT=off';
+  const doctor = ['packages/appdyno/dist/main.js', 'doctor', '--serial', udid];
+  const r = spawnSync('node', doctor, { cwd: repo, encoding: 'utf8' });
+  const lines = `${r.stdout}\n${r.stderr}`
+    .split('\n')
+    .filter((l) => / direct (input|read): /.test(l));
+  const refused = lines.find((l) => !/: (answers|no-foreground; .*)$/.test(l));
+  if (lines.length === 2 && !refused) return undefined;
+  if (!refused) return 'doctor did not say whether the helpers answer';
+  const [, which, why] =
+    / direct (input|read): (.*?)(; the runner does this instead)?$/.exec(refused) ?? [];
+  return `no direct ${String(which)} on this host (${String(why).slice(0, 160)})`;
+}
 
 function main() {
   const out = resolve(process.argv[2] ?? join(repo, '.ci/smoke'));
@@ -149,7 +208,7 @@ function main() {
   const report = join(out, 'report.json');
   // an Android device named to this shell is no part of this run
   const { APPDYNO_ANDROID_SERIAL: _android, ...env } = process.env;
-  const code =
+  const ready =
     step('boot', 'xcrun', ['simctl', 'bootstatus', udid, '-b']) ||
     // the line of scripts/ci.sh: signed as Xcode signs for a simulator, where the fixture's web view has its name
     step('build', 'xcodebuild', [
@@ -157,18 +216,23 @@ function main() {
       ...['-destination', 'generic/platform=iOS Simulator', '-derivedDataPath', 'ios/.derived'],
     ]) ||
     // a suite that drives the fixture and installs none need not come after one that does
-    step('install', 'xcrun', [
-      ...['simctl', 'install', udid],
-      'ios/.derived/Build/Products/Debug-iphonesimulator/Fixture.app',
-    ]) ||
+    step('install', 'xcrun', ['simctl', 'install', udid, FIXTURE_APP]);
+  // a helper that does not answer is not asked again by each case, which would wait for it and then prove nothing of it
+  const why = ready === 0 ? noHelpers(udid) : undefined;
+  const code =
+    ready ||
     step(
       'suites',
       'pnpm',
       [
-        ...['exec', 'vitest', 'run', '--config', 'vitest.device.config.ts'],
+        ...['exec', 'vitest', 'run', '--config', 'vitest.device.config.ts', '-t', ONLY],
         ...['--reporter=default', '--reporter=json', `--outputFile.json=${report}`, ...SUITES],
       ],
-      { ...env, APPDYNO_IOS_UDID: udid },
+      {
+        ...env,
+        APPDYNO_IOS_UDID: udid,
+        ...(why ? { APPDYNO_SIM_DIRECT: 'off', APPDYNO_SIM_NO_DIRECT: why } : {}),
+      },
     );
 
   /** @type {FileResult[]} */
@@ -186,17 +250,17 @@ function main() {
     xcode: xcode ? `${String(xcode[1])} (${String(xcode[2])})` : 'unknown',
     date: new Date().toISOString().slice(0, 10),
     commit: process.env.GITHUB_SHA ?? said('git', 'rev-parse', 'HEAD'),
+    path: why ? `runner only: ${why}` : "the simulator's helpers, and the runner behind them",
     seconds,
   });
   writeFileSync(join(out, 'device-summary.md'), text);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
   console.log(text);
 
-  const idle = counts(files).filter((s) => s.passed + s.failed === 0);
-  const missing = SUITES.length - files.length;
-  if (code === 0 && (idle.length || missing)) {
+  const ran = counts(files).reduce((n, f) => n + f.passed + f.failed, 0);
+  if (code === 0 && ran < TITLES.length) {
     console.error(
-      `ran nothing: ${idle.map((s) => s.suite).join(', ') || 'a suite is not in the report'}`,
+      `ran ${String(ran)} of ${String(TITLES.length)} cases: one was renamed, or skipped itself`,
     );
     process.exit(3);
   }

@@ -68,11 +68,13 @@ jobs:
       - name: Runner core unit tests
         run: swift test --package-path ios/RunnerCore
 
-  # device suites on a simulator of the image's own Xcode, which scripts/sim-smoke.mjs makes and deletes. It publishes
-  # nothing and keeps no cache: what it leaves is its artifact, with the run
+  # cases of the device suites on a simulator of the image's own Xcode, which scripts/sim-smoke.mjs makes and deletes,
+  # by the runner alone where the host has no helpers for a simulator. It publishes nothing and keeps no cache: what it
+  # leaves is its artifact, with the run
   sim-smoke:
     runs-on: macos-latest
-    # 11 minutes on a Mac, and a runner starts with nothing built: a hang ends here, not at GitHub's six hours
+    # 4 minutes on a Mac; a hosted runner is slower and starts with nothing built: a hang ends here, not at GitHub's
+    # six hours
     timeout-minutes: 30
     permissions:
       contents: read

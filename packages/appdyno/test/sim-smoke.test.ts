@@ -1,12 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import {
-  chmodSync,
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -17,6 +10,11 @@ const SUITES = ['ios', 'keys', 'views.simulator', 'flows-ci'].map(
   (name) => `device-tests/${name}.test.ts`,
 );
 
+/** How many cases of each suite a release is held to, in the order above. */
+const CASES = [10, 1, 4, 3];
+const HID =
+  'Failed to find service com.apple.coredevice.feature.remote.hid.digitizer in session; the runner does this instead';
+
 /** The tools the script runs, each one that writes down its words: no simulator is made here, and nothing is built. */
 const FAKES = {
   xcrun: `case "$*" in
@@ -26,7 +24,11 @@ const FAKES = {
 esac`,
   xcodebuild: `[ "$1" = -version ] && printf 'Xcode 26.5\\nBuild version 17F42\\n'
 exit 0`,
-  pnpm: `for word in "$@"; do
+  // doctor, as it says the two helpers of a simulator just booted: the read helper answers that no app is in front
+  node: `echo "warn simulator $4 direct input: $FAKE_INPUT"
+echo "warn simulator $4 direct read: no-foreground; the runner does this instead"`,
+  pnpm: `echo "helpers: direct=$APPDYNO_SIM_DIRECT why=$APPDYNO_SIM_NO_DIRECT" >>"$FAKE/log"
+for word in "$@"; do
   case $word in --outputFile.json=*) cp "$FAKE/report.json" "\${word#*=}" ;; esac
 done
 exit "$FAKE_VITEST"`,
@@ -43,8 +45,13 @@ const runtime = (version: string, isAvailable = true) => ({
   ),
 });
 
-/** A run of the script on those tools: each suite's tests by their statuses, and what vitest exits with. */
-function run(statuses: string[][], vitest = 0) {
+/**
+ * A run of the script on those tools: a suite's tests by their statuses where they are not its cases passed, what
+ * vitest exits with, what doctor says of the input helper, and what the shell sets.
+ */
+function run(
+  o: { statuses?: (string[] | undefined)[]; vitest?: number; input?: string; env?: object } = {},
+) {
   const fake = mkdtempSync(join(tmpdir(), 'appdyno-smoke-'));
   for (const [name, body] of Object.entries(FAKES)) {
     writeFileSync(join(fake, name), `#!/bin/sh\necho "${name} $*" >>"$FAKE/log"\n${body}\n`);
@@ -56,7 +63,9 @@ function run(statuses: string[][], vitest = 0) {
     name: join(root, file),
     startTime: 1_000,
     endTime: 62_400,
-    assertionResults: (statuses[i] ?? ['passed']).map((status) => ({ status })),
+    assertionResults: (
+      o.statuses?.[i] ?? Array.from({ length: CASES[i] ?? 0 }, () => 'passed')
+    ).map((status) => ({ status })),
   }));
   writeFileSync(join(fake, 'report.json'), JSON.stringify({ testResults }));
   const r = spawnSync(process.execPath, [join(root, 'scripts/sim-smoke.mjs'), join(fake, 'out')], {
@@ -64,8 +73,10 @@ function run(statuses: string[][], vitest = 0) {
     env: {
       PATH: `${fake}:/usr/bin:/bin`,
       FAKE: fake,
-      FAKE_VITEST: String(vitest),
+      FAKE_VITEST: String(o.vitest ?? 0),
+      FAKE_INPUT: o.input ?? 'answers',
       GITHUB_SHA: 'abc',
+      ...o.env,
     },
   });
   return {
@@ -77,8 +88,8 @@ function run(statuses: string[][], vitest = 0) {
 }
 
 describe('the simulator smoke', () => {
-  it("makes a simulator of the Xcode's own runtime, runs each suite on it and deletes it", () => {
-    const r = run([]);
+  it("makes a simulator of the Xcode's own runtime, runs its cases on it and deletes it", () => {
+    const r = run();
     expect(r.status).toBe(0);
     // the newest iPhone with a plain name, on the runtime of the SDK and not the newest there is
     expect(r.log.join('\n')).toMatch(
@@ -89,28 +100,60 @@ describe('the simulator smoke', () => {
       'xcrun simctl install FAKE-UDID ios/.derived/Build/Products/Debug-iphonesimulator/Fixture.app',
     );
     const suites = r.log.find((line) => line.startsWith('pnpm exec vitest run'));
-    for (const file of SUITES) {
-      expect(suites).toContain(file);
-      expect(existsSync(join(root, file)), file).toBe(true);
-    }
+    for (const file of SUITES) expect(suites).toContain(file);
     expect(r.log.at(-1)).toBe('xcrun simctl delete FAKE-UDID');
     expect(r.summary).toMatch(
       /\| device \| OS \| Xcode \| date \|\n\| --- \| --- \| --- \| --- \|\n\| iPhone 17 simulator \| iOS 26\.5 \(B1\) \| 26\.5 \(17F42\) \| \d{4}-\d\d-\d\d \|/,
     );
-    expect(r.summary).toContain('Commit `abc`.');
-    expect(r.summary).toContain('| ios.test.ts | 1 | 0 | 0 | 61 |');
+    expect(r.summary).toContain('Commit `abc`. 18 cases of 4 suites.');
+    expect(r.summary).toContain('| ios.test.ts | 10 | 0 | 0 | 61 |');
   });
 
-  it('fails where a suite ran nothing, which vitest calls a pass, and deletes its simulator all the same', () => {
-    const r = run([['passed'], ['skipped', 'pending']]);
+  it('names cases that are there, each in a suite it runs: one renamed would run no more', () => {
+    const only = /-t \(\?:(.*)\)\$ --reporter/.exec(run().log.join('\n'))?.[1] ?? '';
+    const titles = only.split('|').map((title) => title.replace(/\\(.)/g, '$1'));
+    expect(titles).toHaveLength(CASES.reduce((a, b) => a + b));
+    const sources = SUITES.map((file) => readFileSync(join(root, file), 'utf8'));
+    expect(titles.filter((title) => !sources.some((text) => text.includes(title)))).toEqual([]);
+  });
+
+  it('asks once whether the helpers answer, and leaves the suites to them where they do', () => {
+    const r = run();
+    expect(r.log.filter((line) => line.startsWith('node '))).toEqual([
+      'node packages/appdyno/dist/main.js doctor --serial FAKE-UDID',
+    ]);
+    expect(r.log).toContain('helpers: direct= why=');
+    expect(r.summary).toContain(
+      "Input and reads: the simulator's helpers, and the runner behind them.",
+    );
+  });
+
+  it('runs by the runner alone where a helper does not answer, and says so to the suites and in the summary', () => {
+    const r = run({ input: HID });
+    const why =
+      'no direct input on this host (Failed to find service com.apple.coredevice.feature.remote.hid.digitizer in session)';
+    expect(r.status).toBe(0);
+    expect(r.log).toContain(`helpers: direct=off why=${why}`);
+    expect(r.summary).toContain(`Input and reads: runner only: ${why}.`);
+  });
+
+  it('runs by the runner alone where the shell says so, with no helper asked', () => {
+    const r = run({ env: { APPDYNO_SIM_DIRECT: 'off' } });
+    expect(r.log.filter((line) => line.startsWith('node '))).toEqual([]);
+    expect(r.log).toContain('helpers: direct=off why=APPDYNO_SIM_DIRECT=off');
+    expect(r.summary).toContain('Input and reads: runner only: APPDYNO_SIM_DIRECT=off.');
+  });
+
+  it('fails where a case did not run, which vitest calls a pass, and deletes its simulator all the same', () => {
+    const r = run({ statuses: [undefined, ['skipped']] });
     expect(r.status).toBe(3);
-    expect(r.stderr).toContain('ran nothing: keys.test.ts');
-    expect(r.summary).toContain('| keys.test.ts | 0 | 0 | 2 | 61 |');
+    expect(r.stderr).toContain('ran 17 of 18 cases');
+    expect(r.summary).toContain('| keys.test.ts | 0 | 0 | 1 | 61 |');
     expect(r.log.at(-1)).toBe('xcrun simctl delete FAKE-UDID');
   });
 
   it('exits as vitest did, with the summary written', () => {
-    const r = run([['passed', 'failed']], 1);
+    const r = run({ statuses: [['passed', 'failed']], vitest: 1 });
     expect(r.status).toBe(1);
     expect(r.summary).toContain('| ios.test.ts | 1 | 1 | 0 | 61 |');
   });
