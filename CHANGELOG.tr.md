@@ -4,6 +4,64 @@
 
 ## Yayımlanmamış
 
+### Uyumluluğu bozan değişiklikler
+
+**48 araç artık 28 ve hepsi fiil_ad biçiminde adlandırıldı. Eski adlar kaldırıldı, takma ad yok.** Eski bir adla yapılan çağrı reddedilir ve ipucu çağrılacak aracın adını söyler.
+
+- Bir istemcide eski adla kaydedilmiş izin (`mcp__appdyno__screen`) artık eşleşmez: sunucunun tümüne izin verin (`mcp__appdyno`).
+- Komutlar adları tireyle izler (`appdyno read-screen`, `appdyno manage-app stop`, `appdyno run-flow run a.flow`, `appdyno record-session video start`). `appdyno perf compare|why|reference|baseline|budget|functions|prune`, `perf dashboard|survey|comment`, `push setup`, `mirror`, `timeline`, `flight`, `devices` ve `test` aynı kalır.
+- `.flow` dosyaları değişmedi.
+- `run_steps` içindeki bir adım `{ action, ... }` değil `{ tool, ...argümanlar }` biçimindedir; `run_steps` ve `run_flow` dışındaki her araç adım olabilir.
+- Süresi dolan bir bekleme `TIMEOUT` yerine `CHECK_FAILED` ile başarısız olur; bekleme `timeoutMs` değerini kendisi verir (5000 varsayılanı yok).
+- Önce kişiye sorulanlar: `manage_app uninstall`, `manage_app clear`, `transfer_files push`, `manage_app revoke`, `manage_app grant`, `set_device keychain`.
+- `--toolsets` (`APPDYNO_TOOLSETS` ve masaüstü eklentisinin bir alanı) yalnızca adı verilen grupları listeler: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
+- Bir araç cihazın ve bu Mac'in ötesine ulaşıyorsa `openWorldHint` true olur.
+- İstemcinin okuduğu katalog 30.865 karakterden 26.607 karaktere indi.
+
+| önce                                                       | şimdi                 | argümanlar                                                                                                               |
+| ---------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `device_info`                                              | `list_devices`        | `selected: true`                                                                                                         |
+| `set_orientation`                                          | `set_device`          | `name: orientation`, `value`                                                                                             |
+| `set_location`                                             | `set_device`          | `name: location`, `value: "lat,lon"` ya da `none`                                                                        |
+| `clipboard`                                                | `set_device`          | `name: clipboard`, `text` yerine `value`                                                                                 |
+| `device_setting`                                           | `set_device`          | aynı; `media` artık `transfer_files` `action: media`, `path`                                                             |
+| `simulator`                                                | `manage_simulator`    | aynı                                                                                                                     |
+| `screen`                                                   | `read_screen`         | aynı                                                                                                                     |
+| `find`                                                     | `read_screen`         | `selector`                                                                                                               |
+| `wait_for`                                                 | `check_element`       | `gone: true` yerine `check: absent`; `timeoutMs` verin                                                                   |
+| `assert`                                                   | `check_element`       | aynı                                                                                                                     |
+| `screenshot`                                               | `take_screenshot`     | aynı                                                                                                                     |
+| `audit`                                                    | `check_screen`        | `check: accessibility`                                                                                                   |
+| `visual`                                                   | `check_screen`        | `compare` yerine `check: visual`, `baseline` yerine `check: visual_baseline`                                             |
+| `tap`                                                      | `tap_screen`          | aynı                                                                                                                     |
+| `gesture`                                                  | `tap_screen`          | `double_tap` yerine `count: 2`; `long_press` için `durationMs` yerine `holdMs`                                           |
+| `gesture`                                                  | `swipe_screen`        | `drag`: `to`; `pinch`: `scale`; `plan`: `pointers`; `kind` yok                                                           |
+| `swipe`                                                    | `swipe_screen`        | aynı                                                                                                                     |
+| `scroll_to`                                                | `swipe_screen`        | `selector` yerine `until`                                                                                                |
+| `keyboard`                                                 | `press_key`           | `dismiss` yerine `key: hide_keyboard`, `enter` yerine `key: enter`; `status`: `read_screen` `@keyboard` öğesini listeler |
+| `steps`                                                    | `run_steps`           | her adımda `action` yerine `tool`                                                                                        |
+| `alert`                                                    | `answer_alert`        | aynı                                                                                                                     |
+| `terminate_app`                                            | `manage_app`          | `action: stop`                                                                                                           |
+| `app`                                                      | `manage_app`          | aynı, iki veri eylemi dışında                                                                                            |
+| `app`                                                      | `transfer_files`      | `download_data` yerine `pull`, `replace_data` yerine `push`                                                              |
+| `push`                                                     | `send_push`           | aynı                                                                                                                     |
+| `logs`                                                     | `read_logs`           | `maxLines` yerine `limit`                                                                                                |
+| `crashes`                                                  | `read_logs`           | `source: crashes`                                                                                                        |
+| `record`                                                   | `record_session`      | `kind: video`                                                                                                            |
+| `report`                                                   | `record_session`      | `kind: report`; `timeline` ve `flight` artık `kind`, `action: start` ile                                                 |
+| `mirror`                                                   | `show_mirror`         | aynı                                                                                                                     |
+| `inspector`                                                | `inspect_app`         | `ax_list`, `ax_press`                                                                                                    |
+| `hand_off`                                                 | `ask_person`          | aynı                                                                                                                     |
+| `network`                                                  | `capture_network`     | aynı                                                                                                                     |
+| `webview`                                                  | `inspect_app`         | `web_pages`, `web_elements`, `web_click`, `web_eval`                                                                     |
+| `react_native`                                             | `inspect_app`         | `rn_targets`, `rn_logs`, `rn_reload`                                                                                     |
+| `perf_snapshot`, `perf_launch`, `perf_scroll`, `perf_heap` | `measure_performance` | `metric: snapshot`, `launch`, `scroll`, `heap`                                                                           |
+| `perf_trace`                                               | `measure_performance` | `metric: frames`; `scroll` yerine `direction`                                                                            |
+| `perf_profile`                                             | `measure_performance` | `metric: cpu`; `scroll` yerine `direction`                                                                               |
+| `perf_compare`                                             | `compare_performance` | aynı                                                                                                                     |
+| `perf_query`                                               | `compare_performance` | `action: query`                                                                                                          |
+| `flow`                                                     | `run_flow`            | `start` yerine `record`                                                                                                  |
+
 ### Güvenlik
 
 - Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün, durum klasörünün ya da `--allow-write` (`APPDYNO_ALLOW_WRITE`) ile verilen bir klasörün içinde dosya yazar: `screenshot`, `visual`, `record`, `report`, `app download_data`, `network save` ve `flow`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Diskin kökünde ya da ev klasöründe başlatılan bir sunucunun proje klasörü yoktur. `connect` de aynı klasörlerle sınırlıdır, fazlası için `allowWrite` alır; bir kişinin komut satırına yazdığı yol ise söylediği yere yazılır. Masaüstü eklentisinin kurulum formunda bu klasörler için bir alan vardır. `screenshot`, `visual` ve `perf_heap` artık salt okunur diye işaretlenmez; salt okunur araçları sormadan çalıştıran bir istemci bunlardan önce sorar.

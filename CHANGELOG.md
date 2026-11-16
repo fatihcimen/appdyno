@@ -4,6 +4,64 @@
 
 ## Unreleased
 
+### Breaking
+
+**The 48 tools are now 28, named verb_noun. The old names are removed, with no aliases.** A call by an old name is refused, and its hint names the tool to call.
+
+- A client's saved permission by an old name (`mcp__appdyno__screen`) no longer matches: allow the server whole (`mcp__appdyno`).
+- Commands follow the names with dashes (`appdyno read-screen`, `appdyno manage-app stop`, `appdyno run-flow run a.flow`, `appdyno record-session video start`). `appdyno perf compare|why|reference|baseline|budget|functions|prune`, `perf dashboard|survey|comment`, `push setup`, `mirror`, `timeline`, `flight`, `devices` and `test` keep their words.
+- `.flow` files are unchanged.
+- A step of `run_steps` is `{ tool, ...arguments }`, not `{ action, ... }`, and any tool but `run_steps` and `run_flow` can be one.
+- A wait that runs out fails with `CHECK_FAILED`, not `TIMEOUT`, and a wait names its `timeoutMs` (there is no default of 5000).
+- What asks the person first: `manage_app uninstall`, `manage_app clear`, `transfer_files push`, `manage_app revoke`, `manage_app grant`, `set_device keychain`.
+- `--toolsets` (`APPDYNO_TOOLSETS`, and a field of the desktop extension) lists only the groups named: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
+- `openWorldHint` is true where a tool reaches beyond the device and this Mac.
+- The catalog a client reads is 26,607 characters, from 30,865.
+
+| before                                                     | now                   | arguments                                                                                             |
+| ---------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- |
+| `device_info`                                              | `list_devices`        | `selected: true`                                                                                      |
+| `set_orientation`                                          | `set_device`          | `name: orientation`, `value`                                                                          |
+| `set_location`                                             | `set_device`          | `name: location`, `value: "lat,lon"` or `none`                                                        |
+| `clipboard`                                                | `set_device`          | `name: clipboard`, `value` for `text`                                                                 |
+| `device_setting`                                           | `set_device`          | same; `media` is `transfer_files` `action: media`, `path`                                             |
+| `simulator`                                                | `manage_simulator`    | same                                                                                                  |
+| `screen`                                                   | `read_screen`         | same                                                                                                  |
+| `find`                                                     | `read_screen`         | `selector`                                                                                            |
+| `wait_for`                                                 | `check_element`       | `gone: true` is `check: absent`; give `timeoutMs`                                                     |
+| `assert`                                                   | `check_element`       | same                                                                                                  |
+| `screenshot`                                               | `take_screenshot`     | same                                                                                                  |
+| `audit`                                                    | `check_screen`        | `check: accessibility`                                                                                |
+| `visual`                                                   | `check_screen`        | `compare` is `check: visual`, `baseline` is `check: visual_baseline`                                  |
+| `tap`                                                      | `tap_screen`          | same                                                                                                  |
+| `gesture`                                                  | `tap_screen`          | `double_tap` is `count: 2`; `long_press` `durationMs` is `holdMs`                                     |
+| `gesture`                                                  | `swipe_screen`        | `drag`: `to`; `pinch`: `scale`; `plan`: `pointers`; no `kind`                                         |
+| `swipe`                                                    | `swipe_screen`        | same                                                                                                  |
+| `scroll_to`                                                | `swipe_screen`        | `selector` is `until`                                                                                 |
+| `keyboard`                                                 | `press_key`           | `dismiss` is `key: hide_keyboard`, `enter` is `key: enter`; `status`: `read_screen` lists `@keyboard` |
+| `steps`                                                    | `run_steps`           | each step's `action` is `tool`                                                                        |
+| `alert`                                                    | `answer_alert`        | same                                                                                                  |
+| `terminate_app`                                            | `manage_app`          | `action: stop`                                                                                        |
+| `app`                                                      | `manage_app`          | same, but for its two data actions                                                                    |
+| `app`                                                      | `transfer_files`      | `download_data` is `pull`, `replace_data` is `push`                                                   |
+| `push`                                                     | `send_push`           | same                                                                                                  |
+| `logs`                                                     | `read_logs`           | `maxLines` is `limit`                                                                                 |
+| `crashes`                                                  | `read_logs`           | `source: crashes`                                                                                     |
+| `record`                                                   | `record_session`      | `kind: video`                                                                                         |
+| `report`                                                   | `record_session`      | `kind: report`; `timeline` and `flight` are `kind`, with `action: start`                              |
+| `mirror`                                                   | `show_mirror`         | same                                                                                                  |
+| `inspector`                                                | `inspect_app`         | `ax_list`, `ax_press`                                                                                 |
+| `hand_off`                                                 | `ask_person`          | same                                                                                                  |
+| `network`                                                  | `capture_network`     | same                                                                                                  |
+| `webview`                                                  | `inspect_app`         | `web_pages`, `web_elements`, `web_click`, `web_eval`                                                  |
+| `react_native`                                             | `inspect_app`         | `rn_targets`, `rn_logs`, `rn_reload`                                                                  |
+| `perf_snapshot`, `perf_launch`, `perf_scroll`, `perf_heap` | `measure_performance` | `metric: snapshot`, `launch`, `scroll`, `heap`                                                        |
+| `perf_trace`                                               | `measure_performance` | `metric: frames`; `scroll` is `direction`                                                             |
+| `perf_profile`                                             | `measure_performance` | `metric: cpu`; `scroll` is `direction`                                                                |
+| `perf_compare`                                             | `compare_performance` | same                                                                                                  |
+| `perf_query`                                               | `compare_performance` | `action: query`                                                                                       |
+| `flow`                                                     | `run_flow`            | `start` is `record`                                                                                   |
+
 ### Security
 
 - A tool writes a file where its caller says only inside the folder the server runs in, the state folder, or a folder given with `--allow-write` (`APPDYNO_ALLOW_WRITE`): `screenshot`, `visual`, `record`, `report`, `app download_data`, `network save` and `flow`. A path elsewhere is refused `POLICY_DENIED`. A server started at the disk's root or in the home folder has no project folder. `connect` is held to the same folders, with `allowWrite` for more; a path a person types on a command line is written where they say. The desktop extension's install form has a field for the folders. `screenshot`, `visual` and `perf_heap` are no longer marked read-only, so a client that runs read-only tools unasked now asks first.
