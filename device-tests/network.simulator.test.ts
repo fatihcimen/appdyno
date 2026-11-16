@@ -598,6 +598,25 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     await ok('network', { action: 'stop' });
   }, 240_000);
 
+  it('reads a body in part: one value, its shape, and what differs between two requests', async () => {
+    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    await send(`http://${a.at}/json`);
+    await send(`http://${a.at}/json?n=2`);
+    const read = async (args: Record<string, unknown>) =>
+      (await ok('network', { action: 'read', ...args })).text.split('\n').slice(1);
+    expect(await read({ id: 0, path: 'from' })).toEqual(['response from: "a"']);
+    expect(await read({ id: 0, path: 'api_key' })).toEqual(['response api_key: •••']);
+    const shape = await read({ id: 0, shape: true });
+    out(`BODY shape: ${shape.join(' | ')}`);
+    expect(shape).toEqual(['response body shape: {from: string, note: string, api_key: string}']);
+    const diff = await read({ id: 1, diff: 0 });
+    out(`BODY diff: ${diff.join(' | ')}`);
+    expect(diff).toEqual(['0 → 1: 1 differ', 'request.query.n: none → "2"']);
+    const whole = await ok('network', { action: 'read', id: 0 });
+    out(`BODY sizes: whole ${whole.text.length}, shape ${shape.join('\n').length}, path 18`);
+    await ok('network', { action: 'stop' });
+  }, 180_000);
+
   it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {
     await call('network', { action: 'stop' });
     const set = await rules(`${a.at}/json status=500`);

@@ -5,6 +5,7 @@ import { STATUS } from '@appdyno/flows';
 import type { ServerContext } from './context.js';
 import { detailLines, line, networkAnswers } from './network-answer.js';
 import { captures, endCapture, readCapture, setKept, startOwn, VIA } from './network-capture.js';
+import { diffLines, shapeLines, valueLine } from './network-body.js';
 import { awaitRequest } from './network-check.js';
 import { harEntries } from './network-har.js';
 import { NetworkIn, NetworkOut } from './network-schemas.js';
@@ -55,12 +56,12 @@ export function networkOps(ctx: ServerContext) {
       name: 'network',
       title: 'Network',
       description:
-        "An app's network traffic (HTTP), bounded; mock and throttle by the probe, until stop. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); check: waits for a request that fits, or refuses with the nearest; stop. Installs no certificate.",
+        "An app's network traffic (HTTP), bounded; mock and throttle by the probe, until stop. paths: what each way sees; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); check: waits for a request, else refuses with the nearest; stop. Installs no certificate.",
       input: NetworkIn,
       output: NetworkOut,
       annotations: DESTRUCTIVE,
       run: async ({ action, via, proxy, app, bodies, har, id, rules, add, throttle, ...given }) => {
-        const { strict, has, timeoutMs, from, unmatched, ...asked } = given;
+        const { strict, has, timeoutMs, from, unmatched, path, shape, diff, ...asked } = given;
         const s = await ctx.session();
         const serial = s.device.serial;
         const now = captures.read(serial);
@@ -70,6 +71,9 @@ export function networkOps(ctx: ServerContext) {
             `status: 404, 4xx or failed, not ${asked.status}`,
             'INVALID_ARGUMENT',
           );
+        const cuts = path !== undefined || shape === true || diff !== undefined;
+        if (cuts && (action !== 'read' || id === undefined || har))
+          throw new ToolError('path, shape and diff go with read and id', 'INVALID_ARGUMENT');
         if (action === 'paths') {
           const ways = await paths(s);
           const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${String(p.refused)}`}`).join('\n');
@@ -179,7 +183,30 @@ export function networkOps(ctx: ServerContext) {
             'NOT_FOUND',
           );
         const shown = shownOf(one);
-        const lines = detailLines(shown, await detailOf(s, now)(id), clean);
+        const detail = await detailOf(s, now)(id);
+        if (!cuts) {
+          const lines = detailLines(shown, detail, clean);
+          return reply(lines.join('\n'), { entries: [shown], source: now.via, detail: lines });
+        }
+        if (!now.bodies)
+          throw new ToolError(
+            'path, shape and diff read a body, and this capture keeps none: start with bodies: true',
+            'INVALID_ARGUMENT',
+          );
+        const other = diff === undefined ? undefined : read.entries.find((e) => e.id === diff);
+        if (diff !== undefined && !other) throw new ToolError(`no request ${diff}`, 'NOT_FOUND');
+        const lines = [
+          line(shown, true),
+          ...(path === undefined ? [] : [valueLine(detail, path, clean)]),
+          ...(shape ? shapeLines(detail) : []),
+          ...(other && diff !== undefined
+            ? diffLines(
+                { e: shownOf(other), d: await detailOf(s, now)(diff) },
+                { e: shown, d: detail },
+                clean,
+              )
+            : []),
+        ];
         return reply(lines.join('\n'), { entries: [shown], source: now.via, detail: lines });
       },
     }),

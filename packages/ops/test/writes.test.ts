@@ -98,8 +98,9 @@ describe('a file a tool writes where its caller says', () => {
         .filter((k) => ['file', 'dir', 'path', 'save', 'to', 'out', 'folder'].includes(k))
         .map((k) => `${op.name} ${k}`),
     );
-    // a place on the screen and a measurement's id; app's path is also what install and build_and_run read
-    const others = ['gesture to', 'perf_compare to'];
+    // a place on the screen, a measurement's id and a place in a JSON body; app's path is also what install and
+    // build_and_run read
+    const others = ['gesture to', 'perf_compare to', 'network path'];
     expect(named.sort()).toEqual(
       [...new Set(WRITERS.map(([tool, , k]) => `${tool} ${k}`)), ...others].sort(),
     );
