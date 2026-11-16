@@ -104,14 +104,17 @@ describe("a foldable simulator's fold", () => {
   }, 20_000);
 
   it('refuses a simulator with one display in the words every simulator did', async () => {
+    let asked = 0;
     const phone = new SimulatorFold(
       'PHONE',
-      () => Promise.resolve([COVER]),
+      () => (asked++, Promise.resolve([COVER])),
       () => Promise.reject(new Error('never sent')),
     );
     await expect(phone.get()).rejects.toThrow(/^simctl has no fold pose/);
     await expect(phone.set('open')).rejects.toThrow(/^simctl has no fold pose/);
     await expect(phone.poses()).rejects.toThrow(/^simctl has no fold pose/);
+    // asked once: a window reads this row each time its pane shows
+    expect(asked).toBe(1);
   });
 });
 
@@ -148,6 +151,12 @@ describe('the display a foldable simulator shows', () => {
     expect(await shown.seen([466, 678], [466, 678], 4)).toBe(false);
     expect(await shown.seen([466, 678], [466, 678], 3)).toBe(false);
     expect(asked).toBe(1);
+    // a devicectl with nothing to say, as an older Xcode's of a simulator, is not asked at every touch
+    let silent = 0;
+    const old = new ShownDisplay('OLD', () => (silent++, Promise.resolve([])));
+    expect(await old.seen([320, 480], [466, 678])).toBe(false);
+    expect(await old.seen([320, 480], [466, 678])).toBe(false);
+    expect(silent).toBe(1);
   });
 
   it("turns a point of the open scene into the inner panel's own frame, as a tap that arrived was sent", () => {

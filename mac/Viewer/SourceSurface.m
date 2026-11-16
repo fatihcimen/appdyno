@@ -132,6 +132,21 @@ enum { kBooted = 3 };
   [self show];
 }
 
+/// A still screen presents nothing: a window opened on a foldable already open stays on the screen it found first, the
+/// cover's dark one, until the parent, which knows the display shown by its size, says so.
+- (void)showSized:(CGSize)size {
+  for (id screen in _screens) {
+    id surface = [_surfaces objectForKey:screen];
+    IOSurfaceRef s = (__bridge IOSurfaceRef)surface;
+    if (!s || screen == _chosen || IOSurfaceGetWidth(s) != (size_t)size.width || IOSurfaceGetHeight(s) != (size_t)size.height) continue;
+    _chosen = screen;
+    _surface = surface;
+    [self sayShape];
+    [self show];
+    return;
+  }
+}
+
 /** A guest that turns draws sideways in the same surface and no callback says so: its turns come from the parent. */
 - (void)sayShape {
   IOSurfaceRef s = (__bridge IOSurfaceRef)_surface;

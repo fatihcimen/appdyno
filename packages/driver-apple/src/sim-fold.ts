@@ -66,6 +66,9 @@ export async function simDisplays(udid: string): Promise<SimDisplay[]> {
   }
 }
 
+/** How long a devicectl that could not say is left alone: each ask is a process, and a touch waits for it. */
+const QUIET_MS = 60_000;
+
 /**
  * Which display a foldable simulator shows, told from what the read helper says with each look: the system's frame,
  * `screen`, the main display's size, `main`, and how the app in front lies. Open, the frame's short side is not the main
@@ -78,6 +81,8 @@ export class ShownDisplay {
   inner: SimDisplay | undefined;
   /** A simulator found with one built-in display, which is never asked again. */
   private single = false;
+  /** When devicectl, which had nothing to say, may be asked again: an older Xcode's says nothing of a simulator. */
+  private askAfter = 0;
 
   constructor(
     private readonly udid: string,
@@ -92,9 +97,10 @@ export class ShownDisplay {
     const other = Math.abs(Math.min(a, b) - Math.min(c, d)) >= 1;
     const between = !other && a < b && (orientation === 3 || orientation === 4);
     if (this.single || !(other || between)) this.inner = undefined;
-    else if (between || !this.inner) {
+    else if ((between || !this.inner) && Date.now() >= this.askAfter) {
       const all = await this.displays(this.udid);
       this.single = all.length === 1;
+      if (all.length === 0) this.askAfter = Date.now() + QUIET_MS;
       this.inner = all.find((x) => x.active && !x.main);
     }
     return !!this.inner;
@@ -146,10 +152,14 @@ export class SimulatorFold {
     ) => hingeBy(udid, degrees, done),
   ) {}
 
+  /** A simulator found with one built-in display, which has no more the next time a window reads its fold row. */
+  private single = false;
+
   /** The active display; refused for a simulator with one display, in the words every other simulator refuses with. */
   private async active() {
-    const displays = await this.displays();
+    const displays = this.single ? [] : await this.displays();
     const active = displays.find((d) => d.active);
+    this.single ||= displays.length === 1;
     if (displays.length < 2 || !active) throw new DeviceError('UNSUPPORTED', SIM_CANNOT.fold);
     return active;
   }

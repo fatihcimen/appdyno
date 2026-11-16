@@ -325,7 +325,10 @@ describe("a simulator's picture", () => {
     ]);
     const told: unknown[] = [];
     await mirror.open(undefined, undefined, (m) => told.push(m));
-    await vi.waitFor(() => expect(told).toEqual([{ op: 'turns', turns: 3 }]), { timeout: 3_000 });
+    // with the display's own size: a window opened on a still screen has no frame to find it by
+    await vi.waitFor(() => expect(told).toEqual([{ op: 'turns', turns: 3, w: 1398, h: 2034 }]), {
+      timeout: 3_000,
+    });
     await mirror.input({ kind: 'touch', p: 0, x: 40 / 951, y: 129 / 669 });
     const touch = must(
       calls.find((q) => q.op === 'touch'),

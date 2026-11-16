@@ -113,6 +113,7 @@
   if ([op isEqual:@"raise"]) return [_window raise];
   if ([op isEqual:@"turns"]) {
     if ([(id)_source respondsToSelector:@selector(setTurns:)]) [_source setTurns:[m[@"turns"] intValue] & 3];
+    if (m[@"w"] && [(id)_source respondsToSelector:@selector(showSized:)]) [(MVSourceSurface *)_source showSized:CGSizeMake([m[@"w"] doubleValue], [m[@"h"] doubleValue])];
     return;
   }
   if ([op isEqual:@"record"]) return [self record:m];

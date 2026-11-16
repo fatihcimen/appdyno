@@ -145,6 +145,12 @@ void MVCheckDevice(void) {
                @"platform": @"android",
                @"conditions": @[@{@"name": @"fold", @"value": @"open"}]}];
   MVCheck(@"device: and the two every foldable has where a device lists none", fold.numberOfItems == 2 && [[pane shown:@"fold"] isEqual:@"open"], [fold.itemTitles componentsJoinedByString:@"|"]);
+  // folded by an agent, the window's picture changes shape: the rows the pane shows are asked again
+  [window setPicture:CGSizeMake(1080, 2424)];
+  [sent removeAllObjects];
+  [window setPicture:CGSizeMake(2076, 2152)];
+  MVCheck(@"device: a picture of a new shape asks the pane's rows again, as a fold by an agent changes one", sent.count == 1 && [sent.firstObject[@"name"] isEqual:@"deviceList"], sent.description);
+  [sent removeAllObjects];
   // a change took seconds to show on a loaded Mac, and one the device did not take only went back
   MVConditionRow *row = [pane valueForKey:@"_rows"][@"text_size"];
   NSView *spin = [row valueForKey:@"spin"];

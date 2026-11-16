@@ -333,7 +333,7 @@ export type ViewerOrder = Staged &
     | { op: 'status'; state: string; title?: string; fix?: string; need?: Need }
     | { op: 'tick'; w?: number; h?: number; seq?: number; turns?: number }
     | { op: 'touchAt'; x: number; y: number; agent?: boolean }
-    | { op: 'turns'; turns: number }
+    | { op: 'turns'; turns: number; w?: number; h?: number }
     | { op: 'watch'; id: string; ms: number; strip: boolean }
   );
 

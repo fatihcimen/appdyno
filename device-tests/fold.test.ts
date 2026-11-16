@@ -277,6 +277,12 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
       await until('the cover again', () => picture() === '1398x2034');
       expect(await tapDialog()).toBe(true);
       expect(session.status.inputFailed).toBe(0);
+      // a window opened on the device already open, its screen still: no frame comes to find the display by
+      ok(await fold(call, 'open'));
+      await session.stop('to open another');
+      await new Promise((r) => setTimeout(r, 3_000));
+      await session.start();
+      await until('the inner display from the start', () => picture() === '2853x2007');
     } finally {
       await session.stop('the test ended');
       device.close();

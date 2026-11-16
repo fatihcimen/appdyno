@@ -77,6 +77,7 @@ export class SimulatorMirror implements Mirror {
   private hid: Promise<HelperProcess> | undefined;
   private reader: Promise<HelperProcess> | undefined;
   private turns = 0;
+  private shownPx: string | undefined;
   private turnsTimer: NodeJS.Timeout | undefined;
   /** A foldable's other display, while it is the one shown: a person's touches go to it. */
   private readonly shown: ShownDisplay;
@@ -122,9 +123,14 @@ export class SimulatorMirror implements Mirror {
     const a = await (await must(this.reader, 'the reader')).call({ op: 'orientation' }, INPUT_MS);
     if (a.ok) await this.shown.seen(a.screen, a.main, a.orientation);
     const turns = turnsOf(a.orientation as number);
-    if (turns !== undefined && turns !== this.turns) {
+    // a foldable's other display by its size too: a still screen presents nothing, and a window opened on a device
+    // already open would stay on the dark surface of the display it found first
+    const px = this.shown.inner?.px;
+    if (turns !== undefined && (turns !== this.turns || px !== this.shownPx)) {
       this.turns = turns;
-      tell({ op: 'turns', turns });
+      this.shownPx = px;
+      const [w, h] = (px ?? '').split('x').map(Number);
+      tell({ op: 'turns', turns, ...(w && h && { w, h }) });
     }
     return a.ok;
   }

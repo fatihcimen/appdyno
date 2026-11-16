@@ -197,6 +197,9 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   if (size.width <= 0 || size.height <= 0 || CGSizeEqualToSize(size, _picture)) return;
   // the bezel stands at once, and the first frame comes up in it
   if (_picture.width <= 0) MVFade(_view.layer, 0, 1, kFirstFrameSeconds);
+  // a picture of another shape is a device folded or turned, by an agent as well: the Device pane's rows, shown, are
+  // read again, so that its fold row says the pose the window now shows
+  else if (_inspector.open && _inspector.chosen == MVPaneDevice) [_inspector.device ask];
   _picture = size;
   _view.picture = size;
   [self applySpec];

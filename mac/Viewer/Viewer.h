@@ -117,6 +117,8 @@ void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_
 @end
 
 @interface MVSourceSurface : NSObject <MVSource>
+/// The screen whose surface has this size in pixels is the one shown, as the parent says of a device that folds.
+- (void)showSized:(CGSize)size;
 @end
 
 @interface MVSourcePixels : NSObject <MVSource>
