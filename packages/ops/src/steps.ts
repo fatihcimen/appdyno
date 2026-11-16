@@ -299,6 +299,10 @@ const WITH_SCREEN: Record<string, string> = {
   [NO_MATCH_HINT]: 'the screen now is above; use scroll_to if it may be further along a list',
 };
 
+/** A refusal's hint where the refusal holds the screen itself: it sends nobody to read it. */
+export const hintWithScreen = (hint: string | undefined) =>
+  hint && (WITH_SCREEN[hint] ?? hint.replace(', or read the screen', ''));
+
 /** One step's device call and the action around it, shared by the tools that act on a target. */
 export function stepsFor(
   ctx: ServerContext,
@@ -353,7 +357,7 @@ export function stepsFor(
     return new ToolError(
       `${e.message}\n${left(s, screen, read)}`,
       e.code,
-      (e.hint && WITH_SCREEN[e.hint]) ?? e.hint,
+      hintWithScreen(e.hint),
       e.dispatched,
     );
   };

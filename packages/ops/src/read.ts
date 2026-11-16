@@ -28,7 +28,7 @@ import {
   showSelector,
   WaitStep,
 } from './step-schemas.js';
-import type { Steps } from './steps.js';
+import { hintWithScreen, type Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
 import { readViews } from './views.js';
 import { webLines } from './web.js';
@@ -277,7 +277,7 @@ export function readOps(
           throw new ToolError(
             said,
             'TIMEOUT',
-            read === 'none' ? why.hint : why.hint.replace(', or read the screen', ''),
+            read === 'none' ? why.hint : hintWithScreen(why.hint),
           );
         if (read === 'none') return reply(said, { ...out, screen: 'none' });
         return reply(said, {

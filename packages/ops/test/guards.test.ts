@@ -127,6 +127,23 @@ describe('what did not happen is no success', () => {
     expect(e.hint).toBe('call again to wait longer');
   });
 
+  it('and so does a steps call that fails, which shows the screen', async () => {
+    const call = callerOf(contextOf(new FakeDevice()));
+    const waited = await refusal(
+      call('steps', {
+        steps: [{ action: 'wait_for', selector: { text: 'Never' }, timeoutMs: 300 }],
+      }),
+    );
+    expect(waited.message).toMatch(/\nforeground: dev\.app\n3 elements: /);
+    expect(waited.hint).toBe('call again to wait longer');
+    const missed = await refusal(
+      call('steps', { steps: [{ action: 'tap', selector: { text: 'Never' } }] }),
+    );
+    expect(missed.hint).toBe(
+      'the screen now is above; use scroll_to if it may be further along a list',
+    );
+  });
+
   it('a wait for what goes refuses while it stays', async () => {
     const e = await refusal(
       callerOf(contextOf(new FakeDevice()))('wait_for', {

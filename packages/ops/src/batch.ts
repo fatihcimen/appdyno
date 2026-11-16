@@ -15,7 +15,7 @@ import {
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { LOOKS_ONLY, Read, Step } from './step-schemas.js';
-import type { Steps } from './steps.js';
+import { hintWithScreen, type Steps } from './steps.js';
 import { NOT_A_STEP } from './tool-kinds.js';
 import {
   ACT,
@@ -240,7 +240,7 @@ export function stepsOp(
               ...(screen ? [left(s, screen, read === 'diff' ? 'diff' : 'full')] : []),
             ].join('\n'),
             own || appDied ? 'APP_NOT_RUNNING' : e.code,
-            appDied ? diedHint(appDied) : e.hint,
+            appDied ? diedHint(appDied) : screen ? hintWithScreen(e.hint) : e.hint,
             e.dispatched,
           );
         }
