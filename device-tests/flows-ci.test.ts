@@ -153,6 +153,69 @@ for (const [platform, serial] of targets)
     );
 
     it(
+      'runs a setup and a teardown around each file and each retry, a prepare command, and the checks a run makes',
+      async () => {
+        // in the state folder, which the command line may write in: a project of its own by its .appdyno
+        const suite = join(dir, 'state', 'suite');
+        mkdirSync(join(suite, '.appdyno'), { recursive: true });
+        const seed = [process.execPath, '-e', "console.log('WHO=Deniz')"];
+        writeFileSync(join(suite, '.appdyno', 'test.json'), JSON.stringify({ prepare: { seed } }));
+        const put = (name: string, ...lines: string[]) =>
+          writeFileSync(join(suite, name), `${lines.join('\n')}\n`);
+        const other = platform === 'ios' ? 'android' : 'ios';
+        put('_setup.flow', `app ${APP}`, 'param WHO', 'stop', 'launch', 'prepare seed gives=WHO');
+        put('_teardown.flow', 'screenshot after', 'stop');
+        put(
+          'a-steps.flow',
+          'param WHO',
+          'open_link "appdyno-fixture://open/form"',
+          'type "${WHO}" id=name_input replace',
+          'type "pw-123456" id=password_input',
+          'tap id=submit',
+          'assert id=result check=text equals="Sent: ${WHO}"',
+          'setting orientation landscape_left',
+          'open_link "appdyno-fixture://open/list"',
+          'wait_for id=add_button',
+          'assert id=add_button check=count min=2 max=60',
+          `only ${platform} assert id=add_button index=0 !ambiguous`,
+          `only ${other}`,
+          '  assert text="No such thing" timeoutMs=500',
+          'end',
+        );
+        put(
+          'b-fails.flow',
+          'open_link "appdyno-fixture://open/list"',
+          'assert id=add_button check=count equals=0 timeoutMs=500',
+        );
+        const r = await job('phases', suite, '--retries', '1');
+        expect(r.code).toBe(1);
+        expect(r.out).toContain("prepare seed runs the project's own command:");
+        expect(r.out).toContain('ok   a-steps.flow');
+        expect(r.out).toMatch(
+          /FAIL b-fails\.flow: line 2, step 2: \d+ elements match id=add_button, not 0/,
+        );
+        expect(r.out).toContain("the failed attempt's teardown runs");
+        expect(r.out).toContain('1 passed, 0 flaky, 1 failed');
+        expect(r.junit).toContain('setup 1. stop');
+        expect(r.junit).toContain('Sent: ${WHO}');
+        expect(r.junit).not.toContain('Deniz');
+        expect(r.junit).toContain(`skipped, ${other} only`);
+        expect(r.junit).toContain('teardown 1. screenshot after');
+        // the teardown ran after the pass and after each failed attempt: its picture is beside each file's evidence
+        const kept = (file: string) => join(r.artifacts, serial.replace(/[^\w.-]/g, '_'), file);
+        expect(existsSync(join(kept('a-steps.flow'), 'after.png'))).toBe(true);
+        expect(existsSync(join(kept('b-fails.flow'), 'after.png'))).toBe(true);
+        expect(existsSync(join(kept('b-fails.flow'), 'attempt-2', 'screen.jpg'))).toBe(true);
+        // the turn a-steps made was put back once the file had run
+        const info = await appdyno(
+          ...['list-devices', '--device', serial, '--json', '{"selected":true}'],
+        );
+        expect(info.out).toContain('rotation 0');
+      },
+      LONG_MS,
+    );
+
+    it(
       'exits 1 when the tags select nothing',
       async () => {
         const r = await job('none', join(flows, 'a-form.flow'), '--tag', 'no-such-tag');

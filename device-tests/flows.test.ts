@@ -207,6 +207,50 @@ for (const { platform, serial, form } of targets)
       LONG_MS,
     );
 
+    // proven on a simulator: its push needs no service, and its web view is open to the inspector
+    it.skipIf(platform !== 'ios')(
+      'records a push, a turn of the screen, a drag and a web view click as steps, and replays them',
+      async () => {
+        const gaps = join(dir, 'state', `${platform}-gaps.flow`);
+        await call('run_flow', { action: 'record' });
+        await call('manage_app', { action: 'stop' });
+        await call('launch_app');
+        await call('send_push', { title: 'Order', body: 'On its way' });
+        await call('set_device', { name: 'orientation', value: 'landscape_left' });
+        await call('set_device', { name: 'orientation', value: 'portrait' });
+        await call('open_link', { url: 'appdyno-fixture://open/gestures' });
+        await call('check_element', { selector: { id: 'travel' }, timeoutMs: 8_000 });
+        const [pad] = (await call('read_screen', { selector: { text: 'Gesture pad' } })).data
+          .matches;
+        assert(pad);
+        const drop = { x: pad.x, y: pad.y + 120 };
+        await call('swipe_screen', { x: pad.x, y: pad.y - 60, to: drop, durationMs: 500 });
+        const moved = { selector: { id: 'travel' }, check: 'text', equals: 'travel: 0' };
+        await call('check_element', { ...moved, expect: false });
+        await call('open_link', { url: 'appdyno-fixture://open/web' });
+        await call('inspect_app', { action: 'web_click', selector: '#pay' });
+        await call('run_flow', { action: 'stop' });
+        await call('run_flow', { action: 'save', file: gaps });
+
+        const text = readFileSync(gaps, 'utf8');
+        process.stderr.write(`--- the ${platform} recording of what had no step\n${text}---\n`);
+        expect(text).toContain('push alert title=Order body="On its way"');
+        expect(text).toContain('setting orientation landscape_left');
+        expect(text).toContain('setting orientation portrait');
+        expect(text).toMatch(/^drag .*to="\d+,\d+".* !coordinates$/m);
+        expect(text).toContain('web_click "#pay"');
+        expect(text).not.toContain('unrecorded');
+
+        const r = await call('run_flow', { action: 'run', file: gaps });
+        process.stderr.write(`--- ${platform} replay of it\n${r.text}\n---\n`);
+        expect(r.text).toMatch(/^passed: \d+ steps$/m);
+        // the page is where the replayed click left it
+        const page = await call('inspect_app', { action: 'web_elements' });
+        expect(page.text).toContain('Paid');
+      },
+      LONG_MS,
+    );
+
     it(
       'stops at a miss with the nearest candidates, and goes on with --from',
       async () => {
