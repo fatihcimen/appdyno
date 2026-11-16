@@ -104,4 +104,34 @@ describe('the native views of a screen', () => {
     expect(r.data.warnings).toEqual([note]);
     expect(r.data.views?.[1]?.flags).toEqual(['clickable']);
   });
+
+  it('read the screen first, which opens a lock that asks for nothing, and say a lock that does', async () => {
+    const asked: string[] = [];
+    const d = new FakeDevice();
+    const tree = d.tree.bind(d);
+    const reading = (read: () => ReturnType<FakeDevice['tree']>) =>
+      Object.assign(d, {
+        tree: () => (asked.push('screen'), read()),
+        views: () => (asked.push('views'), Promise.resolve(TREE)),
+      });
+    const { call } = await connect(reading(tree));
+    asked.length = 0;
+    expect((await call('screen', { views: true })).data.framework).toBe('Compose');
+    expect(asked).toEqual(['screen', 'views']);
+    // as an Android phone refuses a read behind its PIN: under the lock its activity draws no view
+    const locked = new DeviceError(
+      'DEVICE_LOCKED',
+      'emulator-5554 is locked behind its PIN, pattern or password',
+      'unlock it by hand: no tool can answer it',
+    );
+    reading(() => Promise.reject(locked));
+    asked.length = 0;
+    expect((await call('screen', { views: true })).text).toBe(
+      'DEVICE_LOCKED: emulator-5554 is locked behind its PIN, pattern or password\nhint: unlock it by hand: no tool can answer it',
+    );
+    expect(asked).toEqual(['screen']);
+    // any other read that fails leaves the views to answer, as under a sheet of the system's that gives no window
+    reading(() => Promise.reject(new DeviceError('NOT_FOUND', 'no window to read')));
+    expect((await call('screen', { views: true })).data.framework).toBe('Compose');
+  });
 });

@@ -1,4 +1,5 @@
 import { frameworkOfViews, NoViewProbe, viewLines, type FrameworkLabel } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { systemAsks } from './noticed.js';
 import type { Session } from './session.js';
 import { reply, ToolError } from './tool.js';
@@ -18,6 +19,12 @@ export async function readViews(s: Session, clean: (t: string) => string, raw: b
       'UNSUPPORTED',
       'screen without views reads its accessibility tree',
     );
+  // the screen first, as its read wakes a dark one and opens a lock that asks for nothing: under a lock an activity
+  // draws no view, which read as "no view is drawn". A lock behind a credential is said; the views need no other read
+  const look = await s.read().catch((e: unknown) => {
+    if (e instanceof DeviceError && e.code === 'DEVICE_LOCKED') throw e;
+    return undefined;
+  });
   const tree = await s.device.views().catch((e: unknown) => {
     if (e instanceof NoViewProbe)
       throw new ToolError(e.message, e.code, 'launch_app restart:true probe:true puts it in');
@@ -26,8 +33,7 @@ export async function readViews(s: Session, clean: (t: string) => string, raw: b
   const framework = frameworkOfViews(tree, s.device.platform);
   const said = framework && frameworkSaid(framework);
   const lines = viewLines(tree, clean);
-  // the views are the app's own: an alert the system shows over them is in none, and a read of the screen has it
-  const look = await s.read().catch(() => undefined);
+  // the views are the app's own: an alert the system shows over them is in none, and the read of the screen has it
   const asks = look && s.device.platformScreen.systemAlert(look.tree, look.elements);
   const notes = [
     ...(tree.notes ?? []).map(clean),
