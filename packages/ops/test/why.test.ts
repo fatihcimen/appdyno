@@ -178,13 +178,13 @@ async function regressed(t: Phone, o: { reference?: boolean } = {}) {
   for (const n of [1, 2, 3]) baseline = addToBaseline(key, baseline, run(n, 400));
   await saveBaseline(t.perf, must(baseline, 'the baseline'));
   await saveRun(t.measurements, run(3, 400));
-  if (o.reference) await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
+  if (o.reference) await t.call('compare_performance', { action: 'reference', scenario: SCENARIO });
   await saveRun(t.measurements, run(4, 1_100));
   t.device.formMs = 1_100;
   return file;
 }
 
-const why = (t: Phone) => t.call('perf_compare', { action: 'why', scenario: SCENARIO });
+const why = (t: Phone) => t.call('compare_performance', { action: 'why', scenario: SCENARIO });
 const answers = (d: { answers?: unknown[] }) => d.answers as GateAnswer[];
 const finding = (d: { answers?: unknown[] }) =>
   must(must(answers(d)[0], 'an answer').findings[0], 'a finding');
@@ -196,9 +196,9 @@ describe('the gate, asked why', () => {
     const measure = () => t.call('run_flow', { action: 'run', file, iterations: 5 });
     for (let i = 0; i < 3; i++) {
       await measure();
-      await t.call('perf_compare', { action: 'baseline', scenario: SCENARIO });
+      await t.call('compare_performance', { action: 'baseline', scenario: SCENARIO });
     }
-    await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
+    await t.call('compare_performance', { action: 'reference', scenario: SCENARIO });
     await measure();
     t.looks.length = 0;
     const same = await why(t);
@@ -230,7 +230,7 @@ describe('the gate, asked why', () => {
     await why(t);
     expect(await runFiles(t.measurements, key)).toEqual(before);
     expect((await loadAnswer(t.measurements, key))?.status).toBe('regression');
-    const again = await t.call('perf_compare', { action: 'compare', scenario: SCENARIO });
+    const again = await t.call('compare_performance', { action: 'compare', scenario: SCENARIO });
     expect(again.data.exitCode).toBe(1);
   });
 
@@ -331,12 +331,12 @@ describe('the gate, asked why', () => {
     });
     await regressed(named);
     const dsym = '/builds/App.app.dSYM';
-    await named.call('perf_compare', { action: 'why', scenario: SCENARIO, dsym });
+    await named.call('compare_performance', { action: 'why', scenario: SCENARIO, dsym });
     expect(asked).toEqual([{ dsym }]);
 
     const none = phone();
     await regressed(none);
-    const r = await none.call('perf_compare', { action: 'why', scenario: SCENARIO, dsym });
+    const r = await none.call('compare_performance', { action: 'why', scenario: SCENARIO, dsym });
     expect(answers(r.data)[0]?.findings[0]?.cannot.join()).toContain('dsym is for iOS');
   });
 
@@ -364,7 +364,7 @@ describe('the gate, asked why', () => {
     const t = phone();
     await regressed(t);
     const asked = (format: string) =>
-      t.call('perf_compare', { action: 'why', scenario: SCENARIO, format });
+      t.call('compare_performance', { action: 'why', scenario: SCENARIO, format });
     const json = await asked('json');
     expect(json.data.exitCode).toBe(1);
     const held = JSON.parse(json.text) as { failed: boolean; answers: GateAnswer[] };
@@ -444,19 +444,20 @@ describe('the gate, asked why', () => {
         ),
     });
     const scenario = 'launch-cold';
-    const measure = () => t.call('perf_launch', { mode: 'cold', repeats: 6, scenario });
+    const measure = () =>
+      t.call('measure_performance', { metric: 'launch', mode: 'cold', repeats: 6, scenario });
     for (let i = 0; i < 3; i++) {
       await measure();
-      await t.call('perf_compare', { action: 'baseline', scenario });
+      await t.call('compare_performance', { action: 'baseline', scenario });
     }
-    await t.call('perf_compare', { action: 'reference', scenario });
+    await t.call('compare_performance', { action: 'reference', scenario });
     start.bind = 1_000;
     start.total = 1_100;
     await measure();
     const [key] = await runKeys(t.measurements);
     assert(key);
     const before = await runFiles(t.measurements, key);
-    const r = await t.call('perf_compare', { action: 'why', scenario });
+    const r = await t.call('compare_performance', { action: 'why', scenario });
     expect(r.data.exitCode).toBe(1);
     const f = finding(r.data);
     expect(f.place).toBe('run');
@@ -480,7 +481,7 @@ describe('the gate, asked why', () => {
     for (const n of [1, 2, 3]) baseline = addToBaseline(key, baseline, records(n, 20));
     await saveBaseline(t.perf, must(baseline, 'the baseline'));
     await saveRun(t.measurements, records(3, 20));
-    await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
+    await t.call('compare_performance', { action: 'reference', scenario: SCENARIO });
     t.costs.scrollCost = 3_000;
     await saveRun(t.measurements, records(4, 90));
     t.device.calls.length = 0;
@@ -499,7 +500,7 @@ describe('the gate, asked why', () => {
     const measure = () => t.call('run_flow', { action: 'run', file, iterations: 5 });
     for (let i = 0; i < 3; i++) {
       await measure();
-      await t.call('perf_compare', { action: 'baseline', scenario: SCENARIO });
+      await t.call('compare_performance', { action: 'baseline', scenario: SCENARIO });
     }
     t.device.formMs = 1_100;
     host.load = 1_000;
@@ -540,7 +541,7 @@ describe('a reference', () => {
     assert(key);
     const before = await runFiles(t.measurements, key);
     t.device.calls.length = 0;
-    const r = await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
+    const r = await t.call('compare_performance', { action: 'reference', scenario: SCENARIO });
     expect(r.data.exitCode).toBe(0);
     expect(await runFiles(t.measurements, key)).toEqual(before);
     // the flow twice, a first time left out: no more, as a replay costs a recording on a phone
@@ -557,7 +558,7 @@ describe('a reference', () => {
     const t = phone();
     await regressed(t);
     t.device.hello.model = 'Other Phone';
-    const r = await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
+    const r = await t.call('compare_performance', { action: 'reference', scenario: SCENARIO });
     expect(r.data.exitCode).toBe(1);
     expect(r.text).toContain('and the run was on');
   });

@@ -26,7 +26,11 @@ describe.skipIf(!serial)('start info', () => {
     await pause(500);
     await d.shell(how);
     await pause(3_000);
-    const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500 });
+    const r = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['startInfo'],
+      cpuWindowMs: 500,
+    });
     console.log(r.text.split('\n').filter((l) => l.includes('start')));
     expect(r.error, r.text).toBe(false);
     return r;
@@ -90,7 +94,12 @@ describe.skipIf(!serial)('start info', () => {
       await pause(3_000);
     };
     const phasesKept = async () => {
-      const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500, scenario });
+      const r = await t.call('measure_performance', {
+        metric: 'snapshot',
+        also: ['startInfo'],
+        cpuWindowMs: 500,
+        scenario,
+      });
       expect(r.error, r.text).toBe(false);
       const [key] = await runKeys(t.measurements, { app: APP, scenario });
       assert(key);
@@ -112,7 +121,11 @@ describe.skipIf(!serial)('start info', () => {
     await pause(500);
     // HyperOS completes the broadcast and starts nothing, which leaves no record to read
     if (!(await d.shell(`pidof ${APP}`).catch(() => '')).trim()) return ctx.skip();
-    const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500 });
+    const r = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['startInfo'],
+      cpuWindowMs: 500,
+    });
     console.log(r.text.split('\n').filter((l) => l.includes('start')));
     expect(r.data.startReason).toBe('BROADCAST');
   }, 60_000);
@@ -121,7 +134,11 @@ describe.skipIf(!serial)('start info', () => {
     if (sdk >= 35) return ctx.skip();
     await d.shell(launcher);
     await pause(1_500);
-    const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500 });
+    const r = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['startInfo'],
+      cpuWindowMs: 500,
+    });
     console.log(r.text);
     expect(r.error, r.text).toBe(false);
     expect(r.text).toContain('not measurable here: startInfo');

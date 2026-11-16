@@ -241,7 +241,7 @@ for (const { platform, serial, provider } of targets)
         await h.ok('type_text', { selector: { id: 'name_input' }, text: SECRET });
         await h.ok('type_text', { selector: { id: 'password_input' }, text: PASSWORD });
         await h.ok('press_key', { key: 'hide_keyboard' }).catch(() => undefined);
-        const fg = await h.call('perf_snapshot');
+        const fg = await h.call('measure_performance', { metric: 'snapshot' });
         if (!noRecorder) await h.ok('record_session', { kind: 'video', action: 'start' });
         await stir(h.ok, 1);
         if (!noRecorder) await h.ok('record_session', { kind: 'video', action: 'stop' });

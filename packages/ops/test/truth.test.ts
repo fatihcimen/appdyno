@@ -398,7 +398,7 @@ describe('a launch', () => {
 
   it("past the system's limit is excessive, in its text and its data alike", async () => {
     const { call } = await connect(launching().device);
-    const r = await call('perf_launch');
+    const r = await call('measure_performance', { metric: 'launch' });
     expect(r.text).toContain('this session would count as a slow cold start');
     expect(r.text).toContain("the day's longest cold start 6000 ms, the limit 5000 ms");
     expect(r.structuredContent).toMatchObject({ excessive: true });
@@ -406,7 +406,7 @@ describe('a launch', () => {
 
   it("counted to a tool's own mark is judged by no such limit, in its text or its data", async () => {
     const { call } = await connect(launching('the first screen is read').device);
-    const r = await call('perf_launch');
+    const r = await call('measure_performance', { metric: 'launch' });
     expect(r.text).toContain('median: 6000 ms');
     expect(r.text).not.toContain('excessive');
     expect(r.structuredContent).not.toHaveProperty('excessive');
@@ -415,10 +415,12 @@ describe('a launch', () => {
   it('is asked for as many times as it is done', async () => {
     const { device, launch } = launching();
     const { call } = await connect(device);
-    await call('perf_launch', { repeats: 10 });
+    await call('measure_performance', { metric: 'launch', repeats: 10 });
     expect(launch.mock.calls.at(-1)).toMatchObject([expect.any(String), { repeats: 10 }]);
     // Android and a simulator do at most 10, so more is refused rather than quietly not done
-    expect((await call('perf_launch', { repeats: 11 })).isError).toBe(true);
+    expect((await call('measure_performance', { metric: 'launch', repeats: 11 })).isError).toBe(
+      true,
+    );
     expect(launch).toHaveBeenCalledTimes(1);
   });
 });

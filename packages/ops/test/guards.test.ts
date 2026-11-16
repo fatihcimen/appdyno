@@ -77,7 +77,11 @@ describe('what did not happen is no success', () => {
 
   it.each([
     ['type_text', { text: 'a'.repeat(1000) }, /^INVALID_ARGUMENT: text: .*500/],
-    ['perf_snapshot', { cpuWindowMs: 100 }, /^INVALID_ARGUMENT: cpuWindowMs: .*500/],
+    [
+      'measure_performance',
+      { metric: 'snapshot', cpuWindowMs: 100 },
+      /^INVALID_ARGUMENT: cpuWindowMs: .*500/,
+    ],
     ['tap_screen', { nonsense: true }, /nonsense/],
   ])(
     '%s with arguments it does not take is a refusal, not a failed call',

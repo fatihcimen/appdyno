@@ -62,7 +62,7 @@ function phone(until?: string) {
 describe('a loaded Mac', () => {
   it('marks a phone’s launch timed on it, says so and keeps the number', async () => {
     const { call, measurements } = phone('the first screen is read');
-    const { text, data } = await call('perf_launch');
+    const { text, data } = await call('measure_performance', { metric: 'launch' });
     expect(data.noise).toEqual(['high-host-load']);
     expect(text).toContain('noise: this Mac was loaded');
     expect(data.medianMs).toBe(3_000);
@@ -78,7 +78,7 @@ describe('a loaded Mac', () => {
 
   it('marks nothing of what a phone reports itself', async () => {
     const { call } = phone();
-    const { text, data } = await call('perf_launch');
+    const { text, data } = await call('measure_performance', { metric: 'launch' });
     expect(data.noise).toEqual([]);
     expect(text).not.toContain('noise');
   });
@@ -97,7 +97,7 @@ describe('a loaded Mac', () => {
       ],
     });
     expect(noise).toEqual(['high-host-load']);
-    const r = await must(checkedOps(ctx).perf_compare, 'perf_compare').handler({
+    const r = await must(checkedOps(ctx).compare_performance, 'compare_performance').handler({
       action: 'baseline',
       format: 'text',
       last: 1,
@@ -126,7 +126,7 @@ describe('a loaded Mac', () => {
       raw: '',
       metrics: [{ kind: 'launch.until_ms', unit: 'ms', samples: [3_000], throughHost: true }],
     });
-    const r = await must(checkedOps(ctx).perf_compare, 'perf_compare').handler({
+    const r = await must(checkedOps(ctx).compare_performance, 'compare_performance').handler({
       action: 'baseline',
       format: 'text',
       last: 1,
@@ -144,7 +144,7 @@ describe('a Mac that is itself a virtual machine', () => {
     try {
       expect(hostIsVirtual()).toBe(true);
       const { call } = phone('the first screen is read');
-      const { text, data } = await call('perf_launch');
+      const { text, data } = await call('measure_performance', { metric: 'launch' });
       expect(data.noise).toEqual(['host-load-unread']);
       expect(text).toContain('this Mac is a virtual machine');
       const { ctx } = phone();
@@ -160,7 +160,7 @@ describe('a Mac that is itself a virtual machine', () => {
           ],
         });
       for (let i = 0; i < 3; i++) await keep();
-      const r = await must(checkedOps(ctx).perf_compare, 'perf_compare').handler({
+      const r = await must(checkedOps(ctx).compare_performance, 'compare_performance').handler({
         action: 'baseline',
         scenario: 'runner',
         format: 'text',

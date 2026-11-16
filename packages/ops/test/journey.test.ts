@@ -118,21 +118,21 @@ describe('a journey as a performance scenario', () => {
     const file = flowFile();
     for (let i = 0; i < 3; i++) {
       await call('run_flow', { action: 'run', file, iterations: 5 });
-      await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
+      await call('compare_performance', { action: 'baseline', scenario: 'journey-checkout' });
     }
     await call('run_flow', { action: 'run', file, iterations: 5 });
-    const same = await call('perf_compare', { action: 'compare' });
+    const same = await call('compare_performance', { action: 'compare' });
     expect(same.data.exitCode).toBe(0);
 
     device.formMs = 1_100;
     await call('run_flow', { action: 'run', file, iterations: 5 });
-    const worse = await call('perf_compare', { action: 'compare' });
+    const worse = await call('compare_performance', { action: 'compare' });
     expect(worse.data.exitCode).toBe(1);
     expect(worse.text).toMatch(/regression\s+journey\.02_tap_text_Form\.ms: 110\d ms against 40/);
     expect(worse.text).toMatch(/regression\s+journey\.total_ms/);
     expect(worse.text).not.toMatch(/regression\s+journey\.03_/);
 
-    const dashboard = await call('perf_compare', { action: 'dashboard' });
+    const dashboard = await call('compare_performance', { action: 'dashboard' });
     const page = readFileSync(must(dashboard.data.file, 'the dashboard'), 'utf8');
     const text = page.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
     expect(text).toContain('Journeys');
@@ -188,11 +188,11 @@ describe('a journey as a performance scenario', () => {
     const file = flowFile();
     for (let i = 0; i < 3; i++) {
       await call('run_flow', { action: 'run', file, iterations: 5 });
-      await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
+      await call('compare_performance', { action: 'baseline', scenario: 'journey-checkout' });
     }
     device.formNeverSettles = Infinity;
     await call('run_flow', { action: 'run', file, iterations: 5 });
-    const worse = await call('perf_compare', { action: 'compare' });
+    const worse = await call('compare_performance', { action: 'compare' });
     expect(worse.data.exitCode).toBe(1);
     expect(worse.text).toMatch(/regression\s+journey\.unsettled: 1 count against 0/);
   });
@@ -203,13 +203,16 @@ describe('a journey as a performance scenario', () => {
     const file = flowFile();
     for (let i = 0; i < 3; i++) {
       await call('run_flow', { action: 'run', file, iterations: 5 });
-      const b = await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
+      const b = await call('compare_performance', {
+        action: 'baseline',
+        scenario: 'journey-checkout',
+      });
       expect(b.data.exitCode).toBe(i < 2 ? 1 : 0);
       expect(b.text).toMatch(/left out, high-host-load: journey\.total_ms, journey\.01_launch\.ms/);
     }
     device.formMs = 1_100;
     await call('run_flow', { action: 'run', file, iterations: 5 });
-    const worse = await call('perf_compare', { action: 'compare' });
+    const worse = await call('compare_performance', { action: 'compare' });
     expect(worse.text).toMatch(/regression\s+journey\.02_tap_text_Form\.ms/);
     expect(worse.text).toMatch(/new\s+journey\.01_launch\.ms/);
     expect(worse.data.exitCode).toBe(1);
@@ -439,7 +442,7 @@ describe('a measure during a recording', () => {
     it('goes on past no frames: a list at its end draws them still, and they are of nothing', async () => {
       const { call, device } = phone();
       device.listEnd = 2;
-      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      const r = await call('measure_performance', { metric: 'scroll', swipes: 2, repeats: 3 });
       expect(rewound(r)).toEqual([false, true, true]);
       expect(r.text).toContain('round 2 ran after the list was brought back');
       expect(r.text).toContain('round 3 ran after the list was brought back');
@@ -448,9 +451,9 @@ describe('a measure during a recording', () => {
     it('brings a list back only once it has ended, and a recording does the same', async () => {
       const { call, device } = phone();
       device.listEnd = 4;
-      let r!: Awaited<ReturnType<typeof call<'perf_scroll'>>>;
+      let r!: Awaited<ReturnType<typeof call<'measure_performance'>>>;
       const text = await recorded(call, async () => {
-        r = await call('perf_scroll', { swipes: 2, repeats: 4 });
+        r = await call('measure_performance', { metric: 'scroll', swipes: 2, repeats: 4 });
       });
       expect(rewound(r)).toEqual([false, false, true, true]);
       expect(swipesOf(text)).toEqual([
@@ -464,39 +467,39 @@ describe('a measure during a recording', () => {
 
     it('takes a phone that refuses a round with no frames as a list that did not move', async () => {
       const { call } = refusing([2]);
-      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      const r = await call('measure_performance', { metric: 'scroll', swipes: 2, repeats: 3 });
       expect(rewound(r)).toEqual([false, true, true]);
     });
 
     it('keeps its good rounds when the list does not move even then', async () => {
       const { call } = refusing([2, 3]);
-      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      const r = await call('measure_performance', { metric: 'scroll', swipes: 2, repeats: 3 });
       expect(r.data.rounds).toHaveLength(1);
       expect(r.text).toContain('1 of 3 rounds');
     });
 
     it('brings back a list at its end before the first round, and measures it', async () => {
       const { call } = refusing([1]);
-      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      const r = await call('measure_performance', { metric: 'scroll', swipes: 2, repeats: 3 });
       expect(rewound(r)).toEqual([true, true, true]);
     });
 
     it('still refuses a first round that moves nothing either way: that screen does not scroll', async () => {
       const { call } = refusing([1, 2]);
-      await expect(call('perf_scroll', { swipes: 2, repeats: 3 })).rejects.toThrow(
-        'the swipes moved nothing on this screen',
-      );
+      await expect(
+        call('measure_performance', { metric: 'scroll', swipes: 2, repeats: 3 }),
+      ).rejects.toThrow('the swipes moved nothing on this screen');
     });
   });
 
   it('leaves what it did to the screen as plain steps, so a replay does not stop there', async () => {
     const { call } = phone();
     const text = await recorded(call, async () => {
-      await call('perf_launch', { repeats: 1 });
-      await call('perf_scroll', { swipes: 2, repeats: 2 });
-      await call('perf_trace', { scroll: 'down', seconds: 1 });
-      await call('perf_profile', { scroll: 'up', seconds: 1 });
-      await call('perf_launch', { mode: 'warm', repeats: 1 });
+      await call('measure_performance', { metric: 'launch', repeats: 1 });
+      await call('measure_performance', { metric: 'scroll', swipes: 2, repeats: 2 });
+      await call('measure_performance', { metric: 'frames', direction: 'down', seconds: 1 });
+      await call('measure_performance', { metric: 'cpu', direction: 'up', seconds: 1 });
+      await call('measure_performance', { metric: 'launch', mode: 'warm', repeats: 1 });
     });
     expect(stepsOf(text)).toEqual([
       'stop',
@@ -514,9 +517,9 @@ describe('a measure during a recording', () => {
   it('writes nothing for what leaves the screen as it found it', async () => {
     const { call } = phone();
     const text = await recorded(call, async () => {
-      await call('perf_snapshot');
-      await call('perf_trace', { seconds: 1 });
-      await call('perf_profile', { seconds: 1 });
+      await call('measure_performance', { metric: 'snapshot' });
+      await call('measure_performance', { metric: 'frames', seconds: 1 });
+      await call('measure_performance', { metric: 'cpu', seconds: 1 });
       await call('launch_app');
     });
     expect(stepsOf(text)).toEqual(['launch !running']);

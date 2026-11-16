@@ -244,6 +244,6 @@ export const journeyText = (j: JourneyAnswer) =>
     ),
     ...(j.note ? [j.note] : []),
     ...(j.noise.length ? [`noise: ${j.noise.join(', ')}`] : []),
-    `kept as ${j.scenario}: perf_compare gates it, by step`,
+    `kept as ${j.scenario}: compare_performance gates it, by step`,
     `raw output: ${j.raw}`,
   ].join('\n');

@@ -2,7 +2,7 @@ import type { MemoryReading } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { SnapshotOut } from './schemas.js';
-import { defineOp, READ, reply } from '../tool.js';
+import { definePart, READ, reply } from '../tool.js';
 import { EXTRA_NAMES, EXTRAS, type Answered, type ExtraName, type Got } from './extras.js';
 import { perfTools, App, Scenario, unlessUnsupported, kb, BAD_ROWS } from './shared.js';
 import { frameVitals } from './vitals.js';
@@ -12,11 +12,8 @@ const swappedMost = (m: MemoryReading) => m.swapPssKb !== undefined && m.swapPss
 
 export function perfSnapshotOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, keep, noisy } = perfTools(ctx);
-  return defineOp({
+  return definePart({
     name: 'perf_snapshot',
-    title: 'Performance snapshot',
-    description:
-      "Performance now: the app's CPU, memory, frames since the last measure and the device's load and heat.",
     input: z
       .object({
         app: App,
@@ -120,12 +117,12 @@ export function perfSnapshotOp(ctx: ServerContext) {
                   ? 'no frame measure on a simulator without the probe'
                   : s.device.virtual
                     ? 'no frame counter on this virtual device'
-                    : 'no frame counter on a phone: perf_scroll and perf_trace record its hitches',
+                    : 'no frame counter on a phone: measure_performance scroll and measure_performance frames record its hitches',
               ]),
           ...(f?.limits ? [f.limits] : []),
           ...(f?.histogram && f.frozenFrames > 0
             ? [
-                "frozen frames here are the system's summary, which on some phones counts a stall more than once: perf_scroll reads them from the frame rows",
+                "frozen frames here are the system's summary, which on some phones counts a stall more than once: measure_performance scroll reads them from the frame rows",
               ]
             : []),
           ...play.lines,

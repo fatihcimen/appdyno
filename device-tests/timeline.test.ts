@@ -145,7 +145,7 @@ const udid = process.env.APPDYNO_IOS_UDID ?? '';
 
 /** The same journey on a simulator, where everything but the video is on one clock already. */
 /** The hold no frame shows, in the measure that used to read its longest frame for it. */
-describe.skipIf(!serial)('perf_trace of a held main thread', () => {
+describe.skipIf(!serial)('measure_performance frames of a held main thread', () => {
   const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   afterAll(() => leave(t));
 
@@ -161,7 +161,7 @@ describe.skipIf(!serial)('perf_trace of a held main thread', () => {
       await pause(1_500);
       await t.call('read_screen');
       const [trace] = await Promise.all([
-        t.call('perf_trace', { seconds: 6 }),
+        t.call('measure_performance', { metric: 'frames', seconds: 6 }),
         pause(3_000).then(() => t.call('tap_screen', { selector: { id: 'cpu_stall' } })),
       ]);
       expect(trace.error, trace.text).toBe(false);

@@ -2,7 +2,7 @@ import type { ProfileEntry } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ProfileOut } from './schemas.js';
-import { ACT, defineOp, reply } from '../tool.js';
+import { ACT, definePart, reply } from '../tool.js';
 import { perfTools, App, Dsym, symbolsOf, inKernel } from './shared.js';
 
 /** What an answer holds; the measurement keeps them all, for a diff of two runs. */
@@ -22,11 +22,8 @@ const KERNEL =
 
 export function perfProfileOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, scroller } = perfTools(ctx);
-  return defineOp({
+  return definePart({
     name: 'perf_profile',
-    title: 'CPU profile',
-    description:
-      "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions. iOS: Xcode's trace tool adds about 8 s.",
     input: z
       .object({
         app: App,

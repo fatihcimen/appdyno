@@ -11,6 +11,7 @@ import { inspectorOps } from './inspector.js';
 import { inspectApp, manageApp, transferFiles } from './merged/apps.js';
 import { listDevices, setDevice } from './merged/devices.js';
 import { checkScreen, readLogs, recordSession } from './merged/evidence.js';
+import { comparePerformance, measurePerformance } from './merged/perf.js';
 import { checkElement, readScreen } from './merged/screen.js';
 import { handoffOps } from './mirror/handoff.js';
 import { mirrorOps } from './mirror/op.js';
@@ -90,13 +91,7 @@ export const catalogOf = (p: Pieces) => [
   p.capture_network,
   inspectApp(p),
   recordSession(p),
-  p.perf_snapshot,
-  p.perf_launch,
-  p.perf_scroll,
-  p.perf_trace,
-  p.perf_profile,
-  p.perf_heap,
-  p.perf_compare,
-  p.perf_query,
+  measurePerformance(p),
+  comparePerformance(p),
   p.run_flow,
 ];

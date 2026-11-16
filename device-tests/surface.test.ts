@@ -3,6 +3,10 @@ import { assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 
+/** A snapshot's frames: another metric answers a count under the same name. */
+const framesIn = (data: { frames?: unknown }) =>
+  (data.frames ?? {}) as { total: number; slowPercent?: number; frozenPercent?: number };
+
 /**
  * Frames that `gfxinfo` never sees: the fixture's `SurfaceView`, drawn from its own thread every `ms` of its
  * link, on the device APPDYNO_ANDROID_SERIAL names, at the refresh its display reads. A surface's frames land on
@@ -37,9 +41,13 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
     await call('manage_app', { action: 'stop' });
     await call('open_link', { url: `appdyno-fixture://open/surface?ms=${ms}` });
     await sleep(3_000);
-    await call('perf_snapshot', {});
+    await call('measure_performance', { metric: 'snapshot' });
     await sleep(2_000);
-    const r = await call('perf_snapshot', { also: ['surface'], cpuWindowMs: 500 });
+    const r = await call('measure_performance', {
+      metric: 'snapshot',
+      also: ['surface'],
+      cpuWindowMs: 500,
+    });
     process.stderr.write(`--- every ${ms} ms\n${r.text}\n---\n`);
     return r;
   };
@@ -79,13 +87,17 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
     expect(s.fps).toBeGreaterThan(15);
     expect(s.fps).toBeLessThan(18.5);
     expect(s.slow50Percent).toBeGreaterThan(90);
-    expect(data.frames?.total).toBeLessThan(s.frames / 2);
+    expect(framesIn(data).total).toBeLessThan(s.frames / 2);
   });
 
   it('says a screen of the View toolkit has no surface to read', async () => {
     await call('open_link', { url: 'appdyno-fixture://open/list' });
     await sleep(1_000);
-    const { data, text } = await call('perf_snapshot', { also: ['surface'], cpuWindowMs: 500 });
+    const { data, text } = await call('measure_performance', {
+      metric: 'snapshot',
+      also: ['surface'],
+      cpuWindowMs: 500,
+    });
     expect(data.surface?.frames).toBe(0);
     expect(text).toContain('no SurfaceView');
   });

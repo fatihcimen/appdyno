@@ -123,10 +123,18 @@ for (const t of targets)
     const ownNumbers = t.name === 'android' && !t.serial.startsWith('emulator-');
     const launch = async () => {
       if (!ownNumbers) await quiet();
-      await op('perf_launch').handler({ mode: 'cold', repeats: REPEATS });
+      await op('measure_performance').handler({
+        metric: 'launch',
+        mode: 'cold',
+        repeats: REPEATS,
+      });
     };
     const compare = async () => {
-      const r = await op('perf_compare').handler({ action: 'compare', format: 'text', last: 1 });
+      const r = await op('compare_performance').handler({
+        action: 'compare',
+        format: 'text',
+        last: 1,
+      });
       const reports = r.data.reports as { comparisons: Comparison[] }[];
       const c = reports[0]?.comparisons.find((x) => x.kind === t.kind);
       assert(c, t.kind);
@@ -145,7 +153,11 @@ for (const t of targets)
       // a run measured under load is refused; another is measured in its place
       for (let tries = 0; tries < 12; tries++) {
         await launch();
-        const b = await op('perf_compare').handler({ action: 'baseline', format: 'text', last: 1 });
+        const b = await op('compare_performance').handler({
+          action: 'baseline',
+          format: 'text',
+          last: 1,
+        });
         if (b.data.exitCode === 0) break;
       }
       const verdicts: Comparison[] = [];

@@ -183,8 +183,8 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
         await call('launch_app', { read: 'full' });
         await call('tap_screen', { x: 200, y: 400, read: 'none' });
         await call('take_screenshot');
-        await call('perf_snapshot');
-        await call('perf_launch', { repeats: 1 });
+        await call('measure_performance', { metric: 'snapshot' });
+        await call('measure_performance', { metric: 'launch', repeats: 1 });
         expect(await call('show_mirror', { action: 'status' })).toContain('live');
       },
       /** A person's click on the picture, which has to reach the device with the client driving. */

@@ -4,7 +4,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { QueryOut } from './schemas.js';
-import { defineOp, READ, ToolError, reply } from '../tool.js';
+import { definePart, READ, ToolError, reply } from '../tool.js';
 
 /** What a kept trace is asked with, by its kind. */
 const ASKED_WITH =
@@ -15,11 +15,8 @@ const UNREAD =
   'record it again with the measure that kept it: a recording cut short has nothing to read';
 
 export function perfQueryOp(ctx: ServerContext) {
-  return defineOp({
+  return definePart({
     name: 'perf_query',
-    title: 'Query a kept trace',
-    description:
-      'A bounded table from a kept trace, by the path a perf_ answer gave: Perfetto (.pftrace): read-only SQL; Instruments (.trace): its top rows (`table`; none lists the tables).',
     input: z
       .object({
         trace: z.string().max(1000),
@@ -40,7 +37,7 @@ export function perfQueryOp(ctx: ServerContext) {
         throw new ToolError(
           `not a kept trace: ${trace}`,
           'INVALID_ARGUMENT',
-          'give the file a perf_ answer names on its "trace (perf_query):" line, not a measurement\'s id',
+          'give the file a measure_performance answer names on its "trace (compare_performance query):" line, not a measurement\'s id',
         );
       let digest: TraceDigest | undefined;
       for (const p of ctx.providers) {
@@ -64,7 +61,7 @@ export function perfQueryOp(ctx: ServerContext) {
       }
       if (!digest)
         throw new ToolError(
-          `no driver reads this trace: ${trace}: perf_query reads a Perfetto trace (.pftrace) and an Instruments trace (.trace)`,
+          `no driver reads this trace: ${trace}: compare_performance query reads a Perfetto trace (.pftrace) and an Instruments trace (.trace)`,
           'UNSUPPORTED',
           "a raw output or a probe's output is text: read the file itself",
         );

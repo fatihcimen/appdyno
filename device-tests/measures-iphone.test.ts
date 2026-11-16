@@ -58,9 +58,9 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   }, 240_000);
   beforeAll(() => d.tree(), 240_000);
 
-  it('frames: perf_scroll with no argument records around its swipes', async () => {
+  it('frames: measure_performance scroll with no argument records around its swipes', async () => {
     await open('list');
-    const r = await t.call('perf_scroll', { repeats: 1 });
+    const r = await t.call('measure_performance', { metric: 'scroll', repeats: 1 });
     console.log(r.text);
     expect(r.error).toBe(false);
     const [round] = r.data.rounds;
@@ -71,15 +71,19 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
 
   it('frozen: a 1 s stall during a scroll reads as one', async () => {
     await open('list_stall');
-    const r = await t.call('perf_scroll', { repeats: 1 });
+    const r = await t.call('measure_performance', { metric: 'scroll', repeats: 1 });
     console.log(r.text);
     expect(r.error).toBe(false);
     expect(r.data.frozen).toBe(1);
   }, 240_000);
 
-  it('frozen: perf_trace says it too, with how long the main thread stalled', async () => {
+  it('frozen: measure_performance frames says it too, with how long the main thread stalled', async () => {
     await open('list_stall');
-    const r = await t.call('perf_trace', { scroll: 'up', seconds: 8 });
+    const r = await t.call('measure_performance', {
+      metric: 'frames',
+      direction: 'up',
+      seconds: 8,
+    });
     console.log(r.text);
     expect(r.data.frozen).toBe(1);
     within(
@@ -149,7 +153,12 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   }, 120_000);
 
   it('why slow: a system app refuses, says why, and the refusal is kept', async () => {
-    const r = await t.call('perf_launch', { app: SETTINGS, repeats: 1, trace: true });
+    const r = await t.call('measure_performance', {
+      metric: 'launch',
+      app: SETTINGS,
+      repeats: 1,
+      trace: true,
+    });
     console.log(r.text);
     expect(r.error).toBe(true);
     expect(r.data.code).toBe('UNSUPPORTED');
@@ -226,7 +235,11 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
 
   it('energy: a busy core reads clearly above an idle app, and is a reading', async () => {
     const s = await open('cpu');
-    const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 8_000 });
+    const idle = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['energy'],
+      cpuWindowMs: 8_000,
+    });
     // set to false below, which the compiler does not follow into the loop
     let on = true as boolean;
     await d.inFront(APP);
@@ -236,7 +249,11 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
         await pause(3_000);
       }
     })();
-    const busy = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 8_000 });
+    const busy = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['energy'],
+      cpuWindowMs: 8_000,
+    });
     on = false;
     await loop;
     console.log('energy', idle.text, '\n', busy.text);

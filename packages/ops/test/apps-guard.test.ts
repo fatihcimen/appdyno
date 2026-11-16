@@ -376,7 +376,7 @@ describe('a link under an app allow list', () => {
     for (const [tool, args] of [
       ['launch_app', { app: 'com.android.settings', read: 'none' }],
       ['launch_app', { app: 'com.android.settings', restart: true, read: 'none' }],
-      ['perf_launch', { app: 'com.android.settings' }],
+      ['measure_performance', { metric: 'launch', app: 'com.android.settings' }],
       ['launch_app', { app: 'com.apple.Preferences', read: 'none' }],
     ] as const) {
       const r = await call(tool, args);

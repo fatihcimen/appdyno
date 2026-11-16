@@ -1,9 +1,8 @@
 import { DeviceError, type ErrorCode } from '@appdyno/protocol';
-import type { OpName } from '../src/index.js';
 
 /** A tool as a device with these answers meets it. `refused`: the tool stops with this code, and keeps nothing. */
 export type Asked = {
-  tool: OpName;
+  metric: 'snapshot' | 'launch' | 'scroll' | 'frames' | 'cpu' | 'heap';
   args?: Record<string, unknown>;
   measures: Record<string, unknown>;
   refused?: ErrorCode;
@@ -15,13 +14,13 @@ export const refuses = (code: ErrorCode) => () =>
   Promise.reject(new DeviceError(code, 'this reading is not to be had'));
 
 export const snapshot = (also: string, measure: string, value: unknown): Asked => ({
-  tool: 'perf_snapshot',
+  metric: 'snapshot',
   args: { also: [also], cpuWindowMs: 500 },
   measures: { [measure]: says(value) },
 });
 
 export const plainSnapshot = (measures: Record<string, unknown> = {}, refused?: ErrorCode) => ({
-  tool: 'perf_snapshot' as const,
+  metric: 'snapshot' as const,
   args: { cpuWindowMs: 500 },
   measures,
   ...(refused && { refused }),
@@ -30,7 +29,7 @@ export const plainSnapshot = (measures: Record<string, unknown> = {}, refused?: 
 const STARTS = [{ totalMs: 590 }, { totalMs: 600 }, { totalMs: 610 }];
 
 export const launch = (args: Record<string, unknown>, over: Record<string, unknown>): Asked => ({
-  tool: 'perf_launch',
+  metric: 'launch',
   args,
   measures: {
     launch: says({ mode: args.mode ?? 'cold', samples: STARTS, medianMs: 600, ...over }),
@@ -47,7 +46,7 @@ export const OTHER_STATE = {
 };
 
 export const profiled = (without: number[], withIt: number[]): Asked => ({
-  tool: 'perf_launch',
+  metric: 'launch',
   args: { baselineProfile: true },
   measures: {
     baselineProfile: says({ present: true, applied: true, without, with: withIt }),
@@ -67,7 +66,7 @@ const counted = (frames: number, over: Record<string, unknown> = {}) => ({
 });
 
 export const scroll = (frames: number, over?: Record<string, unknown>): Asked => ({
-  tool: 'perf_scroll',
+  metric: 'scroll',
   args: { swipes: 1, repeats: 2 },
   measures: counted(frames, over),
 });
@@ -77,7 +76,7 @@ export const shares = (frames: number, over16: number, over700: number) =>
   plainSnapshot(counted(frames, { histogram: { frames, over16, over700 } }));
 
 const traced = (value: Record<string, unknown>, args = {}): Asked => ({
-  tool: 'perf_trace',
+  metric: 'frames',
   args,
   measures: { frameTrace: says({ tracePath: '/t', ...value }) },
 });
@@ -131,33 +130,33 @@ export const hitches = (over: Record<string, unknown> = {}) =>
   });
 
 export const noRecording = (code: ErrorCode): Asked => ({
-  tool: 'perf_trace',
+  metric: 'frames',
   measures: { frameTrace: refuses(code) },
   refused: code,
 });
 
 export const hangs = (measure: unknown, refused?: ErrorCode): Asked => ({
-  tool: 'perf_trace',
+  metric: 'frames',
   args: { what: 'hangs' },
   measures: { hangs: measure },
   ...(refused && { refused }),
 });
 
 export const xct = (metrics: Record<string, number[]>): Asked => ({
-  tool: 'perf_trace',
+  metric: 'frames',
   args: { what: 'xct_launch' },
   measures: { xctMetrics: says({ metrics, resultBundle: '/r' }) },
 });
 
 export const heapProfile = (measure: unknown, refused?: ErrorCode): Asked => ({
-  tool: 'perf_heap',
+  metric: 'heap',
   args: { profile: 'java_hprof' },
   measures: { heapProfile: measure },
   ...(refused && { refused }),
 });
 
 export const heapDump = (value: unknown): Asked => ({
-  tool: 'perf_heap',
+  metric: 'heap',
   measures: { heap: says(value) },
 });
 
@@ -220,7 +219,7 @@ export const battery = (over: Record<string, unknown> = {}) =>
   snapshot('battery', 'battery', { ...BATTERY, ...over });
 export const BATTERY_UNREAD = {
   'the device cannot read it': {
-    tool: 'perf_snapshot',
+    metric: 'snapshot',
     args: { also: ['battery'], cpuWindowMs: 500 },
     measures: { battery: refuses('UNSUPPORTED') },
   },

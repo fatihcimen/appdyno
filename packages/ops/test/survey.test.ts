@@ -107,20 +107,60 @@ describe('the page and the measures', () => {
 
   it('keeps the refusal of every measure, under its row', async () => {
     for (const [name, args, row, measure] of [
-      ['perf_launch', {}, 'launch', { launch: says('no launch') }],
-      ['perf_launch', { trace: true }, 'launch-why', { launch: says('needs get-task-allow') }],
-      ['perf_scroll', {}, 'frames', { frames: says('no frames') }],
-      ['perf_trace', {}, 'frames', { frameTrace: says('no trace') }],
-      ['perf_trace', { what: 'hangs' }, 'stalls', { hangs: says('no hangs') }],
-      ['perf_heap', {}, 'leaks', { heap: says('needs get-task-allow') }],
-      ['perf_snapshot', {}, 'cpu', { cpu: says('no cpu') }],
-      ['perf_snapshot', {}, 'memory', { memory: says('no memory') }],
-      ['perf_snapshot', { also: ['anonMemory'] }, 'memory', { anonMemory: says('no anon') }],
-      ['perf_snapshot', { also: ['network'] }, 'network', { network: says('no bytes') }],
-      ['perf_snapshot', { also: ['energy'] }, 'energy', { energy: says('no energy') }],
-      ['perf_snapshot', { also: ['battery'] }, 'battery', { battery: says('no signals') }],
-      ['perf_snapshot', { also: ['exits'] }, 'crashes', { exits: says('no exits') }],
-      ['perf_snapshot', { also: ['size'] }, 'size', { size: says('no size') }],
+      ['measure_performance', { metric: 'launch' }, 'launch', { launch: says('no launch') }],
+      [
+        'measure_performance',
+        { metric: 'launch', trace: true },
+        'launch-why',
+        { launch: says('needs get-task-allow') },
+      ],
+      ['measure_performance', { metric: 'scroll' }, 'frames', { frames: says('no frames') }],
+      ['measure_performance', { metric: 'frames' }, 'frames', { frameTrace: says('no trace') }],
+      [
+        'measure_performance',
+        { metric: 'frames', what: 'hangs' },
+        'stalls',
+        { hangs: says('no hangs') },
+      ],
+      ['measure_performance', { metric: 'heap' }, 'leaks', { heap: says('needs get-task-allow') }],
+      ['measure_performance', { metric: 'snapshot' }, 'cpu', { cpu: says('no cpu') }],
+      ['measure_performance', { metric: 'snapshot' }, 'memory', { memory: says('no memory') }],
+      [
+        'measure_performance',
+        { metric: 'snapshot', also: ['anonMemory'] },
+        'memory',
+        { anonMemory: says('no anon') },
+      ],
+      [
+        'measure_performance',
+        { metric: 'snapshot', also: ['network'] },
+        'network',
+        { network: says('no bytes') },
+      ],
+      [
+        'measure_performance',
+        { metric: 'snapshot', also: ['energy'] },
+        'energy',
+        { energy: says('no energy') },
+      ],
+      [
+        'measure_performance',
+        { metric: 'snapshot', also: ['battery'] },
+        'battery',
+        { battery: says('no signals') },
+      ],
+      [
+        'measure_performance',
+        { metric: 'snapshot', also: ['exits'] },
+        'crashes',
+        { exits: says('no exits') },
+      ],
+      [
+        'measure_performance',
+        { metric: 'snapshot', also: ['size'] },
+        'size',
+        { size: says('no size') },
+      ],
     ] as const) {
       const { ctx, measurements } = context(measure);
       await op(ctx, name, args).catch(() => undefined);
@@ -137,7 +177,7 @@ describe('the page and the measures', () => {
           at: new Date().toISOString(),
         }),
     });
-    await op(ctx, 'perf_heap');
+    await op(ctx, 'measure_performance', { metric: 'heap' });
     expect((await kept(measurements)).leaks).toMatch(/no count of leaks/);
     const lines: string[] = [];
     await survey(ctx, 'dev.app', (l) => lines.push(l));
@@ -146,24 +186,34 @@ describe('the page and the measures', () => {
 
   it('takes no refusal for what the caller turned off, or a way the device has another of', async () => {
     const off = context({ frames: says('runs without the probe') });
-    await op(off.ctx, 'perf_scroll', { probe: false }).catch(() => undefined);
+    await op(off.ctx, 'measure_performance', { metric: 'scroll', probe: false }).catch(
+      () => undefined,
+    );
     expect(await kept(off.measurements)).toEqual({});
     // a device with no such way, with another: it reads stalls by a frame trace
     const other = context({ hangs: cannot('hangs') });
-    await op(other.ctx, 'perf_trace', { what: 'hangs' }).catch(() => undefined);
+    await op(other.ctx, 'measure_performance', { metric: 'frames', what: 'hangs' }).catch(
+      () => undefined,
+    );
     expect(await kept(other.measurements)).toEqual({});
     // a part of a row is not the row
     const part = context({ threads: says('no threads') });
-    const { data } = await op(part.ctx, 'perf_snapshot', { also: ['threads'] });
+    const { data } = await op(part.ctx, 'measure_performance', {
+      metric: 'snapshot',
+      also: ['threads'],
+    });
     expect(data.lacking).toEqual(['threads']);
     expect(await kept(part.measurements)).toEqual({});
     // what a device has no way of reading is left out, and no row takes it
     const absent = context();
-    const left = await op(absent.ctx, 'perf_snapshot', {
+    const left = await op(absent.ctx, 'measure_performance', {
+      metric: 'snapshot',
       also: ['anonMemory', 'startInfo', 'battery'],
     });
     expect(left.data.lacking).toEqual(['anonMemory', 'startInfo', 'battery']);
-    await op(absent.ctx, 'perf_scroll', { probe: true }).catch(() => undefined);
+    await op(absent.ctx, 'measure_performance', { metric: 'scroll', probe: true }).catch(
+      () => undefined,
+    );
     expect(await kept(absent.measurements)).toEqual({});
   });
 
@@ -196,8 +246,11 @@ describe('the page and the measures', () => {
           at: new Date().toISOString(),
         }),
     });
-    await op(ctx, 'perf_launch', { trace: true });
-    const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['energy'] });
+    await op(ctx, 'measure_performance', { metric: 'launch', trace: true });
+    const { data, blocks } = await op(ctx, 'measure_performance', {
+      metric: 'snapshot',
+      also: ['energy'],
+    });
     expect(data).toMatchObject({ energyMj: 12, energyModelled: true });
     expect(blocks[0]).toMatchObject({
       text: expect.stringContaining('energy (a model): 12 mJ') as unknown,
@@ -218,7 +271,7 @@ describe('the page and the measures', () => {
       cpu: () =>
         Promise.resolve({ value: { percent: 0, windowMs: 1_200, behind }, raw: 'raw cpu', at }),
     });
-    const { data, blocks } = await op(ctx, 'perf_snapshot', {});
+    const { data, blocks } = await op(ctx, 'measure_performance', { metric: 'snapshot' });
     expect(data).toMatchObject({ cpuBehind: behind });
     expect((blocks[0] as { text: string }).text).toMatch(
       /CPU: .*com\.apple\.springboard.*not kept/,
@@ -256,7 +309,8 @@ describe('the page and the measures', () => {
       ),
       size: reading({ bytes: 1_048_576, parts: {} }, 'raw size'),
     });
-    const { data, blocks } = await op(ctx, 'perf_snapshot', {
+    const { data, blocks } = await op(ctx, 'measure_performance', {
+      metric: 'snapshot',
       also: ['size', 'exits', 'energy', 'network', 'threads'],
     });
     // whether this Mac is loaded right now is no part of it
@@ -330,7 +384,10 @@ describe('the page and the measures', () => {
 
     it('keeps nothing of a stock with no run to count from, and says it as one', async () => {
       const { ctx, measurements } = device(quiet);
-      const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      const { data, blocks } = await op(ctx, 'measure_performance', {
+        metric: 'snapshot',
+        also: ['exits'],
+      });
       const text = (blocks[0] as { text: string }).text;
       expect(text).toContain('exits: no earlier run to count from, so this one keeps none');
       expect(text).toContain('the system holds 3 crashes of 6; 1 ANRs filed, of any age');
@@ -347,11 +404,14 @@ describe('the page and the measures', () => {
 
     it('counts from the key’s last run, and only what is newer says this session counts', async () => {
       const { ctx, measurements, asked } = device({ ...quiet, crashes: 1, anrs: 1, userAnrs: 1 });
-      await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      await op(ctx, 'measure_performance', { metric: 'snapshot', also: ['exits'] });
       const [key] = await runKeys(measurements, { app: 'dev.app' });
       assert(key);
       const [first] = await latestRuns(measurements, key, 1);
-      const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      const { data, blocks } = await op(ctx, 'measure_performance', {
+        metric: 'snapshot',
+        also: ['exits'],
+      });
       expect(asked).toEqual([undefined, Date.parse(must(first?.[0], 'a record').at)]);
       expect((blocks[0] as { text: string }).text).toContain(
         'this session would count as a user-perceived ANR',
@@ -363,8 +423,11 @@ describe('the page and the measures', () => {
 
     it('says a quiet run is one, whatever the system still holds', async () => {
       const { ctx } = device(quiet);
-      await op(ctx, 'perf_snapshot', { also: ['exits'] });
-      const { blocks } = await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      await op(ctx, 'measure_performance', { metric: 'snapshot', also: ['exits'] });
+      const { blocks } = await op(ctx, 'measure_performance', {
+        metric: 'snapshot',
+        also: ['exits'],
+      });
       expect((blocks[0] as { text: string }).text).toContain(
         'this session would not count as a user-perceived ANR',
       );
@@ -372,15 +435,15 @@ describe('the page and the measures', () => {
 
     it('goes by the runs of its own scenario', async () => {
       const { ctx, asked } = device(quiet);
-      await op(ctx, 'perf_snapshot', { also: ['exits'], scenario: 'a' });
-      await op(ctx, 'perf_snapshot', { also: ['exits'], scenario: 'b' });
+      await op(ctx, 'measure_performance', { metric: 'snapshot', also: ['exits'], scenario: 'a' });
+      await op(ctx, 'measure_performance', { metric: 'snapshot', also: ['exits'], scenario: 'b' });
       expect(asked).toEqual([undefined, undefined]);
     });
   });
 
   it('is rewritten after each kept run', async () => {
     const { ctx, measurements } = context();
-    await op(ctx, 'perf_snapshot');
+    await op(ctx, 'measure_performance', { metric: 'snapshot' });
     const file = join(measurements, 'dashboard', 'index.html');
     expect(readFileSync(file, 'utf8')).toContain('memory.kb');
   });
@@ -388,13 +451,13 @@ describe('the page and the measures', () => {
   it('never fails a measurement', async () => {
     const { ctx, measurements } = context();
     writeFileSync(join(measurements, 'dashboard'), 'a file where the folder goes');
-    const { data } = await op(ctx, 'perf_snapshot');
+    const { data } = await op(ctx, 'measure_performance', { metric: 'snapshot' });
     expect(data.id).toBeTruthy();
   });
 
-  it('comes from perf_compare on an empty store, with the command that fills it', async () => {
+  it('comes from compare_performance on an empty store, with the command that fills it', async () => {
     const { ctx, measurements } = context();
-    const { data, blocks } = await op(ctx, 'perf_compare', { action: 'dashboard' });
+    const { data, blocks } = await op(ctx, 'compare_performance', { action: 'dashboard' });
     const file = join(measurements, 'dashboard', 'index.html');
     expect(data).toMatchObject({ failed: false, exitCode: 0, file });
     expect(blocks[0]).toMatchObject({ text: `dashboard: ${file}` });

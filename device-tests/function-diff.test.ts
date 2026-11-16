@@ -28,7 +28,7 @@ describe.skipIf(!serial)('a function-level diff of two runs', () => {
     assert(steady);
     await d.tap(steady, { settle: false });
     await pause(500);
-    const r = await t.call('perf_profile', { seconds: 5 });
+    const r = await t.call('measure_performance', { metric: 'cpu', seconds: 5 });
     expect(r.error, r.text).toBe(false);
     console.log(r.text.split('\n').slice(0, 7).join('\n'));
     // what is left of its 8 s
@@ -56,14 +56,14 @@ describe.skipIf(!serial)('a function-level diff of two runs', () => {
     await profiled();
     const a = await profiled();
     const b = await profiled();
-    const same = await t.call('perf_compare', { action: 'functions', from: a, to: b });
+    const same = await t.call('compare_performance', { action: 'functions', from: a, to: b });
     console.log(same.text);
     expect(same.error, same.text).toBe(false);
     expect(same.data.functions?.filter((f) => f.symbol.includes('fixture'))).toEqual([]);
 
     await costs(KNOWN_MS);
     const c = await profiled();
-    const moved = await t.call('perf_compare', { action: 'functions', from: b, to: c });
+    const moved = await t.call('compare_performance', { action: 'functions', from: b, to: c });
     console.log(moved.text);
     const top = moved.data.functions?.[0];
     assert(top);
@@ -72,7 +72,7 @@ describe.skipIf(!serial)('a function-level diff of two runs', () => {
   }, 300_000);
 
   it('refuses what is no profile, by name', async () => {
-    const r = await t.call('perf_compare', {
+    const r = await t.call('compare_performance', {
       action: 'functions',
       from: 'pm-00000000',
       to: '../x',

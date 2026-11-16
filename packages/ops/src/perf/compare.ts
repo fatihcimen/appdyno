@@ -33,7 +33,7 @@ import type { ServerContext } from '../context.js';
 import type { FlowRunner } from '../flow/runner.js';
 import { defined } from '../flow/shared.js';
 import { CompareOut } from './schemas.js';
-import { DESTRUCTIVE, defineOp, reply, ToolError } from '../tool.js';
+import { DESTRUCTIVE, definePart, reply, ToolError } from '../tool.js';
 import { Scenario, pruneNow, rewriteDashboard } from './shared.js';
 import { gateLooks } from './why.js';
 
@@ -182,11 +182,8 @@ const heldToNothing = (set: { line: string; file: string }) =>
   });
 
 export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
-  return defineOp({
+  return definePart({
     name: 'perf_compare',
-    title: 'Compare with the baseline',
-    description:
-      "Performance regression gate: `last` newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: a regression's cause on device; reference: its other side; baseline: adds the `last` newest runs (3 needed), `replace` resets; budget: kind, max or min set one in budgets.json, unmeasured; functions: two perf_profile ids; prune: traces.",
     input: z
       .object({
         action: z
@@ -246,7 +243,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
           const held = id ? await loadMeasurement(dir, id) : undefined;
           if (held?.kind !== 'cpu-profile')
             throw new ToolError(
-              `give from and to: the ids perf_profile answered${id ? `; ${id} is no profile kept here` : ''}`,
+              `give from and to: the ids measure_performance cpu answered${id ? `; ${id} is no profile kept here` : ''}`,
               'NOT_FOUND',
             );
           return held.value as CpuProfile;

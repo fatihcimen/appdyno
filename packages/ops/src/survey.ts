@@ -15,25 +15,26 @@ import { deviceInfo, keepRefusal, ROW_OF } from './perf/shared.js';
 import { EXTRA_NAMES } from './perf/extras.js';
 import { opsFor } from './registry.js';
 
-type Call = { op: string; args?: Record<string, unknown> };
+/** A call of measure_performance: its metric, and what else it is given. */
+type Call = { metric: string; args?: Record<string, unknown> };
 
 const SNAPSHOT: Call = {
-  op: 'perf_snapshot',
+  metric: 'snapshot',
   args: { also: EXTRA_NAMES, batteryWindowMs: 10_000 },
 };
-const SCROLL: Call = { op: 'perf_scroll' };
-const TRACE: Call = { op: 'perf_trace', args: { scroll: 'up' } };
+const SCROLL: Call = { metric: 'scroll' };
+const TRACE: Call = { metric: 'frames', args: { direction: 'up' } };
 
 /** What reads each row, tried in turn until the row has a number. Names no device: each says what it cannot do. */
 const READS: Record<MeasureId, Call[]> = {
-  launch: [{ op: 'perf_launch' }],
+  launch: [{ metric: 'launch' }],
   // its own scenario: a traced launch is not comparable with the plain ones
-  'launch-why': [{ op: 'perf_launch', args: { repeats: 1, trace: true, scenario: 'launch-why' } }],
+  'launch-why': [{ metric: 'launch', args: { repeats: 1, trace: true, scenario: 'launch-why' } }],
   frames: [SCROLL, TRACE],
   frozen: [SCROLL, TRACE],
-  stalls: [SCROLL, TRACE, { op: 'perf_trace', args: { what: 'hangs', scroll: 'up' } }],
+  stalls: [SCROLL, TRACE, { metric: 'frames', args: { what: 'hangs', direction: 'up' } }],
   memory: [SNAPSHOT],
-  leaks: [{ op: 'perf_heap' }],
+  leaks: [{ metric: 'heap' }],
   cpu: [SNAPSHOT],
   network: [SNAPSHOT],
   energy: [SNAPSHOT],
@@ -61,10 +62,10 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
   const since = (at: string) => Date.parse(at) >= started;
 
   const made = new Map<string, Promise<Outcome>>();
-  const attempt = async ({ op, args }: Call): Promise<Outcome> => {
-    const o = must(ops[op], `the op ${op}`);
+  const measure = must(ops.measure_performance, 'the op measure_performance');
+  const attempt = async ({ metric, args }: Call): Promise<Outcome> => {
     try {
-      const { data } = await o.handler(o.input.parse({ app, ...args }));
+      const { data } = await measure.handler(measure.input.parse({ metric, app, ...args }));
       return { lacking: (data.lacking ?? []) as string[] };
     } catch (e) {
       const { code, message } = e as { code?: string; message: string };

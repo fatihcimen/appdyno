@@ -67,7 +67,7 @@ describe('commands from the operations', () => {
     const names = Object.keys(commandsFor(ops));
     expect(names).toHaveLength(Object.keys(ops).length);
     expect(names).toContain('check-element');
-    expect(names).toContain('perf-snapshot');
+    expect(names).toContain('measure-performance');
     expect(names.filter((n) => n.includes('_'))).toEqual([]);
   });
 
@@ -148,11 +148,13 @@ describe('commands from the operations', () => {
   });
 
   it('takes a list of words as they are typed, as much as its JSON', async () => {
-    const one = await run('perf-snapshot', '--also', 'surface');
+    const one = await run('measure-performance', 'snapshot', '--also', 'surface');
     expect(one.err.join('\n')).not.toContain('needs JSON');
-    const two = await run('perf-snapshot', '--also', 'surface,battery');
+    const two = await run('measure-performance', 'snapshot', '--also', 'surface,battery');
     expect(two.err.join('\n')).not.toContain('needs JSON');
-    expect((await run('perf-snapshot', '--also', '{nope')).err.join('\n')).toContain('needs JSON');
+    expect(
+      (await run('measure-performance', 'snapshot', '--also', '{nope')).err.join('\n'),
+    ).toContain('needs JSON');
   });
 
   it('takes the arguments as JSON', async () => {
@@ -240,7 +242,7 @@ describe('commands from the operations', () => {
       expect(help).toContain(flag);
     expect(help).toContain('default "diff"');
     expect(device.calls.length).toBe(before);
-    expect(listOf(ops)).toContain('perf-snapshot');
+    expect(listOf(ops)).toContain('measure-performance');
     expect(listOf(ops).split('\n')).toHaveLength(Object.keys(ops).length);
   });
 

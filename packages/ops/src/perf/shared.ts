@@ -141,8 +141,9 @@ export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
 
 /** What measures the like where a device has no way of giving a measure: by a tool's name, which a driver does not say. */
 const INSTEAD: Partial<Record<Capability, string>> = {
-  hangs: "perf_trace with what: frames reads the main thread's stalls here",
-  xctMetrics: 'perf_trace with what: frames times the frames here, and perf_launch the starts',
+  hangs: "measure_performance frames with what: frames reads the main thread's stalls here",
+  xctMetrics:
+    'measure_performance frames with what: frames times the frames here, and measure_performance launch the starts',
 };
 
 export const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed(1)} MB`);
@@ -273,7 +274,7 @@ export type KeptRun = {
 
 /**
  * A run's records, with the context each number is judged by; read after the measured window, so it does not
- * disturb it. Whatever measures next (a flow's journey, step by step) keeps its numbers here and perf_compare
+ * disturb it. Whatever measures next (a flow's journey, step by step) keeps its numbers here and compare_performance
  * reads them like any other: name the scenario and the metrics.
  */
 export async function keepRun(

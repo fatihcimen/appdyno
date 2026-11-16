@@ -31,7 +31,7 @@ async function byTool(screen: string, target: { ref: string } | { selector: Sele
   device.screen = screen;
   const tools = connect({ device: SERIAL, app: 'dev.app', share: true });
   try {
-    await tools.tool('tap', target);
+    await tools.tool('tap_screen', target);
     const act = must(
       device.calls.find((c) => c.name === 'act'),
       'the tap',

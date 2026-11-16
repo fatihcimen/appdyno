@@ -77,7 +77,7 @@ describe('a kept run and the traces of a state folder', () => {
     await kept(context({ traceLimitGb: 0 }));
     const trace = oldTrace();
     const ctx = context({ traceLimitGb: 0, autoPrune: true });
-    await callerOf(ctx)('perf_profile', { seconds: 1 });
+    await callerOf(ctx)('measure_performance', { metric: 'cpu', seconds: 1 });
     expect(existsSync(trace)).toBe(false);
   });
 
@@ -91,11 +91,11 @@ describe('a kept run and the traces of a state folder', () => {
   });
 });
 
-describe('perf_compare prune', () => {
+describe('compare_performance prune', () => {
   it('refuses a context whose runs are in another folder, by name', async () => {
     const trace = oldTrace();
     const ctx = context({ measurements: mkdtempSync(join(tmpdir(), 'm-')), traceLimitGb: 0 });
-    await expect(callerOf(ctx)('perf_compare', { action: 'prune' })).rejects.toThrow(
+    await expect(callerOf(ctx)('compare_performance', { action: 'prune' })).rejects.toThrow(
       /goes by one folder's runs/,
     );
     expect(existsSync(trace)).toBe(true);
@@ -103,7 +103,9 @@ describe('perf_compare prune', () => {
 
   it('removes nothing with no kept run to go by, and says why', async () => {
     const trace = oldTrace();
-    const r = await callerOf(context({ traceLimitGb: 0 }))('perf_compare', { action: 'prune' });
+    const r = await callerOf(context({ traceLimitGb: 0 }))('compare_performance', {
+      action: 'prune',
+    });
     expect(r.text).toContain('nothing was removed: no kept runs');
     expect(r.data.prune).toMatchObject({ removed: 0, over: true });
     expect(existsSync(trace)).toBe(true);
@@ -114,12 +116,12 @@ describe('perf_compare prune', () => {
     const ctx = context({ traceLimitGb: 7 });
     await kept(ctx);
     const call = callerOf(ctx);
-    const stated = await call('perf_compare', { action: 'prune', dryRun: true });
+    const stated = await call('compare_performance', { action: 'prune', dryRun: true });
     expect(stated.text).toContain('of a limit of 7.00 GB');
-    const dry = await call('perf_compare', { action: 'prune', dryRun: true, limitGb: 0 });
+    const dry = await call('compare_performance', { action: 'prune', dryRun: true, limitGb: 0 });
     expect(dry.text).toContain('would remove: old.pftrace (1024 bytes)');
     expect(existsSync(trace)).toBe(true);
-    const real = await call('perf_compare', { action: 'prune', limitGb: 0 });
+    const real = await call('compare_performance', { action: 'prune', limitGb: 0 });
     expect(real.text).toContain('removed: old.pftrace (1024 bytes)');
     expect(real.text).toContain('traces-pruned.log');
     expect(existsSync(trace)).toBe(false);
@@ -140,10 +142,10 @@ describe('perf_compare prune', () => {
       raw,
       metrics: [{ kind: 'memory.kb', unit: 'kb', samples: [1] }],
     });
-    await callerOf(ctx)('perf_compare', { action: 'baseline' });
+    await callerOf(ctx)('compare_performance', { action: 'baseline' });
     // another project, which has no such baseline
     const other = context({ traceLimitGb: 0 });
-    const r = await callerOf(other)('perf_compare', { action: 'prune' });
+    const r = await callerOf(other)('compare_performance', { action: 'prune' });
     expect(r.data.prune).toMatchObject({ removed: 0 });
     expect(existsSync(trace)).toBe(true);
   });

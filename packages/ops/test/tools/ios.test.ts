@@ -206,35 +206,40 @@ describe('iOS simulators', () => {
   it('says which measure a device lacks', async () => {
     const none = new FakeDevice();
     Object.defineProperty(none, 'measure', { value: LACKS });
-    const r = await (await connect({}, none)).textOf('perf_snapshot');
+    const r = await (await connect({}, none)).textOf('measure_performance', { metric: 'snapshot' });
     expect(r).toEqual({ error: true, text: 'UNSUPPORTED: emulator-5580 cannot measure CPU' });
     const part = new FakeDevice();
     Object.defineProperty(part, 'measure', { value: { ...LACKS, cpu: part.measure.cpu } });
     const t = await connect({}, part);
-    expect((await t.textOf('perf_snapshot')).text).toBe(
+    expect((await t.textOf('measure_performance', { metric: 'snapshot' })).text).toBe(
       'UNSUPPORTED: emulator-5580 cannot measure memory',
     );
-    expect((await t.textOf('perf_trace')).text).toBe(
+    expect((await t.textOf('measure_performance', { metric: 'frames' })).text).toBe(
       'UNSUPPORTED: emulator-5580 cannot measure a frame trace',
     );
-    expect((await t.textOf('perf_heap')).text).toBe(
+    expect((await t.textOf('measure_performance', { metric: 'heap' })).text).toBe(
       'UNSUPPORTED: emulator-5580 cannot measure a heap dump',
     );
   });
 
   it('words each measure a real device has no way of giving, and what measures the like', async () => {
     const t = await connect();
-    const instead = (hint: string) => `\nhint: perf_trace with what: frames ${hint}`;
+    const instead = (hint: string) =>
+      `\nhint: measure_performance frames with what: frames ${hint}`;
     for (const [name, args, word] of [
-      ['perf_trace', { what: 'hangs' }, `hangs${instead("reads the main thread's stalls here")}`],
       [
-        'perf_trace',
-        { what: 'xct_launch' },
-        `XCTest's metrics${instead('times the frames here, and perf_launch the starts')}`,
+        'measure_performance',
+        { metric: 'frames', what: 'hangs' },
+        `hangs${instead("reads the main thread's stalls here")}`,
       ],
-      ['perf_scroll', { probe: true }, 'through a frame probe'],
-      ['perf_heap', { profile: 'java_hprof' }, 'a heap profile'],
-      ['perf_launch', { baselineProfile: true }, 'a Baseline Profile'],
+      [
+        'measure_performance',
+        { metric: 'frames', what: 'xct_launch' },
+        `XCTest's metrics${instead('times the frames here, and measure_performance launch the starts')}`,
+      ],
+      ['measure_performance', { metric: 'scroll', probe: true }, 'through a frame probe'],
+      ['measure_performance', { metric: 'heap', profile: 'java_hprof' }, 'a heap profile'],
+      ['measure_performance', { metric: 'launch', baselineProfile: true }, 'a Baseline Profile'],
     ] as const)
       expect((await t.textOf(name, args)).text).toBe(
         `UNSUPPORTED: emulator-5580 cannot measure ${word}`,
@@ -279,27 +284,27 @@ describe('iOS simulators', () => {
         },
         'ios',
       );
-      const snap = (await t.textOf('perf_snapshot')).text.split('\n');
+      const snap = (await t.textOf('measure_performance', { metric: 'snapshot' })).text.split('\n');
       expect(snap.slice(1, -1)).toEqual([
         'CPU: 5% (of one core, 2000 ms)',
         'memory: physical footprint 51.2 MB (peak 61.0 MB)',
         'no frame measure on a simulator without the probe',
       ]);
-      const launch = (await t.textOf('perf_launch')).text.split('\n');
+      const launch = (await t.textOf('measure_performance', { metric: 'launch' })).text.split('\n');
       expect(launch.slice(1, -2)).toEqual([
         'cold launch (until the first screen is read): 100 ms, 9000 ms, 8000 ms',
         'median: 8000 ms',
-        'no limit of a slow start is rated on this platform: judge it against a baseline (perf_launch baseline: true, then perf_compare)',
+        'no limit of a slow start is rated on this platform: judge it against a baseline (measure_performance launch baseline: true, then compare_performance)',
         'the app was started anew: it shows its first screen',
       ]);
       expect(launch.at(-1)).toMatch(/^kept as one run of launch-cold, not as a baseline/);
-      expect((await t.textOf('perf_heap')).text).toMatch(
+      expect((await t.textOf('measure_performance', { metric: 'heap' })).text).toMatch(
         /^measurement pm-\w+\nmemory graph \(Xcode\): .*x\.memgraph \(1\.0 MB\); 3 leaks, 192 bytes$/,
       );
-      expect((await t.textOf('perf_scroll')).text).toBe(
+      expect((await t.textOf('measure_performance', { metric: 'scroll' })).text).toBe(
         'UNSUPPORTED: emulator-5580 cannot measure frames',
       );
-      expect((await t.textOf('perf_trace')).text).toBe(
+      expect((await t.textOf('measure_performance', { metric: 'frames' })).text).toBe(
         'UNSUPPORTED: emulator-5580 cannot measure a frame trace',
       );
     });
@@ -323,13 +328,15 @@ describe('iOS simulators', () => {
             }),
           ),
       });
-      expect((await t.textOf('perf_trace')).text.split('\n').slice(1)).toEqual([
+      expect(
+        (await t.textOf('measure_performance', { metric: 'frames' })).text.split('\n').slice(1),
+      ).toEqual([
         '300 frames; 2 hitches of the app, 30 ms in all, worst 20 ms; hitch ratio 6 ms/s',
         'frozen frames: 0; main thread stalled 0 times, worst 0 ms',
         'likely causes: 2× expensive commit',
         'trace (Instruments): /t/h.trace',
       ]);
-      expect((await t.textOf('perf_snapshot')).text).toBe(
+      expect((await t.textOf('measure_performance', { metric: 'snapshot' })).text).toBe(
         'UNSUPPORTED: emulator-5580 cannot measure CPU',
       );
     });

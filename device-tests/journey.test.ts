@@ -98,13 +98,13 @@ for (const t of targets)
         const [load] = loadavg();
         assert(load !== undefined);
         console.log(m.text, `\nhost load ${load.toFixed(0)} on ${cpus().length} cores`);
-        const b = await ops.call('perf_compare', { action: 'baseline', scenario });
+        const b = await ops.call('compare_performance', { action: 'baseline', scenario });
         console.log(b.text);
       }
 
       const same = await measure();
       expect(same.error, same.text).toBe(false);
-      const unchanged = await ops.call('perf_compare', { action: 'compare', scenario });
+      const unchanged = await ops.call('compare_performance', { action: 'compare', scenario });
       console.log(unchanged.text);
       const ofStep = (c: { comparisons: Comparison[] }[]) => {
         const step = c[0]?.comparisons.find((x) => x.kind === `journey.${t.step}.ms`);
@@ -118,7 +118,7 @@ for (const t of targets)
       const slower = await measure();
       expect(slower.error, slower.text).toBe(false);
       await t.clear(t.serial);
-      const called = await ops.call('perf_compare', { action: 'compare', scenario });
+      const called = await ops.call('compare_performance', { action: 'compare', scenario });
       console.log(called.text);
       const after = ofStep(called.data.reports as { comparisons: Comparison[] }[]);
       expect(after.verdict).toBe('regression');
@@ -134,7 +134,7 @@ for (const t of targets)
 
       const run = await newest(scenario);
       expect(kept(run, `${t.step}.ms`)?.samples).toHaveLength(5);
-      const page = await ops.call('perf_compare', { action: 'dashboard' });
+      const page = await ops.call('compare_performance', { action: 'dashboard' });
       expect(page.data.file).toBeTruthy();
     }, 1_800_000);
 

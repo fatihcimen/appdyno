@@ -16,7 +16,7 @@ vi.mock('node:os', async (original) => ({
 describe('perf tools', () => {
   it('snapshot: CPU, memory, frames and the device, with the raw output stored under its id', async () => {
     const t = await connect();
-    const r = await t.textOf('perf_snapshot');
+    const r = await t.textOf('measure_performance', { metric: 'snapshot' });
     expect(r.error).toBe(false);
     expect(r.text).toContain('virtual device: relative');
     expect(r.text).toContain('CPU: 12.5%');
@@ -42,10 +42,14 @@ describe('perf tools', () => {
         },
       },
     });
-    expect((await (await connect({}, dev)).textOf('perf_snapshot')).text).toContain(
+    expect(
+      (await (await connect({}, dev)).textOf('measure_performance', { metric: 'snapshot' })).text,
+    ).toContain(
       'memory: PSS 191.0 MB, Java 0.0 MB, native 0.6 MB, graphics 9.8 MB; 136.3 MB of it swapped out to compressed memory (zram), which the heaps leave out',
     );
-    expect((await (await connect()).textOf('perf_snapshot')).text).not.toContain('swapped');
+    expect(
+      (await (await connect()).textOf('measure_performance', { metric: 'snapshot' })).text,
+    ).not.toContain('swapped');
   });
 
   it('snapshot: leaves out what the device did not say, where it read as a question mark or nothing', async () => {
@@ -62,7 +66,7 @@ describe('perf tools', () => {
         },
       },
     });
-    const r = await (await connect({}, dev)).textOf('perf_snapshot');
+    const r = await (await connect({}, dev)).textOf('measure_performance', { metric: 'snapshot' });
     expect(r.text).toContain('device: load 1 1 1\n');
     expect(r.text).not.toContain('graphics');
     expect(r.text).not.toContain('?');
@@ -97,11 +101,11 @@ describe('perf tools', () => {
       },
     });
     const t = await connect({}, dev);
-    const snapshot = (await t.textOf('perf_snapshot')).text;
+    const snapshot = (await t.textOf('measure_performance', { metric: 'snapshot' })).text;
     expect(snapshot).toContain(
       'worst second: 19 missed of 19 frames, mean 120.3 ms\n2 frames left out: timed to end after they were read, they cannot be real',
     );
-    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toContain(
+    expect((await t.textOf('measure_performance', { metric: 'scroll', swipes: 1 })).text).toContain(
       'round 1: 120 frames (2 left out: timed to end after they were read, they cannot be real), janky 4%',
     );
   });
@@ -117,15 +121,15 @@ describe('perf tools', () => {
       },
     });
     const t = await connect({}, dev);
-    expect((await t.textOf('perf_trace', { what: 'hangs' })).text).toBe(
-      "UNSUPPORTED: emulator-5580 cannot measure hangs: they are read from an iPhone's trace\nhint: perf_trace with what: frames reads the main thread's stalls here",
+    expect((await t.textOf('measure_performance', { metric: 'frames', what: 'hangs' })).text).toBe(
+      "UNSUPPORTED: emulator-5580 cannot measure hangs: they are read from an iPhone's trace\nhint: measure_performance frames with what: frames reads the main thread's stalls here",
     );
-    expect((await t.textOf('perf_trace', { probe: true })).text).toMatch(
+    expect((await t.textOf('measure_performance', { metric: 'frames', probe: true })).text).toMatch(
       /\nhint: leave out probe$/,
     );
-    expect((await t.textOf('perf_profile', { dsym: '/b/App.app.dSYM' })).text).toMatch(
-      /^UNSUPPORTED: dsym is for iOS.*\nhint: leave out dsym$/s,
-    );
+    expect(
+      (await t.textOf('measure_performance', { metric: 'cpu', dsym: '/b/App.app.dSYM' })).text,
+    ).toMatch(/^UNSUPPORTED: dsym is for iOS.*\nhint: leave out dsym$/s);
   });
 
   it('launch: says no start was measured where the system timed each as another state', async () => {
@@ -148,7 +152,9 @@ describe('perf tools', () => {
           }),
       },
     });
-    const r = await (await connect({}, dev)).textOf('perf_launch', { repeats: 2 });
+    const r = await (
+      await connect({}, dev)
+    ).textOf('measure_performance', { metric: 'launch', repeats: 2 });
     expect(r.text).toContain(
       'median: not measured: the system timed no start as COLD; a start reads UNKNOWN where another window came to the front, or the system stopped waiting for it',
     );
@@ -173,10 +179,7 @@ describe('perf tools', () => {
     });
     const r = await (
       await connect({}, dev)
-    ).textOf('perf_launch', {
-      repeats: 3,
-      scenario: 'launch-mixed',
-    });
+    ).textOf('measure_performance', { metric: 'launch', repeats: 3, scenario: 'launch-mixed' });
     expect(r.text).toContain(
       'cold launch: ? ms (UNKNOWN), 9654 ms (COLD), 5428 ms (WARM)\nmedian: 9654 ms, longest 9654 ms, of 1 of the 3 starts: the system timed the others as UNKNOWN, WARM, not as COLD',
     );
@@ -189,8 +192,10 @@ describe('perf tools', () => {
   it('scroll: reads one round where it is asked for a reading, and three for a scenario a baseline is kept under', async () => {
     const t = await connect({}, new FakeDevice());
     const rounds = async (args: Record<string, unknown>) =>
-      (((await t.call('perf_scroll', args)).structuredContent ?? {}) as { rounds?: unknown[] })
-        .rounds;
+      (
+        ((await t.call('measure_performance', { ...args, metric: 'scroll' })).structuredContent ??
+          {}) as { rounds?: unknown[] }
+      ).rounds;
     expect(await rounds({ swipes: 1 })).toHaveLength(1);
     expect(await rounds({ swipes: 1, scenario: 'feed' })).toHaveLength(3);
     expect(await rounds({ swipes: 1, repeats: 2 })).toHaveLength(2);
@@ -199,9 +204,12 @@ describe('perf tools', () => {
   it("scroll: names the app's top function where it janked, from one scroll more under the profiler", async () => {
     const dev = new FakeDevice();
     const t = await connect({}, dev);
-    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).not.toContain('top function');
+    expect(
+      (await t.textOf('measure_performance', { metric: 'scroll', swipes: 1 })).text,
+    ).not.toContain('top function');
     dev.jank = 40;
-    const r = (await t.call('perf_scroll', { swipes: 1 })).structuredContent as {
+    const r = (await t.call('measure_performance', { metric: 'scroll', swipes: 1 }))
+      .structuredContent as {
       findings: string[];
       rounds: unknown[];
     };
@@ -219,7 +227,7 @@ describe('perf tools', () => {
       get: () => shares[dev.calls.filter((c) => c.name === 'perf.frames').length % 2],
     });
     const t = await connect({}, dev);
-    const r = await t.textOf('perf_scroll', { swipes: 1, repeats: 2 });
+    const r = await t.textOf('measure_performance', { metric: 'scroll', swipes: 1, repeats: 2 });
     expect(r.text).toContain('median jank: 98.2%');
     expect(r.text).toContain('high jank: median 98.2% (threshold 10%)');
   });
@@ -233,7 +241,9 @@ describe('perf tools', () => {
         cpuProfile: () => Promise.reject(new Error('the trace tool cannot read its own trace')),
       },
     });
-    const r = await (await connect({}, dev)).textOf('perf_scroll', { swipes: 2 });
+    const r = await (
+      await connect({}, dev)
+    ).textOf('measure_performance', { metric: 'scroll', swipes: 2 });
     expect(r.text).toContain('high jank');
     expect(r.text).toContain(
       'no top function: the profile of one scroll more failed: the trace tool cannot read its own trace',
@@ -244,7 +254,7 @@ describe('perf tools', () => {
     const dev = new FakeDevice();
     dev.jank = 25;
     const t = await connect({}, dev);
-    const r = await t.textOf('perf_scroll', { swipes: 2, repeats: 3 });
+    const r = await t.textOf('measure_performance', { metric: 'scroll', swipes: 2, repeats: 3 });
     expect(r.text).toContain('median jank: 25%');
     expect(r.text).toContain('high jank');
     const order = dev.calls.map((c) => c.name).filter((n) => n.startsWith('perf') || n === 'act');
@@ -272,7 +282,7 @@ describe('perf tools', () => {
     const dev = new FakeDevice();
     dev.listEnd = 0;
     const t = await connect({}, dev);
-    const r = await t.textOf('perf_scroll', { swipes: 2 });
+    const r = await t.textOf('measure_performance', { metric: 'scroll', swipes: 2 });
     expect(r.text).toMatch(
       /^NOT_FOUND: the swipes moved nothing on this screen, so no scroll was measured/,
     );
@@ -298,14 +308,14 @@ describe('perf tools', () => {
     }
     const dev = new SplitView();
     const t = await connect({}, dev);
-    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toBe(
+    expect((await t.textOf('measure_performance', { metric: 'scroll', swipes: 1 })).text).toBe(
       'NOT_FOUND: the swipes moved nothing on this screen, so no scroll was measured: they went at 540,1200, on no scrollable, and this screen has a scrollable elsewhere: RecyclerView at 200,1200\nhint: give x and y or a selector on the list to measure, or close what covers it, and call again',
     );
     const swiped = async (args: Record<string, unknown>) => {
       dev.calls.length = 0;
-      expect((await t.textOf('perf_scroll', { swipes: 1, ...args })).text).toContain(
-        'round 1: 120 frames',
-      );
+      expect(
+        (await t.textOf('measure_performance', { metric: 'scroll', swipes: 1, ...args })).text,
+      ).toContain('round 1: 120 frames');
       return dev.calls.find((c) => c.name === 'act')?.args[0];
     };
     expect(await swiped({ x: 120, y: 2000 })).toMatchObject({
@@ -316,7 +326,7 @@ describe('perf tools', () => {
       from: { x: 200, y: 1200 },
       to: { x: 200, y: 400 },
     });
-    expect((await t.textOf('perf_scroll', { x: 120 })).text).toMatch(
+    expect((await t.textOf('measure_performance', { metric: 'scroll', x: 120 })).text).toMatch(
       /^INVALID_ARGUMENT: x and y go together.*\nhint: \w/s,
     );
   });
@@ -333,7 +343,7 @@ describe('perf tools', () => {
     await dev.act(up);
     await dev.act(up);
     const t = await connect({}, dev);
-    const r = await t.textOf('perf_scroll', { swipes: 2 });
+    const r = await t.textOf('measure_performance', { metric: 'scroll', swipes: 2 });
     expect(r.text).toContain('round 1: 120 frames');
     expect(r.text).toContain('round 1 ran after the list was brought back');
   });
@@ -365,7 +375,9 @@ describe('perf tools', () => {
         },
       },
     });
-    const r = await (await connect({}, dev)).textOf('perf_scroll', { swipes: 2 });
+    const r = await (
+      await connect({}, dev)
+    ).textOf('measure_performance', { metric: 'scroll', swipes: 2 });
     expect(r.text).toContain(
       'round 1: on its own surface, 180 frames, 58.4 a second, p95 16.7 ms, 1.1% 34 ms or more after the last',
     );
@@ -402,7 +414,7 @@ describe('perf tools', () => {
       },
     });
     const t = await connect({}, dev);
-    const r = await t.textOf('perf_scroll', { swipes: 2 });
+    const r = await t.textOf('measure_performance', { metric: 'scroll', swipes: 2 });
     expect(r.text).toContain(
       "nothing judged: no round drew the 60 frames a share takes, nor did the app's own surface: 14 at most in a round",
     );
@@ -413,7 +425,7 @@ describe('perf tools', () => {
   it('scroll: goes on into new rows for as long as the list moves', async () => {
     const dev = new FakeDevice();
     const t = await connect({}, dev);
-    await t.textOf('perf_scroll', { swipes: 2, repeats: 3 });
+    await t.textOf('measure_performance', { metric: 'scroll', swipes: 2, repeats: 3 });
     const way = (c: (typeof dev.calls)[number]) => {
       if (c.name === 'perf.frames') return 'read';
       const s = c.args[0] as { from: { y: number }; to: { y: number } };
@@ -434,9 +446,9 @@ describe('perf tools', () => {
       },
     });
     const t = await connect({}, dev);
-    for (const name of ['perf_scroll', 'perf_trace']) {
+    for (const metric of ['scroll', 'frames']) {
       probed = false;
-      const relaunched = await t.call(name);
+      const relaunched = await t.call('measure_performance', { metric });
       expect(relaunched.structuredContent).toMatchObject({
         code: 'CHECK_FAILED',
         hint: "open the screen to measure again and call once more: the probe stays in this tool's launches of the app",
@@ -445,7 +457,7 @@ describe('perf tools', () => {
         "CHECK_FAILED: dev.app was relaunched with the frame probe in it, and shows its first screen: nothing was measured\nhint: open the screen to measure again and call once more: the probe stays in this tool's launches of the app",
       );
       expect(dev.calls.some((c) => c.name.startsWith('perf.'))).toBe(false);
-      expect((await t.call(name)).isError).toBeUndefined();
+      expect((await t.call('measure_performance', { metric })).isError).toBeUndefined();
       dev.calls.length = 0;
     }
   });
@@ -459,31 +471,39 @@ describe('perf tools', () => {
     const t = await connect({}, dev);
     const note =
       'probe: false put no probe in and relaunched nothing: these frames are by the probe the app runs under already, held in its launches by this tool';
-    for (const name of ['perf_scroll', 'perf_trace']) {
-      expect((await t.textOf(name, { probe: false })).text).toContain(note);
+    for (const metric of ['scroll', 'frames']) {
+      expect((await t.textOf('measure_performance', { metric, probe: false })).text).toContain(
+        note,
+      );
       expect(attachProbe).not.toHaveBeenCalled();
-      expect((await t.textOf(name)).text).not.toContain('probe: false');
+      expect((await t.textOf('measure_performance', { metric })).text).not.toContain(
+        'probe: false',
+      );
       attachProbe.mockClear();
     }
     // a device whose frames are no probe's has nothing to say of one
     const other = await connect();
-    expect((await other.textOf('perf_scroll', { probe: false })).text).not.toContain('probe');
+    expect(
+      (await other.textOf('measure_performance', { metric: 'scroll', probe: false })).text,
+    ).not.toContain('probe');
   });
 
   it('launch: the median against the vitals threshold; only allowed apps', async () => {
     const t = await connect({ apps: ['dev.app'] });
-    const r = await t.textOf('perf_launch', { mode: 'cold' });
+    const r = await t.textOf('measure_performance', { metric: 'launch', mode: 'cold' });
     expect(r.text).toContain('median: 600 ms');
     expect(r.text).not.toContain('excessive');
-    expect((await t.textOf('perf_launch', { app: 'com.other' })).error).toBe(true);
+    expect(
+      (await t.textOf('measure_performance', { metric: 'launch', app: 'com.other' })).error,
+    ).toBe(true);
   });
 
   it('profile: the functions taking the CPU; heap: the dump file stays here', async () => {
     const t = await connect();
-    expect((await t.textOf('perf_profile', { seconds: 2 })).text).toContain(
+    expect((await t.textOf('measure_performance', { metric: 'cpu', seconds: 2 })).text).toContain(
       '\n62.1% dev.app.Busy.loop',
     );
-    expect((await t.textOf('perf_heap')).text).toMatch(
+    expect((await t.textOf('measure_performance', { metric: 'heap' })).text).toMatch(
       /heap dump: .*heap-dev\.app-\d+\.hprof \(60\.0 MB\)/,
     );
   });
@@ -506,16 +526,16 @@ describe('perf tools', () => {
       value: { ...dev.measure, cpuProfile: () => Promise.resolve({ value: profile, raw: '', at }) },
     });
     const t = await connect({}, dev);
-    const listed = (await t.textOf('perf_profile', { seconds: 3 })).text;
+    const listed = (await t.textOf('measure_performance', { metric: 'cpu', seconds: 3 })).text;
     expect(listed).toContain('\n53.06% [kernel.kallsyms][+ffffffc07a5f3500]\n');
     expect(listed).toContain(
       "[kernel.kallsyms][+…] is time in the kernel, by its address: this device hides the kernel's names",
     );
-    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toContain(
+    expect((await t.textOf('measure_performance', { metric: 'scroll', swipes: 1 })).text).toContain(
       "the app's top function as it scrolled: android::uirenderer::RenderNode::prepareTreeImpl, 1.79% of its samples, after the time of the kernel, whose names this device hides",
     );
     profile.top = profile.top.slice(0, 2);
-    expect((await t.textOf('perf_scroll', { swipes: 1 })).text).toContain(
+    expect((await t.textOf('measure_performance', { metric: 'scroll', swipes: 1 })).text).toContain(
       'the profile of one scroll more named no function: its samples were in the kernel, whose names this device hides',
     );
   });
@@ -537,16 +557,20 @@ describe('perf tools', () => {
       },
     });
     const t = await connect({}, dev);
-    const bare = (await t.textOf('perf_profile', { seconds: 1 })).text;
+    const bare = (await t.textOf('measure_performance', { metric: 'cpu', seconds: 1 })).text;
     expect(bare).toContain("the app's own functions are addresses: no symbols of this build");
     expect(bare).toContain('DEBUG_INFORMATION_FORMAT is dwarf-with-dsym');
-    const given = await t.textOf('perf_profile', { seconds: 1, dsym: '/b/App.app.dSYM' });
+    const given = await t.textOf('measure_performance', {
+      metric: 'cpu',
+      seconds: 1,
+      dsym: '/b/App.app.dSYM',
+    });
     expect(given.text).not.toContain('are addresses');
   });
 
   it('trace: the frame timeline summary', async () => {
     const t = await connect();
-    const r = await t.textOf('perf_trace', { seconds: 2 });
+    const r = await t.textOf('measure_performance', { metric: 'frames', seconds: 2 });
     expect(r.text).toContain('50 frames; late by the app 4 (8%)');
     expect(r.text).toContain('frozen frames: 1');
     expect(r.text).toContain("on a virtual device the compositor's jank");
@@ -567,9 +591,11 @@ describe('perf tools', () => {
           Promise.resolve({ value: { layer: 'SurfaceView[dev.app]', frames: 127 }, raw: '', at }),
       },
     });
-    const r = await (await connect({}, dev)).textOf('perf_trace', { seconds: 2 });
+    const r = await (
+      await connect({}, dev)
+    ).textOf('measure_performance', { metric: 'frames', seconds: 2 });
     expect(r.text).toContain(
-      "0 frames, of the 60 a share or a percentile needs: none is kept\nthe app draws on its own surface, as a Flutter app or a game does, and these frames leave it out: perf_scroll reads that surface's frames",
+      "0 frames, of the 60 a share or a percentile needs: none is kept\nthe app draws on its own surface, as a Flutter app or a game does, and these frames leave it out: measure_performance scroll reads that surface's frames",
     );
   });
 });

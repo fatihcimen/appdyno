@@ -33,7 +33,12 @@ const state = () =>
 describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   let call: Call;
   const profile = async (app = APP) => {
-    const r = await call('perf_launch', { app, baselineProfile: true, repeats: 4 });
+    const r = await call('measure_performance', {
+      metric: 'launch',
+      app,
+      baselineProfile: true,
+      repeats: 4,
+    });
     process.stderr.write(`--- ${app}\n${r.text}\n---\n`);
     return r;
   };
@@ -45,7 +50,11 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
 
   it('refuses a debuggable build: it stays at verify whatever is asked', async () => {
     installed(join(OUT, 'debug/fixture-debug.apk'));
-    const r = await call('perf_launch', { baselineProfile: true, repeats: 1 });
+    const r = await call('measure_performance', {
+      metric: 'launch',
+      baselineProfile: true,
+      repeats: 1,
+    });
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toContain('measure a release build');
   });
@@ -98,7 +107,11 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
       expect(`${stdout}${stderr}`).toMatch(/Completed with warning/);
     }
     expect(state()).toContain('reason=install-dm');
-    const r = await call('perf_launch', { baselineProfile: true, repeats: 1 });
+    const r = await call('measure_performance', {
+      metric: 'launch',
+      baselineProfile: true,
+      repeats: 1,
+    });
     expect(r.data.baselineProfile?.applied).toBe(false);
     expect(r.text).toContain('delivered, and it compiled nothing');
   });

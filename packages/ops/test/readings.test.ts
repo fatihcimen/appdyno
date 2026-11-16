@@ -10,8 +10,8 @@ vi.mock('node:os', async (original) => ({
   loadavg: () => [0, 0, 0],
 }));
 
-const keptIn = async ({ tool, args = {}, measures }: Asked) =>
-  (await keptBy(tool, args, measures)).kept;
+const keptIn = async ({ metric, args = {}, measures }: Asked) =>
+  (await keptBy('measure_performance', { metric, ...args }, measures)).kept;
 
 describe('what a reading means', () => {
   it('is said of every kind there is', () => {
@@ -21,7 +21,7 @@ describe('what a reading means', () => {
   });
 
   describe.each(Object.entries<Reading>(READINGS))('%s', (kind, r) => {
-    it.each(r.reads.map((asked) => ({ asked, tool: asked.tool })))(
+    it.each(r.reads.map((asked) => ({ asked, tool: asked.metric })))(
       `by $tool is ${r.means}`,
       async ({ asked }) => {
         expect((await keptIn(asked)).find((k) => k.kind === kind)?.value).toBe(r.value);

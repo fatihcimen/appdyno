@@ -77,7 +77,7 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 | **Akışlar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                                               | `flow`                                                                  |
 | **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                                          | `mirror` `hand_off`                                                     |
 
-34 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
+28 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
 
 ### Push bildirimleri ve bağlantılar
 

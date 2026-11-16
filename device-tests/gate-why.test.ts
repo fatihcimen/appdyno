@@ -166,7 +166,7 @@ for (const t of targets)
     const settled = () => (t.phone ? undefined : quiet());
     const load = () => `host load ${lastMinute().toFixed(0)} on ${cpus().length} cores`;
     const asked = async (scenario: string, last = 1) => {
-      const r = await ops.call('perf_compare', { action: 'why', scenario, last, ...named });
+      const r = await ops.call('compare_performance', { action: 'why', scenario, last, ...named });
       expect(r.error, r.text).toBe(false);
       note(`${t.name} ${scenario}, ${load()}\n${r.text}\nexit ${r.data.exitCode}`);
       console.log(r.text);
@@ -179,7 +179,7 @@ for (const t of targets)
       for (let i = 0; i < 12; i++) {
         await settled();
         await measure();
-        const c = await ops.call('perf_compare', { action: 'compare', scenario });
+        const c = await ops.call('compare_performance', { action: 'compare', scenario });
         const said = (c.data.reports as { comparisons: Comparison[] }[]).flatMap(
           (r) => r.comparisons,
         );
@@ -190,7 +190,7 @@ for (const t of targets)
     };
     const reference = async (scenario: string) => {
       await settled();
-      const r = await ops.call('perf_compare', { action: 'reference', scenario, ...named });
+      const r = await ops.call('compare_performance', { action: 'reference', scenario, ...named });
       note(`${t.name} ${scenario} reference, ${load()}\n${r.text}`);
       expect(r.data.exitCode, r.text).toBe(0);
     };
@@ -199,7 +199,7 @@ for (const t of targets)
       for (let tries = 0; tries < 24; tries++) {
         await settled();
         await measure();
-        const b = await ops.call('perf_compare', { action: 'baseline', scenario });
+        const b = await ops.call('compare_performance', { action: 'baseline', scenario });
         note(`${t.name} ${scenario} baseline, ${load()}\n${b.text}`);
         if (b.data.exitCode === 0) break;
       }
@@ -270,7 +270,7 @@ for (const t of targets)
       const out = join(dir, `${t.name}.md`);
       await writeComment(ops.measurements, project, out, { scenario });
       note(readFileSync(out, 'utf8'));
-      const page = await ops.call('perf_compare', { action: 'dashboard' });
+      const page = await ops.call('compare_performance', { action: 'dashboard' });
       assert(page.data.file);
       expect(readFileSync(page.data.file, 'utf8')).toContain('Why it got worse');
     }, 3_600_000);
@@ -282,9 +282,11 @@ for (const t of targets)
       const traced = t.name === 'iphone';
       const how = traced ? { repeats: 1, trace: true } : { repeats: 6 };
       const measure = () =>
-        ops.call('perf_launch', { mode: 'cold', ...how, scenario }).then((m) => {
-          expect(m.error, m.text).toBe(false);
-        });
+        ops
+          .call('measure_performance', { metric: 'launch', mode: 'cold', ...how, scenario })
+          .then((m) => {
+            expect(m.error, m.text).toBe(false);
+          });
       await baselined(measure, scenario);
       await cost('start', COST_MS);
       for (let i = 1; traced && i < 5; i++) await measure();
@@ -300,7 +302,7 @@ for (const t of targets)
       await clear();
       const scenario = `scroll-${t.name}`;
       const measure = () =>
-        ops.call('perf_scroll', { repeats: 5, scenario }).then((m) => {
+        ops.call('measure_performance', { metric: 'scroll', repeats: 5, scenario }).then((m) => {
           expect(m.error, m.text).toBe(false);
         });
       await open('list');
@@ -325,7 +327,7 @@ for (const t of targets)
         await d.ensureAwake?.();
         // what `ensureAwake` is to an Android: a locked iPhone stops the app, which then reads 0
         await d.inFront?.(APP);
-        const m = await ops.call('perf_snapshot', { scenario });
+        const m = await ops.call('measure_performance', { metric: 'snapshot', scenario });
         expect(m.error, m.text).toBe(false);
         note(`${t.name} ${scenario}: ${String(/CPU: .*/.exec(m.text)?.[0])}`);
       };

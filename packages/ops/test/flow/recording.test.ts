@@ -312,7 +312,7 @@ assert id=result check=text equals="Gönderildi"
         await call('capture_network', { action: 'start', via: 'bytes' });
         await call('capture_network', { action: 'read' });
         await call('capture_network', { action: 'stop' });
-        await call('perf_launch', { repeats: 1 });
+        await call('measure_performance', { metric: 'launch', repeats: 1 });
       });
       const unrecorded = text.split('\n').filter((l) => l.startsWith('unrecorded'));
       expect(unrecorded).toEqual([
@@ -371,7 +371,7 @@ assert id=result check=text equals="Gönderildi"
           dir: join(dir, 'shots', 'report'),
         });
         await call('read_screen');
-        await call('perf_snapshot');
+        await call('measure_performance', { metric: 'snapshot' });
         await call('manage_app', { action: 'state' }).catch(() => undefined);
         await call('launch_app');
       });

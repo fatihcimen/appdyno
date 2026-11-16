@@ -4,6 +4,10 @@ import { latestRuns, runKeys } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
 import { untilWithin } from './until.js';
 
+/** A snapshot's frames: another metric answers a count under the same name. */
+const framesIn = (data: { frames?: unknown }) =>
+  (data.frames ?? {}) as { total: number; slowPercent?: number; frozenPercent?: number };
+
 /**
  * Numbers against Play's definitions, on known shares of frames, a known slow start and a provoked ANR
  * (APPDYNO_ANDROID_SERIAL). What is read is printed: docs/reference/perf-evidence.md quotes it.
@@ -38,7 +42,11 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     });
     await pause(1_000);
     // a read resets the count: from here on it is the frames of the run alone
-    await t.call('perf_snapshot', { cpuWindowMs: 500, scenario: 'reset' });
+    await t.call('measure_performance', {
+      metric: 'snapshot',
+      cpuWindowMs: 500,
+      scenario: 'reset',
+    });
     const start = await shown('frozen_start');
     assert(start, 'frozen_start');
     await d.tap(start, { settle: false });
@@ -50,7 +58,8 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
       status = s?.list.find((e) => e.id === 'frozen_status')?.label ?? status;
     }
     expect(status).toBe('done');
-    const r = await t.call('perf_snapshot', {
+    const r = await t.call('measure_performance', {
+      metric: 'snapshot',
       cpuWindowMs: 500,
       scenario: query.replace(/\W/g, '_'),
     });
@@ -76,40 +85,40 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
 
   it('a screen of 40 ms draws reads near 100 % over 16 ms, and would count', async () => {
     const r = await framesOf('frames=600&draw=40', 90);
-    expect(r.data.frames?.slowPercent).toBeGreaterThan(90);
+    expect(framesIn(r.data).slowPercent).toBeGreaterThan(90);
     expect(r.text).toContain('this session would count as slow frames');
   }, 180_000);
 
   it('a light screen would not count as slow', async () => {
     const r = await framesOf('frames=300', 60);
-    expect(r.data.frames?.slowPercent).toBeLessThan(50);
+    expect(framesIn(r.data).slowPercent).toBeLessThan(50);
     expect(r.text).toContain('this session would not count as slow frames');
   }, 180_000);
 
   it('one frozen frame in 500 says too few frames', async () => {
     const r = await framesOf('frames=300&stalls=1', 60);
     assert(r.data.frames);
-    expect(r.data.frames.frozenPercent).toBeUndefined();
+    expect(framesIn(r.data).frozenPercent).toBeUndefined();
     expect(r.text).toContain('too few frames to say of frozen frames');
   }, 180_000);
 
   it('one frozen frame in many would not count, and many would', async () => {
     const few = await framesOf('frames=4000&stalls=1', 180);
-    expect(few.data.frames?.frozenPercent).toBeLessThanOrEqual(0.1);
+    expect(framesIn(few.data).frozenPercent).toBeLessThanOrEqual(0.1);
     expect(few.text).toContain('this session would not count as frozen frames');
     const many = await framesOf('frames=1500&stalls=6', 180);
-    expect(many.data.frames?.frozenPercent).toBeGreaterThan(0.1);
+    expect(framesIn(many.data).frozenPercent).toBeGreaterThan(0.1);
     expect(many.text).toContain('this session would count as frozen frames');
   }, 600_000);
 
   it("a slow start would count by the day's longest, and still does once it is fast again", async () => {
     await costs('startup_ms', 5_200);
-    const slow = await t.call('perf_launch', { repeats: 1 });
+    const slow = await t.call('measure_performance', { metric: 'launch', repeats: 1 });
     console.log(slow.text);
     expect(slow.text).toContain('this session would count as a slow cold start');
     expect(slow.data.excessive).toBe(true);
     await costs('startup_ms');
-    const fast = await t.call('perf_launch', { repeats: 1 });
+    const fast = await t.call('measure_performance', { metric: 'launch', repeats: 1 });
     console.log(fast.text);
     expect(fast.data.medianMs).toBeLessThan(5_000);
     expect(fast.text).toContain('this session would count as a slow cold start');
@@ -120,7 +129,7 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
   }, 300_000);
 
   it('a hot start says which limit it holds to, and that the two pages differ', async () => {
-    const r = await t.call('perf_launch', { mode: 'hot', repeats: 1 });
+    const r = await t.call('measure_performance', { metric: 'launch', mode: 'hot', repeats: 1 });
     console.log(r.text);
     expect(r.text).toContain("Play's developer page says 1.5 s, its help page 1 s");
     expect(r.text).toContain('would not count as a slow hot start');
@@ -129,7 +138,11 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
   it('a touch on a stuck main thread is a user-perceived ANR, and counts', async () => {
     await d.shell(`am force-stop ${APP}`);
     await t.call('launch_app');
-    const before = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
+    const before = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['exits'],
+      cpuWindowMs: 500,
+    });
     const heldBefore = before.data.exitsHeld?.userAnrs;
     assert(heldBefore !== undefined);
     await pause(1_500);
@@ -148,14 +161,22 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     let after = before;
     for (let i = 0; i < 40 && !after.data.userAnrs; i++) {
       await pause(1_000);
-      after = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
+      after = await t.call('measure_performance', {
+        metric: 'snapshot',
+        also: ['exits'],
+        cpuWindowMs: 500,
+      });
     }
     await Promise.all(stuck);
     console.log(after.text);
     expect(after.data.userAnrs).toBe(1);
     expect(after.data.exitsHeld?.userAnrs).toBe(heldBefore + 1);
     expect(after.text).toContain('this session would count as a user-perceived ANR');
-    const next = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
+    const next = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['exits'],
+      cpuWindowMs: 500,
+    });
     expect(next.data.userAnrs).toBe(0);
     expect(next.text).toContain('this session would not count as a user-perceived ANR');
     expect((await t.call('read_logs', { source: 'crashes' })).text).toContain(

@@ -24,7 +24,7 @@ describe.skipIf(!serial)('why a slow frame was slow', () => {
     const start = (await d.read(APP)).list.find((e) => e.id === 'frozen_start');
     assert(start);
     const [r] = await Promise.all([
-      t.call('perf_trace', { seconds: 7 }),
+      t.call('measure_performance', { metric: 'frames', seconds: 7 }),
       pause(3_000).then(() => d.tap(start, { settle: false })),
     ]);
     console.log(query, '\n', r.text);

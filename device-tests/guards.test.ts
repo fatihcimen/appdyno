@@ -135,8 +135,8 @@ for (const [name, serial, provider] of [
       // a list that scrolls while it records: Xcode's profiler counts time on a core, and an idle app has none
       await t.call('open_link', { url: 'appdyno-fixture://open/list' });
       const [first, second] = await Promise.allSettled([
-        t.call('perf_profile', { seconds: 3, scroll: 'down' }),
-        pause(1_500).then(() => t.call('perf_profile', { seconds: 3 })),
+        t.call('measure_performance', { metric: 'cpu', seconds: 3, direction: 'down' }),
+        pause(1_500).then(() => t.call('measure_performance', { metric: 'cpu', seconds: 3 })),
       ]);
       if (first.status !== 'fulfilled' || second.status !== 'fulfilled')
         throw new Error('a recording did not answer');
@@ -190,7 +190,7 @@ describe.skipIf(!phone)('an iPhone that locked itself', () => {
   }, 240_000);
 
   it('reads its thermal state from what it recorded', async () => {
-    const r = await t.call('perf_snapshot', { cpuWindowMs: 2_000 });
+    const r = await t.call('measure_performance', { metric: 'snapshot', cpuWindowMs: 2_000 });
     console.log(r.text);
     expect(r.error, r.text).toBe(false);
     expect(r.text).toMatch(/thermal \d/);

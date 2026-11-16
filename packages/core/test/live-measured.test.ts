@@ -126,7 +126,7 @@ describe("a device's numbers each second", () => {
       const reads = [
         { totalFrames: 1_000, jankyFrames: 40, frozenFrames: 3 },
         { totalFrames: 1_060, jankyFrames: 70, frozenFrames: 4 },
-        // perf_scroll began its own window here
+        // measure_performance scroll began its own window here
         { totalFrames: 12, jankyFrames: 11, frozenFrames: 0 },
         { totalFrames: 72, jankyFrames: 70, frozenFrames: 0 },
       ];

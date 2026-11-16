@@ -53,15 +53,15 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
 
   it('frames: the probe attaches itself, measures nothing of the first screen it leaves, and tells a 40 ms draw from a plain list', async () => {
     await open('list_heavy');
-    const first = await t.call('perf_scroll', { repeats: 1 });
+    const first = await t.call('measure_performance', { metric: 'scroll', repeats: 1 });
     console.log(first.text);
     expect([first.error, first.data.code]).toEqual([true, 'CHECK_FAILED']);
     expect(first.text).toMatch(/relaunched with the frame probe in it, and shows its first screen/);
 
     await open('list');
-    const light = await t.call('perf_scroll');
+    const light = await t.call('measure_performance', { metric: 'scroll' });
     await open('list_heavy');
-    const heavy = await t.call('perf_scroll');
+    const heavy = await t.call('measure_performance', { metric: 'scroll' });
     console.log('light', light.text, '\nheavy', heavy.text);
     expect(light.text).toMatch(/main-thread pacing/);
     const of = (a: typeof light) => a.data.rounds;
@@ -73,7 +73,11 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
 
   it('probe: false puts no probe in: a held one measures and the answer says so, and with none its refusal is not kept as what the device cannot do', async () => {
     await open('list');
-    const held = await t.call('perf_scroll', { probe: false, repeats: 1 });
+    const held = await t.call('measure_performance', {
+      metric: 'scroll',
+      probe: false,
+      repeats: 1,
+    });
     console.log(held.text);
     expect(held.error).toBe(false);
     expect(held.text).toMatch(/probe: false put no probe in and relaunched nothing/);
@@ -81,7 +85,7 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     await t.call('set_device', { name: 'restore' });
     await d.terminate(APP);
     await d.launch(APP);
-    const off = await t.call('perf_scroll', { probe: false, repeats: 1 });
+    const off = await t.call('measure_performance', { metric: 'scroll', probe: false, repeats: 1 });
     console.log(off.text);
     expect(off.error).toBe(true);
     expect(off.data.code).toBe('UNSUPPORTED');
@@ -89,11 +93,11 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
   }, 240_000);
 
   it('stalls: a 500 ms stall reads within 10 %', async () => {
-    await t.call('perf_trace', { seconds: 1 });
+    await t.call('measure_performance', { metric: 'frames', seconds: 1 });
     const s = await open('stall');
     const [r] = await Promise.all([
       // the window has room for its start and for a tap slowed by a loaded Mac
-      t.call('perf_trace', { seconds: 8 }),
+      t.call('measure_performance', { metric: 'frames', seconds: 8 }),
       pause(3_000).then(() => d.tap(byId(s, 'stall_500'), { settle: false })),
     ]);
     console.log(r.text);
@@ -103,13 +107,13 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
   }, 120_000);
 
   it('frozen: a 1 s stall during a scroll reads as one, a plain list as none', async () => {
-    await t.call('perf_trace', { seconds: 1 });
+    await t.call('measure_performance', { metric: 'frames', seconds: 1 });
     await open('list');
-    const light = await t.call('perf_scroll');
+    const light = await t.call('measure_performance', { metric: 'scroll' });
     await d.terminate(APP);
-    await t.call('perf_trace', { seconds: 1 });
+    await t.call('measure_performance', { metric: 'frames', seconds: 1 });
     await open('list_stall');
-    const stalled = await t.call('perf_scroll');
+    const stalled = await t.call('measure_performance', { metric: 'scroll' });
     console.log('frozen', light.data.frozen, stalled.data.frozen, stalled.text);
     expect(light.data.frozen).toBe(0);
     expect(stalled.data.frozen).toBe(1);
@@ -138,7 +142,12 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
   }, 600_000);
 
   it('why slow: an operation keeps the phases for the dashboard', async () => {
-    const r = await t.call('perf_launch', { repeats: 1, trace: true, scenario: 'why' });
+    const r = await t.call('measure_performance', {
+      metric: 'launch',
+      repeats: 1,
+      trace: true,
+      scenario: 'why',
+    });
     expect(r.error).toBe(false);
     expect(r.text).toMatch(/where the time went: .*main/);
     const keys = await runKeys(t.measurements, { app: APP });
@@ -153,7 +162,11 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     await d.launch(APP);
     const s = await open('cpu');
     await pause(3_000);
-    const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 2_000 });
+    const idle = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['energy'],
+      cpuWindowMs: 2_000,
+    });
     // its loop lasts 3 s, and the snapshot reads the CPU before the energy
     // set to false below, which the compiler does not follow into the loop
     let on = true as boolean;
@@ -164,7 +177,11 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
       }
     })();
     await pause(500);
-    const busy = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 2_000 });
+    const busy = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['energy'],
+      cpuWindowMs: 2_000,
+    });
     on = false;
     await loop;
     console.log('energy', idle.data.energyMj, busy.data.energyMj, busy.text);

@@ -23,7 +23,7 @@ import { moved } from '../scroll.js';
 import { Coord, NAME_AN_ELEMENT, Selector } from '../step-schemas.js';
 import { aim, wordsOf } from '../targets.js';
 import { ScrollOut } from './schemas.js';
-import { defineOp, ACT, reply, ToolError } from '../tool.js';
+import { definePart, ACT, reply, ToolError } from '../tool.js';
 import { perfTools, App, byHeldProbe, Probe, Scenario, kb, BAD_ROWS, appTopOf } from './shared.js';
 import { frameVitals, playLine } from './vitals.js';
 
@@ -70,7 +70,7 @@ function scrollMetrics(
     { kind: 'hitches.worst_ms', unit: 'ms', samples: o.hitches },
     { kind: 'memory.end_kb', unit: 'kb', samples: rounds.map((x) => x.memEndKb) },
     { kind: 'stalls.worst_ms', unit: 'ms', samples: o.stalls },
-    // a surface's own, as perf_snapshot keeps them: each round's
+    // a surface's own, as measure_performance snapshot keeps them: each round's
     { kind: 'surface.p95_ms', unit: 'ms', samples: surfaced.map((x) => x.p95Ms) },
     {
       kind: 'surface.slow_34_percent',
@@ -253,11 +253,8 @@ export function perfScrollOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller } =
     perfTools(ctx);
   const clean = (t: string) => redact(ctx.policy, t);
-  return defineOp({
+  return definePart({
     name: 'perf_scroll',
-    title: 'Scroll performance',
-    description:
-      'Scroll jank: frames, frozen frames and memory of a list, in rounds of `swipes` swipes into new rows: one, three under a scenario. x and y or a selector name the list. At its end a list comes back; one that does not move is refused.',
     input: z
       .object({
         app: App,

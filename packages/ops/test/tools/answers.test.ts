@@ -26,20 +26,14 @@ describe('tool list', () => {
         "capture_network",
         "check_element",
         "check_screen",
+        "compare_performance",
         "inspect_app",
         "launch_app",
         "list_devices",
         "manage_app",
         "manage_simulator",
+        "measure_performance",
         "open_link",
-        "perf_compare",
-        "perf_heap",
-        "perf_launch",
-        "perf_profile",
-        "perf_query",
-        "perf_scroll",
-        "perf_snapshot",
-        "perf_trace",
         "press_key",
         "read_logs",
         "read_screen",
@@ -68,14 +62,7 @@ describe('tool list', () => {
         .filter((t) => t.annotations?.readOnlyHint)
         .map((t) => t.name)
         .sort(),
-    ).toEqual([
-      'check_element',
-      'list_devices',
-      'perf_query',
-      'perf_snapshot',
-      'read_logs',
-      'read_screen',
-    ]);
+    ).toEqual(['check_element', 'list_devices', 'read_logs', 'read_screen']);
     expect(tools.length).toBeLessThanOrEqual(48);
   });
 
@@ -110,7 +97,7 @@ describe('structured answers', () => {
     expect(await sc('list_devices')).toMatchObject({
       devices: [{ serial: 'emulator-5580', allowed: true }],
     });
-    expect(await sc('perf_launch')).toMatchObject({
+    expect(await sc('measure_performance', { metric: 'launch' })).toMatchObject({
       mode: 'cold',
       medianMs: 600,
       excessive: false,

@@ -52,17 +52,21 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
 
   it('frozen: a 1 s stall during a scroll reads as one, a plain list as none', async () => {
     await open('list', 'list');
-    const light = await t.call('perf_scroll');
+    const light = await t.call('measure_performance', { metric: 'scroll' });
     await open('list_stall', 'list_stall');
-    const stalled = await t.call('perf_scroll');
+    const stalled = await t.call('measure_performance', { metric: 'scroll' });
     console.log('frozen', light.data.frozen, stalled.data.frozen, stalled.text);
     expect(light.data.frozen).toBe(0);
     expect(stalled.data.frozen).toBe(1);
   }, 180_000);
 
-  it('frozen: the frame timeline says it too, in perf_trace', async () => {
+  it('frozen: the frame timeline says it too, in measure_performance frames', async () => {
     await open('list_stall', 'list_stall');
-    const r = await t.call('perf_trace', { scroll: 'up', seconds: 6 });
+    const r = await t.call('measure_performance', {
+      metric: 'frames',
+      direction: 'up',
+      seconds: 6,
+    });
     console.log(r.text);
     expect(r.error).toBe(false);
     expect(r.data.frozen).toBe(1);
@@ -70,7 +74,12 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
   }, 180_000);
 
   it('why slow: an operation keeps the phases for the dashboard', async () => {
-    const r = await t.call('perf_launch', { repeats: 1, trace: true, scenario: 'why' });
+    const r = await t.call('measure_performance', {
+      metric: 'launch',
+      repeats: 1,
+      trace: true,
+      scenario: 'why',
+    });
     console.log(r.text);
     expect(r.error).toBe(false);
     const keys = await runKeys(t.measurements, { app: APP });
@@ -86,7 +95,11 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     assert(cpuLoad);
     const counted = await onBattery();
     await pause(1_000);
-    const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 3_000 });
+    const idle = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['energy'],
+      cpuWindowMs: 3_000,
+    });
     // its loop lasts 3 s, and the snapshot reads the CPU before the energy
     // set to false below, which the compiler does not follow into the loop
     let on = true as boolean;
@@ -97,7 +110,11 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
       }
     })();
     await pause(500);
-    const busy = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 3_000 });
+    const busy = await t.call('measure_performance', {
+      metric: 'snapshot',
+      also: ['energy'],
+      cpuWindowMs: 3_000,
+    });
     on = false;
     await loop;
     console.log('energy', idle.text, '\n', busy.text);

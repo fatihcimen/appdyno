@@ -168,8 +168,8 @@ describe('a ref on a screen an app moved by itself', () => {
 
   it('runs a profile beside an action, and one that scrolls meanwhile in its turn', async () => {
     for (const [scroll, order] of [
-      [undefined, ['perf_profile', 'tap']],
-      ['down', ['tap', 'perf_profile']],
+      [undefined, ['cpu', 'tap']],
+      ['down', ['tap', 'cpu']],
     ] as const) {
       const d = new FakeDevice();
       const own = d.act.bind(d);
@@ -183,7 +183,11 @@ describe('a ref on a screen an app moved by itself', () => {
       const end = (name: string) => () => void done.push(name);
       await Promise.all([
         call('tap_screen', { selector: { text: 'Form' } }).then(end('tap')),
-        call('perf_profile', { seconds: 1, ...(scroll && { scroll }) }).then(end('perf_profile')),
+        call('measure_performance', {
+          metric: 'cpu',
+          seconds: 1,
+          ...(scroll && { direction: scroll }),
+        }).then(end('cpu')),
       ]);
       expect(done, scroll).toEqual(order);
     }
@@ -195,7 +199,7 @@ describe('a ref on a screen an app moved by itself', () => {
       [{ what: 'hangs' }, true, true],
       [{ probe: false }, true, true],
       [{}, true, false],
-      [{ scroll: 'down' }, false, false],
+      [{ direction: 'down' }, false, false],
       [{ what: 'xct_launch' }, false, false],
     ] as const) {
       const d = new FakeDevice();
@@ -216,7 +220,7 @@ describe('a ref on a screen an app moved by itself', () => {
       Object.defineProperty(d, 'measure', { get: () => measure });
       const { call } = await connect(d);
       await call('read_screen');
-      const trace = call('perf_trace', { seconds: 6, ...args });
+      const trace = call('measure_performance', { metric: 'frames', seconds: 6, ...args });
       // as a client sends it a few seconds into the trace
       await new Promise((r) => setTimeout(r, 50));
       const tap = call('tap_screen', { selector: { text: 'Form' } });

@@ -11,7 +11,7 @@ vi.mock('node:os', async (original) => ({
 const at = '2026-11-03T00:00:00.000Z';
 
 const traced = (args: Record<string, unknown>, measures: Record<string, unknown>) =>
-  keptBy('perf_trace', args, measures);
+  keptBy('measure_performance', { ...args, metric: 'frames' }, measures);
 
 const common = {
   id: expect.any(String) as unknown,
@@ -21,7 +21,7 @@ const common = {
 };
 const head = expect.stringMatching(/^measurement pm-\w+$/) as unknown;
 
-describe('perf_trace', () => {
+describe('measure_performance frames', () => {
   describe('a hold of the main thread', () => {
     const timeline = (over: Record<string, number>) => ({
       frameTrace: () =>
@@ -107,7 +107,7 @@ describe('perf_trace', () => {
       '120 frames; late by the app 4 (8%); any jank 5 (10%: buffer stuffing 1, compositor 0)',
       'frame time p50 9 ms, p95 30 ms, worst 45 ms; frozen frames: 1',
       'overrun p95 3 ms, worst 5 ms; CPU p95 7 ms',
-      'trace (perf_query): /t.pftrace',
+      'trace (compare_performance query): /t.pftrace',
       expect.stringMatching(/^raw output: /),
     ]);
     expect(r.data).toEqual({

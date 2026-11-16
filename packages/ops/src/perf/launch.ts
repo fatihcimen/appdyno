@@ -20,7 +20,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { LaunchOut } from './schemas.js';
 import type { Session } from '../session.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError } from '../tool.js';
+import { definePart, DESTRUCTIVE, reply, ToolError } from '../tool.js';
 import { keepBaseline } from './compare.js';
 import { perfTools, App, Probe, Scenario, deviceInfo, rewriteDashboard } from './shared.js';
 import { baselineLines, baselineVerdict } from './baseline.js';
@@ -143,7 +143,7 @@ async function launchRun(
                     .join(', ')}`,
                 ]
               : []),
-            `trace (perf_query): ${startup.tracePath}`,
+            `trace (compare_performance query): ${startup.tracePath}`,
           ]
         : []),
       // where it was before is not where a start leaves it: the next call must not take it for that screen
@@ -178,8 +178,8 @@ async function launchRun(
 async function nextOf(ctx: ServerContext, key: RunKey) {
   const held = runsIn(await loadBaseline(ctx.perfDir, key));
   if (held >= MIN_BASELINE_RUNS)
-    return `perf_compare with scenario ${key.scenario} compares this run with its baseline of ${held} runs`;
-  return `kept as one run of ${key.scenario}, not as a baseline: ${held ? `its baseline holds ${held} of the ${MIN_BASELINE_RUNS} runs it needs` : 'it has none'}; perf_launch with baseline: true measures ${MIN_BASELINE_RUNS} runs and keeps them as one`;
+    return `compare_performance with scenario ${key.scenario} compares this run with its baseline of ${held} runs`;
+  return `kept as one run of ${key.scenario}, not as a baseline: ${held ? `its baseline holds ${held} of the ${MIN_BASELINE_RUNS} runs it needs` : 'it has none'}; measure_performance launch with baseline: true measures ${MIN_BASELINE_RUNS} runs and keeps them as one`;
 }
 
 /** What a cold or warm start leaves the app on. */
@@ -187,16 +187,13 @@ const RESTARTED = 'the app was started anew: it shows its first screen';
 
 /** Where no store rates a start, what tells a slow one is the app's own runs before. */
 const UNRATED =
-  'no limit of a slow start is rated on this platform: judge it against a baseline (perf_launch baseline: true, then perf_compare)';
+  'no limit of a slow start is rated on this platform: judge it against a baseline (measure_performance launch baseline: true, then compare_performance)';
 
 export function perfLaunchOp(ctx: ServerContext) {
   const tools = perfTools(ctx);
   const { measure, measuredApp, virtualNote, save, keep, noisy } = tools;
-  return defineOp({
+  return definePart({
     name: 'perf_launch',
-    title: 'Launch time',
-    description:
-      'App startup time: cold (stopped first), warm (process alive, activity new) or hot (back from the background); a warm-up, then `repeats` launches. `trace` adds one start that names why it was slow. Android: `compile` sets the compile state (then reset). The app restarts.',
     input: z
       .object({
         app: App,
@@ -213,7 +210,7 @@ export function perfLaunchOp(ctx: ServerContext) {
         baseline: z
           .boolean()
           .optional()
-          .describe(`${MIN_BASELINE_RUNS} runs, added to perf_compare's baseline`),
+          .describe(`${MIN_BASELINE_RUNS} runs, added to compare_performance's baseline`),
       })
       .strict(),
     output: LaunchOut,
@@ -296,7 +293,7 @@ export function perfLaunchOp(ctx: ServerContext) {
       const kept = await keepBaseline(ctx, key, MIN_BASELINE_RUNS);
       await rewriteDashboard(ctx);
       const next = kept.ready
-        ? `perf_compare with scenario ${key.scenario} compares a later run with it`
+        ? `compare_performance with scenario ${key.scenario} compares a later run with it`
         : `not a baseline yet: ${kept.lines.join('; ')}`;
       return reply(
         [

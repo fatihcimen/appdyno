@@ -32,7 +32,8 @@ describe.skipIf(!serial)('battery signals on Android', () => {
     return e;
   };
   const reading = (windowMs: number) =>
-    t.call('perf_snapshot', {
+    t.call('measure_performance', {
+      metric: 'snapshot',
       also: ['battery'],
       cpuWindowMs: 500,
       batteryWindowMs: windowMs,

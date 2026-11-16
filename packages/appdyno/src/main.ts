@@ -277,7 +277,7 @@ async function operationCommand(command: string | undefined, rest: string[]) {
     return 2;
   }
   if (gate) rest.push('--action', gate);
-  const name = gate ? 'perf-compare' : command;
+  const name = gate ? 'compare-performance' : command;
   const device = deviceFlag(command, rest);
   // use-device has its own flag of that name
   const shareAt = command === 'use-device' ? -1 : rest.indexOf('--share');

@@ -118,7 +118,7 @@ describe('the policy a program gives', () => {
       code: 'POLICY_DENIED',
     });
     device.screen = 'settings';
-    const { text } = await tools.tool('screen', {});
+    const { text } = await tools.tool('read_screen', {});
     expect(text).toContain('•••');
     expect(text).not.toMatch(/Wi-Fi|Bluetooth/);
     await tools.close();
@@ -149,7 +149,7 @@ describe('the signing a program gives', () => {
     expect(providersGiven[4]).toBeUndefined();
     await plain.close();
     const tools = connect({ device: SERIAL, share: true, signing });
-    await tools.tool('screen', {});
+    await tools.tool('read_screen', {});
     expect(providersGiven[4]).toEqual(signing);
     await tools.close();
   });

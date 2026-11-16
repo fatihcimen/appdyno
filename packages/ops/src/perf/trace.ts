@@ -13,7 +13,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
 import { TraceOut } from './schemas.js';
-import { defineOp, ACT, reply } from '../tool.js';
+import { definePart, ACT, reply } from '../tool.js';
 import { perfTools, App, byHeldProbe, Dsym, Probe, Scenario, symbolsOf } from './shared.js';
 
 /** Why the slow frames were slow, or that the trace cannot say: never a guess. */
@@ -163,9 +163,9 @@ function hitchesSaid(v: Extract<FrameTrace, { kind: 'hitches' }>): Said {
   };
 }
 
-/** Of a timeline of few frames, where the app has a surface of its own that drew, as perf_scroll says of its rounds. */
+/** Of a timeline of few frames, where the app has a surface of its own that drew, as measure_performance scroll says of its rounds. */
 const OWN_SURFACE =
-  "the app draws on its own surface, as a Flutter app or a game does, and these frames leave it out: perf_scroll reads that surface's frames";
+  "the app draws on its own surface, as a Flutter app or a game does, and these frames leave it out: measure_performance scroll reads that surface's frames";
 
 /** Whether the app has a surface of its own that drew: none on a device that reads no surface. */
 const drawsOnItsOwn = (s: Session, pkg: string) =>
@@ -235,7 +235,7 @@ function timelineSaid(
       ...causeLines(v.causes),
     ],
     after: (raw) => [
-      ...(v.tracePath ? [`trace (perf_query): ${v.tracePath}`] : []),
+      ...(v.tracePath ? [`trace (compare_performance query): ${v.tracePath}`] : []),
       `raw output: ${raw}`,
     ],
     data: {
@@ -258,11 +258,8 @@ function timelineSaid(
 export function perfTraceOp(ctx: ServerContext) {
   const { measure, measuredApp, virtualNote, save, keep, noisy, withProbe, scroller } =
     perfTools(ctx);
-  return defineOp({
+  return definePart({
     name: 'perf_trace',
-    title: 'Frame trace',
-    description:
-      "Why frames were slow, jank: frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches and causes; iOS simulator: main-thread pacing, by a probe). `what`: hangs (iPhone), or XCTest's hitch or launch metric.",
     input: z
       .object({
         app: App,
@@ -276,7 +273,7 @@ export function perfTraceOp(ctx: ServerContext) {
       .strict(),
     output: TraceOut,
     annotations: ACT,
-    // with no swipe and no relaunch it only records, beside the taps that load the app it traces, as perf_profile
+    // with no swipe and no relaunch it only records, beside the taps that load the app it traces, as measure_performance cpu
     readsOnly: ({ scroll, what, probe }) =>
       !scroll &&
       (what === 'hangs' ||

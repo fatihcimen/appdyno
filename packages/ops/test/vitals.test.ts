@@ -96,7 +96,7 @@ describe("a snapshot's frozen frames", () => {
         storage: { measurements: mkdtempSync(join(tmpdir(), 'appdyno-vitals-')) },
       },
     );
-    return callerOf(ctx)('perf_snapshot', {});
+    return callerOf(ctx)('measure_performance', { metric: 'snapshot' });
   };
 
   it("are said as the summary's, which has no rows behind it here", async () => {
@@ -146,7 +146,11 @@ describe('why a hang was a hang, in an answer', () => {
 
   it('says busy or blocked, and that an address needs its dSYM', async () => {
     const { call, asked } = device('ios');
-    const r = await call('perf_trace', { what: 'hangs', dsym: '/a/Fixture.dSYM' });
+    const r = await call('measure_performance', {
+      metric: 'frames',
+      what: 'hangs',
+      dsym: '/a/Fixture.dSYM',
+    });
     expect(r.text).toContain('513 ms hang: busy, on the CPU 97 % of it, in 0x1004c577b');
     expect(r.text).toContain('`dsym` names it');
     expect(r.data.hangCauses).toHaveLength(1);
@@ -155,8 +159,8 @@ describe('why a hang was a hang, in an answer', () => {
 
   it('refuses a dSYM on Android, by name', async () => {
     const { call } = device('android');
-    await expect(call('perf_trace', { what: 'hangs', dsym: '/a/x.dSYM' })).rejects.toThrow(
-      ToolError,
-    );
+    await expect(
+      call('measure_performance', { metric: 'frames', what: 'hangs', dsym: '/a/x.dSYM' }),
+    ).rejects.toThrow(ToolError);
   });
 });

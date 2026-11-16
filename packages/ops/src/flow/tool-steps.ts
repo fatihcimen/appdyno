@@ -29,9 +29,7 @@ const LOOKS: Record<string, string[]> = {
  * a replay: a cold start is a stop and a launch, a scroll its swipes.
  */
 const swipes = (a: Record<string, unknown>, count: number) =>
-  Array.from({ length: count }, () =>
-    stepOf('swipe', {}, { direction: (a.direction ?? a.scroll) as string }),
-  );
+  Array.from({ length: count }, () => stepOf('swipe', {}, { direction: a.direction as string }));
 const restarts = (
   a: Record<string, unknown>,
   how: Record<string, string | string[] | boolean | undefined> = {},
@@ -39,25 +37,30 @@ const restarts = (
   stepOf('stop', {}, { app: a.app as string | undefined }),
   stepOf('launch', {}, { app: a.app as string | undefined, ...how }),
 ];
-const MEASURES: Record<string, ToStep> = {
-  perf_launch: (a) =>
+/** What a metric does to the screen; a snapshot and a heap dump do nothing to it. */
+const BY_METRIC: Record<string, ToStep> = {
+  launch: (a) =>
     a.mode === 'cold' ? restarts(a) : stepOf('launch', {}, { app: a.app as string | undefined }),
-  perf_scroll: (a, data) => {
+  scroll: (a, data) => {
     const count = a.swipes as number;
-    const back = { direction: a.direction === 'up' ? 'down' : 'up' };
+    const on = { direction: a.direction ?? 'up' };
+    const back = { direction: on.direction === 'up' ? 'down' : 'up' };
     const rounds = (data.rounds as { rewound?: boolean }[]).map((round) => [
       ...(round.rewound ? swipes(back, count) : []),
-      ...swipes(a, count),
+      ...swipes(on, count),
     ]);
     return rounds.flat();
   },
-  perf_trace: (a) => [
+  frames: (a) => [
     ...(String(a.what).startsWith('xct_') ? restarts(a) : []),
-    ...(a.scroll ? swipes(a, SCROLLER_SWIPES) : []),
+    ...(a.direction ? swipes(a, SCROLLER_SWIPES) : []),
   ],
-  perf_profile: (a) => (a.scroll ? swipes(a, SCROLLER_SWIPES) : undefined),
+  cpu: (a) => (a.direction ? swipes(a, SCROLLER_SWIPES) : undefined),
+};
+const MEASURES: Record<string, ToStep> = {
+  measure_performance: (a, data) => BY_METRIC[a.metric as string]?.(a, data),
   // a gate reads what is kept, and refuses to look at a device while a recording runs
-  perf_compare: () => undefined,
+  compare_performance: () => undefined,
 };
 
 /** An op with no step of its own, as a flow step; a refused action is none, and any other op stops a replay. */

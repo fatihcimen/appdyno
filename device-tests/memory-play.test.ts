@@ -15,7 +15,8 @@ describe.skipIf(!serial)('memory by Play’s metric', () => {
   const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
   let d: AndroidDevice;
   const read = async () => {
-    const r = await t.call('perf_snapshot', {
+    const r = await t.call('measure_performance', {
+      metric: 'snapshot',
       also: ['anonMemory'],
       cpuWindowMs: 500,
       scenario: 'memory',

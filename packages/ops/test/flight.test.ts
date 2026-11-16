@@ -549,10 +549,10 @@ describe('the flight recorder', () => {
   it('leaves its mark on what is measured while it runs: an encoder is at work on the device', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    const quiet = await call('perf_snapshot');
+    const quiet = await call('measure_performance', { metric: 'snapshot' });
     expect(quiet.data.noise).not.toContain('mirrored');
     await call('record_session', { kind: 'flight', action: 'start' });
-    const during = await call('perf_snapshot');
+    const during = await call('measure_performance', { metric: 'snapshot' });
     expect(during.data.noise).toContain('mirrored');
     await call('record_session', { kind: 'report', action: 'stop' });
   });

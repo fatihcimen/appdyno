@@ -56,9 +56,12 @@ function context(
     { device: device.serial, app: 'dev.appdyno.fixture', storage: { measurements, perf } },
   );
   const ops = checkedOps(ctx);
+  const measure = must(ops.measure_performance, 'measure_performance');
   return {
-    perf_launch: must(ops.perf_launch, 'perf_launch'),
-    perf_compare: must(ops.perf_compare, 'perf_compare'),
+    launch: {
+      handler: (args: Record<string, unknown>) => measure.handler({ metric: 'launch', ...args }),
+    },
+    gate: must(ops.compare_performance, 'compare_performance'),
   };
 }
 
@@ -77,30 +80,30 @@ describe('the gate', () => {
     const project = fresh();
     const startup = { ms: 500 };
     const ops = context(startup, dir, project);
-    for (let i = 0; i < 3; i++) await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    const b = await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 3 });
+    for (let i = 0; i < 3; i++) await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    const b = await ops.gate.handler({ action: 'baseline', format: 'text', last: 3 });
     expect(text(b)).toMatch(/baselines\/dev\.appdyno\.fixture\/launch-cold\/.*: 3 runs$/m);
 
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    const same = await ops.perf_compare.handler({ action: 'compare', format: 'text', last: 1 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    const same = await ops.gate.handler({ action: 'compare', format: 'text', last: 1 });
     expect(text(same)).toMatch(/^\s+ok\s+launch\.ttid_ms/m);
     expect(same.data.exitCode).toBe(0);
 
     startup.ms = 900;
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    const worse = await ops.perf_compare.handler({ action: 'compare', format: 'text', last: 1 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    const worse = await ops.gate.handler({ action: 'compare', format: 'text', last: 1 });
     expect(text(worse)).toMatch(/regression\s+launch\.ttid_ms: 902.5 ms against 502.5/);
     expect(worse.data.exitCode).toBe(1);
-    const junit = await ops.perf_compare.handler({ action: 'compare', format: 'junit', last: 1 });
+    const junit = await ops.gate.handler({ action: 'compare', format: 'junit', last: 1 });
     expect(text(junit)).toContain('<failure message="regression');
-    const json = await ops.perf_compare.handler({ action: 'compare', format: 'json', last: 1 });
+    const json = await ops.gate.handler({ action: 'compare', format: 'json', last: 1 });
     expect(gateJson(json).failed).toBe(true);
 
     writeFileSync(
       join(project, 'budgets.json'),
       JSON.stringify([{ kind: 'launch.ttid_ms', max: 800 }]),
     );
-    const budget = await ops.perf_compare.handler({ action: 'budget', format: 'text', last: 1 });
+    const budget = await ops.gate.handler({ action: 'budget', format: 'text', last: 1 });
     expect(text(budget)).toMatch(/over budget launch\.ttid_ms: 902.5 \(max 800\)/);
     expect(budget.data.exitCode).toBe(1);
   });
@@ -110,8 +113,8 @@ describe('the gate', () => {
     const ops = context({ ms: 900 }, fresh(), project);
     const rule = { action: 'budget', format: 'text', last: 1, kind: 'launch.ttid_ms' } as const;
     const scope = { app: 'dev.appdyno.fixture', scenario: 'launch-cold' };
-    await ops.perf_compare.handler({ ...rule, ...scope, max: 150 });
-    const set = await ops.perf_compare.handler({ ...rule, ...scope, max: 200 });
+    await ops.gate.handler({ ...rule, ...scope, max: 150 });
+    const set = await ops.gate.handler({ ...rule, ...scope, max: 200 });
     expect(text(set)).toBe(
       `budget launch.ttid_ms max 200 for dev.appdyno.fixture, launch-cold, in ${join(project, 'budgets.json')}\nno run is kept yet to hold to it: it holds from the next one`,
     );
@@ -119,21 +122,21 @@ describe('the gate', () => {
     expect(JSON.parse(readFileSync(join(project, 'budgets.json'), 'utf8'))).toEqual([
       { kind: 'launch.ttid_ms', max: 200, ...scope },
     ]);
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    const over = await ops.perf_compare.handler({ action: 'budget', format: 'text', last: 1 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    const over = await ops.gate.handler({ action: 'budget', format: 'text', last: 1 });
     expect(text(over)).toMatch(/over budget launch\.ttid_ms: 902.5 \(max 200\)/);
     expect(over.data.exitCode).toBe(1);
-    const other = await ops.perf_compare.handler({ ...rule, kind: 'frames.p95_ms', max: 20 });
+    const other = await ops.gate.handler({ ...rule, kind: 'frames.p95_ms', max: 20 });
     expect(text(other)).toContain('no run kept here has frames.p95_ms: they have launch.ttid_ms');
     await expect(
-      ops.perf_compare.handler({ ...rule, kind: 'launch.cold_ms', max: 200 }),
+      ops.gate.handler({ ...rule, kind: 'launch.cold_ms', max: 200 }),
     ).rejects.toMatchObject({
       code: 'INVALID_ARGUMENT',
       message: 'no kind launch.cold_ms',
       hint: expect.stringContaining('launch.ttid_ms') as unknown,
     });
     await expect(
-      ops.perf_compare.handler({ action: 'compare', format: 'text', last: 1, max: 9 }),
+      ops.gate.handler({ action: 'compare', format: 'text', last: 1, max: 9 }),
     ).rejects.toThrow('kind, max and min set a budget');
   });
 
@@ -147,9 +150,9 @@ describe('the gate', () => {
         )[0],
         'its metric',
       ).runs.length;
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 1 });
-    const again = await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 3 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    await ops.gate.handler({ action: 'baseline', format: 'text', last: 1 });
+    const again = await ops.gate.handler({ action: 'baseline', format: 'text', last: 3 });
     expect(runs(again)).toBe(1);
     expect(text(again)).toContain('1 already in it, not added again');
     expect(text(again)).toContain('only 1 of the 3 runs asked for is kept');
@@ -158,8 +161,8 @@ describe('the gate', () => {
   it('is not done until it can call a regression, and says what is missing', async () => {
     const ops = context({ ms: 500 }, fresh(), fresh());
     const add = async () => {
-      await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-      return ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 1 });
+      await ops.launch.handler({ mode: 'cold', repeats: 5 });
+      return ops.gate.handler({ action: 'baseline', format: 'text', last: 1 });
     };
     const first = await add();
     expect(text(first)).toContain('1 of the 3 runs a comparison needs, 2 missing');
@@ -173,32 +176,32 @@ describe('the gate', () => {
     expect(third.data.exitCode).toBe(0);
   });
 
-  it('keeps a baseline from perf_launch alone when asked, and says of every run what it is kept as', async () => {
+  it('keeps a baseline from measure_performance launch alone when asked, and says of every run what it is kept as', async () => {
     const ops = context({ ms: 500 }, fresh(), fresh());
-    const one = await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    const one = await ops.launch.handler({ mode: 'cold', repeats: 5 });
     expect(one.data.next).toBe(
-      'kept as one run of launch-cold, not as a baseline: it has none; perf_launch with baseline: true measures 3 runs and keeps them as one',
+      'kept as one run of launch-cold, not as a baseline: it has none; measure_performance launch with baseline: true measures 3 runs and keeps them as one',
     );
-    const kept = await ops.perf_launch.handler({ mode: 'cold', repeats: 5, baseline: true });
+    const kept = await ops.launch.handler({ mode: 'cold', repeats: 5, baseline: true });
     expect(text(kept)).toMatch(/^run 3 of 3:$/m);
     expect(text(kept)).toMatch(
       /^baseline: .*baselines\/dev\.appdyno\.fixture\/launch-cold\/.*: 3 runs$/m,
     );
     expect(existsSync(String(kept.data.baselineFile))).toBe(true);
     expect(kept.data.next).toBe(
-      'perf_compare with scenario launch-cold compares a later run with it',
+      'compare_performance with scenario launch-cold compares a later run with it',
     );
-    const later = await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    const later = await ops.launch.handler({ mode: 'cold', repeats: 5 });
     expect(later.data.next).toBe(
-      'perf_compare with scenario launch-cold compares this run with its baseline of 3 runs',
+      'compare_performance with scenario launch-cold compares this run with its baseline of 3 runs',
     );
-    const same = await ops.perf_compare.handler({ action: 'compare', format: 'text', last: 1 });
+    const same = await ops.gate.handler({ action: 'compare', format: 'text', last: 1 });
     expect(text(same)).toMatch(/^\s+ok\s+launch\.ttid_ms/m);
   });
 
   it('says in its next step why the runs it measured for a baseline are none yet', async () => {
     const ops = context({ ms: 500 }, fresh(), fresh(), { thermalStatus: 3 });
-    const kept = await ops.perf_launch.handler({ mode: 'cold', repeats: 5, baseline: true });
+    const kept = await ops.launch.handler({ mode: 'cold', repeats: 5, baseline: true });
     expect(kept.data.next).toMatch(
       /^not a baseline yet: not added, hot-device: measure launch-cold again; .*baseline unchanged: 0 of the 3 runs a comparison needs, 3 missing/,
     );
@@ -208,8 +211,8 @@ describe('the gate', () => {
   it('is not done on runs of a sample each, however many: no comparison could call them', async () => {
     const ops = context({ ms: 500 }, fresh(), fresh(), {}, 1);
     const add = async () => {
-      await ops.perf_launch.handler({ mode: 'cold', repeats: 1 });
-      return ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 1 });
+      await ops.launch.handler({ mode: 'cold', repeats: 1 });
+      return ops.gate.handler({ action: 'baseline', format: 'text', last: 1 });
     };
     await add();
     await add();
@@ -225,11 +228,11 @@ describe('the gate', () => {
   it('says what it holds when a noisy run adds nothing to a baseline still short', async () => {
     const vitals: Record<string, unknown> = {};
     const ops = context({ ms: 500 }, fresh(), fresh(), vitals);
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 1 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    await ops.gate.handler({ action: 'baseline', format: 'text', last: 1 });
     vitals.thermalStatus = 3;
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    const r = await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 1 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    const r = await ops.gate.handler({ action: 'baseline', format: 'text', last: 1 });
     expect(text(r)).toContain('1 of the 3 runs a comparison needs, 2 missing');
     expect(r.data.exitCode).toBe(1);
   });
@@ -237,12 +240,12 @@ describe('the gate', () => {
   it('takes a change it could not judge for no pass, in every format', async () => {
     const startup = { ms: 500 };
     const ops = context(startup, fresh(), fresh());
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 1 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    await ops.gate.handler({ action: 'baseline', format: 'text', last: 1 });
     startup.ms = 900;
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
     const asked = (format: 'text' | 'json' | 'junit') =>
-      ops.perf_compare.handler({ action: 'compare', format, last: 1 });
+      ops.gate.handler({ action: 'compare', format, last: 1 });
     const said = await asked('text');
     expect(text(said)).toMatch(/few-samples\s+launch\.ttid_ms/);
     expect(text(said)).toMatch(/^the gate could not judge \d+ of these: this is no pass/m);
@@ -256,13 +259,13 @@ describe('the gate', () => {
     const startup = { ms: 500 };
     const vitals: Record<string, unknown> = {};
     const ops = context(startup, fresh(), fresh(), vitals);
-    for (let i = 0; i < 3; i++) await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 3 });
+    for (let i = 0; i < 3; i++) await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    await ops.gate.handler({ action: 'baseline', format: 'text', last: 3 });
     startup.ms = 900;
     vitals.thermalStatus = 3;
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
     const asked = (format: 'text' | 'json' | 'junit') =>
-      ops.perf_compare.handler({ action: 'compare', format, last: 1 });
+      ops.gate.handler({ action: 'compare', format, last: 1 });
     const said = await asked('text');
     expect(text(said)).toMatch(/noisy\s+launch\.ttid_ms/);
     expect(text(said)).toMatch(
@@ -278,9 +281,9 @@ describe('the gate', () => {
   it('says which classes have runs when the one asked for has none', async () => {
     const dir = fresh();
     const ops = context({ ms: 500 }, dir, fresh());
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
     await expect(
-      ops.perf_compare.handler({
+      ops.gate.handler({
         action: 'compare',
         deviceClass: 'nope',
         format: 'text',
@@ -292,8 +295,8 @@ describe('the gate', () => {
   it('adds no run measured with noise to a baseline', async () => {
     const project = fresh();
     const ops = context({ ms: 500 }, fresh(), project, { thermalStatus: 3 });
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
-    const r = await ops.perf_compare.handler({ action: 'baseline', format: 'text', last: 1 });
+    await ops.launch.handler({ mode: 'cold', repeats: 5 });
+    const r = await ops.gate.handler({ action: 'baseline', format: 'text', last: 1 });
     expect(text(r)).toMatch(/not added, hot-device: measure launch-cold again/);
     expect(r.data.exitCode).toBe(1);
     expect(existsSync(join(project, 'baselines'))).toBe(false);
@@ -301,16 +304,16 @@ describe('the gate', () => {
 
   it('says when there is nothing measured', async () => {
     const ops = context({ ms: 1 }, fresh(), fresh());
-    await expect(
-      ops.perf_compare.handler({ action: 'compare', format: 'text', last: 1 }),
-    ).rejects.toThrow(/no measured runs/);
+    await expect(ops.gate.handler({ action: 'compare', format: 'text', last: 1 })).rejects.toThrow(
+      /no measured runs/,
+    );
   });
 
   it('keeps context with a run: the kind of device, the build, the source', async () => {
     const dir = fresh();
     const ops = context({ ms: 500 }, dir, fresh());
-    await ops.perf_launch.handler({ mode: 'cold', repeats: 5, scenario: 'first-open' });
-    const json = await ops.perf_compare.handler({
+    await ops.launch.handler({ mode: 'cold', repeats: 5, scenario: 'first-open' });
+    const json = await ops.gate.handler({
       action: 'compare',
       scenario: 'first-open',
       format: 'json',
@@ -323,7 +326,7 @@ describe('the gate', () => {
   });
 });
 
-describe('perf_query', () => {
+describe('compare_performance query', () => {
   it('reads only kept traces, and asks the driver that knows the file', async () => {
     const dir = fresh();
     const device = new FakeDevice();
@@ -355,7 +358,10 @@ describe('perf_query', () => {
       ],
       { storage: { measurements: dir } },
     );
-    const query = must(checkedOps(ctx).perf_query, 'perf_query');
+    const gate = must(checkedOps(ctx).compare_performance, 'compare_performance');
+    const query = {
+      handler: (args: Record<string, unknown>) => gate.handler({ action: 'query', ...args }),
+    };
     const refused = query.handler({ trace: '/etc/passwd', sql: 'SELECT 1', limit: 5 });
     await expect(refused).rejects.toThrow(/not a kept trace/);
     const inside = join(stateDir(), 'traces', 'x.pftrace');
@@ -378,18 +384,20 @@ describe('perf_query', () => {
           new ServerContext(DEFAULT_POLICY, [provider(queryTrace)], {
             storage: { measurements: fresh() },
           }),
-        ).perf_query,
-        'perf_query',
+        ).compare_performance,
+        'compare_performance',
       );
     const none = query(() => Promise.resolve(undefined));
-    // a measurement's id, as a perf_ answer starts with, is no trace: what was given is wrong, nothing denied it
+    // a measurement's id, as a measure_performance answer starts with, is no trace: what was given is wrong, nothing denied it
     for (const trace of ['/etc/passwd', 'pm-0123abcd'])
-      await expect(none.handler({ trace, sql: 'SELECT 1', limit: 5 })).rejects.toMatchObject({
+      await expect(
+        none.handler({ action: 'query', trace, sql: 'SELECT 1', limit: 5 }),
+      ).rejects.toMatchObject({
         code: 'INVALID_ARGUMENT',
-        hint: 'give the file a perf_ answer names on its "trace (perf_query):" line, not a measurement\'s id',
+        hint: 'give the file a measure_performance answer names on its "trace (compare_performance query):" line, not a measurement\'s id',
       });
     const probe = join(stateDir(), 'traces', 'x.jsonl');
-    await expect(none.handler({ trace: probe, limit: 5 })).rejects.toMatchObject({
+    await expect(none.handler({ action: 'query', trace: probe, limit: 5 })).rejects.toMatchObject({
       code: 'UNSUPPORTED',
       message: expect.stringContaining('.pftrace') as unknown,
       hint: expect.stringMatching(/\w/) as unknown,
@@ -398,7 +406,9 @@ describe('perf_query', () => {
       Promise.reject(new DeviceError('INVALID_ARGUMENT', 'not a table name')),
     );
     const inside = join(stateDir(), 'traces', 'x.trace');
-    await expect(bare.handler({ trace: inside, table: 'a"b', limit: 5 })).rejects.toMatchObject({
+    await expect(
+      bare.handler({ action: 'query', trace: inside, table: 'a"b', limit: 5 }),
+    ).rejects.toMatchObject({
       code: 'INVALID_ARGUMENT',
       hint: expect.stringContaining('an Instruments trace (.trace) a table') as unknown,
     });
@@ -406,7 +416,9 @@ describe('perf_query', () => {
     const unread = query(() =>
       Promise.reject(new DeviceError('UNSUPPORTED', 'the trace tool could not read the trace')),
     );
-    await expect(unread.handler({ trace: inside, limit: 5 })).rejects.toMatchObject({
+    await expect(
+      unread.handler({ action: 'query', trace: inside, limit: 5 }),
+    ).rejects.toMatchObject({
       code: 'UNSUPPORTED',
       hint: expect.stringContaining('record it again') as unknown,
     });

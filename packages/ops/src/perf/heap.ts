@@ -3,7 +3,7 @@ import type { HeapReading } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { HeapOut } from './schemas.js';
-import { defineOp, SAVES, reply } from '../tool.js';
+import { definePart, SAVES, reply } from '../tool.js';
 import { keepRefusal, perfTools, App } from './shared.js';
 
 const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
@@ -14,11 +14,8 @@ const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
 
 export function perfHeapOp(ctx: ServerContext) {
   const { measure, measuredApp, save, keep } = perfTools(ctx);
-  return defineOp({
+  return definePart({
     name: 'perf_heap',
-    title: 'Heap dump',
-    description:
-      "Memory leaks: the app's heap into a file (Android: Java HPROF; iOS simulator: an Xcode memory graph; iPhone, development-signed: a Leaks trace; on iOS the leak count). Android `profile`: a Perfetto trace, top classes or sites, on a debuggable or profileable build.",
     input: z
       .object({
         app: App,
@@ -47,7 +44,7 @@ export function perfHeapOp(ctx: ServerContext) {
             `measurement ${saved.id}`,
             `${profile}: ${v.totalBytes} bytes`,
             ...v.top.slice(0, 10).map((e) => `${e.bytes} bytes, ${e.count}× ${e.name}`),
-            `trace (perf_query): ${v.tracePath}`,
+            `trace (compare_performance query): ${v.tracePath}`,
           ].join('\n'),
           { id: saved.id, file: v.tracePath, bytes: v.totalBytes, top: v.top.slice(0, 20) },
         );
@@ -71,7 +68,7 @@ export function perfHeapOp(ctx: ServerContext) {
           s,
           pkg,
           'leaks',
-          "a heap dump has no count of leaks: read it in a memory analyser, or watch Activities rise in perf_scroll's rounds",
+          "a heap dump has no count of leaks: read it in a memory analyser, or watch Activities rise in measure_performance scroll's rounds",
         );
       return reply(
         `measurement ${saved.id}\n${HEAP[v.kind].label}: ${v.file} (${(v.bytes / 1048576).toFixed(1)} MB)${v.leaks !== undefined ? `; ${v.leaks} leaks, ${String(v.leakedBytes)} bytes` : ''}${v.note ? `\n${v.note}` : ''}`,

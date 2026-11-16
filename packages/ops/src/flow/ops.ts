@@ -92,7 +92,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'run_flow',
       title: 'Flow',
       description:
-        'Record your actions as a repeatable test, replayed with no model: record, your calls, stop (file: saves a .flow), run (file). save: the last recording to file. params NAME=value: on record, stop or save, the recorded value becomes ${NAME}; on run, its value. run: from a step; iterations: a journey timed by step, for perf_compare. export: Maestro YAML, to a .yaml path.',
+        'Record your actions as a repeatable test, replayed with no model: record, your calls, stop (file: saves a .flow), run (file). save: the last recording to file. params NAME=value: on record, stop or save, the recorded value becomes ${NAME}; on run, its value. run: from a step; iterations: a journey timed by step, for compare_performance. export: Maestro YAML, to a .yaml path.',
       input: z
         .object({
           action: z.enum(['record', 'stop', 'save', 'run', 'export']),
