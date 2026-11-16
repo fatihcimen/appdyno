@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = join(import.meta.dirname, '../../..');
+const workflows = join(root, '.github/workflows');
 const SUITES = ['ios', 'keys', 'views.simulator', 'flows-ci'].map(
   (name) => `device-tests/${name}.test.ts`,
 );
@@ -102,5 +103,17 @@ describe('the simulator smoke', () => {
     const r = run([['passed', 'failed']], 1);
     expect(r.status).toBe(1);
     expect(r.summary).toContain('| ios.test.ts | 1 | 1 | 0 | 61 |');
+  });
+});
+
+describe('the workflows', () => {
+  const text = (name: string) => readFileSync(join(workflows, name), 'utf8');
+
+  it('publish a tag only after the simulator job, and attach what it said', () => {
+    const release = text('release.yml');
+    expect(text('ci.yml')).toMatch(/\n {2}sim-smoke:\n(?! {4}(if|continue-on-error):)/);
+    expect(release).toMatch(/gate:\n {4}uses: \.\/\.github\/workflows\/ci\.yml/);
+    expect(release).toMatch(/publish:\n {4}needs: gate/);
+    expect(release).toMatch(/name: sim-smoke[^]*device-summary\.md/);
   });
 });

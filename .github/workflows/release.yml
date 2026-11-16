@@ -1,8 +1,9 @@
 name: release
 
-# A tag publishes: `git tag v1.2.3 && git push origin v1.2.3`, for the version every package carries. Run by hand, it
-# is the rehearsal: the gate, and the Mac app built, signed and notarized as a release's is, kept with the run for a
-# person to open, with nothing published.
+# A tag publishes: `git tag v1.2.3 && git push origin v1.2.3`, for the version every package carries, and only a commit
+# whose device suites passed on a simulator in this run, as the gate holds them. Run by hand, it is the rehearsal: the
+# gate, and the Mac app built, signed and notarized as a release's is, kept with the run for a person to open, with
+# nothing published.
 on:
   push:
     tags:
@@ -94,6 +95,13 @@ jobs:
           awk -v v="## $version" '$0 == v { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md |
             sed -E "s#\]\(([A-Za-z][^):]*)\)#](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/v$version/\1)#g" >"$RUNNER_TEMP/notes.md"
           grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"
+      # what the gate's simulator job said of this commit: a release file, beside what it vouches for
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sim-smoke
+          path: ${{ runner.temp }}/sim-smoke
+      - name: The device summary
+        run: cp "$RUNNER_TEMP/sim-smoke/device-summary.md" .app-build/
       - name: The rehearsal's Mac app
         if: github.event_name != 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -104,6 +112,7 @@ jobs:
             .app-build/*.mcpb
             .app-build/appdyno.rb
             .app-build/appcast.json*
+            .app-build/device-summary.md
           if-no-files-found: error
           # .app-build is a hidden folder, which the upload leaves out unless told
           include-hidden-files: true
@@ -126,6 +135,6 @@ jobs:
         # with no update key there is no appcast; the extension by its whole name, as a glob that finds none says nothing
         run: |
           shopt -s nullglob
-          gh release create "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" .app-build/*.dmg ".app-build/appdyno-${GITHUB_REF_NAME#v}.mcpb" .app-build/appdyno.rb .app-build/appcast.json*
+          gh release create "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" .app-build/*.dmg ".app-build/appdyno-${GITHUB_REF_NAME#v}.mcpb" .app-build/appdyno.rb .app-build/appcast.json* .app-build/device-summary.md
         env:
           GH_TOKEN: ${{ github.token }}
