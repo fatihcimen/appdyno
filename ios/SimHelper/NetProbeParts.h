@@ -226,10 +226,14 @@ static _Thread_local int unseenDepth;
 static BOOL webViewsWatched;
 
 /// Puts `counting` in place of a method, given the one it replaces to call. Each passes what it is given and what it
-/// gets as plain pointers, so that who owns an object is as it was: an init takes its receiver and gives one back.
+/// gets as plain pointers, so that who owns an object is as it was: an init takes its receiver and gives one back. A
+/// method the class only inherits is overridden on the class alone: its parent's stays, for every other child.
 static void watch(Class owner, SEL selector, BOOL ofClass, id (^counting)(IMP original)) {
-  Method m = ofClass ? class_getClassMethod(owner, selector) : class_getInstanceMethod(owner, selector);
-  if (m) method_setImplementation(m, imp_implementationWithBlock(counting(method_getImplementation(m))));
+  Class holder = ofClass ? object_getClass(owner) : owner;
+  Method m = class_getInstanceMethod(holder, selector);
+  if (!m) return;
+  IMP counted = imp_implementationWithBlock(counting(method_getImplementation(m)));
+  if (!class_addMethod(holder, selector, counted, method_getTypeEncoding(m))) method_setImplementation(m, counted);
 }
 
 /// One line for what was made, however many of its own methods the making goes through.

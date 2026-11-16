@@ -42,7 +42,7 @@ function ruleOf(
   r: Answered,
   file: string,
   overwrite: boolean | undefined,
-  query = false,
+  query?: (u: URL) => string | undefined,
 ) {
   const u = new URL(r.url);
   const body =
@@ -56,7 +56,7 @@ function ruleOf(
     args: defined({
       request: `${u.host}${u.pathname}`,
       method: r.method === 'GET' ? undefined : r.method,
-      query: query && u.search.length > 1 ? u.search.slice(1) : undefined,
+      query: query?.(u),
       status: r.status,
       type: r.type,
       body: body && `@${body}`,
@@ -130,15 +130,24 @@ type HarFile = {
   };
 };
 
+/** A HAR by the name a client gave: by a bare name it is where `save` puts one by a bare name. */
+export function harFile(name: string) {
+  const saved = join(HAR_DIR, name);
+  return fileInside(!existsSync(resolve(name)) && existsSync(resolve(saved)) ? saved : name);
+}
+
 /**
  * A rule for each answer of a HAR file, the ones asked for where a part of an address, a method or a status narrows
  * them: a request asked twice is answered as it was last, and one asked with several queries has a rule for each. The
  * bodies go to a folder of the file's name, written again each time, as a flow that replays it runs more than once.
  */
-export function rulesFromHar(policy: Policy, name: string, asked: Filter): Made {
-  // by a bare name it is where `save` puts one by a bare name
-  const saved = join(HAR_DIR, name);
-  const file = fileInside(!existsSync(resolve(name)) && existsSync(resolve(saved)) ? saved : name);
+export function rulesFromHar(
+  policy: Policy,
+  name: string,
+  asked: Filter,
+  clean: (text: string) => string,
+): Made {
+  const file = harFile(name);
   if (statSync(file).size > MAX_HAR_BYTES)
     throw new ToolError(
       `${file} is over ${MAX_HAR_BYTES / 1024 / 1024} MB: save the part to replay`,
@@ -190,13 +199,20 @@ export function rulesFromHar(policy: Policy, name: string, asked: Filter): Made 
     (a, b) => new URL(b.url).search.length - new URL(a.url).search.length,
   );
   const dir = join(HAR_DIR, slug(basename(file).replace(/\.har$/i, '')));
+  // the pairs of a query that tell one request from another, less any that names a credential: a rule's line is read
+  // by whoever lists the rules
+  const told = (u: URL) =>
+    [...u.searchParams]
+      .filter(([k, v]) => clean(`${k}=${v}`) === `${k}=${v}`)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join('&') || undefined;
   const lines = all.map((r, i) =>
     ruleOf(
       policy,
       r,
       join(dir, `${i + 1}-${slug(new URL(r.url).pathname)}`),
       true,
-      all.filter((o) => place(o) === place(r)).length > 1,
+      all.filter((o) => place(o) === place(r)).length > 1 ? told : undefined,
     ),
   );
   return {

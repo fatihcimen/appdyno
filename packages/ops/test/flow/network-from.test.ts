@@ -75,7 +75,7 @@ describe('a rule made of an answer', () => {
     const name = har([
       entry('GET', 'https://api.test/a', 200, { text: '{"old":1}' }),
       entry('GET', 'https://api.test/a', 200, { text: '{"all":1}' }),
-      entry('GET', 'https://api.test/a?page=2', 200, { text: '{"page":2}' }),
+      entry('GET', 'https://api.test/a?page=2&token=abc123', 200, { text: '{"page":2}' }),
       entry('POST', 'https://api.test/b', 201, { text: '{"token":"•••"}' }),
       entry('GET', 'https://cdn.test/logo.png', 200, { text: 'iVBOR', encoding: 'base64' }),
       entry('GET', 'https://api.test/never', 0),
@@ -156,7 +156,7 @@ describe('a rule made of an answer', () => {
       await call('network', { action: 'mock', from: 'flows/replay.har', unmatched: 'fail' });
       await call('network', { action: 'mock', from: '0' });
     });
-    expect(text).toContain('mock from=flows/replay.har unmatched=fail\n');
+    expect(text).toContain(`mock from=${join(at.dir, 'flows/replay.har')} unmatched=fail\n`);
     expect(text).toContain('mock "api.test/v1/items" status=200\n');
     for (const [line, why] of [
       ['mock status=200', 'mock needs request'],

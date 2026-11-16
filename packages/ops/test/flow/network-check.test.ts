@@ -1,6 +1,7 @@
 import type { NetworkDetail, NetworkEntry } from '@appdyno/core';
 import { bodyHas, bodyMatch, pathKeys } from '@appdyno/flows';
 import { describe, expect, it } from 'vitest';
+import { opsFor } from '../../src/index.js';
 import { probeSetup } from './fake-probe.js';
 import { callerOf, flowsFor } from './harness.js';
 
@@ -125,7 +126,16 @@ describe('a check of a request', () => {
   });
 
   it('refuses has where the capture keeps no bodies, and a check with no capture', async () => {
-    const call = callerOf(context());
+    const ctx = context();
+    // a wait for a request holds no turn on the device: a tap sent beside it goes on
+    const { network } = opsFor(ctx);
+    expect(['check', 'read', 'paths'].map((action) => network?.readsOnly?.({ action }))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(network?.readsOnly?.({ action: 'mock' })).toBe(false);
+    const call = callerOf(ctx);
     expect((await refusal(call('network', { action: 'check' }))).code).toBe('NOT_FOUND');
     await call('network', { action: 'start', via: 'probe' });
     const e = await refusal(call('network', { action: 'check', has: 'a=1' }));

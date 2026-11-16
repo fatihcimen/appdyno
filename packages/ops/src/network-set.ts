@@ -36,7 +36,7 @@ export function networkSetting(
 ) {
   /** Rules of what was answered: a request of the capture that runs by its id, or each answer of a HAR file. */
   const rulesFrom = async (s: Session, now: Capture | undefined, from: string, asked: Asked) => {
-    if (!/^\d+$/.test(from)) return rulesFromHar(ctx.policy, from, asked);
+    if (!/^\d+$/.test(from)) return rulesFromHar(ctx.policy, from, asked, clean);
     if (!now)
       throw new ToolError(
         `from ${from} is a request of a capture, and none runs: start one, or give a .har file`,

@@ -1,4 +1,5 @@
 import type { FlowStep } from '@appdyno/flows';
+import { harFile } from '../network-from.js';
 import { ruleStep } from '../network-rules.js';
 import { stepOf, unrecorded } from './aim.js';
 
@@ -18,7 +19,8 @@ export function networkSteps(
     ...(a.action === 'mock' ? ((a.rules as string[] | undefined) ?? []) : []),
     ...(byId ? ((data.added as string[] | undefined) ?? []) : []),
   ];
-  const from = byId ? undefined : (a.from as string | undefined);
+  // by where the file is, as a replay finds it from the flow's own folder
+  const from = byId || typeof a.from !== 'string' ? undefined : harFile(a.from);
   const unmatched = a.unmatched as string | undefined;
   const steps = [
     ...rules.map((rule) => ({ ...ruleStep(rule), line: 0 })),

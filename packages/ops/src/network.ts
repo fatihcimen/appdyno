@@ -19,6 +19,8 @@ const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
 /** The actions that take `strict`: each starts the probe's capture, or changes what it does. */
 const SETS: readonly string[] = ['start', 'mock', 'throttle'];
+/** The actions that change nothing on the device. */
+const WAITS: readonly string[] = ['paths', 'read', 'check'];
 
 const listening = (hostPort: string) =>
   new Promise<boolean>((resolve) => {
@@ -60,6 +62,8 @@ export function networkOps(ctx: ServerContext) {
       input: NetworkIn,
       output: NetworkOut,
       annotations: DESTRUCTIVE,
+      // a read and a wait for a request change nothing: neither holds the device's turn, so a tap goes on beside a check
+      readsOnly: ({ action }) => WAITS.includes(action),
       run: async ({ action, via, proxy, app, bodies, har, id, rules, add, throttle, ...given }) => {
         const { strict, has, timeoutMs, from, unmatched, path, shape, diff, ...asked } = given;
         const s = await ctx.session();
