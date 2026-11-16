@@ -45,6 +45,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   const shots = process.env.APPDYNO_SHOTS;
   let link: ViewerProcess;
   let done: Promise<number>;
+  let ctx: ServerContext;
+  /** The device standing in the room, by what its stream reports each second. */
+  const streaming = () => told.findLast((m) => m.op === 'stats' && m.stage)?.stage;
   /** A page for the fixture to fetch, on this Mac, by the port it listens on. */
   const server = createServer((_, res) => res.end('fetched by the fixture'));
   let port = 0;
@@ -66,13 +69,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     process.env.SIMCTL_CHILD_APPDYNO_FIXTURE_FETCH_URL = `http://127.0.0.1:${port}/order?token=s3cr3t`;
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^(${serials.join('|')})$`) };
-    const ctx = new ServerContext(
-      policy,
-      [androidProvider(), simulatorProvider(), iphoneProvider()],
-      {
-        mirrorCommand: [process.execPath, main, 'mirror'],
-      },
-    );
+    ctx = new ServerContext(policy, [androidProvider(), simulatorProvider(), iphoneProvider()], {
+      mirrorCommand: [process.execPath, main, 'mirror'],
+    });
     done = runHub(ctx, {
       focus: false,
       behind: true,
@@ -154,8 +153,6 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   it(
     "answers the Inspector's panes as a window of its own does: Push, Links and Apps name their device",
     async () => {
-      // the device standing in the room, by what its stream reports each second
-      const streaming = () => told.findLast((m) => m.op === 'stats' && m.stage)?.stage;
       await until('a device in the room', () => !!streaming(), LIVE_MS);
       const shown = String(streaming());
       const from = told.length;
@@ -196,13 +193,21 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     'reads the app in front in Logs, Network and Accessibility only while each shows, and stops as it hides',
     async () => {
       // run by itself, the device is chosen once the hub has listed it
-      for (let tries = 0; !told.some((m) => m.op === 'first') && tries < 18; tries++) {
+      for (let tries = 0; !streaming() && tries < 18; tries++) {
         link.send({ op: 'poke', id: serials[0] });
         await quiet(10_000);
       }
-      await until('a device in the room', () => told.some((m) => m.op === 'first'), LIVE_MS);
-      const shown = String(told.findLast((m) => m.op === 'first')?.stage);
+      // after the cases before it the device stands there already, and choosing it again says no first picture
+      await until('a device in the room', () => !!streaming(), LIVE_MS);
+      const shown = String(streaming());
       const simulator = /^[0-9A-F]{8}-/.test(shown);
+      // Fetch and Open are tapped where they stand upright, and a run before may have left the simulator turned
+      if (simulator) {
+        const device = ctx.deviceFor(shown);
+        await device.open();
+        await device.setOrientation(0);
+        device.close();
+      }
       // an emulator reaches this Mac at 10.0.2.2
       const page = `http://${simulator ? '127.0.0.1' : '10.0.2.2'}:${port}/order?token=s3cr3t`;
       const open = async (screen: string) => {
