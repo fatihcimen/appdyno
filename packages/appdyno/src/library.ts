@@ -183,10 +183,35 @@ export type CallOptions = {
   raw?: boolean;
 };
 
+/** A step of a replay that ran to its end. `skipped`: why it did not run, where it is another platform's. */
+export type ReplayStep = {
+  n: number;
+  step: string;
+  ms: number;
+  settledMs?: number;
+  skipped?: string;
+};
+
+/** A step that failed. `phase`: of the setup or of the teardown; none: of the flow's own steps. */
+export type ReplayFailure = {
+  n: number;
+  step: string;
+  message: string;
+  code?: string;
+  hint?: string;
+  phase?: 'setup' | 'teardown';
+};
+
 export type ReplayResult = {
   passed: boolean;
-  steps: { n: number; step: string; ms: number; settledMs?: number }[];
-  failure?: { n: number; step: string; message: string; code?: string; hint?: string };
+  /** The flow's own steps that ran to their end. */
+  steps: ReplayStep[];
+  /** The setup's, where the flow has one. */
+  setup?: ReplayStep[];
+  /** The first failure of the setup or of the flow's own steps, which ended them. */
+  failure?: ReplayFailure;
+  /** What the teardown did, where the flow has one: every step of it ran, and each that failed is here. */
+  teardown?: { ok: boolean; steps: ReplayStep[]; failed: ReplayFailure[] };
 };
 
 export type Appdyno = {

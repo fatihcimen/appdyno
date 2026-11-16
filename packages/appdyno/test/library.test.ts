@@ -224,6 +224,36 @@ describe('the library', () => {
     }
   });
 
+  it("gives what a flow's setup and teardown did, each step typed, beside its own steps", async () => {
+    device.screen = 'home';
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-library-'));
+    writeFileSync(join(dir, '_setup.flow'), 'assert text="Form"\n');
+    writeFileSync(
+      join(dir, '_teardown.flow'),
+      'assert text="Form" timeoutMs=300\nassert text="Ana sayfa" timeoutMs=300\n',
+    );
+    const flow = join(dir, 'a.flow');
+    writeFileSync(flow, 'tap text="Form"\n');
+    const d = library.connect();
+    try {
+      const run: library.ReplayResult = await d.replay(flow);
+      const lines = (steps: library.ReplayStep[] = []) => steps.map((s) => `${s.n} ${s.step}`);
+      expect(lines(run.setup)).toEqual(['1 assert text="Form"']);
+      expect(lines(run.steps)).toEqual(['1 tap text="Form"']);
+      // neither text is on the form: both of the teardown's steps ran, and each failed
+      expect(run.teardown?.ok).toBe(false);
+      expect(lines(run.teardown?.steps)).toEqual([]);
+      const failed: library.ReplayFailure[] = run.teardown?.failed ?? [];
+      expect(failed.map((f) => [f.n, f.phase])).toEqual([
+        [1, 'teardown'],
+        [2, 'teardown'],
+      ]);
+      expect(run.failure).toBeUndefined();
+    } finally {
+      await d.close();
+    }
+  });
+
   it('gives the tree of the screen an action left, from the read its answer made', async () => {
     device.screen = 'home';
     const d = library.connect();
