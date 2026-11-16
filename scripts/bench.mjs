@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // What a model pays to do a task through this server: its calls, its tokens and its time, on a simulator.
 //   pnpm build && node scripts/bench.mjs <simulator id> [--tasks login,crash] [--model <name>] [--out <file.json>]
+//   [--keep <dir>: each run's stream as the client wrote it]
 //
 // Each task is one run of an MCP client's command line in print mode (`claude -p`), which must be signed in. The
 // client is given this checkout's server and nothing else: no other server, no tool of its own, none of this Mac's
@@ -32,7 +33,7 @@ const flag = (name) => {
 };
 if (!/^[0-9A-F]{8}-[0-9A-F-]{27}$/i.test(udid)) {
   console.error(
-    'usage: bench.mjs <simulator id> [--tasks a,b] [--model name] [--budget usd] [--out file.json]',
+    'usage: bench.mjs <simulator id> [--tasks a,b] [--model name] [--budget usd] [--out file.json] [--keep dir]',
   );
   process.exit(2);
 }
@@ -95,10 +96,11 @@ const TASKS = {
     done: async (call, said, since) => {
       // a simulator writes its report some seconds after the end
       for (let i = 0; i < 30; i++) {
-        if ((await call('crashes', { since })).structuredContent?.reports?.length) break;
+        if ((await call('crashes', { since })).structuredContent?.reports?.length)
+          return /fixture crash/i.test(said);
         await new Promise((next) => setTimeout(next, 2_000));
       }
-      return /fixture crash/i.test(said);
+      return false;
     },
   },
   flow: {
@@ -115,7 +117,7 @@ const TASKS = {
  *   subtype?: string;
  *   model?: string;
  *   mcp_servers?: { name: string; status: string }[];
- *   message?: { content?: { type: string; name?: string; content?: unknown }[] | string };
+ *   message?: { id?: string; content?: { type: string; name?: string; content?: unknown }[] | string };
  *   result?: string;
  *   is_error?: boolean;
  *   num_turns?: number;
@@ -168,7 +170,8 @@ function taken(stream) {
     cacheWrite: u.cache_creation_input_tokens ?? 0,
     cacheRead: u.cache_read_input_tokens ?? 0,
     output: u.output_tokens ?? 0,
-    turns: end?.num_turns ?? 0,
+    // a model may send several calls in one message: what it pays for is each request, with the whole context
+    requests: new Set(events.flatMap((e) => (e.type === 'assistant' ? [e.message?.id] : []))).size,
     usd: end?.total_cost_usd ?? 0,
     said: end?.is_error ? '' : (end?.result ?? ''),
   };
@@ -247,12 +250,12 @@ try {
 const out = flag('out');
 if (out) writeFileSync(out, `${JSON.stringify(rows, null, 2)}\n`);
 console.log(
-  '| task | done | calls | other tools | answers, chars | pictures | input | cache write | cache read | output | turns | s | handed |',
+  '| task | done | calls | other tools | answers, chars | pictures | requests | input | cache write | cache read | output | s | handed |',
 );
 console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
 for (const r of rows)
   console.log(
-    `| ${r.task} | ${r.ok ? 'yes' : 'no'} | ${String(r.calls)} | ${r.other.join(' ') || '0'} | ${String(r.answerChars)} | ${String(r.pictures)} | ${String(r.input)} | ${String(r.cacheWrite)} | ${String(r.cacheRead)} | ${String(r.output)} | ${String(r.turns)} | ${(r.ms / 1000).toFixed(0)} | ${r.handed} |`,
+    `| ${r.task} | ${r.ok ? 'yes' : 'no'} | ${String(r.calls)} | ${r.other.join(' ') || '0'} | ${String(r.answerChars)} | ${String(r.pictures)} | ${String(r.requests)} | ${String(r.input)} | ${String(r.cacheWrite)} | ${String(r.cacheRead)} | ${String(r.output)} | ${(r.ms / 1000).toFixed(0)} | ${r.handed} |`,
   );
 if (rows[0]) console.log(`\nmodel: ${rows[0].model}`);
 if (rows.some((r) => !r.connected || r.other.length))
