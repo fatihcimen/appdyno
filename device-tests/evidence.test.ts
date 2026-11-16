@@ -472,7 +472,7 @@ describe.skipIf(!simulator)('network on a simulator', () => {
     await h.ok('network', { action: 'start', via: 'probe' });
     await fetchIn(h.ok, `http://127.0.0.1:${web.webPort}/seen?token=abc123`);
     const read = await h.ok('network', { action: 'read' });
-    expect(read.text).toMatch(/GET http:\/\/127\.0\.0\.1:\d+\/seen\?token=••• 200 \d+ ms 200000 B/);
+    expect(read.text).toMatch(/\n127\.0\.0\.1:\d+:\n {2}\d+ GET \/seen\?token 200 \d+ ms 200000 B/);
     expect(read.text).not.toContain('abc123');
     const stop = await h.ok('network', { action: 'stop' });
     expect(stop.text).toMatch(/stays in the app until it next starts/);

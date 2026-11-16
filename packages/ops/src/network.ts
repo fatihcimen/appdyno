@@ -74,6 +74,7 @@ export function networkOps(ctx: ServerContext) {
           bodies: z.boolean().optional(),
           har: z.string().max(1_000).optional(),
           id: z.number().int().min(0).optional(),
+          after: z.number().int().min(0).optional().describe('only requests after this id'),
           contains: z.string().max(200).optional(),
           method: z.string().max(10).optional(),
           status: z.string().max(6).optional().describe('404, 4xx, failed'),

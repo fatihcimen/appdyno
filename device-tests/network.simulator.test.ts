@@ -202,7 +202,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       har: join(dir, 'appdyno-network/capture.har'),
     });
     console.log(back.text);
-    expect(back.text).toMatch(/POST http:\/\/127\.0\.0\.1:\d+\/echo\?token=••• 200/);
+    expect(back.text).toMatch(/\n127\.0\.0\.1:\d+:\n {2}POST \/echo\?token 200/);
     expect(back.text).toContain('4 of 4 from');
   });
 

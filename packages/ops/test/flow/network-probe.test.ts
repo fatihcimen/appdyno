@@ -108,7 +108,20 @@ describe('the network probe through its tool and a flow', () => {
     probe.entries = [POST, { ...POST, method: 'GET', url: 'https://api.test/x', status: 404 }];
     probe.details = { 0: DETAIL };
     const list = await call('network', { action: 'read' });
-    expect(list.text).toContain('0 POST https://api.test/login?token=••• 200 85 ms 31 B');
+    // the one refused first and whole, then each host once with its paths, a query by its names
+    expect(list.text.split('\n')).toEqual([
+      expect.stringMatching(/^2 of 2 from probe since .*; last id 1$/),
+      'bodies: read with id gives one request whole',
+      '! 1 GET https://api.test/x 404 85 ms 31 B',
+      'api.test:',
+      '  0 POST /login?token 200 85 ms 31 B',
+    ]);
+    expect((await call('network', { action: 'read', after: 0 })).text).toMatch(
+      /^1 of 1 from probe/,
+    );
+    expect((await call('network', { action: 'read', after: 1 })).text).toMatch(
+      /^0 of 0 from probe/,
+    );
     expect(list.text).toContain('bodies: read with id gives one request whole');
     expect((await call('network', { action: 'read', status: '4xx' })).text).toMatch(/^1 of 1 /);
     expect((await call('network', { action: 'read', method: 'post' })).text).toMatch(/^1 of 1 /);
@@ -202,7 +215,7 @@ describe('the network probe through its tool and a flow', () => {
     expect(har.log.entries).toHaveLength(2);
     const back = await call('network', { action: 'read', har: file });
     expect(back.text).toMatch(/^2 of 2 from/);
-    expect(back.text).toContain('POST https://api.test/login?token=••• 200 85 ms 31 B');
+    expect(back.text).toContain('api.test:\n  POST /login?token ×2 200 median 85 ms');
     // outside the folders this server writes to
     await call('network', { action: 'start', via: 'probe' });
     const out = await refusal(call('network', { action: 'read', save: '/tmp/x.har' }));
@@ -234,7 +247,7 @@ describe('the network probe through its tool and a flow', () => {
       ].join('\n'),
     );
     expect((await call('network', { action: 'read' })).text).toMatch(
-      /31 B \[mocked\]\nrule 1: .*\nrule 2 .*\nrule 3: /,
+      /\napi\.test:\n {2}0 POST \/login\?token 200 85 ms 31 B \[mocked\]\nrule 1: .*\nrule 2 .*\nrule 3: /,
     );
     await call('network', { action: 'mock', rules: [] });
     expect(probe.told?.rules).toEqual([]);

@@ -5,6 +5,7 @@ import { boundLines } from './diagnose.js';
 import { writeInside } from './flow/shared.js';
 import { readCapture, type Capture } from './network-capture.js';
 import { cleanHeaders, harOf } from './network-har.js';
+import { compactList } from './network-list.js';
 import { ruleHits } from './network-rules.js';
 import { redact, redactLog } from './policy.js';
 import type { Session } from './session.js';
@@ -12,6 +13,9 @@ import { reply } from './tool.js';
 
 /** Where a HAR named with no folder is written, under the folder this server runs in: one line keeps it out of git. */
 export const HAR_DIR = 'appdyno-network';
+
+/** The most requests an answer's data holds: the latest. */
+const MAX_LISTED = 200;
 
 /** A body in an answer to here: the rest is in the export. */
 const BODY_CHARS = 4_000;
@@ -38,13 +42,16 @@ export const line = (e: NetworkEntry, ids = false) =>
       : `${e.direction ?? ''} ${e.host ?? ''}: ${e.packets !== undefined ? `${e.packets} packets, ` : ''}${e.bytes ?? 0} B`.trim();
 
 export type Filter = {
+  /** Only what started after the request of this id: what is new since a read that ended with it. */
+  after?: number | undefined;
   contains?: string | undefined;
   method?: string | undefined;
   status?: string | undefined;
 };
 
 /** Whether a request is one asked for: by a part of its address, its method, and its status, a class of it or `failed`. */
-export function fits(e: NetworkEntry, { contains, method, status }: Filter) {
+export function fits(e: NetworkEntry, { after, contains, method, status }: Filter) {
+  if (after !== undefined && (e.id ?? Infinity) <= after) return false;
   if (contains && !`${e.url ?? ''} ${e.host ?? ''}`.includes(contains)) return false;
   if (method && (e.method ?? 'GET').toUpperCase() !== method.toUpperCase()) return false;
   if (!status) return true;
@@ -188,19 +195,30 @@ export function networkAnswers(ctx: ServerContext) {
     const hits = entries.map(shownOf).filter((e) => !e.inFlight && fits(e, asked));
     const flying = flightLine(entries.map(shownOf));
     const ids = c?.bodies === true;
-    const { kept, dropped } = boundLines(
-      hits.map((e) => line(e, ids)),
-      asked.limit,
-    );
-    const list = hits.slice(hits.length - kept.length);
+    // asked for by a part of an address, a method or a status, each request has its own line, whole; a read of all of
+    // them is as few lines as tell them apart, and counts what the lines it has room for stand for
+    const sifted = asked.contains ?? asked.method ?? asked.status;
+    const folded = sifted === undefined && hits.some((e) => e.url);
+    const all = folded ? compactList(hits, (e) => line(e, true), howOf) : [];
+    const { kept, dropped } = folded
+      ? { kept: all.slice(0, asked.limit).map((l) => l.text), dropped: 0 }
+      : boundLines(
+          hits.map((e) => line(e, ids)),
+          asked.limit,
+        );
+    const told = all.slice(0, asked.limit).reduce((n, l) => n + l.requests, 0);
+    const list = folded ? hits.slice(-MAX_LISTED) : hits.slice(hits.length - kept.length);
+    const last = hits.at(-1)?.id;
     const withBody = list.filter((e) => e.body).length;
     const bodies = ids
       ? 'bodies: read with id gives one request whole'
       : list.some((e) => e.url) && list.some((e) => e.body !== undefined)
         ? `bodies: ${withBody} of ${list.length} in the export`
-        : 'bodies: not by this way';
+        : c?.via === 'probe'
+          ? 'bodies: not kept: start with bodies keeps them'
+          : 'bodies: not by this way';
     const head = [
-      `${list.length} of ${hits.length} from ${source}${c ? ` since ${new Date(c.since).toISOString()}` : ''}`,
+      `${folded ? told : list.length} of ${hits.length} from ${source}${c ? ` since ${new Date(c.since).toISOString()}` : ''}${last === undefined ? '' : `; last id ${last}`}${folded && told < hits.length ? ': contains, method, status or after narrows it' : ''}`,
       ...(note ? [note] : []),
       bodies,
       ...(saved ? [saved] : []),
@@ -208,7 +226,7 @@ export function networkAnswers(ctx: ServerContext) {
     const rules = controlLines(c, entries).map((l) => redact(ctx.policy, l));
     return reply([...head, ...kept, ...flying, ...rules].join('\n'), {
       entries: list,
-      dropped,
+      dropped: folded ? hits.length - list.length : dropped,
       source,
       bodies,
       ...(saved && { saved }),

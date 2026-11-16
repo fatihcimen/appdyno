@@ -114,10 +114,19 @@ describe('a proxy export', () => {
     }));
     const r = await op.handler(op.input.parse({ action: 'read', har: har(list), limit: 3 }));
     const text = r.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
-    expect(text).toMatch(/^3 of 10 from/);
-    expect(text).toContain('https://a.test/9?token=•••');
-    expect(text).not.toContain('https://a.test/6');
-    expect(text).toMatch(/bodies: 0 of 3 in the export/);
+    // the host's own line, then the first of its paths the limit has room for, each query by its names
+    expect(text).toMatch(/^2 of 10 from .*: contains, method, status or after narrows it\n/);
+    expect(text).toContain('\na.test:\n  GET /0?token 201 12 ms 3 B\n  GET /1?token 201 12 ms 3 B');
+    expect(text).not.toContain('/2?token');
+    expect(text).not.toContain('abc');
+    const narrowed = await op.handler(
+      op.input.parse({ action: 'read', har: har(list), contains: 'a.test', limit: 3 }),
+    );
+    const whole = narrowed.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
+    expect(whole).toMatch(/^3 of 10 from/);
+    expect(whole).toContain('https://a.test/9?token=•••');
+    expect(whole).not.toContain('https://a.test/6');
+    expect(text).toMatch(/bodies: 0 of 10 in the export/);
     // a start with no way names the ways this device has, and points to what each sees
     await expect(op.handler(op.input.parse({ action: 'start' }))).rejects.toMatchObject({
       code: 'INVALID_ARGUMENT',
