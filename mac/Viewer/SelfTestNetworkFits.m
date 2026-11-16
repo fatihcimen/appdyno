@@ -20,7 +20,10 @@ static void cut(NSView *view, NSView *pane, NSMutableArray<NSString *> *found) {
     // words of the window's own: a row's words, an address and a figure are what was sent, and are marked as that
     BOOL own = ![field respondsToSelector:NSSelectorFromString(@"content")] || ![[field valueForKey:@"content"] boolValue];
     words = own ? field.stringValue : nil;
-    needs = field.maximumNumberOfLines == 1 || field.cell.usesSingleLineMode || !field.cell.wraps ? [field.cell cellSizeForBounds:NSMakeRect(0, 0, 10000, 100)].width : 0;
+    BOOL oneLine = field.maximumNumberOfLines == 1 || field.cell.usesSingleLineMode || !field.cell.wraps;
+    needs = oneLine ? [field.cell cellSizeForBounds:NSMakeRect(0, 0, 10000, 100)].width : 0;
+    // words that wrap are cut where they need more lines than they have
+    if (!oneLine && words.length && [field.cell cellSizeForBounds:NSMakeRect(0, 0, NSWidth(view.frame), 10000)].height > NSHeight(view.frame) + 1) needs = 10000;
   }
   if (words.length && (needs > NSWidth(view.frame) + 1 || NSMinX(at) < -0.5 || NSMaxX(at) > NSWidth(pane.bounds) + 0.5)) [found addObject:[NSString stringWithFormat:@"%@ (%.0f of %.0f at %.0f)", words, NSWidth(at), needs, NSMinX(at)]];
   for (NSView *child in view.subviews) cut(child, pane, found);
@@ -134,6 +137,15 @@ void MVCheckNetworkFits(MVWindow *window, MVNetworkPane *pane) {
     [fresh removeFromSuperview];
   }
   MVTestTurkish(NO);
+  // Find, from the menu or its key, puts the keyboard in the filter: a key typed anywhere else is the device's
+  [pane show:probing];
+  NSMenu *edit = MVControlMenu(@"Edit", nil);
+  NSInteger find = [edit indexOfItemWithRepresentedObject:@"find"];
+  [window perform:@"find"];
+  MVPump(0.1);
+  NSTextField *filter = [pane.filter valueForKey:@"_field"];
+  MVCheck(@"find: the menu has it under \u2318F, and it puts the keyboard in the Network pane's filter", find >= 0 && [[edit itemAtIndex:find].keyEquivalent isEqual:@"f"] && [edit itemAtIndex:find].keyEquivalentModifierMask == NSEventModifierFlagCommand && filter.currentEditor != nil && window.nsWindow.firstResponder == filter.currentEditor, NSStringFromClass([window.nsWindow.firstResponder class]));
+  [window.nsWindow makeFirstResponder:nil];
   [pane show:@{@"op": @"answer",
                @"ok": @NO,
                @"text": @"a rule sends requests only to this Mac or its own network, and example.org is neither",

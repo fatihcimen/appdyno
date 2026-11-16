@@ -173,8 +173,12 @@ static NSView *named(NSString *label, NSView *control) {
   _asText.accessibilityValue = asText ? MVWord(@"selected") : nil;
 }
 
+/// Asked for, the line comes into sight under the fields, where they scroll.
 - (void)showLine:(id)sender {
   self.asText = !self.asText;
+  if (!self.asText) return;
+  [self.superview.superview layoutSubtreeIfNeeded];
+  [_linePlate scrollRectToVisible:_linePlate.bounds];
 }
 
 /// Which of the two a person changed last is what is saved: the line once it is typed in, the fields once one of them is.

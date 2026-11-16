@@ -261,8 +261,11 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
       poke({ field: 'networkRuleDelay', value: '250' });
       await looked('rules-edit');
       // an agent sets the rules anew under the person's hands: what was typed stays, and the pane says what happened
+      const changing = sent.length;
       await ok('capture_network', { action: 'mock', rules: [mine[1], mine[2]] });
-      await until('the change of another', () => network((m) => m.elsewhere === true).length > 0);
+      await until('the change of another', () =>
+        sent.slice(changing).some((m) => m.op === 'network' && m.elsewhere === true),
+      );
       await looked('changed-elsewhere');
       await click('networkRuleCancel');
 

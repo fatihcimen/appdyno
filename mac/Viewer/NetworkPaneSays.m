@@ -157,7 +157,11 @@ NSString *MVNetworkWayTitle(NSString *via) {
     words = MVWord(@"Make a request in the app, and it shows here.");
   }
   // what a capture says of itself keeps an address or an app as it came
-  if (_noteSaid.length) words = MVSentence(_noteSaid);
+  // and starts as a sentence does, where the op wrote it as the end of one
+  if (_noteSaid.length) {
+    NSString *said = MVSentence(_noteSaid);
+    words = [[said substringToIndex:1].localizedUppercaseString stringByAppendingString:[said substringFromIndex:1]];
+  }
   // what the app made that this way cannot see, so that an empty list is not read as an app that asked for nothing
   if (_unseen.length && _capturing) words = [NSString stringWithFormat:@"%@\n%@", words, _unseen];
   // what lists no requests says what would, while it counts too

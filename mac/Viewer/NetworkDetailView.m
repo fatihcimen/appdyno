@@ -197,7 +197,8 @@ static const double kBar = 6, kBarRound = 3, kWellRound = 9, kWellInset = 10;
 
 /// The request the list has, at once: its head from what its row says, and its well waiting where its parts are asked for.
 - (void)showEntry:(NSDictionary *)entry reading:(BOOL)reading {
-  BOOL same = [_entry[@"id"] isEqual:entry[@"id"]] && _entry[@"id"];
+  // by its name as words: the list names a request by a string, and its parts by a number
+  BOOL same = _entry[@"id"] && [[_entry[@"id"] description] isEqual:[entry[@"id"] description]];
   _entry = entry;
   if (!same) {
     _parts = nil;
@@ -246,8 +247,8 @@ static const double kBar = 6, kBarRound = 3, kWellRound = 9, kWellInset = 10;
   _bar.phases = phases;
   NSMutableAttributedString *legend = [NSMutableAttributedString new];
   for (NSArray *phase in phases) {
-    [legend appendAttributedString:[[NSAttributedString alloc] initWithString:[phase[0] stringByAppendingString:@" "] attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:10 weight:NSFontWeightMedium], NSForegroundColorAttributeName: MVQuietColor()}]];
-    [legend appendAttributedString:[[NSAttributedString alloc] initWithString:[MVNetworkTook([phase[1] doubleValue]) stringByAppendingString:@"   "] attributes:@{NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightRegular], NSForegroundColorAttributeName: MVInkColor()}]];
+    [legend appendAttributedString:[[NSAttributedString alloc] initWithString:[phase[0] stringByAppendingString:@"\u00A0"] attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:10 weight:NSFontWeightMedium], NSForegroundColorAttributeName: MVQuietColor()}]];
+    [legend appendAttributedString:[[NSAttributedString alloc] initWithString:[[MVNetworkTook([phase[1] doubleValue]) stringByReplacingOccurrencesOfString:@" " withString:@"\u00A0"] stringByAppendingString:@"  "] attributes:@{NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightRegular], NSForegroundColorAttributeName: MVInkColor()}]];
   }
   if ([timings[@"cache"] boolValue]) [legend appendAttributedString:[[NSAttributedString alloc] initWithString:MVWord(@"From the cache") attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:11], NSForegroundColorAttributeName: MVQuietColor()}]];
   _legend.attributedStringValue = legend;
@@ -281,7 +282,8 @@ static const double kBar = 6, kBarRound = 3, kWellRound = 9, kWellInset = 10;
     else none = MVWord(at == 1 ? @"It sent no body." : @"Nothing came back in its body.");
   }
   // the same words again keep what a person selected in them, and where they had scrolled to
-  if (![_text.textStorage isEqualToAttributedString:text]) [_text.textStorage setAttributedString:text];
+  // by their letters: two colours made apart are never one to the text's own comparison
+  if (![_text.string isEqual:text.string]) [_text.textStorage setAttributedString:text];
   _kind.stringValue = kind;
   _none.stringValue = none ?: @"";
   _none.hidden = !none;

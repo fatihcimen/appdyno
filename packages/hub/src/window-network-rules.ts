@@ -98,17 +98,22 @@ export function heldBy(
   op: (args: Record<string, unknown>) => Promise<{ data: Record<string, unknown> | undefined }>,
 ) {
   let known: string | undefined;
+  /** What held after this window's own last change: a read that was under way then may tell it late. */
+  let own: string | undefined;
   let mine = false;
-  return {
+  const held = {
     /** A new capture holds nothing yet for anyone to have changed. */
     forget: () => {
       known = undefined;
+      own = undefined;
     },
     /** What holds once `change` is done is this window's own doing. */
     async changing(change: () => Promise<void>) {
       mine = true;
       try {
         await change();
+        // read here too: the window's own read may have been skipped for one already under way
+        await held.now();
       } finally {
         mine = false;
       }
@@ -117,24 +122,25 @@ export function heldBy(
       const { data } = await op({ action: 'mock' });
       const c = captures.read(serial);
       if (!data) return {};
-      const held = {
+      const holds = {
         rules: ((data.rules as { rule: string }[] | undefined) ?? []).map(withFields),
         throttle: typeof data.throttle === 'string' ? data.throttle : 'full',
         strict: c?.strict === true,
         unmatched: c?.unmatched ?? ('pass' as const),
       };
       const now = JSON.stringify([
-        held.rules.map((r) => r.rule),
-        held.throttle,
-        held.strict,
-        held.unmatched,
+        holds.rules.map((r) => r.rule),
+        holds.throttle,
+        holds.strict,
+        holds.unmatched,
       ]);
-      const elsewhere = known !== undefined && now !== known && !mine;
-      if (now !== known) mine = false;
+      if (mine) own = now;
+      const elsewhere = known !== undefined && now !== known && !mine && now !== own;
       known = now;
-      return { ...held, ...(elsewhere && { elsewhere }) };
+      return { ...holds, ...(elsewhere && { elsewhere }) };
     },
   };
+  return held;
 }
 
 /**

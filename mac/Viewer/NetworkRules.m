@@ -184,6 +184,8 @@ static NSScrollView *scrolling(NSView *column) {
     };
     _moved = MVPaneNote(@"This rule was changed elsewhere. What you typed is kept: add it again, or leave it.");
     _moved.maximumNumberOfLines = 0;
+    // as wide as the card it stands in lets it be, so that its last words are not cut
+    _moved.preferredMaxLayoutWidth = MVInspectorWidth - 2 * 16 - 2 * 14;
     _moved.textColor = MVInkColor();
     _moved.hidden = YES;
     _save = MVPlacePrimary(@"Add", @"networkRuleSave", self, @selector(save:));
@@ -253,7 +255,10 @@ static NSScrollView *scrolling(NSView *column) {
   _rules = rules;
   for (NSView *old in _rows.arrangedSubviews.copy) [old removeFromSuperview];
   [rules enumerateObjectsUsingBlock:^(NSDictionary *rule, NSUInteger at, __unused BOOL *stop) {
-    [self->_rows addArrangedSubview:[[MVRuleRow alloc] initWithRule:rule at:at target:self]];
+    MVRuleRow *row = [[MVRuleRow alloc] initWithRule:rule at:at target:self];
+    [self->_rows addArrangedSubview:row];
+    // as wide as the list, its words taking what its mark and its switch leave
+    [row.widthAnchor constraintEqualToAnchor:self->_rows.widthAnchor].active = YES;
   }];
   if (had && self.openAt == NSNotFound) {
     _moved.hidden = _sent;
@@ -269,6 +274,9 @@ static NSScrollView *scrolling(NSView *column) {
   _editing = YES;
   _moved.hidden = YES;
   [_form show:[rule[@"fields"] isKindOfClass:NSDictionary.class] ? rule[@"fields"] : nil line:[rule[@"rule"] description]];
+  // from its first field, wherever the one before it was left
+  [_formScroll.contentView scrollToPoint:NSZeroPoint];
+  [_formScroll reflectScrolledClipView:_formScroll.contentView];
   [self lay];
 }
 
