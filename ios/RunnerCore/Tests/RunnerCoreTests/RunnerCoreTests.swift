@@ -12,6 +12,19 @@ final class FrameTests: XCTestCase {
         XCTAssertEqual(frames, [.binary(id: 7, data: Data([1, 2, 3])), .json(json)])
     }
 
+    func testHoldsAFrameBeforeTheHelloToItsOwnLimit() throws {
+        let hello = Data(#"{"jsonrpc":"2.0","id":1,"method":"hello"}"#.utf8)
+        // 64 KiB and a byte, by its header alone: none of it has come, and none is waited for
+        let tooLong = Data([0, 1, 0, 1, 0])
+        let d = FrameDecoder(limit: maxHelloFrameBytes)
+        XCTAssertThrowsError(try FrameDecoder(limit: maxHelloFrameBytes).push(tooLong)) {
+            XCTAssertEqual($0 as? FrameError, .tooLarge(65537))
+        }
+        XCTAssertEqual(try d.push(encodeJSON(hello)), [.json(hello)])
+        d.limit = maxFrameBytes
+        XCTAssertEqual(try d.push(tooLong), [])
+    }
+
     func testRejectsHugeAndUnknownFrames() {
         XCTAssertThrowsError(try FrameDecoder().push(Data([0x7f, 0xff, 0xff, 0xff, 0])))
         XCTAssertThrowsError(try FrameDecoder().push(Data([0, 0, 0, 0, 9])))

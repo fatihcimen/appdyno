@@ -15,6 +15,10 @@ public enum FrameError: Error, Equatable {
 
 public let maxFrameBytes = 64 * 1024 * 1024
 
+/// What a connection may send before its hello was taken: a hello is some hundred bytes, and until then whoever
+/// connected has shown no token, so nothing of its saying is given the memory a frame may take after.
+public let maxHelloFrameBytes = 64 * 1024
+
 public func encodeJSON(_ payload: Data) -> Data {
     var out = header(payload.count, 0)
     out.append(payload)
@@ -41,8 +45,10 @@ private func header(_ length: Int, _ type: UInt8) -> Data {
 /// Collects stream bytes and returns the frames they complete.
 public final class FrameDecoder {
     private var buffer = Data()
+    /// The longest frame taken: a longer one is refused by its header, before any of it is kept.
+    public var limit: Int
 
-    public init() {}
+    public init(limit: Int = maxFrameBytes) { self.limit = limit }
 
     public func push(_ chunk: Data) throws -> [Frame] {
         buffer.append(chunk)
@@ -51,7 +57,7 @@ public final class FrameDecoder {
             let b = [UInt8](buffer.prefix(5))
             let length = Int(UInt32(b[0]) << 24 | UInt32(b[1]) << 16 | UInt32(b[2]) << 8 | UInt32(b[3]))
             let type = b[4]
-            if length > maxFrameBytes { throw FrameError.tooLarge(length) }
+            if length > limit { throw FrameError.tooLarge(length) }
             if type != 0 && type != 1 { throw FrameError.unknownType(type) }
             if buffer.count < 5 + length { break }
             let payload = buffer.subdata(in: buffer.startIndex + 5 ..< buffer.startIndex + 5 + length)

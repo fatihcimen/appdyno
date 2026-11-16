@@ -108,7 +108,7 @@ final class Server: Sendable {
     /// Unchecked: only the server's queue touches it, where each of its connection's callbacks runs.
     private final class Session: @unchecked Sendable {
         let connection: NWConnection
-        let decoder = FrameDecoder()
+        let decoder = FrameDecoder(limit: maxHelloFrameBytes)
         let jobs = JobTable()
         var greeted = false
         init(connection: NWConnection) { self.connection = connection }
@@ -151,6 +151,7 @@ final class Server: Sendable {
                 return
             }
             session.greeted = true
+            session.decoder.limit = maxFrameBytes
             send(session, try Self.frame(id: id, Reply(result: hello())))
             return
         }
