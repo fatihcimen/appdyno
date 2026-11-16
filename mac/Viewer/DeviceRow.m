@@ -57,6 +57,16 @@ static NSArray<NSArray<NSString *> *> *choicesOf(NSString *name, BOOL android) {
   ];
 }
 
+/// A foldable's own poses as the op takes them, each in a person's words where it has any: a device lists more than
+/// folded and unfolded, and which ones differs by device.
+static NSArray<NSArray<NSString *> *> *foldChoices(NSArray *poses) {
+  NSDictionary<NSString *, NSString *> *words = @{@"open": @"Unfolded", @"closed": @"Folded", @"half": @"Half Open", @"half_opened": @"Half Open", @"rear_display": @"Rear Display", @"dual": @"Both Displays"};
+  NSMutableArray *choices = [NSMutableArray array];
+  for (id pose in poses)
+    if ([pose isKindOfClass:NSString.class]) [choices addObject:@[pose, words[pose] ?: pose]];
+  return choices;
+}
+
 /// What a device reads with its state of the moment after it, `default (now 85)`, as what that state is.
 static NSString *nowOf(NSString *value) {
   if (![value hasPrefix:@"default (now "] || ![value hasSuffix:@")"]) return value;
@@ -191,9 +201,13 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
 }
 
 - (void)offerChoices:(BOOL)android {
+  [self offer:choicesOf(_name, android)];
+}
+
+- (void)offer:(NSArray<NSArray<NSString *> *> *)options {
   NSPopUpButton *choice = (NSPopUpButton *)_control;
   [choice removeAllItems];
-  for (NSArray<NSString *> *option in choicesOf(_name, android)) {
+  for (NSArray<NSString *> *option in options) {
     [choice addItemWithTitle:MVWord(option[1])];
     choice.lastItem.representedObject = option[0];
   }
@@ -220,6 +234,9 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   if (_kind == MVRowField) _field.stringValue = [_name isEqual:@"proxy"] && [value isEqual:@"none"] ? @"" : nowOf(value);
   if (_kind != MVRowChoice) return;
   NSPopUpButton *choice = (NSPopUpButton *)_control;
+  // the device's own poses where it lists them, each time: another device may stand in this row next
+  NSArray *own = [_said[@"choices"] isKindOfClass:NSArray.class] ? _said[@"choices"] : nil;
+  if ([_name isEqual:@"fold"]) [self offer:own.count ? foldChoices(own) : choicesOf(_name, NO)];
   // by its name before by how a name ends, which extra-extra-large shares with large
   for (NSNumber *loose in @[@NO, @YES])
     for (NSInteger i = 0; i < choice.numberOfItems; i++)

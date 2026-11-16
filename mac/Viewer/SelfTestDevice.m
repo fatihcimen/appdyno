@@ -131,6 +131,20 @@ void MVCheckDevice(void) {
                @"conditions": @[@{@"name": @"text_size", @"value": @"1.1"}]}];
   NSPopUpButton *size = (NSPopUpButton *)MVFindControl(window.nsWindow.contentView, @"condition:text_size");
   MVCheck(@"device: an Android scale none of the menu's is a percent too, and each of the menu's a whole one", [size.titleOfSelectedItem isEqual:MVPercent(110)] && [[pane shown:@"text_size"] isEqual:@"1.1"] && [size.itemTitles containsObject:MVPercent(115)], [size.itemTitles componentsJoinedByString:@"|"]);
+  // a foldable lists its own poses, and with no request stands where its hinge is
+  [pane show:@{@"op": @"answer",
+               @"name": @"device",
+               @"platform": @"android",
+               @"conditions": @[@{@"name": @"fold",
+                                  @"value": @"default (now half_opened)",
+                                  @"choices": @[@"closed", @"half_opened", @"open", @"rear_display"]}]}];
+  NSPopUpButton *fold = (NSPopUpButton *)MVFindControl(window.nsWindow.contentView, @"condition:fold");
+  MVCheck(@"device: a foldable's row offers the poses the device lists, at the one it reads", fold.numberOfItems == 4 && [[pane shown:@"fold"] isEqual:@"half_opened"] && [fold.titleOfSelectedItem isEqual:MVWord(@"Half Open")], [fold.itemTitles componentsJoinedByString:@"|"]);
+  [pane show:@{@"op": @"answer",
+               @"name": @"device",
+               @"platform": @"android",
+               @"conditions": @[@{@"name": @"fold", @"value": @"open"}]}];
+  MVCheck(@"device: and the two every foldable has where a device lists none", fold.numberOfItems == 2 && [[pane shown:@"fold"] isEqual:@"open"], [fold.itemTitles componentsJoinedByString:@"|"]);
   // a change took seconds to show on a loaded Mac, and one the device did not take only went back
   MVConditionRow *row = [pane valueForKey:@"_rows"][@"text_size"];
   NSView *spin = [row valueForKey:@"spin"];
