@@ -19,6 +19,8 @@ import XCTest
     /// before it only as what moved is known to cycle.
     var byItself = false
     var cycled = false
+    /// The process XCTest's keyboard last sent a key to (`key`).
+    var keyedPid: Int?
     /// The frame of the system alert in the last read, if one was over the app.
     var alertFrame: CGRect?
     /// The app's frame in the last read: wider than tall where its interface stands turned.

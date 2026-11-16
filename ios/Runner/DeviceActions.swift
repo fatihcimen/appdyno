@@ -118,9 +118,28 @@ extension Device {
 
     private func key(_ name: String, _ modifiers: [String]) throws {
         let flags = modifiers.reduce(into: XCUIElement.KeyModifierFlags()) { $0.formUnion(Device.held[$1] ?? []) }
+        // XCTest's delete does nothing with a modifier held, and typed as text it deletes one character whatever is
+        // held (live: option+delete left the word, or took a letter of it)
+        if name == "delete", !flags.isEmpty {
+            throw AgentError(
+                "UNSUPPORTED",
+                "XCTest sends no delete with \(modifiers.joined(separator: "+")) held",
+                hint: "select what to delete first (shift+option+arrow_left takes a word, shift+command+arrow_left "
+                    + "the line), then press delete"
+            )
+        }
         if !flags.isEmpty || name.count == 1
             || ["escape", "space", "arrowUp", "arrowDown", "arrowLeft", "arrowRight"].contains(name) {
-            front().0.typeKey(Device.keyboard[name]?.rawValue ?? name, modifierFlags: flags)
+            let app = front().0
+            let pid = app.responds(to: NSSelectorFromString("processID")) ? app.value(forKey: "processID") as? Int : nil
+            // on a simulator no hardware key has reached, XCTest's first key to an app that just started comes
+            // without its modifiers, and its next ones keep them (live: command+a selected nothing, shift+arrow
+            // moved the cursor alone): a key no app takes goes first
+            if !flags.isEmpty, pid == nil || pid != keyedPid {
+                app.typeKey(XCUIKeyboardKey.F19.rawValue, modifierFlags: [])
+            }
+            app.typeKey(Device.keyboard[name]?.rawValue ?? name, modifierFlags: flags)
+            keyedPid = pid
             return
         }
         switch name {
