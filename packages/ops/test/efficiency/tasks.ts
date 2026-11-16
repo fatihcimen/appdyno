@@ -93,7 +93,9 @@ const logIn = (late: number) => async () => {
   const d = simulator(form);
   let reads = -1;
   d.onAct = (a) => {
-    if (a.kind === 'tap') reads = late;
+    if (a.kind !== 'tap') return;
+    if (late) reads = late;
+    else d.fixture = sent;
   };
   const tree = d.tree.bind(d);
   d.tree = () => {
