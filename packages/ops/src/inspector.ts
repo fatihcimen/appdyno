@@ -1,3 +1,4 @@
+import { asName, onLine } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { DoneOut } from './schemas.js';
@@ -29,7 +30,7 @@ export function inspectorOps(ctx: ServerContext) {
         if (action === 'list') {
           const elements = await inspector.elements();
           const lines = elements.map(
-            (e) => `${e.caption}${e.identifier ? ` #${e.identifier}` : ''}`,
+            (e) => `${onLine(e.caption)}${e.identifier ? ` #${asName(e.identifier)}` : ''}`,
           );
           return reply(lines.join('\n') || 'nothing on the screen', {
             done: `${elements.length} elements`,
@@ -39,7 +40,8 @@ export function inspectorOps(ctx: ServerContext) {
         if (!name) throw new ToolError('press needs name', 'INVALID_ARGUMENT');
         const pressed = await inspector.press(name);
         s.acted();
-        return reply(`pressed ${pressed.caption}`, { done: `pressed ${pressed.caption}` });
+        const t = `pressed ${onLine(pressed.caption)}`;
+        return reply(t, { done: t });
       },
     }),
   ];

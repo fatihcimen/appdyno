@@ -1,4 +1,12 @@
-import { fold, INSTALLED_APPS, must, reportProgress, type Screen } from '@appdyno/core';
+import {
+  fold,
+  INSTALLED_APPS,
+  must,
+  onLine,
+  reportProgress,
+  type AppLink,
+  type Screen,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
@@ -50,6 +58,10 @@ async function askOfScheme(policy: Policy, s: Session, href: string, app: string
   if (declared.some((l) => schemeOf(l.url) === scheme)) return;
   await approveLink(s, href, scheme, app);
 }
+
+/** A link an app says it opens, as a line: an app wrote its filters, so they stay on that line. */
+const linkLine = (l: AppLink) =>
+  `${l.kind} ${onLine(l.url)}${l.state ? `: ${onLine(l.state)}` : ''}`;
 
 /** With `links`, each link the app opens, as its lines say. */
 const LinkOut = ActionOut.extend({
@@ -225,9 +237,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         const s = await ctx.session();
         if (links) {
           const found = await s.device.apps.links(checkApp(policy, links));
-          const t =
-            found.map((l) => `${l.kind} ${l.url}${l.state ? `: ${l.state}` : ''}`).join('\n') ||
-            `${links} opens no links`;
+          const t = found.map(linkLine).join('\n') || `${links} opens no links`;
           return reply(t, { done: t, screen: 'none', warnings: [], links: found });
         }
         if (settings) return openSettings(s, settings, read);

@@ -1,4 +1,4 @@
-import { alertAnswer } from '@appdyno/core';
+import { alertAnswer, onLine } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { stepsOp } from './batch.js';
@@ -246,7 +246,7 @@ function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
       }
       const buttons = a.buttons.map((b) => JSON.stringify(clean(b.label))).join(', ');
       if (!answer) {
-        const t = `system alert: ${a.texts.map(clean).join(' / ')}\nbuttons: ${buttons}`;
+        const t = `system alert: ${a.texts.map((x) => onLine(clean(x))).join(' / ')}\nbuttons: ${buttons}`;
         return reply(t, { ...summary(t), alert: { ...a, texts: a.texts.map(clean) } });
       }
       const { hit, many } = alertAnswer(a, (x) => facts.alertButton(screen.elements, x), answer);
