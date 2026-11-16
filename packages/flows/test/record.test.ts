@@ -10,12 +10,14 @@ import {
   type RecordingState,
 } from '../src/index.js';
 
+/** Each element at a place of its own, one under the last, unless it is given one. */
+let placed = 0;
 const el = (
   ref: string,
   role: string,
   label: string,
   id?: string,
-  rect = { x: 0, y: 0, width: 100, height: 40 },
+  rect = { x: 0, y: 50 * placed++, width: 100, height: 40 },
 ): ScreenElement => ({
   ref,
   role,
@@ -65,6 +67,30 @@ describe('the selector a target is recorded with', () => {
   it('takes the text alone where the role is no name another platform shares', () => {
     const e = el('@a', 'tappable', 'Row');
     expect(bestSelector(on([e]), e)).toEqual({ selector: { text: 'Row' } });
+  });
+
+  it('takes a text that finds a control and its own text inside it, as a replay takes the two for one', () => {
+    // a Compose tab, as Now in Android's: one test tag on every tab, and the tab's words on a text inside it too
+    const tab = (ref: string, label: string, x: number): ScreenElement[] => [
+      {
+        ...el(ref, 'tappable', label, 'NiaNavItem', { x, y: 2200, width: 300, height: 200 }),
+        flags: ['clickable'],
+      },
+      el(`${ref}t`, 'text', label, undefined, { x: x + 90, y: 2330, width: 120, height: 40 }),
+    ];
+    const list = [...tab('@a', 'For you', 0), ...tab('@b', 'Saved', 360)];
+    const [forYou, itsText] = list;
+    assert(forYou && itsText);
+    expect(selectIn(list, { text: 'For you' })).toEqual([forYou, itsText]);
+    // not `id=NiaNavItem index=0`: the tab chosen leaves that id's matches on another screen, and index 0 is Saved
+    expect(bestSelector(on(list), forYou)).toEqual({ selector: { text: 'For you' } });
+    expect(bestSelector(on(list), itsText)).toEqual({ selector: { text: 'For you' } });
+    // two rows of the same words stand apart, and are still told by an index
+    const twice = [...list, ...tab('@c', 'For you', 720)];
+    expect(bestSelector(on(twice), forYou)).toEqual({
+      selector: { id: 'NiaNavItem', index: 0 },
+      ambiguous: 3,
+    });
   });
 
   it('records an index and how many it chose from when nothing alone finds it', () => {

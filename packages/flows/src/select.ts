@@ -1,4 +1,4 @@
-import { must, selectIn, type Screen, type ScreenElement } from '@appdyno/core';
+import { must, oneOf, selectIn, type Screen, type ScreenElement } from '@appdyno/core';
 import type { FlowSelector } from './format.js';
 
 /** The roles both platforms give a control alike; the others (`tappable`, a class name) may not match on another. */
@@ -26,7 +26,9 @@ export function bestSelector(screen: Pick<Screen, 'list' | 'elements'>, e: Scree
     ...(text ? [{ text }] : []),
   ];
   const hits = (c: FlowSelector) => selectIn(screen.list, c);
-  const unique = candidates.find((c) => hits(c).length === 1 && hits(c)[0]?.ref === e.ref);
+  // alone as a replay finds it: a control and its own text inside it are one target there, and counted as two, a
+  // text that named the control alone gave way to an id on several, picked by an index that another screen shifts
+  const unique = candidates.find((c) => hits(c).some((x) => x.ref === e.ref) && oneOf(hits(c)));
   if (unique) return { selector: unique };
   const within = must(
     [...candidates, { role: e.role }].find((c) => hits(c).some((x) => x.ref === e.ref)),
