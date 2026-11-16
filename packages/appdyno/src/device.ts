@@ -176,11 +176,9 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     },
     key: async (key, o) => touched(await device.key(key, acts(o)), o),
     async typeText(text, { at, replace, submit, ...o } = {}) {
-      const given = acts(o);
-      // into the field that has the focus, a text goes to whatever is in front, as a key does
-      if (at) await aimedStill(o);
+      // a text goes to the field it finds, as a key goes to whatever is in front: neither is compared with a read
       const r = await device.typeText(text, {
-        ...given,
+        ...acts(o),
         ...(at && { at }),
         ...(replace !== undefined && { replace }),
         ...(submit !== undefined && { submit }),

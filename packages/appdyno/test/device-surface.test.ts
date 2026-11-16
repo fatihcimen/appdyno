@@ -133,6 +133,8 @@ describe('the policy a program gives', () => {
     await bad({ policy: { secrets: [1] } });
     await bad({ policy: { urls: '^myapp:' } });
     await bad({ signing: { keychain: 'login.keychain' } });
+    // by its own name, secrets takes one text too, as it did
+    expect(() => connect({ secrets: 'one' as never })).not.toThrow();
     expect(() => connect({ policy: { write: '/tmp' as never } })).toThrow(/policy\.write/);
   });
 });
@@ -541,6 +543,20 @@ describe('what a touch waits for and answers', () => {
   );
 
   it(
+    'answers for the screen a link began on where that held still, unless before names it',
+    fakeTimed(async () => {
+      const d = await opened();
+      const began = (await d.screen()).hash;
+      // this fake's link opens nothing: the screen it began on stays
+      await expect(d.openLink('app://item/1')).resolves.toMatchObject({ settled: true });
+      const waited = await d.openLink('app://item/1', { before: began, maxMs: 400 });
+      expect(waited.settled).toBe(false);
+      expect(waited.ms).toBeGreaterThanOrEqual(400);
+      await d.close();
+    }),
+  );
+
+  it(
     "waits for a link's screen by the same options",
     fakeTimed(async () => {
       const d = await opened();
@@ -580,7 +596,6 @@ describe('a touch aimed on a read that is no longer in front, on an iPhone', () 
     await expect(d.tap(point, { before: on })).rejects.toMatchObject(stale);
     await expect(d.longPress(point, 600, { before: on })).rejects.toMatchObject(stale);
     await expect(d.swipe(point, { x: 5, y: 5 }, 300, { before: on })).rejects.toMatchObject(stale);
-    await expect(d.typeText('a', { at: point, before: on })).rejects.toMatchObject(stale);
     expect(sent()).toEqual(['act']);
     await d.close();
   });
@@ -599,13 +614,14 @@ describe('a touch aimed on a read that is no longer in front, on an iPhone', () 
     await d.close();
   });
 
-  it('is not compared for a key, a text into the focused field, a read it did not give or one past the last 8', async () => {
+  it('is not compared for a key, a text, a read it did not give or one past the last 8', async () => {
     shows('dev.shop');
     const d = await openDevice(SERIAL, { share: true });
     const { point, on } = await d.aim({ text: 'Buy' });
     shows('com.apple.mobilesafari');
     await d.key('home', { before: on });
     await d.typeText('a', { before: on });
+    await d.typeText('a', { at: point, before: on });
     await d.tap(point, { before: 'a hash of another object' });
     for (let n = 0; n < 8; n++) {
       shows(`dev.other${n}`);
@@ -614,7 +630,7 @@ describe('a touch aimed on a read that is no longer in front, on an iPhone', () 
     const reads = device.calls.filter((c) => c.name === 'tree').length;
     await d.tap(point, { before: on });
     expect(device.calls.filter((c) => c.name === 'tree')).toHaveLength(reads);
-    expect(sent()).toEqual(['act', 'typeText', 'act', 'act', 'act']);
+    expect(sent()).toEqual(['act', 'typeText', 'act', 'typeText', 'act', 'act', 'act']);
     await d.close();
   });
 

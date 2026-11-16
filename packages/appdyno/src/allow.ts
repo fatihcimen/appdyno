@@ -35,7 +35,8 @@ type Allowed = Pick<
 
 /**
  * A program's options as the policy the tools keep, for `connect` and for a device opened from code alike. A link's
- * list is `policy.urls`, else `allowUrls`; secrets and folders are those of both.
+ * list is `policy.urls`, else `allowUrls`; secrets and folders are those of both, and those the environment names for
+ * a server: `APPDYNO_SECRETS`, `APPDYNO_SECRETS_FILE` and `APPDYNO_ALLOW_WRITE`.
  */
 export function policyFor(given: Allowed): ToolPolicy {
   const { policy = {} } = given;
@@ -49,8 +50,9 @@ export function policyFor(given: Allowed): ToolPolicy {
     ...(urls && { urls }),
     ...(given.allowBuild === true && { allowBuild: true }),
     apps: texts(policy.apps, 'policy.apps'),
+    // `secrets` by its name takes one text too, as it did before `policy` was there
     secrets: secretsOf(process.env, [
-      ...texts(given.secrets, 'secrets'),
+      ...[given.secrets ?? []].flat(),
       ...texts(policy.secrets, 'policy.secrets'),
     ]),
     writeDirs: writeDirsOf([

@@ -66,7 +66,8 @@ export type OpenOptions = {
    * in an audit's words. `apps`: the only apps `launch`, `terminate`, `clearData` and `logs` take, and a link opens in.
    * `urls`: the only links `openLink` opens. `write`: folders `screenshot` may write a file in, beside the folder the
    * program runs in and appdyno's own state folder. A call outside them is refused `POLICY_DENIED`. A touch is still
-   * a touch: none of this asks anything of one.
+   * a touch: none of this asks anything of one. The secrets and folders the environment names for a server are added:
+   * `APPDYNO_SECRETS`, `APPDYNO_SECRETS_FILE` and `APPDYNO_ALLOW_WRITE`.
    */
   policy?: Policy;
   /** An iPhone's signing for this device alone, in place of the `APPDYNO_IOS_PROFILE` variables: see `Signing`. */
@@ -76,14 +77,15 @@ export type OpenOptions = {
 export type TouchOptions = {
   /**
    * The `hash` of the read the touch was aimed on: the screen after the touch is settled against it. A touch (`tap`,
-   * `longPress`, `swipe`, and `typeText` with `at`) whose `before` is a read that no longer has in front what it had
+   * `longPress` or `swipe`) whose `before` is a read that no longer has in front what it had
    * is refused `STALE`, with nothing sent, while that read is among the last 8. Android compares on the device, as
    * the touch is sent, by the app windows of the two reads. iOS compares on this Mac, by one more read just before
    * the touch, of the reads this device object gave: another app in front, a system alert that came or went, an
    * alert or a sheet of the app's that came up or went away. What comes in front between that read and the touch is
-   * not caught there, and a cover the app draws that is no alert or sheet is not seen as one. `key` goes to whatever
-   * is in front, and is never refused so. On `launch` and `openLink` it names the screen the call began on, which is
-   * then no rest however long it holds.
+   * not caught there, and a cover the app draws that is no alert or sheet is not seen as one. `key` and `typeText`
+   * go to whatever is in front, and are never refused so. On `launch` and `openLink` it names the screen the call
+   * began on, which is then no rest however long it holds: without it, a screen slow to come is answered for by the
+   * one the call began on, where that one held still.
    */
   before?: string;
   /** How long the layout must hold to count as at rest, in ms: 200 with none given, 5000 at most. */
@@ -230,7 +232,8 @@ export type Device = {
   /** The app's own log lines, the oldest first, each a line of data. */
   logs(query?: LogsQuery): Promise<Logs>;
   /**
-   * Opens a link, in `app` where one is given, and waits for the screen it opens to come to rest. Refused
+   * Opens a link, in `app` where one is given, and waits for the screen to come to rest: with `before`, for another
+   * screen than the one it names, as a link may take a second to open its app. Refused
    * `POLICY_DENIED` for a scheme that reaches files or code, as a tool refuses it, for a link `policy.urls` does not
    * name, for one that would open in an app `policy.apps` does not, and for one that places a call unless
    * `policy.urls` names it.
