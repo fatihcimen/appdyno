@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+### Added
+
+- **Network on the iOS simulator.** `network` keeps a request's headers and text bodies when asked (`start` with `bodies`), gives one request whole by `id` with what the session measured of it, shows requests still in flight, filters by `method` and `status`, gives what is new since an id by `after`, and writes the capture as HAR 1.2 (`save`). Headers, bodies and addresses are cleaned as a log is.
+- **Mock rules.** `network mock` answers, fails, delays or sends elsewhere the requests a rule takes, by host, path (glob or regex), method and query. The flow step `mock` holds a rule while its file runs.
+- **Throttle.** `network throttle` slows the app's requests on a simulator: latency, bandwidth and loss, by the names `device_setting network` has on Android, and `3g` and `offline`.
+- **Mac app.** The Network pane shows a request whole, filters the list, copies a request as cURL, makes a rule of an answer, saves a HAR, edits the rules and sets the speed, on the same capture an MCP client uses. Show real values, off by default, shows what was sent in that window only.
+- A `network read` of all requests is folded: failures first, each host once, repeats in one line. Under the probe, the app's own certificate check (pinning) and its answers to a login or client-certificate challenge are not asked; background sessions, WKWebView, Network.framework and dart:io are not seen.
+
 ### Changed
 
 - A touch refused as `NOT_FOUND` or `STALE` holds the screen as it is now, as an answer does: what differs from the screen shown last, or all of it. It took a `screen` call and a turn before the next try. A `steps` call that fails shows the screen the same way, where it always showed all of it; `read: full` still does. Neither hint sends to `screen` any more.

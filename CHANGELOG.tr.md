@@ -4,6 +4,14 @@
 
 ## Yayımlanmamış
 
+### Eklenenler
+
+- **iOS simülatöründe ağ.** `network`, istendiğinde (`bodies` ile `start`) bir isteğin başlıklarını ve metin gövdelerini tutar, `id` ile tek bir isteğin tamamını oturumun ölçtükleriyle birlikte verir, hâlâ süren istekleri gösterir, `method` ve `status` ile süzer, `after` ile bir kimlikten sonra yeni olanı verir ve yakalamayı HAR 1.2 olarak yazar (`save`). Başlıklar, gövdeler ve adresler bir log gibi temizlenir.
+- **Sahte yanıt kuralları.** `network mock`, bir kuralın aldığı istekleri ana makineye, yola (glob ya da regex), yönteme ve sorguya göre yanıtlar, başarısız kılar, geciktirir ya da başka yere gönderir. `mock` flow adımı, dosyası çalışırken bir kuralı geçerli tutar.
+- **Yavaşlatma.** `network throttle`, simülatörde uygulamanın isteklerini yavaşlatır: gecikme, bant genişliği ve kayıp; Android'de `device_setting network`'ün adlarıyla, ayrıca `3g` ve `offline`.
+- **Mac uygulaması.** Ağ bölmesi bir isteğin tamamını gösterir, listeyi süzer, bir isteği cURL olarak kopyalar, bir yanıttan kural yapar, HAR kaydeder, kuralları düzenler ve hızı ayarlar; hepsi bir MCP istemcisinin kullandığı aynı yakalama üzerinde. Varsayılan olarak kapalı olan "Gerçek değerleri göster", gönderileni yalnızca o pencerede gösterir.
+- Bütün isteklerin `network read` çağrısı katlanmış gelir: önce başarısız olanlar, her ana makine bir kez, yinelenenler tek satırda. Probe içindeyken uygulamanın kendi sertifika denetimi (pinning) ile bir oturum açma ya da istemci sertifikası sorgusuna verdiği yanıtlar sorulmaz; arka plan oturumları, WKWebView, Network.framework ve dart:io görülmez.
+
 ### Değişenler
 
 - `NOT_FOUND` ya da `STALE` ile reddedilen bir dokunuş, bir yanıtın yaptığı gibi ekranı şimdiki haliyle içerir: son gösterilen ekrandan farkını ya da tamamını. Önceden bir sonraki denemeden önce bir `screen` çağrısı ve bir tur gerekiyordu. Başarısız olan bir `steps` çağrısı da ekranı aynı biçimde gösterir; önceden hep tamamını gösteriyordu, `read: full` yine öyle yapar. İkisinin ipucu da artık `screen`'e yollamaz.
