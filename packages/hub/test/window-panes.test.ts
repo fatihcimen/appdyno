@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,6 +12,7 @@ import {
   PROBE_WHILE,
   windowNetwork,
 } from '../src/window-network.js';
+import { NO_REQUEST } from '../src/window-network-tools.js';
 import { windowSends } from '../src/window-sends.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
@@ -22,6 +23,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   rmSync(state, { recursive: true, force: true });
 });
 
@@ -227,7 +229,7 @@ describe("a window's Network pane", () => {
 
   const open = (t: ReturnType<typeof on>, recording = false) => {
     const sends = windowSends(t.ctx, t.device, t.session);
-    return windowNetwork(t.device, t.session, sends.call, {
+    return windowNetwork(t.device, t.ctx.policy, t.session, sends.call, {
       recording: () => recording,
       measuring: () => false,
     });
@@ -401,6 +403,104 @@ describe("a window's Network pane", () => {
     await expect
       .poll(() => answered(t))
       .toMatchObject({ ok: false, text: expect.stringMatching(/not a rule/) as unknown });
+    await pane.end();
+  });
+
+  it('shows and copies real values only in the window that asked, and never in what an agent is answered', async () => {
+    const t = on();
+    vi.stubEnv('HOME', state);
+    const entries = [
+      {
+        id: 0,
+        at: '2026-01-01T00:00:00.000Z',
+        method: 'POST',
+        url: 'https://a.test/login?token=abc123',
+        status: 200,
+        ms: 3,
+        bytes: 31,
+      },
+      { id: 1, method: 'GET', url: 'https://a.test/later', status: 200, ms: 1 },
+    ];
+    const source: NetworkSource = {
+      ...probe(),
+      read: () => Promise.resolve({ entries }),
+      control: () => undefined,
+      detail: (_, id) =>
+        Promise.resolve(
+          id === 0
+            ? {
+                requestHeaders: { Authorization: 'Bearer abcdefgh12345678', Accept: '*/*' },
+                requestBody: '{"password":"hunter2"}',
+                responseHeaders: { 'Content-Type': 'application/json', 'Set-Cookie': 'sid=xyz' },
+                responseBody: '{"token":"tok-0042","ok":true}',
+                responseBodySize: 31,
+              }
+            : undefined,
+        ),
+    };
+    Object.assign(t.device, { network: source });
+    const pane = open(t);
+    const sends = windowSends(t.ctx, t.device, t.session);
+    pane.onWindow({ op: 'control', name: 'networkStart', via: 'probe', bodies: true });
+    await expect.poll(() => said(t)).toMatchObject({ capturing: 'probe' });
+    const lines = () =>
+      (said(t)?.detail as { lines: string[] } | undefined)?.lines.join('\n') ?? '';
+    const SECRETS = ['abcdefgh12345678', 'hunter2', 'sid=xyz', 'tok-0042', 'abc123'];
+    // as a window shows it with no choice made
+    pane.onWindow({ op: 'control', name: 'networkDetail', id: 0 });
+    await expect.poll(lines).toContain('  Authorization: •••');
+    for (const secret of SECRETS) expect(lines()).not.toContain(secret);
+    // the person chose real values: this window gets what was sent
+    pane.onWindow({ op: 'control', name: 'networkDetail', id: 0, real: true });
+    await expect.poll(lines).toContain('  Authorization: Bearer abcdefgh12345678');
+    for (const secret of SECRETS) expect(lines()).toContain(secret);
+    // and what an agent is answered is hidden all the same: the op knows of no such choice
+    const { answer: answeredAgent, data } = await sends.call('network', 'network', {
+      action: 'read',
+      id: 0,
+    });
+    const agent = `${answeredAgent.text}\n${JSON.stringify(data)}`;
+    expect(agent).toContain('Authorization: •••');
+    for (const secret of SECRETS) expect(agent).not.toContain(secret);
+    const listed = await sends.call('network', 'network', { action: 'read' });
+    for (const secret of SECRETS) expect(JSON.stringify(listed)).not.toContain(secret);
+    // a command that makes the request again, hidden unless asked otherwise
+    pane.onWindow({ op: 'control', name: 'networkCurl', id: 0 });
+    await expect
+      .poll(() => said(t)?.curl)
+      .toBe(
+        "curl -X POST 'https://a.test/login?token=•••' -H 'Authorization: •••' -H 'Accept: */*' --data-raw '{\"password\":\"•••\"}'",
+      );
+    pane.onWindow({ op: 'control', name: 'networkCurl', id: 0, real: true });
+    await expect
+      .poll(() => said(t)?.curl)
+      .toBe(
+        "curl -X POST 'https://a.test/login?token=abc123' -H 'Authorization: Bearer abcdefgh12345678' -H 'Accept: */*' --data-raw '{\"password\":\"hunter2\"}'",
+      );
+    // a rule of its answer is one an agent lists: hidden whatever the window shows
+    pane.onWindow({ op: 'control', name: 'networkMockFrom', id: 0 });
+    await expect
+      .poll(() => said(t)?.rule)
+      .toBe(
+        '"a.test/login" method=POST status=200 type=application/json body="{\\"token\\":\\"•••\\",\\"ok\\":true}"',
+      );
+    pane.onWindow({ op: 'control', name: 'networkCurl', id: 9 });
+    await expect.poll(() => answered(t)).toMatchObject({ ok: false, text: NO_REQUEST });
+    // the capture as a file on the Desktop, as clean as an agent's
+    pane.onWindow({ op: 'control', name: 'networkSave' });
+    await expect.poll(() => answered(t)).toMatchObject({ ok: true, text: 'Saved to the Desktop' });
+    const har = readFileSync(String(answered(t)?.file), 'utf8');
+    expect(String(answered(t)?.file)).toMatch(/\/Desktop\/appdyno network [\d-]+\.har$/);
+    expect(har).toContain('"Authorization"');
+    for (const secret of SECRETS) expect(har).not.toContain(secret);
+    // the list emptied: what the capture holds stays, and the window is given what comes after
+    pane.onWindow({ op: 'control', name: 'networkClear' });
+    await expect.poll(() => said(t)?.entries).toEqual([]);
+    entries.push({ id: 2, method: 'GET', url: 'https://a.test/new', status: 200, ms: 1 });
+    pane.onWindow({ op: 'control', name: 'networkRead' });
+    await expect
+      .poll(() => (said(t)?.entries as { id: number }[] | undefined)?.map((e) => e.id))
+      .toEqual([2]);
     await pane.end();
   });
 });

@@ -93,7 +93,9 @@ type Control =
         | 'deviceList'
         | 'measureLaunch'
         | 'measureScroll'
+        | 'networkClear'
         | 'networkRead'
+        | 'networkSave'
         | 'networkStop'
         | 'reconnect'
         | 'record'
@@ -107,7 +109,8 @@ type Control =
   | { name: 'journey'; file: string }
   | { name: 'links'; app?: string }
   | { name: 'networkStart'; via: NetworkVia; bodies?: boolean }
-  | { name: 'networkDetail'; id: number }
+  | { name: 'networkDetail' | 'networkCurl'; id: number; real?: boolean }
+  | { name: 'networkMockFrom'; id: number }
   | { name: 'networkRules'; rules: string[] }
   | { name: 'networkRuleSwitch'; at: number; on: boolean }
   | { name: 'networkThrottle'; value: string }
@@ -312,6 +315,9 @@ export type ViewerOrder = Staged &
         throttle?: string;
         /** One request whole, as its lines. */
         detail?: { id: number; lines: string[] };
+        /** A request as a command, for the window to copy; and a rule made of a request's answer, for its field. */
+        curl?: string;
+        rule?: string;
       }
     | { op: 'note'; text: string }
     | { op: 'pair'; both?: boolean; with?: string; failing?: string; ended?: boolean }

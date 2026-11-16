@@ -77,6 +77,12 @@ static const double kListHeight = 96;
   [self chosen];
 }
 
+- (void)fill:(NSString *)line {
+  [_list selectKey:nil];
+  [self chosen];
+  _field.stringValue = line;
+}
+
 /// The whole list as it would stand, sent as one: the parent sets it by the op an agent calls.
 - (void)send:(NSArray<NSString *> *)lines {
   if (self.onSend) self.onSend(@{@"op": @"control", @"name": @"networkRules", @"rules": lines});

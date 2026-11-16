@@ -7,7 +7,8 @@ import type {
   ViewerTold,
   WindowControl,
 } from '@appdyno/core';
-import { captures, ruleSwitched } from '@appdyno/ops';
+import { captures, ruleSwitched, type Policy } from '@appdyno/ops';
+import { networkTools } from './window-network-tools.js';
 import { frontApp, type WindowSession } from './controls.js';
 import type { windowSends } from './window-sends.js';
 
@@ -39,12 +40,31 @@ const numbered = (data: Record<string, unknown>) =>
     id: typeof e.id === 'number' ? e.id : Number(data.dropped ?? 0) + i,
   }));
 
+/** What a device can see, read from it alone: listing them opens no session, and starts no agent. */
+async function waysOf(device: Device) {
+  const own: NetworkPath[] = (await device.network?.paths().catch(() => [])) ?? [];
+  const proxy = await device.settings.get('proxy').catch(() => 'none');
+  // the device's own first: a proxy the Mac or the device goes through is a person's, and is offered last
+  const usable = [
+    ...own.filter((p) => !p.refused).map((p) => p.via),
+    ...(proxy === 'none' ? [] : (['proxy'] as const)),
+  ];
+  // a device with no way of its own is an iPhone; one that only counts is an Android
+  const needs = usable.some((v) => REQUESTS.includes(v))
+    ? undefined
+    : device.network
+      ? ANDROID_NEEDS
+      : IPHONE_NEEDS;
+  return { ways: usable, ...(proxy !== 'none' && { proxy }), ...(needs && { needs }) };
+}
+
 /**
  * A window's Network pane: the capture `network` keeps for the device, read by that op so an agent's and the pane's are
  * one, and the ways the device has. A proxy is offered only where the device already goes through one: no window sets one.
  */
 export function windowNetwork(
   device: Device,
+  policy: Policy,
   session: () => Pick<WindowSession, 'tell'>,
   call: Call,
   o: { recording(): boolean; measuring(): boolean },
@@ -53,6 +73,8 @@ export function windowNetwork(
   let wanted = false;
   let ours = false;
   let reading = false;
+  /** The last request a person cleared the list to: a read gives what came after it. */
+  let cleared: number | undefined;
   let looking: NodeJS.Timeout | undefined;
   const tell = (m: ViewerTold<'network'>) => session().tell({ op: 'network', ...m });
   const answer = (m: Record<string, unknown>) =>
@@ -60,23 +82,7 @@ export function windowNetwork(
   const op = (args: Record<string, unknown>) =>
     call('network', 'network', { ...args, limit: MOST });
 
-  /** What this device can see, read from it alone: listing them opens no session, and starts no agent. */
-  const ways = async () => {
-    const own: NetworkPath[] = (await device.network?.paths().catch(() => [])) ?? [];
-    const proxy = await device.settings.get('proxy').catch(() => 'none');
-    // the device's own first: a proxy the Mac or the device goes through is a person's, and is offered last
-    const usable = [
-      ...own.filter((p) => !p.refused).map((p) => p.via),
-      ...(proxy === 'none' ? [] : (['proxy'] as const)),
-    ];
-    // a device with no way of its own is an iPhone; one that only counts is an Android
-    const needs = usable.some((v) => REQUESTS.includes(v))
-      ? undefined
-      : device.network
-        ? ANDROID_NEEDS
-        : IPHONE_NEEDS;
-    return { ways: usable, ...(proxy !== 'none' && { proxy }), ...(needs && { needs }) };
-  };
+  const ways = () => waysOf(device);
 
   /** The probe's rules with what each took, and its throttle, as the op an agent sets them by lists them. */
   const controlled = async () => {
@@ -95,7 +101,10 @@ export function windowNetwork(
     if (!c || reading) return;
     reading = true;
     try {
-      const { answer: said, data } = await op({ action: 'read' });
+      const { answer: said, data } = await op({
+        action: 'read',
+        ...(cleared !== undefined && { after: cleared }),
+      });
       if (!data) {
         answer(said);
         return;
@@ -149,6 +158,8 @@ export function windowNetwork(
     // what the op says it sees is the pane's to say, in its own words
     answer(said.ok ? { ok: true, text: 'Capture started' } : said);
     if (said.ok) ours = true;
+    // a new capture numbers its requests from the start
+    cleared = undefined;
     await look();
   };
 
@@ -170,11 +181,14 @@ export function windowNetwork(
     });
   };
 
-  /** One request whole, its headers and bodies as the op gives them. */
-  const detail = async (id: number) => {
-    const { answer: said, data } = await op({ action: 'read', id });
-    if (data) tell({ detail: { id, lines: (data.detail as string[] | undefined) ?? [] } });
-    else answer(said);
+  const tools = networkTools(device, policy, tell, answer, op);
+
+  /** The list emptied for a person: what the capture holds stays, and a read gives what comes after. */
+  const clear = async () => {
+    const c = captures.read(serial);
+    const all = c && (await device.network?.read(c.handle ?? {}).catch(() => undefined));
+    cleared = all?.entries.at(-1)?.id ?? cleared;
+    await read();
   };
 
   /** A change of the probe's rules or throttle, by the op an agent makes it with; then what holds now. */
@@ -200,7 +214,11 @@ export function windowNetwork(
     networkStart: (m: ViewerControl<'networkStart'>) => start(m.via, m.bodies),
     networkStop: stop,
     networkRead: read,
-    networkDetail: (m: ViewerControl<'networkDetail'>) => detail(m.id),
+    networkDetail: (m: ViewerControl<'networkDetail'>) => tools.detail(m.id, m.real),
+    networkCurl: (m: ViewerControl<'networkCurl'>) => tools.curl(m.id, m.real),
+    networkMockFrom: (m: ViewerControl<'networkMockFrom'>) => tools.mockFrom(m.id),
+    networkSave: () => tools.save(new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')),
+    networkClear: clear,
     networkRules: (m: ViewerControl<'networkRules'>) => setRules(m.rules),
     networkRuleSwitch: (m: ViewerControl<'networkRuleSwitch'>) => switchRule(m.at, m.on),
     networkThrottle: (m: ViewerControl<'networkThrottle'>) =>

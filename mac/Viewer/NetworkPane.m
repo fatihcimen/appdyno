@@ -14,9 +14,10 @@ static NSString *const kSpeeds[][2] = {
     {@"gsm", @"GSM"},
     {@"gprs", @"GPRS"},
     {@"edge", @"EDGE"},
-    {@"umts", @"3G"},
+    {@"3g", @"3G"},
     {@"hsdpa", @"HSDPA"},
     {@"lte", @"LTE"},
+    {@"offline", @"Offline"},
 };
 enum { kSpeedCount = sizeof kSpeeds / sizeof kSpeeds[0] };
 
@@ -101,6 +102,8 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   NSButton *_go, *_again, *_bodies;
   NSPopUpButton *_throttle;
   MVNetworkRules *_rules;
+  MVNetworkActions *_actions;
+  NSArray<MVRow *> *_allRows;
   NSArray<MVAccentButton *> *_sections;
   NSView *_sectionRow;
   BOOL _onRules;
@@ -168,7 +171,14 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     _rules.onSend = ^(NSDictionary *message) {
       MVPaneSend(weak, message);
     };
-    MVPaneFill(self, @[_state, controls, _bodies, _throttle, _about, _answer, _sectionRow, _none, _list, _detailCard, _rules, _slack], 8);
+    _actions = [MVNetworkActions new];
+    _actions.onChange = ^{
+      [weak sifted];
+    };
+    _actions.onPress = ^(NSString *name) {
+      [weak pressed:name];
+    };
+    MVPaneFill(self, @[_state, controls, _bodies, _throttle, _about, _answer, _sectionRow, _actions, _none, _list, _detailCard, _rules, _slack], 8);
     [self layOut];
   }
   return self;
@@ -190,6 +200,39 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   if (_capturing) MVPaneSend(self, @{@"op": @"control", @"name": @"networkStop"});
   else if (!_bodies.hidden && _bodies.state == NSControlStateValueOn) MVPaneSend(self, @{@"op": @"control", @"name": @"networkStart", @"via": _ways[chosen], @"bodies": @YES});
   else MVPaneSend(self, @{@"op": @"control", @"name": @"networkStart", @"via": _ways[chosen]});
+}
+
+/// The rows a person's words leave: each word in a row's method and address, or in its figures, in any case.
+- (void)listRows {
+  NSArray<NSString *> *words = [_actions.filter.lowercaseString componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+  NSString *chosen = _list.selected.key;
+  _list.rows = [_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, __unused NSDictionary *bindings) {
+                           NSString *all = [NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.help ?: @""].lowercaseString;
+                           for (NSString *word in words)
+                             if (word.length && ![all containsString:word]) return NO;
+                           return YES;
+                         }]];
+  [_list selectKey:chosen];
+}
+
+/// The filter changed, or whether real values show: the list again, and the request chosen asked for again.
+- (void)sifted {
+  _askedKey = nil;
+  _whole = nil;
+  [self listRows];
+  [self layOut];
+  [self showDetail:_list.selected.key];
+}
+
+/// A button of the requests: what is done to one names it, and says whether real values are wanted.
+- (void)pressed:(NSString *)name {
+  NSString *key = _list.selected.key;
+  BOOL one = [name isEqual:@"networkCurl"] || [name isEqual:@"networkMockFrom"];
+  if (one && !key) return;
+  NSMutableDictionary *m = [@{@"op": @"control", @"name": name} mutableCopy];
+  if (one) m[@"id"] = @(key.integerValue);
+  if ([name isEqual:@"networkCurl"] && _actions.real) m[@"real"] = @YES;
+  MVPaneSend(self, m);
 }
 
 - (void)sectionChosen:(NSButton *)sender {
@@ -226,6 +269,14 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     [self showDetail:_list.selected.key];
     return;
   }
+  if ([m[@"curl"] isKindOfClass:NSString.class]) return [_actions copied:m[@"curl"]];
+  // a rule made of a request's answer stands in the rules' field, for a person to set
+  if ([m[@"rule"] isKindOfClass:NSString.class]) {
+    _onRules = YES;
+    [_rules fill:m[@"rule"]];
+    [self layOut];
+    return [self showDetail:_list.selected.key];
+  }
   NSString *capturing = [m[@"capturing"] isKindOfClass:NSString.class] ? m[@"capturing"] : nil;
   _keeps = capturing && [m[@"bodies"] boolValue];
   if ([m[@"rules"] isKindOfClass:NSArray.class]) [_rules show:m[@"rules"]];
@@ -252,9 +303,8 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     if ([e isKindOfClass:NSDictionary.class]) [rows addObject:entryRow(e, at)];
   }];
   // a probe's requests are read again every few seconds: the one a person reads stays chosen, and stays open
-  NSString *chosen = _list.selected.key;
-  _list.rows = rows;
-  [_list selectKey:chosen];
+  _allRows = rows;
+  [self listRows];
   [self layOut];
   [self showDetail:_list.selected.key];
 }
@@ -303,6 +353,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     section.accessibilityValue = chosen ? MVWord(@"selected") : nil;
   }
   _rules.hidden = !_onRules;
+  _actions.hidden = !probe || _onRules;
   _list.hidden = _onRules || !_list.rows.count;
   _none.hidden = _onRules || _list.rows.count;
   _slack.hidden = !_list.hidden;
@@ -315,11 +366,13 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   }];
   NSDictionary *e = at == NSNotFound ? nil : _entries[at];
   _detailCard.hidden = !e || _onRules;
+  _actions.hasRequest = e != nil;
   if (!e) return;
   // its headers and bodies are asked for once, where the capture keeps them, and stand in place of the line
   if (_keeps && key && ![key isEqual:_askedKey]) {
     _askedKey = key;
-    MVPaneSend(self, @{@"op": @"control", @"name": @"networkDetail", @"id": @(key.integerValue)});
+    if (_actions.real) MVPaneSend(self, @{@"op": @"control", @"name": @"networkDetail", @"id": @(key.integerValue), @"real": @YES});
+    else MVPaneSend(self, @{@"op": @"control", @"name": @"networkDetail", @"id": @(key.integerValue)});
   }
   if (_whole && [key isEqual:_wholeKey]) {
     if (![_detail.string isEqual:_whole]) _detail.string = _whole;
@@ -344,6 +397,10 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
 
 - (NSString *)said {
   return _about.hidden ? _state.stringValue : [NSString stringWithFormat:@"%@\n%@", _state.stringValue, _about.stringValue];
+}
+
+- (MVNetworkActions *)actions {
+  return _actions;
 }
 
 - (MVNetworkRules *)rules {

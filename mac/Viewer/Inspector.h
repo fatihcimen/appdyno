@@ -187,7 +187,22 @@ void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nulla
 @property(nonatomic, copy, nullable) void (^onSend)(NSDictionary *message);
 /// The parent's rules, each with its line, what it took, and whether it is off.
 - (void)show:(NSArray<NSDictionary *> *)rules;
+/// A line put in the field for a person to set or change, as one made of a request's answer.
+- (void)fill:(NSString *)line;
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
+@end
+
+/// What is done with the requests listed: the words that narrow the list, a request copied as a command or made a
+/// rule of, the capture kept as a file, the list emptied, and whether what was sent shows as it was sent.
+@interface MVNetworkActions : NSView
+@property(nonatomic, readonly) NSString *filter;
+/// A person chose to see real values: held while the window is open, and never kept.
+@property(nonatomic, readonly) BOOL real;
+@property(nonatomic) BOOL hasRequest;
+/// The filter or that choice changed; and a button pressed, by the control's name.
+@property(nonatomic, copy, nullable) void (^onChange)(void);
+@property(nonatomic, copy, nullable) void (^onPress)(NSString *name);
+- (void)copied:(NSString *)text;
 @end
 
 /// The app's requests as `network` gives them, the ways this device has to see them, and what a person needs where none.
@@ -198,6 +213,7 @@ void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nulla
 /// What it says of the capture, and of the request chosen.
 @property(nonatomic, readonly) NSString *said, *detail;
 @property(nonatomic, readonly) MVNetworkRules *rules;
+@property(nonatomic, readonly) MVNetworkActions *actions;
 @end
 
 /// What `audit` finds on the screen shown, by kind; one chosen is marked on the device's picture.

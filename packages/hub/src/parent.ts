@@ -131,7 +131,7 @@ export class Parent {
     const flow = windowFlow(this.ctx, device, hardware, () => session, controls.measuring);
     const sends = windowSends(this.ctx, device, () => session);
     const logs = windowLogs(this.ctx, device, () => session);
-    const network = windowNetwork(device, () => session, sends.call, {
+    const network = windowNetwork(device, this.ctx.policy, () => session, sends.call, {
       recording: flow.recording,
       measuring: controls.measuring,
     });

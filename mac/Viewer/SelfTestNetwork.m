@@ -65,6 +65,72 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
   [pane show:@{@"op": @"network",
                @"detail": @{@"id": @7, @"lines": @[@"7 GET https://a.test/x 200", @"response body (16 B):", @"{\"error\":\"down\"}"]}}];
   MVCheck(@"probe: and shows them whole, the list as it was", [pane.detail hasSuffix:@"{\"error\":\"down\"}"] && pane.rows.count == 1, pane.detail);
+  MVNetworkActions *actions = pane.actions;
+  NSTextField *filter = [actions valueForKey:@"_field"];
+  NSDictionary *again = @{@"op": @"network",
+                          @"capturing": @"probe",
+                          @"bodies": @YES,
+                          @"entries": @[@{@"id": @7,
+                                          @"method": @"GET",
+                                          @"url": @"https://a.test/x",
+                                          @"status": @200,
+                                          @"ms": @3,
+                                          @"how": @"mocked"},
+                                        @{@"id": @8,
+                                          @"method": @"POST",
+                                          @"url": @"https://b.test/pay",
+                                          @"status": @500,
+                                          @"ms": @9}]};
+  [pane show:again];
+  filter.stringValue = @"post 500";
+  actions.onChange();
+  MVCheck(@"requests: words in the filter leave the rows that hold them all, in any case", pane.rows.count == 1 && [pane.rows[0].title isEqual:@"POST b.test/pay"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  filter.stringValue = @"";
+  actions.onChange();
+  MVPokeListRow([pane valueForKey:@"_list"], @"GET a.test/x");
+  MVPump(0.1);
+  [sent removeAllObjects];
+  [window pokeClick:@"networkCurl"];
+  MVPump(0.1);
+  NSDictionary *asked = @{@"op": @"control",
+                          @"name": @"networkCurl",
+                          @"id": @7};
+  MVCheck(@"requests: Copy as cURL asks for the request chosen, hidden as an answer is", [sent.lastObject isEqual:asked], [sent.lastObject description]);
+  [pane show:@{@"op": @"network", @"curl": @"curl -X GET 'https://a.test/x'"}];
+  MVCheck(@"requests: and copies what the parent gives", [[MVPlaceBoard() stringForType:NSPasteboardTypeString] isEqual:@"curl -X GET 'https://a.test/x'"], [MVPlaceBoard() stringForType:NSPasteboardTypeString]);
+  NSButton *real = [actions valueForKey:@"_real"];
+  MVCheck(@"requests: real values are not shown until a person asks", real.state == NSControlStateValueOff && !actions.real, nil);
+  [window.nsWindow layoutIfNeeded];
+  NSRect place = [real convertRect:real.bounds toView:pane];
+  MVCheck(@"requests: its tools stand whole in the Inspector", NSContainsRect(pane.bounds, place) && NSContainsRect(pane.bounds, [filter convertRect:filter.bounds toView:pane]), NSStringFromRect(place));
+  [sent removeAllObjects];
+  real.state = NSControlStateValueOn;
+  [real sendAction:real.action to:real.target];
+  NSDictionary *whole = @{@"op": @"control",
+                          @"name": @"networkDetail",
+                          @"id": @7,
+                          @"real": @YES};
+  MVCheck(@"requests: asked for, the request chosen is asked for again as it was sent", actions.real && [sent.lastObject isEqual:whole], [sent.lastObject description]);
+  [window pokeClick:@"networkCurl"];
+  MVPump(0.1);
+  MVCheck(@"requests: and so is its command", [sent.lastObject[@"real"] isEqual:@YES] && [sent.lastObject[@"name"] isEqual:@"networkCurl"], [sent.lastObject description]);
+  real.state = NSControlStateValueOff;
+  [real sendAction:real.action to:real.target];
+  [window pokeClick:@"networkSave"];
+  MVPump(0.1);
+  NSDictionary *save = @{@"op": @"control", @"name": @"networkSave"};
+  MVCheck(@"requests: Save HAR and Clear are the parent's to do", [sent.lastObject isEqual:save], [sent.lastObject description]);
+  [window pokeClick:@"networkMockFrom"];
+  MVPump(0.1);
+  NSDictionary *mock = @{@"op": @"control",
+                         @"name": @"networkMockFrom",
+                         @"id": @7};
+  MVCheck(@"requests: Mock This Answer asks for a rule of the request chosen", [sent.lastObject isEqual:mock], [sent.lastObject description]);
+  [pane show:@{@"op": @"network", @"rule": @"\"a.test/x\" status=200 body=ok"}];
+  MVCheck(@"requests: and the rule stands in the rules' field, to be set or changed", !pane.rules.hidden && [[[pane.rules valueForKey:@"_field"] stringValue] isEqual:@"\"a.test/x\" status=200 body=ok"], nil);
+  [window pokeClick:@"networkShowRequests"];
+  MVPump(0.1);
+  [[pane.rules valueForKey:@"_field"] setStringValue:@""];
   MVCheck(@"probe: the requests stand first, and the rules in their place when asked for", pane.rules.hidden && ![[pane valueForKey:@"_list"] isHidden], nil);
   [window pokeClick:@"networkShowRules"];
   MVPump(0.1);
