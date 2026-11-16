@@ -5,6 +5,48 @@
 #import "WindowParts.h"
 #import "Words.h"
 
+/// A rule by its fields: shown when asked for, filled from the rule chosen, and sent as fields for the parent to write
+/// as a line; and what the capture holds beside its rules, each set by its own switch.
+static void MVCheckRuleFields(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent) {
+  MVNetworkRuleForm *form = pane.rules.form;
+  MVCheck(@"rules: the fields stay out of the way until asked for", form.hidden, nil);
+  [window pokeClick:@"networkRuleFields"];
+  MVPump(0.1);
+  [pane show:@{@"op": @"network",
+               @"capturing": @"probe",
+               @"strict": @YES,
+               @"unmatched": @"fail",
+               @"rules": @[@{@"rule": @"\"a.test/x\" method=POST status=503",
+                             @"hits": @2,
+                             @"fields": @{@"method": @"POST", @"host": @"a.test", @"path": @"/x", @"status": @"503"}}],
+               @"entries": @[]}];
+  MVPokeListRow([pane.rules valueForKey:@"_list"], @"\"a.test/x\" method=POST status=503");
+  MVPump(0.1);
+  NSPopUpButton *method = [form valueForKey:@"_method"];
+  [window.nsWindow layoutIfNeeded];
+  NSRect place = [form convertRect:form.bounds toView:pane];
+  MVCheck(@"rules: asked for, they stand whole in the Inspector with the rule chosen in them", !form.hidden && NSContainsRect(pane.bounds, place) && [method.titleOfSelectedItem isEqual:@"POST"] && [form.fields isEqual:(@{@"method": @"POST", @"host": @"a.test", @"path": @"/x", @"status": @"503"})], [NSString stringWithFormat:@"%@ in %@ %@", NSStringFromRect(place), NSStringFromRect(pane.bounds), form.fields]);
+  NSTextField *status = [form valueForKey:@"_texts"][@"status"];
+  status.stringValue = @"404";
+  form.onEdit();
+  [sent removeAllObjects];
+  [window pokeClick:@"networkRuleSave"];
+  MVPump(0.1);
+  NSDictionary *fields = @{@"op": @"control",
+                           @"name": @"networkRuleFields",
+                           @"at": @0,
+                           @"fields": @{@"method": @"POST", @"host": @"a.test", @"path": @"/x", @"status": @"404"}};
+  MVCheck(@"rules: changed in its fields, the rule is sent as fields, in its place", [sent.lastObject isEqual:fields], [sent.lastObject description]);
+  NSButton *strict = [pane.rules valueForKey:@"_strict"], *unmatched = [pane.rules valueForKey:@"_unmatched"];
+  MVCheck(@"rules: what the capture holds beside them stands as an agent set it", strict.state == NSControlStateValueOn && unmatched.state == NSControlStateValueOn, nil);
+  unmatched.state = NSControlStateValueOff;
+  [unmatched sendAction:unmatched.action to:unmatched.target];
+  NSDictionary *passes = @{@"op": @"control", @"name": @"networkKeep", @"unmatched": @"pass"};
+  MVCheck(@"rules: and each is set by its own switch, by the op's word", [sent.lastObject isEqual:passes], [sent.lastObject description]);
+  [window pokeClick:@"networkRuleFields"];
+  MVPump(0.1);
+}
+
 /// What only the probe has: headers and bodies asked for at its start, and rules and a speed while it runs.
 void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent) {
   [pane show:@{@"op": @"network",
@@ -47,7 +89,7 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
                                @"how": @"mocked"}]}];
   MVCheck(@"probe: a request a rule answered says so, the speed set stands chosen, and each rule stands with what it took", [pane.rows[0].detail containsString:MVWord(@"Mocked")] && [speed.titleOfSelectedItem isEqual:@"EDGE"] && pane.rules.rows.count == 2 && [pane.rules.rows[1].detail hasPrefix:MVWord(@"Off")], [NSString stringWithFormat:@"%@ | %@ | %@", pane.rows[0].detail, speed.titleOfSelectedItem, [[pane.rules.rows valueForKey:@"detail"] componentsJoinedByString:@"|"]]);
   [sent removeAllObjects];
-  MVPokeListRow([pane valueForKey:@"_list"], @"GET a.test/x");
+  MVPokeListRow([pane valueForKey:@"_list"], @"GET /x");
   MVPump(0.1);
   [pane show:@{@"op": @"network",
                @"capturing": @"probe",
@@ -82,12 +124,29 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
                                           @"status": @500,
                                           @"ms": @9}]};
   [pane show:again];
+  MVList *list = [pane valueForKey:@"_list"];
+  NSArray<NSString *> * (^hosts)(void) = ^{
+    return [[list.rows filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"header == YES"]] valueForKey:@"title"];
+  };
+  MVCheck(@"requests: each stands under its host, by its method and path", [hosts() isEqual:(@[@"a.test", @"b.test"])] && [[list.rows valueForKey:@"title"] isEqual:(@[@"a.test", @"GET /x", @"b.test", @"POST /pay"])], [[list.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  NSMutableDictionary *flying = [again mutableCopy];
+  flying[@"entries"] = [again[@"entries"] arrayByAddingObject:@{@"id": @9,
+                                                                @"method": @"GET",
+                                                                @"url": @"https://a.test/feed",
+                                                                @"ms": @41000,
+                                                                @"inFlight": @YES}];
+  flying[@"unseen"] = @{@"webview": @2,
+                        @"websocket": @1};
+  [pane show:flying];
+  MVCheck(@"requests: one still under way stands with its host's, and says for how long", [[list.rows valueForKey:@"title"] isEqual:(@[@"a.test", @"GET /x", @"GET /feed", @"b.test", @"POST /pay"])] && [pane.rows[1].detail isEqual:MVFormat(@"In flight for %@", @[@"41 s"])] && [pane.rows[1].symbol isEqual:@"hourglass"], [[pane.rows valueForKey:@"detail"] componentsJoinedByString:@"|"]);
+  MVCheck(@"probe: what the app made that it cannot see is said, each kind counted", [pane.said hasSuffix:@"Not seen here: web views: 2, WebSocket tasks: 1"], pane.said);
+  [pane show:again];
   filter.stringValue = @"post 500";
   actions.onChange();
-  MVCheck(@"requests: words in the filter leave the rows that hold them all, in any case", pane.rows.count == 1 && [pane.rows[0].title isEqual:@"POST b.test/pay"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  MVCheck(@"requests: words in the filter leave the rows that hold them all, in any case", pane.rows.count == 1 && [pane.rows[0].title isEqual:@"POST /pay"] && [hosts() isEqual:@[@"b.test"]], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
   filter.stringValue = @"";
   actions.onChange();
-  MVPokeListRow([pane valueForKey:@"_list"], @"GET a.test/x");
+  MVPokeListRow([pane valueForKey:@"_list"], @"GET /x");
   MVPump(0.1);
   [sent removeAllObjects];
   [window pokeClick:@"networkCurl"];
@@ -126,8 +185,10 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
                          @"name": @"networkMockFrom",
                          @"id": @7};
   MVCheck(@"requests: Mock This Answer asks for a rule of the request chosen", [sent.lastObject isEqual:mock], [sent.lastObject description]);
-  [pane show:@{@"op": @"network", @"rule": @"\"a.test/x\" status=200 body=ok"}];
-  MVCheck(@"requests: and the rule stands in the rules' field, to be set or changed", !pane.rules.hidden && [[[pane.rules valueForKey:@"_field"] stringValue] isEqual:@"\"a.test/x\" status=200 body=ok"], nil);
+  [pane show:@{@"op": @"network",
+               @"rule": @"\"a.test/x\" status=200 body=ok",
+               @"fields": @{@"host": @"a.test", @"path": @"/x", @"status": @"200", @"body": @"ok"}}];
+  MVCheck(@"requests: and the rule stands in the rules' field and in its fields, to be set or changed", !pane.rules.hidden && [[[pane.rules valueForKey:@"_field"] stringValue] isEqual:@"\"a.test/x\" status=200 body=ok"] && [pane.rules.form.fields isEqual:(@{@"host": @"a.test", @"path": @"/x", @"status": @"200", @"body": @"ok"})], pane.rules.form.fields.description);
   [window pokeClick:@"networkShowRequests"];
   MVPump(0.1);
   [[pane.rules valueForKey:@"_field"] setStringValue:@""];
@@ -156,6 +217,7 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
   [window pokeClick:@"networkRuleRemove"];
   MVPump(0.1);
   MVCheck(@"rules: and removed, the rest sent", [sent.lastObject[@"rules"] isEqual:@[first]], [sent.lastObject description]);
+  MVCheckRuleFields(window, pane, sent);
   [speed selectItemAtIndex:1];
   [speed sendAction:speed.action to:speed.target];
   NSDictionary *slowed = @{@"op": @"control", @"name": @"networkThrottle", @"value": @"slow"};

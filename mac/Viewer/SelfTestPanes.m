@@ -162,8 +162,8 @@ static void checkNetwork(MVWindow *window) {
                                @"url": @"https://a.test/y",
                                @"status": @500,
                                @"ms": @12}]}];
-  MVCheck(@"network: each request stands with its method, address, status and time", pane.rows.count == 2 && [pane.rows[0].title isEqual:@"GET a.test/x"] && [pane.rows[0].detail hasPrefix:@"200 · 85 ms · "] && pane.rows[1].tint != nil, [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
-  MVPokeListRow([pane valueForKey:@"_list"], @"GET a.test/x");
+  MVCheck(@"network: each request stands with its method, address, status and time", pane.rows.count == 2 && [pane.rows[0].title isEqual:@"GET /x"] && [pane.rows[0].detail hasPrefix:@"200 · 85 ms · "] && pane.rows[1].tint != nil, [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  MVPokeListRow([pane valueForKey:@"_list"], @"GET /x");
   MVPump(0.1);
   MVCheck(@"network: one chosen shows whole, its address as the op gave it", [pane.detail containsString:@"https://a.test/x?token=•••"], pane.detail);
   MVCheck(@"network: a capture says how and since when, with Stop to end it", [pane.said hasPrefix:@"Capturing by the probe since "] && [[[pane valueForKey:@"_go"] title] isEqual:MVWord(@"Stop")], pane.said);
@@ -171,7 +171,7 @@ static void checkNetwork(MVWindow *window) {
   MVCheck(@"network: its controls stand whole in the Inspector", within([pane valueForKey:@"_go"], pane) && within([pane valueForKey:@"_list"], pane), nil);
   // a probe's requests are read again every 3 s, and the detail a person read closed at each; past the most a read
   // holds, the oldest go and every place in the list moves
-  MVPokeListRow([pane valueForKey:@"_list"], @"POST a.test/y");
+  MVPokeListRow([pane valueForKey:@"_list"], @"POST /y");
   MVPump(0.1);
   NSTextView *detail = [pane valueForKey:@"_detail"];
   detail.selectedRange = NSMakeRange(0, 4);

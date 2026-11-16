@@ -6,6 +6,7 @@ import type {
   LogsQuery,
   NetworkControl,
   NetworkDetail,
+  NetworkEntry,
   NetworkHandle,
   NetworkSource,
 } from '@appdyno/core';
@@ -345,7 +346,7 @@ describe("a window's Network pane", () => {
     const t = on();
     const told: NetworkControl[] = [];
     const starts: unknown[] = [];
-    const entries = [
+    const entries: NetworkEntry[] = [
       { id: 0, method: 'GET', url: 'https://a.test/x', status: 503, ms: 3, how: 'mocked' },
     ];
     const source: NetworkSource = {
@@ -395,6 +396,54 @@ describe("a window's Network pane", () => {
     pane.onWindow({ op: 'control', name: 'networkThrottle', value: 'slow' });
     await expect.poll(() => said(t)).toMatchObject({ throttle: 'slow' });
     expect(told.at(-1)?.throttle).toMatchObject({ down: 29_600 });
+    // a rule from a window's fields goes in place of the one named, each rule told with its own parts
+    pane.onWindow({
+      op: 'control',
+      name: 'networkRuleFields',
+      at: 1,
+      fields: {
+        method: 'POST',
+        host: 'a.test',
+        path: '/pay',
+        status: '402',
+        body: '{"paid":false}',
+      },
+    });
+    await expect
+      .poll(() => said(t)?.rules)
+      .toEqual([
+        expect.objectContaining({ fields: { host: 'a.test', path: '/x', status: '503' } }),
+        expect.objectContaining({
+          rule: '"a.test/pay" method=POST status=402 body="{\\"paid\\":false}"',
+          fields: {
+            method: 'POST',
+            host: 'a.test',
+            path: '/pay',
+            status: '402',
+            body: '{"paid":false}',
+          },
+        }),
+      ]);
+    pane.onWindow({ op: 'control', name: 'networkRuleFields', at: -1, fields: { path: '/none' } });
+    await expect
+      .poll(() => answered(t))
+      .toMatchObject({ ok: false, text: expect.stringMatching(/not a rule/) as unknown });
+    // what the capture holds beside its rules, set as the op sets it; and a request still under way with the rest
+    entries.push({ id: 1, method: 'GET', url: 'https://a.test/slow', ms: 41_000, inFlight: true });
+    pane.onWindow({ op: 'control', name: 'networkKeep', strict: true, unmatched: 'fail' });
+    await expect
+      .poll(() => said(t))
+      .toMatchObject({
+        strict: true,
+        unmatched: 'fail',
+        entries: [
+          expect.objectContaining({ id: 0 }),
+          expect.objectContaining({ id: 1, inFlight: true, ms: 41_000 }),
+        ],
+      });
+    expect(told.at(-1)?.unmatched).toBe('fail');
+    pane.onWindow({ op: 'control', name: 'networkKeep', strict: false, unmatched: 'pass' });
+    await expect.poll(() => said(t)).toMatchObject({ strict: false, unmatched: 'pass' });
     pane.onWindow({ op: 'control', name: 'networkDetail', id: 0 });
     await expect
       .poll(() => said(t))

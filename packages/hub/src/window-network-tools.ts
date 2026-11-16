@@ -12,6 +12,8 @@ import {
   type Policy,
 } from '@appdyno/ops';
 
+import { ruleFields } from './window-network-rules.js';
+
 export const NO_REQUEST = 'That request is no longer in the capture';
 export const TOO_LONG =
   'Its answer is too long for a rule here. Save it to a file and use body=@file';
@@ -55,6 +57,9 @@ export function networkTools(
     else answer({ ok: false, text: NO_REQUEST });
   };
 
+  /** A rule made of a request's answer, with its parts for a window's fields. */
+  const told = (rule: string) => tell({ rule, fields: ruleFields(rule) });
+
   return {
     /** One request whole, as the op's lines have it: cleaned, unless the person asked for what was sent. */
     detail: (id: number, real = false) =>
@@ -97,12 +102,12 @@ export function networkTools(
             : [`body=${JSON.stringify(clean(detail.responseBody))}`]),
         ].join(' ');
         if (line.length <= MAX_RULE) {
-          tell({ rule: ruleLine(line) });
+          told(ruleLine(line));
           return;
         }
         // too long for a line: in a file, as an agent's rule of the same request has it, where this may write one
         try {
-          tell({ rule: ruleFromRequest(policy, entry, detail, clean, true).lines[0] });
+          told(ruleFromRequest(policy, entry, detail, clean, true).lines[0] ?? '');
         } catch {
           answer({ ok: false, text: TOO_LONG });
         }

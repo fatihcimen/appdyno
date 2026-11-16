@@ -214,7 +214,8 @@ export function networkAnswers(ctx: ServerContext) {
   ) => {
     saved ??= await exportHar(s, c, entries, asked);
     const hits = entries.map(shownOf).filter((e) => !e.inFlight && fits(e, asked));
-    const flying = flightLine(entries.map(shownOf));
+    const under = entries.map(shownOf).filter((e) => e.inFlight);
+    const flying = flightLine(under);
     const ids = c?.bodies === true;
     // asked for by a part of an address, a method or a status, each request has its own line, whole; a read of all of
     // them is as few lines as tell them apart, and counts what the lines it has room for stand for
@@ -253,6 +254,7 @@ export function networkAnswers(ctx: ServerContext) {
       ...(saved && { saved }),
       ...(note && { note }),
       ...(unseen && { unseen }),
+      ...(under.length > 0 && { inFlight: under.slice(-MAX_LISTED) }),
     });
   };
 

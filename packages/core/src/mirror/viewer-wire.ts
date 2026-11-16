@@ -113,6 +113,8 @@ type Control =
   | { name: 'networkMockFrom'; id: number }
   | { name: 'networkRules'; rules: string[] }
   | { name: 'networkRuleSwitch'; at: number; on: boolean }
+  | { name: 'networkRuleFields'; at: number; fields: Record<string, string> }
+  | { name: 'networkKeep'; strict?: boolean; unmatched?: 'pass' | 'fail' }
   | { name: 'networkThrottle'; value: string }
   | { name: 'openLink'; url?: string; app?: string }
   | { name: 'pushes'; app?: string }
@@ -313,11 +315,18 @@ export type ViewerOrder = Staged &
         /** The probe's rules with what each took, and how slow it makes the app's network. */
         rules?: unknown[];
         throttle?: string;
+        /** Whether a failed request fails an action, and what becomes of a request no rule takes. */
+        strict?: boolean;
+        unmatched?: 'pass' | 'fail';
+        /** What the app made that the capture cannot see, each kind counted. */
+        unseen?: unknown;
         /** One request whole, as its lines. */
         detail?: { id: number; lines: string[] };
         /** A request as a command, for the window to copy; and a rule made of a request's answer, for its field. */
         curl?: string;
         rule?: string;
+        /** That rule's parts, for a window's fields. */
+        fields?: Record<string, string>;
       }
     | { op: 'note'; text: string }
     | { op: 'pair'; both?: boolean; with?: string; failing?: string; ended?: boolean }

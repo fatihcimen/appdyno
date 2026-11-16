@@ -21,16 +21,6 @@ static NSString *const kSpeeds[][2] = {
 };
 enum { kSpeedCount = sizeof kSpeeds / sizeof kSpeeds[0] };
 
-/// What a rule or the throttle did to a request, as the op says it, in a person's words.
-static NSString *howWord(NSDictionary *e) {
-  NSString *how = [e[@"how"] isKindOfClass:NSString.class] ? e[@"how"] : nil;
-  if ([how isEqual:@"mocked"]) return MVWord(@"Mocked");
-  if ([how isEqual:@"failed"]) return MVWord(@"Failed by a rule");
-  if ([how isEqual:@"delayed"]) return MVWord(@"Delayed by a rule");
-  if ([how isEqual:@"sent"]) return MVFormat(@"Sent to %@", @[[e[@"to"] description] ?: @""]);
-  return [how isEqual:@"lost"] ? MVWord(@"Lost by the throttle") : nil;
-}
-
 /// Each way by its name, as a person reads it, and what it shows.
 static NSString *const kWays[][3] = {
     {@"probe", @"Probe", @"Restarts the app with a probe in it, then lists each request it makes through URLSession: method, address, status, time and size. While it is in, the app's own certificate check (pinning) is not asked."},
@@ -49,51 +39,19 @@ static NSInteger wayAt(NSString *via) {
   return -1;
 }
 
-/// A size in the Mac's language: the system's formatter says bytes in English whatever the window's language.
-static NSString *sized(id bytes) {
-  double n = [bytes doubleValue];
-  if (n < 1000) return MVWord([NSString stringWithFormat:@"%.0f bytes", n]);
-  return n < 1e6 ? [MVDecimal(n / 1e3) stringByAppendingString:@" KB"] : [MVDecimal(n / 1e6) stringByAppendingString:@" MB"];
-}
+/// What the app made that no way here sees, by the op's word for each kind, as a person reads it.
+static NSString *const kUnseen[][2] = {
+    {@"webview", @"web views: %@"},
+    {@"background", @"background sessions: %@"},
+    {@"websocket", @"WebSocket tasks: %@"},
+};
 
-/// A request's figures, or a count's, joined as a line reads them.
-static NSString *figures(NSDictionary *e) {
+/// Those counts as one line, or none where the app made none of them.
+static NSString *unseenLine(NSDictionary *unseen) {
   NSMutableArray<NSString *> *parts = [NSMutableArray array];
-  if (e[@"status"]) [parts addObject:[e[@"status"] description]];
-  if (e[@"ms"]) [parts addObject:[NSString stringWithFormat:@"%@ ms", e[@"ms"]]];
-  if (e[@"packets"]) [parts addObject:MVWord([NSString stringWithFormat:@"%@ packets", e[@"packets"]])];
-  if (e[@"bytes"]) [parts addObject:sized(e[@"bytes"])];
-  if ([e[@"error"] length]) [parts addObject:MVFormat(@"Failed: %@", @[e[@"error"]])];
-  if (howWord(e)) [parts addObject:howWord(e)];
-  return [parts componentsJoinedByString:@" · "];
-}
-
-/// A request by where it stands since the capture began, as the parent numbers it: its place in the list moves as the
-/// oldest go, and a person's choice must not.
-static NSString *keyOf(NSDictionary *e, NSUInteger at) {
-  return [e[@"id"] isKindOfClass:NSNumber.class] ? [e[@"id"] stringValue] : @(at).stringValue;
-}
-
-static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
-  MVRow *row = [MVRow new];
-  row.key = keyOf(e, at);
-  row.detail = figures(e);
-  NSString *url = [e[@"url"] isKindOfClass:NSString.class] ? e[@"url"] : nil;
-  if (!url) {
-    row.title = [NSString stringWithFormat:@"%@ · %@", MVWord([e[@"direction"] description] ?: @""), MVSentence([e[@"host"] description] ?: @"")];
-    row.symbol = @"chart.bar";
-    return row;
-  }
-  NSURL *parsed = [NSURL URLWithString:url];
-  NSString *where = parsed.host ? [parsed.host stringByAppendingString:parsed.path] : url;
-  row.title = [NSString stringWithFormat:@"%@ %@", e[@"method"] ?: @"GET", where];
-  row.help = url;
-  BOOL failed = [e[@"error"] length] || [e[@"status"] integerValue] >= 400;
-  // one a rule took is no answer of the server's: it stands apart
-  row.symbol = failed ? @"exclamationmark.triangle.fill" : e[@"how"] ? @"arrow.triangle.branch"
-                                                                     : @"arrow.down.circle";
-  if (failed) row.tint = MVRed();
-  return row;
+  for (NSUInteger i = 0; i < sizeof kUnseen / sizeof kUnseen[0]; i++)
+    if ([unseen[kUnseen[i][0]] integerValue] > 0) [parts addObject:MVFormat(kUnseen[i][1], @[[unseen[kUnseen[i][0]] description]])];
+  return parts.count ? MVFormat(@"Not seen here: %@", @[[parts componentsJoinedByString:@", "]]) : nil;
 }
 
 @implementation MVNetworkPane {
@@ -108,7 +66,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   NSView *_sectionRow;
   BOOL _onRules;
   NSArray<NSString *> *_ways;
-  NSString *_capturing, *_needs, *_note, *_proxy, *_wholeKey, *_whole, *_askedKey;
+  NSString *_capturing, *_needs, *_note, *_unseen, *_proxy, *_wholeKey, *_whole, *_askedKey;
   BOOL _keeps;
   NSDate *_since;
   NSArray<NSDictionary *> *_entries;
@@ -206,12 +164,13 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
 - (void)listRows {
   NSArray<NSString *> *words = [_actions.filter.lowercaseString componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
   NSString *chosen = _list.selected.key;
-  _list.rows = [_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, __unused NSDictionary *bindings) {
-                           NSString *all = [NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.help ?: @""].lowercaseString;
-                           for (NSString *word in words)
-                             if (word.length && ![all containsString:word]) return NO;
-                           return YES;
-                         }]];
+  // those left stand under their hosts, a host with none left gone with them
+  _list.rows = MVNetworkGrouped([_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, __unused NSDictionary *bindings) {
+                                            NSString *all = [NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.help ?: @""].lowercaseString;
+                                            for (NSString *word in words)
+                                              if (word.length && ![all containsString:word]) return NO;
+                                            return YES;
+                                          }]]);
   [_list selectKey:chosen];
 }
 
@@ -273,7 +232,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   // a rule made of a request's answer stands in the rules' field, for a person to set
   if ([m[@"rule"] isKindOfClass:NSString.class]) {
     _onRules = YES;
-    [_rules fill:m[@"rule"]];
+    [_rules fill:m[@"rule"] fields:[m[@"fields"] isKindOfClass:NSDictionary.class] ? m[@"fields"] : nil];
     [self layOut];
     return [self showDetail:_list.selected.key];
   }
@@ -282,6 +241,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   if ([m[@"rules"] isKindOfClass:NSArray.class]) [_rules show:m[@"rules"]];
   else if (!capturing) [_rules show:@[]];
   if ([m[@"throttle"] isKindOfClass:NSString.class]) [self showThrottle:m[@"throttle"]];
+  if (m[@"strict"] || m[@"unmatched"]) [_rules showStrict:[m[@"strict"] boolValue] unmatched:[m[@"unmatched"] isEqual:@"fail"]];
   if (m[@"ways"]) {
     _ways = [m[@"ways"] isKindOfClass:NSArray.class] ? m[@"ways"] : @[];
     _proxy = [m[@"proxy"] isKindOfClass:NSString.class] ? m[@"proxy"] : nil;
@@ -296,11 +256,12 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   _capturing = capturing;
   _since = [m[@"since"] isKindOfClass:NSNumber.class] ? [NSDate dateWithTimeIntervalSince1970:[m[@"since"] doubleValue] / 1000] : _since;
   _note = [m[@"note"] isKindOfClass:NSString.class] ? m[@"note"] : nil;
+  _unseen = [m[@"unseen"] isKindOfClass:NSDictionary.class] ? unseenLine(m[@"unseen"]) : nil;
   if ([m[@"entries"] isKindOfClass:NSArray.class]) _entries = m[@"entries"];
   else if (!capturing) _entries = @[];
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   [_entries enumerateObjectsUsingBlock:^(NSDictionary *e, NSUInteger at, __unused BOOL *stop) {
-    if ([e isKindOfClass:NSDictionary.class]) [rows addObject:entryRow(e, at)];
+    if ([e isKindOfClass:NSDictionary.class]) [rows addObject:MVNetworkRow(e, at)];
   }];
   // a probe's requests are read again every few seconds: the one a person reads stays chosen, and stays open
   _allRows = rows;
@@ -332,6 +293,8 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   // what a capture says of itself keeps an address or an app as it came
   NSString *about = chosen >= 0 ? MVWord(kWays[chosen][2]) : @"";
   if (_note.length) about = MVSentence(_note);
+  // what the app made that this way cannot see, so that a short list is not read as an app that asked for little
+  if (_unseen.length && _capturing) about = about.length ? [NSString stringWithFormat:@"%@\n%@", about, _unseen] : _unseen;
   // what lists no requests says what would, while it counts too
   BOOL counts = _capturing && ![@[@"probe", @"proxy"] containsObject:_capturing];
   if (_needs && !_capturing) about = MVWord(_needs);
@@ -356,13 +319,15 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   _actions.hidden = !probe || _onRules;
   _list.hidden = _onRules || !_list.rows.count;
   _none.hidden = _onRules || _list.rows.count;
+  // the rules with their fields take the room the note of the way would
+  if (_onRules) _about.hidden = YES;
   _slack.hidden = !_list.hidden;
 }
 
 /// The request chosen, whole: its address, what came back, when, and what failed.
 - (void)showDetail:(nullable NSString *)key {
   NSUInteger at = [_entries indexOfObjectPassingTest:^BOOL(NSDictionary *one, NSUInteger i, __unused BOOL *stop) {
-    return [one isKindOfClass:NSDictionary.class] && [keyOf(one, i) isEqual:key];
+    return [one isKindOfClass:NSDictionary.class] && [MVNetworkKey(one, i) isEqual:key];
   }];
   NSDictionary *e = at == NSNotFound ? nil : _entries[at];
   _detailCard.hidden = !e || _onRules;
@@ -381,8 +346,8 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   }
   NSMutableArray<NSString *> *lines = [NSMutableArray array];
   if ([e[@"url"] length]) [lines addObject:[NSString stringWithFormat:@"%@ %@", e[@"method"] ?: @"GET", e[@"url"]]];
-  else [lines addObject:entryRow(e, 0).title];
-  [lines addObject:figures(e)];
+  else [lines addObject:MVNetworkRow(e, 0).title];
+  [lines addObject:MVNetworkFigures(e)];
   if ([e[@"at"] length]) [lines addObject:MVFormat(@"At %@", @[e[@"at"]])];
   if ([e[@"body"] boolValue]) [lines addObject:MVWord(@"Its body is in the proxy's export")];
   // the same words again keep what a person selected in them
@@ -392,7 +357,7 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
 }
 
 - (NSArray<MVRow *> *)rows {
-  return _list.rows;
+  return [_list.rows filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"header == NO"]];
 }
 
 - (NSString *)said {

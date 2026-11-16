@@ -182,13 +182,34 @@ void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nulla
 
 /// The rules the probe holds for the app's requests, as `network` `mock` lists them: one added, changed, turned off
 /// and on, or removed here is set by that op.
+/// A request's row in the pane's list, its host left to the heading it stands under, and one still under way as that;
+/// its figures in a line; the key a person's choice of it is kept by; and rows under a heading for each host.
+MVRow *MVNetworkRow(NSDictionary *entry, NSUInteger at);
+NSString *MVNetworkFigures(NSDictionary *entry);
+NSString *MVNetworkKey(NSDictionary *entry, NSUInteger at);
+NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows);
+
+/// A rule as fields beside its line: what it takes and what it does, each in its own. The parent reads a line into
+/// them and writes them as one.
+@interface MVNetworkRuleForm : NSView
+/// A field changed; and enter was pressed in one.
+@property(nonatomic, copy, nullable) void (^onEdit)(void);
+@property(nonatomic, copy, nullable) void (^onSubmit)(void);
+/// What the fields hold, by the names the parent reads a rule's parts by: none for one left empty.
+@property(nonatomic, readonly) NSDictionary<NSString *, NSString *> *fields;
+- (void)show:(nullable NSDictionary *)fields;
+@end
+
 @interface MVNetworkRules : NSView
 /// Where a change goes: the whole list as it would stand, or one rule's switch.
 @property(nonatomic, copy, nullable) void (^onSend)(NSDictionary *message);
 /// The parent's rules, each with its line, what it took, and whether it is off.
 - (void)show:(NSArray<NSDictionary *> *)rules;
-/// A line put in the field for a person to set or change, as one made of a request's answer.
-- (void)fill:(NSString *)line;
+/// A line put in the field for a person to set or change, as one made of a request's answer, with its parts.
+- (void)fill:(NSString *)line fields:(nullable NSDictionary *)fields;
+/// What the capture holds beside its rules: whether a failed request fails an action, and one no rule takes fails.
+- (void)showStrict:(BOOL)strict unmatched:(BOOL)fails;
+@property(nonatomic, readonly) MVNetworkRuleForm *form;
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
 @end
 
@@ -209,6 +230,7 @@ void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nulla
 /// By the probe it also keeps headers and bodies, holds rules and slows the app's network.
 @interface MVNetworkPane : NSView <MVWatches>
 @property(nonatomic, readonly) MVAnswerView *answer;
+/// The requests listed, without the headings of their hosts.
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
 /// What it says of the capture, and of the request chosen.
 @property(nonatomic, readonly) NSString *said, *detail;

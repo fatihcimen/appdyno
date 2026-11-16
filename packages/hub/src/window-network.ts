@@ -7,7 +7,8 @@ import type {
   ViewerTold,
   WindowControl,
 } from '@appdyno/core';
-import { captures, ruleSwitched, type Policy } from '@appdyno/ops';
+import { captures, type Policy } from '@appdyno/ops';
+import { ruleControls, withFields } from './window-network-rules.js';
 import { networkTools } from './window-network-tools.js';
 import { frontApp, type WindowSession } from './controls.js';
 import type { windowSends } from './window-sends.js';
@@ -87,10 +88,13 @@ export function windowNetwork(
   /** The probe's rules with what each took, and its throttle, as the op an agent sets them by lists them. */
   const controlled = async () => {
     const { data } = await op({ action: 'mock' });
+    const c = captures.read(serial);
     return data
       ? {
-          rules: (data.rules as unknown[] | undefined) ?? [],
+          rules: ((data.rules as { rule: string }[] | undefined) ?? []).map(withFields),
           throttle: typeof data.throttle === 'string' ? data.throttle : 'full',
+          strict: c?.strict === true,
+          unmatched: c?.unmatched ?? ('pass' as const),
         }
       : {};
   };
@@ -109,7 +113,8 @@ export function windowNetwork(
         answer(said);
         return;
       }
-      const entries = numbered(data);
+      // what is still under way stands with the rest, each by its own id
+      const entries = [...numbered(data), ...((data.inFlight as unknown[] | undefined) ?? [])];
       const note = c.via === 'packets' && !entries.length ? PACKETS_LATER : data.note;
       tell({
         capturing: c.via,
@@ -117,6 +122,7 @@ export function windowNetwork(
         bodies: c.bodies === true,
         entries,
         ...(note ? { note } : {}),
+        ...(data.unseen ? { unseen: data.unseen } : {}),
         ...(c.via === 'probe' ? await controlled() : {}),
       });
     } finally {
@@ -202,14 +208,6 @@ export function windowNetwork(
     answer(said.ok ? { ok: true, text: done } : said);
     await read();
   };
-  const setRules = (rules: string[]) => change({ action: 'mock', rules }, 'Rules set');
-  const switchRule = (at: number, on: boolean) =>
-    setRules(
-      (captures.read(serial)?.rules ?? []).map((line, i) =>
-        i === at ? ruleSwitched(line, on) : line,
-      ),
-    );
-
   const controls = {
     networkStart: (m: ViewerControl<'networkStart'>) => start(m.via, m.bodies),
     networkStop: stop,
@@ -219,10 +217,7 @@ export function windowNetwork(
     networkMockFrom: (m: ViewerControl<'networkMockFrom'>) => tools.mockFrom(m.id),
     networkSave: () => tools.save(new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')),
     networkClear: clear,
-    networkRules: (m: ViewerControl<'networkRules'>) => setRules(m.rules),
-    networkRuleSwitch: (m: ViewerControl<'networkRuleSwitch'>) => switchRule(m.at, m.on),
-    networkThrottle: (m: ViewerControl<'networkThrottle'>) =>
-      change({ action: 'throttle', throttle: m.value }, 'Speed set'),
+    ...ruleControls(serial, change),
   };
 
   return {
