@@ -1,14 +1,21 @@
-import { buildScreen, oneOf, refName, selectIn, touchPoint, withShownWords } from '@appdyno/core';
 import {
+  buildScreen,
   claim,
-  DEFAULT_POLICY,
+  refName,
   release,
-  ServerContext,
-  SETTLE,
+  seek,
+  seekOn,
+  selectIn,
   settleBy,
   SHARE_BY_LIBRARY,
-  ToolError,
-} from '@appdyno/ops';
+  touchPoint,
+  waitUntil,
+  withShownWords,
+  type Reads,
+  type Sought,
+} from '@appdyno/core';
+import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { DeviceError, SETTLE_DEFAULT, type Tree } from '@appdyno/protocol';
 import { regularExpression } from './allow.js';
 import type { ErrorCode } from './library.js';
 import { deviceProviders } from './providers.js';
@@ -103,6 +110,11 @@ export type Device = {
   terminate(app: string): Promise<void>;
   /** The app in front. */
   foreground(): Promise<string | undefined>;
+  /**
+   * `aim` on the screen just now, and where the element is not there yet, on the screens of the next `waitMs` (1500
+   * with none given, 0 for no wait), as a tool waits for one still coming.
+   */
+  aim(target: Selector | { ref: string }, options?: { waitMs?: number }): Promise<Aimed>;
   /** Lets the device go. */
   close(): Promise<void>;
 };
@@ -152,13 +164,28 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     letGo();
     throw e;
   });
-  const screen = async (): Promise<Screen> => {
-    const { list, hash, foreground, window } = buildScreen(await device.tree(), {
+  const shown = (tree: Tree): Screen => {
+    const { list, hash, foreground, window } = buildScreen(tree, {
       port: device.platformScreen,
       ...(app && { appId: app }),
     });
     return { elements: list, hash, ...(foreground && { foreground }), ...(window && { window }) };
   };
+  const screen = async () => shown(await device.tree());
+  const until = (met: (s: Screen) => boolean, ms: number) =>
+    waitUntil(
+      {
+        read: () => screen().catch(() => undefined),
+        changed: async (since, left) => {
+          const r = await device.waitChange(since, left).catch(() => undefined);
+          return (
+            r && (r.tree ? { sig: r.sig, screen: shown(r.tree) } : { sig: r.sig, unchanged: true })
+          );
+        },
+      },
+      met,
+      ms,
+    );
   return {
     serial,
     platform: device.platform,
@@ -179,11 +206,13 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     async launch(id) {
       await device.launch(id);
       // a read right after a launch catches a screen still laying out, and a touch aimed on it lands elsewhere
-      const { settled } = await settleBy(screen, SETTLE.quietMs, SETTLE.maxMs);
+      const { settled } = await settleBy(screen, SETTLE_DEFAULT.quietMs, SETTLE_DEFAULT.maxMs);
       return { settled };
     },
     terminate: (id) => device.terminate(id),
     foreground: () => device.foreground(),
+    aim: async (target, { waitMs = AIM_WAIT_MS } = {}) =>
+      aimed(await seek({ now: screen, until }, target, READS, waitMs), target),
     close() {
       letGo();
       return Promise.resolve();
@@ -200,25 +229,32 @@ export const select = (screen: Screen, selector: Selector): ScreenElement[] =>
  * `before` is compared with this read, so one found on a dialog that came in front by itself is touched there.
  * Refused `NOT_FOUND` with no match, `AMBIGUOUS` with several that stand apart, `STALE` for a ref not on this read.
  */
-export function aim(screen: Screen, target: Selector | { ref: string }): Aimed {
-  const { elements, hash } = screen;
-  const element =
-    'ref' in target ? elements.find((e) => e.ref === target.ref) : found(elements, target);
-  if (!element) throw new ToolError('the ref is not on this read', 'STALE', 'aim on a new read');
-  return { element, ...touchPoint(element, elements), on: hash };
-}
+export const aim = (screen: Screen, target: Selector | { ref: string }): Aimed =>
+  aimed(seekOn(screen, target, READS), target);
 
-function found(elements: ScreenElement[], selector: Selector): ScreenElement {
-  const hits = selectIn(elements, selector);
-  const hit = oneOf(hits, selector.index);
-  if (hit) return hit;
-  const said = JSON.stringify(selector);
-  if (hits.length === 0) throw new ToolError(`no element matches ${said}`, 'NOT_FOUND');
-  if (selector.index !== undefined)
-    throw new ToolError(`only ${hits.length} match ${said}, so its index names none`, 'NOT_FOUND');
-  throw new ToolError(
-    `${hits.length} elements match ${said}: ${hits.map((e) => refName(e.ref, e.label)).join('; ')}`,
+/** How long `Device.aim` waits for an element still coming, as a tool does. */
+const AIM_WAIT_MS = 1_500;
+
+const READS: Reads<Screen, ScreenElement> = {
+  list: (x) => x.elements,
+  byRef: (x, ref) => x.elements.find((e) => e.ref === ref),
+};
+
+/** What was sought as where a touch on it goes, or the refusal of one not found. */
+function aimed(got: Sought<Screen, ScreenElement>, target: Selector | { ref: string }): Aimed {
+  if ('element' in got)
+    return { element: got.element, ...touchPoint(got.element, got.list), on: got.screen.hash };
+  const said = JSON.stringify(target);
+  const n = got.hits.length;
+  if (got.miss === 'unread') throw new DeviceError('NOT_FOUND', 'the screen could not be read');
+  if (got.miss === 'ref')
+    throw new DeviceError('STALE', 'the ref is not on this read', 'aim on a new read');
+  if (got.miss === 'none') throw new DeviceError('NOT_FOUND', `no element matches ${said}`);
+  if (got.miss === 'index')
+    throw new DeviceError('NOT_FOUND', `only ${n} match ${said}, so its index names none`);
+  throw new DeviceError(
     'AMBIGUOUS',
+    `${n} elements match ${said}: ${got.hits.map((e) => refName(e.ref, e.label)).join('; ')}`,
     'give the selector an index, 0 for the first, or aim by a ref',
   );
 }

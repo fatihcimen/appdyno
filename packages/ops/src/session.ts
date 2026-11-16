@@ -5,10 +5,11 @@ import {
   must,
   opStartedAt,
   pause,
+  settleBy,
   readPicture,
   SLIDE_DROPS_TOUCH,
-  throwIfCancelled,
   TRANSITION_MS,
+  waitUntil,
   withPictureText,
   type Device,
   type Owner,
@@ -19,11 +20,9 @@ import {
 import type { Tree } from '@appdyno/protocol';
 import { appInFront } from './apps-guard.js';
 import { guardInputs, type InputGuard } from './power.js';
-import { settleBy } from './settle.js';
 import type { RunningFlight } from './timeline/flight.js';
 import type { RunningTimeline } from './timeline/run.js';
 
-const WAIT_GAP_MS = 300;
 /** A phone locks itself about a minute after the last touch: an older read says nothing of the screen a touch will reach. */
 const LOOK_MS = 20_000;
 
@@ -60,46 +59,30 @@ export class Session {
    * Reads until `met` holds or the time is up, the last read with it. On the device where the agent has
    * `wait`, so the tree crosses only when the screen changed; else a read every WAIT_GAP_MS.
    */
-  async until(
+  until(
     met: (s: Screen) => boolean,
     timeoutMs: number,
   ): Promise<{ screen?: Screen; met: boolean }> {
-    const end = Date.now() + timeoutMs;
-    let last: Screen | undefined;
-    let sig: string | undefined;
-    let onDevice = true;
-    for (;;) {
-      throwIfCancelled('wait');
-      let now: Screen | undefined;
-      // what changes on a picture changes nothing a device could wait on
-      if (this.wordless) onDevice = false;
-      if (onDevice) {
-        const left = Math.max(0, end - Date.now());
-        // a failed or absent wait: poll for the rest of this call
-        const r = await this.device
-          .waitChange(sig, sig === undefined ? 0 : left)
-          .catch(() => undefined);
-        if (r === undefined) onDevice = false;
-        else {
-          sig = r.sig;
-          if (r.tree) {
-            // no app window: a dark screen, which only the device's own read wakes
-            now = r.tree.windows.some((w) => w.type === 1)
-              ? await this.seen(r.tree)
-              : await this.read().catch(() => undefined);
-            if (now) this.remember(now);
-          } else if (last) return { screen: last, met: false };
-        }
-      }
-      // a failed read is no answer: never "gone"
-      if (!onDevice) now = await this.read().catch(() => undefined);
-      if (now) {
-        last = now;
-        if (met(now)) return { screen: now, met: true };
-      }
-      if (Date.now() >= end) return { ...(last && { screen: last }), met: false };
-      if (!onDevice) await pause(WAIT_GAP_MS);
-    }
+    return waitUntil(
+      {
+        // a failed read is no answer: never "gone"
+        read: () => this.read().catch(() => undefined),
+        changed: async (since, ms) => {
+          // what changes on a picture changes nothing a device could wait on
+          if (this.wordless) return undefined;
+          const r = await this.device.waitChange(since, ms).catch(() => undefined);
+          if (!r?.tree) return r && { sig: r.sig, unchanged: true };
+          // no app window: a dark screen, which only the device's own read wakes
+          const now = r.tree.windows.some((w) => w.type === 1)
+            ? await this.seen(r.tree)
+            : await this.read().catch(() => undefined);
+          if (now) this.remember(now);
+          return { sig: r.sig, screen: now };
+        },
+      },
+      met,
+      timeoutMs,
+    );
   }
 
   /** This session's reads until the layout has held for `quietMs`, at most `maxMs`: see `settleBy`. */

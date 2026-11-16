@@ -1,13 +1,14 @@
 import {
   byRef,
+  chosen,
   cutContext,
   inPart,
   KEYBOARD_REF,
   nearest,
-  oneOf,
   refName,
-  selectIn,
+  seek,
   touchPoint,
+  type Reads,
   type Screen,
   type ScreenElement,
   type Selector as SelectorOf,
@@ -69,8 +70,8 @@ export function pick(
       `give an index below ${hits.length}, 0 for the first listed, or use a ref`,
       sent || undefined,
     );
-  const hit = oneOf(hits, index);
-  if (hit) return hit;
+  const one = chosen(hits, index);
+  if ('element' in one) return one.element;
   throw new ToolError(
     `${hits.length} elements match ${showSelector(sel)}: ${listed}`,
     'AMBIGUOUS',
@@ -99,24 +100,8 @@ export function missed(
   return { said: offer(screen.list, want) };
 }
 
-/** A selector on a fresh read, and that read's hash; no match waits a moment, as the screen may still be coming. */
-async function resolve(
-  s: Session,
-  sel: SelectorOf,
-  { line, offer }: Words,
-): Promise<{ e: ScreenElement; list: ScreenElement[]; on: string }> {
-  const { screen, met } = await s.until((x) => selectIn(x.list, sel).length > 0, NO_MATCH_WAIT_MS);
-  if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
-  if (!met) {
-    const why = missed(s, screen, sel.text ?? sel.id, offer);
-    throw new ToolError(
-      `no element matches ${showSelector(sel)} after ${NO_MATCH_WAIT_MS} ms${why.said}`,
-      'NOT_FOUND',
-      why.hint ?? NO_MATCH_HINT,
-    );
-  }
-  return { e: pick(selectIn(screen.list, sel), sel, line), list: screen.list, on: screen.hash };
-}
+/** How a session's read gives its elements: a ref names one of the list, else one of the whole tree. */
+const READS: Reads<Screen, ScreenElement> = { list: (x) => x.list, byRef };
 
 export type Aim = { ref?: string; x?: number; y?: number; selector?: SelectorOf };
 
@@ -149,37 +134,52 @@ function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[])
 /** Where a touch goes and what its answer calls it; `on`: the read a selector found it on, which the touch is compared with. */
 export type Aimed = { point: Point; name: string; on?: string };
 
-/** The point of a ref (on the device's current screen), a selector or x,y. */
+/**
+ * The point of a ref (on the device's current screen), a selector or x,y. One not there is waited for a moment, by the
+ * rule a device opened from code aims by, and one still not there is said with its words and what is there in its place.
+ */
 export async function aim(s: Session, a: Aim, words: Words): Promise<Aimed> {
-  const { clean, offer } = words;
-  if (a.ref) {
-    const ref = a.ref;
-    const has = (x: Screen | undefined) => {
-      const e = x && byRef(x, ref);
-      return e && { e, list: x.list };
-    };
-    // a read on a loaded device, or of an app not answering, can come back short of what the last one listed: the ref
-    // is waited for as a selector is, and one still not there is said with its words and what is there in their place
-    const first = await s.justNow();
-    const waited = has(first) ? undefined : await s.until((x) => !!has(x), NO_MATCH_WAIT_MS);
-    const found = has(first) ?? has(waited?.screen);
-    if (!found) {
-      const was = s.refWords.get(a.ref);
-      const now = waited?.screen ?? first;
+  const { clean, line, offer } = words;
+  const target = a.ref ? { ref: a.ref } : a.selector;
+  if (!target) {
+    if (a.x === undefined || a.y === undefined)
       throw new ToolError(
-        `${STALE}: ${a.ref}${was ? ` ${JSON.stringify(clean(was))}` : ''} is not on this screen${was ? offer(now.list, was) : ''}`,
-        'STALE',
-        STALE_HINT,
+        'give a ref, a selector, or x and y',
+        'INVALID_ARGUMENT',
+        NAME_AN_ELEMENT,
       );
-    }
-    return aimedAt(found.e, clean, found.list);
+    return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
   }
-  if (a.selector) {
-    const { e, list, on } = await resolve(s, a.selector, words);
-    const aimed = aimedAt(e, clean, list);
-    return { ...aimed, name: `${aimed.name}${partly(e, a.selector)}`, on };
+  const got = await seek(
+    { now: () => s.justNow(), until: (met, ms) => s.until(met, ms) },
+    target,
+    READS,
+    NO_MATCH_WAIT_MS,
+  );
+  if ('element' in got) {
+    const aimed = aimedAt(got.element, clean, got.list);
+    if (!a.selector || a.ref) return aimed;
+    return {
+      ...aimed,
+      name: `${aimed.name}${partly(got.element, a.selector)}`,
+      on: got.screen.hash,
+    };
   }
-  if (a.x === undefined || a.y === undefined)
-    throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT', NAME_AN_ELEMENT);
-  return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
+  if (!got.screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
+  if ('ref' in target) {
+    const was = s.refWords.get(target.ref);
+    throw new ToolError(
+      `${STALE}: ${target.ref}${was ? ` ${JSON.stringify(clean(was))}` : ''} is not on this screen${was ? offer(got.screen.list, was) : ''}`,
+      'STALE',
+      STALE_HINT,
+    );
+  }
+  // several, or an index past the last: refused with the matches listed
+  if (got.miss !== 'none') pick(got.hits, target, line);
+  const why = missed(s, got.screen, target.text ?? target.id, offer);
+  throw new ToolError(
+    `no element matches ${showSelector(target)} after ${NO_MATCH_WAIT_MS} ms${why.said}`,
+    'NOT_FOUND',
+    why.hint ?? NO_MATCH_HINT,
+  );
 }
