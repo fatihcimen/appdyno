@@ -24,6 +24,8 @@ export type StepPlace = {
   update: boolean;
   /** The rules the run's `mock` steps have added so far, each as its line. */
   mocked: string[];
+  /** The capture's newest request as the run began, and when that capture began: a `request` step looks past it. */
+  before?: { since: number; id: number } | undefined;
 };
 
 /** A `visual` step's comparison, refused before the run when there is nothing to compare with. */
@@ -155,6 +157,15 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
       return ['network', { action: 'mock', rules: [mockLine(st, at)], add: true }];
     case 'network':
       return ['network', { action: 'mock', strict: a.value !== 'off' }];
+    case 'request':
+      return [
+        'network',
+        {
+          action: 'check',
+          ...defined({ contains: a.part, method: a.method, status: a.status, has: a.has }),
+          timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS,
+        },
+      ];
     case 'unrecorded':
       throw new ToolError(
         `this action has no step and was not recorded: ${String(a.what)}. Replace or delete this line`,

@@ -44,6 +44,7 @@ tap id=add_button index=1 !ambiguous
 | `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `screenshot` with `file`, `visual`                                       |
 | `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `device_setting`                                                         |
 | `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `network` with `mock`                                                    |
+| `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `network` with `check`                                                   |
 | `network strict`, `network strict off`                                                                                             | `network` with `strict`                                                  |
 | `run shared/login.flow`                                                                                                            | that file's steps, in place                                              |
 
@@ -115,6 +116,8 @@ The rules go into the app by the network probe, so the first `mock` starts a cap
 While a capture by the network probe runs on a simulator, a step under which a request of the app's failed says so among its warnings, one line for each: `network: POST api.example.com/v1/pay 500 (id 44)`. A request counts when the server refused it (4xx, 5xx) or it failed on its way; one the app itself gave up does not.
 
 `network strict` makes that a failure: from that line on, a step fails when a request got a 5xx or failed on its way and no rule made it, so a flow that passes on the screen while a call behind it broke does not pass. A 4xx, and what a `mock` rule answers or fails, stay warnings. `network strict off` ends it, and so does the end of the file. It starts a capture by the probe where none runs, which restarts the app, so put it before `launch`. A request is looked at when the step it happened under ends: one that fails later fails the next step, and says it came before it.
+
+`request` passes when the app made a request that fits, and waits for one that has not come yet, 10 s unless `timeoutMs=` says otherwise: `request "/v1/profile" method=PUT status=2xx has="name=Grace"`. The first word is a part of the address; `status=` is one status, a class of them (`2xx`) or `failed`; `has=` is what the request's body holds, a value by its path in a JSON body (`user.name=Grace`, `items[0].id=7`) or any text of it, and `has="response: ok=true"` asks the same of the answer's body. `has=` needs a capture that keeps bodies (`network` `start` with `bodies`). Only requests since the run began count, so one from before it cannot pass the step. A miss names the request that came nearest and what of it differed: `nearest: PUT api.example.com/v1/profile 409 (id 52): 409, not 2xx`.
 
 ## Screenshots, visual checks and settings
 

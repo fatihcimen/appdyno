@@ -474,6 +474,59 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     await ok('network', { action: 'stop' });
   }, 180_000);
 
+  it('waits for a request and checks it, and says of a miss what came nearest', async () => {
+    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    expect((await send(`http://${a.at}/echo`, 'post')).status).toBe(200);
+    const found = await ok('network', {
+      action: 'check',
+      contains: '/echo',
+      method: 'POST',
+      status: '2xx',
+      has: 'user=fixture',
+    });
+    out(`CHECK ${found.text}`);
+    expect(found.text).toMatch(/^found: \d+ POST http:\/\/127\.0\.0\.1:\d+\/echo 200 \d+ ms 47 B$/);
+    await ok('network', { action: 'check', contains: '/echo', has: 'response: user=fixture' });
+    const miss = await call('network', {
+      action: 'check',
+      contains: '/echo',
+      has: 'user=someone',
+      timeoutMs: 500,
+    });
+    out(`CHECK miss: ${miss.text}`);
+    expect(miss.data.code).toBe('CHECK_FAILED');
+    expect(miss.text).toMatch(
+      /nearest: POST 127\.0\.0\.1:\d+\/echo 200 \(id \d+\): its request body has \{"user":"fixture"\}$/,
+    );
+    const hidden = await call('network', {
+      action: 'check',
+      contains: '/echo',
+      has: 'password=x',
+      timeoutMs: 0,
+    });
+    expect(hidden.text).toMatch(/its request body has \{"password":"•••"\}$/);
+    // one that has not ended when the check begins: the server answers it five seconds on
+    const last = Number(/found: (\d+)/.exec(found.text)?.[1]);
+    await ok('open_link', { url: 'appdyno-fixture://open/network' });
+    await ok('type_text', {
+      selector: { id: 'url_input' },
+      text: `http://${a.at}/slow`,
+      replace: true,
+    });
+    await ok('tap', { selector: { id: 'fetch' } });
+    const began = Date.now();
+    const waited = await ok('network', {
+      action: 'check',
+      contains: '/slow',
+      status: '200',
+      after: last,
+      timeoutMs: 20_000,
+    });
+    out(`CHECK waited ${Date.now() - began} ms: ${waited.text}`);
+    expect(Date.now() - began).toBeGreaterThan(1_000);
+    await ok('network', { action: 'stop' });
+  }, 180_000);
+
   it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {
     await call('network', { action: 'stop' });
     const set = await rules(`${a.at}/json status=500`);

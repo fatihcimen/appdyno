@@ -1,9 +1,10 @@
 import { existsSync } from 'node:fs';
 import { connect } from 'node:net';
 import { must, reportProgress, type NetworkPath } from '@appdyno/core';
+import { STATUS } from '@appdyno/flows';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { detailLines, networkAnswers } from './network-answer.js';
+import { detailLines, line, networkAnswers } from './network-answer.js';
 import {
   captures,
   endCapture,
@@ -14,6 +15,7 @@ import {
   startOwn,
   VIA,
 } from './network-capture.js';
+import { awaitRequest } from './network-check.js';
 import { harEntries } from './network-har.js';
 import { MAX_RULES } from './network-rules.js';
 import { NetworkOut } from './network-schemas.js';
@@ -24,7 +26,7 @@ import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ENTRIES = 200;
 const DEFAULT_ENTRIES = 50;
-const ACTIONS = ['paths', 'start', 'read', 'stop', 'mock', 'throttle'] as const;
+const ACTIONS = ['paths', 'start', 'read', 'stop', 'mock', 'throttle', 'check'] as const;
 
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
@@ -70,7 +72,7 @@ export function networkOps(ctx: ServerContext) {
       name: 'network',
       title: 'Network',
       description:
-        "An app's network traffic (HTTP), bounded; mock and throttle by the probe, until stop. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); stop. Installs no certificate.",
+        "An app's network traffic (HTTP), bounded; mock and throttle by the probe, until stop. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); check: waits for a request that fits, or refuses with the nearest; stop. Installs no certificate.",
       input: z
         .object({
           action: z.enum(ACTIONS),
@@ -95,6 +97,8 @@ export function networkOps(ctx: ServerContext) {
               'Each "host/path* [method=] [query=] [regex=]" then "status= body= (@file) type= header=", "fail=offline|timeout|reset" or "to=host", and delayMs= times= off. Replaces; [] clears; none lists',
             ),
           add: z.boolean().optional(),
+          has: z.string().max(1_000).optional().describe('in its body: path=value or text'),
+          timeoutMs: z.number().int().min(0).max(60_000).optional(),
           strict: z.boolean().optional().describe('a 5xx or a failed request fails the action'),
           throttle: z
             .string()
@@ -108,12 +112,12 @@ export function networkOps(ctx: ServerContext) {
       output: NetworkOut,
       annotations: DESTRUCTIVE,
       run: async ({ action, via, proxy, app, bodies, har, id, rules, add, throttle, ...given }) => {
-        const { strict, ...asked } = given;
+        const { strict, has, timeoutMs, ...asked } = given;
         const s = await ctx.session();
         const serial = s.device.serial;
         const now = captures.read(serial);
         const target = app ?? s.appId;
-        if (asked.status && !/^(\d{3}|\dxx|failed)$/.test(asked.status))
+        if (asked.status && !STATUS.test(asked.status))
           throw new ToolError(
             `status: 404, 4xx or failed, not ${asked.status}`,
             'INVALID_ARGUMENT',
@@ -219,6 +223,19 @@ export function networkOps(ctx: ServerContext) {
             `the traffic went through ${String(now.proxy)}, whose list this tool cannot read: export the proxy's session as HAR and give har`,
             'UNSUPPORTED',
           );
+        if (action === 'check') {
+          if (has !== undefined && !now.bodies)
+            throw new ToolError(
+              'has reads a body, and this capture keeps none: start with bodies: true',
+              'INVALID_ARGUMENT',
+            );
+          const again = async () => ((await readCapture(s, now, true)) ?? read).entries;
+          const found = shownOf(
+            await awaitRequest(again, detailOf(s, now), { ...asked, has, timeoutMs }, clean),
+          );
+          const t = `found: ${line(found, true)}`;
+          return reply(t, { done: t, entries: [found], source: now.via });
+        }
         if (id === undefined)
           return answer(s, now, read, asked, now.via === 'proxy' ? 'the proxy' : now.via);
         const one = read.entries.find((e) => e.id === id);

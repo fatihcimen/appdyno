@@ -44,6 +44,7 @@ tap id=add_button index=1 !ambiguous
 | `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `file` ile `screenshot`, `visual`                                              |
 | `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `device_setting`                                                               |
 | `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `mock` ile `network`                                                           |
+| `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `check` ile `network`                                                          |
 | `network strict`, `network strict off`                                                                                             | `strict` ile `network`                                                         |
 | `run shared/login.flow`                                                                                                            | o dosyanın adımları, yerinde                                                   |
 
@@ -115,6 +116,8 @@ Kurallar uygulamaya ağ sondasıyla girer; bu yüzden ilk `mock`, çalışan bir
 Bir simülatörde ağ sondasıyla bir yakalama çalışırken, altında uygulamanın bir isteği başarısız olan adım bunu uyarıları arasında, her istek için bir satırla söyler: `network: POST api.example.com/v1/pay 500 (id 44)`. Sunucunun reddettiği (4xx, 5xx) ya da yolda başarısız olan istek sayılır; uygulamanın kendi vazgeçtiği istek sayılmaz.
 
 `network strict` bunu bir hataya çevirir: o satırdan sonra, bir istek 5xx aldığında ya da yolda başarısız olduğunda ve bunu bir kural yapmadıysa adım başarısız olur; böylece ekranda geçen ama arkasındaki bir çağrısı bozulan akış geçmez. 4xx yanıtları ile bir `mock` kuralının verdiği yanıtlar ve hatalar uyarı olarak kalır. `network strict off` bunu bitirir, dosyanın sonu da öyle. Çalışan bir yakalama yoksa sondayla bir yakalama başlatır ve bu, uygulamayı yeniden başlatır; bu yüzden onu `launch` satırından önce yazın. Bir isteğe, altında gerçekleştiği adım bittiğinde bakılır: daha sonra başarısız olan istek bir sonraki adımı başarısız kılar ve ondan önce geldiğini söyler.
+
+`request`, uygulama uyan bir istek yaptıysa geçer; henüz gelmemiş bir isteği de bekler, `timeoutMs=` başka bir süre vermedikçe 10 sn: `request "/v1/profile" method=PUT status=2xx has="name=Grace"`. İlk sözcük adresin bir parçasıdır; `status=` tek bir durum kodu, bir kod sınıfı (`2xx`) ya da `failed` olur; `has=` isteğin gövdesinde bulunması gerekendir: JSON bir gövdede yoluyla verilen bir değer (`user.name=Grace`, `items[0].id=7`) ya da gövdenin herhangi bir metni; `has="response: ok=true"` ise aynısını yanıtın gövdesi için sorar. `has=`, gövdeleri saklayan bir yakalama ister (`bodies` ile `network` `start`). Yalnızca çalıştırma başladıktan sonraki istekler sayılır; böylece ondan önceki bir istek adımı geçiremez. Bulunamadığında, en yakın isteği ve onun neyinin farklı olduğunu söyler: `nearest: PUT api.example.com/v1/profile 409 (id 52): 409, not 2xx`.
 
 ## Ekran görüntüleri, görsel denetimler ve ayarlar
 

@@ -8,6 +8,8 @@ const NUMBER = String.raw`(\d+(?:\.\d+)?)`;
 // a mask may start off the screen's edge
 const PLACE = String.raw`(-?\d+(?:\.\d+)?)`;
 const RECT = new RegExp(`^${PLACE},${PLACE},${NUMBER},${NUMBER}$`);
+/** A status a request is asked for by: one, a class of them, or a failure on its way. */
+export const STATUS = /^(\d{3}|\dxx|failed)$/;
 const MASK_KEYS = ['id', 'role', 'text'] as const;
 
 /** What a `visual` step leaves out of its comparison, as the `visual` tool takes it. */
@@ -62,6 +64,8 @@ export function checkDeviceStep(st: FlowStep, line: number) {
     (a.name !== 'strict' || !['on', 'off', undefined].includes(a.value as string | undefined))
   )
     throw new FlowError('network: strict, strict on or strict off', line);
+  if (st.action === 'request' && a.status !== undefined && !STATUS.test(String(a.status)))
+    throw new FlowError(`request: status is 404, 4xx or failed: ${String(a.status)}`, line);
   if ((st.action === 'screenshot' || st.action === 'visual') && !PICTURE_NAME.test(String(a.name)))
     throw new FlowError(
       `${st.action}: a name is letters, digits, dot, dash and underscore: ${String(a.name)}`,

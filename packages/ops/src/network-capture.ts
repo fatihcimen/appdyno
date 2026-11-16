@@ -68,11 +68,16 @@ async function proxymanEntries(proxy: string | undefined, since: number) {
   }
 }
 
-/** What a running capture has seen so far; none from a proxy whose list this tool cannot read. */
-export async function readCapture(s: Session, c: Capture): Promise<NetworkAnswer | undefined> {
+/** What a running capture has seen so far, `bare` with nothing asked of the device beside; none from a proxy whose list this tool cannot read. */
+export async function readCapture(
+  s: Session,
+  c: Capture,
+  bare = false,
+): Promise<NetworkAnswer | undefined> {
   if (c.via !== 'proxy')
     return must(s.device.network, "the device's capture").read(
       must(c.handle, "the capture's handle"),
+      bare,
     );
   const entries = await proxymanEntries(c.proxy, c.since);
   return entries && { entries };

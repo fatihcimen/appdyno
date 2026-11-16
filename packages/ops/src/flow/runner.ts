@@ -26,10 +26,11 @@ import type { Steps } from '../steps.js';
 import { keyboardFirst } from '../keyboard.js';
 import { refused, ToolError, type Op } from '../tool.js';
 import { WHOLE_STEP } from '../tool-kinds.js';
-import { dropRules, heldNow } from '../network-capture.js';
+import { captures, dropRules, heldNow } from '../network-capture.js';
+import { lastRequest } from '../network-check.js';
 import { failedSince } from '../network-watch.js';
 import { mockLine, opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
-import { loadRecording } from './shared.js';
+import { defined, loadRecording } from './shared.js';
 import { looksStill } from './still.js';
 
 /** What a step took: the device's own count from action to settled where it has one, else the action on this Mac's clock. */
@@ -147,6 +148,9 @@ export function flowRunner(
 
   const act = async (s: Session, st: FlowStep, at: StepPlace): Promise<StepOutcome> => {
     const [name, args] = opCall(st, at);
+    // a request from before the run is none of the run's; a capture the run itself started has only its own
+    if (st.action === 'request' && captures.read(s.device.serial)?.since === at.before?.since)
+      Object.assign(args, defined({ after: at.before?.id }));
     const t0 = Date.now();
     const op = must(ops()[name], `the op ${name}`);
     const answered = await op.handler(opInput(name, args, st.action)).catch(async (e: unknown) => {
@@ -218,13 +222,14 @@ export function flowRunner(
         `from ${from}: this flow has steps 1 to ${flow.steps.length}`,
         'INVALID_ARGUMENT',
       );
-    const at = {
+    const at: StepPlace = {
       file,
       shots: o.shots ?? SHOTS_DIR,
       update: ctx.options.updateBaselines === true,
       mocked: [],
     };
     validate(flow, at);
+    if (flow.steps.some((st) => st.action === 'request')) at.before = await lastRequest(s);
     let values: Record<string, string>;
     try {
       values = valuesFor(flow, o.params ?? {}, { ...ctx.options.env, ...o.fromFile }, from);

@@ -66,6 +66,11 @@ export const SPECS = {
    * made it; `network strict off` ends that. It holds until the file ends.
    */
   network: { words: ['name', 'value?'] },
+  /**
+   * The app made a request, as `network` `check` waits for one: by a part of its address, its method, its status and
+   * what its body holds. It looks only at requests since the run began.
+   */
+  request: { words: ['part?'], text: ['method', 'status', 'has'], number: ['timeoutMs'] },
   /** An action the format has no step for: replay stops here rather than go on without it. */
   unrecorded: { words: ['what'] },
   /** Another flow's steps go here: `composeFlow` replaces it before anything runs. */
