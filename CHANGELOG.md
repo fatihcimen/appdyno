@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+appdyno 1.2.0 reads what a screen is made of and does more to the app: the native views under an iOS simulator's app or an Android activity, memory warnings, a shake, photos and videos added, and an app ended as the system ends it. A program gets the device itself through `appdyno/device`, desktop installs come as one `.mcpb` file, and a screen with a part that never stops moving no longer slows Android down. It is tested on Xcode 26.5 and Xcode 27.2.
+
+### Highlights
+
+- `screen` with `views` gives the app's native views with their kind, rect and framework, on an iOS simulator by a probe in the app and on Android from the activity, and names what draws the screen: UIKit, SwiftUI, Android views, Compose, Flutter or React Native.
+- `device_setting` takes `memory_warning`, `shake` and `media`, `terminate_app` takes `background`, and flows record and replay each of them, so an app's low-memory path, its shake handler, its photo picker and its restore after a background end can be tested.
+- Library: `appdyno/device` is the device itself for a program, under semantic versioning, and `connect` shares a held device, stops on an `AbortSignal` and gives the raw tree after an action.
+- Each release carries `appdyno-<version>.mcpb`, a desktop extension that installs appdyno with no terminal.
+- On Android a screen with a part that keeps moving, as a turning banner, reads in 25 ms where it took 1.1 s, and a tap on it settles in 0.6 s where it ran 4.2 s unsettled.
+- `appdyno test --fail-on-flaky`, a recording that says at once when an action will not replay, and photos put back after each file.
+
 ### Added
 
 - Flows have three more steps: `screenshot home` keeps a picture of the screen (under a test's artifacts, else `./appdyno-screenshots/`), `visual home [tolerance=] [mask=]...` compares the screen with `baselines/home.png` beside the flow, and `setting dark_mode on` or `setting restore` changes a device setting as `device_setting` does. `appdyno test` and `appdyno flow run` take `--update-baselines` to save the baselines, and a missing one is refused before the first step. A picture step waits until the screen has looked the same for 500 ms, at most 5 s: taken 272 ms after `setting dark_mode on`, a dark baseline was saved light. A recording writes these steps where it wrote `unrecorded`, and the Maestro export writes `takeScreenshot` and refuses the other two with the reason.

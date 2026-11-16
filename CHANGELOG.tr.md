@@ -4,6 +4,17 @@
 
 ## Yayımlanmamış
 
+appdyno 1.2.0 bir ekranın neyden yapıldığını okur ve uygulamaya daha fazlasını yapar: bir iOS simülatöründeki uygulamanın ya da bir Android activity'sinin native view'ları, bellek uyarıları, sallama, eklenen fotoğraf ve videolar, ve sistemin sonlandırdığı gibi sonlandırılan bir uygulama. Bir program `appdyno/device` ile cihazın kendisini alır, masaüstü kurulumu tek bir `.mcpb` dosyasıyla gelir ve hiç durmadan hareket eden bir parçası olan ekran artık Android'i yavaşlatmaz. Xcode 26.5 ve Xcode 27.2'de test edildi.
+
+### Öne çıkanlar
+
+- `views` ile `screen`, uygulamanın native view'larını türü, dikdörtgeni ve framework'üyle verir; iOS simülatöründe uygulamadaki bir probe ile, Android'de activity'den. Ekranı neyin çizdiğini de söyler: UIKit, SwiftUI, Android views, Compose, Flutter ya da React Native.
+- `device_setting`, `memory_warning`, `shake` ve `media` alır; `terminate_app` `background` alır; flow'lar her birini kaydedip yeniden oynatır. Böylece bir uygulamanın düşük bellek yolu, sallama işleyicisi, fotoğraf seçicisi ve arka planda sonlandırıldıktan sonra kendini geri getirmesi test edilebilir.
+- Kütüphane: `appdyno/device`, anlamsal sürümlemeyle bir program için cihazın kendisidir; `connect` tutulan bir cihazı paylaşır, bir `AbortSignal` ile durur ve bir eylemden sonra ham ağacı verir.
+- Her sürümde `appdyno-<version>.mcpb` bulunur: appdyno'yu terminalsiz kuran bir masaüstü eklentisi.
+- Android'de dönen bir afiş gibi durmadan hareket eden bir parçası olan ekran 1.1 s yerine 25 ms'de okunur; ona yapılan bir dokunuş 4.2 s durulmadan beklemek yerine 0.6 s'de durulur.
+- `appdyno test --fail-on-flaky`, bir eylemin yeniden oynatılamayacağını anında söyleyen kayıt, ve her dosyadan sonra geri alınan fotoğraflar.
+
 ### Eklenenler
 
 - Akışlarda üç yeni adım var: `screenshot home` ekranın bir resmini saklar (bir testin artifacts klasörü altında, yoksa `./appdyno-screenshots/` altında), `visual home [tolerance=] [mask=]...` ekranı akışın yanındaki `baselines/home.png` ile karşılaştırır, `setting dark_mode on` ya da `setting restore` bir cihaz ayarını `device_setting` gibi değiştirir. `appdyno test` ve `appdyno flow run`, temel görüntüleri kaydetmek için `--update-baselines` alır; eksik bir temel görüntü ilk adımdan önce reddedilir. Bir resim adımı, ekranın 500 ms boyunca aynı görünmesini bekler, en çok 5 sn: `setting dark_mode on`'dan 272 ms sonra alınan koyu bir temel görüntü açık kaydedilmişti. Bir kayıt bu adımları, eskiden `unrecorded` yazdığı yerde yazar; Maestro dışa aktarması `takeScreenshot` yazar, diğer ikisini nedeniyle reddeder.
