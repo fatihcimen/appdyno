@@ -34,10 +34,10 @@ type TimelineRun = {
  * @internal the bin's own, and the published types have none of what it takes
  */
 export async function recordTimeline(ops: Ops, { during, dir, log }: TimelineRun) {
-  log(await say(ops, 'report', { action: 'timeline', ...(dir && { dir }) }));
+  log(await say(ops, 'record_session', { kind: 'timeline', action: 'start', ...(dir && { dir }) }));
   let failed: unknown;
   await during(ops).catch((e: unknown) => (failed = e));
-  log(await say(ops, 'report', { action: 'stop' }));
+  log(await say(ops, 'record_session', { kind: 'timeline', action: 'stop' }));
   // eslint-disable-next-line @typescript-eslint/only-throw-error -- what failed during it, thrown on as it came
   if (failed !== undefined) throw failed;
 }
@@ -68,9 +68,15 @@ export async function flightCommand(args: string[], context: (values: Settings) 
   });
   const ops = opsFor(ctx);
   try {
-    console.log(await say(ops, 'report', { action: 'flight', ...(dir && { dir: resolve(dir) }) }));
+    console.log(
+      await say(ops, 'record_session', {
+        kind: 'flight',
+        action: 'start',
+        ...(dir && { dir: resolve(dir) }),
+      }),
+    );
     await forThisLong();
-    console.log(await say(ops, 'report', { action: 'stop' }));
+    console.log(await say(ops, 'record_session', { kind: 'flight', action: 'stop' }));
     return 0;
   } finally {
     await ctx.end().catch(() => []);

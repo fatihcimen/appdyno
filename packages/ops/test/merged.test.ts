@@ -62,6 +62,8 @@ describe('a touch by what it is given', () => {
     );
     const none = await call('swipe_screen', { x: 10, y: 10 });
     expect(none.text).toMatch(/^INVALID_ARGUMENT: a swipe needs direction/);
+    const long = await call('swipe_screen', { scale: 2, durationMs: 60_000 });
+    expect(long.text).toMatch(/^INVALID_ARGUMENT: durationMs: Too big/);
     const lone = await call('swipe_screen', { direction: 'up', maxSwipes: 3 });
     expect(lone.text).toMatch(
       /^INVALID_ARGUMENT: maxSwipes goes with until, to, scale or pointers/,

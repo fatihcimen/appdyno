@@ -314,7 +314,8 @@ export const ACT: ToolAnnotations = { destructiveHint: false, openWorldHint: fal
 export const DESTRUCTIVE: ToolAnnotations = { openWorldHint: false };
 /**
  * The same of a tool that reaches beyond the device and this Mac: Apple's or Google's push service, a page on the web,
- * the hosts an app talks to, what a project's build fetches; and of a tool that may run one of those. Never of `SAVES`,
+ * the hosts an app talks to, what a project's build fetches; and of a tool that may run one of those. What appdyno
+ * fetches for itself, once and checked by its hash, a trace reader or a simulator's runner, makes no tool one. Never of `SAVES`,
  * which `onlyReads` knows by being that one object.
  */
 export const beyond = (within: ToolAnnotations): ToolAnnotations => ({

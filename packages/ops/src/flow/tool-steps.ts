@@ -117,7 +117,9 @@ const OPS: Record<string, ToStep> = {
     data.answered !== undefined ? stepOf('alert', {}, { answer: a.answer as string }) : undefined,
   // the one key that is no step of its own: the keyboard closed is a flow's word
   press_key: (a, data) =>
-    a.key === HIDE_KEYBOARD && data.closed ? stepOf('hide_keyboard', {}) : undefined,
+    String(a.key).toLowerCase() === HIDE_KEYBOARD && data.closed
+      ? stepOf('hide_keyboard', {})
+      : undefined,
   // a swipe, a scroll and a drag are steps, written as they run; a pinch and free paths have none
   swipe_screen: (a) =>
     a.scale !== undefined

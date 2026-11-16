@@ -113,7 +113,8 @@ function swipeScreenOp(
         distance: z.number().optional(),
         exact: z.boolean().optional(),
         to: z.object(Target).strict().optional(),
-        durationMs: z.number().int().optional(),
+        // the longest of the ways that take one: a swipe and a drag hold theirs to their own
+        durationMs: z.number().int().min(50).max(10_000).optional(),
         holdMs: z.number().int().optional(),
         scale: z.number().min(0.2).max(5).optional(),
         pointers: z

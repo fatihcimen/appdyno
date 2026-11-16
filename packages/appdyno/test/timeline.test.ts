@@ -4,13 +4,13 @@ import { recordTimeline } from '../src/timeline.js';
 import { line } from '../src/usage.js';
 
 /** An op that only says it was called. */
-const op = (calls: string[], name: string) => ({
-  name,
-  input: z.object({ action: z.string() }),
-  handler: (args: { action: string }) => {
-    calls.push(`${name} ${args.action}`);
+const op = (calls: string[]) => ({
+  name: 'record_session',
+  input: z.object({ kind: z.string(), action: z.string() }),
+  handler: (args: { kind: string; action: string }) => {
+    calls.push(`${args.kind} ${args.action}`);
     return Promise.resolve({
-      blocks: [{ type: 'text', text: `${name} ${args.action} done` }],
+      blocks: [{ type: 'text', text: `${args.kind} ${args.action} done` }],
       data: {},
     });
   },
@@ -18,7 +18,7 @@ const op = (calls: string[], name: string) => ({
 
 /** The one op a timeline calls, as the tools it is given. */
 const opsWith = (calls: string[]) =>
-  ({ report: op(calls, 'report') }) as unknown as Parameters<typeof recordTimeline>[0];
+  ({ record_session: op(calls) }) as unknown as Parameters<typeof recordTimeline>[0];
 
 describe('a timeline from the command line', () => {
   it('starts, runs what it is given, and stops, in that order', async () => {
@@ -28,8 +28,8 @@ describe('a timeline from the command line', () => {
       during: () => Promise.resolve(calls.push('journey')),
       log: (l) => log.push(l),
     });
-    expect(calls).toEqual(['report timeline', 'journey', 'report stop']);
-    expect(log).toEqual(['report timeline done', 'report stop done']);
+    expect(calls).toEqual(['timeline start', 'journey', 'timeline stop']);
+    expect(log).toEqual(['timeline start done', 'timeline stop done']);
   });
 
   it('still writes the page of a journey that failed, and then says so', async () => {
@@ -40,7 +40,7 @@ describe('a timeline from the command line', () => {
         log: () => undefined,
       }),
     ).rejects.toThrow('step 3 failed');
-    expect(calls).toEqual(['report timeline', 'report stop']);
+    expect(calls).toEqual(['timeline start', 'timeline stop']);
   });
 
   it('is listed with what it takes', () => {
