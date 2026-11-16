@@ -88,6 +88,14 @@ describe('screenshot, visual and setting steps', () => {
     const before = flowFile('visual home\ntap id=tab index=0 !ambiguous', 'b.flow');
     await flowsFor(context([], { updateBaselines: true })).replay(before);
     expect(existsSync(baseline('home'))).toBe(true);
+    // and so is one after a check picked so: a check of another element leads to no other screen
+    const checked = flowFile(
+      'assert text="Ana sayfa" index=0 !ambiguous\nvisual checked',
+      'c.flow',
+    );
+    const r = await flowsFor(context([], { updateBaselines: true })).replay(checked);
+    expect(r.passed).toBe(true);
+    expect(existsSync(baseline('checked'))).toBe(true);
   });
 
   it('fails the flow on a screen that differs from its baseline, naming the diff', async () => {

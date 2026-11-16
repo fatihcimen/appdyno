@@ -93,8 +93,8 @@ export function flowRunner(
 
   /**
    * Every step's arguments, before the first runs: a typo is not found at step 40. And no baseline is saved after a
-   * step whose target is picked by its index: on this run that may be another element, and a baseline of the screen
-   * it led to would pass ever after, where a comparison would have failed.
+   * step that acts on a target picked by its index: on this run that may be another element, and a baseline of the
+   * screen it led to would pass ever after, where a comparison would have failed.
    */
   const validate = (flow: Flow, at: StepPlace) => {
     let picked: FlowStep | undefined;
@@ -107,7 +107,8 @@ export function flowRunner(
           'INVALID_ARGUMENT',
           'name that target by a selector that finds it alone, and take !ambiguous off its line',
         );
-      if (st.flags.includes('ambiguous')) picked ??= st;
+      // a check of another element fails or passes, and leads to no other screen
+      if (st.flags.includes('ambiguous') && !LOOKS_ONLY.has(st.action)) picked ??= st;
       const [name, args] = opCall(st, at);
       opInput(name, args, where);
     }
