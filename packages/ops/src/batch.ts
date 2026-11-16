@@ -20,6 +20,7 @@ import { NOT_A_STEP } from './tool-kinds.js';
 import {
   ACT,
   argumentsHint,
+  CHANGE_HINT,
   defineOp,
   inSelector,
   refusedAction,
@@ -75,7 +76,8 @@ function planned(
       inSelector(takes, rest, p.error.issues) ?? argumentsHint(p.error.issues),
     );
   }
-  if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);
+  // said, or a client looks for what the steps before it did
+  if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`, CHANGE_HINT);
   const p = op.input.safeParse(args);
   if (!p.success)
     throw fail(

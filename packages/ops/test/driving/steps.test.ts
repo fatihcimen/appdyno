@@ -246,6 +246,7 @@ describe('steps across screens', () => {
       const no = await call('steps', { steps: [{ action }] });
       expect(no.error).toBe(true);
       expect(no.text).toContain(`no step ${action}`);
+      expect(no.text).toContain('nothing was done');
     }
     const wrong = await call('steps', { steps: [{ action: 'find', nope: 1 }] });
     expect(wrong.error).toBe(true);
