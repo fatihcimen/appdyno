@@ -42,7 +42,7 @@ export type Selector = { text?: string; id?: string; role?: string; index?: numb
 /** One read of the screen. */
 export type Screen = {
   elements: ScreenElement[];
-  /** Names this read: a touch given it as `before` is refused where another window has come in front since. */
+  /** Names this read: what a touch takes as `before`. */
   hash: string;
   /** The app of the window in front. */
   foreground?: string;
@@ -60,7 +60,12 @@ export type OpenOptions = {
 };
 
 export type TouchOptions = {
-  /** The `hash` of the read the touch was aimed on. */
+  /**
+   * The `hash` of the read the touch was aimed on: the screen after the touch is settled against it. On Android a
+   * touch whose `before` is a read from before another window of an app came in front is refused `STALE`, with
+   * nothing sent, while that read is among the last 8 the device gave. iOS makes no such comparison: there the touch
+   * is sent, so read again and aim again after a dialog came up by itself.
+   */
   before?: string;
 };
 

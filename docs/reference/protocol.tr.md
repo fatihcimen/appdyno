@@ -23,7 +23,7 @@ hata kodlarını, düğüm bayraklarını ve sürümü karşılaştırır.
 | 1   | ikili bir ek: `[u32 BE request id][bytes]`, o id'yi taşıyan JSON yanıtından hemen önce gönderilir      |
 | 2   | bir video karesi, yalnızca cihazdan host'a: `[u64 BE capture us][u64 BE sent ns][u32 BE flags][bytes]` |
 
-64 MiB'den büyük bir çerçeve, bilinmeyen bir tür ya da ayrıştırılamayan bir JSON çerçevesi bağlantıyı sonlandırır.
+64 MiB'den büyük bir çerçeve, bilinmeyen bir tür ya da ayrıştırılamayan bir JSON çerçevesi bağlantıyı sonlandırır. iOS runner, `hello` kabul edilene kadar bir çerçeveyi 64 KiB ile sınırlar.
 
 ## El sıkışma
 

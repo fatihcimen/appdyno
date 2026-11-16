@@ -23,7 +23,7 @@ error codes, node flags and version the three of them write down.
 | 1    | a binary attachment: `[u32 BE request id][bytes]`, sent right before the JSON response with that id |
 | 2    | a video frame, device to host only: `[u64 BE capture us][u64 BE sent ns][u32 BE flags][bytes]`      |
 
-A frame larger than 64 MiB, an unknown type or a JSON frame that does not parse ends the connection.
+A frame larger than 64 MiB, an unknown type or a JSON frame that does not parse ends the connection. Before its `hello` is taken, the iOS runner holds a frame to 64 KiB.
 
 ## Handshake
 
