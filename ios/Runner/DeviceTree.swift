@@ -24,6 +24,8 @@ extension Device {
         var nodes: [Node]
         var truncated: Bool
         var busy: Bool
+        /// When it was read, in ms.
+        var at = Int(Date().timeIntervalSince1970 * 1000)
         var hash: String { layoutHash(nodes) }
     }
 
@@ -139,7 +141,7 @@ extension Device {
      * app's home walkthrough keeps a second bubble with its close button under the header; other drivers report
      * one. XCUI's hittable check decides, only for such duplicates (a few queries).
      */
-    func hideUnreachableCopies(_ c: inout Capture) {
+    func hideUnreachableCopies(_ c: inout Capture, still: Bool = false) {
         // a layout with no copy asks nothing, and keeps no place among those that did: the reads of a list
         // scrolling pushed out the screen with copies, which then asked again, 144 to 203 ms on a simulator
         let repeated = repeatedControls(c.nodes)
@@ -154,35 +156,39 @@ extension Device {
         let soon = Date().addingTimeInterval(Device.copiesAskS)
         var askedOne = false
         for idxs in repeated.prefix(4) {
-            // kept by what can change the answer, not by the whole layout: a real app's home grid under a turning
-            // banner had a new layout at every read and asked again each time, 25 s a read
-            let key = copiesKey(c.nodes, idxs)
-            var hidden = unreachable.first(where: { $0.hash == key })?.copies
-            // a read asks of one group at least; what is not asked by then stays shown, as a screen with no copy
-            // is, and is asked at the next read
-            if hidden == nil, Date() < soon || !askedOne {
+            // kept by the control and where its copies stand, not by the whole layout nor by what moves over them: a
+            // real app's home grid under a turning banner had a new layout at every read and asked again each time,
+            // 25 s a read, and a carousel of slides with one id asked of its own slides at every read
+            let id = copiesId(c.nodes, idxs), places = idxs.map { c.nodes[$0].box }
+            let kept = unreachable.firstIndex { $0.id == id }
+            var verdict = kept.map { unreachable.remove(at: $0).verdict }
+            let cover = coverKey(c.nodes, (verdict?.hidden ?? []).map { idxs[$0] })
+            var unasked = verdict?.stale(places: places, cover: cover, at: c.at, still: still) ?? true
+            // a read asks of one group at least; what is not asked by then stays as it was last known, shown where
+            // it never was, and is asked at the next read
+            if unasked, Date() < soon || !askedOne {
                 askedOne = true
-                if let asked = askCopies(app, c.nodes, idxs, until: Date().addingTimeInterval(Device.copiesGroupS)) {
-                    unreachable.removeAll { $0.hash == key }
-                    unreachable.append((key, asked))
-                    if unreachable.count > 32 { unreachable.removeFirst() }
-                    hidden = asked
+                if let hidden = askCopies(app, c.nodes, idxs, until: Date().addingTimeInterval(Device.copiesGroupS)) {
+                    verdict = CopiesVerdict(places: places, hidden: hidden,
+                                            cover: coverKey(c.nodes, hidden.map { idxs[$0] }), at: c.at)
+                    unasked = false
                 }
             }
             // what was left unasked is said, so that no one keeps this read's copies as XCUI's verdict
-            if hidden == nil { c.truncated = true }
-            for index in idxs where hidden?.contains(c.nodes[index].copyKey) == true {
-                c.nodes[index].flags &= ~Flag.visible
-            }
+            if unasked { c.truncated = true }
+            guard let verdict else { continue }
+            unreachable.append((id, verdict))
+            if unreachable.count > 32 { unreachable.removeFirst() }
+            for copy in verdict.hidden { c.nodes[idxs[copy]].flags &= ~Flag.visible }
         }
     }
 
-    /// The copies of one control out of reach, by XCUI's hittable check: nil when time ran out first, as a verdict
-    /// asked in part would keep a copy shown, or hidden, for as long as the screen stays.
-    private func askCopies(_ app: XCUIApplication, _ nodes: [Node], _ idxs: [Int], until end: Date) -> [String]? {
+    /// The copies of one control out of reach, in the screen's order, by XCUI's hittable check: nil when time ran out
+    /// first, as a verdict asked in part would keep a copy shown, or hidden, for as long as the screen stays.
+    private func askCopies(_ app: XCUIApplication, _ nodes: [Node], _ idxs: [Int], until end: Date) -> [Int]? {
         guard let id = nodes[idxs[0]].id else { return [] }
         let query = app.descendants(matching: .any).matching(identifier: id)
-        var hidden: [String] = []
+        var hidden: [Int] = []
         for index in 0 ..< min(query.count, 8) {
             if Date() >= end { return nil }
             let element = query.element(boundBy: index)
@@ -191,7 +197,9 @@ extension Device {
             guard element.exists, IssueTrap.answer({ element.isHittable }) == false,
                   let snap = try? element.snapshot() else { continue }
             let place = box(snap.frame)
-            if let copy = idxs.first(where: { nodes[$0].box == place }) { hidden.append(nodes[copy].copyKey) }
+            if let copy = idxs.firstIndex(where: { samePlaces([nodes[$0].box], [place]) }), !hidden.contains(copy) {
+                hidden.append(copy)
+            }
         }
         return hidden
     }

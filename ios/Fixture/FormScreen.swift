@@ -77,3 +77,32 @@ struct CopiesUnderBannerScreen: View {
         .onReceive(timer) { _ in turn += 1 }
     }
 }
+
+/// A carousel whose slides carry one id and never stand still, two or three of them on a phone's screen at a time, as
+/// a home screen's turning campaigns do: the copies themselves are elsewhere at every read.
+struct CopiesCarouselScreen: View {
+    @State private var turn = 0
+    @State private var taps = 0
+    let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
+    private let period = 200
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            ZStack(alignment: .leading) {
+                ForEach(0 ..< 4, id: \.self) { index in
+                    Button("Kampanya \(index + 1)") {}
+                        .accessibilityIdentifier("promo_slide")
+                        .frame(width: 180, height: 80)
+                        .background(Color.orange)
+                        .offset(x: CGFloat(index * period - turn * 7 % period - 190))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button("Dokun") { taps += 1 }.accessibilityIdentifier("carousel_tap")
+            Text("Dokunuş: \(taps)").accessibilityIdentifier("carousel_taps")
+            Spacer()
+        }
+        .padding()
+        .onReceive(timer) { _ in turn += 1 }
+    }
+}

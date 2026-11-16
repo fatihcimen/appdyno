@@ -23,9 +23,6 @@ public struct Node: Equatable {
 
 public extension Node {
     var box: [Int] { [left, top, right, bottom] }
-
-    /// One copy of a control: its type, id and place.
-    var copyKey: String { "\(type)#\(id ?? "")@\(box)" }
 }
 
 /// A frame as a tree gives it: [left, top, right, bottom], whole numbers; nothing finite to say is no box.
@@ -141,21 +138,59 @@ public func repeatedControls(_ nodes: [Node]) -> [[Int]] {
     return groups.values.filter { (2 ... 3).contains($0.count) }.sorted { $0[0] < $1[0] }
 }
 
-/// What decides which copy of a repeated control a tap reaches: the copies' places and every shown node over any of
-/// them. A banner turning elsewhere on the screen leaves it as it was, as the layout digest does not. FNV-1a 64, hex.
-public func copiesKey(_ nodes: [Node], _ copies: [Int]) -> String {
-    let boxes = copies.map { nodes[$0] }
+/// What a group of copies is known by: the control and how many of it there are. Where they stand, and how large,
+/// is the verdict's to compare.
+public func copiesId(_ nodes: [Node], _ copies: [Int]) -> String {
+    "\(nodes[copies[0]].type)#\(nodes[copies[0]].id ?? "")#\(copies.count)"
+}
+
+/// The same boxes in the same order, each edge within the layout's tolerance: places and sizes both.
+public func samePlaces(_ one: [[Int]], _ other: [[Int]]) -> Bool {
+    one.count == other.count && zip(one, other).allSatisfy { box, match in
+        box.count == match.count && zip(box, match).allSatisfy { abs($0 - $1) <= layoutTolerance }
+    }
+}
+
+/// What lies over the copies found out of reach, `hidden` by index: every other shown node that meets one, by type
+/// and id and no place. A cover that leaves changes it, where the copy under it would stay hidden for good; what
+/// moves over a copy in reach changes nothing.
+public func coverKey(_ nodes: [Node], _ hidden: [Int]) -> String {
+    let boxes = hidden.map { nodes[$0] }
     func over(_ node: Node) -> Bool {
         boxes.contains { node.left < $0.right && $0.left < node.right && node.top < $0.bottom && $0.top < node.bottom }
     }
-    var h: UInt64 = 0xcbf2_9ce4_8422_2325
-    for node in boxes + nodes.filter({ shown($0) && over($0) }) {
-        for unit in "\(node.copyKey);".utf16 {
-            h ^= UInt64(unit)
-            h = h &* 0x100_0000_01b3
-        }
+    return nodes.indices.filter { !hidden.contains($0) && shown(nodes[$0]) && over(nodes[$0]) }
+        .map { "\(nodes[$0].type)#\(nodes[$0].id ?? "")" }.joined(separator: ";")
+}
+
+/// What XCUI said of one control's copies: where they stood when asked, which of them, in the screen's order, a tap
+/// does not reach, and what lay over those.
+public struct CopiesVerdict {
+    public let places: [[Int]]
+    public let hidden: [Int]
+    public let cover: String
+    /// Where the last read had the copies, and since when they stand there.
+    var seen: [[Int]]
+    var since: Int
+
+    public init(places: [[Int]], hidden: [Int], cover: String, at: Int) {
+        self.places = places; self.hidden = hidden; self.cover = cover
+        seen = places
+        since = at
     }
-    return String(h, radix: 16)
+
+    /// Whether to ask again, for a read at `at` ms with the copies at `now` under `cover`. Not while they stand as
+    /// asked. Copies that moved, or lost their cover, are asked of once they stand still: where a read
+    /// `copiesStillMs` earlier had them, or as a settle found the screen (`still`). Until then the verdict holds
+    /// by their order: a carousel that never stops had a new place at every read, and was asked of at each.
+    public mutating func stale(places now: [[Int]], cover: String, at: Int, still: Bool = false) -> Bool {
+        if !samePlaces(now, seen) {
+            seen = now
+            since = at
+        }
+        if samePlaces(now, places), cover == self.cover { return false }
+        return still || at - since >= SettleTimes.copiesStillMs
+    }
 }
 
 /// A toolbar as large as the screen is the system's container, no bar (iOS 27 on a phone: XCUI calls it

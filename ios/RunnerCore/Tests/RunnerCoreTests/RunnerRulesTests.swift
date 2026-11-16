@@ -17,6 +17,38 @@ final class RunnerRulesTests: XCTestCase {
         XCTAssertEqual(t["inertQuietMs"], SettleTimes.inertQuietMs)
         XCTAssertEqual(t["alertAppearMs"], SettleTimes.alertAppearMs)
         XCTAssertEqual(t["alertWatchMs"], SettleTimes.alertWatchMs)
+        XCTAssertEqual(t["copiesStillMs"], SettleTimes.copiesStillMs)
+    }
+
+    func testTheCopiesOfAControl() throws {
+        let copies = try XCTUnwrap(rules()["copies"] as? Wire)
+        let screen = try XCTUnwrap(copies["screen"] as? Wire)
+        let all = try nodes(screen)
+        let groups = repeatedControls(all)
+        XCTAssertEqual(groups, screen["groups"] as? [[Int]])
+        XCTAssertEqual(groups.map { copiesId(all, $0) }, screen["ids"] as? [String])
+        for c in try XCTUnwrap(screen["covers"] as? [Wire]) {
+            XCTAssertEqual(coverKey(all, try XCTUnwrap(c["hidden"] as? [Int])), c["cover"] as? String,
+                           c["why"] as? String ?? "")
+        }
+    }
+
+    func testWhenCopiesAreAskedOfAgain() throws {
+        let traces = try XCTUnwrap((rules()["copies"] as? Wire)?["verdicts"] as? [Wire])
+        XCTAssertFalse(traces.isEmpty)
+        for t in traces {
+            let why = t["why"] as? String ?? ""
+            let asked = try XCTUnwrap(t["asked"] as? Wire, why)
+            var verdict = CopiesVerdict(places: try XCTUnwrap(asked["places"] as? [[Int]], why), hidden: [],
+                                        cover: try XCTUnwrap(asked["cover"] as? String, why), at: 0)
+            for read in try XCTUnwrap(t["reads"] as? [Wire], why) {
+                let places = try XCTUnwrap(read["places"] as? [[Int]], why)
+                let cover = try XCTUnwrap(read["cover"] as? String, why), at = try XCTUnwrap(read["at"] as? Int, why)
+                let ask = verdict.stale(places: places, cover: cover, at: at, still: read["still"] as? Bool ?? false)
+                XCTAssertEqual(ask, read["ask"] as? Bool, "\(why), at \(at)")
+                if ask { verdict = CopiesVerdict(places: places, hidden: [], cover: cover, at: at) }
+            }
+        }
     }
 
     func testTheSettle() throws {

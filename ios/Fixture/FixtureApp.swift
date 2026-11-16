@@ -62,6 +62,7 @@ struct FixtureApp: App {
         "biometric": { _ in AnyView(BiometricScreen()) },
         "ticker": { _ in AnyView(TickerScreen()) },
         "copies_banner": { _ in AnyView(CopiesUnderBannerScreen()) },
+        "copies_carousel": { _ in AnyView(CopiesCarouselScreen()) },
         "delayed": { _ in AnyView(DelayedScreen()) },
         "permission": { _ in AnyView(PermissionScreen()) },
         "late": { _ in AnyView(LateScreen()) },

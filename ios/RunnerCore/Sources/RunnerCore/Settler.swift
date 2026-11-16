@@ -9,6 +9,8 @@ public enum SettleTimes {
     public static let alertWatchMs = 800
     /// How long an alert or sheet takes to come up (UIKit's presentation is about 0.3–0.4 s).
     public static let alertAppearMs = 450
+    /// How long a control's copies stand at a new place before they are asked of again.
+    public static let copiesStillMs = 300
 }
 
 /// What a settle asks of its caller: a read of the screen, whether two reads show one layout, whether a read shows

@@ -3,7 +3,306 @@
     "tolerance": 4,
     "inertQuietMs": 80,
     "alertAppearMs": 450,
-    "alertWatchMs": 800
+    "alertWatchMs": 800,
+    "copiesStillMs": 300
+  },
+  "copies": {
+    "screen": {
+      "nodes": [
+        { "p": -1, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "slide", "b": [-150, 100, 30, 180], "f": 3 },
+        { "p": 0, "w": 0, "c": "Button", "id": "slide", "b": [50, 100, 230, 180], "f": 3 },
+        { "p": 0, "w": 0, "c": "Button", "id": "slide", "b": [250, 100, 430, 180], "f": 3 },
+        { "p": 0, "w": 0, "c": "Button", "id": "slide", "b": [450, 100, 630, 180], "f": 2 },
+        { "p": 0, "w": 0, "c": "Button", "id": "close", "b": [10, 300, 50, 340], "f": 3 },
+        { "p": 0, "w": 0, "c": "Button", "id": "close", "b": [200, 300, 240, 340], "f": 3 },
+        { "p": 0, "w": 0, "c": "Other", "id": "header", "b": [0, 280, 120, 360], "f": 1 },
+        { "p": 0, "w": 0, "c": "Cell", "id": "row", "b": [0, 400, 400, 440], "f": 3 },
+        { "p": 0, "w": 0, "c": "Cell", "id": "row", "b": [0, 440, 400, 480], "f": 3 },
+        { "p": 0, "w": 0, "c": "Cell", "id": "row", "b": [0, 480, 400, 520], "f": 3 },
+        { "p": 0, "w": 0, "c": "Cell", "id": "row", "b": [0, 520, 400, 560], "f": 3 },
+        { "p": -1, "w": 1, "c": "Button", "id": "close", "b": [300, 700, 340, 740], "f": 3 }
+      ],
+      "groups": [
+        [1, 2, 3],
+        [5, 6]
+      ],
+      "ids": ["Button#slide#3", "Button#close#2"],
+      "covers": [
+        {
+          "why": "nothing is out of reach: nothing over the copies counts",
+          "hidden": [],
+          "cover": ""
+        },
+        {
+          "why": "all that meets the copy out of reach, by type and id, itself left out",
+          "hidden": [5],
+          "cover": "Other#;Other#header"
+        },
+        { "why": "the header is not over the other copy", "hidden": [6], "cover": "Other#" }
+      ]
+    },
+    "verdicts": [
+      {
+        "why": "copies that stand as asked are not asked of again, a few points off either",
+        "asked": {
+          "places": [
+            [10, 300, 50, 340],
+            [200, 300, 240, 340]
+          ],
+          "cover": ""
+        },
+        "reads": [
+          {
+            "at": 1000,
+            "places": [
+              [10, 300, 50, 340],
+              [200, 300, 240, 340]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 2000,
+            "places": [
+              [14, 296, 54, 336],
+              [204, 296, 244, 336]
+            ],
+            "cover": "",
+            "ask": false
+          }
+        ]
+      },
+      {
+        "why": "a carousel that never stops, elsewhere at every read, is not asked of at any",
+        "asked": {
+          "places": [
+            [50, 100, 230, 180],
+            [250, 100, 430, 180]
+          ],
+          "cover": ""
+        },
+        "reads": [
+          {
+            "at": 500,
+            "places": [
+              [-20, 100, 160, 180],
+              [180, 100, 360, 180]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 1000,
+            "places": [
+              [-90, 100, 90, 180],
+              [110, 100, 290, 180]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 1500,
+            "places": [
+              [-160, 100, 20, 180],
+              [40, 100, 220, 180]
+            ],
+            "cover": "",
+            "ask": false
+          }
+        ]
+      },
+      {
+        "why": "copies come to rest at a new place are asked of once, when a later read has them there still",
+        "asked": {
+          "places": [
+            [10, 300, 50, 340],
+            [200, 300, 240, 340]
+          ],
+          "cover": ""
+        },
+        "reads": [
+          {
+            "at": 500,
+            "places": [
+              [10, 400, 50, 440],
+              [200, 400, 240, 440]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 700,
+            "places": [
+              [10, 400, 50, 440],
+              [200, 400, 240, 440]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 800,
+            "places": [
+              [10, 400, 50, 440],
+              [200, 400, 240, 440]
+            ],
+            "cover": "",
+            "ask": true
+          },
+          {
+            "at": 1500,
+            "places": [
+              [10, 400, 50, 440],
+              [200, 400, 240, 440]
+            ],
+            "cover": "",
+            "ask": false
+          }
+        ]
+      },
+      {
+        "why": "one read looked at twice is no proof of standing still",
+        "asked": {
+          "places": [
+            [10, 300, 50, 340],
+            [200, 300, 240, 340]
+          ],
+          "cover": ""
+        },
+        "reads": [
+          {
+            "at": 500,
+            "places": [
+              [10, 400, 50, 440],
+              [200, 400, 240, 440]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 500,
+            "places": [
+              [10, 400, 50, 440],
+              [200, 400, 240, 440]
+            ],
+            "cover": "",
+            "ask": false
+          }
+        ]
+      },
+      {
+        "why": "a settle that found the screen still is proof at once",
+        "asked": {
+          "places": [
+            [10, 300, 50, 340],
+            [200, 300, 240, 340]
+          ],
+          "cover": ""
+        },
+        "reads": [
+          {
+            "at": 500,
+            "places": [
+              [10, 400, 50, 440],
+              [200, 400, 240, 440]
+            ],
+            "cover": "",
+            "still": true,
+            "ask": true
+          }
+        ]
+      },
+      {
+        "why": "a cover that left is asked of, the copies in place",
+        "asked": {
+          "places": [
+            [10, 300, 50, 340],
+            [200, 300, 240, 340]
+          ],
+          "cover": "Other#;Other#header"
+        },
+        "reads": [
+          {
+            "at": 1000,
+            "places": [
+              [10, 300, 50, 340],
+              [200, 300, 240, 340]
+            ],
+            "cover": "Other#",
+            "ask": true
+          }
+        ]
+      },
+      {
+        "why": "a copy of another size has moved",
+        "asked": {
+          "places": [
+            [10, 300, 50, 340],
+            [200, 300, 240, 340]
+          ],
+          "cover": ""
+        },
+        "reads": [
+          {
+            "at": 500,
+            "places": [
+              [10, 300, 50, 340],
+              [200, 300, 260, 340]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 900,
+            "places": [
+              [10, 300, 50, 340],
+              [200, 300, 260, 340]
+            ],
+            "cover": "",
+            "ask": true
+          }
+        ]
+      },
+      {
+        "why": "slides read on their way and back at rest, as between a carousel's turns, are known where they were asked of",
+        "asked": {
+          "places": [
+            [50, 100, 230, 180],
+            [250, 100, 430, 180]
+          ],
+          "cover": ""
+        },
+        "reads": [
+          {
+            "at": 500,
+            "places": [
+              [-50, 100, 130, 180],
+              [150, 100, 330, 180]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 600,
+            "places": [
+              [50, 100, 230, 180],
+              [250, 100, 430, 180]
+            ],
+            "cover": "",
+            "ask": false
+          },
+          {
+            "at": 3000,
+            "places": [
+              [50, 100, 230, 180],
+              [250, 100, 430, 180]
+            ],
+            "cover": "",
+            "ask": false
+          }
+        ]
+      }
+    ]
   },
   "digest": {
     "nodes": [

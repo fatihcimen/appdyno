@@ -15,8 +15,10 @@ extension Device {
         switch request.read {
         case "hash", "tree":
             let start = Date()
-            var c = try last.flatMap { $0.windows.isEmpty ? nil : $0 } ?? capture(job: job)
-            hideUnreachableCopies(&c)
+            let read = last.flatMap { $0.windows.isEmpty ? nil : $0 }
+            var c = try read ?? capture(job: job)
+            // a settle that ended settled saw the screen, its copies too, stand still
+            hideUnreachableCopies(&c, still: read != nil && (out["settle"] as? Wire)?["settled"] as? Bool == true)
             remember(c)
             out["hash"] = c.hash
             if request.read == "tree" {

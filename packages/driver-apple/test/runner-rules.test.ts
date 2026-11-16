@@ -3,6 +3,14 @@ import { join } from 'node:path';
 import { assert, describe, expect, it } from 'vitest';
 import { must } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
+import {
+  COPIES_STILL_MS,
+  copiesId,
+  copiesStale,
+  copiesVerdict,
+  coverKey,
+  repeatedControls,
+} from '../src/simcopies.js';
 import { ALERT_APPEAR_MS, ALERT_WATCH_MS, INERT_QUIET_MS, settle } from '../src/simsettle.js';
 import {
   CHECKABLE,
@@ -27,7 +35,25 @@ type Why = { why: string };
 const rules = JSON.parse(
   readFileSync(join(import.meta.dirname, 'fixtures/runner-rules.json'), 'utf8'),
 ) as {
-  times: { tolerance: number; inertQuietMs: number; alertAppearMs: number; alertWatchMs: number };
+  times: {
+    tolerance: number;
+    inertQuietMs: number;
+    alertAppearMs: number;
+    alertWatchMs: number;
+    copiesStillMs: number;
+  };
+  copies: {
+    screen: {
+      nodes: Node[];
+      groups: number[][];
+      ids: string[];
+      covers: (Why & { hidden: number[]; cover: string })[];
+    };
+    verdicts: (Why & {
+      asked: { places: number[][]; cover: string };
+      reads: { at: number; places: number[][]; cover: string; still?: boolean; ask: boolean }[];
+    })[];
+  };
   digest: { nodes: Node[]; hash: string };
   sameDigest: (Why & { a: Node[]; b: Node[] })[];
   sameLayout: (Why & { a: Node[]; b: Node[]; same: boolean })[];
@@ -57,7 +83,27 @@ describe('the rules the direct read shares with the runner', () => {
       inertQuietMs: INERT_QUIET_MS,
       alertAppearMs: ALERT_APPEAR_MS,
       alertWatchMs: ALERT_WATCH_MS,
+      copiesStillMs: COPIES_STILL_MS,
     }).toEqual(rules.times);
+  });
+
+  it('knows a control’s copies, and what is over those out of reach', () => {
+    const { nodes, groups, ids, covers } = rules.copies.screen;
+    expect(repeatedControls(nodes)).toEqual(groups);
+    expect(groups.map((g) => copiesId(nodes, g))).toEqual(ids);
+    for (const c of covers) expect(coverKey(nodes, c.hidden), c.why).toBe(c.cover);
+  });
+
+  it('asks of copies again when the runner does', () => {
+    expect(rules.copies.verdicts.length).toBeGreaterThan(0);
+    for (const t of rules.copies.verdicts) {
+      let verdict = copiesVerdict(t.asked.places, [], t.asked.cover, 0);
+      for (const r of t.reads) {
+        const ask = copiesStale(verdict, r.places, r.cover, r.at, r.still);
+        expect(ask, `${t.why}, at ${String(r.at)}`).toBe(r.ask);
+        if (ask) verdict = copiesVerdict(r.places, [], r.cover, r.at);
+      }
+    }
   });
 
   it('settles as the runner does, where its windows are the same', async () => {

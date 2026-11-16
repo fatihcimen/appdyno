@@ -241,6 +241,28 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(await shownCopies()).toHaveLength(1);
   });
 
+  it('asks the runner of copies on a screen that never stands still a few times, not at every read', async () => {
+    await home();
+    for (const [screen, id, shown] of [
+      // the slides themselves are the copies, two or three of them on the screen and elsewhere at each read
+      ['copies_carousel', 'promo_slide', [2, 3]],
+      ['copies_banner', 'dup_close', [1]],
+    ] as const) {
+      await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
+      await new Promise((r) => setTimeout(r, 1_000));
+      let asked = 0;
+      for (let i = 0; i < 20; i++) {
+        asked += await askedOfRunner(async () => {
+          const copies = (await d.tree()).nodes.filter((n) => n.id === id && n.f & 1);
+          expect(shown, `${screen}, read ${String(i)}`).toContain(copies.length);
+        });
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      // once for two slides and once for three, and where a read finds them standing as another did
+      expect(asked, screen).toBeLessThanOrEqual(4);
+    }
+  });
+
   // asked of the runner itself: a simulator's own touches go past it, and a phone's are all it has
   it('watches for a system alert after a button that changes nothing, with a copy on the screen or not', async () => {
     await home();

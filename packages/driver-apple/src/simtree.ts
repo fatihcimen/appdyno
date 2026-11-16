@@ -56,7 +56,7 @@ export type RawAx = {
   cut?: boolean;
 };
 
-const shown = (n: Node) => (n.f & F.visible) !== 0 && n.b[2] > n.b[0] && n.b[3] > n.b[1];
+export const shown = (n: Node) => (n.f & F.visible) !== 0 && n.b[2] > n.b[0] && n.b[3] > n.b[1];
 
 const interactive = (n: Node) =>
   (n.f & (F.clickable | F.editable | F.checkable | F.scrollable)) !== 0;
@@ -249,41 +249,25 @@ const copyKey = (n: Node) => `${n.c}#${n.id ?? ''}@${n.b.join(',')}`;
 
 /**
  * What the runner decided about a screen's repeated controls, seen in its read of the same screen: the
- * copies it left out as out of reach. Undefined when the reads are not of the same screen.
+ * copies it left out as out of reach, by their place among the nodes. Undefined when the reads are not of the same
+ * screen.
  */
-export function learnCopies(direct: Tree, runner: Tree): Set<string> | undefined {
+export function learnCopies(direct: Tree, runner: Tree): Set<number> | undefined {
   if (direct.nodes.length !== runner.nodes.length) return undefined;
-  const hidden = new Set<string>();
+  const hidden = new Set<number>();
   for (let i = 0; i < direct.nodes.length; i++) {
     const a = must(direct.nodes[i], 'a node');
     const b = must(runner.nodes[i], 'a node');
     if (a.c !== b.c || a.id !== b.id) return undefined;
-    if ((a.f & F.visible) !== 0 && (b.f & F.visible) === 0) hidden.add(copyKey(a));
+    if ((a.f & F.visible) !== 0 && (b.f & F.visible) === 0) hidden.add(i);
   }
   return hidden;
 }
 
-/**
- * What decides which copy of a repeated control a tap reaches (RunnerCore's `copiesKey`, over every group): the
- * copies' places and every shown node over any of them. A banner turning elsewhere leaves it as it was, as the layout
- * digest does not; a screen with no copies is known by that digest.
- */
-export function copiesKey(t: Tree): string {
-  const groups = new Map<string, Node[]>();
-  for (const n of t.nodes)
-    if (n.w === 0 && (n.f & F.visible) !== 0 && n.id !== undefined)
-      groups.set(`${n.c}#${n.id}`, [...(groups.get(`${n.c}#${n.id}`) ?? []), n]);
-  const copies = [...groups.values()].filter((g) => g.length === 2 || g.length === 3).flat();
-  if (!copies.length) return t.hash;
-  const over = (n: Node) =>
-    copies.some((c) => n.b[0] < c.b[2] && c.b[0] < n.b[2] && n.b[1] < c.b[3] && c.b[1] < n.b[3]);
-  return [...copies, ...t.nodes.filter((n) => shown(n) && over(n))].map(copyKey).join(';');
-}
-
 /** The tree with those copies left out, as the runner's would have them. */
-export function withoutCopies(t: Tree, hidden: Set<string>): Tree {
+export function withoutCopies(t: Tree, hidden: Set<number>): Tree {
   if (!hidden.size) return t;
-  const nodes = t.nodes.map((n) => (hidden.has(copyKey(n)) ? { ...n, f: n.f & ~F.visible } : n));
+  const nodes = t.nodes.map((n, i) => (hidden.has(i) ? { ...n, f: n.f & ~F.visible } : n));
   return { ...t, nodes, hash: layoutHash(nodes) };
 }
 

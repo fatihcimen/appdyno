@@ -9,8 +9,9 @@ import XCTest
     private(set) var targetId: String?
     /// Recent captures by layout digest: what `before` names (compare and hit test).
     var recent: [(hash: String, nodes: [Node])] = []
-    /// The copies found out of reach on a recent layout, by its hash (each hittability check costs a query).
-    var unreachable: [(hash: String, copies: [String])] = []
+    /// What XCUI said of the copies of each control lately asked of, by `copiesId` (each hittability check costs a
+    /// query).
+    var unreachable: [(id: String, verdict: CopiesVerdict)] = []
     /// The frame of the system alert in the last read, if one was over the app.
     var alertFrame: CGRect?
     /// The app's frame in the last read: wider than tall where its interface stands turned.
