@@ -48,7 +48,7 @@ describe('a listed secret', () => {
 
   it('is read from the variable, from a file with one to a line where it holds a comma, and from a program', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-secrets-')), 'secrets');
-    writeFileSync(file, 'one, with a comma\r\n\n  spaced  \n');
+    writeFileSync(file, 'one, with a comma\r\n\n   \n\t\n  spaced  \n');
     expect(secretsOf({ APPDYNO_SECRETS: 'a1, b22 ,', APPDYNO_SECRETS_FILE: file }, ['c'])).toEqual([
       'one, with a comma',
       '  spaced  ',

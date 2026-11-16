@@ -48,7 +48,8 @@ export function secretsOf(
   const listed = (env.APPDYNO_SECRETS ?? '').split(',').map((x) => x.trim());
   const file = env.APPDYNO_SECRETS_FILE;
   const lines = file ? secretLines(file) : [];
-  return [...new Set([given, listed, lines].flat().filter(Boolean))].sort(
+  // a line of spaces alone is no secret: hidden, it would take every space out of every answer
+  return [...new Set([given, listed, lines].flat().filter((x) => x.trim() !== ''))].sort(
     (a, b) => b.length - a.length,
   );
 }
