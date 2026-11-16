@@ -30,6 +30,8 @@
 
 - A live window on a foldable Android emulator kept the inner display's shape after the device folded: it now follows.
 - `tap` on an iOS switch row by its ref or a selector toggles it: the row is touched on its own switch even where that switch stands a little out of the row's frame, as in Settings on iOS 26, and a cell that holds one switch is touched on that switch too.
+- **iOS: a screen whose repeated controls keep moving is read fast.** A carousel whose slides carry one id was asked of XCUI at every read, and every read through the simulator's helper went to the runner. The verdict on a control's copies is now kept by the control and the number of its copies, holds while they stand within 4 points of where they were asked of, and is asked again only once moved copies stand still. On the fixture's carousel (iPhone 17 simulator, iOS 26.5) a runner read went from a median 194 ms to 63 ms and a read through the helper from 237 ms to 25 ms. A tap there still waits out its settle.
+- **iOS: a release that changes nothing in the runner no longer rebuilds it.** The runner's sources held the release number, so every release, an Android-only one too, cost each iOS user a full `xcodebuild`. The runner now says the digest of its sources in its hello (`checkout` in a checkout's build), and `device_info` shows that in place of a version number on iOS. 1.3.0 builds the runner once more; later releases do so only when the runner changes.
 
 ## 1.2.0
 

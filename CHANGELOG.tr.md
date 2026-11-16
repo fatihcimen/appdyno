@@ -30,6 +30,8 @@
 
 - Katlanabilir bir Android emülatöründe canlı pencere, cihaz katlandıktan sonra iç ekranın biçiminde kalıyordu: artık izliyor.
 - iOS'ta bir switch satırına ref ya da seçiciyle yapılan `tap` artık switch'i değiştirir: switch satırın çerçevesinden biraz taşsa bile (iOS 26 Ayarlar'da olduğu gibi) satıra kendi switch'inden dokunulur; tek bir switch tutan hücreye de o switch'ten dokunulur.
+- **iOS: tekrarlı kontrolleri durmadan hareket eden bir ekran hızlı okunuyor.** Slaytları aynı id'yi taşıyan bir carousel her okumada XCUI'ye soruluyordu ve simülatör yardımcısından geçen her okuma runner'a gidiyordu. Bir kontrolün kopyalarına dair karar artık kontrol ve kopya sayısıyla saklanıyor, kopyalar soruldukları yerin 4 nokta yakınında durdukça geçerli kalıyor ve yer değiştiren kopyalar ancak durduklarında yeniden soruluyor. Fixture'ın carousel ekranında (iPhone 17 simülatörü, iOS 26.5) bir runner okuması ortanca 194 ms'den 63 ms'ye, yardımcıdan geçen bir okuma 237 ms'den 25 ms'ye indi. Oradaki bir dokunuş hâlâ durulmasını bekliyor.
+- **iOS: runner'da hiçbir şeyi değiştirmeyen bir sürüm onu yeniden derletmiyor.** Runner'ın kaynakları sürüm numarasını taşıyordu; bu yüzden her sürüm, yalnızca Android'i düzelten bile, her iOS kullanıcısına tam bir `xcodebuild` ödetiyordu. Runner artık hello'sunda kaynaklarının özetini söylüyor (bir checkout derlemesinde `checkout`) ve `device_info` iOS'ta sürüm numarası yerine bunu gösteriyor. 1.3.0 runner'ı bir kez daha derletir; sonraki sürümler yalnızca runner değiştiğinde.
 
 ## 1.2.0
 
