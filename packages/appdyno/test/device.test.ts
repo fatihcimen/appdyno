@@ -108,7 +108,7 @@ describe('appdyno/device', () => {
     'waits after a launch for the first screen to come to rest, as launch_app does',
     fakeTimed(async () => {
       const { d, out, reads, ms } = await launched(4);
-      expect(out).toEqual({ settled: true });
+      expect(out).toMatchObject({ settled: true });
       // the screen that held: read first on the 4th read, and for 200 ms more
       expect(reads).toBeGreaterThan(4);
       expect(ms).toBeGreaterThanOrEqual(200);
@@ -123,7 +123,7 @@ describe('appdyno/device', () => {
     'gives up on a screen that never rests after 3 s, and says so',
     fakeTimed(async () => {
       const { d, out, ms } = await launched(Infinity);
-      expect(out).toEqual({ settled: false });
+      expect(out).toMatchObject({ settled: false });
       expect(ms).toBeGreaterThanOrEqual(3_000);
       expect(ms).toBeLessThan(3_500);
       await d.close();
@@ -209,7 +209,10 @@ describe('appdyno/device', () => {
     expect(now.hash).not.toBe(first.hash);
     const allow = aim(now, { text: 'Uygulamayı kullanırken' });
     expect(allow.on).toBe(now.hash);
-    await expect(d.tap(allow.point, { before: allow.on })).resolves.toEqual({ settled: true });
+    await expect(d.tap(allow.point, { before: allow.on })).resolves.toEqual({
+      settled: true,
+      ms: 120,
+    });
     expect(device.permissionUp).toBe(false);
     await d.close();
   });
@@ -218,15 +221,17 @@ describe('appdyno/device', () => {
     const d = await openDevice('emulator-5656');
     await expect(d.typeText('abc', { at: { x: 1, y: 2 }, replace: true })).resolves.toEqual({
       settled: true,
+      ms: 120,
       verified: true,
     });
-    await expect(d.key('back')).resolves.toEqual({ settled: true });
+    await expect(d.key('back')).resolves.toEqual({ settled: true, ms: 120 });
     await expect(d.swipe({ x: 500, y: 900 }, { x: 500, y: 300 })).resolves.toEqual({
       settled: true,
+      ms: 120,
     });
-    await expect(d.longPress({ x: 5, y: 5 }, 600)).resolves.toEqual({ settled: true });
+    await expect(d.longPress({ x: 5, y: 5 }, 600)).resolves.toEqual({ settled: true, ms: 120 });
     device.settles = false;
-    await expect(d.tap({ x: 5, y: 5 })).resolves.toEqual({ settled: false });
+    await expect(d.tap({ x: 5, y: 5 })).resolves.toEqual({ settled: false, ms: 120 });
     await d.close();
   });
 });

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { must, type AppManager } from '@appdyno/core';
 import { holder } from '@appdyno/ops';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import { tree } from '@appdyno/testing/fake-screens.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { openDevice } from '../src/device.js';
@@ -242,7 +243,7 @@ describe('a link', () => {
 
   it('is opened, in the app named, and the screen it opens is waited for', async () => {
     const d = await opened();
-    await expect(d.openLink(' https://example.com/a ')).resolves.toEqual({ settled: true });
+    await expect(d.openLink(' https://example.com/a ')).resolves.toMatchObject({ settled: true });
     await d.openLink('app://item/1', { app: 'dev.app' });
     expect(opens()).toEqual([
       ['https://example.com/a', undefined],
@@ -448,4 +449,102 @@ describe("the device's agent", () => {
       rmSync(file, { force: true });
     }
   });
+});
+
+describe('what a touch waits for and answers', () => {
+  const acts = () => device.calls.filter((c) => c.name === 'act').map((c) => c.args[1]);
+
+  it('asks the device for the quiet and the longest wait a caller names, and for none of its own otherwise', async () => {
+    const d = await opened();
+    await d.tap({ x: 5, y: 5 });
+    await d.tap({ x: 5, y: 5 }, { quietMs: 120, maxMs: 1_500, before: 'h0' });
+    await d.key('back', { before: 'h0', maxMs: 0 });
+    expect(acts()).toEqual([
+      { settle: {} },
+      { settle: { quietMs: 120, maxMs: 1_500 }, before: 'h0' },
+      { settle: { maxMs: 0 }, before: 'h0' },
+    ]);
+    await d.close();
+  });
+
+  it('refuses a wait past what the wire carries, with nothing sent', async () => {
+    const d = await opened();
+    const wrong = { code: 'INVALID_ARGUMENT' };
+    await expect(d.tap({ x: 5, y: 5 }, { quietMs: 5_001 })).rejects.toMatchObject(wrong);
+    await expect(d.swipe({ x: 1, y: 9 }, { x: 1, y: 2 }, 300, { maxMs: -1 })).rejects.toMatchObject(
+      wrong,
+    );
+    await expect(d.launch('dev.app', { maxMs: 15_001 })).rejects.toMatchObject(wrong);
+    await expect(d.typeText('a', { quietMs: 1.5 })).rejects.toMatchObject(wrong);
+    expect(device.calls.filter((c) => c.name !== 'tree')).toEqual([]);
+    await d.close();
+  });
+
+  it('gives the screen the touch left from the read its settle made, and no read for one not asked', async () => {
+    const d = await opened();
+    const plain = await d.tap({ x: 540, y: 350 });
+    expect(plain).toEqual({ settled: true, ms: 120 });
+    expect(device.calls.some((c) => c.name === 'tree')).toBe(false);
+    device.screen = 'home';
+    const { tree: left, ...rest } = await d.tap({ x: 540, y: 350 }, { tree: true });
+    expect(rest).toEqual({ settled: true, ms: 120 });
+    expect(acts().at(-1)).toEqual({ settle: {}, read: 'tree' });
+    expect(device.calls.some((c) => c.name === 'tree')).toBe(false);
+    expect(left).toEqual(await d.screen());
+    await d.close();
+  });
+
+  it('reads once where the device answered with no tree', async () => {
+    const d = await opened();
+    const act = device.act.bind(device);
+    device.act = async (action, o) => {
+      const { tree: _none, ...r } = await act(action, o);
+      return r;
+    };
+    const { tree: left } = await d.key('back', { tree: true });
+    expect(device.calls.filter((c) => c.name === 'tree')).toHaveLength(1);
+    expect(left?.elements.length).toBeGreaterThan(0);
+    await d.close();
+  });
+
+  it("gives a typed text's screen and time with what the field read back", async () => {
+    const d = await opened();
+    const typed = await d.typeText('abc', { at: { x: 1, y: 2 }, submit: true, tree: true });
+    expect(typed).toMatchObject({ settled: true, ms: 120, verified: true });
+    expect(typed.tree?.hash).toBe((await d.screen()).hash);
+    expect(device.calls.find((c) => c.name === 'typeText')?.args[0]).toEqual({
+      settle: {},
+      read: 'tree',
+      at: { x: 1, y: 2 },
+      submit: true,
+    });
+    await d.close();
+  });
+
+  it(
+    'does not take the screen a launch began on for the one it opens, and says how long the rest took',
+    fakeTimed(async () => {
+      const d = await opened();
+      const began = (await d.screen()).hash;
+      // the app's first screen never comes: the one the launch began on holds
+      const stuck = await d.launch('dev.app', { before: began, maxMs: 600 });
+      expect(stuck.settled).toBe(false);
+      expect(stuck.ms).toBeGreaterThanOrEqual(600);
+      const opened_ = await d.launch('dev.app', { quietMs: 80, tree: true });
+      expect(opened_).toMatchObject({ settled: true, tree: { hash: began } });
+      expect(opened_.ms).toBeGreaterThanOrEqual(80);
+      expect(opened_.ms).toBeLessThan(600);
+      await d.close();
+    }),
+  );
+
+  it(
+    "waits for a link's screen by the same options",
+    fakeTimed(async () => {
+      const d = await opened();
+      const r = await d.openLink('app://item/1', { quietMs: 40, maxMs: 500, tree: true });
+      expect(r).toMatchObject({ settled: true, tree: { hash: (await d.screen()).hash } });
+      await d.close();
+    }),
+  );
 });

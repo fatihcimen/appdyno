@@ -13,12 +13,20 @@ import {
   waitUntil,
   withFamily,
   withShownWords,
+  type ActOptions,
   type Reads,
   type ScreenElement as Listed,
   type Sought,
 } from '@appdyno/core';
 import { checkApp, redact, ServerContext } from '@appdyno/ops';
-import { DeviceError, SETTLE_DEFAULT, type Traversal, type Tree } from '@appdyno/protocol';
+import {
+  DeviceError,
+  Settle,
+  SETTLE_DEFAULT,
+  type ActResult,
+  type Traversal,
+  type Tree,
+} from '@appdyno/protocol';
 import { policyFor, signingOf } from './allow.js';
 import { membersOf } from './device-members.js';
 import { deviceProviders } from './providers.js';
@@ -30,16 +38,31 @@ import type {
   ScreenElement,
   Selector,
   Touched,
+  TouchOptions,
 } from './device-types.js';
 
 export type * from './device-types.js';
 
-/** Every touch waits for the screen to come to rest, by the device's own measure. */
-const REST = { settle: {} };
-
-const settled = (r: { settle?: { settled: boolean } | undefined }): Touched => ({
-  settled: r.settle?.settled === true,
-});
+/**
+ * A touch's options as a device takes them: it waits for the screen to come to rest, by the device's own measure, for
+ * as long as the wire lets a caller ask.
+ */
+function acts({ before, quietMs, maxMs, tree }: TouchOptions = {}): ActOptions {
+  const settle = {
+    ...(quietMs !== undefined && { quietMs }),
+    ...(maxMs !== undefined && { maxMs }),
+  };
+  if (!Settle.safeParse(settle).success)
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      'quietMs is a whole number of ms from 0 to 5000, and maxMs one from 0 to 15000',
+    );
+  return {
+    settle,
+    ...(before !== undefined && { before }),
+    ...(tree && { read: 'tree' as const }),
+  };
+}
 
 /**
  * A device by its serial, opened by the driver that takes it and held for this process until `close`: one another
@@ -77,6 +100,19 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     };
   };
   const screen = async () => shown(await device.tree());
+  /** What an action answered, with the screen it left where that was asked: the one its settle read, else a new read. */
+  const touched = async (r: ActResult, o: TouchOptions = {}): Promise<Touched> => ({
+    settled: r.settle?.settled === true,
+    ...(r.settle && { ms: r.settle.ms }),
+    ...(o.tree && { tree: r.tree ? shown(r.tree) : await screen() }),
+  });
+  /** A launch's or a link's screen come to rest, by reads: one right after catches a screen still laying out. */
+  const rested = async (o: TouchOptions = {}): Promise<Touched> => {
+    const { settle = {} } = acts(o);
+    const { quietMs, maxMs } = { ...SETTLE_DEFAULT, ...settle };
+    const r = await settleBy(screen, quietMs, maxMs, o.before);
+    return { settled: r.settled, ms: r.ms, ...(o.tree && { tree: r.screen }) };
+  };
   const until = (met: (s: Screen) => boolean, ms: number) =>
     waitUntil(
       {
@@ -96,29 +132,33 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     platform: device.platform,
     virtual: device.virtual,
     screen,
-    tap: async (at, o) => settled(await device.tap(at, { ...REST, ...o })),
-    longPress: async (at, ms, o) => settled(await device.longPress(at, ms, { ...REST, ...o })),
-    swipe: async (from, to, ms, o) => settled(await device.swipe(from, to, ms, { ...REST, ...o })),
-    key: async (key) => settled(await device.key(key, REST)),
-    async typeText(text, o) {
-      const r = await device.typeText(text, { ...REST, ...o });
+    tap: async (at, o) => touched(await device.tap(at, acts(o)), o),
+    longPress: async (at, ms, o) => touched(await device.longPress(at, ms, acts(o)), o),
+    swipe: async (from, to, ms, o) => touched(await device.swipe(from, to, ms, acts(o)), o),
+    key: async (key, o) => touched(await device.key(key, acts(o)), o),
+    async typeText(text, { at, replace, submit, ...o } = {}) {
+      const r = await device.typeText(text, {
+        ...acts(o),
+        ...(at && { at }),
+        ...(replace !== undefined && { replace }),
+        ...(submit !== undefined && { submit }),
+      });
       return {
-        ...settled(r),
+        ...(await touched(r, o)),
         ...(r.verified !== undefined && { verified: r.verified }),
         ...(r.submitted !== undefined && { submitted: r.submitted }),
       };
     },
-    async launch(id) {
+    async launch(id, o) {
+      acts(o);
       await device.launch(checkApp(policy, id));
-      // a read right after a launch catches a screen still laying out, and a touch aimed on it lands elsewhere
-      const { settled } = await settleBy(screen, SETTLE_DEFAULT.quietMs, SETTLE_DEFAULT.maxMs);
-      return { settled };
+      return rested(o);
     },
     terminate: async (id) => device.terminate(checkApp(policy, id)),
     foreground: () => device.foreground(),
     aim: async (target, { waitMs = AIM_WAIT_MS } = {}) =>
       aimed(await seek({ now: screen, until }, target, READS, waitMs), target),
-    ...membersOf({ device, policy, app, reads, clean, shown, screen, letGo }),
+    ...membersOf({ device, policy, app, reads, clean, shown, screen, rested, letGo }),
     close() {
       letGo();
       return Promise.resolve();

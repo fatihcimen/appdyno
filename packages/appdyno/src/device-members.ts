@@ -6,7 +6,6 @@ import {
   ORIENTATIONS,
   otherHosts,
   rotationOf,
-  settleBy,
   type Device as Driven,
   type ScreenOptions,
 } from '@appdyno/core';
@@ -21,12 +20,11 @@ import {
 import {
   AUDIT_TYPES,
   DeviceError,
-  SETTLE_DEFAULT,
   type AuditType,
   type Traversal,
   type Tree,
 } from '@appdyno/protocol';
-import type { Device, DeviceWindow, Screen } from './device-types.js';
+import type { Device, DeviceWindow, Screen, Touched, TouchOptions } from './device-types.js';
 
 /** What the members here are made of: the driver's device, the program's policy, and how this entry reads a screen. */
 export type Opened = {
@@ -38,6 +36,8 @@ export type Opened = {
   clean: (text: string) => string;
   shown: (tree: Tree, traversal?: Traversal[]) => Screen;
   screen: () => Promise<Screen>;
+  /** The screen come to rest after what replaces it, as a launch or a link. */
+  rested: (options?: TouchOptions) => Promise<Touched>;
   letGo: () => void;
 };
 
@@ -70,6 +70,7 @@ export function membersOf({
   clean,
   shown,
   screen,
+  rested,
   letGo,
 }: Opened): Pick<
   Device,
@@ -119,7 +120,7 @@ export function membersOf({
         ...(note && { note }),
       };
     },
-    async openLink(url, { app: into } = {}) {
+    async openLink(url, { app: into, ...o } = {}) {
       const href = checkUrl(policy, url, device.platform);
       if (CALL_LINK.test(href) && !policy.urls)
         throw new DeviceError(
@@ -139,8 +140,7 @@ export function membersOf({
           );
       }
       await device.openUrl(href, into);
-      const { settled } = await settleBy(screen, SETTLE_DEFAULT.quietMs, SETTLE_DEFAULT.maxMs);
-      return { settled };
+      return rested(o);
     },
     async windows() {
       const tree = await device.tree();

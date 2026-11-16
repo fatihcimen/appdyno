@@ -78,13 +78,25 @@ export type TouchOptions = {
    * The `hash` of the read the touch was aimed on: the screen after the touch is settled against it. On Android a
    * touch whose `before` is a read from before another window of an app came in front is refused `STALE`, with
    * nothing sent, while that read is among the last 8 the device gave. iOS makes no such comparison: there the touch
-   * is sent, so read again and aim again after a dialog came up by itself.
+   * is sent, so read again and aim again after a dialog came up by itself. `key` goes to whatever is in front, and is
+   * never refused so. On `launch` and `openLink` it names the screen the call began on, which is then no rest
+   * however long it holds.
    */
   before?: string;
+  /** How long the layout must hold to count as at rest, in ms: 200 with none given, 5000 at most. */
+  quietMs?: number;
+  /** The longest the call waits for that, in ms: 3000 with none given, 15000 at most. */
+  maxMs?: number;
+  /** Also answer `tree`, the screen the call left, from the read its settle made where the device gives one. */
+  tree?: boolean;
 };
 
-/** What a touch did: whether the screen came to rest after it, in the time a touch waits. */
-export type Touched = { settled: boolean };
+/**
+ * What a touch did. `settled`: whether the screen came to rest after it, in the time it waits. `ms`: how long that
+ * took, from the touch, as the device counted it; none where it did not say. `tree`: asked with `tree: true`, the
+ * screen it left.
+ */
+export type Touched = { settled: boolean; ms?: number; tree?: Screen };
 
 /** `verified`: whether the field read back holds the text, where it can be read back. `submitted`: false where enter was not pressed. */
 export type Typed = Touched & { verified?: boolean; submitted?: boolean };
@@ -187,14 +199,14 @@ export type Device = {
   longPress(at: Point, durationMs?: number, options?: TouchOptions): Promise<Touched>;
   swipe(from: Point, to: Point, durationMs?: number, options?: TouchOptions): Promise<Touched>;
   /** A key by its name, as `back`, `home` or `enter`, or a letter or digit. */
-  key(key: string): Promise<Touched>;
+  key(key: string, options?: TouchOptions): Promise<Touched>;
   /** Types into the focused field, or the one at `at`, tapped first. */
   typeText(
     text: string,
     options?: { at?: Point; replace?: boolean; submit?: boolean } & TouchOptions,
   ): Promise<Typed>;
   /** Starts the app, or brings it in front, and waits for its first screen to come to rest, as `launch_app` does. */
-  launch(app: string): Promise<Touched>;
+  launch(app: string, options?: TouchOptions): Promise<Touched>;
   terminate(app: string): Promise<void>;
   /** The app in front. */
   foreground(): Promise<string | undefined>;
@@ -217,7 +229,7 @@ export type Device = {
    * name, for one that would open in an app `policy.apps` does not, and for one that places a call unless
    * `policy.urls` names it.
    */
-  openLink(url: string, options?: { app?: string }): Promise<Touched>;
+  openLink(url: string, options?: TouchOptions & { app?: string }): Promise<Touched>;
   /** The windows on the screen, and where the keyboard is. */
   windows(): Promise<Windows>;
   /** Turns the device. A quarter turn's name is the side its top goes to. */
