@@ -221,10 +221,13 @@ for (const { platform, serial, provider } of targets)
       it('says a recording failed when its file cannot be written', async () => {
         // of the kind the device records, as another kind is refused before the folder is tried
         const kind = platform === 'ios' ? 'mov' : 'mp4';
+        // under a file, where no folder can be made, and inside what the server writes in
+        const blocked = join(dir, 'not-a-folder');
+        writeFileSync(blocked, '');
         const r = await h.call('record_session', {
           kind: 'video',
           action: 'start',
-          file: `/dev/null/x/video.${kind}`,
+          file: join(blocked, 'x', `video.${kind}`),
         });
         expect(r.error).toBe(true);
         expect(r.text).toMatch(/cannot write|did not start/);
