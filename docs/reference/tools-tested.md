@@ -4,6 +4,16 @@
 
 What [the tools](tools.md) were run on, and what each run showed. The device suites are in `device-tests/`, and [CI and releases](ci.md) says how to run them. The _fixture_ is appdyno's own test app, `dev.appdyno.fixture`. A _host load_ is the Mac's 1-minute load average, on 15 cores.
 
+## Tested versions
+
+Each device, OS and Xcode that a run on this page names whole, newest first. The simulator smoke of [CI and releases](ci.md) writes the same four columns at the top of its `device-summary.md`, which each release holds as a file: a row there that is not here names a pair that only the smoke's suites ran on.
+
+| device              | OS                                      | Xcode        | date       | what ran                                                                                                       |
+| ------------------- | --------------------------------------- | ------------ | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.5 (17F42) | 2026-11-16 | the simulator smoke on a Mac, 63 tests of its 4 suites passed in 11 minutes, at host load 7 to 476 on 10 cores |
+| iPhone 17 simulator | iOS 27.2 (24B8117)                      | 27.2 (27B52) | 2026-11-16 | the simulator suites, one file at a time: [Xcode 27.2](#xcode-272)                                             |
+| Android emulator    | Android 17, API 37 (CE2A.260420.051.A3) | none         | 2026-11-08 | every Android suite: [Android 17](#android-17)                                                                 |
+
 ## Android 17
 
 Every Android device suite ran on an emulator of Android 17, API 37, on 2026-11-08: `system-images;android-37.0;google_apis;arm64-v8a` revision 8, build `CE2A.260420.051.A3`, emulator 37.2.13, 1080x2400 at 420 dpi, drawing on its CPU (`swiftshader_indirect`), adbd not root, one file at a time at host load 8 to 28 on 15 cores. `evidence.test.ts`'s proxy test was left out, as this run changed no proxy. A test that failed ran again, and then on an API 34 emulator of the same make, revision 14, build `UE1A.230829.050`, to tell Android 17 from the rest. What Android 17 changed, each fixed and run again on it:

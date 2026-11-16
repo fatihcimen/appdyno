@@ -4,6 +4,16 @@
 
 [Araçların](tools.tr.md) neyin üzerinde çalıştırıldığı ve her çalıştırmanın ne gösterdiği. Cihaz suite'leri `device-tests/` içindedir; nasıl çalıştırılacaklarını [CI ve sürümler](ci.tr.md) söyler. _Fixture_, appdyno'nun kendi test uygulaması `dev.appdyno.fixture`'dır. _Host yükü_, Mac'in 1 dakikalık yük ortalamasıdır; 15 çekirdekte.
 
+## Test edilen sürümler
+
+Bu sayfadaki bir çalıştırmanın eksiksiz adlandırdığı her cihaz, işletim sistemi ve Xcode, en yeniden eskiye. [CI ve sürümler](ci.tr.md) sayfasındaki simülatör smoke'u aynı dört sütunu, her sürümün bir dosya olarak taşıdığı `device-summary.md` dosyasının başına yazar: orada olup burada olmayan bir satır, yalnızca smoke'un suite'lerinin çalıştığı bir ikiliyi adlandırır.
+
+| cihaz               | işletim sistemi                         | Xcode        | tarih      | ne çalıştı                                                                                                        |
+| ------------------- | --------------------------------------- | ------------ | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.5 (17F42) | 2026-11-16 | bir Mac'te simülatör smoke'u, 4 suite'inin 63 testi 11 dakikada geçti, 10 çekirdekte host yükü 7 ile 476 arasında |
+| iPhone 17 simulator | iOS 27.2 (24B8117)                      | 27.2 (27B52) | 2026-11-16 | simülatör suite'leri, her seferinde bir dosya: [Xcode 27.2](#xcode-272)                                           |
+| Android emulator    | Android 17, API 37 (CE2A.260420.051.A3) | yok          | 2026-11-08 | her Android suite'i: [Android 17](#android-17)                                                                    |
+
 ## Android 17
 
 Her Android cihaz suite'i 2026-11-08'de Android 17, API 37 emülatöründe çalıştı: `system-images;android-37.0;google_apis;arm64-v8a` revizyon 8, build `CE2A.260420.051.A3`, emülatör 37.2.13, 420 dpi'de 1080x2400, CPU'sunda çizen (`swiftshader_indirect`), adbd root değil, 15 çekirdekte 8 ile 28 arası host yükünde her seferinde bir dosya. Bu çalıştırma hiçbir proxy'yi değiştirmediği için `evidence.test.ts`'in proxy testi dışarıda bırakıldı. Başarısız olan bir test yeniden çalıştırıldı, ardından Android 17'yi geri kalanından ayırmak için aynı yapımdan, revizyon 14, build `UE1A.230829.050` olan bir API 34 emülatöründe de çalıştırıldı. Android 17'nin değiştirdikleri; her biri düzeltildi ve onda yeniden çalıştırıldı:

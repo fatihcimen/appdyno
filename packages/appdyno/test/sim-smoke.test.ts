@@ -111,6 +111,13 @@ describe('the simulator smoke', () => {
     expect(r.status).toBe(1);
     expect(r.summary).toContain('| ios.test.ts | 1 | 1 | 0 | 61 |');
   });
+
+  it("has a row of the tested versions in the summary's own form, so that one reads against the other", () => {
+    for (const page of ['tools-tested.md', 'tools-tested.tr.md'])
+      expect(readFileSync(join(root, 'docs/reference', page), 'utf8')).toMatch(
+        /^\| iPhone \d+ simulator +\| iOS [\d.]+ \(\w+\) +\| [\d.]+ \(\w+\) +\| \d{4}-\d\d-\d\d +\|/m,
+      );
+  });
 });
 
 describe('the workflows', () => {
