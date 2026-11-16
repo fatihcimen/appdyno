@@ -85,6 +85,8 @@ export const NetworkOut = z.object({
   source: z.string().optional(),
   bodies: z.string().optional(),
   note: z.string().optional(),
+  /** What the app made that the capture cannot see, each kind counted. */
+  unseen: z.record(z.string(), z.number().int()).optional(),
   saved: z.string().optional(),
   /** One request whole, as its lines. */
   detail: z.array(z.string()).optional(),

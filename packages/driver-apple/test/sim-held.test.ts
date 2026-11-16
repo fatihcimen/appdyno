@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { cannot } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { holdAppLanguage } from '../src/manage.js';
-import { SimulatorNetwork, probeEntries } from '../src/network.js';
+import { SimulatorNetwork, probeEntries, probeUnseen } from '../src/network.js';
 import { IosSimulatorPerf } from '../src/perf.js';
 import { ProbedFrames } from '../src/sim-frames.js';
 import { HeldLaunches, heldLaunch, joinEnv } from '../src/sim-held.js';
@@ -319,6 +319,11 @@ describe('a capture by the network probe', () => {
       [1, undefined, undefined],
       [2, true, undefined],
     ]);
+    // what the probe cannot see is counted by its kind, and is no request
+    const blind = `${log}\n{"unseen":"webview"}\n{"unseen":"websocket"}\n{"unseen":"webview"}`;
+    expect(probeEntries(blind, 61_000)).toHaveLength(2);
+    expect(probeUnseen(blind)).toEqual({ unseen: { webview: 2, websocket: 1 } });
+    expect(probeUnseen(log)).toEqual({});
   });
 
   it('keeps all of a capture in one folder of its own, for this user alone, and leaves none of it', async () => {

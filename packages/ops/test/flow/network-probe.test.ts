@@ -129,6 +129,19 @@ describe('the network probe through its tool and a flow', () => {
     );
   });
 
+  it('ends a read with what the app made that the probe cannot see', async () => {
+    const call = callerOf(context());
+    await call('network', { action: 'start', via: 'probe' });
+    expect((await call('network', { action: 'read' })).text).not.toContain('not seen here');
+    probe.read = () =>
+      Promise.resolve({ entries: [], unseen: { background: 1, webview: 2, websocket: 3 } });
+    const read = await call('network', { action: 'read' });
+    expect(read.text).toMatch(
+      /\nnot seen here: 1 background session, 2 web views, 3 WebSocket tasks$/,
+    );
+    expect(read.data.unseen).toEqual({ background: 1, webview: 2, websocket: 3 });
+  });
+
   it('writes a HAR that hides what an answer hides, and reads it back', async () => {
     const call = callerOf(context(['s3cr3t-pass']));
     await call('network', { action: 'start', via: 'probe', bodies: true });

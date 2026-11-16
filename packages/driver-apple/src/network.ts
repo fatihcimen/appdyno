@@ -47,7 +47,7 @@ export class SimulatorNetwork implements NetworkSource {
     return Promise.resolve([
       {
         via: 'probe',
-        sees: "the URLSession requests of the app, restarted with the probe: method, URL, status, time, size; headers and text bodies with bodies; with mock its rules answer, fail, delay or send elsewhere what they take, and throttle slows them. Not background sessions, WKWebView or Network.framework. While it is in, the app's own check of a server's certificate (pinning) and its answers to a login or client-certificate challenge are not asked: a server the app would refuse is let through, and one that asks the app for a certificate fails",
+        sees: "the URLSession requests of the app, restarted with the probe: method, URL, status, time, size; headers and text bodies with bodies; with mock its rules answer, fail, delay or send elsewhere what they take, and throttle slows them. Not background sessions, WKWebView or Network.framework, nor a WebSocket task, which is left to the system: read says how many of these the app made. While it is in, the app's own check of a server's certificate (pinning) and its answers to a login or client-certificate challenge are not asked: a server the app would refuse is let through, and one that asks the app for a certificate fails",
       },
       { via: 'packets', refused: 'a simulator has no packet trace of its own' },
       { via: 'bytes', refused: "a simulator's traffic is the Mac's: no count per app" },
@@ -98,14 +98,15 @@ export class SimulatorNetwork implements NetworkSource {
   async read(h: NetworkHandle, bare = false): Promise<NetworkAnswer> {
     const text = await readFile(String(h.log), 'utf8').catch(() => '');
     const entries = probeEntries(text);
-    if (bare) return { entries };
+    const unseen = probeUnseen(text);
+    if (bare) return { entries, ...unseen };
     const notes = [
       ...(!entries.some((e) => !e.inFlight)
         ? ['no request has finished in the app since the probe went in']
         : []),
       ...(h.app ? [await this.outside(String(h.app), text)] : []),
     ].filter(Boolean);
-    return { entries, ...(notes.length > 0 && { note: notes.join('; ') }) };
+    return { entries, ...(notes.length > 0 && { note: notes.join('; ') }), ...unseen };
   }
 
   /** What a read says where the app runs as another process than the one the probe last went into. */
@@ -131,7 +132,21 @@ export class SimulatorNetwork implements NetworkSource {
 }
 
 type Probed = NetworkEntry & { detail?: string };
-type Line = Probed & { at: number; loaded?: string; begin?: number; n?: number };
+type Line = Probed & {
+  at: number;
+  loaded?: string;
+  begin?: number;
+  n?: number;
+  unseen?: string;
+};
+
+/** What the probe's log says the app made that the probe cannot see, each kind counted; nothing where it made none. */
+export function probeUnseen(text: string): { unseen?: Record<string, number> } {
+  const unseen: Record<string, number> = {};
+  for (const [, kind] of text.matchAll(/^\{"unseen":"(\w+)"\}$/gm))
+    unseen[String(kind)] = (unseen[String(kind)] ?? 0) + 1;
+  return Object.keys(unseen).length > 0 ? { unseen } : {};
+}
 
 /**
  * The requests of the probe's log, each numbered as it starts: a request has a line when it starts and one when it
@@ -149,6 +164,8 @@ export function probeEntries(text: string, now = Date.now()): Probed[] {
       // empty, or the last line half written
       continue;
     }
+    // what the probe cannot see is counted apart, and is no request
+    if (e.unseen !== undefined) continue;
     if (e.loaded !== undefined) {
       for (const left of open.values())
         Object.assign(left, { inFlight: undefined, error: 'the app ended before it did' });

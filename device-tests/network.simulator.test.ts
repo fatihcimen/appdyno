@@ -7,6 +7,7 @@ import {
   realpathSync,
   writeFileSync,
 } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -73,9 +74,22 @@ async function server(name: string) {
       );
     });
   });
+  /** Each address a WebSocket task asked to be upgraded at: it is refused, as nothing here speaks it. */
+  const upgrades: string[] = [];
+  web.on('upgrade', (req, socket) => {
+    upgrades.push(req.url ?? '');
+    // the handshake a WebSocket asks for, then one text frame
+    const accept = createHash('sha1')
+      .update(`${String(req.headers['sec-websocket-key'])}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+      .digest('base64');
+    socket.write(
+      `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
+    );
+    socket.write(Buffer.concat([Buffer.from([0x81, 5]), Buffer.from('hello')]));
+  });
   await new Promise<void>((r) => web.listen(0, '127.0.0.1', r));
   const at = `127.0.0.1:${(web.address() as AddressInfo).port}`;
-  return { at, seen, held, asked, close: () => web.close() };
+  return { at, seen, held, asked, upgrades, close: () => web.close() };
 }
 
 describe.skipIf(!udid)('the network probe on a simulator', () => {
@@ -614,6 +628,43 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(diff).toEqual(['0 → 1: 1 differ', 'request.query.n: none → "2"']);
     const whole = await ok('network', { action: 'read', id: 0 });
     out(`BODY sizes: whole ${whole.text.length}, shape ${shape.join('\n').length}, path 18`);
+    await ok('network', { action: 'stop' });
+  }, 180_000);
+
+  it('says what the app made that it cannot see: a web view, a background session, a WebSocket task', async () => {
+    /** The fixture's Others pressed: what its WebSocket task was sent, or how it failed. */
+    const others = async () => {
+      await ok('open_link', { url: 'appdyno-fixture://open/network' });
+      await ok('type_text', {
+        selector: { id: 'url_input' },
+        text: `http://${a.at}/ws`,
+        replace: true,
+      });
+      await ok('tap', { selector: { id: 'others' } });
+      for (let i = 0; i < 30; i++) {
+        const said = /socket (said|failed)[^"\n]*/.exec((await ok('screen')).text)?.[0];
+        if (said) return said;
+        await sleep(500);
+      }
+      return 'socket said nothing';
+    };
+    // as an app's own, with no probe in it
+    await ok('launch_app', { restart: true });
+    expect(await others()).toBe('socket said hello');
+    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    expect((await ok('network', { action: 'read' })).text).not.toContain('not seen here');
+    const said = await others();
+    const read = await ok('network', { action: 'read' });
+    out(`UNSEEN with the probe: ${said}`);
+    out(`UNSEEN ${read.text.replaceAll('\n', ' | ')}`);
+    expect(read.text).toMatch(
+      /\nnot seen here: 1 web view, 1 background session, 1 WebSocket task$/,
+    );
+    expect(read.data.unseen).toEqual({ webview: 1, background: 1, websocket: 1 });
+    // left to the system, the socket opens as it does with no probe, and the list has no line of it
+    expect(said).toBe('socket said hello');
+    expect(read.text).not.toContain('/ws');
     await ok('network', { action: 'stop' });
   }, 180_000);
 

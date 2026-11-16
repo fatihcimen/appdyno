@@ -2,6 +2,7 @@
 // and what it keeps and measures of a request.
 #import <Foundation/Foundation.h>
 #include <fcntl.h>
+#import <objc/runtime.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -216,4 +217,68 @@ static NSDictionary *timingsOf(NSURLSessionTaskTransactionMetrics *m) {
   if (m.networkProtocolName) t[@"proto"] = m.networkProtocolName;
   if (m.remoteAddress) t[@"ip"] = m.remoteAddress;
   return t;
+}
+
+/// What this way cannot see, said in the log as the app makes it: a web view's requests run in WebKit's processes, a
+/// background session's in the system's, and a WebSocket task's go by no protocol of the URL loading system. A read
+/// then says how many there were, where an empty list would read as an app that asked for nothing.
+static _Thread_local int unseenDepth;
+static BOOL webViewsWatched;
+
+/// Puts `counting` in place of a method, given the one it replaces to call. Each passes what it is given and what it
+/// gets as plain pointers, so that who owns an object is as it was: an init takes its receiver and gives one back.
+static void watch(Class owner, SEL selector, BOOL ofClass, id (^counting)(IMP original)) {
+  Method m = ofClass ? class_getClassMethod(owner, selector) : class_getInstanceMethod(owner, selector);
+  if (m) method_setImplementation(m, imp_implementationWithBlock(counting(method_getImplementation(m))));
+}
+
+/// One line for what was made, however many of its own methods the making goes through.
+static void *unseenBy(NSString *what, void * (^make)(void)) {
+  if (unseenDepth++ == 0) writeEntry(@{@"unseen": what});
+  void *made = make();
+  unseenDepth--;
+  return made;
+}
+
+/// A method that takes one object, as a session's of a WebSocket task for a URL or a request.
+static void watchOne(Class owner, SEL selector, BOOL ofClass, NSString *what) {
+  watch(owner, selector, ofClass, ^id(IMP original) {
+    return ^void *(void *self, void *one) {
+      return unseenBy(what, ^{
+        return ((void *(*)(void *, SEL, void *))original)(self, selector, one);
+      });
+    };
+  });
+}
+
+/// The web views an app makes, once WebKit is in the process: an app that loads it late is watched from its next request.
+static void watchWebViews(void) {
+  Class web = objc_getClass("WKWebView");
+  if (webViewsWatched || !web) return;
+  webViewsWatched = YES;
+  SEL framed = NSSelectorFromString(@"initWithFrame:configuration:");
+  watch(web, framed, NO, ^id(IMP original) {
+    return ^void *(void *self, CGRect frame, void *configuration) {
+      return unseenBy(@"webview", ^{
+        return ((void *(*)(void *, SEL, CGRect, void *))original)(self, framed, frame, configuration);
+      });
+    };
+  });
+  watchOne(web, NSSelectorFromString(@"initWithCoder:"), NO, @"webview");
+}
+
+/// `session` is one as an app's own are: the class its WebSocket tasks are made by.
+static void watchUnseen(NSURLSession *session) {
+  watchOne(NSURLSessionConfiguration.class, @selector(backgroundSessionConfigurationWithIdentifier:), YES, @"background");
+  watchOne(session.class, @selector(webSocketTaskWithURL:), NO, @"websocket");
+  watchOne(session.class, @selector(webSocketTaskWithRequest:), NO, @"websocket");
+  SEL spoken = @selector(webSocketTaskWithURL:protocols:);
+  watch(session.class, spoken, NO, ^id(IMP original) {
+    return ^void *(void *self, void *url, void *protocols) {
+      return unseenBy(@"websocket", ^{
+        return ((void *(*)(void *, SEL, void *, void *))original)(self, spoken, url, protocols);
+      });
+    };
+  });
+  watchWebViews();
 }

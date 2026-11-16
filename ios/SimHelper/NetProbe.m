@@ -5,7 +5,7 @@
 // gone the probe does nothing more in this process. An NSURLProtocol sees what the URL loading system loads in the
 // app's process: not background sessions (their requests run in another process), not WKWebView (nor that), not
 // Network.framework (below it). A request has a line when it starts and one when it ends, by one number, so that
-// one still under way shows. Its parts are in NetProbeParts.h.
+// one still under way shows, and what it cannot see has a line as the app makes it. Its parts are in NetProbeParts.h.
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
@@ -56,6 +56,13 @@ static AppdynoNetRouter *router;
   return [NSURLProtocol propertyForKey:kHandled inRequest:request] == nil;
 }
 
+/// A WebSocket task asks for its upgrade as a request, and one taken here ends at the answer that upgrades it: the
+/// socket never opens. It is left to the system, and counted among what is not seen.
++ (BOOL)canInitWithTask:(NSURLSessionTask *)task {
+  if ([task isKindOfClass:NSURLSessionWebSocketTask.class]) return NO;
+  return [self canInitWithRequest:task.currentRequest];
+}
+
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request {
   return request;
 }
@@ -95,6 +102,7 @@ static AppdynoNetRouter *router;
   NSRunLoopMode mode = NSRunLoop.currentRunLoop.currentMode;
   self.modes = mode && ![mode isEqual:NSDefaultRunLoopMode] ? @[NSDefaultRunLoopMode, mode] : @[NSDefaultRunLoopMode];
   NSDictionary *now = controlNow();
+  watchWebViews();
   @synchronized(lock) {
     self.number = ++requestCount;
   }
@@ -330,4 +338,5 @@ __attribute__((constructor)) static void start(void) {
   [NSURLProtocol registerClass:AppdynoNetProtocol.class];
   addToConfiguration(@selector(defaultSessionConfiguration));
   addToConfiguration(@selector(ephemeralSessionConfiguration));
+  watchUnseen(router.session);
 }

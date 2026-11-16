@@ -92,6 +92,23 @@ export function flightLine(entries: NetworkEntry[]) {
   return flying.length > 0 ? [`in flight: ${flying.length} (${shown})`] : [];
 }
 
+const UNSEEN: Record<string, string> = {
+  background: 'background session',
+  webview: 'web view',
+  websocket: 'WebSocket task',
+};
+
+/**
+ * What the app made that this capture cannot see, as an answer's line: an empty list beside a web view is no app that
+ * asked for nothing.
+ */
+export const unseenLine = (unseen: Record<string, number> = {}) => {
+  const parts = Object.entries(unseen).map(
+    ([kind, n]) => `${n} ${UNSEEN[kind] ?? kind}${n === 1 ? '' : 's'}`,
+  );
+  return parts.length > 0 ? [`not seen here: ${parts.join(', ')}`] : [];
+};
+
 const phase = (name: string, ms: number) => (ms >= 0 ? [`${name} ${Math.round(ms)} ms`] : []);
 
 /**
@@ -190,7 +207,7 @@ export function networkAnswers(ctx: ServerContext) {
   const answer = async (
     s: Session,
     c: Capture | undefined,
-    { entries, note }: NetworkAnswer,
+    { entries, note, unseen }: NetworkAnswer,
     asked: Asked,
     source: string,
     saved?: string,
@@ -228,13 +245,14 @@ export function networkAnswers(ctx: ServerContext) {
       ...(saved ? [saved] : []),
     ];
     const rules = controlLines(c, entries).map((l) => redact(ctx.policy, l));
-    return reply([...head, ...kept, ...flying, ...rules].join('\n'), {
+    return reply([...head, ...kept, ...flying, ...unseenLine(unseen), ...rules].join('\n'), {
       entries: list,
       dropped: folded ? hits.length - list.length : dropped,
       source,
       bodies,
       ...(saved && { saved }),
       ...(note && { note }),
+      ...(unseen && { unseen }),
     });
   };
 

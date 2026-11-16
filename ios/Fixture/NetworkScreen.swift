@@ -1,18 +1,21 @@
 import SwiftUI
+import WebKit
 
 /// One request through a session of its own, as most apps make it: what is typed, else APPDYNO_FIXTURE_FETCH_URL.
 /// APPDYNO_FIXTURE_NO_PROXY: past a proxy a phone's Wi-Fi may name, as a known download must reach its server.
 /// Each button makes it another way an app does, for what reads or changes a request to be held to:
 /// Post sends a JSON body and a credential in a header; Upload a body by a stream, longer than what a reader keeps;
 /// Config goes by a session whose configuration adds headers and gives up after two seconds; Pin by a session whose
-/// delegate refuses every server's certificate, as an app that pins refuses all but its own.
+/// delegate refuses every server's certificate, as an app that pins refuses all but its own; Others makes what no
+/// protocol of the URL loading system carries: a web view, a background session's configuration, and a WebSocket task
+/// to the address typed.
 struct NetworkScreen: View {
     @State private var url = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_FETCH_URL"] ?? ""
     @State private var result = ""
     @State private var answer = ""
 
     private enum Way: String, CaseIterable {
-        case fetch, post, upload, config, pin
+        case fetch, post, upload, config, pin, others
     }
 
     var body: some View {
@@ -63,7 +66,7 @@ struct NetworkScreen: View {
             request.setValue("text/plain", forHTTPHeaderField: "Content-Type")
             request.setValue(String(body.count), forHTTPHeaderField: "Content-Length")
             request.httpBodyStream = InputStream(data: body)
-        case .fetch, .config, .pin:
+        case .fetch, .config, .pin, .others:
             break
         }
         return request
@@ -73,6 +76,10 @@ struct NetworkScreen: View {
         guard let address = URL(string: url) else { result = "failed: not a URL"; return }
         result = ""
         answer = ""
+        if way == .others {
+            others(address)
+            return
+        }
         let started = Date()
         session(way).dataTask(with: request(way, to: address)) { data, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -88,6 +95,30 @@ struct NetworkScreen: View {
                 answer = words
             }
         }.resume()
+    }
+}
+
+extension NetworkScreen {
+    /// A web view that loads nothing, a background configuration no session is made of, and a WebSocket task that
+    /// asks the address for an upgrade and shows the first message it is sent.
+    fileprivate func others(_ address: URL) {
+        _ = WKWebView(frame: .zero)
+        _ = URLSessionConfiguration.background(withIdentifier: "dev.appdyno.fixture.background")
+        var socket = URLComponents(url: address, resolvingAgainstBaseURL: false)
+        socket?.scheme = "ws"
+        result = "made 3"
+        guard let url = socket?.url else { return }
+        let task = URLSession.shared.webSocketTask(with: url)
+        task.receive { got in
+            let words: String
+            switch got {
+            case .success(.string(let text)): words = "socket said \(text)"
+            case .success: words = "socket said bytes"
+            case .failure(let error): words = "socket failed: \(error.localizedDescription)"
+            }
+            DispatchQueue.main.async { answer = words }
+        }
+        task.resume()
     }
 }
 

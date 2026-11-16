@@ -100,7 +100,10 @@ export type NetworkDetail = {
   note?: string;
 };
 
-export type NetworkAnswer = { entries: NetworkEntry[]; note?: string };
+/** What the app made that this way cannot see, each kind with how many: `webview`, `background`, `websocket`. */
+export type NetworkUnseen = Record<string, number>;
+
+export type NetworkAnswer = { entries: NetworkEntry[]; note?: string; unseen?: NetworkUnseen };
 
 /** What later calls need: plain values, as they may be other processes. */
 export type NetworkHandle = Record<string, string | number>;
