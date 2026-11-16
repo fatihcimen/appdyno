@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { CLIENTS } from '@appdyno/cli';
-import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 
 const root = join(import.meta.dirname, '../../..');
@@ -47,10 +46,10 @@ describe('a client', () => {
 
   it('is named in the README, where a person searching for it looks', () => {
     const readme = readFileSync(join(root, 'README.md'), 'utf8');
-    const line = must(
-      readme.split('\n').find((l) => l.startsWith('Works with ')),
-      'the line of clients',
-    );
+    // the line, and under it the table of how each client stands: tested, set up, or not tried
+    const start = readme.indexOf('\nWorks with ');
+    expect(start).toBeGreaterThan(0);
+    const line = readme.slice(start, readme.indexOf('\n## ', start));
     const unnamed = CLIENTS.flatMap((c) => c.name.split(' and '))
       .map((name) => name.replace(/ (desktop|CLI|in a browser)$/, ''))
       .filter((name) => !line.includes(name));

@@ -6,9 +6,9 @@
 </h1>
 
 <p align="center">
-  <b>Let an AI agent drive, test and measure your mobile app.</b><br>
-  An MCP server, a command line and a Mac app for iOS and Android,<br>
-  on simulators, emulators and real phones.
+  <b>Reproduce a mobile bug, find its cause with measurements, and turn the same flow into a test that runs again.</b><br>
+  appdyno lets an AI agent drive, test and measure your iOS and Android app.<br>
+  An MCP server, a command line, a TypeScript library and a Mac app, on simulators, emulators and real phones.
 </p>
 
 <div align="center">
@@ -27,7 +27,15 @@
 
 An agent reads the screen as elements, taps, types and swipes. It sends a push, opens a deep link, and measures how the app starts, scrolls and holds its memory. Every action answers with the screen once it has settled, so the agent sees what it did in the same call. You can watch and touch the same device in a live window. It all runs on your Mac, with no cloud and no telemetry.
 
-Works with Claude Code, Claude Desktop, Codex, ChatGPT, Cursor, VS Code, Devin Desktop (formerly Windsurf), Antigravity, Gemini CLI, Zed, opencode, Cline and any other MCP client.
+Works with any MCP client that starts a local server. How each one stands:
+
+|                               | clients                                                                                       | what was done                                                                                                                                                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tested**                    | Claude Code, Gemini CLI, opencode                                                             | each connected and listed the tools on 2026-11-04: Claude Code 2.1.318 over stdio and HTTP, Gemini CLI 0.66.0, opencode 1.19.5. Claude Code 2.1.319 was then run against an iPhone 17 Pro simulator (iOS 27.2) and an API 34 emulator, on 2026-11-08 and 2026-11-09 |
+| **Set up, not yet connected** | Codex, Cline                                                                                  | `appdyno install` wrote each one's file, and Codex CLI 0.166.0 and Cline CLI 3.0.74 read it and listed appdyno; neither connected, on 2026-11-04                                                                                                                    |
+| **Should work**               | Claude Desktop, ChatGPT, Cursor, VS Code, Devin Desktop (formerly Windsurf), Antigravity, Zed | not tried: each needs an account, a licence or a window. `appdyno install` writes each one's file as its own documentation says                                                                                                                                     |
+
+[What this was tried on](docs/guides/clients.md#what-this-was-tried-on) has every run.
 
 ## Quick start
 
@@ -137,6 +145,17 @@ Nothing the agent sends counts as a yes, and no tool erases or resets a device. 
 [What works where](docs/reference/perf.md#what-works-where) has every measure on every device, and how each was proved. An iPhone's live picture is experimental, and rests on undocumented Apple services that may change.
 
 ## Install
+
+The shortest path, by how you will use appdyno:
+
+| you want                                | do this                                                                                                                                                                                                                                                             |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| appdyno in your MCP client              | `npx -y appdyno install`, then restart the client. It asks which clients, and `--dry-run` shows the change first                                                                                                                                                    |
+| the desktop extension, with no terminal | download `appdyno-<version>.mcpb` from the [latest release](https://github.com/fatihcimen/appdyno/releases/latest) and open it in Claude Desktop. `scripts/check-mcpb.mjs` runs the server the file unpacks to; opening the file in the app has not been tried here |
+| the Mac app, with no terminal           | download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases), drag it to Applications, and choose Add to MCP Clients in its menu bar                                                                                  |
+| the library, in a TypeScript project    | `npm install appdyno`, then `import { connect } from 'appdyno'`: see [Library](docs/reference/library.md)                                                                                                                                                           |
+
+Each needs a Mac, and a device to drive: [step 4](#4-get-a-device-ready) gets one ready. A client that runs `npx -y appdyno` asks npm for the latest release at every start: steps 2 and 3 install one version and keep it. The steps below are the same paths in full.
 
 ### 1. What you need
 
