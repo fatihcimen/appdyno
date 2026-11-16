@@ -26,8 +26,8 @@ const OWN_TEXT_SLACK = 2;
 /**
  * The one element a selector's matches name, with no index: a control and its own text inside it, with the same words
  * (an Android row), are one target, and so are a web link and its own text, which take the same box, where the one a
- * touch acts on is the target. With an index, the match at it. None where several stand apart, or the index is past
- * the last.
+ * touch acts on is the target; and so are an icon and the text beside it, of the same words, where neither takes a touch.
+ * With an index, the match at it. None where several stand apart, or the index is past the last.
  */
 export function oneOf<E extends Touchable>(hits: E[], index?: number): E | undefined {
   if (index !== undefined) return hits[index];
@@ -42,7 +42,21 @@ export function oneOf<E extends Touchable>(hits: E[], index?: number): E | undef
   }
   const placed = [...boxed.values()];
   const outer = placed.filter((a) => !placed.some((b) => inside(a, b)));
-  return outer.length === 1 ? outer[0] : undefined;
+  const [first] = outer;
+  if (!first || outer.length === 1) return first;
+  // an icon and the text beside it on its line, of the same words and neither taking a touch itself, as a search box
+  // holds them: one thing said twice, and its text is the target
+  const icon = outer.find((e) => e.role === 'image');
+  const text = outer.find((e) => e.role === 'text');
+  const beside =
+    outer.length === 2 &&
+    !!icon &&
+    !!text &&
+    icon.label === text.label &&
+    !outer.some((e) => e.flags.includes('clickable')) &&
+    Math.abs(icon.y - text.y) <= Math.max(icon.rect.height, text.rect.height) / 2 &&
+    (icon.rect.x + icon.rect.width <= text.rect.x || text.rect.x + text.rect.width <= icon.rect.x);
+  return beside ? text : undefined;
 }
 
 /**

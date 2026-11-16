@@ -62,6 +62,21 @@ describe('the one element of several matches', () => {
     expect(oneOf([row, other], 2)).toBeUndefined();
     expect(oneOf<typeof row>([])).toBeUndefined();
   });
+
+  it('is the text of an icon and the text beside it that say the same on one line, as a search box holds them', () => {
+    const icon = el('@icon', 'Search', [60, 330, 90, 90], { role: 'image', flags: [] });
+    const words = el('@words', 'Search', [170, 345, 740, 60], { role: 'text', flags: [] });
+    expect(oneOf([icon, words])).toBe(words);
+  });
+
+  it('is none of an icon and a text on other lines, or of two texts beside each other', () => {
+    const icon = el('@icon', 'Search', [60, 330, 90, 90], { role: 'image', flags: [] });
+    const below = el('@below', 'Search', [170, 600, 740, 60], { role: 'text', flags: [] });
+    const words = el('@words', 'Search', [170, 345, 300, 60], { role: 'text', flags: [] });
+    const again = el('@again', 'Search', [500, 345, 300, 60], { role: 'text', flags: [] });
+    expect(oneOf([icon, below])).toBeUndefined();
+    expect(oneOf([words, again])).toBeUndefined();
+  });
 });
 
 describe('where a touch on an element goes', () => {
