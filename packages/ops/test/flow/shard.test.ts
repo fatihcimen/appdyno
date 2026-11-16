@@ -67,6 +67,9 @@ describe('a part of a test run', () => {
       writeFileSync(join(dir, 'flows', f), 'app dev.app\nopen_link "app://x"\n');
       return join(dir, 'flows', f);
     });
+    // the project's root, so that its setup is every file's
+    mkdirSync(join(dir, 'flows', '.appdyno'), { recursive: true });
+    writeFileSync(join(dir, 'flows', '_setup.flow'), 'open_link "app://setup"\n');
     const artifacts = join(dir, `part-${i}`);
     const lines: string[] = [];
     const r = await flowsFor(context()).test({
@@ -84,6 +87,8 @@ describe('a part of a test run', () => {
     const two = await run(2, 2);
     expect(one.record.cases.map((c) => c.label)).toEqual(['a/smoke.flow', 'c.flow']);
     expect(two.record.cases.map((c) => c.label)).toEqual(['b/smoke.flow']);
+    for (const c of [...one.record.cases, ...two.record.cases])
+      expect(c.out, c.label).toContain('setup 1. open_link "app://setup"');
     expect(one.record.shard).toEqual({ i: 1, n: 2 });
     expect(one.lines[0]).toBe('shard 1/2: 2 of 3 files');
     expect(one.xml).toContain('<testsuites name="shard 1/2" tests="2"');

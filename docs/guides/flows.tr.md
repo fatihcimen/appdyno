@@ -146,7 +146,7 @@ Kayıt, çalıştırmanın neyi, neyin üzerinde test ettiğini söyler:
 
 - git'ten commit ve dal, ve izlenen dosyalarda değişiklik olup olmadığı;
 - ayarlı oldukları yerde `GITHUB_*` değişkenlerinden CI çalıştırması;
-- her cihazın modeli ve işletim sistemi, ve çalıştırma cihazı açtığında bir kez okunan `locale`, `dark_mode`, `text_size`, `orientation` ve `animations` koşulları;
+- her cihazın modeli ve işletim sistemi, ve çalıştırma cihazı açtığında bir kez okunan `locale`, `dark_mode`, `text_size`, `orientation` ve `animations` koşulları; bir cihazın söyleyemediği koşul dışarıda kalır;
 - her dosya için, dosya başladığında appdyno'nun değiştirmiş ve henüz geri koymamış olduğu koşullar;
 - yüklü uygulamanın sürümü, Android'de sürüm kodu da.
 

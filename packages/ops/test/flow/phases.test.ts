@@ -187,6 +187,12 @@ describe('a flow with a setup and a teardown', () => {
       expect(e.message).toContain('prepare seed asks the person first');
       expect(existsSync(mark)).toBe(false);
       expect(did()).toEqual([]);
+      // a test run a tool call asked for is no command line's: its file fails on the same question
+      const to = join(dir, 'artifacts', 'asked');
+      const run = await callerOf(context())('run_flow', { action: 'test', file, to });
+      expect(run.data.verdict).toBe('FAIL');
+      expect(run.text).toContain('prepare seed asks the person first');
+      expect(existsSync(mark)).toBe(false);
       const allowed = new ServerContext(
         { ...DEFAULT_POLICY, allowBuild: true, writeDirs: [tests] },
         [

@@ -109,6 +109,17 @@ describe("a test run's report", () => {
     expect(red(540, 150)).toBe(255); // a field holding neither
   });
 
+  it("keeps the app's crash reports beside the failure, a secret hidden in them", async () => {
+    device.crashReports = [
+      { at: '2026-11-16 10:15:02', reason: `SIGABRT after ${SECRET}`, detail: 'main + 12' },
+    ];
+    const { read, record, kept } = await run();
+    expect(record.cases[1]?.attempts[0]?.evidence.crash).toBe(`${kept}/crash.txt`);
+    expect(read(`${kept}/crash.txt`)).toBe('2026-11-16 10:15:02 SIGABRT after •••\nmain + 12');
+    expect(record.contents.crashes).toBe(1);
+    expect(read('index.html')).toContain(`<a href="${kept}/crash.txt">its crash reports</a>`);
+  });
+
   it('keeps no picture it could not paint over', async () => {
     device = new FakeDevice();
     device.screen = 'login';

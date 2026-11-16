@@ -58,6 +58,7 @@ export function mergeRuns(
   for (const dir of dirs) if (resolve(dir) !== resolve(out)) copyRun(dir, out);
   const record = {
     ...merged,
+    command: ['appdyno', 'test', 'merge', ...dirs, '--out', out],
     contents: contentsOf(out, merged.cases, merged.contents.secretsListed),
   };
   return { record, ...writeRun(out, record, o) };

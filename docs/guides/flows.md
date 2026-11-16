@@ -146,7 +146,7 @@ The record says what the run tested and on what:
 
 - the commit and the branch, from git, and whether tracked files had changes;
 - the CI run, from the `GITHUB_*` variables where they are set;
-- each device's model and OS, and the conditions `locale`, `dark_mode`, `text_size`, `orientation` and `animations`, read once when the run opened the device;
+- each device's model and OS, and the conditions `locale`, `dark_mode`, `text_size`, `orientation` and `animations`, read once when the run opened the device, where one a device cannot tell is left out;
 - for each file, the conditions appdyno had changed and not yet put back when the file began;
 - the installed app's version, and on Android its version code.
 

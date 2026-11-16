@@ -67,6 +67,7 @@ describe('runs that are already there', () => {
       ]);
       expect(record).toMatchObject({ verdict: 'FAIL', why: ['1 failed'] });
       expect(record.shard).toBeUndefined();
+      expect(record.command).toEqual(['appdyno', 'test', 'merge', ...parts, '--out', out]);
       const shot = record.cases[2]?.attempts[0]?.evidence.shot;
       expect(shot).toBe(`${device.serial}/b.flow/screen.jpg`);
       expect(existsSync(join(out, String(shot)))).toBe(true);

@@ -19,3 +19,22 @@ it('names an app with two launcher activities by its own, the first, as it is st
     { id: 'org.wikipedia.alpha', name: 'Wikipedia Alpha' },
   ]);
 });
+
+it("reads an installed app's version and build from what the system says of its package", async () => {
+  const said = [
+    'Packages:',
+    '  Package [dev.app] (a1b2c3):',
+    '    versionCode=42 minSdk=24 targetSdk=35',
+    '    versionName=1.4.2-beta',
+  ].join('\n');
+  const answering = (out: string) =>
+    new AndroidApps(
+      { exec: () => Promise.resolve(out) } as unknown as Adb,
+      'emulator-5560',
+      {} as never,
+      undefined,
+      () => Promise.resolve([]),
+    );
+  expect(await answering(said).appInfo('dev.app')).toEqual({ version: '1.4.2-beta', build: '42' });
+  expect(await answering('Unable to find package: dev.app').appInfo('dev.app')).toEqual({});
+});
