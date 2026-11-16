@@ -29,6 +29,13 @@
 - `nameOf` takes `clean` and `shownAs`, so its words pass a caller's masking and can be said in another language.
 - On iOS a `tap`, `longPress` or `swipe` whose `before` names a read that no longer has in front what it had is refused `STALE`, with nothing sent. It is compared on the Mac by one more read before the touch; what comes in front between that read and the touch is not caught. Checked on a simulator for another app in front, not yet on an iPhone.
 - On an iOS simulator the first action that needs appdyno's runner no longer builds it. Each release builds the runner and attaches it, under 1 MB; appdyno fetches it once from the release's page on GitHub, uses it only if its sha256 is the one the package carries, and keeps it where a build is kept. With nothing kept, a read through the runner answered in 4.8 s fetched and 20.5 s built. It is built as before, with the reason in one line, where the download fails or has another sha256, the Mac is an Intel one, its Xcode is more than one major version from the release's, or the fetched runner does not start. `--no-fetch` on the server and on `appdyno ios build`, or `APPDYNO_NO_FETCH=1`, asks the network for nothing. `appdyno doctor` says whether the runner was fetched or built here. The request is a download of a public file: GitHub sees the address it comes from, and the release and the runner's sources in the file's name; nothing else is sent.
+- **A failed request with the action that caused it.** While a probe capture runs on a simulator, a tap, `type_text`, `launch_app` or `open_link` answers with the requests that failed since it began (4xx, 5xx, transport errors), one short line each. `network` `strict`, and the flow step `network strict`, fail the action or the step for a 5xx or a transport failure no rule made.
+- **`network check`** waits for a request by `contains`, `method`, `status` and a body value (`has`), and on a miss names the nearest request and what differed. The flow step `request` does the same for requests since the run began.
+- **Rules by body and header.** `has=` (a JSON path with its value, or any text) and `when="Name: value"` let one address, as a GraphQL endpoint, be mocked per operation.
+- **A rule from a real answer.** `network mock from=<id>` makes a rule of a captured response and `from=<file.har>` a rule for each answer of a HAR; `unmatched=fail` fails what no rule takes. In a flow: `mock from=checkout.har unmatched=fail`.
+- **Body tools.** `network read id` with `path` gives one value, `shape` the JSON shape with no values, `diff` what differs from another request.
+- `network read` ends with what the app made that the probe cannot see: web views, background sessions and WebSocket tasks, counted.
+- **Mac app.** The Network pane lists requests under their hosts, shows a request in flight, edits a rule by fields beside its line, and has switches for strict and for failing unmatched requests.
 
 ### Changed
 
@@ -43,6 +50,7 @@
 - The tools and `appdyno/device` aim, wait and settle by one rule in core, so a correction reaches both.
 - An element from `appdyno/device` holds the fields its type names and no other; fields the type never named (`name`, `nameKind`, `context`, `refContext`) are gone, since they carried the element's words unmasked.
 - `openDevice` hides the secrets, and may write in the folders, that `APPDYNO_SECRETS`, `APPDYNO_SECRETS_FILE` and `APPDYNO_ALLOW_WRITE` name.
+- `network` `read`, `paths` and `check` no longer wait their turn on the device.
 
 ### Fixed
 
@@ -59,6 +67,7 @@
 - `TouchOptions.before`: a stale touch is refused on Android only, as the library page says.
 - Android: the launcher activity is quoted in every command it goes into.
 - **iOS: a tap beside a part that never stops moving settles.** A carousel or a turning banner moved the layout at every read, so a tap on such a screen ran to `maxMs` and answered `settled: false`. The runner and the host's settle of a simulator now learn the part, as the Android agent does since 1.2.0: reads that differ only under one view under half the screen, or, where SwiftUI gives a row no view of its own, only in one strip across it, for 1 s with never 300 ms between two reads, make the part known to cycle for 30 s, and a change under it alone no longer holds the settle. Only a tap, a press or a key with no action in the 3 s before can teach it; a row thrown by a swipe, a slide that ends and a change anywhere else are waited for as before. On the fixture's carousel on an iOS 26.5 simulator a tap took 3.1 s and never settled; a tap that changes the layout now takes about 0.3 s (0.66 s by the runner alone), settled every time, after 1.4 s the first time. A tap there that changes nothing in the layout is watched 800 ms for a system alert, as on a still screen, so a permission prompt that comes after the tap is in the answer. A launch or a link onto such a screen still waits its full `maxMs`.
+- A WebSocket task opens with the network probe in the app. The probe took its handshake, and the socket never opened.
 
 ## 1.2.0
 

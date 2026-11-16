@@ -29,6 +29,13 @@
 - `nameOf`, `clean` ve `shownAs` alır; böylece sözleri çağıranın maskelemesinden geçer ve başka bir dilde söylenebilir.
 - iOS'te `before` değeri, önünde artık o zamanki şey bulunmayan bir okumayı adlandıran `tap`, `longPress` ya da `swipe`, hiçbir şey gönderilmeden `STALE` ile reddedilir. Karşılaştırma Mac'te, dokunuştan önce yapılan bir okumayla yapılır; o okuma ile dokunuş arasında öne gelen şey yakalanmaz. Öne geçen başka bir uygulama için bir simülatörde denendi, henüz bir iPhone'da denenmedi.
 - iOS simülatöründe appdyno'nun runner'ını gerektiren ilk işlem artık onu derlemez. Her sürüm runner'ı derler ve sürüme ekler (1 MB'tan küçük); appdyno onu sürümün GitHub'daki sayfasından bir kez indirir, yalnızca sha256'sı paketin taşıdığıyla aynıysa kullanır ve bir build'in tutulduğu yerde tutar. Hiçbir şey tutulmuyorken runner üzerinden bir okuma, indirildiğinde 4,8 s'de, derlendiğinde 20,5 s'de yanıt verdi. İndirme başarısız olursa ya da sha256'sı farklıysa, Mac Intel ise, Xcode'u sürümünkinden birden fazla ana sürüm uzaktaysa ya da indirilen runner başlamazsa, nedeni tek satırda söylenerek eskisi gibi derlenir. Sunucuda ve `appdyno ios build`'de `--no-fetch`, ya da `APPDYNO_NO_FETCH=1`, ağdan hiçbir şey istemez. `appdyno doctor` runner'ın indirildiğini mi burada derlendiğini mi söyler. İstek, herkese açık bir dosyanın indirilmesidir: GitHub isteğin geldiği adresi, dosyanın adından da sürümü ve runner'ın kaynaklarını görür; başka hiçbir şey gönderilmez.
+- **Başarısız istek, ona yol açan eylemle birlikte.** Bir simülatörde probe ile yakalama çalışırken `tap`, `type_text`, `launch_app` ya da `open_link`, başladığından beri başarısız olan istekleri (4xx, 5xx, taşıma hataları) her biri kısa bir satırla yanıtlar. `network` `strict` ve `network strict` flow adımı, bir kuralın yapmadığı 5xx ya da taşıma hatasında eylemi ya da adımı başarısız kılar.
+- **`network check`**, bir isteği `contains`, `method`, `status` ve bir gövde değeriyle (`has`) bekler; bulamazsa en yakın isteği ve neyin farklı olduğunu söyler. `request` flow adımı aynısını çalıştırma başladığından beri gelen istekler için yapar.
+- **Gövdeye ve başlığa göre kurallar.** `has=` (değeriyle bir JSON yolu ya da herhangi bir metin) ve `when="Name: value"`, bir GraphQL uç noktası gibi tek bir adresin işlem başına sahtelenmesini sağlar.
+- **Gerçek bir yanıttan kural.** `network mock from=<id>` yakalanmış bir yanıttan bir kural, `from=<dosya.har>` ise bir HAR'daki her yanıt için bir kural yapar; `unmatched=fail` hiçbir kuralın almadığını başarısız kılar. Flow'da: `mock from=checkout.har unmatched=fail`.
+- **Gövde araçları.** `network read id` ile `path` tek bir değer, `shape` değerler olmadan JSON biçimini, `diff` başka bir istekten farkı verir.
+- `network read`, uygulamanın yaptığı ama probe'un göremediği şeylerle biter: web görünümleri, arka plan oturumları ve WebSocket görevleri, sayılarıyla.
+- **Mac uygulaması.** Ağ bölmesi istekleri ana makinelerinin altında listeler, yoldaki isteği gösterir, bir kuralı satırının yanında alanlarla düzenler; strict için ve eşleşmeyen istekleri başarısız kılmak için anahtarları vardır.
 
 ### Değişenler
 
@@ -43,6 +50,7 @@
 - Araçlar ve `appdyno/device`, core'daki tek bir kuralla nişan alır, bekler ve durulur; böylece bir düzeltme ikisine birden ulaşır.
 - `appdyno/device` öğesi yalnızca tipinin adlandırdığı alanları taşır; tipin hiç adlandırmadığı alanlar (`name`, `nameKind`, `context`, `refContext`) öğenin sözlerini maskesiz taşıdığı için kaldırıldı.
 - `openDevice`, `APPDYNO_SECRETS`, `APPDYNO_SECRETS_FILE` ve `APPDYNO_ALLOW_WRITE` değişkenlerinin adlandırdığı sırları gizler ve klasörlere yazabilir.
+- `network` `read`, `paths` ve `check` artık cihazda sıra beklemez.
 
 ### Düzeltilenler
 
@@ -59,6 +67,7 @@
 - `TouchOptions.before`: bayat bir dokunuş yalnızca Android'de reddedilir; kütüphane sayfasının dediği gibi.
 - Android: başlatma activity'si, girdiği her komutta tırnak içindedir.
 - **iOS: durmadan hareket eden bir parçanın yanındaki dokunuş artık duruluyor.** Bir carousel ya da dönen bir afiş yerleşimi her okumada oynatıyordu; böyle bir ekranda bir dokunuş `maxMs`'e kadar sürüyor ve `settled: false` yanıtını veriyordu. Runner ve ana makinenin simülatör için yaptığı durulma, Android ajanının 1.2.0'dan beri yaptığı gibi, artık parçayı öğreniyor: yalnızca ekranın yarısından küçük tek bir görünümün altında, ya da SwiftUI bir sıraya kendi görünümünü vermediğinde yalnızca ekranı boydan boya geçen tek bir şeritte, iki okuma arasında 300 ms geçmeden 1 s boyunca farklılaşan okumalar parçanın döndüğünü 30 s için bilinir kılıyor ve yalnızca onun altındaki bir değişiklik durulmayı artık tutmuyor. Bunu yalnızca, öncesindeki 3 s içinde hiçbir işlem gitmemiş bir dokunuş, basılı tutuş ya da tuş öğretebilir; bir kaydırmanın fırlattığı satır, biten bir kayma ve başka her yerdeki bir değişiklik eskisi gibi beklenir. Fixture'ın carousel ekranında, iOS 26.5 simülatöründe bir dokunuş 3,1 s sürüyor ve hiç durulmuyordu; yerleşimi değiştiren bir dokunuş artık ilk seferde 1,4 s'den sonra yaklaşık 0,3 s (yalnızca runner ile 0,66 s) sürüyor ve her seferinde duruluyor. Orada yerleşimde hiçbir şeyi değiştirmeyen bir dokunuş, durgun bir ekrandaki gibi bir sistem uyarısı için 800 ms izlenir; böylece dokunuştan sonra gelen bir izin istemi yanıtta yer alır. Böyle bir ekrana yapılan bir başlatma ya da açılan bir bağlantı hâlâ `maxMs`'in tamamını bekler.
+- Ağ probe'u uygulamadayken bir WebSocket görevi açılır. Probe el sıkışmasını alıyordu ve soket hiç açılmıyordu.
 
 ## 1.2.0
 
