@@ -25,7 +25,8 @@ describe('what a window sends to its device', () => {
     }));
     /** What the window is told last of a link: its answer, once the op has given one. */
     const answer = async () => {
-      await expect.poll(() => told.some((m) => 'ok' in m)).toBe(true);
+      // a web link no app holds waits for the browser to come in front, which this device has none of
+      await expect.poll(() => told.some((m) => 'ok' in m), { timeout: 6_000 }).toBe(true);
       return must(
         told.find((m) => 'ok' in m),
         'an answer',

@@ -259,11 +259,20 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         await askOfScheme(policy, s, href, app);
         if (CALL_LINK.test(href))
           await approvePower(policy, s, `the link ${href}, which places a call`);
+        // a web link that no app holds goes to a browser, which the device puts in front a moment after it took the
+        // link: the screen the link left, still and unchanged, is no answer yet
+        const from = /^https?:/i.test(href)
+          ? (await s.current().catch(() => undefined))?.hash
+          : undefined;
         const {
           result: { result, notIn },
           was,
         } = await changing(s, () => openIn(s, href, app));
         const answered = typeof result === 'object' ? result.answered : undefined;
+        const arrived = {
+          met: (x: Screen) => x.hash !== from,
+          otherwise: 'the screen is still the one the link was sent from',
+        };
         // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
         return afterChange(
           s,
@@ -271,7 +280,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
           linkSaid(s, href, answered, notIn),
           read,
           undefined,
-          undefined,
+          from !== undefined && (!app || notIn) ? arrived : undefined,
           LINK_SETTLE_MS,
         );
       },

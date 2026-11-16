@@ -495,7 +495,7 @@ Apple'a ve Google'a giden istekler, her birinin belgelediği biçimde kaydedilmi
 
 Bir uygulamanın kimliğiyle `open_link` `links`, kurulu uygulamadan okuyarak onun açtığı bağlantıları listeler: bir simulator'da URL şemalarını ve imzasının universal link'ler için adını verdiği alan adlarını, Android'de bir bağlantıyı görüntüleyen her filtreyi `scheme://host/path` olarak ve her App Link alan adını Android'in doğrulama durumuyla. `data.links` alanı aynısını tutar; her biri `url`'i, `kind`'ı (`scheme`, `domain` ya da `filter`) ve Android'in doğruladığı yerde bir alan adının `state`'i ile, bir istemcinin sunması ya da tek tek geçmesi için. Bir iPhone'un kurulu uygulaması okunmaz.
 
-Android'de bir bağlantı seçili uygulamaya, orada tutularak gider; `--allow-apps` yoksa o uygulamanın açmadığı bir web bağlantısı onu açan uygulamaya, çoğu zaman bir tarayıcıya gider ve yanıt, uygulamanın onu açmadığını söyler.
+Android'de bir bağlantı seçili uygulamaya, orada tutularak gider; `--allow-apps` yoksa o uygulamanın açmadığı bir web bağlantısı onu açan uygulamaya, çoğu zaman bir tarayıcıya gider ve yanıt, uygulamanın onu açmadığını söyler. Hiçbir uygulamanın tutmadığı bir web bağlantısı, gönderildiği ekran değişince yanıtlanır, çünkü tarayıcı, cihaz bağlantıyı aldıktan bir an sonra öne gelir; 3 sn boyunca olduğu gibi kalan bir ekran öyle yanıtlanır ve hâlâ bağlantının gönderildiği ekran olduğunu söyler.
 
 ### Bir bağlantı ne zaman açılmış sayılır
 

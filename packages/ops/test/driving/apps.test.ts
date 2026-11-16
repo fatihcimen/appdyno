@@ -382,6 +382,20 @@ describe('a web link the selected app does not open', () => {
     ]);
   });
 
+  it('answers with the browser, which is in front a moment after the device took the link', async () => {
+    class Late extends Held {
+      override openUrl(url: string, pkg?: string) {
+        if (pkg) return super.openUrl(url, pkg);
+        this.sent.push([url, pkg]);
+        setTimeout(() => void super.openUrl(url), 600);
+        return Promise.resolve();
+      }
+    }
+    const r = await (await connect(new Late())).call('open_link', { url: 'https://example.com/' });
+    expect(r.text).toContain('foreground: browser');
+    expect(r.text).not.toContain('no change seen');
+  });
+
   it('stays held to the app for a link of another kind, and under an allowlist', async () => {
     const cases: [string, string[]][] = [
       ['other://x', []],

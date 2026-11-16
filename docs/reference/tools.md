@@ -495,7 +495,7 @@ Requests to Apple and Google are tested against recorded ones, as each documents
 
 `open_link` `links` with an app's id lists the links it opens, read from the installed app: on a simulator its URL schemes and the domains its signature names for universal links, on Android each filter that views a link, as `scheme://host/path`, and each App Link domain with Android's verification state. Its `data.links` holds the same, each with its `url`, its `kind` (`scheme`, `domain` or `filter`) and a domain's `state` where Android verifies it, for a client to offer or go through. An iPhone's installed app is not read.
 
-On Android a link goes to the selected app, held there; with no `--allow-apps`, a web link that app does not open goes to whatever does, a browser most often, and the answer says the app does not open it.
+On Android a link goes to the selected app, held there; with no `--allow-apps`, a web link that app does not open goes to whatever does, a browser most often, and the answer says the app does not open it. A web link that no app holds is answered once the screen it was sent from has changed, as the browser comes in front a moment after the device took the link; a screen that stays as it was for 3 s is answered so, saying it is still the one the link was sent from.
 
 ### When a link has opened
 
