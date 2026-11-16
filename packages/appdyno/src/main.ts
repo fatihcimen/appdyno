@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { homedir, loadavg } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
@@ -52,7 +52,7 @@ import { pushCommand } from './push-setup.js';
 import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
-import { policyOf, serveCommand, type ServerFlags } from './serve.js';
+import { ownPaths, policyOf, serveCommand, type ServerFlags } from './serve.js';
 import {
   devicesCommand,
   installCommand,
@@ -142,7 +142,7 @@ const commandLine = (
   values: Parameters<typeof contextFrom>[0],
   remember?: string,
   oneCall = false,
-) => contextFrom(values, remember, process.env, oneCall);
+) => contextFrom(ownPaths(values), remember, process.env, oneCall);
 
 /** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
 const servicesOfHub = (ctx: ServerContext) => {
@@ -200,7 +200,7 @@ async function surveyCommand(args: string[]) {
     err(usage('perf survey'));
     return 2;
   }
-  const ctx = contextFrom(values, cliSessionFile());
+  const ctx = contextFrom(ownPaths(values), cliSessionFile());
   try {
     const { read } = await survey(ctx, values.app, (line) => console.log(line));
     return read > 0 ? 0 : 1;
@@ -232,8 +232,6 @@ async function testCommand(rest: string[]) {
   const artifacts = values.artifacts ?? 'appdyno-artifacts';
   const files = flowsTagged(flowFiles(positionals), values.tag, values['exclude-tag']);
   const ctx = commandLine({
-    // this command line named them: a run's pictures go under one, a flow's baselines beside the other
-    'allow-write': [artifacts, ...new Set(files.map((f) => dirname(f)))],
     ...(values.share && { share: true }),
     ...(values.measurements && { measurements: values.measurements }),
     ...(values['update-baselines'] && { 'update-baselines': true }),

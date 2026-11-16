@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { expect, it } from 'vitest';
-import { allowFlags, policyOf, tokenFromEnv } from '../src/serve.js';
+import { allowFlags, ownPaths, policyOf, tokenFromEnv } from '../src/serve.js';
 import { COMMANDS } from '../src/usage.js';
 
 it('takes a token that is long enough and fits in a URL, and refuses any other by its fix', () => {
@@ -20,6 +20,19 @@ it('refuses an allow list given empty, by flag or variable, as it would let in e
   expect(policyOf({}, {})).toMatchObject({ apps: [] });
   expect(policyOf({}, {}).devices).toBeUndefined();
   expect(policyOf({ 'allow-devices': '^emulator-' }, {}).devices?.test('emulator-5554')).toBe(true);
+});
+
+it("writes where a command line's own path says, and holds a server's tool calls to its folders", () => {
+  // a server's: the folders it was started with, and no more
+  expect(policyOf({}, {}).writeDirs).toEqual([]);
+  expect(policyOf({ 'allow-write': ['/a'] }, { APPDYNO_ALLOW_WRITE: '/b:/c' }).writeDirs).toEqual([
+    '/a',
+    '/b',
+    '/c',
+  ]);
+  // a command's: the disk's root, which every path is inside
+  expect(policyOf(ownPaths({}), {}).writeDirs).toEqual(['/']);
+  expect(policyOf(ownPaths({ 'allow-write': ['/a'] }), {}).writeDirs).toEqual(['/a', '/']);
 });
 
 it('reads the secrets of the variable and of the file, and stops at a file it cannot read', () => {

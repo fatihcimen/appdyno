@@ -73,6 +73,9 @@ describe('a file a tool writes where its caller says', () => {
     expect(() => inside(policy, out)).toThrow(/outside/);
     symlinkSync(tmpdir(), join(out, 'link'));
     expect(() => inside(policy, join(out, 'link', 'a.png'))).toThrow(/outside/);
+    // a command line's own: the root of the disk has every path inside it
+    expect(inside({ writeDirs: ['/'] }, join(out, 'a.png'))).toBe(join(out, 'a.png'));
+    expect(inside({ writeDirs: ['/'] }, '/a.png')).toBe('/a.png');
     expect(writeDirsOf(['a'], { APPDYNO_ALLOW_WRITE: '/x:/y' })).toEqual([
       join(process.cwd(), 'a'),
       '/x',

@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { parse } from 'node:path';
 import { parseArgs } from 'node:util';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
@@ -82,6 +83,17 @@ export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.e
     writeDirs: writeDirsOf(values['allow-write'], env),
   };
 }
+
+/**
+ * A command line's own flags: a path a person typed on it is written where they said, as the whole disk is theirs to
+ * name. The folders a tool writes in hold a call a client makes, where what a screen showed may have named the path.
+ */
+export const ownPaths = <V extends object>(
+  values: V & { 'allow-write'?: string[] | undefined },
+) => ({
+  ...values,
+  'allow-write': [...(values['allow-write'] ?? []), parse(process.cwd()).root],
+});
 
 /** The devices and apps a server this process starts may drive, as its flags: the same as this one's. */
 export const allowFlags = ({ devices, apps }: Policy) => [
