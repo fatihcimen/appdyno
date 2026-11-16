@@ -61,7 +61,7 @@ export const shown = (n: Node) => (n.f & F.visible) !== 0 && n.b[2] > n.b[0] && 
 const interactive = (n: Node) =>
   (n.f & (F.clickable | F.editable | F.checkable | F.scrollable)) !== 0;
 
-const plainText = (n: Node) => !interactive(n) && !!(n.t ?? n.d);
+export const plainText = (n: Node) => !interactive(n) && !!(n.t ?? n.d);
 
 /** The layout digest the runner computes (RunnerCore's `layoutHash`). */
 export function layoutHash(nodes: Node[]): string {
@@ -108,9 +108,10 @@ export function sameLayout(a: Node[], b: Node[]): boolean {
  * place, in any order. The system's nameless views (glass, scroll edge effects) keep coming and going after
  * a transition, a floating search bar moves between levels of the tree, and neither shows in an answer.
  */
+export const meant = (n: Node) =>
+  shown(n) && (interactive(n) || !!(n.id ?? n.d ?? n.t) || n.c !== 'Other');
+
 export function sameContent(a: Node[], b: Node[]): boolean {
-  const meant = (n: Node) =>
-    shown(n) && (interactive(n) || !!(n.id ?? n.d ?? n.t) || n.c !== 'Other');
   const x = a.filter(meant);
   const y = b.filter(meant);
   if (x.length !== y.length) return false;

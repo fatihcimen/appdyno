@@ -12,6 +12,13 @@ import XCTest
     /// What XCUI said of the copies of each control lately asked of, by `copiesId` (each hittability check costs a
     /// query).
     var unreachable: [(id: String, verdict: CopiesVerdict)] = []
+    /// What is known of the screen to keep moving by itself, and when the last action began.
+    var cycling = Cycling()
+    var actedAt = 0
+    /// What moves after the action being settled, no action of ours set moving; and a read of its settle was the one
+    /// before it only as what moved is known to cycle.
+    var byItself = false
+    var cycled = false
     /// The frame of the system alert in the last read, if one was over the app.
     var alertFrame: CGRect?
     /// The app's frame in the last read: wider than tall where its interface stands turned.

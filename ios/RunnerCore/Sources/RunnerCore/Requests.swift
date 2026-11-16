@@ -98,6 +98,14 @@ public enum Action {
         }
     }
 
+    /// No finger of it moves: it can throw no row.
+    public var throwsNothing: Bool {
+        switch self {
+        case .swipe, .gesture: return false
+        default: return true
+        }
+    }
+
     /// Where a tap landed: only a tap may be inert.
     public var tapPoint: (x: Double, y: Double)? {
         if case let .tap(x, y) = self { return (x, y) }

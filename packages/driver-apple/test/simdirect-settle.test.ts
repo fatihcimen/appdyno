@@ -1,3 +1,4 @@
+import { Cycling } from '../src/simcycling.js';
 import { describe, expect, it } from 'vitest';
 import { must } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
@@ -136,6 +137,8 @@ describe('an action with no settle', () => {
       recent: new Map(),
       width: 402,
       clock: Date.now,
+      cycling: new Cycling(),
+      rested: true,
       handled: () => {
         order.push('handled');
         return Promise.resolve();
@@ -157,6 +160,8 @@ describe('what a settle says of the screen', () => {
     recent: new Map([[was.hash, was.nodes]]),
     width: 402,
     clock: Date.now,
+    cycling: new Cycling(),
+    rested: true,
     handled: () => Promise.resolve(undefined),
   });
   const a = tree(app(cell('A', 0))).tree;
@@ -193,6 +198,8 @@ describe('a reaction that begins after the settle', () => {
       recent: new Map([[a.hash, a.nodes]]),
       width: 402,
       clock: Date.now,
+      cycling: new Cycling(),
+      rested: true,
       handled: () => Promise.resolve(undefined),
     };
     start = Date.now();
@@ -243,6 +250,8 @@ describe('a push that leaves its old page in the tree a while', () => {
         recent: new Map([[before.hash, before.nodes]]),
         width: 402,
         clock: Date.now,
+        cycling: new Cycling(),
+        rested: true,
         handled: () => Promise.resolve(undefined),
       };
       const r = await settleAfter(
@@ -261,4 +270,101 @@ describe('a push that leaves its old page in the tree a while', () => {
     expect(leftBehind(before.nodes, cart.nodes, 402)).toBe(false);
     expect(leftBehind(before.nodes, before.nodes, 402)).toBe(false);
   });
+});
+
+describe('a tap beside slides that never stop', () => {
+  // three slides 200 apart, 7 points on at every 100 ms, the first of them over the side, above a row
+  const screen = (at: number, row = 300) =>
+    tree(
+      app(
+        ...[0, 1, 2].map((i) => ({
+          a: 9,
+          l: 'Kampanya',
+          i: 'slide',
+          f: [i * 200 - 190 + ((Math.floor(at / 100) * 7) % 200), 100, 180, 40],
+        })),
+        cell('A', row),
+      ),
+    ).tree;
+  const tap = { kind: 'tap', x: 20, y: 310 } as const;
+  type Settled = { settle: { settled: boolean; ms: number }; tree: Tree };
+
+  /** One action's settle over the screen `at` gives, on what `cycling` knows by then. */
+  const after = async (
+    cycling: Cycling,
+    action: Parameters<typeof settleAfter>[1],
+    at: (ms: number) => Tree = screen,
+  ) => {
+    const start = Date.now();
+    const before = at(0);
+    const on: SettleOn = {
+      read: () => Promise.resolve({ tree: at(Date.now() - start), busy: false }),
+      remember: () => undefined,
+      recent: new Map([[before.hash, before.nodes]]),
+      width: 402,
+      clock: Date.now,
+      cycling,
+      rested: true,
+      handled: () => Promise.resolve(undefined),
+    };
+    const r = await settleAfter(on, action, {
+      settle: { quietMs: 200, maxMs: 3_000 },
+      before: before.hash,
+      read: 'tree',
+    });
+    return { ...(r.result as Settled), moved: r.moved };
+  };
+
+  it(
+    'settles once they are known to cycle, and soon from then',
+    fakeTimed(async () => {
+      const cycling = new Cycling();
+      const first = await after(cycling, tap);
+      expect(first.settle.settled).toBe(true);
+      expect(first.settle.ms).toBeGreaterThanOrEqual(1_000);
+      expect(first.settle.ms).toBeLessThan(1_600);
+      const next = await after(cycling, tap);
+      expect(next.settle.settled).toBe(true);
+      expect(next.settle.ms).toBeLessThan(700);
+      expect(next.moved).toBe(false);
+    }),
+  );
+
+  it(
+    'waits for a row that moves 400 ms after the tap, the slides known or not',
+    fakeTimed(async () => {
+      const cycling = new Cycling();
+      for (let tapped = 0; tapped < 2; tapped++) {
+        const r = await after(cycling, tap, (ms) => screen(ms, ms < 400 ? 300 : 500));
+        expect(r.settle.settled).toBe(true);
+        expect(r.moved).toBe(true);
+        expect(r.tree.nodes.find((n) => n.d === 'A')?.b[1]).toBe(500);
+      }
+    }),
+  );
+
+  it(
+    'never settles on a screen that changes as a whole',
+    fakeTimed(async () => {
+      const cycling = new Cycling();
+      await after(cycling, tap);
+      const r = await after(cycling, tap, (ms) => screen(ms, 300 + Math.floor(ms / 100) * 7));
+      expect(r.settle.settled).toBe(false);
+    }),
+  );
+
+  it(
+    'waits out what a swipe of ours threw, however long it runs',
+    fakeTimed(async () => {
+      const swipe = {
+        kind: 'swipe',
+        from: { x: 300, y: 120 },
+        to: { x: 100, y: 120 },
+        durationMs: 200,
+      } as const;
+      const r = await after(new Cycling(), swipe, (ms) => screen(Math.min(ms, 2_000)));
+      expect(r.settle.settled).toBe(true);
+      expect(r.settle.ms).toBeGreaterThanOrEqual(2_000);
+    }),
+  );
 });

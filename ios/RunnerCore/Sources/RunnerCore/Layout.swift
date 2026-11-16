@@ -39,10 +39,10 @@ public enum Flag {
         selected = 64, editable = 128, scrollable = 256, password = 512, checkable = 1024, longClickable = 2048
 }
 
-private func shown(_ node: Node) -> Bool {
+func shown(_ node: Node) -> Bool {
     node.flags & Flag.visible != 0 && node.right > node.left && node.bottom > node.top
 }
-private func interactive(_ node: Node) -> Bool {
+func interactive(_ node: Node) -> Bool {
     node.flags & (Flag.clickable | Flag.editable | Flag.checkable | Flag.scrollable) != 0
 }
 

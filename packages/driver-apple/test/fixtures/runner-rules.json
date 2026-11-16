@@ -4,7 +4,11 @@
     "inertQuietMs": 80,
     "alertAppearMs": 450,
     "alertWatchMs": 800,
-    "copiesStillMs": 300
+    "copiesStillMs": 300,
+    "cycleMs": 1000,
+    "gapMs": 300,
+    "keptMs": 30000,
+    "ownMs": 3000
   },
   "copies": {
     "screen": {
@@ -1056,6 +1060,583 @@
       "settled": false,
       "reads": 5,
       "elapsedMs": 210
+    }
+  ],
+  "regions": [
+    {
+      "why": "nothing moved",
+      "region": null,
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "within what counts as one place",
+      "region": null,
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [-3, 100, 197, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [247, 100, 447, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "cards moved under their banner",
+      "region": "Other#banner@0,100,400,300",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [-50, 100, 150, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [200, 100, 400, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "a card came",
+      "region": "Other#banner@0,100,400,300",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [-50, 100, 150, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [200, 100, 400, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [450, 100, 650, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "a card went",
+      "region": "Other#banner@0,100,400,300",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [500, 100, 700, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "a text of another width is no change",
+      "region": "Other#banner@0,100,400,300",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 10",
+          "b": [0, 600, 220, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [-50, 100, 150, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [200, 100, 400, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "a button moved far from where it was",
+      "region": "",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 20, 400, 70], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "the banner and a button far from it",
+      "region": "",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 300], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 300], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 650, 400, 700], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [-50, 100, 150, 300], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [200, 100, 400, 300], "f": 3 }
+      ]
+    },
+    {
+      "why": "a view over half the screen is the screen",
+      "region": "",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 600], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [0, 100, 200, 600], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [250, 100, 450, 600], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "id": "banner", "b": [0, 100, 400, 600], "f": 1 },
+        { "p": 0, "w": 0, "c": "Button", "id": "add", "b": [0, 500, 400, 550], "f": 3 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "StaticText",
+          "id": "count",
+          "t": "Sepet: 1",
+          "b": [0, 600, 200, 620],
+          "f": 1
+        },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [-50, 100, 150, 600], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "card", "b": [200, 100, 400, 600], "f": 3 }
+      ]
+    },
+    {
+      "why": "slides with no view of their own: the strip they lie in, by what they are",
+      "region": "Button#slide|160,180",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [0, 160, 180, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [200, 160, 380, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [400, 160, 580, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [-50, 160, 130, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [150, 160, 330, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [350, 160, 530, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 }
+      ]
+    },
+    {
+      "why": "a slide came into sight",
+      "region": "Button#slide|160,180",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [0, 160, 180, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [200, 160, 380, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [400, 160, 580, 180], "f": 2 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [-50, 160, 130, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [150, 160, 330, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [350, 160, 530, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 }
+      ]
+    },
+    {
+      "why": "a line that comes inside the strip is not of it",
+      "region": "Button#slide,StaticText#|160,180",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [0, 160, 180, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [200, 160, 380, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [400, 160, 580, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [-50, 160, 130, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [150, 160, 330, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [350, 160, 530, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 },
+        { "p": 1, "w": 0, "c": "StaticText", "t": "Tepki", "b": [16, 162, 200, 178], "f": 1 }
+      ]
+    },
+    {
+      "why": "nor on a screen with no slides",
+      "region": "StaticText#|162,178",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 },
+        { "p": 1, "w": 0, "c": "StaticText", "t": "Tepki", "b": [16, 162, 200, 178], "f": 1 }
+      ]
+    },
+    {
+      "why": "the slides and a button far from them",
+      "region": "",
+      "a": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [0, 160, 180, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [200, 160, 380, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [400, 160, 580, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 236, 65, 256], "f": 3 }
+      ],
+      "b": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 0, "w": 0, "c": "Other", "b": [0, 0, 400, 800], "f": 1 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [-50, 160, 130, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [150, 160, 330, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "slide", "b": [350, 160, 530, 180], "f": 3 },
+        { "p": 1, "w": 0, "c": "Button", "id": "tap", "b": [16, 700, 65, 720], "f": 3 }
+      ]
+    }
+  ],
+  "cyclingTraces": [
+    {
+      "why": "a part that keeps moving is a change until it has moved longer than a transition lasts, and none from then",
+      "reads": [
+        { "at": 0, "region": "Button#slide|160,180", "same": false },
+        { "at": 100, "region": "Button#slide|160,180", "same": false },
+        { "at": 200, "region": "Button#slide|160,180", "same": false },
+        { "at": 300, "region": "Button#slide|160,180", "same": false },
+        { "at": 400, "region": "Button#slide|160,180", "same": false },
+        { "at": 500, "region": "Button#slide|160,180", "same": false },
+        { "at": 600, "region": "Button#slide|160,180", "same": false },
+        { "at": 700, "region": "Button#slide|160,180", "same": false },
+        { "at": 800, "region": "Button#slide|160,180", "same": false },
+        { "at": 900, "region": "Button#slide|160,180", "same": false },
+        { "at": 1000, "region": "Button#slide|160,180", "same": true },
+        { "at": 1100, "region": "Button#slide|160,180", "same": true },
+        { "at": 1200, "region": "Button#slide|160,180", "same": true },
+        { "at": 9000, "region": "Button#slide|160,180", "same": true }
+      ]
+    },
+    {
+      "why": "a change anywhere else is one though the part is known",
+      "reads": [
+        { "at": 0, "region": "Button#slide|160,180", "same": false },
+        { "at": 100, "region": "Button#slide|160,180", "same": false },
+        { "at": 200, "region": "Button#slide|160,180", "same": false },
+        { "at": 300, "region": "Button#slide|160,180", "same": false },
+        { "at": 400, "region": "Button#slide|160,180", "same": false },
+        { "at": 500, "region": "Button#slide|160,180", "same": false },
+        { "at": 600, "region": "Button#slide|160,180", "same": false },
+        { "at": 700, "region": "Button#slide|160,180", "same": false },
+        { "at": 800, "region": "Button#slide|160,180", "same": false },
+        { "at": 900, "region": "Button#slide|160,180", "same": false },
+        { "at": 1000, "region": "Button#slide|160,180", "same": true },
+        { "at": 1100, "region": "", "same": false },
+        { "at": 1200, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 1300, "region": "Button#slide,StaticText#|160,180", "same": false },
+        { "at": 1400, "region": null, "same": true },
+        { "at": 1500, "region": "Button#slide|160,180", "same": true }
+      ]
+    },
+    {
+      "why": "a slide under one part that ends is never known to cycle",
+      "reads": [
+        { "at": 0, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 100, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 200, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 300, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 400, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 500, "region": null, "same": true },
+        { "at": 1200, "region": null, "same": true },
+        { "at": 1900, "region": null, "same": true },
+        { "at": 2000, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 2100, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 2200, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 2300, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 2400, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 2500, "region": null, "same": true },
+        { "at": 3200, "region": null, "same": true },
+        { "at": 3900, "region": null, "same": true },
+        { "at": 4000, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 4100, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 4200, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 4300, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 4400, "region": "Other#banner@0,100,400,300", "same": false },
+        { "at": 4500, "region": null, "same": true },
+        { "at": 5200, "region": null, "same": true },
+        { "at": 5900, "region": null, "same": true }
+      ]
+    },
+    {
+      "why": "a gap is from the end of one read to the start of the next: reads that take long are no gap",
+      "reads": [
+        { "at": 400, "took": 400, "region": "Button#slide|160,180", "same": false },
+        { "at": 880, "took": 400, "region": "Button#slide|160,180", "same": false },
+        { "at": 1360, "took": 400, "region": "Button#slide|160,180", "same": true }
+      ]
+    },
+    {
+      "why": "steps too far apart leave the settle its quiet window, and are never known",
+      "reads": [
+        { "at": 0, "region": "Button#slide|160,180", "same": false },
+        { "at": 350, "region": "Button#slide|160,180", "same": false },
+        { "at": 700, "region": "Button#slide|160,180", "same": false },
+        { "at": 1050, "region": "Button#slide|160,180", "same": false },
+        { "at": 1400, "region": "Button#slide|160,180", "same": false },
+        { "at": 1750, "region": "Button#slide|160,180", "same": false },
+        { "at": 2100, "region": "Button#slide|160,180", "same": false },
+        { "at": 2450, "region": "Button#slide|160,180", "same": false },
+        { "at": 2800, "region": "Button#slide|160,180", "same": false }
+      ]
+    },
+    {
+      "why": "a part not seen moving for long is known no longer",
+      "reads": [
+        { "at": 0, "region": "Button#slide|160,180", "same": false },
+        { "at": 100, "region": "Button#slide|160,180", "same": false },
+        { "at": 200, "region": "Button#slide|160,180", "same": false },
+        { "at": 300, "region": "Button#slide|160,180", "same": false },
+        { "at": 400, "region": "Button#slide|160,180", "same": false },
+        { "at": 500, "region": "Button#slide|160,180", "same": false },
+        { "at": 600, "region": "Button#slide|160,180", "same": false },
+        { "at": 700, "region": "Button#slide|160,180", "same": false },
+        { "at": 800, "region": "Button#slide|160,180", "same": false },
+        { "at": 900, "region": "Button#slide|160,180", "same": false },
+        { "at": 1000, "region": "Button#slide|160,180", "same": true },
+        { "at": 25000, "region": "Button#slide|160,180", "same": true },
+        { "at": 55000, "region": "Button#slide|160,180", "same": true },
+        { "at": 85001, "region": "Button#slide|160,180", "same": false }
+      ]
+    },
+    {
+      "why": "what an action of ours set moving is waited out however long, and reads of it make nothing known",
+      "reads": [
+        { "at": 0, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 100, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 200, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 300, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 400, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 500, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 600, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 700, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 800, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 900, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1000, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1100, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1200, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1300, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1400, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1500, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1600, "region": "Button#slide|160,180", "byItself": false, "same": false },
+        { "at": 1700, "region": null, "same": true }
+      ]
+    },
+    {
+      "why": "a part known stays so through an action of ours",
+      "reads": [
+        { "at": 0, "region": "Button#slide|160,180", "same": false },
+        { "at": 100, "region": "Button#slide|160,180", "same": false },
+        { "at": 200, "region": "Button#slide|160,180", "same": false },
+        { "at": 300, "region": "Button#slide|160,180", "same": false },
+        { "at": 400, "region": "Button#slide|160,180", "same": false },
+        { "at": 500, "region": "Button#slide|160,180", "same": false },
+        { "at": 600, "region": "Button#slide|160,180", "same": false },
+        { "at": 700, "region": "Button#slide|160,180", "same": false },
+        { "at": 800, "region": "Button#slide|160,180", "same": false },
+        { "at": 900, "region": "Button#slide|160,180", "same": false },
+        { "at": 1000, "region": "Button#slide|160,180", "same": true },
+        { "at": 1100, "region": "Button#slide|160,180", "byItself": false, "same": true },
+        { "at": 1200, "region": "Other#banner@0,100,400,300", "byItself": false, "same": false }
+      ]
     }
   ]
 }

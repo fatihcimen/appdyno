@@ -18,6 +18,10 @@ final class RunnerRulesTests: XCTestCase {
         XCTAssertEqual(t["alertAppearMs"], SettleTimes.alertAppearMs)
         XCTAssertEqual(t["alertWatchMs"], SettleTimes.alertWatchMs)
         XCTAssertEqual(t["copiesStillMs"], SettleTimes.copiesStillMs)
+        XCTAssertEqual(t["cycleMs"], Cycling.cycleMs)
+        XCTAssertEqual(t["gapMs"], Cycling.gapMs)
+        XCTAssertEqual(t["keptMs"], Cycling.keptMs)
+        XCTAssertEqual(t["ownMs"], Cycling.ownMs)
     }
 
     func testTheCopiesOfAControl() throws {
@@ -80,6 +84,30 @@ final class RunnerRulesTests: XCTestCase {
             XCTAssertEqual(outcome.settled, t["settled"] as? Bool, why)
             XCTAssertEqual(outcome.reads, t["reads"] as? Int, why)
             XCTAssertEqual(outcome.elapsedMs, t["elapsedMs"] as? Int, why)
+        }
+    }
+
+    func testThePartTwoReadsDifferUnder() throws {
+        let regions = try cases("regions")
+        XCTAssertFalse(regions.isEmpty)
+        for c in regions {
+            XCTAssertEqual(Region.between(try nodes(c, "a"), try nodes(c, "b")), c["region"] as? String,
+                           c["why"] as? String ?? "")
+        }
+    }
+
+    func testAPartThatKeepsMovingByItself() throws {
+        let traces = try cases("cyclingTraces")
+        XCTAssertFalse(traces.isEmpty)
+        for t in traces {
+            let why = t["why"] as? String ?? ""
+            var cycling = Cycling()
+            for read in try XCTUnwrap(t["reads"] as? [Wire], why) {
+                let at = try XCTUnwrap(read["at"] as? Int, why)
+                let same = cycling.same(read["region"] as? String, byItself: read["byItself"] as? Bool ?? true,
+                                        readAt: at - (read["took"] as? Int ?? 0), now: at)
+                XCTAssertEqual(same, read["same"] as? Bool, "\(why), at \(at)")
+            }
         }
     }
 

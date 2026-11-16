@@ -8,6 +8,9 @@ extension Device {
                tapAt: (x: Double, y: Double)?, inFront: Bool = false) throws -> [String: Any] {
         var out: [String: Any] = [:]
         var last: Capture?
+        // the next settle is an action's own to call so again
+        defer { byItself = false }
+        cycled = false
         if let (wire, read) = settled(request, job: job, actionAt: actionAt, tapAt: tapAt, inFront: inFront) {
             out["settle"] = wire
             last = read
@@ -17,8 +20,9 @@ extension Device {
             let start = Date()
             let read = last.flatMap { $0.windows.isEmpty ? nil : $0 }
             var c = try read ?? capture(job: job)
-            // a settle that ended settled saw the screen, its copies too, stand still
-            hideUnreachableCopies(&c, still: read != nil && (out["settle"] as? Wire)?["settled"] as? Bool == true)
+            // a settle that ended settled saw the screen, its copies too, stand still, but for a part known to cycle
+            let settled = (out["settle"] as? Wire)?["settled"] as? Bool == true
+            hideUnreachableCopies(&c, still: read != nil && settled && !cycled)
             remember(c)
             out["hash"] = c.hash
             if request.read == "tree" {
@@ -27,6 +31,24 @@ extension Device {
         default: break
         }
         return out
+    }
+
+    /// Before an action: what moves after it and is not known to cycle, no action of ours set moving where none went
+    /// out in `Cycling.ownMs` and this one throws nothing. A row our own swipe threw runs as long as a banner does.
+    func begins(_ action: Action) {
+        let now = Int(Date().timeIntervalSince1970 * 1000)
+        byItself = action.throwsNothing && now - actedAt > Cycling.ownMs
+        actedAt = now
+    }
+
+    /// Whether a settle's read, begun at `readAt`, is the one before it: a part of the screen known to keep moving by
+    /// itself does not hold the settle.
+    private func sameToSettle(_ next: Capture, _ prev: Capture, readAt: Int) -> Bool {
+        guard let region = Region.between(prev.nodes, next.nodes) else { return true }
+        let known = cycling.same(region, byItself: byItself, readAt: readAt,
+                                 now: Int(Date().timeIntervalSince1970 * 1000))
+        if known { cycled = true }
+        return known
     }
 
     /// The settle an action asked for, if it asked: what it answers, and its last read.
@@ -46,7 +68,9 @@ extension Device {
         // an alert or sheet that came up during the settle is still animating in: a tap on it then is
         // lost, so the screen counts as busy for its appear animation
         var alertSince: Date? = before.flatMap { hasAlert($0) ? Date.distantPast : nil }
+        var readAt = actionAt
         let read = { () -> Capture in
+            readAt = Int(Date().timeIntervalSince1970 * 1000)
             var c = (try? self.capture(job: job)) ?? Capture(windows: [], nodes: [], truncated: true, busy: true)
             if inFront, let id = c.windows.first?["pkg"] as? String, id != self.targetId, id != Device.springboardId {
                 left = true
@@ -61,7 +85,7 @@ extension Device {
             return c
         }
         let seen = before.map { Capture(windows: [], nodes: $0, truncated: false, busy: false) }
-        let probe = SettleProbe(read: read, same: { sameLayout($0.nodes, $1.nodes) }, busy: { $0.busy },
+        let probe = SettleProbe(read: read, same: { self.sameToSettle($0, $1, readAt: readAt) }, busy: { $0.busy },
                                 cancelled: { job.over || left })
         let outcome = settler.run(actionAt: actionAt, quietMs: quiet, maxMs: settle.maxMs, before: seen, probe: probe)
         var last: Capture? = outcome.last

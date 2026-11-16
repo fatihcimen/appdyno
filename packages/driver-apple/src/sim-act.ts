@@ -9,6 +9,7 @@ import {
 import type { ActParams, ActResult, Tree } from '@appdyno/protocol';
 import type { HelperReads } from './sim-read.js';
 import type { DirectSim } from './simdirect.js';
+import { Cycling, OWN_MS } from './simcycling.js';
 import { type Capture, settleAfter } from './simsettle.js';
 import { firstPoint } from './simtouch.js';
 import { onKeyboard } from './simtree.js';
@@ -43,6 +44,11 @@ export class HelperActs {
   /** What calls have waited for the runner to come up: no settle running meanwhile counts it. */
   startingMs = 0;
 
+  private readonly cycling = new Cycling();
+
+  /** When the last action's settle began. */
+  private settledAt = 0;
+
   constructor(private readonly p: ActsPort) {}
 
   remember(t: Tree) {
@@ -54,7 +60,11 @@ export class HelperActs {
 
   /** What a settle after an action reads and remembers, on the clock that leaves out waits for the runner. */
   settleOn() {
+    const rested = Date.now() - this.settledAt > OWN_MS;
+    this.settledAt = Date.now();
     return {
+      cycling: this.cycling,
+      rested,
       read: (final: boolean) => this.p.read(final),
       remember: (t: Tree) => this.remember(t),
       recent: this.recent,

@@ -11,6 +11,7 @@ import {
   coverKey,
   repeatedControls,
 } from '../src/simcopies.js';
+import { CYCLE_MS, Cycling, GAP_MS, KEPT_MS, OWN_MS, regionBetween } from '../src/simcycling.js';
 import { ALERT_APPEAR_MS, ALERT_WATCH_MS, INERT_QUIET_MS, settle } from '../src/simsettle.js';
 import {
   CHECKABLE,
@@ -41,7 +42,21 @@ const rules = JSON.parse(
     alertAppearMs: number;
     alertWatchMs: number;
     copiesStillMs: number;
+    cycleMs: number;
+    gapMs: number;
+    keptMs: number;
+    ownMs: number;
   };
+  regions: (Why & { a: Node[]; b: Node[]; region: string | null })[];
+  cyclingTraces: (Why & {
+    reads: {
+      at: number;
+      took?: number;
+      region: string | null;
+      byItself?: boolean;
+      same: boolean;
+    }[];
+  })[];
   copies: {
     screen: {
       nodes: Node[];
@@ -84,6 +99,10 @@ describe('the rules the direct read shares with the runner', () => {
       alertAppearMs: ALERT_APPEAR_MS,
       alertWatchMs: ALERT_WATCH_MS,
       copiesStillMs: COPIES_STILL_MS,
+      cycleMs: CYCLE_MS,
+      gapMs: GAP_MS,
+      keptMs: KEPT_MS,
+      ownMs: OWN_MS,
     }).toEqual(rules.times);
   });
 
@@ -139,6 +158,36 @@ describe('the rules the direct read shares with the runner', () => {
         t.why,
       ).toEqual({ settled: t.settled, reads: t.reads, elapsedMs: t.elapsedMs });
     }
+  });
+
+  it('names the part of the screen two reads differ under as the runner does', () => {
+    expect(rules.regions.length).toBeGreaterThan(0);
+    for (const c of rules.regions)
+      expect(regionBetween(c.a, c.b)?.name ?? null, c.why).toBe(c.region);
+  });
+
+  it('knows a part to keep moving by itself when the runner does', () => {
+    expect(rules.cyclingTraces.length).toBeGreaterThan(0);
+    for (const t of rules.cyclingTraces) {
+      const cycling = new Cycling();
+      for (const r of t.reads) {
+        const region = r.region === null ? undefined : { name: r.region, rest: (l: Node[]) => l };
+        expect(
+          cycling.same(region, r.byItself ?? true, r.at - (r.took ?? 0), r.at),
+          `${t.why}, at ${String(r.at)}`,
+        ).toBe(r.same);
+      }
+    }
+  });
+
+  it('leaves what a part known to cycle holds out of a layout', () => {
+    const [a, b] = [must(rules.regions[9], 'the slides').a, must(rules.regions[9], 'the slides').b];
+    const cycling = new Cycling();
+    expect(cycling.rest(b, 0)).toBe(b);
+    cycling.same(regionBetween(a, b), true, 0, 0);
+    expect(cycling.same(regionBetween(a, b), true, 0, CYCLE_MS)).toBe(true);
+    expect(cycling.rest(b, CYCLE_MS).map((n) => n.id)).toEqual([undefined, undefined, 'tap']);
+    expect(cycling.rest(b, CYCLE_MS + KEPT_MS + 1)).toBe(b);
   });
 
   it('computes the digest the runner computes', () => {

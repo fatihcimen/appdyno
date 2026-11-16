@@ -1,5 +1,6 @@
 import { sleep as wait, type ActOptions } from '@appdyno/core';
 import { Settle, type ActParams, type Tree } from '@appdyno/protocol';
+import { type Cycling, regionBetween } from './simcycling.js';
 import {
   actionable,
   hasAlert,
@@ -99,6 +100,10 @@ export type SettleOn = {
   clock: () => number;
   /** Until the app has handled the touch just sent. */
   handled: () => Promise<void>;
+  /** What is known of this simulator's screen to keep moving by itself. */
+  cycling: Cycling;
+  /** No action went out in the OWN_MS before this one. */
+  rested: boolean;
 };
 
 /**
@@ -133,7 +138,11 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
   let alertGoneAt: number | undefined;
   const stuckBefore = stickingOut(seen, on.width);
   let slideSince: number | undefined;
+  // a row our own swipe threw runs as long as a banner does: only what no action of ours set moving is learnt of
+  const byItself = on.rested && action.kind !== 'swipe' && action.kind !== 'gesture';
+  let readAt = actionAt;
   const read = async (): Promise<Capture> => {
+    readAt = on.clock();
     const c = await on.read(false);
     const now = on.clock();
     if (hasAlert(c.tree.nodes)) {
@@ -147,9 +156,11 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
         return { ...c, busy: true };
     }
     // a push leaves the old page aside, inside the screen, until it ends: only a tap pushes
+    // not what is known to cycle: a carousel's slides go over the side at every read
+    const rest = on.cycling.rest(c.tree.nodes, now);
     const sliding =
-      [...stickingOut(c.tree.nodes, on.width)].some((k) => !stuckBefore.has(k)) ||
-      (!!tap && leftBehind(seen, c.tree.nodes, on.width));
+      [...stickingOut(rest, on.width)].some((k) => !stuckBefore.has(k)) ||
+      (!!tap && leftBehind(seen, rest, on.width));
     if (sliding) {
       slideSince ??= now;
       if (now - slideSince < SLIDE_CAP_MS) return { ...c, busy: true };
@@ -163,7 +174,7 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
     pollMs: POLL_MS,
     read,
     same: (a: { tree: { nodes: Node[] } }, b: { tree: { nodes: Node[] } }) =>
-      sameContent(a.tree.nodes, b.tree.nodes),
+      on.cycling.same(regionBetween(b.tree.nodes, a.tree.nodes), byItself, readAt, on.clock()),
     busy: (c: { busy: boolean }) => c.busy,
   };
   const r = await settle<Capture | { tree: { nodes: Node[] }; busy: false }>({
@@ -211,7 +222,11 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
   if (want !== 'none' && last.askRunner) last = await on.read(true);
   return {
     untouched,
-    moved: !sameContent(seen, last.tree.nodes),
+    // a part that cycles moved by itself: no transition of the touch's
+    moved: !sameContent(
+      on.cycling.rest(seen, on.clock()),
+      on.cycling.rest(last.tree.nodes, on.clock()),
+    ),
     result: {
       settle: { settled, ms, reads, quietMs },
       ...answer(last),
