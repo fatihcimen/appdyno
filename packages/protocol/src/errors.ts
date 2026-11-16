@@ -66,9 +66,39 @@ export const ERROR_TRAITS: Record<ErrorCode, { retryable: boolean; touch: TouchB
   OFFLINE: { retryable: false, touch: 'if sent' },
 };
 
-/** JSON-RPC error codes on the wire: -32000 minus the index of the code. */
-export const rpcCode = (code: ErrorCode) => -32000 - ERROR_CODES.indexOf(code);
-export const codeOfRpc = (n: number): ErrorCode => ERROR_CODES[-32000 - n] ?? 'INTERNAL';
+/**
+ * JSON-RPC error codes on the wire, each code's own number for good. They were the place of each code in the list
+ * above, where a code put in the middle would have moved every one after it, on a host and its agents alike: a new
+ * code takes the next number, and none is given again.
+ */
+export const RPC_CODES: Record<ErrorCode, number> = {
+  TIMEOUT: -32000,
+  CANCELLED: -32001,
+  DEVICE_GONE: -32002,
+  AGENT_UNAVAILABLE: -32003,
+  AGENT_CONFLICT: -32004,
+  AGENT_VERSION_MISMATCH: -32005,
+  UNSUPPORTED: -32006,
+  PERMISSION_REQUIRED: -32007,
+  NOT_FOUND: -32008,
+  NO_FOCUS: -32009,
+  APP_NOT_RUNNING: -32010,
+  POLICY_DENIED: -32011,
+  INVALID_ARGUMENT: -32012,
+  STALE: -32013,
+  SCREEN_OFF: -32014,
+  INTERNAL: -32015,
+  AMBIGUOUS: -32016,
+  CHECK_FAILED: -32017,
+  BUILD_FAILED: -32018,
+  DEVICE_CLAIMED: -32019,
+  DEVICE_LOCKED: -32020,
+  OFFLINE: -32021,
+};
+const BY_NUMBER = new Map(Object.entries(RPC_CODES).map(([code, n]) => [n, code as ErrorCode]));
+
+export const rpcCode = (code: ErrorCode) => RPC_CODES[code];
+export const codeOfRpc = (n: number): ErrorCode => BY_NUMBER.get(n) ?? 'INTERNAL';
 
 export class DeviceError extends Error {
   readonly retryable: boolean;

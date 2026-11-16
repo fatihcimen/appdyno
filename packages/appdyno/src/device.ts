@@ -10,6 +10,7 @@ import {
   ToolError,
 } from '@appdyno/ops';
 import { regularExpression } from './allow.js';
+import type { ErrorCode } from './library.js';
 import { deviceProviders } from './providers.js';
 
 /** A place on the screen, in the units a touch takes: points on iOS, pixels on Android. */
@@ -69,8 +70,10 @@ export type Touched = { settled: boolean };
 /** `verified`: whether the field read back holds the text, where it can be read back. `submitted`: false where enter was not pressed. */
 export type Typed = Touched & { verified?: boolean; submitted?: boolean };
 
+export type { ErrorCode };
+
 /** What a refused call throws. */
-export type DeviceRefusal = Error & { code: string; hint?: string };
+export type DeviceRefusal = Error & { code: ErrorCode; hint?: string };
 
 /** One device, whichever platform. */
 export type Device = {

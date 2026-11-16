@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { must } from '@appdyno/core';
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import * as library from '../src/index.js';
 import { drive } from '../examples/drive.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
@@ -22,6 +22,12 @@ vi.mock('../src/providers.js', () => ({
 }));
 
 describe('the library', () => {
+  it('has every code of a refusal in its own types, as the protocol has them', () => {
+    type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+    const same: Same<library.ErrorCode, ErrorCode> = true;
+    expect(same).toBe(true);
+  });
+
   it('runs the example the docs show', async () => {
     const flow = join(mkdtempSync(join(tmpdir(), 'appdyno-library-')), 'a.flow');
     writeFileSync(flow, 'assert text="Bilgiler"\n');

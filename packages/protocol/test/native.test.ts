@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assert, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
-import { ERROR_CODES } from '../src/errors.js';
+import { ERROR_CODES, RPC_CODES, codeOfRpc, rpcCode } from '../src/errors.js';
 import {
   FRAME_BINARY,
   FRAME_JSON,
@@ -56,6 +56,46 @@ describe('what is written three times', () => {
     expect(quoted(inside(read(`${CORE}/Errors.swift`), /errorCodes = \[/, ']'))).toEqual(
       WIRE_CODES,
     );
+  });
+
+  it('each error code keeps the number it has had on the wire, on the host and on both agents', () => {
+    // as released: a number here changes only by a new line at the end
+    expect(RPC_CODES).toEqual({
+      TIMEOUT: -32000,
+      CANCELLED: -32001,
+      DEVICE_GONE: -32002,
+      AGENT_UNAVAILABLE: -32003,
+      AGENT_CONFLICT: -32004,
+      AGENT_VERSION_MISMATCH: -32005,
+      UNSUPPORTED: -32006,
+      PERMISSION_REQUIRED: -32007,
+      NOT_FOUND: -32008,
+      NO_FOCUS: -32009,
+      APP_NOT_RUNNING: -32010,
+      POLICY_DENIED: -32011,
+      INVALID_ARGUMENT: -32012,
+      STALE: -32013,
+      SCREEN_OFF: -32014,
+      INTERNAL: -32015,
+      AMBIGUOUS: -32016,
+      CHECK_FAILED: -32017,
+      BUILD_FAILED: -32018,
+      DEVICE_CLAIMED: -32019,
+      DEVICE_LOCKED: -32020,
+      OFFLINE: -32021,
+    });
+    expect(Object.keys(RPC_CODES)).toEqual([...ERROR_CODES]);
+    expect(new Set(Object.values(RPC_CODES)).size).toBe(ERROR_CODES.length);
+    for (const code of ERROR_CODES) expect(codeOfRpc(rpcCode(code))).toBe(code);
+    expect(codeOfRpc(-31999)).toBe('INTERNAL');
+    // an agent numbers a code by its place in its own list
+    for (const [file, open, close] of [
+      [`${AGENT}/Errors.kt`, /ERROR_CODES = listOf\(/, ')'],
+      [`${CORE}/Errors.swift`, /errorCodes = \[/, ']'],
+    ] as const)
+      expect(quoted(inside(read(file), open, close)).map((_, i) => -32000 - i)).toEqual(
+        WIRE_CODES.map(rpcCode),
+      );
   });
 
   it('the Android agent numbers every node flag as the host does', () => {

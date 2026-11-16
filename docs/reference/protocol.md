@@ -442,8 +442,7 @@ What it took on that phone:
 
 `data.code` is one of `TIMEOUT`, `CANCELLED`, `DEVICE_GONE`, `AGENT_UNAVAILABLE`, `AGENT_CONFLICT`,
 `AGENT_VERSION_MISMATCH`, `UNSUPPORTED`, `PERMISSION_REQUIRED`, `NOT_FOUND`, `NO_FOCUS`,
-`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `STALE`, `SCREEN_OFF`, `INTERNAL`; the JSON-RPC code is −32000
-minus its index in that list. An unknown method answers `UNSUPPORTED` on both platforms. `AMBIGUOUS`, `CHECK_FAILED`, `BUILD_FAILED`, `DEVICE_CLAIMED`, `DEVICE_LOCKED` and `OFFLINE` come after those and are the host's own, never on the wire. `TIMEOUT`, `DEVICE_GONE` and `AGENT_UNAVAILABLE` are worth one retry; the host
+`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `STALE`, `SCREEN_OFF`, `INTERNAL`; each has a JSON-RPC code of its own, from −32000 for `TIMEOUT` down to −32015 for `INTERNAL` in that order, which it keeps: a code added later takes the next number, and none moves. An unknown method answers `UNSUPPORTED` on both platforms. `AMBIGUOUS`, `CHECK_FAILED`, `BUILD_FAILED`, `DEVICE_CLAIMED`, `DEVICE_LOCKED` and `OFFLINE` come after those and are the host's own, never on the wire. `TIMEOUT`, `DEVICE_GONE` and `AGENT_UNAVAILABLE` are worth one retry; the host
 retries read-only requests itself once on a fresh connection, never an action (it may have happened).
 
 ## Android agent lifecycle

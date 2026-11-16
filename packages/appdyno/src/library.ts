@@ -79,8 +79,33 @@ export type ScreenNode = {
   flags: string[];
 };
 
+/** Every code a refusal has. One may be added in a minor release: a program that takes each apart has a default. */
+export type ErrorCode =
+  | 'TIMEOUT'
+  | 'CANCELLED'
+  | 'DEVICE_GONE'
+  | 'AGENT_UNAVAILABLE'
+  | 'AGENT_CONFLICT'
+  | 'AGENT_VERSION_MISMATCH'
+  | 'UNSUPPORTED'
+  | 'PERMISSION_REQUIRED'
+  | 'NOT_FOUND'
+  | 'NO_FOCUS'
+  | 'APP_NOT_RUNNING'
+  | 'POLICY_DENIED'
+  | 'INVALID_ARGUMENT'
+  | 'STALE'
+  | 'SCREEN_OFF'
+  | 'INTERNAL'
+  | 'AMBIGUOUS'
+  | 'CHECK_FAILED'
+  | 'BUILD_FAILED'
+  | 'DEVICE_CLAIMED'
+  | 'DEVICE_LOCKED'
+  | 'OFFLINE';
+
 /** What a refused call throws. `dispatched`: whether its touch went out, where it had one. */
-export type Refusal = Error & { code: string; hint?: string; dispatched?: boolean | 'unknown' };
+export type Refusal = Error & { code: ErrorCode; hint?: string; dispatched?: boolean | 'unknown' };
 
 /** One step of a replay, before its action and after the screen settled. */
 export type StepEvent =

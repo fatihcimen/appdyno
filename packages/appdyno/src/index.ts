@@ -3,6 +3,7 @@ export {
   type Answer,
   type Appdyno,
   type ConnectOptions,
+  type ErrorCode,
   type Refusal,
   type ReplayOptions,
   type ReplayResult,

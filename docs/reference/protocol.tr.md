@@ -442,8 +442,7 @@ O telefonda gerekenler:
 
 `data.code` şunlardan biridir: `TIMEOUT`, `CANCELLED`, `DEVICE_GONE`, `AGENT_UNAVAILABLE`, `AGENT_CONFLICT`,
 `AGENT_VERSION_MISMATCH`, `UNSUPPORTED`, `PERMISSION_REQUIRED`, `NOT_FOUND`, `NO_FOCUS`,
-`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `STALE`, `SCREEN_OFF`, `INTERNAL`; JSON-RPC kodu −32000
-eksi o listedeki dizinidir. Bilinmeyen bir metot iki platformda da `UNSUPPORTED` yanıtını verir. `AMBIGUOUS`, `CHECK_FAILED`, `BUILD_FAILED`, `DEVICE_CLAIMED`, `DEVICE_LOCKED` ve `OFFLINE` bunlardan sonra gelir ve host'un kendisinindir, asla bağlantı üzerinden gitmez. `TIMEOUT`, `DEVICE_GONE` ve `AGENT_UNAVAILABLE` bir kez yeniden denemeye değer; host
+`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `STALE`, `SCREEN_OFF`, `INTERNAL`; her birinin kendine ait bir JSON-RPC kodu vardır: bu sırayla `TIMEOUT` için −32000'den `INTERNAL` için −32015'e kadar. Bu kodlar değişmez: sonradan eklenen bir kod sıradaki sayıyı alır, hiçbiri yer değiştirmez. Bilinmeyen bir metot iki platformda da `UNSUPPORTED` yanıtını verir. `AMBIGUOUS`, `CHECK_FAILED`, `BUILD_FAILED`, `DEVICE_CLAIMED`, `DEVICE_LOCKED` ve `OFFLINE` bunlardan sonra gelir ve host'un kendisinindir, asla bağlantı üzerinden gitmez. `TIMEOUT`, `DEVICE_GONE` ve `AGENT_UNAVAILABLE` bir kez yeniden denemeye değer; host
 salt okunur istekleri yeni bir bağlantıda kendisi bir kez yeniden dener, bir işlemi ise asla (gerçekleşmiş olabilir).
 
 ## Android ajanının yaşam döngüsü
