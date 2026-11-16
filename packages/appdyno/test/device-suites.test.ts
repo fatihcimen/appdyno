@@ -28,6 +28,7 @@ const OWN_GATE = [
   'hub.room.test.ts',
   'hub.shared.test.ts',
   'mirror.pair.test.ts',
+  'netpane-look.test.ts',
   'soak.test.ts',
   'trace-temp.test.ts',
 ];
