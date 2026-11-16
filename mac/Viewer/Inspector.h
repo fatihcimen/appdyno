@@ -256,6 +256,29 @@ NSString *MVNetworkDetailText(NSDictionary *detail);
 - (void)focus;
 @end
 
+/// A request's headers, each group under its name, and a body as it was sent, set out to be read where it is JSON.
+NSAttributedString *MVNetworkHeadersText(NSArray<NSArray *> *groups);
+NSAttributedString *MVNetworkBodyText(NSString *text);
+NSString *MVNetworkBodyKind(NSString *text);
+
+/// One request on a card: how it ended and what there is to do with it, its address, how its time was spent, and its
+/// headers, what it sent and what came back, one at a time.
+@interface MVNetworkDetailView : NSView
+/// The request as the list has it, shown at once; `reading` while its parts are asked for.
+- (void)showEntry:(NSDictionary *)entry reading:(BOOL)reading;
+/// Its parts, as the parent gives them.
+- (void)showParts:(NSDictionary *)parts;
+/// A capture runs, so that the request can be copied and mocked; real values show; and it has the whole pane.
+@property(nonatomic) BOOL live, real, full;
+/// Why it has no headers and bodies to show, where the pane knows: the capture ended, or was started without them.
+@property(nonatomic, copy, nullable) NSString *why;
+/// A button of its head was pressed, by its name: `networkCurl`, `networkMockFrom`, `networkFull`.
+@property(nonatomic, copy, nullable) void (^onAct)(NSString *name);
+/// The section that shows: headers, request, response. All it holds as text; its head; and what its well shows.
+@property(nonatomic, readonly) NSInteger section;
+@property(nonatomic, readonly) NSString *text, *head, *shown;
+@end
+
 /// A pane with a control of its own on the line of its name, which the Inspector places there while the pane shows.
 @protocol MVTitled <NSObject>
 @property(nonatomic, readonly) NSView *titleTool;

@@ -4,7 +4,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface MVNetworkPane () <NSMenuItemValidation, NSMenuDelegate> {
+@interface MVNetworkPane () <NSMenuItemValidation, NSMenuDelegate, NSSplitViewDelegate> {
+  MVNetworkDetailView *_detailView;
+  NSSplitView *_split;
+  /// The request chosen has the whole pane; and its parts, as the parent last gave them.
+  BOOL _full;
+  NSDictionary *_parts;
   NSView *_listCard;
   /// The hosts a person closed, and the request a menu was opened on.
   NSMutableSet<NSString *> *_closed;
@@ -12,9 +17,9 @@ NS_ASSUME_NONNULL_BEGIN
   void (^_onSend)(NSDictionary *message);
   BOOL _watching;
   MVAnswerView *_answer;
-  NSStackView *_captureRow, *_cardRows, *_requestTools;
+  NSStackView *_captureRow, *_cardRows;
   MVAccentButton *_go;
-  NSButton *_again, *_bodies, *_curl, *_mock;
+  NSButton *_again, *_bodies;
   MVInk *_dot, *_tortoise;
   NSTextField *_state, *_note, *_cardTitle, *_cardWords;
   NSPopUpButton *_way, *_throttle;
@@ -24,12 +29,11 @@ NS_ASSUME_NONNULL_BEGIN
   NSMenu *_menu;
   MVNetworkRules *_rules;
   MVList *_list;
-  NSView *_card, *_detailCard, *_slack;
-  NSTextView *_detail;
+  NSView *_card, *_slack;
   NSTimer *_tick;
   NSArray<MVRow *> *_allRows;
   NSArray<NSString *> *_ways;
-  NSString *_capturing, *_needs, *_noteSaid, *_unseen, *_proxy, *_wholeKey, *_whole, *_askedKey, *_cutSays;
+  NSString *_capturing, *_needs, *_noteSaid, *_unseen, *_proxy, *_wholeKey, *_askedKey, *_cutSays;
   BOOL _onRules, _keeps, _real;
   /// The capture that ended was the probe's, and its requests still stand in the list.
   BOOL _wasProbe;
@@ -69,7 +73,7 @@ NSString *_Nullable MVNetworkUnseenLine(NSDictionary *unseen);
 - (void)bodiesChosen:(nullable id)sender;
 - (void)openMenu:(nullable id)sender;
 - (void)menuChosen:(NSMenuItem *)item;
-- (void)pressed:(NSButton *)sender;
+
 - (void)sectionChosen:(NSInteger)at;
 - (void)readAgain:(nullable id)sender;
 - (void)wayChosen:(nullable id)sender;
@@ -78,6 +82,9 @@ NSString *_Nullable MVNetworkUnseenLine(NSDictionary *unseen);
 - (void)leave;
 - (void)act:(NSString *)name on:(nullable NSString *)key;
 - (NSArray<NSAccessibilityCustomAction *> *)actionsOn:(NSString *)key;
+/// A button of the detail's head; and the request chosen opened to the whole pane, or back.
+- (void)detailAct:(NSString *)name;
+- (void)openFull:(BOOL)full;
 @end
 
 /// What the pane says and offers, from what it was last told; and the time gone, kept only while it is looked at.

@@ -25,7 +25,7 @@ static NSDictionary *probing(NSArray<NSDictionary *> *entries, NSDictionary *mor
 }
 
 /// Whether a part of the pane shows, whole, inside it.
-static BOOL stands(NSView *part, NSView *pane) {
+BOOL MVStands(NSView *part, NSView *pane) {
   [pane.window layoutIfNeeded];
   NSRect at = [part convertRect:part.bounds toView:pane];
   return !part.isHiddenOrHasHiddenAncestor && at.size.width > 0 && NSContainsRect(NSInsetRect(pane.bounds, -0.5, -0.5), at);
@@ -33,7 +33,7 @@ static BOOL stands(NSView *part, NSView *pane) {
 
 /// A picture of the window as it stands, into the folder APPDYNO_NETPANE_LOOK names: a state to be judged by eye, which
 /// no check here can do. With no folder named it does nothing.
-static void look(MVWindow *window, NSString *name) {
+void MVLook(MVWindow *window, NSString *name) {
   NSString *folder = NSProcessInfo.processInfo.environment[@"APPDYNO_NETPANE_LOOK"];
   if (!folder.length) return;
   [window.nsWindow layoutIfNeeded];
@@ -61,18 +61,18 @@ static void checkStart(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSD
                @"capturing": @NO,
                @"ways": @[],
                @"needs": needs}];
-  MVCheck(@"network: where nothing lists requests a card says what a person needs, and offers nothing to press", [pane.said containsString:MVWord(needs)] && stands(card, pane) && go.isHiddenOrHasHiddenAncestor && row.hidden, pane.said);
+  MVCheck(@"network: where nothing lists requests a card says what a person needs, and offers nothing to press", [pane.said containsString:MVWord(needs)] && MVStands(card, pane) && go.isHiddenOrHasHiddenAncestor && row.hidden, pane.said);
   [pane show:@{@"op": @"network",
                @"capturing": @NO,
                @"ways": @[@"probe", @"proxy"],
                @"proxy": @"127.0.0.1:9090"}];
-  MVCheck(@"network: the ways the device has, a proxy by where it is, to choose from where it has more than one", [way.itemTitles isEqual:@[MVWord(@"Probe"), [MVWord(@"Proxy") stringByAppendingString:@" 127.0.0.1:9090"]]] && stands(way, card), [way.itemTitles componentsJoinedByString:@"|"]);
+  MVCheck(@"network: the ways the device has, a proxy by where it is, to choose from where it has more than one", [way.itemTitles isEqual:@[MVWord(@"Probe"), [MVWord(@"Proxy") stringByAppendingString:@" 127.0.0.1:9090"]]] && MVStands(way, card), [way.itemTitles componentsJoinedByString:@"|"]);
   [pane show:@{@"op": @"network",
                @"capturing": @NO,
                @"ways": @[@"probe"]}];
-  MVCheck(@"empty: the card says what the probe does, that the app restarts, and holds Start", [pane.said containsString:MVWord(@"See this app's requests")] && [pane.said containsString:@"Restarts the app"] && stands(go, card) && [go.title isEqual:MVWord(@"Start")] && row.hidden && way.isHiddenOrHasHiddenAncestor, pane.said);
-  look(window, @"empty");
-  MVCheck(@"empty: headers and bodies are kept unless a person says not", stands(bodies, card) && bodies.state == NSControlStateValueOn, nil);
+  MVCheck(@"empty: the card says what the probe does, that the app restarts, and holds Start", [pane.said containsString:MVWord(@"See this app's requests")] && [pane.said containsString:@"Restarts the app"] && MVStands(go, card) && [go.title isEqual:MVWord(@"Start")] && row.hidden && way.isHiddenOrHasHiddenAncestor, pane.said);
+  MVLook(window, @"empty");
+  MVCheck(@"empty: headers and bodies are kept unless a person says not", MVStands(bodies, card) && bodies.state == NSControlStateValueOn, nil);
   [sent removeAllObjects];
   [window pokeClick:@"networkGo"];
   [window pokeClick:@"networkGo"];
@@ -86,7 +86,7 @@ static void checkStart(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSD
                @"name": @"network",
                @"ok": @NO,
                @"text": @"Open an app of yours to capture its requests"}];
-  MVCheck(@"error: what the parent refused stands at the pane's foot, and stays", [pane.answer.said isEqual:MVWord(@"Open an app of yours to capture its requests")] && stands(pane.answer, pane) && NSMinY([pane.answer convertRect:pane.answer.bounds toView:pane]) < NSMinY([card convertRect:card.bounds toView:pane]), pane.answer.said);
+  MVCheck(@"error: what the parent refused stands at the pane's foot, and stays", [pane.answer.said isEqual:MVWord(@"Open an app of yours to capture its requests")] && MVStands(pane.answer, pane) && NSMinY([pane.answer convertRect:pane.answer.bounds toView:pane]) < NSMinY([card convertRect:card.bounds toView:pane]), pane.answer.said);
   bodies.state = NSControlStateValueOff;
   [sent removeAllObjects];
   [window pokeClick:@"networkGo"];
@@ -108,12 +108,12 @@ static void checkCapture(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
   [pane show:probing(@[], @{@"throttle": @"full",
                             @"rules": @[],
                             @"unseen": @{@"webview": @2, @"websocket": @1}})];
-  MVCheck(@"listening: with no request yet the card says it listens, and what the app made that it cannot see", [pane.said containsString:MVWord(@"Listening")] && [pane.said hasSuffix:@"Not seen here: web views: 2, WebSocket tasks: 1"] && stands(card, pane), pane.said);
-  look(window, @"listening");
-  MVCheck(@"capture: its row holds Stop, the time gone and how many requests, and says since when to a screen reader", stands(go, row) && [go.title isEqual:MVWord(@"Stop")] && [state.stringValue hasSuffix:@" · 0 requests"] && [state.accessibilityLabel hasPrefix:@"Capturing by the probe since "], [NSString stringWithFormat:@"%@ | %@", state.stringValue, state.accessibilityLabel]);
-  MVCheck(@"capture: the speed stands in its row, named, with no mark while the network is as it is", stands(speed, row) && [speed.titleOfSelectedItem isEqual:MVWord(@"Full Speed")] && tortoise.hidden && [speed.accessibilityLabel isEqual:MVWord(@"Network speed")], speed.titleOfSelectedItem);
+  MVCheck(@"listening: with no request yet the card says it listens, and what the app made that it cannot see", [pane.said containsString:MVWord(@"Listening")] && [pane.said hasSuffix:@"Not seen here: web views: 2, WebSocket tasks: 1"] && MVStands(card, pane), pane.said);
+  MVLook(window, @"listening");
+  MVCheck(@"capture: its row holds Stop, the time gone and how many requests, and says since when to a screen reader", MVStands(go, row) && [go.title isEqual:MVWord(@"Stop")] && [state.stringValue hasSuffix:@" · 0 requests"] && [state.accessibilityLabel hasPrefix:@"Capturing by the probe since "], [NSString stringWithFormat:@"%@ | %@", state.stringValue, state.accessibilityLabel]);
+  MVCheck(@"capture: the speed stands in its row, named, with no mark while the network is as it is", MVStands(speed, row) && [speed.titleOfSelectedItem isEqual:MVWord(@"Full Speed")] && tortoise.hidden && [speed.accessibilityLabel isEqual:MVWord(@"Network speed")], speed.titleOfSelectedItem);
   [pane show:probing(@[], @{@"throttle": @"edge"})];
-  MVCheck(@"capture: a speed set stands chosen, with the mark of a slowed network beside it", [speed.titleOfSelectedItem isEqual:@"EDGE"] && stands(tortoise, row), speed.titleOfSelectedItem);
+  MVCheck(@"capture: a speed set stands chosen, with the mark of a slowed network beside it", [speed.titleOfSelectedItem isEqual:@"EDGE"] && MVStands(tortoise, row), speed.titleOfSelectedItem);
   [pane show:probing(@[], @{@"throttle": @"delayMs=300 loss=5"})];
   MVCheck(@"capture: a speed an agent set in its own words stands as a person reads it", [speed.titleOfSelectedItem isEqual:@"300 ms, 5 % lost"] && [speed.selectedItem.toolTip isEqual:@"delayMs=300 loss=5"], speed.titleOfSelectedItem);
   [sent removeAllObjects];
@@ -148,7 +148,7 @@ static void checkList(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDi
                                      @"how": @"mocked"},
                                    request(8, @"POST", @"https://b.test/pay", 500, 9)];
   [pane show:probing(two, @{})];
-  MVCheck(@"requests: each stands under its host, by its method and path, the card gone", [[list.rows valueForKey:@"title"] isEqual:(@[@"a.test", @"GET /x", @"b.test", @"POST /pay"])] && [[pane valueForKey:@"_card"] isHidden] && stands(list, pane) && stands(filter, pane), [[list.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  MVCheck(@"requests: each stands under its host, by its method and path, the card gone", [[list.rows valueForKey:@"title"] isEqual:(@[@"a.test", @"GET /x", @"b.test", @"POST /pay"])] && [[pane valueForKey:@"_card"] isHidden] && MVStands(list, pane) && MVStands(filter, pane), [[list.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
   MVCheck(@"requests: one a rule answered says so, and one the server refused is marked", [pane.rows[0].detail containsString:MVWord(@"Mocked")] && pane.rows[1].tint != nil && !pane.note.length, pane.rows[0].detail);
   [pane show:probing([two arrayByAddingObject:@{@"id": @9,
                                                 @"method": @"GET",
@@ -156,7 +156,7 @@ static void checkList(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDi
                                                 @"ms": @41000,
                                                 @"inFlight": @YES}],
                      @{@"total": @1234})];
-  look(window, @"list");
+  MVLook(window, @"list");
   MVCheck(@"requests: one still under way stands with its host's, and says for how long", [titles(pane) isEqual:@"GET /x|GET /feed|POST /pay"] && [pane.rows[1].detail isEqual:MVFormat(@"In flight for %@", @[@"41.0 s"])] && pane.rows[1].spins && [pane.rows[1].symbol isEqual:@"hourglass"], [[pane.rows valueForKey:@"detail"] componentsJoinedByString:@"|"]);
   NSTextField *state = [pane valueForKey:@"_state"];
   MVCheck(@"requests: a list that is the latest of more says how many it shows of how many, and the capture's row how many there are", [pane.note isEqual:@"Showing the latest 2 of 1,234 requests"] && [state.stringValue hasSuffix:@" · 1,234 requests"], [NSString stringWithFormat:@"%@ | %@", pane.note, state.stringValue]);
@@ -175,9 +175,9 @@ static void checkList(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDi
   NSString *english = [@[found(@"failed"), found(@"Failed"), found(@"başarısız"), found(@"mocked"), found(@"post 500")] componentsJoinedByString:@" "];
   MVCheck(@"requests: `failed` and `başarısız` find what failed in a Turkish window and an English one, in capitals and without the marks", [turkish isEqual:@"POST /pay POST /pay POST /pay POST /pay POST /pay POST /pay"] && [mocked isEqual:@"GET /x GET /x GET /x GET /x"] && [english isEqual:@"POST /pay POST /pay POST /pay GET /x POST /pay"], [NSString stringWithFormat:@"%@ ; %@ ; %@", turkish, mocked, english]);
   filter.words = @"nothing-has-this";
-  MVCheck(@"requests: words that leave nothing say so, and the filter stays to be changed", !pane.rows.count && [pane.note isEqual:MVWord(@"No request here matches the filter.")] && stands(filter, pane), pane.note);
+  MVCheck(@"requests: words that leave nothing say so, and the filter stays to be changed", !pane.rows.count && [pane.note isEqual:MVWord(@"No request here matches the filter.")] && MVStands(filter, pane), pane.note);
   filter.words = @"";
-  MVCheck(@"requests: what failed is counted beside the filter, one a rule answered not among it", stands(failed, pane) && [failed.accessibilityLabel hasSuffix:@", 1"] && [failed.accessibilityValue isEqual:@NO], failed.accessibilityLabel);
+  MVCheck(@"requests: what failed is counted beside the filter, one a rule answered not among it", MVStands(failed, pane) && [failed.accessibilityLabel hasSuffix:@", 1"] && [failed.accessibilityValue isEqual:@NO], failed.accessibilityLabel);
   [window pokeClick:@"networkFailed"];
   MVPump(0.1);
   MVCheck(@"requests: its scope leaves only what failed, and says it is on", [titles(pane) isEqual:@"POST /pay"] && [failed.accessibilityValue isEqual:@YES], titles(pane));
@@ -185,7 +185,7 @@ static void checkList(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDi
   MVPump(0.1);
   MVSegments *sections = [pane valueForKey:@"_sections"];
   NSButton *requests = MVFindControl(sections, @"networkShowRequests");
-  MVCheck(@"requests: the sections stand as one choice of two, the one chosen said, with how many it holds", stands(sections, pane) && sections.chosen == 0 && [requests.accessibilityLabel isEqual:[NSString stringWithFormat:@"%@, 2", MVWord(@"Requests")]] && [requests.accessibilityValue isEqual:@YES] && [requests.accessibilityRole isEqual:NSAccessibilityRadioButtonRole], requests.accessibilityLabel);
+  MVCheck(@"requests: the sections stand as one choice of two, the one chosen said, with how many it holds", MVStands(sections, pane) && sections.chosen == 0 && [requests.accessibilityLabel isEqual:[NSString stringWithFormat:@"%@, 2", MVWord(@"Requests")]] && [requests.accessibilityValue isEqual:@YES] && [requests.accessibilityRole isEqual:NSAccessibilityRadioButtonRole], requests.accessibilityLabel);
   [sent removeAllObjects];
 }
 
@@ -226,7 +226,7 @@ static void checkRows(MVWindow *window, MVNetworkPane *pane) {
       @"inFlight": @YES},
   ];
   [pane show:probing(all, @{})];
-  look(window, @"rows");
+  MVLook(window, @"rows");
   NSArray<MVRow *> *rows = pane.rows;
   NSString * (^line)(MVRow *) = ^(MVRow *row) {
     return [@[row.symbol ?: @"-", row.code ?: @"-", row.method ?: @"-", row.line ?: @"-", row.ends ?: @"-"] componentsJoinedByString:@" "];
@@ -266,7 +266,7 @@ static void checkRows(MVWindow *window, MVNetworkPane *pane) {
   NSTableView *table = [list valueForKey:@"_table"];
   [window.nsWindow layoutIfNeeded];
   MVCheck(@"rows: the one chosen stays in sight above what opens of it", table.selectedRow >= 0 && NSContainsRect(NSInsetRect(table.visibleRect, 0, -1), [table rectOfRow:table.selectedRow]) && pane.detail.length > 0, NSStringFromRect([table rectOfRow:table.selectedRow]));
-  look(window, @"rows-chosen");
+  MVLook(window, @"rows-chosen");
   many[40] = request(140, @"GET", @"https://api.test/v1/items/40", 200, 999);
   [pane show:probing(many, @{})];
   MVCheck(@"rows: read again, the same rows keep the one chosen, and only what changed is drawn again", [list.selected.key isEqual:@"140"] && [list.selected.ends isEqual:@"999 ms"], list.selected.ends);
@@ -321,10 +321,11 @@ static void checkRequest(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
       if (![text containsString:one]) [missing addObject:one];
     return [missing componentsJoinedByString:@" | "];
   };
-  look(window, @"request");
+  MVLook(window, @"request");
   MVCheck(@"detail: a request's parts stand under names of the window's own, what was sent as it was sent", !lacks(inEnglish, wantEnglish).length, [NSString stringWithFormat:@"%@ in %@", lacks(inEnglish, wantEnglish), inEnglish]);
   MVCheck(@"detail: and in Turkish every name is Turkish, with nothing of the op's English left", !lacks(inTurkish, wantTurkish).length && ![inTurkish containsString:@"request headers"] && ![inTurkish containsString:@"connection"] && ![inTurkish containsString:@"mocked"], [NSString stringWithFormat:@"%@ in %@", lacks(inTurkish, wantTurkish), inTurkish]);
   MVCheck(@"detail: one whose headers and bodies were not kept says so and what to do, in Turkish too", [notKept hasSuffix:@"Başlıkları ve gövdeleri tutulmadı. Okumak için onları tutan bir yakalama başlatın."], notKept);
+  MVCheckNetworkCard(window, pane, parts);
   [sent removeAllObjects];
   [window pokeClick:@"networkCurl"];
   MVPump(0.1);
@@ -367,16 +368,14 @@ static void checkRequest(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
   // a probe's requests are read again every 3 s; past the most a read holds, the oldest go and every place moves
   MVPokeListRow(list, @"POST /pay");
   MVPump(0.1);
-  NSTextView *detail = [pane valueForKey:@"_detail"];
-  detail.selectedRange = NSMakeRange(0, 4);
   [pane show:probing(@[request(8, @"POST", @"https://b.test/pay", 500, 9), request(9, @"GET", @"https://a.test/z", 200, 9)], @{})];
-  MVCheck(@"request: the one chosen stays open as requests come and go, and so does what was selected in it", [pane.detail hasPrefix:@"POST https://b.test/pay"] && NSEqualRanges(detail.selectedRange, NSMakeRange(0, 4)), [NSString stringWithFormat:@"%@ %@", pane.detail, NSStringFromRange(detail.selectedRange)]);
+  MVCheck(@"request: the one chosen stays open as requests come and go", [pane.detail hasPrefix:@"POST https://b.test/pay"] && [list.selected.key isEqual:@"8"], pane.detail);
 }
 
 /// A capture that ended: its list and the filter stay, and what needs a capture that runs is off, with why.
 static void checkStopped(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent) {
   NSArray<NSDictionary *> *left = @[request(7, @"GET", @"https://a.test/x", 200, 3), request(8, @"POST", @"https://b.test/pay", 500, 9)];
-  NSButton *go = [pane valueForKey:@"_go"], *more = [pane valueForKey:@"_more"], *curl = [pane valueForKey:@"_curl"];
+  NSButton *go = [pane valueForKey:@"_go"], *more = [pane valueForKey:@"_more"], *curl = MVFindControl(pane, @"networkCurl");
   NSTextField *state = [pane valueForKey:@"_state"];
   [pane show:probing(left, @{})];
   [pane show:@{@"op": @"network",
@@ -385,7 +384,7 @@ static void checkStopped(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
                @"ways": @[@"probe"],
                @"entries": left,
                @"total": @2}];
-  MVCheck(@"stopped: the requests stay with the words that narrow them, and the row says when it stopped and offers Start", pane.rows.count == 2 && stands(pane.filter, pane) && [state.stringValue hasPrefix:MVFormat(@"Stopped at %@", @[@""])] && [state.stringValue hasSuffix:@" · 2 requests"] && [go.title isEqual:MVWord(@"Start")] && stands(go, [pane valueForKey:@"_captureRow"]), state.stringValue);
+  MVCheck(@"stopped: the requests stay with the words that narrow them, and the row says when it stopped and offers Start", pane.rows.count == 2 && MVStands(pane.filter, pane) && [state.stringValue hasPrefix:MVFormat(@"Stopped at %@", @[@""])] && [state.stringValue hasSuffix:@" · 2 requests"] && [go.title isEqual:MVWord(@"Start")] && MVStands(go, [pane valueForKey:@"_captureRow"]), state.stringValue);
   pane.filter.words = @"pay";
   MVCheck(@"stopped: and those words still narrow the list", [titles(pane) isEqual:@"POST /pay"], titles(pane));
   MVPokeListRow([pane valueForKey:@"_list"], @"POST /pay");
@@ -393,18 +392,18 @@ static void checkStopped(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
   [sent removeAllObjects];
   [pane choose:@"networkSave"];
   [pane choose:@"networkReal"];
-  MVCheck(@"stopped: what reads the capture is off, asks for nothing, and the pane says why", curl.isHiddenOrHasHiddenAncestor && !more.enabled && sent.count == 0 && !pane.real && [pane.note hasPrefix:MVWord(@"The capture has ended.")] && [more.toolTip isEqual:pane.note] && [pane.detail hasPrefix:@"POST https://b.test/pay"], [NSString stringWithFormat:@"%@ | %@", sent, pane.note]);
-  look(window, @"stopped");
+  MVCheck(@"stopped: what reads the capture is off, asks for nothing, and the pane says why", !curl.enabled && [curl.toolTip isEqual:pane.note] && !more.enabled && sent.count == 0 && !pane.real && [pane.note hasPrefix:MVWord(@"The capture has ended.")] && [more.toolTip isEqual:pane.note] && [pane.detail hasPrefix:@"POST https://b.test/pay"] && [pane.detail hasSuffix:MVWord(@"The capture has ended, and the headers and bodies it kept went with it.")], [NSString stringWithFormat:@"%@ | %@", sent, pane.note]);
+  MVLook(window, @"stopped");
   pane.filter.words = @"";
   [pane show:probing(left, @{})];
-  MVCheck(@"stopped: a capture that runs again has them back", more.enabled && !pane.note.length && stands(curl, pane), pane.note);
+  MVCheck(@"stopped: a capture that runs again has them back", more.enabled && !pane.note.length && curl.enabled && MVStands(curl, pane), pane.note);
   [pane show:@{@"op": @"network",
                @"capturing": @"bytes",
                @"since": @1793000000000,
                @"entries": @[@{@"direction": @"Received",
                                @"host": @"uid 10123",
                                @"bytes": @2048}]}];
-  MVCheck(@"network: a count stands as a row too, with Read Again where nothing reads it by itself, and no speed or sections", [pane.rows[0].title isEqual:@"Received · uid 10123"] && stands([pane valueForKey:@"_again"], pane) && [[pane valueForKey:@"_throttle"] isHidden] && [[pane valueForKey:@"_sections"] isHidden], pane.rows[0].title);
+  MVCheck(@"network: a count stands as a row too, with Read Again where nothing reads it by itself, and no speed or sections", [pane.rows[0].title isEqual:@"Received · uid 10123"] && MVStands([pane valueForKey:@"_again"], pane) && [[pane valueForKey:@"_throttle"] isHidden] && [[pane valueForKey:@"_sections"] isHidden], pane.rows[0].title);
 }
 
 void MVCheckNetwork(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent) {

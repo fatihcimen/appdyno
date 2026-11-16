@@ -7,9 +7,22 @@
 #import "Place.h"
 #import "Words.h"
 
-static const double kDetailHeight = 150, kBand = 28;
+static const double kBand = 28;
 
 static NSString *const kBodiesKept = @"networkBodies";
+
+/// A split whose line is room and no rule: the two cards it parts are apart by what parts every band of the pane.
+@interface MVPaneSplit : NSSplitView
+@end
+
+@implementation MVPaneSplit
+- (CGFloat)dividerThickness {
+  return 8;
+}
+
+- (void)drawDividerInRect:(NSRect)rect {
+}
+@end
 
 @implementation MVNetworkPane
 
@@ -75,6 +88,7 @@ static NSString *const kBodiesKept = @"networkBodies";
     };
     _list.onKey = ^(NSString *key) {
       if ([key isEqual:@"escape"]) [weak leave];
+      if ([key isEqual:@"open"]) [weak openFull:YES];
     };
     _list.rowActions = ^(MVRow *row) {
       return [weak actionsOn:row.key];
@@ -83,13 +97,19 @@ static NSString *const kBodiesKept = @"networkBodies";
     _list.rowMenu.delegate = self;
     _listCard = MVCardInset(_list, 4, 0);
     [_listCard setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-    _curl = MVPlaceButton(@"Copy as cURL", @"networkCurl", self, @selector(pressed:));
-    _mock = MVPlaceButton(@"Mock This Answer", @"networkMockFrom", self, @selector(pressed:));
-    _requestTools = MVPaneRow(@[_curl, _mock]);
-    NSView *card;
-    _detail = MVReadText(@"networkDetail", @"The request chosen", &card);
-    _detailCard = card;
-    [_detailCard.heightAnchor constraintEqualToConstant:kDetailHeight].active = YES;
+    _detailView = [MVNetworkDetailView new];
+    _detailView.hidden = YES;
+    _detailView.onAct = ^(NSString *name) {
+      [weak detailAct:name];
+    };
+    // the list over what is open of the request chosen, the line between them a person's to move
+    _split = [MVPaneSplit new];
+    _split.vertical = NO;
+    _split.dividerStyle = NSSplitViewDividerStyleThin;
+    _split.delegate = self;
+    [_split addSubview:_listCard];
+    [_split addSubview:_detailView];
+    [_split setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
     // with no list, what is left goes under it all, and the answer stands at the pane's foot
     _slack = [NSView new];
     [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
@@ -98,7 +118,7 @@ static NSString *const kBodiesKept = @"networkBodies";
       MVPaneSend(weak, message);
     };
     [self makeMenu];
-    MVPaneFill(self, @[_captureRow, _sections, _filter, _note, _card, _listCard, _requestTools, _detailCard, _rules, _slack, _answer], 8);
+    MVPaneFill(self, @[_captureRow, _sections, _filter, _note, _card, _split, _rules, _slack, _answer], 8);
     [self layOut];
   }
   return self;
@@ -188,14 +208,15 @@ static NSString *const kBodiesKept = @"networkBodies";
   // one request whole, asked for as it was chosen: nothing else of the pane changes
   if ([m[@"detail"] isKindOfClass:NSDictionary.class]) {
     _wholeKey = [m[@"detail"][@"id"] description];
-    // its parts, named here in the Mac's language; its lines as the op wrote them where the parent sent no parts
-    _whole = [m[@"detail"][@"request"] isKindOfClass:NSDictionary.class] ? MVNetworkDetailText(m[@"detail"]) : [m[@"detail"][@"lines"] componentsJoinedByString:@"\n"];
+    _parts = [m[@"detail"][@"request"] isKindOfClass:NSDictionary.class] ? m[@"detail"] : nil;
     [self showDetail:_list.selected.key];
     return;
   }
   if ([m[@"curl"] isKindOfClass:NSString.class]) {
     MVCopyText(m[@"curl"], MVPlaceBoard());
-    return MVSayCopied(_curl);
+    NSButton *copied = MVFindControl(_detailView, @"networkCurl");
+    if (copied) MVSayCopied(copied);
+    return;
   }
   // a rule made of a request's answer stands in the rules' field, for a person to set
   if ([m[@"rule"] isKindOfClass:NSString.class]) {
@@ -290,7 +311,7 @@ static void stand(NSView *view, NSStackView *stack, NSUInteger at, BOOL wide) {
   _sections.hidden = !probe;
   _filter.hidden = _onRules || !(any || _filter.words.length || _filter.failedOnly);
   _rules.hidden = !_onRules;
-  _listCard.hidden = _onRules || !_list.rows.count;
+  _split.hidden = _onRules || !_list.rows.count;
   _card.hidden = _onRules || any;
   if (!_card.hidden) [self sayCard:via];
   // the list is the latest of more; and what a capture that ended can no longer do, with why
@@ -300,7 +321,14 @@ static void stand(NSView *view, NSStackView *stack, NSUInteger at, BOOL wide) {
   if (any && !_list.rows.count) [notes addObject:MVWord(@"No request here matches the filter.")];
   _note.stringValue = [notes componentsJoinedByString:@"\n"];
   _note.hidden = _onRules || !notes.count;
-  _slack.hidden = !_listCard.hidden || _onRules;
+  _slack.hidden = !_split.hidden || _onRules;
+  // a request opened full has the pane: the bands and the list give it their room, and take it back as it closes
+  if (_full && (!_list.selected || _split.hidden)) _full = NO;
+  if (_full)
+    for (NSView *band in @[_captureRow, _sections, _filter, _note]) band.hidden = YES;
+  _listCard.hidden = _full;
+  _detailView.full = _full;
+  [_split adjustSubviews];
   _more.hidden = !(probe || (left && _wasProbe));
   _more.enabled = probe;
   if (!probe) _more.toolTip = _wasProbe ? MVWord(@"The capture has ended. Its requests can still be searched; copying, mocking and saving need a capture that runs.") : MVWord(@"More");
@@ -332,8 +360,7 @@ static void stand(NSView *view, NSStackView *stack, NSUInteger at, BOOL wide) {
 }
 
 - (NSString *)detail {
-  // a copy: the text view hands out its own store, which changes under a reader
-  return _detailCard.hidden ? @"" : [_detail.string copy];
+  return _detailView.hidden || _split.hidden ? @"" : _detailView.text;
 }
 
 @end

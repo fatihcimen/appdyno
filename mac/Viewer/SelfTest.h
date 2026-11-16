@@ -67,6 +67,12 @@ void MVPokeRow(MVHub *hub, NSString *title);
 @class MVNetworkPane, MVWindow;
 /// The Network pane, shown: its states, a capture, the list and what narrows it; `sent` is what the pane has asked of its parent.
 void MVCheckNetwork(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent);
+/// The card of the request chosen, from its parts.
+void MVCheckNetworkCard(MVWindow *window, MVNetworkPane *pane, NSDictionary *parts);
+/// Whether a part shows, whole, inside another; and a picture of the window as it stands, into the folder
+/// APPDYNO_NETPANE_LOOK names, for a state to be judged by eye: with no folder named it does nothing.
+BOOL MVStands(NSView *part, NSView *pane);
+void MVLook(MVWindow *window, NSString *name);
 /// Its rules, by the probe.
 void MVCheckNetworkRules(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent);
 /// Tools, on the hub Connect a Phone's checks leave.

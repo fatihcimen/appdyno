@@ -35,7 +35,7 @@ static NSString *const kBodiesKept = @"networkBodies";
   [_more paint:real ? @"eye.circle.fill" : @"ellipsis.circle" color:real ? MVOrange() : MVInkColor()];
   _more.toolTip = MVWord(real ? @"More. Real values show in this window." : @"More");
   _askedKey = nil;
-  _whole = nil;
+  _parts = nil;
 }
 
 /// One at a time: a second press would race the first for what the pane says.
@@ -59,9 +59,16 @@ static NSString *const kBodiesKept = @"networkBodies";
   MVPaneSend(self, @{@"op": @"control", @"name": name});
 }
 
-/// What is done to the request chosen, by the name of what was pressed.
-- (void)pressed:(NSButton *)sender {
-  [self act:sender.identifier on:_list.selected.key];
+/// A button of the detail's head: the request it shows is the one chosen.
+- (void)detailAct:(NSString *)name {
+  if ([name isEqual:@"networkFull"]) return [self openFull:!_full];
+  [self act:name on:_list.selected.key];
+}
+
+- (void)openFull:(BOOL)full {
+  _full = full && _list.selected;
+  [self layOut];
+  [self showDetail:_list.selected.key];
 }
 
 - (void)sectionChosen:(NSInteger)at {
@@ -87,8 +94,9 @@ static NSString *const kBodiesKept = @"networkBodies";
   [self showDetail:_list.selected.key];
 }
 
-/// Esc in the list: the request chosen is left, and what showed of it closes.
+/// Esc in the list: a request opened full goes back under the list; otherwise the request chosen is left, and its card closes.
 - (void)leave {
+  if (_full) return [self openFull:NO];
   [_list selectKey:nil];
   [self showDetail:nil];
 }
