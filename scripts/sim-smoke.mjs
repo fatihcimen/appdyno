@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * What a release is held to, by suite: reads, taps, typing, an alert, a settle on a moving screen, plain keys, native views
+ * What a release is held to, by suite: reads, taps, typing, an alert, a settle on a moving screen, keys, native views
  * and flows replayed by the built command line. Each holds whichever path its input and its reads take. The long cases,
  * those of one iOS's own words and those that prove the helpers' path are left to scripts/ci.sh.
  */
@@ -31,8 +31,12 @@ const CASES = {
     'takes a screenshot',
     'reads the home screen when the app is gone',
   ],
-  // the keys with a modifier are left out: by the runner alone one lost its modifier on a busy Mac
-  keys: ['moves the cursor with the arrows'],
+  keys: [
+    'moves the cursor with the arrows',
+    'selects all and deletes by a shortcut, and presses count times',
+    'copies and pastes by shortcuts, and types a letter and a digit as keys',
+    'takes escape and a held arrow on a field, and leaves the app on the screen',
+  ],
   'views.simulator': [
     'reads the home screen as SwiftUI once launch_app puts the probe in',
     'reads UIKit inside SwiftUI, at the places and with the words the accessibility tree has',
