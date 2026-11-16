@@ -47,7 +47,7 @@ export class SimulatorNetwork implements NetworkSource {
     return Promise.resolve([
       {
         via: 'probe',
-        sees: 'the URLSession requests of the app, restarted with the probe: method, URL, status, time, size; headers and text bodies with bodies; with mock its rules answer, fail, delay or send elsewhere what they take, and throttle slows them. Not background sessions, WKWebView or Network.framework',
+        sees: "the URLSession requests of the app, restarted with the probe: method, URL, status, time, size; headers and text bodies with bodies; with mock its rules answer, fail, delay or send elsewhere what they take, and throttle slows them. Not background sessions, WKWebView or Network.framework. While it is in, the app's own check of a server's certificate (pinning) and its answers to a login or client-certificate challenge are not asked: a server the app would refuse is let through, and one that asks the app for a certificate fails",
       },
       { via: 'packets', refused: 'a simulator has no packet trace of its own' },
       { via: 'bytes', refused: "a simulator's traffic is the Mac's: no count per app" },

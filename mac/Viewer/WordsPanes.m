@@ -37,7 +37,7 @@ const MVWordRow MVWordTablePanes[] = {
     {"Probe", "Sonda"},
     {"Bytes", "Baytlar"},
     {"Packets", "Paketler"},
-    {"Restarts the app with a probe in it, then lists each request it makes through URLSession: method, address, status, time and size.", "Uygulamayı içinde bir sondayla yeniden başlatır, sonra URLSession ile yaptığı her isteği listeler: yöntem, adres, durum, süre ve boyut."},
+    {"Restarts the app with a probe in it, then lists each request it makes through URLSession: method, address, status, time and size. While it is in, the app's own certificate check (pinning) is not asked.", "Uygulamayı içinde bir sondayla yeniden başlatır, sonra URLSession ile yaptığı her isteği listeler: yöntem, adres, durum, süre ve boyut. Sonda içindeyken uygulamanın kendi sertifika denetimi (pinning) sorulmaz."},
     {"Lists what goes through the proxy this device already uses, where this tool can read the proxy's list. HTTPS shows only its host unless the proxy decrypts it.", "Bu cihazın zaten kullandığı proxy'den geçenleri, bu araç proxy'nin listesini okuyabiliyorsa listeler. Proxy şifresini çözmedikçe HTTPS yalnızca sunucusunu gösterir."},
     {"Counts what the app sends and receives, with no addresses.", "Uygulamanın gönderdiğini ve aldığını adres olmadan sayar."},
     {"Counts the app's packets by port when the capture stops, with no addresses.", "Yakalama durunca uygulamanın paketlerini bağlantı noktasına göre, adres olmadan sayar."},

@@ -1,4 +1,5 @@
 import {
+  appendFileSync,
   existsSync,
   mkdtempSync,
   readdirSync,
@@ -23,6 +24,11 @@ import { Simctl, simulatorProvider, sleep } from './workspace.js';
 const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
 const SECRET = 'gizli-kod-9911';
+/** An address whose certificate the system trusts, for the one case that is about trust: skipped with no network. */
+const TRUSTED =
+  process.env.APPDYNO_TRUSTED_URL ?? 'https://www.apple.com/library/test/success.html';
+const OUT = process.env.APPDYNO_NETWORK_OUT;
+const out = (line: string) => OUT && appendFileSync(OUT, `${line}\n`);
 
 // the folder this suite's server runs in: a rule's file and a HAR are read and written inside it
 const dir = realpathSync(mkdtempSync(join(tmpdir(), 'appdyno-network-')));
@@ -33,12 +39,24 @@ process.env.APPDYNO_STATE_DIR = stateDir;
 async function server(name: string) {
   const seen: string[] = [];
   const held: (() => void)[] = [];
+  /** The headers of each request to /headers, as the server got them. */
+  const asked: Record<string, unknown>[] = [];
   const web = createServer((req, res) => {
     seen.push(`${req.method ?? ''} ${req.url ?? ''}`);
     const chunks: Buffer[] = [];
     req.on('data', (c: Buffer) => chunks.push(c));
     req.on('end', () => {
       if (req.url?.startsWith('/big')) return res.end(Buffer.alloc(200_000, 7));
+      // what it was asked with, how much it was sent, and an answer that comes too late for a hurried session
+      if (req.url?.startsWith('/headers')) {
+        asked.push(req.headers);
+        return res.end('ok');
+      }
+      if (req.url?.startsWith('/size')) {
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ got: Buffer.concat(chunks).length }));
+      }
+      if (req.url?.startsWith('/slow')) return void setTimeout(() => res.end('slow'), 5_000);
       // answered only when the test lets it go
       if (req.url?.startsWith('/hang')) return void held.push(() => res.end('late'));
       res.setHeader('Content-Type', 'application/json');
@@ -52,7 +70,7 @@ async function server(name: string) {
   });
   await new Promise<void>((r) => web.listen(0, '127.0.0.1', r));
   const at = `127.0.0.1:${(web.address() as AddressInfo).port}`;
-  return { at, seen, held, close: () => web.close() };
+  return { at, seen, held, asked, close: () => web.close() };
 }
 
 describe.skipIf(!udid)('the network probe on a simulator', () => {
@@ -77,16 +95,25 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
   };
 
   /** A request from the fixture's Network screen: what the screen then says of it. */
-  const send = async (url: string, button: 'fetch' | 'post' = 'fetch') => {
+  const send = async (
+    url: string,
+    button: 'fetch' | 'post' | 'upload' | 'config' | 'pin' = 'fetch',
+  ) => {
     await ok('open_link', { url: 'appdyno-fixture://open/network' });
     await ok('type_text', { selector: { id: 'url_input' }, text: url, replace: true });
     await ok('tap', { selector: { id: button } });
     for (let i = 0; i < 40; i++) {
       // a label's own quotes come escaped
       const text = (await ok('screen')).text.replaceAll('\\"', '"');
+      // a long failure is cut on the screen before its time
       const said = /(fetched (\d+) (\d+) in (\d+) ms|failed: [^\n"]*)/.exec(text);
       if (said)
-        return { text, said: String(said[1]), status: Number(said[2]), ms: Number(said[4]) };
+        return {
+          text,
+          said: String(said[1]),
+          status: Number(said[2]),
+          ms: Number(said[4] ?? / in (\d+) ms/.exec(String(said[1]))?.[1]),
+        };
       await sleep(500);
     }
     throw new Error(`no answer to ${url}`);
@@ -112,6 +139,33 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       b.close();
     };
   }, 240_000);
+
+  /** What the fixture's other ways of asking come to: with the probe in the app, or without. */
+  const ways = async (label: string) => {
+    const headers = await send(`http://${a.at}/headers`, 'config');
+    const slow = await send(`http://${a.at}/slow`, 'config');
+    const upload = await send(`http://${a.at}/size`, 'upload');
+    const pin = await send(TRUSTED, 'pin');
+    const got = a.asked.at(-1) ?? {};
+    out(`WAYS ${label}: headers ${headers.said} ${JSON.stringify(got)}`);
+    out(`WAYS ${label}: slow ${slow.said}`);
+    out(`WAYS ${label}: upload ${upload.said} ${/\{"got":\d+\}/.exec(upload.text)?.[0] ?? ''}`);
+    out(`WAYS ${label}: pin ${pin.said}`);
+    return { headers: got, slow, upload, pin };
+  };
+
+  it('asks as an app does without the probe: its session adds headers and gives up, its delegate refuses a server', async () => {
+    const { headers, slow, upload, pin } = await ways('without the probe');
+    expect(headers).toMatchObject({
+      'x-fixture-config': 'on',
+      authorization: 'Bearer config-bearer-0123456789',
+    });
+    expect(slow.said).toMatch(/^failed: The request timed out/);
+    expect(slow.ms).toBeLessThan(4_000);
+    expect(upload.text).toContain('{"got":100000}');
+    // a server the system trusts, refused by the app's own check
+    expect(pin.said).toMatch(/^failed: cancelled/);
+  }, 180_000);
 
   it('keeps headers and bodies when asked, with what names a credential hidden', async () => {
     await ok('network', { action: 'start', via: 'probe', bodies: true });
@@ -148,6 +202,40 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(bytes.text).toContain('response body: 200000 B, not text or not kept');
   }, 180_000);
 
+  it("says what of an app's own session holds under the probe, and what does not", async () => {
+    const { headers, slow, upload, pin } = await ways('with the probe');
+    // the headers its configuration adds still reach the server, and its own time to give up still holds
+    expect(headers).toMatchObject({
+      'x-fixture-config': 'on',
+      authorization: 'Bearer config-bearer-0123456789',
+    });
+    expect(slow.said).toMatch(/^failed: The request timed out/);
+    expect(slow.ms).toBeLessThan(4_000);
+    // an upload longer than what is kept goes on whole, and is not held to be kept
+    expect(upload.text).toContain('{"got":100000}');
+    const whole = async (part: string) => {
+      const read = await ok('network', { action: 'read', contains: part });
+      const one = await ok('network', {
+        action: 'read',
+        id: Number(/^(\d+) (GET|POST)/m.exec(read.text)?.[1]),
+      });
+      out(one.text);
+      return one.text;
+    };
+    expect(await whole('/size')).toContain('request body: 100000 B, not text or not kept');
+    // and the probe has those added headers with the request: it lists them, a credential hidden
+    const asked = await whole('/headers');
+    expect(asked).toContain('  X-Fixture-Config: on');
+    expect(asked).toContain('  Authorization: •••');
+    expect(asked).not.toContain('config-bearer');
+    // the app's delegate refused this server before; under the probe it is not asked, and the request goes through
+    expect(pin.said).toMatch(/^fetched 200/);
+    const paths = await ok('network', { action: 'paths' });
+    expect(paths.text).toMatch(
+      /^probe: .*the app's own check of a server's certificate \(pinning\) and its answers to a login or client-certificate challenge are not asked/m,
+    );
+  }, 180_000);
+
   it('shows a request that has not ended, and what the session measured of one that has', async () => {
     await ok('open_link', { url: 'appdyno-fixture://open/network' });
     await ok('type_text', {
@@ -172,7 +260,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
 
   it('writes the capture as a HAR that reads back, as clean as an answer', async () => {
     const saved = await ok('network', { action: 'read', save: 'capture.har' });
-    expect(saved.text).toMatch(/saved 4 requests as HAR 1\.2 in .*capture\.har/);
+    expect(saved.text).toMatch(/saved \d+ requests as HAR 1\.2 in .*capture\.har/);
     const text = readFileSync(join(dir, 'appdyno-network/capture.har'), 'utf8');
     const har = JSON.parse(text) as {
       log: {
@@ -203,7 +291,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     });
     console.log(back.text);
     expect(back.text).toMatch(/\n127\.0\.0\.1:\d+:\n {2}POST \/echo\?token 200/);
-    expect(back.text).toContain('4 of 4 from');
+    expect(back.text).toMatch(/^(\d+) of \1 from/);
   });
 
   it('leaves no file once the capture stops, and the probe left in the app does nothing more', async () => {
