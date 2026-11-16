@@ -18,7 +18,8 @@ const globPattern = (glob: string) =>
  * The rule a `mock` step makes, as the probe reads it: the first word is `host[:port][/path]` with `*` for any run, or
  * `*` alone for every request, and `regex` a pattern for the whole path in its place. It answers by itself with
  * `status`, `type`, `header` and `body` (`@file`: that file's bytes, `bodyFile` here, for the caller to place), fails
- * with `fail`, sends the request elsewhere with `to`, and waits `delayMs` before any of them or before the real one.
+ * with `fail`, sends the request elsewhere with `to` (a bare `localhost`: `http://127.0.0.1`), and waits `delayMs`
+ * before any of them or before the real one.
  */
 export function mockRule(st: FlowStep, line = st.line): NetworkRule {
   const a = st.args;
@@ -72,6 +73,9 @@ export function mockRule(st: FlowStep, line = st.line): NetworkRule {
   const delayMs = whole('delayMs', 0, MAX_DELAY_MS);
   const times = whole('times', 1, 1_000_000);
   const port = to?.[3] === undefined ? undefined : Number(to[3]);
+  // `localhost` with no scheme is a server on this Mac, which seldom speaks TLS: plain HTTP, by the address, which
+  // an app's transport security lets through where a name it does not know is refused
+  const local = to && !to[1] && /^localhost$/i.test(String(to[2]));
   const query = a.query === undefined ? undefined : [...new URLSearchParams(String(a.query))];
   return {
     // the same on and off, so that what it took stays counted
@@ -92,7 +96,8 @@ export function mockRule(st: FlowStep, line = st.line): NetworkRule {
     ...(to && {
       to: {
         ...(to[1] && { scheme: to[1] }),
-        host: String(to[2]),
+        ...(local && { scheme: 'http' }),
+        host: local ? '127.0.0.1' : String(to[2]),
         ...(port !== undefined && { port }),
       },
     }),

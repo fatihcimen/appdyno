@@ -166,14 +166,14 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     const id = Number(/^(\d+) GET .*\/hang 200 (\d+) ms 4 B$/m.exec(after.text)?.[1]);
     const one = await ok('network', { action: 'read', id });
     expect(one.text.split('\n')[1]).toMatch(
-      /^http\/1\.1, connection (reused|new), (connect \d+ ms, )?wait \d+ ms, receive \d+ ms, 4 B on the wire, 127\.0\.0\.1 \(the probe's own connection, not the app's\)$/,
+      /^http\/1\.1, connection (reused|new), (dns \d+ ms, )?(connect \d+ ms, )?wait \d+ ms, receive \d+ ms, 4 B on the wire, 127\.0\.0\.1 \(the probe's own connection, not the app's\)$/,
     );
   }, 120_000);
 
   it('writes the capture as a HAR that reads back, as clean as an answer', async () => {
     const saved = await ok('network', { action: 'read', save: 'capture.har' });
     expect(saved.text).toMatch(/saved 4 requests as HAR 1\.2 in .*capture\.har/);
-    const text = readFileSync(join(dir, 'capture.har'), 'utf8');
+    const text = readFileSync(join(dir, 'appdyno-network/capture.har'), 'utf8');
     const har = JSON.parse(text) as {
       log: {
         version: string;
@@ -197,7 +197,10 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       expect(text).not.toContain(hidden);
     const again = await call('network', { action: 'read', save: 'capture.har' });
     expect(again.text).toMatch(/exists: overwrite true replaces it/);
-    const back = await ok('network', { action: 'read', har: join(dir, 'capture.har') });
+    const back = await ok('network', {
+      action: 'read',
+      har: join(dir, 'appdyno-network/capture.har'),
+    });
     console.log(back.text);
     expect(back.text).toMatch(/POST http:\/\/127\.0\.0\.1:\d+\/echo\?token=••• 200/);
     expect(back.text).toContain('4 of 4 from');
@@ -213,9 +216,11 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
   });
 
   it('answers in place of the server by a rule, and says so', async () => {
+    // a path is taken as it is written, a host in any case
+    await rules(`${a.at}/JSON status=503`);
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    await rules(`${a.at.toUpperCase()}/json status=503 body="{\\"error\\":\\"down\\"}"`);
     const before = a.seen.length;
-    const set = await rules(`${a.at}/json status=503 body="{\\"error\\":\\"down\\"}"`);
-    console.log(set.text);
     const got = await send(`http://${a.at}/json`);
     expect(got.status).toBe(503);
     expect(got.text).toContain('{"error":"down"}');
@@ -246,12 +251,15 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(outside.text).toMatch(/outside the folder this server runs in/);
     const none = await call('network', { action: 'mock', rules: [`${a.at}/x`] });
     expect(none.text).toMatch(/say what it does/);
+    const far = await call('network', { action: 'mock', rules: [`${a.at} to=evil.example`] });
+    expect(far.text).toMatch(/a rule sends requests only to this Mac or its own network/);
   }, 180_000);
 
   it('fails a request, sends one to another host, delays one, and leaves one that is off alone', async () => {
     await rules(
       `${a.at}/offline fail=offline`,
-      `${a.at}/moved to=${b.at}`,
+      // a bare localhost is this Mac in plain HTTP, whatever the app asked by
+      `${a.at}/moved to=localhost:${String(b.at.split(':')[1])}`,
       `${a.at}/late delayMs=1500`,
       `${a.at}/json status=500 off`,
     );

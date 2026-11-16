@@ -10,6 +10,7 @@ import type {
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { DEFAULT_POLICY, ServerContext } from '../../src/index.js';
 import { captures } from '../../src/network-capture.js';
 import { throttleOf } from '../../src/network-rules.js';
 import { callerOf, flowsFor, flowHelpers } from './harness.js';
@@ -76,6 +77,11 @@ describe('the network probe through its tool and a flow', () => {
   let dir: string;
   let device: FakeDevice;
   let probe: FakeProbe;
+  const provider = () => ({
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device' as const, ready: true }]),
+    handles: () => true,
+    open: () => device,
+  });
   const { context, refusal, recorded } = flowHelpers(
     () => device,
     () => dir,
@@ -163,8 +169,10 @@ describe('the network probe through its tool and a flow', () => {
     ];
     probe.details = { 0: DETAIL };
     const saved = await call('network', { action: 'stop', save: 'out/capture' });
-    const file = join(dir, 'out/capture.har');
-    expect(saved.text).toContain(`saved 2 requests as HAR 1.2 in ${file}`);
+    const file = join(dir, 'appdyno-network/out/capture.har');
+    expect(saved.text).toContain(
+      `saved 2 requests as HAR 1.2 in ${file}; it holds 1 response body: keep it out of git`,
+    );
     const text = readFileSync(file, 'utf8');
     for (const hidden of ['abc123', 'abcdefgh12345678', 'key-0042', 'hunter2', 'sid=xyz', 's3cr3t'])
       expect(text).not.toContain(hidden);
@@ -240,6 +248,41 @@ describe('the network probe through its tool and a flow', () => {
     expect(probe.controls).toHaveLength(told);
   });
 
+  it('sends requests only to this Mac or its own network, unless the person listed the host', async () => {
+    const call = callerOf(context());
+    const to = (host: string) =>
+      call('network', { action: 'mock', rules: [`api.test to=${host}`] });
+    for (const near of [
+      'localhost:8080',
+      '127.0.0.1:9',
+      '10.0.0.5',
+      '192.168.1.20:3000',
+      '172.20.1.1',
+      'mac.local',
+    ])
+      await to(near);
+    expect(probe.told?.rules[0]?.to).toEqual({ host: 'mac.local' });
+    for (const far of ['evil.example', '172.32.0.1', '8.8.8.8', 'http://localhost.evil.example']) {
+      const e = await refusal(to(far));
+      expect(e.code).toBe('POLICY_DENIED');
+      expect(e.message).toMatch(/a rule sends requests only to this Mac or its own network/);
+      expect(e.hint).toMatch(/--allow-urls/);
+    }
+    // nothing of a refused list was told
+    expect(probe.told?.rules[0]?.to).toEqual({ host: 'mac.local' });
+    const listed = callerOf(
+      new ServerContext(
+        { ...DEFAULT_POLICY, urls: /^https:\/\/staging\.example\.com/ },
+        [provider()],
+        {
+          app: 'dev.app',
+        },
+      ),
+    );
+    await listed('network', { action: 'mock', rules: ['api.test to=staging.example.com'] });
+    expect(probe.told?.rules[0]?.to).toEqual({ host: 'staging.example.com' });
+  });
+
   it('slows by a name, a number or its parts, and stop ends it', async () => {
     const call = callerOf(context());
     const slow = await call('network', { action: 'throttle', throttle: 'slow' });
@@ -254,6 +297,8 @@ describe('the network probe through its tool and a flow', () => {
     expect(probe.told?.throttle).toBeUndefined();
     expect(throttleOf('30000')).toEqual({ delayMs: [0, 0], down: 30_000, up: 0, loss: 0 });
     expect(throttleOf('lte')?.down).toBe(21_625_000);
+    expect(throttleOf('3g')).toEqual(throttleOf('umts'));
+    expect(throttleOf('offline')).toEqual({ delayMs: [0, 0], down: 0, up: 0, loss: 100 });
     for (const wrong of ['warp', 'loss=101', 'down=', 'delayMs=-1'])
       expect(() => throttleOf(wrong)).toThrow(/throttle is full, slow, gsm/);
     await call('network', { action: 'stop' });

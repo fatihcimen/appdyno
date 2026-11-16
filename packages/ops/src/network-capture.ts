@@ -12,7 +12,8 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import { harEntries } from './network-har.js';
-import { ruleLine, rulesOf, throttleOf } from './network-rules.js';
+import { checkSentTo, ruleLine, rulesOf, throttleOf } from './network-rules.js';
+import type { Policy } from './policy.js';
 import { Handle } from './schemas.js';
 import type { Session } from './session.js';
 import { restoreCondition } from './settings.js';
@@ -158,9 +159,16 @@ function tellProbe(s: Session, c: Capture) {
 }
 
 /** The capture's rules replaced by `lines`, or with `add` those after the ones there; `started`: the app restarted. */
-export async function setRules(s: Session, app: string | undefined, lines: string[], add = false) {
-  // refused before anything starts, where a line is no rule
+export async function setRules(
+  s: Session,
+  policy: Policy,
+  app: string | undefined,
+  lines: string[],
+  add = false,
+) {
+  // refused before anything starts, where a line is no rule or sends requests where it may not
   rulesOf(lines);
+  checkSentTo(policy, lines);
   const given = lines.map(ruleLine);
   const { capture, started } = await probeCapture(s, app, 'a rule');
   const kept = add ? (capture.rules ?? []).filter((l) => !given.includes(l)) : [];

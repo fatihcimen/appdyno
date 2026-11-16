@@ -92,7 +92,9 @@ export function networkOps(ctx: ServerContext) {
             .string()
             .max(100)
             .optional()
-            .describe('full, slow, edge, lte, bytes/s down, or "delayMs= down= up= loss="'),
+            .describe(
+              'full, slow, edge, 3g, lte, offline, bytes/s down, or "delayMs= down= up= loss="',
+            ),
         })
         .strict(),
       output: NetworkOut,
@@ -118,7 +120,7 @@ export function networkOps(ctx: ServerContext) {
           if (target) checkApp(ctx.policy, target);
           const { capture, started } =
             action === 'mock'
-              ? await setRules(s, target, rules ?? [], add)
+              ? await setRules(s, ctx.policy, target, rules ?? [], add)
               : await setThrottle(s, target, throttle ?? 'full');
           return controlAnswer(s, capture, [
             ...(started

@@ -2,6 +2,7 @@ import { realpathSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 import type { NetworkEntry, NetworkRule, NetworkThrottle } from '@appdyno/core';
 import { FlowError, mockRule, parseFlow, stepLine, type FlowStep } from '@appdyno/flows';
+import { byPerson, type Policy } from './policy.js';
 import { ToolError } from './tool.js';
 
 export const MAX_RULES = 50;
@@ -57,6 +58,27 @@ function bodyFile(name: string) {
   return real;
 }
 
+/** A host on this Mac or its own network: where a rule may send a request with no one's leave. */
+const NEAR =
+  /^(localhost|127(\.\d{1,3}){3}|10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}|[\w-]+\.local)$/i;
+
+/**
+ * Refuses a rule that sends requests to a host that is neither near nor on the person's list of links: a request
+ * goes there with its cookies and tokens, and the app reads the answer as the real server's.
+ */
+export function checkSentTo(policy: Policy, lines: string[]) {
+  for (const line of lines) {
+    const to = mockRule(ruleStep(line)).to;
+    if (!to || NEAR.test(to.host)) continue;
+    if (!policy.urls?.test(`${to.scheme ?? 'https'}://${to.host}`))
+      throw new ToolError(
+        `a rule sends requests only to this Mac or its own network, and ${to.host} is neither: ${line}`,
+        'POLICY_DENIED',
+        byPerson(`by --allow-urls with ${to.host} in it`),
+      );
+  }
+}
+
 /** The rules of those lines as the probe reads them, each file it answers with placed. */
 export function rulesOf(lines: string[]): NetworkRule[] {
   if (lines.length > MAX_RULES)
@@ -88,12 +110,13 @@ const SPEEDS: Record<string, [up: number, down: number, min: number, max: number
   gprs: [40 * KBIT, 80 * KBIT, 150, 550],
   edge: [118.4 * KBIT, 236.8 * KBIT, 80, 400],
   umts: [128 * KBIT, 1920 * KBIT, 35, 200],
+  '3g': [128 * KBIT, 1920 * KBIT, 35, 200],
   hsdpa: [348 * KBIT, 14_400 * KBIT, 0, 0],
   lte: [58_000 * KBIT, 173_000 * KBIT, 0, 0],
 };
 const THROTTLE_KEYS = ['delayMs', 'down', 'up', 'loss'] as const;
 const MAX_DELAY_MS = 600_000;
-export const THROTTLE_SAYS = `full, ${Object.keys(SPEEDS).join(', ')}, a number (bytes a second down), or delayMs= down= up= loss=`;
+export const THROTTLE_SAYS = `full, ${Object.keys(SPEEDS).join(', ')}, offline, a number (bytes a second down), or delayMs= down= up= loss=`;
 
 /**
  * A slow network from its word: a name, bytes a second down alone as a phone's cap is, or `delayMs=`, `down=`, `up=`
@@ -102,6 +125,8 @@ export const THROTTLE_SAYS = `full, ${Object.keys(SPEEDS).join(', ')}, a number 
 export function throttleOf(value: string): NetworkThrottle | undefined {
   const word = value.trim().toLowerCase();
   if (word === 'full') return undefined;
+  // every request lost, as with no network at all
+  if (word === 'offline') return { delayMs: [0, 0], down: 0, up: 0, loss: 100 };
   const speed = SPEEDS[word];
   if (speed) return { delayMs: [speed[2], speed[3]], down: speed[1], up: speed[0], loss: 0 };
   if (/^\d+$/.test(word) && Number(word) > 0)

@@ -60,6 +60,18 @@ describe('a mock step', () => {
       delayMs: 300,
     });
     expect(rule('a.test delayMs=300').status).toBeUndefined();
+    // a bare localhost is this Mac by its address, in plain HTTP; one with a scheme stays as written
+    expect(rule('a.test to=localhost:8080').to).toEqual({
+      scheme: 'http',
+      host: '127.0.0.1',
+      port: 8080,
+    });
+    expect(rule('a.test to=https://localhost:8443').to).toEqual({
+      scheme: 'https',
+      host: 'localhost',
+      port: 8443,
+    });
+    expect(rule('a.test to=staging.example.com').to).toEqual({ host: 'staging.example.com' });
   });
 
   it('keeps its id on and off, and has another for another rule', () => {

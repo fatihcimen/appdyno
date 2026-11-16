@@ -1,4 +1,5 @@
 import type { NetworkAnswer, NetworkDetail, NetworkEntry, NetworkTimings } from '@appdyno/core';
+import { isAbsolute, join } from 'node:path';
 import type { ServerContext } from './context.js';
 import { boundLines } from './diagnose.js';
 import { writeInside } from './flow/shared.js';
@@ -8,6 +9,9 @@ import { ruleHits } from './network-rules.js';
 import { redact, redactLog } from './policy.js';
 import type { Session } from './session.js';
 import { reply } from './tool.js';
+
+/** Where a HAR named with no folder is written, under the folder this server runs in: one line keeps it out of git. */
+export const HAR_DIR = 'appdyno-network';
 
 /** A body in an answer to here: the rest is in the export. */
 const BODY_CHARS = 4_000;
@@ -160,12 +164,16 @@ export function networkAnswers(ctx: ServerContext) {
   ) => {
     if (!asked.save) return undefined;
     const hits = entries.map(shownOf).filter((e) => e.url && !e.inFlight && fits(e, asked));
+    const name = /\.har$/i.test(asked.save) ? asked.save : `${asked.save}.har`;
+    const har = await harOf(hits, detailOf(s, c), clean);
+    const bodies = har.log.entries.filter((e) => e.response.content.text !== undefined).length;
     const file = writeInside(
-      /\.har$/i.test(asked.save) ? asked.save : `${asked.save}.har`,
-      JSON.stringify(await harOf(hits, detailOf(s, c), clean)),
+      isAbsolute(name) ? name : join(HAR_DIR, name),
+      JSON.stringify(har),
       asked.overwrite,
     );
-    return `saved ${hits.length} requests as HAR 1.2 in ${file}`;
+    // cleaned of what names a credential, and still what a server said of a person
+    return `saved ${hits.length} requests as HAR 1.2 in ${file}${bodies > 0 ? `; it holds ${bodies} response ${bodies === 1 ? 'body' : 'bodies'}: keep it out of git` : ''}`;
   };
 
   const answer = async (
