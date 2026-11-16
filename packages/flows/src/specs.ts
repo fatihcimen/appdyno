@@ -34,12 +34,17 @@ export const SPECS = {
   },
   scroll_to: { target: 'needed', text: ['direction'], number: ['maxSwipes'] },
   wait_for: { target: 'needed', bool: ['gone'], number: ['timeoutMs'] },
+  /** `check=count`: how many elements the selector names, `equals=` a number or within `min=` and `max=`. */
   assert: {
     target: 'needed',
     text: ['check', 'equals'],
     bool: ['expect'],
-    number: ['timeoutMs'],
+    number: ['timeoutMs', 'min', 'max'],
   },
+  /** With a text, puts it on the device's clipboard; with `equals=` or `contains=`, checks what the clipboard holds. */
+  clipboard: { words: ['text?'], text: ['equals', 'contains'], number: ['timeoutMs'] },
+  /** The screen's accessibility audit, failed by more issues than `max=`: 0 unless given. `types=` names the kinds, by commas. */
+  audit: { text: ['types'], number: ['max'] },
   open_link: { words: ['url?'], text: ['settings'] },
   set_location: { words: ['lat', 'lon'] },
   alert: { words: ['answer'] },

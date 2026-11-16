@@ -16,6 +16,7 @@
  *   tap id=add_button index=2 !ambiguous
  *   launch language=tr arg=-UITests env=API_URL=https://staging.example
  *   run shared/logout.flow
+ *   only ios tap text="Allow Once"
  *
  * `setup shared/sign-in.flow` and `teardown shared/sign-out.flow` among the first lines name a file whose steps run
  * before and after this one's: see `composeFlow`.
@@ -38,6 +39,14 @@ export type FlowSelector = { id?: string; role?: string; text?: string; index?: 
  */
 export type Flag = 'ambiguous' | 'coordinates' | 'running';
 
+/** The platforms a step may be kept to: `only ios` before it, or around several lines closed by `end`. */
+export const PLATFORMS = ['ios', 'android'] as const;
+export type Only = (typeof PLATFORMS)[number];
+
+/** Whether a step is one of a run on `platform`: the device decides, never what its screen shows. */
+export const runsOn = (st: FlowStep, platform: string | undefined) =>
+  !st.only || !platform || st.only === platform;
+
 type Scalar = string | number | boolean;
 
 export type FlowStep = {
@@ -46,6 +55,8 @@ export type FlowStep = {
   line: number;
   /** The file it was written in, when another flow runs it: see `composeFlow`. */
   file?: string;
+  /** The one platform it runs on: on the other it is skipped, and said to be. */
+  only?: Only;
   selector?: FlowSelector;
   args: Record<string, Scalar | string[]>;
   flags: Flag[];
@@ -182,6 +193,8 @@ export function parseFlow(text: string): Flow {
   const flow: Flow = { tags: [], params: [], secrets: [], steps: [] };
   const lines = text.split(/\r?\n/);
   let appLine = 0;
+  /** An `only` with no step after it, open until `end`: every step between is that platform's. */
+  let block: { only: Only; line: number } | undefined;
   for (const [i, raw] of lines.entries()) {
     const line = i + 1;
     const toks = tokens(raw, line);
@@ -191,7 +204,7 @@ export function parseFlow(text: string): Flow {
       throw new FlowError(`a line starts with a step: ${raw.trim()}`, line);
     const word = head.value;
     if (word === 'tag') {
-      if (flow.steps.length > 0) throw new FlowError('tag comes before the steps', line);
+      if (flow.steps.length > 0 || block) throw new FlowError('tag comes before the steps', line);
       const tags = toks.slice(1);
       if (tags.length === 0 || tags.some((t) => t.key !== undefined || !WORD.test(t.value)))
         throw new FlowError('tag takes words: tag smoke login', line);
@@ -199,7 +212,8 @@ export function parseFlow(text: string): Flow {
       continue;
     }
     if (word === 'app' || word === 'param' || word === 'secret' || isPhase(word)) {
-      if (flow.steps.length > 0) throw new FlowError(`${word} comes before the steps`, line);
+      if (flow.steps.length > 0 || block)
+        throw new FlowError(`${word} comes before the steps`, line);
       const value = toks[1];
       if (!value || toks.length !== 2 || value.key !== undefined)
         throw new FlowError(`${word} takes one word`, line);
@@ -224,8 +238,27 @@ export function parseFlow(text: string): Flow {
       (word === 'param' ? flow.params : flow.secrets).push(value.value);
       continue;
     }
-    flow.steps.push(parseStep(word, toks.slice(1), line));
+    if (word === 'end') {
+      if (!block || toks.length > 1) throw new FlowError('end closes an only block, alone', line);
+      block = undefined;
+      continue;
+    }
+    if (word !== 'only') {
+      const step = parseStep(word, toks.slice(1), line);
+      flow.steps.push(block ? { ...step, only: block.only } : step);
+      continue;
+    }
+    const [, on, action, ...rest] = toks;
+    const only = PLATFORMS.find((p) => p === on?.value && on.key === undefined && !on.quoted);
+    if (!only) throw new FlowError('only takes ios or android: only ios tap id=allow', line);
+    if (block)
+      throw new FlowError(`this is inside the only ${block.only} of line ${block.line}`, line);
+    if (!action) block = { only, line };
+    else if (action.quoted || action.key !== undefined)
+      throw new FlowError(`only ${only} is followed by a step: ${raw.trim()}`, line);
+    else flow.steps.push({ ...parseStep(action.value, rest, line), only });
   }
+  if (block) throw new FlowError(`only ${block.only} is not closed: end closes it`, block.line);
   const declared = new Set([...flow.params, ...flow.secrets]);
   const undeclared = (name: string, line: number) => {
     if (!declared.has(name))
@@ -267,7 +300,10 @@ export function stepLine(st: FlowStep): string {
       return typeof v === 'number' ? `${k}=${v}` : `${k}=${show(v)}`;
     });
   const selector = selectorWords(st.selector);
-  return [st.action, ...words, ...selector, ...rest, ...st.flags.map((f) => `!${f}`)].join(' ');
+  const only = st.only ? ['only', st.only] : [];
+  return [...only, st.action, ...words, ...selector, ...rest, ...st.flags.map((f) => `!${f}`)].join(
+    ' ',
+  );
 }
 
 /** A flow as its file; `parseFlow` reads it back. */
@@ -328,27 +364,31 @@ export const isName = (name: string) => NAME.test(name);
 /** The app's id with its placeholders filled. */
 export const fillApp = (app: string, values: Record<string, string>) => fill(app, values);
 
-/** A flow's steps in the order a run takes them: its setup, its own from `from`, its teardown. */
-export const stepsInOrder = (flow: Flow, from = 1) => [
-  ...(flow.setup ?? []),
-  ...flow.steps.slice(from - 1),
-  ...(flow.teardown ?? []),
-];
+/**
+ * A flow's steps in the order a run takes them: its setup, its own from `from`, its teardown. With a platform, the
+ * ones a run there takes.
+ */
+export const stepsInOrder = (flow: Flow, from = 1, platform?: string) =>
+  [...(flow.setup ?? []), ...flow.steps.slice(from - 1), ...(flow.teardown ?? [])].filter((st) =>
+    runsOn(st, platform),
+  );
 
 /**
  * Values for the names of a flow's steps from `--param`, then `env`: an env file's, and a command line's own
  * environment. A missing one is refused before anything runs, by name: a value in the message would be stored by
- * whatever keeps the log. A name a `prepare` step gives needs none in the steps after it.
+ * whatever keeps the log. A name a `prepare` step gives needs none in the steps after it, nor one only a step of the
+ * other platform uses.
  */
 export function valuesFor(
   flow: Flow,
   params: Record<string, string>,
   env: Record<string, string | undefined>,
   from = 1,
+  platform?: string,
 ): Record<string, string> {
   const needed = new Set(flow.app ? namesIn(flow.app, 0) : []);
   const given = new Set<string>();
-  for (const st of stepsInOrder(flow, from)) {
+  for (const st of stepsInOrder(flow, from, platform)) {
     for (const n of namesOf(st)) if (!given.has(n)) needed.add(n);
     for (const n of givesOf(st)) given.add(n);
   }

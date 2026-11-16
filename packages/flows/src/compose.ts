@@ -55,7 +55,17 @@ export function composeFlow(
         );
       const inner = expand(target, [...chain, target]);
       take(whole, inner, target, where);
-      whole.steps.push(...inner.steps);
+      const { only } = st;
+      // a file run for one platform is that platform's, every step of it
+      const kept = (x: FlowStep): FlowStep => {
+        if (x.only && x.only !== only)
+          throw new FlowError(
+            `${where}: ${target} is run for ${String(only)} alone, and its line ${x.line} is for ${x.only}`,
+            0,
+          );
+        return { ...x, only };
+      };
+      whole.steps.push(...(only ? inner.steps.map(kept) : inner.steps));
     }
     return whole;
   };

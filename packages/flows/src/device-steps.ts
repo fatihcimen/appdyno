@@ -67,9 +67,48 @@ function checkMock(st: FlowStep, line: number) {
     throw new FlowError(`mock: unmatched is pass or fail: ${String(unmatched)}`, line);
 }
 
+/** The longest a check waits, as the tools' own. */
+const MAX_WAIT_MS = 15_000;
+
+const whole = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 0;
+
+/** What the checks a run makes itself need: a count, what the clipboard holds, an audit's threshold. */
+function checkOwnStep(st: FlowStep, line: number) {
+  const a = st.args;
+  const no = (why: string) => new FlowError(`${st.action}: ${why}`, line);
+  const ranged = a.min !== undefined || a.max !== undefined;
+  if (st.action === 'assert' && a.check !== 'count') {
+    if (ranged) throw no('min and max are for check=count');
+    return;
+  }
+  if (a.timeoutMs !== undefined && !(whole(a.timeoutMs) && Number(a.timeoutMs) <= MAX_WAIT_MS))
+    throw no(`timeoutMs is 0 to ${MAX_WAIT_MS}`);
+  if (st.action === 'assert') {
+    if (st.selector?.index !== undefined) throw no('check=count counts every match: no index');
+    if (a.expect !== undefined) throw no('check=count takes no expect: give the count');
+    if ((a.equals !== undefined) === ranged)
+      throw no('check=count takes equals=3, or min= and max=, one or the other');
+    // a name is filled when the flow runs
+    if (a.equals !== undefined && !/^\d+$|\$\{/.test(String(a.equals)))
+      throw no(`equals is a count: ${String(a.equals)}`);
+    if ([a.min, a.max].some((v) => v !== undefined && !whole(v)))
+      throw no('min and max are whole numbers');
+  }
+  if (st.action === 'clipboard') {
+    const given = [a.text, a.equals, a.contains].filter((v) => v !== undefined).length;
+    if (given !== 1)
+      throw no('a text to put there, or equals= or contains= to check what it holds, one of them');
+    if (a.text !== undefined && a.timeoutMs !== undefined) throw no('timeoutMs is for a check');
+  }
+  if (st.action === 'audit' && a.max !== undefined && !whole(a.max))
+    throw no('max is a whole number of issues');
+}
+
 /** What a `screenshot`, `visual` or `setting` line needs beyond its words, refused as its line's error. */
 export function checkDeviceStep(st: FlowStep, line: number) {
   const a = st.args;
+  if (st.action === 'assert' || st.action === 'clipboard' || st.action === 'audit')
+    checkOwnStep(st, line);
   if (st.action === 'mock') checkMock(st, line);
   if (
     st.action === 'network' &&

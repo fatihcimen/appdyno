@@ -3,6 +3,7 @@ import {
   fillStep,
   givesOf,
   namesOf,
+  runsOn,
   stepLine,
   stepsInOrder,
   type Flow,
@@ -36,6 +37,8 @@ export type StepResult = Omit<StepOutcome, 'values'> & {
   step: string;
   /** All of the step, its lookup included. */
   ms: number;
+  /** Why it did not run, where it is another platform's: nothing of it reached the device. */
+  skipped?: string;
 };
 
 export type StepEvent =
@@ -86,6 +89,8 @@ export type RunOptions = {
   checkpoint?: (n: number, total: number, step: FlowStep) => void;
   /** At the failure that ends the steps, awaited before the teardown changes the screen it left. */
   onFailure?: (failure: RunFailure) => void | Promise<void>;
+  /** The device's platform: a step kept to the other one is skipped, and its result says so. */
+  platform?: string;
 };
 
 /** How a device carries out a step: `prepare` waits for its target, `act` does it. */
@@ -102,12 +107,12 @@ export type Executor = {
 export async function runSteps(
   flow: Flow,
   exec: Executor,
-  { from = 1, values: given = {}, onStep, checkpoint, onFailure }: RunOptions = {},
+  { from = 1, values: given = {}, onStep, checkpoint, onFailure, platform }: RunOptions = {},
 ): Promise<RunResult> {
   // a prepare step's values join them, for this run alone
   const values = { ...given };
   /** The names a `prepare` step is to give: one that did not is no value, where the run was given none. */
-  const owed = new Set(stepsInOrder(flow).flatMap(givesOf));
+  const owed = new Set(stepsInOrder(flow, 1, platform).flatMap(givesOf));
   const one = async (
     list: FlowStep[],
     n: number,
@@ -122,6 +127,8 @@ export async function runSteps(
       ...(phase && { phase }),
       step: stepLine(written),
     };
+    if (!runsOn(written, platform))
+      return { result: { ...at, ms: 0, skipped: `${String(written.only)} only` } };
     const hook = phase ? undefined : onStep;
     if (phase !== 'teardown') checkpoint?.(n, total, written);
     const t0 = Date.now();

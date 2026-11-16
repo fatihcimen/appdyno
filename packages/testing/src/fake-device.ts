@@ -241,7 +241,7 @@ export class FakeDevice extends DeviceActions implements Device {
   setLocation(lat: number, lon: number) {
     return answer(() => this.record('setLocation', lat, lon));
   }
-  getClipboard() {
+  getClipboard(): Promise<string | undefined> {
     return Promise.resolve(undefined);
   }
   audit(): ReturnType<Device['audit']> {

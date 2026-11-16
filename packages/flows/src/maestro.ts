@@ -124,6 +124,8 @@ function commands(st: FlowStep): Yaml[] {
       const yes = a.expect !== false;
       const check = a.check ?? 'exists';
       if (check === 'moves') unsupported('Maestro YAML has no check of what moves on a screen');
+      if (check === 'count')
+        unsupported('Maestro YAML has no count of the elements a selector names');
       const sel = maestroSelector(st.selector);
       if (check === 'exists' || check === 'absent') {
         const shows = (check === 'exists') === yes;
@@ -165,6 +167,10 @@ function commands(st: FlowStep): Yaml[] {
       return unsupported("Maestro YAML has no rule for an app's requests");
     case 'alert':
       return unsupported('Maestro YAML answers a system alert by its words, in one language');
+    case 'clipboard':
+      return unsupported('the clipboard has no checked form in Maestro YAML');
+    case 'audit':
+      return unsupported('Maestro YAML has no accessibility audit');
     case 'prepare':
       return unsupported("Maestro YAML runs no command of a project's own");
     case 'unrecorded':
@@ -204,6 +210,7 @@ export function toMaestro(flow: Flow): string {
   ];
   for (const [i, st] of flow.steps.entries()) {
     try {
+      if (st.only) unsupported(`a step for ${st.only} alone has no checked form in Maestro YAML`);
       if (st.selector?.role && (st.selector.id || st.selector.text))
         lines.push(`# step ${i + 1}: role=${st.selector.role} left out, Maestro YAML has no role`);
       for (const c of commands(st)) {

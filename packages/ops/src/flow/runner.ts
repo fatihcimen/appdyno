@@ -12,6 +12,7 @@ import {
   valuesFor,
   fillApp,
   runSteps,
+  runsOn,
   stepsInOrder,
   type RunFailure,
 } from '@appdyno/flows';
@@ -31,6 +32,7 @@ import { dropRules, heldNow } from '../network-capture.js';
 import { requestsFrom } from '../network-check.js';
 import { failedSince } from '../network-watch.js';
 import { mockLine, opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
+import { auditWithin, checkedHere, checkHere } from './own-checks.js';
 import { prepared, preparedCommand, type PreparePlace } from './prepare.js';
 import { loadRecording } from './shared.js';
 import { looksStill } from './still.js';
@@ -85,7 +87,7 @@ const keepEvidence = async (s: Session, dir: string, clean: (s: string) => strin
 };
 
 const lineOf = (r: RunResult['steps'][number]) =>
-  `${r.phase ? `${r.phase} ` : ''}${r.n}. ${r.step}: ${r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;
+  `${r.phase ? `${r.phase} ` : ''}${r.n}. ${r.step}: ${r.skipped ? `skipped, ${r.skipped}` : r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;
 
 /** A failure's first line: where it is, and of which part of the run. */
 const failedAt = (file: string, f: RunFailure) =>
@@ -117,7 +119,7 @@ const teardownText = (file: string, r: RunResult) =>
     : undefined;
 
 /** What a `prepare` step needs of its run beside a step's place. */
-type Place = StepPlace & PreparePlace;
+type Place = StepPlace & PreparePlace & { platform: string };
 
 /** The app as the step began, and when the step before it began: a step that fails as the app is gone failed for its death. */
 type Was = ReturnType<typeof asStepBegan> & { since: number; began: number };
@@ -149,6 +151,32 @@ async function seenAsItFailed(
   if (evidence) f.saved = await keepEvidence(s, evidence, clean);
 }
 
+/** A run's place on this device: refused where no step of the flow is for its platform, as nothing would run. */
+function placeOf(
+  ctx: ServerContext,
+  s: Session,
+  flow: Flow,
+  file: string,
+  o: ReplayOptions,
+): Place {
+  const { platform } = s.device;
+  if (!flow.steps.some((st) => runsOn(st, platform)))
+    throw new ToolError(
+      `${file}: nothing to run on ${platform}: every step of it is for the other platform alone`,
+      'INVALID_ARGUMENT',
+    );
+  return {
+    file,
+    shots: o.shots ?? SHOTS_DIR,
+    update: ctx.options.updateBaselines === true,
+    mocked: [],
+    platform,
+    prepares: o.prepares === true,
+    secrets: flow.secrets,
+    kept: new Set(Object.keys(o.params ?? {})),
+  };
+}
+
 /** Runs flows through the operations themselves, as an agent's calls would. */
 export function flowRunner(
   ctx: ServerContext,
@@ -169,10 +197,10 @@ export function flowRunner(
    * step that acts on a target picked by its index: on this run that may be another element, and a baseline of the
    * screen it led to would pass ever after, where a comparison would have failed.
    */
-  const validate = (flow: Flow, at: StepPlace) => {
+  const validate = (flow: Flow, at: Place) => {
     let picked: FlowStep | undefined;
-    for (const st of stepsInOrder(flow)) {
-      if (st.action === 'unrecorded') continue;
+    for (const st of stepsInOrder(flow, 1, at.platform)) {
+      if (st.action === 'unrecorded' || checkedHere(st)) continue;
       if (st.action === 'prepare') {
         preparedCommand(st, at.file);
         continue;
@@ -215,6 +243,10 @@ export function flowRunner(
       const values = await prepared(ctx, s, st, at, clean);
       return { actMs: Date.now() - t0, values };
     }
+    if (checkedHere(st)) {
+      await checkHere(s, st, clean, steps.line);
+      return { actMs: Date.now() - t0 };
+    }
     const [name, args] = opCall(st, at);
     const op = must(ops()[name], `the op ${name}`);
     const answered = await op.handler(opInput(name, args, st.action)).catch(async (e: unknown) => {
@@ -236,6 +268,7 @@ export function flowRunner(
       at.mocked.push(...(st.args.request === undefined ? (data.added ?? []) : [mockLine(st, at)]));
     // a step that only looks has no answer to say it in: a request that failed under it is this step's all the same
     const warnings = [...(data.warnings ?? []), ...(await failedSince(s, t0, '', clean))];
+    if (st.action === 'audit' && answered) auditWithin(st, answered);
     const whole = Date.now() - t0;
     const settledMs = WHOLE_STEP.has(st.action)
       ? whole
@@ -286,20 +319,14 @@ export function flowRunner(
         `from ${from}: this flow has steps 1 to ${flow.steps.length}`,
         'INVALID_ARGUMENT',
       );
-    const at: Place = {
-      file,
-      shots: o.shots ?? SHOTS_DIR,
-      update: ctx.options.updateBaselines === true,
-      mocked: [],
-      prepares: o.prepares === true,
-      secrets: flow.secrets,
-      kept: new Set(Object.keys(o.params ?? {})),
-    };
+    const at = placeOf(ctx, s, flow, file, o);
     validate(flow, at);
-    if (stepsInOrder(flow).some((st) => st.action === 'request')) at.after = await requestsFrom(s);
+    if (stepsInOrder(flow, 1, at.platform).some((st) => st.action === 'request'))
+      at.after = await requestsFrom(s);
     let values: Record<string, string>;
     try {
-      values = valuesFor(flow, o.params ?? {}, { ...ctx.options.env, ...o.fromFile }, from);
+      const env = { ...ctx.options.env, ...o.fromFile };
+      values = valuesFor(flow, o.params ?? {}, env, from, at.platform);
     } catch (e) {
       throw new ToolError(`${file}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
     }
@@ -322,6 +349,7 @@ export function flowRunner(
       const result = await runSteps(flow, executor(s, was, at), {
         from,
         values,
+        platform: at.platform,
         onFailure: (f) => seenAsItFailed(s, f, was, o.evidence, answers),
         ...(o.onStep && { onStep: o.onStep }),
         checkpoint: (n, total, st) => {

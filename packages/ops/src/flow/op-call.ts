@@ -187,6 +187,17 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
           timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS,
         },
       ];
+    case 'clipboard':
+      // a check of what it holds is the run's own: see `checkHere`
+      return ['set_device', { name: 'clipboard', value: a.text }];
+    case 'audit':
+      return [
+        'check_screen',
+        {
+          check: 'accessibility',
+          ...defined({ types: (a.types as string | undefined)?.split(',') }),
+        },
+      ];
     case 'prepare':
       throw new ToolError(
         `prepare ${String(a.name)} is the run's own to carry out, by no tool`,
