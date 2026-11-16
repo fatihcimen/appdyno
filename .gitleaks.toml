@@ -1,0 +1,20 @@
+# Each file below holds made-up values that look like keys, there to prove appdyno hides them, or the site's
+# counter token, which is public in every page by design. A new file is added here only after it is read.
+title = "appdyno"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "made-up values in tests and fixtures, and the site's public counter token"
+paths = [
+  '''^packages/ops/test/diagnose\.test\.ts$''',
+  '''^packages/ops/test/truth\.test\.ts$''',
+  '''^packages/appdyno/test/device-surface\.test\.ts$''',
+  '''^packages/hub/test/window-panes\.test\.ts$''',
+  '''^packages/driver-apple/test/apns\.test\.ts$''',
+  '''^packages/protocol/fixtures/requests\.json$''',
+  '''^android/agent/src/test/kotlin/dev/appdyno/agent/ServerPartsTest\.kt$''',
+  '''^ios/Fixture/NetworkScreen\.swift$''',
+  '''^site/src/site\.ts$''',
+]
