@@ -18,6 +18,8 @@ export type NetworkEntry = {
   /** The export holds its response body. */
   body?: boolean;
   error?: string;
+  /** The transport's own number for `error`, as the system has it: -999 is a request the app gave up. */
+  code?: number;
   /** Its place in the capture, by which its headers and bodies are asked for where the capture keeps them. */
   id?: number;
   /** What a rule did to it: `mocked`, `failed`, `delayed`, `sent` to another host; `lost` by the throttle. */
@@ -94,7 +96,8 @@ export type NetworkHandle = Record<string, string | number>;
 export type NetworkSource = {
   paths(): Promise<NetworkPath[]>;
   start(via: NetworkVia, app: string | undefined, bodies?: boolean): Promise<NetworkHandle>;
-  read(handle: NetworkHandle): Promise<NetworkAnswer>;
+  /** `bare`: the requests alone, with nothing asked of the device for a note. */
+  read(handle: NetworkHandle, bare?: boolean): Promise<NetworkAnswer>;
   stop(handle: NetworkHandle): Promise<NetworkAnswer>;
   /** What the capture does from now on, whole; only a way that is in the app takes it. */
   control?(handle: NetworkHandle, control: NetworkControl): void;

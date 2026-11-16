@@ -25,6 +25,7 @@ export const NetworkOut = z.object({
         bytes: z.number().optional(),
         body: z.boolean().optional(),
         error: z.string().optional(),
+        code: z.number().int().optional(),
         id: z.number().int().optional(),
         how: z.string().optional(),
         rule: z.string().optional(),

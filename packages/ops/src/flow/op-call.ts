@@ -153,6 +153,8 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
     case 'mock':
       // added to the rules there, and taken out when the run of its file ends
       return ['network', { action: 'mock', rules: [mockLine(st, at)], add: true }];
+    case 'network':
+      return ['network', { action: 'mock', strict: a.value !== 'off' }];
     case 'unrecorded':
       throw new ToolError(
         `this action has no step and was not recorded: ${String(a.what)}. Replace or delete this line`,

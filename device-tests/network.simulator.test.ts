@@ -56,6 +56,11 @@ async function server(name: string) {
         res.setHeader('Content-Type', 'application/json');
         return res.end(JSON.stringify({ got: Buffer.concat(chunks).length }));
       }
+      // refused by the server itself, as a fault of its own
+      if (req.url?.startsWith('/fail')) {
+        res.statusCode = 500;
+        return res.end('{"error":"boom"}');
+      }
       if (req.url?.startsWith('/slow')) return void setTimeout(() => res.end('slow'), 5_000);
       // answered only when the test lets it go
       if (req.url?.startsWith('/hang')) return void held.push(() => res.end('late'));
@@ -425,6 +430,49 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect((await send(`http://${a.at}/json`)).ms).toBeLessThan(1500);
     expect(kept()).toEqual([]);
   }, 240_000);
+
+  it('says a request that failed with the tap that made it, and under strict refuses the tap', async () => {
+    await ok('network', { action: 'start', via: 'probe' });
+    /** The fixture's Fetch pressed for an address, and the tap after it: what both answered. */
+    const fetched = async (path: string) => {
+      await ok('open_link', { url: 'appdyno-fixture://open/network' });
+      await ok('type_text', {
+        selector: { id: 'url_input' },
+        text: `http://${a.at}${path}`,
+        replace: true,
+      });
+      const tap = await call('tap', { selector: { id: 'fetch' } });
+      await sleep(1_000);
+      // an answer slower than the screen is told with the next action
+      return [tap, await call('tap', { selector: { id: 'fetch_result' } })] as const;
+    };
+    const [tap, next] = await fetched('/fail');
+    out(
+      `FAILED tap: ${tap.text.split('\n').find((l) => l.startsWith('network:')) ?? 'not in its answer'}`,
+    );
+    expect(`${tap.text}\n${next.text}`).toMatch(
+      /^network: GET 127\.0\.0\.1:\d+\/fail 500 \(id \d+(, before this action)?\)$/m,
+    );
+    expect(tap.error).toBe(false);
+    // a request that went well costs the answer nothing
+    const [well, after] = await fetched('/json?n=1');
+    expect(`${well.text}${after.text}`).not.toContain('network:');
+    const on = await ok('network', { action: 'mock', strict: true });
+    expect(on.text).toMatch(/^strict on: /);
+    const [refused, late] = await fetched('/fail?n=2');
+    const strict = refused.error ? refused : late;
+    out(`STRICT ${strict.text.replaceAll('\n', ' | ')}`);
+    expect(strict.data.code).toBe('CHECK_FAILED');
+    expect(strict.text).toMatch(
+      /^tapped .*\nnetwork strict: GET 127\.0\.0\.1:\d+\/fail 500 \(id \d+/,
+    );
+    // one a rule of one's own made is said, and fails nothing
+    await ok('network', { action: 'mock', rules: [`${a.at}/json status=503`] });
+    const [mocked, then] = await fetched('/json');
+    expect(mocked.error || then.error).toBe(false);
+    expect(`${mocked.text}\n${then.text}`).toMatch(/\/json 503 \[mocked\] \(id \d+/);
+    await ok('network', { action: 'stop' });
+  }, 180_000);
 
   it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {
     await call('network', { action: 'stop' });

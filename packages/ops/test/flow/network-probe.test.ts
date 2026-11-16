@@ -1,43 +1,13 @@
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type {
-  NetworkControl,
-  NetworkDetail,
-  NetworkEntry,
-  NetworkHandle,
-  NetworkSource,
-} from '@appdyno/core';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import type { NetworkDetail, NetworkEntry } from '@appdyno/core';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { DEFAULT_POLICY, ServerContext } from '../../src/index.js';
 import { captures } from '../../src/network-capture.js';
 import { throttleOf } from '../../src/network-rules.js';
-import { callerOf, flowsFor, flowHelpers } from './harness.js';
-
-/** A probe that keeps what it is told and gives what the test put in it. */
-class FakeProbe implements NetworkSource {
-  entries: NetworkEntry[] = [];
-  details: Record<number, NetworkDetail> = {};
-  controls: NetworkControl[] = [];
-  started: { app: string | undefined; bodies: boolean | undefined }[] = [];
-  stopped = 0;
-  paths = () => Promise.resolve([{ via: 'probe' as const, sees: 'requests' }]);
-  start = (_: string, app: string | undefined, bodies?: boolean): Promise<NetworkHandle> => {
-    this.started.push({ app, bodies });
-    return Promise.resolve({ via: 'probe', app: app ?? '' });
-  };
-  read = () => Promise.resolve({ entries: this.entries.map((e, id) => ({ ...e, id })) });
-  stop = async () => {
-    this.stopped++;
-    return { ...(await this.read()), note: 'ended' };
-  };
-  control = (_: NetworkHandle, control: NetworkControl) => void this.controls.push(control);
-  detail = (_: NetworkHandle, id: number) => Promise.resolve(this.details[id]);
-  get told() {
-    return this.controls.at(-1);
-  }
-}
+import { probeSetup, type FakeProbe } from './fake-probe.js';
+import { callerOf, flowsFor } from './harness.js';
 
 const POST: NetworkEntry = {
   at: '2026-01-01T00:00:01.000Z',
@@ -74,6 +44,7 @@ const DETAIL: NetworkDetail = {
 };
 
 describe('the network probe through its tool and a flow', () => {
+  const at = probeSetup();
   let dir: string;
   let device: FakeDevice;
   let probe: FakeProbe;
@@ -82,23 +53,9 @@ describe('the network probe through its tool and a flow', () => {
     handles: () => true,
     open: () => device,
   });
-  const { context, refusal, recorded } = flowHelpers(
-    () => device,
-    () => dir,
-  );
+  const { context, refusal, recorded } = at.helpers;
   beforeEach(() => {
-    dir = realpathSync(mkdtempSync(join(tmpdir(), 'appdyno-probe-')));
-    vi.stubEnv('APPDYNO_STATE_DIR', join(dir, 'state'));
-    vi.spyOn(process, 'cwd').mockReturnValue(dir);
-    device = new FakeDevice();
-    probe = new FakeProbe();
-    Object.assign(device, { network: probe });
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
+    ({ dir, device, probe } = at);
   });
 
   it('keeps bodies only when asked, and gives one request whole with its credentials hidden', async () => {
@@ -327,12 +284,7 @@ describe('the network probe through its tool and a flow', () => {
     expect(e.hint).toMatch(/an Android device is slowed by device_setting network/);
   });
 
-  const flowFile = (body: string) => {
-    mkdirSync(join(dir, 'flows'), { recursive: true });
-    const file = join(dir, 'flows', 'a.flow');
-    writeFileSync(file, `app dev.app\n${body}\n`);
-    return file;
-  };
+  const flowFile = (body: string) => at.flowFile(body);
 
   it('holds a mock step’s rule while its file runs, a file found from the flow’s folder, and takes it out after', async () => {
     const ctx = context();

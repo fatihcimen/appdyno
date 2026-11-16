@@ -22,6 +22,7 @@ import {
   watched,
 } from './app-death.js';
 import type { ServerContext } from './context.js';
+import { failedSince } from './network-watch.js';
 import { broughtUp, noticed } from './noticed.js';
 import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
@@ -213,6 +214,8 @@ async function afterAction(
   const notes = [
     ...(o.notes ?? []),
     ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs, !!d && differs(d))] : []),
+    // what the app asked for and did not get, said with the action that asked
+    ...(await failedSince(s, o.started, done, clean)),
   ];
   return reply(
     [`${done}${fg}${moving}`, ...notes, diff ?? headerOf(screen, clean)].join('\n'),

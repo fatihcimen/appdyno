@@ -95,9 +95,10 @@ export class SimulatorNetwork implements NetworkSource {
     return text === undefined ? undefined : (JSON.parse(text) as NetworkDetail);
   }
 
-  async read(h: NetworkHandle): Promise<NetworkAnswer> {
+  async read(h: NetworkHandle, bare = false): Promise<NetworkAnswer> {
     const text = await readFile(String(h.log), 'utf8').catch(() => '');
     const entries = probeEntries(text);
+    if (bare) return { entries };
     const notes = [
       ...(!entries.some((e) => !e.inFlight)
         ? ['no request has finished in the app since the probe went in']

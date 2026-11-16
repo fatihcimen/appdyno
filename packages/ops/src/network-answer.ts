@@ -28,7 +28,7 @@ const HOW: Record<string, (e: NetworkEntry) => string> = {
   sent: (e) => `sent to ${e.to ?? 'another host'}`,
   lost: () => 'lost by the throttle',
 };
-const howOf = (e: NetworkEntry) => (e.how ? ` [${HOW[e.how]?.(e) ?? e.how}]` : '');
+export const howOf = (e: NetworkEntry) => (e.how ? ` [${HOW[e.how]?.(e) ?? e.how}]` : '');
 
 /** How long a request has been under way, as a person says it. */
 const since = (ms = 0) => (ms < 10_000 ? `${ms} ms` : `${Math.round(ms / 1000)} s`);
@@ -66,6 +66,7 @@ export function controlLines(c: Capture | undefined, entries: NetworkEntry[]) {
   return [
     ...hits.map((h, i) => `rule ${i + 1}${h.off ? ' (off)' : ''}: ${h.rule} (${h.hits} taken)`),
     ...(c?.throttle ? [`throttle: ${c.throttle}`] : []),
+    ...(c?.strict ? ['strict: on'] : []),
   ];
 }
 

@@ -44,6 +44,7 @@ tap id=add_button index=1 !ambiguous
 | `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `screenshot` with `file`, `visual`                                       |
 | `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `device_setting`                                                         |
 | `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `network` with `mock`                                                    |
+| `network strict`, `network strict off`                                                                                             | `network` with `strict`                                                  |
 | `run shared/login.flow`                                                                                                            | that file's steps, in place                                              |
 
 A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, an `arg=` for each argument, an `env=NAME=value` for each variable and `probe`, as `launch_app` takes `language`, `args`, `env` and `probe`. `stop background` ends the app as the system ends one in the background, as `terminate_app` with `background` does.
@@ -108,6 +109,12 @@ The first word is the request: a host, with a path after it, where `*` is any ru
 Two patterns come up often. A request that fails once and then works, as a retry must survive, is one rule that runs out: `mock api.example.com/v1/pay fail=timeout times=1`. A run in which nothing leaves this Mac ends its rules with one that fails all the rest: `mock * fail=offline` as the last line, after the rules that answer.
 
 The rules go into the app by the network probe, so the first `mock` starts a capture by it where none runs, which restarts the app: put the `mock` lines before `launch`. A rule holds until its file has run, on a pass and on a failure, and then that rule alone is taken out: one set before the run, by an agent or in the Mac app, stays. The capture runs on until `network` `stop` or the session's end. Only the app's own URLSession requests are taken: not a web view's, not a background session's, and the system still reads the Mac's network as it is. An Android device and an iPhone refuse the step.
+
+## Requests that fail
+
+While a capture by the network probe runs on a simulator, a step under which a request of the app's failed says so among its warnings, one line for each: `network: POST api.example.com/v1/pay 500 (id 44)`. A request counts when the server refused it (4xx, 5xx) or it failed on its way; one the app itself gave up does not.
+
+`network strict` makes that a failure: from that line on, a step fails when a request got a 5xx or failed on its way and no rule made it, so a flow that passes on the screen while a call behind it broke does not pass. A 4xx, and what a `mock` rule answers or fails, stay warnings. `network strict off` ends it, and so does the end of the file. It starts a capture by the probe where none runs, which restarts the app, so put it before `launch`. A request is looked at when the step it happened under ends: one that fails later fails the next step, and says it came before it.
 
 ## Screenshots, visual checks and settings
 

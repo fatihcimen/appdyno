@@ -61,6 +61,11 @@ export const SPECS = {
     list: ['header'],
     bool: ['off'],
   },
+  /**
+   * `network strict`: from here a step fails when a request of the app's got a 5xx or failed on its way, and no rule
+   * made it; `network strict off` ends that. It holds until the file ends.
+   */
+  network: { words: ['name', 'value?'] },
   /** An action the format has no step for: replay stops here rather than go on without it. */
   unrecorded: { words: ['what'] },
   /** Another flow's steps go here: `composeFlow` replaces it before anything runs. */

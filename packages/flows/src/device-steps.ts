@@ -57,6 +57,11 @@ export const VALUELESS_SETTINGS: readonly string[] = ['shake', 'memory_warning']
 export function checkDeviceStep(st: FlowStep, line: number) {
   const a = st.args;
   if (st.action === 'mock') mockRule(st, line);
+  if (
+    st.action === 'network' &&
+    (a.name !== 'strict' || !['on', 'off', undefined].includes(a.value as string | undefined))
+  )
+    throw new FlowError('network: strict, strict on or strict off', line);
   if ((st.action === 'screenshot' || st.action === 'visual') && !PICTURE_NAME.test(String(a.name)))
     throw new FlowError(
       `${st.action}: a name is letters, digits, dot, dash and underscore: ${String(a.name)}`,

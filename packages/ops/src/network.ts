@@ -9,6 +9,7 @@ import {
   endCapture,
   readCapture,
   setRules,
+  setStrict,
   setThrottle,
   startOwn,
   VIA,
@@ -30,6 +31,11 @@ const SEES_PROXY =
 /** What a rule that fails a request, or a throttle, does not reach: said with each. */
 const APP_ONLY =
   "only the app's URLSession requests: the system still reads the Mac's network as it is";
+
+/** The actions that take `strict`: each starts the probe's capture, or changes what it does. */
+const SETS: readonly string[] = ['start', 'mock', 'throttle'];
+const STRICT_ON =
+  'strict on: an action fails when a request of the app got a 5xx or failed on its way, unless a rule made it';
 
 const listening = (hostPort: string) =>
   new Promise<boolean>((resolve) => {
@@ -89,6 +95,7 @@ export function networkOps(ctx: ServerContext) {
               'Each "host/path* [method=] [query=] [regex=]" then "status= body= (@file) type= header=", "fail=offline|timeout|reset" or "to=host", and delayMs= times= off. Replaces; [] clears; none lists',
             ),
           add: z.boolean().optional(),
+          strict: z.boolean().optional().describe('a 5xx or a failed request fails the action'),
           throttle: z
             .string()
             .max(100)
@@ -100,7 +107,8 @@ export function networkOps(ctx: ServerContext) {
         .strict(),
       output: NetworkOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, via, proxy, app, bodies, har, id, rules, add, throttle, ...asked }) => {
+      run: async ({ action, via, proxy, app, bodies, har, id, rules, add, throttle, ...given }) => {
+        const { strict, ...asked } = given;
         const s = await ctx.session();
         const serial = s.device.serial;
         const now = captures.read(serial);
@@ -115,19 +123,30 @@ export function networkOps(ctx: ServerContext) {
           const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${String(p.refused)}`}`).join('\n');
           return reply(clean(t), { done: clean(t), paths: ways });
         }
+        if (strict !== undefined && !SETS.includes(action))
+          throw new ToolError('strict goes with start, mock or throttle', 'INVALID_ARGUMENT');
         if (action === 'mock' || action === 'throttle') {
           const sets = action === 'mock' ? rules : throttle;
-          if (sets === undefined) return controlAnswer(s, now, []);
+          if (sets === undefined && strict === undefined) return controlAnswer(s, now, []);
           if (target) checkApp(ctx.policy, target);
-          const { capture, started } =
-            action === 'mock'
-              ? await setRules(s, ctx.policy, target, rules ?? [], add)
-              : await setThrottle(s, target, throttle ?? 'full');
+          const set =
+            sets === undefined
+              ? undefined
+              : action === 'mock'
+                ? await setRules(s, ctx.policy, target, rules ?? [], add)
+                : await setThrottle(s, target, throttle ?? 'full');
+          const judged = strict === undefined ? undefined : await setStrict(s, target, strict);
+          const capture = must(judged?.capture ?? set?.capture, 'the capture');
           return controlAnswer(s, capture, [
-            ...(started
+            ...((set ?? judged)?.started
               ? [`started a capture by the probe: ${String(target)} was restarted with it`]
               : []),
-            `${action === 'mock' ? 'rules set' : `throttle ${capture.throttle ?? 'full'}`}: for ${APP_ONLY}; ended by network stop`,
+            ...(set
+              ? [
+                  `${action === 'mock' ? 'rules set' : `throttle ${capture.throttle ?? 'full'}`}: for ${APP_ONLY}; ended by network stop`,
+                ]
+              : []),
+            ...(strict === undefined ? [] : [strict ? STRICT_ON : 'strict off']),
           ]);
         }
         if (action === 'start') {
@@ -139,6 +158,8 @@ export function networkOps(ctx: ServerContext) {
               'network paths says what each sees, and what it costs',
             );
           }
+          if (strict !== undefined && via !== 'probe')
+            throw new ToolError(`strict goes by the probe, not by ${via}`, 'INVALID_ARGUMENT');
           if (now)
             throw new ToolError(
               `${now.via} has been capturing on ${serial} since ${new Date(now.since).toISOString()}: stop it first`,
@@ -167,7 +188,8 @@ export function networkOps(ctx: ServerContext) {
             return reply(t, { done: t });
           }
           const { sees } = await startOwn(s, via, target, bodies === true);
-          const t = `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${sees ? `; it sees ${sees}` : ''}`;
+          if (strict !== undefined) await setStrict(s, target, strict);
+          const t = `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${sees ? `; it sees ${sees}` : ''}${strict ? `; ${STRICT_ON}` : ''}`;
           return reply(t, { done: t });
         }
         if (action === 'stop') {

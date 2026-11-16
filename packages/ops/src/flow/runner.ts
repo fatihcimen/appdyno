@@ -26,7 +26,8 @@ import type { Steps } from '../steps.js';
 import { keyboardFirst } from '../keyboard.js';
 import { refused, ToolError, type Op } from '../tool.js';
 import { WHOLE_STEP } from '../tool-kinds.js';
-import { dropRules } from '../network-capture.js';
+import { dropRules, heldNow } from '../network-capture.js';
+import { failedSince } from '../network-watch.js';
 import { mockLine, opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
 import { loadRecording } from './shared.js';
 import { looksStill } from './still.js';
@@ -162,6 +163,8 @@ export function flowRunner(
     });
     if (st.action === 'mock') at.mocked.push(mockLine(st, at));
     const data = (answered?.data ?? {}) as Partial<ActionOut>;
+    // a step that only looks has no answer to say it in: a request that failed under it is this step's all the same
+    const warnings = [...(data.warnings ?? []), ...(await failedSince(s, t0, '', clean))];
     const whole = Date.now() - t0;
     const settledMs = WHOLE_STEP.has(st.action)
       ? whole
@@ -173,7 +176,7 @@ export function flowRunner(
       ...(settledMs !== undefined && { settledMs }),
       ...(data.settled !== undefined && { settled: data.settled }),
       ...(data.changed !== undefined && { changed: data.changed }),
-      ...(data.warnings?.length && { warnings: data.warnings }),
+      ...(warnings.length > 0 && { warnings }),
     };
   };
 
@@ -235,6 +238,7 @@ export function flowRunner(
       s.forgetProcess();
     }
     const undo = ctx.hide(flow.secrets.flatMap((n) => values[n] ?? []));
+    const held = heldNow(s.device.serial);
     const was: Was = {
       app: undefined,
       up: false,
@@ -276,7 +280,7 @@ export function flowRunner(
     } finally {
       undo();
       // the rules its mock steps added, on a pass and on a failure alike: one a person or an agent set stays
-      dropRules(s, at.mocked);
+      dropRules(s, at.mocked, held);
     }
   };
 

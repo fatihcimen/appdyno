@@ -44,6 +44,7 @@ tap id=add_button index=1 !ambiguous
 | `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `file` ile `screenshot`, `visual`                                              |
 | `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `device_setting`                                                               |
 | `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `mock` ile `network`                                                           |
+| `network strict`, `network strict off`                                                                                             | `strict` ile `network`                                                         |
 | `run shared/login.flow`                                                                                                            | o dosyanın adımları, yerinde                                                   |
 
 Bir seçici `id=`, `role=`, `text=`, `index=` alanlarından herhangi biridir; metin, araçlarda olduğu gibi eşleşir. `launch` bir `language=`, her argüman için bir `arg=`, her değişken için bir `env=NAME=value` ve `probe` alır; `launch_app` da `language`, `args`, `env` ve `probe` alır. `stop background` uygulamayı sistemin arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır; `background` ile `terminate_app` de öyle yapar.
@@ -108,6 +109,12 @@ launch
 İki kalıp sık kullanılır. Bir kez başarısız olup sonra çalışan bir istek, yani bir yeniden denemenin atlatması gereken durum, tükenen tek bir kuraldır: `mock api.example.com/v1/pay fail=timeout times=1`. Bu Mac'ten hiçbir şeyin çıkmadığı bir çalıştırma, kurallarını geri kalan her isteği başarısız kılan bir kuralla bitirir: yanıt veren kurallardan sonra, son satır olarak `mock * fail=offline`.
 
 Kurallar uygulamaya ağ sondasıyla girer; bu yüzden ilk `mock`, çalışan bir yakalama yoksa sondayla bir yakalama başlatır ve bu, uygulamayı yeniden başlatır: `mock` satırlarını `launch` satırından önce yazın. Bir kural, dosyası çalışıp bitene kadar, başarıda da hatada da geçerlidir; sonra yalnızca o kural kaldırılır: çalıştırmadan önce bir ajanın ya da Mac uygulamasının koyduğu kural kalır. Yakalama, `network` `stop` çağrısına ya da oturumun sonuna kadar sürer. Yalnızca uygulamanın kendi URLSession istekleri alınır: bir web görünümününkiler ya da arka plan oturumununkiler alınmaz ve sistem Mac'in ağını olduğu gibi okumayı sürdürür. Bir Android cihazı ve bir iPhone bu adımı reddeder.
+
+## Başarısız olan istekler
+
+Bir simülatörde ağ sondasıyla bir yakalama çalışırken, altında uygulamanın bir isteği başarısız olan adım bunu uyarıları arasında, her istek için bir satırla söyler: `network: POST api.example.com/v1/pay 500 (id 44)`. Sunucunun reddettiği (4xx, 5xx) ya da yolda başarısız olan istek sayılır; uygulamanın kendi vazgeçtiği istek sayılmaz.
+
+`network strict` bunu bir hataya çevirir: o satırdan sonra, bir istek 5xx aldığında ya da yolda başarısız olduğunda ve bunu bir kural yapmadıysa adım başarısız olur; böylece ekranda geçen ama arkasındaki bir çağrısı bozulan akış geçmez. 4xx yanıtları ile bir `mock` kuralının verdiği yanıtlar ve hatalar uyarı olarak kalır. `network strict off` bunu bitirir, dosyanın sonu da öyle. Çalışan bir yakalama yoksa sondayla bir yakalama başlatır ve bu, uygulamayı yeniden başlatır; bu yüzden onu `launch` satırından önce yazın. Bir isteğe, altında gerçekleştiği adım bittiğinde bakılır: daha sonra başarısız olan istek bir sonraki adımı başarısız kılar ve ondan önce geldiğini söyler.
 
 ## Ekran görüntüleri, görsel denetimler ve ayarlar
 

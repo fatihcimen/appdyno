@@ -31,6 +31,8 @@ const Capture = z.object({
   /** The probe's rules, each as its line, and how slow it makes the network, as its word. */
   rules: z.array(z.string()).optional(),
   throttle: z.string().optional(),
+  /** An action fails when a request of the app's got a 5xx or failed on its way, and no rule made it. */
+  strict: z.boolean().optional(),
   owner: Owner.optional(),
 });
 export type Capture = z.infer<typeof Capture>;
@@ -177,13 +179,25 @@ export async function setRules(
   return { capture: next, started };
 }
 
-/** Takes out the rules of those lines, as a flow's end takes out what its steps added; the rest stay. */
-export function dropRules(s: Session, lines: string[]) {
+/** What a flow's steps change of a capture beside its rules, as it stood before the flow. */
+export type Held = Pick<Capture, 'strict'>;
+export const heldNow = (serial: string): Held => ({ strict: captures.read(serial)?.strict });
+
+/**
+ * Takes out the rules of those lines, as a flow's end takes out what its steps added, and puts back what else its
+ * steps changed; the rest stay.
+ */
+export function dropRules(s: Session, lines: string[], was: Held = heldNow(s.device.serial)) {
   const now = captures.read(s.device.serial);
-  if (lines.length === 0 || !now?.rules || now.via !== 'probe' || !s.device.network?.control)
-    return;
+  if (now?.via !== 'probe' || !s.device.network?.control) return;
+  if (lines.length === 0 && now.strict === was.strict) return;
   const gone = lines.map(ruleLine);
-  const next = { ...now, rules: now.rules.filter((l) => !gone.includes(l)) };
+  const { strict: _, ...rest } = now;
+  const next: Capture = {
+    ...rest,
+    ...(now.rules && { rules: now.rules.filter((l) => !gone.includes(l)) }),
+    ...(was.strict && { strict: true }),
+  };
   try {
     tellProbe(s, next);
   } catch {
@@ -199,5 +213,14 @@ export async function setThrottle(s: Session, app: string | undefined, word: str
   const { throttle: _, ...rest } = capture;
   const next: Capture = full ? rest : { ...rest, throttle: word.trim() };
   tellProbe(s, next);
+  return { capture: next, started };
+}
+
+/** Whether an action fails for a request that failed under it, kept with the probe's capture as its rules are. */
+export async function setStrict(s: Session, app: string | undefined, on: boolean) {
+  const { capture, started } = await probeCapture(s, app, 'strict');
+  const { strict: _, ...rest } = capture;
+  const next: Capture = on ? { ...rest, strict: true } : rest;
+  captures.write(s.device.serial, next);
   return { capture: next, started };
 }

@@ -198,7 +198,10 @@ static AppdynoNetRouter *router;
     @"n": @(self.number),
   } mutableCopy];
   if (self.timings) entry[@"timings"] = self.timings;
-  if (error) entry[@"error"] = error.localizedDescription;
+  if (error) {
+    entry[@"error"] = error.localizedDescription;
+    entry[@"code"] = @(error.code);
+  }
   if (self.how) entry[@"how"] = self.how;
   if (self.rule[@"id"]) entry[@"rule"] = self.rule[@"id"];
   if ([self.how isEqual:@"sent"]) entry[@"to"] = self.task.originalRequest.URL.host ?: @"";
