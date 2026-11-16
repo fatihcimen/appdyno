@@ -150,6 +150,20 @@ describe("a window's controls", () => {
     }),
   );
 
+  it(
+    'ends where it began after a turn each way pressed at once, where the app in front does not turn',
+    fakeTimed(async () => {
+      const { controls, told, device } = fixture('android', {
+        setOrientation: vi.fn(() => Promise.resolve(undefined)),
+      });
+      controls.press('rotateLeft');
+      controls.press('rotateRight');
+      const notes = () => told.filter((m) => m.text === 'The app in front does not turn');
+      await vi.waitFor(() => expect(notes()).toHaveLength(2), WAIT);
+      expect(mocks(device).setOrientation.mock.calls.at(-1)).toEqual([0]);
+    }),
+  );
+
   it('says what went wrong beneath the device, and goes on', async () => {
     const { controls, told } = fixture('ios', {
       setOrientation: () => Promise.reject(new Error('no agent here')),

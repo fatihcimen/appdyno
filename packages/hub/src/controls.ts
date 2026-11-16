@@ -77,7 +77,8 @@ function windowTurns({ device, session, ready, note }: WindowParts, opened: () =
     const { picture } = session().status;
     return picture && picture.w > picture.h;
   };
-  return async (by: 1 | 3) => {
+  let last: Promise<unknown> = Promise.resolve();
+  const turn = async (by: 1 | 3) => {
     // a simulator's orientation has no way in but its runner, which a first turn may have to build
     note(opened() ? 'Rotating' : 'Rotating: the first turn starts the device agent');
     await ready();
@@ -91,6 +92,13 @@ function windowTurns({ device, session, ready, note }: WindowParts, opened: () =
     rotation = was;
     await device.setOrientation(was);
     note('The app in front does not turn');
+  };
+  // one at a time: a turn pressed while another waits for the picture would put back what that one asked for, and
+  // leave the device turned under an app that does not turn. One that failed holds none back
+  return (by: 1 | 3) => {
+    const mine = last.catch(() => undefined).then(() => turn(by));
+    last = mine;
+    return mine;
   };
 }
 
