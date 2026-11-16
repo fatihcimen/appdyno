@@ -4,7 +4,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface MVNetworkPane () <NSMenuItemValidation> {
+@interface MVNetworkPane () <NSMenuItemValidation, NSMenuDelegate> {
+  NSView *_listCard;
+  /// The hosts a person closed, and the request a menu was opened on.
+  NSMutableSet<NSString *> *_closed;
+  NSString *_menuKey;
   void (^_onSend)(NSDictionary *message);
   BOOL _watching;
   MVAnswerView *_answer;
@@ -69,6 +73,11 @@ NSString *_Nullable MVNetworkUnseenLine(NSDictionary *unseen);
 - (void)sectionChosen:(NSInteger)at;
 - (void)readAgain:(nullable id)sender;
 - (void)wayChosen:(nullable id)sender;
+/// A host's heading opened or closed; the request chosen left; and what is done to one request, by its name.
+- (void)toggle:(NSString *)host;
+- (void)leave;
+- (void)act:(NSString *)name on:(nullable NSString *)key;
+- (NSArray<NSAccessibilityCustomAction *> *)actionsOn:(NSString *)key;
 @end
 
 /// What the pane says and offers, from what it was last told; and the time gone, kept only while it is looked at.

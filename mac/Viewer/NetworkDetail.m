@@ -12,12 +12,11 @@ NSString *MVNetworkTook(double ms) {
   return [MVFigure(ms / 60000, 1) stringByAppendingString:MVWord(@" min")];
 }
 
-/// Three figures at most: 61 B, 1.2 KB, 200 KB, 3.45 MB.
+/// Three figures at most: 61 B, 1.2 KB, 200 KB, 3.4 MB.
 NSString *MVNetworkSize(double bytes) {
   if (bytes < 1000) return [NSString stringWithFormat:@"%.0f B", bytes];
   double n = bytes < 1e6 ? bytes / 1e3 : bytes / 1e6;
-  return [NSString stringWithFormat:@"%@ %@", MVFigure(n, n < 10 ? 2 : n < 100 ? 1
-                                                                               : 0),
+  return [NSString stringWithFormat:@"%@ %@", MVFigure(n, n < 10 ? 1 : 0),
                                     bytes < 1e6 ? @"KB" : @"MB"];
 }
 

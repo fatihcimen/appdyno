@@ -32,7 +32,7 @@ NSColor *MVQuietColor(void);
 NSColor *MVGreen(void);
 NSColor *MVOrange(void);
 NSColor *MVRed(void);
-/// An agent at work.
+/// appdyno's own hand: an agent at work, and what a rule or an agent did to a request in the server's place.
 NSColor *MVAgent(void);
 /// What is chosen, and the one thing a person came to press.
 NSColor *MVAccent(void);

@@ -19,6 +19,7 @@ static NSString *const kBodiesKept = @"networkBodies";
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
+  if (item.menu == _list.rowMenu) return YES;
   item.state = [item.identifier isEqual:@"networkReal"] && _real ? NSControlStateValueOn : NSControlStateValueOff;
   return self.probing;
 }
@@ -58,13 +59,9 @@ static NSString *const kBodiesKept = @"networkBodies";
   MVPaneSend(self, @{@"op": @"control", @"name": name});
 }
 
-/// What is done to the request chosen names it, and says whether real values are wanted.
+/// What is done to the request chosen, by the name of what was pressed.
 - (void)pressed:(NSButton *)sender {
-  NSString *key = _list.selected.key;
-  if (!key || !self.probing) return;
-  NSMutableDictionary *m = [@{@"op": @"control", @"name": sender.identifier, @"id": @(key.integerValue)} mutableCopy];
-  if ([sender.identifier isEqual:@"networkCurl"] && _real) m[@"real"] = @YES;
-  MVPaneSend(self, m);
+  [self act:sender.identifier on:_list.selected.key];
 }
 
 - (void)sectionChosen:(NSInteger)at {
@@ -79,6 +76,79 @@ static NSString *const kBodiesKept = @"networkBodies";
 
 - (void)wayChosen:(id)sender {
   [self layOut];
+}
+
+/// A host's heading clicked: its requests close under it, or open again.
+- (void)toggle:(NSString *)host {
+  if ([_closed containsObject:host]) [_closed removeObject:host];
+  else [_closed addObject:host];
+  [self listRows];
+  [self layOut];
+  [self showDetail:_list.selected.key];
+}
+
+/// Esc in the list: the request chosen is left, and what showed of it closes.
+- (void)leave {
+  [_list selectKey:nil];
+  [self showDetail:nil];
+}
+
+/// What is done to one request, by the name the parent takes it by, or here where the window can do it alone: its
+/// address copied, and the list narrowed to its host.
+- (void)act:(NSString *)name on:(nullable NSString *)key {
+  NSUInteger at = [_entries indexOfObjectPassingTest:^BOOL(NSDictionary *one, NSUInteger i, __unused BOOL *stop) {
+    return [one isKindOfClass:NSDictionary.class] && [MVNetworkKey(one, i) isEqual:key];
+  }];
+  if (at == NSNotFound) return;
+  NSURL *url = [NSURL URLWithString:[_entries[at][@"url"] description] ?: @""];
+  if ([name isEqual:@"networkCopyUrl"]) return MVCopyText(url.absoluteString ?: @"", MVPlaceBoard());
+  if ([name isEqual:@"networkOnlyHost"]) {
+    _filter.words = url.host ?: @"";
+    return;
+  }
+  if (!self.probing) return;
+  NSMutableDictionary *m = [@{@"op": @"control", @"name": name, @"id": @(key.integerValue)} mutableCopy];
+  if ([name isEqual:@"networkCurl"] && _real) m[@"real"] = @YES;
+  MVPaneSend(self, m);
+}
+
+/// What there is to do with a request, each by its name here and the words a person reads: the same in the menu of a
+/// row and for a screen reader. What reads the capture is offered only while one runs.
+- (NSArray<NSArray<NSString *> *> *)deeds {
+  NSMutableArray<NSArray<NSString *> *> *deeds = [NSMutableArray array];
+  if (self.probing) [deeds addObjectsFromArray:@[@[@"networkCurl", _real ? @"Copy as cURL with Real Values" : @"Copy as cURL"], @[@"networkMockFrom", @"Mock This Answer"]]];
+  [deeds addObjectsFromArray:@[@[@"networkCopyUrl", @"Copy Address"], @[@"networkOnlyHost", @"Show Only This Host"]]];
+  return deeds;
+}
+
+- (NSArray<NSAccessibilityCustomAction *> *)actionsOn:(NSString *)key {
+  NSMutableArray<NSAccessibilityCustomAction *> *actions = [NSMutableArray array];
+  __weak MVNetworkPane *weak = self;
+  for (NSArray<NSString *> *deed in self.deeds)
+    [actions addObject:[[NSAccessibilityCustomAction alloc] initWithName:MVWord(deed[1])
+                                                                 handler:^BOOL {
+                                                                   [weak act:deed[0] on:key];
+                                                                   return YES;
+                                                                 }]];
+  return actions;
+}
+
+/// The menu of a row, made as it opens for the row it opens on: rows are read again under an open menu, and the one
+/// clicked is kept by its own name.
+- (void)menuNeedsUpdate:(NSMenu *)menu {
+  if (menu != _list.rowMenu) return;
+  [menu removeAllItems];
+  _menuKey = _list.clickedKey;
+  if (!_menuKey || [_menuKey hasPrefix:@"host "]) return;
+  for (NSArray<NSString *> *deed in self.deeds) {
+    NSMenuItem *item = [menu addItemWithTitle:MVWord(deed[1]) action:@selector(rowChosen:) keyEquivalent:@""];
+    item.target = self;
+    item.identifier = deed[0];
+  }
+}
+
+- (void)rowChosen:(NSMenuItem *)item {
+  [self act:item.identifier on:_menuKey];
 }
 
 @end

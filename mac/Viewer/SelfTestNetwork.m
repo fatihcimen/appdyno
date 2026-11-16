@@ -41,6 +41,12 @@ static void look(MVWindow *window, NSString *name) {
   MVWriteWindow(window.nsWindow, [folder stringByAppendingPathComponent:[name stringByAppendingString:@".png"]]);
 }
 
+/// A colour as its three parts, in the look it is asked in: two colours made apart are one hue where these are alike.
+static NSString *hue(NSColor *color) {
+  NSColor *plain = [color colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+  return [NSString stringWithFormat:@"%.2f %.2f %.2f", plain.redComponent, plain.greenComponent, plain.blueComponent];
+}
+
 static NSString *titles(MVNetworkPane *pane) {
   return [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"];
 }
@@ -151,7 +157,7 @@ static void checkList(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDi
                                                 @"inFlight": @YES}],
                      @{@"total": @1234})];
   look(window, @"list");
-  MVCheck(@"requests: one still under way stands with its host's, and says for how long", [titles(pane) isEqual:@"GET /x|GET /feed|POST /pay"] && [pane.rows[1].detail isEqual:MVFormat(@"In flight for %@", @[@"41 s"])] && [pane.rows[1].symbol isEqual:@"hourglass"], [[pane.rows valueForKey:@"detail"] componentsJoinedByString:@"|"]);
+  MVCheck(@"requests: one still under way stands with its host's, and says for how long", [titles(pane) isEqual:@"GET /x|GET /feed|POST /pay"] && [pane.rows[1].detail isEqual:MVFormat(@"In flight for %@", @[@"41.0 s"])] && pane.rows[1].spins && [pane.rows[1].symbol isEqual:@"hourglass"], [[pane.rows valueForKey:@"detail"] componentsJoinedByString:@"|"]);
   NSTextField *state = [pane valueForKey:@"_state"];
   MVCheck(@"requests: a list that is the latest of more says how many it shows of how many, and the capture's row how many there are", [pane.note isEqual:@"Showing the latest 2 of 1,234 requests"] && [state.stringValue hasSuffix:@" · 1,234 requests"], [NSString stringWithFormat:@"%@ | %@", pane.note, state.stringValue]);
   MVTestTurkish(YES);
@@ -183,22 +189,109 @@ static void checkList(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDi
   [sent removeAllObjects];
 }
 
+/// A row for each way a request can stand: its mark and its figures, with nothing that is no figure; its host's heading,
+/// counted and closed; and what a screen reader has of it.
+static void checkRows(MVWindow *window, MVNetworkPane *pane) {
+  MVList *list = [pane valueForKey:@"_list"];
+  NSArray<NSDictionary *> *all = @[
+    request(1, @"GET", @"https://api.test:8443/v1/items", 200, 23),
+    request(2, @"GET", @"https://api.test:8443/assets/hero.png", 304, 37296),
+    request(3, @"DELETE", @"https://api.test:8443/v1/coupons/SPRING", 404, 12),
+    request(4, @"POST", @"https://pay.test/v1/pay", 500, 8),
+    @{@"id": @5,
+      @"method": @"GET",
+      @"url": @"https://pay.test/v1/health",
+      @"ms": @8,
+      @"bytes": @0,
+      @"error": @"Could not connect to the server."},
+    @{@"id": @6,
+      @"method": @"GET",
+      @"url": @"https://pay.test/v1/profile",
+      @"status": @200,
+      @"ms": @1,
+      @"bytes": @29,
+      @"how": @"mocked"},
+    @{@"id": @7,
+      @"method": @"GET",
+      @"url": @"https://pay.test/v1/ads/banner",
+      @"status": @0,
+      @"ms": @0,
+      @"bytes": @0,
+      @"error": @"The operation couldn’t be completed. (NSURLErrorDomain error -1009.)",
+      @"how": @"failed"},
+    @{@"id": @8,
+      @"method": @"GET",
+      @"url": @"https://pay.test/v1/feed",
+      @"ms": @1743,
+      @"inFlight": @YES},
+  ];
+  [pane show:probing(all, @{})];
+  look(window, @"rows");
+  NSArray<MVRow *> *rows = pane.rows;
+  NSString * (^line)(MVRow *) = ^(MVRow *row) {
+    return [@[row.symbol ?: @"-", row.code ?: @"-", row.method ?: @"-", row.line ?: @"-", row.ends ?: @"-"] componentsJoinedByString:@" "];
+  };
+  NSArray<NSString *> *want = @[@"- 200 GET /v1/items 23 ms", @"arrow.turn.down.right 304 GET /assets/hero.png 37.3 s", @"exclamationmark.circle.fill 404 DELETE /v1/coupons/SPRING 12 ms", @"exclamationmark.triangle.fill 500 POST /v1/pay 8 ms", @"wifi.slash - GET /v1/health \u2014", @"arrow.triangle.turn.up.right.diamond.fill 200 GET /v1/profile 1 ms", @"xmark.diamond.fill - GET /v1/ads/banner \u2014", @"hourglass - GET /v1/feed 1.7 s"];
+  NSMutableArray<NSString *> *got = [NSMutableArray array];
+  for (MVRow *row in rows) [got addObject:line(row)];
+  MVCheck(@"rows: each is one line of a mark, a status, a method, a path and how long it took, in seconds past a second", [got isEqual:want], [got componentsJoinedByString:@" | "]);
+  MVCheck(@"rows: what went well has no mark and a quiet status; what did not has its status in the main ink", !rows[0].symbol && !rows[0].strong && !rows[0].tint && !rows[1].tint && rows[2].strong && rows[3].strong, nil);
+  MVCheck(@"rows: colour sits in the mark, one hue for the app's fault, one for the server's and the way, one for a rule's doing", [hue(rows[2].tint) isEqual:hue(MVOrange())] && [hue(rows[3].tint) isEqual:hue(rows[4].tint)] && [hue(rows[5].tint) isEqual:hue(MVAgent())] && [hue(rows[6].tint) isEqual:hue(MVAgent())] && ![hue(rows[3].tint) isEqual:hue(rows[6].tint)] && ![hue(rows[2].tint) isEqual:hue(rows[3].tint)], [@[hue(rows[2].tint), hue(rows[3].tint), hue(rows[5].tint)] componentsJoinedByString:@" | "]);
+  MVCheck(@"rows: one a rule failed says only that, with no status of 0, no time, no size and no cut error", [rows[6].detail isEqual:MVWord(@"Failed by a rule")] && !rows[6].bad && rows[4].bad && [rows[4].detail isEqual:@"8 ms · Failed: Could not connect to the server."], [NSString stringWithFormat:@"%@ | %@", rows[6].detail, rows[4].detail]);
+  MVCheck(@"rows: a screen reader hears how each stands in words, as its mark is none", [rows[3].says isEqual:@"POST /v1/pay, failed, 500, 8 ms"] && [rows[5].says isEqual:@"GET /v1/profile, 200, 1 ms, 29 B, Mocked"] && [rows[7].says isEqual:@"GET /v1/feed, In flight for 1.7 s"], [@[rows[3].says, rows[5].says, rows[7].says] componentsJoinedByString:@" | "]);
+  NSArray<MVRow *> *heads = [list.rows filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"header == YES"]];
+  MVCheck(@"hosts: each heading has its host, its port apart, how many requests and how many failed", heads.count == 2 && [heads[0].line isEqual:@"api.test"] && [heads[0].ends isEqual:@":8443"] && heads[0].count == 3 && heads[0].failed == 1 && heads[1].count == 5 && heads[1].failed == 2 && [heads[1].says isEqual:@"pay.test, 5 requests, 2 failed"], heads[1].says);
+  list.onToggle(heads[1]);
+  MVCheck(@"hosts: a heading clicked closes its requests under it, and still says how many it has", [titles(pane) isEqual:@"GET /v1/items|GET /assets/hero.png|DELETE /v1/coupons/SPRING"] && list.rows.lastObject.closed && list.rows.lastObject.count == 5, titles(pane));
+  pane.filter.words = @"health";
+  MVCheck(@"hosts: what a person looks for is found in a host that is closed", [titles(pane) isEqual:@"GET /v1/health"], titles(pane));
+  pane.filter.words = @"#4";
+  MVCheck(@"rows: a request is found by the number an agent names it by", [titles(pane) isEqual:@"POST /v1/pay"], titles(pane));
+  pane.filter.words = @"";
+  list.onToggle(list.rows.lastObject);
+  NSArray<NSString *> *offered = [list.rowActions(rows[3]) valueForKey:@"name"];
+  NSArray<NSString *> *deeds = @[MVWord(@"Copy as cURL"), MVWord(@"Mock This Answer"), MVWord(@"Copy Address"), MVWord(@"Show Only This Host")];
+  MVCheck(@"rows: what is done to a request is offered on its row, to a screen reader as in its menu", [offered isEqual:deeds] && list.rowMenu.delegate == (id)pane, [offered componentsJoinedByString:@"|"]);
+  [list.rowActions(rows[3])[2] handler]();
+  MVCheck(@"rows: Copy Address copies the request's address", [[MVPlaceBoard() stringForType:NSPasteboardTypeString] isEqual:@"https://pay.test/v1/pay"], [MVPlaceBoard() stringForType:NSPasteboardTypeString]);
+  [list.rowActions(rows[3])[3] handler]();
+  MVCheck(@"rows: Show Only This Host narrows the list to it", [pane.filter.words isEqual:@"pay.test"] && pane.rows.count == 5, pane.filter.words);
+  pane.filter.words = @"";
+  // many rows, and one chosen far down: the detail that opens under the list takes room, and the row stays in sight
+  NSMutableArray<NSDictionary *> *many = [NSMutableArray array];
+  for (NSInteger i = 0; i < 60; i++) [many addObject:request(100 + i, @"GET", [NSString stringWithFormat:@"https://api.test/v1/items/%ld", (long)i], 200, i)];
+  [pane show:probing(many, @{})];
+  MVPokeListRow(list, @"GET /v1/items/40");
+  MVPump(0.2);
+  NSTableView *table = [list valueForKey:@"_table"];
+  [window.nsWindow layoutIfNeeded];
+  MVCheck(@"rows: the one chosen stays in sight above what opens of it", table.selectedRow >= 0 && NSContainsRect(NSInsetRect(table.visibleRect, 0, -1), [table rectOfRow:table.selectedRow]) && pane.detail.length > 0, NSStringFromRect([table rectOfRow:table.selectedRow]));
+  look(window, @"rows-chosen");
+  many[40] = request(140, @"GET", @"https://api.test/v1/items/40", 200, 999);
+  [pane show:probing(many, @{})];
+  MVCheck(@"rows: read again, the same rows keep the one chosen, and only what changed is drawn again", [list.selected.key isEqual:@"140"] && [list.selected.ends isEqual:@"999 ms"], list.selected.ends);
+  list.onKey(@"escape");
+  MVCheck(@"rows: Esc in the list leaves the request, and what showed of it closes", !list.selected && !pane.detail.length, pane.detail);
+}
+
 /// One request chosen, and what is done to it and to the capture.
 static void checkRequest(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictionary *> *sent) {
   MVList *list = [pane valueForKey:@"_list"];
+  NSArray<NSDictionary *> *two = @[@{@"id": @7,
+                                     @"method": @"GET",
+                                     @"url": @"https://a.test/x?token=•••",
+                                     @"status": @200,
+                                     @"ms": @3,
+                                     @"how": @"mocked"},
+                                   request(8, @"POST", @"https://b.test/pay", 500, 9)];
+  [pane show:probing(two, @{})];
+  [sent removeAllObjects];
   MVPokeListRow(list, @"GET /x");
   MVPump(0.1);
   NSDictionary *asked = @{@"op": @"control",
                           @"name": @"networkDetail",
                           @"id": @7};
-  [pane show:probing(@[@{@"id": @7,
-                         @"method": @"GET",
-                         @"url": @"https://a.test/x?token=•••",
-                         @"status": @200,
-                         @"ms": @3,
-                         @"how": @"mocked"},
-                       request(8, @"POST", @"https://b.test/pay", 500, 9)],
-                     @{})];
+  [pane show:probing(two, @{})];
   MVCheck(@"request: one chosen asks for its headers and bodies, once however often the list is read again", sent.count == 1 && [sent[0] isEqual:asked], sent.description);
   MVCheck(@"request: and shows whole meanwhile, its address as the op gave it", [pane.detail containsString:@"https://a.test/x?token=•••"], pane.detail);
   NSDictionary *parts = @{@"id": @7,
@@ -318,6 +411,7 @@ void MVCheckNetwork(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDict
   checkStart(window, pane, sent);
   checkCapture(window, pane, sent);
   checkList(window, pane, sent);
+  checkRows(window, pane);
   checkRequest(window, pane, sent);
   MVCheckNetworkRules(window, pane, sent);
   [window pokeClick:@"networkShowRequests"];

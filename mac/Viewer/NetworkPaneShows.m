@@ -5,31 +5,22 @@
 
 @implementation MVNetworkPane (Shows)
 
-/// Whether a request failed: refused by its server or lost on its way, and not by a rule's doing.
-static BOOL failed(NSDictionary *e) {
-  return ![e[@"how"] isKindOfClass:NSString.class] && ([e[@"error"] length] || [e[@"status"] integerValue] >= 400);
-}
-
 /// The rows a person's words leave: each word in a row's method and address, in its figures or in how it stands, in any
 /// case and with or without the marks on a letter; and with the scope on, only what failed.
 - (void)listRows {
   NSArray<NSString *> *words = [MVFolded(_filter.words) componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
-  NSString *chosen = _list.selected.key;
-  NSMutableSet<NSString *> *bad = [NSMutableSet set];
-  [_entries enumerateObjectsUsingBlock:^(NSDictionary *e, NSUInteger at, __unused BOOL *stop) {
-    if ([e isKindOfClass:NSDictionary.class] && failed(e)) [bad addObject:MVNetworkKey(e, at)];
-  }];
-  _filter.failed = bad.count;
-  BOOL scoped = _filter.failedOnly;
-  // those left stand under their hosts, a host with none left gone with them
-  _list.rows = MVNetworkGrouped([_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, __unused NSDictionary *bindings) {
-                                            if (scoped && ![bad containsObject:row.key]) return NO;
-                                            NSString *all = MVFolded([NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.finds ?: @""]);
-                                            for (NSString *word in words)
-                                              if (word.length && ![all containsString:word]) return NO;
-                                            return YES;
-                                          }]]);
-  [_list selectKey:chosen];
+  _filter.failed = [_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"bad == YES"]].count;
+  BOOL scoped = _filter.failedOnly, narrowed = scoped || _filter.words.length;
+  NSArray<MVRow *> *left = [_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, __unused NSDictionary *bindings) {
+                                       if (scoped && !row.bad) return NO;
+                                       NSString *all = MVFolded([NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.finds ?: @""]);
+                                       for (NSString *word in words)
+                                         if (word.length && ![all containsString:word]) return NO;
+                                       return YES;
+                                     }]];
+  // those left stand under their hosts, a host with none left gone with them; what a person looked for is not kept
+  // closed away from them
+  _list.rows = MVNetworkGrouped(left, narrowed ? nil : _closed);
 }
 
 /// The filter changed: the list again, and the request chosen as it stands in it.
@@ -48,6 +39,9 @@ static BOOL failed(NSDictionary *e) {
   _detailCard.hidden = !e || _onRules;
   _requestTools.hidden = _detailCard.hidden || !self.probing;
   if (!e) return;
+  // what opened under the list took room from it: the row it belongs to stays in sight
+  [self layoutSubtreeIfNeeded];
+  [_list showSelected];
   // its headers and bodies are asked for once, where the capture keeps them, and stand in place of the line
   if (_keeps && key && ![key isEqual:_askedKey]) {
     _askedKey = key;

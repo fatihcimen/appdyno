@@ -212,6 +212,9 @@ static const double MVHudWidth = 188;
 @end
 
 /// One line of a list.
+/// The red of a mark in a list: the palette's own, lifted in the dark look, where that one falls under 3:1 on a card.
+NSColor *MVMarkRed(void);
+
 @interface MVRow : NSObject
 /// A small mark of how a device is, and the shape that says it where colour is not to be relied on.
 @property(nonatomic, nullable) NSColor *dot;
@@ -227,6 +230,14 @@ static const double MVHudWidth = 188;
 @property(nonatomic, copy, nullable) NSString *key;
 /// A heading over the rows beneath it, which cannot be chosen.
 @property(nonatomic) BOOL header;
+/// A row of one line, as a list of lines draws it: its status and its method before `line`, the words it shows in place
+/// of its title, and what stands at its end, such as how long it took. `strong` sets its status in the main ink, `spins`
+/// says it is under way, `bad` that it failed, and `says` is the whole of it for a screen reader, whose eyes its mark is not.
+@property(nonatomic, copy, nullable) NSString *code, *method, *line, *ends, *says;
+@property(nonatomic) BOOL strong, spins, bad;
+/// A heading of such a list: how many rows stand under it, how many of them failed, and whether it is closed over them.
+@property(nonatomic) NSUInteger count, failed;
+@property(nonatomic) BOOL closed;
 /// What a search finds it by beside what it shows: the words for how it stands, in both of the window's languages.
 @property(nonatomic, copy, nullable) NSString *finds;
 /// Its line beneath wraps whole, the row as tall as it needs, where one cut in the middle would leave a name unread.
@@ -242,6 +253,17 @@ static const double MVHudWidth = 188;
 @property(nonatomic, readonly, nullable) MVRow *selected;
 - (void)scrollToEnd;
 - (void)selectKey:(nullable NSString *)key;
+/// Rows of one line each, set in columns, under headings that stay in sight as the list scrolls: for a list of many of
+/// one kind. The row chosen wears the house's own mark of it, a heading clicked is `onToggle`'s, rows read again change
+/// only where they differ, and a list scrolled to its end follows what comes.
+- (void)useLines;
+@property(nonatomic, copy, nullable) void (^onToggle)(MVRow *heading);
+/// A key pressed while the list has the keyboard, and only then: `open` for Return or Space, `escape`, `delete`.
+@property(nonatomic, copy, nullable) void (^onKey)(NSString *key);
+/// What a screen reader offers to do with a row, beside choosing it.
+@property(nonatomic, copy, nullable) NSArray<NSAccessibilityCustomAction *> * (^rowActions)(MVRow *row);
+/// The row chosen comes into sight.
+- (void)showSelected;
 /// Where a row stands in its window.
 - (NSPoint)pointOfRow:(NSUInteger)at;
 /// What a secondary click on a row offers, and the row it was on.

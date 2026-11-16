@@ -1,19 +1,13 @@
 // Rows of a title and a line beneath, with a symbol: the Inspector's lists and a sidebar. A row's words stand as given: an
 // app's, a device's or an element's name is never put in another language, and a row's builder says the window's own.
+#import "List.h"
 #import "Place.h"
-#import "Window.h"
+#import "Words.h"
 
+static const double kLineHeight = 28, kFloatAlpha = 0.9;
 static const double kHeaderHeight = 30, kChangeSeconds = 0.2, kTileSide = 26, kChosenAlpha = 0.2, kChosenRound = 10, kChosenInset = 4;
 /// What an inset table's row keeps on each side, and the room a row's end keeps, all told.
 static const double kWrapMargins = 28;
-
-/// Its title is its own: as a cell's `textField` the table would take over its colour.
-@interface MVRowCell : NSTableCellView
-@property(nonatomic) NSTextField *title;
-@end
-
-@implementation MVRowCell
-@end
 
 @interface MVRowView : NSTableRowView
 @end
@@ -31,7 +25,21 @@ static const double kWrapMargins = 28;
 
 - (void)weigh {
   for (NSView *view in self.subviews)
-    if ([view isKindOfClass:MVRowCell.class]) ((MVRowCell *)view).title.font = [NSFont systemFontOfSize:NSFont.systemFontSize weight:self.selected ? NSFontWeightSemibold : NSFontWeightRegular];
+    if ([view isKindOfClass:MVRowCell.class] && !((MVRowCell *)view).line.header) {
+      ((MVRowCell *)view).title.font = [NSFont systemFontOfSize:NSFont.systemFontSize weight:self.selected ? NSFontWeightSemibold : NSFontWeightRegular];
+      [(MVRowCell *)view choose:self.selected];
+    }
+}
+
+/// A heading held at the list's top as its rows pass under it stands on a ground of its own, so that they do not show through.
+- (void)drawBackgroundInRect:(NSRect)dirty {
+  if (!self.isGroupRowStyle || !self.isFloating) return;
+  // held, and not merely the first heading of a list at rest: only then do rows pass under it
+  NSTableView *table = (NSTableView *)self.superview;
+  NSInteger row = [table isKindOfClass:NSTableView.class] ? [table rowForView:self] : -1;
+  if (row < 0 || NSMinY(self.frame) <= NSMinY([table rectOfRow:row]) + 0.5) return;
+  [[MVSurface() colorWithAlphaComponent:kFloatAlpha] setFill];
+  NSRectFillUsingOperation(self.bounds, NSCompositingOperationSourceOver);
 }
 
 - (void)setSelected:(BOOL)selected {
@@ -61,15 +69,14 @@ static NSString *identityOf(MVRow *row);
 }
 @end
 
-@implementation MVList {
-  NSTableView *_table;
-  BOOL _arrives;
-}
+@implementation MVList
+
+@synthesize rows = _rows;
 
 - (instancetype)initWithFrame:(NSRect)frame {
   if ((self = [super initWithFrame:frame])) {
     _rows = @[];
-    _table = [NSTableView new];
+    _table = [MVKeyTable new];
     _table.style = NSTableViewStyleInset;
     _table.rowHeight = 38;
     _table.headerView = nil;
@@ -125,7 +132,30 @@ static NSString *identityOf(MVRow *row) {
   if (_table.clickedRow >= 0 && (NSUInteger)_table.clickedRow < _rows.count) self.onClick(_rows[_table.clickedRow]);
 }
 
+- (void)useLines {
+  _lines = YES;
+  _table.style = NSTableViewStylePlain;
+  _table.rowHeight = kLineHeight;
+  _table.intercellSpacing = NSZeroSize;
+  _table.floatsGroupRows = YES;
+  _table.gridStyleMask = NSTableViewGridNone;
+  _table.target = self;
+  _table.action = @selector(lineClicked:);
+  __weak MVList *weak = self;
+  _table.onKey = ^BOOL(NSString *key) {
+    MVList *list = weak;
+    if (!list.onKey || (!list.selected && ![key isEqual:@"escape"])) return NO;
+    list.onKey(key);
+    return YES;
+  };
+}
+
+- (void)showSelected {
+  if (_table.selectedRow >= 0) [_table scrollRowToVisible:_table.selectedRow];
+}
+
 - (void)setRows:(NSArray<MVRow *> *)rows {
+  if (_lines) return [self setLines:rows];
   if (_arrives && MVMoves() && _rows.count && [self changeTo:rows]) return;
   _rows = [rows copy];
   [_table reloadData];
@@ -168,10 +198,11 @@ static NSString *identityOf(MVRow *row) {
 }
 
 - (BOOL)tableView:(NSTableView *)table isGroupRow:(NSInteger)at {
-  return NO;
+  return _lines && _rows[at].header;
 }
 
 - (BOOL)tableView:(NSTableView *)table shouldSelectRow:(NSInteger)at {
+  if (_lines) return !_rows[at].header;
   return !self.onClick && (!_rows[at].header || _rows[at].key);
 }
 
@@ -186,6 +217,7 @@ static NSDictionary *subLine(void) {
 
 - (CGFloat)tableView:(NSTableView *)table heightOfRow:(NSInteger)at {
   MVRow *row = _rows[at];
+  if (_lines) return kLineHeight;
   if (row.header) return kHeaderHeight;
   if (!row.wraps || !row.detail.length) return table.rowHeight;
   // as many lines more as its line beneath takes past the first
@@ -206,11 +238,11 @@ static NSDictionary *subLine(void) {
 }
 
 - (NSTableRowView *)tableView:(NSTableView *)table rowViewForRow:(NSInteger)at {
-  return table.style == NSTableViewStyleSourceList ? [MVRowView new] : nil;
+  return _lines || table.style == NSTableViewStyleSourceList ? [MVRowView new] : nil;
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification {
-  if (self.onSelect) self.onSelect(self.selected);
+  if (self.onSelect && !_still) self.onSelect(self.selected);
 }
 
 - (NSView *)headerCell:(NSString *)text in:(NSTableCellView *)cell {
@@ -228,6 +260,7 @@ static NSDictionary *subLine(void) {
 
 - (NSView *)tableView:(NSTableView *)table viewForTableColumn:(NSTableColumn *)column row:(NSInteger)at {
   MVRow *row = _rows[at];
+  if (_lines) return row.header ? [self hostCell:row] : [self lineCell:row];
   MVRowCell *cell = [MVRowCell new];
   cell.toolTip = row.help;
   if (row.header) return [self headerCell:row.title in:cell];

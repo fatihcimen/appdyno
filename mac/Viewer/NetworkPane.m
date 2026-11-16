@@ -65,10 +65,24 @@ static NSString *const kBodiesKept = @"networkBodies";
     _answer = [MVAnswerView new];
     _list = [MVList new];
     _list.accessibilityLabel = MVWord(@"Requests");
-    [_list setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+    [_list useLines];
+    _closed = [NSMutableSet set];
     _list.onSelect = ^(MVRow *row) {
       [weak showDetail:row.key];
     };
+    _list.onToggle = ^(MVRow *heading) {
+      [weak toggle:heading.title];
+    };
+    _list.onKey = ^(NSString *key) {
+      if ([key isEqual:@"escape"]) [weak leave];
+    };
+    _list.rowActions = ^(MVRow *row) {
+      return [weak actionsOn:row.key];
+    };
+    _list.rowMenu = [NSMenu new];
+    _list.rowMenu.delegate = self;
+    _listCard = MVCardInset(_list, 4, 0);
+    [_listCard setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
     _curl = MVPlaceButton(@"Copy as cURL", @"networkCurl", self, @selector(pressed:));
     _mock = MVPlaceButton(@"Mock This Answer", @"networkMockFrom", self, @selector(pressed:));
     _requestTools = MVPaneRow(@[_curl, _mock]);
@@ -84,7 +98,7 @@ static NSString *const kBodiesKept = @"networkBodies";
       MVPaneSend(weak, message);
     };
     [self makeMenu];
-    MVPaneFill(self, @[_captureRow, _sections, _filter, _note, _card, _list, _requestTools, _detailCard, _rules, _slack, _answer], 8);
+    MVPaneFill(self, @[_captureRow, _sections, _filter, _note, _card, _listCard, _requestTools, _detailCard, _rules, _slack, _answer], 8);
     [self layOut];
   }
   return self;
@@ -276,7 +290,7 @@ static void stand(NSView *view, NSStackView *stack, NSUInteger at, BOOL wide) {
   _sections.hidden = !probe;
   _filter.hidden = _onRules || !(any || _filter.words.length || _filter.failedOnly);
   _rules.hidden = !_onRules;
-  _list.hidden = _onRules || !_list.rows.count;
+  _listCard.hidden = _onRules || !_list.rows.count;
   _card.hidden = _onRules || any;
   if (!_card.hidden) [self sayCard:via];
   // the list is the latest of more; and what a capture that ended can no longer do, with why
@@ -286,7 +300,7 @@ static void stand(NSView *view, NSStackView *stack, NSUInteger at, BOOL wide) {
   if (any && !_list.rows.count) [notes addObject:MVWord(@"No request here matches the filter.")];
   _note.stringValue = [notes componentsJoinedByString:@"\n"];
   _note.hidden = _onRules || !notes.count;
-  _slack.hidden = !_list.hidden || _onRules;
+  _slack.hidden = !_listCard.hidden || _onRules;
   _more.hidden = !(probe || (left && _wasProbe));
   _more.enabled = probe;
   if (!probe) _more.toolTip = _wasProbe ? MVWord(@"The capture has ended. Its requests can still be searched; copying, mocking and saving need a capture that runs.") : MVWord(@"More");

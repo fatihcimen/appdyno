@@ -70,7 +70,7 @@ void MVCheckNetworkRules(MVWindow *window, MVNetworkPane *pane, NSMutableArray<N
   MVCheck(@"rules: each stands with what it took, one that is off said to be", pane.rules.rows.count == 2 && [pane.rules.rows[1].detail hasPrefix:MVWord(@"Off")], [[pane.rules.rows valueForKey:@"detail"] componentsJoinedByString:@"|"]);
   [window pokeClick:@"networkShowRules"];
   MVPump(0.1);
-  MVCheck(@"rules: shown, they take the place of the requests", !pane.rules.hidden && [[pane valueForKey:@"_list"] isHidden] && !pane.detail.length, nil);
+  MVCheck(@"rules: shown, they take the place of the requests", !pane.rules.hidden && [[pane valueForKey:@"_list"] isHiddenOrHasHiddenAncestor] && !pane.detail.length, nil);
   NSTextField *field = [pane.rules valueForKey:@"_field"];
   field.stringValue = @"a.test/z delayMs=300";
   [window pokeClick:@"networkRuleSave"];

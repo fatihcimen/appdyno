@@ -188,7 +188,10 @@ void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nulla
 MVRow *MVNetworkRow(NSDictionary *entry, NSUInteger at);
 NSString *MVNetworkFigures(NSDictionary *entry);
 NSString *MVNetworkKey(NSDictionary *entry, NSUInteger at);
-NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows);
+/// Rows under the heading of their host, each heading with how many it has and how many failed; a host in `closed` keeps its heading alone.
+NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows, NSSet<NSString *> *_Nullable closed);
+/// Whether a request failed: refused by its server or lost on its way, and not by a rule's doing.
+BOOL MVNetworkFailed(NSDictionary *entry);
 /// How long and how much, as a person reads them: ms, then seconds, then minutes; B, KB, MB to three figures.
 NSString *MVNetworkTook(double ms);
 NSString *MVNetworkSize(double bytes);
