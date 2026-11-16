@@ -1,10 +1,9 @@
-import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { arch, homedir, platform } from 'node:os';
 import { dirname, join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
-import { type Check, noteInAnswer, reportProgress, run } from '@appdyno/core';
+import { type Check, downloadPinned, noteInAnswer, reportProgress, run } from '@appdyno/core';
 
 /**
  * Host tools some measurements need, pinned by version and sha256 (the digests the release publishes);
@@ -132,20 +131,6 @@ async function fetchTraceProcessor() {
   }
 }
 
-/** A file from the network, whole, or a refusal that says why none came. */
-async function download(url: string) {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_MS) });
-    if (!res.ok) throw new Error(`HTTP ${String(res.status)}`);
-    return Buffer.from(await res.arrayBuffer());
-  } catch (e) {
-    // offline, a proxy that refuses or holds it, a release that is gone: fetch says which in its cause
-    const why = e instanceof Error && e.cause instanceof Error ? e.cause : e;
-    const said = why instanceof Error ? why.message : String(why);
-    throw new DeviceError('OFFLINE', `download failed (${said}): ${url}`);
-  }
-}
-
 /**
  * A pinned zip's `program` and `notices` into `dir`: one whose hash differs is never unpacked. Each file appears whole,
  * by a rename, the program last, so a process stopped midway leaves nothing that looks installed.
@@ -159,9 +144,7 @@ async function fetchPinned(
   log: (s: string) => void,
 ) {
   log(`downloading ${url}`);
-  const data = await download(url);
-  const sha = createHash('sha256').update(data).digest('hex');
-  if (sha !== sha256) throw new DeviceError('POLICY_DENIED', `sha256 mismatch for ${url}: ${sha}`);
+  const data = await downloadPinned(url, sha256, DOWNLOAD_MS);
   await mkdir(dirname(dir), { recursive: true });
   // beside where it goes, so that a rename never crosses a volume
   const tmp = await mkdtemp(`${dir}.`);
