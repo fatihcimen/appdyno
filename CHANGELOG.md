@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+### Changed
+
+- A touch refused as `NOT_FOUND` or `STALE` holds the screen as it is now, as an answer does: what differs from the screen shown last, or all of it. It took a `screen` call and a turn before the next try. A `steps` call that fails shows the screen the same way, where it always showed all of it; `read: full` still does. Neither hint sends to `screen` any more.
+- The server's instructions say that `launch_app`, `open_link` and every action answer with the screen, so `screen` is for when no answer has shown it, and that the actions already known go in one `steps` call, with `wait_for` or `assert` last where a result takes time. A `wait_for` that runs out with the screen in its answer no longer says to read the screen.
+- Over MCP, an answer's structured content leaves out each warning its text says, and `warnings` where none is left: a client that hands a model the structured content alone read every warning twice.
+- A whole screen folds rows that only their context tells apart under one header, with the context in a column of its own: twelve `Add` buttons took 1,248 characters and take 1,044.
+- `logs` says the day, and the process where one wrote every line, once under its first line and not on each line: 200 lines of logcat took 19,014 characters and take 16,458.
+- A refusal that holds why the app died says so in its hint, where it sent to `crashes` for it.
+- A `steps` call refused for a step that is no tool says that nothing was done.
+- `node scripts/efficiency.mjs` prints what eight tasks cost in calls and characters with no device, and `node scripts/bench.mjs <simulator id>` runs five with a real model; see CONTRIBUTING.
+
 ## 1.2.0
 
 appdyno 1.2.0 reads what a screen is made of and does more to the app: the native views under an iOS simulator's app or an Android activity, memory warnings, a shake, photos and videos added, and an app ended as the system ends it. A program gets the device itself through `appdyno/device`, desktop installs come as one `.mcpb` file, and a screen with a part that never stops moving no longer slows Android down. It is tested on Xcode 26.5 and Xcode 27.2.

@@ -4,6 +4,17 @@
 
 ## Yayımlanmamış
 
+### Değişenler
+
+- `NOT_FOUND` ya da `STALE` ile reddedilen bir dokunuş, bir yanıtın yaptığı gibi ekranı şimdiki haliyle içerir: son gösterilen ekrandan farkını ya da tamamını. Önceden bir sonraki denemeden önce bir `screen` çağrısı ve bir tur gerekiyordu. Başarısız olan bir `steps` çağrısı da ekranı aynı biçimde gösterir; önceden hep tamamını gösteriyordu, `read: full` yine öyle yapar. İkisinin ipucu da artık `screen`'e yollamaz.
+- Sunucunun yönergeleri, `launch_app`, `open_link` ve her işlemin ekranla yanıt verdiğini, yani `screen`'in hiçbir yanıtın ekranı göstermediği durum için olduğunu ve bilinen işlemlerin tek bir `steps` çağrısına, sonucun zaman aldığı yerde sonda `wait_for` ya da `assert` ile konduğunu söyler. Süresi dolan ve yanıtında ekran bulunan bir `wait_for` artık ekranı okumayı söylemez.
+- MCP üzerinde bir yanıtın yapılandırılmış içeriği, metninin söylediği her uyarıyı ve hiçbiri kalmadığında `warnings` alanını dışarıda bırakır: modele yalnızca yapılandırılmış içeriği veren bir istemci her uyarıyı iki kez okuyordu.
+- Bütün bir ekran, yalnızca bağlamlarının ayırdığı satırları tek bir başlığın altında katlar, bağlam kendi sütunundadır: on iki `Add` düğmesi 1.248 karakter tutuyordu, şimdi 1.044 tutar.
+- `logs` günü, her satırı tek bir süreç yazdıysa süreci de, her satırda değil ilk satırının altında bir kez söyler: 200 satırlık logcat 19.014 karakter tutuyordu, şimdi 16.458 tutar.
+- Uygulamanın neden öldüğünü içeren bir ret, bunu ipucunda söyler; önceden bunun için `crashes`'a yolluyordu.
+- Araç olmayan bir adım yüzünden reddedilen bir `steps` çağrısı hiçbir şeyin yapılmadığını söyler.
+- `node scripts/efficiency.mjs` sekiz görevin çağrı ve karakter olarak maliyetini cihazsız yazdırır; `node scripts/bench.mjs <simulator id>` beşini gerçek bir modelle çalıştırır; bkz. CONTRIBUTING.
+
 ## 1.2.0
 
 appdyno 1.2.0 bir ekranın neyden yapıldığını okur ve uygulamaya daha fazlasını yapar: bir iOS simülatöründeki uygulamanın ya da bir Android activity'sinin native view'ları, bellek uyarıları, sallama, eklenen fotoğraf ve videolar, ve sistemin sonlandırdığı gibi sonlandırılan bir uygulama. Bir program `appdyno/device` ile cihazın kendisini alır, masaüstü kurulumu tek bir `.mcpb` dosyasıyla gelir ve hiç durmadan hareket eden bir parçası olan ekran artık Android'i yavaşlatmaz. Xcode 26.5 ve Xcode 27.2'de test edildi.
