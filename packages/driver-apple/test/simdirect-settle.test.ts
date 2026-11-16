@@ -2,7 +2,7 @@ import { Cycling } from '../src/simcycling.js';
 import { describe, expect, it } from 'vitest';
 import { must } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
-import { settle, settleAfter, type SettleOn } from '../src/simsettle.js';
+import { ALERT_WATCH_MS, settle, settleAfter, type SettleOn } from '../src/simsettle.js';
 import {
   actionable,
   leftBehind,
@@ -321,12 +321,29 @@ describe('a tap beside slides that never stop', () => {
       const cycling = new Cycling();
       const first = await after(cycling, tap);
       expect(first.settle.settled).toBe(true);
-      expect(first.settle.ms).toBeGreaterThanOrEqual(1_000);
-      expect(first.settle.ms).toBeLessThan(1_600);
+      // with the watch for a system alert, as the tap changed nothing but the slides
+      expect(first.settle.ms).toBeGreaterThanOrEqual(1_000 + ALERT_WATCH_MS);
+      expect(first.settle.ms).toBeLessThan(1_600 + ALERT_WATCH_MS);
       const next = await after(cycling, tap);
       expect(next.settle.settled).toBe(true);
-      expect(next.settle.ms).toBeLessThan(700);
+      expect(next.settle.ms).toBeLessThan(700 + ALERT_WATCH_MS);
       expect(next.moved).toBe(false);
+    }),
+  );
+
+  it(
+    'has in its answer a system alert that comes 600 ms after the tap, once they are known',
+    fakeTimed(async () => {
+      const cycling = new Cycling();
+      await after(cycling, tap);
+      const asked = (ms: number) => {
+        const t = screen(ms);
+        if (ms < 600) return t;
+        const alert = { ...must(t.nodes[0], 'the app'), p: 0, c: 'Alert', b: [60, 300, 340, 500] };
+        return { ...t, nodes: [...t.nodes, alert as (typeof t.nodes)[number]] };
+      };
+      const r = await after(cycling, tap, asked);
+      expect(r.tree.nodes.some((n) => n.c === 'Alert')).toBe(true);
     }),
   );
 

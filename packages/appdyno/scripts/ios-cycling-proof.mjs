@@ -1,13 +1,15 @@
 // What a tap costs on iOS beside a part of the screen that never stops moving: on the fixture's carousel and banner
 // screens and on a still one, the time of each tap and whether its settle ended settled.
-// Usage: node scripts/ios-cycling-proof.mjs <simulator id> [n]     APPDYNO_SIM_DIRECT=off: by the runner alone
+// Usage: node scripts/ios-cycling-proof.mjs <simulator id> [n] [alerts]     APPDYNO_SIM_DIRECT=off: by the runner alone
+// `alerts`: only the round of system alerts over the slides, which resets the fixture's location permission.
+import { execFileSync } from 'node:child_process';
 import { buildScreen } from '@appdyno/core';
 import { IosSimulatorDevice } from '@appdyno/driver-apple';
 import { answered } from './timed.mjs';
 
-const [udid, nArg] = process.argv.slice(2);
+const [udid, nArg, only] = process.argv.slice(2);
 if (!udid) {
-  console.error('usage: ios-cycling-proof.mjs <simulator id> [n]');
+  console.error('usage: ios-cycling-proof.mjs <simulator id> [n] [alerts]');
   process.exit(2);
 }
 const n = Number(nArg ?? 10);
@@ -21,11 +23,14 @@ try {
   await d.open();
   await d.terminate(APP);
   await d.launch(APP);
-  for (const { name, id } of [
+  const screens = [
+    // a tap that adds a line, and one that changes a text only, watched for a system alert as on a still screen
+    { name: 'copies_carousel', id: 'carousel_more' },
     { name: 'copies_carousel', id: 'carousel_tap' },
     { name: 'copies_banner', id: 'dup_close' },
     { name: 'late', id: 'late_0' },
-  ]) {
+  ];
+  for (const { name, id } of only ? [] : screens) {
     await d.openUrl(`appdyno-fixture://open/${name}`, APP);
     await pause(1_500);
     /** @type {number[]} */
@@ -42,8 +47,8 @@ try {
       // as a caller that thinks between two taps, and as a script that does not
       await pause(i % 2 ? 4_000 : 300);
     }
-    out[name] = { first: ms[0], median: median(ms), settled, n, ms };
-    console.error(name, JSON.stringify(out[name]));
+    out[id] = { first: ms[0], median: median(ms), settled, n, ms };
+    console.error(name, id, JSON.stringify(out[id]));
   }
   // what the slides taught must cost no other answer: a push away from them, and a late line on another screen
   const read = async () => buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
@@ -58,7 +63,7 @@ try {
   let pushes = 0;
   /** @type {Record<number, number>} */
   const late = {};
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < (only ? 0 : n); i++) {
     await d.openUrl('appdyno-fixture://open/copies_carousel', APP);
     await pause(800);
     await tapped('carousel_tap');
@@ -75,6 +80,33 @@ try {
   }
   out.after = { n, pushesMissed: pushes, lateMissed: late };
   console.error('after the slides', JSON.stringify(out.after));
+  // nor the system's alert a tap brings up over them, a moment after the tap
+  let alerts = 0;
+  for (let i = 0; i < n; i++) {
+    execFileSync('xcrun', ['simctl', 'privacy', udid, 'reset', 'location', APP]);
+    await d.terminate(APP);
+    await d.launch(APP);
+    await d.openUrl('appdyno-fixture://open/copies_carousel', APP);
+    await pause(800);
+    await tapped('carousel_tap');
+    await tapped('carousel_tap');
+    const s = await read();
+    const ask = s.list.find((x) => x.id === 'carousel_ask');
+    if (!ask) throw new Error('no carousel_ask');
+    const r = answered(await d.tap(ask, { settle: {}, read: 'tree', before: s.hash }));
+    const button = r.tree.nodes.find((x) => x.w === 1 && x.c === 'Button');
+    if (r.tree.windows.some((w) => w.type === 3) && button) alerts++;
+    // answered either way, for the next round to ask again
+    await pause(1_500);
+    const allow = (await d.tree()).nodes.find((x) => x.w === 1 && x.c === 'Button');
+    if (allow)
+      await d.tap(
+        { x: (allow.b[0] + allow.b[2]) / 2, y: (allow.b[1] + allow.b[3]) / 2 },
+        { settle: {} },
+      );
+  }
+  out.alerts = { n, caught: alerts };
+  console.error('alerts over the slides', JSON.stringify(out.alerts));
 } finally {
   await d.stopAgent();
 }

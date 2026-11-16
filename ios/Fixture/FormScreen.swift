@@ -83,6 +83,8 @@ struct CopiesUnderBannerScreen: View {
 struct CopiesCarouselScreen: View {
     @State private var turn = 0
     @State private var taps = 0
+    @State private var lines = 0
+    @StateObject private var asker = PermissionScreen.Asker()
     let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
     private let period = 200
 
@@ -100,6 +102,17 @@ struct CopiesCarouselScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             Button("Dokun") { taps += 1 }.accessibilityIdentifier("carousel_tap")
             Text("Dokunuş: \(taps)").accessibilityIdentifier("carousel_taps")
+            // the system's alert comes over slides that never stop, half a second after the tap: an app asks once
+            // its own work is done, and a settle is over by then
+            Button("Konum iste") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
+                    asker.manager.requestWhenInUseAuthorization()
+                }
+            }
+            .accessibilityIdentifier("carousel_ask")
+            // a tap that changes the layout under the slides
+            Button("Satır ekle") { lines += 1 }.accessibilityIdentifier("carousel_more")
+            ForEach(0 ..< lines, id: \.self) { Text("Satır \($0 + 1)") }
             Spacer()
         }
         .padding()

@@ -122,7 +122,13 @@ extension Device {
         // `before` was sent with its copies hidden, and a read has them still, so that a screen with a copy would
         // never compare as the same
         hideUnreachableCopies(&now)
-        guard sameLayout(before, now.nodes), !hasAlert(now.nodes) else { return (0, false) }
+        // what a part known to cycle holds says nothing of the tap: over slides that never stop the alert is watched
+        // for as on a still screen
+        func unmoved(_ nodes: [Node]) -> Bool {
+            let at = Int(Date().timeIntervalSince1970 * 1000)
+            return sameLayout(cycling.rest(before, now: at), cycling.rest(nodes, now: at))
+        }
+        guard unmoved(now.nodes), !hasAlert(now.nodes) else { return (0, false) }
         let end = Date().addingTimeInterval(Double(SettleTimes.alertWatchMs) / 1000)
         while Date() < end, !job.over, !springboard.alerts.firstMatch.exists {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
@@ -133,6 +139,6 @@ extension Device {
         last = next
         now = next
         hideUnreachableCopies(&now)
-        return (Int(Date().timeIntervalSince(idleAt) * 1000), !sameLayout(before, now.nodes) || hasAlert(now.nodes))
+        return (Int(Date().timeIntervalSince(idleAt) * 1000), !unmoved(now.nodes) || hasAlert(now.nodes))
     }
 }

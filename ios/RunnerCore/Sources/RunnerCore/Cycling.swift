@@ -1,9 +1,17 @@
 import Foundation
 
-/// Where two reads of a screen differ.
-public enum Region {
+/// Where two reads of a screen differ: a part of it by its name, and a layout's nodes that are not of it.
+public struct Region {
+    public let name: String
+    public let rest: ([Node]) -> [Node]
+
+    public init(name: String, rest: @escaping ([Node]) -> [Node] = { $0 }) {
+        self.name = name
+        self.rest = rest
+    }
+
     /// No one part under half the screen holds what differs.
-    public static let whole = ""
+    public static var whole: Region { Region(name: "") }
 
     private static func kind(_ node: Node) -> String { "\(node.type)#\(node.id ?? "")" }
 
@@ -35,7 +43,7 @@ public enum Region {
     /// both and under half the screen, by its type, id and place. Where that view is the screen, as SwiftUI gives a
     /// row no view of its own, it is the strip across the screen they lie in, under half its height, by their types
     /// and ids and its top and bottom: what else lies in it is not of it.
-    public static func between(_ one: [Node], _ other: [Node]) -> String? {
+    public static func between(_ one: [Node], _ other: [Node]) -> Region? {
         if sameLayout(one, other) { return nil }
         guard let screen = one.first else { return whole }
         // each node's key once: a real app's screen has a thousand nodes under thirty views
@@ -49,7 +57,12 @@ public enum Region {
                sameLayout(outside(one, here), outside(other, there)) {
                 let view = one[here]
                 if (view.right - view.left) * (view.bottom - view.top) * 2
-                    <= (screen.right - screen.left) * (screen.bottom - screen.top) { return names[holder] }
+                    <= (screen.right - screen.left) * (screen.bottom - screen.top) {
+                    let name = names[holder]
+                    return Region(name: name) { nodes in
+                        nodes.firstIndex { key($0) == name }.map { outside(nodes, $0) } ?? nodes
+                    }
+                }
                 break
             }
             holder = nodes[holder].parent
@@ -62,7 +75,7 @@ public enum Region {
             nodes.filter { !(kinds.contains(kind($0)) && $0.top >= top && $0.bottom <= bottom) }
         }
         return sameLayout(rest(one), rest(other))
-            ? kinds.sorted().joined(separator: ",") + "|\(top),\(bottom)" : whole
+            ? Region(name: kinds.sorted().joined(separator: ",") + "|\(top),\(bottom)", rest: rest) : whole
     }
 }
 
@@ -86,7 +99,7 @@ public struct Cycling {
     private var since = 0
     private var movedAt = 0
     /// The part known to cycle, and when it was last seen to.
-    private var known: String?
+    private var known: Region?
     private var knownAt = 0
 
     public init() {}
@@ -94,19 +107,19 @@ public struct Cycling {
     /// Whether a read is the one before it to a settle: `region` is `Region.between` of the two, the read began at
     /// `readAt` and it is `now`. `byItself`: no action of ours set moving what moves now, as none went out lately and
     /// this one throws nothing: only then can reads make a part known.
-    public mutating func same(_ region: String?, byItself: Bool, readAt: Int, now: Int) -> Bool {
+    public mutating func same(_ region: Region?, byItself: Bool, readAt: Int, now: Int) -> Bool {
         guard let region else { return true }
-        if region == Region.whole {
+        if region.name.isEmpty {
             moving = nil
             return false
         }
-        if region == known, now - knownAt <= Cycling.keptMs {
+        if region.name == known?.name, now - knownAt <= Cycling.keptMs {
             knownAt = now
             return true
         }
         if !byItself { return false }
-        if region != moving || readAt - movedAt > Cycling.gapMs {
-            moving = region
+        if region.name != moving || readAt - movedAt > Cycling.gapMs {
+            moving = region.name
             since = readAt
         }
         movedAt = now
@@ -114,5 +127,11 @@ public struct Cycling {
         known = region
         knownAt = now
         return true
+    }
+
+    /// A layout's nodes without what the part known to cycle holds: what else changed on the screen is told by them.
+    public func rest(_ nodes: [Node], now: Int) -> [Node] {
+        guard let known, now - knownAt <= Cycling.keptMs else { return nodes }
+        return known.rest(nodes)
     }
 }

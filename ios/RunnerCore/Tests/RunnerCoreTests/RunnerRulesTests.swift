@@ -91,7 +91,7 @@ final class RunnerRulesTests: XCTestCase {
         let regions = try cases("regions")
         XCTAssertFalse(regions.isEmpty)
         for c in regions {
-            XCTAssertEqual(Region.between(try nodes(c, "a"), try nodes(c, "b")), c["region"] as? String,
+            XCTAssertEqual(Region.between(try nodes(c, "a"), try nodes(c, "b"))?.name, c["region"] as? String,
                            c["why"] as? String ?? "")
         }
     }
@@ -104,11 +104,24 @@ final class RunnerRulesTests: XCTestCase {
             var cycling = Cycling()
             for read in try XCTUnwrap(t["reads"] as? [Wire], why) {
                 let at = try XCTUnwrap(read["at"] as? Int, why)
-                let same = cycling.same(read["region"] as? String, byItself: read["byItself"] as? Bool ?? true,
+                let region = (read["region"] as? String).map { Region(name: $0) }
+                let same = cycling.same(region, byItself: read["byItself"] as? Bool ?? true,
                                         readAt: at - (read["took"] as? Int ?? 0), now: at)
                 XCTAssertEqual(same, read["same"] as? Bool, "\(why), at \(at)")
             }
         }
+    }
+
+    func testWhatAPartKnownToCycleHoldsIsLeftOut() throws {
+        let slides = try cases("regions")[9]
+        let was = try nodes(slides, "a"), now = try nodes(slides, "b")
+        var cycling = Cycling()
+        XCTAssertEqual(cycling.rest(now, now: 0), now)
+        _ = cycling.same(Region.between(was, now), byItself: true, readAt: 0, now: 0)
+        XCTAssertTrue(cycling.same(Region.between(was, now), byItself: true, readAt: 0, now: Cycling.cycleMs))
+        XCTAssertEqual(cycling.rest(now, now: Cycling.cycleMs).map(\.id), [nil, nil, "tap"])
+        XCTAssertTrue(sameLayout(cycling.rest(was, now: Cycling.cycleMs), cycling.rest(now, now: Cycling.cycleMs)))
+        XCTAssertEqual(cycling.rest(now, now: Cycling.cycleMs + Cycling.keptMs + 1), now)
     }
 
     func testTheDigest() throws {

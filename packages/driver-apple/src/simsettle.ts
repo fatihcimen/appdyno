@@ -189,7 +189,11 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
   let last = r.last as Capture;
   let { settled, reads } = r;
   let ms = r.elapsedMs;
-  const unchanged = !!before && sameLayout(before, last.tree.nodes) && !hasAlert(last.tree.nodes);
+  // what a part known to cycle holds says nothing of the tap: over slides that never stop the alert is watched for
+  // as on a still screen
+  const unmoved = (now: Node[]) =>
+    !!before && sameLayout(on.cycling.rest(before, on.clock()), on.cycling.rest(now, on.clock()));
+  const unchanged = unmoved(last.tree.nodes) && !hasAlert(last.tree.nodes);
   // an actionable tap that changed nothing in the app may have asked the system for something: its
   // alert comes a moment later, while the app is idle
   if (tap && !inert && unchanged) {
@@ -197,12 +201,12 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
     while (Date.now() - idleAt < ALERT_WATCH_MS) {
       await wait(100);
       last = await read();
-      if (last.byRunner || !sameLayout(before, last.tree.nodes)) break;
+      if (last.byRunner || !unmoved(last.tree.nodes)) break;
     }
     ms += Date.now() - idleAt;
     // a reaction that began after the settle, an alert or the app's own: it is at its first frame, so it is
     // settled in turn from there, within what is left of the action's time
-    if (!sameLayout(before, last.tree.nodes)) {
+    if (!unmoved(last.tree.nodes)) {
       const at = on.clock();
       const again = await settle({
         ...rules,
@@ -217,7 +221,7 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
       ms += again.elapsedMs;
     }
   }
-  const untouched = unchanged && sameLayout(before, last.tree.nodes);
+  const untouched = unchanged && unmoved(last.tree.nodes);
   // the last look may have left to the runner what only it can tell
   if (want !== 'none' && last.askRunner) last = await on.read(true);
   return {
