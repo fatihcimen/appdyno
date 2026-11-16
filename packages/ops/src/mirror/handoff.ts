@@ -29,9 +29,9 @@ export function handoffOps(ctx: ServerContext) {
   return [
     defineOp({
       name: 'ask_person',
-      title: 'Ask a person',
+      title: 'Ask the person',
       description:
-        'Asks your person to do what you cannot (Face ID, a passcode, a permission) and waits until they say done or, with no window, the screen changes. On this Mac: a banner and a sound in a window, else a sound and a macOS notification of reason; --silent: no sound, no notification.',
+        'Ask your person to do what no tool can (Face ID, a passcode) and wait until they say done or, with no window, the screen changes. A system alert: answer_alert. On this Mac: a banner and a sound in the live window, else a sound and a notification of reason. Returns when done; refuses at timeoutS.',
       input: z
         .object({
           reason: z.string().min(1).max(500),

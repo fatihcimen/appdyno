@@ -143,7 +143,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(30_865);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(25_929);
   expect(JSON.stringify(tools)).not.toMatch(
     /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
   );
@@ -171,4 +171,75 @@ it('keeps the tool catalog within its budget', async () => {
   expect(
     tools.filter((t) => 'device' in (t.inputSchema.properties ?? {})).map((t) => t.name),
   ).toEqual(['use_device']);
+});
+
+/** What each tool says of itself to a client, beside what the protocol assumes: reads only, may lose state, reaches out. */
+const HINTS: Record<string, string> = {
+  list_devices: 'reads',
+  use_device: 'acts',
+  manage_simulator: 'changes',
+  set_device: 'changes',
+  read_screen: 'reads',
+  take_screenshot: 'acts',
+  check_element: 'reads',
+  check_screen: 'acts',
+  tap_screen: 'acts',
+  swipe_screen: 'acts',
+  type_text: 'acts',
+  press_key: 'acts',
+  run_steps: 'acts, beyond',
+  answer_alert: 'acts',
+  ask_person: 'acts',
+  show_mirror: 'acts',
+  launch_app: 'changes',
+  manage_app: 'changes, beyond',
+  transfer_files: 'changes',
+  open_link: 'acts, beyond',
+  send_push: 'acts, beyond',
+  read_logs: 'reads',
+  capture_network: 'changes, beyond',
+  inspect_app: 'changes, beyond',
+  record_session: 'changes',
+  measure_performance: 'changes',
+  compare_performance: 'changes, beyond',
+  run_flow: 'changes, beyond',
+};
+
+it('names every tool verb_noun, and says of each what it does, what comes back and where a neighbour is', () => {
+  const ops = Object.values(opsFor(new ServerContext(DEFAULT_POLICY, [])));
+  expect(ops.length).toBeLessThanOrEqual(28);
+  for (const op of ops) {
+    expect(op.name).toMatch(/^[a-z]+(_[a-z]+)+$/);
+    expect(op.description, op.name).toMatch(/Returns|fails with/);
+    const others = ops.filter((o) => o !== op && op.description.includes(o.name));
+    // a push has no neighbour to be taken for
+    expect(others.length > 0, op.name).toBe(op.name !== 'send_push');
+  }
+});
+
+it('says of each tool whether it only reads, may lose state, and reaches beyond the device and this Mac', () => {
+  const ops = Object.values(opsFor(new ServerContext(DEFAULT_POLICY, [])));
+  const said = ops.map(({ name, annotations: a }) => [
+    name,
+    [
+      a.readOnlyHint ? 'reads' : a.destructiveHint === false ? 'acts' : 'changes',
+      ...(a.openWorldHint ? ['beyond'] : []),
+    ].join(', '),
+  ]);
+  expect(Object.fromEntries(said)).toEqual(HINTS);
+});
+
+it('lists no name tools had before 1.3.0, and answers a call by one with the name to call', async () => {
+  const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  await createServer(ops, () => undefined).connect(a);
+  const client = new Client({ name: 'test', version: '0' });
+  await client.connect(b);
+  const { tools } = await client.listTools();
+  expect(tools.map((t) => t.name)).toEqual(Object.keys(ops));
+  const r = await client.callTool({ name: 'screen', arguments: {} });
+  expect(r.isError).toBe(true);
+  expect(r.content).toEqual([
+    { type: 'text', text: 'INVALID_ARGUMENT: no tool screen\nhint: screen is now read_screen' },
+  ]);
 });

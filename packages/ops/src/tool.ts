@@ -308,7 +308,16 @@ export const SAVES: ToolAnnotations = { destructiveHint: false, openWorldHint: f
 /** Whether an op leaves the device as it was, whatever it writes on this Mac. */
 export const onlyReads = (op: Pick<Tool, 'annotations'>) =>
   op.annotations.readOnlyHint === true || op.annotations === SAVES;
-/** Acts on the device's screen (a tap may do anything the app does, but it never leaves the device). */
+/** Acts on the device's screen (a tap may do anything the app does, but the call itself never leaves the device). */
 export const ACT: ToolAnnotations = { destructiveHint: false, openWorldHint: false };
 /** Changes device state beyond the screen (app data, apps, settings). */
 export const DESTRUCTIVE: ToolAnnotations = { openWorldHint: false };
+/**
+ * The same of a tool that reaches beyond the device and this Mac: Apple's or Google's push service, a page on the web,
+ * the hosts an app talks to, what a project's build fetches; and of a tool that may run one of those. Never of `SAVES`,
+ * which `onlyReads` knows by being that one object.
+ */
+export const beyond = (within: ToolAnnotations): ToolAnnotations => ({
+  ...within,
+  openWorldHint: true,
+});

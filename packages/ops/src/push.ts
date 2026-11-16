@@ -23,7 +23,7 @@ const PushOut = ActionOut.extend({
     .optional(),
 });
 import { Read } from './step-schemas.js';
-import { ACT, defineOp, reply, ToolError } from './tool.js';
+import { ACT, beyond, defineOp, reply, ToolError } from './tool.js';
 
 /** APNs' limit for a payload, which a simulator's push keeps too. */
 const PAYLOAD_BYTES = 4_096;
@@ -47,9 +47,9 @@ export function pushOps(ctx: ServerContext, { changing, afterChange }: Answers) 
   return [
     defineOp({
       name: 'send_push',
-      title: 'Push notification',
+      title: 'Send push notification',
       description:
-        'Push notification, remote notification, Live Activity, rich notification, FCM, APNs, to the app. No type lists what this device takes, and how.',
+        "Send the app a push notification: remote notification, rich notification, Live Activity, by APNs or FCM. No type: lists what this device takes and how, sending nothing. title, body, image, data; or payload, APNs' or FCM's own JSON. Returns what was sent, and the screen after.",
       input: z
         .object({
           app: z.string().max(200).optional(),
@@ -67,7 +67,8 @@ export function pushOps(ctx: ServerContext, { changing, afterChange }: Answers) 
         })
         .strict(),
       output: PushOut,
-      annotations: ACT,
+      // by APNs or FCM, where the device takes it from them
+      annotations: beyond(ACT),
       run: async ({ app, type, title, body, image, data, payload, read }) => {
         const s = await ctx.session();
         // through the allow list for a listing too: the routes are read from the app's build

@@ -65,7 +65,7 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
       name: 'use_device',
       title: 'Use device',
       description:
-        'Drive this device; app: the id under test. One another process holds refuses, naming it; share: true uses it anyway.',
+        'Select the device later calls drive, by a serial list_devices gives; app: the app id under test. Not needed with one device connected. One server drives one device: for several in parallel, a server each. A device another process holds is refused, naming it; share: true drives it anyway. Returns what is selected.',
       input: z
         .object({
           device: z.string().max(64),

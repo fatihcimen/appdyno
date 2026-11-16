@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Pieces } from '../catalog.js';
 import { mergeOp } from '../merge.js';
-import { DESTRUCTIVE } from '../tool.js';
+import { beyond, DESTRUCTIVE } from '../tool.js';
 
 export const manageApp = ({ app, terminate_app: stop }: Pick<Pieces, 'app' | 'terminate_app'>) =>
   mergeOp({
@@ -25,7 +25,8 @@ export const manageApp = ({ app, terminate_app: stop }: Pick<Pieces, 'app' | 'te
         ...stop.input.shape,
       })
       .strict(),
-    annotations: DESTRUCTIVE,
+    // a project's build fetches what the project names
+    annotations: beyond(DESTRUCTIVE),
     parts: [app, stop],
     pick: ({ action, background, ...a }) =>
       action === 'stop' ? [stop, { ...a, background }] : [app, { ...a, action, background }],
@@ -86,7 +87,8 @@ export const inspectApp = ({
         ...ax.input.omit({ action: true }).shape,
       })
       .strict(),
-    annotations: DESTRUCTIVE,
+    // a web view's page is the web's, and a script in it reaches what the page can
+    annotations: beyond(DESTRUCTIVE),
     parts: [web, rn, ax],
     // an action is its part's own word behind what it reaches into
     pick: ({ action, ...a }) => {

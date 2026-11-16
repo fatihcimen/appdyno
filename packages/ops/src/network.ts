@@ -13,7 +13,7 @@ import { networkSetting, STRICT_ON } from './network-set.js';
 import { checkApp } from './policy.js';
 import type { Session } from './session.js';
 import { setCondition } from './settings.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { beyond, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
@@ -56,12 +56,13 @@ export function networkOps(ctx: ServerContext) {
   return [
     defineOp({
       name: 'capture_network',
-      title: 'Network',
+      title: 'Network traffic',
       description:
-        "An app's network traffic (HTTP), bounded; mock and throttle by the probe, until stop. paths: what each way sees; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); check: waits for a request, else refuses with the nearest; stop. Installs no certificate.",
+        "Capture an app's network traffic (HTTP), mock its answers, throttle it. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies; strict); read (id: one request whole; contains, method, status; har: a proxy's export; save: a .har); check: waits for a request, failing with the nearest; mock (rules; add; from: a file of answers; unmatched); throttle; stop. The whole device: set_device network. Returns requests, bounded; installs no certificate.",
       input: NetworkIn,
       output: NetworkOut,
-      annotations: DESTRUCTIVE,
+      // it stands between the app and the hosts it talks to
+      annotations: beyond(DESTRUCTIVE),
       // a read and a wait for a request change nothing: neither holds the device's turn, so a tap goes on beside a check
       readsOnly: ({ action }) => WAITS.includes(action),
       run: async ({ action, via, proxy, app, bodies, har, id, rules, add, throttle, ...given }) => {

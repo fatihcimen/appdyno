@@ -301,7 +301,7 @@ function simulatorOp(ctx: ServerContext) {
     name: 'manage_simulator',
     title: 'Simulators and emulators',
     description:
-      'Start or stop an iOS simulator or Android emulator, only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts and selects it), shutdown (name; none: those this tool started; ends its session and app state).',
+      'Start or stop an iOS simulator or Android emulator, only on request. list: what can be started; boot (name: id or name); create (name: an iOS model; boots and selects it); shutdown (name; none: those this tool started). Connected devices: list_devices. Returns the device.',
     input: z
       .object({
         action: z.enum(['list', 'boot', 'create', 'shutdown']),

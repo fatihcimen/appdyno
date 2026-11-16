@@ -13,12 +13,14 @@ import {
   pidInAnswer,
 } from './app-death.js';
 import type { ServerContext } from './context.js';
+import { renamedHint } from './renamed.js';
 import { ActionOut } from './schemas.js';
 import { LOOKS_ONLY, Read, Step } from './step-schemas.js';
 import { hintWithScreen, type Steps } from './steps.js';
 import { NOT_A_STEP } from './tool-kinds.js';
 import {
   ACT,
+  beyond,
   argumentsHint,
   CHANGE_HINT,
   defineOp,
@@ -63,7 +65,7 @@ function planned(
   const fail = (why: string, hint?: string) =>
     new ToolError(`step ${i + 1}: ${why}`, 'INVALID_ARGUMENT', hint);
   // said, or a client looks for what the steps before it did
-  if (!op || NOT_A_STEP.has(tool)) throw fail(`no step ${tool}`, CHANGE_HINT);
+  if (!op || NOT_A_STEP.has(tool)) throw fail(`no step ${tool}`, renamedHint(tool) ?? CHANGE_HINT);
   const p = op.input.safeParse(args);
   if (!p.success)
     throw fail(
@@ -93,7 +95,7 @@ export function stepsOp(
   return defineOp({
     name: 'run_steps',
     title: 'Run steps',
-    description: `A sequence in one call: at most ${MAX_STEPS}, each { tool: a tool's name, ...its arguments }, as { tool: tap_screen, selector: { text: OK } }; any tool but run_steps and run_flow. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
+    description: `Run known actions as one call: at most ${MAX_STEPS}, each { tool: a tool's name, ...its arguments }, as { tool: tap_screen, selector: { text: OK } }; any tool but run_steps and run_flow. Stops at the first failure, saying which and why. Returns every answer, images too; a step reads the screen only with read on it, or last. A saved sequence: run_flow.`,
     input: z
       .object({
         steps: z
@@ -108,7 +110,8 @@ export function stepsOp(
       })
       .strict(),
     output: ActionOut,
-    annotations: ACT,
+    // as far as the tools it runs reach
+    annotations: beyond(ACT),
     run: async ({ steps: raw, read }) => {
       const plan = raw.map((x, i) => planned(tools, x, i));
       let s = await ctx.session();

@@ -34,7 +34,7 @@ import { askLanguage } from './power.js';
 import { setCondition } from './settings.js';
 import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
-import { ACT, defineOp, definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { ACT, beyond, defineOp, definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 /** The app the device says the link opens in, held to `app`; none where it cannot tell. */
 const openerOf = async (s: Session, href: string, app: string) => {
@@ -232,7 +232,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       name: 'open_link',
       title: 'Open link',
       description:
-        "Open a URL, deep link, universal link or App Link, in the selected app if any. settings: a Settings page (about, privacy…; a wrong word lists this device's), or an app's: its id, or app. links: an app's id lists the links it opens.",
+        "Open a URL, deep link, universal link or App Link, in the selected app if any. settings: a Settings page (about, privacy…; a wrong word lists this device's), or an app's: its id, or app. links: an app's id lists the links it opens. An app by id: launch_app. Returns the screen after.",
       input: z
         .object({
           url: z.string().min(3).max(2_000).optional(),
@@ -242,7 +242,8 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         })
         .strict(),
       output: LinkOut,
-      annotations: ACT,
+      // a link may be a page on the web
+      annotations: beyond(ACT),
       run: async ({ url, settings, links, read }) => {
         if ([url, settings, links].filter(Boolean).length !== 1)
           throw new ToolError('give url, settings or links', 'INVALID_ARGUMENT');
@@ -339,7 +340,7 @@ function launchOp(
     name: 'launch_app',
     title: 'Launch app',
     description:
-      'Launch the app by its id or the name app list gives, to the front on the screen it was on if it runs. restart: start it fresh, as args (Android: key=value extras), env and language (tr, pt-BR; Android keeps it until changed) do. probe: with the view probe screen views reads, held in its launches.',
+      'Launch an app by its id or the name manage_app list gives, to the front on the screen it was on if it runs. restart: start it fresh, as args (Android: key=value extras), env and language (tr, pt-BR) do. probe: with the view probe read_screen views reads. By URL: open_link; to stop it: manage_app. Returns the screen after.',
     input: z
       .object({
         app: z.string().max(200).optional(),

@@ -36,6 +36,7 @@ import {
   flowsTagged,
   JOURNEY_ITERATIONS,
   opsFor,
+  renamedHint,
   paramsOf,
   survey,
   PUT_BACK_TOOL,
@@ -300,6 +301,11 @@ async function operationCommand(command: string | undefined, rest: string[]) {
   const ops = opsFor(ctx);
   const commands = commandsFor(ops);
   const op = name === undefined ? undefined : commands[name];
+  const renamed = renamedHint((command ?? '').replaceAll('-', '_'));
+  if (!op && renamed) {
+    err(`no command ${String(command)}: ${renamed}, a command as the tool is, with dashes`);
+    return 2;
+  }
   if (!op) {
     const asked = command === undefined || ['--help', '-h', 'help'].includes(command);
     (asked ? console.log : err)(

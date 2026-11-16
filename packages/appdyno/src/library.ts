@@ -4,6 +4,7 @@ import {
   givenUp,
   inCall,
   opsFor,
+  renamedHint,
   rawNodes,
   ServerContext,
   SHARE_BY_LIBRARY,
@@ -229,7 +230,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
   return {
     async tool(name, args, { signal, raw } = {}) {
       const op = ops[name];
-      if (!op) throw new ToolError(`no tool ${name}`, 'INVALID_ARGUMENT');
+      if (!op) throw new ToolError(`no tool ${name}`, 'INVALID_ARGUMENT', renamedHint(name));
       const { blocks, data, nodes } = await stoppedBy(signal, name, async () => {
         const answer = await op.handler(argumentsFor(op, args));
         return { ...answer, ...(raw && { nodes: await rawNodes(ctx) }) };

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { FlowOut } from './schemas.js';
 import { Scenario } from '../perf/shared.js';
-import { ToolError, reply, defineOp, DESTRUCTIVE } from '../tool.js';
+import { beyond, ToolError, reply, defineOp, DESTRUCTIVE } from '../tool.js';
 import { journeyText, measureJourney } from './journey.js';
 import type { FlowRunner } from './runner.js';
 import {
@@ -90,9 +90,9 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
   return [
     defineOp({
       name: 'run_flow',
-      title: 'Flow',
+      title: 'Record and replay a flow',
       description:
-        'Record your actions as a repeatable test, replayed with no model: record, your calls, stop (file: saves a .flow), run (file). save: the last recording to file. params NAME=value: on record, stop or save, the recorded value becomes ${NAME}; on run, its value. run: from a step; iterations: a journey timed by step, for compare_performance. export: Maestro YAML, to a .yaml path.',
+        'Record your actions as a repeatable test, replayed with no model. record, your calls, stop (file: saves a .flow); save: the last recording; run (file; from: a step; iterations: a journey timed by step, for compare_performance); export: Maestro YAML. params NAME=value: recorded, the value becomes ${NAME}; on run, its value. A one-off sequence: run_steps. Returns the steps, or each result.',
       input: z
         .object({
           action: z.enum(['record', 'stop', 'save', 'run', 'export']),
@@ -107,7 +107,8 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
         })
         .strict(),
       output: FlowOut,
-      annotations: DESTRUCTIVE,
+      // as far as the steps of a flow reach
+      annotations: beyond(DESTRUCTIVE),
       run: async ({ action, file, to, from, params, envFile, overwrite, iterations, scenario }) => {
         const need = () => {
           if (!file)

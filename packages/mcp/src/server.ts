@@ -17,6 +17,8 @@ import {
   inCall,
   inputSchemaOf,
   refusalText,
+  RENAMED_NAMES,
+  renamedHint,
   ToolError,
   text,
   textOf,
@@ -191,6 +193,12 @@ export function createServer(
       },
     );
   }
+  // a name tools had before 1.3.0 is in no list, and a call by one is answered with the name to call
+  for (const was of RENAMED_NAMES)
+    if (!ops[was])
+      server.registerTool(was, { inputSchema: ANY_ARGUMENTS }, () =>
+        refusal(new ToolError(`no tool ${was}`, 'INVALID_ARGUMENT', renamedHint(was), false)),
+      );
   // the SDK's own list adds a schema dialect and a task setting to every tool, and closed-object markers that
   // cost thousands of characters in every session: arguments are still checked strictly when they arrive
   server.server.setRequestHandler('tools/list', () => ({

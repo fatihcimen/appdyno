@@ -141,7 +141,7 @@ function typeTextOp(ctx: ServerContext, { one }: Steps) {
   return defineOp({
     name: 'type_text',
     title: 'Type text',
-    description: `Type up to ${MAX_TYPED} characters of Unicode into the focused field, or a target, tapped and focused first. replace: the field's text; submit: then enter.`,
+    description: `Type up to ${MAX_TYPED} characters of Unicode into the focused field, or a target, tapped and focused first. replace: the field's text; submit: then enter. One key or button: press_key. Returns the screen after.`,
     input: z.object({ ...TypeStep.omit({ action: true }).shape, read: Read }).strict(),
     output: ActionOut,
     annotations: ACT,
@@ -217,7 +217,7 @@ function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
     name: 'answer_alert',
     title: 'System alert',
     description:
-      "The open system alert: with no answer its text and buttons; answer: a button's label, or on a permission prompt in any language allow (the least it offers: once, else while using) or deny. Never touches the app's own dialogs.",
+      "Read or answer the open system alert, as a permission prompt. No answer: its text and buttons. answer: a button's label, or in any language allow (the least it offers: once, else while using) or deny. The app's own dialogs: tap_screen. Returns the screen after.",
     input: z.object({ answer: z.string().min(1).max(200).optional(), read: Read }).strict(),
     output: ActionOut,
     annotations: ACT,

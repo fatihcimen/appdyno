@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Pieces } from '../catalog.js';
 import { mergeOp } from '../merge.js';
-import { DESTRUCTIVE } from '../tool.js';
+import { beyond, DESTRUCTIVE } from '../tool.js';
 
 export const measurePerformance = (
   p: Pick<
@@ -63,8 +63,8 @@ export const comparePerformance = ({
         trace: query.input.shape.trace.optional(),
       })
       .strict(),
-    // the worst of its actions: `why` and `reference` replay a flow and restart the app
-    annotations: DESTRUCTIVE,
+    // the worst of its actions: `why` and `reference` replay a flow, as far as its steps reach, and restart the app
+    annotations: beyond(DESTRUCTIVE),
     parts: [gate, query],
     pick: ({ action, ...a }) => (action === 'query' ? [query, a] : [gate, { ...a, action }]),
   });
