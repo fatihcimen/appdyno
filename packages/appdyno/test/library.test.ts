@@ -248,7 +248,25 @@ describe('the library', () => {
         [1, 'teardown'],
         [2, 'teardown'],
       ]);
+      // its own steps passed, and it is no pass: the next run would start from what the teardown left
+      expect(run).toMatchObject({ passed: false, teardownFailed: true });
       expect(run.failure).toBeUndefined();
+      device.screen = 'home';
+      const stoppable = await d.replay(flow, { signal: new AbortController().signal });
+      expect(stoppable).toMatchObject({ passed: false, teardownFailed: true });
+      // a teardown that cleans up leaves a pass a pass, and says nothing more
+      writeFileSync(join(dir, '_teardown.flow'), 'assert text="Bilgiler"\n');
+      device.screen = 'home';
+      const clean = await d.replay(flow);
+      expect(clean).toMatchObject({ passed: true, teardown: { ok: true, failed: [] } });
+      expect('teardownFailed' in clean).toBe(false);
+      // a failed step stays the failure, with the teardown's beside it
+      writeFileSync(flow, 'assert text="Yok" timeoutMs=300\n');
+      writeFileSync(join(dir, '_teardown.flow'), 'assert text="Yok" timeoutMs=300\n');
+      device.screen = 'home';
+      const both = await d.replay(flow);
+      expect(both).toMatchObject({ passed: false, teardownFailed: true, failure: { n: 1 } });
+      expect(both.failure?.phase).toBeUndefined();
     } finally {
       await d.close();
     }

@@ -136,6 +136,19 @@ export type ErrorCode =
   | 'DEVICE_LOCKED'
   | 'OFFLINE';
 
+/**
+ * A run as a program reads it: one whose teardown failed has not passed, as `appdyno test` exits 1 for it, whatever
+ * its own steps came to.
+ */
+const told = <R extends { passed: boolean; teardown?: { ok: boolean } }>(run: R) => {
+  const teardownFailed = run.teardown?.ok === false;
+  return {
+    ...run,
+    passed: run.passed && !teardownFailed,
+    ...(teardownFailed && { teardownFailed }),
+  };
+};
+
 /** What a refused call throws. `dispatched`: whether its touch went out, where it had one. */
 export type Refusal = Error & { code: ErrorCode; hint?: string; dispatched?: boolean | 'unknown' };
 
@@ -203,7 +216,13 @@ export type ReplayFailure = {
 };
 
 export type ReplayResult = {
+  /** The setup and the flow's own steps passed, and the teardown cleaned up: a run a next one can start after. */
   passed: boolean;
+  /**
+   * The teardown failed, so the next run starts from what it left. Where the flow's own steps passed, this is all
+   * that keeps `passed` false, and `failure` is absent: `teardown.failed` says why.
+   */
+  teardownFailed?: true;
   /** The flow's own steps that ran to their end. */
   steps: ReplayStep[];
   /** The setup's, where the flow has one. */
@@ -268,7 +287,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
       };
     },
     async replay(file, { signal, ...o } = {}) {
-      if (!signal) return flows.replay(file, o);
+      if (!signal) return told(await flows.replay(file, o));
       const seen = { before: 0, after: 0 };
       const stopped = () => {
         const refusal = givenUp(file);
@@ -289,7 +308,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
       });
       // a step its signal stopped is no failure of the flow
       if (signal.aborted && run.failure?.code === 'CANCELLED') throw stopped();
-      return run;
+      return told(run);
     },
     async close() {
       await ctx.end().catch(() => []);
