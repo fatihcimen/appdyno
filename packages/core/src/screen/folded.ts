@@ -84,11 +84,7 @@ export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
 }
 
 const alike = (a: ScreenElement, b: ScreenElement) =>
-  !!b.label &&
-  a.role === b.role &&
-  a.x === b.x &&
-  a.flags.join() === b.flags.join() &&
-  a.refContext === b.refContext;
+  !!b.label && a.role === b.role && a.x === b.x && a.flags.join() === b.flags.join();
 
 /**
  * The screen as an answer says it: what repeats is folded, and only in this text. The list itself stays
@@ -105,13 +101,12 @@ export function renderFolded(
   const names = rows.map(named);
   // a context tells apart what is shown together, and needs few words for that; a nameless element has
   // nothing else to go by. Redacted before it is cut, or part of a secret would stay
-  const line = ({ refContext, ...bare }: ScreenElement) =>
-    elementLine(
-      refContext && (!bare.label || names.indexOf(named(bare)) !== names.lastIndexOf(named(bare)))
-        ? { ...bare, refContext: cutContext(clean(refContext)) }
-        : bare,
-      say,
-    );
+  const context = (e: ScreenElement) =>
+    e.refContext && (!e.label || names.indexOf(named(e)) !== names.lastIndexOf(named(e)))
+      ? cutContext(clean(e.refContext))
+      : undefined;
+  const line = ({ refContext: _, ...bare }: ScreenElement, told: string | undefined) =>
+    elementLine(told ? { ...bare, refContext: told } : bare, say);
   const lines = [
     `${screenHeader(list.length)}${inside.size ? `; ${inside.size} inside rows, by find` : ''}`,
   ];
@@ -120,11 +115,17 @@ export function renderFolded(
     end = i + 1;
     while (first.label && end < rows.length && alike(first, must(rows[end], 'a row'))) end++;
     const run = rows.slice(i, end);
-    if (run.length < MIN_RUN) lines.push(...run.map((e) => line(e)));
+    // rows of one context say nothing by it; rows it alone tells apart each keep theirs, in a column of its own
+    const told = run.map((e) => context(e));
+    const apart = new Set(told).size > 1;
+    if (run.length < MIN_RUN) lines.push(...run.map((e, k) => line(e, told[k])));
     else
       lines.push(
-        `${[first.role, `x=${first.x}`, ...first.flags].join(' ')}: ref "label" y`,
-        ...run.map((e) => `${e.ref} ${JSON.stringify(say(e.label))} ${e.y}`),
+        `${[first.role, `x=${first.x}`, ...first.flags].join(' ')}: ref "label" y${apart ? ' — context' : ''}`,
+        ...run.map(
+          (e, k) =>
+            `${e.ref} ${JSON.stringify(say(e.label))} ${e.y}${apart && told[k] ? ` — ${told[k]}` : ''}`,
+        ),
       );
   }
   return lines.join('\n');

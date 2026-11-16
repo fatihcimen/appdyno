@@ -244,7 +244,7 @@ describe('what repeats in an answer', () => {
     ]);
   });
 
-  it('leaves two rows as they are, and what only its context tells apart', () => {
+  it('leaves two rows as they are, and gives rows only their context tells apart a column for it', () => {
     const plain = renderFolded([row('@a', 'One', 100), row('@b', 'Two', 152)]);
     expect(plain).not.toContain('x=200');
     const told = [
@@ -252,7 +252,13 @@ describe('what repeats in an answer', () => {
       { ...row('@b', 'Add', 152), refContext: 'Milk' },
       { ...row('@c', 'Add', 204), refContext: 'Eggs' },
     ];
-    expect(renderFolded(told)).toContain('@b cell "Add" 200,152 clickable — Milk');
+    expect(renderFolded(told).split('\n').slice(1)).toEqual([
+      'cell x=200 clickable: ref "label" y — context',
+      '@a "Add" 100',
+      '@b "Add" 152 — Milk',
+      '@c "Add" 204 — Eggs',
+    ]);
+    expect(renderFolded(told.slice(1))).toContain('@b cell "Add" 200,152 clickable — Milk');
     expect(renderFolded([element('@i', 'button', '', 100, { id: 'close' })])).toContain('id=close');
   });
 
