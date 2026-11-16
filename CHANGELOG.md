@@ -22,6 +22,12 @@
 - `device_setting` `fold` takes every pose a foldable lists, not only `open` and `closed`: `half_opened` (also `half`), `rear_display` and `dual` where the device has them. A read lists them after the state. A change answers with the display size and density apps then see, and whether the activity in front was recreated or kept. Flows record and replay `setting fold <pose>`.
 - On an iPhone Duo simulator (Xcode 27.1 or later), `device_setting` `fold` takes `closed`, `half` and `open`, put back at `restore`, the session's end and each flow file's end. While it is open, `screen`, touches, `screenshot` and `record` work on the inner display. It uses private API of the simulator; any other simulator refuses as before.
 - In the Mac app, the Device pane's fold row lists the device's own poses, and the live window follows the display a foldable shows, at its size, with touches that land on it.
+- `appdyno/device`: an element has `parent`, `pkg`, `notImportant`, `screenReaderFocusable` and `order`, its place in the order the tree gives a screen reader.
+- `appdyno/device`: a device has `aim` (waits for an element still coming), `screenshot` (bytes, or a file inside the folders it may write in), `logs` (each line as data, with its time where the platform tells it), `openLink`, `windows` (with the keyboard's bounds), `setOrientation`, `audit` (its issues, the elements the checks ran on and their reading order), `clearData` (emulators and simulators only) and `stopAgent`, which ends the device's agent where `close` lets the device go.
+- `appdyno/device`: a touch takes `quietMs` and `maxMs` for its settle, and with `tree: true` answers the screen it left from the read the settle made. Every touch answers `ms`. `key`, `launch` and `openLink` take the same options.
+- `connect` and `openDevice` take `policy: { secrets, apps, urls, write }` and, for an iPhone, `signing: { profile, keychain, keychainPassword }` for that device alone.
+- `nameOf` takes `clean` and `shownAs`, so its words pass a caller's masking and can be said in another language.
+- On iOS a `tap`, `longPress` or `swipe` whose `before` names a read that no longer has in front what it had is refused `STALE`, with nothing sent. It is compared on the Mac by one more read before the touch; what comes in front between that read and the touch is not caught. Checked on a simulator for another app in front, not yet on an iPhone.
 
 ### Changed
 
@@ -33,6 +39,9 @@
 - A refusal that holds why the app died says so in its hint, where it sent to `crashes` for it.
 - A `steps` call refused for a step that is no tool says that nothing was done.
 - `node scripts/efficiency.mjs` prints what eight tasks cost in calls and characters with no device, and `node scripts/bench.mjs <simulator id>` runs five with a real model; see CONTRIBUTING.
+- The tools and `appdyno/device` aim, wait and settle by one rule in core, so a correction reaches both.
+- An element from `appdyno/device` holds the fields its type names and no other; fields the type never named (`name`, `nameKind`, `context`, `refContext`) are gone, since they carried the element's words unmasked.
+- `openDevice` hides the secrets, and may write in the folders, that `APPDYNO_SECRETS`, `APPDYNO_SECRETS_FILE` and `APPDYNO_ALLOW_WRITE` name.
 
 ### Fixed
 

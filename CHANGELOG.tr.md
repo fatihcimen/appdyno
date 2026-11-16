@@ -22,6 +22,12 @@
 - `device_setting` `fold`, katlanabilir bir cihazın listelediği her duruşu alır, yalnızca `open` ve `closed` değil: cihazda varsa `half_opened` (`half` de olur), `rear_display` ve `dual`. Okuma bunları durumdan sonra listeler. Bir değişiklik, uygulamaların artık gördüğü ekran boyutunu ve yoğunluğunu, öndeki activity'nin yeniden oluşturulduğunu ya da korunduğunu söyler. Flow'lar `setting fold <duruş>` adımını kaydeder ve yeniden oynatır.
 - iPhone Duo simülatöründe (Xcode 27.1 ve sonrası) `device_setting` `fold`, `closed`, `half` ve `open` alır; `restore`'da, oturum sonunda ve her flow dosyasının sonunda geri alınır. Açıkken `screen`, dokunuşlar, `screenshot` ve `record` iç ekranda çalışır. Simülatörün özel API'sini kullanır; başka her simülatör eskisi gibi reddeder.
 - Mac uygulamasında Cihaz bölmesinin katlama satırı cihazın kendi duruşlarını listeler; canlı pencere katlanabilir cihazın gösterdiği ekranı, kendi boyutunda izler ve dokunuşlar ona ulaşır.
+- `appdyno/device`: bir öğenin `parent`, `pkg`, `notImportant`, `screenReaderFocusable` ve ağacın bir ekran okuyucuya verdiği sıradaki yeri olan `order` alanları var.
+- `appdyno/device`: bir cihazın `aim` (henüz gelmekte olan öğeyi bekler), `screenshot` (baytlar ya da yazabildiği klasörlerin içinde bir dosya), `logs` (her satır veri olarak, platform söylüyorsa zamanıyla), `openLink`, `windows` (klavyenin sınırlarıyla), `setOrientation`, `audit` (sorunlar, denetimlerin çalıştığı öğeler ve okunma sıraları), `clearData` (yalnızca emülatör ve simülatörde) ve `stopAgent` çağrıları var; `close` cihazı bırakırken `stopAgent` cihazın ajanını sonlandırır.
+- `appdyno/device`: bir dokunuş, durulması için `quietMs` ve `maxMs` alır; `tree: true` ile bıraktığı ekranı durulmanın yaptığı okumadan verir. Her dokunuş `ms` yanıtını verir. `key`, `launch` ve `openLink` aynı seçenekleri alır.
+- `connect` ve `openDevice`, `policy: { secrets, apps, urls, write }` ile, bir iPhone için yalnızca o cihaza özgü `signing: { profile, keychain, keychainPassword }` alır.
+- `nameOf`, `clean` ve `shownAs` alır; böylece sözleri çağıranın maskelemesinden geçer ve başka bir dilde söylenebilir.
+- iOS'te `before` değeri, önünde artık o zamanki şey bulunmayan bir okumayı adlandıran `tap`, `longPress` ya da `swipe`, hiçbir şey gönderilmeden `STALE` ile reddedilir. Karşılaştırma Mac'te, dokunuştan önce yapılan bir okumayla yapılır; o okuma ile dokunuş arasında öne gelen şey yakalanmaz. Öne geçen başka bir uygulama için bir simülatörde denendi, henüz bir iPhone'da denenmedi.
 
 ### Değişenler
 
@@ -33,6 +39,9 @@
 - Uygulamanın neden öldüğünü içeren bir ret, bunu ipucunda söyler; önceden bunun için `crashes`'a yolluyordu.
 - Araç olmayan bir adım yüzünden reddedilen bir `steps` çağrısı hiçbir şeyin yapılmadığını söyler.
 - `node scripts/efficiency.mjs` sekiz görevin çağrı ve karakter olarak maliyetini cihazsız yazdırır; `node scripts/bench.mjs <simulator id>` beşini gerçek bir modelle çalıştırır; bkz. CONTRIBUTING.
+- Araçlar ve `appdyno/device`, core'daki tek bir kuralla nişan alır, bekler ve durulur; böylece bir düzeltme ikisine birden ulaşır.
+- `appdyno/device` öğesi yalnızca tipinin adlandırdığı alanları taşır; tipin hiç adlandırmadığı alanlar (`name`, `nameKind`, `context`, `refContext`) öğenin sözlerini maskesiz taşıdığı için kaldırıldı.
+- `openDevice`, `APPDYNO_SECRETS`, `APPDYNO_SECRETS_FILE` ve `APPDYNO_ALLOW_WRITE` değişkenlerinin adlandırdığı sırları gizler ve klasörlere yazabilir.
 
 ### Düzeltilenler
 
