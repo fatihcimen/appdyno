@@ -1,4 +1,4 @@
-// The Device pane: the device's conditions as it reads them, each changed by `device_setting` or `set_location`, the ops an
+// The Device pane: the device's conditions as it reads them, each changed by `set_device`, the op an
 // agent calls, so that one record holds what goes back, whoever changed it. What this device cannot do stands disabled with
 // the device's own reason, and what a person changes here goes back when the device leaves the window.
 #import "Place.h"
@@ -267,7 +267,7 @@ static const double kBetween = 10, kHeadingGap = 18;
   [self send:@"deviceSet" args:args asked:@{@"name": @"sms"} saying:MVWord([NSString stringWithFormat:@"Sending %@", row.title])];
 }
 
-/// Everything this session changed, by `device_setting restore`: what another program changed stays, as it puts it back.
+/// Everything this session changed, by `set_device restore`: what another program changed stays, as it puts it back.
 - (void)putBack:(id)sender {
   NSMutableSet<NSString *> *changed = [NSMutableSet set];
   for (MVConditionRow *row in _ordered)

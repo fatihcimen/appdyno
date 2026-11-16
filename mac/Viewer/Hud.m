@@ -8,7 +8,7 @@ enum { kHistory = 60,
 static const double kCardHeight = 92, kLineHeight = 26, kGlowAlpha = 0.38;
 // a frame this long is seen as a stutter, and marked where it fell
 static const double kStutterMs = 100;
-// the share of frames that may come late: past the first `perf_scroll` has a finding, past the second Android vitals calls
+// the share of frames that may come late: past the first `measure_performance scroll` has a finding, past the second Android vitals calls
 // a session slow
 static const double kLateWatch = 0.10, kLatePoor = 0.25;
 

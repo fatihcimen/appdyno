@@ -104,6 +104,7 @@ What a person may set is in [the CLI reference](docs/reference/cli.md#server-opt
 | `APPDYNO_FORM_ALLOW_APPS`    | the desktop extension's manifest      | the same, for `--allow-apps`                                                                                     |
 | `APPDYNO_FORM_ALLOW_URLS`    | the desktop extension's manifest      | the same, for `--allow-urls`                                                                                     |
 | `APPDYNO_FORM_ALLOW_WRITE`   | the desktop extension's manifest      | the same, for `--allow-write`: folders with a colon between them, `~` for the home folder                        |
+| `APPDYNO_FORM_TOOLSETS`      | the desktop extension's manifest      | the same, for `--toolsets`: groups of tools with a comma between them                                            |
 | `APPDYNO_PROBE_OUT`          | the frame probe's launch, for the app | the file the probe in the app writes its frames to                                                               |
 | `APPDYNO_VIEW_SOCKET`        | the view probe's launch, for the app  | the socket the probe in the app answers on                                                                       |
 | `APPDYNO_RECORD_SEGMENT_S`   | `device-tests/evidence.test.ts`       | an Android recording's segment, 180 s otherwise, so that a test of a long one is short                           |

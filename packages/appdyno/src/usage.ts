@@ -1,3 +1,4 @@
+import { TOOLSET_NAMES } from '@appdyno/ops';
 import type { ParseArgsConfig } from 'node:util';
 
 /** A flag as `parseArgs` takes it, with what usage says of it: a new flag is written here, once. */
@@ -38,6 +39,7 @@ export const COMMANDS = {
       'allow-power': value('virtual|all'),
       'allow-write': values('dir'),
       'allow-build': on,
+      toolsets: value(TOOLSET_NAMES.join(',')),
       'no-home': on,
       silent: on,
       takeover: on,
@@ -54,7 +56,7 @@ export const COMMANDS = {
       'end-with-parent': unsaidOn,
       'put-back-after': unsaidValue,
     },
-    what: "the MCP server over stdio; with --http, on this Mac's loopback behind a token",
+    what: "the MCP server over stdio; with --http, on this Mac's loopback behind a token; --toolsets lists only those groups of tools, all of them when it is left out",
   },
   install: {
     flags: { yes: { type: 'boolean', short: 'y' }, 'dry-run': on, remove: on, moved: unsaidOn },

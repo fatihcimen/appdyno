@@ -5,7 +5,18 @@ import {
   StreamableHTTPClientTransport,
 } from '@modelcontextprotocol/client';
 import { createMcpHandler } from '@modelcontextprotocol/server';
-import { DATA_LOSS, DATA_LOSS_WORDS, DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import {
+  DATA_LOSS,
+  DATA_LOSS_WORDS,
+  DEFAULT_POLICY,
+  inToolsets,
+  opsFor,
+  ServerContext,
+  TOOLSET_NAMES,
+  TOOLSETS,
+  toolsetsOf,
+  type Toolset,
+} from '@appdyno/ops';
 import { assert, expect, it } from 'vitest';
 import { INSTRUCTIONS } from '../src/brand.js';
 import { createServer } from '../src/server.js';
@@ -242,4 +253,36 @@ it('lists no name tools had before 1.3.0, and answers a call by one with the nam
   expect(r.content).toEqual([
     { type: 'text', text: 'INVALID_ARGUMENT: no tool screen\nhint: screen is now read_screen' },
   ]);
+});
+
+it('has every tool in one group, and lists a group at the size it was measured', async () => {
+  const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+  const grouped = TOOLSET_NAMES.flatMap((set) => [...TOOLSETS[set]]);
+  expect([...grouped].sort()).toEqual(Object.keys(ops).sort());
+  // none given, a blank and spaces are every group; a word that names none is refused with the groups there are
+  for (const all of [undefined, '', ' , ']) expect(toolsetsOf(all)).toEqual(TOOLSET_NAMES);
+  expect(toolsetsOf(' perf, core ')).toEqual(['core', 'perf']);
+  expect(() => toolsetsOf('core,everything')).toThrow(
+    '--toolsets takes core, device, apps, evidence, network, perf, with a comma between them, not everything',
+  );
+  const sizeOf = async (sets: readonly Toolset[]) => {
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(inToolsets(ops, sets), () => undefined).connect(a);
+    const client = new Client({ name: 'test', version: '0' });
+    await client.connect(b);
+    const { tools } = await client.listTools();
+    return [tools.length, JSON.stringify({ tools }).length];
+  };
+  const sizes: Record<string, number[]> = {};
+  for (const set of TOOLSET_NAMES) sizes[set] = await sizeOf([set]);
+  // tools, then characters as the budget above counts them; each list is 12 characters of its own
+  expect(sizes).toEqual({
+    core: [13, 10_074],
+    device: [4, 3_240],
+    apps: [4, 3_552],
+    evidence: [4, 3_949],
+    network: [1, 1_569],
+    perf: [2, 3_600],
+  });
+  expect(await sizeOf(['core', 'network', 'perf'])).toEqual([16, 15_221]);
 });

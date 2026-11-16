@@ -6,7 +6,9 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
 import {
   DEFAULT_POLICY,
+  inToolsets,
   opsFor,
+  toolsetsOf,
   secretsOf,
   writeDirsOf,
   type Policy,
@@ -146,6 +148,10 @@ export async function serveCommand(
   context: (values: ServerFlags) => ServerContext,
 ) {
   const values = flags(args);
+  // a group it does not know is said now, not found missing by the first client
+  const listed = toolsetsOf(
+    values.toolsets ?? process.env.APPDYNO_TOOLSETS ?? fieldOf(process.env.APPDYNO_FORM_TOOLSETS),
+  );
   const log = (line: object) =>
     process.stderr.write(`${JSON.stringify({ t: new Date().toISOString(), ...line })}\n`);
   // a device named at the start: its first call finds what it needs started
@@ -162,7 +168,7 @@ export async function serveCommand(
     const ctx = started(context(values));
     endWithClient(ctx, log, undefined, undefined, handOff);
     // either revision, as the client's first message says
-    const ops = opsFor(ctx);
+    const ops = inToolsets(opsFor(ctx), listed);
     serveStdio(() => createServer(ops, log));
     return;
   }
@@ -176,7 +182,7 @@ export async function serveCommand(
     token,
     open: () => {
       const ctx = started(context(values));
-      return { ops: opsFor(ctx), end: () => putBack(ctx, log) };
+      return { ops: inToolsets(opsFor(ctx), listed), end: () => putBack(ctx, log) };
     },
     log,
   });

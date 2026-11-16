@@ -53,7 +53,8 @@
         "APPDYNO_FORM_ALLOW_DEVICES": "${user_config.allow_devices}",
         "APPDYNO_FORM_ALLOW_APPS": "${user_config.allow_apps}",
         "APPDYNO_FORM_ALLOW_URLS": "${user_config.allow_urls}",
-        "APPDYNO_FORM_ALLOW_WRITE": "${user_config.allow_write}"
+        "APPDYNO_FORM_ALLOW_WRITE": "${user_config.allow_write}",
+        "APPDYNO_FORM_TOOLSETS": "${user_config.toolsets}"
       }
     }
   },
@@ -83,6 +84,13 @@
       "type": "string",
       "title": "Folders it may write in",
       "description": "A folder a screenshot, a video or a report may be saved in when the path is named in a request, as ~/Desktop/appdyno; several with a colon between them. Empty: only appdyno's own folder under ~/Library/Caches/appdyno.",
+      "default": "",
+      "required": false
+    },
+    "toolsets": {
+      "type": "string",
+      "title": "Groups of tools to list",
+      "description": "Only these groups of tools, with a comma between them: core, device, apps, evidence, network, perf. core alone drives and reads the screen; fewer groups make a shorter list for the model to read in every chat. Empty: every tool.",
       "default": "",
       "required": false
     }

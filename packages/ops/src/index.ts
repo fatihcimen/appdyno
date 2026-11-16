@@ -58,6 +58,7 @@ export { ServerContext } from './context.js';
 export { deviceNamed } from './device-names.js';
 export { Session, shownSize } from './session.js';
 export * from './policy.js';
+export { inToolsets, TOOLSET_NAMES, TOOLSETS, toolsetsOf, type Toolset } from './toolsets.js';
 export { inside } from './writes.js';
 export { DATA_LOSS, DATA_LOSS_WORDS, type DataLoss } from './approval.js';
 export { powerControlAt } from './power.js';

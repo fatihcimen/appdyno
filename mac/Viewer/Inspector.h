@@ -148,7 +148,7 @@ typedef NS_ENUM(NSInteger, MVRowKind) { MVRowSwitch,
 - (NSString *)titleFor:(NSString *)value;
 @end
 
-/// The device's conditions as it reads them, each changed by `device_setting`, the op an agent calls, and put back with
+/// The device's conditions as it reads them, each changed by `set_device`, the op an agent calls, and put back with
 /// the rest of what this session changed; what the device cannot do stands disabled, with why.
 @interface MVDevicePane : NSView <MVSendPane>
 /// For a test: a condition set as a person sets its control, by the op's names; what it shows, or why it cannot.

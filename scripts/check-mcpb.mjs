@@ -146,6 +146,7 @@ async function main() {
       allow_apps: ' , ',
       allow_urls: '.*',
       allow_write: 'shots',
+      toolsets: 'core, everything',
     })) {
       const started = await served(await filled({ [field]: refused })).then(
         () => true,
@@ -163,6 +164,13 @@ async function main() {
         `ok   ${form}: ${config.command} ${(config.args ?? []).join(' ').replace(unpacked, '${__dirname}')} ${JSON.stringify(config.env)}: ${tools.length} tools, the manifest's`,
       );
     }
+    // a form that names groups lists their tools and no other
+    const few = await served(await filled({ toolsets: 'core, perf' }));
+    const all = (await served(forms['a form left empty'])).map((t) => t.name);
+    const names = few.map((t) => t.name);
+    if (names.length === 0 || names.length >= all.length || names.some((n) => !all.includes(n)))
+      throw new Error(`toolsets core, perf: listed ${names.join(', ')}`);
+    console.log(`ok   toolsets given "core, perf": ${names.length} of the ${all.length} tools`);
     console.log('passed');
   } catch (e) {
     console.error(`FAILED: ${e instanceof Error ? e.message : String(e)}`);

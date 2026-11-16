@@ -88,7 +88,7 @@ void MVCheckDevice(void) {
   [sent removeAllObjects];
   [pane set:@"location" to:@"41.0082, 28.9784"];
   NSDictionary *place = sent.firstObject[@"args"];
-  MVCheck(@"device: a location goes by set_location, as numbers", [sent.firstObject[@"name"] isEqual:@"deviceLocation"] && [place[@"lat"] doubleValue] == 41.0082 && [place[@"lon"] doubleValue] == 28.9784, sent.description);
+  MVCheck(@"device: a location goes by set_device, as numbers", [sent.firstObject[@"name"] isEqual:@"deviceLocation"] && [place[@"lat"] doubleValue] == 41.0082 && [place[@"lon"] doubleValue] == 28.9784, sent.description);
   [pane show:@{@"op": @"answer",
                @"name": @"device",
                @"ok": @YES,
