@@ -14,7 +14,7 @@ import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
 import { NO_MATCH_WAIT_MS } from '../steps.js';
-import type { Op, ToolResult } from '../tool.js';
+import { onlyReads, type Op, type ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
 import { ruleStep } from '../network-rules.js';
 import { DEFAULT_TOLERANCE } from '../visual.js';
@@ -402,7 +402,7 @@ export function flowRecorder(ctx: ServerContext) {
     /** The op as the surfaces see it. */
     wrap: (op: Op): Op => {
       const elsewhere = BY_STEP.has(op.name) || NOT_ACTIONS.has(op.name);
-      if (!LOOKING_STEPS.has(op.name) && (elsewhere || op.annotations.readOnlyHint)) return op;
+      if (!LOOKING_STEPS.has(op.name) && (elsewhere || onlyReads(op))) return op;
       const toStep = OPS[op.name] ?? unknownOp(op.name);
       return {
         ...op,

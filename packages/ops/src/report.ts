@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { safeName, stateDir } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { checkApp, NO_APP_HINT } from './policy.js';
+import { checkApp, NO_APP_HINT, type Policy } from './policy.js';
 import { journaled } from './report-journal.js';
 import { openReports } from './report-state.js';
 import { writeReport } from './report-write.js';
@@ -18,6 +18,7 @@ import {
 } from './timeline/flight.js';
 import { startTimeline } from './timeline/run.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { inside } from './writes.js';
 
 /** Sources run in this process, so one that ends with the command has nothing to give. */
 function stayingApp(ctx: ServerContext, s: Session, command: 'timeline' | 'flight') {
@@ -38,7 +39,7 @@ async function startFlightOn(ctx: ServerContext, s: Session, dir: string | undef
   const asked = ctx.options.flightSeconds ?? DEFAULT_FLIGHT_SECONDS;
   const seconds = Math.max(MIN_FLIGHT_SECONDS, Math.min(asked, MAX_FLIGHT_SECONDS));
   const app = stayingApp(ctx, s, 'flight');
-  s.keepFlight(await startFlight(ctx, s, app, seconds, dir && resolve(dir)));
+  s.keepFlight(await startFlight(ctx, s, app, seconds, dir && inside(ctx.policy, dir)));
   const t = `flight recorder on: the last ${seconds} s of ${app}, kept on a crash or a stall; report stop ends it`;
   return reply(t, { done: t, dir: dir ?? '' });
 }
@@ -76,9 +77,9 @@ function ownFolder(dir: string | undefined, to: string) {
     );
 }
 
-const namedDir = (serial: string, dir: string | undefined) =>
+const namedDir = (policy: Policy, serial: string, dir: string | undefined) =>
   resolve(
-    dir ??
+    (dir ? inside(policy, dir) : undefined) ??
       join(
         stateDir(),
         'reports',
@@ -100,7 +101,7 @@ async function startReport(
       'INVALID_ARGUMENT',
     );
   const app = action === 'timeline' ? stayingApp(ctx, s, 'timeline') : undefined;
-  const to = namedDir(serial, dir);
+  const to = namedDir(ctx.policy, serial, dir);
   ownFolder(dir, to);
   mkdirSync(to, { recursive: true });
   openReports.write(serial, { dir: to, since: Date.now(), owner: s.owner });
@@ -123,9 +124,9 @@ async function finishReport(
   const open = openReports.read(serial);
   if (action === 'stop' && !open)
     throw new ToolError(`no report is open on ${serial}`, 'NOT_FOUND');
-  if (!open) ownFolder(dir, namedDir(serial, dir));
+  if (!open) ownFolder(dir, namedDir(ctx.policy, serial, dir));
   const timeline = action === 'stop' ? await s.timeline?.finish() : undefined;
-  const r = await writeReport(ctx, s, open?.dir ?? namedDir(serial, dir), open?.since);
+  const r = await writeReport(ctx, s, open?.dir ?? namedDir(ctx.policy, serial, dir), open?.since);
   if (action === 'stop') openReports.remove(serial);
   const t = [
     `report: ${r.file} (${r.steps} steps, ${r.measurements} measurements)`,

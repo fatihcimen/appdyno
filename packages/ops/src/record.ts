@@ -16,6 +16,7 @@ import { reportVideoDir } from './report-state.js';
 import { Handle, RecordOut } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { inside } from './writes.js';
 
 const DEFAULT_S = 1_800;
 const MAX_S = 3_600;
@@ -91,7 +92,7 @@ export function recordOps(ctx: ServerContext) {
           );
         const since = new Date().toISOString();
         const to = resolve(
-          file ??
+          (file ? inside(ctx.policy, file) : undefined) ??
             join(
               reportVideoDir(s.device.serial) ?? join(stateDir(), 'video'),
               `${safeName(s.device.serial)}-${since.replace(/\W/g, '')}.${recorder.extension}`,

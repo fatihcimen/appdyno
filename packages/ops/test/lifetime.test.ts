@@ -72,7 +72,10 @@ function connect(device: Device, defaults: ConstructorParameters<typeof ServerCo
     handles: () => true,
     open: () => device,
   };
-  const ctx = new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app', ...defaults });
+  const ctx = new ServerContext({ ...DEFAULT_POLICY, writeDirs: [tmpdir()] }, [provider], {
+    app: 'dev.app',
+    ...defaults,
+  });
   return { ctx, call: callerOf(ctx) };
 }
 

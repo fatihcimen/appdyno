@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import { must, type Device, type DeviceProvider, type VirtualDevices } from '@appdyno/core';
 import { type ActParams, type ErrorCode, type Tree } from '@appdyno/protocol';
 import {
@@ -39,10 +40,14 @@ export async function connect(
     open: () => device,
     ...(o.virtual && { virtual: o.virtual }),
   };
-  const ctx = new ServerContext({ ...DEFAULT_POLICY, ...o.policy }, [provider], {
-    app: 'dev.app',
-    ...o.defaults,
-  });
+  const ctx = new ServerContext(
+    { ...DEFAULT_POLICY, writeDirs: [tmpdir()], ...o.policy },
+    [provider],
+    {
+      app: 'dev.app',
+      ...o.defaults,
+    },
+  );
   const client = await linkedClient(ctx);
   const call = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const r = (await client.callTool({ name, arguments: args })) as Result;

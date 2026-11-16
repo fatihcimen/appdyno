@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import {
   decodePng,
   diffImages,
@@ -13,7 +13,8 @@ import type { ServerContext } from './context.js';
 import { looksStill } from './flow/still.js';
 import { VisualOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, READ, reply, ToolError } from './tool.js';
+import { defineOp, reply, SAVES, ToolError } from './tool.js';
+import { inside } from './writes.js';
 
 const DEFAULT_DIR = 'appdyno-baselines';
 /** Percent of the pixels compared. */
@@ -56,10 +57,10 @@ export function visualOps(ctx: ServerContext) {
         })
         .strict(),
       output: VisualOut,
-      annotations: READ,
+      annotations: SAVES,
       run: async ({ action, name, dir, tolerance, masks }) => {
         const s = await ctx.session();
-        const folder = resolve(dir ?? DEFAULT_DIR);
+        const folder = inside(ctx.policy, dir ?? DEFAULT_DIR);
         const file = join(folder, `${name}.png`);
         // a fade a setting began is on a picture taken at once, as a baseline a recording saved, which its replay is not
         await looksStill(s);

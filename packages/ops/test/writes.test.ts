@@ -1,0 +1,105 @@
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  realpathSync,
+  symlinkSync,
+} from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { DEFAULT_POLICY, opsFor, ServerContext, writeDirsOf } from '../src/index.js';
+import { inside, writeFolders } from '../src/writes.js';
+import { connect } from './driving/shared.js';
+
+/** Each tool that writes where its caller says, with the argument that says where. */
+const WRITERS: [string, Record<string, unknown>, string][] = [
+  ['screenshot', {}, 'file'],
+  ['visual', { action: 'baseline', name: 'home' }, 'dir'],
+  ['visual', { action: 'compare', name: 'home' }, 'dir'],
+  ['record', { action: 'start' }, 'file'],
+  ['report', { action: 'start' }, 'dir'],
+  ['report', { action: 'write' }, 'dir'],
+  ['report', { action: 'timeline' }, 'dir'],
+  ['report', { action: 'flight' }, 'dir'],
+  ['app', { action: 'download_data' }, 'path'],
+  ['network', { action: 'read' }, 'save'],
+  ['flow', { action: 'save' }, 'file'],
+  ['flow', { action: 'stop' }, 'file'],
+  ['flow', { action: 'export', file: 'a.flow' }, 'to'],
+];
+
+describe('a file a tool writes where its caller says', () => {
+  let out: string;
+  beforeEach(() => {
+    const base = realpathSync(mkdtempSync(join(tmpdir(), 'appdyno-writes-')));
+    vi.stubEnv('APPDYNO_STATE_DIR', join(base, 'state'));
+    out = join(base, 'out');
+    mkdirSync(out);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('is refused outside the folders the server writes in, by every such tool, and none is read-only', async () => {
+    const { call, ctx } = await connect(new FakeDevice(), { policy: { writeDirs: [] } });
+    const ops = opsFor(ctx);
+    for (const [tool, args, name] of WRITERS) {
+      // a capture or a recording has to be there before its file is looked at: the flow tests have those refusals
+      if (tool === 'network' || tool === 'flow') continue;
+      const said = `${tool} ${JSON.stringify(args)}`;
+      expect(ops[tool]?.annotations.readOnlyHint, said).not.toBe(true);
+      const ext = tool === 'record' ? 'mp4' : tool === 'flow' ? 'flow' : 'png';
+      const to = join(out, name === 'file' ? `a.${ext}` : name === 'to' ? 'a.yaml' : 'sub');
+      const r = await call(tool as 'screenshot', { ...args, [name]: to });
+      expect(r.text, said).toMatch(
+        /^POLICY_DENIED: .* is outside the folders this server writes to/,
+      );
+      expect(r.text, said).toContain('--allow-write');
+    }
+    expect(readdirSync(out)).toEqual([]);
+  });
+
+  it('is written in the project folder, the state folder and a folder the server was started with', () => {
+    const policy = { writeDirs: writeDirsOf([out], {}) };
+    expect(inside(policy, join(out, 'a.png'))).toBe(join(out, 'a.png'));
+    expect(inside(DEFAULT_POLICY, 'a.png')).toBe(join(process.cwd(), 'a.png'));
+    expect(inside(DEFAULT_POLICY, join(out, '..', 'state', 'a.png'))).toContain('/state/a.png');
+    expect(() => inside(DEFAULT_POLICY, join(out, 'a.png'))).toThrow(/outside/);
+    // the folder itself is no file in it, and a link that leads out is out
+    expect(() => inside(policy, out)).toThrow(/outside/);
+    symlinkSync(tmpdir(), join(out, 'link'));
+    expect(() => inside(policy, join(out, 'link', 'a.png'))).toThrow(/outside/);
+    expect(writeDirsOf(['a'], { APPDYNO_ALLOW_WRITE: '/x:/y' })).toEqual([
+      join(process.cwd(), 'a'),
+      '/x',
+      '/y',
+    ]);
+  });
+
+  it('takes a server started at the root of the disk or in the home folder as one with no project', () => {
+    for (const cwd of ['/', homedir()]) {
+      vi.spyOn(process, 'cwd').mockReturnValue(cwd);
+      expect(writeFolders(DEFAULT_POLICY)).toEqual([join(out, '..', 'state')]);
+      expect(() => inside(DEFAULT_POLICY, join(homedir(), '.zshrc'))).toThrow(/outside/);
+    }
+  });
+
+  it('holds every tool with a path of its own to write in this list', () => {
+    const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+    const named = Object.values(ops).flatMap((op) =>
+      Object.keys(op.input.shape)
+        .filter((k) => ['file', 'dir', 'path', 'save', 'to', 'out', 'folder'].includes(k))
+        .map((k) => `${op.name} ${k}`),
+    );
+    // a place on the screen and a measurement's id; app's path is also what install and build_and_run read
+    const others = ['gesture to', 'perf_compare to'];
+    expect(named.sort()).toEqual(
+      [...new Set(WRITERS.map(([tool, , k]) => `${tool} ${k}`)), ...others].sort(),
+    );
+    expect(existsSync(out)).toBe(true);
+  });
+});

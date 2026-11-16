@@ -77,7 +77,7 @@ function connect(
     handles: () => true,
     open: () => device,
   };
-  const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
+  const ctx = new ServerContext({ ...DEFAULT_POLICY, writeDirs: [tmpdir()] }, [provider], {
     app: 'dev.app',
     ...defaults,
     storage: { measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')), ...defaults.storage },

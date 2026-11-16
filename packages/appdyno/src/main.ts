@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { homedir, loadavg } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
@@ -230,14 +230,17 @@ async function testCommand(rest: string[]) {
     return 2;
   }
   const artifacts = values.artifacts ?? 'appdyno-artifacts';
+  const files = flowsTagged(flowFiles(positionals), values.tag, values['exclude-tag']);
   const ctx = commandLine({
+    // this command line named them: a run's pictures go under one, a flow's baselines beside the other
+    'allow-write': [artifacts, ...new Set(files.map((f) => dirname(f)))],
     ...(values.share && { share: true }),
     ...(values.measurements && { measurements: values.measurements }),
     ...(values['update-baselines'] && { 'update-baselines': true }),
   });
   try {
     const { passed } = await flowsFor(ctx).test({
-      files: flowsTagged(flowFiles(positionals), values.tag, values['exclude-tag']),
+      files,
       devices: values.device ?? [],
       artifacts,
       junit: values.junit ?? join(artifacts, 'junit.xml'),

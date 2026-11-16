@@ -88,12 +88,9 @@ describe('tool list', () => {
       'find',
       'list_devices',
       'logs',
-      'perf_heap',
       'perf_query',
       'perf_snapshot',
       'screen',
-      'screenshot',
-      'visual',
       'wait_for',
     ]);
     expect(tools.length).toBeLessThanOrEqual(48);

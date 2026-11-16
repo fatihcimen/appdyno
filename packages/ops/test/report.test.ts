@@ -28,10 +28,14 @@ function connect(device = new FakeDevice()) {
     handles: () => true,
     open: () => device,
   };
-  const ctx = new ServerContext({ ...DEFAULT_POLICY, secrets: [SECRET] }, [provider], {
-    app: 'dev.app',
-    storage: { measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')) },
-  });
+  const ctx = new ServerContext(
+    { ...DEFAULT_POLICY, secrets: [SECRET], writeDirs: [tmpdir()] },
+    [provider],
+    {
+      app: 'dev.app',
+      storage: { measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')) },
+    },
+  );
   const call = callerOf(ctx);
   return { ctx, call, device };
 }

@@ -5,7 +5,7 @@ import { redactLog } from './policy.js';
 import { journalOf, openReports, type Step } from './report-state.js';
 import { reportShot } from './report-write.js';
 import { LOOKS_ONLY } from './step-schemas.js';
-import type { Op, ToolResult } from './tool.js';
+import { onlyReads, type Op, type ToolResult } from './tool.js';
 import { NOT_STEPS } from './tool-kinds.js';
 
 const MAX_ANSWER = 20_000;
@@ -56,7 +56,7 @@ export function shownArgs(op: Op, args: unknown, clean: (s: string) => string): 
     const all = shown || LOOKS_ONLY.has(String(o.action));
     return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, walk(x, all || NAMES.has(k))]));
   };
-  return walk(args, op.annotations.readOnlyHint === true);
+  return walk(args, onlyReads(op));
 }
 
 /** One call in the journal, with the screen after it when it may have changed something. */
@@ -88,7 +88,7 @@ async function note(
   };
   const s = await ctx.session();
   // a timeline's video has every screen, and a read and a picture after each step would be in its frames
-  if (!op.annotations.readOnlyHint && !s.timeline) {
+  if (!onlyReads(op) && !s.timeline) {
     const screen = await s.read().catch(() => undefined);
     if (screen) {
       step.screen = renderScreen(screen.list, clean);

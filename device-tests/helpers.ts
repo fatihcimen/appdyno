@@ -50,8 +50,12 @@ export const opCaller =
     }
   };
 
-/** A person named the device to the suite: what it loses there is the fixture's, asked of nobody. */
-export const SUITE_POLICY = { ...DEFAULT_POLICY, allowDataLoss: 'all' } as const;
+/** A person named the device to the suite: what it loses there is the fixture's, asked of nobody. Its files go to temporary folders. */
+export const SUITE_POLICY = {
+  ...DEFAULT_POLICY,
+  allowDataLoss: 'all' as const,
+  writeDirs: [tmpdir()],
+};
 
 /** The operations on one device with stores of their own, as a client calls them. */
 export function opsOn(provider: DeviceProvider, device: string, app: string) {

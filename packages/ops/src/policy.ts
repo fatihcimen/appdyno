@@ -1,3 +1,4 @@
+import { delimiter, resolve } from 'node:path';
 import { must, SETTINGS_APP } from '@appdyno/core';
 import type { Platform } from '@appdyno/protocol';
 import { ToolError } from './tool.js';
@@ -18,9 +19,17 @@ export type Policy = {
   allowDataLoss?: 'virtual' | 'all';
   /** An input on the system's own power, emergency or erase controls goes ahead with no question asked, as above. */
   allowPower?: 'virtual' | 'all';
+  /** Folders a tool call may write in beside the project's and the state folder: `--allow-write`. */
+  writeDirs?: string[];
 };
 
 export const DEFAULT_POLICY: Policy = { apps: [], allowHome: true, secrets: [] };
+
+/** The folders `--allow-write` gave, and those of APPDYNO_ALLOW_WRITE, which lists them as PATH does. */
+export const writeDirsOf = (given: string[] = [], env: NodeJS.ProcessEnv = process.env) =>
+  [...given, ...(env.APPDYNO_ALLOW_WRITE ?? '').split(delimiter)]
+    .filter(Boolean)
+    .map((d) => resolve(d));
 
 /** Schemes that reach the device's files, other components or code, not a page or an app screen. */
 const UNSAFE_SCHEME = /^(file|content|intent|javascript|data|android-app|jar):/i;

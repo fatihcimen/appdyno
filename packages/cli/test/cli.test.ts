@@ -40,7 +40,11 @@ describe('commands from the operations', () => {
       handles: () => true,
       open: () => device,
     };
-    ops = checkedOps(new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' }));
+    ops = checkedOps(
+      new ServerContext({ ...DEFAULT_POLICY, writeDirs: [tmpdir()] }, [provider], {
+        app: 'dev.app',
+      }),
+    );
   });
 
   it('takes the first bare word of an op with actions as its action', async () => {
@@ -269,7 +273,7 @@ describe('commands from the operations', () => {
       open: () => device,
     };
     const process = async (name: string, ...argv: string[]) => {
-      const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
+      const ctx = new ServerContext({ ...DEFAULT_POLICY, writeDirs: [tmpdir()] }, [provider], {
         storage: { remember: file },
       });
       const out: string[] = [];
@@ -308,7 +312,7 @@ describe('commands from the operations', () => {
       open: (serial) => (serial === other.serial ? other : device),
     };
     const inFolder = async (cwd: string, name: string, ...argv: string[]) => {
-      const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
+      const ctx = new ServerContext({ ...DEFAULT_POLICY, writeDirs: [tmpdir()] }, [provider], {
         storage: { remember: cliSessionFile(cwd) },
       });
       const out: string[] = [];
@@ -431,7 +435,11 @@ describe('a command that loses data', () => {
       handles: () => true,
       open: () => device,
     };
-    const ops = checkedOps(new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' }));
+    const ops = checkedOps(
+      new ServerContext({ ...DEFAULT_POLICY, writeDirs: [tmpdir()] }, [provider], {
+        app: 'dev.app',
+      }),
+    );
     const err: string[] = [];
     const code = await must(commandsFor(ops).app, 'app').run(argv, {
       out: () => undefined,

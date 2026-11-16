@@ -35,11 +35,19 @@ export function flowHelpers(deviceOf: () => FakeDevice, dirOf: () => string) {
       handles: () => true,
       open: () => deviceOf(),
     };
-    return new ServerContext({ ...DEFAULT_POLICY, secrets }, [provider], {
-      app: app ?? undefined,
-      ...(env && { env }),
-      ...(updateBaselines && { updateBaselines }),
-    });
+    return new ServerContext(
+      {
+        ...DEFAULT_POLICY,
+        secrets,
+        writeDirs: ['flows', 'shots', 'artifacts'].map((f) => join(dirOf(), f)),
+      },
+      [provider],
+      {
+        app: app ?? undefined,
+        ...(env && { env }),
+        ...(updateBaselines && { updateBaselines }),
+      },
+    );
   };
   const refusal = async (p: Promise<unknown>) => {
     try {

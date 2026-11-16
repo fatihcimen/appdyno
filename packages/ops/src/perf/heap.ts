@@ -3,7 +3,7 @@ import type { HeapReading } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { HeapOut } from './schemas.js';
-import { defineOp, READ, reply } from '../tool.js';
+import { defineOp, SAVES, reply } from '../tool.js';
 import { keepRefusal, perfTools, App } from './shared.js';
 
 const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
@@ -27,7 +27,7 @@ export function perfHeapOp(ctx: ServerContext) {
       })
       .strict(),
     output: HeapOut,
-    annotations: READ,
+    annotations: SAVES,
     run: async ({ app, profile, seconds }) => {
       const s = await ctx.session();
       const pkg = measuredApp(s, app);

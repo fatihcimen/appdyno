@@ -12,14 +12,13 @@ import {
   FLOW_FILE,
   envValues,
   flagged,
-  inside,
   keepRecording,
   loadRecording,
   readFlow,
   saveRecording,
   startRecording,
-  writeInside,
 } from './shared.js';
+import { inside, writeInside } from '../writes.js';
 
 /** `NAME=value` words as a record. */
 export function paramsOf(words: string[] = []): Record<string, string> {
@@ -128,7 +127,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           try {
             const yaml = toMaestro(readFlow(need()));
             if (to === undefined) return reply(yaml, { done: 'exported' });
-            const written = writeInside(to, yaml, overwrite);
+            const written = writeInside(ctx.policy, to, yaml, overwrite);
             return reply(`${yaml}\nwritten to ${written}`, { done: 'exported', file: written });
           } catch (e) {
             if (e instanceof FlowError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
@@ -153,7 +152,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
             if (!held)
               throw new ToolError('no recording to stop: flow start begins one', 'NOT_FOUND');
             // a file refused before anything stops leaves the recording running, as it was
-            const path = file === undefined ? undefined : inside(need());
+            const path = file === undefined ? undefined : inside(ctx.policy, need());
             const named = nameParams(held, params, true);
             held.state.running = false;
             keepRecording(held);
@@ -179,7 +178,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
               throw new ToolError('no recording to save: flow start begins one', 'NOT_FOUND');
             if (held.state.steps.length === 0)
               throw new ToolError('nothing was recorded yet', 'NOT_FOUND');
-            const path = inside(need());
+            const path = inside(ctx.policy, need());
             return saved(held, path, overwrite, nameParams(held, params, true), false);
           }
           case 'run': {

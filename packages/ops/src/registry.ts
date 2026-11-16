@@ -29,7 +29,7 @@ import { stepsFor, type Steps } from './steps.js';
 import { KIND_NAMES } from './tool-kinds.js';
 import { visualOps } from './visual.js';
 import { webOps } from './web.js';
-import { givenUp, type Op } from './tool.js';
+import { givenUp, onlyReads, type Op } from './tool.js';
 
 const everyOp = (
   ctx: ServerContext,
@@ -68,7 +68,7 @@ const holding = new AsyncLocalStorage<DeviceQueue>();
  * where its ref had been on the screen the first opened. One that only reads runs beside them.
  */
 const inTurn = (queue: DeviceQueue, op: Op): Op =>
-  op.annotations.readOnlyHint
+  onlyReads(op)
     ? op
     : {
         ...op,

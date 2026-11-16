@@ -17,7 +17,9 @@ function connect(recorder: ScreenRecorder) {
     handles: () => true,
     open: () => device,
   };
-  const ctx = new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' });
+  const ctx = new ServerContext({ ...DEFAULT_POLICY, writeDirs: [tmpdir()] }, [provider], {
+    app: 'dev.app',
+  });
   const op = must(checkedOps(ctx).record, 'record');
   const call = (args: Record<string, unknown>) => op.handler(op.input.parse(args));
   return { ctx, call };

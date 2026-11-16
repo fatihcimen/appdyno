@@ -348,9 +348,9 @@ assert id=result check=text equals="Gönderildi"
         await call('list_devices');
         await call('use_device', { device: device.serial });
         await call('simulator', { action: 'list' });
-        await call('record', { action: 'start', file: join(dir, 'a.mp4') });
+        await call('record', { action: 'start', file: join(dir, 'shots', 'a.mp4') });
         await call('record', { action: 'stop' });
-        await call('report', { action: 'write', dir: join(dir, 'report') });
+        await call('report', { action: 'write', dir: join(dir, 'shots', 'report') });
         await call('screen');
         await call('perf_snapshot');
         await call('app', { action: 'state' }).catch(() => undefined);

@@ -260,6 +260,14 @@ export const reply = <D>(t: string, data: D, extra: Block[] = []): ToolResult<D>
 
 /** Reads the device, changes nothing. */
 export const READ: ToolAnnotations = { readOnlyHint: true, openWorldHint: false };
+/**
+ * Reads the device and writes a file on this Mac where its caller says: no client takes it as read-only and runs it
+ * unasked, while here it runs as a read does, as the device stays as it was.
+ */
+export const SAVES: ToolAnnotations = { destructiveHint: false, openWorldHint: false };
+/** Whether an op leaves the device as it was, whatever it writes on this Mac. */
+export const onlyReads = (op: Pick<Tool, 'annotations'>) =>
+  op.annotations.readOnlyHint === true || op.annotations === SAVES;
 /** Acts on the device's screen (a tap may do anything the app does, but it never leaves the device). */
 export const ACT: ToolAnnotations = { destructiveHint: false, openWorldHint: false };
 /** Changes device state beyond the screen (app data, apps, settings). */

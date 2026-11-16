@@ -2,13 +2,13 @@ import type { NetworkAnswer, NetworkDetail, NetworkEntry, NetworkTimings } from 
 import { isAbsolute, join } from 'node:path';
 import type { ServerContext } from './context.js';
 import { boundLines } from './diagnose.js';
-import { writeInside } from './flow/shared.js';
 import { readCapture, type Capture } from './network-capture.js';
 import { cleanHeaders, harOf } from './network-har.js';
 import { compactList } from './network-list.js';
 import { ruleHits } from './network-rules.js';
 import { redact, redactLog } from './policy.js';
 import type { Session } from './session.js';
+import { writeInside } from './writes.js';
 import { reply } from './tool.js';
 
 /** Where a HAR named with no folder is written, under the folder this server runs in: one line keeps it out of git. */
@@ -175,6 +175,7 @@ export function networkAnswers(ctx: ServerContext) {
     const har = await harOf(hits, detailOf(s, c), clean);
     const bodies = har.log.entries.filter((e) => e.response.content.text !== undefined).length;
     const file = writeInside(
+      ctx.policy,
       isAbsolute(name) ? name : join(HAR_DIR, name),
       JSON.stringify(har),
       asked.overwrite,

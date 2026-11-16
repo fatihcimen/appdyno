@@ -9,6 +9,7 @@ import {
   ServerContext,
   SHARE_BY_LIBRARY,
   ToolError,
+  writeDirsOf,
 } from '@appdyno/ops';
 import { regularExpression } from './allow.js';
 import { deviceProviders } from './providers.js';
@@ -34,6 +35,11 @@ export type ConnectOptions = {
   allowDevices?: RegExp;
   /** Drives a device another process holds, beside it, and holds it against none. `APPDYNO_SHARE=1` says so too. */
   share?: boolean;
+  /**
+   * Folders a tool may write in where a call names the path, beside the folder the program runs in and appdyno's own
+   * state folder: a path anywhere else is refused, `POLICY_DENIED`. `APPDYNO_ALLOW_WRITE` lists more, as `PATH` does.
+   */
+  allowWrite?: string[];
 };
 
 /** What a tool answered: the words a person would read, its images, and its data. */
@@ -139,7 +145,11 @@ export function connect(options: ConnectOptions = {}): Appdyno {
   const { device, app, share = process.env.APPDYNO_SHARE === '1' } = options;
   const allowDevices = regularExpression(options.allowDevices);
   const ctx = new ServerContext(
-    { ...DEFAULT_POLICY, ...(allowDevices && { devices: allowDevices }) },
+    {
+      ...DEFAULT_POLICY,
+      ...(allowDevices && { devices: allowDevices }),
+      writeDirs: writeDirsOf(options.allowWrite),
+    },
     deviceProviders(),
     // the program that calls this is the person's own, as a command line is
     {

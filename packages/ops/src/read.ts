@@ -1,6 +1,6 @@
 import { motionText, takeStrip, watchScreen } from './watch.js';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   attributesOf,
   diffScreens,
@@ -17,7 +17,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { selectorOf } from './checks.js';
 import type { ServerContext } from './context.js';
-import { redact } from './policy.js';
+import { redact, type Policy } from './policy.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import type { Session } from './session.js';
 import {
@@ -29,9 +29,10 @@ import {
   WaitStep,
 } from './step-schemas.js';
 import { hintWithScreen, type Steps } from './steps.js';
-import { defineOp, READ, reply, ToolError } from './tool.js';
+import { defineOp, READ, reply, SAVES, ToolError } from './tool.js';
 import { readViews } from './views.js';
 import { webLines } from './web.js';
+import { inside } from './writes.js';
 
 /** The fixtures' and Settings' smallest text still reads at this size and quality, and an answer costs half as much. */
 const SHOT_PX = 800;
@@ -70,13 +71,19 @@ const maxPxOf = (size: { w: number; h: number }, width?: number, points?: boolea
  * of kB.
  */
 async function saveShot(
+  policy: Policy,
   s: Session,
   file: string,
-  overwrite: boolean,
-  inline: boolean,
-  asked: { width?: number | undefined; points?: boolean | undefined },
+  asked: {
+    overwrite?: boolean | undefined;
+    inline?: boolean | undefined;
+    width?: number | undefined;
+    points?: boolean | undefined;
+  },
 ) {
-  const given = resolve(file);
+  const overwrite = asked.overwrite === true;
+  const inline = asked.inline !== false;
+  const given = inside(policy, file);
   const folder = existsSync(given) && statSync(given).isDirectory();
   const to = folder
     ? join(given, `${safeName(s.device.serial)}-${new Date().toISOString().replace(/\W/g, '')}.png`)
@@ -302,7 +309,7 @@ export function readOps(
         })
         .strict(),
       output: ScreenshotOut,
-      annotations: READ,
+      annotations: SAVES,
       run: async ({ points, width, watchMs, strip, file, overwrite, inline }) => {
         const s = await ctx.session();
         if (watchMs) {
@@ -327,7 +334,7 @@ export function readOps(
             shown ? [{ type: 'image', data: shown.data, mimeType: 'image/png' }] : [],
           );
         }
-        if (file) return saveShot(s, file, overwrite === true, inline !== false, { width, points });
+        if (file) return saveShot(ctx.policy, s, file, { overwrite, inline, width, points });
         const layout = s.fresh
           ? `${String(!!points)} ${String(width)} ${screenStructure(s.fresh.list)}`
           : undefined;

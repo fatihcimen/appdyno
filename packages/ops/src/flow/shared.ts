@@ -1,7 +1,6 @@
-import { lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
-import { deviceState, Owner, stateDir } from '@appdyno/core';
+import { deviceState, Owner } from '@appdyno/core';
 import {
   Recording,
   type RecordingState,
@@ -14,6 +13,7 @@ import {
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
+import { writeNew } from '../writes.js';
 
 export const FLOW_FILE = /\.flow$/;
 
@@ -92,67 +92,11 @@ export const flagged = (flow: Flow) =>
     return why.length > 0 ? [`step ${i + 1}: ${why.join(', ')}`] : [];
   });
 
-/** A file and its folders: what is there stays unless `overwrite`. */
-function writeNew(path: string, text: string, overwrite: boolean | undefined) {
-  try {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, text, { flag: overwrite ? 'w' : 'wx' });
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'EEXIST')
-      throw new ToolError(`${path} exists: overwrite true replaces it`, 'INVALID_ARGUMENT');
-    throw new ToolError(`cannot write ${path}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
-  }
-  return path;
-}
-
 /** A recording as its file: what is there stays unless `overwrite`. */
 export function saveRecording(r: Recording, path: string, overwrite: boolean | undefined) {
   writeNew(path, r.text(), overwrite);
   return flagged(r.flow());
 }
-
-/** What exists of a path, a link at its end included: what lies past it has no link in it. */
-const nearest = (p: string): string => {
-  try {
-    lstatSync(p);
-    return p;
-  } catch {
-    return dirname(p) === p ? p : nearest(dirname(p));
-  }
-};
-
-const real = (p: string) => {
-  const at = nearest(p);
-  try {
-    return join(realpathSync(at), relative(at, p));
-  } catch {
-    return undefined;
-  }
-};
-
-/**
- * The path of a file a client asked to have written, inside this server's project folder (where it runs) or its state
- * folder, and no other: the client names the path, and the server's own command line sets those two. A link that leads
- * out is out.
- */
-export function inside(path: string) {
-  const to = resolve(path);
-  const roots = [process.cwd(), stateDir()];
-  const under = (p: string | undefined, root: string | undefined) => {
-    const r = p !== undefined && root !== undefined ? relative(root, p) : '';
-    return r !== '' && !r.startsWith('..') && !isAbsolute(r);
-  };
-  if (!roots.some((root) => under(to, root) && under(real(to), real(root))))
-    throw new ToolError(
-      `${to} is outside the folders this server writes to`,
-      'POLICY_DENIED',
-      `give a path inside ${roots.join(' or ')}`,
-    );
-  return to;
-}
-
-export const writeInside = (path: string, text: string, overwrite: boolean | undefined) =>
-  writeNew(inside(path), text, overwrite);
 
 export const defined = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as {

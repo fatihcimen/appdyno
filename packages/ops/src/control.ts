@@ -8,16 +8,17 @@ import { approve } from './approval.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkVirtual, namedVirtual, RanAs, ranAsFile, virtuals } from './device-names.js';
-import { byPerson, checkApp, checkCreate, noApp } from './policy.js';
+import { byPerson, checkApp, checkCreate, noApp, type Policy } from './policy.js';
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { inside } from './writes.js';
 
 /** App data can hold secrets, and a copy must not land among a person's files: a new or empty folder, for this user alone. */
-function emptyFolder(path: string | undefined) {
+function emptyFolder(policy: Policy, path: string | undefined) {
   if (!path) throw new ToolError('download_data needs path', 'INVALID_ARGUMENT');
-  const to = resolve(path);
+  const to = inside(policy, path);
   if (existsSync(to) && (!statSync(to).isDirectory() || readdirSync(to).length > 0))
     throw new ToolError(`${to} must be a new or empty folder`, 'INVALID_ARGUMENT');
   mkdirSync(to, { recursive: true, mode: 0o700 });
@@ -156,7 +157,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
         }
         case 'download_data': {
           const pkg = appOf(s, app);
-          const to = emptyFolder(path);
+          const to = emptyFolder(policy, path);
           reportProgress(`copying the data of ${pkg}`);
           await apps.downloadData(pkg, to);
           return done(`the data of ${pkg} is in ${to}`);
