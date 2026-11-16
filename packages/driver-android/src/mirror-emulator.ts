@@ -71,6 +71,11 @@ export class EmulatorMirror implements Mirror {
   private file: string | undefined;
   private turnsTimer: NodeJS.Timeout | undefined;
   private push: ((s: DeviceState) => void) | undefined;
+  /**
+   * A screen size the emulator's frame is not: a foldable's other display, which it draws stretched into the frame of
+   * the display it was built with. The guest's own picture is taken for it, until the device has another size.
+   */
+  private stretched: string | undefined;
 
   constructor(
     private readonly serial: string,
@@ -91,12 +96,41 @@ export class EmulatorMirror implements Mirror {
   ): Promise<MirrorSource> {
     const grpc = this.endpoint();
     if (!grpc) return this.guest(opts, 'this emulator has no gRPC port');
+    if (this.stretched && (await this.sizeNow()) === this.stretched) {
+      this.untilSized(this.stretched);
+      return this.guest(
+        opts,
+        "the emulator draws a foldable's other display stretched into its frame",
+      );
+    }
     try {
       return await this.openPixels(grpc, tell);
     } catch (e) {
       this.endPixels();
       return this.guest(opts, (e as Error).message);
     }
+  }
+
+  /** The screen's size as it stands upright, as the device says it now. */
+  private async sizeNow() {
+    const { w, h, rotation } = await this.phone.status();
+    return rotation % 2 === 1 ? `${String(h)}x${String(w)}` : `${String(w)}x${String(h)}`;
+  }
+
+  /** Ends the picture once the screen is no longer of this size, as a fold makes it: the session opens it anew. */
+  private untilSized(size: string) {
+    clearInterval(this.turnsTimer);
+    this.turnsTimer = setInterval(() => {
+      void this.sizeNow().then(
+        (now) => {
+          if (now === size) return;
+          clearInterval(this.turnsTimer);
+          this.push?.('not-connected');
+        },
+        () => undefined,
+      );
+    }, TURNS_POLL_MS);
+    this.turnsTimer.unref();
   }
 
   private async guest(opts: MirrorOptions, why: string): Promise<MirrorSource> {
@@ -188,6 +222,12 @@ export class EmulatorMirror implements Mirror {
         const { w: width, h: height, seq } = imageInfo(m);
         // an inactive display answers an empty image
         if (width === 0 || height === 0) continue;
+        // not the size asked for: the frame has another shape than this screen, and would show it stretched
+        if (width !== w || height !== h) {
+          this.stretched = `${String(w)}x${String(h)}`;
+          client.destroy();
+          return;
+        }
         seen = { w: width, h: height, seq };
         // after the session's `attach`, which this promise's end comes before
         setImmediate(tick);
@@ -196,8 +236,17 @@ export class EmulatorMirror implements Mirror {
     // a turn of the guest brings no message of its own, and the picture must still turn
     this.turnsTimer = setInterval(() => {
       void this.phone.status().then(
-        ({ rotation }) => {
-          if (rotation === turns || this.client !== client) return;
+        (now) => {
+          const { rotation } = now;
+          if (this.client !== client) return;
+          // a fold: another display, of another size, where the stream was asked for this one's. It ends, and the
+          // session opens it again at the size the device now has
+          const across = rotation % 2 === 1;
+          if ((across ? now.h : now.w) !== w || (across ? now.w : now.h) !== h) {
+            client.destroy();
+            return;
+          }
+          if (rotation === turns) return;
           turns = rotation;
           tick();
         },

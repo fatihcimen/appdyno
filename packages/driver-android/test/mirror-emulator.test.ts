@@ -249,9 +249,47 @@ describe('an emulator mirror', () => {
     expect(source).toMatchObject({ w: 1080, h: 2400 });
     await until(() => ticks.length === 1);
     expect(ticks[0]).toMatchObject({ turns: 1 });
-    screen.rotation = 0;
+    Object.assign(screen, { w: 1080, h: 2400, rotation: 0 });
     await until(() => ticks.length === 2);
     expect(ticks[1]).toMatchObject({ w: 1080, h: 2400, turns: 0 });
+    await mirror.close();
+  });
+
+  it("takes the guest's picture of a foldable's other display, which the frame would show stretched, until it unfolds", async () => {
+    // the frame keeps the inner display's shape: asked for the cover's size, the emulator fits its frame into it
+    let streams = 0;
+    const emulator = await fakeEmulator((s) => {
+      s.respond({ ':status': 200 });
+      s.write(grpcFrame(streams++ === 0 ? image(2076, 2152, 1) : image(1080, 1119, 1)));
+    });
+    close = emulator.close;
+    const screen = { w: 2076, h: 2152, rotation: 0 };
+    const seen: string[] = [];
+    const mirror = new EmulatorMirror('emulator-5720', phone(screen), () => ({
+      port: emulator.port,
+    }));
+    mirror.watch((s) => seen.push(s));
+    /** The picture ended, however many of its ends said so. */
+    const ended = async () => {
+      await until(() => seen.length > 0);
+      expect(new Set(seen)).toEqual(new Set(['not-connected']));
+      await new Promise((r) => setTimeout(r, 100));
+      seen.length = 0;
+    };
+    const open = () => mirror.open({ quality: 'auto' }, signal, () => undefined);
+    // open, and folded while the picture is up: it ends, to be opened at the size the device now has
+    expect(await open()).toMatchObject({ kind: 'pixels', w: 2076, h: 2152 });
+    Object.assign(screen, { w: 1080, h: 2424 });
+    await ended();
+    // the cover's size is not the frame's, as the first answer shows, and the guest encodes from then
+    expect(await open()).toMatchObject({ kind: 'pixels', w: 1080, h: 2424 });
+    await ended();
+    const folded = await open();
+    expect(folded).toMatchObject({ kind: 'adb', start: { maxSize: 1212 } });
+    expect((folded as { note: string }).note).toContain('stretched into its frame');
+    // unfolded: the picture ends once more, for the frame's own
+    Object.assign(screen, { w: 2076, h: 2152 });
+    await ended();
     await mirror.close();
   });
 

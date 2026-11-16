@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   Adb,
+  AndroidDevice,
   androidProvider,
   IosSimulatorDevice,
   MirrorSession,
@@ -89,6 +90,13 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
     expect(cover).not.toBe(open);
     // the display the answer names is the window the app has
     expect(cover).toContain(`Window ${String(/display (\d+x\d+)/.exec(closed.text)?.[1])} px`);
+    // and the picture of the screen is of that display, whole
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-fold-')), 'cover.png');
+    ok(await call('screenshot', { file, inline: false }));
+    const png = readFileSync(file);
+    expect(`${String(png.readUInt32BE(16))}x${String(png.readUInt32BE(20))}`).toBe(
+      /display (\d+x\d+)/.exec(closed.text)?.[1],
+    );
 
     // half open by a person's word for it: the inner display again, and the hinge half way
     const half = ok(await fold(call, 'half'));
@@ -128,6 +136,61 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
     expect((await fold(call)).data.value).toBe('default (now open)');
     expect(await shows(call, 'fold_posture', 'Posture: flat')).toBe(true);
   });
+
+  it("shows a person's window the display in use at its size, and takes their touch on it", async () => {
+    const until = untilWithin(60_000);
+    const device = new AndroidDevice(ANDROID, new Adb());
+    const session = new MirrorSession({
+      mirror: device.mirror,
+      viewer: async () => new ViewerProcess(await viewerBinary(), ['--headless']),
+      options: { quality: 'auto' },
+      title: 'a fold',
+    });
+    const size = () => adb('wm size').replace(/.*: /s, '');
+    const picture = () =>
+      `${String(session.status.picture?.w)}x${String(session.status.picture?.h)}`;
+    /** A person's tap on the fixture's home, at its Dialog button, as a fraction of the picture. */
+    const tapDialog = async () => {
+      ok(await call('terminate_app'));
+      ok(await call('launch_app', { read: 'none' }));
+      const at = ok(await call('find', { selector: { text: 'DIALOG' } })).data.matches[0];
+      const [w, h] = size().split('x').map(Number);
+      expect(at && w && h && true).toBe(true);
+      const [x, y] = [Number(at?.x) / Number(w), Number(at?.y) / Number(h)];
+      session.send({ kind: 'touch', p: 0, x, y });
+      await new Promise((r) => setTimeout(r, 80));
+      session.send({ kind: 'touch', p: 2, x, y });
+      return ok(await call('wait_for', { selector: { text: 'OPEN DIALOG' }, timeoutMs: 8_000 }))
+        .data.met;
+    };
+    ok(await fold(call, 'open'));
+    await session.start();
+    try {
+      await until('the inner display', () => session.status.state === 'live');
+      const open = size();
+      await until('its size', () => picture() === open);
+      expect(await tapDialog()).toBe(true);
+      // closed by the agent's call while the person's window is up: the window follows to the cover's size
+      ok(await fold(call, 'closed'));
+      const cover = size();
+      expect(cover).not.toBe(open);
+      // the emulator draws the cover stretched into the inner display's frame, so the guest's own picture is taken:
+      // smaller, and of the cover's shape
+      await until('the cover', () => {
+        const [w, h] = cover.split('x').map(Number);
+        const p = session.status.picture;
+        return !!p && Math.abs(p.w / p.h - Number(w) / Number(h)) < 0.02;
+      });
+      expect(session.status.state).toBe('live');
+      expect(await tapDialog()).toBe(true);
+      ok(await fold(call, 'half'));
+      await until('the inner display again', () => picture() === open);
+      expect(await tapDialog()).toBe(true);
+    } finally {
+      await session.stop('the test ended');
+      device.close();
+    }
+  }, 240_000);
 
   it('puts the pose back when the session ends', async () => {
     ok(await fold(call, 'half_opened'));
