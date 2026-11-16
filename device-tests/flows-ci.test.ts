@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import type { RunCase, RunRecord } from '@appdyno/flows';
+import { assert, describe, expect, it } from 'vitest';
 
 /**
  * `appdyno test` as a CI job runs it, by the built command line, on the fixture. The flake has a known cause:
@@ -126,6 +127,117 @@ for (const [platform, serial] of targets)
         expect(r.out).toContain('2 passed, 0 flaky, 1 failed');
         expect(r.junit).toContain('tests="3" failures="1"');
         expect(r.junit).toContain('flakes="0"');
+      },
+      LONG_MS,
+    );
+
+    it(
+      'leaves one verdict, a record and a page, and a command that runs a file alone as it ran',
+      async () => {
+        write(
+          'f-form.flow',
+          `app ${APP}`,
+          'run shared/start.flow',
+          'run shared/form.flow',
+          'assert text="No such" timeoutMs=500',
+        );
+        const r = await job(
+          'report',
+          join(flows, 'a-form.flow'),
+          join(flows, 'f-form.flow'),
+          '--env-file',
+          envFile,
+        );
+        expect(r.code).toBe(1);
+        const read = (name: string) => readFileSync(join(r.artifacts, name), 'utf8');
+        expect(read('verdict.txt')).toMatch(
+          /^FAIL: 1 passed, 0 flaky, 1 failed on 1 device in \d+s\nbecause: 1 failed\nFAIL \S+ f-form\.flow line 4, step \d+: /,
+        );
+        const run = JSON.parse(read('run.json')) as RunRecord;
+        expect(run).toMatchObject({
+          schema: 1,
+          verdict: 'FAIL',
+          devices: [{ serial, virtual: true }],
+        });
+        expect(run.devices[0]?.os).toMatch(platform === 'ios' ? /^iOS \d/ : /^Android \d/);
+        const [passed, failed] = run.cases;
+        assert(passed && failed);
+        expect(failed).toMatchObject({ label: 'f-form.flow', outcome: 'failed', app: { id: APP } });
+        expect(failed.app?.version).toMatch(/^\d/);
+        // the form holds a password field with the secret typed in it: the picture is painted, so it is a PNG
+        const shot = failed.attempts[0]?.evidence.shot;
+        expect(shot).toMatch(/f-form\.flow\/screen\.png$/);
+        expect(
+          readFileSync(join(r.artifacts, String(shot)))
+            .subarray(1, 4)
+            .toString(),
+        ).toBe('PNG');
+        expect(run.contents).toMatchObject({ shots: 1, painted: 1, trees: 1 });
+        expect(r.junit).toContain(`[[ATTACHMENT|${join(r.artifacts, String(shot))}]]`);
+        for (const name of ['run.json', 'verdict.txt', 'index.html', 'pr.md'])
+          expect(read(name), name).not.toContain(PASSWORD);
+        expect(read('index.html')).toContain('<p class="verdict fail">FAIL</p>');
+        // each runs alone as it ran: the one that passed passes, the one that failed fails on the same step
+        const alone = (c: RunCase, name: string) =>
+          appdyno(...c.rerun.split(' ').slice(1), '--artifacts', join(dir, name));
+        expect(passed.rerun).toBe(
+          `appdyno test ${join(flows, 'a-form.flow')} --device ${serial} --env-file ${envFile}`,
+        );
+        expect((await alone(passed, 'again-passed')).code).toBe(0);
+        const again = await alone(failed, 'again-failed');
+        expect(again.code).toBe(1);
+        expect(again.out).toContain('FAIL f-form.flow: line 4, step');
+      },
+      LONG_MS,
+    );
+
+    it(
+      'runs a part of the files in each of two jobs, and merges them into one report',
+      async () => {
+        const parts = [];
+        for (const i of [1, 2])
+          parts.push(
+            await job(
+              `part-${i}`,
+              flows,
+              '--tag',
+              'ci',
+              '--env-file',
+              envFile,
+              '--shard',
+              `${i}/2`,
+            ),
+          );
+        expect(parts.map((p) => /shard \d\/2: (\d) of 3 files/.exec(p.out)?.[1])).toEqual([
+          '2',
+          '1',
+        ]);
+        const whole = join(dir, 'whole');
+        const merged = await appdyno(
+          'test',
+          'merge',
+          ...parts.map((p) => p.artifacts),
+          '--out',
+          whole,
+        );
+        const run = JSON.parse(readFileSync(join(whole, 'run.json'), 'utf8')) as RunRecord;
+        expect(run.cases.map((c) => c.label).sort()).toEqual([
+          'a-form.flow',
+          'b-list.flow',
+          'c-counts.flow',
+        ]);
+        expect(merged.code).toBe(run.verdict === 'PASS' ? 0 : 1);
+        expect(merged.out).toContain(`report: ${join(whole, 'index.html')}`);
+        const short = await appdyno(
+          'test',
+          'merge',
+          String(parts[0]?.artifacts),
+          '--out',
+          join(dir, 'short'),
+        );
+        expect(short.code).toBe(1);
+        expect(short.out).toContain('because: ');
+        expect(short.out).toContain('shard 2/2 did not run');
       },
       LONG_MS,
     );

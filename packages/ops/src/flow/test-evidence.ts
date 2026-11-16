@@ -6,7 +6,7 @@ import type { ServerContext } from '../context.js';
 import { paintedShot } from '../report-write.js';
 import type { Session } from '../session.js';
 
-/** As many of the app's last log lines as a failure keeps. */
+/** As many of the app's last log messages as a failure keeps: one may run over several lines. */
 const LOG_TAIL = 200;
 const MAX_CRASHES = 5;
 
