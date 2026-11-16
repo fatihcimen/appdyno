@@ -7,7 +7,7 @@ import type {
   ViewerTold,
   WindowControl,
 } from '@appdyno/core';
-import { captures } from '@appdyno/ops';
+import { captures, ruleSwitched } from '@appdyno/ops';
 import { frontApp, type WindowSession } from './controls.js';
 import type { windowSends } from './window-sends.js';
 
@@ -25,16 +25,18 @@ export const ANDROID_NEEDS =
 export const PROBE_WHILE =
   'The probe restarts the app: stop the recording first, or wait for the measure to end';
 const NO_APP = 'Open an app of yours to capture its requests';
+export const NO_PROBE = 'Start a capture by the probe first';
 const PACKETS_LATER = 'Packets are counted when the capture stops';
 
 /**
  * Each request with where it stands since the capture began, which the next read keeps as the oldest go: a window keeps
- * the one a person chose by it, where its place in the list moves.
+ * the one a person chose by it, where its place in the list moves. The probe numbers its own, and a request's headers
+ * and bodies are asked for by that.
  */
 const numbered = (data: Record<string, unknown>) =>
   ((data.entries as Record<string, unknown>[] | undefined) ?? []).map((e, i) => ({
     ...e,
-    id: Number(data.dropped ?? 0) + i,
+    id: typeof e.id === 'number' ? e.id : Number(data.dropped ?? 0) + i,
   }));
 
 /**
@@ -76,6 +78,17 @@ export function windowNetwork(
     return { ways: usable, ...(proxy !== 'none' && { proxy }), ...(needs && { needs }) };
   };
 
+  /** The probe's rules with what each took, and its throttle, as the op an agent sets them by lists them. */
+  const controlled = async () => {
+    const { data } = await op({ action: 'mock' });
+    return data
+      ? {
+          rules: (data.rules as unknown[] | undefined) ?? [],
+          throttle: typeof data.throttle === 'string' ? data.throttle : 'full',
+        }
+      : {};
+  };
+
   /** What the capture has seen so far, by the op an agent reads it with. */
   const read = async () => {
     const c = captures.read(serial);
@@ -89,7 +102,14 @@ export function windowNetwork(
       }
       const entries = numbered(data);
       const note = c.via === 'packets' && !entries.length ? PACKETS_LATER : data.note;
-      tell({ capturing: c.via, since: c.since, entries, ...(note ? { note } : {}) });
+      tell({
+        capturing: c.via,
+        since: c.since,
+        bodies: c.bodies === true,
+        entries,
+        ...(note ? { note } : {}),
+        ...(c.via === 'probe' ? await controlled() : {}),
+      });
     } finally {
       reading = false;
     }
@@ -108,7 +128,7 @@ export function windowNetwork(
     if (c.via === 'probe' && wanted) looking = setInterval(() => void read(), PROBE_LOOK_MS);
   };
 
-  const start = async (via: NetworkVia) => {
+  const start = async (via: NetworkVia, bodies = false) => {
     if (via === 'probe' && (o.recording() || o.measuring())) {
       answer({ ok: false, text: PROBE_WHILE });
       return;
@@ -120,7 +140,12 @@ export function windowNetwork(
       return;
     }
     answer({ line: via === 'probe' ? 'Restarting the app with the probe' : 'Starting' });
-    const { answer: said } = await op({ action: 'start', via, ...(app && { app }) });
+    const { answer: said } = await op({
+      action: 'start',
+      via,
+      ...(app && { app }),
+      ...(bodies && via === 'probe' && { bodies }),
+    });
     // what the op says it sees is the pane's to say, in its own words
     answer(said.ok ? { ok: true, text: 'Capture started' } : said);
     if (said.ok) ours = true;
@@ -145,10 +170,41 @@ export function windowNetwork(
     });
   };
 
+  /** One request whole, its headers and bodies as the op gives them. */
+  const detail = async (id: number) => {
+    const { answer: said, data } = await op({ action: 'read', id });
+    if (data) tell({ detail: { id, lines: (data.detail as string[] | undefined) ?? [] } });
+    else answer(said);
+  };
+
+  /** A change of the probe's rules or throttle, by the op an agent makes it with; then what holds now. */
+  const change = async (args: Record<string, unknown>, done: string) => {
+    // no capture: the op would start one, and restart the app under a person who asked for a rule
+    if (captures.read(serial)?.via !== 'probe') {
+      answer({ ok: false, text: NO_PROBE });
+      return;
+    }
+    const { answer: said } = await op(args);
+    answer(said.ok ? { ok: true, text: done } : said);
+    await read();
+  };
+  const setRules = (rules: string[]) => change({ action: 'mock', rules }, 'Rules set');
+  const switchRule = (at: number, on: boolean) =>
+    setRules(
+      (captures.read(serial)?.rules ?? []).map((line, i) =>
+        i === at ? ruleSwitched(line, on) : line,
+      ),
+    );
+
   const controls = {
-    networkStart: (m: ViewerControl<'networkStart'>) => start(m.via),
+    networkStart: (m: ViewerControl<'networkStart'>) => start(m.via, m.bodies),
     networkStop: stop,
     networkRead: read,
+    networkDetail: (m: ViewerControl<'networkDetail'>) => detail(m.id),
+    networkRules: (m: ViewerControl<'networkRules'>) => setRules(m.rules),
+    networkRuleSwitch: (m: ViewerControl<'networkRuleSwitch'>) => switchRule(m.at, m.on),
+    networkThrottle: (m: ViewerControl<'networkThrottle'>) =>
+      change({ action: 'throttle', throttle: m.value }, 'Speed set'),
   };
 
   return {

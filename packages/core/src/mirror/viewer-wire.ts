@@ -106,7 +106,11 @@ type Control =
     }
   | { name: 'journey'; file: string }
   | { name: 'links'; app?: string }
-  | { name: 'networkStart'; via: NetworkVia }
+  | { name: 'networkStart'; via: NetworkVia; bodies?: boolean }
+  | { name: 'networkDetail'; id: number }
+  | { name: 'networkRules'; rules: string[] }
+  | { name: 'networkRuleSwitch'; at: number; on: boolean }
+  | { name: 'networkThrottle'; value: string }
   | { name: 'openLink'; url?: string; app?: string }
   | { name: 'pushes'; app?: string }
   | { name: 'pushToken'; app?: string; token?: string; kind?: string };
@@ -301,6 +305,13 @@ export type ViewerOrder = Staged &
         ways?: NetworkVia[];
         proxy?: string;
         needs?: string;
+        /** The capture keeps each request's headers and bodies, which `networkDetail` asks for. */
+        bodies?: boolean;
+        /** The probe's rules with what each took, and how slow it makes the app's network. */
+        rules?: unknown[];
+        throttle?: string;
+        /** One request whole, as its lines. */
+        detail?: { id: number; lines: string[] };
       }
     | { op: 'note'; text: string }
     | { op: 'pair'; both?: boolean; with?: string; failing?: string; ended?: boolean }

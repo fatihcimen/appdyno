@@ -180,12 +180,24 @@ void MVPaneWatch(NSView<MVAsks> *pane, NSString *name, BOOL on, NSString *_Nulla
 @property(nonatomic, readonly) NSArray<MVRow *> *crashRows;
 @end
 
+/// The rules the probe holds for the app's requests, as `network` `mock` lists them: one added, changed, turned off
+/// and on, or removed here is set by that op.
+@interface MVNetworkRules : NSView
+/// Where a change goes: the whole list as it would stand, or one rule's switch.
+@property(nonatomic, copy, nullable) void (^onSend)(NSDictionary *message);
+/// The parent's rules, each with its line, what it took, and whether it is off.
+- (void)show:(NSArray<NSDictionary *> *)rules;
+@property(nonatomic, readonly) NSArray<MVRow *> *rows;
+@end
+
 /// The app's requests as `network` gives them, the ways this device has to see them, and what a person needs where none.
+/// By the probe it also keeps headers and bodies, holds rules and slows the app's network.
 @interface MVNetworkPane : NSView <MVWatches>
 @property(nonatomic, readonly) MVAnswerView *answer;
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
 /// What it says of the capture, and of the request chosen.
 @property(nonatomic, readonly) NSString *said, *detail;
+@property(nonatomic, readonly) MVNetworkRules *rules;
 @end
 
 /// What `audit` finds on the screen shown, by kind; one chosen is marked on the device's picture.

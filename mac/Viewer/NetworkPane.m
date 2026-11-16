@@ -5,7 +5,30 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kDetailHeight = 110;
+static const double kDetailHeight = 150;
+
+/// How slow the probe makes the app's network: the op's word, and its name here.
+static NSString *const kSpeeds[][2] = {
+    {@"full", @"Full Speed"},
+    {@"slow", @"Slow"},
+    {@"gsm", @"GSM"},
+    {@"gprs", @"GPRS"},
+    {@"edge", @"EDGE"},
+    {@"umts", @"3G"},
+    {@"hsdpa", @"HSDPA"},
+    {@"lte", @"LTE"},
+};
+enum { kSpeedCount = sizeof kSpeeds / sizeof kSpeeds[0] };
+
+/// What a rule or the throttle did to a request, as the op says it, in a person's words.
+static NSString *howWord(NSDictionary *e) {
+  NSString *how = [e[@"how"] isKindOfClass:NSString.class] ? e[@"how"] : nil;
+  if ([how isEqual:@"mocked"]) return MVWord(@"Mocked");
+  if ([how isEqual:@"failed"]) return MVWord(@"Failed by a rule");
+  if ([how isEqual:@"delayed"]) return MVWord(@"Delayed by a rule");
+  if ([how isEqual:@"sent"]) return MVFormat(@"Sent to %@", @[[e[@"to"] description] ?: @""]);
+  return [how isEqual:@"lost"] ? MVWord(@"Lost by the throttle") : nil;
+}
 
 /// Each way by its name, as a person reads it, and what it shows.
 static NSString *const kWays[][3] = {
@@ -40,6 +63,7 @@ static NSString *figures(NSDictionary *e) {
   if (e[@"packets"]) [parts addObject:MVWord([NSString stringWithFormat:@"%@ packets", e[@"packets"]])];
   if (e[@"bytes"]) [parts addObject:sized(e[@"bytes"])];
   if ([e[@"error"] length]) [parts addObject:MVFormat(@"Failed: %@", @[e[@"error"]])];
+  if (howWord(e)) [parts addObject:howWord(e)];
   return [parts componentsJoinedByString:@" · "];
 }
 
@@ -64,7 +88,9 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   row.title = [NSString stringWithFormat:@"%@ %@", e[@"method"] ?: @"GET", where];
   row.help = url;
   BOOL failed = [e[@"error"] length] || [e[@"status"] integerValue] >= 400;
-  row.symbol = failed ? @"exclamationmark.triangle.fill" : @"arrow.down.circle";
+  // one a rule took is no answer of the server's: it stands apart
+  row.symbol = failed ? @"exclamationmark.triangle.fill" : e[@"how"] ? @"arrow.triangle.branch"
+                                                                     : @"arrow.down.circle";
   if (failed) row.tint = MVRed();
   return row;
 }
@@ -72,9 +98,15 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
 @implementation MVNetworkPane {
   NSTextField *_state, *_about;
   NSPopUpButton *_way;
-  NSButton *_go, *_again;
+  NSButton *_go, *_again, *_bodies;
+  NSPopUpButton *_throttle;
+  MVNetworkRules *_rules;
+  NSArray<MVAccentButton *> *_sections;
+  NSView *_sectionRow;
+  BOOL _onRules;
   NSArray<NSString *> *_ways;
-  NSString *_capturing, *_needs, *_note, *_proxy;
+  NSString *_capturing, *_needs, *_note, *_proxy, *_wholeKey, *_whole, *_askedKey;
+  BOOL _keeps;
   NSDate *_since;
   NSArray<NSDictionary *> *_entries;
   MVList *_list;
@@ -99,6 +131,19 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     _again = MVPlaceButton(@"Read Again", @"networkRead", self, @selector(readAgain:));
     NSStackView *controls = [NSStackView stackViewWithViews:@[_way, _go, _again]];
     controls.spacing = 8;
+    _bodies = [NSButton checkboxWithTitle:MVWord(@"Keep headers and bodies") target:self action:@selector(wayChosen:)];
+    _bodies.identifier = @"networkBodies";
+    _throttle = [NSPopUpButton new];
+    _throttle.identifier = @"networkThrottle";
+    _throttle.accessibilityLabel = MVWord(@"Network speed");
+    _throttle.target = self;
+    _throttle.action = @selector(throttleChosen:);
+    for (NSInteger i = 0; i < kSpeedCount; i++) [_throttle addItemWithTitle:MVWord(kSpeeds[i][1])];
+    _rules = [MVNetworkRules new];
+    // the requests or the rules: both at once leave neither the room to be read
+    _sections = @[(MVAccentButton *)MVPlaceButton(@"Requests", @"networkShowRequests", self, @selector(sectionChosen:)), (MVAccentButton *)MVPlaceButton(@"Rules", @"networkShowRules", self, @selector(sectionChosen:))];
+    _sections[1].tag = 1;
+    _sectionRow = MVPaneRow(_sections);
     _about = MVPaneNote(@"");
     _about.maximumNumberOfLines = 0;
     MVHoldContent(_about);
@@ -120,7 +165,10 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     // pane's foot
     _slack = [NSView new];
     [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-    MVPaneFill(self, @[_state, controls, _about, _answer, _none, _list, _detailCard, _slack], 8);
+    _rules.onSend = ^(NSDictionary *message) {
+      MVPaneSend(weak, message);
+    };
+    MVPaneFill(self, @[_state, controls, _bodies, _throttle, _about, _answer, _sectionRow, _none, _list, _detailCard, _rules, _slack], 8);
     [self layOut];
   }
   return self;
@@ -140,7 +188,20 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   _go.enabled = NO;
   [_answer sending:MVWord(_capturing ? @"Stopping the capture" : @"Starting the capture")];
   if (_capturing) MVPaneSend(self, @{@"op": @"control", @"name": @"networkStop"});
+  else if (!_bodies.hidden && _bodies.state == NSControlStateValueOn) MVPaneSend(self, @{@"op": @"control", @"name": @"networkStart", @"via": _ways[chosen], @"bodies": @YES});
   else MVPaneSend(self, @{@"op": @"control", @"name": @"networkStart", @"via": _ways[chosen]});
+}
+
+- (void)sectionChosen:(NSButton *)sender {
+  _onRules = sender.tag == 1;
+  [self layOut];
+  [self showDetail:_list.selected.key];
+}
+
+/// A speed chosen is the probe's throttle, by the op an agent sets it with.
+- (void)throttleChosen:(id)sender {
+  NSInteger at = _throttle.indexOfSelectedItem;
+  if (at >= 0 && at < kSpeedCount) MVPaneSend(self, @{@"op": @"control", @"name": @"networkThrottle", @"value": kSpeeds[at][0]});
 }
 
 - (void)readAgain:(id)sender {
@@ -158,7 +219,18 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     _go.enabled = !_answer.waiting;
     return;
   }
+  // one request whole, asked for as it was chosen: nothing else of the pane changes
+  if ([m[@"detail"] isKindOfClass:NSDictionary.class]) {
+    _wholeKey = [m[@"detail"][@"id"] description];
+    _whole = [m[@"detail"][@"lines"] componentsJoinedByString:@"\n"];
+    [self showDetail:_list.selected.key];
+    return;
+  }
   NSString *capturing = [m[@"capturing"] isKindOfClass:NSString.class] ? m[@"capturing"] : nil;
+  _keeps = capturing && [m[@"bodies"] boolValue];
+  if ([m[@"rules"] isKindOfClass:NSArray.class]) [_rules show:m[@"rules"]];
+  else if (!capturing) [_rules show:@[]];
+  if ([m[@"throttle"] isKindOfClass:NSString.class]) [self showThrottle:m[@"throttle"]];
   if (m[@"ways"]) {
     _ways = [m[@"ways"] isKindOfClass:NSArray.class] ? m[@"ways"] : @[];
     _proxy = [m[@"proxy"] isKindOfClass:NSString.class] ? m[@"proxy"] : nil;
@@ -187,6 +259,15 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   [self showDetail:_list.selected.key];
 }
 
+/// The speed the probe holds, chosen in the list: one set in other words, as an agent may, stands there as it was set.
+- (void)showThrottle:(NSString *)value {
+  NSInteger at = 0;
+  while (at < kSpeedCount && ![kSpeeds[at][0] isEqual:value]) at++;
+  while (_throttle.numberOfItems > kSpeedCount) [_throttle removeItemAtIndex:kSpeedCount];
+  if (at == kSpeedCount) [_throttle addItemWithTitle:value];
+  [_throttle selectItemAtIndex:at];
+}
+
 /// What the pane says and offers, from what it was last told.
 - (void)layOut {
   NSString *via = _capturing;
@@ -211,8 +292,19 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
   _go.hidden = !_capturing && !_ways.count;
   _go.title = MVWord(_capturing ? @"Stop" : @"Start");
   _again.hidden = !_capturing || [_capturing isEqual:@"probe"];
-  _list.hidden = !_list.rows.count;
-  _none.hidden = !_list.hidden;
+  // the probe's own: bodies are asked for before it starts, and its rules and its speed hold while it runs
+  _bodies.hidden = _capturing || ![via isEqual:@"probe"];
+  BOOL probe = [_capturing isEqual:@"probe"];
+  if (!probe) _onRules = NO;
+  _throttle.hidden = _sectionRow.hidden = !probe;
+  for (MVAccentButton *section in _sections) {
+    BOOL chosen = (section.tag == 1) == _onRules;
+    section.hue = chosen ? MVAccent() : nil;
+    section.accessibilityValue = chosen ? MVWord(@"selected") : nil;
+  }
+  _rules.hidden = !_onRules;
+  _list.hidden = _onRules || !_list.rows.count;
+  _none.hidden = _onRules || _list.rows.count;
   _slack.hidden = !_list.hidden;
 }
 
@@ -222,8 +314,18 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
     return [one isKindOfClass:NSDictionary.class] && [keyOf(one, i) isEqual:key];
   }];
   NSDictionary *e = at == NSNotFound ? nil : _entries[at];
-  _detailCard.hidden = !e;
+  _detailCard.hidden = !e || _onRules;
   if (!e) return;
+  // its headers and bodies are asked for once, where the capture keeps them, and stand in place of the line
+  if (_keeps && key && ![key isEqual:_askedKey]) {
+    _askedKey = key;
+    MVPaneSend(self, @{@"op": @"control", @"name": @"networkDetail", @"id": @(key.integerValue)});
+  }
+  if (_whole && [key isEqual:_wholeKey]) {
+    if (![_detail.string isEqual:_whole]) _detail.string = _whole;
+    _detail.textColor = MVInkColor();
+    return;
+  }
   NSMutableArray<NSString *> *lines = [NSMutableArray array];
   if ([e[@"url"] length]) [lines addObject:[NSString stringWithFormat:@"%@ %@", e[@"method"] ?: @"GET", e[@"url"]]];
   else [lines addObject:entryRow(e, 0).title];
@@ -242,6 +344,10 @@ static MVRow *entryRow(NSDictionary *e, NSUInteger at) {
 
 - (NSString *)said {
   return _about.hidden ? _state.stringValue : [NSString stringWithFormat:@"%@\n%@", _state.stringValue, _about.stringValue];
+}
+
+- (MVNetworkRules *)rules {
+  return _rules;
 }
 
 - (NSString *)detail {

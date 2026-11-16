@@ -196,6 +196,7 @@ static void checkNetwork(MVWindow *window) {
                                @"host": @"uid 10123",
                                @"bytes": @2048}]}];
   MVCheck(@"network: a count stands as one too, with Read Again where nothing reads it by itself", [pane.rows[0].title isEqual:@"Received · uid 10123"] && ![[pane valueForKey:@"_again"] isHidden], pane.rows[0].title);
+  MVCheckProbe(window, pane, sent);
 }
 
 static void checkAudit(MVWindow *window) {

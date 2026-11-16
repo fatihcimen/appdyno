@@ -26,6 +26,13 @@ export function ruleStep(line: string): FlowStep {
 /** A rule as it is written, the same from every way of writing it. */
 export const ruleLine = (line: string) => stepLine(ruleStep(line)).replace(/^mock /, '');
 
+/** A rule's line turned off, or on again: the same rule, by its id. */
+export function ruleSwitched(line: string, on: boolean) {
+  const st = ruleStep(line);
+  const { off: _, ...args } = st.args;
+  return stepLine({ ...st, args: on ? args : { ...args, off: true } }).replace(/^mock /, '');
+}
+
 /**
  * The file a rule answers with, inside the folder this server runs in once its links are followed, as `media` has it:
  * a client names the path, and what it reads goes to an app and from there into a capture.

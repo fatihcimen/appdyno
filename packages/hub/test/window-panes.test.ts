@@ -2,10 +2,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LogsQuery, NetworkHandle, NetworkSource } from '@appdyno/core';
+import type { LogsQuery, NetworkControl, NetworkHandle, NetworkSource } from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '@appdyno/ops';
 import { NO_PHONE_LOG, OPEN_AN_APP, windowLogs } from '../src/window-logs.js';
-import { ANDROID_NEEDS, IPHONE_NEEDS, PROBE_WHILE, windowNetwork } from '../src/window-network.js';
+import {
+  ANDROID_NEEDS,
+  IPHONE_NEEDS,
+  NO_PROBE,
+  PROBE_WHILE,
+  windowNetwork,
+} from '../src/window-network.js';
 import { windowSends } from '../src/window-sends.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
@@ -325,5 +331,76 @@ describe("a window's Network pane", () => {
         text: PROBE_WHILE,
       });
     expect(source.started).toEqual([]);
+  });
+
+  it('keeps bodies, shows one request whole, and sets the rules and the speed by the op an agent calls', async () => {
+    const t = on();
+    const told: NetworkControl[] = [];
+    const starts: unknown[] = [];
+    const entries = [
+      { id: 0, method: 'GET', url: 'https://a.test/x', status: 503, ms: 3, how: 'mocked' },
+    ];
+    const source: NetworkSource = {
+      ...probe(),
+      start: (via, app, bodies) => {
+        starts.push({ via, app, bodies });
+        return Promise.resolve<NetworkHandle>({ via });
+      },
+      read: () => Promise.resolve({ entries }),
+      control: (_, c) => void told.push(c),
+      detail: () =>
+        Promise.resolve({
+          requestHeaders: { Authorization: 'Bearer abcdefgh12345678' },
+          responseHeaders: {},
+          responseBody: '{"error":"down"}',
+          responseBodySize: 16,
+        }),
+    };
+    Object.assign(t.device, { network: source });
+    const pane = open(t);
+    // with no capture a rule would restart the app under a person: it is refused, and says what to do
+    pane.onWindow({ op: 'control', name: 'networkRules', rules: ['a.test/x status=503'] });
+    await expect.poll(() => answered(t)).toMatchObject({ ok: false, text: NO_PROBE });
+    pane.onWindow({ op: 'control', name: 'networkStart', via: 'probe', bodies: true });
+    await expect.poll(() => said(t)).toMatchObject({ capturing: 'probe', bodies: true, rules: [] });
+    expect(starts).toEqual([{ via: 'probe', app: 'dev.app', bodies: true }]);
+    pane.onWindow({
+      op: 'control',
+      name: 'networkRules',
+      rules: ['a.test/x status=503', 'a.test/y fail=offline'],
+    });
+    await expect.poll(() => answered(t)).toMatchObject({ ok: true, text: 'Rules set' });
+    await expect
+      .poll(() => said(t))
+      .toMatchObject({
+        rules: [
+          { rule: '"a.test/x" status=503', hits: 0 },
+          { rule: '"a.test/y" fail=offline', hits: 0 },
+        ],
+        throttle: 'full',
+        entries: [expect.objectContaining({ id: 0, how: 'mocked' })],
+      });
+    pane.onWindow({ op: 'control', name: 'networkRuleSwitch', at: 1, on: false });
+    await expect.poll(() => told.at(-1)?.rules[1]).toMatchObject({ fail: 'offline', off: true });
+    pane.onWindow({ op: 'control', name: 'networkRuleSwitch', at: 1, on: true });
+    await expect.poll(() => told.at(-1)?.rules[1]?.off).toBeUndefined();
+    pane.onWindow({ op: 'control', name: 'networkThrottle', value: 'slow' });
+    await expect.poll(() => said(t)).toMatchObject({ throttle: 'slow' });
+    expect(told.at(-1)?.throttle).toMatchObject({ down: 29_600 });
+    pane.onWindow({ op: 'control', name: 'networkDetail', id: 0 });
+    await expect
+      .poll(() => said(t))
+      .toMatchObject({
+        detail: {
+          id: 0,
+          lines: expect.arrayContaining(['  Authorization: •••', '{"error":"down"}']) as unknown,
+        },
+      });
+    // a rule that is none is said as the op says it
+    pane.onWindow({ op: 'control', name: 'networkRules', rules: ['a.test/x'] });
+    await expect
+      .poll(() => answered(t))
+      .toMatchObject({ ok: false, text: expect.stringMatching(/not a rule/) as unknown });
+    await pane.end();
   });
 });
