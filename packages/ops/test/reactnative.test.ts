@@ -118,9 +118,11 @@ async function fakeMetro(opts: {
 }
 
 const ops = () => checkedOps(new ServerContext(DEFAULT_POLICY, []));
+const inside = (args: Record<string, unknown>) =>
+  must(ops().inspect_app, 'inspect_app').input.parse(args);
 const call = async (args: Record<string, unknown>) => {
-  const op = must(ops().react_native, 'react_native');
-  const r = await op.handler(op.input.parse(args));
+  const op = must(ops().inspect_app, 'inspect_app');
+  const r = await op.handler(op.input.parse({ ...args, action: `rn_${String(args.action)}` }));
   return r.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
 };
 
@@ -189,30 +191,28 @@ describe('react_native', () => {
 
       const ctx = new ServerContext(DEFAULT_POLICY, [provider], { storage: { remember } });
       const call = callerOf(ctx);
-      await call('react_native', { action: 'targets', metro: metro.metro });
-      await call('react_native', { action: 'reload', metro: metro.metro });
+      await call('inspect_app', { action: 'rn_targets', metro: metro.metro });
+      await call('inspect_app', { action: 'rn_reload', metro: metro.metro });
       expect(opens).toBe(0);
       const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text.split('\n').filter((l) => l.startsWith('unrecorded'))).toEqual([
-        'unrecorded "react_native reload"',
+        'unrecorded "inspect_app rn_reload"',
       ]);
     });
 
     it('with a device attached and none named, opens none and marks nothing', async () => {
       metro = await fakeMetro({ reloadRoute: true });
       const call = callerOf(new ServerContext(DEFAULT_POLICY, [provider]));
-      await call('react_native', { action: 'reload', metro: metro.metro });
+      await call('inspect_app', { action: 'rn_reload', metro: metro.metro });
       expect(opens).toBe(0);
     });
   });
 
   it('calls no Metro but on this Mac', () => {
     for (const metro of ['10.0.0.5:8080', 'secret.example.com:80', 'localhost.example.com:80'])
-      expect(() => ops().react_native?.input.parse({ action: 'targets', metro })).toThrow(
-        /Metro on this Mac/,
-      );
+      expect(() => inside({ action: 'rn_targets', metro })).toThrow(/Metro on this Mac/);
     for (const metro of ['localhost:8081', '127.0.0.1:8081', '[::1]:8081'])
-      expect(ops().react_native?.input.parse({ action: 'targets', metro })).toMatchObject({
+      expect(inside({ action: 'rn_targets', metro })).toMatchObject({
         metro,
       });
   });

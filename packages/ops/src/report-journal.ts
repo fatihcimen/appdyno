@@ -6,7 +6,7 @@ import { journalOf, openReports, type Step } from './report-state.js';
 import { reportShot } from './report-write.js';
 import { LOOKS_ONLY } from './step-schemas.js';
 import { onlyReads, type Op, type ToolResult } from './tool.js';
-import { NOT_STEPS } from './tool-kinds.js';
+import { notAStepOfAReport } from './tool-kinds.js';
 
 const MAX_ANSWER = 20_000;
 
@@ -71,7 +71,7 @@ async function note(
 ) {
   const serial = ctx.currentSerial;
   const open = serial && openReports.read(serial);
-  if (!serial || !open || NOT_STEPS.has(op.name)) return;
+  if (!serial || !open || notAStepOfAReport(op.name, args)) return;
   const clean = (s: string) => redactLog(ctx.policy, s);
   const answer = out
     ? out.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n')

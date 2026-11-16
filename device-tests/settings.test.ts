@@ -222,7 +222,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     );
     expect([counts(), unlocked()]).toEqual(['1', false]);
     expect((await set(call, 'biometric', 'enroll')).text).toBe('biometric: enroll');
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     const nobody = await call('device_setting', { name: 'biometric', value: 'match' });
     expect(nobody.data.code).toBe('NOT_FOUND');
     expect(nobody.text).toContain('an app must be asking');
@@ -398,7 +398,7 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     expect(global()).toBe('tr_TR');
     await call('device_setting', { name: 'restore' });
     expect(global()).toBe(before);
-    await call('terminate_app', { app: PREFS });
+    await call('manage_app', { action: 'stop', app: PREFS });
   });
 
   it('says a simulator has no radios', async () => {

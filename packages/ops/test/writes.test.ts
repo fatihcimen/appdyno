@@ -17,14 +17,14 @@ import { connect } from './driving/shared.js';
 /** Each tool that writes where its caller says, with the argument that says where. */
 const WRITERS: [string, Record<string, unknown>, string][] = [
   ['take_screenshot', {}, 'file'],
-  ['visual', { action: 'baseline', name: 'home' }, 'dir'],
-  ['visual', { action: 'compare', name: 'home' }, 'dir'],
-  ['record', { action: 'start' }, 'file'],
-  ['report', { action: 'start' }, 'dir'],
-  ['report', { action: 'write' }, 'dir'],
-  ['report', { action: 'timeline' }, 'dir'],
-  ['report', { action: 'flight' }, 'dir'],
-  ['app', { action: 'download_data' }, 'path'],
+  ['check_screen', { check: 'visual_baseline', name: 'home' }, 'dir'],
+  ['check_screen', { check: 'visual', name: 'home' }, 'dir'],
+  ['record_session', { kind: 'video', action: 'start' }, 'file'],
+  ['record_session', { kind: 'report', action: 'start' }, 'dir'],
+  ['record_session', { kind: 'report', action: 'write' }, 'dir'],
+  ['record_session', { kind: 'timeline', action: 'start' }, 'dir'],
+  ['record_session', { kind: 'flight', action: 'start' }, 'dir'],
+  ['transfer_files', { action: 'pull' }, 'path'],
   ['capture_network', { action: 'read' }, 'save'],
   ['run_flow', { action: 'save' }, 'file'],
   ['run_flow', { action: 'stop' }, 'file'],
@@ -52,7 +52,7 @@ describe('a file a tool writes where its caller says', () => {
       if (tool === 'capture_network' || tool === 'run_flow') continue;
       const said = `${tool} ${JSON.stringify(args)}`;
       expect(ops[tool]?.annotations.readOnlyHint, said).not.toBe(true);
-      const ext = tool === 'record' ? 'mp4' : tool === 'run_flow' ? 'flow' : 'png';
+      const ext = args.kind === 'video' ? 'mp4' : tool === 'run_flow' ? 'flow' : 'png';
       const to = join(out, name === 'file' ? `a.${ext}` : name === 'to' ? 'a.yaml' : 'sub');
       const r = await call(tool as 'take_screenshot', { ...args, [name]: to });
       expect(r.text, said).toMatch(
@@ -98,9 +98,8 @@ describe('a file a tool writes where its caller says', () => {
         .filter((k) => ['file', 'dir', 'path', 'save', 'to', 'out', 'folder'].includes(k))
         .map((k) => `${op.name} ${k}`),
     );
-    // a place on the screen, a measurement's id and a place in a JSON body; app's path is also what install and
-    // build_and_run read
-    const others = ['gesture to', 'perf_compare to', 'network path'];
+    // a place on the screen, a measurement's id, and what install and build_and_run read
+    const others = ['gesture to', 'perf_compare to', 'manage_app path', 'capture_network path'];
     expect(named.sort()).toEqual(
       [...new Set(WRITERS.map(([tool, , k]) => `${tool} ${k}`)), ...others].sort(),
     );

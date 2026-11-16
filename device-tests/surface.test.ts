@@ -34,7 +34,7 @@ const shareFrom = (ms: number, refresh: number, bar: number) => {
 describe.skipIf(!SERIAL)('frames of a surface', () => {
   let call: Call;
   const surface = async (ms: number) => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     await call('open_link', { url: `appdyno-fixture://open/surface?ms=${ms}` });
     await sleep(3_000);
     await call('perf_snapshot', {});

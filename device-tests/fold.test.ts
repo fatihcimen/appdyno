@@ -124,7 +124,7 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
 
   it('holds the pose over a restart of the app, and restore puts the device back where its hinge is', async () => {
     ok(await fold(call, 'closed'));
-    ok(await call('terminate_app'));
+    ok(await call('manage_app', { action: 'stop' }));
     ok(await call('launch_app', { read: 'none' }));
     ok(await call('open_link', { url: FOLD, read: 'none' }));
     expect(await shows(call, 'fold_size_class', 'Size class: compact wide')).toBe(true);
@@ -151,7 +151,7 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
       `${String(session.status.picture?.w)}x${String(session.status.picture?.h)}`;
     /** A person's tap on the fixture's home, at its Dialog button, as a fraction of the picture. */
     const tapDialog = async () => {
-      ok(await call('terminate_app'));
+      ok(await call('manage_app', { action: 'stop' }));
       ok(await call('launch_app', { read: 'none' }));
       const at = ok(await call('find', { selector: { text: 'DIALOG' } })).data.matches[0];
       const [w, h] = size().split('x').map(Number);
@@ -218,7 +218,7 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
   };
   /** A tap on the fixture's home that opens its Dialog screen: proof that a touch lands on the display shown. */
   const tapOpensDialog = async () => {
-    ok(await call('terminate_app'));
+    ok(await call('manage_app', { action: 'stop' }));
     ok(await call('launch_app', { read: 'none' }));
     ok(await call('tap', { selector: { text: 'Dialog' } }));
     return ok(await call('wait_for', { selector: { text: 'Open dialog' }, timeoutMs: 8_000 })).data
@@ -260,7 +260,9 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
     expect(open.data.reads).toEqual({ fold: 'open' });
     expect(await active()).toBe(3);
     // at once, with no look between: the screen is the inner display's, and so is the small picture an answer shows
-    expect(ok(await call('device_info')).text).toContain('screen 951x669, density 3');
+    expect(ok(await call('list_devices', { selected: true })).text).toContain(
+      'screen 951x669, density 3',
+    );
     expect(ok(await call('take_screenshot', { inline: false })).text).toMatch(/^image 800x56\d px/);
     expect(await shows(call, 'fold_window', 'Window 951x669 points')).toBe(true);
     expect(await shows(call, 'fold_size_class', 'Size class: regular wide, regular high')).toBe(
@@ -290,7 +292,7 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
 
   it('holds the pose over a restart of the app, and restore closes it as it was found', async () => {
     ok(await fold(call, 'open'));
-    ok(await call('terminate_app'));
+    ok(await call('manage_app', { action: 'stop' }));
     ok(await call('launch_app', { read: 'none' }));
     ok(await call('open_link', { url: FOLD, read: 'none' }));
     expect(await shows(call, 'fold_window', 'Window 951x669 points')).toBe(true);
@@ -315,10 +317,12 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
       `${String(session.status.picture?.w)}x${String(session.status.picture?.h)}`;
     /** A person's tap on the fixture's home, at the Dialog row, as a fraction of the picture. */
     const tapDialog = async () => {
-      ok(await call('terminate_app'));
+      ok(await call('manage_app', { action: 'stop' }));
       const home = ok(await call('launch_app'));
       const at = ok(await call('find', { selector: { text: 'Dialog' } })).data.matches[0];
-      const size = /screen (\d+)x(\d+)/.exec(ok(await call('device_info')).text);
+      const size = /screen (\d+)x(\d+)/.exec(
+        ok(await call('list_devices', { selected: true })).text,
+      );
       expect([home.error, at && size && true]).toEqual([false, true]);
       const [x, y] = [Number(at?.x) / Number(size?.[1]), Number(at?.y) / Number(size?.[2])];
       session.send({ kind: 'touch', p: 0, x, y });

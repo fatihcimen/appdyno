@@ -7,7 +7,7 @@ import { checkApp, noApp, redactLog } from './policy.js';
 import { AuditOut, CrashesOut, LogsOut } from './diagnose-schemas.js';
 import { sharedHead } from './log-heads.js';
 import type { Session } from './session.js';
-import { defineOp, READ, reply, ToolError } from './tool.js';
+import { definePart, READ, reply, ToolError } from './tool.js';
 
 const MAX_LINES = 1_000;
 const DEFAULT_LINES = 200;
@@ -55,11 +55,8 @@ export function boundLines(lines: string[], maxLines: number, maxChars = MAX_LOG
 
 export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
   return [
-    defineOp({
+    definePart({
       name: 'audit',
-      title: 'Accessibility audit',
-      description:
-        'Accessibility issues of the current screen: contrast, touch targets, labels, reading order.',
       input: z
         .object({
           types: z.array(z.enum(AUDIT_TYPES)).max(AUDIT_TYPES.length).optional(),
@@ -97,11 +94,8 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
         );
       },
     }),
-    defineOp({
+    definePart({
       name: 'logs',
-      title: 'App log',
-      description:
-        "The app's own log lines (logcat on Android), newest last, bounded, secrets redacted; contains: only lines with this text, whatever its case. On an iPhone it says what it cannot read.",
       input: z
         .object({
           app: App,
@@ -145,11 +139,8 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
         });
       },
     }),
-    defineOp({
+    definePart({
       name: 'crashes',
-      title: 'Crashes',
-      description:
-        "The app's crash, ANR and exit reports: a bounded summary, each report's file on this machine. since: ISO time; default: all kept.",
       input: z
         .object({
           app: App,

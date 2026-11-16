@@ -6,7 +6,11 @@ import { connect } from './shared.js';
 describe('a refusal of a call that names too little', () => {
   it('says where an app is found when the call names none and none is selected', async () => {
     const { call } = await connect(new FakeDevice(), { defaults: { app: undefined } });
-    for (const r of [await call('logs'), await call('terminate_app'), await call('crashes')])
+    for (const r of [
+      await call('read_logs'),
+      await call('manage_app', { action: 'stop' }),
+      await call('read_logs', { source: 'crashes' }),
+    ])
       expect(r.text).toBe(
         'INVALID_ARGUMENT: give app (or select one with use_device)\nhint: app action list names the installed apps by id; use_device with app selects one for the calls after',
       );

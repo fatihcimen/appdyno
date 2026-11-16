@@ -16,7 +16,7 @@ import { picturesHideNothing } from './policy.js';
 import { reportVideoDir } from './report-state.js';
 import { Handle, RecordOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 import { inside } from './writes.js';
 
 const DEFAULT_S = 1_800;
@@ -63,10 +63,8 @@ export async function endRecording(s: Session) {
 
 export function recordOps(ctx: ServerContext) {
   return [
-    defineOp({
+    definePart({
       name: 'record',
-      title: 'Screen video',
-      description: `Screen video, one per device (to record actions for replay: flow). stop checks that it plays or says why not; a session's end stops it too.`,
       input: z
         .object({
           action: z.enum(['start', 'stop']),

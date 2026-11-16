@@ -141,7 +141,7 @@ describe('steps across screens', () => {
         { tool: 'take_screenshot' },
         { tool: 'tap', selector: { text: 'Form' } },
         { tool: 'take_screenshot' },
-        { tool: 'device_info' },
+        { tool: 'list_devices', selected: true },
       ],
     });
     expect(r.error).toBe(false);
@@ -258,7 +258,10 @@ describe('steps across screens', () => {
   it('says which step failed, with what the others answered', async () => {
     const { call } = await connect(new FakeDevice());
     const r = await call('run_steps', {
-      steps: [{ tool: 'device_info' }, { tool: 'app', action2: 1 }],
+      steps: [
+        { tool: 'list_devices', selected: true },
+        { tool: 'manage_app', action2: 1 },
+      ],
     });
     expect(r.error).toBe(true);
     expect(r.text).toContain('step 2');

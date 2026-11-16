@@ -76,9 +76,9 @@ async function reader(device: FakeDevice, app: string) {
     /** After an app died under an action: what a hint or the instructions still send for. */
     why: async (hint: string) => {
       const toldAbove = words.includes('already says');
-      if (hint.includes('crashes says why')) await say('crashes');
-      if (hint.includes('logs says why') || (words.includes('logs and crashes') && !toldAbove))
-        await say('logs');
+      if (hint.includes('crashes says why')) await say('read_logs', { source: 'crashes' });
+      if (hint.includes('logs says why') || (words.includes('misbehaves: read_logs') && !toldAbove))
+        await say('read_logs');
     },
   };
 }

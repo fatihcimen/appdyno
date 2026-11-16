@@ -137,7 +137,7 @@ swipe up
         await call('screen');
         await call('find', { selector: { text: 'Form' } });
         await call('take_screenshot');
-        await call('device_info');
+        await call('list_devices', { selected: true });
         await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
         await refusal(call('assert', { selector: { text: 'Nothing like it' } }));
         await refusal(call('wait_for', { selector: { text: 'Nothing like it' }, timeoutMs: 300 }));
@@ -293,10 +293,10 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       let clicked = '';
       const { text } = await recorded(call, async () => {
-        await call('webview', { action: 'pages' });
-        await call('webview', { action: 'elements' });
-        clicked = (await call('webview', { action: 'click', selector: '#go' })).text;
-        await call('webview', { action: 'eval', js: 'secretWork()' });
+        await call('inspect_app', { action: 'web_pages' });
+        await call('inspect_app', { action: 'web_elements' });
+        clicked = (await call('inspect_app', { action: 'web_click', selector: '#go' })).text;
+        await call('inspect_app', { action: 'web_eval', js: 'secretWork()' });
         await call('capture_network', { action: 'paths' });
         await call('capture_network', { action: 'start', via: 'bytes' });
         await call('capture_network', { action: 'read' });
@@ -305,13 +305,13 @@ assert id=result check=text equals="Gönderildi"
       });
       const unrecorded = text.split('\n').filter((l) => l.startsWith('unrecorded'));
       expect(unrecorded).toEqual([
-        'unrecorded "webview click"',
-        'unrecorded "webview eval"',
+        'unrecorded "inspect_app web_click"',
+        'unrecorded "inspect_app web_eval"',
         'unrecorded "capture_network start"',
         'unrecorded "capture_network stop"',
       ]);
       expect(clicked).toContain(
-        'not recorded: webview click. A flow has no step for it, so a replay stops there: a `tap` at the x, y that `screen` gives the element is recorded, as a `tap` step',
+        'not recorded: inspect_app web_click. A flow has no step for it, so a replay stops there: a `tap` at the x, y that `screen` gives the element is recorded, as a `tap` step',
       );
       expect(text).not.toContain('secretWork');
     });
@@ -348,12 +348,20 @@ assert id=result check=text equals="Gönderildi"
         await call('list_devices');
         await call('use_device', { device: device.serial });
         await call('manage_simulator', { action: 'list' });
-        await call('record', { action: 'start', file: join(dir, 'shots', 'a.mp4') });
-        await call('record', { action: 'stop' });
-        await call('report', { action: 'write', dir: join(dir, 'shots', 'report') });
+        await call('record_session', {
+          kind: 'video',
+          action: 'start',
+          file: join(dir, 'shots', 'a.mp4'),
+        });
+        await call('record_session', { kind: 'video', action: 'stop' });
+        await call('record_session', {
+          kind: 'report',
+          action: 'write',
+          dir: join(dir, 'shots', 'report'),
+        });
         await call('screen');
         await call('perf_snapshot');
-        await call('app', { action: 'state' }).catch(() => undefined);
+        await call('manage_app', { action: 'state' }).catch(() => undefined);
         await call('launch_app');
       });
       expect(text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual([
@@ -372,7 +380,7 @@ assert id=result check=text equals="Gönderildi"
       const stopped = await recorded(
         call,
         async () => {
-          await call('terminate_app');
+          await call('manage_app', { action: 'stop' });
           await call('launch_app');
         },
         'stopped.flow',
@@ -569,7 +577,7 @@ assert id=result check=text equals="Gönderildi"
       await call('swipe', { direction: 'left', distance: 200 });
       await call('gesture', { kind: 'long_press', selector: { id: 'greeting' }, durationMs: 300 });
       await call('gesture', { kind: 'double_tap', selector: { id: 'greeting' } });
-      await call('terminate_app');
+      await call('manage_app', { action: 'stop' });
     });
     const f = parseFlow(text);
     expect(f.steps.map((s) => s.action)).toEqual([

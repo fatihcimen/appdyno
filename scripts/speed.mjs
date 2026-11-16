@@ -219,7 +219,7 @@ async function run(s, warmUp) {
   timed('`initialize`', init.ms);
   timed('`tools/list`', list.ms);
 
-  await call('', 'terminate_app', {});
+  await call('', 'manage_app', { action: 'stop' });
   /** @param {Result} r */
   const inFront = (r) => r.structuredContent?.foreground === APP;
   await call('`launch_app` of the fixture, cold', 'launch_app', { app: APP }, inFront);
@@ -273,11 +273,13 @@ async function run(s, warmUp) {
     { selector: { text: 'Send' } },
     'found',
   );
-  await call('`screenshot`', 'screenshot', {}, (r) => r.content.some((c) => c.type === 'image'));
+  await call('`take_screenshot`', 'take_screenshot', {}, (r) =>
+    r.content.some((c) => c.type === 'image'),
+  );
   // one line, or none, is a log read too
   /** @param {Result} r */
   const lines = (r) => typeof r.structuredContent?.lines === 'number';
-  await call('`logs`, 20 lines', 'logs', { maxLines: 20 }, lines);
+  await call('`read_logs`, 20 lines', 'read_logs', { limit: 20 }, lines);
   // last: a touch on a screen still sliding in is lost, and nothing waits out a slide a touch alone started
   // Android's back closes the keyboard first
   if (!IOS) await call('', 'keyboard', { action: 'dismiss' }, 'closed');

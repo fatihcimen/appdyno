@@ -31,7 +31,7 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
     await new Simctl().install(SIMULATOR, SIM_FIXTURE);
     call = opsOn(simulatorProvider(), SIMULATOR, APP).call;
   }, 300_000);
-  afterAll(() => call('terminate_app'));
+  afterAll(() => call('manage_app', { action: 'stop' }));
 
   it.each([
     ['about', /text "About"/],
@@ -84,7 +84,7 @@ describe.skipIf(!IPHONE)('Settings on an iPhone', () => {
     o = await onIphone(APP);
   }, 300_000);
   afterAll(async () => {
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 60_000);

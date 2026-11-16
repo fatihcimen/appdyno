@@ -13,7 +13,7 @@ import type { ServerContext } from './context.js';
 import { looksStill } from './flow/still.js';
 import { VisualOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, reply, SAVES, ToolError } from './tool.js';
+import { definePart, reply, SAVES, ToolError } from './tool.js';
 import { inside } from './writes.js';
 
 const DEFAULT_DIR = 'appdyno-baselines';
@@ -43,10 +43,8 @@ async function shot(s: Session): Promise<{ png: Buffer; image: Image }> {
 /** Screenshots against a saved image of the same screen, pixel by pixel. */
 export function visualOps(ctx: ServerContext) {
   return [
-    defineOp({
+    definePart({
       name: 'visual',
-      title: 'Visual comparison',
-      description: `Visual regression test: the screen against a saved image. baseline saves it as name in dir (./${DEFAULT_DIR}); compare refuses (CHECK_FAILED) past tolerance (percent of pixels), with a diff image. masks and the status bar are left out.`,
       input: z
         .object({
           action: z.enum(['baseline', 'compare']),

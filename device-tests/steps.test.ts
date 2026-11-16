@@ -22,7 +22,7 @@ function stepsOf(get: () => Call) {
   const call: Call = (n, a) => get()(n, a);
 
   it('reads, takes pictures and acts across screens, and says each answer', async () => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     const r = ok(
       await call('run_steps', {
@@ -33,7 +33,7 @@ function stepsOf(get: () => Call) {
           { tool: 'type_text', selector: { id: 'name_input' }, text: 'Ali' },
           { tool: 'find', selector: { id: 'name_input' } },
           { tool: 'take_screenshot' },
-          { tool: 'device_info' },
+          { tool: 'list_devices', selected: true },
         ],
       }),
     );
@@ -45,7 +45,7 @@ function stepsOf(get: () => Call) {
   });
 
   it('runs the most it may, with each step answered', async () => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     ok(await call('open_link', { url: 'appdyno-fixture://open/form' }));
     const started = Date.now();
@@ -91,7 +91,7 @@ describe.skipIf(!IPHONE)('steps on an iPhone', () => {
     o = await onIphone(APP);
   }, 300_000);
   afterAll(async () => {
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 60_000);

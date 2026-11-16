@@ -31,7 +31,7 @@ describe.skipIf(!SIMULATOR)('a simulator of a model', () => {
     made = r.data.serial;
     assert(made);
     expect(await simctl.state(made)).toBe('Booted');
-    expect(ok(await call('device_info')).data.serial).toBe(made);
+    expect(ok(await call('list_devices', { selected: true })).data.serial).toBe(made);
     expect(r.text).toContain(`xcrun simctl delete ${made}`);
     const none = await call('manage_simulator', { action: 'create', name: 'Nokia 3310' });
     expect(none.data.code).toBe('NOT_FOUND');

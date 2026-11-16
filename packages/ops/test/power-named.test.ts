@@ -18,7 +18,7 @@ function inspected() {
   return { device, press };
 }
 
-const pressed = { action: 'press', name: 'Power' };
+const pressed = { action: 'ax_press', name: 'Power' };
 
 describe("an element pressed by name by an iPhone's inspector", () => {
   it('passes the guard as every input does, which sees it before the phone does', async () => {
@@ -44,7 +44,7 @@ describe("an element pressed by name by an iPhone's inspector", () => {
   it('asks the person, as nothing tells what it is, and presses nothing on a no', async () => {
     const { device, press } = inspected();
     const { call, asked } = await onDevice('ios-control-center-app', { device, answer: 'decline' });
-    const r = await call('inspector', pressed);
+    const r = await call('inspect_app', pressed);
     expect(r.code).toBe('PERMISSION_REQUIRED');
     expect(asked[0]).toContain('the element "Power", pressed by name with no look at what it is');
     expect(press).not.toHaveBeenCalled();
@@ -54,8 +54,8 @@ describe("an element pressed by name by an iPhone's inspector", () => {
     for (const o of [{ answer: 'accept' }, { policy: { allowPower: 'all' } }] as const) {
       const { device, press } = inspected();
       const { call, asked } = await onDevice('ios-control-center-app', { device, ...o });
-      expect((await call('inspector', { action: 'list' })).error).toBe(false);
-      expect((await call('inspector', pressed)).text).toBe('pressed Power');
+      expect((await call('inspect_app', { action: 'ax_list' })).error).toBe(false);
+      expect((await call('inspect_app', pressed)).text).toBe('pressed Power');
       expect(press).toHaveBeenCalledWith('Power');
       expect(asked).toHaveLength('answer' in o ? 1 : 0);
     }
@@ -64,7 +64,7 @@ describe("an element pressed by name by an iPhone's inspector", () => {
   it('is refused where the client cannot ask, with how a person allows it ahead', async () => {
     const { device, press } = inspected();
     const { call } = await onDevice('ios-control-center-app', { device });
-    const r = await call('inspector', pressed);
+    const r = await call('inspect_app', pressed);
     expect(r.code).toBe('PERMISSION_REQUIRED');
     expect(r.hint).toContain('a press by name has no place on the screen to tell');
     expect(r.hint).toContain('--allow-power');
@@ -83,7 +83,7 @@ describe("an element pressed by name by an iPhone's inspector", () => {
         answer: 'accept',
         policy: { ...policy, allowPower: 'all' },
       });
-      const r = await call('inspector', pressed);
+      const r = await call('inspect_app', pressed);
       expect([r.code, r.text.split('\n')[0]]).toEqual([
         'POLICY_DENIED',
         `POLICY_DENIED: a press by name is off on this server: ${why}`,

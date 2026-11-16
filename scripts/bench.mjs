@@ -96,7 +96,9 @@ const TASKS = {
     done: async (call, said, since) => {
       // a simulator writes its report some seconds after the end
       for (let i = 0; i < 30; i++) {
-        if ((await call('crashes', { since })).structuredContent?.reports?.length)
+        if (
+          (await call('read_logs', { source: 'crashes', since })).structuredContent?.reports?.length
+        )
           return /fixture crash/i.test(said);
         await new Promise((next) => setTimeout(next, 2_000));
       }

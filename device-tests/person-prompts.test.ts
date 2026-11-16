@@ -22,7 +22,7 @@ const ok = <A extends Answer>(r: A) => {
 };
 
 const asks = async (call: Call) => {
-  await call('terminate_app');
+  await call('manage_app', { action: 'stop' });
   ok(await call('open_link', { url: 'appdyno-fixture://open/biometric' }));
   // the iOS fixture's first screen names the link while the new one slides over it: a tap then would change the screen
   ok(await call('wait_for', { selector: { id: 'last_link' }, gone: true, timeoutMs: 5_000 }));
@@ -74,7 +74,7 @@ describe.skipIf(!IPHONE)('a prompt on an iPhone', () => {
     const r = await asks(o.call);
     if (r.text.includes('not enrolled')) return t.skip();
     expect(r.text).toContain('needs a person');
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 300_000);

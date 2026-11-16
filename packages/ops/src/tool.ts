@@ -95,7 +95,8 @@ export type Tool = {
   title: string;
   description: string;
   input: z.ZodObject;
-  output: z.ZodObject;
+  /** A tool of several parts answers as the part that ran: one of their schemas. */
+  output: z.ZodType;
   annotations: ToolAnnotations;
   /** Whether a call of an op that may act only reads, by its arguments: it runs beside the client's actions, as a read. */
   readsOnly?: (args: Record<string, unknown>) => boolean;
@@ -106,23 +107,27 @@ export type Tool = {
 export type Op = Tool & { name: string };
 
 /**
- * An op, whose device failures reach the surfaces as refusals wherever in its `run` they came from, and whose answer
- * says what its call did on the way, as a fetch that made it take longer.
+ * What a tool of several parts is made of: the schemas and the work of one of them, under the name the tool picks it
+ * by. No surface lists it, so it has no words for a caller; its annotations say what its own calls do.
  */
-export function defineOp<
-  const N extends string,
-  S extends z.ZodObject,
-  O extends z.ZodObject,
->(def: {
+export type Part = Omit<Op, 'title' | 'description' | 'output'> & { output: z.ZodObject };
+
+type PartDef<N, S extends z.ZodObject, O extends z.ZodObject> = {
   name: N;
-  title: string;
-  description: string;
   input: S;
   output: O;
   annotations: ToolAnnotations;
   readsOnly?: (args: z.infer<S>) => boolean;
   run: (args: z.infer<S>) => Promise<ToolResult<z.infer<O>>>;
-}): Omit<Op, 'name' | 'output'> & { name: N; output: O } {
+};
+
+/**
+ * A part, whose device failures reach the surfaces as refusals wherever in its `run` they came from, and whose answer
+ * says what its call did on the way, as a fetch that made it take longer.
+ */
+export function definePart<const N extends string, S extends z.ZodObject, O extends z.ZodObject>(
+  def: PartDef<N, S, O>,
+): Omit<Part, 'name' | 'input' | 'output'> & { name: N; input: S; output: O } {
   const { run, readsOnly, ...rest } = def;
   return {
     ...rest,
@@ -139,6 +144,17 @@ export function defineOp<
     },
   };
 }
+
+/** An op that is one part: a tool by itself, with the words a caller reads. */
+export const defineOp = <const N extends string, S extends z.ZodObject, O extends z.ZodObject>({
+  title,
+  description,
+  ...part
+}: PartDef<N, S, O> & { title: string; description: string }) => ({
+  title,
+  description,
+  ...definePart(part),
+});
 
 const SERVER_CHECKS = new Set([
   'maxLength',
@@ -234,11 +250,22 @@ export function inSelector(schema: z.ZodObject, args: unknown, issues: z.core.$Z
   return moved ? `a target goes in selector: ${JSON.stringify(call)}` : undefined;
 }
 
-/** A call's arguments as its op takes them, or a refusal naming each one wrong; `flag`: how the caller writes a name. */
-export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') {
+/**
+ * A call's arguments as its op takes them, or a refusal naming each one wrong; `flag`: how the caller writes a name;
+ * `names`: what the caller calls an argument, where a tool hands its part one under another name.
+ */
+export function argumentsFor(
+  op: Pick<Tool, 'input'>,
+  args: unknown,
+  flag = '',
+  names: Record<string, string> = {},
+) {
   const checked = op.input.safeParse(args);
   if (checked.success) return checked.data;
-  const { issues } = checked.error;
+  const issues = checked.error.issues.map((x) => ({
+    ...x,
+    path: x.path.map((p, i) => (i === 0 ? (names[String(p)] ?? p) : p)),
+  }));
   throw new ToolError(
     issues
       .map((x) => `${x.path.length ? `${flag}${x.path.join('.')}: ` : ''}${x.message}`)
@@ -247,6 +274,13 @@ export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') 
     inSelector(op.input, args, issues) ?? argumentsHint(issues, flag),
     false,
   );
+}
+
+/** An op's output schema, taking no more than it names; of a tool of several parts, each part's so. */
+export function strictOutput({ output }: Pick<Tool, 'output'>): z.ZodType {
+  if (output instanceof z.ZodUnion)
+    return z.union((output.options as z.ZodType[]).map((o) => strictOutput({ output: o })));
+  return output instanceof z.ZodObject ? output.strict() : output;
 }
 
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];

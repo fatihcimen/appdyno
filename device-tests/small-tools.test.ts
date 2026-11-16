@@ -83,7 +83,7 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
     const saved = await savedWidth(call, dir);
     rmSync(dir, { recursive: true });
-    expect(saved).toBe(ok(await call('device_info')).data.screen.w);
+    expect(saved).toBe(ok(await call('list_devices', { selected: true })).data.screen.w);
   });
 
   it('turns to each of the four rotations, as the device says', async () => {
@@ -113,7 +113,7 @@ const language = async (call: Call) => {
 
 const inPoints = async (call: Call) => {
   const r = ok(await call('take_screenshot', { points: true }));
-  const { w, h } = ok(await call('device_info')).data.screen;
+  const { w, h } = ok(await call('list_devices', { selected: true })).data.screen;
   expect([r.data.width, r.data.height]).toEqual([w, h]);
   expect(r.data.scale).toBe(1);
 };
@@ -122,7 +122,7 @@ const atWidth = async (call: Call) => {
   expect(Math.abs(ok(await call('take_screenshot', { width: 200 })).data.width - 200)).toBeLessThan(
     2,
   );
-  const { w, density } = ok(await call('device_info')).data.screen;
+  const { w, density } = ok(await call('list_devices', { selected: true })).data.screen;
   // Android's units are pixels already, and its density is in dpi
   const full = density < 10 ? Math.round(w * density) : w;
   expect(ok(await call('take_screenshot', { width: 8_000 })).data.width).toBe(full);
@@ -130,7 +130,7 @@ const atWidth = async (call: Call) => {
 
 /** A landscape and back, seen in where the app puts a row. */
 const turns = async (call: Call) => {
-  await call('terminate_app');
+  await call('manage_app', { action: 'stop' });
   ok(await call('launch_app'));
   const y = async () => {
     const [row] = ok(await call('find', { selector: { text: 'Permission' } })).data.matches;
@@ -149,9 +149,9 @@ const turns = async (call: Call) => {
 
 /** By what a launcher shows: the fixture's name is the same on every device. */
 const byName = async (call: Call) => {
-  await call('terminate_app');
+  await call('manage_app', { action: 'stop' });
   expect(ok(await call('launch_app', { app: 'appdyno fixture' })).text).toContain(`started ${APP}`);
-  expect(ok(await call('device_info')).data.foreground).toBe(APP);
+  expect(ok(await call('list_devices', { selected: true })).data.foreground).toBe(APP);
   expect((await call('launch_app', { app: 'no such app' })).data.code).toBe('NOT_FOUND');
 };
 
@@ -161,7 +161,7 @@ describe.skipIf(!ANDROID)('a language on Android', () => {
     ok(await call('launch_app', { language: 'de-DE' }));
     expect(await language(call)).toContain('de-DE');
     ok(await call('device_setting', { name: 'restore' }));
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     expect(await language(call)).not.toContain('de-DE');
     ctx.close();
@@ -256,7 +256,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   it('launches in a language for that launch alone', async () => {
     ok(await call('launch_app', { language: 'tr' }));
     expect(await language(call)).toContain('tr');
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     expect(await language(call)).not.toContain('tr');
     ok(await call('launch_app'));
@@ -266,7 +266,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
     onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
     const saved = await savedWidth(call, dir);
-    const { w, density } = ok(await call('device_info')).data.screen;
+    const { w, density } = ok(await call('list_devices', { selected: true })).data.screen;
     expect(saved).toBe(Math.round(w * density));
     const again = await call('take_screenshot', { file: join(dir, 'screen.png') });
     expect(again.text).toContain('is there already');
@@ -310,7 +310,7 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
   }, 300_000);
   afterAll(async () => {
     await call('set_orientation', { orientation: 'portrait' });
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 60_000);
@@ -341,7 +341,7 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
   it('launches in a language for that launch alone', async () => {
     ok(await call('launch_app', { language: 'de' }));
     expect(await language(call)).toContain(': de');
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     expect(await language(call)).not.toContain(': de');
     ok(await call('launch_app'));
@@ -351,7 +351,7 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
     const saved = await savedWidth(call, dir);
     rmSync(dir, { recursive: true });
-    const { w, density } = ok(await call('device_info')).data.screen;
+    const { w, density } = ok(await call('list_devices', { selected: true })).data.screen;
     expect(saved).toBe(Math.round(w * density));
   });
 

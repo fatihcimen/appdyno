@@ -46,9 +46,9 @@ describe('app management', () => {
     const apps = manager();
     const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d);
-    // where app's launch went
-    expect((await call('app', { action: 'launch' })).text).toMatch(
-      /^INVALID_ARGUMENT: action: app has no launch: launch_app starts an app, and with restart: true starts it fresh\n/,
+    // what a caller reaches for there
+    expect((await call('manage_app', { action: 'launch' })).text).toMatch(
+      /^INVALID_ARGUMENT: action: manage_app has no launch: launch_app starts an app, and with restart: true starts it fresh\n/,
     );
     expect((await call('launch_app', { restart: true })).text).toMatch(
       /^restarted dev\.app, which was running\n/,
@@ -67,14 +67,16 @@ describe('app management', () => {
     const apps = manager();
     const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d, allowed);
-    expect((await call('app', { action: 'list' })).data.apps?.[0]?.id).toBe('dev.app');
-    expect((await call('app', { action: 'state' })).data.state).toBe('foreground');
-    expect((await call('app', { action: 'state', app: 'dev.other' })).data.state).toBe('running');
-    await call('app', { action: 'install', path: '/tmp/a.apk' });
-    await call('app', { action: 'clear' });
-    await call('app', { action: 'uninstall', app: 'dev.other' });
-    await call('app', { action: 'grant', service: 'camera' });
-    await call('app', { action: 'revoke', service: 'camera' });
+    expect((await call('manage_app', { action: 'list' })).data.apps?.[0]?.id).toBe('dev.app');
+    expect((await call('manage_app', { action: 'state' })).data.state).toBe('foreground');
+    expect((await call('manage_app', { action: 'state', app: 'dev.other' })).data.state).toBe(
+      'running',
+    );
+    await call('manage_app', { action: 'install', path: '/tmp/a.apk' });
+    await call('manage_app', { action: 'clear' });
+    await call('manage_app', { action: 'uninstall', app: 'dev.other' });
+    await call('manage_app', { action: 'grant', service: 'camera' });
+    await call('manage_app', { action: 'revoke', service: 'camera' });
     expect(apps.log).toEqual([
       ['install', '/tmp/a.apk'],
       ['clear', 'dev.app'],
@@ -128,7 +130,7 @@ describe('app management', () => {
     });
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
     for (const read of ['none', 'diff', 'full', undefined]) {
-      const r = await call('app', {
+      const r = await call('manage_app', {
         action: 'install',
         path: '/tmp/a.apk',
         ...(read && { read }),
@@ -145,7 +147,7 @@ describe('app management', () => {
       },
     });
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
-    const r = await call('app', { action: 'install', path: '/tmp/a.apk' });
+    const r = await call('manage_app', { action: 'install', path: '/tmp/a.apk' });
     expect([r.done, r.data.app]).toEqual(['installed dev.app from /tmp/a.apk', 'dev.app']);
   });
 
@@ -162,13 +164,13 @@ describe('app management', () => {
     const ok = await connect(Object.assign(new FakeDevice(), { apps: holding('dev.app') }), {
       policy,
     });
-    expect((await ok.call('app', { action: 'install', path: '/tmp/a.apk' })).done).toBe(
+    expect((await ok.call('manage_app', { action: 'install', path: '/tmp/a.apk' })).done).toBe(
       'installed dev.app from /tmp/a.apk',
     );
     const other = await connect(Object.assign(new FakeDevice(), { apps: holding('dev.other') }), {
       policy,
     });
-    const refused = await other.call('app', { action: 'install', path: '/tmp/b.apk' });
+    const refused = await other.call('manage_app', { action: 'install', path: '/tmp/b.apk' });
     expect(refused.text).toBe(
       'POLICY_DENIED: dev.other is not an allowed app (dev.app)\nhint: the person who runs this server allows it by --allow-apps, and no call can',
     );
@@ -177,13 +179,13 @@ describe('app management', () => {
   it('builds what a project makes only with no allowlist: `approval.test.ts` has its question', async () => {
     const apps = manager();
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
-    expect((await call('app', { action: 'build_and_run' })).error).toBe(true);
+    expect((await call('manage_app', { action: 'build_and_run' })).error).toBe(true);
 
     const narrow = manager();
     const { call: narrowCall } = await connect(Object.assign(new FakeDevice(), { apps: narrow }), {
       policy: { apps: ['dev.app'] },
     });
-    const refused = await narrowCall('app', { action: 'build_and_run', path: '/tmp/a' });
+    const refused = await narrowCall('manage_app', { action: 'build_and_run', path: '/tmp/a' });
     expect(refused.error).toBe(true);
     expect(narrow.log).toEqual([]);
   });
@@ -205,16 +207,16 @@ describe('app management', () => {
     const { call } = await connect(Object.assign(new FakeDevice(), { inspector }), {
       policy: { allowPower: 'all' },
     });
-    const list = await call('inspector', { action: 'list' });
+    const list = await call('inspect_app', { action: 'ax_list' });
     expect(list.text).toBe('Form, Button #open_form\nTitle');
-    expect((await call('inspector', { action: 'press' })).error).toBe(true);
+    expect((await call('inspect_app', { action: 'ax_press' })).error).toBe(true);
     expect(pressed).toEqual([]);
-    expect((await call('inspector', { action: 'press', name: 'Form' })).text).toBe(
+    expect((await call('inspect_app', { action: 'ax_press', name: 'Form' })).text).toBe(
       'pressed Form, Button',
     );
     expect(pressed).toEqual(['Form']);
     const none = await connect(new FakeDevice());
-    expect((await none.call('inspector', { action: 'list' })).error).toBe(true);
+    expect((await none.call('inspect_app', { action: 'ax_list' })).error).toBe(true);
   });
 
   it('copies an app data only with a safe folder', async () => {
@@ -223,22 +225,22 @@ describe('app management', () => {
     const base = mkdtempSync(join(tmpdir(), 'app-data-op-'));
     try {
       const to = join(base, 'new', 'copy');
-      const down = { action: 'download_data', app: 'dev.app', path: to };
-      expect((await call('app', { action: 'download_data', app: 'dev.app' })).error).toBe(true);
-      expect((await call('app', down)).text).toContain(to);
+      const down = { action: 'pull', app: 'dev.app', path: to };
+      expect((await call('transfer_files', { action: 'pull', app: 'dev.app' })).error).toBe(true);
+      expect((await call('transfer_files', down)).text).toContain(to);
       expect(apps.log).toEqual([['download', 'dev.app', to]]);
       expect(statSync(to).mode & 0o777).toBe(0o700);
       // a copy never lands among what a folder already holds
       writeFileSync(join(to, 'mine.txt'), 'mine');
-      const refused = await call('app', down);
+      const refused = await call('transfer_files', down);
       expect(refused.error).toBe(true);
       expect(refused.text).toContain('new or empty');
       expect(apps.log).toHaveLength(1);
 
-      const up = { action: 'replace_data', app: 'dev.app', path: to };
-      expect((await call('app', up)).text).toContain(to);
+      const up = { action: 'push', app: 'dev.app', path: to };
+      expect((await call('transfer_files', up)).text).toContain(to);
       expect(apps.log.at(-1)).toEqual(['replace', 'dev.app', to]);
-      const missing = await call('app', { ...up, path: join(base, 'gone') });
+      const missing = await call('transfer_files', { ...up, path: join(base, 'gone') });
       expect(missing.error).toBe(true);
       expect(apps.log).toHaveLength(2);
     } finally {
@@ -249,7 +251,7 @@ describe('app management', () => {
   it('takes no tool argument that could accept a warning', async () => {
     const apps = manager();
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
-    const r = await call('app', {
+    const r = await call('manage_app', {
       action: 'install',
       path: '/tmp/a.apk',
       accept_install_warnings: true,
@@ -269,14 +271,14 @@ describe('app management', () => {
     });
     const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d, { policy: { apps: ['dev.app'], allowDataLoss: 'virtual' } });
-    const off = await call('app', { action: 'install', path: '/tmp/a.apk' });
+    const off = await call('manage_app', { action: 'install', path: '/tmp/a.apk' });
     expect(off.data.code).toBe('POLICY_DENIED');
-    expect((await call('app', { action: 'uninstall', app: 'dev.other' })).error).toBe(true);
-    const r = await call('app', { action: 'clear' });
+    expect((await call('manage_app', { action: 'uninstall', app: 'dev.other' })).error).toBe(true);
+    const r = await call('manage_app', { action: 'clear' });
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toContain('an iPhone cannot');
     const none = await connect(new FakeDevice());
-    expect((await none.call('app', { action: 'list' })).data.code).toBe('UNSUPPORTED');
+    expect((await none.call('manage_app', { action: 'list' })).data.code).toBe('UNSUPPORTED');
   });
 
   it('refuses a launch with the view probe where the device puts none in, before anything is launched', async () => {
@@ -328,7 +330,7 @@ describe('app management', () => {
 
   it('ends an app in the background where the device can, and says what stops it where it cannot', async () => {
     const { call } = await connect(new FakeDevice());
-    expect((await call('terminate_app', { background: true })).text).toBe(
+    expect((await call('manage_app', { action: 'stop', background: true })).text).toBe(
       'UNSUPPORTED: this device cannot end an app in the background as the system does\nhint: terminate_app without background stops it, as a person does',
     );
     const ended: string[] = [];
@@ -339,7 +341,9 @@ describe('app management', () => {
       },
     });
     const able = await connect(d);
-    expect((await able.call('terminate_app', { background: true, app: 'dev.other' })).text).toBe(
+    expect(
+      (await able.call('manage_app', { action: 'stop', background: true, app: 'dev.other' })).text,
+    ).toBe(
       'ended dev.other in the background, as the system does for memory; its saved state comes back at its next launch',
     );
     expect(ended).toEqual(['dev.other']);

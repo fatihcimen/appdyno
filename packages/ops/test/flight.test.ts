@@ -264,7 +264,7 @@ describe('the flight recorder', () => {
   it('keeps the last seconds when a frame stands still, and goes on', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    const r = await call('report', { action: 'flight' });
+    const r = await call('record_session', { kind: 'flight', action: 'start' });
     expect(r.text).toContain('the last 20 s');
     await vi.advanceTimersByTimeAsync(10_500);
     d.tell({ at: Date.now(), worstFrameMs: 950 });
@@ -273,39 +273,39 @@ describe('the flight recorder', () => {
     expect(page).toContain('a stall of 950 ms');
     expect(page).toContain('id="video-bytes"');
     await until(() => d.frameRuns === 2);
-    const off = await call('report', { action: 'stop' });
+    const off = await call('record_session', { kind: 'report', action: 'stop' });
     expect(off.data.saved).toHaveLength(1);
   });
 
   it('calls one stall that repeats one, within what it keeps', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     d.tell({ at: Date.now(), worstFrameMs: 950 });
     await until(() => saved().length === 1);
     await until(() => d.frameRuns === 2);
     d.tell({ at: Date.now(), worstFrameMs: 950 });
     await vi.advanceTimersByTimeAsync(5_000);
     expect(saved()).toHaveLength(1);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('goes by a frozen frame too, and by nothing less', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     d.tell({ at: Date.now(), worstFrameMs: 300, frozenFrames: 0 });
     await vi.advanceTimersByTimeAsync(3_000);
     expect(saved()).toEqual([]);
     d.tell({ at: Date.now(), frozenFrames: 1 });
     await until(() => saved().length === 1);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('keeps a crash, says why, and waits for the app to come back', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     d.running = false;
     d.crashReports = [{ at: new Date().toISOString(), reason: 'java.lang.IllegalStateException' }];
     d.tell({ at: Date.now() });
@@ -316,7 +316,7 @@ describe('the flight recorder', () => {
     const runs = d.frameRuns;
     d.running = true;
     await until(() => d.frameRuns === runs + 1);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('sees a crash Android has already restarted: the app runs, in another process', async () => {
@@ -324,7 +324,7 @@ describe('the flight recorder', () => {
     d.pid = '100';
     d.appPid = d.fakePid;
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     d.pid = '200';
     d.crashReports = [{ at: new Date().toISOString(), reason: 'it crashed' }];
     d.tell({ at: Date.now() });
@@ -332,13 +332,13 @@ describe('the flight recorder', () => {
     expect(readFileSync(join(state, 'traces', must(saved()[0], 'a page')), 'utf8')).toContain(
       'a crash: it crashed',
     );
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('claims no more of a stretch than it watched', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 30);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     await vi.advanceTimersByTimeAsync(5_000);
     d.tell({ at: Date.now(), worstFrameMs: 950 });
     await until(() => saved().length === 1);
@@ -350,20 +350,20 @@ describe('the flight recorder', () => {
       to: number;
     };
     expect(page.to - page.from).toBeLessThan(10_000);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('keeps nothing of an app a person closed: no report, no crash', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     d.running = false;
     d.tell({ at: Date.now() });
     await vi.advanceTimersByTimeAsync(10_000);
     expect(saved()).toEqual([]);
     d.running = true;
     // it may be in its look for the app: a stop waits that second out
-    const off = call('report', { action: 'stop' });
+    const off = call('record_session', { kind: 'report', action: 'stop' });
     await vi.advanceTimersByTimeAsync(2_000);
     await off;
   });
@@ -371,7 +371,7 @@ describe('the flight recorder', () => {
   it('goes on after a save that failed: only that one is lost', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     const traces = join(state, 'traces');
     rmSync(traces, { recursive: true });
     writeFileSync(traces, 'where its pages would go');
@@ -379,18 +379,18 @@ describe('the flight recorder', () => {
     const runs = d.frameRuns;
     d.tell({ at: Date.now(), worstFrameMs: 950 });
     await until(() => d.frameRuns === runs + 1);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('keeps what it holds when a person asks', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
-    const r = call('report', { action: 'write' });
+    await call('record_session', { kind: 'flight', action: 'start' });
+    const r = call('record_session', { kind: 'report', action: 'write' });
     await vi.advanceTimersByTimeAsync(5_000);
     expect((await r).text).toContain('kept: ');
     expect(saved()).toHaveLength(1);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('ends with a report open beside it at one stop, which writes the report', async () => {
@@ -398,9 +398,9 @@ describe('the flight recorder', () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
     const dir = join(state, 'report');
-    await call('report', { action: 'start', dir });
-    await call('report', { action: 'flight' });
-    const off = call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'start', dir });
+    await call('record_session', { kind: 'flight', action: 'start' });
+    const off = call('record_session', { kind: 'report', action: 'stop' });
     await vi.advanceTimersByTimeAsync(5_000);
     const r = await off;
     expect(r.text.split('\n')).toEqual([
@@ -409,7 +409,9 @@ describe('the flight recorder', () => {
     ]);
     expect(r.data).toMatchObject({ saved: [], file: join(dir, 'index.html') });
     expect(existsSync(join(dir, 'index.html'))).toBe(true);
-    await expect(call('report', { action: 'stop' })).rejects.toThrow(/no report is open/);
+    await expect(call('record_session', { kind: 'report', action: 'stop' })).rejects.toThrow(
+      /no report is open/,
+    );
   });
 
   it('leaves nothing on this Mac, and no recording running, when it is turned off', async () => {
@@ -417,9 +419,9 @@ describe('the flight recorder', () => {
     d.tracePath = join(state, 'ring.pftrace');
     writeFileSync(d.tracePath, 'a trace');
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     await vi.advanceTimersByTimeAsync(25_000);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
     expect(existsSync(d.tracePath)).toBe(false);
     expect(d.rec.log.running).toBe(0);
     expect(filming.read(d.serial)).toBeUndefined();
@@ -431,11 +433,11 @@ describe('the flight recorder', () => {
   it('turned off in the middle of a save, keeps that page and leaves nothing running', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     d.tell({ at: Date.now(), worstFrameMs: 950 });
     // it is in the pause after a stall, before it writes the page
     await vi.advanceTimersByTimeAsync(500);
-    const stopping = call('report', { action: 'stop' });
+    const stopping = call('record_session', { kind: 'report', action: 'stop' });
     await vi.advanceTimersByTimeAsync(5_000);
     const off = await stopping;
     expect(off.data.saved).toHaveLength(1);
@@ -454,7 +456,9 @@ describe('the flight recorder', () => {
     const d = new FlightDevice();
     spoil(d);
     const { call } = connect(d, 20);
-    await expect(call('report', { action: 'flight' })).rejects.toThrow('it will not start');
+    await expect(call('record_session', { kind: 'flight', action: 'start' })).rejects.toThrow(
+      'it will not start',
+    );
     expect(d.rec.log.running).toBe(0);
     expect(d.frameTraces).toBe(0);
     expect(filming.read(d.serial)).toBeUndefined();
@@ -467,12 +471,12 @@ describe('the flight recorder', () => {
   it('ends the trace that was coming up when it was turned off', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     let up: () => void = () => undefined;
     d.frameGate = new Promise((r) => (up = r));
     await vi.advanceTimersByTimeAsync(480_000);
     expect(d.frameRuns).toBe(2);
-    const off = call('report', { action: 'stop' });
+    const off = call('record_session', { kind: 'report', action: 'stop' });
     await vi.advanceTimersByTimeAsync(1_000);
     d.frameGate = undefined;
     up();
@@ -486,7 +490,7 @@ describe('the flight recorder', () => {
     const d = new FlightDevice();
     d.wallClock = () => Promise.resolve(Date.now() - behind);
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     const all = d.crashes.bind(d);
     d.crashes = async (q) => {
       const answer = await all(q);
@@ -500,7 +504,7 @@ describe('the flight recorder', () => {
     d.tell({ at: Date.now() });
     await until(() => saved().length === 1);
     d.running = true;
-    const off = call('report', { action: 'stop' });
+    const off = call('record_session', { kind: 'report', action: 'stop' });
     await vi.advanceTimersByTimeAsync(2_000);
     await off;
   });
@@ -508,7 +512,7 @@ describe('the flight recorder', () => {
   it('ends with its session', async () => {
     const d = new FlightDevice();
     const { call, ctx } = connect(d, 20);
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     expect(await ctx.end()).toEqual([]);
     expect(d.rec.log.running).toBe(0);
     expect((await ctx.session()).flight).toBeUndefined();
@@ -517,9 +521,11 @@ describe('the flight recorder', () => {
   it('refuses a second one, a command line, and an app that is not running', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    await call('report', { action: 'flight' });
-    await expect(call('report', { action: 'flight' })).rejects.toThrow(/a flight recorder runs/);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'flight', action: 'start' });
+    await expect(call('record_session', { kind: 'flight', action: 'start' })).rejects.toThrow(
+      /a flight recorder runs/,
+    );
+    await call('record_session', { kind: 'report', action: 'stop' });
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'session.json');
     const provider: DeviceProvider = {
       list: () =>
@@ -531,9 +537,13 @@ describe('the flight recorder', () => {
       app: 'dev.app',
       storage: { remember },
     });
-    await expect(callerOf(cli)('report', { action: 'flight' })).rejects.toThrow(/appdyno flight/);
+    await expect(
+      callerOf(cli)('record_session', { kind: 'flight', action: 'start' }),
+    ).rejects.toThrow(/appdyno flight/);
     d.running = false;
-    await expect(call('report', { action: 'flight' })).rejects.toThrow(/not running/);
+    await expect(call('record_session', { kind: 'flight', action: 'start' })).rejects.toThrow(
+      /not running/,
+    );
   });
 
   it('leaves its mark on what is measured while it runs: an encoder is at work on the device', async () => {
@@ -541,23 +551,27 @@ describe('the flight recorder', () => {
     const { call } = connect(d, 20);
     const quiet = await call('perf_snapshot');
     expect(quiet.data.noise).not.toContain('mirrored');
-    await call('report', { action: 'flight' });
+    await call('record_session', { kind: 'flight', action: 'start' });
     const during = await call('perf_snapshot');
     expect(during.data.noise).toContain('mirrored');
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('caps what it holds, whatever a flag asks for', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 100_000);
-    expect((await call('report', { action: 'flight' })).text).toContain('the last 120 s');
-    await call('report', { action: 'stop' });
+    expect((await call('record_session', { kind: 'flight', action: 'start' })).text).toContain(
+      'the last 120 s',
+    );
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('holds enough to outlast a look on a busy device, whatever a flag asks for', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 3);
-    expect((await call('report', { action: 'flight' })).text).toContain('the last 20 s');
-    await call('report', { action: 'stop' });
+    expect((await call('record_session', { kind: 'flight', action: 'start' })).text).toContain(
+      'the last 20 s',
+    );
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 });

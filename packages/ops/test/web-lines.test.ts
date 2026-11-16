@@ -38,11 +38,15 @@ describe('webview', () => {
     const web = { pages: () => Promise.resolve(pages), evaluate: () => Promise.resolve('LLVM') };
     const { call } = await connect(Object.assign(new FakeDevice(), { web }));
     const app = 'com.apple.mobilesafari';
-    expect((await call('webview', { action: 'eval', js: 'document.title', app })).text).toBe(
+    expect(
+      (await call('inspect_app', { action: 'web_eval', js: 'document.title', app })).text,
+    ).toBe(
       `NOT_FOUND: no web page to inspect in ${app}: one that is loading shows here once it has loaded, and an app's web view only while it is on the screen and the app is debuggable, or set its debugging on\nhint: ask again in a moment`,
     );
     pages.push({ id: 'PID:1/2', title: 'LLVM - Wikipedia', url: 'https://x.test/LLVM', app });
-    expect((await call('webview', { action: 'eval', js: '1', page: 'Swift', app })).text).toBe(
+    expect(
+      (await call('inspect_app', { action: 'web_eval', js: '1', page: 'Swift', app })).text,
+    ).toBe(
       `NOT_FOUND: no page in ${app} matches Swift: one that has loaded another since goes by its new title and URL\nhint: webview pages lists them as they are now`,
     );
   });

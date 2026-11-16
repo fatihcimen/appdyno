@@ -256,8 +256,8 @@ it.skipIf(!DEVICE)(
         await call('wait_for', { selector: { text: 'Web content' }, timeoutMs: 10_000 });
         await call('screen');
         await call(
-          'webview',
-          { action: 'eval', js: 'document.title' },
+          'inspect_app',
+          { action: 'web_eval', js: 'document.title' },
           {
             check: (o) => (o.text.includes('Fixture web') ? undefined : `the title read ${o.text}`),
           },

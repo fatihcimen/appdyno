@@ -36,7 +36,7 @@ describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
     client = new Client({ name: 'stdio-test', version: '0' });
     await client.connect(transport);
     return async () => {
-      await call('terminate_app').catch(() => undefined);
+      await call('manage_app', { action: 'stop' }).catch(() => undefined);
       await client.close();
       // the runner does not stay on a shared phone after the run
       await new IosPhoneDevice(udid).stopAgent();

@@ -12,7 +12,7 @@ import { byPerson, checkApp, checkCreate, noApp, type Policy } from './policy.js
 import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
-import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { ACT, defineOp, definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 import { inside } from './writes.js';
 
 /** App data can hold secrets, and a copy must not land among a person's files: a new or empty folder, for this user alone. */
@@ -42,34 +42,22 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
     if (!pkg) throw noApp();
     return pkg;
   };
-  return defineOp({
+  return definePart({
     name: 'app',
-    title: 'App management',
-    description:
-      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (service: location, photos, microphone…; a wrong word lists them), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant; args, env as launch_app takes them).',
     input: z
       .object({
-        action: z.enum(
-          [
-            'list',
-            'state',
-            'install',
-            'uninstall',
-            'clear',
-            'grant',
-            'revoke',
-            'download_data',
-            'replace_data',
-            'build_and_run',
-          ],
-          {
-            // what app once held, where it went
-            error: (x) =>
-              x.input === 'launch'
-                ? 'app has no launch: launch_app starts an app, and with restart: true starts it fresh'
-                : undefined,
-          },
-        ),
+        action: z.enum([
+          'list',
+          'state',
+          'install',
+          'uninstall',
+          'clear',
+          'grant',
+          'revoke',
+          'download_data',
+          'replace_data',
+          'build_and_run',
+        ]),
         app: z.string().max(200).optional(),
         path: z.string().max(1_000).optional(),
         service: z.string().max(80).optional(),
@@ -152,7 +140,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
           const pkg = appOf(s, app);
           if (!service) throw new ToolError(`${action} needs service`, 'INVALID_ARGUMENT');
           if (action === 'revoke' || apps.grantResets)
-            await approve(policy, s, `app ${action}`, pkg, service);
+            await approve(policy, s, `manage_app ${action}`, pkg, service);
           const said = await apps.permission(pkg, action === 'grant', service);
           return done(
             said ?? `${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`,
@@ -168,7 +156,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
         case 'replace_data': {
           const pkg = appOf(s, app);
           const from = dataFolder(path);
-          await approve(policy, s, 'app replace_data', pkg);
+          await approve(policy, s, 'transfer_files push', pkg);
           reportProgress(`replacing the data of ${pkg}`);
           await apps.replaceData(pkg, from);
           s.acted();
@@ -178,7 +166,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
         case 'uninstall':
         case 'clear': {
           const pkg = appOf(s, app);
-          await approve(policy, s, `app ${action}`, pkg);
+          await approve(policy, s, `manage_app ${action}`, pkg);
           await (action === 'clear' ? apps.clearData(pkg) : apps.uninstall(pkg));
           s.acted();
           s.forgetProcess();

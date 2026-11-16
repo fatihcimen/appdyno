@@ -1,34 +1,17 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { callSignal, reportProgress, type DeviceQueue } from '@appdyno/core';
-import { inspectorOps } from './inspector.js';
 import type { z } from 'zod';
-import { actOps } from './act.js';
 import { activityFor } from './activity.js';
 import { answersFor, type Answers } from './answers.js';
-import { appOps } from './apps.js';
+import { catalogOf, piecesOf } from './catalog.js';
 import type { ServerContext } from './context.js';
-import { controlOps } from './control.js';
-import { pushOps } from './push.js';
-import { settingOps } from './settings.js';
-import { deviceOps } from './device.js';
-import { diagnoseOps } from './diagnose.js';
-import { flowOps } from './flow/ops.js';
 import { flowRecorder } from './flow/recorder.js';
 import { flowRunner, type FlowRunner, type ReplayOptions } from './flow/runner.js';
 import { readFlow } from './flow/shared.js';
 import { runTests, type TestOptions } from './flow/test-run.js';
-import { handoffOps } from './mirror/handoff.js';
-import { mirrorOps } from './mirror/op.js';
-import { networkOps } from './network.js';
-import { perfOps } from './perf/index.js';
-import { reactNativeOps } from './reactnative.js';
-import { readOps } from './read.js';
-import { recordOps } from './record.js';
 import { reportFor } from './report.js';
 import { stepsFor, type Steps } from './steps.js';
 import { KIND_NAMES } from './tool-kinds.js';
-import { visualOps } from './visual.js';
-import { webOps } from './web.js';
 import { givenUp, onlyReads, refused, type Op } from './tool.js';
 
 const everyOp = (
@@ -38,27 +21,7 @@ const everyOp = (
   report: ReturnType<typeof reportFor>,
   runner: FlowRunner,
   tools: () => Record<string, Op>,
-) => [
-  ...deviceOps(ctx, answers),
-  ...readOps(ctx, answers, steps),
-  ...actOps(ctx, answers, steps, tools),
-  ...appOps(ctx, answers, steps),
-  ...controlOps(ctx, answers),
-  ...settingOps(ctx, answers),
-  ...pushOps(ctx, answers),
-  ...diagnoseOps(ctx, answers),
-  ...recordOps(ctx),
-  ...mirrorOps(ctx),
-  ...inspectorOps(ctx),
-  ...handoffOps(ctx),
-  ...report.ops(),
-  ...networkOps(ctx),
-  ...webOps(ctx),
-  ...reactNativeOps(ctx),
-  ...visualOps(ctx),
-  ...perfOps(ctx, runner),
-  ...flowOps(ctx, runner),
-];
+) => catalogOf(piecesOf(ctx, answers, steps, report, runner, tools));
 
 /** The queue a call that acts holds: what it calls in turn, a step's op, runs within it, not after it. */
 const holding = new AsyncLocalStorage<DeviceQueue>();
@@ -114,8 +77,18 @@ export type OpName = AnyOp['name'];
 /** A name of `tool-kinds.ts` that is no tool fails the build here, where the tools are known. */
 const _kinds: readonly OpName[] = KIND_NAMES;
 
-/** What this op answers, as its output schema says. */
+/** What this op answers, as its output schema says: of a tool of several parts, what one of them does. */
 export type OpData<N extends OpName> = z.infer<Extract<AnyOp, { name: N }>['output']>;
+
+type Keys<U> = U extends unknown ? keyof U : never;
+
+/**
+ * That answer read as one: every field any of its parts answers, for a caller that knows which part it called and
+ * reads that part's fields without saying so to the compiler.
+ */
+export type OpFields<N extends OpName, U = OpData<N>> = {
+  [K in Keys<U>]: U extends unknown ? (K extends keyof U ? U[K] : never) : never;
+};
 
 /** Every operation over this context, by name: what the MCP tools and CLI commands are made from. */
 export const opsFor = (ctx: ServerContext): Record<string, Op> => build(ctx).ops;

@@ -201,7 +201,7 @@ describe.each(REVISIONS)('a client, on %s', (revision) => {
     const client = await clientAt(url);
     const seen: (string | undefined)[] = [];
     await client.callTool(
-      { name: 'device_info' },
+      { name: 'list_devices', arguments: { selected: true } },
       {
         onprogress: (p) => seen.push(p.message),
       },
@@ -292,7 +292,9 @@ describe('one client at a time', () => {
     const first = await clientOf(url, 'hosted');
     await first.callTool({ name: 'use_device', arguments: { device: 'emulator-5580' } });
     const second = await clientOf(url, 'hosted');
-    expect(text(await second.callTool({ name: 'device_info' }))).toContain('Fake Phone');
+    expect(
+      text(await second.callTool({ name: 'list_devices', arguments: { selected: true } })),
+    ).toContain('Fake Phone');
     const [context] = contexts;
     expect(contexts).toHaveLength(1);
     expect(context?.currentSerial).toBe('emulator-5580');

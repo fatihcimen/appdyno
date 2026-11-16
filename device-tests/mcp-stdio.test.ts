@@ -78,7 +78,7 @@ for (const revision of REVISIONS)
 
       it('drives the fixture: launch, read, tap by ref with a diff, type, screenshot', async () => {
         // a known start: earlier tests may have left another screen of the app on top
-        expect((await call('terminate_app')).error).toBe(false);
+        expect((await call('manage_app', { action: 'stop' })).error).toBe(false);
         const launched = await call('launch_app', { read: 'full' });
         expect(launched.error).toBe(false);
         expect(launched.text).toContain(`started ${APP}`);

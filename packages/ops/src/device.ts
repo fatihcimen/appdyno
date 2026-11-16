@@ -14,7 +14,7 @@ import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
 import { deviceNamed } from './device-names.js';
 import { endLocation, fixLocation, turning } from './settings.js';
 import { Read } from './step-schemas.js';
-import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
+import { ACT, defineOp, definePart, READ, reply, ToolError } from './tool.js';
 
 /** Shapes, a quarter turn each, in the order of a phone's own rotations, which a tablet wide as it stands has at others. */
 
@@ -24,11 +24,8 @@ const turnedTo = (wide: boolean) => (x: Screen) =>
 
 export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: Answers) {
   return [
-    defineOp({
+    definePart({
       name: 'list_devices',
-      title: 'Devices',
-      description:
-        'Connected phones, simulators and emulators (serial, state, model, kind), which this server may drive, who holds each, what blocks each with its fix.',
       input: z.object({}).strict(),
       output: DevicesOut,
       annotations: READ,
@@ -105,10 +102,8 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
         );
       },
     }),
-    defineOp({
+    definePart({
       name: 'device_info',
-      title: 'Device info',
-      description: 'Model, OS version, screen, agent version and the app in front.',
       input: z.object({}).strict(),
       output: DeviceOut,
       annotations: READ,

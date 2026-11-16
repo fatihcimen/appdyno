@@ -23,7 +23,7 @@ const ok = <A extends Answer>(r: A) => {
 function scrollOf(get: () => Call) {
   const call: Call = (n, a) => get()(n, a);
   const list = async () => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     ok(await call('open_link', { url: 'appdyno-fixture://open/list' }));
     ok(await call('wait_for', { selector: { text: 'Product 1' }, timeoutMs: 8_000 }));
@@ -61,7 +61,7 @@ function scrollOf(get: () => Call) {
     await list();
     const gap = await spacing();
     const was = await offset(gap);
-    const far = Math.round(1.5 * ok(await call('device_info')).data.screen.h);
+    const far = Math.round(1.5 * ok(await call('list_devices', { selected: true })).data.screen.h);
     const r = ok(await call('swipe', { direction: 'up', distance: far, exact: true }));
     expect(r.text).toMatch(new RegExp(`of ${far} in [2-9] strokes`));
     expect(Math.abs((await offset(gap)) - was - far)).toBeLessThanOrEqual(CLOSE);
@@ -104,7 +104,7 @@ describe.skipIf(!IPHONE)('exact scrolling on an iPhone', () => {
     o = await onIphone(APP);
   }, 300_000);
   afterAll(async () => {
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 60_000);

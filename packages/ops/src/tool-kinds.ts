@@ -6,13 +6,13 @@ import type { FlowStep } from '@appdyno/flows';
 const NOT_A_STEP_NAMES = ['run_steps', 'run_flow'] as const;
 const NOT_ACTIVITY_NAMES = ['show_mirror', 'ask_person', 'list_devices'] as const;
 const NOT_STEP_NAMES = [
-  'report',
+  'record_session',
   'list_devices',
   'manage_simulator',
   'show_mirror',
   'ask_person',
 ] as const;
-const NOT_ACTION_NAMES = [...NOT_STEP_NAMES, 'use_device', 'record', 'run_flow'] as const;
+const NOT_ACTION_NAMES = [...NOT_STEP_NAMES, 'use_device', 'run_flow'] as const;
 const BY_STEP_NAMES = ['tap', 'swipe', 'scroll_to', 'type_text', 'press_key', 'run_steps'] as const;
 
 /** Every name of the lists here, for registry.ts to hold to the tools there are. */
@@ -29,8 +29,12 @@ export const NOT_A_STEP: ReadonlySet<string> = new Set(NOT_A_STEP_NAMES);
 /** Calls that are not an agent acting on the device: no line of the activity a person watches. */
 export const NOT_ACTIVITY: ReadonlySet<string> = new Set(NOT_ACTIVITY_NAMES);
 
-/** Calls that say nothing about the app: no step of a report. */
-export const NOT_STEPS: ReadonlySet<string> = new Set(NOT_STEP_NAMES);
+const NOT_STEPS: ReadonlySet<string> = new Set(NOT_STEP_NAMES);
+
+/** Calls that say nothing about the app: no step of a report. A video's start and its stop are steps of one. */
+export const notAStepOfAReport = (name: string, args: unknown) =>
+  NOT_STEPS.has(name) &&
+  !(name === 'record_session' && (args as { kind?: unknown } | undefined)?.kind === 'video');
 
 /** No action of a flow, as they pick the device, film it or run the recording; nor is what a report leaves out. */
 export const NOT_ACTIONS: ReadonlySet<string> = new Set(NOT_ACTION_NAMES);

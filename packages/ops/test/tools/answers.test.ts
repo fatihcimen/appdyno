@@ -5,6 +5,8 @@ import { DEFAULT_POLICY } from '../../src/policy.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { REVISIONS } from '@appdyno/testing/calls.js';
 import { opsFor } from '../../src/registry.js';
+import type { Op } from '../../src/tool.js';
+import { z } from 'zod';
 import { type Result, connect, refOf } from './shared.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
@@ -20,22 +22,19 @@ describe('tool list', () => {
     expect(tools.map((t) => t.name).sort()).toMatchInlineSnapshot(`
       [
         "answer_alert",
-        "app",
         "ask_person",
         "assert",
-        "audit",
         "capture_network",
+        "check_screen",
         "clipboard",
-        "crashes",
-        "device_info",
         "device_setting",
         "find",
         "gesture",
-        "inspector",
+        "inspect_app",
         "keyboard",
         "launch_app",
         "list_devices",
-        "logs",
+        "manage_app",
         "manage_simulator",
         "open_link",
         "perf_compare",
@@ -47,9 +46,8 @@ describe('tool list', () => {
         "perf_snapshot",
         "perf_trace",
         "press_key",
-        "react_native",
-        "record",
-        "report",
+        "read_logs",
+        "record_session",
         "run_flow",
         "run_steps",
         "screen",
@@ -61,19 +59,17 @@ describe('tool list', () => {
         "swipe",
         "take_screenshot",
         "tap",
-        "terminate_app",
+        "transfer_files",
         "type_text",
         "use_device",
-        "visual",
         "wait_for",
-        "webview",
       ]
     `);
     for (const t of tools) {
       expect(t.annotations, t.name).toBeDefined();
       expect(t.outputSchema, t.name).toBeUndefined();
       expect(t.title, t.name).toBeTruthy();
-      expect(t.description?.length, t.name).toBeLessThan(400);
+      expect(t.description?.length, t.name).toBeLessThan(510);
     }
     expect(
       tools
@@ -82,14 +78,11 @@ describe('tool list', () => {
         .sort(),
     ).toEqual([
       'assert',
-      'audit',
-      'crashes',
-      'device_info',
       'find',
       'list_devices',
-      'logs',
       'perf_query',
       'perf_snapshot',
+      'read_logs',
       'screen',
       'wait_for',
     ]);
@@ -140,7 +133,12 @@ describe('structured answers', () => {
 
   it('leaves the text its own field: no summary has a text of its own', () => {
     const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
-    expect(Object.values(ops).filter((op) => 'text' in op.output.shape)).toEqual([]);
+    // of a tool of several parts, each part's summary
+    const fields = (op: Op) => {
+      const schema = z.toJSONSchema(op.output, { unrepresentable: 'any' });
+      return (schema.anyOf ?? [schema]).flatMap((part) => Object.keys(part.properties ?? {}));
+    };
+    expect(Object.values(ops).filter((op) => fields(op).includes('text'))).toEqual([]);
   });
 
   describe.each(REVISIONS)(
@@ -168,7 +166,7 @@ describe('structured answers', () => {
         const sent = await both('tap', { ref: refOf(tap.said, 'Gönder') });
         expect(sent.sc).toMatchObject({ screen: 'diff', changes: { added: 1 }, changed: true });
         expect(sent.said).toMatch(/^screen changed: \+1 -0 ~0 .*\n\+ @[\w-]+ text "Gönderildi"/m);
-        expect(await both('logs')).toMatchObject({
+        expect(await both('read_logs')).toMatchObject({
           said: expect.stringContaining('E/Fixture: the form failed to load') as unknown,
         });
         device.screen = 'login';

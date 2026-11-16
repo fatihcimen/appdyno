@@ -159,7 +159,7 @@ for (const { platform, serial, provider } of targets)
     describe('record', () => {
       it('records a video that plays, and refuses a second one', async (ctx) => {
         const to = file(platform === 'ios' ? 'one.mov' : 'one.mp4');
-        const first = await h.call('record', { action: 'start', file: to });
+        const first = await h.call('record_session', { kind: 'video', action: 'start', file: to });
         if (platform === 'iphone' && first.error) {
           expect(first.data.code).toBe('UNSUPPORTED');
           expect(first.text).toMatch(/Screen Recording/);
@@ -168,26 +168,32 @@ for (const { platform, serial, provider } of targets)
         }
         const started = first;
         expect(started.text).toContain(to);
-        const again = await h.call('record', { action: 'start', file: file('two.mp4') });
+        const again = await h.call('record_session', {
+          kind: 'video',
+          action: 'start',
+          file: file('two.mp4'),
+        });
         expect(again.error).toBe(true);
         expect(again.text).toMatch(/stop it first/);
         await stir(h.ok);
-        const stopped = await h.ok('record', { action: 'stop' });
+        const stopped = await h.ok('record_session', { kind: 'video', action: 'stop' });
         expect(stopped.data.files).toEqual([to]);
         expect(stopped.data.frames).toBeGreaterThan(1);
         assertPlayable(to, 0.1);
-        expect((await h.call('record', { action: 'stop' })).text).toMatch(/no recording runs/);
+        expect((await h.call('record_session', { kind: 'video', action: 'stop' })).text).toMatch(
+          /no recording runs/,
+        );
       }, 120_000);
 
       it('starts in one process and stops in another', async (ctx) => {
         if (noRecorder) return ctx.skip();
         const to = file(platform === 'ios' ? 'cli.mov' : 'cli.mp4');
-        const start = await cli(serial, 'record', 'start', '--file', to);
+        const start = await cli(serial, 'record-session', 'video', 'start', '--file', to);
         expect(faults(start.err)).toBe('');
         expect(start.code).toBe(0);
         // the starter is gone; only the recording remains
         await stir(h.ok, 2);
-        const stop = await cli(serial, 'record', 'stop');
+        const stop = await cli(serial, 'record-session', 'video', 'stop');
         expect(faults(stop.err)).toBe('');
         expect(stop.out).toContain(to);
         assertPlayable(to, 0.1);
@@ -196,11 +202,11 @@ for (const { platform, serial, provider } of targets)
       it('ends by itself at its limit, and stop still finds the video', async (ctx) => {
         if (noRecorder) return ctx.skip();
         const to = file(platform === 'ios' ? 'limit.mov' : 'limit.mp4');
-        await h.ok('record', { action: 'start', file: to, maxSeconds: 2 });
+        await h.ok('record_session', { kind: 'video', action: 'start', file: to, maxSeconds: 2 });
         await stir(h.ok, 1);
         // past the limit, whatever the stirring took
         await new Promise((r) => setTimeout(r, 3_000));
-        const stopped = await h.ok('record', { action: 'stop' });
+        const stopped = await h.ok('record_session', { kind: 'video', action: 'stop' });
         expect(stopped.data.files).toEqual([to]);
         assertPlayable(to, 0.05);
         expect(Number(stopped.data.durationMs)).toBeLessThan(3_500);
@@ -209,10 +215,16 @@ for (const { platform, serial, provider } of targets)
       it('says a recording failed when its file cannot be written', async () => {
         // of the kind the device records, as another kind is refused before the folder is tried
         const kind = platform === 'ios' ? 'mov' : 'mp4';
-        const r = await h.call('record', { action: 'start', file: `/dev/null/x/video.${kind}` });
+        const r = await h.call('record_session', {
+          kind: 'video',
+          action: 'start',
+          file: `/dev/null/x/video.${kind}`,
+        });
         expect(r.error).toBe(true);
         expect(r.text).toMatch(/cannot write|did not start/);
-        expect((await h.call('record', { action: 'stop' })).text).toMatch(/no recording runs/);
+        expect((await h.call('record_session', { kind: 'video', action: 'stop' })).text).toMatch(
+          /no recording runs/,
+        );
       });
     });
 
@@ -222,16 +234,16 @@ for (const { platform, serial, provider } of targets)
 
       it('is one folder with the steps, a screen and an image after each, and hides secrets', async () => {
         const folder = file('report');
-        await h.ok('report', { action: 'start', dir: folder });
+        await h.ok('record_session', { kind: 'report', action: 'start', dir: folder });
         await h.ok('open_link', { url: 'appdyno-fixture://open/form' });
         await h.ok('type_text', { selector: { id: 'name_input' }, text: SECRET });
         await h.ok('type_text', { selector: { id: 'password_input' }, text: PASSWORD });
         await h.ok('keyboard', { action: 'dismiss' }).catch(() => undefined);
         const fg = await h.call('perf_snapshot');
-        if (!noRecorder) await h.ok('record', { action: 'start' });
+        if (!noRecorder) await h.ok('record_session', { kind: 'video', action: 'start' });
         await stir(h.ok, 1);
-        if (!noRecorder) await h.ok('record', { action: 'stop' });
-        const done = await h.ok('report', { action: 'stop' });
+        if (!noRecorder) await h.ok('record_session', { kind: 'video', action: 'stop' });
+        const done = await h.ok('record_session', { kind: 'report', action: 'stop' });
         expect(done.data.file).toBe(join(folder, 'index.html'));
 
         const html = readFileSync(join(folder, 'index.html'), 'utf8');
@@ -279,10 +291,12 @@ for (const { platform, serial, provider } of targets)
         const folder = file('report-cli');
         // an iPhone opens a link in the selected app
         expect((await cli(serial, 'use-device', '--app', APP)).code).toBe(0);
-        expect((await cli(serial, 'report', 'start', '--dir', folder)).code).toBe(0);
+        expect((await cli(serial, 'record-session', 'report', 'start', '--dir', folder)).code).toBe(
+          0,
+        );
         const open = await cli(serial, 'open-link', '--url', 'appdyno-fixture://open/list');
         expect(faults(open.err)).toBe('');
-        const r = await cli(serial, 'report', 'stop');
+        const r = await cli(serial, 'record-session', 'report', 'stop');
         expect(faults(r.err)).toBe('');
         expect(r.out).toContain('1 steps');
         expect(readFileSync(join(folder, 'index.html'), 'utf8')).toMatch(
@@ -482,7 +496,7 @@ describe.skipIf(!simulator)('network on a simulator', () => {
     expect(read.text).not.toContain('abc123');
     const stop = await h.ok('capture_network', { action: 'stop' });
     expect(stop.text).toMatch(/stays in the app until it next starts/);
-    await h.ok('terminate_app');
+    await h.ok('manage_app', { action: 'stop' });
     await h.ok('launch_app');
   }, 180_000);
 });
@@ -495,7 +509,7 @@ for (const { platform, serial, provider, pageId, other } of [
     let h: ReturnType<typeof harness>;
     beforeAll(async () => {
       h = harness(serial, provider());
-      await h.ok('terminate_app');
+      await h.ok('manage_app', { action: 'stop' });
       await h.ok('launch_app');
       await h.ok('open_link', { url: 'appdyno-fixture://open/web' });
       await h.ok('wait_for', { selector: { text: 'Web content' } });
@@ -512,21 +526,24 @@ for (const { platform, serial, provider, pageId, other } of [
     });
 
     it('lists the page of a debuggable app, and none of an app that is not', async () => {
-      const r = await h.ok('webview', { action: 'pages' });
+      const r = await h.ok('inspect_app', { action: 'web_pages' });
       expect(r.text).toMatch(
         new RegExp(`${pageId} "Fixture web" .* in dev\\.appdyno\\.fixture \\(showing\\)`),
       );
-      const none = await h.call('webview', { action: 'elements', app: other });
+      const none = await h.call('inspect_app', { action: 'web_elements', app: other });
       expect(none.error).toBe(true);
       expect(none.text).toMatch(/no web page to inspect in /);
     }, 60_000);
 
     it('reads the DOM as elements where the accessibility tree sees them', async () => {
-      const r = await h.ok('webview', { action: 'elements' });
+      const r = await h.ok('inspect_app', { action: 'web_elements' });
       expect(r.text).toMatch(/^"Fixture web" /);
       expect(r.text).toMatch(/button "Pay" \d+,\d+ #pay/);
       expect(r.text).toMatch(/input "Card" \d+,\d+ #card/);
-      const pay = r.data.elements?.find((e) => e.text === 'Pay');
+      // a web view's elements have places, an inspector's none
+      const pay = r.data.elements
+        ?.flatMap((e) => ('x' in e ? [e] : []))
+        .find((e) => e.text === 'Pay');
       assert(pay, 'Pay');
       const found = await h.ok('find', { selector: { text: 'Pay' } });
       const [inTree] = found.data.matches;
@@ -537,41 +554,44 @@ for (const { platform, serial, provider, pageId, other } of [
 
     it('clicks by selector and evaluates a script', async () => {
       const paid = "document.getElementById('paid').textContent";
-      expect((await h.ok('webview', { action: 'eval', js: paid })).text).toBe('""');
-      const click = await h.ok('webview', { action: 'click', selector: '#pay' });
+      expect((await h.ok('inspect_app', { action: 'web_eval', js: paid })).text).toBe('""');
+      const click = await h.ok('inspect_app', { action: 'web_click', selector: '#pay' });
       expect(click.text).toBe('clicked button "Pay"');
-      expect((await h.ok('webview', { action: 'eval', js: paid })).text).toBe('"Paid"');
+      expect((await h.ok('inspect_app', { action: 'web_eval', js: paid })).text).toBe('"Paid"');
       expect((await h.ok('wait_for', { selector: { text: 'Paid' } })).data.met).toBe(true);
 
-      const none = await h.call('webview', { action: 'click', selector: '#nothing' });
+      const none = await h.call('inspect_app', { action: 'web_click', selector: '#nothing' });
       expect(none.error).toBe(true);
       expect(none.text).toMatch(/nothing on the page matches/);
-      const thrown = await h.call('webview', { action: 'eval', js: 'no.such.thing' });
+      const thrown = await h.call('inspect_app', { action: 'web_eval', js: 'no.such.thing' });
       expect(thrown.error).toBe(true);
       expect(thrown.text).toMatch(/the script threw: ReferenceError/);
     }, 60_000);
 
     it('brings back a long answer whole', async () => {
-      const r = await h.ok('webview', { action: 'eval', js: "'x'.repeat(100000)" });
+      const r = await h.ok('inspect_app', { action: 'web_eval', js: "'x'.repeat(100000)" });
       // an answer stops at 20,000 characters; the socket's framing is what this reads across
       expect(r.text).toHaveLength(20_000);
     }, 60_000);
 
     it('a page coordinate takes a real touch', async () => {
-      await h.ok('webview', {
-        action: 'eval',
+      await h.ok('inspect_app', {
+        action: 'web_eval',
         js: "document.getElementById('paid').textContent = ''",
       });
-      const r = await h.ok('webview', { action: 'elements' });
-      const pay = r.data.elements?.find((e) => e.text === 'Pay');
+      const r = await h.ok('inspect_app', { action: 'web_elements' });
+      // a web view's elements have places, an inspector's none
+      const pay = r.data.elements
+        ?.flatMap((e) => ('x' in e ? [e] : []))
+        .find((e) => e.text === 'Pay');
       assert(pay, 'Pay');
       await h.ok('tap', { x: pay.x, y: pay.y });
       expect((await h.ok('wait_for', { selector: { text: 'Paid' } })).data.met).toBe(true);
     }, 60_000);
 
     it('adds to the screen what the tree does not hold', async () => {
-      await h.ok('webview', {
-        action: 'eval',
+      await h.ok('inspect_app', {
+        action: 'web_eval',
         js: "const b = document.createElement('button'); b.id = 'silent'; b.setAttribute('aria-hidden', 'true'); b.textContent = 'Hidden from readers'; document.body.appendChild(b); true",
       });
       const s = await h.ok('screen');
@@ -582,7 +602,7 @@ for (const { platform, serial, provider, pageId, other } of [
     }, 60_000);
 
     it('works from the command line', async () => {
-      const r = await cli(serial, 'webview', 'pages', '--app', APP);
+      const r = await cli(serial, 'inspect-app', 'web_pages', '--app', APP);
       expect(faults(r.err)).toBe('');
       expect(r.out).toContain('"Fixture web"');
     }, 60_000);
@@ -598,23 +618,27 @@ for (const { platform, serial, provider } of targets)
     };
     beforeAll(async () => {
       h = harness(serial, provider());
-      await h.ok('terminate_app');
+      await h.ok('manage_app', { action: 'stop' });
       await h.ok('launch_app');
       await open('dialog', 'Open dialog');
       return () => h.ctx.close();
     }, 240_000);
 
     it('finds a screen the same as its baseline', async () => {
-      const saved = await h.ok('visual', { action: 'baseline', name: 'dialog', dir: baselines });
+      const saved = await h.ok('check_screen', {
+        check: 'visual_baseline',
+        name: 'dialog',
+        dir: baselines,
+      });
       expect(saved.text).toMatch(/saved .*dialog\.png \(\d+x\d+\)/);
-      const r = await h.ok('visual', { action: 'compare', name: 'dialog', dir: baselines });
+      const r = await h.ok('check_screen', { check: 'visual', name: 'dialog', dir: baselines });
       expect(r.data.same).toBe(true);
       expect(existsSync(join(baselines, 'dialog.diff.png'))).toBe(false);
     }, 60_000);
 
     it('refuses what has changed, with a diff image a person can open', async () => {
       await open('list', 'Product 1');
-      const r = await h.call('visual', { action: 'compare', name: 'dialog', dir: baselines });
+      const r = await h.call('check_screen', { check: 'visual', name: 'dialog', dir: baselines });
       expect(r.error).toBe(true);
       expect(r.data.code).toBe('CHECK_FAILED');
       expect(r.text).toMatch(/[\d.]+ percent of pixels differ .* tolerance 0\.1: diff /);
@@ -646,33 +670,41 @@ for (const { platform, serial, provider } of targets)
 
     it('takes a bigger tolerance, a mask by selector and one by rect', async () => {
       await open('dialog', 'Open dialog');
-      const full = await h.ok('visual', { action: 'baseline', name: 'masked', dir: baselines });
+      const full = await h.ok('check_screen', {
+        check: 'visual_baseline',
+        name: 'masked',
+        dir: baselines,
+      });
       expect(full.error).toBe(false);
       await h.ok('tap', { selector: { id: 'open_dialog' } });
-      const seen = await h.call('visual', { action: 'compare', name: 'masked', dir: baselines });
+      const seen = await h.call('check_screen', {
+        check: 'visual',
+        name: 'masked',
+        dir: baselines,
+      });
       expect(seen.error).toBe(true);
       const shown = /([\d.]+) percent/.exec(seen.text)?.[1];
       assert(shown, seen.text);
       const percent = Number(shown);
-      const loose = await h.ok('visual', {
-        action: 'compare',
+      const loose = await h.ok('check_screen', {
+        check: 'visual',
         name: 'masked',
         dir: baselines,
         tolerance: Math.min(100, percent + 1),
       });
       expect(loose.data.same).toBe(true);
-      const window = await h.ok('device_info');
+      const window = await h.ok('list_devices', { selected: true });
       const size = window.data.screen;
-      const masked = await h.ok('visual', {
-        action: 'compare',
+      const masked = await h.ok('check_screen', {
+        check: 'visual',
         name: 'masked',
         dir: baselines,
         tolerance: 0,
         masks: [{ x: 0, y: 0, w: size.w, h: size.h }],
       });
       expect(masked.data.percent).toBe(0);
-      const none = await h.call('visual', {
-        action: 'compare',
+      const none = await h.call('check_screen', {
+        check: 'visual',
         name: 'masked',
         dir: baselines,
         masks: [{ text: 'nothing like this' }],
@@ -681,10 +713,10 @@ for (const { platform, serial, provider } of targets)
     }, 90_000);
 
     it('says when there is no baseline, and from the command line', async () => {
-      const r = await h.call('visual', { action: 'compare', name: 'never', dir: baselines });
+      const r = await h.call('check_screen', { check: 'visual', name: 'never', dir: baselines });
       expect(r.error).toBe(true);
       expect(r.text).toMatch(/no baseline/);
-      const c = await cli(serial, 'visual', 'compare', '--name', 'never', '--dir', baselines);
+      const c = await cli(serial, 'check-screen', 'visual', '--name', 'never', '--dir', baselines);
       expect(c.code).toBe(1);
       expect(c.err).toMatch(/no baseline/);
     }, 60_000);
@@ -703,9 +735,14 @@ describe.skipIf(!android)('visual comparison leaves the status bar out', () => {
       await h.ok('open_link', { url: 'appdyno-fixture://open/dialog' });
       await h.ok('wait_for', { selector: { text: 'Open dialog' } });
       const b = join(dir, 'clock');
-      await h.ok('visual', { action: 'baseline', name: 'clock', dir: b });
+      await h.ok('check_screen', { check: 'visual_baseline', name: 'clock', dir: b });
       await demo('-e command clock -e hhmm 2359');
-      const r = await h.ok('visual', { action: 'compare', name: 'clock', dir: b, tolerance: 0 });
+      const r = await h.ok('check_screen', {
+        check: 'visual',
+        name: 'clock',
+        dir: b,
+        tolerance: 0,
+      });
       expect(r.data.same).toBe(true);
     } finally {
       await demo('-e command exit');
@@ -800,10 +837,10 @@ describe.skipIf(!android)('recording on Android', () => {
       const to = join(dir, 'joined.mp4');
       // something moves all along: a still phone's screen gives no frames, so little video
       await h.ok('open_link', { url: 'appdyno-fixture://open/ticker' });
-      await h.ok('record', { action: 'start', file: to });
+      await h.ok('record_session', { kind: 'video', action: 'start', file: to });
       await new Promise((r) => setTimeout(r, 12_000));
       await stirOnce(h.ok);
-      const stopped = await h.ok('record', { action: 'stop' });
+      const stopped = await h.ok('record_session', { kind: 'video', action: 'stop' });
       expect(stopped.data.files).toEqual([to]);
       expect(stopped.text).toMatch(/\d segments joined/);
       // what was recorded, less a moment at each join
@@ -821,29 +858,33 @@ describe.skipIf(!android)('recording on Android', () => {
 
   it('says so when the recorder is killed, and can record again', async () => {
     const to = join(dir, 'killed.mp4');
-    await h.ok('record', { action: 'start', file: to });
+    await h.ok('record_session', { kind: 'video', action: 'start', file: to });
     await stirOnce(h.ok);
     await adb.exec(android, 'pkill -9 screenrecord');
-    const r = await h.call('record', { action: 'stop' });
+    const r = await h.call('record_session', { kind: 'video', action: 'stop' });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(/recording failed.*(did not end properly|runs past|empty)/);
-    expect((await h.call('record', { action: 'stop' })).text).toMatch(/no recording runs/);
+    expect((await h.call('record_session', { kind: 'video', action: 'stop' })).text).toMatch(
+      /no recording runs/,
+    );
     const next = join(dir, 'after-kill.mp4');
-    await h.ok('record', { action: 'start', file: next });
+    await h.ok('record_session', { kind: 'video', action: 'start', file: next });
     await stirOnce(h.ok);
-    await h.ok('record', { action: 'stop' });
+    await h.ok('record_session', { kind: 'video', action: 'stop' });
     assertPlayable(next, 0.1);
   }, 120_000);
 
   it('stops a session-long recording when the session ends', async () => {
     const to = join(dir, 'ended.mp4');
     const e = harness(android, androidProvider(adb));
-    await e.ok('record', { action: 'start', file: to });
+    await e.ok('record_session', { kind: 'video', action: 'start', file: to });
     await stirOnce(e.ok);
     expect(await e.ctx.end()).toEqual([]);
     e.ctx.close();
     assertPlayable(to, 0.1);
-    expect((await h.call('record', { action: 'stop' })).text).toMatch(/no recording runs/);
+    expect((await h.call('record_session', { kind: 'video', action: 'stop' })).text).toMatch(
+      /no recording runs/,
+    );
   }, 120_000);
 });
 

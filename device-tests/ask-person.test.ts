@@ -63,7 +63,7 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
   });
 
   it('leaves the data on a no, never says a person declined, and says how a person allows it ahead', async () => {
-    const r = await (await connect('decline'))('app', { action: 'clear', app: APP });
+    const r = await (await connect('decline'))('manage_app', { action: 'clear', app: APP });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(
       new RegExp(
@@ -81,7 +81,7 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
   }, 120_000);
 
   it('leaves the data where the client cannot ask, and says how a person allows it', async () => {
-    const r = await (await connect())('app', { action: 'clear', app: APP });
+    const r = await (await connect())('manage_app', { action: 'clear', app: APP });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(
       /^PERMISSION_REQUIRED: app clear asks the person first, and this client cannot ask: nothing was done\nhint: a person allows it ahead in this server's own command line: --allow-data-loss virtual/,
@@ -90,7 +90,7 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
   }, 120_000);
 
   it('clears it on the yes of the person the client asked', async () => {
-    const r = await (await connect('accept'))('app', { action: 'clear', app: APP });
+    const r = await (await connect('accept'))('manage_app', { action: 'clear', app: APP });
     expect(r.error ? r.text : '').toBe('');
     expect(r.text).toBe(`cleared the data of ${APP}`);
     expect(asked).toHaveLength(1);
@@ -100,10 +100,7 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
   it('clears it with nothing asked on a server a person started with --allow-data-loss virtual', async () => {
     const r = await (
       await connect('decline', ['--allow-data-loss', 'virtual'])
-    )('app', {
-      action: 'clear',
-      app: APP,
-    });
+    )('manage_app', { action: 'clear', app: APP });
     expect(r.error ? r.text : '').toBe('');
     expect(asked).toEqual([]);
     expect(existsSync(kept())).toBe(false);

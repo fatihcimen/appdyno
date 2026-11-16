@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { assert, beforeAll, describe, expect, it } from 'vitest';
-import type { OpData, OpName } from '@appdyno/ops';
+import type { OpFields, OpName } from '@appdyno/ops';
 import { Devicectl, IosSimulatorDevice } from './workspace.js';
 
 /**
@@ -83,7 +83,7 @@ for (const { platform, serial, form } of targets)
       return {
         error: r.isError === true,
         text: r.content.map((c) => c.text ?? '').join('\n'),
-        data: (r.structuredContent ?? {}) as OpData<N> & { code?: string },
+        data: (r.structuredContent ?? {}) as OpFields<N> & { code?: string },
       };
     };
     const call = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
@@ -114,7 +114,7 @@ for (const { platform, serial, form } of targets)
       'records the form, the list and the dialog through the MCP tools',
       async () => {
         await call('run_flow', { action: 'record' });
-        await call('terminate_app');
+        await call('manage_app', { action: 'stop' });
         await call('launch_app');
         const home = await call('screen');
         // by ref, as an agent does: the file must not keep it
@@ -313,7 +313,7 @@ for (const { platform, serial, form } of targets)
           return r;
         };
         await run('run-flow', 'record');
-        await run('terminate-app', '--app', APP);
+        await run('manage-app', 'stop', '--app', APP);
         await run('launch-app', '--app', APP);
         await run('tap', '--json', JSON.stringify({ selector: { text: form } }));
         await run('assert', '--selector', '{"id":"name_input"}', '--timeout-ms', '8000');

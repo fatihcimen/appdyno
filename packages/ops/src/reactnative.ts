@@ -4,7 +4,7 @@ import type { ServerContext } from './context.js';
 import { boundLines } from './diagnose.js';
 import { redactLog } from './policy.js';
 import { ReactNativeOut } from './schemas.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const DEFAULT_METRO = 'localhost:8081';
 const DEFAULT_LOG_MS = 3_000;
@@ -66,10 +66,8 @@ export function reactNativeOps(ctx: ServerContext) {
     );
 
   return [
-    defineOp({
+    definePart({
       name: 'react_native',
-      title: 'React Native',
-      description: `A debug React Native app through Metro: targets, logs (the JS console for ms), reload.`,
       input: z
         .object({
           action: z.enum(['targets', 'logs', 'reload']),

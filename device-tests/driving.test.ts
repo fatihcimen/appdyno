@@ -59,7 +59,7 @@ function shared(
   const call: Call = (n, a) => get().call(n, a);
 
   it('says whether a launch started the app or brought it to the front as it was', async () => {
-    ok(await call('terminate_app'));
+    ok(await call('manage_app', { action: 'stop' }));
     expect(ok(await call('launch_app')).data.done).toBe(`started ${APP}`);
     expect(ok(await call('launch_app')).data.done).toBe(
       `brought ${APP} to the front, on the screen it was on`,
@@ -227,14 +227,14 @@ function shared(
 
   it('says what an app is doing, and lists it', async () => {
     await open('home');
-    expect(ok(await call('app', { action: 'state' })).data.state).toBe('foreground');
-    const list = ok(await call('app', { action: 'list' }));
+    expect(ok(await call('manage_app', { action: 'state' })).data.state).toBe('foreground');
+    const list = ok(await call('manage_app', { action: 'list' }));
     expect(list.text).toContain(APP);
-    ok(await call('terminate_app'));
-    expect(ok(await call('app', { action: 'state' })).data.state).toBe('stopped');
-    expect(ok(await call('app', { action: 'state', app: 'dev.nobody.here' })).data.state).toBe(
-      'not_installed',
-    );
+    ok(await call('manage_app', { action: 'stop' }));
+    expect(ok(await call('manage_app', { action: 'state' })).data.state).toBe('stopped');
+    expect(
+      ok(await call('manage_app', { action: 'state', app: 'dev.nobody.here' })).data.state,
+    ).toBe('not_installed');
   });
 
   it('runs 20 steps within a client’s patience', async () => {
@@ -257,7 +257,7 @@ describe.skipIf(!android)('driving on Android', () => {
   const adb = new Adb();
   const sh = (c: string) => adb.exec(android, c);
   const open = async (screen: string) => {
-    await h.call('terminate_app');
+    await h.call('manage_app', { action: 'stop' });
     if (screen === 'home') ok(await h.call('launch_app'));
     else ok(await h.call('open_link', { url: `appdyno-fixture://open/${screen}` }));
   };
@@ -304,7 +304,7 @@ describe.skipIf(!android)('driving on Android', () => {
   });
 
   it('reads and answers a permission prompt', async () => {
-    ok(await h.call('app', { action: 'revoke', service: 'location' }));
+    ok(await h.call('manage_app', { action: 'revoke', service: 'location' }));
     await open('permission');
     ok(await h.call('tap', { selector: { text: 'Request location' } }));
     const read = ok(await h.call('answer_alert'));
@@ -315,7 +315,7 @@ describe.skipIf(!android)('driving on Android', () => {
     expect(await sh(`dumpsys package ${APP}`)).toMatch(
       /ACCESS_(COARSE|FINE)_LOCATION: granted=true/,
     );
-    ok(await h.call('app', { action: 'revoke', service: 'location' }));
+    ok(await h.call('manage_app', { action: 'revoke', service: 'location' }));
   });
 
   it('presses volume, lock and power; the next read wakes the screen', async () => {
@@ -349,24 +349,26 @@ describe.skipIf(!android)('driving on Android', () => {
     await open('home');
     ok(await h.call('press_key', { key: 'app_switch' }));
     ok(await h.call('press_key', { key: 'home' }));
-    expect(ok(await h.call('device_info')).data.foreground).not.toBe(APP);
+    expect(ok(await h.call('list_devices', { selected: true })).data.foreground).not.toBe(APP);
   });
 
   it('manages apps: clear, grant, launch with extras, uninstall and install', async () => {
-    ok(await h.call('app', { action: 'grant', service: 'location' }));
+    ok(await h.call('manage_app', { action: 'grant', service: 'location' }));
     expect(await sh(`dumpsys package ${APP}`)).toMatch(/ACCESS_FINE_LOCATION: granted=true/);
-    ok(await h.call('app', { action: 'revoke', service: 'location' }));
+    ok(await h.call('manage_app', { action: 'revoke', service: 'location' }));
     expect(await sh(`dumpsys package ${APP}`)).toMatch(/ACCESS_FINE_LOCATION: granted=false/);
     ok(await h.call('launch_app', { args: ['who=me'] }));
     expect((await h.call('launch_app', { env: { A: '1' } })).data.code).toBe('UNSUPPORTED');
-    ok(await h.call('app', { action: 'clear' }));
+    ok(await h.call('manage_app', { action: 'clear' }));
     const apk = join(ROOT, 'android/fixture/build/outputs/apk/debug/fixture-debug.apk');
     expect(existsSync(apk)).toBe(true);
-    ok(await h.call('app', { action: 'uninstall' }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    ok(await h.call('app', { action: 'install', path: apk }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
-    expect((await h.call('app', { action: 'install', path: '/tmp/none.apk' })).error).toBe(true);
+    ok(await h.call('manage_app', { action: 'uninstall' }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('not_installed');
+    ok(await h.call('manage_app', { action: 'install', path: apk }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('stopped');
+    expect((await h.call('manage_app', { action: 'install', path: '/tmp/none.apk' })).error).toBe(
+      true,
+    );
   });
 
   it('changes and restores dark mode, text size, animations, locale and the network', async () => {
@@ -498,7 +500,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   let h: ReturnType<typeof harness>;
   const simctl = new Simctl();
   const open = async (screen: string) => {
-    await h.call('terminate_app');
+    await h.call('manage_app', { action: 'stop' });
     ok(await h.call('launch_app'));
     if (screen !== 'home')
       ok(await h.call('open_link', { url: `appdyno-fixture://open/${screen}` }));
@@ -549,7 +551,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   });
 
   it("opens a link of the app's own on the stopped app in one call, with the app's screen", async () => {
-    ok(await h.call('terminate_app'));
+    ok(await h.call('manage_app', { action: 'stop' }));
     const r = ok(await h.call('open_link', { url: 'appdyno-fixture://open/list', read: 'full' }));
     expect(r.data.foreground).toBe(APP);
     expect(r.text).toContain('Product 1');
@@ -590,16 +592,18 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   });
 
   it('manages apps: permissions, launch with arguments, clear, uninstall and install', async () => {
-    ok(await h.call('app', { action: 'grant', service: 'photos' }));
-    ok(await h.call('app', { action: 'revoke', service: 'photos' }));
+    ok(await h.call('manage_app', { action: 'grant', service: 'photos' }));
+    ok(await h.call('manage_app', { action: 'revoke', service: 'photos' }));
     ok(await h.call('launch_app', { args: ['-mode', 'test'], env: { FIXTURE_VAR: '1' } }));
-    ok(await h.call('app', { action: 'clear' }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
-    ok(await h.call('app', { action: 'uninstall' }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    ok(await h.call('app', { action: 'install', path: SIM_FIXTURE }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
-    expect((await h.call('app', { action: 'install', path: '/tmp/none.app' })).error).toBe(true);
+    ok(await h.call('manage_app', { action: 'clear' }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('stopped');
+    ok(await h.call('manage_app', { action: 'uninstall' }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('not_installed');
+    ok(await h.call('manage_app', { action: 'install', path: SIM_FIXTURE }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('stopped');
+    expect((await h.call('manage_app', { action: 'install', path: '/tmp/none.app' })).error).toBe(
+      true,
+    );
   });
 
   it('changes and restores dark mode, text size, reduce motion and locale', async () => {
@@ -641,7 +645,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   // neither leaves anything to read back: what stands here is that the simulator takes them
   it('takes a push and a biometric result with no refusal', async () => {
     // on its own: the app there and running, and allowed notifications by its own prompt, which comes once an install
-    ok(await h.call('app', { action: 'install', path: SIM_FIXTURE }));
+    ok(await h.call('manage_app', { action: 'install', path: SIM_FIXTURE }));
     await open('push');
     ok(await h.call('tap', { selector: { id: 'ask_notifications' } }));
     const asked = await h.call('wait_for', {
@@ -659,7 +663,7 @@ const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
 describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
   let h: ReturnType<typeof harness>;
   const open = async (screen: string) => {
-    await h.call('terminate_app');
+    await h.call('manage_app', { action: 'stop' });
     ok(await h.call('launch_app'));
     if (screen !== 'home')
       ok(await h.call('open_link', { url: `appdyno-fixture://open/${screen}` }));
@@ -684,20 +688,22 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
   });
 
   it('lists apps and their state, launches with an environment, uninstalls and installs', async () => {
-    const mine = ok(await h.call('app', { action: 'list' }));
+    const mine = ok(await h.call('manage_app', { action: 'list' }));
     expect(mine.text).toContain(APP);
-    expect(ok(await h.call('app', { action: 'list', all: true })).text).toContain(
+    expect(ok(await h.call('manage_app', { action: 'list', all: true })).text).toContain(
       'com.apple.Preferences',
     );
     ok(await h.call('launch_app', { args: ['-mode', 'test'], env: { FIXTURE_VAR: '1' } }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('foreground');
-    ok(await h.call('terminate_app'));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
-    ok(await h.call('app', { action: 'uninstall' }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    ok(await h.call('app', { action: 'install', path: iphoneFixture }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
-    expect((await h.call('app', { action: 'install', path: '/tmp/none.app' })).error).toBe(true);
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('foreground');
+    ok(await h.call('manage_app', { action: 'stop' }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('stopped');
+    ok(await h.call('manage_app', { action: 'uninstall' }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('not_installed');
+    ok(await h.call('manage_app', { action: 'install', path: iphoneFixture }));
+    expect(ok(await h.call('manage_app', { action: 'state' })).data.state).toBe('stopped');
+    expect((await h.call('manage_app', { action: 'install', path: '/tmp/none.app' })).error).toBe(
+      true,
+    );
   }, 240_000);
 
   it('says what an iPhone cannot do, and why', async () => {

@@ -22,7 +22,7 @@ const ok = <A extends Answer>(r: A) => {
 function keysOf(get: () => Call) {
   const call: Call = (n, a) => get()(n, a);
   const form = async () => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     ok(await call('open_link', { url: 'appdyno-fixture://open/form' }));
   };
@@ -73,7 +73,7 @@ function keysOf(get: () => Call) {
     ok(await call('press_key', { key: 'delete' }));
     ok(await reads('x'));
     ok(await call('press_key', { key: 'escape' }));
-    expect(ok(await call('device_info')).data.foreground).toBe(APP);
+    expect(ok(await call('list_devices', { selected: true })).data.foreground).toBe(APP);
   });
 }
 
@@ -81,7 +81,7 @@ function keysOf(get: () => Call) {
 function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 'search', RegExp>) {
   const call: Call = (n, a) => get()(n, a);
   const opens = async (key: string, shown: RegExp) => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     try {
       const r = ok(await call('press_key', { key, read: 'full' }));
@@ -101,7 +101,7 @@ function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 's
   it('opens Spotlight by name', () => opens('spotlight', shows.search));
 
   it('reads the app again once home has closed a view over it', async () => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     ok(await call('press_key', { key: 'control_center' }));
     await call('press_key', { key: 'home' });
@@ -121,7 +121,7 @@ describe.skipIf(!ANDROID)('keys on Android', () => {
   afterAll(() => o.ctx.close());
   keysOf(() => o.call);
   it('leaves a field by an arrow, and the next key lands in the next field', async () => {
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     ok(await o.call('launch_app'));
     ok(await o.call('open_link', { url: 'appdyno-fixture://open/form' }));
     ok(await o.call('type_text', { selector: { id: FIELD }, text: 'a' }));
@@ -167,7 +167,7 @@ describe.skipIf(!IPHONE)('keys on an iPhone', () => {
     o = await onIphone(APP);
   }, 300_000);
   afterAll(async () => {
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 60_000);

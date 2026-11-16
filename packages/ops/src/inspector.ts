@@ -2,7 +2,7 @@ import { asName, onLine } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { DoneOut } from './schemas.js';
-import { ACT, defineOp, reply, ToolError } from './tool.js';
+import { ACT, definePart, reply, ToolError } from './tool.js';
 
 const InspectorOut = DoneOut.extend({
   elements: z
@@ -12,11 +12,8 @@ const InspectorOut = DoneOut.extend({
 
 export function inspectorOps(ctx: ServerContext) {
   return [
-    defineOp({
+    definePart({
       name: 'inspector',
-      title: 'Accessibility inspector',
-      description:
-        "An iPhone's screen with no runner, by its own accessibility service: list (words and ids, no places), press (name: an id or words listed).",
       input: z
         .object({ action: z.enum(['list', 'press']), name: z.string().max(200).optional() })
         .strict(),

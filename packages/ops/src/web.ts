@@ -4,7 +4,7 @@ import type { ServerContext } from './context.js';
 import { checkApp, redactLog } from './policy.js';
 import { WebOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ELEMENTS = 200;
 const MAX_ANSWER = 20_000;
@@ -149,11 +149,8 @@ export function webOps(ctx: ServerContext) {
   };
 
   return [
-    defineOp({
+    definePart({
       name: 'webview',
-      title: 'Web views',
-      description:
-        "Inside a debuggable app's web view: elements (the DOM, at tap coordinates), click (selector: CSS), eval (js). page: id or part of a title or URL.",
       input: z
         .object({
           action: z.enum(['pages', 'elements', 'click', 'eval']),

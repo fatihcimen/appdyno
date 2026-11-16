@@ -8,20 +8,23 @@ import { ToolError } from './tool.js';
  * ahead only on a person's yes, or by the flag a person put in the server's own command line.
  */
 export const DATA_LOSS = {
-  'app uninstall': (app: string) => [
+  'manage_app uninstall': (app: string) => [
     `Uninstall ${app}`,
     'The app and all it keeps there are lost for good',
   ],
-  'app clear': (app: string) => [`Clear the data of ${app}`, 'All it keeps there is lost for good'],
-  'app replace_data': (app: string) => [
+  'manage_app clear': (app: string) => [
+    `Clear the data of ${app}`,
+    'All it keeps there is lost for good',
+  ],
+  'transfer_files push': (app: string) => [
     `Replace the data of ${app} with a folder's`,
     'All it keeps there now is lost for good',
   ],
-  'app revoke': (app: string, service = '') => [
+  'manage_app revoke': (app: string, service = '') => [
     `Revoke ${service} from ${app}`,
     'The permission it was given is lost until it is granted again',
   ],
-  'app grant': (app: string, service = '') => [
+  'manage_app grant': (app: string, service = '') => [
     `Grant ${service} to ${app}, which here resets it to ask`,
     'The answer the person gave is lost, and the app asks again',
   ],
@@ -34,7 +37,7 @@ export const DATA_LOSS = {
 export type DataLoss = keyof typeof DATA_LOSS;
 
 /** What loses data only on some devices, and on which: a driver says so of its own. */
-const ONLY: Partial<Record<DataLoss, string>> = { 'app grant': 'on an iPhone' };
+const ONLY: Partial<Record<DataLoss, string>> = { 'manage_app grant': 'on an iPhone' };
 
 /** Each, as the server's instructions name them. */
 export const DATA_LOSS_WORDS = Object.keys(DATA_LOSS)
@@ -60,12 +63,12 @@ export async function approveBuild(policy: Policy, s: Session, project: string) 
   if (policy.allowBuild) return;
   await askPerson(
     s,
-    'app build_and_run',
+    'manage_app build_and_run',
     [
       `Build ${project} on this Mac and run what it makes`,
       "Its build runs the project's own scripts on this Mac, with all that this user may do",
     ],
-    "a person builds it, and app install takes what the build made; or a person allows builds ahead in this server's own command line: --allow-build (APPDYNO_ALLOW_BUILD=1)",
+    "a person builds it, and manage_app install takes what the build made; or a person allows builds ahead in this server's own command line: --allow-build (APPDYNO_ALLOW_BUILD=1)",
   );
 }
 

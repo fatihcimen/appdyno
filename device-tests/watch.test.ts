@@ -29,7 +29,7 @@ const ok = <A extends Answer>(r: A) => {
 function watchOf(get: () => Call, ctx: () => ServerContext, serial: string) {
   const call: Call = (n, a) => get()(n, a);
   const open = async (screen: string) => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     ok(await call('open_link', { url: `appdyno-fixture://open/${screen}`, read: 'none' }));
     await pause(1_000);
@@ -122,7 +122,7 @@ describe.skipIf(!IPHONE)('a watch on an iPhone', () => {
     o = await onIphone(APP, driver.iphoneProvider());
   }, 300_000);
   afterAll(async () => {
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 60_000);

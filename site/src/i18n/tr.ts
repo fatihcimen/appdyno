@@ -42,7 +42,7 @@ export const tr: Words = {
     done: 'bitti',
     idle: 'Yukarıdan bir iş seçin. Çağrılar ve yanıtlar burada görünür.',
     you: 'siz',
-    tools: '48 aracın tümünü görün',
+    tools: '42 aracın tümünü görün',
     example: 'Örnek bir oturum: sayılar örnektir.',
     app: {
       name: 'Beans',

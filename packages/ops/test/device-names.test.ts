@@ -58,7 +58,7 @@ describe('use_device by what a person calls the device', () => {
     const byName = context({ devices: /^bench-sim$/ });
     expect((await byName.call('use_device', { device: 'bench-sim' })).data.serial).toBe(SIM);
     // and its session after it, which goes by its serial
-    expect((await byName.call('device_info')).data.serial).toBe(SIM);
+    expect((await byName.call('list_devices', { selected: true })).data.serial).toBe(SIM);
   });
 
   it('opens a window on one the allow list names by its name, as every op past use_device does', async () => {

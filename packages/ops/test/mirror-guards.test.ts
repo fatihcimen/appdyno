@@ -78,13 +78,13 @@ describe('the activity of a device', () => {
     await wrap(op('type_text')).handler({ text: 'hello there' });
     await wrap(op('tap')).handler({ selector: { text: 'hunter2' } });
     await expect(
-      wrap(op('terminate_app', () => Promise.reject(new Error('nope')))).handler({}),
+      wrap(op('manage_app', () => Promise.reject(new Error('nope')))).handler({ action: 'stop' }),
     ).rejects.toThrow('nope');
     const lines = readActivity();
     expect(lines.map((l) => [l.tool, l.ok])).toEqual([
       ['type_text', true],
       ['tap', true],
-      ['terminate_app', false],
+      ['manage_app', false],
     ]);
     expect(JSON.stringify(lines[0]?.args)).toContain('(11 characters)');
     expect(JSON.stringify(lines)).not.toContain('hello there');

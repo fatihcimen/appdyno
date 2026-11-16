@@ -26,14 +26,22 @@ const SEARCHED: Record<string, string> = {
   'long press': 'gesture',
   landscape: 'set_orientation',
   gps: 'set_location',
-  install: 'app',
-  logcat: 'logs',
-  anr: 'crashes',
+  install: 'manage_app',
+  'file transfer': 'transfer_files',
+  download: 'transfer_files',
+  upload: 'transfer_files',
+  logcat: 'read_logs',
+  anr: 'read_logs',
+  crash: 'read_logs',
   'screen mirror': 'show_mirror',
   'network traffic': 'capture_network',
   mock: 'capture_network',
   throttle: 'capture_network',
-  'visual regression': 'visual',
+  'visual regression': 'check_screen',
+  'accessibility audit': 'check_screen',
+  'web view': 'inspect_app',
+  'react native': 'inspect_app',
+  video: 'record_session',
   'accessibility tree': 'screen',
   'view hierarchy': 'screen',
   performance: 'perf_snapshot',
@@ -87,7 +95,9 @@ it('names in the docs and in its instructions each action that asks the person f
   const listed = [...section.matchAll(/^- `([a-z_]+ [a-z_]+)`:/gm)].map((m) => m[1]);
   expect(listed.sort()).toEqual(Object.keys(DATA_LOSS).sort());
   expect(INSTRUCTIONS).toContain(`${DATA_LOSS_WORDS} ask the person first.`);
-  expect(DATA_LOSS_WORDS).toContain('app revoke, app grant on an iPhone, device_setting keychain');
+  expect(DATA_LOSS_WORDS).toContain(
+    'manage_app revoke, manage_app grant on an iPhone, device_setting keychain',
+  );
 });
 
 it('lists the same tools on both revisions, byte for byte, and says the same of itself', async () => {
@@ -141,7 +151,7 @@ it('keeps the tool catalog within its budget', async () => {
     assert(property, `${op} has ${name}`);
     return property.description;
   };
-  expect(flag('crashes', 'app')).toBe('default: the selected app');
+  expect(flag('read_logs', 'app')).toBe('default: the selected app');
   expect(flag('perf_snapshot', 'scenario')).toBe('kept under this name');
   expect(flag('perf_launch', 'probe')).toBe('iOS simulator: frame probe; relaunches the app');
   // a limit stays out of the catalog, but the words of a tool do not deny one

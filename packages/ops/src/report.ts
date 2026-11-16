@@ -17,7 +17,7 @@ import {
   type RunningFlight,
 } from './timeline/flight.js';
 import { startTimeline } from './timeline/run.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 import { inside } from './writes.js';
 
 /** Sources run in this process, so one that ends with the command has nothing to give. */
@@ -155,11 +155,8 @@ export function reportFor(ctx: ServerContext) {
   };
 
   const ops = () => [
-    defineOp({
+    definePart({
       name: 'report',
-      title: 'Session report',
-      description:
-        "Test report, index.html: steps, video, logs, crashes, measurements; secrets hidden. start, until stop or the session's end; write: now. flight: last seconds, kept on a crash or stall.",
       input: z
         .object({
           action: z.enum(['start', 'timeline', 'flight', 'write', 'stop']),

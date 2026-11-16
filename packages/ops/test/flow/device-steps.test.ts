@@ -153,7 +153,11 @@ describe('screenshot, visual and setting steps', () => {
   it('takes the visual tool’s own picture once the screen holds still, as a recording saves the baseline a replay compares', async () => {
     const looks = settling(3);
     const call = callerOf(context());
-    await call('visual', { action: 'baseline', name: 'home', dir: join(dir, 'state', 'b') });
+    await call('check_screen', {
+      check: 'visual_baseline',
+      name: 'home',
+      dir: join(dir, 'state', 'b'),
+    });
     expect(looks()).toBeGreaterThan(4);
   });
 
@@ -218,9 +222,9 @@ describe('screenshot, visual and setting steps', () => {
       await call('device_setting', { name: 'dark_mode', value: 'on' });
       await call('device_setting', { name: 'dark_mode' });
       await call('device_setting', { name: 'locale', value: 'tr-TR', app: 'org.example' });
-      await call('visual', { action: 'baseline', name: 'home', dir: baselines });
-      await call('visual', {
-        action: 'compare',
+      await call('check_screen', { check: 'visual_baseline', name: 'home', dir: baselines });
+      await call('check_screen', {
+        check: 'visual',
         name: 'home',
         dir: baselines,
         tolerance: 0.5,
@@ -263,7 +267,7 @@ setting restore
       await call('device_setting', { name: 'shake' });
       await call('device_setting', { name: 'memory_warning' });
       await call('device_setting', { name: 'memory_warning', value: 'RUNNING_LOW' });
-      await call('terminate_app', { background: true });
+      await call('manage_app', { action: 'stop', background: true });
     });
     expect(text).toBe(`app dev.app
 

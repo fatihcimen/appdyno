@@ -40,7 +40,7 @@ export const en = {
     done: 'done',
     idle: 'Pick a job above. The calls and answers show here.',
     you: 'you',
-    tools: 'See all 48 tools',
+    tools: 'See all 42 tools',
     example: 'An example session: its numbers are examples.',
     app: {
       name: 'Beans',

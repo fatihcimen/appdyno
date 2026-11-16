@@ -307,8 +307,8 @@ describe('failed answers', () => {
       (await call(name, args)).structuredContent?.code;
     expect(await code('press_key', { key: 'home' })).toBe('POLICY_DENIED');
     expect(await code('clipboard', { text: 'a s3cr3t b' })).toBe('POLICY_DENIED');
-    expect(await code('logs')).toBe('UNSUPPORTED');
-    expect(await code('crashes')).toBe('UNSUPPORTED');
+    expect(await code('read_logs')).toBe('UNSUPPORTED');
+    expect(await code('read_logs', { source: 'crashes' })).toBe('UNSUPPORTED');
     expect(await code('run_flow', { action: 'stop' })).toBe('NOT_FOUND');
   });
 });

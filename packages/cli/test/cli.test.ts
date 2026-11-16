@@ -47,17 +47,19 @@ describe('commands from the operations', () => {
     );
   });
 
-  it('takes the first bare word of an op with actions as its action', async () => {
-    const r = await run('report', 'stop');
+  it('takes the first bare words of an op as its action, and what else it must be told from a list', async () => {
+    const r = await run('record-session', 'report', 'stop');
     expect(r.code).toBe(1);
     expect(r.err.join('')).toMatch(/no report is open/);
-    expect((await run('report', 'nothing')).err.join('')).toMatch(
+    expect((await run('record-session', 'report', 'nothing')).err.join('')).toMatch(
       /--action: Invalid option: expected one of "start"\|/,
     );
-    expect((await run('report', 'stop', 'stop')).err.join('')).toMatch(/unexpected word: stop/);
-    // an action app had once says where it went
-    expect((await run('app', 'launch')).err.join('')).toMatch(
-      /--action: app has no launch: launch_app starts an app, and with restart: true starts it fresh/,
+    expect((await run('record-session', 'report', 'stop', 'stop')).err.join('')).toMatch(
+      /unexpected word: stop/,
+    );
+    // what a caller reaches for there says where it is
+    expect((await run('manage-app', 'launch')).err.join('')).toMatch(
+      /--action: manage_app has no launch: launch_app starts an app, and with restart: true starts it fresh/,
     );
   });
 
@@ -220,7 +222,7 @@ describe('commands from the operations', () => {
     const help = (await run('use-device', '--help')).out.join('\n');
     expect(help.match(/^ {2}--device /gm)).toHaveLength(1);
     expect((await run('tap', '--help')).out.join('\n')).toContain('--device <serial>');
-    expect((await run('app', '--help')).out.join('\n')).toContain('--yes  yes to what');
+    expect((await run('manage-app', '--help')).out.join('\n')).toContain('--yes  yes to what');
     expect((await run('tap', '--help')).out.join('\n')).not.toContain('--yes');
   });
 
@@ -327,8 +329,8 @@ describe('commands from the operations', () => {
     expect(cliSessionFile('/work/one')).not.toBe(cliSessionFile('/work/two'));
     await inFolder('/work/one', 'use-device', '--device', device.serial);
     await inFolder('/work/two', 'use-device', '--device', other.serial);
-    expect(await inFolder('/work/one', 'device-info')).toContain(device.serial);
-    expect(await inFolder('/work/two', 'device-info')).toContain(other.serial);
+    expect(await inFolder('/work/one', 'list-devices', '--selected')).toContain(device.serial);
+    expect(await inFolder('/work/two', 'list-devices', '--selected')).toContain(other.serial);
   });
 
   it('prints a refusal and exits 1', async () => {
@@ -441,7 +443,7 @@ describe('a command that loses data', () => {
       }),
     );
     const err: string[] = [];
-    const code = await must(commandsFor(ops).app, 'app').run(argv, {
+    const code = await must(commandsFor(ops)['manage-app'], 'manage-app').run(argv, {
       out: () => undefined,
       err: (s) => err.push(s),
       ...(answer !== undefined && {

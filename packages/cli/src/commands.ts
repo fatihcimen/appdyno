@@ -103,7 +103,12 @@ const camel = (flag: string) => flag.replace(/-([a-z])/g, (_, c: string) => c.to
 
 /** `--flag value` and `--json '{...}'` as the op's arguments, typed by its input schema. */
 function parse(op: Op, argv: string[]) {
-  const { properties = {} } = schemaOf(op);
+  const { properties = {}, required = [] } = schemaOf(op);
+  // `manage-app stop`, `record-session video start`: the first bare words are the op's action and what else it must
+  // be told from a list, in its own order; one it has no place for the op refuses, as it does over MCP
+  const leading = Object.keys(properties).filter(
+    (k) => properties[k]?.enum && (k === 'action' || required.includes(k)),
+  );
   // a selector's words as flags: taken, so that the op refuses them as it does over MCP, saying where they go
   const words = properties.selector?.properties ?? {};
   const json = (flag: string, word: string) => {
@@ -118,9 +123,9 @@ function parse(op: Op, argv: string[]) {
   let yes = false;
   for (let i = 0; i < argv.length; i++) {
     const word = must(argv[i], 'a word');
-    // `record start`: the first bare word of an op with actions, which the op refuses as it does over MCP where it has none
-    if (i === 0 && !word.startsWith('--') && properties.action?.enum) {
-      args.action = word;
+    const place = leading[i];
+    if (place && !word.startsWith('--')) {
+      args[place] = word;
       continue;
     }
     if (!word.startsWith('--')) throw new ToolError(`unexpected word: ${word}`, 'INVALID_ARGUMENT');

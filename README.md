@@ -77,7 +77,7 @@ There is no second call to look, and no fixed sleep: an answer says `settled` wh
 | **Flows.** What an agent did once runs again with no model, on another device, and in CI.                                                                                                                                                                                                  | `flow`                                                                 |
 | **A person, too.** A live window you can touch while the agent drives. When only a person can go on, such as at Face ID, the agent asks one and waits until they say done.                                                                                                                 | `mirror` `hand_off`                                                    |
 
-All 48 tools are in [Tools](docs/reference/tools.md). Each is also [a command](docs/reference/cli.md), and a call in [the library](docs/reference/library.md).
+All 42 tools are in [Tools](docs/reference/tools.md). Each is also [a command](docs/reference/cli.md), and a call in [the library](docs/reference/library.md).
 
 ### Push notifications and links
 

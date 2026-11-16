@@ -4,7 +4,7 @@ import { type ActParams, type ErrorCode, type Tree } from '@appdyno/protocol';
 import {
   DEFAULT_POLICY,
   ServerContext,
-  type OpData,
+  type OpFields,
   type OpName,
   type Policy,
 } from '../../src/index.js';
@@ -19,7 +19,7 @@ export type Result = {
 };
 
 /** What a tool answered, as this server writes it: its output, or a refusal's code and hint; any of it may be missing. */
-export type Answer<N extends OpName> = Partial<OpData<N>> & {
+export type Answer<N extends OpName> = Partial<OpFields<N>> & {
   code?: ErrorCode;
   hint?: string;
   dispatched?: boolean | 'unknown';

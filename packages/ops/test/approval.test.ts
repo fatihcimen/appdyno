@@ -23,11 +23,17 @@ type Kind = { grantResets?: boolean };
 
 /** Each action that loses data, its call, what the driver is asked to do by it, and the device it loses data on. */
 const GATED: [DataLoss, string, Record<string, unknown>, string, Kind?][] = [
-  ['app uninstall', 'app', { action: 'uninstall' }, 'uninstall'],
-  ['app clear', 'app', { action: 'clear' }, 'clear'],
-  ['app replace_data', 'app', { action: 'replace_data', path: folder }, 'replace'],
-  ['app revoke', 'app', { action: 'revoke', service: 'camera' }, 'revoke'],
-  ['app grant', 'app', { action: 'grant', service: 'camera' }, 'grant', { grantResets: true }],
+  ['manage_app uninstall', 'manage_app', { action: 'uninstall' }, 'uninstall'],
+  ['manage_app clear', 'manage_app', { action: 'clear' }, 'clear'],
+  ['transfer_files push', 'transfer_files', { action: 'push', path: folder }, 'replace'],
+  ['manage_app revoke', 'manage_app', { action: 'revoke', service: 'camera' }, 'revoke'],
+  [
+    'manage_app grant',
+    'manage_app',
+    { action: 'grant', service: 'camera' },
+    'grant',
+    { grantResets: true },
+  ],
   ['device_setting keychain', 'device_setting', { name: 'keychain', value: 'reset' }, 'keychain'],
 ];
 
@@ -173,7 +179,9 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
   it('takes no argument, and no step, for an answer', async () => {
     const { call, done } = await on();
     for (const word of ['yes', 'approved', 'confirm', 'allowDataLoss'])
-      expect((await call('app', { action: 'clear', [word]: true })).code).toBe('INVALID_ARGUMENT');
+      expect((await call('manage_app', { action: 'clear', [word]: true })).code).toBe(
+        'INVALID_ARGUMENT',
+      );
     const r = await call('run_steps', {
       steps: [{ tool: 'device_setting', name: 'keychain', value: 'reset' }],
     });
@@ -271,7 +279,7 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
 
     it("builds on the person's yes alone, asked with the project and that its scripts run on this Mac", async () => {
       const { call, done, asked, serial } = await on({ answer: 'accept' });
-      const r = await call('app', build);
+      const r = await call('manage_app', build);
       expect(r.error ? r.text : '').toBe('');
       expect(done).toEqual(['build', 'launch']);
       expect(asked).toEqual([
@@ -282,32 +290,35 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
     it('is asked whatever flag lets data be lost, and builds nothing on a no or with nobody to ask', async () => {
       const policy = { allowDataLoss: 'all' as const, allowPower: 'all' as const };
       const no = await on({ policy, answer: 'decline' });
-      expect((await no.call('app', build)).code).toBe('PERMISSION_REQUIRED');
+      expect((await no.call('manage_app', build)).code).toBe('PERMISSION_REQUIRED');
       expect(no.asked).toHaveLength(1);
       expect(no.done).toEqual([]);
       const nobody = await on({ policy });
-      expect((await nobody.call('app', build)).text).toBe(
-        "PERMISSION_REQUIRED: app build_and_run asks the person first, and this client cannot ask: nothing was done\nhint: a person builds it, and app install takes what the build made; or a person allows builds ahead in this server's own command line: --allow-build (APPDYNO_ALLOW_BUILD=1)",
+      expect((await nobody.call('manage_app', build)).text).toBe(
+        "PERMISSION_REQUIRED: manage_app build_and_run asks the person first, and this client cannot ask: nothing was done\nhint: a person builds it, and manage_app install takes what the build made; or a person allows builds ahead in this server's own command line: --allow-build (APPDYNO_ALLOW_BUILD=1)",
       );
       expect(nobody.done).toEqual([]);
     });
 
     it('builds with nothing asked where the person who started the server allowed builds, in its folders and under no allowlist', async () => {
       const ahead = await on({ policy: { allowBuild: true }, answer: 'decline' });
-      expect((await ahead.call('app', build)).error).toBe(false);
+      expect((await ahead.call('manage_app', build)).error).toBe(false);
       expect(ahead.asked).toEqual([]);
       expect(ahead.done).toEqual(['build', 'launch']);
       const outside = await on({ policy: { allowBuild: true } });
-      const far = await outside.call('app', { ...build, path: join(folder, 'My.xcodeproj') });
+      const far = await outside.call('manage_app', {
+        ...build,
+        path: join(folder, 'My.xcodeproj'),
+      });
       expect(far.code).toBe('POLICY_DENIED');
       const listed = await on({ policy: { allowBuild: true, apps: ['dev.app'] } });
-      expect((await listed.call('app', build)).code).toBe('POLICY_DENIED');
+      expect((await listed.call('manage_app', build)).code).toBe('POLICY_DENIED');
       expect([...outside.done, ...listed.done]).toEqual([]);
     });
 
     it('builds no project outside the folders the server writes in, and asks nobody about one', async () => {
       const { call, done, asked } = await on({ answer: 'accept' });
-      const r = await call('app', { ...build, path: join(folder, 'My.xcodeproj') });
+      const r = await call('manage_app', { ...build, path: join(folder, 'My.xcodeproj') });
       expect(r.code).toBe('POLICY_DENIED');
       expect(asked).toEqual([]);
       expect(done).toEqual([]);
@@ -316,7 +327,7 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
 
   it("asks nothing of a grant that loses nothing, as a simulator's and Android's", async () => {
     const { call, done, asked } = await on({ answer: 'decline' });
-    expect((await call('app', { action: 'grant', service: 'camera' })).error).toBe(false);
+    expect((await call('manage_app', { action: 'grant', service: 'camera' })).error).toBe(false);
     expect(done).toEqual(['grant']);
     expect(asked).toEqual([]);
   });

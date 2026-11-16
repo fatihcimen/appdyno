@@ -21,7 +21,7 @@ const ok = <A extends Answer>(r: A) => {
 function wordsOf(get: () => Call) {
   const call: Call = (n, a) => get()(n, a);
   const canvas = async () => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     ok(await call('open_link', { url: 'appdyno-fixture://open/canvas' }));
   };
@@ -75,7 +75,7 @@ describe.skipIf(!IPHONE)('a picture on an iPhone', () => {
     o = await onIphone(APP);
   }, 300_000);
   afterAll(async () => {
-    await o.call('terminate_app');
+    await o.call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
   }, 60_000);

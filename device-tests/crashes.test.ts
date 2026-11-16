@@ -31,13 +31,13 @@ const LIBS = join(
 /** Crashes the fixture by a button of its crash screen, and waits for a report that says `shows`. */
 const crash = async (call: Call, button: string, shows: RegExp) => {
   const since = new Date().toISOString();
-  await call('terminate_app');
+  await call('manage_app', { action: 'stop' });
   await call('launch_app');
   await call('open_link', { url: 'appdyno-fixture://open/crash' });
   await call('wait_for', { selector: { id: button }, timeoutMs: 8_000 });
   await call('tap', { selector: { id: button } });
   for (let i = 0; i < 40; i++) {
-    const { data } = await call('crashes', { since });
+    const { data } = await call('read_logs', { source: 'crashes', since });
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a refusal's data has no reports
     if (data.reports?.some((r) => shows.test(`${r.reason}\n${String(r.detail)}`))) return since;
     await sleep(500);
@@ -46,7 +46,7 @@ const crash = async (call: Call, button: string, shows: RegExp) => {
 };
 
 const report = async (call: Call, since: string, symbols?: string) => {
-  const r = await call('crashes', { since, ...(symbols && { symbols }) });
+  const r = await call('read_logs', { source: 'crashes', since, ...(symbols && { symbols }) });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a refusal's data has no reports
   return { ...r, report: r.data.reports?.[0] };
 };
@@ -86,7 +86,7 @@ describe.skipIf(!ANDROID)('a crash on an emulator', () => {
     assert(other.report);
     expect(other.report.detail).not.toContain('fixture_native_crash');
 
-    const none = await call('crashes', { since, symbols: '/no/such/folder' });
+    const none = await call('read_logs', { source: 'crashes', since, symbols: '/no/such/folder' });
     expect(none.data.code).toBe('NOT_FOUND');
     expect(none.text).toContain('no such folder of symbols');
   });
@@ -150,9 +150,12 @@ describe.skipIf(!SIMULATOR || !RELEASE)('a crash on a simulator', () => {
   });
 
   it('refuses a path with no dSYM', async () => {
-    const none = await call('crashes', { symbols: '/no/such/thing.dSYM' });
+    const none = await call('read_logs', { source: 'crashes', symbols: '/no/such/thing.dSYM' });
     expect(none.data.code).toBe('NOT_FOUND');
-    const empty = await call('crashes', { symbols: mkdtempSync(join(tmpdir(), 'appdyno-none-')) });
+    const empty = await call('read_logs', {
+      source: 'crashes',
+      symbols: mkdtempSync(join(tmpdir(), 'appdyno-none-')),
+    });
     expect(empty.text).toContain('no .dSYM under');
   });
 });

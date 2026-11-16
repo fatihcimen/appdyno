@@ -63,10 +63,10 @@ describe('report', () => {
 
   it('writes steps, screens and images, and loads nothing from anywhere', async () => {
     const { call } = connect();
-    await call('report', { action: 'start', dir });
+    await call('record_session', { kind: 'report', action: 'start', dir });
     await call('tap', { selector: { text: 'Form' } });
     await call('screen');
-    const r = await call('report', { action: 'stop' });
+    const r = await call('record_session', { kind: 'report', action: 'stop' });
     expect(r.data).toMatchObject({ steps: 2, file: join(dir, 'index.html') });
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     expect(html).toContain('Content-Security-Policy');
@@ -77,17 +77,19 @@ describe('report', () => {
     expect(html).toContain('src="shots/0001.jpg"');
     expect(html).not.toMatch(/<script|<link|https?:\/\/|<iframe/i);
     // ended: nothing more is kept
-    await expect(call('report', { action: 'stop' })).rejects.toThrow(/no report is open/);
+    await expect(call('record_session', { kind: 'report', action: 'stop' })).rejects.toThrow(
+      /no report is open/,
+    );
   });
 
   it("writes over no page of a folder's own: an index.html there already is said", async () => {
     const { call } = connect();
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'index.html'), 'kept');
-    await expect(call('report', { action: 'start', dir })).rejects.toThrow(
+    await expect(call('record_session', { kind: 'report', action: 'start', dir })).rejects.toThrow(
       /holds an index\.html already/,
     );
-    await expect(call('report', { action: 'write', dir })).rejects.toThrow(
+    await expect(call('record_session', { kind: 'report', action: 'write', dir })).rejects.toThrow(
       /holds an index\.html already/,
     );
     expect(readFileSync(join(dir, 'index.html'), 'utf8')).toBe('kept');
@@ -98,9 +100,9 @@ describe('report', () => {
       apps: { install: () => Promise.resolve(['passed a Play Protect warning for dev.app']) },
     });
     const { call } = connect(device);
-    await call('report', { action: 'start', dir });
-    await call('app', { action: 'install', path: '/tmp/a.apk' });
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'start', dir });
+    await call('manage_app', { action: 'install', path: '/tmp/a.apk' });
+    await call('record_session', { kind: 'report', action: 'stop' });
     for (const f of ['index.html', 'steps.jsonl'])
       expect(readFileSync(join(dir, f), 'utf8')).toContain(
         'passed a Play Protect warning for dev.app',
@@ -111,14 +113,14 @@ describe('report', () => {
     const device = new FakeDevice();
     const { call } = connect(device);
     device.screen = 'settings';
-    await call('report', { action: 'start', dir });
-    await call('report', { action: 'write' });
+    await call('record_session', { kind: 'report', action: 'start', dir });
+    await call('record_session', { kind: 'report', action: 'write' });
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     expect(html).toMatch(/10 elements/);
     expect(html).toContain('text &#34;Bluetooth&#34; 300,430');
     expect(html).not.toContain('inside rows');
     device.screen = 'doubled';
-    await call('report', { action: 'write' });
+    await call('record_session', { kind: 'report', action: 'write' });
     expect(readFileSync(join(dir, 'index.html'), 'utf8')).toMatch(
       /button &#34;General&#34; 540,350/,
     );
@@ -126,7 +128,7 @@ describe('report', () => {
 
   it('hides secrets in every text, and never writes what was typed', async () => {
     const { call, ctx } = connect();
-    await call('report', { action: 'start', dir });
+    await call('record_session', { kind: 'report', action: 'start', dir });
     await call('tap', { selector: { text: 'Form' } });
     await call('type_text', { selector: { text: 'Adınız' }, text: 'hidden-words' });
     await call('open_link', { url: `app://x?token=abc123&secret=${SECRET}` }).catch(
@@ -144,7 +146,7 @@ describe('report', () => {
 
   it('shows by its length what it does not know to name something, whatever the op', async () => {
     const { ctx, call } = connect();
-    await call('report', { action: 'start', dir });
+    await call('record_session', { kind: 'report', action: 'start', dir });
     const made = (annotations: ToolAnnotations) =>
       reportFor(ctx).wrap(
         defineOp({
@@ -175,7 +177,7 @@ describe('report', () => {
       params: ['A=hidden-param'],
     }).catch(() => undefined);
     await made(READ).handler({ text: 'on the screen' });
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
     const journal = readFileSync(join(dir, 'steps.jsonl'), 'utf8');
     for (const typed of ['hidden-words', 'hidden-deep', 'hidden-step', 'hidden-param'])
       expect(journal).not.toContain(typed);
@@ -188,9 +190,9 @@ describe('report', () => {
     const device = new ImagingDevice();
     const { call } = connect(device);
     device.screen = 'login';
-    await call('report', { action: 'start', dir });
+    await call('record_session', { kind: 'report', action: 'start', dir });
     await call('tap', { selector: { text: 'Add', index: 0 } });
-    await call('report', { action: 'write' });
+    await call('record_session', { kind: 'report', action: 'write' });
     const name = must(readdirSync(join(dir, 'shots'))[0], 'a shot');
     expect(name).toBe('0001.png');
     const img = must(decodePng(readFileSync(join(dir, 'shots', name))), 'its image');
@@ -203,9 +205,9 @@ describe('report', () => {
   it('leaves out an image it cannot paint over', async () => {
     const { call, device } = connect();
     device.screen = 'login';
-    await call('report', { action: 'start', dir });
+    await call('record_session', { kind: 'report', action: 'start', dir });
     await call('tap', { selector: { text: 'Add', index: 0 } });
-    const r = await call('report', { action: 'write' });
+    const r = await call('record_session', { kind: 'report', action: 'write' });
     expect(existsSync(join(dir, 'shots'))).toBe(true);
     expect(readdirSync(join(dir, 'shots'))).toEqual([]);
     expect(readFileSync(String(r.data.file), 'utf8')).not.toContain('<img');
@@ -213,7 +215,7 @@ describe('report', () => {
 
   it('writes a report of the screen as it is, with no start', async () => {
     const { call } = connect();
-    const r = await call('report', { action: 'write', dir });
+    const r = await call('record_session', { kind: 'report', action: 'write', dir });
     const html = readFileSync(String(r.data.file), 'utf8');
     expect(html).toContain('The screen now');
     expect(html).toContain('none kept');
@@ -222,8 +224,10 @@ describe('report', () => {
 
   it('refuses a second report, and writes the open one at the session end', async () => {
     const { call, ctx } = connect();
-    await call('report', { action: 'start', dir });
-    await expect(call('report', { action: 'start', dir })).rejects.toBeInstanceOf(ToolError);
+    await call('record_session', { kind: 'report', action: 'start', dir });
+    await expect(
+      call('record_session', { kind: 'report', action: 'start', dir }),
+    ).rejects.toBeInstanceOf(ToolError);
     await call('tap', { selector: { text: 'Form' } });
     expect(await ctx.end()).toEqual([]);
     expect(readFileSync(join(dir, 'index.html'), 'utf8')).toMatch(/>1<\/span>tap/);

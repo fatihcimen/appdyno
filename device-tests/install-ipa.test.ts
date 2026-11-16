@@ -36,14 +36,14 @@ describe.skipIf(!SIMULATOR)('an .ipa on a simulator', () => {
   const { call } = opsOn(simulatorProvider(), SIMULATOR, APP);
 
   it('installs what is built for a simulator', async () => {
-    ok(await call('app', { action: 'uninstall' }));
-    expect(ok(await call('app', { action: 'state' })).data.state).toBe('not_installed');
-    ok(await call('app', { action: 'install', path: ipa() }));
-    expect(ok(await call('app', { action: 'state' })).data.state).not.toBe('not_installed');
+    ok(await call('manage_app', { action: 'uninstall' }));
+    expect(ok(await call('manage_app', { action: 'state' })).data.state).toBe('not_installed');
+    ok(await call('manage_app', { action: 'install', path: ipa() }));
+    expect(ok(await call('manage_app', { action: 'state' })).data.state).not.toBe('not_installed');
   }, 120_000);
 
   it('refuses what is built for a phone, and says so', async () => {
-    const r = await call('app', { action: 'install', path: ipa('iPhoneOS') });
+    const r = await call('manage_app', { action: 'install', path: ipa('iPhoneOS') });
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toContain('is built for iPhoneOS');
   }, 60_000);
@@ -52,9 +52,9 @@ describe.skipIf(!SIMULATOR)('an .ipa on a simulator', () => {
 describe.skipIf(!IPHONE)('an .ipa on an iPhone', () => {
   it('installs what is signed for it, and refuses a simulator build', async () => {
     const { call, ctx } = await onIphone(APP);
-    ok(await call('app', { action: 'install', path: ipa(undefined, IPHONE_FIXTURE) }));
-    expect(ok(await call('app', { action: 'state' })).data.state).not.toBe('not_installed');
-    const r = await call('app', {
+    ok(await call('manage_app', { action: 'install', path: ipa(undefined, IPHONE_FIXTURE) }));
+    expect(ok(await call('manage_app', { action: 'state' })).data.state).not.toBe('not_installed');
+    const r = await call('manage_app', {
       action: 'install',
       path: ipa('iPhoneSimulator', IPHONE_FIXTURE),
     });

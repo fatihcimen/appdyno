@@ -86,7 +86,7 @@ function suite(
     ({ ctx, call } = on(device().provider, device().serial));
   });
   afterAll(async () => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     ctx.close();
   });
 

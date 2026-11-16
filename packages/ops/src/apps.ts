@@ -34,7 +34,7 @@ import { askLanguage } from './power.js';
 import { setCondition } from './settings.js';
 import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
-import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { ACT, defineOp, definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 /** The app the device says the link opens in, held to `app`; none where it cannot tell. */
 const openerOf = async (s: Session, href: string, app: string) => {
@@ -276,11 +276,8 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       },
     }),
     launchOp(ctx, { changing, afterChange }, { appNamed, notThere }),
-    defineOp({
+    definePart({
       name: 'terminate_app',
-      title: 'Terminate app',
-      description:
-        'Stop the app (force-stop). background: end it as the system ends a backgrounded app, its saved state kept.',
       input: z
         .object({ app: z.string().max(200).optional(), background: z.boolean().optional() })
         .strict(),

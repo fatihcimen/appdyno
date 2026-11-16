@@ -96,13 +96,13 @@ describe('report timeline', () => {
     const device = new TimedDevice();
     device.clockAheadMs = 5_000;
     const { call } = connect(device);
-    await call('report', { action: 'timeline', dir });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
     await call('tap', { x: 1, y: 1 });
     // well inside: a measured offset is a little off, and the page goes by it
     await pause(20);
     device.drawnAt = Date.now();
     await pause(20);
-    const r = await call('report', { action: 'stop' });
+    const r = await call('record_session', { kind: 'report', action: 'stop' });
     expect(r.data).toMatchObject({ timeline: join(dir, 'timeline.html') });
     expect(existsSync(join(dir, 'index.html'))).toBe(true);
     const page = pageOf(must(r.data.timeline, 'the timeline'));
@@ -131,7 +131,9 @@ describe('report timeline', () => {
     };
     spoil(device);
     const { call } = connect(device);
-    await expect(call('report', { action: 'timeline', dir })).rejects.toThrow('it will not start');
+    await expect(
+      call('record_session', { kind: 'timeline', action: 'start', dir }),
+    ).rejects.toThrow('it will not start');
     expect(filming.read(device.serial)).toBeUndefined();
     expect(traces).toBe(0);
   });
@@ -146,12 +148,12 @@ describe('report timeline', () => {
           ended++;
         });
       const { call } = connect(device);
-      await call('report', { action: 'timeline', dir });
+      await call('record_session', { kind: 'timeline', action: 'start', dir });
       await vi.advanceTimersByTimeAsync(179_000);
       expect(ended).toBe(0);
       await vi.advanceTimersByTimeAsync(2_000);
       expect(ended).toBe(1);
-      await call('report', { action: 'stop' });
+      await call('record_session', { kind: 'report', action: 'stop' });
     } finally {
       vi.useRealTimers();
     }
@@ -159,8 +161,8 @@ describe('report timeline', () => {
 
   it('carries the video inside the page, and says how large it came to', async () => {
     const { call } = connect();
-    await call('report', { action: 'timeline', dir });
-    const r = await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
+    const r = await call('record_session', { kind: 'report', action: 'stop' });
     expect(r.text).toContain('video inside it');
     expect(r.data.timelineBytes).toBeGreaterThan(1_000);
     expect(readFileSync(must(r.data.timeline, 'the timeline'), 'utf8')).toContain(
@@ -178,8 +180,8 @@ describe('report timeline', () => {
       Promise.reject(new DeviceError('UNSUPPORTED', 'no frames on a clock here'));
     device.logNote = 'no log on this device';
     const { call } = connect(device);
-    await call('report', { action: 'timeline', dir });
-    const r = await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
+    const r = await call('record_session', { kind: 'report', action: 'stop' });
     expect(r.text).toContain('no video: this phone records nothing');
     const page = pageOf(must(r.data.timeline, 'the timeline'));
     expect(page.noVideo).toBe('this phone records nothing');
@@ -194,8 +196,8 @@ describe('report timeline', () => {
     const logs = vi.spyOn(device, 'logs');
     const { call } = connect(device);
     const before = Date.now();
-    await call('report', { action: 'timeline', dir });
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
+    await call('record_session', { kind: 'report', action: 'stop' });
     const timed = must(
       logs.mock.calls.map(([q]) => q).find((q) => q.timed),
       'the timed read',
@@ -209,16 +211,16 @@ describe('report timeline', () => {
     device.appPid = device.fakePid;
     const logs = vi.spyOn(device, 'logs');
     const { call } = connect(device);
-    await call('report', { action: 'timeline', dir });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
     device.pid = undefined;
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
     expect(logs.mock.calls.map(([q]) => q).find((q) => q.timed)?.pid).toBe('4242');
   });
 
   it('is finished by the end of a session, as anything else it left', async () => {
     const device = new TimedDevice();
     const { call, ctx } = connect(device);
-    await call('report', { action: 'timeline', dir });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
     expect(await ctx.end()).toEqual([]);
     expect(device.ended).toBe(1);
     expect(openReports.read(device.serial)).toBeUndefined();
@@ -231,11 +233,11 @@ describe('report timeline', () => {
   it('stops once, however many ask', async () => {
     const device = new TimedDevice();
     const { call, ctx } = connect(device);
-    await call('report', { action: 'timeline', dir });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
     const running = must((await ctx.session()).timeline, 'the timeline');
     await Promise.all([running.finish(), running.finish()]);
     expect(device.ended).toBe(1);
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
     expect(device.ended).toBe(1);
   });
 
@@ -243,7 +245,7 @@ describe('report timeline', () => {
     const withCapture = async (defaults: ConstructorParameters<typeof ServerContext>[2] = {}) => {
       const device = new TimedDevice();
       const { call } = connect(device, defaults);
-      await call('report', { action: 'timeline', dir });
+      await call('record_session', { kind: 'timeline', action: 'start', dir });
       captures.write(device.serial, { via: 'probe', since: Date.now(), handle: {} });
       (device as { network?: unknown }).network = {
         read: () =>
@@ -258,7 +260,7 @@ describe('report timeline', () => {
             ],
           }),
       };
-      const r = await call('report', { action: 'stop' });
+      const r = await call('record_session', { kind: 'report', action: 'stop' });
       captures.remove(device.serial);
       return pageOf(must(r.data.timeline, 'the timeline')).network;
     };
@@ -281,12 +283,16 @@ describe('report timeline', () => {
   it('refuses a command line, which ends before there is anything to read', async () => {
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'session.json');
     const { call } = connect(new TimedDevice(), { storage: { remember } });
-    await expect(call('report', { action: 'timeline', dir })).rejects.toThrow(/appdyno timeline/);
+    await expect(
+      call('record_session', { kind: 'timeline', action: 'start', dir }),
+    ).rejects.toThrow(/appdyno timeline/);
   });
 
   it('refuses with no app to be about', async () => {
     const { call } = connect(new TimedDevice(), { app: undefined });
-    await expect(call('report', { action: 'timeline', dir })).rejects.toThrow(/select an app/);
+    await expect(
+      call('record_session', { kind: 'timeline', action: 'start', dir }),
+    ).rejects.toThrow(/select an app/);
   });
 
   it('refuses over a recording it would have to stop', async () => {
@@ -298,16 +304,18 @@ describe('report timeline', () => {
       since: new Date().toISOString(),
       file: join(dir, 'x.mp4'),
     });
-    await expect(call('report', { action: 'timeline', dir })).rejects.toThrow(
-      /a recording has run/,
-    );
+    await expect(
+      call('record_session', { kind: 'timeline', action: 'start', dir }),
+    ).rejects.toThrow(/a recording has run/);
   });
 
   it('leaves no report open when it could not start', async () => {
     const device = new TimedDevice();
     device.wallClock = () => Promise.reject(new DeviceError('DEVICE_GONE', 'it went away'));
     const { call } = connect(device);
-    await expect(call('report', { action: 'timeline', dir })).rejects.toThrow('it went away');
+    await expect(
+      call('record_session', { kind: 'timeline', action: 'start', dir }),
+    ).rejects.toThrow('it went away');
     expect(openReports.read(device.serial)).toBeUndefined();
   });
 
@@ -315,9 +323,9 @@ describe('report timeline', () => {
     const device = new TimedDevice();
     const shots = vi.spyOn(device, 'screenshot');
     const { call } = connect(device);
-    await call('report', { action: 'timeline', dir });
+    await call('record_session', { kind: 'timeline', action: 'start', dir });
     await call('tap', { x: 1, y: 1 });
-    await call('report', { action: 'stop' });
+    await call('record_session', { kind: 'report', action: 'stop' });
     expect(shots).not.toHaveBeenCalled();
   });
 });

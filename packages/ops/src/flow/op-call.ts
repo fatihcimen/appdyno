@@ -36,10 +36,10 @@ function visualCall(st: FlowStep, at: StepPlace): Record<string, unknown> {
     throw new ToolError(
       `${st.file ?? at.file}:${st.line}: no baseline ${file}: appdyno test or flow run with --update-baselines saves it`,
       'NOT_FOUND',
-      `or visual action baseline with dir ${dir}`,
+      `or check_screen with check visual_baseline and dir ${dir}`,
     );
   return {
-    action: at.update ? 'baseline' : 'compare',
+    check: at.update ? 'visual_baseline' : 'visual',
     name: st.args.name,
     dir,
     ...defined({
@@ -86,7 +86,10 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
       ];
     }
     case 'stop':
-      return ['terminate_app', defined({ app: a.app, background: a.background })];
+      return [
+        'manage_app',
+        { action: 'stop', ...defined({ app: a.app, background: a.background }) },
+      ];
     case 'tap':
       return ['tap', target];
     case 'long_press':
@@ -146,7 +149,7 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
         { file: join(at.shots, `${String(a.name)}.png`), overwrite: true, inline: false },
       ];
     case 'visual':
-      return ['visual', visualCall(st, at)];
+      return ['check_screen', visualCall(st, at)];
     case 'setting':
       return [
         'device_setting',

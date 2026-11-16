@@ -95,7 +95,7 @@ describe('iOS simulators', () => {
     const used = await t.textOf('use_device', { device: '75505767-61E2-40F2-8FC6-8AFE20EE25C9' });
     expect(used.text).toContain('iPhone 16, iOS 18.2');
     expect(used.text).not.toContain('Android');
-    const info = await t.textOf('device_info');
+    const info = await t.textOf('list_devices', { selected: true });
     expect(info.text).toContain('iPhone 16, iOS 18.2');
     expect(info.text).not.toMatch(/Android|SDK/);
   });

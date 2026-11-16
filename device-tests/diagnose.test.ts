@@ -18,7 +18,7 @@ import {
   DEFAULT_POLICY,
   ServerContext,
   ToolError,
-  type OpData,
+  type OpFields,
   type OpName,
   type ToolResult,
 } from '@appdyno/ops';
@@ -34,14 +34,14 @@ const textOf = (r: ToolResult) => r.blocks.map((b) => (b.type === 'text' ? b.tex
 type Call = <N extends OpName>(
   name: N,
   args?: Record<string, unknown>,
-) => Promise<ToolResult<OpData<N>>>;
+) => Promise<ToolResult<OpFields<N>>>;
 /** An operation as its tool calls it: through its input schema. */
 const caller = (ctx: ServerContext): Call => {
   const ops = checkedOps(ctx);
   return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const op = ops[name];
     assert(op, name);
-    return (await op.handler(op.input.parse(args))) as ToolResult<OpData<N>>;
+    return (await op.handler(op.input.parse(args))) as ToolResult<OpFields<N>>;
   };
 };
 
@@ -124,10 +124,10 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
     const marker = `appdyno-mark-${Date.now()}`;
     await call('screen');
     await adb.exec(serial, `log -t appdyno-test ${marker}`);
-    const r = await call('logs', { level: 'verbose', maxLines: 50 });
+    const r = await call('read_logs', { level: 'verbose', limit: 50 });
     expect(textOf(r)).toContain(APP);
     expect(r.data.source).toMatch(/^logcat --pid=\d+/);
-    const old = await call('logs', { since: new Date(Date.now() + 60_000).toISOString() });
+    const old = await call('read_logs', { since: new Date(Date.now() + 60_000).toISOString() });
     expect(old.data.lines).toBe(0);
   });
 
@@ -159,11 +159,11 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
   });
 
   it('lists the crash with a summary and its file', async () => {
-    let r!: ToolResult<OpData<'crashes'>>;
+    let r!: ToolResult<OpFields<'read_logs'>>;
     let reports: { reason: string; detail?: string; file?: string }[] = [];
     // the stack comes from dropbox, written a moment after the exit
     for (let i = 0; i < 20 && !reports.some((x) => x.detail?.includes('shell-induced')); i++) {
-      r = await call('crashes', { limit: 3 });
+      r = await call('read_logs', { source: 'crashes', limit: 3 });
       ({ reports } = r.data);
       await pause(500);
     }
@@ -175,7 +175,7 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
 
   it('audits the screen', async () => {
     await call('launch_app', { read: 'none' });
-    const r = await call('audit', { maxIssues: 5 });
+    const r = await call('check_screen', { check: 'accessibility', maxIssues: 5 });
     expect(r.data.engine).toBe('rules');
     expect(textOf(r)).toMatch(/accessibility issue/);
   });
@@ -207,10 +207,10 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
   afterAll(() => ctx.close());
 
   it('reads the log of the app through the simulator', async () => {
-    const r = await call('logs', {
+    const r = await call('read_logs', {
       since: new Date(Date.now() - 120_000).toISOString(),
       level: 'info',
-      maxLines: 20,
+      limit: 20,
     });
     expect(r.data.source).toBe('simctl spawn log show');
     expect(r.data.lines).toBeGreaterThan(0);
@@ -238,7 +238,8 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
       expect((r as Error).message).toMatch(/the app died: /);
     let reports: { reason: string; file?: string }[] = [];
     for (let i = 0; i < 20 && reports.length === 0; i++) {
-      const c = await call('crashes', {
+      const c = await call('read_logs', {
+        source: 'crashes',
         since: new Date(Date.now() - 30_000).toISOString(),
         limit: 2,
       });
@@ -278,7 +279,7 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
   }, 240_000);
 
   it('says what it cannot read of a phone log, and how to read it', async () => {
-    const r = await call('logs');
+    const r = await call('read_logs');
     expect(r.data.source).toBe('devicectl');
     expect(r.data.lines).toBe(0);
     expect(textOf(r)).toMatch(/process launch --console/);
@@ -306,7 +307,8 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
     let reports: { reason: string; file?: string }[] = [];
     // the phone writes the report a moment after the death
     for (let i = 0; i < 20 && reports.length === 0; i++) {
-      const c = await call('crashes', {
+      const c = await call('read_logs', {
+        source: 'crashes',
         since: new Date(Date.now() - 120_000).toISOString(),
         limit: 2,
       });

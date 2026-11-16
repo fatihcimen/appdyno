@@ -57,11 +57,11 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
     const file = join(flows, `${name}.flow`);
     writeFileSync(file, `${[`app ${APP}`, ...steps].join('\n')}\n`);
     await fixtureInFront();
-    const started = await t.call('report', { action: 'timeline', dir });
+    const started = await t.call('record_session', { kind: 'timeline', action: 'start', dir });
     expect(started.error, started.text).toBe(false);
     console.log(started.text);
     const ran = await t.call('run_flow', { action: 'run', file });
-    const done = await t.call('report', { action: 'stop' });
+    const done = await t.call('record_session', { kind: 'report', action: 'stop' });
     expect(ran.error, ran.text).toBe(false);
     expect(done.error, done.text).toBe(false);
     console.log(done.text, 'host load', loadavg()[0]);
@@ -188,13 +188,13 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
     // this screen stalls once: a process that has shown it has nothing left to show
     await s.device.terminate(APP);
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-timeline-'));
-    const started = await t.call('report', { action: 'timeline', dir });
+    const started = await t.call('record_session', { kind: 'timeline', action: 'start', dir });
     expect(started.error, started.text).toBe(false);
     await s.device.openUrl('appdyno-fixture://open/list_stall', APP);
     await pause(1_000);
     for (let i = 0; i < 4; i++) await t.call('swipe', { direction: 'up' });
     await pause(1_000);
-    const done = await t.call('report', { action: 'stop' });
+    const done = await t.call('record_session', { kind: 'report', action: 'stop' });
     expect(done.error, done.text).toBe(false);
     console.log(done.text, 'host load', loadavg()[0]);
     assert(done.data.timeline);
@@ -228,13 +228,13 @@ describe.skipIf(!serial)('the flight recorder', () => {
   };
   /** What it kept while `act` ran, with the recorder off again whatever became of `act`. */
   const flying = async (act: () => Promise<void>) => {
-    const on = await t.call('report', { action: 'flight' });
+    const on = await t.call('record_session', { kind: 'flight', action: 'start' });
     expect(on.error, on.text).toBe(false);
     let off;
     try {
       await act();
     } finally {
-      off = await t.call('report', { action: 'stop' });
+      off = await t.call('record_session', { kind: 'report', action: 'stop' });
     }
     console.log(off.text, 'host load', loadavg()[0]);
     expect(off.data.saved).toHaveLength(1);
@@ -323,14 +323,14 @@ describe.skipIf(!udid)('the flight recorder on a simulator', () => {
     await s.device.terminate(APP);
     await s.device.launch(APP);
     await pause(1_500);
-    const on = await t.call('report', { action: 'flight' });
+    const on = await t.call('record_session', { kind: 'flight', action: 'start' });
     expect(on.error, on.text).toBe(false);
     await s.device.openUrl('appdyno-fixture://open/crash', APP);
     await pause(8_000);
     await t.call('screen');
     await t.call('tap', { selector: { id: 'crash' } });
     await pause(12_000);
-    const off = await t.call('report', { action: 'stop' });
+    const off = await t.call('record_session', { kind: 'report', action: 'stop' });
     console.log(off.text, 'host load', loadavg()[0]);
     expect(off.data.saved).toHaveLength(1);
     const saved = off.data.saved?.[0];

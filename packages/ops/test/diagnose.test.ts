@@ -24,7 +24,7 @@ describe('logs', () => {
     await call('screen');
     const before = Date.now();
     await call('tap', { x: 5, y: 2390 });
-    const r = await call('logs', { level: 'warn' });
+    const r = await call('read_logs', { level: 'warn' });
     expect(r.isError).toBeUndefined();
     expect(device.logAsked).toMatchObject({ app: 'dev.app', level: 'warn' });
     expect(device.logAsked?.since).toBeGreaterThanOrEqual(before);
@@ -53,11 +53,11 @@ describe('logs', () => {
     } as unknown as Device['events'];
     const { call } = await connect(device);
     await call('send_push', { type: 'background', data: { orderId: '43' }, read: 'none' });
-    await call('logs');
+    await call('read_logs');
     expect(device.logAsked?.since).toBeLessThanOrEqual(reached);
     await call('screen');
     await call('tap', { x: 5, y: 2390 });
-    await call('logs');
+    await call('read_logs');
     expect(device.logAsked?.since).toBeLessThanOrEqual(reached);
   });
 
@@ -65,12 +65,12 @@ describe('logs', () => {
     const device = new FakeDevice();
     device.logNote = 'devicectl cannot read this';
     const { call } = await connect(device);
-    await call('logs', { since: '2026-11-02T10:00:00Z' });
+    await call('read_logs', { since: '2026-11-02T10:00:00Z' });
     expect(device.logAsked?.since).toBe(Date.parse('2026-11-02T10:00:00Z'));
-    expect((await call('logs', { since: 'yesterday' })).structuredContent).toMatchObject({
+    expect((await call('read_logs', { since: 'yesterday' })).structuredContent).toMatchObject({
       code: 'INVALID_ARGUMENT',
     });
-    expect((await call('logs')).text).toContain('devicectl cannot read this');
+    expect((await call('read_logs')).text).toContain('devicectl cannot read this');
   });
 
   it('takes a time as long ago, 30s, 5m or 2h, for logs and crashes alike', async () => {
@@ -82,13 +82,13 @@ describe('logs', () => {
       ['2h', 7_200_000],
     ] as const) {
       const before = Date.now();
-      const r = await call('logs', { since });
+      const r = await call('read_logs', { since });
       expect(r.isError).toBeUndefined();
       expect(device.logAsked?.since).toBeGreaterThanOrEqual(before - ago);
       expect(device.logAsked?.since).toBeLessThanOrEqual(Date.now() - ago);
     }
-    expect((await call('crashes', { since: '5m' })).isError).toBeUndefined();
-    expect((await call('logs', { since: '5 minutes' })).structuredContent).toMatchObject({
+    expect((await call('read_logs', { source: 'crashes', since: '5m' })).isError).toBeUndefined();
+    expect((await call('read_logs', { since: '5 minutes' })).structuredContent).toMatchObject({
       code: 'INVALID_ARGUMENT',
     });
   });
@@ -213,7 +213,7 @@ describe('crashes', () => {
       },
     ];
     const { call } = await connect(device);
-    const r = await call('crashes');
+    const r = await call('read_logs', { source: 'crashes' });
     expect(r.text).toContain('APP CRASH(EXCEPTION)');
     expect(r.text).toContain('file: /tmp/report.txt');
     expect(r.text.length).toBeLessThan(1_600);
@@ -523,7 +523,7 @@ describe('audit', () => {
         ],
       });
     const { call } = await connect(device);
-    const r = await call('audit');
+    const r = await call('check_screen', { check: 'accessibility' });
     expect(r.text).toContain('1 accessibility issue');
     expect(r.text).toContain('android.textContrast: ratio 2.1 "Low" at 50,20');
     expect(r.structuredContent).toMatchObject({ engine: 'rules', truncated: false });
@@ -547,7 +547,7 @@ describe('audit', () => {
         ],
       });
     const { call } = await connect(device);
-    const r = await call('audit');
+    const r = await call('check_screen', { check: 'accessibility' });
     expect(r.text).toContain('\ntextClipped: Text clipped "418" at 356,300');
     // the structure keeps the rule
     expect(r.structuredContent).toMatchObject({

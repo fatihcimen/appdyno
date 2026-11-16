@@ -216,7 +216,8 @@ export function windowControls(
     /** An agent's call on this device: one that installed or removed an app lists the apps again, for the Apps pane. */
     heard: ({ tool, ok, args }: ActivityLine) => {
       const { action } = (args ?? {}) as { action?: unknown };
-      if (ok && tool === 'app' && APPS_CHANGE.has(String(action))) trying(() => apps.listApps());
+      if (ok && tool === 'manage_app' && APPS_CHANGE.has(String(action)))
+        trying(() => apps.listApps());
     },
 
     /** A control of the window that is no input: a person's, however input is set. */

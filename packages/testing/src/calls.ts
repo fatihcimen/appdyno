@@ -14,10 +14,11 @@ import { latestRuns, runKeys } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
   opsFor,
+  strictOutput,
   ServerContext,
   textOf,
   type Op,
-  type OpData,
+  type OpFields,
   type OpName,
 } from '@appdyno/ops';
 import { FakeDevice } from './fake-device.js';
@@ -31,7 +32,7 @@ export const checkedOps = (ctx: ServerContext): Record<string, Op> =>
         ...op,
         handler: async (args) => {
           const r = await op.handler(args);
-          op.output.strict().parse(r.data);
+          strictOutput(op).parse(r.data);
           return r;
         },
       },
@@ -50,7 +51,7 @@ export const callerOf = (
   return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const op = must(ops[name], `the op ${name}`);
     const r = await on(op.handler(op.input.parse(args)));
-    return { text: textOf(r.blocks), data: r.data as OpData<N> };
+    return { text: textOf(r.blocks), data: r.data as OpFields<N> };
   };
 };
 

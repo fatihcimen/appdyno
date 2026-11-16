@@ -74,7 +74,7 @@ const ON_SIMULATOR: Platform = {
   serial: SIMULATOR,
   provider: () => simulatorProvider(),
   ready: () => new Simctl().install(SIMULATOR, SIM_FIXTURE),
-  stop: (call) => call('terminate_app', { background: true }),
+  stop: (call) => call('manage_app', { action: 'stop', background: true }),
   plainStop: false,
   back: (call) => call('open_link', { url: LIFECYCLE, read: 'none' }),
 };
@@ -83,7 +83,7 @@ const ON_EMULATOR: Platform = {
   name: 'an emulator',
   serial: EMULATOR,
   provider: () => androidProvider(new Adb()),
-  stop: (call) => call('terminate_app'),
+  stop: (call) => call('manage_app', { action: 'stop' }),
   plainStop: true,
   back: () => Promise.resolve(),
 };
@@ -112,9 +112,9 @@ for (const p of PLATFORMS)
       const kept = unique('kept');
       ok(await call('type_text', { text: kept, selector: { id: 'kept_value' }, replace: true }));
       const before = await labelOf(call, 'process_start');
-      const ended = ok(await call('terminate_app', { background: true }));
+      const ended = ok(await call('manage_app', { action: 'stop', background: true }));
       expect(ended.text).toBe(`ended ${APP} in the background, as the system does for memory`);
-      expect(ok(await call('app', { action: 'state', app: APP })).text).toContain('stopped');
+      expect(ok(await call('manage_app', { action: 'state', app: APP })).text).toContain('stopped');
       expect(ok(await call('launch_app', { read: 'none' })).text).toContain(`started ${APP}`);
       await p.back(call);
       expect(await shows(call, 'kept_value', kept)).toBe(true);
@@ -125,7 +125,7 @@ for (const p of PLATFORMS)
       await fresh(p, call);
       const lost = unique('lost');
       ok(await call('type_text', { text: lost, selector: { id: 'kept_value' }, replace: true }));
-      ok(await call('terminate_app'));
+      ok(await call('manage_app', { action: 'stop' }));
       ok(await call('launch_app', { read: 'none' }));
       ok(await call('open_link', { url: LIFECYCLE, read: 'none' }));
       expect(await shows(call, 'process_start', 'Process')).toBe(true);
@@ -134,7 +134,9 @@ for (const p of PLATFORMS)
 
     it('refuses an end in the background of an app that does not run', async () => {
       await p.stop(call);
-      expect((await call('terminate_app', { background: true })).data.code).toBe('APP_NOT_RUNNING');
+      expect((await call('manage_app', { action: 'stop', background: true })).data.code).toBe(
+        'APP_NOT_RUNNING',
+      );
     });
   });
 

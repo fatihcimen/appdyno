@@ -19,13 +19,13 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
   let call: Call;
   /** The reasons `crashes` counts after `cause`, with the app up on its crash screen when it runs. */
   const after = async (cause: () => unknown) => {
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     await call('open_link', { url: 'appdyno-fixture://open/crash' });
     await call('wait_for', { selector: { id: 'exit' }, timeoutMs: 8_000 });
     const since = new Date().toISOString();
     await cause();
     await sleep(2_000);
-    const r = await call('crashes', { since });
+    const r = await call('read_logs', { source: 'crashes', since });
     return { text: r.text, exits: r.data.exits ?? [] };
   };
   const reasons = (exits: { reason: string }[]) => exits.map((e) => e.reason);

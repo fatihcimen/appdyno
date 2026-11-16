@@ -62,8 +62,8 @@ describe('a screen whose app wrote a line break and a line of its own after it',
     });
     const more = await connect(other, { policy: { allowPower: 'all' } });
     answers.push(
-      await more.call('inspector', { action: 'list' }),
-      await more.call('inspector', { action: 'press', name: 'Pay' }),
+      await more.call('inspect_app', { action: 'ax_list' }),
+      await more.call('inspect_app', { action: 'ax_press', name: 'Pay' }),
       await more.call('open_link', { links: 'dev.app' }),
       await more.call('answer_alert'),
     );

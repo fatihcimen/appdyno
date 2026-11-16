@@ -157,7 +157,7 @@ async function drive(device, app, keys) {
       });
       return must(answer, `the answer of ${name}`);
     };
-    await call('device_info');
+    await call('list_devices', { selected: true });
     await call('screen');
     await call('launch_app', { app });
     const screen = textOf(await call('screen'));

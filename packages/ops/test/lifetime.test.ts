@@ -282,7 +282,11 @@ describe('tool calls in parallel', () => {
       dark_mode: { was: 'no', owner: await killedProcess() },
     });
     const { ctx, call } = connect(device, { claims: { share: false } });
-    await Promise.all([call('device_info'), call('device_info'), call('device_info')]);
+    await Promise.all([
+      call('list_devices', { selected: true }),
+      call('list_devices', { selected: true }),
+      call('list_devices', { selected: true }),
+    ]);
     expect(open).toHaveBeenCalledTimes(1);
     expect(set).toHaveBeenCalledTimes(1);
     ctx.close();
@@ -527,7 +531,11 @@ describe('what a process leaves running', () => {
   it('a session’s end stops its own recording and capture', async () => {
     const device = equipped();
     const { ctx, call } = connect(device);
-    await call('record', { action: 'start', file: join(tmpdir(), 'appdyno-own.mp4') });
+    await call('record_session', {
+      kind: 'video',
+      action: 'start',
+      file: join(tmpdir(), 'appdyno-own.mp4'),
+    });
     await call('capture_network', { action: 'start', via: 'bytes' });
     expect(await ctx.end()).toEqual([]);
     expect(stops.recording).toHaveBeenCalledOnce();
@@ -538,14 +546,18 @@ describe('what a process leaves running', () => {
     const device = equipped();
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
     const start = connect(device, { storage: { remember } });
-    await start.call('record', { action: 'start', file: join(tmpdir(), 'appdyno-cli.mp4') });
+    await start.call('record_session', {
+      kind: 'video',
+      action: 'start',
+      file: join(tmpdir(), 'appdyno-cli.mp4'),
+    });
     start.ctx.close();
     const session = connect(device);
     await session.call('use_device', { device: device.serial });
     expect(await session.ctx.end()).toEqual([]);
     expect(stops.recording).not.toHaveBeenCalled();
     const stop = connect(device, { storage: { remember } });
-    await stop.call('record', { action: 'stop' });
+    await stop.call('record_session', { kind: 'video', action: 'stop' });
     expect(stops.recording).toHaveBeenCalledOnce();
   });
 });

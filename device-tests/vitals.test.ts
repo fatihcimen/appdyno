@@ -158,6 +158,8 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     const next = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
     expect(next.data.userAnrs).toBe(0);
     expect(next.text).toContain('this session would not count as a user-perceived ANR');
-    expect((await t.call('crashes', {})).text).toContain('Input dispatching timed out');
+    expect((await t.call('read_logs', { source: 'crashes' })).text).toContain(
+      'Input dispatching timed out',
+    );
   }, 240_000);
 });

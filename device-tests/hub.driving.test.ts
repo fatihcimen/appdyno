@@ -138,7 +138,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
     );
     const driving = (async () => {
       for (let i = 0; i < 12; i++) {
-        await agent.callTool({ name: 'device_info' });
+        await agent.callTool({ name: 'list_devices', arguments: { selected: true } });
         await quiet(300);
       }
     })();

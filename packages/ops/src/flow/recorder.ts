@@ -35,7 +35,7 @@ const LOOKING_STEPS: ReadonlySet<string> = new Set([
   'wait_for',
   'assert',
   'take_screenshot',
-  'visual',
+  'check_screen',
 ]);
 
 /** A picture's file as a `screenshot` step names it. */
@@ -43,11 +43,9 @@ const pictureName = (file: string) => safeName(basename(file, extname(file))).sl
 
 /** What an op that can change things does when it only looks. */
 const LOOKS: Record<string, string[]> = {
-  app: ['list', 'state'],
-  inspector: ['list'],
+  manage_app: ['list', 'state'],
   capture_network: ['paths', 'read'],
-  webview: ['pages', 'elements'],
-  react_native: ['targets', 'logs'],
+  inspect_app: ['web_pages', 'web_elements', 'rn_targets', 'rn_logs', 'ax_list'],
 };
 
 type Selector = {
@@ -290,12 +288,23 @@ const OPS: Record<string, ToStep> = {
           { app: a.app as string | undefined, language: how.language, probe },
         );
   },
-  terminate_app: (a) =>
-    stepOf(
-      'stop',
-      {},
-      { app: a.app as string | undefined, background: (a.background as boolean) || undefined },
-    ),
+  manage_app: (a) =>
+    a.action === 'stop'
+      ? stepOf(
+          'stop',
+          {},
+          { app: a.app as string | undefined, background: (a.background as boolean) || undefined },
+        )
+      : unknownOp('manage_app')(a),
+  // photos put in the gallery are a setting of a flow; an app's data moved is no step
+  transfer_files: (a) =>
+    a.action === 'media'
+      ? stepOf(
+          'setting',
+          {},
+          { name: 'media', value: a.path as string, app: a.app as string | undefined },
+        )
+      : unknownOp('transfer_files')(a),
   // what an app opens is read, and nothing opened: no step
   open_link: (a) =>
     a.links
@@ -337,16 +346,18 @@ const OPS: Record<string, ToStep> = {
       ? stepOf('screenshot', {}, { name: pictureName(data.file as string) || 'screen' })
       : undefined,
   // a baseline saved while recording is what a replay compares with, in the flow's own baselines folder
-  visual: (a) =>
-    stepOf(
-      'visual',
-      {},
-      {
-        name: a.name as string,
-        tolerance: a.tolerance === DEFAULT_TOLERANCE ? undefined : (a.tolerance as number),
-        mask: (a.masks as Mask[] | undefined)?.map(maskText),
-      },
-    ),
+  check_screen: (a) =>
+    a.check === 'accessibility'
+      ? undefined
+      : stepOf(
+          'visual',
+          {},
+          {
+            name: a.name as string,
+            tolerance: a.tolerance === DEFAULT_TOLERANCE ? undefined : (a.tolerance as number),
+            mask: (a.masks as Mask[] | undefined)?.map(maskText),
+          },
+        ),
 };
 
 const unknownOp = (name: string) => (a: Record<string, unknown>) => {
@@ -406,7 +417,7 @@ export function flowRecorder(ctx: ServerContext) {
         handler: async (args): Promise<ToolResult> => {
           // no device: the op itself says what is wrong; Metro needs none, so none is opened for it
           const s =
-            op.name === 'react_native'
+            op.name === 'inspect_app' && String(args.action).startsWith('rn_')
               ? undefined
               : await (
                   op.name === 'launch_app'

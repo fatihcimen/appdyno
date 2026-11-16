@@ -275,7 +275,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     // brought back as it was, not by the banner: its code still has the push before
     await call('launch_app');
     expect(await last()).toBe('alert Raw: order=7');
-    await call('terminate_app');
+    await call('manage_app', { action: 'stop' });
     const off = await call('send_push', { type: 'alert', title: 'Off' });
     expect(off.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is not running/);
     await call('launch_app');
@@ -304,7 +304,9 @@ describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
   it('reads the app a link brought back, with a runner up, and a push says it was in front', async () => {
     await call('open_link', { url: 'appdyno-fixture://open/push' });
     // a runner, which with no app named would read the home screen whatever is up
-    expect((await call('audit', { maxIssues: 1 })).error).toBe(false);
+    expect((await call('check_screen', { check: 'accessibility', maxIssues: 1 })).error).toBe(
+      false,
+    );
     await goHome(call);
     const back = await call('open_link', { url: 'appdyno-fixture://open/push' });
     expect(back.text).toContain(`foreground: ${APP}`);

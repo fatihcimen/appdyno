@@ -152,7 +152,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     await ok('launch_app');
     return async () => {
       process.chdir(cwd);
-      await ok('terminate_app').catch(() => undefined);
+      await ok('manage_app', { action: 'stop' }).catch(() => undefined);
       ctx.close();
       a.close();
       b.close();
