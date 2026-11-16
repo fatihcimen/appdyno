@@ -137,6 +137,7 @@ async function main() {
         allow_devices: '^emulator-5554$',
         allow_apps: 'com.example.shop, com.example.shop.dev',
         allow_urls: '^https://staging\\.example\\.com/',
+        allow_write: '~/Desktop/appdyno',
       }),
     };
     // each field reaches the server: what it refuses of a flag, it refuses of the field, and does not start
@@ -144,6 +145,7 @@ async function main() {
       allow_devices: 'a|',
       allow_apps: ' , ',
       allow_urls: '.*',
+      allow_write: 'shots',
     })) {
       const started = await served(await filled({ [field]: refused })).then(
         () => true,

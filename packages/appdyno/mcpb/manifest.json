@@ -52,7 +52,8 @@
       "env": {
         "APPDYNO_FORM_ALLOW_DEVICES": "${user_config.allow_devices}",
         "APPDYNO_FORM_ALLOW_APPS": "${user_config.allow_apps}",
-        "APPDYNO_FORM_ALLOW_URLS": "${user_config.allow_urls}"
+        "APPDYNO_FORM_ALLOW_URLS": "${user_config.allow_urls}",
+        "APPDYNO_FORM_ALLOW_WRITE": "${user_config.allow_write}"
       }
     }
   },
@@ -74,7 +75,14 @@
     "allow_urls": {
       "type": "string",
       "title": "Links it may open",
-      "description": "Only links that match this JavaScript regular expression, anchored: ^https://staging\\.example\\.com/ where the / ends the host. Empty: every link.",
+      "description": "Only links that match this JavaScript regular expression, anchored: ^https://staging\\.example\\.com/ where the / ends the host. Empty: web links and the links the selected app takes; any other asks you first.",
+      "default": "",
+      "required": false
+    },
+    "allow_write": {
+      "type": "string",
+      "title": "Folders it may write in",
+      "description": "A folder a screenshot, a video or a report may be saved in when the path is named in a request, as ~/Desktop/appdyno; several with a colon between them. Empty: only appdyno's own folder under ~/Library/Caches/appdyno.",
       "default": "",
       "required": false
     }

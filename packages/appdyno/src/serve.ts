@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { parse } from 'node:path';
+import { homedir } from 'node:os';
+import { delimiter, isAbsolute, join, parse } from 'node:path';
 import { parseArgs } from 'node:util';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
@@ -33,6 +34,24 @@ const UNFILLED = /^\$\{user_config\.\w+\}$/;
  */
 const fieldOf = (said: string | undefined) =>
   said === undefined || said.trim() === '' || UNFILLED.test(said.trim()) ? undefined : said;
+
+/**
+ * The form's folders, where a person writes a path as they know it and no shell reads it: `~` is their home, and one
+ * that names no place on the disk by itself is refused, as it would be a folder of wherever the client started this.
+ */
+function formFolders(said: string | undefined, home = homedir()) {
+  const folders = (fieldOf(said) ?? '')
+    .split(delimiter)
+    .map((f) => f.trim())
+    .filter(Boolean)
+    .map((f) => (f === '~' || f.startsWith('~/') ? join(home, f.slice(1)) : f));
+  const bad = folders.find((f) => !isAbsolute(f));
+  if (bad !== undefined)
+    throw new Error(
+      `the folders it may write in take a whole path, as ~/Desktop/appdyno or /Users/me/shots, not ${bad}`,
+    );
+  return folders;
+}
 
 const FIELDS = {
   'allow-devices': 'APPDYNO_FORM_ALLOW_DEVICES',
@@ -81,7 +100,10 @@ export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.e
     ...(loss && { allowDataLoss: loss }),
     ...(power && { allowPower: power }),
     ...((values['allow-build'] || env.APPDYNO_ALLOW_BUILD === '1') && { allowBuild: true }),
-    writeDirs: writeDirsOf(values['allow-write'], env),
+    writeDirs: writeDirsOf(
+      [...(values['allow-write'] ?? []), ...formFolders(env.APPDYNO_FORM_ALLOW_WRITE)],
+      env,
+    ),
   };
 }
 

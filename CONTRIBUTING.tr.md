@@ -102,6 +102,7 @@ Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#su
 | `APPDYNO_FORM_ALLOW_DEVICES` | masaüstü eklentisinin manifest dosyası        | kurulum formunun `--allow-devices` alanı: boş bırakılırsa liste yoktur                                      |
 | `APPDYNO_FORM_ALLOW_APPS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-apps` için                                                                                 |
 | `APPDYNO_FORM_ALLOW_URLS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-urls` için                                                                                 |
+| `APPDYNO_FORM_ALLOW_WRITE`   | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-write` için: aralarında iki nokta olan klasörler, ev klasörü için `~`                      |
 | `APPDYNO_PROBE_OUT`          | kare ölçerin başlatılışı, uygulama için       | uygulamadaki ölçerin karelerini yazdığı dosya                                                               |
 | `APPDYNO_VIEW_SOCKET`        | görünüm probe'unun başlatılışı, uygulama için | uygulamadaki probe'un yanıt verdiği soket                                                                   |
 | `APPDYNO_RECORD_SEGMENT_S`   | `device-tests/evidence.test.ts`               | bir Android kaydının parçası, yoksa 180 sn; böylece uzun bir kaydın testi kısa sürer                        |

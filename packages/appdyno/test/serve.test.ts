@@ -1,3 +1,5 @@
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { expect, it } from 'vitest';
 import { allowFlags, ownPaths, policyOf, tokenFromEnv } from '../src/serve.js';
@@ -40,6 +42,21 @@ it('allows a build ahead by its own flag or variable, and by no other', () => {
   expect(policyOf({}, { APPDYNO_ALLOW_BUILD: '1' }).allowBuild).toBe(true);
   for (const env of [{}, { APPDYNO_ALLOW_BUILD: '0' }, { APPDYNO_ALLOW_DATA_LOSS: 'all' }])
     expect(policyOf({}, env).allowBuild).toBeUndefined();
+});
+
+it("takes the form's folders as a person writes them, their home by ~, and refuses one that is no whole path", () => {
+  const home = homedir();
+  for (const empty of ['', '  ', '${user_config.allow_write}'])
+    expect(policyOf({}, { APPDYNO_FORM_ALLOW_WRITE: empty }).writeDirs).toEqual([]);
+  expect(
+    policyOf(
+      { 'allow-write': ['/a'] },
+      { APPDYNO_FORM_ALLOW_WRITE: '~/Desktop/appdyno: /tmp/shots' },
+    ).writeDirs,
+  ).toEqual(['/a', join(home, 'Desktop/appdyno'), '/tmp/shots']);
+  expect(() => policyOf({}, { APPDYNO_FORM_ALLOW_WRITE: 'shots' })).toThrow(
+    'take a whole path, as ~/Desktop/appdyno or /Users/me/shots, not shots',
+  );
 });
 
 it('reads the secrets of the variable and of the file, and stops at a file it cannot read', () => {
