@@ -25,26 +25,26 @@ type Clean = (s: string) => string;
 
 const pre = (s: string) => `<pre>${esc(s)}</pre>`;
 
-/** An image of the screen, painted over where an element holds a secret or a password. */
-export async function reportShot(
+/**
+ * An image of the screen, painted over where an element holds a secret or a password: a JPEG where nothing had to be,
+ * a PNG where something was. None where it cannot be painted.
+ */
+export async function paintedShot(
   ctx: ServerContext,
   s: Session,
   screen: Screen,
-  dir: string,
-  name: string,
-) {
+  { maxPx = SHOT_PX, quality = 60 } = {},
+): Promise<{ data: Buffer; ext: 'jpg' | 'png' } | undefined> {
   const units = screen.window?.w ?? s.device.hello?.screen.w;
   const secret = (t?: string) => !!t && ctx.policy.secrets.some((x) => x && t.includes(x));
   const hiding = screen.elements.flatMap((e) =>
     e.rect && (e.password || [e.text, e.label, e.placeholder].some(secret)) ? [e.rect] : [],
   );
-  mkdirSync(join(dir, 'shots'), { recursive: true });
   if (hiding.length === 0) {
-    const { data } = await s.device.screenshot({ format: 'jpeg', quality: 60, maxPx: SHOT_PX });
-    writeFileSync(join(dir, 'shots', `${name}.jpg`), data);
-    return `shots/${name}.jpg`;
+    const { data } = await s.device.screenshot({ format: 'jpeg', quality, maxPx });
+    return { data, ext: 'jpg' };
   }
-  const { data } = await s.device.screenshot({ format: 'png', quality: 100, maxPx: SHOT_PX });
+  const { data } = await s.device.screenshot({ format: 'png', quality: 100, maxPx });
   const img = decodePng(data);
   if (!img || !units) return undefined;
   const k = img.width / units;
@@ -52,8 +52,22 @@ export async function reportShot(
     img,
     hiding.map((r) => ({ x: r.x * k, y: r.y * k, w: r.width * k, h: r.height * k })),
   );
-  writeFileSync(join(dir, 'shots', `${name}.png`), encodePng(img));
-  return `shots/${name}.png`;
+  return { data: encodePng(img), ext: 'png' };
+}
+
+/** That image as a report's file, by its path in the report. */
+export async function reportShot(
+  ctx: ServerContext,
+  s: Session,
+  screen: Screen,
+  dir: string,
+  name: string,
+) {
+  mkdirSync(join(dir, 'shots'), { recursive: true });
+  const shot = await paintedShot(ctx, s, screen);
+  if (!shot) return undefined;
+  writeFileSync(join(dir, 'shots', `${name}.${shot.ext}`), shot.data);
+  return `shots/${name}.${shot.ext}`;
 }
 
 function headSection(s: Session, since: number | undefined) {

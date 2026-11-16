@@ -10,7 +10,7 @@ describe('usage', () => {
     expect(line('install')).toBe('install [--yes] [--dry-run] [--remove]');
     expect(line('ios build')).toBe('ios build [--no-fetch]');
     expect(line('test')).toBe(
-      'test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--share] [--retries N [--fail-on-flaky]] [--update-baselines] [--measure [--iterations N] [--measurements dir]]',
+      'test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--pr-body file] [--no-report] [--share] [--retries N [--fail-on-flaky]] [--update-baselines] [--measure [--iterations N] [--measurements dir]]',
     );
     expect(line('bench')).toBe('bench --serial S [--n 50] [--out file] [--max-load N]');
     expect(line('perf survey')).toBe(

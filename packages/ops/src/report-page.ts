@@ -14,11 +14,11 @@ img,video{max-height:24rem;max-width:100%;border-radius:14px;display:block;box-s
 summary{cursor:pointer;font-size:.85rem;color:var(--ink2)}
 @media (max-width:720px){main{padding:0 1rem 2rem}.step{grid-template-columns:minmax(0,1fr)}}`;
 
-/** A report as one file, its styles in it. */
-export const reportPage = (title: string, body: string) =>
+/** A report as one file, its styles in it, and `more` of them where a kind of report has its own. */
+export const reportPage = (title: string, body: string, more = '') =>
   selfContainedPage({
     title,
     body: `<main>${body}</main>`,
-    style: STYLE,
+    style: `${STYLE}${more}`,
     sources: "img-src 'self' file:; media-src 'self' file:; ",
   });

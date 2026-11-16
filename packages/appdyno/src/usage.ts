@@ -82,6 +82,8 @@ export const COMMANDS = {
       'exclude-tag': values('T'),
       artifacts: value('dir'),
       junit: value('file'),
+      'pr-body': value('file'),
+      'no-report': on,
       share: on,
       retries: value('N'),
       'fail-on-flaky': { type: 'boolean', under: 'retries' },
@@ -90,7 +92,7 @@ export const COMMANDS = {
       iterations: under('measure', 'N'),
       measurements: under('measure', 'dir'),
     },
-    what: 'replay flows, one after another, on each device; --retries runs a failed file again and calls it flaky, which --fail-on-flaky fails the run for (exit 1); --update-baselines saves what visual steps compare with; --measure keeps each as a scenario, by step',
+    what: 'replay flows, one after another, on each device, and leave one verdict, one page, JUnit and a pull request text in the artifacts folder (--no-report: the record and JUnit alone); --retries runs a failed file again and calls it flaky, which --fail-on-flaky fails the run for (exit 1); --update-baselines saves what visual steps compare with; --measure keeps each as a scenario, by step',
   },
   doctor: { flags: { serial: value('S') }, what: 'what this machine and that device lack' },
   'ios build': {

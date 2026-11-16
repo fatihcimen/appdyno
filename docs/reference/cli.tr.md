@@ -42,6 +42,8 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 
 `test` ve `run-flow run`, `--update-baselines` alır: bir flow'un her `visual` adımı, [Flow'lar](../guides/flows.tr.md#ekran-görüntüleri-görsel-denetimler-ve-ayarlar) sayfasının anlattığı gibi, karşılaştırmak yerine temel görüntüsünü kaydeder. Bir `visual` adımı, `!ambiguous` işaretli ve işlem yapan bir adımdan sonra gelen flow ilk adımından önce reddedilir ve hiçbir temel görüntüsü kaydedilmez.
 
+`test` tek bir kararla biter ve artifacts klasöründe `verdict.txt`, `index.html`, `run.json`, `junit.xml` ve `pr.md` bırakır: bkz. [Bir çalıştırmanın report'u](../guides/flows.tr.md#bir-çalıştırmanın-reportu). `--pr-body file` pull request metnini başka yere koyar, `--no-report` ise yalnızca `run.json` ve JUnit yazar.
+
 `test`, `--retries N` yanında `--fail-on-flaky` alır: bir dosyanın yalnızca yeniden denemede geçtiği bir çalıştırma 1 ile çıkar ve son satırında her birini adıyla söyler; bayrak olmadan 0 ile çıkar. Bkz. [Flow'lar](../guides/flows.tr.md#yeniden-denemeler).
 
 `test`, bir klasörün `_setup.flow` dosyasını altındaki her flow'dan önce, `_teardown.flow` dosyasını da sonra çalıştırır; adı `_` ile başlayan bir dosyayı test olarak çalıştırmaz. Bir flow'un `prepare` komutlarını sormadan çalıştırır, çünkü onu çalıştıran kişi projenin kendi komutlarını çalıştırmıştır, ve her birini önce yazdırır: bkz. [Veri hazırlamak](../guides/flows.tr.md#veri-hazırlamak).

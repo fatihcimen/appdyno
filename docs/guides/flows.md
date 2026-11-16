@@ -127,10 +127,36 @@ audit types="contrast,hitRegion" max=2
 
 ## Running flows in CI
 
-`appdyno test` runs files or directories of `.flow` one at a time on each `--device` in turn. It writes
-JUnit (a suite per device, a case per file; default `appdyno-artifacts/junit.xml`), saves `screen.jpg` and
-`tree.json` under `<artifacts>/<device>/<file>/` at a failure, goes on to the next file, and exits 1 if any
-failed or if there was nothing to run. Assertions are steps.
+`appdyno test` runs files or directories of `.flow` one at a time on each `--device` in turn. After a failure it goes on to the next file. It exits 1 if the run's verdict is FAIL or if there was nothing to run. Assertions are steps. What it leaves under `--artifacts` (default `appdyno-artifacts`) is [the run's report](#a-runs-report).
+
+## A run's report
+
+A run ends in one verdict, PASS or FAIL. The verdict is FAIL when a file failed, when a teardown failed, or when `--fail-on-flaky` met a flaky file. The run leaves these in its artifacts folder:
+
+| file               | what                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `verdict.txt`      | The first line is the verdict and the counts, as `FAIL: 38 passed, 1 flaky, 1 failed on 2 devices in 6m12s`. A failed run's next line starts with `because:`. Then comes a line for each file that failed, was flaky or left a teardown failed: its device, its error, its picture's path and the command that runs it alone. After 30 such lines it says how many more the page has |
+| `index.html`       | One page for the whole run: the verdict, the app, the commit and the devices, what the folder holds, every file against every device, then each file to look at with its step, its error, its picture and the command that runs it alone. Files that passed are folded                                                                                                               |
+| `run.json`         | The record the other files are written from. It is kept after each file, so a run that is killed leaves what it finished                                                                                                                                                                                                                                                             |
+| `junit.xml`        | A suite per device and a case per file. `--junit` puts it elsewhere                                                                                                                                                                                                                                                                                                                  |
+| `pr.md`            | The verdict, the files to look at, the commit, the devices and the rerun commands as Markdown, for a step of your CI to post on a pull request. `--pr-body` puts it elsewhere                                                                                                                                                                                                        |
+| `<device>/<file>/` | What a failure left: `screen.jpg` or `screen.png`, `tree.json`, `log.txt` with the app's last 200 log lines, and `crash.txt` when the app crashed during the run. A retry's files are under `attempt-<n>/`                                                                                                                                                                           |
+
+The record says what the run tested and on what:
+
+- the commit and the branch, from git, and whether tracked files had changes;
+- the CI run, from the `GITHUB_*` variables where they are set;
+- each device's model and OS, and the conditions `locale`, `dark_mode`, `text_size`, `orientation` and `animations`, read once when the run opened the device;
+- for each file, the conditions appdyno had changed and not yet put back when the file began;
+- the installed app's version, and on Android its version code.
+
+The command that runs a file alone names the file, the device and the `--env-file`. It never holds a value given by `--param`. The names are listed beside it, for you to set in the environment or in an env file.
+
+The failure's picture is painted over where an element is a password field or holds a secret. It is `screen.png` when something was painted and `screen.jpg` when nothing had to be. Three things are not painted: text the app draws with no element behind it, a picture a `screenshot` step saved, and a video. When the screen cannot be read at the failure, no picture is kept. In the tree and the log lines, listed secrets and what looks like a credential are hidden. The page lists what the folder holds, so read that list before you send the folder to anyone.
+
+JUnit names each of a failure's files in two forms, because the CI systems that show attachments read different ones: a property of the case called `attachment`, and a line `[[ATTACHMENT|path]]` in its `system-out`. The path is relative to the folder the command ran in. Each case also has the properties `appdyno.device`, `appdyno.commit` and `appdyno.rerun`.
+
+`--no-report` writes `run.json` and JUnit alone.
 
 ## Mock rules
 

@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { homedir, loadavg } from 'node:os';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
@@ -28,19 +28,7 @@ import {
 } from '@appdyno/cli';
 import { must } from '@appdyno/core';
 import { writeComment, writeDashboard } from '@appdyno/perf';
-import {
-  ServerContext,
-  envValues,
-  flowFiles,
-  flowsFor,
-  flowsTagged,
-  JOURNEY_ITERATIONS,
-  opsFor,
-  renamedHint,
-  paramsOf,
-  survey,
-  PUT_BACK_TOOL,
-} from '@appdyno/ops';
+import { ServerContext, opsFor, renamedHint, survey, PUT_BACK_TOOL } from '@appdyno/ops';
 import { runHub, runMirrors } from '@appdyno/hub';
 import { endWithHub, PUT_BACK_AFTER } from './lifetime.js';
 import { alertOf } from './alert.js';
@@ -61,6 +49,7 @@ import {
   toolsCommand,
   updateCommand,
 } from './setup.js';
+import { testCommand } from './test-command.js';
 import { flightCommand, timelineCommand } from './timeline.js';
 
 const [command, ...rest] = process.argv.slice(2);
@@ -128,6 +117,7 @@ function contextFrom(
       tool: remember ? 'appdyno cli' : values[PUT_BACK_AFTER] ? PUT_BACK_TOOL : 'appdyno mcp',
       // a silent server sounds nowhere: a window that shows its request is told so
       person: { ...(alertPerson ? { alertPerson } : { silent: true }), clientNamed },
+      version: SERVER_INFO.version,
       ...(flowEnv && { env: flowEnv }),
       ...(values['update-baselines'] && { updateBaselines: true }),
       mirrorCommand: [
@@ -207,52 +197,6 @@ async function surveyCommand(args: string[]) {
   try {
     const { read } = await survey(ctx, values.app, (line) => console.log(line));
     return read > 0 ? 0 : 1;
-  } finally {
-    await ctx.end().catch(() => []);
-    ctx.close();
-  }
-}
-
-/** `test`: flow files on one or more devices, with JUnit and artifacts; exit 1 when one failed. */
-async function testCommand(rest: string[]) {
-  const { values, positionals } = parseArgs({
-    args: rest,
-    allowPositionals: true,
-    options: COMMANDS.test.flags,
-  });
-  const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
-  const retries = Number(values.retries ?? 0);
-  if (
-    positionals.length === 0 ||
-    !Number.isInteger(iterations) ||
-    iterations < 1 ||
-    !Number.isInteger(retries) ||
-    retries < 0
-  ) {
-    err(usage('test'));
-    return 2;
-  }
-  const artifacts = values.artifacts ?? 'appdyno-artifacts';
-  const files = flowsTagged(flowFiles(positionals), values.tag, values['exclude-tag']);
-  const ctx = commandLine({
-    ...(values.share && { share: true }),
-    ...(values.measurements && { measurements: values.measurements }),
-    ...(values['update-baselines'] && { 'update-baselines': true }),
-  });
-  try {
-    const { passed } = await flowsFor(ctx).test({
-      files,
-      devices: values.device ?? [],
-      artifacts,
-      junit: values.junit ?? join(artifacts, 'junit.xml'),
-      params: paramsOf(values.param),
-      ...(values['env-file'] && { fromFile: envValues(values['env-file']) }),
-      retries,
-      ...(values['fail-on-flaky'] && { failOnFlaky: true }),
-      ...(values.measure && { iterations }),
-      log: (line) => console.log(line),
-    });
-    return passed ? 0 : 1;
   } finally {
     await ctx.end().catch(() => []);
     ctx.close();
@@ -401,7 +345,7 @@ async function main(): Promise<number> {
       return checks.some((c) => !c.ok && !c.warn) ? 1 : 0;
     }
     case 'test':
-      return testCommand(rest);
+      return testCommand(rest, commandLine, err);
     case 'bench': {
       const { values } = parseArgs({ args: rest, options: COMMANDS.bench.flags });
       const serial = values.serial;

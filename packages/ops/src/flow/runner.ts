@@ -1,5 +1,3 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { must, nearest, throwIfCancelled, reportProgress } from '@appdyno/core';
 import {
   type FlowStep,
@@ -36,6 +34,7 @@ import { auditWithin, checkedHere, checkHere } from './own-checks.js';
 import { prepared, preparedCommand, type PreparePlace } from './prepare.js';
 import { loadRecording } from './shared.js';
 import { looksStill } from './still.js';
+import { keepEvidence } from './test-evidence.js';
 
 /** What a step took: the device's own count from action to settled where it has one, else the action on this Mac's clock. */
 export const stepTime = (action: FlowStep['action'], r: StepResult) =>
@@ -61,30 +60,6 @@ const filedValues = (values: Record<string, string>, o: ReplayOptions) =>
     const v = o.params?.[name] === undefined ? o.fromFile?.[name] : undefined;
     return v ? [v] : [];
   });
-
-/** The failure's moment on disk; what cannot be had is left out, the failure already says enough. */
-const keepEvidence = async (s: Session, dir: string, clean: (s: string) => string) => {
-  mkdirSync(dir, { recursive: true });
-  const out: string[] = [];
-  const shot = await s.device
-    .screenshot({ format: 'jpeg', quality: 80, maxPx: 1024 })
-    .catch(() => undefined);
-  if (shot) {
-    const file = join(dir, 'screen.jpg');
-    out.push(file);
-    writeFileSync(file, shot.data);
-  }
-  const tree = await s.device.tree().catch(() => undefined);
-  if (tree) {
-    const file = join(dir, 'tree.json');
-    out.push(file);
-    writeFileSync(
-      file,
-      JSON.stringify(tree, (_k, v: unknown) => (typeof v === 'string' ? clean(v) : v), 1),
-    );
-  }
-  return out;
-};
 
 const lineOf = (r: RunResult['steps'][number]) =>
   `${r.phase ? `${r.phase} ` : ''}${r.n}. ${r.step}: ${r.skipped ? `skipped, ${r.skipped}` : r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;
@@ -126,9 +101,10 @@ type Was = ReturnType<typeof asStepBegan> & { since: number; began: number };
 
 /** The failure's own moment, read before a teardown changes the screen it left: its screen, the app's death, the evidence. */
 async function seenAsItFailed(
+  ctx: ServerContext,
   s: Session,
   f: RunFailure,
-  was: Was,
+  was: Was & { ran: number },
   evidence: string | undefined,
   { header, clean, show }: Answers,
 ) {
@@ -148,7 +124,7 @@ async function seenAsItFailed(
       code: 'APP_NOT_RUNNING',
       hint: diedHint(appDied),
     });
-  if (evidence) f.saved = await keepEvidence(s, evidence, clean);
+  if (evidence) f.saved = await keepEvidence(ctx, s, evidence, { screen, since: was.ran, clean });
 }
 
 /** A run's place on this device: refused where no step of the flow is for its platform, as nothing would run. */
@@ -338,7 +314,8 @@ export function flowRunner(
     }
     const undo = ctx.hide(flow.secrets.flatMap((n) => values[n] ?? []));
     const held = heldNow(s.device.serial);
-    const was: Was = {
+    const was: Was & { ran: number } = {
+      ran: Date.now(),
       app: undefined,
       up: false,
       pid: undefined,
@@ -350,7 +327,7 @@ export function flowRunner(
         from,
         values,
         platform: at.platform,
-        onFailure: (f) => seenAsItFailed(s, f, was, o.evidence, answers),
+        onFailure: (f) => seenAsItFailed(ctx, s, f, was, o.evidence, answers),
         ...(o.onStep && { onStep: o.onStep }),
         checkpoint: (n, total, st) => {
           throwIfCancelled('flow');

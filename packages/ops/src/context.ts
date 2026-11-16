@@ -92,6 +92,8 @@ export class ServerContext {
       claims?: Claims;
       /** This process as a holder and as the owner of what a session leaves, as it is shown. */
       tool?: string;
+      /** This tool's version, as a test run's record names it. */
+      version?: string;
       /** How to run this tool again, for a window that outlives the call that opened it. */
       mirrorCommand?: string[];
       person?: Person;

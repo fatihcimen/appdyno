@@ -127,10 +127,36 @@ audit types="contrast,hitRegion" max=2
 
 ## Flow'ları CI'da çalıştırmak
 
-`appdyno test`, `.flow` dosyalarını ya da klasörlerini her `--device` üzerinde sırayla, birer birer çalıştırır.
-JUnit yazar (cihaz başına bir suite, dosya başına bir case; varsayılan `appdyno-artifacts/junit.xml`), bir hatada `screen.jpg` ve
-`tree.json` dosyalarını `<artifacts>/<device>/<file>/` altına kaydeder, sonraki dosyaya geçer ve herhangi biri
-başarısız olduysa ya da çalıştırılacak bir şey yoksa 1 ile çıkar. Doğrulamalar birer adımdır.
+`appdyno test`, `.flow` dosyalarını ya da klasörlerini her `--device` üzerinde sırayla, birer birer çalıştırır. Bir hatadan sonra sonraki dosyaya geçer. Çalıştırmanın kararı FAIL ise ya da çalıştırılacak bir şey yoksa 1 ile çıkar. Doğrulamalar birer adımdır. `--artifacts` altında (varsayılan `appdyno-artifacts`) bıraktığı şey [çalıştırmanın report'udur](#bir-çalıştırmanın-reportu).
+
+## Bir çalıştırmanın report'u
+
+Bir çalıştırma tek bir kararla biter: PASS ya da FAIL. Bir dosya başarısız olduğunda, bir temizlik başarısız olduğunda ya da `--fail-on-flaky` kararsız bir dosyayla karşılaştığında karar FAIL olur. Çalıştırma, artifacts klasöründe şunları bırakır:
+
+| dosya              | ne                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verdict.txt`      | İlk satır karar ve sayılardır: `FAIL: 38 passed, 1 flaky, 1 failed on 2 devices in 6m12s`. Başarısız bir çalıştırmanın sonraki satırı `because:` ile başlar. Ardından başarısız olan, kararsız olan ya da temizliği başarısız kalan her dosya için bir satır gelir: cihazı, hatası, görüntüsünün yolu ve onu tek başına çalıştıran komut. Böyle 30 satırdan sonra sayfada kaç tane daha olduğunu söyler |
+| `index.html`       | Bütün çalıştırma için tek sayfa: karar, uygulama, commit ve cihazlar, klasörün ne tuttuğu, her cihaza karşı her dosya, ardından bakılacak her dosya; adımı, hatası, görüntüsü ve onu tek başına çalıştıran komutla. Geçen dosyalar katlanmıştır                                                                                                                                                         |
+| `run.json`         | Öteki dosyaların yazıldığı kayıt. Her dosyadan sonra saklanır; bu yüzden öldürülen bir çalıştırma bitirdiğini bırakır                                                                                                                                                                                                                                                                                   |
+| `junit.xml`        | Cihaz başına bir suite, dosya başına bir case. `--junit` onu başka yere koyar                                                                                                                                                                                                                                                                                                                           |
+| `pr.md`            | Karar, bakılacak dosyalar, commit, cihazlar ve yeniden çalıştırma komutları, Markdown olarak; CI'ınızın bir adımı bir pull request'e yazsın diye. `--pr-body` onu başka yere koyar                                                                                                                                                                                                                      |
+| `<device>/<file>/` | Bir hatanın bıraktıkları: `screen.jpg` ya da `screen.png`, `tree.json`, uygulamanın son 200 log satırıyla `log.txt` ve uygulama çalıştırma sırasında crash olduysa `crash.txt`. Bir yeniden denemenin dosyaları `attempt-<n>/` altındadır                                                                                                                                                               |
+
+Kayıt, çalıştırmanın neyi, neyin üzerinde test ettiğini söyler:
+
+- git'ten commit ve dal, ve izlenen dosyalarda değişiklik olup olmadığı;
+- ayarlı oldukları yerde `GITHUB_*` değişkenlerinden CI çalıştırması;
+- her cihazın modeli ve işletim sistemi, ve çalıştırma cihazı açtığında bir kez okunan `locale`, `dark_mode`, `text_size`, `orientation` ve `animations` koşulları;
+- her dosya için, dosya başladığında appdyno'nun değiştirmiş ve henüz geri koymamış olduğu koşullar;
+- yüklü uygulamanın sürümü, Android'de sürüm kodu da.
+
+Bir dosyayı tek başına çalıştıran komut dosyayı, cihazı ve `--env-file` yolunu adlandırır. `--param` ile verilen bir değeri asla tutmaz. Adlar yanında listelenir; onları ortamda ya da bir env dosyasında siz ayarlarsınız.
+
+Hatanın görüntüsü, bir öğenin parola alanı olduğu ya da bir gizli değer tuttuğu yerde boyanır. Bir şey boyandıysa `screen.png`, boyanacak bir şey yoksa `screen.jpg` olur. Üç şey boyanmaz: uygulamanın arkasında öğe olmadan çizdiği metin, bir `screenshot` adımının kaydettiği görüntü ve bir video. Hata anında ekran okunamıyorsa görüntü saklanmaz. Ağaçta ve log satırlarında, listelenen gizli değerler ve kimlik bilgisine benzeyenler gizlenir. Sayfa klasörün ne tuttuğunu listeler; klasörü birine göndermeden önce o listeyi okuyun.
+
+JUnit, bir hatanın her dosyasını iki biçimde adlandırır, çünkü ekleri gösteren CI sistemleri farklı biçimleri okur: vakanın `attachment` adlı bir özelliği ve `system-out` içinde bir `[[ATTACHMENT|path]]` satırı. Yol, komutun çalıştığı klasöre göredir. Her vakada ayrıca `appdyno.device`, `appdyno.commit` ve `appdyno.rerun` özellikleri vardır.
+
+`--no-report` yalnızca `run.json` ve JUnit yazar.
 
 ## Sahte yanıt kuralları
 

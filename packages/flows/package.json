@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@appdyno/core": "workspace:*"
+    "@appdyno/core": "workspace:*",
+    "zod": "^4.6.7"
   }
 }

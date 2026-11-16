@@ -63,6 +63,8 @@ export type AppManager = {
   /** The folder's content becomes the app's data, with the app stopped. */
   replaceData(app: string, from: string): Promise<void>;
   listApps(all: boolean): Promise<AppEntry[]>;
+  /** The installed app's version and build, where one read tells them: else `listApps` has the version. */
+  appInfo?(app: string): Promise<{ version?: string; build?: string }>;
   /** Installed and running; `foreground` is told by the caller, which has the screen. */
   appState(app: string): Promise<Exclude<AppState, 'foreground'>>;
   /** What the answer says, where a grant or a revoke is less than its name. */

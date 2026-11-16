@@ -7,4 +7,6 @@ export * from './recording.js';
 export * from './run.js';
 export * from './maestro.js';
 export * from './junit.js';
+export * from './run-record.js';
+export * from './verdict-text.js';
 export * from './body-match.js';

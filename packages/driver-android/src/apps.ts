@@ -250,6 +250,13 @@ export class AndroidApps implements AppManager {
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 
+  async appInfo(app: string) {
+    const out = await this.sh(`dumpsys package ${assertPkg(app)}`);
+    const version = /versionName=(\S+)/.exec(out)?.[1];
+    const build = /versionCode=(\d+)/.exec(out)?.[1];
+    return { ...(version && { version }), ...(build && { build }) };
+  }
+
   async appState(app: string) {
     if (!(await this.sh(`pm path ${assertPkg(app)}`)).includes('package:')) return 'not_installed';
     return (await this.sh(`pidof ${app}`)).trim() ? 'running' : 'stopped';
