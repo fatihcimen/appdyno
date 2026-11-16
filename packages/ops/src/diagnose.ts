@@ -5,6 +5,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp, noApp, redactLog } from './policy.js';
 import { AuditOut, CrashesOut, LogsOut } from './diagnose-schemas.js';
+import { sharedHead } from './log-heads.js';
 import type { Session } from './session.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
 
@@ -129,11 +130,14 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
           want ? read.filter((l) => l.toLowerCase().includes(want)) : read,
           maxLines,
         );
+        // after the choice of lines, which is made on them whole: the same lines, each said shorter
+        const { lines: short, shared } = sharedHead(shown);
         const head = [
           `${shown.length} line${shown.length === 1 ? '' : 's'}${want ? ` with ${JSON.stringify(contains)}` : ''} of ${pkg} from ${source}${from !== undefined ? ` since ${new Date(from).toISOString()}` : ''}${dropped ? ` (${dropped} older lines left out)` : ''}`,
           ...(note ? [note] : []),
+          ...(shared.length ? [`every line: ${shared.join(', ')}, left out below`] : []),
         ];
-        return reply([...head, ...shown].join('\n'), {
+        return reply([...head, ...short].join('\n'), {
           lines: shown.length,
           dropped,
           source,
