@@ -2,7 +2,10 @@ import os
 import UIKit
 import XCTest
 
-let agentVersion = "1.2.0"
+/// What the runner says it is in its hello: the digest of its sources, written here in the packaged copy of them
+/// (`copy-runner-sources.mjs`), and this word in a checkout's own build. No release's number: one that changes
+/// nothing under ios/ leaves the sources, and the build each user keeps of them, as they were.
+let agentVersion = "checkout"
 
 /// The runner: one long test that serves the host until it asks to shut down. Port and token come from
 /// the launch environment (APPDYNO_PORT, APPDYNO_TOKEN; xcodebuild passes TEST_RUNNER_-prefixed variables).

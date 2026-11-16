@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/** One version for the release: the packages, the Android agent, the iOS runner, the MCP server. */
+/** One version for the release: the packages, the Android agent, the MCP server; the iOS runner has none of it. */
 const root = join(import.meta.dirname, '../../..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
@@ -26,8 +26,6 @@ describe('release version', () => {
       if (existsSync(join(root, 'packages', p, 'package.json')))
         expect(JSON.parse(read(`packages/${p}/package.json`)), p).toHaveProperty('version', v);
     expect(read('android/agent/build.gradle.kts')).toContain(`versionName = "${v}"`);
-    expect(read('ios/Runner/RunnerTests.swift')).toContain(`let agentVersion = "${v}"`);
-    expect(read('ios/Appdyno.xcodeproj/project.pbxproj')).toContain(`MARKETING_VERSION = ${v};`);
     expect(read('packages/mcp/src/brand.ts')).toContain(`version: '${v}'`);
     expect(read('CHANGELOG.md')).toContain(`## ${v}`);
     expect(read('CHANGELOG.tr.md')).toContain(`## ${v}`);
@@ -36,6 +34,27 @@ describe('release version', () => {
     expect(server.packages.map((p) => p.version)).toEqual([v]);
     // the desktop extension's, which its build holds to the package's as well
     expect(JSON.parse(read('packages/appdyno/mcpb/manifest.json'))).toHaveProperty('version', v);
+  });
+
+  it('is nowhere under ios/, so a release that changes nothing there builds no runner again', () => {
+    const { version: v } = JSON.parse(read('packages/appdyno/package.json')) as { version: string };
+    // each user builds the runner once per digest of its packaged sources (copy-runner-sources.mjs), which a number
+    // written in them moved at every release
+    const files = (dir: string): string[] =>
+      readdirSync(join(root, dir), { withFileTypes: true }).flatMap((e) =>
+        e.name.startsWith('.')
+          ? []
+          : e.isDirectory()
+            ? files(`${dir}/${e.name}`)
+            : [`${dir}/${e.name}`],
+      );
+    const named = new RegExp(`(?<![\\d.])${v.replaceAll('.', '\\.')}(?![\\d.])`);
+    expect(files('ios').filter((f) => named.test(read(f)))).toEqual([]);
+    // what the runner says it is, which the packaged copy has as that digest
+    expect(read('ios/Runner/RunnerTests.swift')).toContain('let agentVersion = "checkout"');
+    expect(read('packages/driver-apple/scripts/copy-runner-sources.mjs')).toContain(
+      `const checkout = 'let agentVersion = "checkout"';`,
+    );
   });
 
   it('asks of a desktop client the Node the package asks for, on a Mac alone', () => {

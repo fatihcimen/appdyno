@@ -153,7 +153,7 @@ do it again. Spotlight is Command-Space from the home screen; on a simulator, wh
   it turns them on (`_AXSApplicationAccessibilitySetEnabled`, `_AXSSetAutomationEnabled`) and, if it was the one to do so
   and no runner stays, off again when it leaves. `IgnoreAXServerEntitlements` was not needed.
 - **Hello**, from the same helper: model, OS version, screen and scale, in the same shape. `agentVersion` is `helper`,
-  until a runner starts and says its own. The runner
+  until a runner starts and says its own: the first 16 characters of the digest of the sources it was built from, the name its build is kept under in the state folder's `ios-build`, or `checkout` for a checkout's own build. It is no release's number, so a release that changes nothing in the runner builds none again; a runner of another protocol is refused by its hello's `protocol`, and one of another build is replaced by the digest of its binary. The runner
   starts on the first thing only it does: an alert, a system prompt, text entry, an image, an audit, or a read of a control
   found at different places. A look for a sheet over the app is none of these: with the app in front the helper says
   so at once, and a read of an app that is not in front is what brings the runner.

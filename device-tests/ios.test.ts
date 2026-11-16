@@ -121,7 +121,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     // only a runner waits on the device: the helper is read (until the one started behind it is up)
     if (!d.agentUp) expect(await d.waitChange(undefined, 0)).toBeUndefined();
     await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
-    expect(helloOf(d).agentVersion).not.toBe('helper');
+    // the runner's own: the digest of the sources it was built from, or a checkout's build
+    expect(helloOf(d).agentVersion).toMatch(/^(checkout|[0-9a-f]{16})$/);
     expect(d.hello?.screen).toEqual(size);
     expect((await d.waitChange(undefined, 0))?.sig).toBeTruthy();
     // the idle shim's replacements were each called at start with a BOOL in every slot (a crash otherwise)

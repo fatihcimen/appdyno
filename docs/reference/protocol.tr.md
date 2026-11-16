@@ -153,7 +153,7 @@ yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir; simülatörde bu 3 
   yardımcı bunları açar (`_AXSApplicationAccessibilitySetEnabled`, `_AXSSetAutomationEnabled`) ve açan kendisiyse
   ve hiçbir runner kalmıyorsa, ayrılırken yeniden kapatır. `IgnoreAXServerEntitlements` gerekmedi.
 - **Hello**, aynı yardımcıdan: model, işletim sistemi sürümü, ekran ve ölçek, aynı biçimde. `agentVersion`, bir runner
-  başlayıp kendi sürümünü söyleyene kadar `helper`'dır. Runner,
+  başlayıp kendi sürümünü söyleyene kadar `helper`'dır: runner'ın söylediği, derlendiği kaynakların özetinin ilk 16 karakteridir, yani derlemesinin durum klasöründeki `ios-build` altında saklandığı ad; bir checkout'un kendi derlemesinde ise `checkout`. Bir sürümün numarası değildir; böylece runner'da hiçbir şeyi değiştirmeyen bir sürüm onu yeniden derletmez. Başka bir protokolün runner'ı hello'sundaki `protocol` ile reddedilir, başka bir derlemenin runner'ı ise ikili dosyasının özetiyle değiştirilir. Runner,
   yalnızca kendisinin yaptığı ilk işte başlar: bir uyarı, bir sistem sorusu, metin girişi, bir görüntü, bir denetim ya da farklı yerlerde
   bulunan bir kontrolün okunması. Uygulamanın üstünde bir sheet aramak bunların hiçbiri değildir: uygulama öndeyse yardımcı bunu
   hemen söyler; önde olmayan bir uygulamanın okunması ise runner'ı getiren şeydir.

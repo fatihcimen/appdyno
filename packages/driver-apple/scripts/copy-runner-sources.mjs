@@ -37,4 +37,11 @@ const h = createHash('sha256');
 for (const f of files) h.update(relative(dest, f)).update(readFileSync(f));
 const srcSha = h.digest('hex');
 writeFileSync(join(dest, 'sources.sha256'), `${srcSha}\n`);
+// the runner says which sources it is of, by the id its build is kept under: written after the digest, which is of the
+// sources as the checkout has them
+const hello = join(dest, 'Runner/RunnerTests.swift');
+const checkout = 'let agentVersion = "checkout"';
+const text = readFileSync(hello, 'utf8');
+if (!text.includes(checkout)) throw new Error(`${hello} has no ${checkout}`);
+writeFileSync(hello, text.replace(checkout, `let agentVersion = "${srcSha.slice(0, 16)}"`));
 console.log(`ios-src ${files.length} files ${srcSha.slice(0, 12)}`);
