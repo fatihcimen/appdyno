@@ -91,12 +91,25 @@ export function flowRunner(
     return p.data;
   };
 
-  /** Every step's arguments, before the first runs: a typo is not found at step 40. */
+  /**
+   * Every step's arguments, before the first runs: a typo is not found at step 40. And no baseline is saved after a
+   * step whose target is picked by its index: on this run that may be another element, and a baseline of the screen
+   * it led to would pass ever after, where a comparison would have failed.
+   */
   const validate = (flow: Flow, at: StepPlace) => {
+    let picked: FlowStep | undefined;
     for (const st of flow.steps) {
       if (st.action === 'unrecorded') continue;
+      const where = `${st.file ?? at.file}:${st.line}`;
+      if (at.update && st.action === 'visual' && picked)
+        throw new ToolError(
+          `${where}: no baseline is saved after ${picked.file ?? at.file}:${picked.line}, whose target is picked by its index among several (!ambiguous): it may be another element on this run`,
+          'INVALID_ARGUMENT',
+          'name that target by a selector that finds it alone, and take !ambiguous off its line',
+        );
+      if (st.flags.includes('ambiguous')) picked ??= st;
       const [name, args] = opCall(st, at);
-      opInput(name, args, `${st.file ?? at.file}:${st.line}`);
+      opInput(name, args, where);
     }
   };
 

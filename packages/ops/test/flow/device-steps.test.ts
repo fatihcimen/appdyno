@@ -71,6 +71,25 @@ describe('screenshot, visual and setting steps', () => {
     expect((await flowsFor(context()).replay(file)).passed).toBe(true);
   });
 
+  it('saves no baseline after a step that picks its target by an index, which may be another element', async () => {
+    const file = flowFile('visual home\ntap id=tab index=0 !ambiguous\nvisual list');
+    const e = await refusal(flowsFor(context([], { updateBaselines: true })).replay(file));
+    expect(e.code).toBe('INVALID_ARGUMENT');
+    expect(e.message).toBe(
+      `${file}:4: no baseline is saved after ${file}:3, whose target is picked by its index among several (!ambiguous): it may be another element on this run`,
+    );
+    expect(e.hint).toBe(
+      'name that target by a selector that finds it alone, and take !ambiguous off its line',
+    );
+    // before its first step: none of its baselines is saved, and nothing is touched
+    expect(existsSync(baseline('home'))).toBe(false);
+    expect(device.calls.some((c) => c.name === 'tap')).toBe(false);
+    // a look before such a step is of a screen it did not lead to, and is saved
+    const before = flowFile('visual home\ntap id=tab index=0 !ambiguous', 'b.flow');
+    await flowsFor(context([], { updateBaselines: true })).replay(before);
+    expect(existsSync(baseline('home'))).toBe(true);
+  });
+
   it('fails the flow on a screen that differs from its baseline, naming the diff', async () => {
     const file = flowFile('launch\nvisual home');
     await flowsFor(context([], { updateBaselines: true })).replay(file);
