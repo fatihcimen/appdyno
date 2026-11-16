@@ -85,6 +85,13 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Eklenenler
 
+- **Bir test çalıştırması için tek karar ve tek rapor.** `appdyno test` tek bir kararla biter ve artifacts klasöründe `verdict.txt`, `index.html`, `run.json`, `junit.xml` ve `pr.md` bırakır. Kayıt commit'i, CI çalıştırmasını, her cihazı işletim sistemi ve koşullarıyla, uygulamanın sürümünü ve her dosyayı tek başına çalıştıran komutu adlandırır; bu komut bir `--param` değerini asla tutmaz. `--pr-body` ve `--no-report` yenidir.
+- Bir hatanın görüntüsü, parola alanının ve gizli değer tutan öğenin üzerinde boyanır (boyandıysa `screen.png`, boyanmadıysa `screen.jpg`); uygulamanın son log mesajları ve crash raporları yanında saklanır. Ekran okunamıyorsa görüntü saklanmaz.
+- JUnit, bir hatanın her dosyasını hem `attachment` özelliği hem de `[[ATTACHMENT|path]]` satırı olarak adlandırır; her vakada `appdyno.device`, `appdyno.commit` ve `appdyno.rerun` bulunur. Hata metni artık kaydedilen dosyaları listelemez.
+- `appdyno test --shard i/n` dosyaların bir parçasını çalıştırır; parçalar her makinede aynıdır. `appdyno test merge` parçalardan tek bir rapor yapar ve biri başarısızsa ya da eksikse başarısız olur.
+- `appdyno test share`, bir çalıştırmanın klasörünün ne tuttuğunu göndermeden önce söyler ve `--zip` ile paketler; `--without` ile adlandırılan türleri dışarıda bırakır. Video tutan bir klasör, videonun gidip gitmeyeceğini söyleyene kadar paketlenmez. `appdyno test comment` pull request metnini yeniden yazar.
+- `run_flow` aracına `test` eklendi: seçili cihazda bir dosya ya da bir klasör dolusu flow; yanıtı karar ve her hatadır.
+- Mac uygulamasında Flow'ları Çalıştır, çalıştırma bittiğinde sayfasını açmayı sunar.
 - **iOS simulator'ında ağ.** `capture_network`, istendiğinde (`bodies` ile `start`) bir isteğin başlıklarını ve metin gövdelerini tutar, `id` ile tek bir isteğin tamamını oturumun ölçtükleriyle birlikte verir, hâlâ süren istekleri gösterir, `method` ve `status` ile süzer, `after` ile bir kimlikten sonra yeni olanı verir ve yakalamayı HAR 1.2 olarak yazar (`save`). Başlıklar, gövdeler ve adresler bir log gibi temizlenir.
 - **Mock kuralları.** `capture_network mock`, bir kuralın aldığı istekleri ana makineye, yola (glob ya da regex), yönteme ve sorguya göre yanıtlar, başarısız kılar, geciktirir ya da başka yere gönderir. `mock` flow adımı, dosyası çalışırken bir kuralı geçerli tutar.
 - **Yavaşlatma.** `capture_network throttle`, simulator'da uygulamanın isteklerini yavaşlatır: gecikme, bant genişliği ve kayıp; Android'de `set_device network`'ün adlarıyla, ayrıca `3g` ve `offline`.

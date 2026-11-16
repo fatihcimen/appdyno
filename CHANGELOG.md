@@ -85,6 +85,13 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Added
 
+- **One verdict and one report for a test run.** `appdyno test` ends in one verdict and leaves `verdict.txt`, `index.html`, `run.json`, `junit.xml` and `pr.md` in its artifacts folder. The record names the commit, the CI run, each device with its OS and conditions, the app's version, and a command that runs each file alone, which never holds a `--param` value. `--pr-body` and `--no-report` are new.
+- A failure's picture is painted over a password field and an element holding a secret (`screen.png` when painted, `screen.jpg` when not), and the app's last log messages and crash reports are kept beside it. No picture is kept when the screen cannot be read.
+- JUnit names each failure's files as an `attachment` property and as an `[[ATTACHMENT|path]]` line, and each case has `appdyno.device`, `appdyno.commit` and `appdyno.rerun`. A failure's text no longer lists saved files.
+- `appdyno test --shard i/n` runs one part of the files, the same parts on every machine. `appdyno test merge` makes one report of the parts and fails when one failed or is missing.
+- `appdyno test share` says what a run's folder holds before you send it and packs it with `--zip`, leaving out the kinds `--without` names; a folder with a video is not packed until you say whether it goes. `appdyno test comment` writes the pull request text again.
+- `run_flow` has `test`: a file or a folder of flows on the selected device, answered with the verdict and each failure.
+- In the Mac app, Run Flows offers the run's page to open when it ends.
 - **Network on the iOS simulator.** `capture_network` keeps a request's headers and text bodies when asked (`start` with `bodies`), gives one request whole by `id` with what the session measured of it, shows requests still in flight, filters by `method` and `status`, gives what is new since an id by `after`, and writes the capture as HAR 1.2 (`save`). Headers, bodies and addresses are cleaned as a log is.
 - **Mock rules.** `capture_network mock` answers, fails, delays or sends elsewhere the requests a rule takes, by host, path (glob or regex), method and query. The flow step `mock` holds a rule while its file runs.
 - **Throttle.** `capture_network throttle` slows the app's requests on a simulator: latency, bandwidth and loss, by the names `set_device network` has on Android, and `3g` and `offline`.
