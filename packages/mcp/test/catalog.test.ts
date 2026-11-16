@@ -122,7 +122,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(29_451);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(29_681);
   expect(JSON.stringify(tools)).not.toMatch(
     /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
   );

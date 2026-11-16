@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { must, type NetworkEntry } from '@appdyno/core';
+import { must, type NetworkDetail, type NetworkEntry } from '@appdyno/core';
 import { ToolError } from './tool.js';
 
 type HarEntry = {
@@ -93,4 +93,87 @@ export async function harEntries(file: string, since?: number): Promise<NetworkE
   }
   if (!found) throw new ToolError(`not a HAR file: it has no entries`, 'INVALID_ARGUMENT');
   return out;
+}
+
+/**
+ * Headers with what names a credential hidden, by the rules a log is read with: each goes through them as the line a
+ * log would have it on, so `Authorization`, `Cookie`, `Set-Cookie` and a key or a token by its name lose their value.
+ */
+export const cleanHeaders = (clean: (text: string) => string, headers: Record<string, string>) =>
+  Object.entries(headers).map(([name, value]) => ({
+    name,
+    value: clean(`${name}: ${value}`).slice(name.length + 2),
+  }));
+
+/** The revision of what this writes, which a HAR names its maker by. */
+const HAR_WRITER = '1';
+
+const typeOf = (headers: Record<string, string> | undefined) =>
+  Object.entries(headers ?? {}).find(([name]) => /^content-type$/i.test(name))?.[1] ?? '';
+
+const queryOf = (url: string) => {
+  try {
+    return [...new URL(url).searchParams].map(([name, value]) => ({ name, value }));
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * A capture as HAR 1.2, what a proxy's viewer or `network` `read` with `har` opens: each request with its headers and
+ * text bodies where the capture kept them, all of it cleaned as an answer is. The probe knows a request's whole time
+ * and not its phases, nor its HTTP version; what a rule did to one is in `_how`.
+ */
+export async function harOf(
+  entries: NetworkEntry[],
+  detail: (id: number) => Promise<NetworkDetail | undefined>,
+  clean: (text: string) => string,
+) {
+  const requests = entries.filter((e) => e.url);
+  const list = await Promise.all(
+    requests.map(async (e) => {
+      const d = e.id === undefined ? undefined : await detail(e.id);
+      const url = clean(e.url ?? '');
+      const ms = e.ms ?? 0;
+      return {
+        startedDateTime: new Date((e.at ? Date.parse(e.at) : 0) - ms).toISOString(),
+        time: ms,
+        request: {
+          method: e.method ?? 'GET',
+          url,
+          httpVersion: 'unknown',
+          cookies: [],
+          headers: cleanHeaders(clean, d?.requestHeaders ?? {}),
+          queryString: queryOf(url),
+          headersSize: -1,
+          bodySize: d?.requestBodySize ?? -1,
+          ...(d?.requestBody !== undefined && {
+            postData: { mimeType: typeOf(d.requestHeaders), text: clean(d.requestBody) },
+          }),
+        },
+        response: {
+          status: e.status ?? 0,
+          statusText: '',
+          httpVersion: 'unknown',
+          cookies: [],
+          headers: cleanHeaders(clean, d?.responseHeaders ?? {}),
+          content: {
+            size: d?.responseBodySize ?? e.bytes ?? 0,
+            mimeType: typeOf(d?.responseHeaders),
+            ...(d?.responseBody !== undefined && { text: clean(d.responseBody) }),
+          },
+          redirectURL: '',
+          headersSize: -1,
+          bodySize: e.bytes ?? -1,
+        },
+        cache: {},
+        timings: { send: 0, wait: ms, receive: 0 },
+        ...(e.how && { _how: e.how }),
+        ...(e.error && { _error: clean(e.error) }),
+      };
+    }),
+  );
+  return {
+    log: { version: '1.2', creator: { name: 'appdyno', version: HAR_WRITER }, entries: list },
+  };
 }

@@ -3,7 +3,7 @@ import type { ServerContext } from './context.js';
 import { dropFlightFolder } from './timeline/flight.js';
 import { flowRecordings } from './flow/shared.js';
 import { takeOutMedia } from './media.js';
-import { captures, capturingApp, endCapture } from './network.js';
+import { captures, capturingApp, endCapture } from './network-capture.js';
 import { endRecording, filming } from './record.js';
 import { reportFor } from './report.js';
 import { openReports } from './report-state.js';

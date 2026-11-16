@@ -1,4 +1,12 @@
-import { appendFileSync, chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cannot } from '@appdyno/core';
@@ -74,12 +82,12 @@ describe('what each launch of an app on a simulator carries', () => {
     holds.hold(APP, 'frames', { lib: lib('SimProbe'), env: { APPDYNO_PROBE_OUT: '/f' } });
     const owner = { pid: 1, started: 'then', tool: 'appdyno', since: 'now' };
     holds.owner = owner;
-    holds.hold(APP, 'network', { lib: lib('NetProbe'), env: { APPDYNO_NET_LOG: '/n' } });
+    holds.hold(APP, 'network', { lib: lib('NetProbe'), env: { APPDYNO_NET_DIR: '/n' } });
     holds.hold(OTHER, 'frames', { lib: lib('SimProbe'), env: { APPDYNO_PROBE_OUT: '/o' } });
     expect(holds.holder()).toEqual({ owner });
     expect(heldLaunch(SIM, APP).env).toEqual({
       APPDYNO_PROBE_OUT: '/f',
-      APPDYNO_NET_LOG: '/n',
+      APPDYNO_NET_DIR: '/n',
       DYLD_INSERT_LIBRARIES: `${lib('SimProbe')}:${lib('NetProbe')}`,
     });
     holds.drop(APP, 'network');
@@ -100,7 +108,7 @@ describe('what each launch of an app on a simulator carries', () => {
     const holds = new HeldLaunches(SIM);
     const owner = { pid: 1, started: 'then', tool: 'appdyno', since: 'now' };
     holds.owner = owner;
-    holds.hold(APP, 'network', { lib: lib('NetProbe'), env: { APPDYNO_NET_LOG: '/n' } });
+    holds.hold(APP, 'network', { lib: lib('NetProbe'), env: { APPDYNO_NET_DIR: '/n' } });
     holds.hold(APP, 'frames', { lib: lib('SimProbe'), env: {} });
     holds.hold(OTHER, 'network', { lib: lib('NetProbe'), env: {} });
     expect(holds.letGo(APP)).toEqual([
@@ -108,7 +116,7 @@ describe('what each launch of an app on a simulator carries', () => {
       `the network probe in ${OTHER}`,
     ]);
     expect(heldLaunch(SIM, APP).env).toEqual({
-      APPDYNO_NET_LOG: '/n',
+      APPDYNO_NET_DIR: '/n',
       DYLD_INSERT_LIBRARIES: lib('NetProbe'),
     });
     expect(holds.holder()).toEqual({ owner: undefined });
@@ -178,12 +186,12 @@ describe('what each launch of an app on a simulator carries', () => {
     const [first, ...after] = launches;
     expect(first).toEqual({
       args: ['launch', '--terminate-running-process', SIM, APP],
-      env: { APPDYNO_NET_LOG: capture.log, DYLD_INSERT_LIBRARIES: lib('NetProbe') },
+      env: { APPDYNO_NET_DIR: capture.dir, DYLD_INSERT_LIBRARIES: lib('NetProbe') },
     });
     expect(after).toHaveLength(8);
     for (const l of after) {
       expect(l.env.DYLD_INSERT_LIBRARIES).toBe(`${lib('NetProbe')}:${lib('SimProbe')}`);
-      expect(l.env.APPDYNO_NET_LOG).toBe(capture.log);
+      expect(l.env.APPDYNO_NET_DIR).toBe(capture.dir);
       expect(l.env.APPDYNO_PROBE_OUT).toMatch(/probes\/.+\.jsonl$/);
     }
     expect(after.map((l) => l.args.slice(1, -1).join(' '))).toEqual([
@@ -258,6 +266,7 @@ describe('a capture by the network probe', () => {
       `{"at":0,"method":"GET","url":"https://a.test/","status":200,"ms":3.4,"bytes":5}\n`,
     );
     const request = {
+      id: 0,
       at: '1970-01-01T00:00:00.000Z',
       method: 'GET',
       url: 'https://a.test/',
@@ -271,5 +280,35 @@ describe('a capture by the network probe', () => {
     expect((await network.read(capture)).note).toBe(
       `${APP} runs as a process the probe is not in: its requests since are not seen`,
     );
+  });
+
+  it('keeps all of a capture in one folder of its own, for this user alone, and leaves none of it', async () => {
+    const simctl = Object.assign(new Simctl({}), { exec: () => Promise.resolve(`${APP}: 1`) });
+    const network = new SimulatorNetwork(simctl, SIM, new HeldLaunches(SIM));
+    const capture = await network.start('probe', APP, true);
+    const dir = String(capture.dir);
+    const control = () => JSON.parse(readFileSync(join(dir, 'control.json'), 'utf8')) as unknown;
+    expect(control()).toEqual({ bodies: true, rules: [] });
+    expect(statSync(dir).mode & 0o777).toBe(0o700);
+    expect(statSync(join(dir, 'control.json')).mode & 0o777).toBe(0o600);
+    const rule = { id: 'abc123', host: '^a\\.test$', status: 503, headers: {} };
+    const throttle = { delayMs: [40, 100] as [number, number], down: 29_600, up: 14_800, loss: 0 };
+    network.control(capture, { bodies: true, rules: [rule], throttle });
+    expect(control()).toEqual({ bodies: true, rules: [rule], throttle });
+    // a request's headers and bodies by its place among the requests, from the file the probe named
+    writeFileSync(
+      String(capture.log),
+      `{"loaded":"${APP}","pid":7,"t":1}\n{"at":0,"url":"https://a.test/"}\n{"at":1,"url":"https://a.test/b","detail":"7-1"}\n{"at":2,"url":"https://a.test/c","detail":"../../x"}\n`,
+    );
+    const kept = { requestHeaders: { A: 'b' }, responseHeaders: {}, responseBody: 'ok' };
+    writeFileSync(join(dir, 'bodies', '7-1.json'), JSON.stringify(kept));
+    expect(await network.detail(capture, 1)).toEqual(kept);
+    expect(await network.detail(capture, 0)).toBeUndefined();
+    expect(await network.detail(capture, 2)).toBeUndefined();
+    const end = await network.stop(capture);
+    expect(end.note).toBe(
+      'the probe stays in the app until it next starts, and does nothing more there',
+    );
+    expect(existsSync(dir)).toBe(false);
   });
 });

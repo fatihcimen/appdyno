@@ -1,74 +1,23 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { connect } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import {
-  deviceState,
-  must,
-  Owner,
-  run,
-  reportProgress,
-  type NetworkAnswer,
-  type NetworkEntry,
-  type NetworkPath,
-} from '@appdyno/core';
+import { must, reportProgress, type NetworkPath } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { restoreCondition, setCondition } from './settings.js';
-import { boundLines } from './diagnose.js';
-import { checkApp, redactLog } from './policy.js';
+import { detailLines, networkAnswers } from './network-answer.js';
+import { captures, endCapture, readCapture, startOwn, VIA } from './network-capture.js';
 import { harEntries } from './network-har.js';
 import { NetworkOut } from './network-schemas.js';
-import { Handle } from './schemas.js';
+import { checkApp } from './policy.js';
 import type { Session } from './session.js';
+import { setCondition } from './settings.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ENTRIES = 200;
 const DEFAULT_ENTRIES = 50;
-const VIA = ['proxy', 'probe', 'packets', 'bytes'] as const;
+const ACTIONS = ['paths', 'start', 'read', 'stop'] as const;
 
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
-
-const Capture = z.object({
-  via: z.enum(VIA),
-  since: z.number(),
-  handle: Handle.optional(),
-  proxy: z.string().optional(),
-  owner: Owner.optional(),
-});
-type Capture = z.infer<typeof Capture>;
-
-/** The device's capture. */
-export const captures = deviceState('network', Capture);
-
-/** The app whose network probe a running capture reads: a restore and a session's end leave that probe held. */
-export const capturingApp = (serial: string) => {
-  const app = captures.read(serial)?.handle?.app;
-  return typeof app === 'string' ? app : undefined;
-};
-
-const PROXYMAN_CLI = [
-  '/Applications/Proxyman.app/Contents/MacOS/proxyman-cli',
-  '/Applications/Setapp/Proxyman.app/Contents/MacOS/proxyman-cli',
-];
-
-/** What a running Proxyman listening on `proxy`'s port has seen, if that is what `proxy` is. */
-async function proxymanEntries(proxy: string | undefined, since: number) {
-  const cli = PROXYMAN_CLI.find((p) => existsSync(p));
-  if (!cli) return undefined;
-  const host = await run(cli, ['proxy-host'], { timeout: 10_000 }).catch(() => undefined);
-  const port = host && /"port"\s*:\s*(\d+)/.exec(host.stdout)?.[1];
-  if (!port || !proxy?.endsWith(`:${port}`)) return undefined;
-  const dir = mkdtempSync(join(tmpdir(), 'appdyno-har-'));
-  try {
-    const file = join(dir, 'export.har');
-    await run(cli, ['export-log', '-m', 'all', '-f', 'har', '-o', file], { timeout: 300_000 });
-    return await harEntries(file, since);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
 
 const listening = (hostPort: string) =>
   new Promise<boolean>((resolve) => {
@@ -83,38 +32,8 @@ const listening = (hostPort: string) =>
     c.once('timeout', () => done(false));
   });
 
-const line = (e: NetworkEntry) =>
-  e.url
-    ? `${e.method ?? 'GET'} ${e.url}${e.status ? ` ${e.status}` : ''}${e.ms !== undefined ? ` ${e.ms} ms` : ''}${e.bytes !== undefined ? ` ${e.bytes} B` : ''}${e.body ? ' (body in the export)' : ''}${e.error ? ` failed: ${e.error}` : ''}`
-    : `${e.direction ?? ''} ${e.host ?? ''}: ${e.packets !== undefined ? `${e.packets} packets, ` : ''}${e.bytes ?? 0} B`.trim();
-
-/** What a running capture has seen so far; none from a proxy whose list this tool cannot read. */
-export async function readCapture(s: Session, c: Capture): Promise<NetworkAnswer | undefined> {
-  if (c.via !== 'proxy')
-    return must(s.device.network, "the device's capture").read(
-      must(c.handle, "the capture's handle"),
-    );
-  const entries = await proxymanEntries(c.proxy, c.since);
-  return entries && { entries };
-}
-
-/** Ends a device's capture, its proxy put back; what the way saw to the end. */
-export async function endCapture(s: Session): Promise<NetworkAnswer | undefined> {
-  const serial = s.device.serial;
-  const c = captures.read(serial);
-  if (!c) return undefined;
-  let answer: NetworkAnswer = { entries: [] };
-  try {
-    if (c.handle && s.device.network) answer = await s.device.network.stop(c.handle);
-  } finally {
-    if (c.via === 'proxy') await restoreCondition(s, 'proxy');
-    captures.remove(serial);
-  }
-  return answer;
-}
-
 export function networkOps(ctx: ServerContext) {
-  const clean = (t: string) => redactLog(ctx.policy, t);
+  const { clean, shownOf, detailOf, exportHar, answer } = networkAnswers(ctx);
 
   const paths = async (s: Session): Promise<NetworkPath[]> => {
     const own = (await s.device.network?.paths()) ?? [];
@@ -128,66 +47,41 @@ export function networkOps(ctx: ServerContext) {
     return [proxy, ...own];
   };
 
-  const answer = (
-    c: Capture | undefined,
-    { entries, note }: NetworkAnswer,
-    contains: string | undefined,
-    limit: number,
-    source: string,
-  ) => {
-    const shown = entries.map((e) => ({
-      ...e,
-      ...(e.url && { url: clean(e.url) }),
-      ...(e.error && { error: clean(e.error) }),
-    }));
-    const hits = contains
-      ? shown.filter((e) => `${e.url ?? ''} ${e.host ?? ''}`.includes(contains))
-      : shown;
-    const { kept, dropped } = boundLines(hits.map(line), limit);
-    const list = hits.slice(hits.length - kept.length);
-    const withBody = list.filter((e) => e.body).length;
-    const bodies = !list.some((e) => e.url)
-      ? 'bodies: not by this way'
-      : list.some((e) => e.body !== undefined)
-        ? `bodies: ${withBody} of ${list.length} in the export`
-        : 'bodies: not by this way';
-    const head = [
-      `${list.length} of ${hits.length} from ${source}${c ? ` since ${new Date(c.since).toISOString()}` : ''}`,
-      ...(note ? [note] : []),
-      bodies,
-    ];
-    return reply([...head, ...kept].join('\n'), {
-      entries: list,
-      dropped,
-      source,
-      bodies,
-      ...(note && { note }),
-    });
-  };
-
   return [
     defineOp({
       name: 'network',
       title: 'Network',
       description:
-        "An app's network traffic (HTTP), bounded. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app); read (har: a proxy's export); stop. Says when bodies are unavailable; installs no certificate.",
+        "An app's network traffic (HTTP), bounded. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); stop. Installs no certificate.",
       input: z
         .object({
-          action: z.enum(['paths', 'start', 'read', 'stop']),
+          action: z.enum(ACTIONS),
           via: z.enum(VIA).optional(),
           proxy: z.string().max(100).optional(),
           app: z.string().max(200).optional(),
+          bodies: z.boolean().optional(),
           har: z.string().max(1_000).optional(),
+          id: z.number().int().min(0).optional(),
           contains: z.string().max(200).optional(),
+          method: z.string().max(10).optional(),
+          status: z.string().max(6).optional().describe('404, 4xx, failed'),
           limit: z.number().int().min(1).max(MAX_ENTRIES).default(DEFAULT_ENTRIES),
+          save: z.string().max(1_000).optional(),
+          overwrite: z.boolean().optional(),
         })
         .strict(),
       output: NetworkOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, via, proxy, app, har, contains, limit }) => {
+      run: async ({ action, via, proxy, app, bodies, har, id, ...asked }) => {
         const s = await ctx.session();
         const serial = s.device.serial;
         const now = captures.read(serial);
+        const target = app ?? s.appId;
+        if (asked.status && !/^(\d{3}|\dxx|failed)$/.test(asked.status))
+          throw new ToolError(
+            `status: 404, 4xx or failed, not ${asked.status}`,
+            'INVALID_ARGUMENT',
+          );
         if (action === 'paths') {
           const ways = await paths(s);
           const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${String(p.refused)}`}`).join('\n');
@@ -207,7 +101,6 @@ export function networkOps(ctx: ServerContext) {
               `${now.via} has been capturing on ${serial} since ${new Date(now.since).toISOString()}: stop it first`,
               'INVALID_ARGUMENT',
             );
-          const target = app ?? s.appId;
           if (target) checkApp(ctx.policy, target);
           if (via === 'proxy') {
             const was = await s.device.settings.get('proxy');
@@ -230,27 +123,24 @@ export function networkOps(ctx: ServerContext) {
             const t = `traffic goes through ${want}${was === want ? ' (it already did)' : `, ${was} before`}. ${SEES_PROXY}`;
             return reply(t, { done: t });
           }
-          if (!s.device.network)
-            throw new ToolError(`this device has no ${via} way: use proxy`, 'UNSUPPORTED');
-          const way = (await s.device.network.paths()).find((p) => p.via === via);
-          if (way?.refused) throw new ToolError(way.refused, 'UNSUPPORTED');
-          reportProgress(`starting ${via}`);
-          const handle = await s.device.network.start(via, target);
-          captures.write(serial, { via, since: Date.now(), handle, owner: s.owner });
-          if (via === 'probe') s.acted();
-          const t = `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${way?.sees ? `; it sees ${way.sees}` : ''}`;
+          const { sees } = await startOwn(s, via, target, bodies === true);
+          const t = `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${sees ? `; it sees ${sees}` : ''}`;
           return reply(t, { done: t });
         }
         if (action === 'stop') {
           if (!now) throw new ToolError(`no capture runs on ${serial}`, 'NOT_FOUND');
+          // written before it ends: its bodies go with it
+          const last = asked.save ? await readCapture(s, now) : undefined;
+          const saved = await exportHar(s, now, last?.entries ?? [], asked);
           const end = await endCapture(s);
-          return answer(now, end ?? { entries: [] }, contains, limit, now.via);
+          const { save: _, ...rest } = asked;
+          return answer(s, now, end ?? { entries: [] }, rest, now.via, saved);
         }
         // read
         if (har) {
           if (!existsSync(har)) throw new ToolError(`no such file: ${har}`, 'NOT_FOUND');
           const entries = await harEntries(har, now?.since);
-          return answer(now, { entries }, contains, limit, har);
+          return answer(s, undefined, { entries }, asked, har);
         }
         if (!now)
           throw new ToolError(
@@ -259,12 +149,22 @@ export function networkOps(ctx: ServerContext) {
           );
         if (now.via === 'proxy') reportProgress('exporting from the proxy');
         const read = await readCapture(s, now);
-        if (read)
-          return answer(now, read, contains, limit, now.via === 'proxy' ? 'the proxy' : now.via);
-        throw new ToolError(
-          `the traffic went through ${String(now.proxy)}, whose list this tool cannot read: export the proxy's session as HAR and give har`,
-          'UNSUPPORTED',
-        );
+        if (!read)
+          throw new ToolError(
+            `the traffic went through ${String(now.proxy)}, whose list this tool cannot read: export the proxy's session as HAR and give har`,
+            'UNSUPPORTED',
+          );
+        if (id === undefined)
+          return answer(s, now, read, asked, now.via === 'proxy' ? 'the proxy' : now.via);
+        const one = read.entries.find((e) => e.id === id);
+        if (!one)
+          throw new ToolError(
+            `no request ${id}: this capture has ${read.entries.length}`,
+            'NOT_FOUND',
+          );
+        const shown = shownOf(one);
+        const lines = detailLines(shown, await detailOf(s, now)(id), clean);
+        return reply(lines.join('\n'), { entries: [shown], source: now.via, detail: lines });
       },
     }),
   ];

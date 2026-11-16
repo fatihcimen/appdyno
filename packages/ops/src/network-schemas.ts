@@ -25,6 +25,10 @@ export const NetworkOut = z.object({
         bytes: z.number().optional(),
         body: z.boolean().optional(),
         error: z.string().optional(),
+        id: z.number().int().optional(),
+        how: z.string().optional(),
+        rule: z.string().optional(),
+        to: z.string().optional(),
       }),
     )
     .optional(),
@@ -32,4 +36,7 @@ export const NetworkOut = z.object({
   source: z.string().optional(),
   bodies: z.string().optional(),
   note: z.string().optional(),
+  saved: z.string().optional(),
+  /** One request whole, as its lines. */
+  detail: z.array(z.string()).optional(),
 });

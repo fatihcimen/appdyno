@@ -70,7 +70,7 @@ const MVWordRow MVWordTablePanes[] = {
     {"Open an app of yours to capture its requests", "İsteklerini yakalamak için kendi uygulamalarınızdan birini açın"},
     {"Packets are counted when the capture stops", "Paketler yakalama durunca sayılır"},
     {"no request has finished in the app since the probe went in", "sonda girdiğinden beri uygulamada tamamlanan bir istek yok"},
-    {"the probe stays in the app until it next starts", "sonda, uygulama bir sonraki açılışına dek içinde kalır"},
+    {"the probe stays in the app until it next starts, and does nothing more there", "sonda, uygulama bir sonraki açılışına dek içinde kalır ve orada başka hiçbir şey yapmaz"},
     {"%@ packets. Traffic on the loopback (an adb reverse) is not counted.", "%@ paket. Geri döngüdeki trafik (bir adb reverse) sayılmaz."},
     {"this device's trace recorded no packets of any app, so this says nothing of the traffic: use bytes", "bu cihazın izi hiçbir uygulamanın paketini kaydetmedi, bu yüzden trafik hakkında bir şey söylemez: baytları kullanın"},
     {"the trace holds %@ packet rows of other apps and none of this one", "izde başka uygulamaların %@ paket satırı var, bu uygulamanın hiç yok"},

@@ -10,7 +10,7 @@ import {
 } from '@appdyno/core';
 import { writeTimeline } from '@appdyno/perf';
 import type { ServerContext } from '../context.js';
-import { captures, readCapture } from '../network.js';
+import { captures, readCapture } from '../network-capture.js';
 import { redactLog } from '../policy.js';
 import { stepsIn } from '../report-state.js';
 import type { Session } from '../session.js';

@@ -13,7 +13,7 @@ import type { Timeline } from '@appdyno/perf';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeVideo } from '@appdyno/testing/fake-video.js';
 import { ServerContext } from '../src/context.js';
-import { captures } from '../src/network.js';
+import { captures } from '../src/network-capture.js';
 import { filming } from '../src/record.js';
 import { openReports } from '../src/report-state.js';
 import { DEFAULT_POLICY } from '../src/policy.js';

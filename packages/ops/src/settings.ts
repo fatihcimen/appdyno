@@ -13,7 +13,7 @@ import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { askLanguage } from './power.js';
 import { mediaRestored } from './media.js';
-import { capturingApp } from './network.js';
+import { capturingApp } from './network-capture.js';
 import { SettingOut } from './schemas.js';
 import { isOneShot, oneShot, ONE_SHOT } from './setting-events.js';
 import type { Session } from './session.js';
