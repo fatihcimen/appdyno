@@ -9,7 +9,7 @@ export const SHARE_IMAGE = { path: '/docs/images/social.png', width: 1280, heigh
 /** Cloudflare Web Analytics, cookie-free. The token ships in every page, and is public. */
 export const ANALYTICS = {
   src: 'https://static.cloudflareinsights.com/beacon.min.js',
-  token: 'a6ab8b72c9b444bcb25cf35fdbaa7135',
+  token: 'a6ab8b72c9b444bcb25cf35fdbaa7135', // gitleaks:allow: the Web Analytics site token, public in every page's HTML
 };
 
 /** What a person runs first: a command, the same in every language. */
