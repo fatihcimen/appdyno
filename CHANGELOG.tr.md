@@ -70,6 +70,9 @@ appdyno 1.2.0 bir ekranın neyden yapıldığını okur ve uygulamaya daha fazla
 - `perf_profile`, Swift derleyicisinin ürettiği thunk'ları uygulamanın kendi işlevleri arasında saymaz: Xcode 27.2 ile derlenmiş bir uygulamada en yoğun işlev olarak, işi yapan closure'ın üstünde bir `thunk for @escaping @callee_guaranteed @Sendable () -> ()` adını veriyordu.
 - Bir iOS simülatöründe `screenshot`, `screen` gibi, bir kişi gerektiren istemi söyler: uygulamanın üstünde Face ID sayfası varken resmin yanıtı bir şey söylemiyordu. Bu bakış orada bir resme yaklaşık 10 ms ekler; iPhone'da eskisi gibi bakılmaz.
 - Tek bir modele özgü çalışma zamanındaki simülatör (Xcode 27.2'nin iPhone Duo için olanı gibi) iOS sürümüyle listelenir: "iOS 27.2.iPhone19.4" yazıyordu.
+- Android'de `views` ile `screen`, sistemin uygulama kendi ekranını çizdikten sonra da bir süre aktivitenin üstünde listelediği açılış ekranı penceresini artık onun üstünde bir diyalog saymaz.
+- Android'de `background` ile `terminate_app`, üstünde başka bir uygulamanın penceresi, izin istemi gibi, duran bir uygulamayı da ana ekrana gönderir: ekranda kalıyordu ve `am kill` ekrandaki bir uygulamayı sonlandırmaz.
+- Android'de `device_setting` `media`, `Pictures/appdyno` klasörünün MediaStore'daki satırını da klasörle birlikte çıkarır ve orada göndermediği bir dosyanın üstüne artık yazmaz: o addaki bir fotoğraf yanına `photo-2.jpg` olarak gider.
 
 ## 1.1.3
 

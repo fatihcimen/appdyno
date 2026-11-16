@@ -70,6 +70,9 @@ appdyno 1.2.0 reads what a screen is made of and does more to the app: the nativ
 - `perf_profile` leaves the Swift compiler's thunks out of the app's own functions: of an app built with Xcode 27.2 it named a `thunk for @escaping @callee_guaranteed @Sendable () -> ()` the busiest, above the closure that did the work.
 - On an iOS simulator, `screenshot` says a prompt that needs a person, as `screen` does: with a Face ID sheet over the app, the picture's answer said nothing. The look costs a picture about 10 ms there; an iPhone's takes none, as before.
 - A simulator on a runtime of one model's own, as Xcode 27.2's for the iPhone Duo, is listed with its iOS version: it read "iOS 27.2.iPhone19.4".
+- On Android, `screen` with `views` no longer counts the splash screen's window, which the system still lists above the activity for a while after the app has drawn its own, as a dialog over it.
+- On Android, `terminate_app` with `background` sends home an app that another app's window lies over, as its permission prompt: it stayed on the screen, and `am kill` ends no app there.
+- On Android, `device_setting` `media` takes out MediaStore's row of the `Pictures/appdyno` folder with the folder, and no longer writes over a file there that it did not push: a photo of that name goes in beside it, as `photo-2.jpg`.
 
 ## 1.1.3
 
