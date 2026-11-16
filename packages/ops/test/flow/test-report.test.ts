@@ -6,7 +6,7 @@ import { RunRecord } from '@appdyno/flows';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flowFiles, type TestOptions } from '../../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
-import { flowsFor, SECRET, flowHelpers } from './harness.js';
+import { callerOf, flowsFor, SECRET, flowHelpers } from './harness.js';
 
 /** A device whose images are real PNGs: white, one pixel of tap units per pixel. */
 class ImagingDevice extends FakeDevice {
@@ -27,7 +27,7 @@ const WHO = 'ayse-4411';
 describe("a test run's report", () => {
   let dir: string;
   let device: FakeDevice;
-  const { context } = flowHelpers(
+  const { context, refusal } = flowHelpers(
     () => device,
     () => dir,
   );
@@ -155,6 +155,53 @@ describe("a test run's report", () => {
     const body = readFileSync(join(dir, 'out', 'body.md'), 'utf8');
     expect(body).toContain('## appdyno test: FAIL');
     expect(body).toContain(`[picture](${kept}/screen.png)`);
+  });
+
+  describe('asked for by a tool call', () => {
+    const flows = () => {
+      const tests = mkdtempSync(join(dir, 'tests-'));
+      writeFileSync(join(tests, 'a-good.flow'), 'app dev.app\ntag smoke\nopen_link "app://x"\n');
+      writeFileSync(
+        join(tests, 'b-bad.flow'),
+        'app dev.app\nassert text="Ana sayfa" timeoutMs=200\n',
+      );
+      return tests;
+    };
+
+    it('answers with the verdict and each failure, and fails no call for a run that failed', async () => {
+      const call = callerOf(context());
+      const to = join(dir, 'artifacts', 'run');
+      const r = await call('run_flow', { action: 'test', file: flows(), to });
+      const [first, , line] = r.text.split('\n');
+      expect(first).toMatch(/^FAIL: 1 passed, 0 flaky, 1 failed on 1 device in \d+s$/);
+      expect(line).toMatch(
+        /^FAIL emulator-5580 b-bad\.flow line 2, step 1: .* \| rerun: appdyno test /,
+      );
+      expect(r.data).toMatchObject({
+        done: 'FAIL',
+        verdict: 'FAIL',
+        failed: ['b-bad.flow'],
+        record: join(to, 'run.json'),
+        page: join(to, 'index.html'),
+      });
+      expect(
+        RunRecord.parse(JSON.parse(readFileSync(join(to, 'run.json'), 'utf8'))).command,
+      ).toEqual(['run_flow', 'test', expect.any(String)]);
+    });
+
+    it('runs the files its tags select, and writes nowhere this server may not', async () => {
+      const call = callerOf(context());
+      const file = flows();
+      const to = join(dir, 'artifacts', 'smoke');
+      const r = await call('run_flow', { action: 'test', file, to, tags: ['smoke'] });
+      expect(r.data).toMatchObject({ verdict: 'PASS', failed: [] });
+      const outside = await refusal(
+        call('run_flow', { action: 'test', file, to: join(dir, 'elsewhere') }),
+      );
+      expect(outside.code).toBe('POLICY_DENIED');
+      expect(existsSync(join(dir, 'elsewhere'))).toBe(false);
+      expect((await refusal(call('run_flow', { action: 'test' }))).message).toContain('needs file');
+    });
   });
 
   it('writes the record and JUnit alone where no report is wanted', async () => {

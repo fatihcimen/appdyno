@@ -19,6 +19,11 @@ export type FileOptions = {
   iterations?: number;
   /** How many times a file that failed on a step runs again, whole, from its first step. */
   retries?: number;
+  /**
+   * A person at a terminal started this run: a `prepare` step's command, the project's own, runs with nothing asked.
+   * Else each asks the person, as a tool call's does.
+   */
+  prepares?: boolean;
 };
 
 /** What stands between two goes at a file, said at the first retry of a run. */
@@ -66,7 +71,7 @@ export function fileRunner(
     const replay = {
       evidence: attempt > 1 ? join(kept, `attempt-${attempt}`) : kept,
       shots: kept,
-      prepares: true,
+      prepares: o.prepares === true,
       ...(o.params && { params: o.params }),
       ...(o.fromFile && { fromFile: o.fromFile }),
     };

@@ -154,7 +154,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(26_607);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(26_758);
   expect(JSON.stringify(tools)).not.toMatch(
     /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
   );
@@ -280,7 +280,7 @@ it('has every tool in one group, and lists a group at the size it was measured',
     core: [13, 10_074],
     device: [4, 3_240],
     apps: [4, 3_552],
-    evidence: [4, 3_949],
+    evidence: [4, 4_100],
     network: [1, 2_247],
     perf: [2, 3_600],
   });

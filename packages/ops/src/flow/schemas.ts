@@ -5,6 +5,11 @@ export const FlowOut = z.object({
   /** `export` with `to`: the file it wrote. */
   file: z.string().optional(),
   steps: z.number().int().optional(),
+  /** `test`: the run's verdict, its record and page, and the files that failed. */
+  verdict: z.enum(['PASS', 'FAIL']).optional(),
+  record: z.string().optional(),
+  page: z.string().optional(),
+  failed: z.array(z.string()).optional(),
   flagged: z.array(z.string()).optional(),
   timings: z
     .array(

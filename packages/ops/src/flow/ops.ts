@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { must } from '@appdyno/core';
 import { toMaestro, FlowError, namesOf, type Recording } from '@appdyno/flows';
 import type { ErrorCode } from '@appdyno/protocol';
@@ -19,6 +21,7 @@ import {
   startRecording,
 } from './shared.js';
 import { inside, writeInside } from '../writes.js';
+import { flowFiles, flowsTagged, runTests } from './test-run.js';
 
 /** `NAME=value` words as a record. */
 export function paramsOf(words: string[] = []): Record<string, string> {
@@ -85,6 +88,43 @@ function saved(
   });
 }
 
+/**
+ * `test`: a file or a folder of flows on the selected device, as `appdyno test` runs them, with the report in a folder
+ * this server may write in. A run that fails is an answer, not a refusal: its verdict and each failure are what was asked.
+ */
+async function tested(
+  ctx: ServerContext,
+  runner: FlowRunner,
+  o: {
+    file?: string;
+    to?: string;
+    params?: string[];
+    envFile?: string;
+    retries?: number;
+    tags?: string[];
+  },
+) {
+  if (!o.file)
+    throw new ToolError('test needs file: a .flow file, or a folder of them', 'INVALID_ARGUMENT');
+  const artifacts = inside(ctx.policy, o.to ?? 'appdyno-artifacts');
+  const { record } = await runTests(ctx, runner, {
+    files: flowsTagged(flowFiles([o.file]), o.tags),
+    devices: [],
+    artifacts,
+    params: paramsOf(o.params),
+    ...(o.envFile && { fromFile: envValues(o.envFile), envFile: o.envFile }),
+    ...(o.retries && { retries: o.retries }),
+    command: ['run_flow', 'test', o.file],
+  });
+  return reply(readFileSync(join(artifacts, 'verdict.txt'), 'utf8').trimEnd(), {
+    done: record.verdict,
+    verdict: record.verdict,
+    record: join(artifacts, 'run.json'),
+    page: join(artifacts, 'index.html'),
+    failed: record.cases.filter((c) => c.outcome === 'failed').map((c) => c.label),
+  });
+}
+
 export function flowOps(ctx: ServerContext, runner: FlowRunner) {
   const done = (t: string, data: Record<string, unknown> = {}) => reply(t, { done: t, ...data });
   return [
@@ -92,10 +132,10 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'run_flow',
       title: 'Record and replay a flow',
       description:
-        'Record your actions as a repeatable test, replayed with no model. record, your calls, stop (file: saves a .flow); save: the last recording; run (file; from: a step; iterations: a journey timed by step, for compare_performance); export: Maestro YAML. params NAME=value: recorded, the value becomes ${NAME}; on run, its value. A one-off sequence: run_steps. Returns the steps, or each result.',
+        'Record your actions as a repeatable test, replayed with no model. record, your calls, stop (file: saves a .flow); save: the last recording; run (file; from: a step; iterations: a journey timed by step, for compare_performance); test (file or folder; to: a folder for its report): one verdict; export: Maestro YAML. params NAME=value: recorded, the value becomes ${NAME}; on run, its value. A one-off sequence: run_steps. Returns the steps, or each result.',
       input: z
         .object({
-          action: z.enum(['record', 'stop', 'save', 'run', 'export']),
+          action: z.enum(['record', 'stop', 'save', 'run', 'test', 'export']),
           file: z.string().max(1_000).optional(),
           to: z.string().max(1_000).optional(),
           from: z.number().refine(Number.isInteger, 'a step number').optional(),
@@ -103,13 +143,16 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           envFile: z.string().max(1_000).optional(),
           overwrite: z.boolean().optional(),
           iterations: z.number().int().min(1).max(50).optional(),
+          retries: z.number().int().min(0).max(5).optional(),
+          tags: z.array(z.string().max(100)).optional(),
           scenario: Scenario,
         })
         .strict(),
       output: FlowOut,
       // as far as the steps of a flow reach
       annotations: beyond(DESTRUCTIVE),
-      run: async ({ action, file, to, from, params, envFile, overwrite, iterations, scenario }) => {
+      run: async (input) => {
+        const { action, file, to, from, params, envFile, overwrite, iterations, scenario } = input;
         const need = () => {
           if (!file)
             throw new ToolError(`${action} needs file: a path ending in .flow`, 'INVALID_ARGUMENT');
@@ -135,6 +178,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
             throw e;
           }
         }
+        if (action === 'test') return tested(ctx, runner, input);
         const s = await ctx.session();
         const serial = s.device.serial;
         const held = loadRecording(ctx, serial);
