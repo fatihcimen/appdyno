@@ -140,6 +140,10 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Fixed
 
+- iOS, by the runner (a real iPhone, and a simulator without its helpers): the first key with a modifier sent to an app that had just started lost its modifier, so `command+a` selected nothing and `shift+arrow_left` moved the cursor without selecting. It now keeps it. This did not depend on the Mac's load: it happened on a simulator no hardware key had reached.
+- iOS, by the runner: `type_text` with `replace` lost its select-all in an app that had just started and deleted the old text character by character, which a field that formats what is typed can scramble. It now selects all and deletes at once.
+- iOS, by the runner: `delete` with a modifier held (`option+delete`, `command+delete`) did nothing and said nothing. XCTest cannot send it, so `press_key` now refuses it and says to select first, then delete.
+- The simulator smoke runs the keys with a modifier again (21 cases).
 - A live window on a foldable Android emulator kept the inner display's shape after the device folded: it now follows.
 - `tap_screen` on an iOS switch row by its ref or a selector toggles it: the row is touched on its own switch even where that switch stands a little out of the row's frame, as in Settings on iOS 26, and a cell that holds one switch is touched on that switch too.
 - **iOS: a screen whose repeated controls keep moving is read fast.** A carousel whose slides carry one id was asked of XCUI at every read, and every read through the simulator's helper went to the runner. The verdict on a control's copies is now kept by the control and the number of its copies, holds while they stand within 4 points of where they were asked of, and is asked again only once moved copies stand still. On the fixture's carousel (iPhone 17 simulator, iOS 26.5) a runner read went from a median 194 ms to 63 ms and a read through the helper from 237 ms to 25 ms. A tap there still waits out its settle.

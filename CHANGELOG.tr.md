@@ -140,6 +140,10 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Düzeltilenler
 
+- iOS, runner yoluyla (gerçek bir iPhone ve yardımcıları olmayan bir simulator): yeni başlamış bir uygulamaya gönderilen ilk değiştirici tuşlu tuş, değiştiricisini kaybediyordu; `command+a` hiçbir şey seçmiyor, `shift+arrow_left` seçmeden imleci kaydırıyordu. Artık değiştiricisini koruyor. Bu, Mac'in yüküne bağlı değildi: hiçbir donanım tuşunun ulaşmadığı bir simulator'da oluyordu.
+- iOS, runner yoluyla: `replace` ile `type_text`, yeni başlamış bir uygulamada tümünü seçme adımını kaybediyor ve eski metni karakter karakter siliyordu; yazılanı biçimlendiren bir alan bunu karıştırabiliyordu. Artık tümünü seçip bir kerede siliyor.
+- iOS, runner yoluyla: bir değiştirici basılıyken `delete` (`option+delete`, `command+delete`) hiçbir şey yapmıyor ve bunu söylemiyordu. XCTest bunu gönderemiyor; `press_key` artık reddediyor ve önce seçip sonra silmeyi söylüyor.
+- Simulator smoke'u değiştirici tuşlu tuşları yeniden çalıştırıyor (21 durum).
 - Katlanabilir bir Android emulator'ında canlı pencere, cihaz katlandıktan sonra iç ekranın biçiminde kalıyordu: artık izliyor.
 - iOS'ta bir switch satırına ref ya da seçiciyle yapılan `tap_screen` artık switch'i değiştirir: switch satırın çerçevesinden biraz taşsa bile (iOS 26 Ayarlar'da olduğu gibi) satıra kendi switch'inden dokunulur; tek bir switch tutan hücreye de o switch'ten dokunulur.
 - **iOS: tekrarlı kontrolleri durmadan hareket eden bir ekran hızlı okunuyor.** Slaytları aynı id'yi taşıyan bir carousel her okumada XCUI'ye soruluyordu ve simulator yardımcısından geçen her okuma runner'a gidiyordu. Bir kontrolün kopyalarına dair karar artık kontrol ve kopya sayısıyla saklanıyor, kopyalar soruldukları yerin 4 nokta yakınında durdukça geçerli kalıyor ve yer değiştiren kopyalar ancak durduklarında yeniden soruluyor. Fixture'ın carousel ekranında (iPhone 17 simulator'ı, iOS 26.5) bir runner okuması ortanca 194 ms'den 63 ms'ye, yardımcıdan geçen bir okuma 237 ms'den 25 ms'ye indi. Oradaki bir dokunuş hâlâ durulmasını bekliyor.
