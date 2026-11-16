@@ -21,15 +21,16 @@ const shown = (e: UiElement) =>
   e.visible !== false && !!e.rect && e.rect.width > 0 && e.rect.height > 0;
 
 /**
- * What tells element `i` apart from identical ones: the nearest ancestor's text that is unique on the
- * screen (a product card's name for its "Ekle" button), else the nearest unique text on its row, else
- * none. Never a position: a scroll moves it, the card's name stays.
+ * What tells element `i` apart from identical ones: the nearest ancestor's text that only it and what it holds say
+ * (a product card's name for its "Ekle" button; a row may say its name twice, as itself and in a text inside), else
+ * the nearest unique text on its row, else none. Never a position: a scroll moves it, the card's name stays.
  */
 function contextOf(
   elements: UiElement[],
   i: number,
   unique: Set<string>,
   children: Map<number, number[]>,
+  said: Map<string, number[]>,
 ): string | undefined {
   const at = (n: number) => must(elements[n], `element ${n}`);
   const self = ownText(at(i));
@@ -38,10 +39,11 @@ function contextOf(
     // the screen's root holds every text: no context of a card
     if (at(p).parent === undefined) break;
     // what a field holds is typed, and a field's ref must not change with another's
-    const texts = below(p)
+    const held = new Set([p, ...below(p)]);
+    const texts = [...held]
       .filter((n) => !at(n).editable && shown(at(n)))
       .map((n) => ownText(at(n)))
-      .filter((t) => t && t !== self && unique.has(t));
+      .filter((t) => t && t !== self && (said.get(t) ?? []).every((n) => held.has(n)));
     // a name rather than a price or a count: those change on the same card
     const text = texts.find((t) => !/\d/.test(t)) ?? texts[0];
     if (text) return text;
@@ -88,6 +90,10 @@ export function withStableRefs(elements: UiElement[], opts: ScreenOptions): UiEl
       .filter(Boolean),
   );
   const unique = new Set([...texts].filter(([, n]) => n === 1).map(([t]) => t));
+  const said = new Map<string, number[]>();
+  elements.forEach((e, n) => {
+    if (e.rect && ownText(e)) said.set(ownText(e), [...(said.get(ownText(e)) ?? []), n]);
+  });
   const idCount = count(list.flatMap((e) => (e.id ? [e.id] : [])));
   // a field's words are what is typed in it, or a placeholder that may come later: it is named by what is around it
   const field = (e: ScreenElement) => e.role === 'textField';
@@ -106,7 +112,7 @@ export function withStableRefs(elements: UiElement[], opts: ScreenOptions): UiEl
   const keyed = based.map(({ e, base }) => {
     const context =
       (repeated.get(base) ?? 0) > 1 || base.endsWith('@')
-        ? contextOf(elements, must(index.get(e.ref), e.ref), unique, children)
+        ? contextOf(elements, must(index.get(e.ref), e.ref), unique, children, said)
         : undefined;
     // no context: a nameless element falls back to its path or position name
     const key =
