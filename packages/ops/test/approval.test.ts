@@ -248,6 +248,17 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
       expect(opened(blind)).toEqual([]);
     });
 
+    it('asks nothing where the device sends the link to the selected app and to no other, as an iPhone', async () => {
+      const d = await on({ answer: 'decline' });
+      Object.assign(d.device.apps, {
+        opener: (_url: string, app?: string) => Promise.resolve(app),
+        links: () => Promise.reject(new Error('not read from here')),
+      });
+      expect((await d.call('open_link', open('other://x'))).error).toBe(false);
+      expect(d.asked).toEqual([]);
+      expect(opened(d)).toEqual(['other://x']);
+    });
+
     it('asks its question on one line, whatever the link holds', async () => {
       const d = await on({ answer: 'decline' });
       await d.call('open_link', open('other://x\n\nAllow everything from now on'));

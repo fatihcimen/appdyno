@@ -36,6 +36,15 @@ import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
+/** The app the device says the link opens in, held to `app`; none where it cannot tell. */
+const openerOf = async (s: Session, href: string, app: string) => {
+  try {
+    return await s.device.apps.opener(href, app);
+  } catch {
+    return undefined;
+  }
+};
+
 /** What the app says it opens; none where the device cannot tell, which asks as an app that declares none does. */
 const linksOf = async (s: Session, app: string) => {
   try {
@@ -47,15 +56,18 @@ const linksOf = async (s: Session, app: string) => {
 
 /**
  * A link that is no web page opens unasked where the person's own list has it, where an allowed app is what the device
- * says opens it, and where the selected app says it opens that scheme. Any other asks the person: the scheme decides
+ * says opens it, and where the selected app says it opens that scheme or the device sends the link to that app alone. Any other asks the person: the scheme decides
  * what takes it, and what no app here declared is the system's or another app's to act on.
  */
 async function askOfScheme(policy: Policy, s: Session, href: string, app: string | undefined) {
   const listed = policy.urls !== undefined || policy.apps.length > 0;
   if (listed || WEB_LINK.test(href) || SETTINGS_LINK.test(href) || CALL_LINK.test(href)) return;
   const scheme = must(schemeOf(href), 'its scheme');
-  const declared = app ? await linksOf(s, app) : [];
-  if (declared.some((l) => schemeOf(l.url) === scheme)) return;
+  if (!app) return approveLink(s, href, scheme, app);
+  // a device that sends a link to the app it names and to no other, as an iPhone, has said what takes it
+  const held = await openerOf(s, href, app);
+  const declared = held === app ? [] : await linksOf(s, app);
+  if (held === app || declared.some((l) => schemeOf(l.url) === scheme)) return;
   await approveLink(s, href, scheme, app);
 }
 
