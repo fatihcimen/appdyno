@@ -148,24 +148,59 @@ static void checkNetwork(MVWindow *window) {
                @"name": @"network",
                @"ok": @YES,
                @"text": @"Capture started"}];
+  NSDictionary *two = @{@"op": @"network",
+                        @"capturing": @"probe",
+                        @"since": @1793000000000,
+                        @"entries": @[@{@"id": @0,
+                                        @"method": @"GET",
+                                        @"url": @"https://a.test/x?token=•••",
+                                        @"status": @200,
+                                        @"ms": @85,
+                                        @"bytes": @1200},
+                                      @{@"id": @1,
+                                        @"method": @"POST",
+                                        @"url": @"https://a.test/y",
+                                        @"status": @500,
+                                        @"ms": @12}]};
+  [pane show:two];
+  MVCheck(@"network: each request stands with its method, address, status and time", pane.rows.count == 2 && [pane.rows[0].title isEqual:@"GET /x"] && [pane.rows[0].detail hasPrefix:@"200 · 85 ms · "] && pane.rows[1].tint != nil, [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  MVPokeListRow([pane valueForKey:@"_list"], @"GET /x");
+  MVPump(0.1);
+  MVCheck(@"network: one chosen shows whole, its address as the op gave it", [pane.detail containsString:@"https://a.test/x?token=•••"], pane.detail);
+  MVCheck(@"network: a list that holds every request says nothing of more", !pane.cut.length, pane.cut);
   [pane show:@{@"op": @"network",
                @"capturing": @"probe",
                @"since": @1793000000000,
-               @"entries": @[@{@"id": @0,
+               @"total": @1234,
+               @"entries": @[@{@"id": @1232,
                                @"method": @"GET",
                                @"url": @"https://a.test/x?token=•••",
                                @"status": @200,
                                @"ms": @85,
                                @"bytes": @1200},
-                             @{@"id": @1,
+                             @{@"id": @1233,
+                               @"method": @"POST",
+                               @"url": @"https://a.test/y",
+                               @"status": @500,
+                               @"ms": @12},
+                             @{@"id": @1234,
+                               @"method": @"GET",
+                               @"url": @"https://a.test/z",
+                               @"ms": @40,
+                               @"inFlight": @YES}]}];
+  MVCheck(@"network: a list that is the latest of more says how many it shows of how many, those under way apart", [pane.cut isEqual:@"Showing the latest 2 of 1,234 requests"], pane.cut);
+  MVTestTurkish(YES);
+  [pane show:@{@"op": @"network",
+               @"capturing": @"probe",
+               @"total": @1234,
+               @"entries": @[@{@"id": @1233,
                                @"method": @"POST",
                                @"url": @"https://a.test/y",
                                @"status": @500,
                                @"ms": @12}]}];
-  MVCheck(@"network: each request stands with its method, address, status and time", pane.rows.count == 2 && [pane.rows[0].title isEqual:@"GET /x"] && [pane.rows[0].detail hasPrefix:@"200 · 85 ms · "] && pane.rows[1].tint != nil, [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
-  MVPokeListRow([pane valueForKey:@"_list"], @"GET /x");
-  MVPump(0.1);
-  MVCheck(@"network: one chosen shows whole, its address as the op gave it", [pane.detail containsString:@"https://a.test/x?token=•••"], pane.detail);
+  MVCheck(@"network: and in Turkish, its thousands set apart as Turkish sets them", [pane.cut isEqual:@"1.234 isteğin son 1 tanesi gösteriliyor"], pane.cut);
+  MVTestTurkish(NO);
+  [pane show:two];
   MVCheck(@"network: a capture says how and since when, with Stop to end it", [pane.said hasPrefix:@"Capturing by the probe since "] && [[[pane valueForKey:@"_go"] title] isEqual:MVWord(@"Stop")], pane.said);
   [window.nsWindow layoutIfNeeded];
   MVCheck(@"network: its controls stand whole in the Inspector", within([pane valueForKey:@"_go"], pane) && within([pane valueForKey:@"_list"], pane), nil);

@@ -183,6 +183,13 @@ NSString *MVDecimal(double value) {
   return [[NSString alloc] initWithFormat:@"%.1f" locale:locale(), value];
 }
 
+NSString *MVCount(NSUInteger count) {
+  NSNumberFormatter *format = [NSNumberFormatter new];
+  format.numberStyle = NSNumberFormatterDecimalStyle;
+  format.locale = locale();
+  return [format stringFromNumber:@(count)] ?: @(count).stringValue;
+}
+
 NSString *MVPercent(double value) {
   NSString *number = value == round(value) ? [NSString stringWithFormat:@"%.0f", value] : MVDecimal(value);
   return turkish() ? [@"%" stringByAppendingString:number] : [number stringByAppendingString:@" %"];

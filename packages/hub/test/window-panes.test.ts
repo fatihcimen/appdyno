@@ -323,6 +323,8 @@ describe("a window's Network pane", () => {
     const entries = said(t)?.entries as { id: number; url: string }[];
     expect(entries[0]).toMatchObject({ id: 5, url: 'https://a.test/5' });
     expect(entries.at(-1)).toMatchObject({ id: 204, url: 'https://a.test/204' });
+    // and says how many there are, so that a window can say it shows the latest of them
+    expect(said(t)).toMatchObject({ total: 205 });
     await pane.end();
   });
 

@@ -236,6 +236,8 @@ NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows);
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
 /// What it says of the capture, and of the request chosen.
 @property(nonatomic, readonly) NSString *said, *detail;
+/// That it lists the latest of more requests, where it does.
+@property(nonatomic, readonly) NSString *cut;
 @property(nonatomic, readonly) MVNetworkRules *rules;
 @property(nonatomic, readonly) MVNetworkActions *actions;
 @end

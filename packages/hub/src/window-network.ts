@@ -35,6 +35,10 @@ const PACKETS_LATER = 'Packets are counted when the capture stops';
  * the one a person chose by it, where its place in the list moves. The probe numbers its own, and a request's headers
  * and bodies are asked for by that.
  */
+/** How many requests the capture holds that ended: those a read lists, and the older it left out to list those. */
+const totalOf = (data: Record<string, unknown>) =>
+  Number(data.dropped ?? 0) + ((data.entries as unknown[] | undefined)?.length ?? 0);
+
 const numbered = (data: Record<string, unknown>) =>
   ((data.entries as Record<string, unknown>[] | undefined) ?? []).map((e, i) => ({
     ...e,
@@ -109,6 +113,7 @@ export function windowNetwork(
         since: c.since,
         bodies: c.bodies === true,
         entries,
+        total: totalOf(data),
         ...(note ? { note } : {}),
         ...(data.unseen ? { unseen: data.unseen } : {}),
         ...(c.via === 'probe' ? await held.now() : {}),
@@ -171,6 +176,7 @@ export function windowNetwork(
       capturing: false,
       ...(was && { was: was.via }),
       entries: numbered(data),
+      total: totalOf(data),
       ...(data.note ? { note: data.note } : {}),
       ...(await ways()),
     });

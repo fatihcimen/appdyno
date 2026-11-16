@@ -46,6 +46,7 @@ const MVWordRow MVWordTablePanes[] = {
     {"Counting bytes since %@", "%@ saatinden beri baytlar sayılıyor"},
     {"Counting packets since %@", "%@ saatinden beri paketler sayılıyor"},
     {"Not capturing", "Yakalanmıyor"},
+    {"Showing the latest %@ of %@ requests", "%2$@ isteğin son %1$@ tanesi gösteriliyor"},
     {"Way to capture", "Yakalama yolu"},
     {"Read Again", "Yeniden Oku"},
     {"Requests show here while a capture runs.", "Yakalama sürerken istekler burada görünür."},

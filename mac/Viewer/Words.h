@@ -28,5 +28,7 @@ void MVTestTurkish(BOOL on);
 NSString *MVPercent(double value);
 /// The same for a number with one decimal.
 NSString *MVDecimal(double value);
+/// A count, its thousands set apart as the Mac's language sets them.
+NSString *MVCount(NSUInteger count);
 
 NS_ASSUME_NONNULL_END

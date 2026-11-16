@@ -306,6 +306,8 @@ export type ViewerOrder = Staged &
         was?: NetworkVia;
         since?: number;
         entries?: unknown[];
+        /** How many requests that ended the capture holds: `entries` are the latest of them, to the most a read lists. */
+        total?: number;
         /** What the op said of the capture, as it said it. */
         note?: unknown;
         ways?: NetworkVia[];

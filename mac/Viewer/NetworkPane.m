@@ -55,7 +55,7 @@ static NSString *unseenLine(NSDictionary *unseen) {
 }
 
 @implementation MVNetworkPane {
-  NSTextField *_state, *_about;
+  NSTextField *_state, *_about, *_cut;
   NSPopUpButton *_way;
   NSButton *_go, *_again, *_bodies;
   NSPopUpButton *_throttle;
@@ -66,6 +66,7 @@ static NSString *unseenLine(NSDictionary *unseen) {
   NSView *_sectionRow;
   BOOL _onRules;
   NSArray<NSString *> *_ways;
+  NSString *_cutSays;
   NSString *_capturing, *_needs, *_note, *_unseen, *_proxy, *_wholeKey, *_whole, *_askedKey;
   BOOL _keeps;
   NSDate *_since;
@@ -109,6 +110,9 @@ static NSString *unseenLine(NSDictionary *unseen) {
     _about.maximumNumberOfLines = 0;
     MVHoldContent(_about);
     _answer = [MVAnswerView new];
+    _cut = MVPaneNote(@"");
+    _cut.hidden = YES;
+    MVHoldContent(_cut);
     _none = MVEmptyCard(@"network", @"Requests show here while a capture runs.");
     _list = [MVList new];
     _list.accessibilityLabel = MVWord(@"Requests");
@@ -136,7 +140,7 @@ static NSString *unseenLine(NSDictionary *unseen) {
     _actions.onPress = ^(NSString *name) {
       [weak pressed:name];
     };
-    MVPaneFill(self, @[_state, controls, _bodies, _throttle, _about, _answer, _sectionRow, _actions, _none, _list, _detailCard, _rules, _slack], 8);
+    MVPaneFill(self, @[_state, controls, _bodies, _throttle, _about, _answer, _sectionRow, _actions, _cut, _none, _list, _detailCard, _rules, _slack], 8);
     [self layOut];
   }
   return self;
@@ -264,6 +268,13 @@ static NSString *unseenLine(NSDictionary *unseen) {
   _unseen = [m[@"unseen"] isKindOfClass:NSDictionary.class] ? unseenLine(m[@"unseen"]) : nil;
   if ([m[@"entries"] isKindOfClass:NSArray.class]) _entries = m[@"entries"];
   else if (!capturing) _entries = @[];
+  // the list is the latest of what the capture holds, and says so where it holds more
+  NSUInteger ended = [_entries filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSDictionary *e, __unused NSDictionary *bindings) {
+                                 return [e isKindOfClass:NSDictionary.class] && ![e[@"inFlight"] boolValue];
+                               }]]
+                         .count;
+  NSUInteger total = [m[@"total"] isKindOfClass:NSNumber.class] ? [m[@"total"] unsignedIntegerValue] : ended;
+  _cutSays = total > ended && ended > 0 ? MVFormat(@"Showing the latest %@ of %@ requests", @[MVCount(ended), MVCount(total)]) : nil;
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   [_entries enumerateObjectsUsingBlock:^(NSDictionary *e, NSUInteger at, __unused BOOL *stop) {
     if ([e isKindOfClass:NSDictionary.class]) [rows addObject:MVNetworkRow(e, at)];
@@ -327,6 +338,8 @@ static NSString *unseenLine(NSDictionary *unseen) {
   // the rules with their fields take the room the note of the way would
   if (_onRules) _about.hidden = YES;
   _slack.hidden = !_list.hidden;
+  _cut.stringValue = _cutSays ?: @"";
+  _cut.hidden = _onRules || !_cutSays;
 }
 
 /// The request chosen, whole: its address, what came back, when, and what failed.
@@ -363,6 +376,10 @@ static NSString *unseenLine(NSDictionary *unseen) {
 
 - (NSArray<MVRow *> *)rows {
   return [_list.rows filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"header == NO"]];
+}
+
+- (NSString *)cut {
+  return _cut.hidden ? @"" : _cut.stringValue;
 }
 
 - (NSString *)said {
