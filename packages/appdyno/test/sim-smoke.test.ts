@@ -1,5 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -108,6 +115,12 @@ describe('the simulator smoke', () => {
 
 describe('the workflows', () => {
   const text = (name: string) => readFileSync(join(workflows, name), 'utf8');
+
+  it('name no npm token: a release is published as a trusted publisher alone', () => {
+    const named = readdirSync(workflows).filter((f) => /NPM_TOKEN|NODE_AUTH_TOKEN/.test(text(f)));
+    expect(named).toEqual([]);
+    expect(text('release.yml')).toMatch(/id-token: write[^]*npm publish --provenance/);
+  });
 
   it('publish a tag only after the simulator job, and attach what it said', () => {
     const release = text('release.yml');

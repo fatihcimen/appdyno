@@ -84,7 +84,7 @@ Bir sürüm şunlara dayanır:
 
 - Depo herkese açıktır. npm, paket herkese açık olsa bile özel bir depodan provenance üretmez ve `appdyno update` provenance'ı olmayan bir sürümü reddeder.
 - `packages/appdyno/package.json` içindeki `repository` onunla, büyük-küçük harf dahil, eşleşir. npm bunu yayımlarken denetler, `update` de her sürümü o adrese bağlı tutar, bu yüzden başka yerde derlenmiş bir sürüm reddedilir.
-- npm yayımlamayı, npmjs.com'da ayarlanan güvenilir yayımcı olarak `release.yml`'den ya da bir `NPM_TOKEN` secret'ıyla kabul eder. Bir paketin ilk yayımlaması bu secret'ı ister, çünkü bir paketin güvenilir bir yayımcısı olabilmesi için önce var olması gerekir; yayımcı ayarlandığında secret kaldırılabilir. Yayımlama job'ının Node 26'sında güvenilir yayımcı olarak yayımlayabilen bir npm vardır.
+- npm yayımlamayı paketin güvenilir yayımcısı olarak `release.yml`'den kabul eder, başka hiçbir yoldan değil: workflow'da token yoktur. Yayımcının npmjs.com'da nasıl ayarlandığını [Katkıda bulunmak](../../CONTRIBUTING.tr.md#sürümler) anlatır. npm 11.5.1 ya da daha yenisi gerekir; yayımlama job'ı bunu Node 26'sının npm'inde denetler.
 
 Bir tag'den önce, klasöründe pnpm olmayan bir node'dan, `node scripts/check-package.mjs` tarball'ı boş bir ev klasörüne kurar. Workflow'un dışında kalır, çünkü yolunda bir JDK olan yerde çalışmayı reddeder.
 

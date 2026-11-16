@@ -84,7 +84,7 @@ What a release depends on:
 
 - The repository is public. npm generates no provenance from a private repository, even for a public package, and `appdyno update` refuses a release with none.
 - `repository` in `packages/appdyno/package.json` matches it, case included. npm checks this when it publishes, and `update` holds every release to that address, so a release built elsewhere is refused.
-- npm takes the publish from `release.yml` as the package's trusted publisher, set on npmjs.com, or by an `NPM_TOKEN` secret. A package's first publish needs the secret, as a package must exist before it can have a trusted publisher; once one is set, the secret can go. The publish job's Node 26 has an npm that can publish as a trusted publisher.
+- npm takes the publish from `release.yml` as the package's trusted publisher, and by nothing else: the workflow holds no token. [Contributing](../../CONTRIBUTING.md#releases) says how the publisher is set on npmjs.com. It needs npm 11.5.1 or newer, which the publish job checks of its Node 26's npm.
 
 Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.mjs` installs the tarball on an empty home. It stays out of the workflow, as it refuses to run where a JDK is on its path.
 

@@ -152,6 +152,10 @@ Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its 
 
 `packages/appdyno/test/docs.test.ts` holds the diagrams to the code, and every link in the docs to a real target.
 
+## Releases
+
+A tag publishes, as [the CI reference](docs/reference/ci.md#release) says, and npm takes the publish from the workflow with no token. That rests on one setting, made once on npmjs.com by whoever holds the package there: on the Settings page of the `appdyno` package, under Trusted Publisher, choose GitHub Actions and give the owner `fatihcimen`, the repository `appdyno` and the workflow file `release.yml`, with no environment. npm checks none of these when they are saved, so a wrong letter shows only at the next publish. Once a release has gone out this way, the repository's `NPM_TOKEN` secret can be deleted and its token revoked on npmjs.com, and the package's publishing access set to require two-factor authentication and disallow tokens.
+
 ## The site
 
 [appdyno.dev](https://appdyno.dev) is built from `site/`, a workspace package with Astro and Starlight. Its docs are the files of `docs/`, read as they stand at each build: `X.md` is the page at `/docs/X/` and `X.tr.md` the one at `/tr/docs/X/`, so a change to a doc needs nothing in `site/`. The landing page is `site/src/components/landing`, and every word of it is in `site/src/i18n/en.ts` and `site/src/i18n/tr.ts`, key for key. The dragon that roams the page is `site/src/components/mascot`: the page finds its model's bones and clips by the names in `names.ts`, which `models` keeps in the file and `check` holds the committed file to.

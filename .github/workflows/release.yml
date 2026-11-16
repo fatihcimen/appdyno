@@ -25,7 +25,7 @@ jobs:
     permissions:
       # the GitHub release
       contents: write
-      # what `--provenance` signs with
+      # what npm takes the publish by, as the package's trusted publisher, and what a provenance is signed with
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,9 +37,9 @@ jobs:
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          # its npm can publish by trusted publishing too, which the 22's cannot
+          # its npm can publish by trusted publishing, which the 22's cannot. No registry-url: it would write an
+          # .npmrc that reads a token, and this job has none
           node-version: 26
-          registry-url: https://registry.npmjs.org
           # what is published is built from what the tag holds, and from no cache another run could have written
           package-manager-cache: false
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -120,16 +120,17 @@ jobs:
       - name: Publish with provenance
         if: github.event_name == 'push'
         working-directory: packages/appdyno
-        # a run again, after a later step failed, finds this version published and goes on to the release
+        # by no token: npm takes the publish from this workflow as the package's trusted publisher, which an npm older
+        # than 11.5.1 cannot ask for. A run again, after a later step failed, finds this version published and goes on
+        # to the release
         run: |
+          test "$(printf '%s\n' 11.5.1 "$(npm --version)" | sort -V | head -1)" = 11.5.1
           this="$(node -p "require('./package.json').name + '@' + require('./package.json').version")"
           if [ -n "$(npm view "$this" version 2>/dev/null)" ]; then
             echo "$this is published already"
           else
             npm publish --provenance --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: The release
         if: github.event_name == 'push'
         # with no update key there is no appcast; the extension by its whole name, as a glob that finds none says nothing
