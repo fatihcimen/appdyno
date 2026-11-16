@@ -10,6 +10,7 @@ import {
   SHARE_BY_LIBRARY,
   touchPoint,
   waitUntil,
+  withFamily,
   withShownWords,
   type Reads,
   type Sought,
@@ -17,121 +18,18 @@ import {
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { DeviceError, SETTLE_DEFAULT, type Tree } from '@appdyno/protocol';
 import { regularExpression } from './allow.js';
-import type { ErrorCode } from './library.js';
 import { deviceProviders } from './providers.js';
+import type {
+  Aimed,
+  Device,
+  OpenOptions,
+  Screen,
+  ScreenElement,
+  Selector,
+  Touched,
+} from './device-types.js';
 
-/** A place on the screen, in the units a touch takes: points on iOS, pixels on Android. */
-export type Point = { x: number; y: number };
-
-export type Rect = { x: number; y: number; width: number; height: number };
-
-/** One element a person reads or taps. */
-export type ScreenElement = {
-  /** Its name on this screen and on the next read of it. */
-  ref: string;
-  role: string;
-  /** Its words, cut short where they are long. */
-  label: string;
-  /** Its words uncut, where `label` is cut: what a selector's text is matched against. */
-  whole?: string;
-  /** Its identifier (an Android resource id without its package). */
-  id?: string;
-  rect: Rect;
-  /** Its middle. */
-  x: number;
-  y: number;
-  flags: ('clickable' | 'checked' | 'focused' | 'web')[];
-};
-
-/** Names an element by what it shows instead of where it is. `index` picks one of several matches, from 0. */
-export type Selector = { text?: string; id?: string; role?: string; index?: number };
-
-/** One read of the screen. */
-export type Screen = {
-  elements: ScreenElement[];
-  /** Names this read: what a touch takes as `before`. */
-  hash: string;
-  /** The app of the window in front. */
-  foreground?: string;
-  /** The screen's size, where the read shows it. */
-  window?: { w: number; h: number };
-};
-
-export type OpenOptions = {
-  /** The app the screen is read for. */
-  app?: string;
-  /** Devices it may drive; with none, any. */
-  allowDevices?: RegExp;
-  /** Drive a device another process holds, and hold it from no one. */
-  share?: boolean;
-};
-
-export type TouchOptions = {
-  /**
-   * The `hash` of the read the touch was aimed on: the screen after the touch is settled against it. On Android a
-   * touch whose `before` is a read from before another window of an app came in front is refused `STALE`, with
-   * nothing sent, while that read is among the last 8 the device gave. iOS makes no such comparison: there the touch
-   * is sent, so read again and aim again after a dialog came up by itself.
-   */
-  before?: string;
-};
-
-/** What a touch did: whether the screen came to rest after it, in the time a touch waits. */
-export type Touched = { settled: boolean };
-
-/** `verified`: whether the field read back holds the text, where it can be read back. `submitted`: false where enter was not pressed. */
-export type Typed = Touched & { verified?: boolean; submitted?: boolean };
-
-export type { ErrorCode };
-
-/** What a refused call throws. */
-export type DeviceRefusal = Error & { code: ErrorCode; hint?: string };
-
-/** One device, whichever platform. */
-export type Device = {
-  readonly serial: string;
-  readonly platform: 'android' | 'ios';
-  /** An emulator or a simulator. */
-  readonly virtual: boolean;
-  /** A new read of the screen, whatever window is in front. */
-  screen(): Promise<Screen>;
-  tap(at: Point, options?: TouchOptions): Promise<Touched>;
-  longPress(at: Point, durationMs?: number, options?: TouchOptions): Promise<Touched>;
-  swipe(from: Point, to: Point, durationMs?: number, options?: TouchOptions): Promise<Touched>;
-  /** A key by its name, as `back`, `home` or `enter`, or a letter or digit. */
-  key(key: string): Promise<Touched>;
-  /** Types into the focused field, or the one at `at`, tapped first. */
-  typeText(
-    text: string,
-    options?: { at?: Point; replace?: boolean; submit?: boolean } & TouchOptions,
-  ): Promise<Typed>;
-  /** Starts the app, or brings it in front, and waits for its first screen to come to rest, as `launch_app` does. */
-  launch(app: string): Promise<Touched>;
-  terminate(app: string): Promise<void>;
-  /** The app in front. */
-  foreground(): Promise<string | undefined>;
-  /**
-   * `aim` on the screen just now, and where the element is not there yet, on the screens of the next `waitMs` (1500
-   * with none given, 0 for no wait), as a tool waits for one still coming.
-   */
-  aim(target: Selector | { ref: string }, options?: { waitMs?: number }): Promise<Aimed>;
-  /** Lets the device go. */
-  close(): Promise<void>;
-};
-
-/**
- * Where a touch on an element goes. `why` says where that is not its middle. `own`: on its own switch, `other`, as a
- * switch row's middle is its label. `clear`: clear of `other`, a smaller control of other words at its middle, which
- * would take the touch. `covered`: at its middle still, as no point of it is clear, and `other` may take the touch.
- */
-export type Aimed = {
-  element: ScreenElement;
-  point: Point;
-  why?: 'own' | 'clear' | 'covered';
-  other?: ScreenElement;
-  /** The read it was found on: what a touch takes as `before`. */
-  on: string;
-};
+export type * from './device-types.js';
 
 /** Every touch waits for the screen to come to rest, by the device's own measure. */
 const REST = { settle: {} };
@@ -165,11 +63,16 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     throw e;
   });
   const shown = (tree: Tree): Screen => {
-    const { list, hash, foreground, window } = buildScreen(tree, {
+    const { list, elements, hash, foreground, window } = buildScreen(tree, {
       port: device.platformScreen,
       ...(app && { appId: app }),
     });
-    return { elements: list, hash, ...(foreground && { foreground }), ...(window && { window }) };
+    return {
+      elements: withFamily(list, elements),
+      hash,
+      ...(foreground && { foreground }),
+      ...(window && { window }),
+    };
   };
   const screen = async () => shown(await device.tree());
   const until = (met: (s: Screen) => boolean, ms: number) =>

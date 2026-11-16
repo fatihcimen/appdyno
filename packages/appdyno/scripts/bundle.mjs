@@ -68,7 +68,7 @@ if (existsSync(stream)) {
 chmodSync(join(dist, 'main.js'), 0o755);
 
 // the public face and nothing behind it: the workspace is inlined, and shows no types
-const PUBLIC = ['index.d.ts', 'library.d.ts', 'device.d.ts'];
+const PUBLIC = ['index.d.ts', 'library.d.ts', 'device.d.ts', 'device-types.d.ts'];
 for (const f of readdirSync(dist))
   if (f.endsWith('.d.ts') && !PUBLIC.includes(f)) rmSync(join(dist, f));
 const face = join(dist, 'library.d.ts');

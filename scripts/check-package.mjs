@@ -203,6 +203,7 @@ try {
       'dist/index.d.ts',
       'dist/device.js',
       'dist/device.d.ts',
+      'dist/device-types.d.ts',
       'README.md',
       'LICENSE',
       'THIRD_PARTY_NOTICES',

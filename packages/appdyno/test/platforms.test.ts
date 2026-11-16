@@ -13,7 +13,7 @@ const packages = join(root, 'packages');
  */
 const NAMES_A_PLATFORM = [
   // what is published needs no other package's types: it fails to compile until it names a device's new platform
-  'packages/appdyno/src/device.ts',
+  'packages/appdyno/src/device-types.ts',
   'packages/appdyno/src/main.ts',
   'packages/core/src/device.ts',
   'packages/core/src/native.ts',

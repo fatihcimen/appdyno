@@ -211,6 +211,16 @@ export type ScreenElement = {
   x: number;
   y: number;
   flags: ('clickable' | 'checked' | 'focused' | 'web')[];
+  /** What `withFamily` adds for a caller that walks the list: its place among the listed in `readingOrder`. */
+  order?: number;
+  /** The place in the list of its nearest listed ancestor. */
+  parent?: number;
+  /** Android: a screen reader skips it; set only when true. */
+  notImportant?: boolean;
+  /** Android: a screen reader reads it with what it holds as one; set only when true. */
+  screenReaderFocusable?: boolean;
+  /** The app of its window. */
+  pkg?: string;
 };
 
 /**
