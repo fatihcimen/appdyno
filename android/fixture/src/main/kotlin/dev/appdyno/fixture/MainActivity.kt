@@ -50,6 +50,8 @@ private val LINKED = mapOf(
     "locale" to LocaleActivity::class.java,
     "lifecycle" to LifecycleActivity::class.java,
     "photos" to PhotosActivity::class.java,
+    "fold" to FoldActivity::class.java,
+    "fold_kept" to FoldKeptActivity::class.java,
 )
 
 /** The home screen; `appdyno-fixture://open/<screen>` opens a screen directly. */

@@ -70,6 +70,11 @@
     <item name="cpu_stall" type="id" />
     <item name="cpu_taps" type="id" />
     <item name="trim_levels" type="id" />
+    <item name="fold_created" type="id" />
+    <item name="fold_window" type="id" />
+    <item name="fold_size_class" type="id" />
+    <item name="fold_posture" type="id" />
+    <item name="fold_hinge" type="id" />
     <item name="shakes" type="id" />
     <item name="kept_value" type="id" />
     <item name="process_start" type="id" />

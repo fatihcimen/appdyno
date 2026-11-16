@@ -8,6 +8,8 @@
     <!-- Android 17 holds an app that targets it off the Mac at 10.0.2.2 and the LAN without this -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <application android:name=".FixtureApp" android:icon="@drawable/ic_launcher" android:label="appdyno fixture" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="true">
+        <!-- the device's own window extensions, which tell the fold screen its posture, where a device has them -->
+        <uses-library android:name="androidx.window.extensions" android:required="false" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -60,6 +62,9 @@
         <activity android:name=".BannerActivity" />
         <activity android:name=".LocaleActivity" />
         <activity android:name=".LifecycleActivity" />
+        <activity android:name=".FoldActivity" />
+        <!-- every change a fold makes, taken by the activity itself: the system keeps it -->
+        <activity android:name=".FoldKeptActivity" android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|density|keyboard|keyboardHidden|navigation|uiMode" />
         <activity android:name=".PhotosActivity" />
         <activity android:name=".GesturesActivity" />
         <activity android:name=".A11yActivity" />
