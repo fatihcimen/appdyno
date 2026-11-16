@@ -11,6 +11,9 @@
 - **Throttle.** `network throttle` slows the app's requests on a simulator: latency, bandwidth and loss, by the names `device_setting network` has on Android, and `3g` and `offline`.
 - **Mac app.** The Network pane shows a request whole, filters the list, copies a request as cURL, makes a rule of an answer, saves a HAR, edits the rules and sets the speed, on the same capture an MCP client uses. Show real values, off by default, shows what was sent in that window only.
 - A `network read` of all requests is folded: failures first, each host once, repeats in one line. Under the probe, the app's own certificate check (pinning) and its answers to a login or client-certificate challenge are not asked; background sessions, WKWebView, Network.framework and dart:io are not seen.
+- `device_setting` `fold` takes every pose a foldable lists, not only `open` and `closed`: `half_opened` (also `half`), `rear_display` and `dual` where the device has them. A read lists them after the state. A change answers with the display size and density apps then see, and whether the activity in front was recreated or kept. Flows record and replay `setting fold <pose>`.
+- On an iPhone Duo simulator (Xcode 27.1 or later), `device_setting` `fold` takes `closed`, `half` and `open`, put back at `restore`, the session's end and each flow file's end. While it is open, `screen`, touches, `screenshot` and `record` work on the inner display. It uses private API of the simulator; any other simulator refuses as before.
+- In the Mac app, the Device pane's fold row lists the device's own poses, and the live window follows the display a foldable shows, at its size, with touches that land on it.
 
 ### Changed
 
@@ -22,6 +25,11 @@
 - A refusal that holds why the app died says so in its hint, where it sent to `crashes` for it.
 - A `steps` call refused for a step that is no tool says that nothing was done.
 - `node scripts/efficiency.mjs` prints what eight tasks cost in calls and characters with no device, and `node scripts/bench.mjs <simulator id>` runs five with a real model; see CONTRIBUTING.
+
+### Fixed
+
+- A live window on a foldable Android emulator kept the inner display's shape after the device folded: it now follows.
+- `tap` on an iOS switch row by its ref or a selector toggles it: the row is touched on its own switch even where that switch stands a little out of the row's frame, as in Settings on iOS 26, and a cell that holds one switch is touched on that switch too.
 
 ## 1.2.0
 

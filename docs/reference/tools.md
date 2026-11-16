@@ -195,31 +195,31 @@ names, by the id the file holds, read before anything reaches the device, and re
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 
-| feature                            | Android                                 | simulator                              | iPhone                               |
-| ---------------------------------- | --------------------------------------- | -------------------------------------- | ------------------------------------ |
-| volume buttons                     | yes                                     | yes (no way to read back)              | the runner                           |
-| clear an app's data                | `pm clear`                              | empties its container                  | development-signed apps              |
-| reads with no signing              | no need                                 | no need                                | `inspector`: words and ids           |
-| native views (`screen` `views`)    | the system's dump, no probe             | the view probe: `launch_app` `probe`   | no                                   |
-| download, replace app data         | debuggable builds                       | yes                                    | development-signed apps              |
-| grant, revoke a permission         | `pm grant`, `pm revoke`                 | `simctl privacy`                       | reset to ask, then `alert`           |
-| launch environment                 | no: args are intent extras              | yes                                    | yes                                  |
-| dark mode, text, motion, contrast  | yes                                     | yes                                    | `devicectl`                          |
-| reduce transparency                | no: its blurs are a developer option    | yes                                    | `devicectl`                          |
-| animations                         | yes                                     | no: use `reduce_motion`                | no                                   |
-| locale                             | per app, API 33+; whole device below    | per app; `app ""`: the whole simulator | per app, the tool's launches         |
-| slow network, thermal state        | emulator; a phone's downloads, 13+      | no                                     | Xcode's conditions                   |
-| biometrics                         | an emulator's fingerprint               | yes                                    | no: `devicectl` simulates none       |
-| airplane, Wi-Fi, mobile data       | yes, read back                          | no: it has the Mac's network           | no                                   |
-| keychain                           | no: Android has none                    | emptied, counted                       | no                                   |
-| fold pose                          | a foldable, API 31+, put back           | no: `simctl` has none                  | no                                   |
-| incoming call, SMS                 | emulator only                           | no: no telephony                       | no                                   |
-| battery level                      | yes                                     | no: it only draws one                  | no                                   |
-| proxy                              | yes, put back                           | follows the Mac's                      | no: its Wi-Fi settings               |
-| memory warning                     | a trim level above the app's            | every app on it, one a call            | `devicectl` (not yet run on a phone) |
-| shake                              | an emulator's accelerometer             | yes                                    | no: only by hand                     |
-| photos and videos into the library | pushed, scanned, taken out at `restore` | `simctl addmedia`, no delete           | no                                   |
-| end in the background              | `am kill`                               | SIGKILL of its process                 | `devicectl` (not yet run on a phone) |
+| feature                            | Android                                            | simulator                                                                                            | iPhone                               |
+| ---------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| volume buttons                     | yes                                                | yes (no way to read back)                                                                            | the runner                           |
+| clear an app's data                | `pm clear`                                         | empties its container                                                                                | development-signed apps              |
+| reads with no signing              | no need                                            | no need                                                                                              | `inspector`: words and ids           |
+| native views (`screen` `views`)    | the system's dump, no probe                        | the view probe: `launch_app` `probe`                                                                 | no                                   |
+| download, replace app data         | debuggable builds                                  | yes                                                                                                  | development-signed apps              |
+| grant, revoke a permission         | `pm grant`, `pm revoke`                            | `simctl privacy`                                                                                     | reset to ask, then `alert`           |
+| launch environment                 | no: args are intent extras                         | yes                                                                                                  | yes                                  |
+| dark mode, text, motion, contrast  | yes                                                | yes                                                                                                  | `devicectl`                          |
+| reduce transparency                | no: its blurs are a developer option               | yes                                                                                                  | `devicectl`                          |
+| animations                         | yes                                                | no: use `reduce_motion`                                                                              | no                                   |
+| locale                             | per app, API 33+; whole device below               | per app; `app ""`: the whole simulator                                                               | per app, the tool's launches         |
+| slow network, thermal state        | emulator; a phone's downloads, 13+                 | no                                                                                                   | Xcode's conditions                   |
+| biometrics                         | an emulator's fingerprint                          | yes                                                                                                  | no: `devicectl` simulates none       |
+| airplane, Wi-Fi, mobile data       | yes, read back                                     | no: it has the Mac's network                                                                         | no                                   |
+| keychain                           | no: Android has none                               | emptied, counted                                                                                     | no                                   |
+| fold pose                          | a foldable, API 31+: every pose it lists, put back | a simulator with two displays (iPhone Duo, Xcode 27.1+): closed, half, open, put back; any other: no | no                                   |
+| incoming call, SMS                 | emulator only                                      | no: no telephony                                                                                     | no                                   |
+| battery level                      | yes                                                | no: it only draws one                                                                                | no                                   |
+| proxy                              | yes, put back                                      | follows the Mac's                                                                                    | no: its Wi-Fi settings               |
+| memory warning                     | a trim level above the app's                       | every app on it, one a call                                                                          | `devicectl` (not yet run on a phone) |
+| shake                              | an emulator's accelerometer                        | yes                                                                                                  | no: only by hand                     |
+| photos and videos into the library | pushed, scanned, taken out at `restore`            | `simctl addmedia`, no delete                                                                         | no                                   |
+| end in the background              | `am kill`                                          | SIGKILL of its process                                                                               | `devicectl` (not yet run on a phone) |
 
 An Android app that targets API 37 reaches this Mac, at `10.0.2.2` from an emulator, or the local network only with the `ACCESS_LOCAL_NETWORK` permission: without it, its requests hang, and `perf_snapshot` and `network` count 0 bytes.
 
@@ -328,7 +328,9 @@ On an iPhone `devicectl device simulate biometrics` answers `Device does not sup
 
 ## A fold
 
-`fold` on Android asks `cmd device_state` for the state of that name, `open`, `closed` or another the device lists such as `half_opened`, by its id there, which differs by device, and is done when the device is in it. The request holds until it is reset, whatever the hinge does and whatever becomes of this tool, so it is a condition: `restore` resets it, and `default (now open)` is no request. It is the same on an emulator and a phone, from API 31. It has not been run on a real foldable.
+`fold` on Android asks `cmd device_state` for the state of that name, by its id there, which differs by device, and is done when the device is in it. It takes every pose the device lists: `open`, `closed`, `half_opened` (also `half`), `rear_display`, and `dual` for both displays at once. A read says the state and then the list. A change answers with the display size and density apps then see, and whether the activity in front was recreated or kept, by the system's own relaunch line. Tabletop and book are not device states: they are half opened with the hinge lying across or standing, which an app reads for itself. The request holds until it is reset, whatever the hinge does and whatever becomes of this tool, so it is a condition: `restore` resets it, and `default (now open)` is no request. It is the same on an emulator and a phone, from API 31. It has not been run on a real foldable. A live window on a folded emulator takes the guest's own picture, which is smaller and lags, as the emulator draws the cover stretched into the inner display's frame.
+
+On an iOS simulator with two built-in displays, the iPhone Duo with Xcode 27.1 or later, `fold` takes `closed`, `half` and `open`. It is read by which display `devicectl device info displays` says is active, and set by the hinge event the simulator's hinge slider sends, which is private API. The display follows the hinge up to 2.5 s later; one that does not follow is refused, and booting the simulator again clears it. The simulator keeps no request to reset, so the pose found is what is written down, and `restore` and the session's end set it again. Nothing outside the simulator tells half open from open: `half` reads back only where this session set it, and a device found half open is put back open. While it is open, reads, touches, `screenshot` and `record` are of the inner display, and an app keeps its process as its scene moves there. Three things differ: the home screen's elements read in the cover's coordinates, a recording comes out unturned, and only the direct input path taps there, not the runner's. Any other simulator refuses.
 
 ## Languages
 

@@ -11,6 +11,9 @@
 - **Yavaşlatma.** `network throttle`, simülatörde uygulamanın isteklerini yavaşlatır: gecikme, bant genişliği ve kayıp; Android'de `device_setting network`'ün adlarıyla, ayrıca `3g` ve `offline`.
 - **Mac uygulaması.** Ağ bölmesi bir isteğin tamamını gösterir, listeyi süzer, bir isteği cURL olarak kopyalar, bir yanıttan kural yapar, HAR kaydeder, kuralları düzenler ve hızı ayarlar; hepsi bir MCP istemcisinin kullandığı aynı yakalama üzerinde. Varsayılan olarak kapalı olan "Gerçek değerleri göster", gönderileni yalnızca o pencerede gösterir.
 - Bütün isteklerin `network read` çağrısı katlanmış gelir: önce başarısız olanlar, her ana makine bir kez, yinelenenler tek satırda. Probe içindeyken uygulamanın kendi sertifika denetimi (pinning) ile bir oturum açma ya da istemci sertifikası sorgusuna verdiği yanıtlar sorulmaz; arka plan oturumları, WKWebView, Network.framework ve dart:io görülmez.
+- `device_setting` `fold`, katlanabilir bir cihazın listelediği her duruşu alır, yalnızca `open` ve `closed` değil: cihazda varsa `half_opened` (`half` de olur), `rear_display` ve `dual`. Okuma bunları durumdan sonra listeler. Bir değişiklik, uygulamaların artık gördüğü ekran boyutunu ve yoğunluğunu, öndeki activity'nin yeniden oluşturulduğunu ya da korunduğunu söyler. Flow'lar `setting fold <duruş>` adımını kaydeder ve yeniden oynatır.
+- iPhone Duo simülatöründe (Xcode 27.1 ve sonrası) `device_setting` `fold`, `closed`, `half` ve `open` alır; `restore`'da, oturum sonunda ve her flow dosyasının sonunda geri alınır. Açıkken `screen`, dokunuşlar, `screenshot` ve `record` iç ekranda çalışır. Simülatörün özel API'sini kullanır; başka her simülatör eskisi gibi reddeder.
+- Mac uygulamasında Cihaz bölmesinin katlama satırı cihazın kendi duruşlarını listeler; canlı pencere katlanabilir cihazın gösterdiği ekranı, kendi boyutunda izler ve dokunuşlar ona ulaşır.
 
 ### Değişenler
 
@@ -22,6 +25,11 @@
 - Uygulamanın neden öldüğünü içeren bir ret, bunu ipucunda söyler; önceden bunun için `crashes`'a yolluyordu.
 - Araç olmayan bir adım yüzünden reddedilen bir `steps` çağrısı hiçbir şeyin yapılmadığını söyler.
 - `node scripts/efficiency.mjs` sekiz görevin çağrı ve karakter olarak maliyetini cihazsız yazdırır; `node scripts/bench.mjs <simulator id>` beşini gerçek bir modelle çalıştırır; bkz. CONTRIBUTING.
+
+### Düzeltilenler
+
+- Katlanabilir bir Android emülatöründe canlı pencere, cihaz katlandıktan sonra iç ekranın biçiminde kalıyordu: artık izliyor.
+- iOS'ta bir switch satırına ref ya da seçiciyle yapılan `tap` artık switch'i değiştirir: switch satırın çerçevesinden biraz taşsa bile (iOS 26 Ayarlar'da olduğu gibi) satıra kendi switch'inden dokunulur; tek bir switch tutan hücreye de o switch'ten dokunulur.
 
 ## 1.2.0
 
