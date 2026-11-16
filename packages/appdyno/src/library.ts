@@ -1,18 +1,15 @@
 import {
   argumentsFor,
-  DEFAULT_POLICY,
   flowsFor,
   givenUp,
   inCall,
   opsFor,
   rawNodes,
-  secretsOf,
   ServerContext,
   SHARE_BY_LIBRARY,
   ToolError,
-  writeDirsOf,
 } from '@appdyno/ops';
-import { regularExpression } from './allow.js';
+import { policyFor, signingOf } from './allow.js';
 import { deviceProviders } from './providers.js';
 
 /**
@@ -59,7 +56,35 @@ export type ConnectOptions = {
    * video show the screen as it was.
    */
   secrets?: string[];
+  /** The same limits as one object, which `openDevice` takes too: see `Policy`. */
+  policy?: Policy;
+  /** An iPhone's signing for this device alone: see `Signing`. */
+  signing?: Signing;
 };
+
+/**
+ * What a program lets appdyno show and do, in one object that `connect` and `openDevice` both take. On `connect` each
+ * field adds to the option of the same meaning: `secrets` to `secrets`, `write` to `allowWrite`, and `urls` stands in
+ * place of `allowUrls`.
+ */
+export type Policy = {
+  /** Texts never shown back, as a test account's password. Hidden in text alone, not in a picture. */
+  secrets?: string[];
+  /** The only apps that may be launched, stopped or cleared, and that a link may open in; with none, any. */
+  apps?: string[];
+  /** The only links that may be opened. */
+  urls?: RegExp;
+  /** Folders a file may be written in, beside the folder the program runs in and appdyno's own state folder. */
+  write?: string[];
+};
+
+/**
+ * What signs the runner for an iPhone: a development provisioning profile's path, and the keychain that holds its
+ * identity, with its password where that keychain is locked. Given here it stands in place of `APPDYNO_IOS_PROFILE`,
+ * `APPDYNO_IOS_KEYCHAIN` and `APPDYNO_IOS_KEYCHAIN_PASSWORD`, for this device alone. appdyno neither prints nor keeps
+ * the password: read it from where secrets are kept, not from the source.
+ */
+export type Signing = { profile: string; keychain?: string; keychainPassword?: string };
 
 /** What a tool answered: the words a person would read, its images, and its data. */
 export type Answer<N extends ToolName> = {
@@ -187,18 +212,9 @@ function stoppedBy<T>(signal: StopSignal | undefined, what: string, run: () => P
 /** A device to drive from code: nothing is opened until the first call. */
 export function connect(options: ConnectOptions = {}): Appdyno {
   const { device, app, share = process.env.APPDYNO_SHARE === '1' } = options;
-  const allowDevices = regularExpression(options.allowDevices);
-  const urls = regularExpression(options.allowUrls, ['allowUrls', '/^myapp:/']);
   const ctx = new ServerContext(
-    {
-      ...DEFAULT_POLICY,
-      ...(allowDevices && { devices: allowDevices }),
-      ...(urls && { urls }),
-      ...(options.allowBuild === true && { allowBuild: true }),
-      secrets: secretsOf(process.env, options.secrets),
-      writeDirs: writeDirsOf(options.allowWrite),
-    },
-    deviceProviders(),
+    policyFor(options),
+    deviceProviders(false, undefined, undefined, {}, signingOf(options.signing)),
     // the program that calls this is the person's own, as a command line is
     {
       ...(device && { device }),

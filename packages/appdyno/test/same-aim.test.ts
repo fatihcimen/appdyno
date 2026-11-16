@@ -79,8 +79,8 @@ describe('a tool and a device opened from code', () => {
     }
   });
 
-  /** What the device entry takes of the tool layer: the driver for a serial and the policy a server keeps, by name. */
-  const OF_THE_TOOLS = ['DEFAULT_POLICY', 'ServerContext'];
+  /** What the device entry takes of the tool layer: the driver for a serial and the checks of the policy a server keeps, by name. */
+  const OF_THE_TOOLS = ['ServerContext', 'checkApp', 'redact'];
 
   it('take of the tool layer, in the device entry, only what is named here', () => {
     const source = readFileSync(new URL('../src/device.ts', import.meta.url), 'utf8');

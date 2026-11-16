@@ -8,16 +8,18 @@ import {
   selectIn,
   settleBy,
   SHARE_BY_LIBRARY,
+  shownLabel,
   touchPoint,
   waitUntil,
   withFamily,
   withShownWords,
   type Reads,
+  type ScreenElement as Listed,
   type Sought,
 } from '@appdyno/core';
-import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { checkApp, redact, ServerContext } from '@appdyno/ops';
 import { DeviceError, SETTLE_DEFAULT, type Tree } from '@appdyno/protocol';
-import { regularExpression } from './allow.js';
+import { policyFor, signingOf } from './allow.js';
 import { deviceProviders } from './providers.js';
 import type {
   Aimed,
@@ -44,10 +46,11 @@ const settled = (r: { settle?: { settled: boolean } | undefined }): Touched => (
  */
 export async function openDevice(serial: string, options: OpenOptions = {}): Promise<Device> {
   const { app, share = false } = options;
-  const allowDevices = regularExpression(options.allowDevices);
+  const policy = policyFor(options);
+  const clean = (text: string) => redact(policy, text);
   const device = new ServerContext(
-    { ...DEFAULT_POLICY, ...(allowDevices && { devices: allowDevices }) },
-    deviceProviders(),
+    policy,
+    deviceProviders(false, undefined, undefined, {}, signingOf(options.signing)),
   ).deviceFor(serial);
   const letGo = (held = !share) => {
     device.close();
@@ -68,7 +71,7 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
       ...(app && { appId: app }),
     });
     return {
-      elements: withFamily(list, elements),
+      elements: withFamily(list, elements).map((e) => hidden(e, clean)),
       hash,
       ...(foreground && { foreground }),
       ...(window && { window }),
@@ -107,12 +110,12 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
       };
     },
     async launch(id) {
-      await device.launch(id);
+      await device.launch(checkApp(policy, id));
       // a read right after a launch catches a screen still laying out, and a touch aimed on it lands elsewhere
       const { settled } = await settleBy(screen, SETTLE_DEFAULT.quietMs, SETTLE_DEFAULT.maxMs);
       return { settled };
     },
-    terminate: (id) => device.terminate(id),
+    terminate: async (id) => device.terminate(checkApp(policy, id)),
     foreground: () => device.foreground(),
     aim: async (target, { waitMs = AIM_WAIT_MS } = {}) =>
       aimed(await seek({ now: screen, until }, target, READS, waitMs), target),
@@ -120,6 +123,22 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
       letGo();
       return Promise.resolve();
     },
+  };
+}
+
+/**
+ * An element as this entry gives it: the fields its type names and no other, as the model's own names for it hold its
+ * words too, with the caller's secrets hidden in its words and its id. Whole first, then cut, so no cut shows a part.
+ */
+function hidden(
+  { name: _name, nameKind: _kind, context: _context, refContext: _row, ...e }: Listed,
+  clean: (text: string) => string,
+): ScreenElement {
+  return {
+    ...e,
+    label: shownLabel(e, clean),
+    ...(e.whole !== undefined && { whole: clean(e.whole) }),
+    ...(e.id !== undefined && { id: clean(e.id) }),
   };
 }
 

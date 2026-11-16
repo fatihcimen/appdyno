@@ -1,6 +1,6 @@
-import type { ErrorCode } from './library.js';
+import type { ErrorCode, Policy, Signing } from './library.js';
 
-export type { ErrorCode };
+export type { ErrorCode, Policy, Signing };
 
 /** A place on the screen, in the units a touch takes: points on iOS, pixels on Android. */
 export type Point = { x: number; y: number };
@@ -60,6 +60,14 @@ export type OpenOptions = {
   allowDevices?: RegExp;
   /** Drive a device another process holds, and hold it from no one. */
   share?: boolean;
+  /**
+   * What this device may show and do. `secrets` are hidden in an element's `label`, `whole` and `id`. `apps`: the only
+   * apps `launch` and `terminate` take. A call outside it is refused `POLICY_DENIED`. A touch is still a touch: none
+   * of this asks anything of one.
+   */
+  policy?: Policy;
+  /** An iPhone's signing for this device alone, in place of the `APPDYNO_IOS_PROFILE` variables: see `Signing`. */
+  signing?: Signing;
 };
 
 export type TouchOptions = {

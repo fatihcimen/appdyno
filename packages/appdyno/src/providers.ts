@@ -1,5 +1,5 @@
 import { Adb, androidProvider, type InstallAnswers } from '@appdyno/driver-android';
-import { iphoneProvider, simulatorProvider } from '@appdyno/driver-apple';
+import { iphoneProvider, simulatorProvider, type PhoneSigning } from '@appdyno/driver-apple';
 
 /** What this Mac reaches devices by: of those that take a serial, the last one opens it. */
 export const deviceProviders = (
@@ -7,6 +7,7 @@ export const deviceProviders = (
   animations?: 'on' | 'off',
   installAnswers?: InstallAnswers,
   simulator: { behind?: boolean } = {},
+  signing?: PhoneSigning,
 ) => [
   androidProvider(new Adb(), {
     takeover,
@@ -14,5 +15,5 @@ export const deviceProviders = (
     ...(installAnswers && { installAnswers }),
   }),
   simulatorProvider(undefined, simulator),
-  iphoneProvider(),
+  iphoneProvider(undefined, signing),
 ];

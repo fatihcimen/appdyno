@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Devicectl, phoneFacts } from './devicectl.js';
 import { iphoneGuide } from './guide.js';
 import { IosPhoneDevice } from './phone.js';
+import type { PhoneSigning } from './signing.js';
 import { listPhones, sameUdid, type UsbAttach } from './usbmux.js';
 import { pairedPhones } from './wifi-paired.js';
 
@@ -77,6 +78,8 @@ export function iphoneProvider(
     phones: () => listPhones().catch(() => []),
     paired: pairedPhones,
   },
+  /** What signs the runner for the phones opened here, in place of what the environment names. */
+  signing?: PhoneSigning,
 ): DeviceProvider {
   const devicectl = connected.devicectl ?? ((udid) => new Devicectl(udid));
   return {
@@ -109,6 +112,6 @@ export function iphoneProvider(
       return usbPhoneNeed(serial, plugIn?.deviceId, devicectl(serial));
     },
     guide: iphoneGuide,
-    open: (serial) => new IosPhoneDevice(serial),
+    open: (serial) => new IosPhoneDevice(serial, signing),
   };
 }
