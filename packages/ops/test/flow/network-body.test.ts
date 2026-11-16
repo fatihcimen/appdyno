@@ -48,7 +48,7 @@ describe('a body of a request, read in part', () => {
   const { context, refusal } = at.helpers;
   const start = async (bodies = true) => {
     const call = callerOf(context(['s3cr3t-pass']));
-    await call('network', { action: 'start', via: 'probe', bodies });
+    await call('capture_network', { action: 'start', via: 'probe', bodies });
     at.probe.entries = [
       GET,
       { ...GET, url: 'https://api.test/search?q=shoe%20&page=2', status: 404 },
@@ -65,7 +65,7 @@ describe('a body of a request, read in part', () => {
   const reader = async () => {
     const call = await start();
     return async (args: Record<string, unknown>) =>
-      (await call('network', { action: 'read', ...args })).text.split('\n');
+      (await call('capture_network', { action: 'read', ...args })).text.split('\n');
   };
 
   it('gives one value by its path, hidden where its key names a credential', async () => {
@@ -99,7 +99,7 @@ describe('a body of a request, read in part', () => {
   it('gives the shape of each body, and says of one cut short or of no JSON why it has none', async () => {
     const call = await start();
     expect(
-      (await call('network', { action: 'read', id: 0, shape: true })).text.split('\n'),
+      (await call('capture_network', { action: 'read', id: 0, shape: true })).text.split('\n'),
     ).toEqual([
       '0 GET https://api.test/search?q=shoe&token=••• 200 40 ms 90 B',
       'request body shape: {q: string, password: string}',
@@ -109,10 +109,10 @@ describe('a body of a request, read in part', () => {
       0: { ...answered('{"a":[1,2'), responseBodySize: 90_000 },
       1: answered('<html></html>'),
     };
-    expect((await call('network', { action: 'read', id: 0, shape: true })).text).toContain(
+    expect((await call('capture_network', { action: 'read', id: 0, shape: true })).text).toContain(
       'the response body is 90000 B and its first 9 were kept: no whole JSON',
     );
-    expect((await call('network', { action: 'read', id: 1, shape: true })).text).toContain(
+    expect((await call('capture_network', { action: 'read', id: 1, shape: true })).text).toContain(
       'the response body is no JSON',
     );
   });
@@ -141,14 +141,14 @@ describe('a body of a request, read in part', () => {
   it('refuses where it has no meaning: with no id, with no bodies kept, a path that is none', async () => {
     const call = await start(false);
     const e = (args: Record<string, unknown>) =>
-      refusal(call('network', { action: 'read', ...args }));
+      refusal(call('capture_network', { action: 'read', ...args }));
     expect((await e({ shape: true })).message).toBe('path, shape and diff go with read and id');
     expect((await e({ id: 0, shape: true })).message).toMatch(/this capture keeps none/);
-    await call('network', { action: 'stop' });
+    await call('capture_network', { action: 'stop' });
     const kept = await start();
-    const bad = await refusal(kept('network', { action: 'read', id: 0, path: 'a b' }));
+    const bad = await refusal(kept('capture_network', { action: 'read', id: 0, path: 'a b' }));
     expect(bad.message).toBe('path is keys and indexes, as data.items[0].price: a b');
-    expect((await refusal(kept('network', { action: 'read', id: 0, diff: 7 }))).code).toBe(
+    expect((await refusal(kept('capture_network', { action: 'read', id: 0, diff: 7 }))).code).toBe(
       'NOT_FOUND',
     );
   });

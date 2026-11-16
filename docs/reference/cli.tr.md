@@ -92,7 +92,7 @@ Yalnızca değişkeni olan ayarlar:
 | `APPDYNO_HOST_VIRTUAL=0`      | bu Mac, macOS ne derse desin, sanal makine sayılmaz; load average'ı ne kadar meşgul olduğunu gerçekten söyleyen bir sanal Mac için: bkz. [Kapı](perf.tr.md#kapı)         |
 | `APPDYNO_IOS_TEAM`            | Xcode'un iPhone runner'ını hazırlarken kullandığı Apple ekibi: bkz. [Xcode halletsin](../guides/clients.tr.md#xcode-halletsin)                                           |
 | `APPDYNO_IOS_PROFILE`         | iPhone runner'ı için bir provisioning profile; `APPDYNO_IOS_KEYCHAIN` ve `APPDYNO_IOS_KEYCHAIN_PASSWORD` ile birlikte                                                    |
-| `APPDYNO_EMULATOR_ARGS`       | `simulator` bir emülatör başlatırken verilen seçenekler: bkz. [Bir simülatör ya da emülatör başlatmak](tools.tr.md#bir-simülatör-ya-da-emülatör-başlatmak)               |
+| `APPDYNO_EMULATOR_ARGS`       | `manage_simulator` bir emülatör başlatırken verilen seçenekler: bkz. [Bir simülatör ya da emülatör başlatmak](tools.tr.md#bir-simülatör-ya-da-emülatör-başlatmak)        |
 | `APPDYNO_ANDROID_AGENT`       | bu checkout'un build'i ya da paketinki yerine kurulacak bir Android ajanı `.apk` dosyası                                                                                 |
 | `APPDYNO_IOS_PRODUCTS`        | bu checkout'un build'i ya da ilk kullanımda indirilen ya da derlenen yerine, bir simülatör için derlenmiş iOS runner'ını ve onun `.xctestrun` dosyasını tutan bir klasör |
 | `APPDYNO_IOS_DEVICE_PRODUCTS` | aynısı, bir telefon için                                                                                                                                                 |

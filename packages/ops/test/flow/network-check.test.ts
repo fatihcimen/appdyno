@@ -50,7 +50,7 @@ describe('a check of a request', () => {
   const { context, refusal, recorded } = at.helpers;
   const start = async (secrets: string[] = []) => {
     const call = callerOf(context(secrets));
-    await call('network', { action: 'start', via: 'probe', bodies: true });
+    await call('capture_network', { action: 'start', via: 'probe', bodies: true });
     return call;
   };
 
@@ -58,7 +58,7 @@ describe('a check of a request', () => {
     const call = await start();
     at.probe.entries = [{ ...PUT, method: 'GET', status: 200 }, PUT];
     at.probe.details = { 1: SENT };
-    const found = await call('network', {
+    const found = await call('capture_network', {
       action: 'check',
       contains: '/v1/profile',
       method: 'put',
@@ -68,8 +68,10 @@ describe('a check of a request', () => {
     expect(found.text).toBe('found: 1 PUT https://api.test/v1/profile?token=••• 409 40 ms 20 B');
     expect(found.data.entries?.[0]?.id).toBe(1);
     // the answer's body by its word, and only what came after the one named
-    await call('network', { action: 'check', has: 'response: error.code=7' });
-    const late = await refusal(call('network', { action: 'check', after: 1, timeoutMs: 0 }));
+    await call('capture_network', { action: 'check', has: 'response: error.code=7' });
+    const late = await refusal(
+      call('capture_network', { action: 'check', after: 1, timeoutMs: 0 }),
+    );
     expect(late.message).toBe('no request in 0 ms after id 1: the app made none');
   });
 
@@ -87,7 +89,11 @@ describe('a check of a request', () => {
         entries: entries.map(({ inFlight, ...e }) => (inFlight ? { ...e, inFlight } : e)),
       });
     };
-    const found = await call('network', { action: 'check', status: '409', timeoutMs: 5_000 });
+    const found = await call('capture_network', {
+      action: 'check',
+      status: '409',
+      timeoutMs: 5_000,
+    });
     expect(found.text).toMatch(/^found: 0 PUT /);
     expect(reads).toBeGreaterThan(6);
   });
@@ -98,7 +104,12 @@ describe('a check of a request', () => {
     at.probe.details = { 1: SENT };
     const miss = (args: Record<string, unknown>) =>
       refusal(
-        call('network', { action: 'check', contains: '/v1/profile', timeoutMs: 500, ...args }),
+        call('capture_network', {
+          action: 'check',
+          contains: '/v1/profile',
+          timeoutMs: 500,
+          ...args,
+        }),
       );
     const status = await miss({ method: 'PUT', status: '2xx' });
     expect(status.code).toBe('CHECK_FAILED');
@@ -128,7 +139,7 @@ describe('a check of a request', () => {
   it('refuses has where the capture keeps no bodies, and a check with no capture', async () => {
     const ctx = context();
     // a wait for a request holds no turn on the device: a tap sent beside it goes on
-    const { network } = opsFor(ctx);
+    const { capture_network: network } = opsFor(ctx);
     expect(['check', 'read', 'paths'].map((action) => network?.readsOnly?.({ action }))).toEqual([
       true,
       true,
@@ -136,9 +147,9 @@ describe('a check of a request', () => {
     ]);
     expect(network?.readsOnly?.({ action: 'mock' })).toBe(false);
     const call = callerOf(ctx);
-    expect((await refusal(call('network', { action: 'check' }))).code).toBe('NOT_FOUND');
-    await call('network', { action: 'start', via: 'probe' });
-    const e = await refusal(call('network', { action: 'check', has: 'a=1' }));
+    expect((await refusal(call('capture_network', { action: 'check' }))).code).toBe('NOT_FOUND');
+    await call('capture_network', { action: 'start', via: 'probe' });
+    const e = await refusal(call('capture_network', { action: 'check', has: 'a=1' }));
     expect(e.message).toBe(
       'has reads a body, and this capture keeps none: start with bodies: true',
     );
@@ -147,7 +158,7 @@ describe('a check of a request', () => {
   it('is a request step in a flow, which looks only at what came since the run began', async () => {
     const ctx = context();
     const call = callerOf(ctx);
-    await call('network', { action: 'start', via: 'probe', bodies: true });
+    await call('capture_network', { action: 'start', via: 'probe', bodies: true });
     at.probe.entries = [PUT];
     const flows = flowsFor(ctx);
     const old = await flows.replay(at.flowFile('request "/v1/profile" status=409 timeoutMs=300'));
@@ -169,7 +180,12 @@ describe('a check of a request', () => {
     const bad = await refusal(flows.replay(at.flowFile('request /x status=ok')));
     expect(bad.message).toContain('request: status is 404, 4xx or failed: ok');
     const { text } = await recorded(call, () =>
-      call('network', { action: 'check', contains: '/v1/profile', method: 'PUT', has: 'name=Ada' }),
+      call('capture_network', {
+        action: 'check',
+        contains: '/v1/profile',
+        method: 'PUT',
+        has: 'name=Ada',
+      }),
     );
     expect(text).toContain('request "/v1/profile" method=PUT has="name=Ada"\n');
   });

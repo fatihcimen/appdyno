@@ -1,5 +1,5 @@
 // The rules of the Network pane: what the probe answers, fails, delays or sends elsewhere in the app's requests, each
-// as the line `network` `mock` takes, so that an agent's rules and a person's are one list. A rule is added, changed,
+// as the line `capture_network` `mock` takes, so that an agent's rules and a person's are one list. A rule is added, changed,
 // turned off and on, and removed here, by its line or by its fields; each change is that op's, through the parent.
 #import "Place.h"
 #import "Window.h"

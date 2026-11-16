@@ -76,7 +76,7 @@ export function networkSetting(
         : []),
       ...(set
         ? [
-            `${action === 'mock' ? 'rules set' : `throttle ${capture.throttle ?? 'full'}`}: for ${APP_ONLY}; ended by network stop`,
+            `${action === 'mock' ? 'rules set' : `throttle ${capture.throttle ?? 'full'}`}: for ${APP_ONLY}; ended by capture_network stop`,
           ]
         : []),
       ...(made?.notes ?? []),

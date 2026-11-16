@@ -511,14 +511,14 @@ describe("a window's Network pane", () => {
     await expect.poll(lines).toContain('  Authorization: Bearer abcdefgh12345678');
     for (const secret of SECRETS) expect(lines()).toContain(secret);
     // and what an agent is answered is hidden all the same: the op knows of no such choice
-    const { answer: answeredAgent, data } = await sends.call('network', 'capture_network', {
+    const { answer: answeredAgent, data } = await sends.call('capture_network', 'capture_network', {
       action: 'read',
       id: 0,
     });
     const agent = `${answeredAgent.text}\n${JSON.stringify(data)}`;
     expect(agent).toContain('Authorization: •••');
     for (const secret of SECRETS) expect(agent).not.toContain(secret);
-    const listed = await sends.call('network', 'capture_network', { action: 'read' });
+    const listed = await sends.call('capture_network', 'capture_network', { action: 'read' });
     for (const secret of SECRETS) expect(JSON.stringify(listed)).not.toContain(secret);
     // a command that makes the request again, hidden unless asked otherwise
     pane.onWindow({ op: 'control', name: 'networkCurl', id: 0 });

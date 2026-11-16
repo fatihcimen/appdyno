@@ -1,4 +1,4 @@
-// The Network pane: the app's requests as `network` gives them, by the capture that op keeps for the device, so an agent's
+// The Network pane: the app's requests as `capture_network` gives them, by the capture that op keeps for the device, so an agent's
 // and this pane's are one. The parent offers only the ways this device has, a proxy only where one is set already, and
 // says what a person needs where none lists requests: no window sets a proxy.
 #import "Place.h"

@@ -51,7 +51,7 @@ export const SPECS = {
   /** A device setting, as `device_setting` takes it; `setting restore` puts back what was changed. */
   setting: { words: ['name', 'value?'], text: ['app', 'title'] },
   /**
-   * A rule for the app's requests, as `network` `mock` takes one: `host/path` with `*`, then what it does. With no
+   * A rule for the app's requests, as `capture_network` `mock` takes one: `host/path` with `*`, then what it does. With no
    * request, `from` makes rules of a HAR file's answers and `unmatched=fail` fails what no rule takes. All of it holds
    * until the file ends.
    */
@@ -68,7 +68,7 @@ export const SPECS = {
    */
   network: { words: ['name', 'value?'] },
   /**
-   * The app made a request, as `network` `check` waits for one: by a part of its address, its method, its status and
+   * The app made a request, as `capture_network` `check` waits for one: by a part of its address, its method, its status and
    * what its body holds. It looks only at requests since the run began.
    */
   request: { words: ['part?'], text: ['method', 'status', 'has'], number: ['timeoutMs'] },

@@ -4,7 +4,7 @@ import { ruleStep } from '../network-rules.js';
 import { stepOf, unrecorded } from './aim.js';
 
 /**
- * A `network` call as the steps of a flow: each rule set is a `mock` step and `strict` a `network strict`, which a
+ * A `capture_network` call as the steps of a flow: each rule set is a `mock` step and `strict` a `network strict`, which a
  * replay sets and takes back at its end, and a `check` a `request`. A capture, a throttle and a clearing have no step; `looks` are the actions
  * that change nothing, and leave none.
  */
@@ -46,5 +46,5 @@ export function networkSteps(
     (a.action === 'mock' && !a.rules) ||
     (a.action === 'throttle' && a.throttle === undefined)
     ? undefined
-    : unrecorded(`network ${String(a.action)}`);
+    : unrecorded(`capture_network ${String(a.action)}`);
 }

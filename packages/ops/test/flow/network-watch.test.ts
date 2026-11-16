@@ -21,10 +21,10 @@ describe('a request that failed under an action', () => {
 
   it('is in the answer of the action, once, in a line, with what a rule made of it marked', async () => {
     const call = callerOf(context());
-    await call('network', { action: 'start', via: 'probe' });
+    await call('capture_network', { action: 'start', via: 'probe' });
     // what ended before the first action is not its own
     at.probe.entries = [later({ at: new Date(Date.now() - 5_000).toISOString() })];
-    expect((await call('tap', TAP)).text).not.toContain('network:');
+    expect((await call('tap_screen', TAP)).text).not.toContain('network:');
     at.probe.entries.push(
       later(),
       later({ method: 'GET', url: 'https://api.test/me', status: 404 }),
@@ -34,7 +34,7 @@ describe('a request that failed under an action', () => {
       later({ status: 0, error: 'the app ended before it did' }),
       later({ status: 0, error: 'The request timed out.', code: -1001, how: 'failed' }),
     );
-    const tap = await call('tap', TAP);
+    const tap = await call('tap_screen', TAP);
     const lines = tap.text.split('\n').filter((l) => l.startsWith('network:'));
     expect(lines).toEqual([
       'network: POST api.test/v1/pay 500 (id 1)',
@@ -43,7 +43,7 @@ describe('a request that failed under an action', () => {
     ]);
     expect(tap.data.warnings).toEqual(expect.arrayContaining(lines));
     // told once: the next action says nothing of them
-    expect((await call('tap', TAP)).text).not.toContain('network:');
+    expect((await call('tap_screen', TAP)).text).not.toContain('network:');
     // one that began before this action and ended after the last answer says so; past three they are counted
     at.probe.entries.push(
       later({ at: new Date(Date.now() - 1).toISOString() }),
@@ -52,26 +52,28 @@ describe('a request that failed under an action', () => {
       later(),
       later(),
     );
-    const many = (await call('tap', TAP)).text.split('\n').filter((l) => l.startsWith('network:'));
+    const many = (await call('tap_screen', TAP)).text
+      .split('\n')
+      .filter((l) => l.startsWith('network:'));
     expect(many).toEqual([
       'network: POST api.test/v1/pay 500 (id 7, before this action)',
       'network: POST api.test/v1/pay 500 (id 8)',
       'network: POST api.test/v1/pay 500 (id 9)',
-      'network: 2 more failed: network read lists them first',
+      'network: 2 more failed: capture_network read lists them first',
     ]);
   });
 
   it('says nothing with no capture by the probe, and costs an answer nothing when none failed', async () => {
     const call = callerOf(context());
-    const plain = (await call('tap', TAP)).text;
-    await call('network', { action: 'start', via: 'probe' });
+    const plain = (await call('tap_screen', TAP)).text;
+    await call('capture_network', { action: 'start', via: 'probe' });
     at.probe.entries = [later({ status: 200 })];
-    expect((await call('tap', TAP)).text.length).toBeLessThanOrEqual(plain.length);
+    expect((await call('tap_screen', TAP)).text.length).toBeLessThanOrEqual(plain.length);
   });
 
   it('fails the action under strict, for a 5xx or a failure no rule made, and says what the action did', async () => {
     const call = callerOf(context());
-    const on = await call('network', { action: 'mock', strict: true });
+    const on = await call('capture_network', { action: 'mock', strict: true });
     expect(on.text).toMatch(
       /^started a capture by the probe: dev\.app was restarted with it\nstrict on: /,
     );
@@ -83,25 +85,31 @@ describe('a request that failed under an action', () => {
       later({ how: 'mocked' }),
       later({ status: 0, error: 'offline', code: -1009, how: 'failed' }),
     ];
-    expect((await call('tap', TAP)).text).toContain('network: POST api.test/v1/pay 404 (id 0)');
+    expect((await call('tap_screen', TAP)).text).toContain(
+      'network: POST api.test/v1/pay 404 (id 0)',
+    );
     at.probe.entries.push(later());
-    const e = await refusal(call('tap', TAP));
+    const e = await refusal(call('tap_screen', TAP));
     expect(e.code).toBe('CHECK_FAILED');
     expect(e.message).toMatch(
       /^tapped .*"Ana sayfa"\nnetwork strict: POST api\.test\/v1\/pay 500 \(id 3\)$/,
     );
-    expect(e.hint).toContain('network mock strict: false ends this');
+    expect(e.hint).toContain('capture_network mock strict: false ends this');
     at.probe.entries.push(later({ status: 0, error: 'The request timed out.', code: -1001 }));
-    expect((await refusal(call('tap', TAP))).message).toContain('failed: The request timed out.');
-    const off = await call('network', { action: 'mock', strict: false });
+    expect((await refusal(call('tap_screen', TAP))).message).toContain(
+      'failed: The request timed out.',
+    );
+    const off = await call('capture_network', { action: 'mock', strict: false });
     expect(off.text).toBe('strict off\nno rule is set');
     at.probe.entries.push(later());
-    expect((await call('tap', TAP)).text).toContain('network: POST api.test/v1/pay 500 (id 5)');
+    expect((await call('tap_screen', TAP)).text).toContain(
+      'network: POST api.test/v1/pay 500 (id 5)',
+    );
     // with a capture it starts, and nowhere it has no meaning
-    await call('network', { action: 'stop' });
-    await call('network', { action: 'start', via: 'probe', strict: true });
+    await call('capture_network', { action: 'stop' });
+    await call('capture_network', { action: 'start', via: 'probe', strict: true });
     expect(captures.read(at.device.serial)?.strict).toBe(true);
-    expect((await refusal(call('network', { action: 'read', strict: true }))).message).toBe(
+    expect((await refusal(call('capture_network', { action: 'read', strict: true }))).message).toBe(
       'strict goes with start, mock or throttle',
     );
   });
@@ -140,8 +148,8 @@ describe('a request that failed under an action', () => {
   it('records strict as a step, and reads only strict, on or off, after network', async () => {
     const call = callerOf(context());
     const { text } = await recorded(call, async () => {
-      await call('network', { action: 'mock', strict: true });
-      await call('network', { action: 'mock', strict: false });
+      await call('capture_network', { action: 'mock', strict: true });
+      await call('capture_network', { action: 'mock', strict: false });
     });
     expect(text).toContain('network strict\nnetwork strict off\n');
     const bad = await refusal(flowsFor(context()).replay(at.flowFile('network loud')));

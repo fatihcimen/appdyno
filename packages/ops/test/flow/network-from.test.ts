@@ -36,12 +36,12 @@ describe('a rule made of an answer', () => {
 
   it('answers a captured request as it was answered, its body in a file with its credentials hidden', async () => {
     const call = callerOf(context());
-    await call('network', { action: 'start', via: 'probe', bodies: true });
-    await call('network', { action: 'mock', rules: ['api.test/mine status=500'] });
+    await call('capture_network', { action: 'start', via: 'probe', bodies: true });
+    await call('capture_network', { action: 'mock', rules: ['api.test/mine status=500'] });
     at.probe.entries = [GET, { ...GET, status: 0, error: 'offline' }, { ...GET, method: 'POST' }];
     at.probe.details = { 0: ANSWER, 2: { ...ANSWER, responseBodySize: 90_000 } };
     const file = join(at.dir, 'appdyno-network', 'mock-api.test-v1-items-0.json');
-    const made = await call('network', { action: 'mock', from: '0' });
+    const made = await call('capture_network', { action: 'mock', from: '0' });
     const line = `"api.test/v1/items" status=200 type="application/json; charset=utf-8" body=@${file}`;
     expect(made.data.added).toEqual([line]);
     expect(made.text).toContain('what names a credential in the body is hidden in the file (•••)');
@@ -50,22 +50,24 @@ describe('a rule made of an answer', () => {
     expect(captures.read(at.device.serial)?.rules).toEqual(['"api.test/mine" status=500', line]);
     expect(at.probe.told?.rules[1]).toMatchObject({ status: 200, bodyFile: file });
     // a file that is there stays unless asked
-    expect((await refusal(call('network', { action: 'mock', from: '0' }))).message).toMatch(
+    expect((await refusal(call('capture_network', { action: 'mock', from: '0' }))).message).toMatch(
       /exists: overwrite true replaces it/,
     );
-    await call('network', { action: 'mock', from: '0', overwrite: true });
-    expect((await refusal(call('network', { action: 'mock', from: '1' }))).message).toBe(
+    await call('capture_network', { action: 'mock', from: '0', overwrite: true });
+    expect((await refusal(call('capture_network', { action: 'mock', from: '1' }))).message).toBe(
       'request 1 got no answer to make a rule of',
     );
-    const half = await refusal(call('network', { action: 'mock', from: '2' }));
+    const half = await refusal(call('capture_network', { action: 'mock', from: '2' }));
     expect(half.message).toMatch(/answered 90000 B and its first 34 were kept: half an answer/);
-    expect((await refusal(call('network', { action: 'mock', from: '9' }))).code).toBe('NOT_FOUND');
+    expect((await refusal(call('capture_network', { action: 'mock', from: '9' }))).code).toBe(
+      'NOT_FOUND',
+    );
     // with no body kept, the rule answers by the status alone, and says so
     at.probe.details = {};
-    const bare = await call('network', { action: 'mock', from: '2' });
+    const bare = await call('capture_network', { action: 'mock', from: '2' });
     expect(bare.data.added).toEqual(['"api.test/v1/items" method=POST status=200']);
     expect(bare.text).toContain('its body was not kept (start with bodies: true)');
-    expect((await refusal(call('network', { action: 'read', from: '0' }))).message).toBe(
+    expect((await refusal(call('capture_network', { action: 'read', from: '0' }))).message).toBe(
       'from and unmatched go with mock',
     );
   });
@@ -81,7 +83,7 @@ describe('a rule made of an answer', () => {
       entry('GET', 'https://api.test/never', 0),
       entry('GET', 'data:text/plain,hey', 200),
     ]);
-    const made = await call('network', { action: 'mock', from: name, unmatched: 'fail' });
+    const made = await call('capture_network', { action: 'mock', from: name, unmatched: 'fail' });
     const dir = join(at.dir, 'appdyno-network', 'checkout');
     expect(made.data.added).toEqual([
       `"api.test/a" query="page=2" status=200 type=application/json body=@${join(dir, '1-a.json')}`,
@@ -100,22 +102,22 @@ describe('a rule made of an answer', () => {
     expect(at.probe.told?.unmatched).toBe('fail');
     expect(at.probe.told?.rules).toHaveLength(4);
     // again as it is, as a flow that replays it runs more than once; and narrowed
-    await call('network', { action: 'mock', rules: [] });
-    const some = await call('network', { action: 'mock', from: name, method: 'POST' });
+    await call('capture_network', { action: 'mock', rules: [] });
+    const some = await call('capture_network', { action: 'mock', from: name, method: 'POST' });
     expect(some.data.added).toHaveLength(1);
     // by a bare name it is found where save writes one
     mkdirSync(join(at.dir, 'appdyno-network'), { recursive: true });
     har([entry('GET', 'https://api.test/kept', 204)], 'appdyno-network/kept.har');
-    const kept = await call('network', { action: 'mock', from: 'kept.har' });
+    const kept = await call('capture_network', { action: 'mock', from: 'kept.har' });
     expect(kept.data.added).toEqual(['"api.test/kept" status=204 type=application/json']);
-    await call('network', { action: 'mock', unmatched: 'pass' });
+    await call('capture_network', { action: 'mock', unmatched: 'pass' });
     expect(at.probe.told?.unmatched).toBeUndefined();
   });
 
   it('refuses a file outside the folder, one that is no HAR, one with nothing in it and one with too much', async () => {
     const call = callerOf(context());
     const from = (name: string, more = {}) =>
-      refusal(call('network', { action: 'mock', from: name, ...more }));
+      refusal(call('capture_network', { action: 'mock', from: name, ...more }));
     expect((await from('/etc/hosts')).code).toBe('POLICY_DENIED');
     expect((await from('none.har')).code).toBe('NOT_FOUND');
     writeFileSync(join(at.dir, 'bad.har'), 'not json');
@@ -134,7 +136,7 @@ describe('a rule made of an answer', () => {
   it('holds in a flow until its file ends, and is recorded as the step that makes it again', async () => {
     const ctx = context();
     const call = callerOf(ctx);
-    await call('network', { action: 'mock', rules: ['api.test/mine status=500'] });
+    await call('capture_network', { action: 'mock', rules: ['api.test/mine status=500'] });
     mkdirSync(join(at.dir, 'flows'));
     har([entry('GET', 'https://api.test/a', 200, { text: '{}' })], 'flows/replay.har');
     const during: [number, string | undefined][] = [];
@@ -153,8 +155,12 @@ describe('a rule made of an answer', () => {
     expect(captures.read(at.device.serial)?.unmatched).toBeUndefined();
     at.probe.entries = [GET];
     const { text } = await recorded(call, async () => {
-      await call('network', { action: 'mock', from: 'flows/replay.har', unmatched: 'fail' });
-      await call('network', { action: 'mock', from: '0' });
+      await call('capture_network', {
+        action: 'mock',
+        from: 'flows/replay.har',
+        unmatched: 'fail',
+      });
+      await call('capture_network', { action: 'mock', from: '0' });
     });
     expect(text).toContain(`mock from=${join(at.dir, 'flows/replay.har')} unmatched=fail\n`);
     expect(text).toContain('mock "api.test/v1/items" status=200\n');

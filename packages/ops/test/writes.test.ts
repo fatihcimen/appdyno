@@ -99,7 +99,12 @@ describe('a file a tool writes where its caller says', () => {
         .map((k) => `${op.name} ${k}`),
     );
     // a place on the screen, a measurement's id, and what install and build_and_run read
-    const others = ['swipe_screen to', 'compare_performance to', 'manage_app path', 'capture_network path'];
+    const others = [
+      'swipe_screen to',
+      'compare_performance to',
+      'manage_app path',
+      'capture_network path',
+    ];
     expect(named.sort()).toEqual(
       [...new Set(WRITERS.map(([tool, , k]) => `${tool} ${k}`)), ...others].sort(),
     );

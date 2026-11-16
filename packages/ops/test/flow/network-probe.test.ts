@@ -137,11 +137,11 @@ describe('the network probe through its tool and a flow', () => {
 
   it('ends a read with what the app made that the probe cannot see', async () => {
     const call = callerOf(context());
-    await call('network', { action: 'start', via: 'probe' });
-    expect((await call('network', { action: 'read' })).text).not.toContain('not seen here');
+    await call('capture_network', { action: 'start', via: 'probe' });
+    expect((await call('capture_network', { action: 'read' })).text).not.toContain('not seen here');
     probe.read = () =>
       Promise.resolve({ entries: [], unseen: { background: 1, webview: 2, websocket: 3 } });
-    const read = await call('network', { action: 'read' });
+    const read = await call('capture_network', { action: 'read' });
     expect(read.text).toMatch(
       /\nnot seen here: 1 background session, 2 web views, 3 WebSocket tasks$/,
     );

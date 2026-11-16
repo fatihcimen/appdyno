@@ -101,7 +101,7 @@ export async function awaitRequest(
   throw new ToolError(
     `no request${asked ? ` ${asked}` : ''} in ${timeoutMs} ms${since}; nearest: ${shortLine(near, clean)} (id ${near.id ?? 0}): ${differs.join('; ')}`,
     'CHECK_FAILED',
-    'network read id gives it whole',
+    'capture_network read id gives it whole',
   );
 }
 

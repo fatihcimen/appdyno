@@ -453,7 +453,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
   }, 240_000);
 
   it('says a request that failed with the tap that made it, and under strict refuses the tap', async () => {
-    await ok('network', { action: 'start', via: 'probe' });
+    await ok('capture_network', { action: 'start', via: 'probe' });
     /** The fixture's Fetch pressed for an address, and the tap after it: what both answered. */
     const fetched = async (path: string) => {
       await ok('open_link', { url: 'appdyno-fixture://open/network' });
@@ -462,10 +462,10 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
         text: `http://${a.at}${path}`,
         replace: true,
       });
-      const tap = await call('tap', { selector: { id: 'fetch' } });
+      const tap = await call('tap_screen', { selector: { id: 'fetch' } });
       await sleep(1_000);
       // an answer slower than the screen is told with the next action
-      return [tap, await call('tap', { selector: { id: 'fetch_result' } })] as const;
+      return [tap, await call('tap_screen', { selector: { id: 'fetch_result' } })] as const;
     };
     const [tap, next] = await fetched('/fail');
     out(
@@ -478,7 +478,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     // a request that went well costs the answer nothing
     const [well, after] = await fetched('/json?n=1');
     expect(`${well.text}${after.text}`).not.toContain('network:');
-    const on = await ok('network', { action: 'mock', strict: true });
+    const on = await ok('capture_network', { action: 'mock', strict: true });
     expect(on.text).toMatch(/^strict on: /);
     const [refused, late] = await fetched('/fail?n=2');
     const strict = refused.error ? refused : late;
@@ -488,17 +488,17 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       /^tapped .*\nnetwork strict: GET 127\.0\.0\.1:\d+\/fail 500 \(id \d+/,
     );
     // one a rule of one's own made is said, and fails nothing
-    await ok('network', { action: 'mock', rules: [`${a.at}/json status=503`] });
+    await ok('capture_network', { action: 'mock', rules: [`${a.at}/json status=503`] });
     const [mocked, then] = await fetched('/json');
     expect(mocked.error || then.error).toBe(false);
     expect(`${mocked.text}\n${then.text}`).toMatch(/\/json 503 \[mocked\] \(id \d+/);
-    await ok('network', { action: 'stop' });
+    await ok('capture_network', { action: 'stop' });
   }, 180_000);
 
   it('waits for a request and checks it, and says of a miss what came nearest', async () => {
-    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    await ok('capture_network', { action: 'start', via: 'probe', bodies: true });
     expect((await send(`http://${a.at}/echo`, 'post')).status).toBe(200);
-    const found = await ok('network', {
+    const found = await ok('capture_network', {
       action: 'check',
       contains: '/echo',
       method: 'POST',
@@ -507,8 +507,12 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     });
     out(`CHECK ${found.text}`);
     expect(found.text).toMatch(/^found: \d+ POST http:\/\/127\.0\.0\.1:\d+\/echo 200 \d+ ms 47 B$/);
-    await ok('network', { action: 'check', contains: '/echo', has: 'response: user=fixture' });
-    const miss = await call('network', {
+    await ok('capture_network', {
+      action: 'check',
+      contains: '/echo',
+      has: 'response: user=fixture',
+    });
+    const miss = await call('capture_network', {
       action: 'check',
       contains: '/echo',
       has: 'user=someone',
@@ -519,7 +523,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(miss.text).toMatch(
       /nearest: POST 127\.0\.0\.1:\d+\/echo 200 \(id \d+\): its request body has \{"user":"fixture"\}$/,
     );
-    const hidden = await call('network', {
+    const hidden = await call('capture_network', {
       action: 'check',
       contains: '/echo',
       has: 'password=x',
@@ -534,9 +538,9 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       text: `http://${a.at}/slow`,
       replace: true,
     });
-    await ok('tap', { selector: { id: 'fetch' } });
+    await ok('tap_screen', { selector: { id: 'fetch' } });
     const began = Date.now();
-    const waited = await ok('network', {
+    const waited = await ok('capture_network', {
       action: 'check',
       contains: '/slow',
       status: '200',
@@ -545,11 +549,11 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     });
     out(`CHECK waited ${Date.now() - began} ms: ${waited.text}`);
     expect(Date.now() - began).toBeGreaterThan(1_000);
-    await ok('network', { action: 'stop' });
+    await ok('capture_network', { action: 'stop' });
   }, 180_000);
 
   it('takes a request by what its body holds and by a header it carries', async () => {
-    await ok('network', { action: 'start', via: 'probe' });
+    await ok('capture_network', { action: 'start', via: 'probe' });
     // the first that fits wins: the fixture posts {"user":"fixture","password":…} with an Authorization header
     await rules(
       `${a.at}/echo has=user=someone status=418`,
@@ -564,18 +568,18 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect((await send(`http://${a.at}/echo`)).status).toBe(200);
     expect((await send(`http://${a.at}/json`)).status).toBe(200);
     expect((await send(`http://${a.at}/json`, 'post')).status).toBe(203);
-    const listed = await ok('network', { action: 'mock' });
+    const listed = await ok('capture_network', { action: 'mock' });
     out(`HAS ${listed.text.replaceAll('\n', ' | ')}`);
     expect(listed.data.rules?.map((r) => r.hits)).toEqual([0, 1, 1, 0]);
-    await ok('network', { action: 'stop' });
+    await ok('capture_network', { action: 'stop' });
   }, 180_000);
 
   it('makes a rule of an answer it saw, replays a HAR it saved, and fails what no rule takes', async () => {
-    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    await ok('capture_network', { action: 'start', via: 'probe', bodies: true });
     expect((await send(`http://${a.at}/json`)).status).toBe(200);
-    const seen = await ok('network', { action: 'read', contains: '/json' });
+    const seen = await ok('capture_network', { action: 'read', contains: '/json' });
     const id = /^(\d+) GET/m.exec(seen.text)?.[1];
-    const made = await ok('network', { action: 'mock', from: String(id) });
+    const made = await ok('capture_network', { action: 'mock', from: String(id) });
     out(`FROM ${made.text.replaceAll('\n', ' | ')}`);
     const file = /body=@(\S+\.json)/.exec(made.data.added?.[0] ?? '')?.[1] ?? '';
     // the answer as the server gave it, less what names a credential and the policy's own secret
@@ -586,9 +590,9 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(again.text).toContain('{"from":"a","note":"•••"');
     expect(a.seen.length).toBe(before);
     // the capture kept as a file, and its answers given again from the file with the server left out
-    await ok('network', { action: 'mock', rules: [] });
-    await ok('network', { action: 'read', save: 'replay.har', contains: '/json' });
-    const replay = await ok('network', {
+    await ok('capture_network', { action: 'mock', rules: [] });
+    await ok('capture_network', { action: 'read', save: 'replay.har', contains: '/json' });
+    const replay = await ok('capture_network', {
       action: 'mock',
       from: 'replay.har',
       unmatched: 'fail',
@@ -605,26 +609,26 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       text: `http://${a.at}/headers`,
       replace: true,
     });
-    const tap = await call('tap', { selector: { id: 'fetch' } });
+    const tap = await call('tap_screen', { selector: { id: 'fetch' } });
     await sleep(1_000);
-    const late = tap.error ? tap : await call('tap', { selector: { id: 'fetch_result' } });
+    const late = tap.error ? tap : await call('tap_screen', { selector: { id: 'fetch_result' } });
     out(`UNMATCHED ${late.text.replaceAll('\n', ' | ')}`);
     expect(late.data.code).toBe('CHECK_FAILED');
     expect(late.text).toMatch(
       /network strict: GET 127\.0\.0\.1:\d+\/headers failed: .* \[failed: no rule took it\]/,
     );
     expect(a.seen.length).toBe(before);
-    await ok('network', { action: 'mock', unmatched: 'pass', strict: false });
+    await ok('capture_network', { action: 'mock', unmatched: 'pass', strict: false });
     expect((await send(`http://${a.at}/headers`)).status).toBe(200);
-    await ok('network', { action: 'stop' });
+    await ok('capture_network', { action: 'stop' });
   }, 240_000);
 
   it('reads a body in part: one value, its shape, and what differs between two requests', async () => {
-    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    await ok('capture_network', { action: 'start', via: 'probe', bodies: true });
     await send(`http://${a.at}/json`);
     await send(`http://${a.at}/json?n=2`);
     const read = async (args: Record<string, unknown>) =>
-      (await ok('network', { action: 'read', ...args })).text.split('\n').slice(1);
+      (await ok('capture_network', { action: 'read', ...args })).text.split('\n').slice(1);
     expect(await read({ id: 0, path: 'from' })).toEqual(['response from: "a"']);
     expect(await read({ id: 0, path: 'api_key' })).toEqual(['response api_key: •••']);
     const shape = await read({ id: 0, shape: true });
@@ -633,9 +637,9 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     const diff = await read({ id: 1, diff: 0 });
     out(`BODY diff: ${diff.join(' | ')}`);
     expect(diff).toEqual(['0 → 1: 1 differ', 'request.query.n: none → "2"']);
-    const whole = await ok('network', { action: 'read', id: 0 });
+    const whole = await ok('capture_network', { action: 'read', id: 0 });
     out(`BODY sizes: whole ${whole.text.length}, shape ${shape.join('\n').length}, path 18`);
-    await ok('network', { action: 'stop' });
+    await ok('capture_network', { action: 'stop' });
   }, 180_000);
 
   it('says what the app made that it cannot see: a web view, a background session, a WebSocket task', async () => {
@@ -647,9 +651,9 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
         text: `http://${a.at}/ws`,
         replace: true,
       });
-      await ok('tap', { selector: { id: 'others' } });
+      await ok('tap_screen', { selector: { id: 'others' } });
       for (let i = 0; i < 30; i++) {
-        const said = /socket (said|failed)[^"\n]*/.exec((await ok('screen')).text)?.[0];
+        const said = /socket (said|failed)[^"\n]*/.exec((await ok('read_screen')).text)?.[0];
         if (said) return said;
         await sleep(500);
       }
@@ -658,11 +662,11 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     // as an app's own, with no probe in it
     await ok('launch_app', { restart: true });
     expect(await others()).toBe('socket said hello');
-    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    await ok('capture_network', { action: 'start', via: 'probe', bodies: true });
     expect((await send(`http://${a.at}/json`)).status).toBe(200);
-    expect((await ok('network', { action: 'read' })).text).not.toContain('not seen here');
+    expect((await ok('capture_network', { action: 'read' })).text).not.toContain('not seen here');
     const said = await others();
-    const read = await ok('network', { action: 'read' });
+    const read = await ok('capture_network', { action: 'read' });
     out(`UNSEEN with the probe: ${said}`);
     out(`UNSEEN ${read.text.replaceAll('\n', ' | ')}`);
     expect(read.text).toMatch(
@@ -672,7 +676,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     // left to the system, the socket opens as it does with no probe, and the list has no line of it
     expect(said).toBe('socket said hello');
     expect(read.text).not.toContain('/ws');
-    await ok('network', { action: 'stop' });
+    await ok('capture_network', { action: 'stop' });
   }, 180_000);
 
   it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {

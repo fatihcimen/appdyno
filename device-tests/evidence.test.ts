@@ -79,10 +79,14 @@ function assertPlayable(file: string, minSeconds = 0) {
 }
 
 function harness(serial: string, provider: ConstructorParameters<typeof ServerContext>[1][number]) {
-  const ctx = new ServerContext({ ...DEFAULT_POLICY, secrets: ['gizli-kod-9911'] }, [provider], {
-    device: serial,
-    app: APP,
-  });
+  const ctx = new ServerContext(
+    { ...DEFAULT_POLICY, secrets: ['gizli-kod-9911'], writeDirs: [tmpdir()] },
+    [provider],
+    {
+      device: serial,
+      app: APP,
+    },
+  );
   const call = opCaller(checkedOps(ctx));
   const ok: Call = async (name, args = {}) => {
     const r = await call(name, args);

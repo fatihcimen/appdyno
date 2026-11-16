@@ -74,13 +74,13 @@ export async function failedSince(
     throw new ToolError(
       [...(done ? [done] : []), ...breaking.map((e) => `network strict: ${line(e)}`)].join('\n'),
       'CHECK_FAILED',
-      'what it did stands, and screen shows what that left; network read id gives the request whole; network mock strict: false ends this',
+      'what it did stands, and read_screen shows what that left; capture_network read id gives the request whole; capture_network mock strict: false ends this',
       true,
     );
   return [
     ...bad.slice(0, MAX_TOLD).map((e) => `network: ${line(e)}`),
     ...(bad.length > MAX_TOLD
-      ? [`network: ${bad.length - MAX_TOLD} more failed: network read lists them first`]
+      ? [`network: ${bad.length - MAX_TOLD} more failed: capture_network read lists them first`]
       : []),
   ];
 }
