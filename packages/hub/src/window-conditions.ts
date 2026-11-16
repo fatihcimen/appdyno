@@ -46,7 +46,7 @@ export const PERSON_REASONS: readonly (readonly [RegExp, string])[] = [
   [/^iOS has no animations setting/, 'iOS has no animation speed setting. Use Reduce Motion.'],
   [
     /^a simulator uses the Mac's network/,
-    "A simulator uses the Mac's network. Slow it down with Network Link Conditioner on the Mac.",
+    "A simulator uses the Mac's network. Slow one app's requests in the Network tab, or the whole Mac with Network Link Conditioner.",
   ],
   [/^a simulator has no battery/, 'A simulator has no battery to set.'],
   [/^a simulator has no radios/, "A simulator has no radios. It uses the Mac's network."],

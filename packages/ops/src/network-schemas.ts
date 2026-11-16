@@ -42,4 +42,5 @@ export const NetworkOut = z.object({
   rules: z
     .array(z.object({ rule: z.string(), hits: z.number().int(), off: z.boolean().optional() }))
     .optional(),
+  throttle: z.string().optional(),
 });

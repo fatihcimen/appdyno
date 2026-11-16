@@ -18,7 +18,7 @@ import { Simctl, simulatorProvider, sleep } from './workspace.js';
 
 /**
  * The network probe on a simulator (APPDYNO_IOS_UDID), through the `network` tool: headers and bodies kept and hidden,
- * a HAR that reads back, each kind of rule, and nothing left once a capture or a session ends.
+ * a HAR that reads back, each kind of rule, the throttle, and nothing left once a capture or a session ends.
  */
 const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
@@ -258,6 +258,38 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     await rules();
     expect((await send(`http://${a.at}/json`)).status).toBe(200);
   }, 180_000);
+
+  it('slows the app: a wait before each request, a speed down, and requests lost', async () => {
+    const quick = await send(`http://${a.at}/big`);
+    console.log('full', quick.said);
+    const waits = await ok('network', { action: 'throttle', throttle: 'delayMs=800' });
+    console.log(waits.text);
+    expect((await send(`http://${a.at}/json`)).ms).toBeGreaterThanOrEqual(800);
+    // 200 kB at 100 kB a second
+    await ok('network', { action: 'throttle', throttle: 'down=100000' });
+    const paced = await send(`http://${a.at}/big`);
+    console.log('100 kB/s', paced.said);
+    expect(paced.ms).toBeGreaterThanOrEqual(1800);
+    expect(paced.ms).toBeLessThan(4000);
+    await ok('network', { action: 'throttle', throttle: 'slow' });
+    const slow = await send(`http://${a.at}/json`);
+    console.log('slow', slow.said);
+    expect(slow.ms).toBeGreaterThanOrEqual(40);
+    await ok('network', { action: 'throttle', throttle: 'loss=100' });
+    expect((await send(`http://${a.at}/json`)).said).toMatch(/^failed: /);
+    const read = await ok('network', { action: 'read', status: 'failed', limit: 1 });
+    expect(read.text).toMatch(/\[lost by the throttle\]\nthrottle: loss=100$/);
+    expect((await ok('network', { action: 'throttle' })).data.throttle).toBe('loss=100');
+    await ok('network', { action: 'throttle', throttle: 'full' });
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    const wrong = await call('network', { action: 'throttle', throttle: 'warp' });
+    expect(wrong.text).toMatch(/throttle is full, slow, gsm/);
+    // a stop ends it with the capture: the probe left in the app waits no more
+    await ok('network', { action: 'throttle', throttle: 'delayMs=2000' });
+    await ok('network', { action: 'stop' });
+    expect((await send(`http://${a.at}/json`)).ms).toBeLessThan(1500);
+    expect(kept()).toEqual([]);
+  }, 240_000);
 
   it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {
     await call('network', { action: 'stop' });

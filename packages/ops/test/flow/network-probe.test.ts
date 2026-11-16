@@ -11,6 +11,7 @@ import type {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { captures } from '../../src/network-capture.js';
+import { throttleOf } from '../../src/network-rules.js';
 import { callerOf, flowsFor, flowHelpers } from './harness.js';
 
 /** A probe that keeps what it is told and gives what the test put in it. */
@@ -189,12 +190,33 @@ describe('the network probe through its tool and a flow', () => {
     expect(probe.controls).toHaveLength(told);
   });
 
-  it('refuses rules on a device with no probe, saying what it has', async () => {
+  it('slows by a name, a number or its parts, and stop ends it', async () => {
+    const call = callerOf(context());
+    const slow = await call('network', { action: 'throttle', throttle: 'slow' });
+    expect(slow.text).toMatch(/throttle slow: for only the app's URLSession requests/);
+    expect(probe.told?.throttle).toEqual({ delayMs: [40, 100], down: 29_600, up: 14_800, loss: 0 });
+    await call('network', { action: 'throttle', throttle: 'delayMs=300 down=50000 loss=5' });
+    expect(probe.told?.throttle).toEqual({ delayMs: [300, 300], down: 50_000, up: 0, loss: 5 });
+    expect((await call('network', { action: 'throttle' })).data.throttle).toBe(
+      'delayMs=300 down=50000 loss=5',
+    );
+    await call('network', { action: 'throttle', throttle: 'full' });
+    expect(probe.told?.throttle).toBeUndefined();
+    expect(throttleOf('30000')).toEqual({ delayMs: [0, 0], down: 30_000, up: 0, loss: 0 });
+    expect(throttleOf('lte')?.down).toBe(21_625_000);
+    for (const wrong of ['warp', 'loss=101', 'down=', 'delayMs=-1'])
+      expect(() => throttleOf(wrong)).toThrow(/throttle is full, slow, gsm/);
+    await call('network', { action: 'stop' });
+    expect(probe.stopped).toBe(1);
+    expect(captures.read(device.serial)).toBeUndefined();
+  });
+
+  it('refuses rules and a throttle on a device with no probe, saying what it has', async () => {
     Object.assign(device, { network: undefined });
     const call = callerOf(context());
-    const e = await refusal(call('network', { action: 'mock', rules: ['a.test status=500'] }));
+    const e = await refusal(call('network', { action: 'throttle', throttle: 'slow' }));
     expect(e.code).toBe('UNSUPPORTED');
-    expect(e.hint).toBe('a simulator has the probe');
+    expect(e.hint).toMatch(/an Android device is slowed by device_setting network/);
   });
 
   const flowFile = (body: string) => {
@@ -238,8 +260,10 @@ describe('the network probe through its tool and a flow', () => {
     const { text } = await recorded(call, async () => {
       await call('network', { action: 'mock', rules: ['api.test/pay fail=offline'] });
       await call('network', { action: 'mock' });
+      await call('network', { action: 'throttle', throttle: 'slow' });
     });
     expect(text).toContain('mock "api.test/pay" fail=offline\n');
+    expect(text).toContain('unrecorded "network throttle"');
     expect(text.match(/^mock /gm)).toHaveLength(1);
   });
 });

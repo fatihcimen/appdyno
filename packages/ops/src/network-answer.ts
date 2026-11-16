@@ -12,12 +12,13 @@ import { reply } from './tool.js';
 /** A body in an answer to here: the rest is in the export. */
 const BODY_CHARS = 4_000;
 
-/** What a rule did to a request, as its line says it. */
+/** What a rule or the throttle did to a request, as its line says it. */
 const HOW: Record<string, (e: NetworkEntry) => string> = {
   mocked: () => 'mocked',
   failed: () => 'failed by a rule',
   delayed: () => 'delayed by a rule',
   sent: (e) => `sent to ${e.to ?? 'another host'}`,
+  lost: () => 'lost by the throttle',
 };
 const howOf = (e: NetworkEntry) => (e.how ? ` [${HOW[e.how]?.(e) ?? e.how}]` : '');
 
@@ -43,11 +44,12 @@ export function fits(e: NetworkEntry, { contains, method, status }: Filter) {
   return /^\dxx$/i.test(status) ? code.startsWith(status.charAt(0)) : code === status;
 }
 
-/** The capture's rules with what each took, as the last lines of an answer; none where it has neither. */
+/** The capture's rules with what each took, and its throttle, as the last lines of an answer; none where it has neither. */
 export function controlLines(c: Capture | undefined, entries: NetworkEntry[]) {
   const hits = ruleHits(c?.rules ?? [], entries);
   return [
     ...hits.map((h, i) => `rule ${i + 1}${h.off ? ' (off)' : ''}: ${h.rule} (${h.hits} taken)`),
+    ...(c?.throttle ? [`throttle: ${c.throttle}`] : []),
   ];
 }
 
@@ -159,7 +161,7 @@ export function networkAnswers(ctx: ServerContext) {
     });
   };
 
-  /** What the capture's rules are and what each took, which is what `mock` answers with. */
+  /** What the capture's rules are and what each took, and its throttle: what `mock` and `throttle` answer with. */
   const controlAnswer = async (s: Session, c: Capture | undefined, did: string[]) => {
     const { entries } = (c && (await readCapture(s, c))) ?? { entries: [] };
     const rules = ruleHits(c?.rules ?? [], entries);
@@ -168,6 +170,7 @@ export function networkAnswers(ctx: ServerContext) {
     return reply(t, {
       done: t,
       rules: rules.map((r) => ({ ...r, rule: redact(ctx.policy, r.rule) })),
+      throttle: c?.throttle ?? 'full',
     });
   };
 

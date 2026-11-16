@@ -47,7 +47,7 @@ export class SimulatorNetwork implements NetworkSource {
     return Promise.resolve([
       {
         via: 'probe',
-        sees: 'the URLSession requests of the app, restarted with the probe: method, URL, status, time, size; headers and text bodies with bodies; with mock its rules answer, fail, delay or send elsewhere what they take. Not background sessions, WKWebView or Network.framework',
+        sees: 'the URLSession requests of the app, restarted with the probe: method, URL, status, time, size; headers and text bodies with bodies; with mock its rules answer, fail, delay or send elsewhere what they take, and throttle slows them. Not background sessions, WKWebView or Network.framework',
       },
       { via: 'packets', refused: 'a simulator has no packet trace of its own' },
       { via: 'bytes', refused: "a simulator's traffic is the Mac's: no count per app" },

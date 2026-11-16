@@ -12,7 +12,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import { harEntries } from './network-har.js';
-import { ruleLine, rulesOf } from './network-rules.js';
+import { ruleLine, rulesOf, throttleOf } from './network-rules.js';
 import { Handle } from './schemas.js';
 import type { Session } from './session.js';
 import { restoreCondition } from './settings.js';
@@ -27,8 +27,9 @@ const Capture = z.object({
   proxy: z.string().optional(),
   /** The probe keeps each request's headers and bodies. */
   bodies: z.boolean().optional(),
-  /** The probe's rules, each as its line. */
+  /** The probe's rules, each as its line, and how slow it makes the network, as its word. */
   rules: z.array(z.string()).optional(),
+  throttle: z.string().optional(),
   owner: Owner.optional(),
 });
 export type Capture = z.infer<typeof Capture>;
@@ -116,10 +117,11 @@ export async function startOwn(
   return { capture, sees: way?.sees };
 }
 
-const NO_PROBE_HINT = 'a simulator has the probe';
+const NO_PROBE_HINT =
+  'a simulator has the probe; an Android device is slowed by device_setting network';
 
 /**
- * The probe's capture, which its rules live in: the one that runs, or one started for `app`, which
+ * The probe's capture, which its rules and its throttle live in: the one that runs, or one started for `app`, which
  * restarts it.
  */
 async function probeCapture(s: Session, app: string | undefined, what: string) {
@@ -143,12 +145,14 @@ async function probeCapture(s: Session, app: string | undefined, what: string) {
 
 /** What the capture's probe does from now on, as the capture has it. */
 function tellProbe(s: Session, c: Capture) {
+  const throttle = c.throttle === undefined ? undefined : throttleOf(c.throttle);
   const network = must(s.device.network, 'a capture');
   if (!network.control)
     throw new ToolError('this device has no probe', 'UNSUPPORTED', NO_PROBE_HINT);
   network.control(must(c.handle, 'its handle'), {
     bodies: c.bodies === true,
     rules: rulesOf(c.rules ?? []),
+    ...(throttle && { throttle }),
   });
   captures.write(s.device.serial, c);
 }
@@ -172,4 +176,14 @@ export function dropRules(s: Session, lines: string[]) {
     return;
   const gone = lines.map(ruleLine);
   tellProbe(s, { ...now, rules: now.rules.filter((l) => !gone.includes(l)) });
+}
+
+/** How slow the capture's probe makes the app's network, by its word; `full` is no slower. */
+export async function setThrottle(s: Session, app: string | undefined, word: string) {
+  const full = throttleOf(word) === undefined;
+  const { capture, started } = await probeCapture(s, app, 'a throttle');
+  const { throttle: _, ...rest } = capture;
+  const next: Capture = full ? rest : { ...rest, throttle: word.trim() };
+  tellProbe(s, next);
+  return { capture: next, started };
 }

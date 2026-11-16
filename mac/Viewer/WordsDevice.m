@@ -77,7 +77,7 @@ const MVWordRow MVWordTableDevice[] = {
     // why a device cannot change a condition, in a person's words: the hub's PERSON_REASONS, and its own for a phone
     {"On a phone, this could cut its connection to this Mac. Change it on the phone.", "Bir telefonda bu, telefonun bu Mac'e bağlantısını kesebilir. Telefonun kendisinde değiştirin."},
     {"iOS has no animation speed setting. Use Reduce Motion.", "iOS'ta animasyon hızı ayarı yok. Hareketi Azalt'ı kullanın."},
-    {"A simulator uses the Mac's network. Slow it down with Network Link Conditioner on the Mac.", "Simülatör Mac'in ağını kullanır. Mac'te Network Link Conditioner ile yavaşlatın."},
+    {"A simulator uses the Mac's network. Slow one app's requests in the Network tab, or the whole Mac with Network Link Conditioner.", "Simülatör Mac'in ağını kullanır. Tek bir uygulamanın isteklerini Ağ sekmesinde, Mac'in tamamını Network Link Conditioner ile yavaşlatın."},
     {"A simulator has no battery to set.", "Simülatörün ayarlanacak bir pili yok."},
     {"A simulator has no radios. It uses the Mac's network.", "Simülatörün telsizleri yok. Mac'in ağını kullanır."},
     {"A simulator does not fold.", "Simülatör katlanmaz."},

@@ -1,6 +1,6 @@
 import { realpathSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
-import type { NetworkEntry, NetworkRule } from '@appdyno/core';
+import type { NetworkEntry, NetworkRule, NetworkThrottle } from '@appdyno/core';
 import { FlowError, mockRule, parseFlow, stepLine, type FlowStep } from '@appdyno/flows';
 import { ToolError } from './tool.js';
 
@@ -70,4 +70,51 @@ export function ruleHits(lines: string[], entries: NetworkEntry[]) {
       ...(rule.off && { off: true }),
     };
   });
+}
+
+const KBIT = 125;
+/** A slow network by name, as an emulator's console has them: bytes a second up and down, and the wait it adds. */
+const SPEEDS: Record<string, [up: number, down: number, min: number, max: number]> = {
+  // an EDGE speed with the short wait `device_setting network slow` gives an emulator
+  slow: [118.4 * KBIT, 236.8 * KBIT, 40, 100],
+  gsm: [14.4 * KBIT, 14.4 * KBIT, 150, 550],
+  gprs: [40 * KBIT, 80 * KBIT, 150, 550],
+  edge: [118.4 * KBIT, 236.8 * KBIT, 80, 400],
+  umts: [128 * KBIT, 1920 * KBIT, 35, 200],
+  hsdpa: [348 * KBIT, 14_400 * KBIT, 0, 0],
+  lte: [58_000 * KBIT, 173_000 * KBIT, 0, 0],
+};
+const THROTTLE_KEYS = ['delayMs', 'down', 'up', 'loss'] as const;
+const MAX_DELAY_MS = 600_000;
+export const THROTTLE_SAYS = `full, ${Object.keys(SPEEDS).join(', ')}, a number (bytes a second down), or delayMs= down= up= loss=`;
+
+/**
+ * A slow network from its word: a name, bytes a second down alone as a phone's cap is, or `delayMs=`, `down=`, `up=`
+ * (bytes a second) and `loss=` (percent of requests). Nothing for `full`.
+ */
+export function throttleOf(value: string): NetworkThrottle | undefined {
+  const word = value.trim().toLowerCase();
+  if (word === 'full') return undefined;
+  const speed = SPEEDS[word];
+  if (speed) return { delayMs: [speed[2], speed[3]], down: speed[1], up: speed[0], loss: 0 };
+  if (/^\d+$/.test(word) && Number(word) > 0)
+    return { delayMs: [0, 0], down: Number(word), up: 0, loss: 0 };
+  const wrong = () =>
+    new ToolError(`throttle is ${THROTTLE_SAYS}, not ${value}`, 'INVALID_ARGUMENT');
+  const given: Partial<Record<(typeof THROTTLE_KEYS)[number], number>> = {};
+  for (const part of value.trim().split(/\s+/)) {
+    const [key, n] = part.split('=');
+    const name = THROTTLE_KEYS.find((k) => k === key);
+    const number = Number(n);
+    if (!name || !n || !Number.isFinite(number) || number < 0) throw wrong();
+    given[name] = number;
+  }
+  if ((given.loss ?? 0) > 100 || (given.delayMs ?? 0) > MAX_DELAY_MS) throw wrong();
+  const delay = given.delayMs ?? 0;
+  return {
+    delayMs: [delay, delay],
+    down: given.down ?? 0,
+    up: given.up ?? 0,
+    loss: given.loss ?? 0,
+  };
 }
