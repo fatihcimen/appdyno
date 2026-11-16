@@ -50,14 +50,14 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
   };
 
   // a run's first sheet took 3 to 5 s, after the tap's answer: the next read has it
-  it('Face ID: a read says so, as does a tap once a sheet has been up, and a picture shows it with no look past the app', async () => {
+  it('Face ID: a read and a picture say so, as does a tap once a sheet has been up', async () => {
     await asks(o.call);
     await vi.waitFor(
       async () => expect(ok(await o.call('screen')).text).toContain('needs a person: Face ID'),
       { timeout: 10_000, interval: 1_000 },
     );
-    // the sheet is in the picture: a screenshot reads nothing past the app to name it
-    expect(ok(await o.call('screenshot')).text).not.toContain('needs a person');
+    // a simulator's picture takes the look past the app, which is quick there: a phone's does not
+    expect(ok(await o.call('screenshot')).text).toContain('needs a person: Face ID');
     await passes();
     const r = await asks(o.call);
     expect(r.text).toContain('needs a person: Face ID');
