@@ -154,7 +154,7 @@ Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its 
 
 ## Releases
 
-A tag publishes, as [the CI reference](docs/reference/ci.md#release) says, and npm takes the publish from the workflow with no token. That rests on one setting, made once on npmjs.com by whoever holds the package there: on the Settings page of the `appdyno` package, under Trusted Publisher, choose GitHub Actions and give the owner `fatihcimen`, the repository `appdyno` and the workflow file `release.yml`, with no environment. npm checks none of these when they are saved, so a wrong letter shows only at the next publish. Once a release has gone out this way, the repository's `NPM_TOKEN` secret can be deleted and its token revoked on npmjs.com, and the package's publishing access set to require two-factor authentication and disallow tokens.
+A tag publishes, as [the CI reference](docs/reference/ci.md#release) says, and npm takes the publish from the workflow with no token. That rests on one setting, made once on npmjs.com by whoever holds the package there: on the Settings page of the `appdyno` package, under Trusted Publisher, choose GitHub Actions and give the user `fatihcimen`, the repository `appdyno` and the workflow file `release.yml`, with no environment. npm checks none of these when they are saved, so a wrong letter shows only at the next publish. Once a release has gone out this way, the repository's `NPM_TOKEN` secret can be deleted and its token revoked on npmjs.com, and the package's publishing access set to require two-factor authentication and disallow tokens.
 
 ## The site
 
