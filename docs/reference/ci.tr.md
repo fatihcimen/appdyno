@@ -78,7 +78,7 @@ scripts/ci.sh --all-on <serial>                    # + o cihazın alabildiği he
 
 ## Sürüm
 
-Bir tag yayımlar, başka hiçbir şey yayımlamaz. `.github/workflows/release.yml`, `v1.2.3` üzerinde çalışır: kapı olarak `ci.yml` ve içindeki simülatör smoke'u, böylece commit'i orada bir cihaz suite'inde başarısız olan bir tag hiçbir şey yayımlamaz; sonra tag'in `packages/appdyno/package.json` içindeki sürüm olduğunun denetimi, derlenen ajan ve paket, derlenip çalıştırılan masaüstü eklentisi, Mac uygulaması, kapıdan alınan smoke'un `device-summary.md` dosyası, `npm publish --provenance --access public` ve disk imajı, masaüstü eklentisi, cask, appcast ve `device-summary.md` ile bir GitHub sürümü. Sürüm notları geri alınamayan her şeyden önce yazılır; sonraki bir adım başarısız olduktan sonra yeniden çalıştırılan bir çalışma sürümü npm'de bulur ve GitHub sürümüne geçer. Actions sekmesinden elle çalıştırılan `release.yml` bir provadır: kapı, imzalanıp noter onayından geçmiş Mac uygulaması ve masaüstü eklentisi, açıp bakmak için çalışmayla birlikte 3 gün tutulur ve hiçbir şey yayımlanmaz.
+Bir tag yayımlar, başka hiçbir şey yayımlamaz. `.github/workflows/release.yml`, `v1.2.3` üzerinde çalışır: kapı olarak `ci.yml` ve içindeki simülatör smoke'u, böylece commit'i orada bir cihaz suite'inde başarısız olan bir tag hiçbir şey yayımlamaz; sonra tag'in `packages/appdyno/package.json` içindeki sürüm olduğunun denetimi, derlenen ajan ve paket, derlenip çalıştırılan masaüstü eklentisi, Mac uygulaması, kapıdan alınan smoke'un `device-summary.md` dosyası, `SHA256SUMS`, disk imajı ve masaüstü eklentisi için bir derleme provenance'ı, `npm publish --provenance --access public` ve disk imajı, masaüstü eklentisi, cask, appcast, `device-summary.md` ve `SHA256SUMS` ile bir GitHub sürümü. Sürüm notları geri alınamayan her şeyden önce yazılır; sonraki bir adım başarısız olduktan sonra yeniden çalıştırılan bir çalışma sürümü npm'de bulur ve GitHub sürümüne geçer. Actions sekmesinden elle çalıştırılan `release.yml` bir provadır: kapı, imzalanıp noter onayından geçmiş Mac uygulaması ve masaüstü eklentisi, açıp bakmak için çalışmayla birlikte 3 gün tutulur; hiçbir şey yayımlanmaz ve hiçbir şey için provenance kaydedilmez.
 
 Bir sürüm şunlara dayanır:
 
@@ -86,9 +86,16 @@ Bir sürüm şunlara dayanır:
 - `packages/appdyno/package.json` içindeki `repository` onunla, büyük-küçük harf dahil, eşleşir. npm bunu yayımlarken denetler, `update` de her sürümü o adrese bağlı tutar, bu yüzden başka yerde derlenmiş bir sürüm reddedilir.
 - npm yayımlamayı paketin güvenilir yayımcısı olarak `release.yml`'den kabul eder, başka hiçbir yoldan değil: workflow'da token yoktur. Yayımcının npmjs.com'da nasıl ayarlandığını [Katkıda bulunmak](../../CONTRIBUTING.tr.md#sürümler) anlatır. npm 11.5.1 ya da daha yenisi gerekir; yayımlama job'ı bunu Node 26'sının npm'inde denetler.
 
+`SHA256SUMS` bir sürümün diğer her dosyasını SHA-256'sıyla adlandırır, GitHub da disk imajı ve masaüstü eklentisi için, her birini derleyen workflow çalışmasını söyleyen bir derleme provenance'ı tutar. Bir sürümün dosyaları, hangilerini aldıysanız, tek bir klasördeyken:
+
+```sh
+shasum -a 256 --ignore-missing -c SHA256SUMS
+gh attestation verify appdyno-<version>.mcpb --repo fatihcimen/appdyno
+```
+
 Bir tag'den önce, klasöründe pnpm olmayan bir node'dan, `node scripts/check-package.mjs` tarball'ı boş bir ev klasörüne kurar. Workflow'un dışında kalır, çünkü yolunda bir JDK olan yerde çalışmayı reddeder.
 
-`node scripts/build-mcpb.mjs` masaüstü eklentisini, `.app-build/appdyno-<version>.mcpb` dosyasını üretir: `npm pack`'in ürettiği paket, paketlenen sunucunun listelediği araçlarla `packages/appdyno/mcpb/manifest.json` ve 512 px boyutunda Mac uygulamasının simgesi, manifest dosyasını doğrulayan `mcpb pack` ile paketlenir. `node scripts/check-mcpb.mjs` onu açar ve sunucusunu manifest dosyasının kendi komutuyla, boş bir ev klasöründe, kurulum formu boşken ve doluyken stdio üzerinden çalıştırır; `tools/list` yanıtını manifest dosyasındaki araçlara bağlı tutar. Dosya imzalı değildir.
+`node scripts/build-mcpb.mjs` masaüstü eklentisini, `.app-build/appdyno-<version>.mcpb` dosyasını üretir: `npm pack`'in ürettiği paket, paketlenen sunucunun listelediği araçlarla `packages/appdyno/mcpb/manifest.json` ve 512 px boyutunda Mac uygulamasının simgesi, manifest dosyasını doğrulayan `mcpb pack` ile paketlenir. `node scripts/check-mcpb.mjs` onu açar ve sunucusunu manifest dosyasının kendi komutuyla, boş bir ev klasöründe, kurulum formu boşken ve doluyken stdio üzerinden çalıştırır; `tools/list` yanıtını manifest dosyasındaki araçlara bağlı tutar. Dosya imzalı değildir: nerede derlendiğini derleme provenance'ı söyler.
 
 `scripts/check-update.mjs`, `update`'i ve doğrulamasını gerçekten, geçici bir klasörde, herkese açık paketlerle, bu makinede hiçbir şeyi değiştirmeden çalıştırır: provenance'ı olan bir sürüm, olmayan bir sürüm, yalnızca bağımlılığında olan bir sürüm, kurcalanmış bir registry ve npm ile pnpm altında başarısız bir kurulum. Ağ ve npm 11.12 ya da üstü gerektirir.
 

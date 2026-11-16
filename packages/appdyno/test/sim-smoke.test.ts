@@ -127,6 +127,6 @@ describe('the workflows', () => {
     expect(text('ci.yml')).toMatch(/\n {2}sim-smoke:\n(?! {4}(if|continue-on-error):)/);
     expect(release).toMatch(/gate:\n {4}uses: \.\/\.github\/workflows\/ci\.yml/);
     expect(release).toMatch(/publish:\n {4}needs: gate/);
-    expect(release).toMatch(/name: sim-smoke[^]*device-summary\.md/);
+    expect(release).toMatch(/name: sim-smoke[^]*device-summary\.md[^]*>SHA256SUMS/);
   });
 });

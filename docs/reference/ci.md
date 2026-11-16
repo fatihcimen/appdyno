@@ -78,7 +78,7 @@ scripts/ci.sh --all-on <serial>                    # + every suite that device c
 
 ## Release
 
-A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, the simulator smoke in it, so a tag whose commit failed a device suite there publishes nothing; then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the desktop extension built and run, the Mac app, the smoke's `device-summary.md` taken from the gate, `npm publish --provenance --access public`, and a GitHub release with the disk image, the desktop extension, the cask, the appcast and `device-summary.md`. The release notes are written before anything that cannot be taken back, and a run again after a later step failed finds the version on npm and goes on to the release. Run by hand from the Actions tab, `release.yml` is a rehearsal: the gate, the Mac app, signed and notarized, and the desktop extension, kept with the run for 3 days to open, and nothing published.
+A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, the simulator smoke in it, so a tag whose commit failed a device suite there publishes nothing; then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the desktop extension built and run, the Mac app, the smoke's `device-summary.md` taken from the gate, `SHA256SUMS`, a build provenance for the disk image and the desktop extension, `npm publish --provenance --access public`, and a GitHub release with the disk image, the desktop extension, the cask, the appcast, `device-summary.md` and `SHA256SUMS`. The release notes are written before anything that cannot be taken back, and a run again after a later step failed finds the version on npm and goes on to the release. Run by hand from the Actions tab, `release.yml` is a rehearsal: the gate, the Mac app, signed and notarized, and the desktop extension, kept with the run for 3 days to open, with nothing published and nothing attested.
 
 What a release depends on:
 
@@ -86,9 +86,16 @@ What a release depends on:
 - `repository` in `packages/appdyno/package.json` matches it, case included. npm checks this when it publishes, and `update` holds every release to that address, so a release built elsewhere is refused.
 - npm takes the publish from `release.yml` as the package's trusted publisher, and by nothing else: the workflow holds no token. [Contributing](../../CONTRIBUTING.md#releases) says how the publisher is set on npmjs.com. It needs npm 11.5.1 or newer, which the publish job checks of its Node 26's npm.
 
+`SHA256SUMS` names every other file of a release with its SHA-256, and GitHub keeps a build provenance for the disk image and the desktop extension, which says the workflow run that built each. With the files of a release in one folder, as many of them as you took:
+
+```sh
+shasum -a 256 --ignore-missing -c SHA256SUMS
+gh attestation verify appdyno-<version>.mcpb --repo fatihcimen/appdyno
+```
+
 Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.mjs` installs the tarball on an empty home. It stays out of the workflow, as it refuses to run where a JDK is on its path.
 
-`node scripts/build-mcpb.mjs` makes the desktop extension, `.app-build/appdyno-<version>.mcpb`: the package as `npm pack` makes it, `packages/appdyno/mcpb/manifest.json` with the tools the packed server lists, and the Mac app's icon at 512 px, packed by `mcpb pack`, which validates the manifest. `node scripts/check-mcpb.mjs` unpacks it and runs its server over stdio by the manifest's own command, on an empty home, with the install form left empty and filled in, and holds what `tools/list` answers to the manifest's tools. The file is not signed.
+`node scripts/build-mcpb.mjs` makes the desktop extension, `.app-build/appdyno-<version>.mcpb`: the package as `npm pack` makes it, `packages/appdyno/mcpb/manifest.json` with the tools the packed server lists, and the Mac app's icon at 512 px, packed by `mcpb pack`, which validates the manifest. `node scripts/check-mcpb.mjs` unpacks it and runs its server over stdio by the manifest's own command, on an empty home, with the install form left empty and filled in, and holds what `tools/list` answers to the manifest's tools. The file is not signed: its build provenance says where it was built.
 
 `scripts/check-update.mjs` runs `update` and its verification for real, on public packages in a temporary folder, with no change to this machine: a release with provenance, one without, one whose dependency alone has it, a tampered registry, and a failed install under npm and under pnpm. It needs the network and npm 11.12 or newer.
 

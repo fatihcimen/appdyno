@@ -27,6 +27,8 @@ jobs:
       contents: write
       # what npm takes the publish by, as the package's trusted publisher, and what a provenance is signed with
       id-token: write
+      # the provenance of the disk image and the desktop extension, kept by GitHub
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -100,8 +102,15 @@ jobs:
         with:
           name: sim-smoke
           path: ${{ runner.temp }}/sim-smoke
-      - name: The device summary
-        run: cp "$RUNNER_TEMP/sim-smoke/device-summary.md" .app-build/
+      # of every file a release holds, in the form `shasum -a 256 -c` reads: the release below attaches what this lists
+      - name: The checksums
+        working-directory: .app-build
+        run: |
+          shopt -s nullglob
+          version="$(node -p "require('../packages/appdyno/package.json').version")"
+          cp "$RUNNER_TEMP/sim-smoke/device-summary.md" .
+          shasum -a 256 -- *.dmg "appdyno-$version.mcpb" appdyno.rb appcast.json* device-summary.md >SHA256SUMS
+          cat SHA256SUMS
       - name: The rehearsal's Mac app
         if: github.event_name != 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -113,10 +122,19 @@ jobs:
             .app-build/appdyno.rb
             .app-build/appcast.json*
             .app-build/device-summary.md
+            .app-build/SHA256SUMS
           if-no-files-found: error
           # .app-build is a hidden folder, which the upload leaves out unless told
           include-hidden-files: true
           retention-days: 3
+      # a rehearsal attests nothing: an attestation is public, and stays
+      - name: The provenance of the disk image and the desktop extension
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            .app-build/*.dmg
+            .app-build/appdyno-*.mcpb
       - name: Publish with provenance
         if: github.event_name == 'push'
         working-directory: packages/appdyno
@@ -133,9 +151,8 @@ jobs:
           fi
       - name: The release
         if: github.event_name == 'push'
-        # with no update key there is no appcast; the extension by its whole name, as a glob that finds none says nothing
-        run: |
-          shopt -s nullglob
-          gh release create "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" .app-build/*.dmg ".app-build/appdyno-${GITHUB_REF_NAME#v}.mcpb" .app-build/appdyno.rb .app-build/appcast.json* .app-build/device-summary.md
+        # each file the checksums name, and the checksums
+        working-directory: .app-build
+        run: cut -d' ' -f3 SHA256SUMS | xargs gh release create "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" SHA256SUMS
         env:
           GH_TOKEN: ${{ github.token }}
