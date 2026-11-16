@@ -196,17 +196,18 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
                   ...(scenario && { scenario }),
                 })
               : { result: await runner.run(s, readFlow(path), path, replay), journey: undefined };
+            // what a teardown could not clean up is said beside the failure, and is the refusal after a pass
+            const left = runner.teardownText(path, result);
             if (result.failure)
               throw new ToolError(
                 [
                   runner.failureText(path, result.failure),
+                  ...(left ? [left] : []),
                   ...(journey ? [`what passed before it is kept: ${journeyText(journey)}`] : []),
                 ].join('\n'),
                 (result.failure.code ?? 'NOT_FOUND') as ErrorCode,
                 result.failure.hint,
               );
-            // its own steps passed, and that is said; what its teardown left is the refusal
-            const left = runner.teardownText(path, result);
             if (left)
               throw new ToolError(
                 `passed: ${result.steps.length} steps\n${left}`,

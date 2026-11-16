@@ -114,6 +114,13 @@ describe('a flow with a setup and a teardown', () => {
     const e = await refusal(call('run_flow', { action: 'run', file: join(tests, 'a.flow') }));
     expect(e.code).toBe('CHECK_FAILED');
     expect(e.message).toContain('passed: 2 steps\nthe teardown failed');
+    // beside a failed step too, which stays the refusal
+    write('a.flow', 'launch', 'assert text="Hiç" timeoutMs=300');
+    const both = await refusal(call('run_flow', { action: 'run', file: join(tests, 'a.flow') }));
+    expect(both.message).toContain('step 2 failed: assert text="Hiç"');
+    expect(both.message).toContain(
+      'the teardown failed, so what runs next starts from what it left:',
+    );
   });
 
   it('fails a flow on its setup, runs none of its steps, and names the setup in the failure', async () => {
