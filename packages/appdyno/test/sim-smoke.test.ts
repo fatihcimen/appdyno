@@ -85,6 +85,9 @@ describe('the simulator smoke', () => {
       /^xcrun simctl create appdyno-ci-\d+ type\.iPhone-17 runtime\.26\.5$/m,
     );
     expect(r.log).toContain('xcrun simctl bootstatus FAKE-UDID -b');
+    expect(r.log).toContain(
+      'xcrun simctl install FAKE-UDID ios/.derived/Build/Products/Debug-iphonesimulator/Fixture.app',
+    );
     const suites = r.log.find((line) => line.startsWith('pnpm exec vitest run'));
     for (const file of SUITES) {
       expect(suites).toContain(file);

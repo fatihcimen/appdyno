@@ -156,6 +156,11 @@ function main() {
       ...['build-for-testing', '-project', 'ios/Appdyno.xcodeproj', '-scheme', 'Runner', '-quiet'],
       ...['-destination', 'generic/platform=iOS Simulator', '-derivedDataPath', 'ios/.derived'],
     ]) ||
+    // a suite that drives the fixture and installs none need not come after one that does
+    step('install', 'xcrun', [
+      ...['simctl', 'install', udid],
+      'ios/.derived/Build/Products/Debug-iphonesimulator/Fixture.app',
+    ]) ||
     step(
       'suites',
       'pnpm',
