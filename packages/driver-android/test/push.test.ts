@@ -18,7 +18,7 @@ describe('a push on Android', () => {
     });
     expect(said).toBe('opened dev.app as a tapped push, with 2 data keys as extras');
     expect(asked.at(-1)).toBe(
-      "am start -W -f 0x04000000 -n dev.app/.Main --es order '42' --es note 'it'\\''s'",
+      "am start -W -f 0x04000000 -n 'dev.app/.Main' --es order '42' --es note 'it'\\''s'",
     );
   });
 

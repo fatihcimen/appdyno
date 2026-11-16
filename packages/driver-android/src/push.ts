@@ -7,7 +7,7 @@ import {
   type PushType,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg, launcherOf, shq } from './adb.js';
+import { assertPkg, launcherArg, shq } from './adb.js';
 
 /** What gives an app's code a push on Android: FCM's own message, to the app's own Firebase SDK. */
 const BY_FCM =
@@ -64,7 +64,7 @@ export class AndroidPush {
       );
     let target = `-a ${shq(action ?? '')} -p ${pkg}`;
     if (!action) {
-      target = `-n ${await launcherOf((c) => this.sh(c), pkg)}`;
+      target = await launcherArg((c) => this.sh(c), pkg);
     }
     const extras = data.flatMap(([k, v]) => ['--es', k, shq(v)]).join(' ');
     // as Firebase's own tap opens it: the activity on top of the app's task anew, with this intent

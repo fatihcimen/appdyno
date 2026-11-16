@@ -11,7 +11,7 @@ import {
   reportProgress,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg, launcherOf } from '../adb.js';
+import { assertPkg, launcherArg } from '../adb.js';
 import { traceProcessor } from '../tools.js';
 import {
   type LaunchSample,
@@ -93,7 +93,7 @@ export async function launch(
   const mode = opts.mode ?? 'cold';
   const repeats = Math.min(Math.max(opts.repeats ?? 3, 1), 10);
   if (opts.trace) await traceProcessor();
-  const component = await launcherOf((c) => sh(d, c), pkg);
+  const component = await launcherArg((c) => sh(d, c), pkg);
   const flags = mode === 'warm' ? `-f ${RECREATE_ACTIVITY} ` : '';
   const prepare = async () => {
     // measuring takes longer than a phone's screen stays on, and a dark one starts nothing: it reads UNKNOWN (0)
@@ -109,7 +109,7 @@ export async function launch(
   /** One launch and its "Fully drawn" line, read from the log since it began (the log stays as it is). */
   const launchOnce = async (): Promise<LaunchSample> => {
     const since = (await sh(d, 'date +%s.%N')).trim();
-    const raw = await sh(d, `am start -W ${flags}-n ${component}`, 60_000);
+    const raw = await sh(d, `am start -W ${flags}${component}`, 60_000);
     const s = parseAmStart(raw);
     const started = Date.now();
     let log: string;
@@ -147,7 +147,7 @@ export async function launch(
     // warm and hot start from one known task: a task begun by another intent gets a new activity on top
     if (mode !== 'cold') {
       await sh(d, `am force-stop ${pkg}`);
-      await sh(d, `am start -W -n ${component} > /dev/null`, 60_000);
+      await sh(d, `am start -W ${component} > /dev/null`, 60_000);
     }
     for (let i = 0; i <= repeats; i++) {
       reportProgress(`launch ${i + 1} of ${repeats + 1}`);
