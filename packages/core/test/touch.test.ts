@@ -103,6 +103,30 @@ describe('where a touch on an element goes', () => {
     });
   });
 
+  it('is the own switch that stands out of its row, as an iOS 26 Settings row holds it', () => {
+    const row = el('@row', 'Increase Contrast', [36, 541, 330, 28], { role: 'switch' });
+    const words = el('@words', 'Increase Contrast', [36, 544, 135, 21]);
+    const own = el('@own', '0', [305, 541, 63, 28], { role: 'switch' });
+    expect(touchPoint(row, [row, words, own])).toEqual({
+      point: { x: 337, y: 555 },
+      why: 'own',
+      other: own,
+    });
+    // the cell around them is touched on that switch too, the innermost of the two it holds
+    const cell = el('@cell', 'Increase Contrast 0', [20, 528, 362, 53], { role: 'cell' });
+    expect(touchPoint(cell, [cell, row, words, own])).toEqual({
+      point: { x: 337, y: 555 },
+      why: 'own',
+      other: own,
+    });
+    // a cell of two switches that stand apart has no one switch of its own
+    const left = el('@left', '0', [40, 541, 63, 28], { role: 'switch' });
+    expect(touchPoint(cell, [cell, left, own]).why).toBeUndefined();
+    // the switch of the next row is not this row's
+    const next = el('@next', '0', [305, 657, 63, 28], { role: 'switch' });
+    expect(touchPoint(row, [row, next]).why).toBeUndefined();
+  });
+
   it('is the middle of a control whose smaller one says words of its own', () => {
     const card = el('@card', 'Order 42 Details', [0, 0, 400, 80]);
     const inner = el('@inner', 'Details', [170, 10, 60, 60]);

@@ -135,7 +135,7 @@ function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[])
   const { point, why, other } = touchPoint(e, list);
   if (!why || !other) return { point, name: named(e) };
   const note = {
-    own: ` by its own ${e.role} ${named(other)}`,
+    own: ` by its own ${other.role} ${named(other)}`,
     clear: ` at ${point.x},${point.y}, clear of ${named(other)} at its middle`,
     covered: `, whose middle is ${named(other)}'s, which may take the touch`,
   }[why];

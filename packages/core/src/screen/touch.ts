@@ -89,7 +89,10 @@ export function byRef(
   };
 }
 
-/** The roles of a row that holds its own control of that role, as SwiftUI's Toggle: its middle is its label. */
+/**
+ * The roles of a row that holds its own control of that role, as SwiftUI's Toggle: its middle is its label. An iOS cell
+ * that holds one such control is its row too.
+ */
 const TOGGLES = new Set(['switch', 'checkbox']);
 /** Where along its long side a control is touched when a smaller one has its middle. */
 const ASIDE = [0.25, 0.75, 0.1, 0.9];
@@ -98,9 +101,10 @@ const holds = (r: Rect, p: Point) =>
   p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
 
 /**
- * Where a touch on an element goes. `own`: on its own switch, `other`, where the row's middle is its label. `clear`: at
- * a point clear of `other`, a smaller control of other words at its middle, which would take the touch (a mini player's
- * Pause). `covered`: at its middle still, as no point of it is clear of such controls, and `other` may take the touch.
+ * Where a touch on an element goes. `own`: on its own switch, `other`, where the row's middle is its label, as is a
+ * cell's that holds one switch. `clear`: at a point clear of `other`, a smaller control of other words at its middle,
+ * which would take the touch (a mini player's Pause). `covered`: at its middle still, as no point of it is clear of
+ * such controls, and `other` may take the touch.
  */
 export type TouchPoint<E extends Touchable = ScreenElement> = {
   point: Point;
@@ -114,7 +118,20 @@ function ownPoint<E extends Touchable>(e: E, list: E[]): TouchPoint<E> | undefin
   const smaller = list.filter(
     (c) => c !== e && within(c.rect, e.rect) && area(c.rect) * 2 <= area(e.rect),
   );
-  const own = TOGGLES.has(e.role) ? smaller.find((c) => c.role === e.role) : undefined;
+  // its switch may stand out of it: an iOS 26 switch, 63 wide, ends 2 past the row that holds it
+  const toggles = list
+    .filter(
+      (c) =>
+        c !== e &&
+        TOGGLES.has(c.role) &&
+        (c.role === e.role || e.role === 'cell') &&
+        holds(e.rect, c) &&
+        area(c.rect) * 2 <= area(e.rect),
+    )
+    .sort((a, b) => area(a.rect) - area(b.rect));
+  const [innermost] = toggles;
+  // one switch, in the rows that hold it: two that stand apart are not the row's own
+  const own = innermost && toggles.every((c) => holds(c.rect, innermost)) ? innermost : undefined;
   if (own) return { point: { x: own.x, y: own.y }, why: 'own', other: own };
   // its own words past the list's cut are its own still
   const words = (c: E) => c.whole ?? c.label;
