@@ -88,6 +88,46 @@ describe('an agent found on a device', () => {
     });
   });
 
+  describe('whose hello ran out of time', () => {
+    const late = () => Promise.reject(new DeviceError('TIMEOUT', 'hello did not answer'));
+
+    it('is asked once more, with the whole of the time a hello has, where a live host uses it', async () => {
+      anotherHost();
+      const reach = vi.fn<(s: object, ms?: number) => Promise<typeof agent>>(() =>
+        Promise.resolve(agent),
+      );
+      reach.mockImplementationOnce(late);
+      const found = await sharedAgent(SERIAL, { sha256: THIS_BUILD }, THIS_BUILD, reach);
+      expect(found).toMatchObject({ started: false });
+      expect(reach.mock.calls.map(([, ms]) => ms)).toEqual([undefined, 10_000]);
+    });
+
+    it('is left running under a live host when it is silent again, and the refusal says who uses it', async () => {
+      const child = anotherHost();
+      const reach = vi.fn(late);
+      await expect(
+        sharedAgent(SERIAL, { sha256: THIS_BUILD }, THIS_BUILD, reach),
+      ).rejects.toMatchObject({
+        code: 'AGENT_UNAVAILABLE',
+        retryable: true,
+        message: `the agent on ${SERIAL} did not answer in 10 s, and was left running: pid ${String(child.pid)} uses it`,
+      });
+      expect(reach).toHaveBeenCalledTimes(2);
+    });
+
+    it('is started anew when its process is dead, or when nobody else uses it', async () => {
+      const alone = vi.fn(late);
+      expect(await sharedAgent(SERIAL, { sha256: THIS_BUILD }, THIS_BUILD, alone)).toBeUndefined();
+      // its own to end: no second go holds up the start of another
+      expect(alone).toHaveBeenCalledTimes(1);
+      anotherHost();
+      const dead = () => false;
+      expect(
+        await sharedAgent(SERIAL, { sha256: THIS_BUILD }, THIS_BUILD, late, dead),
+      ).toBeUndefined();
+    });
+  });
+
   it('counts this process as nobody else, however often it asks', async () => {
     const reach = vi.fn(() => Promise.resolve(agent));
     await sharedAgent(SERIAL, undefined, THIS_BUILD, reach);

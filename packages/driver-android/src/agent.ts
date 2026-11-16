@@ -105,7 +105,13 @@ export class AndroidAgentLauncher {
   async connect(): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
     const apk = await agentApk();
     const found = async () =>
-      sharedAgent(this.phone, await this.readState(), apk.sha256, (s) => this.tryConnect(s));
+      sharedAgent(
+        this.phone,
+        await this.readState(),
+        apk.sha256,
+        (s, helloMs) => this.tryConnect(s, helloMs),
+        (s) => this.running(s.socket),
+      );
     const running = await found();
     if (running) return running;
     const state = await this.readState();
@@ -259,9 +265,12 @@ export class AndroidAgentLauncher {
     return out.includes('yes');
   }
 
-  private async tryConnect(state: State): Promise<{ rpc: RpcClient; hello: Hello }> {
+  private async tryConnect(
+    state: State,
+    helloMs = 3_000,
+  ): Promise<{ rpc: RpcClient; hello: Hello }> {
     const { socket, rest } = await this.adb.open(this.serial, `localabstract:${state.socket}`);
-    return greet(socket, rest, 'agent', state.token, 3_000);
+    return greet(socket, rest, 'agent', state.token, helloMs);
   }
 
   /**

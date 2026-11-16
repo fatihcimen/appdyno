@@ -11,6 +11,7 @@ import {
   exclusively,
   sleep,
   greet,
+  processAlive,
   readStateFile,
   reportProgress,
   run,
@@ -177,7 +178,13 @@ export class IosRunnerLauncher {
     const build = await this.transport.build();
     const running = async () => {
       const state = await this.readState();
-      return sharedAgent(this.udid, state, build.sha256, (s) => this.tryConnect(s));
+      return sharedAgent(
+        this.udid,
+        state,
+        build.sha256,
+        (s, helloMs) => this.tryConnect(s, helloMs),
+        (s) => s.pid === undefined || processAlive(s.pid),
+      );
     };
     // one start's time in all: a host that waited for another's has that much less for its own
     let waitEnds: number | undefined;
@@ -337,10 +344,10 @@ export class IosRunnerLauncher {
     }
   }
 
-  private async tryConnect(s: State): Promise<{ rpc: RpcClient; hello: Hello }> {
+  private async tryConnect(s: State, helloMs = 5_000): Promise<{ rpc: RpcClient; hello: Hello }> {
     const { socket, rest } = await this.transport.open(s.port);
     socket.setNoDelay(true);
-    return greet(socket, rest, 'runner', s.token, 5_000);
+    return greet(socket, rest, 'runner', s.token, helloMs);
   }
 
   /**
