@@ -46,9 +46,9 @@ describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
   it('lists the phone and drives Settings: launch, read, tap by ref, screenshot', async () => {
     expect((await call('list_devices')).text).toContain(`${udid} usb iPhone`);
     expect((await call('launch_app')).error).toBe(false);
-    const home = await call('screen');
+    const home = await call('read_screen');
     expect(home.text).toContain(`foreground: ${APP}`);
-    const tapped = await call('tap', { ref: ref(home.text, 'Genel') });
+    const tapped = await call('tap_screen', { ref: ref(home.text, 'Genel') });
     expect(tapped.text).toMatch(/^tapped @[\w-]+ "Genel"/);
     expect(tapped.text).toContain('Hakkında');
     const shot = await call('take_screenshot');

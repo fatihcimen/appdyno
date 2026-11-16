@@ -36,10 +36,10 @@ const ok = <A extends Answer>(r: A) => {
 
 /** Whether the fixture's element of that id shows those words, within a few seconds. */
 const shows = async (call: Call, id: string, text: string) =>
-  ok(await call('wait_for', { selector: { id, text }, timeoutMs: 8_000 })).data.met;
+  ok(await call('check_element', { selector: { id, text }, timeoutMs: 8_000 })).data.met;
 
 const labelOf = async (call: Call, id: string) =>
-  ok(await call('find', { selector: { id } })).data.matches[0]?.label;
+  ok(await call('read_screen', { selector: { id } })).data.matches[0]?.label;
 
 /** The lifecycle screen of a fixture in a process of its own: what it counts begins at none. */
 const fresh = async (p: Platform, call: Call) => {
@@ -103,7 +103,7 @@ for (const p of PLATFORMS)
 
     it('counts exactly one shake a call, several in a row', async () => {
       await fresh(p, call);
-      for (let i = 0; i < 3; i++) ok(await call('device_setting', { name: 'shake' }));
+      for (let i = 0; i < 3; i++) ok(await call('set_device', { name: 'shake' }));
       expect(await shows(call, 'shakes', 'Shakes: 3')).toBe(true);
     });
 
@@ -156,19 +156,19 @@ describe.skipIf(!SIMULATOR)('memory warnings and photos on a simulator', () => {
   it('counts exactly one memory warning a call, several in a row, and takes no level', async () => {
     await fresh(ON_SIMULATOR, call);
     for (let i = 0; i < 3; i++) {
-      const r = ok(await call('device_setting', { name: 'memory_warning' }));
+      const r = ok(await call('set_device', { name: 'memory_warning' }));
       expect(r.text).toContain('every app that runs on the simulator gets it');
     }
     expect(await shows(call, 'memory_warnings', 'Memory warnings: 3')).toBe(true);
-    const level = await call('device_setting', { name: 'memory_warning', value: 'RUNNING_LOW' });
+    const level = await call('set_device', { name: 'memory_warning', value: 'RUNNING_LOW' });
     expect(level.data.code).toBe('INVALID_ARGUMENT');
   });
 
   it('adds photos to Photos, which then holds them, and says it cannot take them out', async () => {
     vi.spyOn(process, 'cwd').mockReturnValue(pictures());
-    const one = ok(await call('device_setting', { name: 'media', value: 'shots/a.png' }));
+    const one = ok(await call('transfer_files', { action: 'media', path: 'shots/a.png' }));
     const held = Number(/Photos holds (\d+)/.exec(one.text)?.[1]);
-    const two = ok(await call('device_setting', { name: 'media', value: 'shots' }));
+    const two = ok(await call('transfer_files', { action: 'media', path: 'shots' }));
     expect(two.text).toContain(`Photos holds ${String(held + 2)}`);
     expect(two.text).toContain('has no delete');
   });
@@ -190,36 +190,36 @@ describe.skipIf(!EMULATOR)('trim levels and photos on an emulator', () => {
   });
   afterAll(async () => {
     vi.restoreAllMocks();
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'restore' });
     o.ctx.close();
   });
 
   it('tells the app each level it is sent, a higher one each time, and a background one only in the background', async () => {
     await fresh(ON_EMULATOR, call);
     for (const value of ['RUNNING_MODERATE', 'RUNNING_LOW', 'RUNNING_CRITICAL'])
-      ok(await call('device_setting', { name: 'memory_warning', value }));
+      ok(await call('set_device', { name: 'memory_warning', value }));
     expect(
       await shows(call, 'trim_levels', 'RUNNING_MODERATE, RUNNING_LOW, RUNNING_CRITICAL'),
     ).toBe(true);
-    const again = await call('device_setting', { name: 'memory_warning' });
+    const again = await call('set_device', { name: 'memory_warning' });
     expect(again.data.code).toBe('INVALID_ARGUMENT');
     expect(again.text).toContain('is at RUNNING_CRITICAL already');
-    const front = await call('device_setting', { name: 'memory_warning', value: 'BACKGROUND' });
+    const front = await call('set_device', { name: 'memory_warning', value: 'BACKGROUND' });
     expect(front.text).toContain('reaches only an app in the background');
     ok(await call('press_key', { key: 'home', read: 'none' }));
-    ok(await call('device_setting', { name: 'memory_warning', value: 'BACKGROUND' }));
+    ok(await call('set_device', { name: 'memory_warning', value: 'BACKGROUND' }));
     ok(await call('launch_app', { read: 'none' }));
     expect(await shows(call, 'trim_levels', 'BACKGROUND')).toBe(true);
   });
 
   it('adds photos to the library, listed once scanned, and restore deletes exactly them', async () => {
     vi.spyOn(process, 'cwd').mockReturnValue(pictures());
-    const added = ok(await call('device_setting', { name: 'media', value: 'shots' }));
+    const added = ok(await call('transfer_files', { action: 'media', path: 'shots' }));
     expect(added.text).toContain('the library lists 2 of them, in Pictures/appdyno');
     const listed = await rows();
     for (const name of ['a.png', 'b.png'])
       expect(listed).toContain(`_data=${PICTURES}/${name}, is_pending=0`);
-    const back = ok(await call('device_setting', { name: 'restore' }));
+    const back = ok(await call('set_device', { name: 'restore' }));
     expect(back.text).toContain('took out the 2 photos and videos it added');
     expect(await sh(`ls ${PICTURES} 2>&1`)).toContain('No such file');
     expect(await rows()).toContain('No result found');

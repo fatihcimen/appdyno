@@ -361,7 +361,7 @@ describe("a window's Apps pane", () => {
       controls.heard({ at: 0, tool, ms: 1, ok, args: { action } });
     call('manage_app', 'state');
     call('manage_app', 'install', false);
-    call('tap', 'install');
+    call('tap_screen', 'install');
     await new Promise((r) => setTimeout(r, 50));
     expect(told.filter((m) => m.op === 'apps')).toEqual([]);
     for (const action of ['install', 'uninstall', 'build_and_run']) call('manage_app', action);

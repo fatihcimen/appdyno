@@ -43,11 +43,11 @@ const ok = <A extends Answer>(r: A) => {
   return r;
 };
 const shows = async (call: Call, id: string, text: string) =>
-  ok(await call('wait_for', { selector: { id, text }, timeoutMs: 8_000 })).data.met;
+  ok(await call('check_element', { selector: { id, text }, timeoutMs: 8_000 })).data.met;
 const labelOf = async (call: Call, id: string) =>
-  ok(await call('find', { selector: { id } })).data.matches[0]?.label;
+  ok(await call('read_screen', { selector: { id } })).data.matches[0]?.label;
 const fold = (call: Call, value?: string) =>
-  call('device_setting', { name: 'fold', ...(value && { value }) });
+  call('set_device', { name: 'fold', ...(value && { value }) });
 /** The request the device holds, as it says it itself. */
 const override = () => /mOverrideState=(.*)/.exec(adb('dumpsys device_state'))?.[1];
 
@@ -60,7 +60,7 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
     ok(await call('launch_app', { read: 'none' }));
   }, 300_000);
   afterAll(async () => {
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'restore' });
     o.ctx.close();
   });
 
@@ -130,7 +130,7 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
     expect(await shows(call, 'fold_size_class', 'Size class: compact wide')).toBe(true);
     expect((await fold(call)).data.value).toBe('closed');
 
-    const back = ok(await call('device_setting', { name: 'restore' }));
+    const back = ok(await call('set_device', { name: 'restore' }));
     expect(back.text).toContain('fold: default (now open)');
     expect(override()).toBe('Optional.empty');
     expect((await fold(call)).data.value).toBe('default (now open)');
@@ -153,15 +153,16 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
     const tapDialog = async () => {
       ok(await call('manage_app', { action: 'stop' }));
       ok(await call('launch_app', { read: 'none' }));
-      const at = ok(await call('find', { selector: { text: 'DIALOG' } })).data.matches[0];
+      const at = ok(await call('read_screen', { selector: { text: 'DIALOG' } })).data.matches[0];
       const [w, h] = size().split('x').map(Number);
       expect(at && w && h && true).toBe(true);
       const [x, y] = [Number(at?.x) / Number(w), Number(at?.y) / Number(h)];
       session.send({ kind: 'touch', p: 0, x, y });
       await new Promise((r) => setTimeout(r, 80));
       session.send({ kind: 'touch', p: 2, x, y });
-      return ok(await call('wait_for', { selector: { text: 'OPEN DIALOG' }, timeoutMs: 8_000 }))
-        .data.met;
+      return ok(
+        await call('check_element', { selector: { text: 'OPEN DIALOG' }, timeoutMs: 8_000 }),
+      ).data.met;
     };
     ok(await fold(call, 'open'));
     await session.start();
@@ -220,9 +221,9 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
   const tapOpensDialog = async () => {
     ok(await call('manage_app', { action: 'stop' }));
     ok(await call('launch_app', { read: 'none' }));
-    ok(await call('tap', { selector: { text: 'Dialog' } }));
-    return ok(await call('wait_for', { selector: { text: 'Open dialog' }, timeoutMs: 8_000 })).data
-      .met;
+    ok(await call('tap_screen', { selector: { text: 'Dialog' } }));
+    return ok(await call('check_element', { selector: { text: 'Open dialog' }, timeoutMs: 8_000 }))
+      .data.met;
   };
 
   beforeAll(async () => {
@@ -232,7 +233,7 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
     ok(await call('launch_app', { read: 'none' }));
   }, 300_000);
   afterAll(async () => {
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'restore' });
     o.ctx.close();
   });
 
@@ -297,7 +298,7 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
     ok(await call('open_link', { url: FOLD, read: 'none' }));
     expect(await shows(call, 'fold_window', 'Window 951x669 points')).toBe(true);
     expect((await fold(call)).data.value).toBe('open');
-    const back = ok(await call('device_setting', { name: 'restore' }));
+    const back = ok(await call('set_device', { name: 'restore' }));
     expect(back.text).toContain('fold: closed');
     expect(await active()).toBe(1);
     expect((await fold(call)).data.value).toBe('closed');
@@ -319,7 +320,7 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
     const tapDialog = async () => {
       ok(await call('manage_app', { action: 'stop' }));
       const home = ok(await call('launch_app'));
-      const at = ok(await call('find', { selector: { text: 'Dialog' } })).data.matches[0];
+      const at = ok(await call('read_screen', { selector: { text: 'Dialog' } })).data.matches[0];
       const size = /screen (\d+)x(\d+)/.exec(
         ok(await call('list_devices', { selected: true })).text,
       );
@@ -328,8 +329,9 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
       session.send({ kind: 'touch', p: 0, x, y });
       await new Promise((r) => setTimeout(r, 80));
       session.send({ kind: 'touch', p: 2, x, y });
-      return ok(await call('wait_for', { selector: { text: 'Open dialog' }, timeoutMs: 8_000 }))
-        .data.met;
+      return ok(
+        await call('check_element', { selector: { text: 'Open dialog' }, timeoutMs: 8_000 }),
+      ).data.met;
     };
     await session.start();
     try {

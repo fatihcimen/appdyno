@@ -229,7 +229,7 @@ for (const t of targets)
       // a simulator asks once whether a link may open the app: a flow would stop at it
       if (t.name === 'simulator') {
         await ops.call('open_link', { url: 'appdyno-fixture://open/stall' });
-        await ops.call('tap', { selector: { text: 'Open' } });
+        await ops.call('tap_screen', { selector: { text: 'Open' } });
       }
       const scenario = `journey-${t.name}`;
       const measure = async () => {

@@ -41,17 +41,17 @@ describe('a point past the edge of the screen', () => {
     namesOf(d).filter((n) => ['tap', 'act', 'swipe', 'longPress', 'typeText'].includes(n));
 
   it.each([
-    ['tap', { x: 9999, y: 9999 }],
-    ['tap', { x: 1080, y: 10 }],
-    ['tap', { x: 10, y: 2400 }],
-    ['swipe', { direction: 'up', x: 9999, y: 100 }],
+    ['tap_screen', { x: 9999, y: 9999 }],
+    ['tap_screen', { x: 1080, y: 10 }],
+    ['tap_screen', { x: 10, y: 2400 }],
+    ['swipe_screen', { direction: 'up', x: 9999, y: 100 }],
     ['type_text', { text: 'a', x: 9999, y: 100 }],
-    ['gesture', { kind: 'drag', x: 10, y: 10, to: { x: 9999, y: 10 } }],
-    ['gesture', { kind: 'pinch', scale: 2, x: 9999, y: 10 }],
-    ['gesture', { kind: 'plan', pointers: [[{ x: 9999, y: 10, t: 0 }]] }],
+    ['swipe_screen', { x: 10, y: 10, to: { x: 9999, y: 10 } }],
+    ['swipe_screen', { scale: 2, x: 9999, y: 10 }],
+    ['swipe_screen', { pointers: [[{ x: 9999, y: 10, t: 0 }]] }],
   ])('%s %j is refused and no touch goes out', async (op, args) => {
     const device = new FakeDevice();
-    const e = await refusal(callerOf(contextOf(device))(op as 'tap', args as { x: number }));
+    const e = await refusal(callerOf(contextOf(device))(op as 'tap_screen', args as { x: number }));
     expect(e.code).toBe('INVALID_ARGUMENT');
     expect(e.message).toContain('off the screen, which is 1080x2400');
     expect(e.dispatched).toBe(false);
@@ -61,7 +61,7 @@ describe('a point past the edge of the screen', () => {
   it('a phone turned since it was opened is not held to the old edge', async () => {
     const device = new FakeDevice();
     device.hello = { ...device.hello, screen: { ...device.hello.screen, w: 2400, h: 1080 } };
-    await callerOf(contextOf(device))('tap', { x: 2000, y: 100 });
+    await callerOf(contextOf(device))('tap_screen', { x: 2000, y: 100 });
     expect(touches(device)).toHaveLength(1);
   });
 });
@@ -78,7 +78,7 @@ describe('what did not happen is no success', () => {
   it.each([
     ['type_text', { text: 'a'.repeat(1000) }, /^INVALID_ARGUMENT: text: .*500/],
     ['perf_snapshot', { cpuWindowMs: 100 }, /^INVALID_ARGUMENT: cpuWindowMs: .*500/],
-    ['tap', { nonsense: true }, /nonsense/],
+    ['tap_screen', { nonsense: true }, /nonsense/],
   ])(
     '%s with arguments it does not take is a refusal, not a failed call',
     async (name, args, said) => {
@@ -93,32 +93,32 @@ describe('what did not happen is no success', () => {
   );
 
   it('a wait that ran out refuses, with the screen it saw', async () => {
-    const r = await asked(new FakeDevice(), 'wait_for', {
+    const r = await asked(new FakeDevice(), 'check_element', {
       selector: { text: 'Never' },
       timeoutMs: 300,
     });
     expect(r.isError).toBe(true);
-    expect(r.structuredContent.code).toBe('TIMEOUT');
+    expect(r.structuredContent.code).toBe('CHECK_FAILED');
     expect(r.content[0]?.text).toContain('text="Never" not shown after 300 ms');
     expect(r.content[0]?.text).toContain('Ana sayfa');
   });
 
   it('so does one with nothing asked of the screen', async () => {
     const e = await refusal(
-      callerOf(contextOf(new FakeDevice()))('wait_for', {
+      callerOf(contextOf(new FakeDevice()))('check_element', {
         selector: { text: 'Never' },
         timeoutMs: 300,
         read: 'none',
       }),
     );
-    expect(e.code).toBe('TIMEOUT');
+    expect(e.code).toBe('CHECK_FAILED');
     expect(e.message).toMatch(/^text="Never" not shown after 300 ms; nearest: /);
     expect(e.hint).toBe('call again to wait longer, or read the screen');
   });
 
   it('and one whose answer holds the screen sends nobody to read it', async () => {
     const e = await refusal(
-      callerOf(contextOf(new FakeDevice()))('wait_for', {
+      callerOf(contextOf(new FakeDevice()))('check_element', {
         selector: { text: 'Never' },
         timeoutMs: 300,
       }),
@@ -131,28 +131,28 @@ describe('what did not happen is no success', () => {
     const call = callerOf(contextOf(new FakeDevice()));
     const waited = await refusal(
       call('run_steps', {
-        steps: [{ tool: 'wait_for', selector: { text: 'Never' }, timeoutMs: 300 }],
+        steps: [{ tool: 'check_element', selector: { text: 'Never' }, timeoutMs: 300 }],
       }),
     );
     expect(waited.message).toMatch(/\nforeground: dev\.app\n3 elements: /);
     expect(waited.hint).toBe('call again to wait longer');
     const missed = await refusal(
-      call('run_steps', { steps: [{ tool: 'tap', selector: { text: 'Never' } }] }),
+      call('run_steps', { steps: [{ tool: 'tap_screen', selector: { text: 'Never' } }] }),
     );
     expect(missed.hint).toBe(
-      'the screen now is above; use scroll_to if it may be further along a list',
+      'the screen now is above; use swipe_screen with until if it may be further along a list',
     );
   });
 
   it('a wait for what goes refuses while it stays', async () => {
     const e = await refusal(
-      callerOf(contextOf(new FakeDevice()))('wait_for', {
+      callerOf(contextOf(new FakeDevice()))('check_element', {
+        check: 'absent',
         selector: { text: 'Ana sayfa' },
-        gone: true,
         timeoutMs: 300,
       }),
     );
-    expect(e.code).toBe('TIMEOUT');
+    expect(e.code).toBe('CHECK_FAILED');
     expect(e.message).toContain('text="Ana sayfa" still there after 300 ms');
   });
 
@@ -194,7 +194,7 @@ describe('a failed action says whether its touch went out', () => {
     'no: nothing named the target',
     fakeTimed(async () => {
       const call = callerOf(contextOf(new FakeDevice()));
-      const e = await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
+      const e = await refusal(call('tap_screen', { selector: { text: 'Nothing like it' } }));
       expect(e.dispatched).toBe(false);
       expect(e.message).toContain('no touch was sent');
     }),
@@ -203,7 +203,7 @@ describe('a failed action says whether its touch went out', () => {
   it('no: the device refused before the touch', async () => {
     const device = new FakeDevice();
     device.act = () => Promise.reject(new DeviceError('STALE', 'another window came in front'));
-    const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
+    const e = await refusal(callerOf(contextOf(device))('tap_screen', { x: 10, y: 10 }));
     expect(e.code).toBe('STALE');
     expect(e.dispatched).toBe(false);
     // the refusal holds the screen, so its hint sends nobody to read it
@@ -214,13 +214,13 @@ describe('a failed action says whether its touch went out', () => {
   it('and shows the screen the refused touch left, not the one read before it', async () => {
     const device = new FakeDevice();
     const call = callerOf(contextOf(device));
-    await call('screen');
+    await call('read_screen');
     // another screen came in front as the touch was aimed: the device refuses, and the read before it is old
     device.act = () => {
       device.screen = 'form';
       return Promise.reject(new DeviceError('STALE', 'another window came in front'));
     };
-    const e = await refusal(call('tap', { x: 10, y: 10 }));
+    const e = await refusal(call('tap_screen', { x: 10, y: 10 }));
     expect(e.message).toContain('"Gönder"');
     expect(e.message).not.toContain('screen unchanged');
   });
@@ -230,7 +230,7 @@ describe('a failed action says whether its touch went out', () => {
     async (code) => {
       const device = new FakeDevice();
       device.act = () => Promise.reject(new DeviceError(code, 'it stopped answering'));
-      const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
+      const e = await refusal(callerOf(contextOf(device))('tap_screen', { x: 10, y: 10 }));
       expect(e.dispatched).toBe('unknown');
       expect(e.message).toContain('read the screen before trying again');
     },
@@ -253,7 +253,7 @@ describe('a failed action says whether its touch went out', () => {
   it('no: a look at the screen that failed before the touch', async () => {
     const device = new FakeDevice();
     device.tree = () => Promise.reject(new DeviceError('NOT_FOUND', 'no window to read'));
-    const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
+    const e = await refusal(callerOf(contextOf(device))('tap_screen', { x: 10, y: 10 }));
     expect(e.dispatched).toBe(false);
     expect(namesOf(device)).not.toContain('act');
   });
@@ -269,7 +269,7 @@ describe('a failed action says whether its touch went out', () => {
 
   it('yes: a scroll that found nothing swiped', async () => {
     const e = await refusal(
-      callerOf(contextOf(new FakeDevice()))('scroll_to', { selector: { text: 'Nowhere' } }),
+      callerOf(contextOf(new FakeDevice()))('swipe_screen', { until: { text: 'Nowhere' } }),
     );
     expect(e.dispatched).toBe(true);
     expect(e.message).toContain('the touch was sent');
@@ -282,13 +282,13 @@ describe('a failed action says whether its touch went out', () => {
       const ctx = contextOf(device);
       const e = await refusal(
         callerOf(ctx)('run_steps', {
-          steps: [{ tool: 'tap', selector: { text: 'Nothing like it' } }],
+          steps: [{ tool: 'tap_screen', selector: { text: 'Nothing like it' } }],
         }),
       );
       expect(e.dispatched).toBe(false);
       const client = await linkedClient(ctx);
       const r = (await client.callTool({
-        name: 'tap',
+        name: 'tap_screen',
         arguments: { selector: { text: 'Nothing like it' } },
       })) as { structuredContent: Record<string, unknown> };
       expect(r.structuredContent.dispatched).toBe(false);
@@ -298,13 +298,13 @@ describe('a failed action says whether its touch went out', () => {
 
 describe('a touch looks first', () => {
   it.each([
-    ['tap', { x: 10, y: 10 }],
-    ['swipe', { direction: 'up' }],
+    ['tap_screen', { x: 10, y: 10 }],
+    ['swipe_screen', { direction: 'up' }],
     ['press_key', { key: 'back' }],
-    ['gesture', { kind: 'plan', pointers: [[{ x: 1, y: 1, t: 0 }]] }],
+    ['swipe_screen', { pointers: [[{ x: 1, y: 1, t: 0 }]] }],
   ])('%s reads a screen nobody has seen before it touches it', async (op, args) => {
     const device = new FakeDevice();
-    await callerOf(contextOf(device))(op as 'tap', args);
+    await callerOf(contextOf(device))(op as 'tap_screen', args);
     const names = namesOf(device);
     expect(names).toContain('act');
     expect(names.indexOf('tree')).toBeLessThan(names.indexOf('act'));
@@ -318,7 +318,7 @@ describe('a touch looks first', () => {
       Promise.reject(
         new DeviceError('DEVICE_LOCKED', 'it is locked behind its passcode', 'unlock it'),
       );
-    const e = await refusal(callerOf(contextOf(device))('swipe', { direction: 'up' }));
+    const e = await refusal(callerOf(contextOf(device))('swipe_screen', { direction: 'up' }));
     expect(e.code).toBe('DEVICE_LOCKED');
     expect(e.dispatched).toBe(false);
     expect(e.message).toContain('locked behind its passcode');
@@ -329,12 +329,12 @@ describe('a touch looks first', () => {
   it('a read that was refused leaves nothing to trust: the next touch looks again', async () => {
     const device = new FakeDevice();
     const call = callerOf(contextOf(device));
-    await call('screen');
+    await call('read_screen');
     const real = device.tree.bind(device);
     device.tree = () =>
       Promise.reject(new DeviceError('DEVICE_LOCKED', 'it is locked behind its PIN'));
-    await refusal(call('screen'));
-    const e = await refusal(call('tap', { x: 10, y: 10 }));
+    await refusal(call('read_screen'));
+    const e = await refusal(call('tap_screen', { x: 10, y: 10 }));
     expect(e.code).toBe('DEVICE_LOCKED');
     expect(namesOf(device)).not.toContain('act');
     device.tree = real;
@@ -343,20 +343,20 @@ describe('a touch looks first', () => {
   it('reads no more than it must: a read just taken is enough', async () => {
     const device = new FakeDevice();
     const call = callerOf(contextOf(device));
-    await call('screen');
+    await call('read_screen');
     const before = namesOf(device).filter((n) => n === 'tree').length;
-    await call('tap', { x: 10, y: 10 });
+    await call('tap_screen', { x: 10, y: 10 });
     expect(namesOf(device).filter((n) => n === 'tree').length).toBe(before);
   });
 
   it('a read of a while ago is no look: a phone locks after a minute', async () => {
     const device = new FakeDevice();
     const call = callerOf(contextOf(device));
-    await call('screen');
+    await call('read_screen');
     const before = namesOf(device).filter((n) => n === 'tree').length;
     const later = Date.now() + 60_000;
     vi.spyOn(Date, 'now').mockReturnValue(later);
-    await call('tap', { x: 10, y: 10 });
+    await call('tap_screen', { x: 10, y: 10 });
     expect(namesOf(device).filter((n) => n === 'tree').length).toBe(before + 1);
   });
 });

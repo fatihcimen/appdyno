@@ -375,7 +375,7 @@ export class ServerContext {
       throw new ToolError(
         'no connected device this server may drive (list_devices)',
         'DEVICE_GONE',
-        'simulator action list names the simulators and emulators it can start, and boot starts one; a phone is joined by its cable',
+        'manage_simulator list names the simulators and emulators it can start, and boot starts one; a phone is joined by its cable',
       );
     throw new ToolError(
       `more than one device this server may drive: ${ready.map((d) => `${d.serial} (${[kindOf(d), d.model].filter(Boolean).join(', ')})`).join('; ')}`,

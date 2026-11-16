@@ -216,8 +216,8 @@ export const BROWSER_CLIENTS: Named[] = [
         tr: 'Pro planında yalnızca salt okunur işaretli araçlar çalışır: dokunma ve yazı yazma yoktur.',
       },
       picture: {
-        en: "One report says it shows a tool's image as nothing: if `screenshot` comes back empty, use `screen`.",
-        tr: 'Bir bildirime göre aracın görselini boş gösteriyor: `screenshot` boş dönerse `screen` kullanın.',
+        en: "One report says it shows a tool's image as nothing: if `take_screenshot` comes back empty, use `read_screen`.",
+        tr: 'Bir bildirime göre aracın görselini boş gösteriyor: `take_screenshot` boş dönerse `read_screen` kullanın.',
       },
     },
   },

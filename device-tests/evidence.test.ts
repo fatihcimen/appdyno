@@ -117,7 +117,9 @@ const cli = (serial: string, ...args: string[]) =>
 const stir = async (ok: ReturnType<typeof harness>['ok'], rounds = 3) => {
   for (let i = 0; i < rounds; i++) {
     await ok('open_link', { url: 'appdyno-fixture://open/ticker' });
-    await ok('wait_for', { selector: { text: 'Ticker' }, timeoutMs: 1_000 }).catch(() => undefined);
+    await ok('check_element', { selector: { text: 'Ticker' }, timeoutMs: 1_000 }).catch(
+      () => undefined,
+    );
     await ok('press_key', { key: 'home' }).catch(() => undefined);
     await ok('launch_app');
   }
@@ -238,7 +240,7 @@ for (const { platform, serial, provider } of targets)
         await h.ok('open_link', { url: 'appdyno-fixture://open/form' });
         await h.ok('type_text', { selector: { id: 'name_input' }, text: SECRET });
         await h.ok('type_text', { selector: { id: 'password_input' }, text: PASSWORD });
-        await h.ok('keyboard', { action: 'dismiss' }).catch(() => undefined);
+        await h.ok('press_key', { key: 'hide_keyboard' }).catch(() => undefined);
         const fg = await h.call('perf_snapshot');
         if (!noRecorder) await h.ok('record_session', { kind: 'video', action: 'start' });
         await stir(h.ok, 1);
@@ -337,8 +339,8 @@ async function localWeb() {
 const fetchIn = async (ok: ReturnType<typeof harness>['ok'], url: string) => {
   await ok('open_link', { url: 'appdyno-fixture://open/network' });
   await ok('type_text', { selector: { id: 'url_input' }, text: url, replace: true });
-  await ok('tap', { selector: { id: 'fetch' } });
-  const r = await ok('wait_for', { selector: { text: 'fetched' }, timeoutMs: 15_000 });
+  await ok('tap_screen', { selector: { id: 'fetch' } });
+  const r = await ok('check_element', { selector: { text: 'fetched' }, timeoutMs: 15_000 });
   expect(r.data.met).toBe(true);
 };
 
@@ -512,12 +514,12 @@ for (const { platform, serial, provider, pageId, other } of [
       await h.ok('manage_app', { action: 'stop' });
       await h.ok('launch_app');
       await h.ok('open_link', { url: 'appdyno-fixture://open/web' });
-      await h.ok('wait_for', { selector: { text: 'Web content' } });
+      await h.ok('check_element', { selector: { text: 'Web content' }, timeoutMs: 5000 });
       return () => h.ctx.close();
     }, 240_000);
 
     it('marks what a web view shows in the screen', async () => {
-      const s = await h.ok('screen');
+      const s = await h.ok('read_screen');
       expect(s.text).toMatch(/button "Pay" \d+,\d+ clickable( focused)? web/);
       // the page's texts at one x fold under one line, which says their x and web once
       expect(s.text).toMatch(
@@ -545,7 +547,7 @@ for (const { platform, serial, provider, pageId, other } of [
         ?.flatMap((e) => ('x' in e ? [e] : []))
         .find((e) => e.text === 'Pay');
       assert(pay, 'Pay');
-      const found = await h.ok('find', { selector: { text: 'Pay' } });
+      const found = await h.ok('read_screen', { selector: { text: 'Pay' } });
       const [inTree] = found.data.matches;
       assert(inTree);
       expect(Math.abs(pay.x - inTree.x)).toBeLessThan(40);
@@ -558,7 +560,9 @@ for (const { platform, serial, provider, pageId, other } of [
       const click = await h.ok('inspect_app', { action: 'web_click', selector: '#pay' });
       expect(click.text).toBe('clicked button "Pay"');
       expect((await h.ok('inspect_app', { action: 'web_eval', js: paid })).text).toBe('"Paid"');
-      expect((await h.ok('wait_for', { selector: { text: 'Paid' } })).data.met).toBe(true);
+      expect(
+        (await h.ok('check_element', { selector: { text: 'Paid' }, timeoutMs: 5000 })).data.met,
+      ).toBe(true);
 
       const none = await h.call('inspect_app', { action: 'web_click', selector: '#nothing' });
       expect(none.error).toBe(true);
@@ -585,8 +589,10 @@ for (const { platform, serial, provider, pageId, other } of [
         ?.flatMap((e) => ('x' in e ? [e] : []))
         .find((e) => e.text === 'Pay');
       assert(pay, 'Pay');
-      await h.ok('tap', { x: pay.x, y: pay.y });
-      expect((await h.ok('wait_for', { selector: { text: 'Paid' } })).data.met).toBe(true);
+      await h.ok('tap_screen', { x: pay.x, y: pay.y });
+      expect(
+        (await h.ok('check_element', { selector: { text: 'Paid' }, timeoutMs: 5000 })).data.met,
+      ).toBe(true);
     }, 60_000);
 
     it('adds to the screen what the tree does not hold', async () => {
@@ -594,7 +600,7 @@ for (const { platform, serial, provider, pageId, other } of [
         action: 'web_eval',
         js: "const b = document.createElement('button'); b.id = 'silent'; b.setAttribute('aria-hidden', 'true'); b.textContent = 'Hidden from readers'; document.body.appendChild(b); true",
       });
-      const s = await h.ok('screen');
+      const s = await h.ok('read_screen');
       expect(s.text).toMatch(
         // a phone's web view may name less than an emulator's: other lines can come first
         /not in the accessibility tree:\n(?:web .*\n)*web button "Hidden from readers" \d+,\d+ #silent/,
@@ -614,7 +620,7 @@ for (const { platform, serial, provider } of targets)
     const baselines = join(dir, `baselines-${platform}`);
     const open = async (screen: string, label: string) => {
       await h.ok('open_link', { url: `appdyno-fixture://open/${screen}` });
-      await h.ok('wait_for', { selector: { text: label } });
+      await h.ok('check_element', { selector: { text: label }, timeoutMs: 5000 });
     };
     beforeAll(async () => {
       h = harness(serial, provider());
@@ -676,7 +682,7 @@ for (const { platform, serial, provider } of targets)
         dir: baselines,
       });
       expect(full.error).toBe(false);
-      await h.ok('tap', { selector: { id: 'open_dialog' } });
+      await h.ok('tap_screen', { selector: { id: 'open_dialog' } });
       const seen = await h.call('check_screen', {
         check: 'visual',
         name: 'masked',
@@ -733,7 +739,7 @@ describe.skipIf(!android)('visual comparison leaves the status bar out', () => {
       await demo('-e command enter');
       await demo('-e command clock -e hhmm 0101');
       await h.ok('open_link', { url: 'appdyno-fixture://open/dialog' });
-      await h.ok('wait_for', { selector: { text: 'Open dialog' } });
+      await h.ok('check_element', { selector: { text: 'Open dialog' }, timeoutMs: 5000 });
       const b = join(dir, 'clock');
       await h.ok('check_screen', { check: 'visual_baseline', name: 'clock', dir: b });
       await demo('-e command clock -e hhmm 2359');
@@ -766,28 +772,28 @@ describe.skipIf(!android.startsWith('emulator-'))('emulator events on Android', 
 
   it('sets the battery and puts it back', async () => {
     const level = async () => /level: (\d+)/.exec(await adb.exec(android, 'dumpsys battery'))?.[1];
-    const was = await h.ok('device_setting', { name: 'battery' });
+    const was = await h.ok('set_device', { name: 'battery' });
     expect(was.text).toMatch(/battery: default \(now \d+\)/);
     const before = await level();
-    await h.ok('device_setting', { name: 'battery', value: '17' });
+    await h.ok('set_device', { name: 'battery', value: '17' });
     expect(await level()).toBe('17');
-    expect((await h.call('device_setting', { name: 'battery', value: '170' })).error).toBe(true);
-    await h.ok('device_setting', { name: 'restore' });
+    expect((await h.call('set_device', { name: 'battery', value: '170' })).error).toBe(true);
+    await h.ok('set_device', { name: 'restore' });
     expect(await level()).toBe(before);
     expect(await adb.exec(android, 'dumpsys battery')).not.toContain('UPDATES STOPPED');
   }, 60_000);
 
   it('brings a call in and ends it', async () => {
-    await h.ok('device_setting', { name: 'call', value: '5551212' });
+    await h.ok('set_device', { name: 'call', value: '5551212' });
     await until('a call ringing', async () => (await callState()) === '1');
-    await h.ok('device_setting', { name: 'call', value: 'end 5551212' });
+    await h.ok('set_device', { name: 'call', value: 'end 5551212' });
     await until('the call gone', async () => (await callState()) === '0');
     await h.ok('launch_app');
   }, 60_000);
 
   it('brings an SMS in', async () => {
     const text = `Merhaba ${Date.now()}`;
-    await h.ok('device_setting', { name: 'sms', title: '5553434', value: text });
+    await h.ok('set_device', { name: 'sms', title: '5553434', value: text });
     await until('the SMS in the inbox', async () =>
       (
         await adb.exec(android, 'content query --uri content://sms/inbox --projection body')
@@ -797,7 +803,7 @@ describe.skipIf(!android.startsWith('emulator-'))('emulator events on Android', 
   }, 60_000);
 
   it('says when an emulator cannot fold', async () => {
-    const r = await h.call('device_setting', { name: 'fold', value: 'closed' });
+    const r = await h.call('set_device', { name: 'fold', value: 'closed' });
     expect(r.error).toBe(true);
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toMatch(/this device does not fold: its states are default/);
@@ -813,7 +819,7 @@ describe.skipIf(!simulator)('emulator events on a simulator', () => {
       [{ name: 'sms', value: 'x' }, /no telephony/],
       [{ name: 'battery', value: '10' }, /no battery to set/],
     ] as const) {
-      const r = await h.call('device_setting', args);
+      const r = await h.call('set_device', args);
       expect(r.error).toBe(true);
       expect(r.data.code).toBe('UNSUPPORTED');
       expect(r.text).toMatch(why);

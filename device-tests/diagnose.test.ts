@@ -87,7 +87,7 @@ describe.skipIf(!serial)('android: another tool holds UI automation', () => {
 
   it('answers the agent with that hint through an operation, as a client sees it', async () => {
     const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider()], { device: serial });
-    await expect(caller(ctx)('screen')).rejects.toMatchObject({
+    await expect(caller(ctx)('read_screen')).rejects.toMatchObject({
       code: 'AGENT_CONFLICT',
       hint: expect.stringContaining('uiautomator') as unknown,
     });
@@ -122,7 +122,7 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
 
   it('reads the log since the last action, at the level asked', async () => {
     const marker = `appdyno-mark-${Date.now()}`;
-    await call('screen');
+    await call('read_screen');
     await adb.exec(serial, `log -t appdyno-test ${marker}`);
     const r = await call('read_logs', { level: 'verbose', limit: 50 });
     expect(textOf(r)).toContain(APP);
@@ -148,7 +148,7 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
     };
     try {
       await call('launch_app', { read: 'none' });
-      await call('screen');
+      await call('read_screen');
       // refused: the key went out, and the app it was for is gone
       const r = await call('press_key', { key: 'enter', read: 'diff' }).catch((e: unknown) => e);
       expect(r).toMatchObject({ code: 'APP_NOT_RUNNING', dispatched: true });
@@ -183,13 +183,13 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
   it('cancels a device call and keeps working', async () => {
     const abort = new AbortController();
     const wait = inCall({ signal: abort.signal }, () =>
-      call('wait_for', { selector: { text: 'never there' }, timeoutMs: 15_000, read: 'none' }),
+      call('check_element', { selector: { text: 'never there' }, timeoutMs: 15_000, read: 'none' }),
     );
     setTimeout(() => abort.abort(), 200);
     const t = Date.now();
     await expect(wait).rejects.toMatchObject({ code: 'CANCELLED' });
     expect(Date.now() - t).toBeLessThan(3_000);
-    expect(textOf(await call('screen'))).toContain('elements');
+    expect(textOf(await call('read_screen'))).toContain('elements');
   });
 });
 
@@ -218,7 +218,7 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
   });
 
   it('says an action killed the app, with the reason, and lists the report', async () => {
-    await call('screen');
+    await call('read_screen');
     const device = new IosSimulatorDevice(udid);
     const found = Number(
       execFileSync('xcrun', ['simctl', 'spawn', udid, 'launchctl', 'list'], { encoding: 'utf8' })
@@ -254,11 +254,11 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
     await call('launch_app', { read: 'none' });
     const abort = new AbortController();
     const wait = inCall({ signal: abort.signal }, () =>
-      call('wait_for', { selector: { text: 'never there' }, timeoutMs: 15_000, read: 'none' }),
+      call('check_element', { selector: { text: 'never there' }, timeoutMs: 15_000, read: 'none' }),
     );
     setTimeout(() => abort.abort(), 200);
     await expect(wait).rejects.toMatchObject({ code: 'CANCELLED' });
-    expect(textOf(await call('screen'))).toContain('elements');
+    expect(textOf(await call('read_screen'))).toContain('elements');
   });
 });
 
@@ -286,7 +286,7 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
   });
 
   it('says an action killed the app, and copies its crash report from the phone', async () => {
-    await call('screen');
+    await call('read_screen');
     assert(iphone);
     await ctl.json([
       'device',

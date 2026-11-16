@@ -28,7 +28,8 @@ export { landing } from '@appdyno/core';
 const STALE = 'stale ref';
 
 /** What to do about a selector nothing matched, where the answer does not hold the screen. */
-export const NO_MATCH_HINT = 'read the screen, or use scroll_to if it may be further along a list';
+export const NO_MATCH_HINT =
+  'read the screen, or use swipe_screen with until if it may be further along a list';
 
 /** How long a selector with no match waits for its element, as a screen may still be coming. */
 export const NO_MATCH_WAIT_MS = 1_500;
@@ -81,7 +82,8 @@ export function pick(
 }
 
 /** What to do about an app that left the front by itself, as the answer to an action says it. */
-const GONE_HINT = 'launch_app brings it back, and crashes says why if it crashed';
+const GONE_HINT =
+  'launch_app brings it back, and read_logs with source crashes says why if it crashed';
 
 /**
  * What a screen with no match offers in its place: the nearest labels, or, with the app gone from the front by itself,
@@ -115,7 +117,7 @@ export const partly = (e: ScreenElement, sel: SelectorOf) =>
 function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[]) {
   if (e.ref === KEYBOARD_REF)
     throw new ToolError(
-      `${KEYBOARD_REF} is the on-screen keyboard: type_text types, press_key enter presses its return key, and keyboard dismiss closes it`,
+      `${KEYBOARD_REF} is the on-screen keyboard: type_text types, press_key enter presses its return key, and press_key hide_keyboard closes it`,
       'INVALID_ARGUMENT',
       undefined,
       false,

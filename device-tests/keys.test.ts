@@ -27,7 +27,7 @@ function keysOf(get: () => Call) {
     ok(await call('open_link', { url: 'appdyno-fixture://open/form' }));
   };
   const reads = (equals: string) =>
-    call('assert', { selector: { id: FIELD }, check: 'text', equals, timeoutMs: 3_000 });
+    call('check_element', { selector: { id: FIELD }, check: 'text', equals, timeoutMs: 3_000 });
 
   it('moves the cursor with the arrows', async () => {
     await form();
@@ -106,9 +106,9 @@ function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 's
     ok(await call('press_key', { key: 'control_center' }));
     await call('press_key', { key: 'home' });
     ok(await call('launch_app'));
-    expect(ok(await call('assert', { selector: { text: 'Form' }, timeoutMs: 5_000 })).error).toBe(
-      false,
-    );
+    expect(
+      ok(await call('check_element', { selector: { text: 'Form' }, timeoutMs: 5_000 })).error,
+    ).toBe(false);
   });
 }
 
@@ -128,7 +128,7 @@ describe.skipIf(!ANDROID)('keys on Android', () => {
     ok(await o.call('press_key', { key: 'arrow_down' }));
     ok(await o.call('press_key', { key: '5' }));
     ok(
-      await o.call('assert', {
+      await o.call('check_element', {
         selector: { id: 'phone_input' },
         check: 'text',
         equals: '5',

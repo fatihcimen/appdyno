@@ -65,11 +65,15 @@ export const unrecorded = (what: string): FlowStep => ({
 });
 
 /** The action that does the same and is recorded, with the step it leaves, by what `unrecorded` calls the one that is not. */
+/** What `unrecorded` calls a drag, and text put on the clipboard. */
+export const DRAG = 'swipe_screen to';
+export const CLIPBOARD = 'set_device clipboard';
+
 const IN_ITS_PLACE: Record<string, string> = {
-  'gesture drag': 'a straight drag made by `swipe` is recorded, as a `swipe` step',
-  clipboard: 'the same text typed by `type_text` is recorded, as a `type` step',
+  [DRAG]: 'a straight drag made by `swipe_screen` with direction is recorded, as a `swipe` step',
+  [CLIPBOARD]: 'the same text typed by `type_text` is recorded, as a `type` step',
   'inspect_app web_click':
-    'a `tap` at the x, y that `screen` gives the element is recorded, as a `tap` step',
+    'a `tap_screen` at the x, y that `read_screen` gives the element is recorded, as a `tap` step',
 };
 
 /**

@@ -25,8 +25,14 @@ const asks = async (call: Call) => {
   await call('manage_app', { action: 'stop' });
   ok(await call('open_link', { url: 'appdyno-fixture://open/biometric' }));
   // the iOS fixture's first screen names the link while the new one slides over it: a tap then would change the screen
-  ok(await call('wait_for', { selector: { id: 'last_link' }, gone: true, timeoutMs: 5_000 }));
-  return ok(await call('tap', { selector: { id: 'authenticate' } }));
+  ok(
+    await call('check_element', {
+      check: 'absent',
+      selector: { id: 'last_link' },
+      timeoutMs: 5_000,
+    }),
+  );
+  return ok(await call('tap_screen', { selector: { id: 'authenticate' } }));
 };
 
 describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
@@ -35,14 +41,14 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-person-')));
     await new Simctl().install(SIMULATOR, SIM_FIXTURE);
     o = opsOn(simulatorProvider(), SIMULATOR, APP);
-    ok(await o.call('device_setting', { name: 'biometric', value: 'enroll' }));
+    ok(await o.call('set_device', { name: 'biometric', value: 'enroll' }));
   }, 300_000);
   afterAll(() => o.ctx.close());
 
   const passes = async () => {
-    ok(await o.call('device_setting', { name: 'biometric', value: 'match' }));
+    ok(await o.call('set_device', { name: 'biometric', value: 'match' }));
     ok(
-      await o.call('wait_for', {
+      await o.call('check_element', {
         selector: { id: 'result', text: 'Authenticated' },
         timeoutMs: 8_000,
       }),
@@ -53,7 +59,7 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
   it('Face ID: a read and a picture say so, as does a tap once a sheet has been up', async () => {
     await asks(o.call);
     await vi.waitFor(
-      async () => expect(ok(await o.call('screen')).text).toContain('needs a person: Face ID'),
+      async () => expect(ok(await o.call('read_screen')).text).toContain('needs a person: Face ID'),
       { timeout: 10_000, interval: 1_000 },
     );
     // a simulator's picture takes the look past the app, which is quick there: a phone's does not
@@ -62,7 +68,7 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
     const r = await asks(o.call);
     expect(r.text).toContain('needs a person: Face ID');
     await passes();
-    expect(ok(await o.call('screen')).text).not.toContain('needs a person');
+    expect(ok(await o.call('read_screen')).text).not.toContain('needs a person');
   });
 });
 
@@ -109,9 +115,10 @@ describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {
     // a PIN just set takes a moment to count as one
     for (let i = 0; i < 5; i++) {
       adb('am', 'start', '-a', 'android.app.action.CONFIRM_DEVICE_CREDENTIAL');
-      if ((await o.call('wait_for', { selector: { id: field }, timeoutMs: 2_000 })).data.met) break;
+      if ((await o.call('check_element', { selector: { id: field }, timeoutMs: 2_000 })).data.met)
+        break;
     }
-    expect(ok(await o.call('screen')).text).toContain('needs a person: a passcode');
+    expect(ok(await o.call('read_screen')).text).toContain('needs a person: a passcode');
     ok(await o.call('press_key', { key: 'back' }));
   });
 
@@ -121,9 +128,9 @@ describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {
     const r = await asks(o.call);
     expect(r.text).toContain('needs a person: a fingerprint or a face');
     expect(ok(await o.call('take_screenshot')).text).toContain('needs a person');
-    ok(await o.call('device_setting', { name: 'biometric', value: 'match' }));
+    ok(await o.call('set_device', { name: 'biometric', value: 'match' }));
     ok(
-      await o.call('wait_for', {
+      await o.call('check_element', {
         selector: { id: 'result', text: 'Authenticated' },
         timeoutMs: 8_000,
       }),

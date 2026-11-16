@@ -64,7 +64,7 @@ class Simulator extends FakeDevice {
 describe('an iOS screen', () => {
   it('lists the keyboard as one element, and no key, prediction or bar of it', async () => {
     const { call } = await connect(new Simulator(keyboardUp), APP);
-    const r = await call('screen');
+    const r = await call('read_screen');
     expect(r.text).toContain('@keyboard keyboard "" 201,703');
     expect(r.text).not.toMatch(/"q"|"return"|inputView|Typing Predictions|Dictate|Next keyboard/);
     expect(r.data.elements).toBe(10);
@@ -74,14 +74,14 @@ describe('an iOS screen', () => {
     const closing = structuredClone(keyboardUp);
     for (const n of closing.nodes) if (n.c === 'Keyboard') n.b = [0, 900, 402, 1126];
     const { call } = await connect(new Simulator(closing), APP);
-    expect((await call('screen')).text).not.toContain('@keyboard');
+    expect((await call('read_screen')).text).not.toContain('@keyboard');
   });
 
   it('says a tap that opened the keyboard changed the screen, by one line', async () => {
     const d = new Simulator(keyboardDown(keyboardUp));
     const { call } = await connect(d, APP);
-    const name = /(@\w+) "Your name"/.exec((await call('screen')).text)?.[1];
-    const r = await call('tap', { ref: name });
+    const name = /(@\w+) "Your name"/.exec((await call('read_screen')).text)?.[1];
+    const r = await call('tap_screen', { ref: name });
     expect(r.data.changed).toBe(true);
     expect(r.text).not.toContain('no change seen');
     expect(r.text).toContain('\n+ @keyboard keyboard "" 201,703');
@@ -91,9 +91,9 @@ describe('an iOS screen', () => {
   it('refuses a touch on the keyboard, saying what types and what closes it', async () => {
     const d = new Simulator(keyboardUp);
     const { call } = await connect(d, APP);
-    await call('screen');
+    await call('read_screen');
     for (const args of [{ ref: '@keyboard' }, { selector: { role: 'keyboard' } }]) {
-      const r = await call('tap', args);
+      const r = await call('tap_screen', args);
       expect(r.data.code).toBe('INVALID_ARGUMENT');
       expect(r.text).toContain('type_text types, press_key enter presses its return key');
     }
@@ -144,7 +144,7 @@ describe('an iOS screen', () => {
     // by alert, and by a plain tap on its Allow (3 of 3 answered with the card, on an iPad and an iPhone)
     const answers = [
       ['answer_alert', { answer: 'Allow' }, 'answered the system alert: "Allow"'],
-      ['tap', { x: 275, y: 518 }, 'tapped 275,518'],
+      ['tap_screen', { x: 275, y: 518 }, 'tapped 275,518'],
     ] as const;
     for (const before of [prompt, alone])
       for (const [tool, args, said] of answers) {
@@ -184,16 +184,16 @@ describe('an iOS screen', () => {
   it('leaves out what lies under the status bar or the navigation bar, as a touch there scrolls the list to its top', async () => {
     const d = new Simulator(recorded('list-under-status-bar'));
     const { call } = await connect(d, APP);
-    const r = await call('screen');
+    const r = await call('read_screen');
     // the row at -24 to 41 is under the status bar, and the one at 41 to 105 under the navigation bar, at 62 to 116
     expect(r.text).not.toMatch(/Product 3[34]/);
     expect(r.text).toContain('"Product 35 In basket: 0 Add" 137');
     expect(r.text).toContain('@v181 button "Back" 38,84');
     // the first Add is the first a touch reaches
-    expect((await call('find', { selector: { text: 'Add', index: 0 } })).text).toMatch(
+    expect((await call('read_screen', { selector: { text: 'Add', index: 0 } })).text).toMatch(
       /^@\w+ button "Add" 339,137 /,
     );
-    expect((await call('tap', { selector: { text: 'Add', index: 0 } })).error).toBe(false);
+    expect((await call('tap_screen', { selector: { text: 'Add', index: 0 } })).error).toBe(false);
     expect(d.calls.filter((c) => c.name === 'act').map((c) => c.args[0])).toEqual([
       expect.objectContaining({ kind: 'tap', x: 339, y: 137 }),
     ]);
@@ -224,7 +224,7 @@ describe('an iOS screen', () => {
     };
     const d = new Simulator(toggle);
     const { call } = await connect(d, APP);
-    const r = await call('tap', { selector: { text: 'Match System', role: 'switch' } });
+    const r = await call('tap_screen', { selector: { text: 'Match System', role: 'switch' } });
     expect(r.done).toMatch(/^tapped @\w+ "Match System" by its own switch @\w+ "1"$/);
     expect(d.calls.filter((c) => c.name === 'act').map((c) => c.args[0])).toEqual([
       expect.objectContaining({ kind: 'tap', x: 342, y: 441 }),

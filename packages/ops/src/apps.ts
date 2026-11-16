@@ -122,7 +122,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
     const [only, other] = same;
     if (only && !other) return only.id;
     if (!only)
-      throw new ToolError(`no app named ${name} here`, 'NOT_FOUND', 'app action list names them');
+      throw new ToolError(`no app named ${name} here`, 'NOT_FOUND', 'manage_app list names them');
     throw new ToolError(
       `several apps are named ${name}: ${same.map((a) => a.id).join(', ')}`,
       'INVALID_ARGUMENT',
@@ -304,7 +304,7 @@ async function endInBackground(s: Session, pkg: string) {
     throw new ToolError(
       'this device cannot end an app in the background as the system does',
       'UNSUPPORTED',
-      'terminate_app without background stops it, as a person does',
+      'manage_app stop without background stops it, as a person does',
     );
   const said = await s.device.endInBackground(pkg);
   s.leftTheApp();
@@ -366,11 +366,11 @@ function launchOp(
         throw new ToolError(
           'this device puts no view probe in an app',
           'UNSUPPORTED',
-          'screen views reads the views where a device gives them without one; screen reads the accessibility tree',
+          'read_screen views reads the views where a device gives them without one; read_screen reads the accessibility tree',
         );
       const withProbe = probe && !unneeded;
       const noProbe =
-        unneeded && 'this device reads its views without a probe: screen views needs none';
+        unneeded && 'this device reads its views without a probe: read_screen views needs none';
       if (language) await askLanguage(policy, s, language, pkg);
       reportProgress(`launching ${pkg}`);
       s.leftTheApp(pkg !== s.appId);

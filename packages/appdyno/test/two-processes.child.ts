@@ -30,7 +30,7 @@ const provider: DeviceProvider = {
 };
 // the whole device's locale asks a person, of whom this race has none
 const ops = opsFor(new ServerContext({ ...DEFAULT_POLICY, allowPower: 'all' }, [provider]));
-const setting = must(ops.device_setting, 'device_setting');
+const setting = must(ops.set_device, 'set_device');
 const change = () => Promise.all(names.map((name) => setting.handler({ name, value: 'changed' })));
 
 process.stdout.write('ready\n');

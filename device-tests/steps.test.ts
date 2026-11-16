@@ -28,10 +28,10 @@ function stepsOf(get: () => Call) {
       await call('run_steps', {
         steps: [
           { tool: 'take_screenshot' },
-          { tool: 'tap', selector: { text: 'Form' }, read: 'diff' },
-          { tool: 'wait_for', selector: { id: 'name_input' } },
+          { tool: 'tap_screen', selector: { text: 'Form' }, read: 'diff' },
+          { tool: 'check_element', selector: { id: 'name_input' }, timeoutMs: 5000 },
           { tool: 'type_text', selector: { id: 'name_input' }, text: 'Ali' },
-          { tool: 'find', selector: { id: 'name_input' } },
+          { tool: 'read_screen', selector: { id: 'name_input' } },
           { tool: 'take_screenshot' },
           { tool: 'list_devices', selected: true },
         ],
@@ -52,7 +52,7 @@ function stepsOf(get: () => Call) {
     const r = ok(
       await call('run_steps', {
         steps: [
-          { tool: 'tap', selector: { id: 'name_input' } },
+          { tool: 'tap_screen', selector: { id: 'name_input' } },
           ...Array.from({ length: 29 }, (_, i) => ({ tool: 'press_key', key: `${i % 10}` })),
         ],
       }),

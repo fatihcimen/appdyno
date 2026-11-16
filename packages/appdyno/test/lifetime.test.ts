@@ -46,7 +46,7 @@ describe('the end of the server', () => {
 
   it.each(signals)('%s ends the session as the client leaving does', async (signal) => {
     const s = serving();
-    await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await s.call('set_device', { name: 'dark_mode', value: 'yes' });
     process.emit(signal);
     await vi.waitFor(() => expect(s.exit).toHaveBeenCalledWith(0));
     expect(s.values.dark_mode).toBe('no');
@@ -56,7 +56,7 @@ describe('the end of the server', () => {
 
   it('the client closing stdin does the same', async () => {
     const s = serving();
-    await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await s.call('set_device', { name: 'dark_mode', value: 'yes' });
     s.stdin.destroy();
     await vi.waitFor(() => expect(s.exit).toHaveBeenCalledWith(0));
     expect(s.values.dark_mode).toBe('no');
@@ -76,7 +76,7 @@ describe('the end of the server', () => {
 
   it('ends once, however many ask', async () => {
     const s = serving();
-    await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await s.call('set_device', { name: 'dark_mode', value: 'yes' });
     s.stdin.destroy();
     drain();
     await vi.waitFor(() => expect(s.exit).toHaveBeenCalled());
@@ -89,7 +89,7 @@ describe('the end of the server', () => {
   it('hands what is kept on disk to the process that puts it back once this one has gone', async () => {
     const handOff = vi.fn((devices: string[]) => devices);
     const s = serving(handOff);
-    await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await s.call('set_device', { name: 'dark_mode', value: 'yes' });
     // as claude -p ends its server: a kill half a second after, which no put-back of seconds outlasts
     process.emit('SIGINT');
     await vi.waitFor(() => expect(s.exit).toHaveBeenCalledWith(0));
@@ -142,7 +142,7 @@ describe('the end of the server', () => {
 
   it('says what it could not put back, and still exits', async () => {
     const s = serving();
-    await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await s.call('set_device', { name: 'dark_mode', value: 'yes' });
     s.set.mockRejectedValueOnce(new Error('broke'));
     process.emit('SIGTERM');
     await vi.waitFor(() => expect(s.exit).toHaveBeenCalled());
@@ -154,7 +154,7 @@ describe('the end of the server', () => {
 
   it('gives up on a device that does not answer, and still exits', async () => {
     const s = serving();
-    await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await s.call('set_device', { name: 'dark_mode', value: 'yes' });
     s.set.mockReturnValueOnce(new Promise(() => undefined));
     vi.useFakeTimers();
     process.emit('SIGTERM');

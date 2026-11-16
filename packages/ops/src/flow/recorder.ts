@@ -1,52 +1,24 @@
-import { basename, extname } from 'node:path';
-import { byRef, type Screen, type ScreenElement, safeName, selectIn } from '@appdyno/core';
-import {
-  type FlowSelector,
-  type FlowStep,
-  type Flag,
-  type Mask,
-  maskText,
-  Recording,
-  VALUELESS_SETTINGS,
-} from '@appdyno/flows';
+import { byRef, must, type Screen, type ScreenElement, selectIn } from '@appdyno/core';
+import { type FlowSelector, type FlowStep, type Flag, Recording } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
-import { SCROLLER_SWIPES } from '../perf/shared.js';
-import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
+import { LONG_PRESS_MS, SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
 import { NO_MATCH_WAIT_MS } from '../steps.js';
 import { onlyReads, type Op, type ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
-import { DEFAULT_TOLERANCE } from '../visual.js';
-import { type Aim, aimAt, fieldName, named, notReplayed, stepOf, unrecorded } from './aim.js';
-import { networkSteps } from './network-steps.js';
+import { type Aim, aimAt, DRAG, fieldName, named, notReplayed, stepOf, unrecorded } from './aim.js';
+import { toolStep } from './tool-steps.js';
 import { activeRecording, addSteps, defined } from './shared.js';
 
 /** A target as the flat form the ops take. */
 type Target = { ref?: string; x?: number; y?: number; selector?: FlowSelector };
 
-/** What an op that ran comes to in a flow: its arguments and answer, as steps. */
-type ToStep = (
-  a: Record<string, unknown>,
-  data: Record<string, unknown>,
-) => FlowStep | FlowStep[] | undefined;
-
 /** Ops that only look and are steps all the same: a check, a picture kept, a comparison. */
 const LOOKING_STEPS: ReadonlySet<string> = new Set([
-  'wait_for',
-  'assert',
+  'check_element',
   'take_screenshot',
   'check_screen',
 ]);
-
-/** A picture's file as a `screenshot` step names it. */
-const pictureName = (file: string) => safeName(basename(file, extname(file))).slice(0, 100);
-
-/** What an op that can change things does when it only looks. */
-const LOOKS: Record<string, string[]> = {
-  manage_app: ['list', 'state'],
-  capture_network: ['paths', 'read'],
-  inspect_app: ['web_pages', 'web_elements', 'rn_targets', 'rn_logs', 'ax_list'],
-};
 
 type Selector = {
   text?: string | undefined;
@@ -94,7 +66,9 @@ type StepOf<A extends Step['action']> = Extract<Step, { action: A }>;
 
 async function pressRecord(s: Session, st: StepOf<'tap' | 'double_tap' | 'long_press'>) {
   const a = await aim(s, st);
-  const durationMs = st.action === 'long_press' ? st.durationMs : undefined;
+  // a hold of the usual length is the step's own, and unsaid
+  const held = st.action === 'long_press' ? st.durationMs : undefined;
+  const durationMs = held === LONG_PRESS_MS ? undefined : held;
   return () =>
     a.selector || a.args
       ? stepOf(st.action, a, { durationMs })
@@ -211,7 +185,7 @@ async function recordOf(r: Recording, s: Session, st: Step): Promise<() => FlowS
     case 'long_press':
       return pressRecord(s, st);
     case 'drag':
-      return () => unrecorded('gesture drag');
+      return () => unrecorded(DRAG);
     case 'swipe':
       return swipeRecord(s, st);
     case 'type_text':
@@ -226,147 +200,6 @@ async function recordOf(r: Recording, s: Session, st: Step): Promise<() => FlowS
       return scrollRecord(st);
   }
 }
-
-/**
- * A measure is the agent measuring, not the journey: its numbers come from `appdyno test --measure`. What it does to
- * the screen stays, as the plain steps that do the same, so that the next step finds what it found, and nothing stops
- * a replay: a cold start is a stop and a launch, a scroll its swipes.
- */
-const swipes = (a: Record<string, unknown>, count: number) =>
-  Array.from({ length: count }, () =>
-    stepOf('swipe', {}, { direction: (a.direction ?? a.scroll) as string }),
-  );
-const restarts = (
-  a: Record<string, unknown>,
-  how: Record<string, string | string[] | boolean | undefined> = {},
-) => [
-  stepOf('stop', {}, { app: a.app as string | undefined }),
-  stepOf('launch', {}, { app: a.app as string | undefined, ...how }),
-];
-const MEASURES: Record<string, ToStep> = {
-  perf_launch: (a) =>
-    a.mode === 'cold' ? restarts(a) : stepOf('launch', {}, { app: a.app as string | undefined }),
-  perf_scroll: (a, data) => {
-    const count = a.swipes as number;
-    const back = { direction: a.direction === 'up' ? 'down' : 'up' };
-    const rounds = (data.rounds as { rewound?: boolean }[]).map((round) => [
-      ...(round.rewound ? swipes(back, count) : []),
-      ...swipes(a, count),
-    ]);
-    return rounds.flat();
-  },
-  perf_trace: (a) => [
-    ...(String(a.what).startsWith('xct_') ? restarts(a) : []),
-    ...(a.scroll ? swipes(a, SCROLLER_SWIPES) : []),
-  ],
-  perf_profile: (a) => (a.scroll ? swipes(a, SCROLLER_SWIPES) : undefined),
-  // a gate reads what is kept, and refuses to look at a device while a recording runs
-  perf_compare: () => undefined,
-};
-
-/** An op with no step of its own, as a flow step; a refused action is none, and any other op stops a replay. */
-const OPS: Record<string, ToStep> = {
-  ...MEASURES,
-  // a launch that started the app is a start in a replay too, where a plain launch brings a running app forward as it is;
-  // a restart, arguments and an environment stop a running app first on every platform: a start, whether it ran or not.
-  // A probe the launch put in is one more such start, which says nothing of whether the app ran
-  launch_app: (a, data) => {
-    const env = a.env as Record<string, string> | undefined;
-    const probe = (a.probe as boolean | undefined) || undefined;
-    const how = {
-      language: a.language as string | undefined,
-      arg: a.args as string[] | undefined,
-      env: env && Object.entries(env).map(([k, v]) => `${k}=${v}`),
-      probe,
-    };
-    const probed = probe && data.wasRunning === undefined;
-    return data.wasRunning === false || a.restart || a.args || a.env || probed
-      ? restarts(a, how)
-      : stepOf(
-          'launch',
-          { flags: data.wasRunning ? ['running'] : [] },
-          { app: a.app as string | undefined, language: how.language, probe },
-        );
-  },
-  manage_app: (a) =>
-    a.action === 'stop'
-      ? stepOf(
-          'stop',
-          {},
-          { app: a.app as string | undefined, background: (a.background as boolean) || undefined },
-        )
-      : unknownOp('manage_app')(a),
-  // photos put in the gallery are a setting of a flow; an app's data moved is no step
-  transfer_files: (a) =>
-    a.action === 'media'
-      ? stepOf(
-          'setting',
-          {},
-          { name: 'media', value: a.path as string, app: a.app as string | undefined },
-        )
-      : unknownOp('transfer_files')(a),
-  // what an app opens is read, and nothing opened: no step
-  open_link: (a) =>
-    a.links
-      ? undefined
-      : stepOf(
-          'open_link',
-          {},
-          { url: a.url as string | undefined, settings: a.settings as string | undefined },
-        ),
-  set_location: (a) => stepOf('set_location', {}, { lat: a.lat as number, lon: a.lon as number }),
-  answer_alert: (a, data) =>
-    data.answered !== undefined ? stepOf('alert', {}, { answer: a.answer as string }) : undefined,
-  keyboard: (_a, data) => (data.closed ? stepOf('hide_keyboard', {}) : undefined),
-  gesture: (a) =>
-    a.kind === 'pinch' || a.kind === 'plan' ? unrecorded(`gesture ${a.kind}`) : undefined,
-  set_orientation: (a) => unrecorded(`set_orientation ${String(a.orientation)}`),
-  clipboard: (a) => (a.text !== undefined ? unrecorded('clipboard') : undefined),
-  // a read of a setting is a look, where a one-shot that takes no value acts all the same;
-  // a restore takes nothing else, whatever came beside it
-  device_setting: (a) =>
-    a.name === 'restore'
-      ? stepOf('setting', {}, { name: 'restore' })
-      : a.value !== undefined || VALUELESS_SETTINGS.includes(a.name as string)
-        ? stepOf(
-            'setting',
-            {},
-            {
-              name: a.name as string,
-              value: a.value as string | undefined,
-              app: a.app as string | undefined,
-              title: a.title as string | undefined,
-            },
-          )
-        : undefined,
-  capture_network: (a, data) => networkSteps(a, LOOKS.capture_network ?? [], data),
-  // a picture only shown to the agent is a look
-  take_screenshot: (a, data) =>
-    a.file && !a.watchMs
-      ? stepOf('screenshot', {}, { name: pictureName(data.file as string) || 'screen' })
-      : undefined,
-  // a baseline saved while recording is what a replay compares with, in the flow's own baselines folder
-  check_screen: (a) =>
-    a.check === 'accessibility'
-      ? undefined
-      : stepOf(
-          'visual',
-          {},
-          {
-            name: a.name as string,
-            tolerance: a.tolerance === DEFAULT_TOLERANCE ? undefined : (a.tolerance as number),
-            mask: (a.masks as Mask[] | undefined)?.map(maskText),
-          },
-        ),
-};
-
-const unknownOp = (name: string) => (a: Record<string, unknown>) => {
-  // an op's action is one of its words, by its schema
-  const action = typeof a.action === 'string' ? a.action : '';
-  return LOOKS[name]?.includes(action)
-    ? undefined
-    : unrecorded(action ? `${name} ${action}` : name);
-};
 
 /** An answer with one more line: under what it says it did, where its words begin with that, as a step's has it. */
 function withLine(out: ToolResult, line: string | undefined): ToolResult {
@@ -411,7 +244,7 @@ export function flowRecorder(ctx: ServerContext) {
     wrap: (op: Op): Op => {
       const elsewhere = BY_STEP.has(op.name) || NOT_ACTIONS.has(op.name);
       if (!LOOKING_STEPS.has(op.name) && (elsewhere || onlyReads(op))) return op;
-      const toStep = OPS[op.name] ?? unknownOp(op.name);
+      const toStep = toolStep(op.name);
       return {
         ...op,
         handler: async (args): Promise<ToolResult> => {
@@ -427,8 +260,12 @@ export function flowRecorder(ctx: ServerContext) {
           const r = activeRecording(ctx, s?.device.serial ?? ctx.selected);
           if (!r) return op.handler(args);
           let record: (() => FlowStep | undefined) | undefined;
-          if (s && op.name === 'wait_for') record = await waitRecord(s, args as never);
-          if (s && op.name === 'assert') record = await assertRecord(s, args as never);
+          if (s && op.name === 'check_element') {
+            const { read: _, ...check } = args;
+            const st = must(op.step?.(check), 'the step of a check');
+            if (st.action === 'wait_for') record = await waitRecord(s, st);
+            if (st.action === 'assert') record = await assertRecord(s, st);
+          }
           const out = await op.handler(args);
           const steps = record ? record() : toStep(args, out.data);
           addSteps(r, steps);

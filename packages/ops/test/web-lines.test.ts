@@ -26,7 +26,7 @@ describe("a screen's web lines", () => {
         screen,
         (t) => t,
       );
-      expect(lines).toMatch(/not read within 3 s: webview reads it/);
+      expect(lines).toMatch(/not read within 3 s: inspect_app reads it/);
     }),
   );
 });
@@ -47,7 +47,7 @@ describe('webview', () => {
     expect(
       (await call('inspect_app', { action: 'web_eval', js: '1', page: 'Swift', app })).text,
     ).toBe(
-      `NOT_FOUND: no page in ${app} matches Swift: one that has loaded another since goes by its new title and URL\nhint: webview pages lists them as they are now`,
+      `NOT_FOUND: no page in ${app} matches Swift: one that has loaded another since goes by its new title and URL\nhint: inspect_app web_pages lists them as they are now`,
     );
   });
 });

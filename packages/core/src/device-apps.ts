@@ -5,7 +5,7 @@ export type AppEntry = { id: string; name?: string; version?: string };
 export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
 
 /** What to do about an app a device does not have, as each platform refuses one. */
-export const INSTALLED_APPS = 'app action list names the installed apps';
+export const INSTALLED_APPS = 'manage_app list names the installed apps';
 
 /** `probe`: the view probe in the app, which `Device.views` reads, held in this tool's later launches of it too. */
 export type LaunchOptions = {

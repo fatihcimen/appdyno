@@ -48,19 +48,19 @@ SCREENS.blind = [{ c: 'android.view.View', b: [0, 0, 1080, 2400] }];
 describe('a screen with no words in its tree', () => {
   it('reads them from its picture, and says so', async () => {
     const { call } = await connect('blind', () => Promise.resolve([word('Start Game')]));
-    const r = await call('screen');
+    const r = await call('read_screen');
     expect(r.text).toContain('"Start Game" 324,300');
     expect(r.text).toContain('read from the picture');
   });
 
   it('says when the fast level read them, and that its letters may be wrong', async () => {
     const { call } = await connect('blind', () => Promise.resolve([word('Start Game')]), 'fast');
-    expect((await call('screen')).text).toContain('letters outside English');
+    expect((await call('read_screen')).text).toContain('letters outside English');
   });
 
   it('takes a tap at their place, by a selector', async () => {
     const { call, device } = await connect('blind', () => Promise.resolve([word('Start Game')]));
-    expect((await call('tap', { selector: { text: 'Start Game' } })).error).toBe(false);
+    expect((await call('tap_screen', { selector: { text: 'Start Game' } })).error).toBe(false);
     expect(device.calls.find((c) => c.name === 'act')?.args[0]).toEqual({
       kind: 'tap',
       x: 324,
@@ -73,14 +73,14 @@ describe('a screen with no words in its tree', () => {
     const { call } = await connect('blind', () =>
       Promise.resolve(++reads > 2 ? [word('Game Over')] : [word('Start Game')]),
     );
-    const r = await call('wait_for', { selector: { text: 'Game Over' }, timeoutMs: 5_000 });
+    const r = await call('check_element', { selector: { text: 'Game Over' }, timeoutMs: 5_000 });
     expect(r.text).toContain('found');
     expect(reads).toBeGreaterThan(2);
   });
 
   it('says why when the picture cannot be read, and goes on', async () => {
     const { call } = await connect('blind', () => Promise.reject(new Error('no compiler')));
-    const r = await call('screen');
+    const r = await call('read_screen');
     expect(r.error).toBe(false);
     expect(r.text).toContain('none from the picture: no compiler');
   });
@@ -93,7 +93,7 @@ describe('a screen with words in its tree', () => {
       reads++;
       return Promise.resolve([]);
     });
-    await call('screen');
+    await call('read_screen');
     expect(reads).toBe(0);
     expect(device.calls.some((c) => c.name === 'screenshot')).toBe(false);
   });

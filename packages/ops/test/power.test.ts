@@ -228,13 +228,13 @@ describe('an input on them', () => {
 
   it('is refused where the client cannot ask, by every way a touch is sent, saying appdyno restarts nothing', async () => {
     const tries: [string, Record<string, unknown>][] = [
-      ['tap', restart],
-      ['tap', { selector: { text: 'Restart' } }],
-      ['gesture', { kind: 'long_press', ...restart }],
-      ['gesture', { kind: 'double_tap', ...restart }],
-      ['gesture', { kind: 'plan', pointers: [[{ ...restart, t: 0 }]] }],
-      ['swipe', { direction: 'up', ...restart }],
-      ['run_steps', { steps: [{ tool: 'tap', ...restart }] }],
+      ['tap_screen', restart],
+      ['tap_screen', { selector: { text: 'Restart' } }],
+      ['tap_screen', { ...restart, holdMs: 800 }],
+      ['tap_screen', { ...restart, count: 2 }],
+      ['swipe_screen', { pointers: [[{ ...restart, t: 0 }]] }],
+      ['swipe_screen', { direction: 'up', ...restart }],
+      ['run_steps', { steps: [{ tool: 'tap_screen', ...restart }] }],
       ['press_key', { key: 'enter' }],
       ['type_text', { text: 'x' }],
     ];
@@ -271,11 +271,11 @@ describe('an input on them', () => {
     const qs = recorded('android-quick-settings-tr');
     const power = middle(qs, 'Güç menüsü');
     for (const [tool, args] of [
-      ['swipe', { direction: 'down' }],
-      ['run_steps', { steps: [{ tool: 'swipe', direction: 'down' }] }],
+      ['swipe_screen', { direction: 'down' }],
+      ['run_steps', { steps: [{ tool: 'swipe_screen', direction: 'down' }] }],
     ] as const) {
       const { call, sent, device } = await onDevice('android-system-en');
-      await call('screen', {});
+      await call('read_screen', {});
       const act = device.act.bind(device);
       device.act = () => (
         (device.fixture = qs),
@@ -283,7 +283,7 @@ describe('an input on them', () => {
       );
       expect((await call(tool, args)).code, tool).toBe('TIMEOUT');
       device.act = act;
-      expect((await call('tap', power)).code, tool).toBe('PERMISSION_REQUIRED');
+      expect((await call('tap_screen', power)).code, tool).toBe('PERMISSION_REQUIRED');
       expect(sent(), tool).toEqual([]);
     }
   });
@@ -292,11 +292,13 @@ describe('an input on them', () => {
     const qs = recorded('android-quick-settings-tr');
     const one = await onDevice('android-system-en', { answer: 'decline' });
     const two = await onDevice('android-system-en', { device: one.device });
-    await one.call('screen', {});
+    await one.call('read_screen', {});
     const act = one.device.act.bind(one.device);
     one.device.act = (a, o) => ((one.device.fixture = qs), act(a, o));
-    expect((await two.call('swipe', { direction: 'down' })).error).toBe(false);
-    expect((await one.call('tap', middle(qs, 'Güç menüsü'))).code).toBe('PERMISSION_REQUIRED');
+    expect((await two.call('swipe_screen', { direction: 'down' })).error).toBe(false);
+    expect((await one.call('tap_screen', middle(qs, 'Güç menüsü'))).code).toBe(
+      'PERMISSION_REQUIRED',
+    );
     // the other client's swipe alone
     expect(one.sent()).toHaveLength(1);
   });
@@ -308,19 +310,21 @@ describe('an input on them', () => {
     const act = one.device.act.bind(one.device);
     one.device.act = async (a, o) => {
       // a read of this client's, taken as the swipe goes, has the screen before the swipe opens quick settings
-      expect((await one.call('screen', {})).error).toBe(false);
+      expect((await one.call('read_screen', {})).error).toBe(false);
       one.device.fixture = qs;
       return act(a, o);
     };
-    expect((await two.call('swipe', { direction: 'down' })).error).toBe(false);
+    expect((await two.call('swipe_screen', { direction: 'down' })).error).toBe(false);
     one.device.act = act;
-    expect((await one.call('tap', middle(qs, 'Güç menüsü'))).code).toBe('PERMISSION_REQUIRED');
+    expect((await one.call('tap_screen', middle(qs, 'Güç menüsü'))).code).toBe(
+      'PERMISSION_REQUIRED',
+    );
     expect(one.sent()).toHaveLength(1);
   });
 
   it('leaves the screen by back and home, and reads it, with nothing asked', async () => {
     const { call, sent, asked } = await onDevice('android-power-en', { answer: 'decline' });
-    expect((await call('screen', {})).error).toBe(false);
+    expect((await call('read_screen', {})).error).toBe(false);
     for (const key of ['back', 'home'])
       expect((await call('press_key', { key })).error, key).toBe(false);
     expect(sent()).toEqual([
@@ -332,14 +336,14 @@ describe('an input on them', () => {
 
   it("goes ahead on the person's yes, asked with the device and what may be lost, and not on a no", async () => {
     const yes = await onDevice('android-power-en', { answer: 'accept' });
-    expect((await yes.call('tap', restart)).error).toBe(false);
+    expect((await yes.call('tap_screen', restart)).error).toBe(false);
     expect(yes.asked).toEqual([
       `Let appdyno act on a touch on "Restart", the system's own power, emergency or erase control on Fake Phone (emulator-5580)? The device may power off, restart, place a call, call for help, or lose all it holds.`,
     ]);
     expect(yes.sent()).toEqual([expect.objectContaining({ kind: 'tap' })]);
     for (const answer of ['decline', 'cancel'] as const) {
       const no = await onDevice('android-erase-tr', { answer });
-      const r = await no.call('tap', middle(no.tree, 'TÜM VERİLERİ SİL'));
+      const r = await no.call('tap_screen', middle(no.tree, 'TÜM VERİLERİ SİL'));
       expect(r.code).toBe('PERMISSION_REQUIRED');
       expect(r.text).toContain('its question got no yes, and nothing was done');
       expect(r.text).not.toMatch(/person declined/);
@@ -356,7 +360,7 @@ describe('an input on them', () => {
       { virtual: false, policy: { allowPower: 'all' as const } },
     ]) {
       const { call, sent, asked } = await onDevice('android-power-en', { ...o, answer: 'decline' });
-      expect((await call('tap', restart)).error).toBe(false);
+      expect((await call('tap_screen', restart)).error).toBe(false);
       expect(sent()).toHaveLength(1);
       expect(asked).toEqual([]);
     }
@@ -365,7 +369,7 @@ describe('an input on them', () => {
       { policy: { allowDataLoss: 'all' as const } },
     ]) {
       const { call, sent } = await onDevice('android-power-en', o);
-      expect((await call('tap', restart)).code).toBe('PERMISSION_REQUIRED');
+      expect((await call('tap_screen', restart)).code).toBe('PERMISSION_REQUIRED');
       expect(sent()).toEqual([]);
     }
   });
@@ -373,7 +377,9 @@ describe('an input on them', () => {
   it('takes no argument for a yes', async () => {
     const { call, sent } = await onDevice('android-power-en');
     for (const word of ['yes', 'allowPower', 'confirm'])
-      expect((await call('tap', { ...restart, [word]: true })).code).toBe('INVALID_ARGUMENT');
+      expect((await call('tap_screen', { ...restart, [word]: true })).code).toBe(
+        'INVALID_ARGUMENT',
+      );
     expect(sent()).toEqual([]);
   });
 
@@ -389,7 +395,7 @@ describe('an input on them', () => {
   it('is no part of an ordinary screen: a tap there goes as it did', async () => {
     const { call, sent, asked } = await onDevice('android-system-en', { answer: 'decline' });
     const t = recorded('android-system-en');
-    expect((await call('tap', middle(t, 'Languages'))).error).toBe(false);
+    expect((await call('tap_screen', middle(t, 'Languages'))).error).toBe(false);
     expect((await call('type_text', { text: 'x' })).error).toBe(false);
     expect(sent().map((a) => (a as { kind?: string }).kind ?? 'typed')).toEqual([
       'tap',
@@ -402,15 +408,15 @@ describe('an input on them', () => {
   it('is judged on the read the touch was aimed by, with no read of its own, in well under a millisecond', async () => {
     const { call, device } = await onDevice('android-system-en');
     const t = recorded('android-system-en');
-    await call('screen', {});
+    await call('read_screen', {});
     for (const args of [middle(t, 'Languages'), { selector: { text: 'Languages' } }]) {
       const reads = device.calls.filter((c) => c.name === 'tree').length;
-      expect((await call('tap', args)).error).toBe(false);
+      expect((await call('tap_screen', args)).error).toBe(false);
       // a selector reads once to find its element, as it did; a tap by x,y on a fresh read reads nothing
       expect(device.calls.filter((c) => c.name === 'tree').length - reads).toBe(
         'x' in args ? 0 : 1,
       );
-      await call('screen', {});
+      await call('read_screen', {});
     }
     const qs = recorded('android-quick-settings-tr');
     const started = performance.now();
@@ -426,9 +432,9 @@ describe('a language of no words here', () => {
   it('asks before Settings or the whole device is put in it, as its resets and erase would then ask nothing', async () => {
     for (const [tool, args, target] of [
       ['launch_app', { app: 'com.android.settings', language: 'de' }, 'com.android.settings in de'],
-      ['device_setting', { name: 'locale', value: 'de-DE', app: '' }, 'the whole device in de-DE'],
+      ['set_device', { name: 'locale', value: 'de-DE', app: '' }, 'the whole device in de-DE'],
       [
-        'device_setting',
+        'set_device',
         { name: 'locale', value: 'ja', app: 'com.android.settings' },
         'com.android.settings in ja',
       ],
@@ -476,7 +482,7 @@ describe('a language of no words here', () => {
       "Let appdyno put com.android.settings in de on Fake Phone (emulator-5580)? appdyno knows Settings' reset and erase buttons by their words in English and Turkish, so in de a touch on them asks nothing.",
     ]);
     const ahead = await onDevice('android-system-en', { policy: { allowPower: 'virtual' } });
-    const r = await ahead.call('device_setting', { name: 'locale', value: 'de-DE', app: '' });
+    const r = await ahead.call('set_device', { name: 'locale', value: 'de-DE', app: '' });
     expect(r.text).not.toMatch(/PERMISSION_REQUIRED|asks the person/);
     expect(ahead.asked).toEqual([]);
   });
@@ -490,7 +496,7 @@ describe('a touch in a contacts or messages app', () => {
       'com.samsung.android.app.contacts',
     ]) {
       const { call, sent } = await onDevice(made(pkg, [button('call', 600)]));
-      const r = await call('tap', { x: 200, y: 625 });
+      const r = await call('tap_screen', { x: 200, y: 625 });
       expect(r.text, pkg).toContain(
         `a touch on the phone app ${pkg}, which may place a call asks the person first`,
       );
@@ -535,13 +541,13 @@ describe('a key or typing into a phone app', () => {
     const opener = vi.fn(() => Promise.resolve('com.maker.contacts'));
     device.apps = { opener } as unknown as AppManager;
     for (let i = 0; i < 2; i++)
-      expect((await call('tap', { x: 540, y: 1000 })).code).toBe('PERMISSION_REQUIRED');
+      expect((await call('tap_screen', { x: 540, y: 1000 })).code).toBe('PERMISSION_REQUIRED');
     expect(opener).toHaveBeenCalledOnce();
     expect(sent()).toEqual([]);
     // with no default dialer the system's chooser answers, which is no phone app
     const none = await onDevice(made('android', []));
     none.device.apps = { opener: () => Promise.resolve('android') } as unknown as AppManager;
-    expect((await none.call('tap', { x: 540, y: 1000 })).error).toBe(false);
+    expect((await none.call('tap_screen', { x: 540, y: 1000 })).error).toBe(false);
   });
 
   it('sends nothing where the device could not say which app places its calls, and asks it again the next time', async () => {
@@ -549,12 +555,12 @@ describe('a key or typing into a phone app', () => {
     const gone = new DeviceError('DEVICE_GONE', 'adb lost the device during cmd package');
     const opener = vi.fn().mockRejectedValueOnce(gone).mockResolvedValue('com.maker.contacts');
     device.apps = { opener } as unknown as AppManager;
-    const r = await call('tap', { x: 540, y: 1000 });
+    const r = await call('tap_screen', { x: 540, y: 1000 });
     expect(r.code).toBe('DEVICE_GONE');
     expect(r.text).toContain(
       'the device could not say which app places its calls, to tell whether this input may place one: adb lost the device during cmd package (no touch was sent)',
     );
-    expect((await call('tap', { x: 540, y: 1000 })).code).toBe('PERMISSION_REQUIRED');
+    expect((await call('tap_screen', { x: 540, y: 1000 })).code).toBe('PERMISSION_REQUIRED');
     expect(opener).toHaveBeenCalledTimes(2);
     expect(sent()).toEqual([]);
   });

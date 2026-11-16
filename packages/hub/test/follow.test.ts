@@ -28,14 +28,19 @@ describe('what a window is told', () => {
       const off = followDevice('guarded', { tell: (m) => seen.push(m) });
       appendActivity('guarded', {
         at: Date.now(),
-        tool: 'tap',
+        tool: 'tap_screen',
         ms: 3,
         ok: true,
         args: {},
         client: 'said by name',
       });
       await vi.advanceTimersByTimeAsync(300);
-      expect(seen[0]).toEqual({ op: 'agent', driving: true, tool: 'tap', client: 'said by name' });
+      expect(seen[0]).toEqual({
+        op: 'agent',
+        driving: true,
+        tool: 'tap_screen',
+        client: 'said by name',
+      });
       off();
     } finally {
       vi.useRealTimers();
@@ -50,10 +55,16 @@ describe('what a window is told', () => {
       const off = followDevice('guarded', { tell: (m) => told.push(m) });
       await vi.advanceTimersByTimeAsync(500);
       expect(told).toEqual([]);
-      appendActivity('guarded', { at: Date.now(), tool: 'tap', ms: 3, ok: true, args: {} });
+      appendActivity('guarded', { at: Date.now(), tool: 'tap_screen', ms: 3, ok: true, args: {} });
       await vi.advanceTimersByTimeAsync(300);
-      expect(told[0]).toEqual({ op: 'agent', driving: true, tool: 'tap' });
-      expect(told[1]).toMatchObject({ op: 'activity', tool: 'tap', ms: 3, ok: true, args: '{}' });
+      expect(told[0]).toEqual({ op: 'agent', driving: true, tool: 'tap_screen' });
+      expect(told[1]).toMatchObject({
+        op: 'activity',
+        tool: 'tap_screen',
+        ms: 3,
+        ok: true,
+        args: '{}',
+      });
       await vi.advanceTimersByTimeAsync(1_500);
       expect(told.filter((m) => m.driving === false)).toEqual([]);
       await vi.advanceTimersByTimeAsync(600);

@@ -42,7 +42,7 @@ describe.skipIf(!android)('guards on Android', () => {
   afterAll(() => t.ctx.close());
 
   it('a target that is not there says no touch was sent', async () => {
-    const r = await t.call('tap', { selector: { text: 'Nothing is called this' } });
+    const r = await t.call('tap_screen', { selector: { text: 'Nothing is called this' } });
     expect(r.error).toBe(true);
     expect(r.text).toContain('no touch was sent');
   }, 60_000);
@@ -58,7 +58,7 @@ describe.skipIf(!android)('guards on Android', () => {
         await d.ensureAwake();
         return ctx.skip();
       }
-      const read = await t.call('screen');
+      const read = await t.call('read_screen');
       console.log(read.error, read.data.code, read.text.slice(0, 150));
       expect(read.error, read.text).toBe(false);
       expect(await d.shell(KEYGUARD_READ)).toContain('false');
@@ -91,7 +91,7 @@ describe.skipIf(!android)('guards on Android', () => {
   it.runIf(android.startsWith('emulator-'))(
     'a phone locked behind a PIN refuses by name, reads and touches alike',
     async () => {
-      const seen = async (name: 'screen' | 'tap' | 'swipe', args = {}) => {
+      const seen = async (name: 'read_screen' | 'tap_screen' | 'swipe_screen', args = {}) => {
         const r = await t.call(name, args);
         console.log(name, r.error, r.data.code, r.text.slice(0, 150));
         return r;
@@ -100,13 +100,13 @@ describe.skipIf(!android)('guards on Android', () => {
       try {
         await d.shell('input keyevent KEYCODE_SLEEP');
         await pause(2_000);
-        const read = await seen('screen');
+        const read = await seen('read_screen');
         expect(read.data.code).toBe('DEVICE_LOCKED');
         expect(read.text).toContain('locked behind its PIN');
-        const tap = await seen('tap', { x: 100, y: 100 });
+        const tap = await seen('tap_screen', { x: 100, y: 100 });
         expect(tap.data.code).toBe('DEVICE_LOCKED');
         expect(tap.text).toContain('no touch was sent');
-        const swipe = await seen('swipe', { direction: 'up' });
+        const swipe = await seen('swipe_screen', { direction: 'up' });
         expect(swipe.data.code).toBe('DEVICE_LOCKED');
       } finally {
         await d.shell('input keyevent KEYCODE_WAKEUP');
@@ -114,7 +114,7 @@ describe.skipIf(!android)('guards on Android', () => {
         await d.shell(`locksettings clear --old ${PIN}`);
         await d.ensureAwake();
       }
-      expect((await seen('screen')).error).toBe(false);
+      expect((await seen('read_screen')).error).toBe(false);
     },
     120_000,
   );
@@ -170,7 +170,7 @@ describe.skipIf(!phone)('an iPhone that locked itself', () => {
   it('a swipe after it locked reaches the app, and opens nothing of the system', async () => {
     const key = vi.spyOn(d, 'key');
     await pause(LOCKS_AFTER_MS);
-    const r = await t.call('swipe', { direction: 'up' });
+    const r = await t.call('swipe_screen', { direction: 'up' });
     console.log(r.text.slice(0, 300), '\nhome presses', key.mock.calls.length);
     expect(r.error, r.text).toBe(false);
     // no press and it never locked, and this has proven nothing

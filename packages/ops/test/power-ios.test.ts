@@ -17,7 +17,7 @@ describe("iOS's own views over an app, where a read of the app has none of them"
     const { call, sent, asked, tree } = await onDevice('ios-control-center-tr', {
       answer: 'decline',
     });
-    const r = await call('tap', middle(tree, 'Güç'));
+    const r = await call('tap_screen', middle(tree, 'Güç'));
     expect(r.code).toBe('PERMISSION_REQUIRED');
     expect(asked[0]).toContain('a touch on "Güç"');
     expect(sent()).toEqual([]);
@@ -29,7 +29,7 @@ describe("iOS's own views over an app, where a read of the app has none of them"
       ['ios-power-off-springboard', 'slide to power off'],
     ] as const) {
       const { call, sent, asked, over: t } = await under(over);
-      const r = await call('tap', middle(t, label));
+      const r = await call('tap_screen', middle(t, label));
       expect(r.code, over).toBe('PERMISSION_REQUIRED');
       expect(asked[0], over).toContain(`a touch on "${label}"`);
       expect(sent(), over).toEqual([]);
@@ -78,18 +78,20 @@ describe("iOS's own views over an app, where a read of the app has none of them"
     for (const label of ['Ein/Aus', 'Steuerelemente hinzufügen']) {
       const o = await onDevice('ios-control-center-app', { answer: 'decline' });
       Object.assign(o.device, { systemTree: () => Promise.resolve(cc) });
-      const r = await o.call('tap', middle(cc, label));
+      const r = await o.call('tap_screen', middle(cc, label));
       expect(r.code, label).toBe('PERMISSION_REQUIRED');
       expect(o.asked[0], label).toContain(
         'a touch on Control Center, which holds the power button',
       );
-      expect(r.hint, label).toContain('device_setting changes what it would');
+      expect(r.hint, label).toContain('set_device changes what it would');
       expect(o.sent(), label).toEqual([]);
     }
     // what the person allowed ahead goes
     const allowed = await onDevice('ios-control-center-app', { policy: { allowPower: 'virtual' } });
     Object.assign(allowed.device, { systemTree: () => Promise.resolve(cc) });
-    expect((await allowed.call('tap', middle(cc, 'Steuerelemente hinzufügen'))).error).toBe(false);
+    expect((await allowed.call('tap_screen', middle(cc, 'Steuerelemente hinzufügen'))).error).toBe(
+      false,
+    );
   });
 });
 
@@ -110,13 +112,13 @@ describe("the home screen app's read, where a read of an iPhone's app has no win
 
   it('is taken once for a read of the screen, however many inputs that read aims, and again for the next read', async () => {
     const { call, sent, systemTree } = await phone(() => Promise.resolve(undefined));
-    await call('screen', {});
+    await call('read_screen', {});
     expect((await call('press_key', { key: 'a', count: 5 })).error).toBe(false);
     expect(sent()).toHaveLength(5);
     expect(systemTree).toHaveBeenCalledTimes(1);
     // a read of the same layout is another look: Control Center coming over the app leaves the app's as it was
-    await call('screen', {});
-    expect((await call('tap', inApp)).error).toBe(false);
+    await call('read_screen', {});
+    expect((await call('tap_screen', inApp)).error).toBe(false);
     expect(systemTree).toHaveBeenCalledTimes(2);
   });
 
@@ -124,7 +126,7 @@ describe("the home screen app's read, where a read of an iPhone's app has no win
     const late = new DeviceError('TIMEOUT', 'the runner gave no answer to tree.get in 10000 ms');
     const { call, sent } = await phone(() => Promise.reject(late));
     for (const [name, args] of [
-      ['tap', inApp],
+      ['tap_screen', inApp],
       ['press_key', { key: 'a' }],
     ] as const) {
       const r = await call(name, args);
@@ -143,14 +145,14 @@ describe("the home screen app's read, where a read of an iPhone's app has no win
     const cc = recorded('ios-control-center-springboard');
     let open = false;
     const { call, sent, asked, device } = await phone(() => Promise.resolve(open ? cc : undefined));
-    await call('screen', {});
+    await call('read_screen', {});
     const late = new DeviceError('TIMEOUT', 'the runner gave no answer to act in 10000 ms');
     late.sent = true;
     const act = device.act.bind(device);
     device.act = () => ((open = true), Promise.reject(late));
-    expect((await call('swipe', { direction: 'down' })).code).toBe('TIMEOUT');
+    expect((await call('swipe_screen', { direction: 'down' })).code).toBe('TIMEOUT');
     device.act = act;
-    expect((await call('tap', middle(cc, 'Power'))).code).toBe('PERMISSION_REQUIRED');
+    expect((await call('tap_screen', middle(cc, 'Power'))).code).toBe('PERMISSION_REQUIRED');
     expect(asked[0]).toContain('a touch on "Power"');
     expect(sent()).toEqual([]);
   });
@@ -160,7 +162,7 @@ describe("the home screen app's read, where a read of an iPhone's app has no win
       virtual: true,
       policy: { allowPower: 'virtual' },
     });
-    expect((await call('tap', inApp)).error).toBe(false);
+    expect((await call('tap_screen', inApp)).error).toBe(false);
     expect(sent()).toHaveLength(1);
     expect(systemTree).not.toHaveBeenCalled();
   });
@@ -216,7 +218,7 @@ describe('a system alert over the app, which the runner reads alone, and what th
   it("asks before a touch on Control Center's power button, which the alert hid from the read", async () => {
     const cc = recorded('ios-control-center-springboard');
     const { call, sent, asked } = await over(cc);
-    expect((await call('tap', middle(cc, 'Power'))).code).toBe('PERMISSION_REQUIRED');
+    expect((await call('tap_screen', middle(cc, 'Power'))).code).toBe('PERMISSION_REQUIRED');
     expect(asked[0]).toContain('a touch on "Power"');
     expect(sent()).toEqual([]);
   });
@@ -224,7 +226,7 @@ describe('a system alert over the app, which the runner reads alone, and what th
   it('refuses under --allow-apps a touch on a control of what the home screen app shows over the app, as no read had it', async () => {
     const cc = recorded('ios-control-center-springboard');
     const { call, sent } = await over(cc, [APP]);
-    const r = await call('tap', middle(cc, 'Add Controls'));
+    const r = await call('tap_screen', middle(cc, 'Add Controls'));
     expect(r.code).toBe('POLICY_DENIED');
     expect(r.text).toContain(
       `a touch lands in com.apple.springboard over ${APP}, not an allowed app`,
@@ -244,8 +246,8 @@ describe('a system alert over the app, which the runner reads alone, and what th
       ],
     };
     const { call, sent, asked } = await over(withAlert, [APP]);
-    expect((await call('tap', allow)).error).toBe(false);
-    expect((await call('tap', { x: 200, y: 700 })).error).toBe(false);
+    expect((await call('tap_screen', allow)).error).toBe(false);
+    expect((await call('tap_screen', { x: 200, y: 700 })).error).toBe(false);
     expect([sent().length, asked]).toEqual([2, []]);
   });
 
@@ -256,9 +258,9 @@ describe('a system alert over the app, which the runner reads alone, and what th
       ['Ara', 'Vazgeç'],
     ] as const) {
       const { call, sent, asked } = await over(home, [], alerted(yes, no));
-      expect((await call('tap', allow)).code, yes).toBe('PERMISSION_REQUIRED');
+      expect((await call('tap_screen', allow)).code, yes).toBe('PERMISSION_REQUIRED');
       expect(asked[0], yes).toContain(`a touch on "${yes}" of a system alert, which places a call`);
-      expect((await call('tap', { x: 130, y: 490 })).error, no).toBe(false);
+      expect((await call('tap_screen', { x: 130, y: 490 })).error, no).toBe(false);
       expect(sent(), yes).toHaveLength(1);
     }
   });
@@ -274,13 +276,13 @@ describe('a system alert over the app, which the runner reads alone, and what th
     // as iOS writes a number, between marks that hold its direction
     const de = saying(alerted('Anrufen', 'Abbrechen'), '\u202a+49 30 1234567\u202c');
     const { call, sent, asked } = await over(home, [], de);
-    expect((await call('tap', allow)).code).toBe('PERMISSION_REQUIRED');
+    expect((await call('tap_screen', allow)).code).toBe('PERMISSION_REQUIRED');
     expect(asked[0]).toContain('a touch on "Anrufen" of a system alert, which places a call');
     const en = await over(home, [], saying(alerted('Call', 'Cancel'), '112'));
-    expect((await en.call('tap', { x: 130, y: 490 })).error).toBe(false);
+    expect((await en.call('tap_screen', { x: 130, y: 490 })).error).toBe(false);
     // an alert with a number among its words is no call's
     const full = await over(home, [], saying(alerted('OK'), 'Storage Almost Full: 500 MB left'));
-    expect((await full.call('tap', allow)).error).toBe(false);
+    expect((await full.call('tap_screen', allow)).error).toBe(false);
     expect([sent().length, en.sent().length, full.sent().length]).toEqual([0, 1, 1]);
   });
 
@@ -295,7 +297,7 @@ describe('a system alert over the app, which the runner reads alone, and what th
       [],
       sheet(saying(alerted('Anrufen', 'Abbrechen'), '112')),
     );
-    expect((await call('tap', allow)).code).toBe('PERMISSION_REQUIRED');
+    expect((await call('tap_screen', allow)).code).toBe('PERMISSION_REQUIRED');
     expect(asked[0]).toContain('a touch on "Anrufen" of a system alert, which places a call');
     expect(sent()).toEqual([]);
   });
@@ -312,7 +314,7 @@ describe('a system alert over the app, which the runner reads alone, and what th
       ],
     };
     const { call, sent, asked } = await over(prompt, [], recorded('ios-control-center-app'));
-    expect((await call('tap', allow)).code).toBe('PERMISSION_REQUIRED');
+    expect((await call('tap_screen', allow)).code).toBe('PERMISSION_REQUIRED');
     expect(asked[0]).toContain('a touch on "Anrufen" of a system alert, which places a call');
     expect(sent()).toEqual([]);
   });

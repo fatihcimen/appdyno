@@ -33,6 +33,9 @@ export const logLines = (n: number) =>
  * report or log where a hint or they send it there. So one sequence measures every tree, and what moves its numbers is
  * the server's own words.
  */
+/** How long the reader waits for what takes time: a wait names its time. */
+const WAIT_MS = 5_000;
+
 async function reader(device: FakeDevice, app: string) {
   const { call, calls, client } = await clientOf(device, app);
   const words = client.getInstructions() ?? '';
@@ -51,13 +54,13 @@ async function reader(device: FakeDevice, app: string) {
     /** The app in front, and its screen: the launch's own answer, or a read after it. */
     open: async () => {
       const launched = await say('launch_app');
-      return readsFirst ? (await say('screen')).text : launched.text;
+      return readsFirst ? (await say('read_screen')).text : launched.text;
     },
     /** A touch that may be refused: the screen after it, read only where the refusal did not show it. */
     touch: async (args: Record<string, unknown>) => {
-      const r = await say('tap', args);
+      const r = await say('tap_screen', args);
       const shown = /^(screen unchanged|foreground: |\d+ elements?\b)/m.test(r.text);
-      return r.refused && !shown ? { ...r, text: (await say('screen')).text } : r;
+      return r.refused && !shown ? { ...r, text: (await say('read_screen')).text } : r;
     },
     /** Actions already known: one call, or one each; `then` waits for what takes time. */
     act: async (
@@ -66,17 +69,19 @@ async function reader(device: FakeDevice, app: string) {
     ) => {
       if (together)
         return say('run_steps', {
-          steps: then ? [...steps, { tool: 'wait_for', ...then }] : steps,
+          steps: then ? [...steps, { tool: 'check_element', ...then, timeoutMs: WAIT_MS }] : steps,
         });
       let last = { text: '', refused: false, hint: '' };
       for (const { tool, ...args } of steps) last = await say(tool, args);
       // a tap whose result is not there yet says to wait for it
-      return then && !last.text.includes(then.selector.text) ? say('wait_for', then) : last;
+      return then && !last.text.includes(then.selector.text)
+        ? say('check_element', { ...then, timeoutMs: WAIT_MS })
+        : last;
     },
     /** After an app died under an action: what a hint or the instructions still send for. */
     why: async (hint: string) => {
       const toldAbove = words.includes('already says');
-      if (hint.includes('crashes says why')) await say('read_logs', { source: 'crashes' });
+      if (hint.includes('source crashes')) await say('read_logs', { source: 'crashes' });
       if (hint.includes('logs says why') || (words.includes('misbehaves: read_logs') && !toldAbove))
         await say('read_logs');
     },
@@ -106,7 +111,7 @@ const logIn = (late: number) => async () => {
   };
   const r = await reader(d, FIXTURE);
   await r.open();
-  await r.act([NAME, PASSWORD, { tool: 'tap', selector: { text: 'Send' } }], {
+  await r.act([NAME, PASSWORD, { tool: 'tap_screen', selector: { text: 'Send' } }], {
     selector: { text: 'Sent: Ada' },
   });
   return { calls: r.calls, proof: r.said.join('\n').includes('"Sent: Ada"') };
@@ -129,7 +134,9 @@ export const TASKS: Task[] = [
       };
       const r = await reader(d, FIXTURE);
       const screen = await r.open();
-      await r.act([35, 36, 37].map((n) => ({ tool: 'tap', ref: refOf(screen, `Product ${n}$`) })));
+      await r.act(
+        [35, 36, 37].map((n) => ({ tool: 'tap_screen', ref: refOf(screen, `Product ${n}$`) })),
+      );
       const all = r.said.join('\n');
       return {
         calls: r.calls,
@@ -153,8 +160,8 @@ export const TASKS: Task[] = [
       const row = { selector: { text: 'Dark theme' } };
       await r.touch(row);
       await r.act([
-        { tool: 'scroll_to', ...row },
-        { tool: 'tap', ...row },
+        { tool: 'swipe_screen', until: row.selector },
+        { tool: 'tap_screen', ...row },
       ]);
       return { calls: r.calls, proof: must(r.said.at(-1), 'an answer').includes('Dark theme on') };
     },
@@ -191,7 +198,7 @@ export const TASKS: Task[] = [
       };
       const r = await reader(d, 'dev.app');
       await r.open();
-      const died = await r.say('tap', { selector: { text: 'Form' } });
+      const died = await r.say('tap_screen', { selector: { text: 'Form' } });
       await r.why(died.hint);
       const all = r.said.join('\n');
       return {
@@ -208,9 +215,9 @@ export const TASKS: Task[] = [
       await r.say('run_flow', { action: 'record' });
       await r.open();
       await r.act([
-        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'tap_screen', selector: { text: 'Form' } },
         { tool: 'type_text', selector: { text: 'Adınız' }, text: 'Ada' },
-        { tool: 'tap', selector: { text: 'Gönder' } },
+        { tool: 'tap_screen', selector: { text: 'Gönder' } },
       ]);
       await r.say('run_flow', { action: 'stop', file });
       const ran = await r.say('run_flow', { action: 'run', file });
@@ -228,7 +235,7 @@ export const TASKS: Task[] = [
       const r = await reader(simulator(recorded(FORM)), FIXTURE);
       const screen = await r.open();
       await r.touch(miss);
-      const sent = await r.say('tap', { ref: refOf(screen, '"Send" .*') });
+      const sent = await r.say('tap_screen', { ref: refOf(screen, '"Send" .*') });
       return { calls: r.calls, proof: !sent.refused };
     },
   })),

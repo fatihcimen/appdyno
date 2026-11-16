@@ -214,7 +214,7 @@ describe.each(REVISIONS)('a client, on %s', (revision) => {
     const client = await clientAt(url);
     const stop = new AbortController();
     const call = client.callTool(
-      { name: 'wait_for', arguments: { selector: { text: 'never' }, timeoutMs: 10_000 } },
+      { name: 'check_element', arguments: { selector: { text: 'never' }, timeoutMs: 10_000 } },
       { signal: stop.signal },
     );
     await vi.waitFor(() => expect(device.calls.length).toBeGreaterThan(0));
@@ -222,7 +222,7 @@ describe.each(REVISIONS)('a client, on %s', (revision) => {
     await expect(call).rejects.toThrow();
     await vi.waitFor(() =>
       expect(log).toHaveBeenCalledWith(
-        expect.objectContaining({ tool: 'wait_for', outcome: 'refused', code: 'CANCELLED' }),
+        expect.objectContaining({ tool: 'check_element', outcome: 'refused', code: 'CANCELLED' }),
       ),
     );
   });
@@ -231,13 +231,16 @@ describe.each(REVISIONS)('a client, on %s', (revision) => {
     const { url, log, device } = await serving();
     const client = await clientAt(url);
     void client
-      .callTool({ name: 'wait_for', arguments: { selector: { text: 'never' }, timeoutMs: 10_000 } })
+      .callTool({
+        name: 'check_element',
+        arguments: { selector: { text: 'never' }, timeoutMs: 10_000 },
+      })
       .catch(() => undefined);
     await vi.waitFor(() => expect(device.calls.length).toBeGreaterThan(0));
     await client.close();
     await vi.waitFor(() =>
       expect(log).toHaveBeenCalledWith(
-        expect.objectContaining({ tool: 'wait_for', code: 'CANCELLED' }),
+        expect.objectContaining({ tool: 'check_element', code: 'CANCELLED' }),
       ),
     );
   });
@@ -255,9 +258,9 @@ describe('asking the person over HTTP', () => {
     await client.connect(
       new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: bearer } }),
     );
-    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
+    const reset = { name: 'set_device', arguments: { name: 'keychain', value: 'reset' } };
     expect(text(await client.callTool(reset))).toMatch(
-      /^PERMISSION_REQUIRED: device_setting keychain asks the person first, and this client cannot ask: nothing was done\nhint: /,
+      /^PERMISSION_REQUIRED: set_device keychain asks the person first, and this client cannot ask: nothing was done\nhint: /,
     );
     expect(asked).not.toHaveBeenCalled();
   });
@@ -267,9 +270,9 @@ describe('asking the person over HTTP', () => {
     const resets = vi.fn(() => Promise.resolve(3));
     Object.assign(device, { events: { ...device.events, resetKeychain: resets } });
     const client = await clientOf(url, 'asks', bearer, '2026-07-28', { elicitation: {} });
-    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
+    const reset = { name: 'set_device', arguments: { name: 'keychain', value: 'reset' } };
     expect(text(await client.callTool(reset))).toMatch(
-      /^PERMISSION_REQUIRED: device_setting keychain asks the person first, and this client cannot ask: nothing was done\nhint: .*--allow-data-loss/,
+      /^PERMISSION_REQUIRED: set_device keychain asks the person first, and this client cannot ask: nothing was done\nhint: .*--allow-data-loss/,
     );
     expect(resets).not.toHaveBeenCalled();
     expect(log).not.toHaveBeenCalledWith(expect.objectContaining({ outcome: 'asked' }));
@@ -280,7 +283,7 @@ describe('asking the person over HTTP', () => {
     const resets = vi.fn(() => Promise.resolve(3));
     Object.assign(device, { events: { ...device.events, resetKeychain: resets } });
     const client = await clientOf(url, 'asks', bearer, '2026-07-28', { elicitation: {} });
-    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
+    const reset = { name: 'set_device', arguments: { name: 'keychain', value: 'reset' } };
     expect(text(await client.callTool(reset))).toBe('the keychain is empty: it held 3 items');
     expect(resets).toHaveBeenCalledTimes(1);
   });
@@ -327,7 +330,7 @@ describe('one client at a time', () => {
     await expect(b.callTool({ name: 'list_devices' })).rejects.toThrow(
       'client-a has held it since',
     );
-    await expect(b.callTool({ name: 'screen' })).rejects.toThrow('client-a has held it since');
+    await expect(b.callTool({ name: 'read_screen' })).rejects.toThrow('client-a has held it since');
     await a.callTool({ name: 'list_devices' });
     expect(contexts).toHaveLength(1);
   });
@@ -340,7 +343,7 @@ describe('one client at a time', () => {
     await new Promise((r) => setTimeout(r, 200));
     // a call in progress: the seat it took cannot lapse under the second client's
     const running = a.callTool({
-      name: 'wait_for',
+      name: 'check_element',
       arguments: { selector: { text: 'never' }, timeoutMs: 1_000 },
     });
     await vi.waitFor(() => expect(contexts.length).toBeGreaterThan(1));
@@ -374,7 +377,7 @@ describe('one client at a time', () => {
       const { url, dark } = await serving(1_000);
       const a = await clientOf(url, 'client-a');
       const b = await clientOf(url, 'client-b');
-      await a.callTool({ name: 'device_setting', arguments: { name: 'dark_mode', value: 'yes' } });
+      await a.callTool({ name: 'set_device', arguments: { name: 'dark_mode', value: 'yes' } });
       const end = Date.now() + 3_000;
       // retries faster than the idle time: a seat that lapsed anyway is one they did not keep
       while (dark.value === 'yes' && Date.now() < end) {
@@ -401,7 +404,7 @@ describe('when the client has gone', () => {
     const { url, dark, contexts } = await serving(50);
     const first = await clientOf(url, 'first');
     await first.callTool({
-      name: 'device_setting',
+      name: 'set_device',
       arguments: { name: 'dark_mode', value: 'yes' },
     });
     expect(dark.value).toBe('yes');
@@ -425,11 +428,11 @@ describe('when the client has gone', () => {
       const { url, dark } = await serving(500);
       const client = await clientOf(url);
       await client.callTool({
-        name: 'device_setting',
+        name: 'set_device',
         arguments: { name: 'dark_mode', value: 'yes' },
       });
       await client.callTool({
-        name: 'wait_for',
+        name: 'check_element',
         arguments: { selector: { text: 'never' }, timeoutMs: 1_000 },
       });
       expect(dark.value).toBe('yes');
@@ -440,7 +443,7 @@ describe('when the client has gone', () => {
     const { url, dark, stop } = await serving();
     const client = await clientOf(url);
     await client.callTool({
-      name: 'device_setting',
+      name: 'set_device',
       arguments: { name: 'dark_mode', value: 'yes' },
     });
     await stop();

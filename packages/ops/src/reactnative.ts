@@ -60,7 +60,7 @@ export function reactNativeOps(ctx: ServerContext) {
         throw new ToolError(
           `the Metro at ${base} did not open the runtime of ${t.id}: ${e instanceof Error ? e.message : String(e)}`,
           'AGENT_UNAVAILABLE',
-          "Metro's own terminal says why; react_native targets lists the apps connected to it now",
+          "Metro's own terminal says why; inspect_app rn_targets lists the apps connected to it now",
         );
       },
     );

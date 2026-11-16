@@ -13,7 +13,7 @@ const NOT_STEP_NAMES = [
   'ask_person',
 ] as const;
 const NOT_ACTION_NAMES = [...NOT_STEP_NAMES, 'use_device', 'run_flow'] as const;
-const BY_STEP_NAMES = ['tap', 'swipe', 'scroll_to', 'type_text', 'press_key', 'run_steps'] as const;
+const BY_STEP_NAMES = ['tap_screen', 'type_text', 'run_steps'] as const;
 
 /** Every name of the lists here, for registry.ts to hold to the tools there are. */
 export const KIND_NAMES = [
@@ -39,7 +39,7 @@ export const notAStepOfAReport = (name: string, args: unknown) =>
 /** No action of a flow, as they pick the device, film it or run the recording; nor is what a report leaves out. */
 export const NOT_ACTIONS: ReadonlySet<string> = new Set(NOT_ACTION_NAMES);
 
-/** Each step these run passes the recorder's `through`. */
+/** Every step these run passes the recorder's `through`; swipe_screen and press_key have a way each that is no step. */
 export const BY_STEP: ReadonlySet<string> = new Set(BY_STEP_NAMES);
 
 /**

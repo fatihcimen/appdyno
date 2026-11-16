@@ -58,7 +58,7 @@ const EVENTS: Record<OneShot, (a: Asked) => Promise<string>> = {
   },
   keychain: async ({ policy, s, value }) => {
     if (value !== 'reset') throw new ToolError('keychain needs value: reset', 'INVALID_ARGUMENT');
-    await approve(policy, s, 'device_setting keychain');
+    await approve(policy, s, 'set_device keychain');
     return `the keychain is empty: it held ${await s.device.events.resetKeychain()} items`;
   },
   call: async ({ s, value }) => {

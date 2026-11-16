@@ -104,7 +104,7 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
     expect(Math.abs(next - end)).toBeLessThan(within);
 
     expect(page.touches.marks.length).toBeGreaterThanOrEqual(4);
-    expect(page.steps.marks.map((m) => m.name)).toContain('flow');
+    expect(page.steps.marks.map((m) => m.name)).toContain('run_flow');
     expect(page.memory.marks.length).toBeGreaterThan(0);
     expect(page.logs.marks.length).toBeGreaterThan(0);
     expect(page.network.absent).toContain('no capture ran');
@@ -159,10 +159,10 @@ describe.skipIf(!serial)('perf_trace of a held main thread', () => {
         `am start -W -a android.intent.action.VIEW -d 'appdyno-fixture://open/cpu?n=${Date.now()}' ${APP}`,
       );
       await pause(1_500);
-      await t.call('screen');
+      await t.call('read_screen');
       const [trace] = await Promise.all([
         t.call('perf_trace', { seconds: 6 }),
-        pause(3_000).then(() => t.call('tap', { selector: { id: 'cpu_stall' } })),
+        pause(3_000).then(() => t.call('tap_screen', { selector: { id: 'cpu_stall' } })),
       ]);
       expect(trace.error, trace.text).toBe(false);
       console.log(`longest frame ${String(trace.data.worstMs)}, held ${String(trace.data.heldMs)}`);
@@ -192,7 +192,7 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
     expect(started.error, started.text).toBe(false);
     await s.device.openUrl('appdyno-fixture://open/list_stall', APP);
     await pause(1_000);
-    for (let i = 0; i < 4; i++) await t.call('swipe', { direction: 'up' });
+    for (let i = 0; i < 4; i++) await t.call('swipe_screen', { direction: 'up' });
     await pause(1_000);
     const done = await t.call('record_session', { kind: 'report', action: 'stop' });
     expect(done.error, done.text).toBe(false);
@@ -206,7 +206,7 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
     expect(Math.abs(page.clock.offsetMs)).toBeLessThanOrEqual(page.clock.boundMs);
     expect(page.clock.sources.find((c) => c.row === 'Video')?.withinMs).toBe(150);
     expect(page.touches.absent).toContain('Steps are what this tool sent');
-    expect(page.steps.marks.map((m) => m.name)).toContain('swipe');
+    expect(page.steps.marks.map((m) => m.name)).toContain('swipe_screen');
     expect(page.memory.marks.length).toBeGreaterThan(0);
   }, 240_000);
 });
@@ -244,8 +244,8 @@ describe.skipIf(!serial)('the flight recorder', () => {
   };
   /** What it answers, as a tap that ends the app may have no good answer: the test looks at what came of it. */
   const tapById = async (id: string) => {
-    await t.call('screen');
-    return t.call('tap', { selector: { id } });
+    await t.call('read_screen');
+    return t.call('tap_screen', { selector: { id } });
   };
 
   it('keeps a real crash, with the screen and the log up to it', async () => {
@@ -282,7 +282,7 @@ describe.skipIf(!serial)('the flight recorder', () => {
     await open('list_stall');
     const page = await flying(async () => {
       await pause(5_000);
-      for (let i = 0; i < 4; i++) await t.call('swipe', { direction: 'up' });
+      for (let i = 0; i < 4; i++) await t.call('swipe_screen', { direction: 'up' });
       await pause(WATCHED_MS);
     });
     console.log(page.reason);
@@ -327,8 +327,8 @@ describe.skipIf(!udid)('the flight recorder on a simulator', () => {
     expect(on.error, on.text).toBe(false);
     await s.device.openUrl('appdyno-fixture://open/crash', APP);
     await pause(8_000);
-    await t.call('screen');
-    await t.call('tap', { selector: { id: 'crash' } });
+    await t.call('read_screen');
+    await t.call('tap_screen', { selector: { id: 'crash' } });
     await pause(12_000);
     const off = await t.call('record_session', { kind: 'report', action: 'stop' });
     console.log(off.text, 'host load', loadavg()[0]);

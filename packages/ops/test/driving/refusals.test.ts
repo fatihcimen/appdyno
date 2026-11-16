@@ -12,7 +12,7 @@ describe('a refusal of a call that names too little', () => {
       await call('read_logs', { source: 'crashes' }),
     ])
       expect(r.text).toBe(
-        'INVALID_ARGUMENT: give app (or select one with use_device)\nhint: app action list names the installed apps by id; use_device with app selects one for the calls after',
+        'INVALID_ARGUMENT: give app (or select one with use_device)\nhint: manage_app list names the installed apps by id; use_device with app selects one for the calls after',
       );
   });
 
@@ -32,17 +32,17 @@ describe('a refusal of a call that names too little', () => {
     const e = await none.defaultSerial().catch((x: unknown) => x);
     expect(e).toMatchObject({
       code: 'DEVICE_GONE',
-      hint: expect.stringContaining('simulator action list names') as unknown,
+      hint: expect.stringContaining('manage_simulator list names') as unknown,
     });
   });
 
-  it('says where the words a find may name are, when it names none', async () => {
+  it('says where the words a selector may name are, when it names none', async () => {
     const { call } = await connect(new FakeDevice());
-    expect((await call('find')).text).toBe(
-      'INVALID_ARGUMENT: give the selector text, id or role\nhint: screen lists the elements, each by its ref, role and words',
+    expect((await call('read_screen', { selector: {} })).text).toBe(
+      'INVALID_ARGUMENT: give the selector text, id or role\nhint: read_screen lists the elements, each by its ref, role and words',
     );
-    expect((await call('tap')).data.hint).toBe(
-      'screen lists the elements, each by its ref, role and words',
+    expect((await call('tap_screen')).data.hint).toBe(
+      'read_screen lists the elements, each by its ref, role and words',
     );
   });
 });

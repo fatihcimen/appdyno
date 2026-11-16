@@ -101,7 +101,7 @@ export function networkOps(ctx: ServerContext) {
             throw new ToolError(
               `start needs via: ${here.length ? `this device has ${here.join(', ')}` : `none of ${VIA.join(', ')} works on this device`}`,
               'INVALID_ARGUMENT',
-              'network paths says what each sees, and what it costs',
+              'capture_network paths says what each sees, and what it costs',
             );
           }
           if (strict !== undefined && via !== 'probe')

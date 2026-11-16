@@ -223,7 +223,7 @@ const open = (w: Awaited<ReturnType<typeof windowOn>>, url: string) => {
   return op.handler(op.input.parse({ url }));
 };
 
-/** A flow's run on a device of its own, as `appdyno flow run` runs it. */
+/** A flow's run on a device of its own, as `appdyno run-flow run` runs it. */
 const replay = async (device: Device, file: string) => {
   const ctx = new ServerContext(DEFAULT_POLICY, [providerOf(device)], {
     device: device.serial,

@@ -60,7 +60,7 @@ export class SimulatorSettings implements DeviceSettings {
       case 'network':
         throw new DeviceError(
           'UNSUPPORTED',
-          "a simulator uses the Mac's network: network with throttle slows one app's requests there, and the Network Link Conditioner all of the Mac's",
+          "a simulator uses the Mac's network: a throttle of the network probe slows one app's requests there, and the Network Link Conditioner all of the Mac's",
         );
       case 'proxy':
         return macProxy();

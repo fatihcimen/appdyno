@@ -256,7 +256,7 @@ describe('the flight recorder', () => {
   it('is off until asked: nothing of it runs in a session', async () => {
     const d = new FlightDevice();
     const { call } = connect(d);
-    await call('screen');
+    await call('read_screen');
     expect(d.rec.log.started).toBe(0);
     expect(d.frameRuns).toBe(0);
   });

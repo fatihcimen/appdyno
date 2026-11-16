@@ -129,7 +129,7 @@ describe('a proxy export', () => {
     await expect(op.handler(op.input.parse({ action: 'start' }))).rejects.toMatchObject({
       code: 'INVALID_ARGUMENT',
       message: expect.stringMatching(/^start needs via: this device has proxy/) as unknown,
-      hint: 'network paths says what each sees, and what it costs',
+      hint: 'capture_network paths says what each sees, and what it costs',
     });
   });
 });

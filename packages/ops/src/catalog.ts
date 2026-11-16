@@ -9,8 +9,9 @@ import { flowOps } from './flow/ops.js';
 import type { FlowRunner } from './flow/runner.js';
 import { inspectorOps } from './inspector.js';
 import { inspectApp, manageApp, transferFiles } from './merged/apps.js';
-import { listDevices } from './merged/devices.js';
+import { listDevices, setDevice } from './merged/devices.js';
 import { checkScreen, readLogs, recordSession } from './merged/evidence.js';
+import { checkElement, readScreen } from './merged/screen.js';
 import { handoffOps } from './mirror/handoff.js';
 import { mirrorOps } from './mirror/op.js';
 import { networkOps } from './network.js';
@@ -67,23 +68,15 @@ export const catalogOf = (p: Pieces) => [
   listDevices(p),
   p.use_device,
   p.manage_simulator,
-  p.device_setting,
-  p.set_orientation,
-  p.set_location,
-  p.clipboard,
-  p.screen,
-  p.find,
-  p.wait_for,
+  setDevice(p),
+  readScreen(p),
   p.take_screenshot,
-  p.assert,
+  checkElement(p),
   checkScreen(p),
-  p.tap,
-  p.gesture,
-  p.swipe,
-  p.scroll_to,
+  p.tap_screen,
+  p.swipe_screen,
   p.type_text,
   p.press_key,
-  p.keyboard,
   p.run_steps,
   p.answer_alert,
   p.ask_person,

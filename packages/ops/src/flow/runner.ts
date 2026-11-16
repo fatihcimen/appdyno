@@ -88,7 +88,7 @@ const failureText = (file: string, f: RunFailure) =>
     `${f.file ?? file}:${f.line}: step ${f.n} failed: ${f.step}`,
     f.message,
     ...(f.screen ? [f.screen] : []),
-    `to go on from here: appdyno flow run ${file} --from ${f.n}`,
+    `to go on from here: appdyno run-flow run ${file} --from ${f.n}`,
   ].join('\n');
 
 /** Runs flows through the operations themselves, as an agent's calls would. */
@@ -154,7 +154,8 @@ export function flowRunner(
       if (!(e instanceof ToolError)) throw e;
       // a prompt comes once: a run after the one that answered it finds none, and that is no failure of the run
       if (st.action === 'alert' && e.code === 'NOT_FOUND') return undefined;
-      if (st.action !== 'wait_for' || e.code !== 'TIMEOUT') throw e;
+      // a wait that ran out fails as a check does, and a flow says it as the time it is
+      if (st.action !== 'wait_for' || e.code !== 'CHECK_FAILED') throw e;
       const screen = await s.read();
       const near = nearest(screen.list, st.selector?.text ?? st.selector?.id).map(steps.line);
       throw new ToolError(

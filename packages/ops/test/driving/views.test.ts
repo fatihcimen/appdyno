@@ -25,7 +25,7 @@ const TREE: ViewTree = {
 describe('the native views of a screen', () => {
   it('are refused where the device gives none, with what reads the screen there', async () => {
     const { call } = await connect(new FakeDevice());
-    expect((await call('screen', { views: true })).text).toBe(
+    expect((await call('read_screen', { views: true })).text).toBe(
       'UNSUPPORTED: this device gives no native view hierarchy\nhint: screen without views reads its accessibility tree',
     );
   });
@@ -35,7 +35,7 @@ describe('the native views of a screen', () => {
       views: () => Promise.reject(new NoViewProbe('dev.app runs without the view probe')),
     });
     const { call } = await connect(d);
-    expect((await call('screen', { views: true })).text).toBe(
+    expect((await call('read_screen', { views: true })).text).toBe(
       'UNSUPPORTED: dev.app runs without the view probe\nhint: launch_app restart:true probe:true puts it in',
     );
   });
@@ -44,7 +44,7 @@ describe('the native views of a screen', () => {
     const refusing = (e: DeviceError) =>
       Object.assign(new FakeDevice(), { views: () => Promise.reject(e) });
     const said = async (e: DeviceError) =>
-      (await (await connect(refusing(e))).call('screen', { views: true })).text;
+      (await (await connect(refusing(e))).call('read_screen', { views: true })).text;
     expect(
       await said(
         new DeviceError(
@@ -72,13 +72,13 @@ describe('the native views of a screen', () => {
   it('come folded under the framework that draws them, and with raw as data, a secret kept off both', async () => {
     const d = Object.assign(new FakeDevice(), { views: () => Promise.resolve(TREE) });
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });
-    const lines = await call('screen', { views: true });
+    const lines = await call('read_screen', { views: true });
     expect(lines.text).toBe(
       'framework: Compose\ncom.android.internal.policy.DecorView > androidx.compose.ui.platform.ComposeView > android.view.View #pay-••• "Pay" text "card •••" 40,600 1000x120',
     );
     expect(lines.data).toMatchObject({ elements: 3, framework: 'Compose' });
     expect(lines.data.views).toBeUndefined();
-    const raw = await call('screen', { views: true, raw: true });
+    const raw = await call('read_screen', { views: true, raw: true });
     expect(raw.data.views?.map((v) => v.class)).toEqual(TREE.views.map((v) => v.class));
     expect(raw.data.views?.[2]).toMatchObject({ label: 'Pay', id: 'pay-•••', parent: 1 });
     expect(JSON.stringify([lines, raw])).not.toContain('hunter2');
@@ -97,7 +97,7 @@ describe('the native views of a screen', () => {
     };
     const d = Object.assign(new FakeDevice(), { views: () => Promise.resolve(tree) });
     const { call } = await connect(d);
-    const r = await call('screen', { views: true, raw: true });
+    const r = await call('read_screen', { views: true, raw: true });
     expect(r.text).toBe(
       `framework: Android views\nandroid.widget.ScrollView > android.widget.Button 0,0 1080x2400 clickable\n${note}`,
     );
@@ -116,7 +116,7 @@ describe('the native views of a screen', () => {
       });
     const { call } = await connect(reading(tree));
     asked.length = 0;
-    expect((await call('screen', { views: true })).data.framework).toBe('Compose');
+    expect((await call('read_screen', { views: true })).data.framework).toBe('Compose');
     expect(asked).toEqual(['screen', 'views']);
     // as an Android phone refuses a read behind its PIN: under the lock its activity draws no view
     const locked = new DeviceError(
@@ -126,12 +126,12 @@ describe('the native views of a screen', () => {
     );
     reading(() => Promise.reject(locked));
     asked.length = 0;
-    expect((await call('screen', { views: true })).text).toBe(
+    expect((await call('read_screen', { views: true })).text).toBe(
       'DEVICE_LOCKED: emulator-5554 is locked behind its PIN, pattern or password\nhint: unlock it by hand: no tool can answer it',
     );
     expect(asked).toEqual(['screen']);
     // any other read that fails leaves the views to answer, as under a sheet of the system's that gives no window
     reading(() => Promise.reject(new DeviceError('NOT_FOUND', 'no window to read')));
-    expect((await call('screen', { views: true })).data.framework).toBe('Compose');
+    expect((await call('read_screen', { views: true })).data.framework).toBe('Compose');
   });
 });

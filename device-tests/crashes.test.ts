@@ -34,8 +34,8 @@ const crash = async (call: Call, button: string, shows: RegExp) => {
   await call('manage_app', { action: 'stop' });
   await call('launch_app');
   await call('open_link', { url: 'appdyno-fixture://open/crash' });
-  await call('wait_for', { selector: { id: button }, timeoutMs: 8_000 });
-  await call('tap', { selector: { id: button } });
+  await call('check_element', { selector: { id: button }, timeoutMs: 8_000 });
+  await call('tap_screen', { selector: { id: button } });
   for (let i = 0; i < 40; i++) {
     const { data } = await call('read_logs', { source: 'crashes', since });
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a refusal's data has no reports

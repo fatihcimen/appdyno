@@ -304,7 +304,7 @@ describe('the network probe through its tool and a flow', () => {
     const call = callerOf(context());
     const e = await refusal(call('capture_network', { action: 'throttle', throttle: 'slow' }));
     expect(e.code).toBe('UNSUPPORTED');
-    expect(e.hint).toMatch(/an Android device is slowed by device_setting network/);
+    expect(e.hint).toMatch(/an Android device is slowed by set_device network/);
   });
 
   const flowFile = (body: string) => at.flowFile(body);

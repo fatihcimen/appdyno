@@ -65,7 +65,7 @@ export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promi
     return {
       lines: [],
       source: 'logcat',
-      note: `${q.app} is not running, so it has no log to read by process; crashes says why it ended`,
+      note: `${q.app} is not running, so it has no log to read by process; its crash and exit reports say why it ended`,
     };
   // shortcut: an ended pid the system gave another process is left out only while that one runs; `since` keeps the
   // rest to the time after the last action
@@ -80,7 +80,7 @@ export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promi
   const source = `logcat --pid=${[ended, live].filter(Boolean).join(',')}`;
   const note = live
     ? undefined
-    : `${q.app} is not running: these are the lines of its process that ended; crashes says why it ended`;
+    : `${q.app} is not running: these are the lines of its process that ended; its crash and exit reports say why it ended`;
   const printed = out.split(/\r?\n/).filter((l) => l && !l.startsWith('--------- beginning of'));
   const messages = messagesOf(printed);
   // the newest as many as asked, of more read: a message the count began inside is among those left out. shortcut: one

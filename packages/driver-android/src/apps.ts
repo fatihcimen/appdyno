@@ -33,7 +33,7 @@ const success = (out: string, what: string) => {
 const DATA_MS = 600_000;
 
 const UNINSTALL_FIRST =
-  'app uninstall first takes the installed app away with all it keeps on the device, so it asks a person; nothing uninstalls it by itself';
+  'uninstalling it first takes the installed app away with all it keeps on the device, so it asks a person; nothing uninstalls it by itself';
 
 /** `adb install`'s refusals a person can act on, by the reason it names: the code, what it means and what to do. */
 const REFUSED: Record<string, [ErrorCode, string, string]> = {

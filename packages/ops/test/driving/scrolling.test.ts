@@ -72,8 +72,8 @@ describe('scroll_to', () => {
   it('moves a row across the page with a finger on the row', async () => {
     const d = new SidewaysRow();
     const { call } = await connect(d);
-    const r = await call('scroll_to', {
-      selector: { text: 'Fruit 9' },
+    const r = await call('swipe_screen', {
+      until: { text: 'Fruit 9' },
       direction: 'left',
       x: 540,
       y: 900,
@@ -84,8 +84,8 @@ describe('scroll_to', () => {
   it('says of a row it did not move that it did not, whatever else changes on the screen', async () => {
     const d = new SidewaysRow();
     const { call } = await connect(d);
-    const r = await call('scroll_to', {
-      selector: { text: 'Fruit 9' },
+    const r = await call('swipe_screen', {
+      until: { text: 'Fruit 9' },
       direction: 'right',
       x: 540,
       y: 900,
@@ -99,17 +99,17 @@ describe('scroll_to', () => {
   it('turns cards with nothing listed on the finger’s line, by what changes on the screen', async () => {
     const d = new Carousel();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Machu Picchu' }, direction: 'left' });
+    const r = await call('swipe_screen', { until: { text: 'Machu Picchu' }, direction: 'left' });
     expect(r.text).toMatch(/found .*"Machu Picchu" .* after 4 swipes/);
-    const back = await call('scroll_to', { selector: { text: 'Petra' }, direction: 'right' });
+    const back = await call('swipe_screen', { until: { text: 'Petra' }, direction: 'right' });
     expect(back.text).toMatch(/found .*"Petra" .* after 3 swipes/);
   });
 
   it('says of cards turned to their last that they did not move, with nothing listed on the finger’s line', async () => {
     const d = new Carousel();
     const { call } = await connect(d);
-    const r = await call('scroll_to', {
-      selector: { text: 'Christ the Redeemer' },
+    const r = await call('swipe_screen', {
+      until: { text: 'Christ the Redeemer' },
       direction: 'left',
       maxSwipes: 20,
     });
@@ -120,8 +120,8 @@ describe('scroll_to', () => {
   it('finds what a stroke brought, though what the finger crossed stood still', async () => {
     const d = new Carousel();
     const { call } = await connect(d);
-    const r = await call('scroll_to', {
-      selector: { text: 'Colosseum' },
+    const r = await call('swipe_screen', {
+      until: { text: 'Colosseum' },
       direction: 'left',
       x: 540,
       y: 240,
@@ -132,7 +132,7 @@ describe('scroll_to', () => {
   it('finds a row further down by scrolling, with no flick', async () => {
     const d = new ListDevice();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Row 20' } });
+    const r = await call('swipe_screen', { until: { text: 'Row 20' } });
     expect(r.error).toBe(false);
     expect(r.text).toMatch(/found .*"Row 20"/);
     expect(r.data.found).toBe(true);
@@ -164,7 +164,7 @@ describe('scroll_to', () => {
     }
     const d = new Coasting();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Row 20' }, read: 'full' });
+    const r = await call('swipe_screen', { until: { text: 'Row 20' }, read: 'full' });
     expect(r.error).toBe(false);
     expect(d.coast).toBe(0);
     const y = 200 * 20 - d.offset + 90;
@@ -175,7 +175,7 @@ describe('scroll_to', () => {
   it('stops at the list’s end when nothing moved', async () => {
     const d = new ListDevice();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 });
+    const r = await call('swipe_screen', { until: { text: 'Row 99' }, maxSwipes: 40 });
     expect(r.error).toBe(true);
     expect(r.text).toContain('the list did not move');
     expect(r.text).toContain('nearest');
@@ -191,7 +191,7 @@ describe('scroll_to', () => {
     }
     const d = new Arriving();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Row 20' } });
+    const r = await call('swipe_screen', { until: { text: 'Row 20' } });
     expect(r.error).toBe(false);
     expect(r.data.found).toBe(true);
   });
@@ -218,8 +218,8 @@ describe('scroll_to', () => {
     }
     const d = new Refreshing();
     const { call } = await connect(d);
-    const r = await call('scroll_to', {
-      selector: { text: 'Row 99' },
+    const r = await call('swipe_screen', {
+      until: { text: 'Row 99' },
       direction: 'down',
       maxSwipes: 3,
     });
@@ -232,7 +232,7 @@ describe('scroll_to', () => {
   it('stops at the bound, and says it could go on', async () => {
     const d = new ListDevice();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Row 29' }, maxSwipes: 1 });
+    const r = await call('swipe_screen', { until: { text: 'Row 29' }, maxSwipes: 1 });
     expect(r.error).toBe(true);
     expect(r.text).toContain('can still move');
     expect(d.swipes).toBe(1);
@@ -270,7 +270,7 @@ describe('scroll_to', () => {
     }
     const d = new Clipped();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Show 2' }, direction: 'left', y: 916 });
+    const r = await call('swipe_screen', { until: { text: 'Show 2' }, direction: 'left', y: 916 });
     expect(r.text).toMatch(/^found @\w+ tappable "Show 2" 545,916 after 1 swipes/);
     expect(d.strokes).toBe(1);
   });
@@ -286,7 +286,7 @@ describe('scroll_to', () => {
     }
     const d = new Twins();
     const { call } = await connect(d);
-    const r = await call('scroll_to', { selector: { text: 'Twin' } });
+    const r = await call('swipe_screen', { until: { text: 'Twin' } });
     expect([r.data.code, r.data.dispatched]).toEqual(['AMBIGUOUS', true]);
     expect(d.swipes).toBeGreaterThan(0);
     expect(r.text).not.toContain('no touch was sent');
@@ -306,7 +306,7 @@ describe('swipe exact', () => {
     fakeTimed(async () => {
       const d = new Dragged();
       const { call } = await connect(d);
-      const r = await call('swipe', { direction: 'up', distance: 3000, exact: true });
+      const r = await call('swipe_screen', { direction: 'up', distance: 3000, exact: true });
       expect(r.error).toBe(false);
       expect(Math.abs(d.offset - 3000)).toBeLessThanOrEqual(2);
       expect(r.text).toMatch(/^scrolled up 3\d{3} of 3000 in \d strokes/);
@@ -319,13 +319,13 @@ describe('swipe exact', () => {
     const d = new Dragged();
     d.offset = 200 * 30 - 2400 - 300;
     const { call } = await connect(d);
-    const r = await call('swipe', { direction: 'up', distance: 1000, exact: true });
+    const r = await call('swipe_screen', { direction: 'up', distance: 1000, exact: true });
     expect(r.error).toBe(false);
     expect(r.text).toMatch(/^scrolled up 300 of 1000 in \d strokes?: the list ended/);
   });
 
   it('wants a distance', async () => {
     const { call } = await connect(new Dragged());
-    expect((await call('swipe', { direction: 'up', exact: true })).error).toBe(true);
+    expect((await call('swipe_screen', { direction: 'up', exact: true })).error).toBe(true);
   });
 });

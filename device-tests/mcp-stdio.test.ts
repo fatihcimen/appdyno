@@ -62,7 +62,7 @@ for (const revision of REVISIONS)
         const seen: (string | undefined)[] = [];
         await client.callTool(
           {
-            name: 'wait_for',
+            name: 'check_element',
             arguments: { selector: { text: 'nothing like it' }, timeoutMs: 6_000 },
           },
           { onprogress: (p) => seen.push(p.message) },
@@ -82,9 +82,9 @@ for (const revision of REVISIONS)
         const launched = await call('launch_app', { read: 'full' });
         expect(launched.error).toBe(false);
         expect(launched.text).toContain(`started ${APP}`);
-        const home = await call('screen');
+        const home = await call('read_screen');
         expect(home.text).toContain(`foreground: ${APP}`);
-        const tapped = await call('tap', { ref: ref(home.text, form) });
+        const tapped = await call('tap_screen', { ref: ref(home.text, form) });
         expect(tapped.text).toMatch(new RegExp(`^tapped @\\w+ "${form}"`));
         expect(tapped.text).toContain('Your name');
         // whole in its structured content too, for a client that shows only that
@@ -97,7 +97,7 @@ for (const revision of REVISIONS)
         });
         expect(typed.text).toMatch(/^typed \(14 characters/);
         // the typed secret is never shown back, in the answer or a later read
-        const after = await call('screen');
+        const after = await call('read_screen');
         expect(after.text).not.toContain('gizli-kod-9911');
         expect(after.text).toContain('•••');
         const shot = await call('take_screenshot');
@@ -110,7 +110,7 @@ for (const revision of REVISIONS)
           await call('use_device', { device: 'another-device' }),
           await call('open_link', { url: 'file:///sdcard/x' }),
           await call('launch_app', { app: 'com.android.settings' }),
-          await call('tap', { selector: { text: 'nothing like it' } }),
+          await call('tap_screen', { selector: { text: 'nothing like it' } }),
         ]) {
           expect(r.error).toBe(true);
           expect(r.text.startsWith(`${String(r.data.code)}: `)).toBe(true);

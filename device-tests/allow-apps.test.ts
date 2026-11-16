@@ -64,7 +64,7 @@ async function nodeIn(ctx: ServerContext, pkg: RegExp, words: RegExp) {
 async function shows(call: Call, words: RegExp) {
   const end = Date.now() + 10_000;
   let text = '';
-  while (Date.now() < end && !words.test(text)) text = (await call('screen')).text;
+  while (Date.now() < end && !words.test(text)) text = (await call('read_screen')).text;
   expect(text).toMatch(words);
 }
 
@@ -94,26 +94,26 @@ function suite(
     expect((await call('open_link', { url: `${LINK}/form`, read: 'none' })).error).toBe(false);
     await shows(call, /Your name/);
     const field = await nodeIn(ctx, /fixture/, /Your name/);
-    expect((await call('tap', { ...field, read: 'none' })).error).toBe(false);
+    expect((await call('tap_screen', { ...field, read: 'none' })).error).toBe(false);
     const key = await nodeIn(ctx, keys, /^q$|^Q$/);
     expect(key, 'a key of the keyboard').toBeDefined();
-    const typed = await call('tap', { ...key, read: 'none' });
+    const typed = await call('tap_screen', { ...key, read: 'none' });
     expect(typed.error, typed.text).toBe(false);
     expect((await call('open_link', { url: `${LINK}/permission`, read: 'none' })).error).toBe(
       false,
     );
     const ask = await nodeIn(ctx, /fixture/, /^request location$/i);
-    expect((await call('tap', { ...ask, read: 'none' })).error).toBe(false);
+    expect((await call('tap_screen', { ...ask, read: 'none' })).error).toBe(false);
     const allow = await nodeIn(ctx, /permissioncontroller|springboard/, /while using|^allow/i);
     expect(allow, 'the prompt').toBeDefined();
-    const answered = await call('tap', { ...allow, read: 'none' });
+    const answered = await call('tap_screen', { ...allow, read: 'none' });
     expect(answered.error, answered.text).toBe(false);
   });
 
   it('refuses the home screen, and leaves it by launch_app', async () => {
     expect((await call('press_key', { key: 'home' })).error).toBe(false);
     await shows(call, home);
-    const text = refused(await call('tap', { x: 100, y: 400 }), 'POLICY_DENIED');
+    const text = refused(await call('tap_screen', { x: 100, y: 400 }), 'POLICY_DENIED');
     expect(text).toMatch(/^a touch lands in [\w.]+, not an allowed app \(dev\.appdyno\.fixture\)/);
     expect((await call('launch_app', { app: APP })).error).toBe(false);
   });

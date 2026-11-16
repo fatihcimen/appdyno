@@ -11,12 +11,12 @@ describe('steps across screens', () => {
     const { call } = await connect(d);
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', selector: { text: 'Form' } },
-        { tool: 'wait_for', selector: { text: 'Bilgiler' } },
+        { tool: 'tap_screen', selector: { text: 'Form' } },
+        { tool: 'check_element', selector: { text: 'Bilgiler' }, timeoutMs: 5000 },
         { tool: 'type_text', text: 'x', selector: { role: 'textField' } },
-        { tool: 'tap', selector: { text: 'Gönder' } },
+        { tool: 'tap_screen', selector: { text: 'Gönder' } },
         {
-          tool: 'assert',
+          tool: 'check_element',
           selector: { id: 'dev.app:id/result' },
           check: 'text',
           equals: 'Gönderildi',
@@ -35,13 +35,16 @@ describe('steps across screens', () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
     d.screen = 'form';
-    const send = must(/(@\w+) button "Gönder"/.exec((await call('screen')).text)?.[1], 'its ref');
+    const send = must(
+      /(@\w+) button "Gönder"/.exec((await call('read_screen')).text)?.[1],
+      'its ref',
+    );
     d.screen = 'home';
-    await call('screen');
+    await call('read_screen');
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', selector: { text: 'Form' } },
-        { tool: 'tap', ref: send },
+        { tool: 'tap_screen', selector: { text: 'Form' } },
+        { tool: 'tap_screen', ref: send },
       ],
     });
     expect(r.error).toBe(false);
@@ -68,12 +71,12 @@ describe('steps across screens', () => {
   it('says no change was seen of no last step that only looked, or found what it scrolled to', async () => {
     const { call } = await connect(new FakeDevice());
     for (const last of [
-      { tool: 'wait_for', selector: { text: 'Form' } },
-      { tool: 'assert', selector: { text: 'Form' } },
+      { tool: 'check_element', selector: { text: 'Form' }, timeoutMs: 5_000 },
+      { tool: 'check_element', selector: { text: 'Form' } },
     ]) {
       const r = await call('run_steps', { steps: [{ tool: 'press_key', key: 'tab' }, last] });
-      expect(r.error, last.tool).toBe(false);
-      expect(r.text, last.tool).not.toContain('no change seen');
+      expect(r.error, String(last.timeoutMs)).toBe(false);
+      expect(r.text, String(last.timeoutMs)).not.toContain('no change seen');
     }
   });
 
@@ -83,8 +86,8 @@ describe('steps across screens', () => {
     await call('run_steps', {
       steps: [
         { tool: 'type_text', text: 'a' },
-        { tool: 'tap', x: 2, y: 2 },
-        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'tap_screen', x: 2, y: 2 },
+        { tool: 'tap_screen', selector: { text: 'Form' } },
       ],
     });
     const opts = d.calls
@@ -99,15 +102,15 @@ describe('steps across screens', () => {
     const { call } = await connect(d);
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', selector: { text: 'Form' } },
-        { tool: 'assert', selector: { text: 'Nope' } },
-        { tool: 'tap', selector: { text: 'Gönder' } },
+        { tool: 'tap_screen', selector: { text: 'Form' } },
+        { tool: 'check_element', selector: { text: 'Nope' } },
+        { tool: 'tap_screen', selector: { text: 'Gönder' } },
       ],
     });
     expect(r.error).toBe(true);
     expect(r.data.code).toBe('CHECK_FAILED');
     expect(r.text).toContain('1. tapped');
-    expect(r.text).toContain('2. assert failed, the rest were not run');
+    expect(r.text).toContain('2. check_element failed, the rest were not run');
     expect(r.text).toMatch(/textField "Adınız"/);
     expect(d.screen).toBe('form');
   });
@@ -116,7 +119,7 @@ describe('steps across screens', () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
     const bad = await call('run_steps', {
-      steps: [{ tool: 'tap', x: 1, y: 1 }, { tool: 'fly' }],
+      steps: [{ tool: 'tap_screen', x: 1, y: 1 }, { tool: 'fly' }],
     });
     expect(bad.error).toBe(true);
     expect(bad.text).toContain('step 2');
@@ -137,9 +140,9 @@ describe('steps across screens', () => {
     const { call } = await connect(d);
     const r = await call('run_steps', {
       steps: [
-        { tool: 'find', selector: { text: 'Form' } },
+        { tool: 'read_screen', selector: { text: 'Form' } },
         { tool: 'take_screenshot' },
-        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'tap_screen', selector: { text: 'Form' } },
         { tool: 'take_screenshot' },
         { tool: 'list_devices', selected: true },
       ],
@@ -166,67 +169,70 @@ describe('steps across screens', () => {
   it("says a touch's target goes in selector, and shows a step that put it at the top in the right shape", async () => {
     const { call, ctx } = await connect(new FakeDevice());
     expect(must(opsFor(ctx).run_steps, 'run_steps').description).toContain(
-      '{ tool: tap, selector: { text: OK } }',
+      '{ tool: tap_screen, selector: { text: OK } }',
     );
     const r = await call('run_steps', {
       steps: [
-        { tool: 'wait_for', selector: { text: 'Form' } },
-        { tool: 'tap', text: 'Crash', read: 'full' },
+        { tool: 'check_element', selector: { text: 'Form' }, timeoutMs: 5000 },
+        { tool: 'tap_screen', text: 'Crash', read: 'full' },
       ],
     });
     expect(r.text).toBe(
-      'INVALID_ARGUMENT: step 2: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"tool":"tap","selector":{"text":"Crash"}}',
+      'INVALID_ARGUMENT: step 2: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"tool":"tap_screen","selector":{"text":"Crash"}}',
     );
   });
 
   it('takes a selector in selector in every tool that looks for an element, and says so of one at the top', async () => {
     const { call } = await connect(new FakeDevice());
-    for (const tool of ['find', 'wait_for', 'assert'] as const) {
+    for (const tool of ['read_screen', 'check_element'] as const) {
       expect((await call(tool, { text: 'Form' })).data.hint, tool).toBe(
         'a target goes in selector: {"selector":{"text":"Form"}}',
       );
       expect((await call(tool, { selector: { text: 'Form' } })).error, tool).toBe(false);
     }
     // a tool's step, as a touch's
-    expect((await call('run_steps', { steps: [{ tool: 'find', text: 'Form' }] })).text).toBe(
-      'INVALID_ARGUMENT: step 1: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"tool":"find","selector":{"text":"Form"}}',
+    expect((await call('run_steps', { steps: [{ tool: 'read_screen', text: 'Form' }] })).text).toBe(
+      'INVALID_ARGUMENT: step 1: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"tool":"read_screen","selector":{"text":"Form"}}',
     );
   });
 
   it("says where a tool's target goes by its own selector, as a tap with text at the top has it", async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    expect((await call('tap', { text: 'OK', read: 'none' })).text).toBe(
+    expect((await call('tap_screen', { text: 'OK', read: 'none' })).text).toBe(
       'INVALID_ARGUMENT: Unrecognized key: "text"\nhint: a target goes in selector: {"read":"none","selector":{"text":"OK"}}',
     );
     // beside a selector it has, and on the tools that share a tap's target
     expect(
-      (await call('gesture', { kind: 'long_press', index: 1, selector: { text: 'A' } })).text,
+      (await call('tap_screen', { index: 1, selector: { text: 'A' }, holdMs: 800 })).text,
     ).toMatch(
-      /hint: a target goes in selector: \{"kind":"long_press","selector":\{"text":"A","index":1\}\}$/,
+      /hint: a target goes in selector: \{"selector":\{"text":"A","index":1\},"holdMs":800\}$/,
     );
     expect((await call('type_text', { text: 'hi', id: 'email' })).text).toMatch(
       /hint: a target goes in selector: \{"text":"hi","selector":\{"id":"email"\}\}$/,
     );
     // in a drag's end, and its start named as from, which is the target at its top
     expect(
-      (await call('gesture', { kind: 'drag', selector: { text: 'A' }, to: { text: 'B' } })).text,
+      (await call('swipe_screen', { selector: { text: 'A' }, to: { text: 'B' } })).text,
     ).toMatch(
-      /hint: a target goes in selector: \{"kind":"drag","selector":\{"text":"A"\},"to":\{"selector":\{"text":"B"\}\}\}$/,
+      /hint: a target goes in selector: \{"selector":\{"text":"A"\},"to":\{"selector":\{"text":"B"\}\}\}$/,
     );
     expect(
-      (await call('gesture', { kind: 'drag', from: { text: 'A', index: 1 }, to: { id: 'b' } }))
-        .text,
+      (await call('swipe_screen', { from: { text: 'A', index: 1 }, to: { id: 'b' } })).text,
     ).toMatch(
-      /hint: a target goes in selector: \{"kind":"drag","to":\{"selector":\{"id":"b"\}\},"selector":\{"text":"A","index":1\}\}$/,
+      /hint: a target goes in selector: \{"to":\{"selector":\{"id":"b"\}\},"selector":\{"text":"A","index":1\}\}$/,
     );
     expect(
-      (await call('run_steps', { steps: [{ tool: 'drag', ref: '@a1', to: { text: 'B' } }] })).text,
+      (
+        await call('run_steps', {
+          steps: [{ tool: 'swipe_screen', ref: '@a1', to: { text: 'B' } }],
+        })
+      ).text,
     ).toMatch(
-      /hint: a target goes in selector: \{"tool":"drag","ref":"@a1","to":\{"selector":\{"text":"B"\}\}\}$/,
+      /hint: a target goes in selector: \{"tool":"swipe_screen","ref":"@a1","to":\{"selector":\{"text":"B"\}\}\}$/,
     );
     // what no selector takes is said as before
-    expect((await call('tap', { label: 'OK' })).data.hint).toBe(
+    expect((await call('tap_screen', { label: 'OK' })).data.hint).toBe(
       'change that and call again: nothing was done',
     );
     expect(act(d)).toEqual([]);
@@ -237,7 +243,7 @@ describe('steps across screens', () => {
     const { call } = await connect(d);
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', selector: { text: 'Form' }, read: 'full' },
+        { tool: 'tap_screen', selector: { text: 'Form' }, read: 'full' },
         { tool: 'press_key', key: 'tab' },
       ],
     });
@@ -248,10 +254,12 @@ describe('steps across screens', () => {
       expect(no.text).toContain(`no step ${tool}`);
       expect(no.text).toContain('nothing was done');
     }
-    const wrong = await call('run_steps', { steps: [{ tool: 'find', nope: 1 }] });
+    const wrong = await call('run_steps', { steps: [{ tool: 'read_screen', nope: 1 }] });
     expect(wrong.error).toBe(true);
     expect(wrong.text).toContain('step 1');
-    const read = await call('run_steps', { steps: [{ tool: 'tap', x: 1, y: 1, read: 'much' }] });
+    const read = await call('run_steps', {
+      steps: [{ tool: 'tap_screen', x: 1, y: 1, read: 'much' }],
+    });
     expect(read.text).toContain('step 1');
   });
 
@@ -311,9 +319,9 @@ describe('steps across screens', () => {
           return new Promise(() => undefined);
         };
         const { call } = await connect(d);
-        await call('screen');
+        await call('read_screen');
         const started = Date.now();
-        const r = await call('tap', { selector: { text: 'Form' } });
+        const r = await call('tap_screen', { selector: { text: 'Form' } });
         expect(Date.now() - started, `android ${String(android)}`).toBeLessThan(10_000);
         expect([r.data.code, r.data.hint, r.data.dispatched]).toEqual([
           'APP_NOT_RUNNING',
@@ -351,8 +359,8 @@ describe('steps across screens', () => {
           return own(a, o);
         };
         const { call } = await connect(d);
-        await call('screen');
-        const r = await call('tap', { selector: { text: 'Form' } });
+        await call('read_screen');
+        const r = await call('tap_screen', { selector: { text: 'Form' } });
         expect([r.data.code, r.data.dispatched], String(answerMs)).toEqual([
           'APP_NOT_RUNNING',
           true,
@@ -370,9 +378,9 @@ describe('steps across screens', () => {
       const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
       // its process gone, or held for "keeps stopping" with the same pid and no report written yet
       for (const [tool, args, kind, held] of [
-        ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', false],
+        ['swipe_screen', { until: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', false],
         ['press_key', { key: 'tab', count: 10 }, 'key', false],
-        ['scroll_to', { selector: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', true],
+        ['swipe_screen', { until: { text: 'Row 99' }, maxSwipes: 40 }, 'gesture', true],
       ] as const) {
         const d = new ScrollingList();
         d.pid = '4242';
@@ -394,7 +402,7 @@ describe('steps across screens', () => {
           return r;
         };
         const { call } = await connect(d);
-        await call('screen');
+        await call('read_screen');
         const r = await call(tool, args);
         const atRefusal = sent;
         const how = `${tool}${held ? ', held' : ''}`;
@@ -425,13 +433,13 @@ describe('steps across screens', () => {
       const { call } = await connect(d, { defaults: { app: undefined } });
       const r = await call('run_steps', {
         steps: [
-          { tool: 'tap', selector: { text: 'Form' } },
-          { tool: 'tap', selector: { text: 'Gönder' } },
+          { tool: 'tap_screen', selector: { text: 'Form' } },
+          { tool: 'tap_screen', selector: { text: 'Gönder' } },
         ],
       });
       expect([r.data.code, r.data.dispatched], after).toEqual(['APP_NOT_RUNNING', true]);
       expect(r.text).toContain('the app died: APP CRASH(EXCEPTION) (/tmp/report.txt)');
-      expect(r.text).toContain('the app died in step 1, tap: the rest were not run');
+      expect(r.text).toContain('the app died in step 1, tap_screen: the rest were not run');
       expect(act(d)).toHaveLength(1);
     }
   });
@@ -461,15 +469,15 @@ describe('steps across screens', () => {
           return act0(a, o);
         };
         const { call } = await connect(d, { defaults: { app } });
-        await call('screen');
+        await call('read_screen');
         const tap = { selector: { text: 'Form' } };
         const r =
           tool === 'tap'
-            ? await call('tap', tap)
+            ? await call('tap_screen', tap)
             : await call('run_steps', {
                 steps: [
-                  { tool: 'tap', ...tap },
-                  { tool: 'tap', selector: { text: 'Gönder' } },
+                  { tool: 'tap_screen', ...tap },
+                  { tool: 'tap_screen', selector: { text: 'Gönder' } },
                 ],
               });
         expect([r.data.code, r.data.dispatched], tool).toEqual(['APP_NOT_RUNNING', true]);
@@ -478,7 +486,7 @@ describe('steps across screens', () => {
         );
         // no report is written while the dialog is up: what says why is the log
         expect(r.data.hint, tool).toBe(
-          'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after',
+          'read_logs says why it died now, and with source crashes once answer_alert answers its crash dialog; launch_app starts it again after',
         );
         expect(act(d)).toHaveLength(1);
       }
@@ -497,9 +505,9 @@ describe('steps across screens', () => {
       const { call } = await connect(d, { defaults: { app } });
       const r = await call('run_steps', {
         steps: [
-          { tool: 'wait_for', selector: { text: 'Form' } },
-          { tool: 'tap', selector: { text: 'Form' }, ...(read && { read }) },
-          { tool: 'tap', selector: { text: 'Gönder' } },
+          { tool: 'check_element', selector: { text: 'Form' }, timeoutMs: 5000 },
+          { tool: 'tap_screen', selector: { text: 'Form' }, ...(read && { read }) },
+          { tool: 'tap_screen', selector: { text: 'Gönder' } },
           { tool: 'type_text', text: 'Ada' },
         ],
       });
@@ -512,7 +520,7 @@ describe('steps across screens', () => {
         /^APP_NOT_RUNNING: 1\. text="Form" shown\n2\. tapped @\w+ "Form"; the app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\)\n/,
       );
       expect(r.text).toContain(
-        'the app died in step 2, tap: the rest were not run\nforeground: com.android.launcher3',
+        'the app died in step 2, tap_screen: the rest were not run\nforeground: com.android.launcher3',
       );
       expect(act(d)).toHaveLength(1);
     }
@@ -521,8 +529,8 @@ describe('steps across screens', () => {
     const { call } = await connect(d);
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', x: 5, y: 5, read: 'diff' },
-        { tool: 'tap', x: 5, y: 5 },
+        { tool: 'tap_screen', x: 5, y: 5, read: 'diff' },
+        { tool: 'tap_screen', x: 5, y: 5 },
       ],
     });
     expect(r.text).not.toContain('the rest were not run');
@@ -533,9 +541,9 @@ describe('steps across screens', () => {
   const cutShort = (call: Awaited<ReturnType<typeof connect>>['call']) =>
     call('run_steps', {
       steps: [
-        { tool: 'wait_for', selector: { text: 'Form' } },
-        { tool: 'tap', selector: { text: 'Form' }, read: 'none' },
-        { tool: 'tap', selector: { text: 'Kaydet' } },
+        { tool: 'check_element', selector: { text: 'Form' }, timeoutMs: 5000 },
+        { tool: 'tap_screen', selector: { text: 'Form' }, read: 'none' },
+        { tool: 'tap_screen', selector: { text: 'Kaydet' } },
         { tool: 'type_text', text: 'Ada' },
       ],
     });
@@ -553,7 +561,7 @@ describe('steps across screens', () => {
           'launch_app starts it again; why it died is above, and crashes has the whole report',
         ]);
         expect(r.text).toMatch(
-          /\n3\. tap failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,
+          /\n3\. tap_screen failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,
         );
         expect(act(d)).toHaveLength(1);
       }
@@ -567,7 +575,7 @@ describe('steps across screens', () => {
       d.crashReports = [];
       const r = await cutShort((await connect(d)).call);
       expect(r.data.code).toBe('NOT_FOUND');
-      expect(r.text).toContain('3. tap failed, the rest were not run: ');
+      expect(r.text).toContain('3. tap_screen failed, the rest were not run: ');
       expect(r.text).not.toContain('the app died');
     }),
   );

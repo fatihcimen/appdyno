@@ -26,11 +26,11 @@ function scrollOf(get: () => Call) {
     await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     ok(await call('open_link', { url: 'appdyno-fixture://open/list' }));
-    ok(await call('wait_for', { selector: { text: 'Product 1' }, timeoutMs: 8_000 }));
+    ok(await call('check_element', { selector: { text: 'Product 1' }, timeoutMs: 8_000 }));
   };
   /** A list's offset, from a row's number, its place and the rows' spacing. */
   const offset = async (spacing: number) => {
-    const rows = (await call('find', { selector: { text: 'Product' } })).data.matches;
+    const rows = (await call('read_screen', { selector: { text: 'Product' } })).data.matches;
     const row = rows[Math.floor(rows.length / 2)];
     assert(row);
     const number = /Product (\d+)/.exec(row.label);
@@ -39,7 +39,8 @@ function scrollOf(get: () => Call) {
   };
   const spacing = async () => {
     const y = async (n: number) => {
-      const [row] = (await call('find', { selector: { text: `Product ${n}` } })).data.matches;
+      const [row] = (await call('read_screen', { selector: { text: `Product ${n}` } })).data
+        .matches;
       assert(row, `Product ${n}`);
       return row.y;
     };
@@ -52,7 +53,7 @@ function scrollOf(get: () => Call) {
     await list();
     const gap = await spacing();
     const was = await offset(gap);
-    const r = ok(await call('swipe', { direction: 'up', distance: 300, exact: true }));
+    const r = ok(await call('swipe_screen', { direction: 'up', distance: 300, exact: true }));
     expect(Math.abs((await offset(gap)) - was - 300)).toBeLessThanOrEqual(CLOSE);
     expect(r.text).toMatch(/^scrolled up \d+ of 300 in \d strokes?/);
   });
@@ -62,16 +63,16 @@ function scrollOf(get: () => Call) {
     const gap = await spacing();
     const was = await offset(gap);
     const far = Math.round(1.5 * ok(await call('list_devices', { selected: true })).data.screen.h);
-    const r = ok(await call('swipe', { direction: 'up', distance: far, exact: true }));
+    const r = ok(await call('swipe_screen', { direction: 'up', distance: far, exact: true }));
     expect(r.text).toMatch(new RegExp(`of ${far} in [2-9] strokes`));
     expect(Math.abs((await offset(gap)) - was - far)).toBeLessThanOrEqual(CLOSE);
-    ok(await call('swipe', { direction: 'down', distance: far, exact: true }));
+    ok(await call('swipe_screen', { direction: 'down', distance: far, exact: true }));
     expect(Math.abs((await offset(gap)) - was)).toBeLessThanOrEqual(CLOSE);
   });
 
   it('says where the list ended, which is no failure', async () => {
     await list();
-    const r = ok(await call('swipe', { direction: 'down', distance: 500, exact: true }));
+    const r = ok(await call('swipe_screen', { direction: 'down', distance: 500, exact: true }));
     expect(r.text).toMatch(/^scrolled down \d+ of 500 in \d strokes?: the list ended/);
   });
 }

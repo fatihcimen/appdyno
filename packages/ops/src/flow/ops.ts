@@ -73,7 +73,7 @@ function saved(
     notes = saveRecording(held, path, overwrite);
   } catch (e) {
     if (stopped && e instanceof ToolError)
-      e.message += `; the recording stopped, and its ${held.state.steps.length} steps are kept: flow save writes them`;
+      e.message += `; the recording stopped, and its ${held.state.steps.length} steps are kept: run_flow save writes them`;
     throw e;
   }
   keepRecording(held);

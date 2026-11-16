@@ -158,13 +158,13 @@ async function drive(device, app, keys) {
       return must(answer, `the answer of ${name}`);
     };
     await call('list_devices', { selected: true });
-    await call('screen');
+    await call('read_screen');
     await call('launch_app', { app });
-    const screen = textOf(await call('screen'));
+    const screen = textOf(await call('read_screen'));
     // Settings' rows may all be tappable, without a button among them
     const ref = /^(@\S+) button /m.exec(screen) ?? /^(@\S+) tappable /m.exec(screen);
     if (!ref) throw new Error(`nothing to tap on the screen:\n${screen}`);
-    await call('tap', { ref: ref[1] });
+    await call('tap_screen', { ref: ref[1] });
     for (const key of keys) await call('press_key', { key });
     const shot = await call('take_screenshot');
     if (!shot.content.some((c) => c.type === 'image' && c.data)) throw new Error('no image');

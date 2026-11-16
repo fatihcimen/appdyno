@@ -20,12 +20,12 @@ describe('a touch on a control whose middle is not its own', () => {
     const d = new FakeDevice();
     d.screen = 'mini';
     const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'Activate to open full size player' } });
+    const r = await call('tap_screen', { selector: { text: 'Activate to open full size player' } });
     expect(r.done).toMatch(
       /^tapped @\w+ "Activate to open full size player" at 270,2094, clear of @\w+ "Pause" at its middle$/,
     );
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 270, y: 2094 });
-    await call('tap', { selector: { text: 'Pause' } });
+    await call('tap_screen', { selector: { text: 'Pause' } });
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 541, y: 2091 });
   });
 
@@ -39,7 +39,7 @@ describe('a touch on a control whose middle is not its own', () => {
     const d = new FakeDevice();
     d.screen = 'crowded';
     const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'Open player' } });
+    const r = await call('tap_screen', { selector: { text: 'Open player' } });
     expect(r.done).toMatch(
       /^tapped @\w+ "Open player", whose middle is @\w+ "Pause"'s, which may take the touch$/,
     );
@@ -60,8 +60,13 @@ describe('a touch on a control whose middle is not its own', () => {
     const d = new FakeDevice();
     d.screen = 'network';
     const { call } = await connect(d);
-    const row = must(/@\w+(?= tappable "Saved networks)/.exec((await call('screen')).text), 'row');
-    expect((await call('tap', { ref: row[0] })).done).toMatch(/^tapped @\w+ "Saved networks.*"$/);
+    const row = must(
+      /@\w+(?= tappable "Saved networks)/.exec((await call('read_screen')).text),
+      'row',
+    );
+    expect((await call('tap_screen', { ref: row[0] })).done).toMatch(
+      /^tapped @\w+ "Saved networks.*"$/,
+    );
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 540, y: 360 });
   });
 
@@ -73,7 +78,7 @@ describe('a touch on a control whose middle is not its own', () => {
     const d = new FakeDevice();
     d.screen = 'wifi';
     const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'Wi-Fi' } });
+    const r = await call('tap_screen', { selector: { text: 'Wi-Fi' } });
     expect(r.done).toMatch(/^tapped @\w+ "Wi-Fi"$/);
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 540, y: 360 });
   });

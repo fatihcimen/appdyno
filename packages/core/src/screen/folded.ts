@@ -108,7 +108,7 @@ export function renderFolded(
   const line = ({ refContext: _, ...bare }: ScreenElement, told: string | undefined) =>
     elementLine(told ? { ...bare, refContext: told } : bare, say);
   const lines = [
-    `${screenHeader(list.length)}${inside.size ? `; ${inside.size} inside rows, by find` : ''}`,
+    `${screenHeader(list.length)}${inside.size ? `; ${inside.size} inside rows, by selector` : ''}`,
   ];
   for (let i = 0, end: number; i < rows.length; i = end) {
     const first = must(rows[i], 'a row');

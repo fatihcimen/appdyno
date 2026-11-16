@@ -21,7 +21,7 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
   const after = async (cause: () => unknown) => {
     await call('manage_app', { action: 'stop' });
     await call('open_link', { url: 'appdyno-fixture://open/crash' });
-    await call('wait_for', { selector: { id: 'exit' }, timeoutMs: 8_000 });
+    await call('check_element', { selector: { id: 'exit' }, timeoutMs: 8_000 });
     const since = new Date().toISOString();
     await cause();
     await sleep(2_000);
@@ -35,7 +35,7 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
   });
 
   it('reads an app that left by itself, with its code', async () => {
-    const { exits, text } = await after(() => call('tap', { selector: { id: 'exit' } }));
+    const { exits, text } = await after(() => call('tap_screen', { selector: { id: 'exit' } }));
     expect(reasons(exits)).toContain('EXIT_SELF status 3');
     expect(text).toContain('EXIT_SELF status 3');
   });
@@ -69,7 +69,7 @@ describe.skipIf(!SERIAL)('how an app ended', () => {
   });
 
   it('reads a crash, kept as a report too', async () => {
-    const { exits, text } = await after(() => call('tap', { selector: { id: 'crash' } }));
+    const { exits, text } = await after(() => call('tap_screen', { selector: { id: 'crash' } }));
     expect(reasons(exits)).toContain('APP CRASH(EXCEPTION)');
     expect(text).toContain('1 crash report');
   });

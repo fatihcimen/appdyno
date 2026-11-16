@@ -7,15 +7,15 @@ describe('keyboard', () => {
   it('says whether it is open and closes it', async () => {
     const d = new WithKeyboard();
     const { call } = await connect(d);
-    expect((await call('keyboard', { action: 'status' })).data.open).toBe(true);
-    const dismissed = await call('keyboard', { action: 'dismiss' });
+    expect((await call('read_screen')).text).toContain('@keyboard');
+    const dismissed = await call('press_key', { key: 'hide_keyboard' });
     expect(dismissed.error).toBe(false);
     expect(dismissed.data.closed).toBe(true);
-    expect((await call('keyboard', { action: 'status' })).data.open).toBe(false);
-    const none = await call('keyboard', { action: 'dismiss' });
+    expect((await call('read_screen')).text).not.toContain('@keyboard');
+    const none = await call('press_key', { key: 'hide_keyboard' });
     expect(none.text).toContain('no keyboard');
     expect(none.data).not.toHaveProperty('closed');
-    await call('keyboard', { action: 'enter' });
+    await call('press_key', { key: 'enter' });
     expect(act(d).at(-1)).toEqual({ kind: 'key', key: 'enter' });
   });
 
@@ -24,7 +24,7 @@ describe('keyboard', () => {
     d.hides = 'Gönder';
     d.screen = 'form';
     const { call } = await connect(d);
-    const r = await call('keyboard', { action: 'dismiss' });
+    const r = await call('press_key', { key: 'hide_keyboard' });
     expect(r.error).toBe(false);
     expect(r.data.changed).toBe(true);
     expect(r.text).not.toContain('no change seen');
@@ -34,7 +34,7 @@ describe('keyboard', () => {
   it('says closing it changed the screen though the app beneath it did not move', async () => {
     const d = new WithKeyboard();
     const { call } = await connect(d);
-    const r = await call('keyboard', { action: 'dismiss' });
+    const r = await call('press_key', { key: 'hide_keyboard' });
     expect(r.error).toBe(false);
     expect(r.data.changed).toBe(true);
     expect(r.text).not.toContain('no change seen');
@@ -46,7 +46,7 @@ describe('keyboard', () => {
       const d = new WithKeyboard();
       d.closes = false;
       const { call } = await connect(d);
-      const r = await call('keyboard', { action: 'dismiss' });
+      const r = await call('press_key', { key: 'hide_keyboard' });
       expect(r.error).toBe(true);
       expect(r.text).toContain('stayed open');
     }),
@@ -60,15 +60,15 @@ describe('keyboard', () => {
     const d = new WithKeyboard();
     d.screen = 'low';
     const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'Send' } });
+    const r = await call('tap_screen', { selector: { text: 'Send' } });
     expect(r.error).toBe(false);
     expect(d.up).toBe(false);
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 540, y: 1750 });
     expect(d.screen).toBe('sent');
     d.screen = 'low';
     d.up = true;
-    const ref = /(@\w+) button "Send"/.exec((await call('screen')).text)?.[1];
-    expect((await call('tap', { ref })).error).toBe(false);
+    const ref = /(@\w+) button "Send"/.exec((await call('read_screen')).text)?.[1];
+    expect((await call('tap_screen', { ref })).error).toBe(false);
     expect(d.up).toBe(false);
   });
 
@@ -85,11 +85,11 @@ describe('keyboard', () => {
         return close();
       };
       const { call } = await connect(d);
-      await call('screen');
+      await call('read_screen');
       d.up = false;
       // older than a read a touch aims by
       await new Promise((r) => setTimeout(r, 200));
-      expect((await call('tap', { selector: { text: 'Gönder' } })).error).toBe(false);
+      expect((await call('tap_screen', { selector: { text: 'Gönder' } })).error).toBe(false);
       expect(closes).toBe(0);
       expect(d.screen).toBe('sent');
     }),
@@ -102,12 +102,12 @@ describe('keyboard', () => {
       d.hides = 'Gönder';
       d.screen = 'form';
       const { call } = await connect(d);
-      const r = await call('tap', { selector: { text: 'Gönder' } });
+      const r = await call('tap_screen', { selector: { text: 'Gönder' } });
       expect(r.error).toBe(false);
       expect(d.screen).toBe('sent');
       d.screen = 'form';
       d.up = true;
-      const missing = await call('tap', { selector: { text: 'Nowhere' } });
+      const missing = await call('tap_screen', { selector: { text: 'Nowhere' } });
       expect(missing.data.code).toBe('NOT_FOUND');
     }),
   );

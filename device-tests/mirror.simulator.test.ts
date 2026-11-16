@@ -162,12 +162,12 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       await new Promise((r) => setTimeout(r, 1_000));
       expect(touches.filter((e) => e.kind === 'text')).toEqual([]);
       // what sits over the picture: a mark, a line of activity in its panel, a banner answered, and no sound
-      session.tell({ op: 'agent', driving: true, tool: 'tap' });
+      session.tell({ op: 'agent', driving: true, tool: 'tap_screen' });
       session.tell({
         op: 'activity',
         at: Date.now(),
         time: '',
-        tool: 'tap',
+        tool: 'tap_screen',
         ms: 3,
         ok: true,
         args: '{}',

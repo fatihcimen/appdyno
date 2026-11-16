@@ -13,9 +13,9 @@ describe('gestures, keys, clipboard', () => {
   it('sends double tap, drag, pinch and a free plan', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    await call('gesture', { kind: 'double_tap', x: 10, y: 20 });
+    await call('tap_screen', { x: 10, y: 20, count: 2 });
     expect(act(d).at(-1)).toEqual({ kind: 'doubleTap', x: 10, y: 20 });
-    await call('gesture', { kind: 'drag', x: 10, y: 20, to: { x: 500, y: 600 }, durationMs: 900 });
+    await call('swipe_screen', { x: 10, y: 20, to: { x: 500, y: 600 }, durationMs: 900 });
     const drag = act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>;
     expect(drag.pointers[0]?.map((p) => [p.x, p.y])).toEqual([
       [10, 20],
@@ -35,20 +35,20 @@ describe('gestures, keys, clipboard', () => {
         { x: 4, y: 4, t: 100 },
       ],
     ];
-    await call('gesture', { kind: 'plan', pointers: plan });
+    await call('swipe_screen', { pointers: plan });
     expect(act(d).at(-1)).toEqual({ kind: 'gesture', pointers: plan });
-    await call('gesture', { kind: 'pinch', scale: 2 });
+    await call('swipe_screen', { scale: 2 });
     expect((act(d).at(-1) as { pointers: unknown[] }).pointers).toHaveLength(2);
-    await call('gesture', { kind: 'long_press', x: 1, y: 1, durationMs: 500 });
+    await call('tap_screen', { x: 1, y: 1, holdMs: 500 });
     expect(act(d).at(-1)).toEqual({ kind: 'longPress', x: 1, y: 1, durationMs: 500 });
-    expect((await call('gesture', { kind: 'plan', pointers: [] })).error).toBe(true);
+    expect((await call('swipe_screen', { pointers: [] })).error).toBe(true);
   });
 
   it('says a pinch that changed no element may have zoomed only the picture', async () => {
     const { call } = await connect(new FakeDevice());
-    const r = await call('gesture', { kind: 'pinch', scale: 2 });
+    const r = await call('swipe_screen', { scale: 2 });
     expect(r.data.changed).toBe(false);
-    expect(r.text).toContain('a zoom may change only the picture: screenshot shows it');
+    expect(r.text).toContain('a zoom may change only the picture: take_screenshot shows it');
   });
 
   it('takes every key of the wire, under the name a tool gives it', async () => {
@@ -94,7 +94,7 @@ describe('gestures, keys, clipboard', () => {
   it('presses count times with one settle, the last', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    await call('screen');
+    await call('read_screen');
     d.calls.length = 0;
     const r = await call('press_key', { key: 'delete', count: 3 });
     expect(r.text).toMatch(/^pressed delete 3 times/);
@@ -225,13 +225,13 @@ describe('gestures, keys, clipboard', () => {
   it('holds a drag at its start for as long as it is told', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    await call('gesture', { kind: 'drag', x: 10, y: 10, to: { x: 10, y: 500 }, holdMs: 900 });
+    await call('swipe_screen', { x: 10, y: 10, to: { x: 10, y: 500 }, holdMs: 900 });
     const path = must(
       (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0],
       'its path',
     );
     expect(path[1]).toEqual({ x: 10, y: 10, t: 900 });
-    await call('gesture', { kind: 'drag', x: 10, y: 10, to: { x: 10, y: 500 } });
+    await call('swipe_screen', { x: 10, y: 10, to: { x: 10, y: 500 } });
     const usual = must(
       (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0],
       'its path',
@@ -242,25 +242,27 @@ describe('gestures, keys, clipboard', () => {
   it('ends a fixed location, and wants a position or that', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    expect((await call('set_location', { clear: true })).text).toContain('real one');
+    expect((await call('set_device', { name: 'location', value: 'none' })).text).toContain(
+      'real one',
+    );
     expect(d.calls.some((c) => c.name === 'clearLocation')).toBe(true);
-    expect((await call('set_location', { lat: 1 })).error).toBe(true);
+    expect((await call('set_device', { name: 'location', value: '1' })).error).toBe(true);
   });
 
   it('puts a fixed location back as a condition: at restore, and at the session end', async () => {
     const d = new FakeDevice();
     const { call, ctx } = await connect(d);
     const cleared = () => d.calls.filter((c) => c.name === 'clearLocation').length;
-    await call('set_location', { lat: 41, lon: 29 });
-    expect((await call('device_setting', { name: 'restore' })).text).toContain(
+    await call('set_device', { name: 'location', value: '41,29' });
+    expect((await call('set_device', { name: 'restore' })).text).toContain(
       'restored location: the real one',
     );
     expect(cleared()).toBe(1);
     // one ended by hand is not ended again
-    await call('set_location', { lat: 41, lon: 29 });
-    await call('set_location', { clear: true });
-    expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
-    await call('set_location', { lat: 41, lon: 29 });
+    await call('set_device', { name: 'location', value: '41,29' });
+    await call('set_device', { name: 'location', value: 'none' });
+    expect((await call('set_device', { name: 'restore' })).text).toBe('nothing was changed');
+    await call('set_device', { name: 'location', value: '41,29' });
     expect(await ctx.end()).toEqual([]);
     expect(cleared()).toBe(3);
   });
@@ -333,9 +335,9 @@ describe('gestures, keys, clipboard', () => {
     const { call } = await connect(d);
     const warned = async (n: OpName, args: Record<string, unknown> = {}) =>
       (await call(n, args)).text.includes('WARNING: the app is not in the foreground');
-    await call('screen');
+    await call('read_screen');
     front = 'launcher';
-    expect([await warned('press_key', { key: 'home' }), await warned('screen')]).toEqual([
+    expect([await warned('press_key', { key: 'home' }), await warned('read_screen')]).toEqual([
       false,
       false,
     ]);
@@ -345,16 +347,16 @@ describe('gestures, keys, clipboard', () => {
     expect(await warned('launch_app')).toBe(false);
     // a back that left the app is the person's leaving, as home is
     front = 'launcher';
-    expect([await warned('press_key', { key: 'back' }), await warned('screen')]).toEqual([
+    expect([await warned('press_key', { key: 'back' }), await warned('read_screen')]).toEqual([
       false,
       false,
     ]);
     front = 'dev.app';
-    expect(await warned('screen')).toBe(false);
+    expect(await warned('read_screen')).toBe(false);
     // back in front, and gone with nothing that took it away
     front = 'launcher';
-    expect(await warned('screen')).toBe(true);
-    expect((await call('screen')).text).toContain(
+    expect(await warned('read_screen')).toBe(true);
+    expect((await call('read_screen')).text).toContain(
       'WARNING: the app is not in the foreground (launcher is, not dev.app)',
     );
   });
@@ -375,13 +377,13 @@ describe('gestures, keys, clipboard', () => {
       return act(a, o);
     };
     const { call } = await connect(d);
-    await call('screen');
-    const r = await call('tap', { x: 10, y: 20 });
+    await call('read_screen');
+    const r = await call('tap_screen', { x: 10, y: 20 });
     expect(r.text).toMatch(
       /^tapped 10,20\ncom\.apple\.mobilesafari came to the front: launch_app brings dev\.app back\n/,
     );
     expect(r.text).not.toContain('if it crashed');
-    expect((await call('screen')).text).not.toContain('WARNING');
+    expect((await call('read_screen')).text).not.toContain('WARNING');
   });
 
   it('refuses an app the device does not have by one code on every platform, with how to list them', async () => {
@@ -394,7 +396,7 @@ describe('gestures, keys, clipboard', () => {
     const gone = await call('launch_app', { app: 'dev.gone' });
     expect([gone.data.code, gone.text]).toEqual([
       'NOT_FOUND',
-      'NOT_FOUND: dev.gone is not installed on emulator-5580\nhint: app action list names the installed apps',
+      'NOT_FOUND: dev.gone is not installed on emulator-5580\nhint: manage_app list names the installed apps',
     ]);
     // an app that is there and does not start keeps what its launch said
     state = 'stopped';
@@ -504,9 +506,9 @@ describe('gestures, keys, clipboard', () => {
   it('reads the clipboard and keeps a secret off it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });
-    expect((await call('clipboard', { text: 'hi' })).error).toBe(false);
+    expect((await call('set_device', { name: 'clipboard', value: 'hi' })).error).toBe(false);
     Object.assign(d, { getClipboard: () => Promise.resolve('pw hunter2') });
-    expect((await call('clipboard')).text).not.toContain('hunter2');
-    expect((await call('clipboard', { text: 'hunter2' })).error).toBe(true);
+    expect((await call('set_device', { name: 'clipboard' })).text).not.toContain('hunter2');
+    expect((await call('set_device', { name: 'clipboard', value: 'hunter2' })).error).toBe(true);
   });
 });

@@ -286,7 +286,7 @@ describe('app management', () => {
     const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d);
     expect((await call('launch_app', { probe: true })).text).toBe(
-      'UNSUPPORTED: this device puts no view probe in an app\nhint: screen views reads the views where a device gives them without one; screen reads the accessibility tree',
+      'UNSUPPORTED: this device puts no view probe in an app\nhint: read_screen views reads the views where a device gives them without one; read_screen reads the accessibility tree',
     );
     expect(apps.log).toEqual([]);
     expect(d.calls.filter((c) => c.name === 'launch')).toEqual([]);
@@ -298,12 +298,12 @@ describe('app management', () => {
     const d = Object.assign(new FakeDevice(), { apps, views });
     const { call } = await connect(d);
     expect((await call('launch_app', { probe: true, read: 'none' })).done).toBe(
-      'brought dev.app to the front, on the screen it was on; this device reads its views without a probe: screen views needs none',
+      'brought dev.app to the front, on the screen it was on; this device reads its views without a probe: read_screen views needs none',
     );
     expect(apps.log).toEqual([]);
     expect(d.calls.filter((c) => c.name === 'launch')).toHaveLength(1);
     expect((await call('launch_app', { probe: true, restart: true, read: 'none' })).done).toBe(
-      'restarted dev.app, which was running; this device reads its views without a probe: screen views needs none',
+      'restarted dev.app, which was running; this device reads its views without a probe: read_screen views needs none',
     );
     expect(apps.log).toEqual([['launch', 'dev.app', {}]]);
   });
@@ -331,7 +331,7 @@ describe('app management', () => {
   it('ends an app in the background where the device can, and says what stops it where it cannot', async () => {
     const { call } = await connect(new FakeDevice());
     expect((await call('manage_app', { action: 'stop', background: true })).text).toBe(
-      'UNSUPPORTED: this device cannot end an app in the background as the system does\nhint: terminate_app without background stops it, as a person does',
+      'UNSUPPORTED: this device cannot end an app in the background as the system does\nhint: manage_app stop without background stops it, as a person does',
     );
     const ended: string[] = [];
     const d = Object.assign(new FakeDevice(), {

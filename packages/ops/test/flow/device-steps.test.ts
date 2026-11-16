@@ -166,7 +166,7 @@ describe('screenshot, visual and setting steps', () => {
     const e = await refusal(flowsFor(context()).replay(file));
     expect(e.code).toBe('NOT_FOUND');
     expect(e.message).toBe(
-      `${file}:3: no baseline ${baseline('home')}: appdyno test or flow run with --update-baselines saves it`,
+      `${file}:3: no baseline ${baseline('home')}: appdyno test or run-flow run with --update-baselines saves it`,
     );
     expect(device.calls.some((c) => c.name === 'launch')).toBe(false);
   });
@@ -208,8 +208,8 @@ describe('screenshot, visual and setting steps', () => {
     settingsOf({ fold: 'default (now open)' });
     const call = callerOf(context());
     const { text } = await recorded(call, async () => {
-      await call('device_setting', { name: 'fold' });
-      await call('device_setting', { name: 'fold', value: 'half_opened' });
+      await call('set_device', { name: 'fold' });
+      await call('set_device', { name: 'fold', value: 'half_opened' });
     });
     expect(text).toBe('app dev.app\n\nsetting fold half_opened\n');
   });
@@ -219,9 +219,9 @@ describe('screenshot, visual and setting steps', () => {
     const call = callerOf(context());
     const baselines = join(dir, 'state', 'b');
     const { text } = await recorded(call, async () => {
-      await call('device_setting', { name: 'dark_mode', value: 'on' });
-      await call('device_setting', { name: 'dark_mode' });
-      await call('device_setting', { name: 'locale', value: 'tr-TR', app: 'org.example' });
+      await call('set_device', { name: 'dark_mode', value: 'on' });
+      await call('set_device', { name: 'dark_mode' });
+      await call('set_device', { name: 'locale', value: 'tr-TR', app: 'org.example' });
       await call('check_screen', { check: 'visual_baseline', name: 'home', dir: baselines });
       await call('check_screen', {
         check: 'visual',
@@ -232,7 +232,7 @@ describe('screenshot, visual and setting steps', () => {
       });
       await call('take_screenshot', { file: join(dir, 'state', 'shots', 'Home page.png') });
       await call('take_screenshot');
-      await call('device_setting', { name: 'restore', value: 'all' });
+      await call('set_device', { name: 'restore', value: 'all' });
     });
     expect(text).toBe(`app dev.app
 
@@ -264,9 +264,9 @@ setting restore
     });
     const call = callerOf(context());
     const { file, text } = await recorded(call, async () => {
-      await call('device_setting', { name: 'shake' });
-      await call('device_setting', { name: 'memory_warning' });
-      await call('device_setting', { name: 'memory_warning', value: 'RUNNING_LOW' });
+      await call('set_device', { name: 'shake' });
+      await call('set_device', { name: 'memory_warning' });
+      await call('set_device', { name: 'memory_warning', value: 'RUNNING_LOW' });
       await call('manage_app', { action: 'stop', background: true });
     });
     expect(text).toBe(`app dev.app

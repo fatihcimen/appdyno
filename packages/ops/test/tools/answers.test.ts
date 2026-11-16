@@ -23,15 +23,10 @@ describe('tool list', () => {
       [
         "answer_alert",
         "ask_person",
-        "assert",
         "capture_network",
+        "check_element",
         "check_screen",
-        "clipboard",
-        "device_setting",
-        "find",
-        "gesture",
         "inspect_app",
-        "keyboard",
         "launch_app",
         "list_devices",
         "manage_app",
@@ -47,22 +42,19 @@ describe('tool list', () => {
         "perf_trace",
         "press_key",
         "read_logs",
+        "read_screen",
         "record_session",
         "run_flow",
         "run_steps",
-        "screen",
-        "scroll_to",
         "send_push",
-        "set_location",
-        "set_orientation",
+        "set_device",
         "show_mirror",
-        "swipe",
+        "swipe_screen",
         "take_screenshot",
-        "tap",
+        "tap_screen",
         "transfer_files",
         "type_text",
         "use_device",
-        "wait_for",
       ]
     `);
     for (const t of tools) {
@@ -77,14 +69,12 @@ describe('tool list', () => {
         .map((t) => t.name)
         .sort(),
     ).toEqual([
-      'assert',
-      'find',
+      'check_element',
       'list_devices',
       'perf_query',
       'perf_snapshot',
       'read_logs',
-      'screen',
-      'wait_for',
+      'read_screen',
     ]);
     expect(tools.length).toBeLessThanOrEqual(48);
   });
@@ -106,14 +96,14 @@ describe('structured answers', () => {
           structuredContent?: Record<string, unknown>;
         }
       ).structuredContent;
-    const home = (await t.textOf('screen')).text;
-    expect(await sc('screen')).toMatchObject({ elements: 3, foreground: 'dev.app' });
-    expect(await sc('tap', { ref: refOf(home, 'Form') })).toMatchObject({
+    const home = (await t.textOf('read_screen')).text;
+    expect(await sc('read_screen')).toMatchObject({ elements: 3, foreground: 'dev.app' });
+    expect(await sc('tap_screen', { ref: refOf(home, 'Form') })).toMatchObject({
       screen: 'full',
       settled: true,
       foreground: 'dev.app',
     });
-    expect(await sc('tap', { x: 1, y: 1 })).toMatchObject({
+    expect(await sc('tap_screen', { x: 1, y: 1 })).toMatchObject({
       screen: 'unchanged',
       changes: { added: 0, removed: 0, changed: 0 },
     });
@@ -126,7 +116,7 @@ describe('structured answers', () => {
       excessive: false,
       virtualDevice: true,
     });
-    expect(await sc('find', { selector: { text: 'Gönder' } })).toMatchObject({
+    expect(await sc('read_screen', { selector: { text: 'Gönder' } })).toMatchObject({
       matches: [{ role: 'button', label: 'Gönder' }],
     });
   });
@@ -157,20 +147,20 @@ describe('structured answers', () => {
           expect(sc.text).toBe(said);
           return { said, sc, error: r.isError === true };
         };
-        const screen = await both('screen');
+        const screen = await both('read_screen');
         expect(screen.said).toMatch(/button "Form" \d+,\d+/);
         expect(screen.sc).toMatchObject({ elements: 3, foreground: 'dev.app' });
-        const tap = await both('tap', { ref: refOf(screen.said, 'Form') });
+        const tap = await both('tap_screen', { ref: refOf(screen.said, 'Form') });
         expect(tap.sc).toMatchObject({ screen: 'full', changed: true, settled: true });
         expect(tap.said).toContain('button "Gönder"');
-        const sent = await both('tap', { ref: refOf(tap.said, 'Gönder') });
+        const sent = await both('tap_screen', { ref: refOf(tap.said, 'Gönder') });
         expect(sent.sc).toMatchObject({ screen: 'diff', changes: { added: 1 }, changed: true });
         expect(sent.said).toMatch(/^screen changed: \+1 -0 ~0 .*\n\+ @[\w-]+ text "Gönderildi"/m);
         expect(await both('read_logs')).toMatchObject({
           said: expect.stringContaining('E/Fixture: the form failed to load') as unknown,
         });
         device.screen = 'login';
-        const refusal = await both('tap', { selector: { text: 'Add' } });
+        const refusal = await both('tap_screen', { selector: { text: 'Add' } });
         expect(refusal.error).toBe(true);
         expect(refusal.said).toMatch(
           /^AMBIGUOUS: 2 elements match .*\nhint: give the selector an index, 0 for the first listed, or use a ref$/,

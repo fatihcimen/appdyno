@@ -84,7 +84,10 @@ export class AndroidEvents implements DeviceEvents {
 
   resetKeychain(): Promise<number> {
     return Promise.reject(
-      new DeviceError('UNSUPPORTED', 'Android has no keychain: app clear empties an app'),
+      new DeviceError(
+        'UNSUPPORTED',
+        "Android has no keychain: clearing an app's data empties what it keeps",
+      ),
     );
   }
 }

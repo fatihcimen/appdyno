@@ -66,7 +66,7 @@ describe('commands from the operations', () => {
   it('has one command per operation, named with dashes', () => {
     const names = Object.keys(commandsFor(ops));
     expect(names).toHaveLength(Object.keys(ops).length);
-    expect(names).toContain('wait-for');
+    expect(names).toContain('check-element');
     expect(names).toContain('perf-snapshot');
     expect(names.filter((n) => n.includes('_'))).toEqual([]);
   });
@@ -76,18 +76,18 @@ describe('commands from the operations', () => {
     await createServer(ops, () => undefined).connect(a);
     const client = new Client({ name: 'test', version: '0' });
     await client.connect(b);
-    const mcp = (await client.callTool({ name: 'screen', arguments: {} })) as {
+    const mcp = (await client.callTool({ name: 'read_screen', arguments: {} })) as {
       content: { type: string; text: string }[];
     };
-    const cli = await run('screen');
+    const cli = await run('read-screen');
     expect(cli.code).toBe(0);
     expect(cli.out).toEqual(mcp.content.map((c) => c.text));
     expect(cli.out[0]).toContain('Form');
   });
 
   it('prints the nodes of `appdyno screen --raw` after its text, one JSON line each', async () => {
-    const plain = await run('screen');
-    const raw = await run('screen', '--raw');
+    const plain = await run('read-screen');
+    const raw = await run('read-screen', '--raw');
     expect(raw.code).toBe(0);
     expect(raw.out[0]).toBe(plain.out[0]);
     const nodes = raw.out.slice(1).map((l) => JSON.parse(l) as { ref?: string; type: string });
@@ -97,21 +97,7 @@ describe('commands from the operations', () => {
   });
 
   it('types flags by the input schema, with dashes for capitals', async () => {
-    expect(
-      (
-        await run(
-          'gesture',
-          '--kind',
-          'long_press',
-          '--x',
-          '100',
-          '--y',
-          '350',
-          '--duration-ms',
-          '500',
-        )
-      ).code,
-    ).toBe(0);
+    expect((await run('tap-screen', '--x', '100', '--y', '350', '--hold-ms', '500')).code).toBe(0);
     expect(device.calls.at(-1)?.args[0]).toEqual({
       kind: 'longPress',
       x: 100,
@@ -119,10 +105,13 @@ describe('commands from the operations', () => {
       durationMs: 500,
     });
     const wait = await run(
-      'wait-for',
+      'check-element',
       '--selector',
       '{"text":"nothing"}',
-      '--gone',
+      '--check',
+      'absent',
+      '--timeout-ms',
+      '300',
       '--read',
       'none',
     );
@@ -150,9 +139,9 @@ describe('commands from the operations', () => {
   });
 
   it('takes a ref typed without its @', async () => {
-    const screen = (await run('screen')).out.join('\n');
+    const screen = (await run('read-screen')).out.join('\n');
     const ref = must(/@([a-z0-9]+) /.exec(screen)?.[1], 'a ref');
-    const tap = await run('tap', '--ref', ref, '--read', 'none');
+    const tap = await run('tap-screen', '--ref', ref, '--read', 'none');
     expect(tap.err).toEqual([]);
     expect(tap.code).toBe(0);
     expect(device.calls.at(-1)?.name).toBe('act');
@@ -167,16 +156,18 @@ describe('commands from the operations', () => {
   });
 
   it('takes the arguments as JSON', async () => {
-    const r = await run('run-steps', '--json', '{"steps":[{"tool":"tap","x":100,"y":350}]}');
+    const r = await run('run-steps', '--json', '{"steps":[{"tool":"tap_screen","x":100,"y":350}]}');
     expect(r.code).toBe(0);
     expect(r.out[0]).toContain('tapped 100,350');
-    expect((await run('tap', '--json', '{"x":100,"y":350}')).out[0]).toContain('tapped 100,350');
+    expect((await run('tap-screen', '--json', '{"x":100,"y":350}')).out[0]).toContain(
+      'tapped 100,350',
+    );
   });
 
   it('says what is wrong with the words, without calling the device', async () => {
     const calls = () => device.calls.length;
     for (const [argv, why] of [
-      [['--nope', '1'], /no --nope here; flags: --ref --x --y --selector --read/],
+      [['--nope', '1'], /no --nope here; flags: --ref --x --y --selector --count --hold-ms --read/],
       [['--x'], /--x needs a value/],
       [['--x', 'left'], /--x: /],
       [['--read', 'some'], /--read: /],
@@ -184,7 +175,7 @@ describe('commands from the operations', () => {
       [['--json', '{bad'], /--json needs JSON/],
     ] as const) {
       const before = calls();
-      const r = await run('tap', ...argv);
+      const r = await run('tap-screen', ...argv);
       expect(r.code).toBe(2);
       expect(r.err.join()).toMatch(why);
       expect(calls()).toBe(before);
@@ -193,24 +184,24 @@ describe('commands from the operations', () => {
 
   it("says where a selector's words go, as the MCP answer does, and what to do about any words it refuses", async () => {
     const before = device.calls.length;
-    const r = await run('tap', '--text', 'OK', '--read', 'none');
+    const r = await run('tap-screen', '--text', 'OK', '--read', 'none');
     expect(r.code).toBe(2);
     expect(r.err).toEqual([
-      'tap: Unrecognized key: "text"',
+      'tap-screen: Unrecognized key: "text"',
       '  a target goes in selector: {"read":"none","selector":{"text":"OK"}}',
     ]);
     expect(
-      (await run('gesture', '--kind', 'double_tap', '--index', '1', '--selector', '{"text":"A"}'))
+      (await run('tap-screen', '--count', '2', '--index', '1', '--selector', '{"text":"A"}'))
         .err[1],
-    ).toBe('  a target goes in selector: {"kind":"double_tap","selector":{"text":"A","index":1}}');
-    expect((await run('tap', '--x', 'left')).err[1]).toBe(
+    ).toBe('  a target goes in selector: {"count":2,"selector":{"text":"A","index":1}}');
+    expect((await run('tap-screen', '--x', 'left')).err[1]).toBe(
       '  change that and call again: nothing was done',
     );
     expect(device.calls).toHaveLength(before);
   });
 
   it('calls only what has no default required', async () => {
-    const help = (await run('wait-for', '--help')).out.join('\n');
+    const help = (await run('check-element', '--help')).out.join('\n');
     expect(help).not.toContain('required; default');
     expect(help).toMatch(/--read <diff\|full\|none> {2}default "diff"/);
     expect((await run('use-device', '--help')).out.join('\n')).toMatch(
@@ -221,9 +212,9 @@ describe('commands from the operations', () => {
   it('lists the device flag once, as an op that takes a device has its own', async () => {
     const help = (await run('use-device', '--help')).out.join('\n');
     expect(help.match(/^ {2}--device /gm)).toHaveLength(1);
-    expect((await run('tap', '--help')).out.join('\n')).toContain('--device <serial>');
+    expect((await run('tap-screen', '--help')).out.join('\n')).toContain('--device <serial>');
     expect((await run('manage-app', '--help')).out.join('\n')).toContain('--yes  yes to what');
-    expect((await run('tap', '--help')).out.join('\n')).not.toContain('--yes');
+    expect((await run('tap-screen', '--help')).out.join('\n')).not.toContain('--yes');
   });
 
   it('says each command in a whole sentence, or marks where it cut one', () => {
@@ -235,11 +226,17 @@ describe('commands from the operations', () => {
 
   it('lists flags from the schema on --help, and does not call the device', async () => {
     const before = device.calls.length;
-    const r = await run('wait-for', '--help');
+    const r = await run('check-element', '--help');
     expect(r.code).toBe(0);
     const help = r.out.join('\n');
-    expect(help).toContain('appdyno wait-for');
-    for (const flag of ['--selector', '--ref', '--gone', '--timeout-ms', '--read <diff|full|none>'])
+    expect(help).toContain('appdyno check-element');
+    for (const flag of [
+      '--selector',
+      '--ref',
+      '--check',
+      '--timeout-ms',
+      '--read <diff|full|none>',
+    ])
       expect(help).toContain(flag);
     expect(help).toContain('default "diff"');
     expect(device.calls.length).toBe(before);
@@ -259,7 +256,7 @@ describe('commands from the operations', () => {
     expect(deviceFlag('use-device', own)).toBeUndefined();
     expect(own).toEqual(['--device', 'emulator-5612']);
     const other = ['--device', 'emulator-5612'];
-    expect(deviceFlag('screen', other)).toBe('emulator-5612');
+    expect(deviceFlag('read-screen', other)).toBe('emulator-5612');
     expect(other).toEqual([]);
   });
 
@@ -289,7 +286,7 @@ describe('commands from the operations', () => {
     expect((await process('use-device', '--device', device.serial, '--app', 'dev.app')).code).toBe(
       0,
     );
-    const screen = await process('screen');
+    const screen = await process('read-screen');
     expect(screen.out).toContain('Form');
     expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({
       serial: device.serial,
@@ -297,7 +294,7 @@ describe('commands from the operations', () => {
     });
     expect(readFileSync(file, 'utf8').length).toBeLessThan(2_000);
     // a new process diffs against what the last one showed
-    const again = await process('tap', '--x', '5', '--y', '2390');
+    const again = await process('tap-screen', '--x', '5', '--y', '2390');
     expect(again.code).toBe(0);
     expect(again.out).toContain('screen unchanged');
     expect(again.out).toContain('no change seen in');
@@ -334,27 +331,27 @@ describe('commands from the operations', () => {
   });
 
   it('prints a refusal and exits 1', async () => {
-    const r = await run('tap');
+    const r = await run('tap-screen');
     expect(r).toEqual({
       code: 1,
       out: [],
       err: [
         'INVALID_ARGUMENT: give a ref, a selector, or x and y',
-        '  screen lists the elements, each by its ref, role and words',
+        '  read_screen lists the elements, each by its ref, role and words',
       ],
     });
   });
 
   it('prints what to do with a refusal, once', async () => {
     device.screen = 'login';
-    const several = await run('tap', '--json', '{"selector":{"text":"Add"}}');
+    const several = await run('tap-screen', '--json', '{"selector":{"text":"Add"}}');
     expect(several.code).toBe(1);
     expect(several.err[0]).toContain('2 elements match');
     expect(several.err[1]).toBe(
       '  give the selector an index, 0 for the first listed, or use a ref',
     );
     device.fail = new DeviceError('TIMEOUT', 'the build hung', 'the last lines of its log');
-    const failed = await run('screen');
+    const failed = await run('read-screen');
     expect(failed.code).toBe(1);
     expect(failed.err).toEqual(['TIMEOUT: the build hung', '  the last lines of its log']);
   });
@@ -365,7 +362,7 @@ describe('commands from the operations', () => {
     const named = await run('take-screenshot', '--out', out);
     expect(named.out).toEqual([expect.stringContaining(`saved ${out}`)]);
     expect(readFileSync(out).length).toBeGreaterThan(0);
-    await run('tap', '--x', '100', '--y', '350');
+    await run('tap-screen', '--x', '100', '--y', '350');
     const temp = await run('take-screenshot');
     expect(temp.out[1]).toMatch(/appdyno-[0-9a-f]{8}\.jpeg$/);
     expect(existsSync(must(temp.out[1], 'its file'))).toBe(true);

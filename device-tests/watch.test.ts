@@ -90,11 +90,11 @@ function watchOf(get: () => Call, ctx: () => ServerContext, serial: string) {
 
   it('asserts that a thing must move, and that it must not', async () => {
     await open('marquee');
-    ok(await call('assert', { check: 'moves', timeoutMs: 1_500 }));
-    const still = await call('assert', { check: 'moves', expect: false, timeoutMs: 1_500 });
+    ok(await call('check_element', { check: 'moves', timeoutMs: 1_500 }));
+    const still = await call('check_element', { check: 'moves', expect: false, timeoutMs: 1_500 });
     expect(still.data.code).toBe('CHECK_FAILED');
     await open('form');
-    ok(await call('assert', { check: 'moves', expect: false, timeoutMs: 1_500 }));
+    ok(await call('check_element', { check: 'moves', expect: false, timeoutMs: 1_500 }));
   });
 }
 

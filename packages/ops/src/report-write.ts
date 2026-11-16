@@ -77,7 +77,9 @@ function headSection(s: Session, since: number | undefined) {
 function stepsSection(steps: Step[], since: number | undefined) {
   const out = [`<h2>Steps (${steps.length})</h2>`];
   if (steps.length === 0)
-    out.push(`<p class="note">${since ? 'no step ran' : 'none kept: report start keeps them'}</p>`);
+    out.push(
+      `<p class="note">${since ? 'no step ran' : 'none kept: record_session with kind report keeps them'}</p>`,
+    );
   steps.forEach((st, i) => {
     const words = [
       `<h3 id="s${i + 1}"><span class="n">${i + 1}</span>${esc(st.op)} <span class="${st.ok ? 'note' : 'bad'}">${st.ok ? st.at : `failed, ${st.at}`}</span></h3>`,

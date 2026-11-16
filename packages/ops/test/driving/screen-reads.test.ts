@@ -11,13 +11,13 @@ import { connect, act, withScreen } from './shared.js';
 describe('waiting on the device', () => {
   it('says its longest wait in its description, and in the hint of a refusal of a longer one', async () => {
     const { call, ctx } = await connect(new FakeDevice());
-    expect(must(opsFor(ctx).wait_for, 'wait_for').description).toContain('at most 15000');
-    const r = await call('wait_for', { selector: { text: 'Loaded' }, timeoutMs: 30000 });
+    expect(must(opsFor(ctx).check_element, 'check_element').description).toContain('at most 15000');
+    const r = await call('check_element', { selector: { text: 'Loaded' }, timeoutMs: 30000 });
     expect(r.text).toBe(
       'INVALID_ARGUMENT: timeoutMs: Too big: expected number to be <=15000\nhint: timeoutMs is at most 15000: change that and call again: nothing was done',
     );
     const step = await call('run_steps', {
-      steps: [{ tool: 'wait_for', selector: { text: 'L' }, timeoutMs: 20000 }],
+      steps: [{ tool: 'check_element', selector: { text: 'L' }, timeoutMs: 20000 }],
     });
     expect(step.text).toMatch(/\nhint: timeoutMs is at most 15000: change that and call again/);
   });
@@ -37,11 +37,11 @@ describe('waiting on the device', () => {
   it('crosses the wire only for a changed screen, and reads no tree itself', async () => {
     const d = new Waiting();
     const { call } = await connect(d);
-    await call('screen');
+    await call('read_screen');
     d.screen = 'form';
     d.next = d.current();
     d.screen = 'home';
-    const r = await call('wait_for', { selector: { text: 'Bilgiler' }, timeoutMs: 5_000 });
+    const r = await call('check_element', { selector: { text: 'Bilgiler' }, timeoutMs: 5_000 });
     expect(r.data.met).toBe(true);
     expect(d.waits).toEqual([undefined, 'a']);
     expect(d.calls.filter((c) => c.name === 'tree')).toHaveLength(1);
@@ -50,13 +50,13 @@ describe('waiting on the device', () => {
   it('polls where the agent has no wait, or its wait fails', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const r = await call('wait_for', { selector: { text: 'Form' }, timeoutMs: 1_000 });
+    const r = await call('check_element', { selector: { text: 'Form' }, timeoutMs: 1_000 });
     expect(r.data.met).toBe(true);
     const f = new Waiting();
     f.waitChange = () => Promise.reject(new DeviceError('INTERNAL', 'no'));
     const { call: call2 } = await connect(f);
     expect(
-      (await call2('wait_for', { selector: { text: 'Form' }, timeoutMs: 1_000 })).data.met,
+      (await call2('check_element', { selector: { text: 'Form' }, timeoutMs: 1_000 })).data.met,
     ).toBe(true);
     expect(f.calls.filter((c) => c.name === 'tree').length).toBeGreaterThan(0);
   });
@@ -69,7 +69,10 @@ describe('a ref on a screen an app moved by itself', () => {
       const d = new FakeDevice();
       d.screen = 'settings';
       const { call } = await connect(d);
-      const line = must(/(@\w+) "Wi-Fi On" (\d+)/.exec((await call('screen')).text), 'its line');
+      const line = must(
+        /(@\w+) "Wi-Fi On" (\d+)/.exec((await call('read_screen')).text),
+        'its line',
+      );
       expect(line[2]).toBe('350');
       // the app adds a row above it, with no action of ours
       withScreen('settingsMoved', [
@@ -81,7 +84,7 @@ describe('a ref on a screen an app moved by itself', () => {
       ]);
       d.screen = 'settingsMoved';
       await new Promise((r) => setTimeout(r, 200));
-      expect((await call('tap', { ref: line[1] })).error).toBe(false);
+      expect((await call('tap_screen', { ref: line[1] })).error).toBe(false);
       expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 450 }]);
     }),
   );
@@ -90,23 +93,23 @@ describe('a ref on a screen an app moved by itself', () => {
     const d = new FakeDevice();
     d.screen = 'settings';
     const { call } = await connect(d);
-    const line = must(/(@\w+) "Wi-Fi On"/.exec((await call('screen')).text), 'its line');
+    const line = must(/(@\w+) "Wi-Fi On"/.exec((await call('read_screen')).text), 'its line');
     const reads = d.calls.filter((c) => c.name === 'tree').length;
-    await call('tap', { ref: line[1], read: 'none' });
+    await call('tap_screen', { ref: line[1], read: 'none' });
     expect(d.calls.filter((c) => c.name === 'tree').length).toBe(reads);
   });
 
   it('of two taps sent at once, the second aims at the screen the first left', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const text = (await call('screen')).text;
+    const text = (await call('read_screen')).text;
     const form = must(/(@\w+) button "Form"/.exec(text), 'Form')[1];
     const allow = must(/(@\w+) button "İzin"/.exec(text), 'İzin')[1];
     const [first, second] = await Promise.all([
-      call('tap', { ref: form }),
-      call('tap', { ref: allow }),
+      call('tap_screen', { ref: form }),
+      call('tap_screen', { ref: allow }),
       // a read runs beside them
-      call('screen'),
+      call('read_screen'),
     ]);
     expect(first.error).toBe(false);
     // where İzin was, the form has its Gönder, which a tap aimed at the screen before would have sent
@@ -130,10 +133,10 @@ describe('a ref on a screen an app moved by itself', () => {
         return r;
       };
       const { call } = await connect(d);
-      await call('screen');
-      const tap = call('tap', { selector: { text: 'Form' } });
+      await call('read_screen');
+      const tap = call('tap_screen', { selector: { text: 'Form' } });
       await landed;
-      expect((await call('screen')).text).toContain('Gönder');
+      expect((await call('read_screen')).text).toContain('Gönder');
       const r = await tap;
       expect(r.data.changed).toBe(true);
       expect(r.text).not.toContain('no change seen');
@@ -153,10 +156,10 @@ describe('a ref on a screen an app moved by itself', () => {
       await held;
     };
     const { call } = await connect(d);
-    await call('screen');
+    await call('read_screen');
     const link = call('open_link', { url: 'https://example.com/form' });
     await landed;
-    expect((await call('screen')).text).toContain('Gönder');
+    expect((await call('read_screen')).text).toContain('Gönder');
     answer();
     const r = await link;
     expect(r.error).toBe(false);
@@ -175,11 +178,11 @@ describe('a ref on a screen an app moved by itself', () => {
         return own(a, o);
       };
       const { call } = await connect(d);
-      await call('screen');
+      await call('read_screen');
       const done: string[] = [];
       const end = (name: string) => () => void done.push(name);
       await Promise.all([
-        call('tap', { selector: { text: 'Form' } }).then(end('tap')),
+        call('tap_screen', { selector: { text: 'Form' } }).then(end('tap')),
         call('perf_profile', { seconds: 1, ...(scroll && { scroll }) }).then(end('perf_profile')),
       ]);
       expect(done, scroll).toEqual(order);
@@ -212,11 +215,11 @@ describe('a ref on a screen an app moved by itself', () => {
       };
       Object.defineProperty(d, 'measure', { get: () => measure });
       const { call } = await connect(d);
-      await call('screen');
+      await call('read_screen');
       const trace = call('perf_trace', { seconds: 6, ...args });
       // as a client sends it a few seconds into the trace
       await new Promise((r) => setTimeout(r, 50));
-      const tap = call('tap', { selector: { text: 'Form' } });
+      const tap = call('tap_screen', { selector: { text: 'Form' } });
       const held = new Promise((r) => setTimeout(() => r('held'), 1_500));
       const first = await Promise.race([tap.then(() => 'answered'), held]);
       stop();
@@ -239,7 +242,9 @@ describe('a ref on a screen an app moved by itself', () => {
       const told: [string[], string[]] = [[], []];
       const [first, second] = told.map((seen, i) =>
         inCall({ progress: (m) => seen.push(m) }, () =>
-          i ? call('press_key', { key: 'tab' }) : call('tap', { selector: { text: 'Form' } }),
+          i
+            ? call('press_key', { key: 'tab' })
+            : call('tap_screen', { selector: { text: 'Form' } }),
         ),
       );
       await Promise.all([first, second]);
@@ -261,7 +266,7 @@ describe('a ref on a screen an app moved by itself', () => {
       const { ctx } = await connect(d);
       const call = callerOf(ctx);
       const gaveUp = new AbortController();
-      const first = call('tap', { selector: { text: 'Form' } });
+      const first = call('tap_screen', { selector: { text: 'Form' } });
       const second = inCall({ signal: gaveUp.signal }, () => call('press_key', { key: 'tab' }));
       gaveUp.abort();
       await first;
@@ -314,10 +319,10 @@ describe('a folded answer', () => {
 
   it('puts rows under one header and counts what they hold', async () => {
     const { call } = await folded();
-    const r = await call('screen');
+    const r = await call('read_screen');
     expect(r.data.elements).toBe(10);
     expect(r.text.split('\n').slice(1)).toEqual([
-      '10 elements: ref role "label" x,y flags; 6 inside rows, by find',
+      '10 elements: ref role "label" x,y flags; 6 inside rows, by selector',
       expect.stringMatching(/^@\w+ text "Ayarlar" 540,150$/),
       'tappable x=540 clickable: ref "label" y',
       expect.stringMatching(/^@\w+ "Wi-Fi On" 350$/),
@@ -328,11 +333,11 @@ describe('a folded answer', () => {
 
   it('leaves what a row holds to find, a selector and the ref find gives', async () => {
     const { d, call } = await folded();
-    await call('screen');
-    const { matches } = (await call('find', { selector: { text: 'Bluetooth' } })).data;
+    await call('read_screen');
+    const { matches } = (await call('read_screen', { selector: { text: 'Bluetooth' } })).data;
     expect(matches).toMatchObject([{ role: 'text', label: 'Bluetooth', x: 300, y: 430 }]);
-    expect((await call('tap', { selector: { text: 'Hotspot' } })).error).toBe(false);
-    expect((await call('tap', { ref: matches?.[0]?.ref })).error).toBe(false);
+    expect((await call('tap_screen', { selector: { text: 'Hotspot' } })).error).toBe(false);
+    expect((await call('tap_screen', { ref: matches?.[0]?.ref })).error).toBe(false);
     expect(act(d)).toMatchObject([
       { kind: 'tap', x: 300, y: 530 },
       { kind: 'tap', x: 300, y: 430 },
@@ -341,8 +346,8 @@ describe('a folded answer', () => {
 
   it('acts on a folded row by the ref its line gives', async () => {
     const { d, call } = await folded();
-    const line = must(/(@\w+) "Wi-Fi On"/.exec((await call('screen')).text), 'its line');
-    await call('tap', { ref: line[1] });
+    const line = must(/(@\w+) "Wi-Fi On"/.exec((await call('read_screen')).text), 'its line');
+    await call('tap_screen', { ref: line[1] });
     expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 350 }]);
     expect(d.screen).toBe('settingsOff');
   });
@@ -351,21 +356,22 @@ describe('a folded answer', () => {
     const d = new FakeDevice();
     d.screen = 'doubled';
     const { call } = await connect(d);
-    const { text } = await call('screen');
+    const { text } = await call('read_screen');
     expect(text.match(/General/g)).toHaveLength(1);
-    expect(text).toContain('; 3 inside rows, by find');
-    const { matches } = (await call('find', { selector: { role: 'button', text: 'General' } }))
-      .data;
+    expect(text).toContain('; 3 inside rows, by selector');
+    const { matches } = (
+      await call('read_screen', { selector: { role: 'button', text: 'General' } })
+    ).data;
     expect(matches).toMatchObject([{ role: 'button', label: 'General', y: 350 }]);
-    await call('tap', { ref: must(matches?.[0], 'a match').ref });
+    await call('tap_screen', { ref: must(matches?.[0], 'a match').ref });
     expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 350 }]);
     expect(d.screen).toBe('home');
   });
 
   it('names in the diff what changed inside a row', async () => {
     const { call } = await folded();
-    await call('screen');
-    const r = await call('tap', { selector: { text: 'Wi-Fi' } });
+    await call('read_screen');
+    const r = await call('tap_screen', { selector: { text: 'Wi-Fi' } });
     expect(r.data.screen).toBe('diff');
     expect(r.text).toContain('"Wi-Fi Off"');
     expect(r.text).toMatch(/text "Off" 300,370/);

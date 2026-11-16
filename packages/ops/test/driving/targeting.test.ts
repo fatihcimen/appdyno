@@ -11,7 +11,7 @@ describe('targeting', () => {
     const d = new FakeDevice();
     d.screen = 'form';
     const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'GONDER' } });
+    const r = await call('tap_screen', { selector: { text: 'GONDER' } });
     expect(r.error).toBe(false);
     expect(d.screen).toBe('sent');
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 540, y: 550 });
@@ -26,9 +26,9 @@ describe('targeting', () => {
     const d = new FakeDevice();
     d.screen = 'two';
     const { call } = await connect(d);
-    await call('tap', { selector: { text: 'save', role: 'button' } });
+    await call('tap_screen', { selector: { text: 'save', role: 'button' } });
     expect(act(d).at(-1)).toMatchObject({ y: 150 });
-    await call('tap', { selector: { id: 'dev.app:id/title' } });
+    await call('tap_screen', { selector: { id: 'dev.app:id/title' } });
     expect(act(d).at(-1)).toMatchObject({ y: 550 });
   });
 
@@ -40,19 +40,19 @@ describe('targeting', () => {
     const d = new FakeDevice();
     d.screen = 'rows';
     const { call } = await connect(d);
-    const many = await call('tap', { selector: { text: 'row' } });
+    const many = await call('tap_screen', { selector: { text: 'row' } });
     expect(many.error).toBe(true);
     expect(many.data.code).toBe('AMBIGUOUS');
     expect(many.text).toMatch(/2 elements match .*@\w+.* button "Row" .*@\w+/);
     expect(act(d)).toEqual([]);
-    await call('tap', { selector: { text: 'row', index: 1 } });
+    await call('tap_screen', { selector: { text: 'row', index: 1 } });
     expect(act(d).at(-1)).toMatchObject({ y: 350 });
   });
 
   it('says an index past the last match names none, and how many match', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'Form', index: 1 } });
+    const r = await call('tap_screen', { selector: { text: 'Form', index: 1 } });
     expect(r.text).toMatch(
       /^NOT_FOUND: only 1 element matches text="Form", so index 1 names none: @\w+ button "Form" 540,350 \(no touch was sent\)\n/,
     );
@@ -69,7 +69,7 @@ describe('targeting', () => {
     const d = new FakeDevice();
     d.screen = 'article';
     const { call } = await connect(d);
-    const r = await call('tap', { selector: { text: 'Hagia Sophia' } });
+    const r = await call('tap_screen', { selector: { text: 'Hagia Sophia' } });
     expect(r.error).toBe(false);
     expect(r.text).toMatch(/^tapped @\w+ "Hagia Sophia"/);
     expect(act(d).at(-1)).toEqual({ kind: 'tap', x: 495, y: 1770 });
@@ -103,15 +103,18 @@ describe('targeting', () => {
         return act(a, o);
       };
       const { call } = await connect(d);
-      const ref = must(/(@\w+) \w+ "Play video/.exec((await call('screen')).text)?.[1], 'its ref');
-      expect((await call('tap', { ref })).text).toMatch(
+      const ref = must(
+        /(@\w+) \w+ "Play video/.exec((await call('read_screen')).text)?.[1],
+        'its ref',
+      );
+      expect((await call('tap_screen', { ref })).text).toMatch(
         /^tapped @\w+ "Play video, duration: Play 02:37"\n/,
       );
       // the video ended while no one looked, and a touch after a while reads the screen first: it went to the element
       // as that read had it
       label = 'Play video, duration: Replay 02:37';
       await pause(30_000);
-      expect((await call('tap', { ref })).text).toMatch(
+      expect((await call('tap_screen', { ref })).text).toMatch(
         /^tapped @\w+ "Play video, duration: Replay 02:37" \(shown as "Play video, duration: Pause 00:02"\)\n/,
       );
     }),
@@ -142,7 +145,7 @@ describe('targeting', () => {
     const d = new FakeDevice();
     d.screen = 'products';
     const { call } = await connect(d);
-    const many = await call('tap', { selector: { text: 'Add' } });
+    const many = await call('tap_screen', { selector: { text: 'Add' } });
     expect(many.text).toMatch(
       /^AMBIGUOUS: 12 elements match text="Add": @[\w-]+ button "Add" 940,70 — Product 1; /,
     );
@@ -158,14 +161,16 @@ describe('targeting', () => {
       }
     }
     const { call } = await connect(new Away());
-    const tap = await call('tap', { selector: { text: 'Gönder' } });
+    const tap = await call('tap_screen', { selector: { text: 'Gönder' } });
     expect(tap.text).toMatch(
       /^NOT_FOUND: no element matches text="Gönder" after 1500 ms; dev\.app is not in front \(com\.android\.launcher\) \(no touch was sent\)\n/,
     );
-    expect(tap.data.hint).toBe('launch_app brings it back, and crashes says why if it crashed');
-    const wait = await call('wait_for', { selector: { text: 'Gönder' }, timeoutMs: 300 });
+    expect(tap.data.hint).toBe(
+      'launch_app brings it back, and read_logs with source crashes says why if it crashed',
+    );
+    const wait = await call('check_element', { selector: { text: 'Gönder' }, timeoutMs: 300 });
     expect(wait.text).toMatch(
-      /^TIMEOUT: text="Gönder" not shown after 300 ms; dev\.app is not in front/,
+      /^CHECK_FAILED: text="Gönder" not shown after 300 ms; dev\.app is not in front/,
     );
   });
 
@@ -175,7 +180,7 @@ describe('targeting', () => {
       const d = new FakeDevice();
       const { call } = await connect(d);
       const started = Date.now();
-      const r = await call('tap', { selector: { text: 'Formm' } });
+      const r = await call('tap_screen', { selector: { text: 'Formm' } });
       expect(Date.now() - started).toBeGreaterThanOrEqual(1_400);
       expect(r.error).toBe(true);
       expect(r.data.code).toBe('NOT_FOUND');
@@ -214,9 +219,9 @@ describe('targeting', () => {
     it('a selector acts on the window it was found on', async () => {
       const d = new Windowed();
       const { call } = await connect(d);
-      await call('screen');
+      await call('read_screen');
       d.permissionUp = true;
-      const r = await call('tap', { selector: ALLOW });
+      const r = await call('tap_screen', { selector: ALLOW });
       expect(r.text).toMatch(/^tapped @\w+ "Uygulamayı kullanırken"/);
       expect(d.permissionUp).toBe(false);
     });
@@ -224,9 +229,9 @@ describe('targeting', () => {
     it('a selector in a sequence acts on the window it was found on', async () => {
       const d = new Windowed();
       const { call } = await connect(d);
-      await call('screen');
+      await call('read_screen');
       d.permissionUp = true;
-      const r = await call('run_steps', { steps: [{ tool: 'tap', selector: ALLOW }] });
+      const r = await call('run_steps', { steps: [{ tool: 'tap_screen', selector: ALLOW }] });
       expect(r.error).toBe(false);
       expect(d.permissionUp).toBe(false);
     });
@@ -235,9 +240,12 @@ describe('targeting', () => {
       for (const aim of [{ ref: true }, { x: 540, y: 350 }]) {
         const d = new Windowed();
         const { call } = await connect(d);
-        const form = must(/@\w+(?= button "Form")/.exec((await call('screen')).text), 'a ref')[0];
+        const form = must(
+          /@\w+(?= button "Form")/.exec((await call('read_screen')).text),
+          'a ref',
+        )[0];
         d.permissionUp = true;
-        const r = await call('tap', 'ref' in aim ? { ref: form } : aim);
+        const r = await call('tap_screen', 'ref' in aim ? { ref: form } : aim);
         expect([r.data.code, r.data.dispatched]).toEqual(['STALE', false]);
         expect(act(d)).toEqual([]);
         // the refusal shows the window that came in front, whole, as a diff names no app
@@ -245,7 +253,7 @@ describe('targeting', () => {
           /\(no touch was sent\)\nforeground: com\.android\.permissioncontroller\n[^]*"Uygulamayı kullanırken"/,
         );
         // so the next touch is aimed at a screen that was shown, and is not refused for it
-        expect((await call('tap', { selector: ALLOW })).error).toBe(false);
+        expect((await call('tap_screen', { selector: ALLOW })).error).toBe(false);
       }
     });
   });
@@ -253,7 +261,7 @@ describe('targeting', () => {
   it('swipes from an element, and types at coordinates', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    await call('swipe', { direction: 'left', selector: { text: 'Form' }, distance: 100 });
+    await call('swipe_screen', { direction: 'left', selector: { text: 'Form' }, distance: 100 });
     expect(act(d).at(-1)).toMatchObject({
       kind: 'swipe',
       from: { x: 540, y: 350 },
@@ -313,7 +321,7 @@ describe('find and assert', () => {
     const d = new FakeDevice();
     d.screen = 'attrs';
     const { call } = await connect(d);
-    const name = await call('find', { selector: { id: 'dev.app:id/name' } });
+    const name = await call('read_screen', { selector: { id: 'dev.app:id/name' } });
     expect(name.data.matches?.[0]).toMatchObject({
       role: 'textField',
       enabled: true,
@@ -323,12 +331,14 @@ describe('find and assert', () => {
       bounds: { x: 0, y: 100, w: 500, h: 100 },
     });
     expect(name.text).toContain('focused');
-    const box = await call('find', { selector: { text: 'Agree' } });
+    const box = await call('read_screen', { selector: { text: 'Agree' } });
     expect(box.data.matches?.[0]).toMatchObject({ enabled: false, checked: true });
     expect(box.text).toContain('disabled');
-    const pw = await call('find', { selector: { id: 'dev.app:id/pw' } });
+    const pw = await call('read_screen', { selector: { id: 'dev.app:id/pw' } });
     expect(must(pw.data.matches?.[0], 'a match').value).toBeUndefined();
-    expect((await call('find', { selector: { role: 'checkbox' } })).data.matches).toHaveLength(1);
+    expect(
+      (await call('read_screen', { selector: { role: 'checkbox' } })).data.matches,
+    ).toHaveLength(1);
   });
 
   it('answers a passing check, and refuses a failing one saying what it found', async () => {
@@ -338,27 +348,31 @@ describe('find and assert', () => {
     const d = new FakeDevice();
     d.screen = 'state';
     const { call } = await connect(d);
-    expect((await call('assert', { selector: { text: 'Agree' }, check: 'checked' })).error).toBe(
-      false,
-    );
-    expect((await call('assert', { selector: { text: 'Agree' }, check: 'enabled' })).error).toBe(
-      false,
-    );
-    expect((await call('assert', { selector: { text: 'Nope' }, check: 'absent' })).error).toBe(
-      false,
-    );
-    const off = await call('assert', {
+    expect(
+      (await call('check_element', { selector: { text: 'Agree' }, check: 'checked' })).error,
+    ).toBe(false);
+    expect(
+      (await call('check_element', { selector: { text: 'Agree' }, check: 'enabled' })).error,
+    ).toBe(false);
+    expect(
+      (await call('check_element', { selector: { text: 'Nope' }, check: 'absent' })).error,
+    ).toBe(false);
+    const off = await call('check_element', {
       selector: { text: 'Agree' },
       check: 'checked',
       expect: false,
     });
     expect(off.error).toBe(true);
     expect(off.data.code).toBe('CHECK_FAILED');
-    const text = await call('assert', { selector: { text: 'Agree' }, check: 'text', equals: 'No' });
+    const text = await call('check_element', {
+      selector: { text: 'Agree' },
+      check: 'text',
+      equals: 'No',
+    });
     expect(text.text).toContain('reads "Agree", not "No"');
     // each of the four: the text it reads or another, wanted or not
     const reads = (equals: string, want: boolean) =>
-      call('assert', { selector: { text: 'Agree' }, check: 'text', equals, expect: want });
+      call('check_element', { selector: { text: 'Agree' }, check: 'text', equals, expect: want });
     expect((await reads('Agree', true)).error).toBe(false);
     expect((await reads('No', true)).error).toBe(true);
     expect((await reads('No', false)).error).toBe(false);
@@ -366,7 +380,7 @@ describe('find and assert', () => {
     expect(must.error).toBe(true);
     expect(must.data.code).toBe('CHECK_FAILED');
     expect(must.text).toContain('reads "Agree", which it must not');
-    const gone = await call('assert', { selector: { text: 'Agree' }, check: 'absent' });
+    const gone = await call('check_element', { selector: { text: 'Agree' }, check: 'absent' });
     expect(gone.text).toContain('is on the screen');
   });
 });

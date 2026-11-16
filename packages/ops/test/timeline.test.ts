@@ -97,7 +97,7 @@ describe('report timeline', () => {
     device.clockAheadMs = 5_000;
     const { call } = connect(device);
     await call('record_session', { kind: 'timeline', action: 'start', dir });
-    await call('tap', { x: 1, y: 1 });
+    await call('tap_screen', { x: 1, y: 1 });
     // well inside: a measured offset is a little off, and the page goes by it
     await pause(20);
     device.drawnAt = Date.now();
@@ -111,7 +111,7 @@ describe('report timeline', () => {
     expect(page.touches.marks).toHaveLength(1);
     expect(page.memory.marks[0]?.mb).toBe(120);
     // a step is the Mac's, and now stands on the device's clock with the rest
-    expect(page.steps.marks[0]?.name).toBe('tap');
+    expect(page.steps.marks[0]?.name).toBe('tap_screen');
     expect(page.steps.marks[0]?.at).toBeGreaterThanOrEqual(page.from - 50);
     expect(page.steps.marks[0]?.at).toBeLessThanOrEqual(page.to + 50);
   });
@@ -298,7 +298,7 @@ describe('report timeline', () => {
   it('refuses over a recording it would have to stop', async () => {
     const device = new TimedDevice();
     const { call } = connect(device);
-    await call('screen');
+    await call('read_screen');
     filming.write(device.serial, {
       handle: {},
       since: new Date().toISOString(),
@@ -324,7 +324,7 @@ describe('report timeline', () => {
     const shots = vi.spyOn(device, 'screenshot');
     const { call } = connect(device);
     await call('record_session', { kind: 'timeline', action: 'start', dir });
-    await call('tap', { x: 1, y: 1 });
+    await call('tap_screen', { x: 1, y: 1 });
     await call('record_session', { kind: 'report', action: 'stop' });
     expect(shots).not.toHaveBeenCalled();
   });

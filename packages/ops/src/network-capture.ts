@@ -128,7 +128,7 @@ export async function startOwn(
 }
 
 const NO_PROBE_HINT =
-  'a simulator has the probe; an Android device is slowed by device_setting network';
+  'a simulator has the probe; an Android device is slowed by set_device network';
 
 /**
  * The probe's capture, which its rules and its throttle live in: the one that runs, or one started for `app`, which

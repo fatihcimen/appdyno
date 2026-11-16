@@ -45,8 +45,8 @@ const STATES = {
   activity: [
     live,
     { op: 'poke', pane: 1 },
-    call('tap', 41, true, '{"text":"Settings"}'),
-    call('screen', 88, true, '{}'),
+    call('tap_screen', 41, true, '{"text":"Settings"}'),
+    call('read_screen', 88, true, '{}'),
     call('type_text', 310, true, '{"text":"11 characters"}'),
     call('launch_app', 1204, false, '{"app":"com.example.gone"}'),
   ],

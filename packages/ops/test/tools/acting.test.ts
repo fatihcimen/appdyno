@@ -19,10 +19,10 @@ describe('act and read', () => {
   });
 
   it('a tap by ref acts on the element centre with a settle, and answers with the diff', async () => {
-    const screen = (await t.textOf('screen')).text;
+    const screen = (await t.textOf('read_screen')).text;
     expect(screen).toContain('foreground: dev.app');
     const form = refOf(screen, 'Form');
-    const r = await t.textOf('tap', { ref: form });
+    const r = await t.textOf('tap_screen', { ref: form });
     expect(r.error).toBe(false);
     const act = must(
       t.device.calls.find((c) => c.name === 'act'),
@@ -37,22 +37,22 @@ describe('act and read', () => {
   });
 
   it('refuses a ref that is not on the current screen', async () => {
-    await t.textOf('screen');
-    const r = await t.textOf('tap', { ref: '@zzzz' });
+    await t.textOf('read_screen');
+    const r = await t.textOf('tap_screen', { ref: '@zzzz' });
     expect(r).toMatchObject({ error: true });
     expect(r.text).toContain('stale ref');
     expect(r.text).toMatch(/\nhint: \S/);
   });
 
   it('taps a ref that only screen raw gives, at its middle', async () => {
-    const r = await t.call('screen', { raw: true });
+    const r = await t.call('read_screen', { raw: true });
     const nodes = (r.structuredContent?.nodes ?? []) as { ref?: string; type: string }[];
     const root = must(
       nodes.find((n) => n.type === 'android.widget.FrameLayout')?.ref,
       'the root ref',
     );
     expect(r.content[0]?.text).not.toContain(root);
-    const tap = await t.textOf('tap', { ref: root });
+    const tap = await t.textOf('tap_screen', { ref: root });
     expect(tap.error).toBe(false);
     expect(tap.text).toMatch(new RegExp(`^tapped ${root} `));
     expect(t.device.calls.find((c) => c.name === 'act')?.args[0]).toEqual({
@@ -69,24 +69,24 @@ describe('act and read', () => {
       { t: paragraph, b: [0, 300, 1080, 600] },
       { c: 'android.widget.Button', t: 'Form', b: [0, 700, 1080, 800], f: 19 },
     ]);
-    const home = await t.textOf('tap', { selector: { text: 'Home' } });
+    const home = await t.textOf('tap_screen', { selector: { text: 'Home' } });
     expect(home.text).toMatch(
       /^tapped @\w+ "Istanbul is the largest city in Turkey\. With a population o…" \(only a part of its words: nothing here reads "Home" alone\)/,
     );
-    const form = await t.textOf('tap', { selector: { text: 'Form' } });
+    const form = await t.textOf('tap_screen', { selector: { text: 'Form' } });
     expect(form.text).toMatch(/^tapped @\w+ "Form"(\n|$)/);
-    const scrolled = await t.textOf('scroll_to', { selector: { text: 'population' } });
+    const scrolled = await t.textOf('swipe_screen', { until: { text: 'population' } });
     expect(scrolled.text).toMatch(
       /^found @\w+ text ".*" 540,450 after 0 swipes \(only a part of its words: nothing here reads "population" alone\)/,
     );
   });
 
   it('says what a ref that went away was, and what is there in its place', async () => {
-    const home = (await t.textOf('screen')).text;
+    const home = (await t.textOf('read_screen')).text;
     const form = refOf(home, 'Form');
     // the screen changed under the agent: another one is in front by the time it taps
-    await t.textOf('tap', { ref: form });
-    const r = await t.textOf('tap', { ref: form });
+    await t.textOf('tap_screen', { ref: form });
+    const r = await t.textOf('tap_screen', { ref: form });
     expect(r).toMatchObject({ error: true });
     expect(r.text).toMatch(
       new RegExp(
@@ -94,50 +94,50 @@ describe('act and read', () => {
       ),
     );
     // read none asks for no screen, and is told to read it
-    const blind = await t.textOf('tap', { ref: form, read: 'none' });
+    const blind = await t.textOf('tap_screen', { ref: form, read: 'none' });
     expect(blind.text).toMatch(
       /\(no touch was sent\)\nhint: read the screen again, and act on what it shows now$/,
     );
   });
 
   it('refuses a selector nothing matches with the screen as it is now, so that no read follows', async () => {
-    await t.textOf('screen');
-    const same = await t.textOf('tap', { selector: { text: 'Gönder' } });
+    await t.textOf('read_screen');
+    const same = await t.textOf('tap_screen', { selector: { text: 'Gönder' } });
     expect(same.text).toMatch(
-      /^NOT_FOUND: no element matches text="Gönder" after 1500 ms; nearest: [^\n]+ \(no touch was sent\)\nscreen unchanged \(3 elements\)\nhint: the screen now is above; use scroll_to if it may be further along a list$/,
+      /^NOT_FOUND: no element matches text="Gönder" after 1500 ms; nearest: [^\n]+ \(no touch was sent\)\nscreen unchanged \(3 elements\)\nhint: the screen now is above; use swipe_screen with until if it may be further along a list$/,
     );
     // the app moved on by itself since the screen was shown: the refusal says what changed
     t.device.screen = 'form';
-    const moved = await t.textOf('tap', { selector: { text: 'İzin' } });
+    const moved = await t.textOf('tap_screen', { selector: { text: 'İzin' } });
     expect(moved.text).toMatch(
       /\(no touch was sent\)\nforeground: dev\.app\n3 elements: [^]*"Gönder"[^]*\nhint: the screen now is above; /,
     );
     // and the next answer's diff is against the screen the refusal showed
-    const next = await t.textOf('tap', { selector: { text: 'Gönder' } });
+    const next = await t.textOf('tap_screen', { selector: { text: 'Gönder' } });
     expect(next.text).toMatch(/^tapped @\w+ "Gönder"\nscreen changed: \+1 -0 ~0 /);
   });
 
   it('answers a small change as a diff and an unchanged screen in one line', async () => {
-    const home = (await t.textOf('screen')).text;
-    const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;
-    const sent = await t.textOf('tap', { ref: refOf(form, 'Gönder') });
+    const home = (await t.textOf('read_screen')).text;
+    const form = (await t.textOf('tap_screen', { ref: refOf(home, 'Form') })).text;
+    const sent = await t.textOf('tap_screen', { ref: refOf(form, 'Gönder') });
     expect(sent.text).toContain('screen changed: +1 -0 ~0');
     expect(sent.text).toContain('+ @');
     expect(sent.text).toContain('"Gönderildi"');
-    const again = await t.textOf('tap', { ref: refOf(form, 'Gönder') });
+    const again = await t.textOf('tap_screen', { ref: refOf(form, 'Gönder') });
     expect(again.text).toContain('screen unchanged');
   });
 
   it('read none acts without a settle or a read', async () => {
-    await t.textOf('screen');
-    const r = await t.textOf('tap', { x: 10, y: 10, read: 'none' });
+    await t.textOf('read_screen');
+    const r = await t.textOf('tap_screen', { x: 10, y: 10, read: 'none' });
     expect(r.text).toBe('tapped 10,10');
     expect(t.device.calls.at(-1)?.args[1]).toEqual({ settle: false, read: 'none' });
   });
 
   it('types into a field by ref without echoing the text', async () => {
-    const home = (await t.textOf('screen')).text;
-    const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;
+    const home = (await t.textOf('read_screen')).text;
+    const form = (await t.textOf('tap_screen', { ref: refOf(home, 'Form') })).text;
     const r = await t.textOf('type_text', {
       ref: refOf(form, 'Adınız'),
       text: 'İş Gören 5551234',
@@ -153,8 +153,8 @@ describe('act and read', () => {
   });
 
   it('says text the field read back wrong was not submitted, where the device pressed no Enter', async () => {
-    const home = (await t.textOf('screen')).text;
-    const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;
+    const home = (await t.textOf('read_screen')).text;
+    const form = (await t.textOf('tap_screen', { ref: refOf(home, 'Form') })).text;
     const typed = t.device.typeText.bind(t.device);
     t.device.typeText = async (text, o) => ({
       ...(await typed(text, o)),
@@ -174,13 +174,13 @@ describe('act and read', () => {
   it(
     'runs steps with one read at the end, and stops at a stale ref before doing anything',
     fakeTimed(async () => {
-      const home = (await t.textOf('screen')).text;
-      const bad = await t.textOf('run_steps', { steps: [{ tool: 'tap', ref: '@zz99' }] });
+      const home = (await t.textOf('read_screen')).text;
+      const bad = await t.textOf('run_steps', { steps: [{ tool: 'tap_screen', ref: '@zz99' }] });
       expect(bad.error).toBe(true);
       expect(t.device.calls.filter((c) => c.name === 'act')).toHaveLength(0);
       const r = await t.textOf('run_steps', {
         steps: [
-          { tool: 'tap', ref: refOf(home, 'Form') },
+          { tool: 'tap_screen', ref: refOf(home, 'Form') },
           { tool: 'type_text', text: 'Ali' },
           { tool: 'press_key', key: 'enter' },
         ],
@@ -199,18 +199,18 @@ describe('act and read', () => {
   );
 
   it('answers only a system permission prompt', async () => {
-    const home = (await t.textOf('screen')).text;
+    const home = (await t.textOf('read_screen')).text;
     const none = await t.textOf('answer_alert', { answer: 'allow' });
     expect(none.text).toContain('no system alert is open');
-    const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
-    expect(asked.text).toContain('answer it with alert');
+    const asked = await t.textOf('tap_screen', { ref: refOf(home, 'İzin') });
+    expect(asked.text).toContain('answer it with answer_alert');
     const r = await t.textOf('answer_alert', { answer: 'allow' });
     expect(r.text).toContain('"Uygulamayı kullanırken"');
     expect(t.device.permissionUp).toBe(false);
   });
 
   it('sends a screenshot once per screen', async () => {
-    await t.textOf('screen');
+    await t.textOf('read_screen');
     const r = await t.call('take_screenshot');
     expect(r.content.map((c) => c.type)).toEqual(['text', 'image']);
     expect(r.content[0]?.text).toContain('its pixel x,y is tapped at x × 2.348, y × 2.348');
@@ -219,9 +219,9 @@ describe('act and read', () => {
   });
 
   it('turns a device failure into an error that says what to do', async () => {
-    await t.textOf('screen');
+    await t.textOf('read_screen');
     t.device.fail = new DeviceError('TIMEOUT', 'act did not answer');
-    const r = await t.textOf('tap', { x: 1, y: 1 });
+    const r = await t.textOf('tap_screen', { x: 1, y: 1 });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(
       /^TIMEOUT: act did not answer \(the touch may have been sent: .*\)\nhint: .*try again$/,
@@ -267,18 +267,20 @@ describe('policy', () => {
 
   it('hides secrets in what it shows and keeps them off the clipboard', async () => {
     const t = await connect({ secrets: ['Gönderildi'] });
-    expect((await t.textOf('clipboard', { text: 'xGönderildix' })).error).toBe(true);
-    const home = (await t.textOf('screen')).text;
-    const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;
-    const sent = (await t.textOf('tap', { ref: refOf(form, 'Gönder'), read: 'full' })).text;
+    expect((await t.textOf('set_device', { name: 'clipboard', value: 'xGönderildix' })).error).toBe(
+      true,
+    );
+    const home = (await t.textOf('read_screen')).text;
+    const form = (await t.textOf('tap_screen', { ref: refOf(home, 'Form') })).text;
+    const sent = (await t.textOf('tap_screen', { ref: refOf(form, 'Gönder'), read: 'full' })).text;
     expect(sent).not.toContain('Gönderildi');
     expect(sent).toContain('•••');
   });
 
   it('logs tool outcomes without arguments', async () => {
     const t = await connect();
-    await t.textOf('screen');
-    const home = (await t.textOf('screen')).text;
+    await t.textOf('read_screen');
+    const home = (await t.textOf('read_screen')).text;
     await t.textOf('type_text', { text: 'gizli-123', ref: refOf(home, 'Form') });
     expect(JSON.stringify(t.logs)).not.toContain('gizli-123');
     expect(t.logs.at(-1)).toMatchObject({ tool: 'type_text', outcome: 'ok' });

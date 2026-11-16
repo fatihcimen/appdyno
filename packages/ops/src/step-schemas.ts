@@ -25,7 +25,7 @@ export const Selector = z
   .strict();
 
 /** What a call that names no element is to do: where the words it may name are. */
-export const NAME_AN_ELEMENT = 'screen lists the elements, each by its ref, role and words';
+export const NAME_AN_ELEMENT = 'read_screen lists the elements, each by its ref, role and words';
 
 // a selector made by hand may hold a key set to undefined
 export const showSelector = (sel: z.infer<typeof Selector>) =>
@@ -83,12 +83,15 @@ export function keyPress(words: string): { key: string; modifiers: Modifier[] } 
 }
 
 // a check, not an enum: 36 more words would cost the catalog more than the names in the description
+/** Whether these words name a key, or a view of the system a key opens. */
+export const isKey = (k: string) => !!keyPress(k) || !!viewNamed(k.toLowerCase());
+
+/** What a key is, said to a caller that gave none. */
+export const A_KEY = `a key: ${Object.keys(WIRE_KEY).join(', ')}, or a small letter or digit, held keys first: command+a`;
+
 const KeyWords = z
   .string()
-  .refine(
-    (k) => !!keyPress(k) || !!viewNamed(k.toLowerCase()),
-    `a key: ${Object.keys(WIRE_KEY).join(', ')}, or a small letter or digit, held keys first: command+a`,
-  )
+  .refine(isKey, A_KEY)
   // as press_key lists it, whatever case or other name it was given in: what reads the key after reads that
   .transform((k) => keyNamed(k));
 
@@ -101,6 +104,9 @@ export const SCROLL_MAX = 10;
 export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', 'focused', 'moves']);
 
 const TapStep = z.object({ action: z.literal('tap'), ...Target }).strict();
+
+/** How long a long press holds where nothing says. */
+export const LONG_PRESS_MS = 800;
 
 const LongPressStep = z
   .object({

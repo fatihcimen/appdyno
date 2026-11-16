@@ -20,7 +20,7 @@ const pageShows = async (call: Call, settings: string, shown: RegExp) => {
   ok(await call('open_link', { settings, read: 'none' }));
   const end = Date.now() + 8_000;
   let text = '';
-  while (Date.now() < end && !shown.test(text)) text = (await call('screen')).text;
+  while (Date.now() < end && !shown.test(text)) text = (await call('read_screen')).text;
   expect(text).toMatch(shown);
 };
 
@@ -73,7 +73,7 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
 
   it('goes back to the app by launching it', async () => {
     ok(await call('launch_app'));
-    ok(await call('assert', { selector: { text: 'Form' }, timeoutMs: 5_000 }));
+    ok(await call('check_element', { selector: { text: 'Form' }, timeoutMs: 5_000 }));
   });
 });
 

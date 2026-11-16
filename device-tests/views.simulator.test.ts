@@ -41,7 +41,7 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
   /** `screen views raw`, timed. */
   const views = async () => {
     const from = Date.now();
-    const r = await t.call('screen', { views: true, raw: true });
+    const r = await t.call('read_screen', { views: true, raw: true });
     const ms = Date.now() - from;
     console.log(`${String(ms)} ms, ${String(r.data.elements)} views\n${r.text.slice(0, 1500)}`);
     expect(r.error).toBe(false);
@@ -62,7 +62,7 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
   it('refuses an app started without the probe, naming what puts it in', async () => {
     await d.terminate(APP);
     await d.launch(APP);
-    const r = await t.call('screen', { views: true });
+    const r = await t.call('read_screen', { views: true });
     console.log(r.text);
     expect([r.error, r.data.code]).toEqual([true, 'UNSUPPORTED']);
     expect(r.text).toMatch(
@@ -96,16 +96,16 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
 
   it('gives the places of a turned screen as its accessibility tree does', async () => {
     try {
-      expect((await t.call('set_orientation', { orientation: 'landscape_left' })).error).toBe(
-        false,
-      );
+      expect(
+        (await t.call('set_device', { name: 'orientation', value: 'landscape_left' })).error,
+      ).toBe(false);
       await sleep(1_000);
       const label = (await views()).views.find((v) => v.id === 'uikit_label');
       assert(label);
       expect(label.rect.width).toBeGreaterThan(500);
       await samePlace(label);
     } finally {
-      await t.call('set_orientation', { orientation: 'portrait' });
+      await t.call('set_device', { name: 'orientation', value: 'portrait' });
     }
   }, 120_000);
 
@@ -126,9 +126,9 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
 
   it("never says what a secure field holds, the field's own views' text among it", async () => {
     await open('form');
-    expect((await t.call('tap', { selector: { id: 'password_input' }, read: 'none' })).error).toBe(
-      false,
-    );
+    expect(
+      (await t.call('tap_screen', { selector: { id: 'password_input' }, read: 'none' })).error,
+    ).toBe(false);
     expect((await t.call('type_text', { text: SECRET, read: 'none' })).error).toBe(false);
     const form = await views();
     const field = form.views.find((v) => v.id === 'password_input');
@@ -143,7 +143,7 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
     for (const wait of [1_000, 12_000]) {
       await sleep(wait);
       const from = Date.now();
-      const behind = await t.call('screen', { views: true });
+      const behind = await t.call('read_screen', { views: true });
       console.log(`${String(Date.now() - from)} ms ${behind.text}`);
       expect([behind.error, behind.data.code]).toEqual([true, 'APP_NOT_RUNNING']);
     }

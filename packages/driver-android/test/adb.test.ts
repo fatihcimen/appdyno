@@ -498,7 +498,7 @@ describe('an agent stuck on an app that is not responding', () => {
       restartStuck(rpc: { close(): void }): Promise<string | undefined>;
     };
     await expect(d.restartStuck({ close: () => undefined })).resolves.toBe(
-      'org.wikipedia.alpha is not responding, and the system asks whether to wait for it or close it: alert answers that',
+      "org.wikipedia.alpha is not responding, and the system asks whether to wait for it or close it: that alert is answered as any of the system's",
     );
   });
 });

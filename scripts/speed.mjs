@@ -207,7 +207,7 @@ async function run(s, warmUp) {
   const devices = await call('`list_devices`', 'list_devices', {}, serial);
   if ((devices.text.split('\n').find((l) => l.startsWith(serial)) ?? '').includes('held by pid'))
     throw new Error(`another process holds ${serial}: ${devices.text}`);
-  const first = await s.request('tools/call', { name: 'screen', arguments: {} });
+  const first = await s.request('tools/call', { name: 'read_screen', arguments: {} });
   const read = must(first.message.result, 'the answer of the first read');
   if (read.isError) throw new Error(`the first read was refused: ${String(read.content[0]?.text)}`);
   timed(
@@ -223,7 +223,7 @@ async function run(s, warmUp) {
   /** @param {Result} r */
   const inFront = (r) => r.structuredContent?.foreground === APP;
   await call('`launch_app` of the fixture, cold', 'launch_app', { app: APP }, inFront);
-  await call('`screen`', 'screen', {}, 'Form');
+  await call('`read_screen`', 'read_screen', {}, 'Form');
   // iOS has no back key: its back is the screen's own control
   /**
    * @param {string} what
@@ -231,33 +231,48 @@ async function run(s, warmUp) {
    */
   const back = (what, proof) =>
     IOS
-      ? call(what, 'tap', { selector: { text: 'Back', role: 'button' } }, proof)
+      ? call(what, 'tap_screen', { selector: { text: 'Back', role: 'button' } }, proof)
       : call(what, 'press_key', { key: 'back' }, proof);
   // the first touch of a server and of an app's process pays for itself: the untimed one, before the two taps compared
-  const rows = await call('', 'tap', { selector: { text: 'List' } }, 'Product 1');
+  const rows = await call('', 'tap_screen', { selector: { text: 'List' } }, 'Product 1');
   // the touch alone answers once it has gone and proves nothing by itself: the untimed wait after it is its proof
   const none = { read: 'none' };
+  // a wait names its time
+  const WAIT_MS = 5_000;
   // a row is `@ref "label"` under its header, or `@ref role "label"`; on iOS its cell says the row's words
   const row1 = /(@\S+) (?:\w+ )?"Product 1\b/.exec(rows.text)?.[1];
-  await call('`swipe`, the touch alone (`read: none`)', 'swipe', { direction: 'up', ...none });
-  await call('', 'wait_for', { ref: row1, gone: true }, 'gone');
+  await call('`swipe_screen`, the touch alone (`read: none`)', 'swipe_screen', {
+    direction: 'up',
+    ...none,
+  });
+  await call('', 'check_element', { ref: row1, check: 'absent', timeoutMs: WAIT_MS }, 'gone');
   /** @param {Result} r */
   const changed = (r) => r.structuredContent?.changed === true;
-  await call('`swipe`, with the settled screen', 'swipe', { direction: 'up' }, changed);
+  await call(
+    '`swipe_screen`, with the settled screen',
+    'swipe_screen',
+    { direction: 'up' },
+    changed,
+  );
   await back('', 'Form');
   const found = await call(
-    '`find`',
-    'find',
+    '`read_screen` with a selector',
+    'read_screen',
     { selector: { text: 'Form' } },
     (r) => r.structuredContent?.matches?.length === 1,
   );
   const at = must(found.result.structuredContent?.matches?.[0], 'the match');
-  await call('`tap` by coordinate, with the settled screen', 'tap', { x: at.x, y: at.y }, 'Send');
+  await call(
+    '`tap_screen` by coordinate, with the settled screen',
+    'tap_screen',
+    { x: at.x, y: at.y },
+    'Send',
+  );
   // the home screen's title: a phone in Turkish says LİST
   await back('back', 'appdyno fixture');
   await call(
-    '`tap` by selector, with the settled screen',
-    'tap',
+    '`tap_screen` by selector, with the settled screen',
+    'tap_screen',
     { selector: { text: 'Form' } },
     'Send',
   );
@@ -268,9 +283,9 @@ async function run(s, warmUp) {
     'speed',
   );
   await call(
-    '`wait_for` an element on the screen',
-    'wait_for',
-    { selector: { text: 'Send' } },
+    '`check_element`, a wait for an element on the screen',
+    'check_element',
+    { selector: { text: 'Send' }, timeoutMs: WAIT_MS },
     'found',
   );
   await call('`take_screenshot`', 'take_screenshot', {}, (r) =>
@@ -282,14 +297,14 @@ async function run(s, warmUp) {
   await call('`read_logs`, 20 lines', 'read_logs', { limit: 20 }, lines);
   // last: a touch on a screen still sliding in is lost, and nothing waits out a slide a touch alone started
   // Android's back closes the keyboard first
-  if (!IOS) await call('', 'keyboard', { action: 'dismiss' }, 'closed');
+  if (!IOS) await call('', 'press_key', { key: 'hide_keyboard' }, 'closed');
   await back('', 'appdyno fixture');
-  await call('`tap` by coordinate, the touch alone (`read: none`)', 'tap', {
+  await call('`tap_screen` by coordinate, the touch alone (`read: none`)', 'tap_screen', {
     x: at.x,
     y: at.y,
     ...none,
   });
-  await call('', 'wait_for', { selector: { text: 'Send' } }, 'found');
+  await call('', 'check_element', { selector: { text: 'Send' }, timeoutMs: WAIT_MS }, 'found');
 }
 
 /** @param {number[]} values */

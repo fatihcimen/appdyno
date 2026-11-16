@@ -21,16 +21,9 @@ import type { ServerContext } from './context.js';
 import { picturesHideNothing, redact, type Policy } from './policy.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import type { Session } from './session.js';
-import {
-  MAX_WAIT_MS,
-  NAME_AN_ELEMENT,
-  Read,
-  Selector,
-  showSelector,
-  WaitStep,
-} from './step-schemas.js';
+import { NAME_AN_ELEMENT, Read, Selector, showSelector, WaitStep } from './step-schemas.js';
 import { hintWithScreen, type Steps } from './steps.js';
-import { defineOp, READ, reply, SAVES, ToolError } from './tool.js';
+import { defineOp, definePart, READ, reply, SAVES, ToolError } from './tool.js';
 import { readViews } from './views.js';
 import { webLines } from './web.js';
 import { inside } from './writes.js';
@@ -178,11 +171,8 @@ export function readOps(
   { waitFor, missing }: Steps,
 ) {
   return [
-    defineOp({
+    definePart({
       name: 'screen',
-      title: 'Read screen',
-      description:
-        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags); views: its native view hierarchy and framework instead. Rows alike fold under one header line; "— words" names an element\'s row; a row\'s inner texts are left out and find reaches them. A ref names an element by what it is, so it holds across scrolls and redraws. raw: each with rect and parent, as data.',
       input: ScreenIn,
       output: ScreenOut,
       annotations: READ,
@@ -201,11 +191,8 @@ export function readOps(
         });
       },
     }),
-    defineOp({
+    definePart({
       name: 'find',
-      title: 'Find',
-      description:
-        "Elements a selector's text, id or role match, with enabled, checked, focused, value and bounds. For a pass or fail: assert.",
       input: z.object({ selector: Selector.optional() }).strict(),
       output: FindOut,
       annotations: READ,
@@ -248,10 +235,8 @@ export function readOps(
         );
       },
     }),
-    defineOp({
+    definePart({
       name: 'wait_for',
-      title: 'Wait for',
-      description: `Wait until an element shows (gone: until it is gone), timeoutMs at most ${MAX_WAIT_MS}: call again to wait longer.`,
       input: z.object({ ...WaitStep.omit({ action: true }).shape, read: Read }).strict(),
       output: WaitOut,
       annotations: READ,
@@ -285,7 +270,7 @@ export function readOps(
         if (why)
           throw new ToolError(
             said,
-            'TIMEOUT',
+            'CHECK_FAILED',
             read === 'none' ? why.hint : hintWithScreen(why.hint),
           );
         if (read === 'none') return reply(said, { ...out, screen: 'none' });

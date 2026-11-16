@@ -120,10 +120,10 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
   ) => {
     await ok('open_link', { url: 'appdyno-fixture://open/network' });
     await ok('type_text', { selector: { id: 'url_input' }, text: url, replace: true });
-    await ok('tap', { selector: { id: button } });
+    await ok('tap_screen', { selector: { id: button } });
     for (let i = 0; i < 40; i++) {
       // a label's own quotes come escaped
-      const text = (await ok('screen')).text.replaceAll('\\"', '"');
+      const text = (await ok('read_screen')).text.replaceAll('\\"', '"');
       // a long failure is cut on the screen before its time
       const said = /(fetched (\d+) (\d+) in (\d+) ms|failed: [^\n"]*)/.exec(text);
       if (said)
@@ -269,7 +269,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       text: `http://${a.at}/hang`,
       replace: true,
     });
-    await ok('tap', { selector: { id: 'fetch' } });
+    await ok('tap_screen', { selector: { id: 'fetch' } });
     await sleep(1500);
     const during = await ok('capture_network', { action: 'read' });
     expect(during.text).toMatch(/\nin flight: 1 \(GET http:\/\/127\.0\.0\.1:\d+\/hang \d+ ms\)$/);

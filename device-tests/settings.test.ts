@@ -32,15 +32,14 @@ const reaches = () => {
 };
 const until = untilWithin(15_000);
 
-const value = async (call: Call, name: string) =>
-  (await call('device_setting', { name })).data.value;
+const value = async (call: Call, name: string) => (await call('set_device', { name })).data.value;
 const set = async (call: Call, name: string, to: string) => {
-  const r = await call('device_setting', { name, value: to });
+  const r = await call('set_device', { name, value: to });
   expect(r.error ? r.text : '').toBe('');
   return r;
 };
 const result = async (call: Call, text: string) =>
-  (await call('wait_for', { selector: { id: 'result', text }, timeoutMs: 8_000 })).data.met;
+  (await call('check_element', { selector: { id: 'result', text }, timeoutMs: 8_000 })).data.met;
 
 describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
   let call: Call;
@@ -49,26 +48,26 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     const o = opsOn(androidProvider(new Adb()), ANDROID, APP);
     call = o.call;
     ctx = o.ctx;
-    return () => call('device_setting', { name: 'restore' });
+    return () => call('set_device', { name: 'restore' });
   });
 
   it('writes the rotation lock a turn sets down, keeps it past its connection, and puts it back at restore and the session end', async () => {
     const lock = () =>
       ['accelerometer_rotation', 'user_rotation'].map((k) => adb('settings', 'get', 'system', k));
     const was = lock();
-    await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
-    await call('set_orientation', { orientation: 'portrait', read: 'none' });
+    await call('set_device', { name: 'orientation', value: 'landscape_left', read: 'none' });
+    await call('set_device', { name: 'orientation', value: 'portrait', read: 'none' });
     expect(lock()).toEqual(['0', '0']);
     // a command line's next command finds it as this one left it
     (await ctx.session()).device.close();
     await new Promise((r) => setTimeout(r, 3_000));
     expect(lock()).toEqual(['0', '0']);
-    const back = await call('device_setting', { name: 'restore' });
+    const back = await call('set_device', { name: 'restore' });
     expect(back.text).toContain(
       `orientation: auto-rotate ${String(was[0])}, rotation ${String(was[1])}`,
     );
     expect(lock()).toEqual(was);
-    await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
+    await call('set_device', { name: 'orientation', value: 'landscape_left', read: 'none' });
     expect(await ctx.end()).toEqual([]);
     expect(lock()).toEqual(was);
   });
@@ -97,7 +96,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
       const was = read();
       await set(call, 'text_size', '1.3');
       expect(read()[0]).toBe('1.3');
-      await call('device_setting', { name: 'restore' });
+      await call('set_device', { name: 'restore' });
       expect(read(), start).toEqual(was);
     }
     adb('settings', 'delete', 'system', 'font_scale');
@@ -109,11 +108,11 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     const read = () =>
       ['font_scale', 'system_locales'].map((k) => adb('settings', 'get', 'system', k));
     const was = read();
-    const tr = await call('device_setting', { name: 'locale', value: 'tr-TR', app: '' });
+    const tr = await call('set_device', { name: 'locale', value: 'tr-TR', app: '' });
     expect(tr.error ? tr.text : '').toBe('');
     expect(adb('getprop', 'persist.sys.locale')).toBe('tr-TR');
     expect(read()).toEqual(was);
-    expect((await call('device_setting', { name: 'restore' })).text).toMatch(/locale: en/);
+    expect((await call('set_device', { name: 'restore' })).text).toMatch(/locale: en/);
     expect(read()).toEqual(was);
   });
 
@@ -131,7 +130,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     const was = read();
     await set(call, 'dark_mode', 'on');
     expect(read()[0]).toBe('Night mode: yes');
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'restore' });
     expect(read()).toEqual(was);
   });
 
@@ -143,7 +142,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
       else adb('settings', 'delete', 'secure', 'high_text_contrast_enabled');
       await set(call, 'increase_contrast', 'on');
       expect(contrast()).toBe('1');
-      await call('device_setting', { name: 'restore' });
+      await call('set_device', { name: 'restore' });
       expect(contrast()).toBe(start);
     }
   });
@@ -158,7 +157,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     try {
       await set(call, 'proxy', '127.0.0.1:18089');
       await set(call, 'network', '100000');
-      await call('device_setting', { name: 'restore' });
+      await call('set_device', { name: 'restore' });
       expect(read()).toEqual([':0', '-1']);
     } finally {
       adb('settings', 'delete', 'global', 'http_proxy');
@@ -173,7 +172,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     await set(call, 'mobile_data', 'off');
     expect(await value(call, 'mobile_data')).toBe('off');
     await until('the network gone', () => !reaches());
-    const r = await call('device_setting', { name: 'restore' });
+    const r = await call('set_device', { name: 'restore' });
     expect(r.text).toContain('mobile_data: on');
     expect(await value(call, 'mobile_data')).toBe('on');
     await until('the network back', reaches);
@@ -185,7 +184,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     expect(await value(call, 'airplane')).toBe('on');
     expect(await value(call, 'wifi')).toBe('off');
     await until('the network gone', () => !reaches());
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'restore' });
     expect(await value(call, 'airplane')).toBe('off');
     await until('the network back', reaches);
     await until('Wi-Fi on', () => adb('settings', 'get', 'global', 'wifi_on') === '1');
@@ -198,11 +197,11 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     await set(call, 'wifi', 'on');
     expect(await value(call, 'wifi')).toBe('on');
     expect(adb('cmd', 'wifi', 'status')).toContain('Wifi is enabled');
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'restore' });
   });
 
   it('refuses what is not on or off, and changes nothing', async () => {
-    const r = await call('device_setting', { name: 'wifi', value: 'half' });
+    const r = await call('set_device', { name: 'wifi', value: 'half' });
     expect(r.data.code).toBe('INVALID_ARGUMENT');
     expect(r.text).toContain('wifi: on or off, not half');
   });
@@ -213,7 +212,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     const unlocked = () =>
       adb('cmd lock_settings verify 2>&1 || true').includes('verified successfully');
     expect([counts(), unlocked()]).toEqual(['0', true]);
-    const none = await call('device_setting', { name: 'biometric', value: 'match' });
+    const none = await call('set_device', { name: 'biometric', value: 'match' });
     expect(none.data.code).toBe('NOT_FOUND');
     expect(none.text).toContain('no fingerprint is enrolled');
     const enrolled = await set(call, 'biometric', 'enroll');
@@ -223,22 +222,23 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     expect([counts(), unlocked()]).toEqual(['1', false]);
     expect((await set(call, 'biometric', 'enroll')).text).toBe('biometric: enroll');
     await call('manage_app', { action: 'stop' });
-    const nobody = await call('device_setting', { name: 'biometric', value: 'match' });
+    const nobody = await call('set_device', { name: 'biometric', value: 'match' });
     expect(nobody.data.code).toBe('NOT_FOUND');
     expect(nobody.text).toContain('an app must be asking');
 
     await call('open_link', { url: 'appdyno-fixture://open/biometric' });
-    await call('tap', { selector: { id: 'authenticate' } });
-    await call('wait_for', { selector: { text: 'Fixture sign-in' }, timeoutMs: 5_000 });
+    await call('tap_screen', { selector: { id: 'authenticate' } });
+    await call('check_element', { selector: { text: 'Fixture sign-in' }, timeoutMs: 5_000 });
     await set(call, 'biometric', 'nomatch');
     // the system's prompt stays up over the fixture, and says it itself
     expect(
-      (await call('wait_for', { selector: { text: 'Not recognized' }, timeoutMs: 8_000 })).data.met,
+      (await call('check_element', { selector: { text: 'Not recognized' }, timeoutMs: 8_000 })).data
+        .met,
     ).toBe(true);
     await set(call, 'biometric', 'match');
     expect(await result(call, 'Authenticated')).toBe(true);
 
-    const back = await call('device_setting', { name: 'restore' });
+    const back = await call('set_device', { name: 'restore' });
     expect(back.text).toContain('screen_lock: none');
     expect([counts(), unlocked()]).toEqual(['0', true]);
   });
@@ -254,9 +254,9 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     ]);
     await call('open_link', { settings: 'general' });
     expect(
-      (await call('wait_for', { selector: { text: 'Ayarlar' }, timeoutMs: 8_000 })).data.met,
+      (await call('check_element', { selector: { text: 'Ayarlar' }, timeoutMs: 8_000 })).data.met,
     ).toBe(true);
-    const back = await call('device_setting', { name: 'restore' });
+    const back = await call('set_device', { name: 'restore' });
     expect(back.text).toContain(`locale: ${String(was)}`);
     expect(adb('getprop', 'persist.sys.locale')).toBe(was);
     await call('press_key', { key: 'home' });
@@ -272,7 +272,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
     await set(call, 'fold', 'closed');
     expect(await value(call, 'fold')).toBe('closed');
     expect(override()).toContain("name='CLOSED'");
-    const back = await call('device_setting', { name: 'restore' });
+    const back = await call('set_device', { name: 'restore' });
     expect(back.text).toContain('fold: default (now open)');
     expect([await value(call, 'fold'), override()]).toEqual([
       'default (now open)',
@@ -305,7 +305,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
       );
       const slow = await download();
       expect(slow).toBeGreaterThan(Math.max(5_000, full * 4));
-      expect((await call('device_setting', { name: 'restore' })).text).toContain('network: full');
+      expect((await call('set_device', { name: 'restore' })).text).toContain('network: full');
       expect(adb('settings', 'get', 'global', 'ingress_rate_limit_bytes_per_second')).toBe('null');
       expect(await download()).toBeLessThan(slow / 4);
       console.log(`a megabyte: ${full} ms, capped ${slow} ms`);
@@ -315,7 +315,7 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
   });
 
   it('says Android has no keychain', async () => {
-    const r = await call('device_setting', { name: 'keychain', value: 'reset' });
+    const r = await call('set_device', { name: 'keychain', value: 'reset' });
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toContain('Android has no keychain');
   });
@@ -332,13 +332,13 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     // a simulator other suites ran on holds items of its own: the count is of the one saved here
     await set(call, 'keychain', 'reset');
     await call('open_link', { url: 'appdyno-fixture://open/keychain' });
-    await call('tap', { selector: { id: 'save' } });
+    await call('tap_screen', { selector: { id: 'save' } });
     expect(await result(call, 'Saved')).toBe(true);
-    await call('tap', { selector: { id: 'read' } });
+    await call('tap_screen', { selector: { id: 'read' } });
     expect(await result(call, 'Found')).toBe(true);
     const r = await set(call, 'keychain', 'reset');
     expect(r.text).toBe('the keychain is empty: it held 1 items');
-    await call('tap', { selector: { id: 'read' } });
+    await call('tap_screen', { selector: { id: 'read' } });
     expect(await result(call, 'Not found')).toBe(true);
     expect((await set(call, 'keychain', 'reset')).text).toContain('it held 0 items');
   });
@@ -346,11 +346,11 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
   it('answers a prompt for a face', async () => {
     await set(call, 'biometric', 'enroll');
     await call('open_link', { url: 'appdyno-fixture://open/biometric' });
-    await call('tap', { selector: { id: 'authenticate' } });
+    await call('tap_screen', { selector: { id: 'authenticate' } });
     // the scan begins a moment after the request, and takes no answer before it
     await new Promise((r) => setTimeout(r, 2_000));
     await set(call, 'biometric', 'nomatch');
-    const miss = await call('wait_for', {
+    const miss = await call('check_element', {
       selector: { text: 'Face Not Recognized' },
       timeoutMs: 8_000,
     });
@@ -375,34 +375,34 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     // what a session changes goes back when it ends, and the answer says so
     const back =
       'put back when this session ends, or by restore; it cannot be kept past the session';
-    const one = await call('device_setting', { name: 'locale', value: 'tr-TR', app: PREFS });
+    const one = await call('set_device', { name: 'locale', value: 'tr-TR', app: PREFS });
     expect(one.text).toBe(
       `locale: tr-TR; ${PREFS}'s launches by this tool, not the system's own text: app "" for the whole simulator; ${back}`,
     );
     expect(global()).toBe(before);
     await call('launch_app', { app: PREFS });
     expect(
-      (await call('wait_for', { selector: { text: 'Ayarlar' }, timeoutMs: 10_000 })).data.met,
+      (await call('check_element', { selector: { text: 'Ayarlar' }, timeoutMs: 10_000 })).data.met,
     ).toBe(true);
     // the app had no language of its own to go back to
-    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale');
+    expect((await call('set_device', { name: 'restore' })).text).toBe('restored locale');
     // it ran, so it started again in the simulator's own
     expect(
-      (await call('wait_for', { selector: { text: 'Settings' }, timeoutMs: 10_000 })).data.met,
+      (await call('check_element', { selector: { text: 'Settings' }, timeoutMs: 10_000 })).data.met,
     ).toBe(true);
 
-    const whole = await call('device_setting', { name: 'locale', value: 'tr-TR', app: '' });
+    const whole = await call('set_device', { name: 'locale', value: 'tr-TR', app: '' });
     expect(whole.text).toBe(
       `locale: tr-TR; the whole simulator: app for one app's launches; ${back}`,
     );
     expect(global()).toBe('tr_TR');
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'restore' });
     expect(global()).toBe(before);
     await call('manage_app', { action: 'stop', app: PREFS });
   });
 
   it('says a simulator has no radios', async () => {
-    const r = await call('device_setting', { name: 'airplane', value: 'on' });
+    const r = await call('set_device', { name: 'airplane', value: 'on' });
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toContain("it uses the Mac's network");
   });

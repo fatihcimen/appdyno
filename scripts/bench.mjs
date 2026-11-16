@@ -74,13 +74,13 @@ const TASKS = {
   login: {
     ask: `In the app ${APP}, open the Form screen, enter the name Ada and the password hunter2, send the form, and tell me the line the app answers with.`,
     done: async (call, said) =>
-      !(await call('assert', { selector: { text: 'Sent: Ada' }, check: 'exists' })).isError &&
-      said.includes('Sent: Ada'),
+      !(await call('check_element', { selector: { text: 'Sent: Ada' }, check: 'exists' }))
+        .isError && said.includes('Sent: Ada'),
   },
   basket: {
     ask: `In the app ${APP}, open the List screen and put Product 1, Product 2 and Product 3 in the basket, one of each. Tell me what the three rows show after.`,
     done: async (call) =>
-      (await call('find', { selector: { text: 'In basket: 1' } })).structuredContent?.matches
+      (await call('read_screen', { selector: { text: 'In basket: 1' } })).structuredContent?.matches
         ?.length === 3,
   },
   setting: {

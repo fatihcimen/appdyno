@@ -45,9 +45,9 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       const { file } = await recorded(call, async () => {
         await call('launch_app');
-        await call('tap', { selector: { text: 'Form' } });
+        await call('tap_screen', { selector: { text: 'Form' } });
         await call('type_text', { text: 'Ayşe', selector: { id: 'name' } });
-        await call('tap', { selector: { text: 'Gönder' } });
+        await call('tap_screen', { selector: { text: 'Gönder' } });
       });
       device.screen = 'home';
       device.typed = [];
@@ -198,7 +198,7 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       await call('run_flow', { action: 'run', file, envFile, params: ['USER=Merhaba'] });
       expect(device.typed).toEqual([SECRET, 'Merhaba']);
-      const { text } = await call('screen', {});
+      const { text } = await call('read_screen', {});
       expect(text).toContain('Merhaba •••');
       expect(text).not.toContain(SECRET);
       expect(text).toContain('Merhaba');
@@ -245,7 +245,7 @@ assert id=result check=text equals="Gönderildi"
         const file = write('outer.flow', 'app dev.app\nlaunch\nrun inner.flow\nlaunch\n');
         const e = await refusal(callerOf(context())('run_flow', { action: 'run', file }));
         expect(e.message).toContain(`${inner}:3: step 3 failed: assert id=none`);
-        expect(e.message).toContain(`appdyno flow run ${file} --from 3`);
+        expect(e.message).toContain(`appdyno run-flow run ${file} --from 3`);
         expect(device.calls.filter((c) => c.name === 'launch')).toHaveLength(2);
       });
 

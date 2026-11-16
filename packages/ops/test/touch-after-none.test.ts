@@ -37,28 +37,28 @@ const NOTHING = { x: 540, y: 2_300 };
 describe('a touch after one that skipped its settle', () => {
   it('waits out the slide of a screen that touch brought, which no read shows', async () => {
     const { call, gap } = await connect();
-    await call('screen');
-    await call('tap', { ...FORM, read: 'none' });
-    await call('tap', { ...NOTHING, read: 'none' });
+    await call('read_screen');
+    await call('tap_screen', { ...FORM, read: 'none' });
+    await call('tap_screen', { ...NOTHING, read: 'none' });
     expect(gap()).toBeGreaterThanOrEqual(TRANSITION_MS - 20);
   });
 
   it("is left to Android's agent, which waits for rest before each action", async () => {
     const { call, gap } = await connect('android');
-    await call('screen');
-    await call('tap', { ...FORM, read: 'none' });
-    await call('tap', { ...NOTHING, read: 'none' });
+    await call('read_screen');
+    await call('tap_screen', { ...FORM, read: 'none' });
+    await call('tap_screen', { ...NOTHING, read: 'none' });
     expect(gap()).toBeLessThan(TRANSITION_MS / 2);
   });
 
   it('goes at once where that touch changed nothing, and after a settled one', async () => {
     const { call, gap } = await connect();
-    await call('screen');
-    await call('tap', { ...NOTHING, read: 'none' });
-    await call('tap', { ...NOTHING, read: 'none' });
+    await call('read_screen');
+    await call('tap_screen', { ...NOTHING, read: 'none' });
+    await call('tap_screen', { ...NOTHING, read: 'none' });
     expect(gap()).toBeLessThan(TRANSITION_MS / 2);
-    await call('tap', FORM);
-    await call('tap', NOTHING);
+    await call('tap_screen', FORM);
+    await call('tap_screen', NOTHING);
     expect(gap()).toBeLessThan(TRANSITION_MS / 2);
   });
 });

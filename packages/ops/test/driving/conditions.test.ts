@@ -68,7 +68,7 @@ describe('device conditions', () => {
     settings.set = (name: SettingName, value: string) =>
       value === '1.3' ? Promise.resolve(undefined) : set(name, value);
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
-    const r = await call('device_setting', { name: 'text_size', value: '1.3' });
+    const r = await call('set_device', { name: 'text_size', value: '1.3' });
     expect([r.error, r.text, r.data.changed, r.data.value]).toEqual([
       false,
       'text_size reads large, as before: nothing changed',
@@ -77,8 +77,8 @@ describe('device conditions', () => {
     ]);
     // what it read back, which a window shows as its row and need not read again
     expect(r.data.reads).toEqual({ text_size: 'large' });
-    expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
-    const moved = await call('device_setting', { name: 'text_size', value: 'extra-large' });
+    expect((await call('set_device', { name: 'restore' })).text).toBe('nothing was changed');
+    const moved = await call('set_device', { name: 'text_size', value: 'extra-large' });
     expect(moved.data.changed).toEqual({ text_size: 'extra-large' });
     expect(moved.data.reads).toEqual({ text_size: 'extra-large' });
   });
@@ -86,16 +86,16 @@ describe('device conditions', () => {
   it('restores only what reads as it was, and keeps the rest written down with what it reads', async () => {
     const settings = new Settings();
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
-    await call('device_setting', { name: 'dark_mode', value: 'on' });
+    await call('set_device', { name: 'dark_mode', value: 'on' });
     const set = settings.set;
     // as Android's own write of a scale just before lands after the one that puts it back
     settings.set = () => Promise.resolve(undefined);
-    const r = await call('device_setting', { name: 'restore' });
+    const r = await call('set_device', { name: 'restore' });
     expect(r.text).toBe('could not restore dark_mode (was no): it reads on');
     expect(r.data.notRestored).toHaveLength(1);
     expect(r.data.reads).toEqual({ dark_mode: 'on' });
     settings.set = set;
-    const back = await call('device_setting', { name: 'restore' });
+    const back = await call('set_device', { name: 'restore' });
     expect([back.text, back.data.reads]).toEqual(['restored dark_mode: off', { dark_mode: 'off' }]);
   });
 
@@ -106,11 +106,11 @@ describe('device conditions', () => {
     settings.set = (name: SettingName, value: string) =>
       set(name, value.startsWith('default') ? 'default (now 79)' : value);
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
-    await call('device_setting', { name: 'battery', value: '50' });
-    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+    await call('set_device', { name: 'battery', value: '50' });
+    expect((await call('set_device', { name: 'restore' })).text).toBe(
       'restored battery: default (now 80)',
     );
-    expect((await call('device_setting', { name: 'battery', value: 'default' })).text).toBe(
+    expect((await call('set_device', { name: 'battery', value: 'default' })).text).toBe(
       'battery reads default (now 79), as before: nothing changed',
     );
   });
@@ -118,18 +118,18 @@ describe('device conditions', () => {
   it('takes one-shot events, and refuses what is not one', async () => {
     const settings = new Settings();
     const { call } = await connect(Object.assign(new FakeDevice(), { settings, events: settings }));
-    await call('device_setting', { name: 'call', value: '+905551112233' });
-    await call('device_setting', { name: 'call', value: 'end +905551112233' });
-    await call('device_setting', { name: 'sms', title: '5553434', value: 'Merhaba' });
+    await call('set_device', { name: 'call', value: '+905551112233' });
+    await call('set_device', { name: 'call', value: 'end +905551112233' });
+    await call('set_device', { name: 'sms', title: '5553434', value: 'Merhaba' });
     expect(settings.events).toEqual([
       ['call', '+905551112233', false],
       ['call', '+905551112233', true],
       ['sms', '5553434', 'Merhaba'],
     ]);
-    expect((await call('device_setting', { name: 'call', value: 'someone' })).text).toMatch(
+    expect((await call('set_device', { name: 'call', value: 'someone' })).text).toMatch(
       /phone number/,
     );
-    expect((await call('device_setting', { name: 'sms', title: 'x', value: 'y' })).text).toMatch(
+    expect((await call('set_device', { name: 'sms', title: 'x', value: 'y' })).text).toMatch(
       /phone number/,
     );
   });
@@ -146,11 +146,11 @@ describe('device conditions', () => {
       },
     });
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
-    const read = await call('device_setting', { name: 'fold' });
+    const read = await call('set_device', { name: 'fold' });
     expect(read.text).toBe('fold: default (now open); of closed, half_opened, open, rear_display');
     expect(read.data.value).toBe('default (now open)');
-    expect((await call('device_setting', { name: 'dark_mode' })).text).toBe('dark_mode: off');
-    expect((await call('device_setting', { name: 'fold', value: 'closed' })).text).toBe(
+    expect((await call('set_device', { name: 'dark_mode' })).text).toBe('dark_mode: off');
+    expect((await call('set_device', { name: 'fold', value: 'closed' })).text).toBe(
       'fold: closed; display 1080x2424 at 390 dpi; app/.Main was recreated; put back when this session ends, or by restore; it cannot be kept past the session',
     );
   });
@@ -166,16 +166,16 @@ describe('device conditions', () => {
       return Promise.resolve(undefined);
     };
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
-    expect((await call('device_setting', { name: 'fold', value: 'closed' })).data.code).toBe(
+    expect((await call('set_device', { name: 'fold', value: 'closed' })).data.code).toBe(
       'UNSUPPORTED',
     );
-    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+    expect((await call('set_device', { name: 'restore' })).text).toBe(
       'restored fold: default (now open)',
     );
     expect(settings.values.fold).toBe('default (now open)');
     settings.set = () => Promise.reject(new DeviceError('UNSUPPORTED', 'no fold here'));
-    await call('device_setting', { name: 'fold', value: 'closed' });
-    expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
+    await call('set_device', { name: 'fold', value: 'closed' });
+    expect((await call('set_device', { name: 'restore' })).text).toBe('nothing was changed');
   });
 
   it('changes a condition and puts it back at the end of the session', async () => {
@@ -183,16 +183,16 @@ describe('device conditions', () => {
     const d = Object.assign(new FakeDevice(), { settings });
     const { call, ctx } = await connect(d);
     // read as it is set on both platforms: Android says no, iOS light
-    expect((await call('device_setting', { name: 'dark_mode' })).data.value).toBe('off');
-    expect((await call('device_setting', { name: 'dark_mode', value: 'on' })).text).toBe(
+    expect((await call('set_device', { name: 'dark_mode' })).data.value).toBe('off');
+    expect((await call('set_device', { name: 'dark_mode', value: 'on' })).text).toBe(
       'dark_mode: on; put back when this session ends, or by restore; it cannot be kept past the session',
     );
     settings.values.dark_mode = 'dark';
-    expect((await call('device_setting', { name: 'dark_mode' })).text).toBe('dark_mode: on');
-    await call('device_setting', { name: 'dark_mode', value: 'off' });
-    await call('device_setting', { name: 'text_size', value: '1.3' });
+    expect((await call('set_device', { name: 'dark_mode' })).text).toBe('dark_mode: on');
+    await call('set_device', { name: 'dark_mode', value: 'off' });
+    await call('set_device', { name: 'text_size', value: '1.3' });
     settings.values.fold = 'default (now open)';
-    await call('device_setting', { name: 'fold', value: 'closed' });
+    await call('set_device', { name: 'fold', value: 'closed' });
     expect(settings.values).toEqual({ dark_mode: 'off', text_size: '1.3', fold: 'closed' });
     expect(await ctx.end()).toEqual([]);
     expect(settings.values).toEqual({
@@ -218,8 +218,8 @@ describe('device conditions', () => {
     const d = Object.assign(new FakeDevice(), { settings });
     const { call, ctx } = await connect(d, { virtual: fleet });
     await ctx.use('B');
-    await call('device_setting', { name: 'dark_mode', value: 'on' });
-    await call('device_setting', { name: 'text_size', value: '1.3' });
+    await call('set_device', { name: 'dark_mode', value: 'on' });
+    await call('set_device', { name: 'text_size', value: '1.3' });
     const r = await call('manage_simulator', { action: 'shutdown', name: 'B' });
     expect(r.text).toBe(
       'shut down two: the session on two ended, and what its apps held with it; what the session changed went back first: text_size: 1.0; dark_mode: off',
@@ -228,7 +228,7 @@ describe('device conditions', () => {
     // what went back is no longer written down: the next session has nothing of it to put back
     expect(await ctx.end()).toEqual([]);
     await ctx.use('B');
-    await call('device_setting', { name: 'dark_mode', value: 'on' });
+    await call('set_device', { name: 'dark_mode', value: 'on' });
     settings.failing = true;
     expect((await call('manage_simulator', { action: 'shutdown', name: 'B' })).text).toMatch(
       /; could not put back dark_mode \(was no\): broke$/,
@@ -239,22 +239,22 @@ describe('device conditions', () => {
     const settings = new Settings();
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
     settings.values.locale = '';
-    await call('device_setting', { name: 'locale', value: 'tr-TR', app: 'a.one' });
-    await call('device_setting', { name: 'locale', value: 'de', app: 'a.one' });
-    const other = await call('device_setting', { name: 'locale', value: 'de', app: 'a.two' });
+    await call('set_device', { name: 'locale', value: 'tr-TR', app: 'a.one' });
+    await call('set_device', { name: 'locale', value: 'de', app: 'a.one' });
+    const other = await call('set_device', { name: 'locale', value: 'de', app: 'a.two' });
     expect([other.data.code, other.text]).toEqual([
       'INVALID_ARGUMENT',
-      'INVALID_ARGUMENT: locale is held for a.one until it is put back\nhint: device_setting restore first',
+      'INVALID_ARGUMENT: locale is held for a.one until it is put back\nhint: set_device restore first',
     ]);
     expect(settings.values.locale).toBe('de');
-    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale');
+    expect((await call('set_device', { name: 'restore' })).text).toBe('restored locale');
   });
 
   it('reads a locale none holds the app in as none set, not as nothing', async () => {
     const settings = new Settings();
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
     settings.values.locale = '';
-    const r = await call('device_setting', { name: 'locale', app: 'a.one' });
+    const r = await call('set_device', { name: 'locale', app: 'a.one' });
     expect([r.text, r.data.value]).toEqual(['locale: none set', '']);
   });
 
@@ -262,27 +262,23 @@ describe('device conditions', () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings });
     const { call, ctx } = await connect(d);
-    await call('device_setting', { name: 'dark_mode', value: 'on' });
+    await call('set_device', { name: 'dark_mode', value: 'on' });
     settings.failing = true;
-    const r = await call('device_setting', { name: 'restore' });
+    const r = await call('set_device', { name: 'restore' });
     expect(r.text).toContain('could not restore dark_mode');
     expect(r.data.notRestored).toHaveLength(1);
     expect((await ctx.end())[0]).toContain('dark_mode');
     settings.failing = false;
-    expect((await call('device_setting', { name: 'restore' })).text).toContain(
-      'restored dark_mode',
-    );
+    expect((await call('set_device', { name: 'restore' })).text).toContain('restored dark_mode');
     expect(settings.values.dark_mode).toBe('no');
-    expect((await call('device_setting', { name: 'restore' })).text).toContain(
-      'nothing was changed',
-    );
+    expect((await call('set_device', { name: 'restore' })).text).toContain('nothing was changed');
   });
 
   it('passes on a refusal, posts a push, and says biometrics are not here', async () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings, events: settings });
     const { call } = await connect(d, { policy: { allowDataLoss: 'virtual' } });
-    const net = await call('device_setting', { name: 'network', value: 'slow' });
+    const net = await call('set_device', { name: 'network', value: 'slow' });
     expect(net.data.code).toBe('UNSUPPORTED');
     expect(net.text).toContain('a phone has no network shaping');
     expect((await call('send_push')).text).toBe(
@@ -316,12 +312,12 @@ describe('device conditions', () => {
       expect((await call('send_push', { type: 'alert', payload })).text).toBe(
         `INVALID_ARGUMENT: ${why}`,
       );
-    const b = await call('device_setting', { name: 'biometric', value: 'match' });
+    const b = await call('set_device', { name: 'biometric', value: 'match' });
     expect(b.data.code).toBe('UNSUPPORTED');
-    expect((await call('device_setting', { name: 'biometric', value: 'x' })).error).toBe(true);
-    const keychain = await call('device_setting', { name: 'keychain', value: 'reset' });
+    expect((await call('set_device', { name: 'biometric', value: 'x' })).error).toBe(true);
+    const keychain = await call('set_device', { name: 'keychain', value: 'reset' });
     expect(keychain.text).toBe('the keychain is empty: it held 3 items');
-    expect((await call('device_setting', { name: 'keychain' })).text).toMatch(/needs value: reset/);
+    expect((await call('set_device', { name: 'keychain' })).text).toMatch(/needs value: reset/);
   });
 
   it("reads no app's routes off the allow list", async () => {

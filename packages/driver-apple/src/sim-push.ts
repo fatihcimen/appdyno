@@ -87,7 +87,7 @@ export async function simulatorPush(
       throw new DeviceError(
         'UNSUPPORTED',
         `${app} is not allowed notifications, and is not in front: the push reached nothing`,
-        "allow them: the app's own prompt, answered with alert",
+        "allow them: the app's own prompt, answered as a system alert",
       );
     return `pushed to ${app} by simctl, which shows none, as it is not allowed notifications: ${at === 'front' ? REACHED.front : 'its code gets it only if it is in front (what is in front could not be read)'}`;
   } finally {

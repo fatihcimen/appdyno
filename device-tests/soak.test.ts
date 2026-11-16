@@ -200,9 +200,9 @@ it.skipIf(!DEVICE)(
 
     const scenarios: Record<string, () => Promise<unknown>> = {
       read: async () => {
-        await call('screen');
+        await call('read_screen');
         await call(
-          'screen',
+          'read_screen',
           { raw: true },
           {
             check: (o) =>
@@ -214,11 +214,15 @@ it.skipIf(!DEVICE)(
         await link('form');
         const text = `Soak ${cycle}`;
         await call('type_text', { selector: { id: 'name_input' }, text, replace: true });
-        await call('assert', { selector: { id: 'name_input' }, check: 'text', equals: text });
-        const send = await call('find', { selector: { id: 'submit' } });
+        await call('check_element', {
+          selector: { id: 'name_input' },
+          check: 'text',
+          equals: text,
+        });
+        const send = await call('read_screen', { selector: { id: 'submit' } });
         const ref = (send.data.matches as { ref: string }[] | undefined)?.[0]?.ref;
-        await call('tap', ref ? { ref } : { selector: { id: 'submit' } });
-        await call('assert', {
+        await call('tap_screen', ref ? { ref } : { selector: { id: 'submit' } });
+        await call('check_element', {
           selector: { id: 'result' },
           check: 'text',
           equals: `Sent: ${text}`,
@@ -226,35 +230,39 @@ it.skipIf(!DEVICE)(
       },
       list: async () => {
         await link('list');
-        await call('tap', { selector: { text: 'Add', index: 0 } });
+        await call('tap_screen', { selector: { text: 'Add', index: 0 } });
         const found = await call(
-          'scroll_to',
-          { selector: { text: 'Product 40' }, maxSwipes: 15 },
+          'swipe_screen',
+          { until: { text: 'Product 40' }, maxSwipes: 15 },
           { check: (o) => (o.data.found === true ? undefined : 'not found') },
         );
         const ref = /found (@[\w-]+)/.exec(found.text)?.[1];
-        if (ref) await call('tap', { ref });
+        if (ref) await call('tap_screen', { ref });
       },
       dialog: async () => {
         await link('dialog');
-        const open = await call('tap', { selector: { id: 'open_dialog' } });
+        const open = await call('tap_screen', { selector: { id: 'open_dialog' } });
         const ok = refIn(open.text, 'OK');
-        await call('tap', ok ? { ref: ok } : { selector: { text: 'OK' } });
-        await call('assert', { selector: { id: 'result' }, check: 'text', equals: 'Confirmed' });
+        await call('tap_screen', ok ? { ref: ok } : { selector: { text: 'OK' } });
+        await call('check_element', {
+          selector: { id: 'result' },
+          check: 'text',
+          equals: 'Confirmed',
+        });
       },
       rotate: async () => {
         await link('list');
         try {
-          await call('set_orientation', { orientation: 'landscape_left' });
-          await call('screen');
+          await call('set_device', { name: 'orientation', value: 'landscape_left' });
+          await call('read_screen');
         } finally {
-          await call('set_orientation', { orientation: 'portrait' });
+          await call('set_device', { name: 'orientation', value: 'portrait' });
         }
       },
       web: async () => {
         await link('web');
-        await call('wait_for', { selector: { text: 'Web content' }, timeoutMs: 10_000 });
-        await call('screen');
+        await call('check_element', { selector: { text: 'Web content' }, timeoutMs: 10_000 });
+        await call('read_screen');
         await call(
           'inspect_app',
           { action: 'web_eval', js: 'document.title' },
@@ -267,7 +275,7 @@ it.skipIf(!DEVICE)(
         await link('crash');
         r.crashesInjected++;
         const tap = await call(
-          'tap',
+          'tap_screen',
           { selector: { id: 'crash' } },
           {
             injected: true,
@@ -280,7 +288,7 @@ it.skipIf(!DEVICE)(
         const restarted = platform === 'android' && tap.code === 'APP_NOT_RUNNING';
         // the tap said so, or the next read must: the app is not the one in front
         await call(
-          'screen',
+          'read_screen',
           {},
           {
             injected: true,
@@ -309,7 +317,11 @@ it.skipIf(!DEVICE)(
         const ms = Math.round(performance.now() - t);
         if (!refused) r.agentEndsInjected++;
         // a simulator's helper reads and taps with no runner: a field's text brings one up
-        await call('tap', { selector: { id: 'name_input' } }, { after: 'the agent was ended' });
+        await call(
+          'tap_screen',
+          { selector: { id: 'name_input' } },
+          { after: 'the agent was ended' },
+        );
         await call('type_text', {
           selector: { id: 'name_input' },
           text: `Again ${cycle}`,
@@ -329,9 +341,9 @@ it.skipIf(!DEVICE)(
       ...(platform === 'ios' && {
         copies: async () => {
           await link('copies_banner');
-          await call('screen');
+          await call('read_screen');
           await call(
-            'tap',
+            'tap_screen',
             { selector: { id: 'dup_close' } },
             { check: (o) => (o.text.includes('"x-mark"') ? undefined : 'not the x-mark') },
           );
@@ -341,7 +353,7 @@ it.skipIf(!DEVICE)(
 
     /** After a scenario that failed: the app brought back if it is gone, so the next one starts where it should. */
     const recover = async () => {
-      const s = await call('screen');
+      const s = await call('read_screen');
       if (s.data.foreground === APP) return;
       if ((await call('launch_app')).passed) r.unplannedRelaunches++;
     };
@@ -386,7 +398,7 @@ it.skipIf(!DEVICE)(
     } finally {
       scenario = 'end';
       await d
-        .tool('set_orientation', { orientation: 'portrait', read: 'none' })
+        .tool('set_device', { name: 'orientation', value: 'portrait', read: 'none' })
         .catch(() => undefined);
       await d.close();
       unsubscribe('appdyno.agent.lost', lost);

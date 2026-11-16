@@ -34,12 +34,10 @@ import {
 // 30 took 13 s on an emulator and 21 s on a simulator at load 12, and up to 56 s on a loaded Mac, near a client's usual 60 s: each step says its progress
 const MAX_STEPS = 30;
 
-/** One step, whole before anything acts: a touch of this file, or another tool's call. */
+/** One step, whole before anything acts: the touch or check a tool's call is, or another tool's call. */
 type Planned =
-  | { st: Step; read?: ReadMode; op?: undefined }
-  | { op: Op; args: Record<string, unknown>; st?: undefined; ownRead: boolean };
-
-const StepRead = z.enum(['diff', 'full', 'none']).optional();
+  | { tool: string; st: Step; read?: ReadMode; op?: undefined }
+  | { tool: string; op: Op; args: Record<string, unknown>; st?: undefined; ownRead: boolean };
 
 const answerText = (r: ToolResult) =>
   r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
@@ -60,32 +58,29 @@ function planned(
   i: number,
 ): Planned {
   const { tool, ...args } = x;
+  const { read: _, ...shown } = x;
   const op = tools()[tool];
   const fail = (why: string, hint?: string) =>
     new ToolError(`step ${i + 1}: ${why}`, 'INVALID_ARGUMENT', hint);
-  const takes = Step.options.find((o) => o.shape.action.value === tool);
-  if (takes) {
-    const { read: own, ...rest } = args;
-    const reads = StepRead.safeParse(own);
-    if (!reads.success) throw fail(z.prettifyError(reads.error));
-    const p = Step.safeParse({ action: tool, ...rest });
-    const { read: _, ...call } = x;
-    if (p.success) return { st: p.data, ...(reads.data && { read: reads.data }) };
-    // a selector's words at the top: shown where they go
-    throw fail(
-      z.prettifyError(p.error),
-      inSelector(takes, call, p.error.issues) ?? argumentsHint(p.error.issues),
-    );
-  }
   // said, or a client looks for what the steps before it did
   if (!op || NOT_A_STEP.has(tool)) throw fail(`no step ${tool}`, CHANGE_HINT);
   const p = op.input.safeParse(args);
   if (!p.success)
     throw fail(
       z.prettifyError(p.error),
-      inSelector(op.input, x, p.error.issues) ?? argumentsHint(p.error.issues),
+      // a selector's words at the top: shown where they go
+      inSelector(op.input, shown, p.error.issues) ?? argumentsHint(p.error.issues),
     );
-  return { op, args: p.data, ownRead: 'read' in args };
+  const ownRead = 'read' in args;
+  const { read, ...touch } = p.data as { read?: ReadMode } & Record<string, unknown>;
+  let st: Step | undefined;
+  try {
+    st = op.step?.(touch);
+  } catch (e) {
+    if (!(e instanceof ToolError)) throw e;
+    throw fail(e.message, e.hint);
+  }
+  return st ? { tool, st, ...(ownRead && read && { read }) } : { tool, op, args: p.data, ownRead };
 }
 
 /** Several actions in one call, each a touch of the screen or another tool. */
@@ -98,12 +93,14 @@ export function stepsOp(
   return defineOp({
     name: 'run_steps',
     title: 'Run steps',
-    description: `A sequence in one call: at most ${MAX_STEPS}, each { tool: a tool's name, ...its arguments }, as { tool: tap, selector: { text: OK } }; any tool but run_steps and run_flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
+    description: `A sequence in one call: at most ${MAX_STEPS}, each { tool: a tool's name, ...its arguments }, as { tool: tap_screen, selector: { text: OK } }; any tool but run_steps and run_flow. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
     input: z
       .object({
         steps: z
           .array(
-            z.object({ tool: z.string({ error: "a tool's name, as tap or type_text" }) }).loose(),
+            z
+              .object({ tool: z.string({ error: "a tool's name, as tap_screen or type_text" }) })
+              .loose(),
           )
           .min(1)
           .max(MAX_STEPS),
@@ -128,7 +125,7 @@ export function stepsOp(
       let seen = s.fresh?.foreground;
       for (const [i, p] of plan.entries()) {
         const last = i === plan.length - 1;
-        const name = p.op ? p.op.name : p.st.action;
+        const name = p.tool;
         seen = front ?? s.fresh?.foreground ?? seen;
         const was = asStepBegan(s, seen);
         [since, began] = [began, Date.now()];

@@ -21,8 +21,8 @@ describe('changed', () => {
   it('is true when the screen differs from before the action, on either read', async () => {
     for (const read of ['diff', 'full']) {
       const { call } = await connect();
-      const home = await call('screen');
-      const r = await call('tap', { ref: refOf(home.text, 'Form'), read });
+      const home = await call('read_screen');
+      const r = await call('tap_screen', { ref: refOf(home.text, 'Form'), read });
       expect(r.structuredContent).toMatchObject({ changed: true, settled: true });
       expect(r.text).not.toContain('no change seen');
       // what was done is the text's first line, and said there only, as a warning is: none here
@@ -34,18 +34,18 @@ describe('changed', () => {
     const device = new FakeDevice();
     device.idleMs = 912;
     const { call } = await connect(device);
-    await call('screen');
-    const r = await call('tap', { x: 5, y: 2390 });
+    await call('read_screen');
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.text).toMatch(/no change seen in \d+ ms, and no system alert in 0\.9 s; if a slow/);
   });
 
   it('is false with its plain sentence when nothing changed', async () => {
     const { call } = await connect();
-    await call('screen');
-    const r = await call('tap', { x: 5, y: 2390 });
+    await call('read_screen');
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.structuredContent).toMatchObject({ changed: false });
     expect(r.text).toMatch(
-      /no change seen in \d+ ms; if a slow reaction is expected, use wait_for/,
+      /no change seen in \d+ ms; if a slow reaction is expected, use check_element with timeoutMs/,
     );
     // once: in the text the structured content holds, and not again beside it
     expect(r.structuredContent).not.toHaveProperty('warnings');
@@ -54,7 +54,7 @@ describe('changed', () => {
   it('says a change it lists came before the action, where the action changed nothing', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     // the app adds a row by itself after that answer, and the touch's own look sees it
     const shown = device.current.bind(device);
     device.current = () => {
@@ -71,23 +71,23 @@ describe('changed', () => {
       return t;
     };
     await vi.advanceTimersByTimeAsync(30_000);
-    const r = await call('tap', { x: 5, y: 2390 });
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.structuredContent).toMatchObject({ changed: false, screen: 'diff' });
     expect(r.text).toMatch(
-      /no change seen in \d+ ms after the action: the screen changed before it; if a slow reaction is expected, use wait_for\nscreen changed: \+1 -0 ~0/,
+      /no change seen in \d+ ms after the action: the screen changed before it; if a slow reaction is expected, use check_element with timeoutMs\nscreen changed: \+1 -0 ~0/,
     );
   });
 
   it('is unknown when the action asked for no read', async () => {
     const { call } = await connect();
-    await call('screen');
-    const r = await call('tap', { x: 5, y: 2390, read: 'none' });
+    await call('read_screen');
+    const r = await call('tap_screen', { x: 5, y: 2390, read: 'none' });
     expect(r.structuredContent).not.toHaveProperty('changed');
   });
 
   it('holds for an action settled on the host, too', async () => {
     const { call } = await connect();
-    await call('screen');
+    await call('read_screen');
     const r = await call('open_link', { url: 'https://example.test/' });
     expect(r.structuredContent).toMatchObject({ changed: false, settled: true });
     expect(r.text).toContain('no change seen');
@@ -152,9 +152,9 @@ describe('failed answers', () => {
   it('carry code and hint in structured output, through a validating client', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     device.fail = new DeviceError('TIMEOUT', 'tree.get did not answer');
-    const r = await call('screen');
+    const r = await call('read_screen');
     expect(r.isError).toBe(true);
     expect(r.structuredContent).toEqual({
       text: 'TIMEOUT: tree.get did not answer\nhint: the device did not answer; read the screen and try again',
@@ -170,7 +170,7 @@ describe('failed answers', () => {
       const device = new FakeDevice();
       device.openError = new DeviceError(code, 'xcodebuild ended', 'the last lines of its log');
       const { call } = await connect(device);
-      const r = await call('screen');
+      const r = await call('read_screen');
       expect(r.structuredContent).toEqual({
         text: `${code}: xcodebuild ended\nhint: the last lines of its log`,
         code,
@@ -243,7 +243,7 @@ describe('failed answers', () => {
   it('of the last of several steps still say which step it was and show the screen', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     const real = device.act.bind(device);
     let acts = 0;
     device.act = async (action, opts) => {
@@ -252,13 +252,13 @@ describe('failed answers', () => {
     };
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', x: 5, y: 2390 },
-        { tool: 'tap', x: 6, y: 2390 },
+        { tool: 'tap_screen', x: 5, y: 2390 },
+        { tool: 'tap_screen', x: 6, y: 2390 },
       ],
     });
     expect(r.isError).toBe(true);
     expect(r.text).toMatch(
-      /^TIMEOUT: 1\. tapped 5,2390\n2\. tap failed, the rest were not run: act did not answer \(the touch may/,
+      /^TIMEOUT: 1\. tapped 5,2390\n2\. tap_screen failed, the rest were not run: act did not answer \(the touch may/,
     );
     expect(r.text).toMatch(/\nhint: the device did not answer; read the screen and try again$/);
     // against the screen shown last, as an action's answer is
@@ -266,11 +266,11 @@ describe('failed answers', () => {
     // and whole where the call asked for the whole screen
     acts = 1;
     const whole = await call('run_steps', {
-      steps: [{ tool: 'tap', x: 6, y: 2390 }],
+      steps: [{ tool: 'tap_screen', x: 6, y: 2390 }],
       read: 'full',
     });
     expect(whole.text).toMatch(
-      /^TIMEOUT: 1\. tap failed[^\n]+\nforeground: dev\.app\n3 elements: [^\n]+\n[^]*"Form"/,
+      /^TIMEOUT: 1\. tap_screen failed[^\n]+\nforeground: dev\.app\n3 elements: [^\n]+\n[^]*"Form"/,
     );
     expect(r.structuredContent).toMatchObject({ code: 'TIMEOUT' });
   });
@@ -283,7 +283,7 @@ describe('failed answers', () => {
       'uiautomator (pid 7): stop it with `adb -s e shell kill 7`',
     );
     const { call } = await connect(device);
-    const r = await call('screen');
+    const r = await call('read_screen');
     expect(r.isError).toBe(true);
     expect(r.text).toContain('adb -s e shell kill 7');
     expect(r.structuredContent).toMatchObject({ code: 'AGENT_CONFLICT' });
@@ -294,7 +294,7 @@ describe('failed answers', () => {
     const { call } = await connect(new FakeDevice(), { apps: ['dev.only'] });
     const denied = await call('launch_app', { app: 'dev.else' });
     expect(denied.structuredContent).toMatchObject({ code: 'POLICY_DENIED' });
-    const words = await call('tap', {});
+    const words = await call('tap_screen', {});
     expect(words.structuredContent).toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 
@@ -306,7 +306,9 @@ describe('failed answers', () => {
     const code = async (name: string, args: Record<string, unknown> = {}) =>
       (await call(name, args)).structuredContent?.code;
     expect(await code('press_key', { key: 'home' })).toBe('POLICY_DENIED');
-    expect(await code('clipboard', { text: 'a s3cr3t b' })).toBe('POLICY_DENIED');
+    expect(await code('set_device', { name: 'clipboard', value: 'a s3cr3t b' })).toBe(
+      'POLICY_DENIED',
+    );
     expect(await code('read_logs')).toBe('UNSUPPORTED');
     expect(await code('read_logs', { source: 'crashes' })).toBe('UNSUPPORTED');
     expect(await code('run_flow', { action: 'stop' })).toBe('NOT_FOUND');
@@ -317,7 +319,7 @@ describe('an answer', () => {
   it('is known by its op’s name to what calls it', async () => {
     const { ctx } = await connect();
     const call = callerOf(ctx, onFakeTime);
-    const { data } = await call('find', { selector: { text: 'Form' } });
+    const { data } = await call('read_screen', { selector: { text: 'Form' } });
     expect(data.matches[0]?.label).toBe('Form');
     // @ts-expect-error: no such key in the schema of find
     expect(data.settled).toBeUndefined();
@@ -328,8 +330,8 @@ describe('an answer', () => {
   it('of screen holds the raw elements, with rects, parents and the refs a tap takes, only when asked', async () => {
     const { ctx } = await connect();
     const call = callerOf(ctx, onFakeTime);
-    expect((await call('screen')).data.nodes).toBeUndefined();
-    const { data } = await call('screen', { raw: true });
+    expect((await call('read_screen')).data.nodes).toBeUndefined();
+    const { data } = await call('read_screen', { raw: true });
     const nodes = data.nodes ?? [];
     const form = nodes.find((n) => n.label === 'Form' || n.text === 'Form');
     expect(form?.rect).toMatchObject({
@@ -337,7 +339,7 @@ describe('an answer', () => {
       width: expect.any(Number) as unknown,
     });
     expect(nodes.some((n) => n.parent !== undefined && nodes[n.parent] !== undefined)).toBe(true);
-    const listed = (await call('find', { selector: { text: 'Form' } })).data.matches[0]?.ref;
+    const listed = (await call('read_screen', { selector: { text: 'Form' } })).data.matches[0]?.ref;
     expect(nodes.some((n) => n.ref === listed)).toBe(true);
   });
 
@@ -352,8 +354,8 @@ describe('an answer', () => {
     };
     const { ctx } = await connect(device, { secrets: ['user@example.test'] });
     const call = callerOf(ctx, onFakeTime);
-    const raw = JSON.stringify((await call('screen', { raw: true })).data);
-    const found = JSON.stringify((await call('find', { selector: { text: 'Form' } })).data);
+    const raw = JSON.stringify((await call('read_screen', { raw: true })).data);
+    const found = JSON.stringify((await call('read_screen', { selector: { text: 'Form' } })).data);
     for (const answer of [raw, found]) {
       expect(answer).not.toContain('user@example.test');
       expect(answer).toContain('account-•••');
@@ -425,10 +427,10 @@ describe('cancellation and progress', () => {
   it('stops a long call when the client cancels, and the device hears no more of it', async () => {
     const device = new FakeDevice();
     const { client, call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     const abort = new AbortController();
     const waiting = client.callTool(
-      { name: 'wait_for', arguments: { selector: { text: 'never' }, timeoutMs: 15_000 } },
+      { name: 'check_element', arguments: { selector: { text: 'never' }, timeoutMs: 15_000 } },
       { signal: abort.signal },
     );
     setTimeout(() => abort.abort(), 50);

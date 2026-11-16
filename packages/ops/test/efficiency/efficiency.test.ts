@@ -50,9 +50,9 @@ it('keeps each task within its calls', { timeout: 120_000 }, async () => {
   const sizes = [
     `catalog: ${JSON.stringify(await client.listTools()).length}`,
     `instructions: ${String(client.getInstructions()?.length)}`,
-    `screen, a list of 49 elements: ${await answer(list(), 'screen')}`,
-    `tap by a stale ref, the list: ${await answer(list(), 'tap', { ref: '@gone' }, ['screen'])}`,
-    `steps refused, 70 elements: ${await answer(over(), 'run_steps', { steps: [{ tool: 'tap', selector: { text: 'Nowhere' } }] }, ['screen'])}`,
+    `screen, a list of 49 elements: ${await answer(list(), 'read_screen')}`,
+    `tap by a stale ref, the list: ${await answer(list(), 'tap_screen', { ref: '@gone' }, ['read_screen'])}`,
+    `steps refused, 70 elements: ${await answer(over(), 'run_steps', { steps: [{ tool: 'tap_screen', selector: { text: 'Nowhere' } }] }, ['read_screen'])}`,
     `logs, 200 lines: ${await answer(logs, 'read_logs')}`,
   ];
   const out = process.env.APPDYNO_EFFICIENCY_OUT;

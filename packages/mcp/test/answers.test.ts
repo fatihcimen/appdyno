@@ -52,10 +52,10 @@ it('gives steps and a tap their text once, through a client', async () => {
   );
   const call = async (name: string, args: Record<string, unknown> = {}) =>
     (await client.callTool({ name, arguments: args })) as Result;
-  const home = must((await call('screen')).content[0]?.text, 'the screen');
+  const home = must((await call('read_screen')).content[0]?.text, 'the screen');
   const form = must(/(@[a-z0-9-]+) \w+ "Form"/.exec(home)?.[1], 'the ref of Form');
   for (const r of [
-    await call('tap', { ref: form, read: 'none' }),
+    await call('tap_screen', { ref: form, read: 'none' }),
     await call('run_steps', { steps: [{ tool: 'press_key', key: 'back' }], read: 'none' }),
   ]) {
     expect(r.structuredContent?.text).toBe(r.content.map((c) => c.text).join('\n'));

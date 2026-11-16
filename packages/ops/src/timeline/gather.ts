@@ -135,7 +135,8 @@ function clockSources(g: Gathered, frames: FrameMarks | undefined): ClockSource[
   ];
 }
 
-export const NO_REQUESTS = 'no capture ran: `network start` before a timeline lists them here';
+export const NO_REQUESTS =
+  'no capture ran: `capture_network start` before a timeline lists them here';
 
 /** All of it on one clock, as the page takes it. */
 export function assemble(g: Gathered): Timeline {

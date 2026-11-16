@@ -57,7 +57,11 @@ describe('a turn of the screen', () => {
     fakeTimed(async () => {
       const d = new Turning();
       const { call } = await connect(d);
-      const r = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
+      const r = await call('set_device', {
+        name: 'orientation',
+        value: 'landscape_left',
+        read: 'full',
+      });
       expect(r.error).toBe(false);
       expect(r.text).toMatch(/"Ana sayfa" 1200,150/);
       expect(r.text).not.toContain('stayed');
@@ -69,7 +73,7 @@ describe('a turn of the screen', () => {
     fakeTimed(async () => {
       for (const read of ['full', 'none'] as const) {
         const { call } = await connect(new FakeDevice());
-        const r = await call('set_orientation', { orientation: 'landscape_left', read });
+        const r = await call('set_device', { name: 'orientation', value: 'landscape_left', read });
         const kept = 'the window stayed tall: the app may keep to one orientation';
         expect(r.text, read).toContain(kept);
         expect(r.data.warnings, read).toBeUndefined();
@@ -79,9 +83,9 @@ describe('a turn of the screen', () => {
 
   it('waits for no turn the window already has, and says nothing of one', async () => {
     const { call } = await connect(new FakeDevice());
-    await call('screen');
+    await call('read_screen');
     const at = Date.now();
-    const r = await call('set_orientation', { orientation: 'upside_down', read: 'none' });
+    const r = await call('set_device', { name: 'orientation', value: 'upside_down', read: 'none' });
     expect(Date.now() - at).toBeLessThan(2_000);
     expect(r.text).toBe('orientation: upside_down');
   });
@@ -114,20 +118,24 @@ describe('a turn of the screen', () => {
         d.calls.filter((c) => c.name === 'setOrientation').map((c) => c.args[0]);
       const d = new Tablet();
       const { call } = await connect(d);
-      await call('screen');
-      const across = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
+      await call('read_screen');
+      const across = await call('set_device', {
+        name: 'orientation',
+        value: 'landscape_left',
+        read: 'full',
+      });
       expect(across.text).toMatch(/"Ana sayfa" 1200,150/);
-      const up = await call('set_orientation', { orientation: 'portrait', read: 'full' });
+      const up = await call('set_device', { name: 'orientation', value: 'portrait', read: 'full' });
       expect(up.text).toMatch(/"Ana sayfa" 540,150/);
-      await call('set_orientation', { orientation: 'upside_down', read: 'none' });
-      await call('set_orientation', { orientation: 'landscape_right', read: 'none' });
+      await call('set_device', { name: 'orientation', value: 'upside_down', read: 'none' });
+      await call('set_device', { name: 'orientation', value: 'landscape_right', read: 'none' });
       for (const r of [across, up]) expect(r.text).not.toContain('stayed');
       expect(turns(d)).toEqual([0, 3, 1, 2]);
       // a phone, tall as it stands, takes the names in its own order
       const phone = new FakeDevice();
       const { call: onPhone } = await connect(phone);
       for (const orientation of ['portrait', 'landscape_left', 'upside_down', 'landscape_right'])
-        await onPhone('set_orientation', { orientation, read: 'none' });
+        await onPhone('set_device', { name: 'orientation', value: orientation, read: 'none' });
       expect(turns(phone)).toEqual([0, 1, 2, 3]);
     }),
   );
@@ -138,7 +146,11 @@ describe('a turn of the screen', () => {
       const d = new Turning();
       d.lag = 2_200;
       const { call } = await connect(d);
-      const r = await call('set_orientation', { orientation: 'landscape_left', read: 'full' });
+      const r = await call('set_device', {
+        name: 'orientation',
+        value: 'landscape_left',
+        read: 'full',
+      });
       expect(r.text).toMatch(/"Ana sayfa" 1200,150/);
       expect(r.text).not.toContain('stayed');
     }),
@@ -148,7 +160,7 @@ describe('a turn of the screen', () => {
     const d = new FakeDevice();
     d.fixture = tree(SCREENS.home ?? [], 'com.google.android.apps.nexuslauncher');
     const { call } = await connect(d);
-    const r = await call('set_orientation', { orientation: 'portrait', read: 'none' });
+    const r = await call('set_device', { name: 'orientation', value: 'portrait', read: 'none' });
     expect(r.text).toBe(
       'orientation: portrait, while com.google.android.apps.nexuslauncher is in front: dev.app may come back turned its own way',
     );
@@ -211,7 +223,7 @@ describe('a turn of the screen', () => {
       // a device that says nothing of its screen now: the picture is of the screen as it was built, tall
       const d = new Turning();
       const { call } = await connect(d);
-      await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
+      await call('set_device', { name: 'orientation', value: 'landscape_left', read: 'none' });
       const shot = await call('take_screenshot');
       expect(shot.text).toMatch(
         /^image 460x1024 px; the screen stands turned from it, 2400x1080 in tap units/,
@@ -228,8 +240,8 @@ describe('a turn of the screen', () => {
     fakeTimed(async () => {
       const d = new Turning();
       const { call } = await connect(d);
-      await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
-      expect((await call('screen')).text).toMatch(/"Ana sayfa" 1200,150/);
+      await call('set_device', { name: 'orientation', value: 'landscape_left', read: 'none' });
+      expect((await call('read_screen')).text).toMatch(/"Ana sayfa" 1200,150/);
     }),
   );
 });

@@ -74,7 +74,7 @@ describe('the library', () => {
       writeFileSync(claim, held);
 
       const alone = library.connect();
-      await expect(alone.tool('screen', {})).rejects.toMatchObject({
+      await expect(alone.tool('read_screen', {})).rejects.toMatchObject({
         code: 'DEVICE_CLAIMED',
         message: expect.stringContaining(`pid ${pid}`) as unknown,
         hint: expect.stringContaining('share: true in the options') as unknown,
@@ -82,14 +82,14 @@ describe('the library', () => {
       await alone.close();
 
       const beside = library.connect({ share: true });
-      expect((await beside.tool('screen', {})).data.elements).toBeGreaterThan(0);
+      expect((await beside.tool('read_screen', {})).data.elements).toBeGreaterThan(0);
       await beside.close();
       // the other's hold stands: sharing takes nothing from it
       expect(readFileSync(claim, 'utf8')).toBe(held);
 
       vi.stubEnv('APPDYNO_SHARE', '1');
       const byEnv = library.connect();
-      expect((await byEnv.tool('screen', {})).data.elements).toBeGreaterThan(0);
+      expect((await byEnv.tool('read_screen', {})).data.elements).toBeGreaterThan(0);
       await byEnv.close();
     } finally {
       vi.unstubAllEnvs();
@@ -105,14 +105,14 @@ describe('the library', () => {
     const stop = new AbortController();
     const started = Date.now();
     const waiting = d.tool(
-      'wait_for',
+      'check_element',
       { selector: { text: 'Never on this screen' }, timeoutMs: 15_000 },
       { signal: stop.signal },
     );
     setTimeout(() => stop.abort(), 100);
     await expect(waiting).rejects.toMatchObject({ code: 'CANCELLED' });
     expect(Date.now() - started).toBeLessThan(5_000);
-    expect((await d.tool('screen', {})).data.elements).toBeGreaterThan(0);
+    expect((await d.tool('read_screen', {})).data.elements).toBeGreaterThan(0);
     await d.close();
   });
 
@@ -122,12 +122,12 @@ describe('the library', () => {
     const act = device.act.bind(device);
     const acts = () => device.calls.filter((c) => c.name === 'act').length;
     const tap = (signal: AbortSignal) =>
-      d.tool('tap', { selector: { text: 'Form' } }, { signal }).then(
+      d.tool('tap_screen', { selector: { text: 'Form' } }, { signal }).then(
         () => undefined,
         (e: unknown) => e as library.Refusal,
       );
     try {
-      await d.tool('screen', {});
+      await d.tool('read_screen', {});
       const before = acts();
       // stopped before it began, and while it waited for the action before it: nothing left for the device
       expect(await tap(AbortSignal.abort())).toMatchObject({
@@ -171,7 +171,7 @@ describe('the library', () => {
     const d = library.connect({ app: 'dev.app' });
     const act = device.act.bind(device);
     try {
-      await d.tool('screen', {});
+      await d.tool('read_screen', {});
       // the touch is made at once, and the device answers later
       device.act = async (a, o) => {
         const done = await act(a, o);
@@ -181,7 +181,7 @@ describe('the library', () => {
       const stop = new AbortController();
       setTimeout(() => stop.abort(), 100);
       const stopped = await d
-        .tool('tap', { selector: { text: 'Form' } }, { signal: stop.signal })
+        .tool('tap_screen', { selector: { text: 'Form' } }, { signal: stop.signal })
         .then(
           () => undefined,
           (e: unknown) => e as library.Refusal,
@@ -229,21 +229,21 @@ describe('the library', () => {
     const d = library.connect();
     const reads = () => device.calls.filter((c) => c.name === 'tree').length;
     try {
-      await d.tool('screen', {});
+      await d.tool('read_screen', {});
       const start = reads();
-      expect((await d.tool('tap', { selector: { text: 'Form' } })).nodes).toBeUndefined();
+      expect((await d.tool('tap_screen', { selector: { text: 'Form' } })).nodes).toBeUndefined();
       const plain = reads() - start;
       device.screen = 'home';
-      await d.tool('screen', {});
+      await d.tool('read_screen', {});
       const before = reads();
-      const tapped = await d.tool('tap', { selector: { text: 'Form' } }, { raw: true });
+      const tapped = await d.tool('tap_screen', { selector: { text: 'Form' } }, { raw: true });
       // the reads a tap makes of itself, and no other for the tree
       expect(reads() - before).toBe(plain);
       const nodes = tapped.nodes ?? [];
       expect(nodes.length).toBeGreaterThan(Number(tapped.data.elements));
       expect(nodes.some((n) => n.ref && n.rect && n.parent !== undefined)).toBe(true);
       // what `screen` with `raw` gives of the same screen, cleaned the same way
-      expect(nodes).toEqual((await d.tool('screen', { raw: true })).data.nodes);
+      expect(nodes).toEqual((await d.tool('read_screen', { raw: true })).data.nodes);
 
       // an action that reads nothing leaves the tree to a read of its own
       const settled = reads();

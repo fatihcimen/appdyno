@@ -21,9 +21,9 @@ describe('logs', () => {
       'I app: gizli-kod-9911 typed',
     ];
     const { call } = await connect(device, { secrets: ['gizli-kod-9911'] });
-    await call('screen');
+    await call('read_screen');
     const before = Date.now();
-    await call('tap', { x: 5, y: 2390 });
+    await call('tap_screen', { x: 5, y: 2390 });
     const r = await call('read_logs', { level: 'warn' });
     expect(r.isError).toBeUndefined();
     expect(device.logAsked).toMatchObject({ app: 'dev.app', level: 'warn' });
@@ -55,8 +55,8 @@ describe('logs', () => {
     await call('send_push', { type: 'background', data: { orderId: '43' }, read: 'none' });
     await call('read_logs');
     expect(device.logAsked?.since).toBeLessThanOrEqual(reached);
-    await call('screen');
-    await call('tap', { x: 5, y: 2390 });
+    await call('read_screen');
+    await call('tap_screen', { x: 5, y: 2390 });
     await call('read_logs');
     expect(device.logAsked?.since).toBeLessThanOrEqual(reached);
   });
@@ -223,7 +223,7 @@ describe('crashes', () => {
   it('says so when an action killed the app, with the reason', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     const read = device.current.bind(device);
     let gone = true;
     device.current = () => {
@@ -234,7 +234,7 @@ describe('crashes', () => {
     device.running = false;
     device.permissionUp = true; // another window in front, the app's process gone
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)', file: '/tmp/report.txt' }];
-    const r = await call('tap', { x: 5, y: 2390 });
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.text).toContain('the app died: APP CRASH(EXCEPTION) (/tmp/report.txt)');
     // refused: the touch went out, and the app it was for is gone
     expect(r).toMatchObject({
@@ -243,16 +243,16 @@ describe('crashes', () => {
     });
     // it died once: an action after that, with it still gone, says nothing more of it
     device.crashReports = [];
-    expect((await call('tap', { x: 5, y: 2390 })).text).not.toContain('the app died');
+    expect((await call('tap_screen', { x: 5, y: 2390 })).text).not.toContain('the app died');
     // back in front, then gone with no report
     gone = false;
     device.running = true;
     device.permissionUp = false;
-    await call('screen');
+    await call('read_screen');
     gone = true;
     device.running = false;
     device.permissionUp = true;
-    const again = await call('tap', { x: 5, y: 2390 });
+    const again = await call('tap_screen', { x: 5, y: 2390 });
     expect(again.text).toContain(
       'the app died: its process is gone, and no crash report says why yet',
     );
@@ -265,7 +265,7 @@ describe('crashes', () => {
   it("says the app died where the device's own read after the touch failed as it died", async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     const act = device.act.bind(device);
     device.act = async (...a: Parameters<FakeDevice['act']>) => {
       await act(...a);
@@ -287,7 +287,7 @@ describe('crashes', () => {
       );
     };
     device.logLines = ['Shop: Fatal error: Index out of range'];
-    const r = await call('tap', { x: 5, y: 2390 });
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.text).toContain(
       'the app died: EXC_BREAKPOINT SIGTRAP (/tmp/Shop.ips)\nits last log lines:\nShop: Fatal error: Index out of range',
     );
@@ -335,7 +335,7 @@ describe('crashes', () => {
   it('says an app that died as it started died, with read none and with another app selected', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     // its report is written at once
     diesAsItStarts(device, () => (reported = Date.now()));
     let reported = Infinity;
@@ -366,7 +366,7 @@ describe('crashes', () => {
   it("asks for the app's own report, and says none will come where the system keeps no more", async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     diesAsItStarts(device);
     const unkept =
       'this Mac holds 25 crash reports of Shop, and macOS saves none past 25: a crash now leaves no report. Move Shop-*.ips out of ~/Library/Logs/DiagnosticReports, and the next one is kept';
@@ -391,11 +391,11 @@ describe('crashes', () => {
     device.pid = '100';
     device.appPid = device.fakePid;
     const { call } = await connect(device);
-    await call('screen');
-    expect((await call('tap', { x: 5, y: 2390 })).text).not.toContain('the app died');
+    await call('read_screen');
+    expect((await call('tap_screen', { x: 5, y: 2390 })).text).not.toContain('the app died');
     device.pid = '200';
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(NATIVE)' }];
-    const r = await call('tap', { x: 5, y: 2390 });
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r).toMatchObject({
       isError: true,
       structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
@@ -404,7 +404,7 @@ describe('crashes', () => {
     device.crashReports = [];
     await call('launch_app');
     device.pid = '300';
-    expect((await call('tap', { x: 5, y: 2390 })).text).not.toContain('the app died');
+    expect((await call('tap_screen', { x: 5, y: 2390 })).text).not.toContain('the app died');
   });
 
   it('tells a crash the first action after a launch that read nothing set off, where a read of the process beside it saw the restart', async () => {
@@ -420,7 +420,7 @@ describe('crashes', () => {
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)' }];
     const { call } = await connect(device);
     await call('launch_app', { read: 'none' });
-    const r = await call('tap', { x: 5, y: 2390 });
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r).toMatchObject({
       isError: true,
       structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
@@ -443,16 +443,16 @@ describe('crashes', () => {
     });
     device.act = naming;
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     // the first action asks once, before it, as nothing knew the process then
-    await call('tap', { x: 5, y: 2390 });
+    await call('tap_screen', { x: 5, y: 2390 });
     expect(asked).toBe(1);
-    await call('tap', { x: 5, y: 2390 });
+    await call('tap_screen', { x: 5, y: 2390 });
     expect(asked).toBe(1);
     // the system restarted it at once: the answer names another process, and the report says why
     device.pid = '200';
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(NATIVE)' }];
-    const died = await call('tap', { x: 5, y: 2390 });
+    const died = await call('tap_screen', { x: 5, y: 2390 });
     expect(died).toMatchObject({
       isError: true,
       structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
@@ -460,7 +460,7 @@ describe('crashes', () => {
     expect(asked).toBe(1);
     device.crashReports = [];
     // a batch's steps that read nothing take it from their answers too
-    const tap = { tool: 'tap', x: 5, y: 2390 };
+    const tap = { tool: 'tap_screen', x: 5, y: 2390 };
     device.calls = [];
     expect((await call('run_steps', { steps: [tap, tap, tap] })).isError).toBeFalsy();
     const named = device.calls
@@ -470,7 +470,7 @@ describe('crashes', () => {
     expect(asked).toBe(1);
     // an older agent, which names none: asked after the action, as before
     device.act = act;
-    await call('tap', { x: 5, y: 2390 });
+    await call('tap_screen', { x: 5, y: 2390 });
     expect(asked).toBe(2);
   });
 
@@ -479,7 +479,7 @@ describe('crashes', () => {
     device.pid = '100';
     device.appPid = device.fakePid;
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     // the tap crashes it: the system's "keeps stopping" stands over the app's last screen, its process gone
     const act = device.act.bind(device);
     device.act = (a, o) => {
@@ -487,7 +487,7 @@ describe('crashes', () => {
       return act(a, o);
     };
     device.crashReports = [{ at: 'now', reason: 'APP CRASH(EXCEPTION)' }];
-    const r = await call('tap', { x: 5, y: 2390 });
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r).toMatchObject({
       isError: true,
       structuredContent: { code: 'APP_NOT_RUNNING', dispatched: true },
@@ -497,9 +497,9 @@ describe('crashes', () => {
   it('says nothing of the sort when the app only went to the background', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);
-    await call('screen');
+    await call('read_screen');
     device.permissionUp = true;
-    const r = await call('tap', { x: 5, y: 2390 });
+    const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.text).not.toContain('the app died');
   });
 });

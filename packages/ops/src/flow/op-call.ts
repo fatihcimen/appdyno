@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { maskOf, stepLine, type FlowStep } from '@appdyno/flows';
+import { LONG_PRESS_MS } from '../step-schemas.js';
 import { ToolError } from '../tool.js';
+import { HIDE_KEYBOARD } from '../touch.js';
 import { defined } from './shared.js';
 
 /**
@@ -34,7 +36,7 @@ function visualCall(st: FlowStep, at: StepPlace): Record<string, unknown> {
   const file = join(dir, `${String(st.args.name)}.png`);
   if (!at.update && !existsSync(file))
     throw new ToolError(
-      `${st.file ?? at.file}:${st.line}: no baseline ${file}: appdyno test or flow run with --update-baselines saves it`,
+      `${st.file ?? at.file}:${st.line}: no baseline ${file}: appdyno test or run-flow run with --update-baselines saves it`,
       'NOT_FOUND',
       `or check_screen with check visual_baseline and dir ${dir}`,
     );
@@ -91,14 +93,12 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
         { action: 'stop', ...defined({ app: a.app, background: a.background }) },
       ];
     case 'tap':
-      return ['tap', target];
+      return ['tap_screen', target];
     case 'long_press':
-      return [
-        'gesture',
-        { kind: 'long_press', ...target, ...defined({ durationMs: a.durationMs }) },
-      ];
+      // a hold no step times is the press's own
+      return ['tap_screen', { ...target, holdMs: a.durationMs ?? LONG_PRESS_MS }];
     case 'double_tap':
-      return ['gesture', { kind: 'double_tap', ...target }];
+      return ['tap_screen', { ...target, count: 2 }];
     case 'type':
       return [
         'type_text',
@@ -108,7 +108,7 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
       return ['press_key', { key: a.key, ...defined({ count: a.count }) }];
     case 'swipe':
       return [
-        'swipe',
+        'swipe_screen',
         {
           direction: a.direction,
           ...target,
@@ -117,17 +117,21 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
       ];
     case 'scroll_to':
       return [
-        'scroll_to',
-        { selector: st.selector, ...defined({ direction: a.direction, maxSwipes: a.maxSwipes }) },
+        'swipe_screen',
+        { until: st.selector, ...defined({ direction: a.direction, maxSwipes: a.maxSwipes }) },
       ];
     case 'wait_for':
       return [
-        'wait_for',
-        { ...target, ...defined({ gone: a.gone }), timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS },
+        'check_element',
+        {
+          ...target,
+          ...(a.gone === true && { check: 'absent' }),
+          timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS,
+        },
       ];
     case 'assert':
       return [
-        'assert',
+        'check_element',
         {
           ...target,
           ...defined({ check: a.check, equals: a.equals, expect: a.expect }),
@@ -137,11 +141,11 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
     case 'open_link':
       return ['open_link', defined({ url: a.url, settings: a.settings })];
     case 'set_location':
-      return ['set_location', { lat: a.lat, lon: a.lon }];
+      return ['set_device', { name: 'location', value: `${String(a.lat)},${String(a.lon)}` }];
     case 'alert':
       return ['answer_alert', { answer: a.answer }];
     case 'hide_keyboard':
-      return ['keyboard', { action: 'dismiss' }];
+      return ['press_key', { key: HIDE_KEYBOARD }];
     case 'screenshot':
       // a run again, a retry or a journey's next iteration takes the picture anew
       return [
@@ -151,10 +155,10 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
     case 'visual':
       return ['check_screen', visualCall(st, at)];
     case 'setting':
-      return [
-        'device_setting',
-        defined({ name: a.name, value: a.value, app: a.app, title: a.title }),
-      ];
+      // photos into the gallery are a setting of a flow, and a transfer of the tools
+      return a.name === 'media'
+        ? ['transfer_files', { action: 'media', path: a.value, ...defined({ app: a.app }) }]
+        : ['set_device', defined({ name: a.name, value: a.value, app: a.app, title: a.title })];
     case 'mock': {
       // added to the rules there, and taken out when the run of its file ends
       if (a.request !== undefined)

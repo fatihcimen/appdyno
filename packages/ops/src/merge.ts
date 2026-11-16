@@ -48,6 +48,7 @@ export function mergeOp<
   input: S;
   annotations: ToolAnnotations;
   parts: P;
+  step?: Op['step'];
   pick: (args: z.infer<S>) => Picked<P[number]>;
 }): Omit<Op, 'name' | 'output'> & {
   name: N;

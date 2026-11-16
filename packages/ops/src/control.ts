@@ -321,10 +321,8 @@ function simulatorOp(ctx: ServerContext) {
 }
 
 function clipboardOp(ctx: ServerContext, { clean }: Answers) {
-  return defineOp({
+  return definePart({
     name: 'clipboard',
-    title: 'Clipboard',
-    description: 'Read the clipboard; with text, put it there.',
     input: z.object({ text: z.string().min(1).max(2_000).optional() }).strict(),
     output: DoneOut,
     annotations: ACT,

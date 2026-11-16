@@ -59,9 +59,9 @@ describe('system alerts', () => {
     // as an API 34 emulator reads it: the system's window, the app's own gone from behind it
     d.add = dialog('android', 3);
     const { call } = await connect(d);
-    const r = await call('screen');
+    const r = await call('read_screen');
     expect(r.text).toContain(
-      '\nthe system asks: Pixel keeps stopping (Close app, App info): answer it with alert',
+      '\nthe system asks: Pixel keeps stopping (Close app, App info): answer it with answer_alert',
     );
     // said once: the structured content holds the text, and no warning the text says
     expect(r.data.warnings).toBeUndefined();
@@ -72,11 +72,11 @@ describe('system alerts', () => {
       views: () => Promise.resolve({ views: [], truncated: false }),
     });
     const { call } = await connect(d);
-    expect((await call('screen', { views: true })).text).toBe('no view is drawn');
+    expect((await call('read_screen', { views: true })).text).toBe('no view is drawn');
     d.add = dialog('android', 3);
-    const r = await call('screen', { views: true });
+    const r = await call('read_screen', { views: true });
     const said =
-      "a system alert is in front of these views, which are the app's: the system asks: Pixel keeps stopping (Close app, App info): answer it with alert";
+      "a system alert is in front of these views, which are the app's: the system asks: Pixel keeps stopping (Close app, App info): answer it with answer_alert";
     expect(r.text).toBe(`no view is drawn\n${said}`);
     expect(r.data.warnings).toBeUndefined();
   });
@@ -87,7 +87,7 @@ describe('system alerts', () => {
     expect((await call('open_link', { url: 'app://screen' })).done).toBe('opened app://screen');
     d.add = dialog('android', 3);
     expect((await call('open_link', { url: 'app://screen' })).done).toBe(
-      'sent app://screen, and the system asks: Pixel keeps stopping (Close app, App info): answer it with alert',
+      'sent app://screen, and the system asks: Pixel keeps stopping (Close app, App info): answer it with answer_alert',
     );
     expect((await call('open_link', { url: 'app://screen', read: 'none' })).done).toBe(
       'opened app://screen',

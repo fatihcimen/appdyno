@@ -123,10 +123,8 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
         );
       },
     }),
-    defineOp({
+    definePart({
       name: 'set_orientation',
-      title: 'Orientation',
-      description: 'Rotate to portrait or landscape. It stays: go back to portrait after.',
       input: z.object({ orientation: z.enum(ROTATIONS), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -163,10 +161,8 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
         );
       },
     }),
-    defineOp({
+    definePart({
       name: 'set_location',
-      title: 'Set location',
-      description: 'Set a fake GPS location; clear: true ends it.',
       input: z
         .object({
           lat: z.number().min(-90).max(90).optional(),

@@ -32,12 +32,12 @@ describe('flows', () => {
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('type_text', { text: SECRET, selector: { id: 'pass' } });
-        await call('assert', {
+        await call('check_element', {
           selector: { id: 'greeting' },
           check: 'text',
           equals: `Merhaba ${SECRET}`,
         });
-        await call('tap', { selector: { id: 'greeting' } });
+        await call('tap_screen', { selector: { id: 'greeting' } });
       });
       expect(device.typed).toEqual([SECRET]);
       expect(text).toBe(`app dev.app
@@ -70,7 +70,7 @@ tap id=greeting
     it('text matching APPDYNO_SECRETS becomes a name in any field', async () => {
       const call = callerOf(context(['kod-9911']));
       const { text } = await recorded(call, async () => {
-        await call('tap', { selector: { text: 'Form' } });
+        await call('tap_screen', { selector: { text: 'Form' } });
         await call('type_text', { text: 'kod-9911', selector: { id: 'name' } });
       });
       expect(text).not.toContain('kod-9911');
@@ -83,7 +83,7 @@ tap id=greeting
     it('names a recorded value at save, which a run takes; a value no step holds is refused', async () => {
       const call = callerOf(context());
       await call('run_flow', { action: 'record' });
-      await call('tap', { selector: { text: 'Form' } });
+      await call('tap_screen', { selector: { text: 'Form' } });
       await call('type_text', { text: 'Grace', selector: { id: 'name' } });
       await call('run_flow', { action: 'stop' });
       const file = join(dir, 'state', 'named.flow');
@@ -115,7 +115,7 @@ type "\${NAME}" id=name
         'no recording',
       );
       await call('run_flow', { action: 'record', params: ['NAME=Ada'] });
-      await call('tap', { selector: { text: 'Form' } });
+      await call('tap_screen', { selector: { text: 'Form' } });
       await call('type_text', { text: 'Ada', selector: { id: 'name' } });
       const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text).toContain('param NAME\n');

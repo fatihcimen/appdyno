@@ -16,7 +16,14 @@ import { STALE_HINT, ToolError } from './tool.js';
 import { backFromAlert } from './noticed.js';
 import { byPerson, type Policy } from './policy.js';
 import { LEAVES_APP, NEEDS_NO_LOOK, NOTHING_TO_READ, SHORTCUT_LEAVES } from './keys.js';
-import { LOOKS_ONLY, Step, keyPress, showSelector, viewNamed } from './step-schemas.js';
+import {
+  LONG_PRESS_MS,
+  LOOKS_ONLY,
+  Step,
+  keyPress,
+  showSelector,
+  viewNamed,
+} from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
 import { checksFor, selectorOf } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
@@ -220,7 +227,7 @@ async function call(
       const t = await target(s, st, patient);
       const back = await closes(s, t.point);
       return {
-        r: await s.device.longPress(t.point, st.durationMs ?? 800, aimedOn(opts, t)),
+        r: await s.device.longPress(t.point, st.durationMs ?? LONG_PRESS_MS, aimedOn(opts, t)),
         done: `long-pressed ${t.name}`,
         back,
       };
@@ -278,7 +285,7 @@ async function call(
         const why = kit.missing(s, w.screen, st);
         throw new ToolError(
           `${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms${why.said}`,
-          'TIMEOUT',
+          'CHECK_FAILED',
           why.hint,
         );
       }
@@ -296,7 +303,8 @@ async function call(
 /** What a refusal says to do in place of a read of the screen, where it holds the screen itself. */
 const WITH_SCREEN: Record<string, string> = {
   [STALE_HINT]: 'the screen now is above: act on what it shows',
-  [NO_MATCH_HINT]: 'the screen now is above; use scroll_to if it may be further along a list',
+  [NO_MATCH_HINT]:
+    'the screen now is above; use swipe_screen with until if it may be further along a list',
 };
 
 /** A refusal's hint where the refusal holds the screen itself: it sends nobody to read it. */

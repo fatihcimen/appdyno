@@ -74,9 +74,9 @@ const MVWordRow MVWordTable[] = {
     {"The device is not connected", "Cihaz bağlı değil"},
     {"Connect it with a data cable: one that only charges shows nothing here. The picture comes back by itself.", "Veri aktaran bir kabloyla bağlayın: yalnızca şarj eden kablo burada hiçbir şey göstermez. Görüntü kendiliğinden geri gelir."},
     {"The simulator is off", "Simülatör kapalı"},
-    {"Boot it: appdyno simulator boot, or the simulator tool.", "Başlatın: appdyno simulator boot ya da simulator aracı."},
+    {"Boot it: appdyno manage-simulator boot, or the manage_simulator tool.", "Başlatın: appdyno manage-simulator boot ya da manage_simulator aracı."},
     {"This emulator has no gRPC port", "Bu emülatörün gRPC bağlantı noktası yok"},
-    {"Boot it with the simulator tool, for a picture with no lag.", "Gecikmesiz görüntü için simulator aracıyla başlatın."},
+    {"Boot it with the manage_simulator tool, for a picture with no lag.", "Gecikmesiz görüntü için manage_simulator aracıyla başlatın."},
     {"No window server in this session", "Bu oturumda pencere sunucusu yok"},
     {"Run from a logged-in desktop, or use --headless.", "Oturum açılmış bir masaüstünden çalıştırın ya da --headless kullanın."},
     // the sidebar and the room

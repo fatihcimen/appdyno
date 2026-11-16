@@ -65,7 +65,7 @@ async function byWindow(serial: string, ms: number, strip: boolean) {
     }
     await pause(POLL_MS);
   }
-  throw cannot('its window did not answer', 'look at `mirror status`');
+  throw cannot('its window did not answer', 'look at `show_mirror status`');
 }
 
 /** With no window, a stream of its own for this watch alone, on a viewer nothing shows. */

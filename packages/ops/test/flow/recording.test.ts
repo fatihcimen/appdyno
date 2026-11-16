@@ -33,8 +33,8 @@ describe('flows', () => {
       const call = callerOf(context());
       device.screen = 'settings';
       const { text } = await recorded(call, async () => {
-        const { data } = await call('find', { selector: { text: 'Wi-Fi' } });
-        await call('tap', { ref: must(data.matches[0], 'a match').ref });
+        const { data } = await call('read_screen', { selector: { text: 'Wi-Fi' } });
+        await call('tap_screen', { ref: must(data.matches[0], 'a match').ref });
       });
       expect(text).toContain('text="Wi-Fi"');
       expect(text).not.toMatch(/@\w/);
@@ -61,8 +61,12 @@ describe('flows', () => {
       const call = callerOf(context());
       device.screen = 'doubled';
       const { text } = await recorded(call, async () => {
-        const { data } = await call('find', { selector: { role: 'button', text: 'Camera' } });
-        await call('tap', { ref: must((data.matches as { ref: string }[])[0], 'a match').ref });
+        const { data } = await call('read_screen', {
+          selector: { role: 'button', text: 'Camera' },
+        });
+        await call('tap_screen', {
+          ref: must((data.matches as { ref: string }[])[0], 'a match').ref,
+        });
       });
       expect(text).toContain('tap role=button text="Camera"');
     });
@@ -71,13 +75,13 @@ describe('flows', () => {
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('launch_app');
-        const home = await call('screen');
-        await call('tap', { ref: refOf(home.text, 'Form') });
+        const home = await call('read_screen');
+        await call('tap_screen', { ref: refOf(home.text, 'Form') });
         await call('type_text', { text: 'Ayşe', selector: { id: 'name' } });
         await call('press_key', { key: 'back' });
         await call('open_link', { url: 'app://x' });
-        await call('set_location', { lat: 41, lon: 29 });
-        await call('swipe', { direction: 'up' });
+        await call('set_device', { name: 'location', value: '41,29' });
+        await call('swipe_screen', { direction: 'up' });
       });
       expect(text).toBe(`app dev.app
 
@@ -94,24 +98,24 @@ swipe up
 
     it('turns a tap at a point into the selector of what is there', async () => {
       const call = callerOf(context());
-      const { text } = await recorded(call, () => call('tap', { x: 500, y: 350 }));
+      const { text } = await recorded(call, () => call('tap_screen', { x: 500, y: 350 }));
       expect(text).toContain('tap role=button text="Form"\n');
     });
 
     it('records a tap on a ref only screen raw gives as what is at its middle', async () => {
       const call = callerOf(context());
-      const { data } = await call('screen', { raw: true });
+      const { data } = await call('read_screen', { raw: true });
       const root = must(
         data.nodes?.find((n) => n.type === 'android.widget.FrameLayout')?.ref,
         'the root ref',
       );
-      const { text } = await recorded(call, () => call('tap', { ref: root }));
+      const { text } = await recorded(call, () => call('tap_screen', { ref: root }));
       expect(text).toContain('tap x=540 y=1200 screen=1080x2400 !coordinates\n');
     });
 
     it('flags coordinates when nothing is there, with the screen they hold for', async () => {
       const call = callerOf(context());
-      const { text } = await recorded(call, () => call('tap', { x: 500, y: 2000 }));
+      const { text } = await recorded(call, () => call('tap_screen', { x: 500, y: 2000 }));
       expect(text).toContain('tap x=500 y=2000 screen=1080x2400 !coordinates\n');
     });
 
@@ -119,12 +123,12 @@ swipe up
       device.screen = 'login';
       const call = callerOf(context());
       await call('run_flow', { action: 'record' });
-      const s = await call('screen');
+      const s = await call('read_screen');
       const second = must(
         [...s.text.matchAll(/(@[a-z0-9-]+) button "Add"/g)][1]?.[1],
         'the second Add',
       );
-      await call('tap', { ref: second });
+      await call('tap_screen', { ref: second });
       const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text).toContain('tap role=button text="Add" index=1 !ambiguous');
       expect(stop.text).toContain('look at step 1: ambiguous');
@@ -134,14 +138,16 @@ swipe up
     it('keeps out of the file what is not an action, or did not happen', async () => {
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
-        await call('screen');
-        await call('find', { selector: { text: 'Form' } });
+        await call('read_screen');
+        await call('read_screen', { selector: { text: 'Form' } });
         await call('take_screenshot');
         await call('list_devices', { selected: true });
-        await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
-        await refusal(call('assert', { selector: { text: 'Nothing like it' } }));
-        await refusal(call('wait_for', { selector: { text: 'Nothing like it' }, timeoutMs: 300 }));
-        await call('assert', { selector: { text: 'Ana sayfa' } });
+        await refusal(call('tap_screen', { selector: { text: 'Nothing like it' } }));
+        await refusal(call('check_element', { selector: { text: 'Nothing like it' } }));
+        await refusal(
+          call('check_element', { selector: { text: 'Nothing like it' }, timeoutMs: 300 }),
+        );
+        await call('check_element', { selector: { text: 'Ana sayfa' } });
       });
       expect(text).toBe('app dev.app\n\nassert text="Ana sayfa"\n');
     });
@@ -151,11 +157,16 @@ swipe up
       const { text } = await recorded(call, () =>
         call('run_steps', {
           steps: [
-            { tool: 'tap', selector: { text: 'Form' } },
-            { tool: 'wait_for', selector: { id: 'name' } },
+            { tool: 'tap_screen', selector: { text: 'Form' } },
+            { tool: 'check_element', selector: { id: 'name' }, timeoutMs: 5000 },
             { tool: 'type_text', text: 'x', selector: { id: 'name' } },
-            { tool: 'tap', selector: { text: 'Gönder' } },
-            { tool: 'assert', selector: { id: 'result' }, check: 'text', equals: 'Gönderildi' },
+            { tool: 'tap_screen', selector: { text: 'Gönder' } },
+            {
+              tool: 'check_element',
+              selector: { id: 'result' },
+              check: 'text',
+              equals: 'Gönderildi',
+            },
           ],
         }),
       );
@@ -175,8 +186,8 @@ assert id=result check=text equals="Gönderildi"
       await refusal(
         call('run_steps', {
           steps: [
-            { tool: 'tap', selector: { text: 'Form' } },
-            { tool: 'tap', selector: { text: 'Nothing like it' } },
+            { tool: 'tap_screen', selector: { text: 'Form' } },
+            { tool: 'tap_screen', selector: { text: 'Nothing like it' } },
           ],
         }),
       );
@@ -187,8 +198,8 @@ assert id=result check=text equals="Gönderildi"
 
     it('marks an action with no step, so that a replay cannot pass without it', async () => {
       const call = callerOf(context());
-      const { text } = await recorded(call, () => call('gesture', { kind: 'pinch', scale: 2 }));
-      expect(text).toContain('unrecorded "gesture pinch"');
+      const { text } = await recorded(call, () => call('swipe_screen', { scale: 2 }));
+      expect(text).toContain('unrecorded "swipe_screen scale"');
     });
 
     describe('an action with no step', () => {
@@ -200,34 +211,34 @@ assert id=result check=text equals="Gönderildi"
       it('says so in its own answer, in a line, and again at the end of the recording', async () => {
         const call = callerOf(context());
         await call('run_flow', { action: 'record' });
-        const pinch = await call('gesture', { kind: 'pinch', scale: 2, read: 'full' });
+        const pinch = await call('swipe_screen', { scale: 2, read: 'full' });
         expect(pinch.text.split('\n')[0]).toBe(pinch.data.done);
-        expect(second(pinch)).toBe(NOT('gesture pinch'));
+        expect(second(pinch)).toBe(NOT('swipe_screen scale'));
         expect(pinch.text.split('\n').length).toBeGreaterThan(2);
-        const turned = await call('set_orientation', { orientation: 'landscape_left' });
-        expect(second(turned)).toBe(NOT('set_orientation landscape_left'));
+        const turned = await call('set_device', { name: 'orientation', value: 'landscape_left' });
+        expect(second(turned)).toBe(NOT('set_device orientation landscape_left'));
         const stop = await call('run_flow', { action: 'stop' });
-        expect(stop.text).toContain('step 1: not recorded: gesture pinch');
-        expect(stop.text).toContain('step 2: not recorded: set_orientation landscape_left');
+        expect(stop.text).toContain('step 1: not recorded: swipe_screen scale');
+        expect(stop.text).toContain('step 2: not recorded: set_device orientation landscape_left');
       });
 
       it('names the step that does the same, where the flow has one', async () => {
         const call = callerOf(context());
         await call('run_flow', { action: 'record' });
-        const drag = await call('gesture', { kind: 'drag', x: 10, y: 20, to: { x: 500, y: 600 } });
+        const drag = await call('swipe_screen', { x: 10, y: 20, to: { x: 500, y: 600 } });
         expect(second(drag)).toBe(
-          `${NOT('gesture drag')}: a straight drag made by \`swipe\` is recorded, as a \`swipe\` step`,
+          `${NOT('swipe_screen to')}: a straight drag made by \`swipe_screen\` with direction is recorded, as a \`swipe\` step`,
         );
-        const copy = await call('clipboard', { text: 'Merhaba' });
+        const copy = await call('set_device', { name: 'clipboard', value: 'Merhaba' });
         expect(second(copy)).toBe(
-          `${NOT('clipboard')}: the same text typed by \`type_text\` is recorded, as a \`type\` step`,
+          `${NOT('set_device clipboard')}: the same text typed by \`type_text\` is recorded, as a \`type\` step`,
         );
         // each step named is one a flow's file takes, and each action one that leaves it
         const named = [second(drag), second(copy)].map((line) =>
           must(/as a `(\w+)` step$/.exec(line)?.[1], 'a step'),
         );
         expect(named).toEqual(['swipe', 'type']);
-        await call('swipe', { direction: 'up' });
+        await call('swipe_screen', { direction: 'up' });
         await call('type_text', { text: 'Merhaba' });
         await call('run_flow', { action: 'stop' });
         const file = join(dir, 'state', 'named.flow');
@@ -238,14 +249,14 @@ assert id=result check=text equals="Gönderildi"
 
       it('adds nothing to an action a recording keeps, nor to one made with no recording', async () => {
         const call = callerOf(context());
-        expect((await call('gesture', { kind: 'pinch', scale: 2 })).text).not.toContain(
-          'not recorded',
-        );
+        expect((await call('swipe_screen', { scale: 2 })).text).not.toContain('not recorded');
         await call('run_flow', { action: 'record' });
-        expect((await call('tap', { selector: { text: 'Form' } })).text).not.toContain(
+        expect((await call('tap_screen', { selector: { text: 'Form' } })).text).not.toContain(
           'not recorded',
         );
-        expect((await call('clipboard', {})).text).not.toContain('not recorded');
+        expect((await call('set_device', { name: 'clipboard' })).text).not.toContain(
+          'not recorded',
+        );
       });
     });
 
@@ -266,9 +277,9 @@ assert id=result check=text equals="Gönderildi"
       const { text } = await recorded(call, async () => {
         await call('answer_alert', { answer: 'allow' });
         await refusal(call('answer_alert', { answer: 'allow' }));
-        await call('keyboard', { action: 'status' });
-        await call('keyboard', { action: 'dismiss' });
-        await call('keyboard', { action: 'dismiss' });
+        await call('read_screen');
+        await call('press_key', { key: 'hide_keyboard' });
+        await call('press_key', { key: 'hide_keyboard' });
       });
       expect(text.match(/^alert /gm)).toHaveLength(1);
       expect(text).toContain('alert "allow"');
@@ -311,7 +322,7 @@ assert id=result check=text equals="Gönderildi"
         'unrecorded "capture_network stop"',
       ]);
       expect(clicked).toContain(
-        'not recorded: inspect_app web_click. A flow has no step for it, so a replay stops there: a `tap` at the x, y that `screen` gives the element is recorded, as a `tap` step',
+        'not recorded: inspect_app web_click. A flow has no step for it, so a replay stops there: a `tap_screen` at the x, y that `read_screen` gives the element is recorded, as a `tap` step',
       );
       expect(text).not.toContain('secretWork');
     });
@@ -359,7 +370,7 @@ assert id=result check=text equals="Gönderildi"
           action: 'write',
           dir: join(dir, 'shots', 'report'),
         });
-        await call('screen');
+        await call('read_screen');
         await call('perf_snapshot');
         await call('manage_app', { action: 'state' }).catch(() => undefined);
         await call('launch_app');
@@ -405,8 +416,8 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       const file = join(dir, 'state', 'tapped.flow');
       await call('run_flow', { action: 'record' });
-      const home = await call('screen');
-      await call('tap', { ref: refOf(home.text, 'Form') });
+      const home = await call('read_screen');
+      await call('tap_screen', { ref: refOf(home.text, 'Form') });
       // a path refused before the stop: the recording goes on
       expect(
         (await refusal(call('run_flow', { action: 'stop', file: join(dir, 'state', 'a.txt') })))
@@ -420,7 +431,7 @@ assert id=result check=text equals="Gönderildi"
       await call('press_key', { key: 'back' });
       const there = await refusal(call('run_flow', { action: 'stop', file }));
       expect(there.message).toMatch(
-        /exists: overwrite true replaces it; the recording stopped, and its 1 steps are kept: flow save writes them$/,
+        /exists: overwrite true replaces it; the recording stopped, and its 1 steps are kept: run_flow save writes them$/,
       );
       expect(
         (await call('run_flow', { action: 'save', file: join(dir, 'state', 'again.flow') })).text,
@@ -510,10 +521,10 @@ assert id=result check=text equals="Gönderildi"
 
     it('holds across the processes of a command line, on the device it began on', async () => {
       await callerOf(context())('run_flow', { action: 'record' });
-      await callerOf(context())('tap', { selector: { text: 'Form' } });
+      await callerOf(context())('tap_screen', { selector: { text: 'Form' } });
       device = new FakeDevice('emulator-9999');
       device.screen = 'form';
-      await callerOf(context())('assert', { selector: { text: 'Bilgiler' } });
+      await callerOf(context())('check_element', { selector: { text: 'Bilgiler' } });
       device = new FakeDevice();
       const stop = await callerOf(context())('run_flow', { action: 'stop' });
       expect(stop.data.steps).toBe(1);
@@ -571,12 +582,16 @@ assert id=result check=text equals="Gönderildi"
         replace: true,
         submit: true,
       });
-      await call('wait_for', { selector: { id: 'greeting' }, timeoutMs: 800 });
-      await call('assert', { selector: { text: 'Merhaba' }, check: 'absent', expect: false });
-      await call('scroll_to', { selector: { id: 'greeting' }, direction: 'down', maxSwipes: 3 });
-      await call('swipe', { direction: 'left', distance: 200 });
-      await call('gesture', { kind: 'long_press', selector: { id: 'greeting' }, durationMs: 300 });
-      await call('gesture', { kind: 'double_tap', selector: { id: 'greeting' } });
+      await call('check_element', { selector: { id: 'greeting' }, timeoutMs: 800 });
+      await call('check_element', {
+        selector: { text: 'Merhaba' },
+        check: 'absent',
+        expect: false,
+      });
+      await call('swipe_screen', { until: { id: 'greeting' }, direction: 'down', maxSwipes: 3 });
+      await call('swipe_screen', { direction: 'left', distance: 200 });
+      await call('tap_screen', { selector: { id: 'greeting' }, holdMs: 300 });
+      await call('tap_screen', { selector: { id: 'greeting' }, count: 2 });
       await call('manage_app', { action: 'stop' });
     });
     const f = parseFlow(text);

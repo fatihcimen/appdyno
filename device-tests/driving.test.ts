@@ -73,11 +73,11 @@ function shared(
 
   it('taps by a selector, folding case and accents, and refuses several or none', async () => {
     await open('list');
-    const many = await call('tap', { selector: { text: 'Product' } });
+    const many = await call('tap_screen', { selector: { text: 'Product' } });
     expect(many.error).toBe(true);
     expect(many.data.code).toBe('AMBIGUOUS');
     expect(many.text).toMatch(/@\w+/);
-    const none = await call('tap', { selector: { text: 'Producz 1' } });
+    const none = await call('tap_screen', { selector: { text: 'Producz 1' } });
     expect(none.data.code).toBe('NOT_FOUND');
     expect(none.text).toContain('nearest');
   });
@@ -86,10 +86,10 @@ function shared(
     await open('home');
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', selector: { text: 'Form' } },
-        { tool: 'wait_for', selector: names.field, timeoutMs: 8_000 },
-        { tool: 'assert', selector: names.field, check: 'exists' },
-        { tool: 'tap', selector: names.field },
+        { tool: 'tap_screen', selector: { text: 'Form' } },
+        { tool: 'check_element', selector: names.field, timeoutMs: 8_000 },
+        { tool: 'check_element', selector: names.field, check: 'exists' },
+        { tool: 'tap_screen', selector: names.field },
         { tool: 'type_text', text: 'İstanbul' },
       ],
     });
@@ -97,8 +97,8 @@ function shared(
     expect(r.text).toContain('5. typed');
     const fail = await call('run_steps', {
       steps: [
-        { tool: 'assert', selector: names.field, check: 'enabled' },
-        { tool: 'assert', selector: { text: 'Nothing here' } },
+        { tool: 'check_element', selector: names.field, check: 'enabled' },
+        { tool: 'check_element', selector: { text: 'Nothing here' } },
       ],
     });
     expect(fail.error).toBe(true);
@@ -116,7 +116,7 @@ function shared(
     const quiet = await device.waitChange(first.sig, 800);
     const again = quiet?.tree ? await device.waitChange(quiet.sig, 800) : quiet;
     expect(again?.tree).toBeUndefined();
-    ok(await call('tap', { selector: { text: 'Form' }, read: 'none' }));
+    ok(await call('tap_screen', { selector: { text: 'Form' }, read: 'none' }));
     assert(again);
     const moved = await device.waitChange(again.sig, 8_000);
     expect(moved?.tree).toBeDefined();
@@ -125,69 +125,72 @@ function shared(
 
   it('waits on the device, whichever way the screen comes', async () => {
     await open('delayed');
-    if (names.delayed.start) ok(await call('tap', { selector: { text: names.delayed.start } }));
-    const r = await call('wait_for', { selector: { text: names.delayed.shows }, timeoutMs: 8_000 });
+    if (names.delayed.start)
+      ok(await call('tap_screen', { selector: { text: names.delayed.start } }));
+    const r = await call('check_element', {
+      selector: { text: names.delayed.shows },
+      timeoutMs: 8_000,
+    });
     expect(r.data.met).toBe(true);
-    const absent = await call('wait_for', { selector: { text: 'Never' }, timeoutMs: 600 });
+    const absent = await call('check_element', { selector: { text: 'Never' }, timeoutMs: 600 });
     expect(absent.error).toBe(true);
     expect(absent.data.code).toBe('TIMEOUT');
   });
 
   it('scrolls to a row, and stops at the list’s end', async () => {
     await open('list');
-    const found = ok(await call('scroll_to', { selector: { text: names.row(25) }, maxSwipes: 15 }));
+    const found = ok(await call('swipe_screen', { until: { text: names.row(25) }, maxSwipes: 15 }));
     expect(found.text).toContain(names.row(25));
-    const end = await call('scroll_to', { selector: { text: 'No such row' }, maxSwipes: 40 });
+    const end = await call('swipe_screen', { until: { text: 'No such row' }, maxSwipes: 40 });
     expect(end.error).toBe(true);
     expect(end.text).toContain('the list did not move');
   });
 
   it('reports attributes and checks them', async () => {
     await open('form');
-    ok(await call('tap', { selector: names.field }));
+    ok(await call('tap_screen', { selector: names.field }));
     ok(await call('type_text', { text: 'Ayşe' }));
-    const f = ok(await call('find', { selector: names.field }));
+    const f = ok(await call('read_screen', { selector: names.field }));
     const [m] = f.data.matches;
     expect(m).toMatchObject({ enabled: true, focused: true, value: 'Ayşe' });
     assert(m);
     expect(m.bounds.w).toBeGreaterThan(0);
-    ok(await call('assert', { selector: names.field, check: 'text', equals: 'Ayşe' }));
+    ok(await call('check_element', { selector: names.field, check: 'text', equals: 'Ayşe' }));
     expect(
-      (await call('assert', { selector: names.field, check: 'text', equals: 'No' })).data.code,
+      (await call('check_element', { selector: names.field, check: 'text', equals: 'No' })).data
+        .code,
     ).toBe('CHECK_FAILED');
   });
 
   it('says whether the keyboard is open, and closes it or says it cannot', async () => {
     await open('form');
-    ok(await call('tap', { selector: names.field }));
-    expect(ok(await call('keyboard', { action: 'status' })).data.open).toBe(true);
-    const r = await call('keyboard', { action: 'dismiss' });
+    ok(await call('tap_screen', { selector: names.field }));
+    expect(ok(await call('read_screen')).text).toContain('@keyboard');
+    const r = await call('press_key', { key: 'hide_keyboard' });
     if (r.error) expect(r.text).toContain('stayed open');
-    else expect(ok(await call('keyboard', { action: 'status' })).data.open).toBe(false);
+    else expect(ok(await call('read_screen')).text).not.toContain('@keyboard');
   });
 
   it('double-taps, drags and runs a plan, as the app sees it', async () => {
     await open('gestures');
     const pad = { selector: { text: 'Gesture pad' } };
-    ok(await call('gesture', { kind: 'double_tap', ...pad }));
-    ok(await call('assert', { selector: { text: 'double taps: 1' } }));
-    const f = ok(await call('find', { selector: { text: 'Gesture pad' } }));
+    ok(await call('tap_screen', { ...pad, count: 2 }));
+    ok(await call('check_element', { selector: { text: 'double taps: 1' } }));
+    const f = ok(await call('read_screen', { selector: { text: 'Gesture pad' } }));
     const [b] = f.data.matches;
     assert(b);
     ok(
-      await call('gesture', {
-        kind: 'drag',
+      await call('swipe_screen', {
         x: b.x,
         y: b.y + 100,
         to: { x: b.x, y: b.y - 100 },
         durationMs: 600,
       }),
     );
-    const moved = ok(await call('find', { selector: { text: 'travel' } }));
+    const moved = ok(await call('read_screen', { selector: { text: 'travel' } }));
     const travel = /travel: (-?\d+)/.exec(JSON.stringify(moved.data))?.[1];
     expect(Number(travel)).toBeLessThan(-60);
-    const r = await call('gesture', {
-      kind: 'plan',
+    const r = await call('swipe_screen', {
       pointers: [
         [
           { x: b.x - 30, y: b.y, t: 0 },
@@ -207,21 +210,21 @@ function shared(
   it('reads the clipboard it set, then types without asking the user about it', async (ctx) => {
     await open('form');
     // on a phone it is a person's
-    const held = await call('clipboard');
-    const set = await call('clipboard', { text: 'pano içeriği' });
+    const held = await call('set_device', { name: 'clipboard' });
+    const set = await call('set_device', { name: 'clipboard', value: 'pano içeriği' });
     // a simulator whose pasteboard stalls on a loaded Mac: a refusal that says so, not a hang
     if (set.error && set.text.includes('did not take the text')) return ctx.skip();
     ok(set);
-    expect(ok(await call('clipboard')).text).toBe('pano içeriği');
+    expect(ok(await call('set_device', { name: 'clipboard' })).text).toBe('pano içeriği');
     ok(await call('type_text', { text: 'x', selector: names.field }));
-    ok(await call('assert', { selector: names.field, check: 'text', equals: 'x' }));
+    ok(await call('check_element', { selector: names.field, check: 'text', equals: 'x' }));
     if (!held.error && held.text !== 'the clipboard is empty')
-      ok(await call('clipboard', { text: held.text }));
+      ok(await call('set_device', { name: 'clipboard', value: held.text }));
   });
 
   it('leaves the app’s own dialog alone', async () => {
     await open('dialog');
-    ok(await call('tap', { selector: { text: 'Open dialog' } }));
+    ok(await call('tap_screen', { selector: { text: 'Open dialog' } }));
     expect((await call('answer_alert', { answer: 'OK' })).text).toContain('no system alert');
   });
 
@@ -239,7 +242,7 @@ function shared(
 
   it('runs 20 steps within a client’s patience', async () => {
     await open('home');
-    const pair = [{ tool: 'tap', selector: { text: 'Form' } }, names.back];
+    const pair = [{ tool: 'tap_screen', selector: { text: 'Form' } }, names.back];
     const t0 = Date.now();
     const r = await call('run_steps', { steps: Array(10).fill(pair).flat() });
     const ms = Date.now() - t0;
@@ -282,12 +285,11 @@ describe.skipIf(!android)('driving on Android', () => {
 
   it('counts two fingers in a plan', async () => {
     await open('gestures');
-    const f = ok(await h.call('find', { selector: { text: 'Gesture pad' } }));
+    const f = ok(await h.call('read_screen', { selector: { text: 'Gesture pad' } }));
     const [b] = f.data.matches;
     assert(b);
     ok(
-      await h.call('gesture', {
-        kind: 'plan',
+      await h.call('swipe_screen', {
         pointers: [
           [
             { x: b.x - 30, y: b.y, t: 0 },
@@ -300,13 +302,13 @@ describe.skipIf(!android)('driving on Android', () => {
         ],
       }),
     );
-    ok(await h.call('assert', { selector: { text: 'fingers: 2' } }));
+    ok(await h.call('check_element', { selector: { text: 'fingers: 2' } }));
   });
 
   it('reads and answers a permission prompt', async () => {
     ok(await h.call('manage_app', { action: 'revoke', service: 'location' }));
     await open('permission');
-    ok(await h.call('tap', { selector: { text: 'Request location' } }));
+    ok(await h.call('tap_screen', { selector: { text: 'Request location' } }));
     const read = ok(await h.call('answer_alert'));
     expect(read.text).toContain('buttons:');
     const wrong = await h.call('answer_alert', { answer: 'Definitely not a button' });
@@ -338,7 +340,7 @@ describe.skipIf(!android)('driving on Android', () => {
         timeout: 15_000,
       })
       .not.toBe('Awake');
-    ok(await h.call('screen'));
+    ok(await h.call('read_screen'));
     await expect
       .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
       .toBe('Awake');
@@ -377,30 +379,27 @@ describe.skipIf(!android)('driving on Android', () => {
     const font = await get('settings get system font_scale');
     const anim = await get('settings get global animator_duration_scale');
     ok(
-      await h.call('device_setting', {
-        name: 'dark_mode',
-        value: dark.includes('yes') ? 'off' : 'on',
-      }),
+      await h.call('set_device', { name: 'dark_mode', value: dark.includes('yes') ? 'off' : 'on' }),
     );
     expect(await get('cmd uimode night')).not.toBe(dark);
     // read in the words it is set by, not Android's yes and no
-    expect(ok(await h.call('device_setting', { name: 'dark_mode' })).data.value).toBe(
+    expect(ok(await h.call('set_device', { name: 'dark_mode' })).data.value).toBe(
       dark.includes('yes') ? 'off' : 'on',
     );
-    ok(await h.call('device_setting', { name: 'text_size', value: '1.3' }));
+    ok(await h.call('set_device', { name: 'text_size', value: '1.3' }));
     expect(await get('settings get system font_scale')).toBe('1.3');
-    ok(await h.call('device_setting', { name: 'animations', value: 'off' }));
+    ok(await h.call('set_device', { name: 'animations', value: 'off' }));
     expect(await get('settings get global window_animation_scale')).toBe('0');
-    ok(await h.call('device_setting', { name: 'reduce_motion', value: 'on' }));
-    ok(await h.call('device_setting', { name: 'locale', value: 'tr-TR' }));
+    ok(await h.call('set_device', { name: 'reduce_motion', value: 'on' }));
+    ok(await h.call('set_device', { name: 'locale', value: 'tr-TR' }));
     expect(await get(`cmd locale get-app-locales ${APP}`)).toContain('tr-TR');
-    const slow = await h.call('device_setting', { name: 'network', value: 'slow' });
+    const slow = await h.call('set_device', { name: 'network', value: 'slow' });
     // a phone from Android 13 caps its downloads
     const shapes =
       android.startsWith('emulator-') || Number(await get('getprop ro.build.version.sdk')) >= 33;
     if (shapes) ok(slow);
     else expect(slow.data.code).toBe('UNSUPPORTED');
-    const restored = ok(await h.call('device_setting', { name: 'restore' }));
+    const restored = ok(await h.call('set_device', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
     expect(await get('cmd uimode night')).toBe(dark);
     // Android writes 1.0 back by itself once a scale has been set and deleted
@@ -410,7 +409,7 @@ describe.skipIf(!android)('driving on Android', () => {
     expect(await get('settings get global animator_duration_scale')).toBe(anim);
     expect(await get(`cmd locale get-app-locales ${APP}`)).not.toContain('tr-TR');
     expect(await get('settings get global ingress_rate_limit_bytes_per_second')).toBe('null');
-    expect(ok(await h.call('device_setting', { name: 'restore' })).text).toContain('nothing');
+    expect(ok(await h.call('set_device', { name: 'restore' })).text).toContain('nothing');
   });
 
   it('has one owner for the animations: the session option gives way to a setting', async () => {
@@ -426,8 +425,8 @@ describe.skipIf(!android)('driving on Android', () => {
       });
       const ops = checkedOps(ctx);
       const set = async (args: Record<string, unknown>) => {
-        const op = ops.device_setting;
-        assert(op, 'device_setting');
+        const op = ops.set_device;
+        assert(op, 'set_device');
         return op.handler(op.input.parse(args));
       };
       return { ctx, set };
@@ -443,13 +442,13 @@ describe.skipIf(!android)('driving on Android', () => {
     await expect.poll(scales, { timeout: 15_000, interval: 500 }).toBe(before);
 
     // a setting, then a session with the option that dies and comes back: as the user had them, whichever came last
-    ok(await h.call('device_setting', { name: 'animations', value: 'off' }));
+    ok(await h.call('set_device', { name: 'animations', value: 'off' }));
     const b = session();
     await b.ctx.use(android);
     await b.set({ name: 'restore' });
     await b.ctx.end();
     b.ctx.close();
-    ok(await h.call('device_setting', { name: 'restore' }));
+    ok(await h.call('set_device', { name: 'restore' }));
     await expect.poll(scales, { timeout: 15_000, interval: 500 }).toBe(before);
   }, 120_000);
 
@@ -466,7 +465,7 @@ describe.skipIf(!android)('driving on Android', () => {
   });
 
   it('answers a fingerprint as the device can: an emulator wants one enrolled first, a phone a person', async () => {
-    const b = await h.call('device_setting', { name: 'biometric', value: 'match' });
+    const b = await h.call('set_device', { name: 'biometric', value: 'match' });
     // an emulator has a sensor to touch, so nothing enrolled is a step away; a phone's sensor is a person's alone
     if (android.startsWith('emulator-')) {
       const enrolled = /"count":(\d+)/.exec(await sh('dumpsys fingerprint'))?.[1];
@@ -482,7 +481,7 @@ describe.skipIf(!android)('driving on Android', () => {
     if (!existsSync(other)) return ctx.skip();
     const refused = (() => {
       try {
-        return execFileSync(process.execPath, [other, 'screen', '--device', android], {
+        return execFileSync(process.execPath, [other, 'read-screen', '--device', android], {
           encoding: 'utf8',
           stdio: ['ignore', 'pipe', 'pipe'],
           env: { ...process.env },
@@ -522,17 +521,16 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     field: { id: 'name_input' },
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
-    back: { tool: 'tap', selector: { text: 'Back' } },
+    back: { tool: 'tap_screen', selector: { text: 'Back' } },
   });
 
   it('pinches with two fingers in a plan, as the app sees it', async () => {
     await open('gestures');
-    const f = ok(await h.call('find', { selector: { text: 'Gesture pad' } }));
+    const f = ok(await h.call('read_screen', { selector: { text: 'Gesture pad' } }));
     const [b] = f.data.matches;
     assert(b);
     ok(
-      await h.call('gesture', {
-        kind: 'plan',
+      await h.call('swipe_screen', {
         pointers: [
           [
             { x: b.x - 20, y: b.y, t: 0 },
@@ -547,7 +545,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
         ],
       }),
     );
-    ok(await h.call('assert', { selector: { text: 'pinches: 1' }, timeoutMs: 2_000 }));
+    ok(await h.call('check_element', { selector: { text: 'pinches: 1' }, timeoutMs: 2_000 }));
   });
 
   it("opens a link of the app's own on the stopped app in one call, with the app's screen", async () => {
@@ -560,7 +558,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   it('reads and answers a permission alert', async () => {
     await simctl.privacy(ios, 'reset', 'location', APP).catch(() => undefined);
     await open('permission');
-    ok(await h.call('tap', { selector: { text: 'Request location' } }));
+    ok(await h.call('tap_screen', { selector: { text: 'Request location' } }));
     const read = ok(await h.call('answer_alert'));
     expect(read.text).toContain('buttons:');
     expect((await h.call('answer_alert', { answer: 'No such button' })).error).toBe(true);
@@ -610,34 +608,34 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     const ui = async (...w: string[]) => (await simctl.exec(['ui', ios, ...w])).trim();
     const before = { dark: await ui('appearance'), size: await ui('content_size') };
     ok(
-      await h.call('device_setting', {
+      await h.call('set_device', {
         name: 'dark_mode',
         value: before.dark === 'dark' ? 'off' : 'on',
       }),
     );
     expect(await ui('appearance')).not.toBe(before.dark);
     // read in the words it is set by, not iOS's light and dark
-    expect(ok(await h.call('device_setting', { name: 'dark_mode' })).data.value).toBe(
+    expect(ok(await h.call('set_device', { name: 'dark_mode' })).data.value).toBe(
       before.dark === 'dark' ? 'off' : 'on',
     );
-    ok(await h.call('device_setting', { name: 'text_size', value: 'extra-large' }));
+    ok(await h.call('set_device', { name: 'text_size', value: 'extra-large' }));
     expect(await ui('content_size')).toBe('extra-large');
-    ok(await h.call('device_setting', { name: 'reduce_motion', value: 'on' }));
-    expect(ok(await h.call('device_setting', { name: 'reduce_motion' })).data.value).toBe('on');
+    ok(await h.call('set_device', { name: 'reduce_motion', value: 'on' }));
+    expect(ok(await h.call('set_device', { name: 'reduce_motion' })).data.value).toBe('on');
     // with an app selected, its own launches: the whole simulator is left alone
     const global = await simctl.exec(['spawn', ios, 'defaults', 'read', '-g', 'AppleLocale']);
-    ok(await h.call('device_setting', { name: 'locale', value: 'tr-TR' }));
-    expect(ok(await h.call('device_setting', { name: 'locale' })).data.value).toBe('tr-TR');
+    ok(await h.call('set_device', { name: 'locale', value: 'tr-TR' }));
+    expect(ok(await h.call('set_device', { name: 'locale' })).data.value).toBe('tr-TR');
     expect(await simctl.exec(['spawn', ios, 'defaults', 'read', '-g', 'AppleLocale'])).toBe(global);
-    const restored = ok(await h.call('device_setting', { name: 'restore' }));
+    const restored = ok(await h.call('set_device', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
     expect(await ui('appearance')).toBe(before.dark);
     expect(await ui('content_size')).toBe(before.size);
-    expect(ok(await h.call('device_setting', { name: 'reduce_motion' })).data.value).toBe('off');
-    expect((await h.call('device_setting', { name: 'network', value: 'slow' })).data.code).toBe(
+    expect(ok(await h.call('set_device', { name: 'reduce_motion' })).data.value).toBe('off');
+    expect((await h.call('set_device', { name: 'network', value: 'slow' })).data.code).toBe(
       'UNSUPPORTED',
     );
-    expect((await h.call('device_setting', { name: 'animations', value: 'off' })).data.code).toBe(
+    expect((await h.call('set_device', { name: 'animations', value: 'off' })).data.code).toBe(
       'UNSUPPORTED',
     );
   });
@@ -647,14 +645,14 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     // on its own: the app there and running, and allowed notifications by its own prompt, which comes once an install
     ok(await h.call('manage_app', { action: 'install', path: SIM_FIXTURE }));
     await open('push');
-    ok(await h.call('tap', { selector: { id: 'ask_notifications' } }));
-    const asked = await h.call('wait_for', {
+    ok(await h.call('tap_screen', { selector: { id: 'ask_notifications' } }));
+    const asked = await h.call('check_element', {
       selector: { text: 'Would Like to Send You Notifications' },
       timeoutMs: 3_000,
     });
     if (!asked.error) ok(await h.call('answer_alert', { answer: 'allow' }));
     ok(await h.call('send_push', { type: 'alert', title: 'appdyno', body: 'merhaba' }));
-    ok(await h.call('device_setting', { name: 'biometric', value: 'match' }));
+    ok(await h.call('set_device', { name: 'biometric', value: 'match' }));
   });
 });
 
@@ -684,7 +682,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     field: { id: 'name_input' },
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
-    back: { tool: 'tap', selector: { text: 'Back' } },
+    back: { tool: 'tap_screen', selector: { text: 'Back' } },
   });
 
   it('lists apps and their state, launches with an environment, uninstalls and installs', async () => {
@@ -708,7 +706,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
 
   it('says what an iPhone cannot do, and why', async () => {
     for (const name of ['animations', 'proxy', 'battery']) {
-      const r = await h.call('device_setting', { name, value: name === 'battery' ? '50' : 'on' });
+      const r = await h.call('set_device', { name, value: name === 'battery' ? '50' : 'on' });
       expect(r.data.code, name).toBe('UNSUPPORTED');
     }
     for (const [name, value] of [
@@ -717,11 +715,11 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
       ['call', '5551234'],
       ['sms', 'x'],
     ] as const)
-      expect((await h.call('device_setting', { name, value })).data.code, name).toBe('UNSUPPORTED');
+      expect((await h.call('set_device', { name, value })).data.code, name).toBe('UNSUPPORTED');
   });
 
   it('changes and restores dark mode, text size and reduce motion', async () => {
-    const read = async (name: string) => ok(await h.call('device_setting', { name })).data.value;
+    const read = async (name: string) => ok(await h.call('set_device', { name })).data.value;
     const before = {
       dark: await read('dark_mode'),
       size: await read('text_size'),
@@ -730,19 +728,19 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     expect(before.dark).toMatch(/^(on|off)$/);
     expect(before.motion).toMatch(/^(on|off)$/);
     const other = before.dark === 'on' ? 'off' : 'on';
-    ok(await h.call('device_setting', { name: 'dark_mode', value: other }));
+    ok(await h.call('set_device', { name: 'dark_mode', value: other }));
     expect(await read('dark_mode')).toBe(other);
     const size = before.size === 'extra-large' ? 'large' : 'extra-large';
-    ok(await h.call('device_setting', { name: 'text_size', value: size }));
+    ok(await h.call('set_device', { name: 'text_size', value: size }));
     expect(await read('text_size')).toBe(size);
     ok(
-      await h.call('device_setting', {
+      await h.call('set_device', {
         name: 'reduce_motion',
         value: before.motion === 'on' ? 'off' : 'on',
       }),
     );
     expect(await read('reduce_motion')).not.toBe(before.motion);
-    const restored = ok(await h.call('device_setting', { name: 'restore' }));
+    const restored = ok(await h.call('set_device', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
     expect(await read('dark_mode')).toBe(before.dark);
     expect(await read('text_size')).toBe(before.size);
@@ -756,7 +754,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     ok(await h.call('press_key', { key: 'lock', read: 'none' }));
     // the next launch must find the phone usable again
     await open('home');
-    ok(await h.call('assert', { selector: { text: 'appdyno fixture' } }));
+    ok(await h.call('check_element', { selector: { text: 'appdyno fixture' } }));
   }, 120_000);
 });
 

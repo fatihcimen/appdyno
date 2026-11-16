@@ -107,12 +107,12 @@ export const pidInAnswer = (asked: string | undefined, r: { pid?: number | undef
  */
 export const diedHint = (d: Died, lines = false) =>
   d.held
-    ? 'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after'
+    ? 'read_logs says why it died now, and with source crashes once answer_alert answers its crash dialog; launch_app starts it again after'
     : d.unreported
       ? // a simulator on a loaded Mac wrote its report a minute after the end
-        'launch_app starts it again, and crashes says why it died once the system has written its report, which can take a minute'
+        'launch_app starts it again, and read_logs with source crashes says why it died once the system has written its report, which can take a minute'
       : d.unkept
-        ? 'launch_app starts it again, and logs says why it died'
+        ? 'launch_app starts it again, and read_logs says why it died'
         : `launch_app starts it again; why it died is above${lines ? ', with its last log lines' : ''}, and crashes has the whole report`;
 
 /** An answer's line of the app's end. */

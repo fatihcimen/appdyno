@@ -20,11 +20,11 @@ describe('a listed secret', () => {
     d.screen = 'long';
     const { call } = await connect(d, { policy: { secrets: [SECRET] } });
     const answers = [
-      await call('screen'),
-      await call('find', { selector: { text: 'Signed in' } }),
-      await call('wait_for', { selector: { text: 'Signed in' }, timeoutMs: 1_000 }),
-      await call('tap', { selector: { text: 'No such thing' } }),
-      await call('tap', { selector: { text: 'Next' }, read: 'full' }),
+      await call('read_screen'),
+      await call('read_screen', { selector: { text: 'Signed in' } }),
+      await call('check_element', { selector: { text: 'Signed in' }, timeoutMs: 1_000 }),
+      await call('tap_screen', { selector: { text: 'No such thing' } }),
+      await call('tap_screen', { selector: { text: 'Next' }, read: 'full' }),
     ];
     for (const { text, data } of answers) {
       expect(text).toContain('•••');

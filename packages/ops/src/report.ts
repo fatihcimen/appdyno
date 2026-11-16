@@ -40,7 +40,7 @@ async function startFlightOn(ctx: ServerContext, s: Session, dir: string | undef
   const seconds = Math.max(MIN_FLIGHT_SECONDS, Math.min(asked, MAX_FLIGHT_SECONDS));
   const app = stayingApp(ctx, s, 'flight');
   s.keepFlight(await startFlight(ctx, s, app, seconds, dir && inside(ctx.policy, dir)));
-  const t = `flight recorder on: the last ${seconds} s of ${app}, kept on a crash or a stall; report stop ends it`;
+  const t = `flight recorder on: the last ${seconds} s of ${app}, kept on a crash or a stall; record_session with kind flight and action stop ends it`;
   return reply(t, { done: t, dir: dir ?? '' });
 }
 

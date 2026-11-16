@@ -77,11 +77,11 @@ export const NEEDS = {
   },
   'simulator-off': {
     title: 'The simulator is off',
-    fix: 'Boot it: appdyno simulator boot, or the simulator tool.',
+    fix: 'Boot it: appdyno manage-simulator boot, or the manage_simulator tool.',
   },
   'no-grpc': {
     title: 'This emulator has no gRPC port',
-    fix: 'Boot it with the simulator tool, for a picture with no lag.',
+    fix: 'Boot it with the manage_simulator tool, for a picture with no lag.',
   },
   'no-display': {
     title: 'No window server in this session',

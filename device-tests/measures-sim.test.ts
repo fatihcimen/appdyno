@@ -78,7 +78,7 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     expect(held.error).toBe(false);
     expect(held.text).toMatch(/probe: false put no probe in and relaunched nothing/);
     // let go, the next launch carries none
-    await t.call('device_setting', { name: 'restore' });
+    await t.call('set_device', { name: 'restore' });
     await d.terminate(APP);
     await d.launch(APP);
     const off = await t.call('perf_scroll', { probe: false, repeats: 1 });

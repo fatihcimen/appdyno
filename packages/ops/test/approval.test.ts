@@ -34,7 +34,7 @@ const GATED: [DataLoss, string, Record<string, unknown>, string, Kind?][] = [
     'grant',
     { grantResets: true },
   ],
-  ['device_setting keychain', 'device_setting', { name: 'keychain', value: 'reset' }, 'keychain'],
+  ['set_device keychain', 'set_device', { name: 'keychain', value: 'reset' }, 'keychain'],
 ];
 
 /**
@@ -183,10 +183,10 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
         'INVALID_ARGUMENT',
       );
     const r = await call('run_steps', {
-      steps: [{ tool: 'device_setting', name: 'keychain', value: 'reset' }],
+      steps: [{ tool: 'set_device', name: 'keychain', value: 'reset' }],
     });
     expect(r.error).toBe(true);
-    expect(r.text).toContain('device_setting keychain asks the person first');
+    expect(r.text).toContain('set_device keychain asks the person first');
     expect(done).toEqual([]);
   });
 
@@ -194,8 +194,8 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
     const { call, done, asked, device } = await on({ answer: 'accept' });
     const r = await call('run_steps', {
       steps: [
-        { tool: 'tap', x: 1, y: 1 },
-        { tool: 'device_setting', name: 'keychain', value: 'reset' },
+        { tool: 'tap_screen', x: 1, y: 1 },
+        { tool: 'set_device', name: 'keychain', value: 'reset' },
       ],
     });
     expect(r.error ? r.text : '').toBe('');

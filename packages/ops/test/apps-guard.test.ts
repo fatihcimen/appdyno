@@ -238,11 +238,11 @@ describe('an input under an app allow list', () => {
 
   it('is refused where it would land in another app, by every way a touch is sent, saying how a person allows it', async () => {
     for (const [tool, args] of [
-      ['tap', { x: 540, y: 1000 }],
-      ['tap', { selector: { text: 'in com.google.android.apps.nexuslauncher' } }],
-      ['swipe', { direction: 'up', x: 540, y: 1000 }],
-      ['gesture', { kind: 'long_press', x: 540, y: 1000 }],
-      ['run_steps', { steps: [{ tool: 'tap', x: 540, y: 1000 }] }],
+      ['tap_screen', { x: 540, y: 1000 }],
+      ['tap_screen', { selector: { text: 'in com.google.android.apps.nexuslauncher' } }],
+      ['swipe_screen', { direction: 'up', x: 540, y: 1000 }],
+      ['tap_screen', { x: 540, y: 1000, holdMs: 800 }],
+      ['run_steps', { steps: [{ tool: 'tap_screen', x: 540, y: 1000 }] }],
       ['type_text', { text: 'settings' }],
       ['press_key', { key: 'enter' }],
     ] as const) {
@@ -261,7 +261,7 @@ describe('an input under an app allow list', () => {
 
   it('leaves such a screen by back, home and launch_app, and reads it', async () => {
     const { call, sent } = await onDevice(home, { apps: APPS });
-    expect((await call('screen', {})).code).toBeUndefined();
+    expect((await call('read_screen', {})).code).toBeUndefined();
     for (const key of ['back', 'home'])
       expect((await call('press_key', { key })).code, key).toBeUndefined();
     expect((await call('launch_app', { app: 'dev.app' })).code).toBeUndefined();
@@ -273,17 +273,17 @@ describe('an input under an app allow list', () => {
     const allow = middle(prompt, 'While using the app');
     // no app selected: the fixture was in front
     const own = await onDevice(recorded('fixture-keyboard'), { apps: [FIXTURE] }, undefined, '');
-    expect((await own.call('screen', {})).code).toBeUndefined();
+    expect((await own.call('read_screen', {})).code).toBeUndefined();
     own.device.fixture = prompt;
-    await own.call('screen', {});
-    expect((await own.call('tap', allow)).code).toBeUndefined();
+    await own.call('read_screen', {});
+    expect((await own.call('tap_screen', allow)).code).toBeUndefined();
     expect(own.sent()).toHaveLength(1);
     // the fixture selected, and a browser was in front
     const other = await onDevice(recorded('browser'), { apps: [FIXTURE] }, undefined, FIXTURE);
-    expect((await other.call('screen', {})).code).toBeUndefined();
+    expect((await other.call('read_screen', {})).code).toBeUndefined();
     other.device.fixture = prompt;
-    await other.call('screen', {});
-    const r = await other.call('tap', allow);
+    await other.call('read_screen', {});
+    const r = await other.call('tap_screen', allow);
     expect(r.code).toBe('POLICY_DENIED');
     expect(r.text).toContain(
       'a touch lands in com.google.android.permissioncontroller over com.android.chrome',
@@ -293,7 +293,7 @@ describe('an input under an app allow list', () => {
 
   it('goes as it did with no list, and in an allowed app over its keyboard and prompts', async () => {
     const free = await onDevice(home, {});
-    expect((await free.call('tap', { x: 540, y: 1000 })).code).toBeUndefined();
+    expect((await free.call('tap_screen', { x: 540, y: 1000 })).code).toBeUndefined();
     const own = await onDevice(
       screen(
         app('dev.app', 1, false),
@@ -304,7 +304,7 @@ describe('an input under an app allow list', () => {
       { apps: APPS },
     );
     for (const y of [300, 1200, 2000])
-      expect((await own.call('tap', { x: 540, y })).code, String(y)).toBeUndefined();
+      expect((await own.call('tap_screen', { x: 540, y })).code, String(y)).toBeUndefined();
     expect(own.sent()).toHaveLength(3);
   });
 });
@@ -423,7 +423,7 @@ describe('a call', () => {
     const dialer = recorded('dialer');
     for (const label of ['Call', '2,ABC', 'backspace']) {
       const { call, sent } = await onDevice(dialer, {});
-      const r = await call('tap', middle(dialer, label));
+      const r = await call('tap_screen', middle(dialer, label));
       expect(r.code, label).toBe('PERMISSION_REQUIRED');
       expect(sent(), label).toEqual([]);
     }
@@ -433,7 +433,7 @@ describe('a call', () => {
       'com.apple.mobilephone',
     ]) {
       const { call, sent } = await onDevice(screen(app(pkg), bars), {});
-      const r = await call('tap', { x: 540, y: 1000 });
+      const r = await call('tap_screen', { x: 540, y: 1000 });
       expect(r.code, pkg).toBe('PERMISSION_REQUIRED');
       expect(r.text, pkg).toContain(
         `a touch on the phone app ${pkg}, which may place a call asks the person first`,
@@ -445,7 +445,7 @@ describe('a call', () => {
       {},
       'accept',
     );
-    expect((await call('tap', { x: 540, y: 1000 })).code).toBeUndefined();
+    expect((await call('tap_screen', { x: 540, y: 1000 })).code).toBeUndefined();
     expect(sent()).toHaveLength(1);
   });
 });

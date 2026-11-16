@@ -181,7 +181,7 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
       /** A client's whole round: a touch, a picture, the numbers and a measure, and it sees the window. */
       drive: async (call: Awaited<ReturnType<typeof openClient>>) => {
         await call('launch_app', { read: 'full' });
-        await call('tap', { x: 200, y: 400, read: 'none' });
+        await call('tap_screen', { x: 200, y: 400, read: 'none' });
         await call('take_screenshot');
         await call('perf_snapshot');
         await call('perf_launch', { repeats: 1 });
@@ -260,8 +260,8 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
           const agent = agentIn(s.state, serial);
           const second = await s.openClient({ ...OTHER_BUILD, APPDYNO_SHARE: '1' });
           await second('launch_app', { read: 'full' });
-          await first('tap', { x: 200, y: 400, read: 'none' });
-          await second('tap', { x: 200, y: 400, read: 'none' });
+          await first('tap_screen', { x: 200, y: 400, read: 'none' });
+          await second('tap_screen', { x: 200, y: 400, read: 'none' });
           expect(agentIn(s.state, serial)).toBe(agent);
         } finally {
           await s.end();
@@ -284,7 +284,7 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
           const call = await s.openClient();
           await call('launch_app', { read: 'full' });
           expect(agentIn(s.state, serial)).not.toBe(orphan);
-          await call('tap', { x: 200, y: 400, read: 'none' });
+          await call('tap_screen', { x: 200, y: 400, read: 'none' });
         } finally {
           await s.end();
         }
@@ -305,7 +305,7 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
           await until('the hub to say so', () =>
             s.said.some((l) => l.includes('state folder of its own')),
           );
-          await call('tap', { x: 200, y: 400, read: 'none' });
+          await call('tap_screen', { x: 200, y: 400, read: 'none' });
           expect(agentIn(own, serial)).toBe(agent);
         } finally {
           await s.end();

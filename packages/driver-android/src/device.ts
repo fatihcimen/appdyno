@@ -203,7 +203,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     const app = /Application Not Responding: (\S+)/.exec(dialog)?.[1];
     return (
       app &&
-      `${app} is not responding, and the system asks whether to wait for it or close it: alert answers that`
+      `${app} is not responding, and the system asks whether to wait for it or close it: that alert is answered as any of the system's`
     );
   }
 

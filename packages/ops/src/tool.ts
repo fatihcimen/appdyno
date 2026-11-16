@@ -1,6 +1,7 @@
 import { cancelled, inOp, noting } from '@appdyno/core';
 import { DeviceError, ERROR_TRAITS, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
+import type { Step } from './step-schemas.js';
 
 /** A refusal the agent can act on (shown as the tool's error text, never a stack). */
 /** Whether a failed action's touch went out: `unknown` is a device that stopped answering, and the screen will say. */
@@ -100,6 +101,8 @@ export type Tool = {
   annotations: ToolAnnotations;
   /** Whether a call of an op that may act only reads, by its arguments: it runs beside the client's actions, as a read. */
   readsOnly?: (args: Record<string, unknown>) => boolean;
+  /** The one touch or check a call is, where it is one: run_steps runs it among its own, with no screen read between. */
+  step?: (args: Record<string, unknown>) => Step | undefined;
   handler: (args: Record<string, unknown>) => Promise<ToolResult>;
 };
 
@@ -118,6 +121,7 @@ type PartDef<N, S extends z.ZodObject, O extends z.ZodObject> = {
   output: O;
   annotations: ToolAnnotations;
   readsOnly?: (args: z.infer<S>) => boolean;
+  step?: (args: Record<string, unknown>) => Step | undefined;
   run: (args: z.infer<S>) => Promise<ToolResult<z.infer<O>>>;
 };
 

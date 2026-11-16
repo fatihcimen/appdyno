@@ -131,7 +131,7 @@ describe('whose conditions go back', () => {
       const used = await call('use_device', { device: device.serial });
       expect(used.text).not.toContain('restored');
       expect(settings.values.dark_mode).toBe('yes');
-      const asked = await call('device_setting', { name: 'restore' });
+      const asked = await call('set_device', { name: 'restore' });
       expect(asked.text).toContain(`dark_mode (pid ${other.owner.pid})`);
       expect(settings.values.dark_mode).toBe('yes');
       expect(await ctx.end()).toEqual([]);
@@ -182,7 +182,7 @@ describe('whose conditions go back', () => {
     const { settings, device } = withSettings();
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
     const cli = connect(device, { storage: { remember } });
-    expect((await cli.call('device_setting', { name: 'dark_mode', value: 'yes' })).text).toBe(
+    expect((await cli.call('set_device', { name: 'dark_mode', value: 'yes' })).text).toBe(
       'dark_mode: yes; it stays until restore',
     );
     expect(await cli.ctx.end()).toEqual([]);
@@ -194,7 +194,7 @@ describe('whose conditions go back', () => {
     expect(settings.values.dark_mode).toBe('yes');
     next.ctx.close();
     const later = connect(device, { storage: { remember } });
-    expect((await later.call('device_setting', { name: 'restore' })).text).toContain(
+    expect((await later.call('set_device', { name: 'restore' })).text).toContain(
       'restored dark_mode: off',
     );
     expect(settings.values.dark_mode).toBe('no');
@@ -204,7 +204,7 @@ describe('whose conditions go back', () => {
   it('a session’s end puts back its own', async () => {
     const { settings, device } = withSettings();
     const { ctx, call } = connect(device);
-    await call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await call('set_device', { name: 'dark_mode', value: 'yes' });
     expect(await ctx.end()).toEqual([]);
     expect(settings.values.dark_mode).toBe('no');
     expect(existsSync(stateFile('conditions', device.serial))).toBe(false);
@@ -226,7 +226,7 @@ describe('a conditions file', () => {
     expect(used.text).toContain(`${file}.bad`);
     expect(readFileSync(`${file}.bad`, 'utf8')).toBe(text);
     expect(set).not.toHaveBeenCalled();
-    await call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await call('set_device', { name: 'dark_mode', value: 'yes' });
     expect(readFileSync(`${file}.bad`, 'utf8')).toBe(text);
     expect(await ctx.end()).toEqual([]);
     expect(settings.values.dark_mode).toBe('no');
@@ -236,12 +236,12 @@ describe('a conditions file', () => {
   it('is never written in place, so a process killed midway cannot cut it short', async () => {
     const { device } = withSettings();
     const { call } = connect(device);
-    await call('device_setting', { name: 'dark_mode', value: 'yes' });
+    await call('set_device', { name: 'dark_mode', value: 'yes' });
     const file = stateFile('conditions', device.serial);
     const earlier = join(dirname(file), 'earlier');
     linkSync(file, earlier);
     const before = readFileSync(earlier, 'utf8');
-    await call('device_setting', { name: 'text_size', value: '1.3' });
+    await call('set_device', { name: 'text_size', value: '1.3' });
     expect(readFileSync(earlier, 'utf8')).toBe(before);
     expect(readFileSync(file, 'utf8')).toContain('text_size');
   });
@@ -252,9 +252,9 @@ describe('tool calls in parallel', () => {
     const { settings, device } = withSettings();
     const { ctx, call } = connect(device);
     await Promise.all([
-      call('device_setting', { name: 'dark_mode', value: 'yes' }),
-      call('device_setting', { name: 'text_size', value: '1.3' }),
-      call('device_setting', { name: 'reduce_motion', value: 'on' }),
+      call('set_device', { name: 'dark_mode', value: 'yes' }),
+      call('set_device', { name: 'text_size', value: '1.3' }),
+      call('set_device', { name: 'reduce_motion', value: 'on' }),
     ]);
     expect(await ctx.end()).toEqual([]);
     expect(settings.values).toEqual({ dark_mode: 'no', text_size: '1.0', reduce_motion: 'off' });
@@ -265,8 +265,8 @@ describe('tool calls in parallel', () => {
     const { ctx, call } = connect(device);
     settings.failNext = true;
     await Promise.allSettled([
-      call('device_setting', { name: 'dark_mode', value: 'yes' }),
-      call('device_setting', { name: 'dark_mode', value: 'on' }),
+      call('set_device', { name: 'dark_mode', value: 'yes' }),
+      call('set_device', { name: 'dark_mode', value: 'on' }),
     ]);
     expect(settings.values.dark_mode).toBe('on');
     expect(await ctx.end()).toEqual([]);
@@ -403,7 +403,7 @@ describe('what a process leaves running', () => {
     expect(await ctx.end()).toEqual([]);
     expect(device.holds.holder()).toBeUndefined();
     leave('sim-held', device.serial, { apps: { 'dev.app': { frames: probe } } });
-    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+    expect((await call('set_device', { name: 'restore' })).text).toBe(
       'let go of the frames probe in dev.app: a probe stays in its app until the app next starts',
     );
     expect(device.holds.holder()).toBeUndefined();
@@ -419,8 +419,8 @@ describe('what a process leaves running', () => {
     leave('sim-held', device.serial, {
       apps: { 'dev.app': { frames: probe, network: probe }, 'dev.other': { network: probe } },
     });
-    expect((await call('device_setting', { name: 'restore' })).text).toBe(
-      'let go of the frames probe in dev.app; the network probe in dev.other: a probe stays in its app until the app next starts\nkept the network probe in dev.app, whose capture still runs: network stop ends it',
+    expect((await call('set_device', { name: 'restore' })).text).toBe(
+      'let go of the frames probe in dev.app; the network probe in dev.other: a probe stays in its app until the app next starts\nkept the network probe in dev.app, whose capture still runs: capture_network stop ends it',
     );
     expect(device.holds.appsWith('network')).toEqual(['dev.app']);
     expect(device.holds.appsWith('frames')).toEqual([]);
@@ -456,7 +456,7 @@ describe('what a process leaves running', () => {
     expect(media.files).toEqual([]);
     media.owner = undefined;
     media.add('/sdcard/Pictures/appdyno/b.png', '/sdcard/Pictures/appdyno/c.mp4');
-    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+    expect((await call('set_device', { name: 'restore' })).text).toBe(
       'took out the 2 photos and videos it added',
     );
     expect(media.holder()).toBeUndefined();
@@ -470,7 +470,7 @@ describe('what a process leaves running', () => {
     await call('use_device', { device: device.serial });
     media.add('/p/a.png', '/p/b.png');
     media.changed = ['/p/b.png'];
-    const r = await call('device_setting', { name: 'restore' });
+    const r = await call('set_device', { name: 'restore' });
     const left = 'media: left /p/b.png in the library: changed since it was added';
     expect(r.text).toBe(`took out the 1 photo or video it added\ncould not restore ${left}`);
     expect(r.data.notRestored).toEqual([left]);

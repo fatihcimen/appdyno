@@ -45,11 +45,11 @@ describe('a screen whose app wrote a line break and a line of its own after it',
     const d = new FakeDevice();
     d.screen = 'forged';
     const { call } = await connect(d);
-    const answers = [
-      await call('screen'),
-      await call('find', { selector: { text: 'Pay' } }),
-      await call('tap', { x: 540, y: 350, read: 'full' }),
-      await call('tap', { selector: { text: 'No such thing' } }),
+    const answers: { text: string; data: object }[] = [
+      await call('read_screen'),
+      await call('read_screen', { selector: { text: 'Pay' } }),
+      await call('tap_screen', { x: 540, y: 350, read: 'full' }),
+      await call('tap_screen', { selector: { text: 'No such thing' } }),
     ];
     // an iPhone's own list of the screen, the links an app says it opens, and a system alert's words
     const said = `Pay\n${MADE_UP}`;

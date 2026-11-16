@@ -17,7 +17,7 @@ import { capturingApp } from './network-capture.js';
 import { SettingOut } from './schemas.js';
 import { isOneShot, oneShot, ONE_SHOT } from './setting-events.js';
 import type { Session } from './session.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 const Changes = z.record(
@@ -55,7 +55,7 @@ async function writeDown(s: Session, settings: DeviceSettings, name: SettingName
     throw new ToolError(
       `${name} is held for ${held.app ?? 'the whole device'} until it is put back`,
       'INVALID_ARGUMENT',
-      'device_setting restore first',
+      'set_device restore first',
     );
   if (held) return { first: false, now: await settings.get(name, app) };
   await settings.willChange?.(name);
@@ -250,7 +250,9 @@ async function restoreAll(s: Session) {
         ? [`let go of ${held.join('; ')}: a probe stays in its app until the app next starts`]
         : []),
       ...(capturing && holds?.holder()
-        ? [`kept the network probe in ${capturing}, whose capture still runs: network stop ends it`]
+        ? [
+            `kept the network probe in ${capturing}, whose capture still runs: capture_network stop ends it`,
+          ]
         : []),
       ...notRestored.map((f) => `could not restore ${f}`),
       ...left.map((l) => `left alone, as its process still runs: ${l}`),
@@ -265,11 +267,8 @@ async function restoreAll(s: Session) {
 export function settingOps(ctx: ServerContext, { clean }: Answers) {
   const policy = ctx.policy;
   return [
-    defineOp({
+    definePart({
       name: 'device_setting',
-      title: 'Device conditions',
-      description:
-        'Dark mode, text size, reduce motion, slow network, airplane mode, Wi-Fi, mobile data, Face ID, fingerprint, calls, SMS, memory warning, shake, photos. No value reads one. Put back at the end or by restore.',
       input: z
         .object({
           name: z.enum([...SETTINGS, 'restore', ...ONE_SHOT]),
@@ -277,7 +276,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(500)
             .describe(
-              'Switch: on, off; text_size: Android 1.3, iOS extra-large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: closed, half, open. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset), memory_warning (Android: trim level), shake, media (file or folder in server folder).',
+              'Switch: on, off; text_size: Android 1.3, iOS extra-large; locale: tr-TR; network: slow, full; thermal: serious; proxy: host:port, none; battery: 0-100; fold: closed, half, open. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset), memory_warning (Android: trim level), shake.',
             )
             .optional(),
           title: z.string().max(200).optional(),

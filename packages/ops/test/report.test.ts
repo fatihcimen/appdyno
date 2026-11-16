@@ -64,14 +64,14 @@ describe('report', () => {
   it('writes steps, screens and images, and loads nothing from anywhere', async () => {
     const { call } = connect();
     await call('record_session', { kind: 'report', action: 'start', dir });
-    await call('tap', { selector: { text: 'Form' } });
-    await call('screen');
+    await call('tap_screen', { selector: { text: 'Form' } });
+    await call('read_screen');
     const r = await call('record_session', { kind: 'report', action: 'stop' });
     expect(r.data).toMatchObject({ steps: 2, file: join(dir, 'index.html') });
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     expect(html).toContain('Content-Security-Policy');
     expect(html).toMatch(/>1<\/span>tap/);
-    expect(html).toMatch(/>2<\/span>screen/);
+    expect(html).toMatch(/>2<\/span>read_screen/);
     expect(html).toContain('Bilgiler');
     expect(readdirSync(join(dir, 'shots'))).toEqual(['0001.jpg']);
     expect(html).toContain('src="shots/0001.jpg"');
@@ -129,7 +129,7 @@ describe('report', () => {
   it('hides secrets in every text, and never writes what was typed', async () => {
     const { call, ctx } = connect();
     await call('record_session', { kind: 'report', action: 'start', dir });
-    await call('tap', { selector: { text: 'Form' } });
+    await call('tap_screen', { selector: { text: 'Form' } });
     await call('type_text', { selector: { text: 'Adınız' }, text: 'hidden-words' });
     await call('open_link', { url: `app://x?token=abc123&secret=${SECRET}` }).catch(
       () => undefined,
@@ -167,7 +167,7 @@ describe('report', () => {
     });
     await call('run_steps', {
       steps: [
-        { tool: 'wait_for', selector: { text: 'Form' }, timeoutMs: 300 },
+        { tool: 'check_element', selector: { text: 'Form' }, timeoutMs: 300 },
         { tool: 'type_text', text: 'hidden-step', x: 5, y: 5 },
       ],
     });
@@ -182,7 +182,7 @@ describe('report', () => {
     for (const typed of ['hidden-words', 'hidden-deep', 'hidden-step', 'hidden-param'])
       expect(journal).not.toContain(typed);
     expect(journal).toContain('(12 characters)');
-    for (const named of ['dev.app', '"text":"Form"', 'on the screen', '"tool":"wait_for"'])
+    for (const named of ['dev.app', '"text":"Form"', 'on the screen', '"tool":"check_element"'])
       expect(journal).toContain(named);
   });
 
@@ -191,7 +191,7 @@ describe('report', () => {
     const { call } = connect(device);
     device.screen = 'login';
     await call('record_session', { kind: 'report', action: 'start', dir });
-    await call('tap', { selector: { text: 'Add', index: 0 } });
+    await call('tap_screen', { selector: { text: 'Add', index: 0 } });
     await call('record_session', { kind: 'report', action: 'write' });
     const name = must(readdirSync(join(dir, 'shots'))[0], 'a shot');
     expect(name).toBe('0001.png');
@@ -206,7 +206,7 @@ describe('report', () => {
     const { call, device } = connect();
     device.screen = 'login';
     await call('record_session', { kind: 'report', action: 'start', dir });
-    await call('tap', { selector: { text: 'Add', index: 0 } });
+    await call('tap_screen', { selector: { text: 'Add', index: 0 } });
     const r = await call('record_session', { kind: 'report', action: 'write' });
     expect(existsSync(join(dir, 'shots'))).toBe(true);
     expect(readdirSync(join(dir, 'shots'))).toEqual([]);
@@ -228,7 +228,7 @@ describe('report', () => {
     await expect(
       call('record_session', { kind: 'report', action: 'start', dir }),
     ).rejects.toBeInstanceOf(ToolError);
-    await call('tap', { selector: { text: 'Form' } });
+    await call('tap_screen', { selector: { text: 'Form' } });
     expect(await ctx.end()).toEqual([]);
     expect(readFileSync(join(dir, 'index.html'), 'utf8')).toMatch(/>1<\/span>tap/);
   });

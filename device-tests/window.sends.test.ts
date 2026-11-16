@@ -153,7 +153,7 @@ describe.runIf(devices.length > 0).each(devices)(
           ok: true,
           // a simulator asks before an app's scheme first opens it, and until then nothing has opened
           text: expect.stringMatching(
-            /^Opened appdyno-fixture:\/\/open\/form$|^Sent appdyno-fixture:\/\/open\/form, and the system asks: .+ \(Cancel, Open\): answer it with alert$/,
+            /^Opened appdyno-fixture:\/\/open\/form$|^Sent appdyno-fixture:\/\/open\/form, and the system asks: .+ \(Cancel, Open\): answer it with answer_alert$/,
           ) as unknown,
           recent: expect.arrayContaining(['appdyno-fixture://open/form']) as unknown,
         });

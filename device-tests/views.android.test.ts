@@ -25,10 +25,10 @@ describe.skipIf(!ANDROID)('the native views on Android', () => {
   /** The views once the activity a link opens is the one in front: it starts after the link's answer. */
   const viewsOf = async (screen: string, activity: string, raw = false) => {
     ok(await call('open_link', { url: `appdyno-fixture://open/${screen}`, read: 'none' }));
-    let r: Awaited<ReturnType<typeof call<'screen'>>> | undefined;
+    let r: Awaited<ReturnType<typeof call<'read_screen'>>> | undefined;
     await vi.waitFor(
       async () => {
-        r = ok(await call('screen', { views: true, raw }));
+        r = ok(await call('read_screen', { views: true, raw }));
         expect(r.text).toContain(`(${APP}.${activity})`);
       },
       { timeout: 10_000, interval: 500 },
@@ -60,7 +60,7 @@ describe.skipIf(!ANDROID)('the native views on Android', () => {
     const r = await viewsOf('form', 'FormActivity', true);
     const id = `${APP}:id/submit`;
     const view = r.data.views?.find((v) => v.id === id);
-    const node = ok(await call('screen', { raw: true })).data.nodes?.find(
+    const node = ok(await call('read_screen', { raw: true })).data.nodes?.find(
       (n) => n.identifier === id,
     );
     expect(view?.flags).toContain('clickable');
@@ -70,14 +70,14 @@ describe.skipIf(!ANDROID)('the native views on Android', () => {
 
   it('says where a scroll leaves places as laid out, and that a dialog over the activity is not there', async () => {
     await viewsOf('showcase', 'ShowcaseActivity');
-    ok(await call('swipe', { direction: 'up', distance: 600, read: 'none' }));
-    expect(ok(await call('screen', { views: true })).text).toMatch(
+    ok(await call('swipe_screen', { direction: 'up', distance: 600, read: 'none' }));
+    expect(ok(await call('read_screen', { views: true })).text).toMatch(
       /\nunder android\.widget\.ScrollView at 0,0 .* places are its layout's/,
     );
     await viewsOf('dialog', 'DialogActivity');
-    ok(await call('tap', { selector: { id: 'open_dialog' }, read: 'none' }));
+    ok(await call('tap_screen', { selector: { id: 'open_dialog' }, read: 'none' }));
     await vi.waitFor(async () =>
-      expect(ok(await call('screen', { views: true })).text).toContain(
+      expect(ok(await call('read_screen', { views: true })).text).toContain(
         'a window over the activity, as a dialog or a menu, is not in these views: screen reads it',
       ),
     );
@@ -87,17 +87,17 @@ describe.skipIf(!ANDROID)('the native views on Android', () => {
   it('launches with no probe, saying that none is needed', async () => {
     const r = ok(await call('launch_app', { probe: true, read: 'none' }));
     expect(r.text).toContain(
-      'this device reads its views without a probe: screen views needs none',
+      'this device reads its views without a probe: read_screen views needs none',
     );
   });
 
   it('refuses an app whose main thread does not answer, and reads it once it does', async () => {
     ok(await call('launch_app', { restart: true, read: 'none' }));
-    ok(await call('tap', { selector: { text: 'Freeze' }, read: 'none' }));
-    const r = await call('screen', { views: true });
+    ok(await call('tap_screen', { selector: { text: 'Freeze' }, read: 'none' }));
+    const r = await call('read_screen', { views: true });
     expect(r.data.code).toBe('TIMEOUT');
     expect(r.text).toContain(`${APP}/.MainActivity did not give its views: it is not answering`);
-    await vi.waitFor(async () => ok(await call('screen', { views: true })), {
+    await vi.waitFor(async () => ok(await call('read_screen', { views: true })), {
       timeout: 20_000,
       interval: 1_000,
     });

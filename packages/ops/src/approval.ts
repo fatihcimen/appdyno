@@ -28,7 +28,7 @@ export const DATA_LOSS = {
     `Grant ${service} to ${app}, which here resets it to ask`,
     'The answer the person gave is lost, and the app asks again',
   ],
-  'device_setting keychain': () => [
+  'set_device keychain': () => [
     'Empty the keychain',
     'Every item apps keep in it is lost for good',
   ],
@@ -96,7 +96,7 @@ export const ALLOW_POWER =
 const POWER_AHEAD = `appdyno does not restart, power off, reset or erase a device, nor place a call or call for help: the person does that on the device; press_key back or home leaves this screen; a person allows it ahead in this server's own command line: ${ALLOW_POWER}`;
 
 /** What a person can do in place of a touch on iOS's Control Center, which holds the power button. */
-export const CONTROL_CENTER_AHEAD = `appdyno touches nothing in Control Center, which holds the power button: device_setting changes what it would (airplane mode, Wi-Fi, mobile data, dark mode), and press_key home leaves it; a person allows it ahead in this server's own command line: ${ALLOW_POWER}`;
+export const CONTROL_CENTER_AHEAD = `appdyno touches nothing in Control Center, which holds the power button: set_device changes what it would (airplane mode, Wi-Fi, mobile data, dark mode), and press_key home leaves it; a person allows it ahead in this server's own command line: ${ALLOW_POWER}`;
 
 /**
  * Settings put in a language whose words for its resets and erase the power guard has none of, by its own or the whole

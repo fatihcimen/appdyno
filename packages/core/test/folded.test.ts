@@ -39,7 +39,7 @@ describe('what repeats in an answer', () => {
     ];
     expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@b']);
     expect(renderFolded(list).split('\n')).toEqual([
-      '3 elements: ref role "label" x,y flags; 1 inside rows, by find',
+      '3 elements: ref role "label" x,y flags; 1 inside rows, by selector',
       '@a cell "General Manage it" 200,100 clickable',
       '@c text "Title" 200,300',
     ]);

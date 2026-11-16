@@ -99,7 +99,7 @@ export async function webLines(
   // a simulator's inspector serves a new connection some 10 s after the last closed: the screen does not wait for it
   const dom = await Promise.race([read(), late]).finally(() => clearTimeout(timer));
   if (dom === 'late')
-    return `a web view's page not read within ${WEB_LINES_MS / 1000} s: webview reads it`;
+    return `a web view's page not read within ${WEB_LINES_MS / 1000} s: inspect_app reads it`;
   if (!dom) return undefined;
   const known = screen.list.map((e) => fold(e.label));
   const ids = new Set(screen.list.map((e) => e.id && `#${e.id}`));
@@ -120,7 +120,7 @@ export function webOps(ctx: ServerContext) {
   const inspector = (s: Session) => {
     if (!s.device.web)
       throw new ToolError(
-        "this device's web views cannot be inspected from here: read them with screen",
+        "this device's web views cannot be inspected from here: read them with read_screen",
         'UNSUPPORTED',
       );
     return s.device.web;
@@ -137,7 +137,7 @@ export function webOps(ctx: ServerContext) {
       throw new ToolError(
         `no page${app ? ` in ${app}` : ''} matches ${wanted ?? ''}: one that has loaded another since goes by its new title and URL`,
         'NOT_FOUND',
-        'webview pages lists them as they are now',
+        'inspect_app web_pages lists them as they are now',
       );
     if (!page)
       throw new ToolError(

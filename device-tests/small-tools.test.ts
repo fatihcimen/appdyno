@@ -37,8 +37,8 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
     ok(await call('launch_app'));
   });
   afterAll(async () => {
-    await call('set_orientation', { orientation: 'portrait' });
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'orientation', value: 'portrait' });
+    await call('set_device', { name: 'restore' });
     o.ctx.close();
   });
 
@@ -66,10 +66,10 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
 
   it('fixes a position and ends it, with no test provider left', async () => {
     try {
-      ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
+      ok(await call('set_device', { name: 'location', value: '41.01,28.97' }));
       expect(shell('dumpsys', 'location')).toContain('[mock]');
     } finally {
-      ok(await call('set_location', { clear: true }));
+      ok(await call('set_device', { name: 'location', value: 'none' }));
     }
     expect(shell('dumpsys', 'location')).not.toContain('[mock]');
   });
@@ -88,10 +88,10 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
 
   it('turns to each of the four rotations, as the device says', async () => {
     for (const [i, orientation] of ['landscape_left', 'upside_down', 'landscape_right'].entries()) {
-      ok(await call('set_orientation', { orientation, read: 'none' }));
+      ok(await call('set_device', { name: 'orientation', value: orientation, read: 'none' }));
       expect(shell('settings', 'get', 'system', 'user_rotation')).toBe(String(i + 1));
     }
-    ok(await call('set_orientation', { orientation: 'portrait', read: 'none' }));
+    ok(await call('set_device', { name: 'orientation', value: 'portrait', read: 'none' }));
     expect(shell('settings', 'get', 'system', 'user_rotation')).toBe('0');
   });
 });
@@ -106,7 +106,7 @@ const savedWidth = async (call: Call, dir: string) => {
 /** The language the fixture says it was launched in. */
 const language = async (call: Call) => {
   ok(await call('open_link', { url: 'appdyno-fixture://open/locale' }));
-  const [seen] = ok(await call('find', { selector: { id: 'result' } })).data.matches;
+  const [seen] = ok(await call('read_screen', { selector: { id: 'result' } })).data.matches;
   assert(seen);
   return seen.label;
 };
@@ -133,16 +133,16 @@ const turns = async (call: Call) => {
   await call('manage_app', { action: 'stop' });
   ok(await call('launch_app'));
   const y = async () => {
-    const [row] = ok(await call('find', { selector: { text: 'Permission' } })).data.matches;
+    const [row] = ok(await call('read_screen', { selector: { text: 'Permission' } })).data.matches;
     assert(row);
     return row.y;
   };
   const upright = await y();
   try {
-    ok(await call('set_orientation', { orientation: 'landscape_right', read: 'none' }));
+    ok(await call('set_device', { name: 'orientation', value: 'landscape_right', read: 'none' }));
     await vi.waitFor(async () => expect(await y()).not.toBe(upright), { timeout: 8_000 });
   } finally {
-    ok(await call('set_orientation', { orientation: 'portrait', read: 'none' }));
+    ok(await call('set_device', { name: 'orientation', value: 'portrait', read: 'none' }));
   }
   await vi.waitFor(async () => expect(await y()).toBe(upright), { timeout: 8_000 });
 };
@@ -160,7 +160,7 @@ describe.skipIf(!ANDROID)('a language on Android', () => {
     const { call, ctx } = opsOn(androidProvider(new Adb()), ANDROID, APP);
     ok(await call('launch_app', { language: 'de-DE' }));
     expect(await language(call)).toContain('de-DE');
-    ok(await call('device_setting', { name: 'restore' }));
+    ok(await call('set_device', { name: 'restore' }));
     await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     expect(await language(call)).not.toContain('de-DE');
@@ -182,17 +182,17 @@ describe.skipIf(!ANDROID)('accessibility on Android', () => {
     const was = contrast();
     expect(was).not.toBe('1');
     try {
-      ok(await call('device_setting', { name: 'increase_contrast', value: 'on' }));
+      ok(await call('set_device', { name: 'increase_contrast', value: 'on' }));
       expect(contrast()).toBe('1');
-      expect((await call('device_setting', { name: 'increase_contrast' })).data.value).toBe('on');
+      expect((await call('set_device', { name: 'increase_contrast' })).data.value).toBe('on');
     } finally {
-      await call('device_setting', { name: 'restore' });
+      await call('set_device', { name: 'restore' });
     }
     expect(contrast()).not.toBe('1');
   });
 
   it('says Android has no reduce_transparency', async () => {
-    const r = await call('device_setting', { name: 'reduce_transparency', value: 'on' });
+    const r = await call('set_device', { name: 'reduce_transparency', value: 'on' });
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toContain('no reduce_transparency switch');
   });
@@ -209,26 +209,26 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     ok(await call('launch_app'));
   }, 300_000);
   afterAll(async () => {
-    await call('set_orientation', { orientation: 'portrait' });
-    await call('device_setting', { name: 'restore' });
+    await call('set_device', { name: 'orientation', value: 'portrait' });
+    await call('set_device', { name: 'restore' });
     o.ctx.close();
   });
 
   it('turns on contrast and transparency, reads them back, and they go back', async () => {
     for (const name of ['increase_contrast', 'reduce_transparency']) {
-      expect((await call('device_setting', { name })).data.value).toBe('off');
-      ok(await call('device_setting', { name, value: 'on' }));
-      expect((await call('device_setting', { name })).data.value).toBe('on');
+      expect((await call('set_device', { name })).data.value).toBe('off');
+      ok(await call('set_device', { name, value: 'on' }));
+      expect((await call('set_device', { name })).data.value).toBe('on');
     }
-    ok(await call('device_setting', { name: 'restore' }));
+    ok(await call('set_device', { name: 'restore' }));
     for (const name of ['increase_contrast', 'reduce_transparency'])
-      expect((await call('device_setting', { name })).data.value).toBe('off');
+      expect((await call('set_device', { name })).data.value).toBe('off');
   });
 
   // a simulator's position has no reading back, so what stands here is that it is taken
   it('takes a position and its end with no refusal', async () => {
-    ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
-    ok(await call('set_location', { clear: true }));
+    ok(await call('set_device', { name: 'location', value: '41.01,28.97' }));
+    ok(await call('set_device', { name: 'location', value: 'none' }));
   });
 
   it('mutes by the Action button, where the simulated phone has one', async () => {
@@ -282,15 +282,14 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));
     const at = Date.now();
     ok(
-      await call('gesture', {
-        kind: 'drag',
+      await call('swipe_screen', {
         selector: { text: 'Gesture pad' },
         to: { x: 200, y: 700 },
         holdMs: 1_500,
       }),
     );
     expect(Date.now() - at).toBeGreaterThan(1_500);
-    const [travel] = ok(await call('find', { selector: { id: 'travel' } })).data.matches;
+    const [travel] = ok(await call('read_screen', { selector: { id: 'travel' } })).data.matches;
     assert(travel);
     expect(travel.label).not.toBe('travel: 0');
     ok(await call('launch_app'));
@@ -309,7 +308,7 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
     ok(await call('launch_app'));
   }, 300_000);
   afterAll(async () => {
-    await call('set_orientation', { orientation: 'portrait' });
+    await call('set_device', { name: 'orientation', value: 'portrait' });
     await call('manage_app', { action: 'stop' });
     await o.ctx.end();
     o.ctx.close();
@@ -317,15 +316,15 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
 
   it('reads contrast and transparency', async () => {
     for (const name of ['increase_contrast', 'reduce_transparency'])
-      expect(ok(await call('device_setting', { name })).data.value).toMatch(/^(on|off)$/);
+      expect(ok(await call('set_device', { name })).data.value).toMatch(/^(on|off)$/);
   });
 
   // an iPhone's position has no reading back that needs no app of its own: what stands here is that it is taken
   it('takes a position and its end with no refusal', async () => {
     try {
-      ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
+      ok(await call('set_device', { name: 'location', value: '41.01,28.97' }));
     } finally {
-      ok(await call('set_location', { clear: true }));
+      ok(await call('set_device', { name: 'location', value: 'none' }));
     }
   });
 
@@ -365,15 +364,14 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
     ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));
     const at = Date.now();
     ok(
-      await call('gesture', {
-        kind: 'drag',
+      await call('swipe_screen', {
         selector: { text: 'Gesture pad' },
         to: { x: 200, y: 700 },
         holdMs: 1_500,
       }),
     );
     expect(Date.now() - at).toBeGreaterThan(1_500);
-    const [travel] = ok(await call('find', { selector: { id: 'travel' } })).data.matches;
+    const [travel] = ok(await call('read_screen', { selector: { id: 'travel' } })).data.matches;
     assert(travel);
     expect(travel.label).not.toBe('travel: 0');
     ok(await call('launch_app'));

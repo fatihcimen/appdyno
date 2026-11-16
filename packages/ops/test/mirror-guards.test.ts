@@ -76,14 +76,14 @@ describe('the activity of a device', () => {
     const wrap = activityFor(ctx);
     rmSync(activityFile(), { force: true });
     await wrap(op('type_text')).handler({ text: 'hello there' });
-    await wrap(op('tap')).handler({ selector: { text: 'hunter2' } });
+    await wrap(op('tap_screen')).handler({ selector: { text: 'hunter2' } });
     await expect(
       wrap(op('manage_app', () => Promise.reject(new Error('nope')))).handler({ action: 'stop' }),
     ).rejects.toThrow('nope');
     const lines = readActivity();
     expect(lines.map((l) => [l.tool, l.ok])).toEqual([
       ['type_text', true],
-      ['tap', true],
+      ['tap_screen', true],
       ['manage_app', false],
     ]);
     expect(JSON.stringify(lines[0]?.args)).toContain('(11 characters)');
@@ -97,8 +97,8 @@ describe('the activity of a device', () => {
       person: { clientNamed: (s) => `${s} by name` },
     });
     ctx.currentSerial = 'guarded';
-    await inCall({ client: 'said' }, () => activityFor(ctx)(op('tap')).handler({}));
-    expect(readActivity()[0]).toMatchObject({ tool: 'tap', client: 'said by name' });
+    await inCall({ client: 'said' }, () => activityFor(ctx)(op('tap_screen')).handler({}));
+    expect(readActivity()[0]).toMatchObject({ tool: 'tap_screen', client: 'said by name' });
   });
 
   it('leaves out what is no agent acting on the device', async () => {

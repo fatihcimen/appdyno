@@ -102,9 +102,9 @@ describe('iOS simulators', () => {
 
   it('answers an iOS system permission prompt (not only Android ones)', async () => {
     const t = await connect({}, new FakeIos());
-    const home = (await t.textOf('screen')).text;
-    const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
-    expect(asked.text).toContain('answer it with alert');
+    const home = (await t.textOf('read_screen')).text;
+    const asked = await t.textOf('tap_screen', { ref: refOf(home, 'İzin') });
+    expect(asked.text).toContain('answer it with answer_alert');
     const r = await t.textOf('answer_alert', { answer: 'allow' });
     expect(r.text).toContain('"Erlauben"');
     expect(t.device.permissionUp).toBe(false);
@@ -115,10 +115,10 @@ describe('iOS simulators', () => {
     // a simulator asks so before an app's scheme first opens it, and its allow is the second of two buttons
     d.alertWords = ['Open in “appdyno fixture”?', 'Cancel', 'Open'];
     const t = await connect({}, d);
-    const home = (await t.textOf('screen')).text;
-    const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
+    const home = (await t.textOf('read_screen')).text;
+    const asked = await t.textOf('tap_screen', { ref: refOf(home, 'İzin') });
     expect(asked.text).toContain(
-      'the system asks: Open in “appdyno fixture”? (Cancel, Open): answer it with alert',
+      'the system asks: Open in “appdyno fixture”? (Cancel, Open): answer it with answer_alert',
     );
     expect(asked.text).not.toContain('permission');
   });
@@ -344,7 +344,7 @@ describe('iOS simulators', () => {
     );
     const t = await connect({}, device);
     for (const r of [
-      await t.textOf('screen'),
+      await t.textOf('read_screen'),
       await t.textOf('use_device', { device: device.serial }),
     ])
       expect(r).toEqual({

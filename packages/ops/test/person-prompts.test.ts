@@ -34,7 +34,7 @@ async function connect(words: string[], virtual = false) {
 describe('a prompt over the app that no read of it has', () => {
   it('is said by a read, and is in a picture, which takes no look past the app', async () => {
     const { call, looks } = await connect(['Face ID']);
-    expect(await call('screen')).toContain('needs a person: Face ID');
+    expect(await call('read_screen')).toContain('needs a person: Face ID');
     const before = looks();
     expect(await call('take_screenshot')).toContain('image');
     expect(looks()).toBe(before);
@@ -48,21 +48,21 @@ describe('a prompt over the app that no read of it has', () => {
 
   it('is said by an action that changed nothing, which is all it leaves', async () => {
     const { call } = await connect(['Enter iPhone Passcode']);
-    await call('screen');
-    expect(await call('tap', { x: 1, y: 1 })).toContain('needs a person: a passcode');
+    await call('read_screen');
+    expect(await call('tap_screen', { x: 1, y: 1 })).toContain('needs a person: a passcode');
   });
 
   it('costs an action that changed the screen no look', async () => {
     const { call, looks } = await connect(['Face ID']);
-    const home = await call('screen');
+    const home = await call('read_screen');
     const before = looks();
     const form = must(/(@[a-z0-9-]+) \w+ "Form"/.exec(home)?.[1], 'its ref');
-    expect(await call('tap', { ref: form })).not.toContain('needs a person');
+    expect(await call('tap_screen', { ref: form })).not.toContain('needs a person');
     expect(looks()).toBe(before);
   });
 
   it('says nothing of ordinary words', async () => {
     const { call } = await connect(['9:41', 'Silent Mode', 'Wi-Fi']);
-    expect(await call('screen')).not.toContain('needs a person');
+    expect(await call('read_screen')).not.toContain('needs a person');
   });
 });

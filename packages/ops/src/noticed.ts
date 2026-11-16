@@ -31,11 +31,11 @@ export async function backFromAlert(s: Session, screen: Screen, at: Point) {
 const FAST_READ =
   '; read at the fast level: letters outside English, French, Italian, German, Spanish and Portuguese may be wrong';
 
-const needsPerson = (what: string) => `\nneeds a person: ${what}. hand_off asks yours, and waits`;
+const needsPerson = (what: string) => `\nneeds a person: ${what}. ask_person asks yours, and waits`;
 
 /** A system alert by its own words and buttons, whatever it asks: a permission, or a link's "Open in …?". */
 export const systemAsks = (a: SystemAlert) =>
-  `the system asks: ${a.texts.map(onLine).join(' ')} (${a.buttons.map((b) => onLine(b.label)).join(', ')}): answer it with alert`;
+  `the system asks: ${a.texts.map(onLine).join(' ')} (${a.buttons.map((b) => onLine(b.label)).join(', ')}): answer it with answer_alert`;
 
 /** The app check: a system alert points to alert; another app in front is said. */
 function appCheck(s: Session, screen: Screen) {
@@ -51,7 +51,7 @@ function appCheck(s: Session, screen: Screen) {
   if (asks) return `\n${systemAsks(asks)}`;
   // an iOS alert of two buttons has an allow by its place, the one a link's "Open in …?" asks with too
   if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
-    return '\na system alert is open: answer it with alert';
+    return '\na system alert is open: answer it with answer_alert';
   if (!s.appId || !screen.foreground || screen.foreground === s.appId || s.leftApp) return '';
   return `${NOT_IN_FRONT} (${screen.foreground} is, not ${s.appId}): if it crashed, bring it back with launch_app`;
 }

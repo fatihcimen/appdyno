@@ -164,6 +164,11 @@ export function conditionSends(
     });
 
   const given = (m: ViewerControl<'deviceSet' | 'deviceLocation'>) => m.args;
+  /** A pane's place, or its clearing, as `set_device` takes a location. */
+  const placed = ({ lat, lon, clear }: Record<string, unknown>) => ({
+    name: 'location',
+    value: clear ? 'none' : `${String(lat)},${String(lon)}`,
+  });
   /** A location has nothing to read: only whether one fixed here is written down to go back. */
   const location = () => ({ name: 'location', ...(changed('location') && { changed: true }) });
 
@@ -183,7 +188,7 @@ export function conditionSends(
         return;
       }
       // the whole device's: the app another pane named is no app of this one
-      const { answer, data } = await call('device', 'device_setting', args, '');
+      const { answer, data } = await call('device', 'set_device', args, '');
       const setting = SETTINGS.find((n) => n === name);
       // what reads as it did is no change, and the answer says so
       const moved = answer.ok && !!(data as { changed?: unknown } | undefined)?.changed;
@@ -197,13 +202,13 @@ export function conditionSends(
 
     deviceLocation: async (m: ViewerControl<'deviceLocation'>) =>
       tell('device', {
-        ...(await call('device', 'set_location', given(m))).answer,
+        ...(await call('device', 'set_device', placed(given(m)))).answer,
         conditions: [location()],
       }),
 
     /** Put Back All: what `device_setting restore` puts back, a location among them, and what it leaves to a process still running. */
     deviceRestore: async () => {
-      const { answer, data } = await call('device', 'device_setting', { name: 'restore' }, '');
+      const { answer, data } = await call('device', 'set_device', { name: 'restore' }, '');
       // what went back is as the restore read it back, and nothing else moved: a refusal reads every row again
       const reads = readBack(data);
       const back = answer.ok ? SETTINGS.filter((n) => n in reads) : SETTINGS;
