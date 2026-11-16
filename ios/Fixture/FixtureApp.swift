@@ -83,6 +83,7 @@ struct FixtureApp: App {
         "push": { _ in AnyView(PushScreen()) },
         "uikit": { _ in AnyView(UIKitScreen()) },
         "lifecycle": { _ in AnyView(LifecycleScreen()) },
+        "fold": { _ in AnyView(FoldScreen()) },
         "photos": { _ in AnyView(PhotosScreen()) }
     ]
 }
