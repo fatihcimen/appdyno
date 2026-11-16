@@ -10,10 +10,23 @@ const NO_WINDOW_HINTS: Partial<Record<string, string>> = {
   'the screen is off or locked': 'the power key wakes it; a lock is opened by hand',
 };
 
-/** A failed read, refused again with what to do where it found no window. */
-export function noWindowHint(e: unknown): never {
+/** The window of the assistant's sheet, as the system names it whichever app is the assistant. */
+const ASSISTANT = /\bVoiceInteractionSession\}/;
+
+/**
+ * A failed read, refused again with what to do where it found no window. `focus`: the window with the focus, asked
+ * only of a lit screen that gave none to read: the assistant's sheet is the system's and gives a reader nothing, so
+ * the app under it read as one that hangs.
+ */
+export async function noWindowHint(e: unknown, focus: () => Promise<string>): Promise<never> {
   if (!(e instanceof DeviceError) || e.code !== 'NOT_FOUND' || e.hint) throw e;
   const hint = NO_WINDOW_HINTS[e.message.replace(/^no window to read: /, '')];
+  if (hint === NOT_ANSWERING && ASSISTANT.test(await focus().catch(() => '')))
+    throw new DeviceError(
+      e.code,
+      "no window to read: the assistant is in front, a sheet of the system's that gives no elements",
+      'the home key closes it, and the app launched again comes back on the screen it was on',
+    );
   throw hint ? new DeviceError(e.code, e.message, hint) : e;
 }
 

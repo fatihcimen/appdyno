@@ -60,6 +60,22 @@ describe('an agent reached', () => {
     ) as unknown;
     await expect(device.tree()).rejects.toMatchObject({ code: 'NOT_FOUND', message: said, hint });
     await expect(device.tree({ asItIs: true })).rejects.toMatchObject({ message: said, hint });
+    // the assistant's sheet over the app gives no window either, and no app hangs under it: API 35's focus then
+    const assistant = (_: string, c: string) =>
+      Promise.resolve(
+        c.includes('mCurrentFocus')
+          ? '  mCurrentFocus=Window{7f503e5 u0 VoiceInteractionSession}\n'
+          : 'mWakefulness=Awake',
+      );
+    Object.assign(device, { adb: { exec: assistant } });
+    const sheet = {
+      code: 'NOT_FOUND',
+      message:
+        "no window to read: the assistant is in front, a sheet of the system's that gives no elements",
+      hint: 'the home key closes it, and the app launched again comes back on the screen it was on',
+    };
+    await expect(device.tree()).rejects.toMatchObject(sheet);
+    await expect(device.tree({ asItIs: true })).rejects.toMatchObject(sheet);
   });
 
   it('says the screen as it stands now, where its hello is of the screen as it stood then', async () => {

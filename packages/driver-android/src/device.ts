@@ -226,8 +226,9 @@ export class AndroidDevice extends RpcDevice implements Device {
   private readonly sh = (command: string) => this.shell(command);
 
   async tree({ asItIs, ...limits }: TreeOptions = {}): Promise<Tree> {
+    const noWindow = (e: unknown) => noWindowHint(e, () => currentFocus(this.sh));
     const read = async () =>
-      (await this.call('tree.get', limits, TIMEOUTS.read).catch(noWindowHint)).result;
+      (await this.call('tree.get', limits, TIMEOUTS.read).catch(noWindow)).result;
     // what the agent found goes with the refusal: an app that does not answer is told from a dark screen by it
     let refusal = new DeviceError('NOT_FOUND', 'no window to read');
     const t = await read().catch((e: unknown) => {
