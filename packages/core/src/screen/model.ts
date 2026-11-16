@@ -74,6 +74,14 @@ export const cutAt = (text: string, max: number) => {
 const cut = (text: string) => cutAt(text, MAX_LABEL);
 /** What tells an element apart is said only so far: the rest of a paragraph tells nothing more. */
 export const cutContext = (text: string) => cutAt(text, MAX_CONTEXT);
+/**
+ * An element's words as a line shows them: hidden of secrets while still whole, then cut. Cut first, a secret the cut
+ * fell on would no longer be the secret, and its start would show.
+ */
+export const shownLabel = (
+  e: { label: string; whole?: string | undefined },
+  clean: (s: string) => string,
+) => (e.whole === undefined ? clean(e.label) : cut(clean(e.whole)));
 /** `com.example.shop:id/basket_btn` → `basket_btn`; iOS identifiers stay as they are. */
 export const idOf = (identifier: string | undefined) =>
   identifier?.replace(/^[A-Za-z][\w.]*:id\//, '').trim() || undefined;

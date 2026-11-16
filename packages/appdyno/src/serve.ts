@@ -2,7 +2,14 @@ import { randomBytes } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
-import { DEFAULT_POLICY, opsFor, writeDirsOf, type Policy, type ServerContext } from '@appdyno/ops';
+import {
+  DEFAULT_POLICY,
+  opsFor,
+  secretsOf,
+  writeDirsOf,
+  type Policy,
+  type ServerContext,
+} from '@appdyno/ops';
 import { endWithClient, handOff, putBack, putBackAfter, PUT_BACK_AFTER } from './lifetime.js';
 import { COMMANDS } from './usage.js';
 
@@ -69,7 +76,7 @@ export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.e
     ...(urls && { urls }),
     apps: listOf(given('allow-apps', 'APPDYNO_ALLOW_APPS')),
     allowHome: !values['no-home'],
-    secrets: listOf(env.APPDYNO_SECRETS),
+    secrets: secretsOf(env),
     ...(loss && { allowDataLoss: loss }),
     ...(power && { allowPower: power }),
     writeDirs: writeDirsOf(values['allow-write'], env),

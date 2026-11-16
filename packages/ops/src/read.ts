@@ -10,6 +10,7 @@ import {
   safeName,
   screenStructure,
   selectIn,
+  shownLabel,
   UNCHANGED,
   type UiElement,
 } from '@appdyno/core';
@@ -17,7 +18,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { selectorOf } from './checks.js';
 import type { ServerContext } from './context.js';
-import { redact, type Policy } from './policy.js';
+import { picturesHideNothing, redact, type Policy } from './policy.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import type { Session } from './session.js';
 import {
@@ -104,7 +105,8 @@ async function saveShot(
   const size = imageSize(data);
   if (!inline) {
     const at = size && placed(now, size.w, size.h);
-    return reply(`saved ${to}${size && at ? ` (${size.w}x${size.h} px; ${at.said})` : ''}`, {
+    const where = size && at ? ` (${size.w}x${size.h} px; ${at.said})` : '';
+    return reply(`saved ${to}${where}${picturesHideNothing(policy)}`, {
       width: size?.w ?? 0,
       height: size?.h ?? 0,
       ...(at?.scale && { scale: at.scale }),
@@ -223,7 +225,7 @@ export function readOps(
           return {
             ref: e.ref,
             role: e.role,
-            label: clean(e.label),
+            label: shownLabel(e, clean),
             ...(e.id && { id: clean(e.id) }),
             x: e.x,
             y: e.y,
@@ -263,14 +265,14 @@ export function readOps(
         // a wait that ran out says what it waited for, as one in steps does
         const what = a.ref ?? showSelector(selectorOf(a.selector) ?? {});
         const head = hit
-          ? `found: ${hit.ref} ${JSON.stringify(clean(hit.label))}`
+          ? `found: ${hit.ref} ${JSON.stringify(shownLabel(hit, clean))}`
           : met
             ? 'gone'
             : `${what} ${gone ? 'still there' : 'not shown'} after ${timeoutMs} ms`;
         const out = {
           met,
           gone,
-          ...(found && !gone && { found: { ref: found.ref, label: clean(found.label) } }),
+          ...(found && !gone && { found: { ref: found.ref, label: shownLabel(found, clean) } }),
         };
         const diff =
           read === 'diff' && before
@@ -320,7 +322,7 @@ export function readOps(
             ? `\nframes at ${shown.at.map((t) => (t / 1_000).toFixed(1)).join(', ')} s`
             : '';
           return reply(
-            text + at,
+            text + at + (shown ? picturesHideNothing(ctx.policy) : ''),
             {
               width: 0,
               height: 0,
@@ -356,7 +358,7 @@ export function readOps(
         s.pictured(layout ?? '');
         const at = placed(size, meta.w, meta.h);
         return reply(
-          `image ${meta.w}x${meta.h} px; ${at.said}${fg}`,
+          `image ${meta.w}x${meta.h} px; ${at.said}${fg}${picturesHideNothing(ctx.policy)}`,
           {
             width: meta.w,
             height: meta.h,

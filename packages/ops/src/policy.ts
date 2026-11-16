@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { delimiter, resolve } from 'node:path';
 import { must, SETTINGS_APP } from '@appdyno/core';
 import type { Platform } from '@appdyno/protocol';
@@ -30,6 +31,43 @@ export const writeDirsOf = (given: string[] = [], env: NodeJS.ProcessEnv = proce
   [...given, ...(env.APPDYNO_ALLOW_WRITE ?? '').split(delimiter)]
     .filter(Boolean)
     .map((d) => resolve(d));
+
+/**
+ * The texts never shown back: what a program gave, APPDYNO_SECRETS's, a,b, and each line of the file
+ * APPDYNO_SECRETS_FILE names, where a secret may hold a comma. A file that cannot be read stops the start: a server
+ * that went on with none of them hidden would show them all. The longest first, so that one that holds another is
+ * hidden whole.
+ */
+export function secretsOf(
+  env: NodeJS.ProcessEnv = process.env,
+  given: string | string[] = [],
+): string[] {
+  const listed = (env.APPDYNO_SECRETS ?? '').split(',').map((x) => x.trim());
+  const file = env.APPDYNO_SECRETS_FILE;
+  const lines = file ? secretLines(file) : [];
+  return [...new Set([given, listed, lines].flat().filter(Boolean))].sort(
+    (a, b) => b.length - a.length,
+  );
+}
+
+function secretLines(file: string) {
+  try {
+    return readFileSync(file, 'utf8').split(/\r?\n/);
+  } catch (e) {
+    throw new Error(`APPDYNO_SECRETS_FILE: cannot read ${file}: ${(e as Error).message}`, {
+      cause: e,
+    });
+  }
+}
+
+/**
+ * What a picture or a video's answer says where secrets are listed: they are hidden in text, and a picture is the
+ * screen as it was. Only a report's own pictures are painted over.
+ */
+export const picturesHideNothing = (policy: Policy, what = 'picture') =>
+  policy.secrets.length > 0
+    ? `\nlisted secrets are hidden in text only: this ${what} shows the screen as it was`
+    : '';
 
 /** Schemes that reach the device's files, other components or code, not a page or an app screen. */
 const UNSAFE_SCHEME = /^(file|content|intent|javascript|data|android-app|jar):/i;

@@ -6,6 +6,7 @@ import {
   inCall,
   opsFor,
   rawNodes,
+  secretsOf,
   ServerContext,
   SHARE_BY_LIBRARY,
   ToolError,
@@ -40,6 +41,12 @@ export type ConnectOptions = {
    * state folder: a path anywhere else is refused, `POLICY_DENIED`. `APPDYNO_ALLOW_WRITE` lists more, as `PATH` does.
    */
   allowWrite?: string[];
+  /**
+   * Texts never shown back in an answer, typed or put on the clipboard, as a test account's password. `APPDYNO_SECRETS`
+   * (`a,b`) and the lines of the file `APPDYNO_SECRETS_FILE` names join them. Hidden in text alone: a screenshot and a
+   * video show the screen as it was.
+   */
+  secrets?: string[];
 };
 
 /** What a tool answered: the words a person would read, its images, and its data. */
@@ -148,6 +155,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
     {
       ...DEFAULT_POLICY,
       ...(allowDevices && { devices: allowDevices }),
+      secrets: secretsOf(process.env, options.secrets),
       writeDirs: writeDirsOf(options.allowWrite),
     },
     deviceProviders(),

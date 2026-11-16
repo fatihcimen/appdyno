@@ -1,7 +1,7 @@
 import { must } from '../must.js';
 import { asName, elementLine, onLine, quoted, screenHeader } from './diff.js';
 import type { Rect } from './elements.js';
-import { cutContext, type ScreenElement } from './model.js';
+import { cutContext, shownLabel, type ScreenElement } from './model.js';
 
 /** Fewer rows than this save nothing over the line their header takes. */
 const MIN_RUN = 3;
@@ -124,7 +124,7 @@ export function renderFolded(
         `${[asName(first.role), `x=${first.x}`, ...first.flags].join(' ')}: ref "label" y${apart ? ' — context' : ''}`,
         ...run.map(
           (e, k) =>
-            `${e.ref} ${quoted(say(e.label))} ${e.y}${apart && told[k] ? ` — ${onLine(told[k])}` : ''}`,
+            `${e.ref} ${quoted(once(shownLabel(e, clean)))} ${e.y}${apart && told[k] ? ` — ${onLine(told[k])}` : ''}`,
         ),
       );
   }

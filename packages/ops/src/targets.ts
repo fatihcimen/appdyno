@@ -14,6 +14,7 @@ import {
   asName,
   onLine,
   quoted,
+  shownLabel,
 } from '@appdyno/core';
 import type { Point } from '@appdyno/protocol';
 import { UNREAD } from './checks.js';
@@ -41,7 +42,7 @@ export type Words = {
 export function wordsOf(clean: (s: string) => string): Words {
   // what tells like elements apart is the row each is in, where the list has one
   const line = (e: ScreenElement) =>
-    `${e.ref} ${asName(e.role)} ${quoted(clean(e.label || e.id || ''))} ${e.x},${e.y}${e.refContext ? ` — ${onLine(cutContext(clean(e.refContext)))}` : ''}`;
+    `${e.ref} ${asName(e.role)} ${quoted(e.label ? shownLabel(e, clean) : clean(e.id ?? ''))} ${e.x},${e.y}${e.refContext ? ` — ${onLine(cutContext(clean(e.refContext)))}` : ''}`;
   const offer = (list: ScreenElement[], want?: string) => {
     const near = nearest(list, want).map(line);
     return near.length > 0 ? `; nearest: ${near.join('; ')}` : '';
@@ -134,7 +135,7 @@ function aimedAt(e: ScreenElement, clean: Words['clean'], list: ScreenElement[])
       undefined,
       false,
     );
-  const named = (c: ScreenElement) => refName(c.ref, clean(c.label));
+  const named = (c: ScreenElement) => refName(c.ref, shownLabel(c, clean));
   const { point, why, other } = touchPoint(e, list);
   if (!why || !other) return { point, name: named(e) };
   const note = {

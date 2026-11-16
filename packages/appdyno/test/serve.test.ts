@@ -22,6 +22,13 @@ it('refuses an allow list given empty, by flag or variable, as it would let in e
   expect(policyOf({ 'allow-devices': '^emulator-' }, {}).devices?.test('emulator-5554')).toBe(true);
 });
 
+it('reads the secrets of the variable and of the file, and stops at a file it cannot read', () => {
+  expect(policyOf({}, { APPDYNO_SECRETS: 'a1,b22' }).secrets).toEqual(['b22', 'a1']);
+  expect(() => policyOf({}, { APPDYNO_SECRETS_FILE: '/no/such/file' })).toThrow(
+    'APPDYNO_SECRETS_FILE: cannot read /no/such/file',
+  );
+});
+
 it("takes an install form's field as the person left it: empty is no list, and what is written is held to the same", () => {
   const fields = ['DEVICES', 'APPS', 'URLS'].map((f) => `APPDYNO_FORM_ALLOW_${f}`);
   // empty, and the manifest's own placeholder, which a client leaves where a field has no value

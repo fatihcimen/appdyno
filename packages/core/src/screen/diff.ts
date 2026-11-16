@@ -1,4 +1,4 @@
-import type { ScreenElement } from './model.js';
+import { shownLabel, type ScreenElement } from './model.js';
 
 /** What JSON leaves as it is and a reader may still take for the end of a line: C1 controls, the line and paragraph separators. */
 const ENDS_A_LINE = /[\u007f-\u009f\u2028\u2029]/g;
@@ -25,7 +25,7 @@ export function elementLine(e: ScreenElement, clean: (s: string) => string = (s)
   return [
     e.ref,
     asName(e.role),
-    quoted(clean(e.label)),
+    quoted(shownLabel(e, clean)),
     ...(!e.label && e.id ? [`id=${asName(clean(e.id))}`] : []),
     `${e.x},${e.y}`,
     ...e.flags,
@@ -106,10 +106,10 @@ export function diffText(
   return [
     `screen changed: +${d.added.length} -${d.removed.length} ~${d.changed.length} (${total} elements; ref role "label" x,y flags)`,
     ...d.added.map((e) => `+ ${elementLine(e, clean)}`),
-    ...d.removed.map((e) => `- ${e.ref} ${quoted(clean(e.label))}`),
+    ...d.removed.map((e) => `- ${e.ref} ${quoted(shownLabel(e, clean))}`),
     ...d.changed.map(
       ({ now, was }) =>
-        `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (was ${quoted(clean(was.label))})` : ''}`,
+        `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (was ${quoted(shownLabel(was, clean))})` : ''}`,
     ),
   ].join('\n');
 }

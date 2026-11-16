@@ -12,6 +12,7 @@ import {
 import type { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
+import { picturesHideNothing } from './policy.js';
 import { reportVideoDir } from './report-state.js';
 import { Handle, RecordOut } from './schemas.js';
 import type { Session } from './session.js';
@@ -118,7 +119,7 @@ export function recordOps(ctx: ServerContext) {
         }
         const handle = await recorder.start(to, { maxSeconds });
         filming.write(s.device.serial, { handle, since, file: to, owner: s.owner });
-        const t = `recording to ${to}, at most ${maxSeconds} s`;
+        const t = `recording to ${to}, at most ${maxSeconds} s${picturesHideNothing(ctx.policy, 'video')}`;
         return reply(t, { done: t, files: [to], since });
       },
     }),
