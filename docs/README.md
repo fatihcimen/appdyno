@@ -2,7 +2,17 @@
 
 [Türkçe](README.tr.md)
 
-appdyno drives and measures iOS and Android apps from your Mac. New here? Start with the [README](../README.md).
+appdyno drives and measures iOS and Android apps from your Mac. The [README](../README.md) says what it is and shows it at work.
+
+## Start here
+
+New to appdyno? Three pages, in this order:
+
+1. [Connecting a client](guides/clients.md): install appdyno, join it to your MCP client, and get a simulator, an emulator or a phone ready.
+2. [Tools, at a glance](reference/tools.md#at-a-glance): the 28 tools on one screen, and where each one's details are.
+3. [Flows](guides/flows.md): save what an agent did, replay it with no model, and run it in CI.
+
+After those, a guide takes you through a task, the reference is for looking things up, and an example runs as it is.
 
 ## Guides
 

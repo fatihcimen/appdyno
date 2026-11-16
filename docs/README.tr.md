@@ -2,7 +2,17 @@
 
 [English](README.md)
 
-appdyno, iOS ve Android uygulamalarını Mac'inizden yönetir ve ölçer. Yeni misiniz? [README](../README.tr.md) ile başlayın.
+appdyno, iOS ve Android uygulamalarını Mac'inizden yönetir ve ölçer. [README](../README.tr.md) ne olduğunu söyler ve iş başında gösterir.
+
+## Buradan başlayın
+
+appdyno'da yeni misiniz? Sırasıyla üç sayfa:
+
+1. [İstemci bağlamak](guides/clients.tr.md): appdyno'yu kurun, MCP istemcinize bağlayın ve bir simulator, bir emulator ya da bir telefon hazırlayın.
+2. [Araçlar, bir bakışta](reference/tools.tr.md#bir-bakışta): tek ekranda 28 araç ve her birinin ayrıntılarının yeri.
+3. [Akışlar](guides/flows.tr.md): bir ajanın yaptığını kaydedin, modelsiz yeniden oynatın ve CI'da çalıştırın.
+
+Bunlardan sonra: bir rehber sizi bir işin içinden geçirir, başvuru bir şeye bakmak içindir, bir örnek de olduğu gibi çalışır.
 
 ## Rehberler
 
@@ -39,7 +49,7 @@ Her biri olduğu gibi çalışır.
 
 | örnek                                     | şunun için deneyin                                                               |
 | ----------------------------------------- | -------------------------------------------------------------------------------- |
-| [Shop](examples/shop/README.tr.md)        | bir ödemedeki çökmeyi bir ajanla bulmak, sonra bir akışla düzeltilmiş tutmak     |
+| [Shop](examples/shop/README.tr.md)        | bir ödemedeki crash'i bir ajanla bulmak, sonra bir akışla düzeltilmiş tutmak     |
 | [`perf-gate.yml`](examples/perf-gate.yml) | uygulamayı yavaşlatan bir pull request'i bir GitHub runner'ında başarısız saymak |
 
 ## Nasıl çalışır
