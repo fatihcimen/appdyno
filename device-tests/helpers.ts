@@ -73,6 +73,17 @@ export function opsOn(provider: DeviceProvider, device: string, app: string) {
 export const IPHONE_FIXTURE = process.env.APPDYNO_IPHONE_FIXTURE_APP ?? '';
 export const IPHONE = IPHONE_FIXTURE && (process.env.APPDYNO_IPHONE_UDID ?? '');
 
+/**
+ * Why this run has no simulator helpers, where it has none: APPDYNO_SIM_NO_DIRECT says what scripts/sim-smoke.mjs found
+ * of its host, and APPDYNO_SIM_DIRECT=off is a reason by itself. A test that proves the helpers' path skips there, as
+ * what the runner does in their place proves nothing of them.
+ */
+export const NO_DIRECT =
+  process.env.APPDYNO_SIM_NO_DIRECT ??
+  (process.env.APPDYNO_SIM_DIRECT === 'off' ? 'APPDYNO_SIM_DIRECT=off' : '');
+// said in the run's output too: a reporter lists no reason for a skip in a file that passed
+if (NO_DIRECT) console.log(`what proves the simulator's helpers skips: ${NO_DIRECT}`);
+
 /** The fixture CONTRIBUTING's simulator build makes, for a suite to install on its simulator. */
 export const SIM_FIXTURE = join(
   import.meta.dirname,

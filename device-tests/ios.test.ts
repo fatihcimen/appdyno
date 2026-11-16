@@ -1,4 +1,4 @@
-import { assert, beforeAll, describe, expect, it, vi } from 'vitest';
+import { assert, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { spawn } from 'node:child_process';
 import { IosSimulatorDevice, Simctl, buildScreen, stoppable, type Screen } from './workspace.js';
 import { PROTOCOL, type Tree } from '@appdyno/protocol';
@@ -13,7 +13,7 @@ import {
   startSimAx,
   type HelperProcess,
 } from '../packages/driver-apple/src/simhelper.js';
-import { SIM_FIXTURE } from './helpers.js';
+import { NO_DIRECT, SIM_FIXTURE } from './helpers.js';
 
 /**
  * The iOS runner against the fixture app on our own simulator (APPDYNO_IOS_UDID; never a default: other
@@ -76,7 +76,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   };
 
-  it('launches, reads and taps with no runner, from the first touch on', async () => {
+  it('launches, reads and taps with no runner, from the first touch on', async (ctx) => {
+    if (NO_DIRECT) return ctx.skip(NO_DIRECT);
     expect(d.hello?.agentVersion).toBe('helper');
     const s = await home();
     // not Form: its control found twice at different places is the runner's to tell apart, once it is up
@@ -88,14 +89,16 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(asked).toBe(0);
   });
 
-  it('looks for a sheet over the app in front with no runner', async () => {
+  it('looks for a sheet over the app in front with no runner', async (ctx) => {
+    if (NO_DIRECT) return ctx.skip(NO_DIRECT);
     await home();
     let words: string[] = [];
     expect(await askedOfRunner(async () => (words = await d.systemWords()))).toBe(0);
     expect(words).toEqual([]);
   });
 
-  it('touches and reads a layout with a control found twice while its runner starts, not after it', async () => {
+  it('touches and reads a layout with a control found twice while its runner starts, not after it', async (ctx) => {
+    if (NO_DIRECT) return ctx.skip(NO_DIRECT);
     const fresh = new IosSimulatorDevice(udid);
     // a runner on its way, which never comes: what waits for it would hang here
     Object.defineProperty(fresh, 'agentStarting', { value: true });
@@ -183,7 +186,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   });
 
-  it('types a phone number whole into an empty field that formats it, after a secure field, by keys alone', async () => {
+  it('types a phone number whole into an empty field that formats it, after a secure field, by keys alone', async (ctx) => {
+    if (NO_DIRECT) return ctx.skip(NO_DIRECT);
     const s = await open('Form');
     // a secure field is the runner's: its dots cannot show that keys of a layout that is not US typed it right
     const secure = await d.typeText('hunter2', { at: foundId(s, 'password_input') });
@@ -242,7 +246,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(await shownCopies()).toHaveLength(1);
   });
 
-  it('asks the runner of copies on a screen that never stands still a few times, not at every read', async () => {
+  it('asks the runner of copies on a screen that never stands still a few times, not at every read', async (ctx) => {
+    if (NO_DIRECT) return ctx.skip(NO_DIRECT);
     await home();
     for (const [screen, id, shown] of [
       // the slides themselves are the copies, two or three of them on the screen and elsewhere at each read
@@ -451,6 +456,11 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   }, 90_000);
 
   describe('direct input and reads', () => {
+    // on a host with no helpers the runner would answer in their place, and prove nothing of them
+    beforeEach((ctx) => {
+      if (NO_DIRECT) ctx.skip(NO_DIRECT);
+    });
+
     const named = (t: Tree) =>
       t.nodes.filter(
         (n) =>
