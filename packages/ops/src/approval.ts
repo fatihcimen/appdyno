@@ -51,6 +51,22 @@ export async function approve(policy: Policy, s: Session, action: DataLoss, app 
   await askPerson(s, action, DATA_LOSS[action](app, also), AHEAD);
 }
 
+/**
+ * A project's build runs the project's own scripts on this Mac, as this user: asked of the person each time, on
+ * whatever device, and no flag of the server allows it ahead, as one that lets a simulator lose data says nothing of
+ * what may run here.
+ */
+export const approveBuild = (s: Session, project: string) =>
+  askPerson(
+    s,
+    'app build_and_run',
+    [
+      `Build ${project} on this Mac and run what it makes`,
+      "Its build runs the project's own scripts on this Mac, with all that this user may do",
+    ],
+    'a person builds it, and app install takes what the build made',
+  );
+
 /** As SECURITY.md has it: no tool does any of this, so a person does it, and a touch that would is asked of them. */
 /** How a person lets the power, emergency, erase and call controls be touched with nothing asked. */
 export const ALLOW_POWER =

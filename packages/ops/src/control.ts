@@ -4,7 +4,7 @@ import { readState, reportProgress, stateDir, updateState } from '@appdyno/core'
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
-import { approve } from './approval.js';
+import { approve, approveBuild } from './approval.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkVirtual, namedVirtual, RanAs, ranAsFile, virtuals } from './device-names.js';
@@ -132,9 +132,11 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
               'POLICY_DENIED',
               byPerson('by starting it without --allow-apps'),
             );
-          reportProgress(`building ${path}`);
+          const project = inside(policy, path, true);
+          await approveBuild(s, project);
+          reportProgress(`building ${project}`);
           const pkg = await apps.buildAndInstall({
-            project: path,
+            project,
             ...(scheme && { scheme }),
             ...(configuration && { configuration }),
           });

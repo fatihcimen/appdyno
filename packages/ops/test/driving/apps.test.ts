@@ -174,23 +174,10 @@ describe('app management', () => {
     );
   });
 
-  it('builds, installs and launches what a project makes, and only with no allowlist', async () => {
+  it('builds what a project makes only with no allowlist: `approval.test.ts` has its question', async () => {
     const apps = manager();
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
     expect((await call('app', { action: 'build_and_run' })).error).toBe(true);
-    const built = await call('app', {
-      action: 'build_and_run',
-      path: '/tmp/My.xcodeproj',
-      scheme: 'My',
-      configuration: 'Release',
-      read: 'none',
-    });
-    expect(built.text).toContain('built and launched dev.built');
-    expect(apps.log[0]).toEqual([
-      'build',
-      { project: '/tmp/My.xcodeproj', scheme: 'My', configuration: 'Release' },
-    ]);
-    expect(apps.log[1]?.slice(0, 2)).toEqual(['launch', 'dev.built']);
 
     const narrow = manager();
     const { call: narrowCall } = await connect(Object.assign(new FakeDevice(), { apps: narrow }), {

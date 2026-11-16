@@ -45,14 +45,15 @@ export const writeFolders = (policy: Folders) => [
 /**
  * The path of a file or folder a client asked to have written, inside the folders this server writes in, and no other:
  * the client names the path, and the server's own command line sets the folders. A link that leads out is out. Every
- * tool that writes where its caller says comes through here.
+ * tool that writes where its caller says comes through here, and with `itself` a project a tool builds, which may be
+ * one of the folders.
  */
-export function inside(policy: Folders, path: string) {
+export function inside(policy: Folders, path: string, itself = false) {
   const to = resolve(path);
   const roots = writeFolders(policy);
   const under = (p: string | undefined, root: string | undefined) => {
-    const r = p !== undefined && root !== undefined ? relative(root, p) : '';
-    return r !== '' && !r.startsWith('..') && !isAbsolute(r);
+    const r = p !== undefined && root !== undefined ? relative(root, p) : '..';
+    return (itself || r !== '') && !r.startsWith('..') && !isAbsolute(r);
   };
   if (!roots.some((root) => under(to, root) && under(real(to), real(root))))
     throw new ToolError(

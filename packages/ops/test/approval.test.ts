@@ -53,6 +53,8 @@ async function onDevice(
       uninstall: record('uninstall'),
       clearData: record('clear'),
       replaceData: record('replace'),
+      buildAndInstall: () => (done.push('build'), Promise.resolve('dev.built')),
+      launchWith: record('launch'),
       permission: (_app: string, grant: boolean) => {
         done.push(grant ? 'grant' : 'revoke');
         return Promise.resolve();
@@ -191,6 +193,41 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
     expect(asked).toHaveLength(1);
     expect(done).toEqual(['keychain']);
     expect(device.calls.filter((c) => c.name === 'act')).toHaveLength(1);
+  });
+
+  describe('app build_and_run', () => {
+    const build = { action: 'build_and_run', path: 'My.xcodeproj', read: 'none' };
+
+    it("builds on the person's yes alone, asked with the project and that its scripts run on this Mac", async () => {
+      const { call, done, asked, serial } = await on({ answer: 'accept' });
+      const r = await call('app', build);
+      expect(r.error ? r.text : '').toBe('');
+      expect(done).toEqual(['build', 'launch']);
+      expect(asked).toEqual([
+        `Build ${join(process.cwd(), 'My.xcodeproj')} on this Mac and run what it makes on Fake Phone (${serial})? Its build runs the project's own scripts on this Mac, with all that this user may do.`,
+      ]);
+    });
+
+    it('is asked whatever flag lets data be lost, and builds nothing on a no or with nobody to ask', async () => {
+      const policy = { allowDataLoss: 'all' as const, allowPower: 'all' as const };
+      const no = await on({ policy, answer: 'decline' });
+      expect((await no.call('app', build)).code).toBe('PERMISSION_REQUIRED');
+      expect(no.asked).toHaveLength(1);
+      expect(no.done).toEqual([]);
+      const nobody = await on({ policy });
+      expect((await nobody.call('app', build)).text).toBe(
+        'PERMISSION_REQUIRED: app build_and_run asks the person first, and this client cannot ask: nothing was done\nhint: a person builds it, and app install takes what the build made',
+      );
+      expect(nobody.done).toEqual([]);
+    });
+
+    it('builds no project outside the folders the server writes in, and asks nobody about one', async () => {
+      const { call, done, asked } = await on({ answer: 'accept' });
+      const r = await call('app', { ...build, path: join(folder, 'My.xcodeproj') });
+      expect(r.code).toBe('POLICY_DENIED');
+      expect(asked).toEqual([]);
+      expect(done).toEqual([]);
+    });
   });
 
   it("asks nothing of a grant that loses nothing, as a simulator's and Android's", async () => {
