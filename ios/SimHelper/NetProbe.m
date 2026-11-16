@@ -176,6 +176,11 @@ static AppdynoNetRouter *router;
 @property(nonatomic) CFAbsoluteTime due;
 @property(nonatomic) int64_t received;
 @property(atomic) BOOL stopped;
+/// The loader's own thread and the modes its run loop was in: what it is told, it is told there.
+@property(nonatomic, strong) NSThread *loader;
+@property(nonatomic, copy) NSArray<NSRunLoopMode> *modes;
+/// What the app is still to be told, each with the time it is due.
+@property(nonatomic, strong) NSMutableArray<NSArray *> *waiting;
 @end
 
 @implementation AppdynoNetProtocol
@@ -194,20 +199,37 @@ static AppdynoNetRouter *router;
 /// Runs `step` once what came before it has reached the app and `bytes` more have passed the link down.
 - (void)pace:(NSUInteger)bytes then:(void (^)(void))step {
   CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-  CFAbsoluteTime at = MAX(linkPassed(0, self.down, bytes), self.due);
-  if (at <= now) {
-    if (!self.stopped) step();
-    return;
+  self.due = MAX(linkPassed(0, self.down, bytes), self.due);
+  @synchronized(self) {
+    [self.waiting addObject:@[@(self.due), [step copy]]];
   }
-  // a little later than the last, so that two of one moment keep their order
-  self.due = at + 1e-6;
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((self.due - now) * NSEC_PER_SEC)), paced, ^{
-    if (!self.stopped) step();
-  });
+  void (^tell)(void) = ^{
+    [self performSelector:@selector(tellDue) onThread:self.loader withObject:nil waitUntilDone:NO modes:self.modes];
+  };
+  if (self.due <= now) tell();
+  else dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((self.due - now) * NSEC_PER_SEC)), paced, tell);
+}
+
+/// On the loader's own thread, each step whose time has come, in the order they were given: two timers of nearly
+/// one moment fire in either order, and an end told before its body left the app with none.
+- (void)tellDue {
+  for (;;) {
+    NSArray *next;
+    @synchronized(self) {
+      next = self.waiting.firstObject;
+      if (!next || [next[0] doubleValue] > CFAbsoluteTimeGetCurrent()) return;
+      [self.waiting removeObjectAtIndex:0];
+    }
+    if (!self.stopped) ((void (^)(void))next[1])();
+  }
 }
 
 - (void)startLoading {
   self.started = CFAbsoluteTimeGetCurrent();
+  self.loader = NSThread.currentThread;
+  self.waiting = [NSMutableArray array];
+  NSRunLoopMode mode = NSRunLoop.currentRunLoop.currentMode;
+  self.modes = mode && ![mode isEqual:NSDefaultRunLoopMode] ? @[NSDefaultRunLoopMode, mode] : @[NSDefaultRunLoopMode];
   NSDictionary *now = controlNow();
   NSDictionary *slow = [now[@"throttle"] isKindOfClass:NSDictionary.class] ? now[@"throttle"] : nil;
   self.rule = now ? ruleFor(self.request) : nil;
@@ -250,7 +272,7 @@ static AppdynoNetRouter *router;
       [self.task resume];
     }
   };
-  // never from inside this call: an answer with no body, told whole before it returns, reached the app as no response
+  // never from inside this call, which the loader has not returned from
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(MAX(wait, 0) * NSEC_PER_SEC)), paced, go);
 }
 
@@ -365,6 +387,7 @@ static AppdynoNetRouter *router;
   @synchronized(self) {
     [self.owners removeObjectForKey:@(task.taskIdentifier)];
   }
+  // one the app gave up is told nothing, and is in the log all the same
   if (owner.stopped) [owner finish:error];
   else
     [owner pace:0
