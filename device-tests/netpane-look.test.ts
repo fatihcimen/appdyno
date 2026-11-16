@@ -119,7 +119,7 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
   /** A request from the fixture's Network screen, by the button that makes it; the screen is not waited for. */
   const send = async (url: string, button: 'fetch' | 'post' = 'fetch') => {
     await ok('type_text', { selector: { id: 'url_input' }, text: url, replace: true });
-    await ok('tap', { selector: { id: button } });
+    await ok('tap_screen', { selector: { id: button } });
   };
 
   beforeAll(async () => {
@@ -204,7 +204,7 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
       await send(TRUSTED);
       // a port nothing listens on: refused on its way
       await send('http://127.0.0.1:9/v1/health');
-      await ok('network', {
+      await ok('capture_network', {
         action: 'mock',
         rules: [
           `"localhost:${port}/v1/profile" status=200 type="application/json" body="{\\"name\\":\\"Grace\\",\\"plan\\":\\"pro\\"}"`,
@@ -254,12 +254,12 @@ describe.runIf(udid && shots)('the Network pane, looked at', () => {
       await click('networkRuleFields');
 
       await click('networkShowRequests');
-      await ok('network', { action: 'throttle', throttle: '3g' });
+      await ok('capture_network', { action: 'throttle', throttle: '3g' });
       await until('the speed set', () => network((m) => m.throttle === '3g').length > 0);
       await looked('speed');
 
       for (const answer of held.splice(0)) answer();
-      await ok('network', { action: 'throttle', throttle: 'full' });
+      await ok('capture_network', { action: 'throttle', throttle: 'full' });
       const before = sent.length;
       await click('networkGo');
       await until('the capture to stop', () =>
