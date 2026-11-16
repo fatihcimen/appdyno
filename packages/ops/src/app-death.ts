@@ -101,8 +101,11 @@ async function deathOf(
 export const pidInAnswer = (asked: string | undefined, r: { pid?: number | undefined }) =>
   asked && r.pid !== undefined ? { pid: r.pid > 0 ? String(r.pid) : undefined } : undefined;
 
-/** What to do once the app died under a call that failed for it: while its crash dialog holds it, its log says why. */
-export const diedHint = (d: Died) =>
+/**
+ * What to do once the app died under a call that failed for it: while its crash dialog holds it, its log says why. An
+ * answer that holds a report's reason, and with `lines` the app's last log lines, sends nobody to read them again.
+ */
+export const diedHint = (d: Died, lines = false) =>
   d.held
     ? 'logs says why it died now, and crashes once alert answers its crash dialog; launch_app starts it again after'
     : d.unreported
@@ -110,7 +113,7 @@ export const diedHint = (d: Died) =>
         'launch_app starts it again, and crashes says why it died once the system has written its report, which can take a minute'
       : d.unkept
         ? 'launch_app starts it again, and logs says why it died'
-        : 'launch_app starts it again, and crashes says why it died';
+        : `launch_app starts it again; why it died is above${lines ? ', with its last log lines' : ''}, and crashes has the whole report`;
 
 /** An answer's line of the app's end. */
 export const diedLine = ({ reason, file }: Died) =>
@@ -275,7 +278,7 @@ export async function diedRefusal(
       ...(lines.length ? ['its last log lines:', ...lines] : []),
     ].join('\n'),
     'APP_NOT_RUNNING',
-    diedHint(said),
+    diedHint(said, lines.length > 0),
     true,
   );
 }

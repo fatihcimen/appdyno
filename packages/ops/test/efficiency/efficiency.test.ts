@@ -63,7 +63,7 @@ it('keeps each task within its calls', { timeout: 120_000 }, async () => {
     'log in, a slow result': 2,
     'three items in the basket': 2,
     'find a setting, change it': 3,
-    'a crash and its log': 3,
+    'a crash and its log': 2,
     'record a flow, replay it': 5,
     'a stale ref, then the row': 3,
     'a selector with no match, then the row': 3,

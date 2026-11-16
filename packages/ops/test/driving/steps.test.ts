@@ -313,7 +313,7 @@ describe('steps across screens', () => {
         expect(Date.now() - started, `android ${String(android)}`).toBeLessThan(10_000);
         expect([r.data.code, r.data.hint, r.data.dispatched]).toEqual([
           'APP_NOT_RUNNING',
-          'launch_app starts it again, and crashes says why it died',
+          'launch_app starts it again; why it died is above, with its last log lines, and crashes has the whole report',
           true,
         ]);
         expect(r.text).toMatch(
@@ -546,7 +546,7 @@ describe('steps across screens', () => {
         const r = await cutShort(call);
         expect([r.data.code, r.data.hint], app).toEqual([
           'APP_NOT_RUNNING',
-          'launch_app starts it again, and crashes says why it died',
+          'launch_app starts it again; why it died is above, and crashes has the whole report',
         ]);
         expect(r.text).toMatch(
           /\n3\. tap failed, the rest were not run: [^\n]+\nthe app died: APP CRASH\(EXCEPTION\) \(\/tmp\/report\.txt\), by step 3\n/,

@@ -374,7 +374,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       );
       expect([e.code, e.hint]).toEqual([
         'APP_NOT_RUNNING',
-        'launch_app starts it again, and crashes says why it died',
+        'launch_app starts it again; why it died is above, and crashes has the whole report',
       ]);
       expect(e.message).toContain(
         '\nthe app died: IllegalStateException: fixture crash, by step 2\n',
