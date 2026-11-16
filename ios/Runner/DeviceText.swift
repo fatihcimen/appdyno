@@ -70,7 +70,7 @@ extension Device {
         try job.stillWaited(before: "the text was typed")
         var verified: Bool? = false
         if field.exists {
-            if replace { clear(field) }
+            if replace { clear(field, in: app) }
             if !replace || field.exists { try type(text, into: field, perSecond: 60) }
             // a secure field reads back as dots: waiting for it to hold the text took the whole echo wait, 1.5 s
             // a field that formats what is typed (a phone number) drops a key that comes while it rewrites itself,
@@ -78,7 +78,7 @@ extension Device {
             let known = replace || before.isEmpty
             verified = secure ? nil : echoed(field, job: job, givesUp: known, holds: holds)
             if verified == false, known, field.exists, !job.over {
-                clear(field)
+                clear(field, in: app)
                 try type(text, into: field, perSecond: 15)
                 verified = echoed(field, job: job, givesUp: false, holds: holds)
             }
@@ -141,10 +141,11 @@ extension Device {
     /// Clears what the text replaces: all of it selected and deleted at once, as deleting a formatting field's
     /// characters one by one moves its cursor and scrambles what is typed after (live: a phone number typed out of
     /// order).
-    private func clear(_ field: XCUIElement) {
-        field.typeKey("a", modifierFlags: .command)
+    private func clear(_ field: XCUIElement, in app: XCUIApplication) {
+        typeKey("a", .command, in: app)
         field.typeText(XCUIKeyboardKey.delete.rawValue)
         if let left = currentText(field), !left.isEmpty {
+            NSLog("appdyno runner: select all left %d characters, deleted one by one", left.count)
             field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count))
         }
     }

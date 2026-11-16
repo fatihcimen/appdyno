@@ -116,6 +116,19 @@ extension Device {
         "command": .command, "control": .control, "option": .option, "shift": .shift
     ]
 
+    /// A key by XCTest's keyboard. On a simulator no hardware key has reached, its first key to an app that just
+    /// started comes without its modifiers, and its next ones keep them (live: command+a selected nothing, shift+arrow
+    /// moved the cursor alone): a key no app takes goes first, once for each process.
+    func typeKey(_ key: String, _ flags: XCUIElement.KeyModifierFlags, in app: XCUIApplication) {
+        let pid = app.responds(to: NSSelectorFromString("processID")) ? app.value(forKey: "processID") as? Int : nil
+        if !flags.isEmpty, pid == nil || pid != keyedPid {
+            NSLog("appdyno runner: a first key to pid %d before one with a modifier", pid ?? -1)
+            app.typeKey(XCUIKeyboardKey.F19.rawValue, modifierFlags: [])
+        }
+        app.typeKey(key, modifierFlags: flags)
+        keyedPid = pid
+    }
+
     private func key(_ name: String, _ modifiers: [String]) throws {
         let flags = modifiers.reduce(into: XCUIElement.KeyModifierFlags()) { $0.formUnion(Device.held[$1] ?? []) }
         // XCTest's delete does nothing with a modifier held, and typed as text it deletes one character whatever is
@@ -130,16 +143,7 @@ extension Device {
         }
         if !flags.isEmpty || name.count == 1
             || ["escape", "space", "arrowUp", "arrowDown", "arrowLeft", "arrowRight"].contains(name) {
-            let app = front().0
-            let pid = app.responds(to: NSSelectorFromString("processID")) ? app.value(forKey: "processID") as? Int : nil
-            // on a simulator no hardware key has reached, XCTest's first key to an app that just started comes
-            // without its modifiers, and its next ones keep them (live: command+a selected nothing, shift+arrow
-            // moved the cursor alone): a key no app takes goes first
-            if !flags.isEmpty, pid == nil || pid != keyedPid {
-                app.typeKey(XCUIKeyboardKey.F19.rawValue, modifierFlags: [])
-            }
-            app.typeKey(Device.keyboard[name]?.rawValue ?? name, modifierFlags: flags)
-            keyedPid = pid
+            typeKey(Device.keyboard[name]?.rawValue ?? name, flags, in: front().0)
             return
         }
         switch name {
