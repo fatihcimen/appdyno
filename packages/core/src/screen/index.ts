@@ -1,4 +1,4 @@
-import type { Tree } from '@appdyno/protocol';
+import type { Traversal, Tree } from '@appdyno/protocol';
 import { elementsOf, type Rect, type UiElement } from './elements.js';
 import { screenElements, windowRect, type ScreenElement } from './model.js';
 import type { ScreenOptions } from './port.js';
@@ -46,8 +46,9 @@ function keyboardOf(tree: Tree, { port }: ScreenOptions, win?: Rect): ScreenElem
   ];
 }
 
-export function buildScreen(tree: Tree, opts: ScreenOptions): Screen {
-  const elements = withStableRefs(elementsOf(tree), opts);
+/** `traversal`: what an audit's read tells of the order a screen reader takes, kept on the elements. */
+export function buildScreen(tree: Tree, opts: ScreenOptions, traversal?: Traversal[]): Screen {
+  const elements = withStableRefs(elementsOf(tree, traversal), opts);
   const win = windowRect(elements, opts.port);
   const list = [...screenElements(elements, opts), ...keyboardOf(tree, opts, win)];
   // the topmost active application window (a dialog activity over the app), else the topmost

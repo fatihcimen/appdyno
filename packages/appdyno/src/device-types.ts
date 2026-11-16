@@ -33,7 +33,8 @@ export type ScreenElement = {
   screenReaderFocusable?: boolean;
   /**
    * Its place, from 0, in the order the tree gives a screen reader: each element, then what it holds. From `screen`
-   * it is the tree's order alone. A screen reader may go another way, as VoiceOver does by place on the screen. None for an
+   * it is the tree's order alone; from `audit` on Android it also follows the elements that name another to be read
+   * before or after. A screen reader may go another way, as VoiceOver does by place on the screen. None for an
    * element the tree does not hold, as the keyboard.
    */
   order?: number;
@@ -54,16 +55,18 @@ export type Screen = {
 };
 
 export type OpenOptions = {
-  /** The app the screen is read for. */
+  /** The app the screen is read for, and the one `logs` reads where it names none. */
   app?: string;
   /** Devices it may drive; with none, any. */
   allowDevices?: RegExp;
   /** Drive a device another process holds, and hold it from no one. */
   share?: boolean;
   /**
-   * What this device may show and do. `secrets` are hidden in an element's `label`, `whole` and `id`. `apps`: the only
-   * apps `launch` and `terminate` take. A call outside it is refused `POLICY_DENIED`. A touch is still a touch: none
-   * of this asks anything of one.
+   * What this device may show and do. `secrets` are hidden in an element's `label`, `whole` and `id`, in log lines and
+   * in an audit's words. `apps`: the only apps `launch`, `terminate`, `clearData` and `logs` take, and a link opens in.
+   * `urls`: the only links `openLink` opens. `write`: folders `screenshot` may write a file in, beside the folder the
+   * program runs in and appdyno's own state folder. A call outside them is refused `POLICY_DENIED`. A touch is still
+   * a touch: none of this asks anything of one.
    */
   policy?: Policy;
   /** An iPhone's signing for this device alone, in place of the `APPDYNO_IOS_PROFILE` variables: see `Signing`. */
@@ -103,6 +106,75 @@ export type Aimed = {
   on: string;
 };
 
+export type ShotOptions = {
+  /** `png` with none given. */
+  format?: 'png' | 'jpeg';
+  /** A JPEG's quality, 10 to 100. */
+  quality?: number;
+  /** Its longer side at most this many pixels. */
+  maxPx?: number;
+};
+
+/** A picture of the screen, in pixels. */
+export type Shot = { format: 'png' | 'jpeg'; width: number; height: number };
+
+/** One line of an app's log. `at`: its time on the device's clock, in ms since the epoch, where the platform tells it. */
+export type LogLine = { text: string; at?: number; level?: 'warn' | 'error' };
+
+export type LogsQuery = {
+  /** With none, the app the device was opened for. */
+  app?: string;
+  /** Lines from this time on, in ms since the epoch, by the device's clock; with none, the newest. */
+  since?: number;
+  /** 200 with none given, 1000 at most. */
+  maxLines?: number;
+  /** The least a line must be: `info` with none given. */
+  level?: 'verbose' | 'debug' | 'info' | 'warn' | 'error';
+};
+
+/** `source`: where the lines came from. `note`: what the platform could not give. */
+export type Logs = { lines: LogLine[]; source: string; note?: string };
+
+/**
+ * One window of the screen, as the device lists it: `layer`, higher over lower; `active`, the one a person acts in;
+ * `focused`, the one keys go to. An iPhone lists the app in front and, over it, the system's alert.
+ */
+export type DeviceWindow = {
+  type: 'app' | 'keyboard' | 'system' | 'overlay' | 'other';
+  pkg?: string;
+  rect: Rect;
+  layer: number;
+  active: boolean;
+  focused: boolean;
+};
+
+/** `keyboard`: where the on-screen keyboard is, while it is open and the device says where. */
+export type Windows = { windows: DeviceWindow[]; keyboard?: Rect };
+
+export type Orientation = 'portrait' | 'landscape_left' | 'upside_down' | 'landscape_right';
+
+/** One accessibility issue. `type`: its kind, as `contrast` or `hitRegion`. `rule`: the engine's own name for it. */
+export type AuditIssue = {
+  type: string;
+  rule: string;
+  message: string;
+  /** The words of the element it is about, where it has any. */
+  label?: string;
+  /** Where that element is; none where it is gone. */
+  rect?: Rect;
+};
+
+/**
+ * `elements`: the screen the checks ran on, each with its `parent` and its `order`. `order`: their refs as a screen
+ * reader goes through them. `truncated`: there were more issues than were asked for, or the time ran out.
+ */
+export type Audit = {
+  issues: AuditIssue[];
+  truncated: boolean;
+  elements: ScreenElement[];
+  order: string[];
+};
+
 /** One device, whichever platform. */
 export type Device = {
   readonly serial: string;
@@ -131,6 +203,35 @@ export type Device = {
    * with none given, 0 for no wait), as a tool waits for one still coming.
    */
   aim(target: Selector | { ref: string }, options?: { waitMs?: number }): Promise<Aimed>;
-  /** Lets the device go. */
+  /**
+   * A picture of the screen as it is: its bytes, or with `path` a file written there, which `policy.write` and the
+   * two folders it adds to must hold. Secrets are hidden in text alone: a picture shows the screen as it was.
+   */
+  screenshot(options: ShotOptions & { path: string }): Promise<Shot & { path: string }>;
+  screenshot(options?: ShotOptions): Promise<Shot & { data: Uint8Array }>;
+  /** The app's own log lines, the oldest first, each a line of data. */
+  logs(query?: LogsQuery): Promise<Logs>;
+  /**
+   * Opens a link, in `app` where one is given, and waits for the screen it opens to come to rest. Refused
+   * `POLICY_DENIED` for a scheme that reaches files or code, as a tool refuses it, for a link `policy.urls` does not
+   * name, for one that would open in an app `policy.apps` does not, and for one that places a call unless
+   * `policy.urls` names it.
+   */
+  openLink(url: string, options?: { app?: string }): Promise<Touched>;
+  /** The windows on the screen, and where the keyboard is. */
+  windows(): Promise<Windows>;
+  /** Turns the device. A quarter turn's name is the side its top goes to. */
+  setOrientation(orientation: Orientation): Promise<void>;
+  /** The accessibility issues of the screen, with the elements the checks ran on and the order they are read in. */
+  audit(options?: { types?: string[]; maxIssues?: number }): Promise<Audit>;
+  /** Clears the app's data, on an emulator or a simulator alone: on a phone it is refused `UNSUPPORTED`. */
+  clearData(app: string): Promise<void>;
+  /**
+   * Ends the device's agent, the iOS runner or the Android agent, and lets the device go, as `close` does: what a
+   * test does at its end, so that another driver can take the device. While another live process of this Mac uses
+   * that agent it is refused `AGENT_CONFLICT`, unless `force`.
+   */
+  stopAgent(options?: { force?: boolean }): Promise<void>;
+  /** Lets the device go, and leaves its agent running for the next to open it. */
   close(): Promise<void>;
 };

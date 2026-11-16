@@ -17,7 +17,7 @@ export * from './usb.js';
 export * from './build.js';
 export * from './owner.js';
 export * from './claims.js';
-export { agentLeft, sharedAgent } from './agent-hosts.js';
+export { agentLeft, otherHosts, sharedAgent } from './agent-hosts.js';
 export * from './stats.js';
 export * from './must.js';
 export * from './call.js';

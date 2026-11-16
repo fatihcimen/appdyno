@@ -80,10 +80,22 @@ describe('a tool and a device opened from code', () => {
   });
 
   /** What the device entry takes of the tool layer: the driver for a serial and the checks of the policy a server keeps, by name. */
-  const OF_THE_TOOLS = ['ServerContext', 'checkApp', 'redact'];
+  const OF_THE_TOOLS = [
+    'CALL_LINK',
+    'Policy as ToolPolicy',
+    'ServerContext',
+    'checkApp',
+    'checkApp',
+    'checkUrl',
+    'inside',
+    'redact',
+    'redactLog',
+  ];
 
   it('take of the tool layer, in the device entry, only what is named here', () => {
-    const source = readFileSync(new URL('../src/device.ts', import.meta.url), 'utf8');
+    const source = ['device.ts', 'device-members.ts']
+      .map((file) => readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8'))
+      .join('\n');
     const taken = [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from '@appdyno\/ops'/g)]
       .flatMap((m) => must(m[1], 'its names').split(','))
       .map((name) => name.replace(/\btype\b/, '').trim())

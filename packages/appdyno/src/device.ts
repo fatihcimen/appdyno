@@ -18,8 +18,9 @@ import {
   type Sought,
 } from '@appdyno/core';
 import { checkApp, redact, ServerContext } from '@appdyno/ops';
-import { DeviceError, SETTLE_DEFAULT, type Tree } from '@appdyno/protocol';
+import { DeviceError, SETTLE_DEFAULT, type Traversal, type Tree } from '@appdyno/protocol';
 import { policyFor, signingOf } from './allow.js';
+import { membersOf } from './device-members.js';
 import { deviceProviders } from './providers.js';
 import type {
   Aimed,
@@ -65,11 +66,9 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     letGo();
     throw e;
   });
-  const shown = (tree: Tree): Screen => {
-    const { list, elements, hash, foreground, window } = buildScreen(tree, {
-      port: device.platformScreen,
-      ...(app && { appId: app }),
-    });
+  const reads = { port: device.platformScreen, ...(app && { appId: app }) };
+  const shown = (tree: Tree, traversal?: Traversal[]): Screen => {
+    const { list, elements, hash, foreground, window } = buildScreen(tree, reads, traversal);
     return {
       elements: withFamily(list, elements).map((e) => hidden(e, clean)),
       hash,
@@ -119,6 +118,7 @@ export async function openDevice(serial: string, options: OpenOptions = {}): Pro
     foreground: () => device.foreground(),
     aim: async (target, { waitMs = AIM_WAIT_MS } = {}) =>
       aimed(await seek({ now: screen, until }, target, READS, waitMs), target),
+    ...membersOf({ device, policy, app, reads, clean, shown, screen, letGo }),
     close() {
       letGo();
       return Promise.resolve();

@@ -52,6 +52,28 @@ export const SLIDE_DROPS_TOUCH: Record<Platform, boolean> = { android: false, io
  */
 export const TURNS_FROM_OWN_SHAPE: Record<Platform, boolean> = { android: true, ios: false };
 
+/** The orientations a device is turned to by name, each a quarter turn on from the one before. */
+export const ORIENTATIONS = [
+  'portrait',
+  'landscape_left',
+  'upside_down',
+  'landscape_right',
+] as const;
+
+/**
+ * The rotation a named orientation is on a device whose own screen is `own`: a tablet wide as it stands is tall three
+ * quarter turns on, where Android puts its own portrait.
+ */
+export function rotationOf(
+  orientation: (typeof ORIENTATIONS)[number],
+  platform: Platform,
+  own: Hello['screen'] | undefined,
+) {
+  const wideAsItStands =
+    TURNS_FROM_OWN_SHAPE[platform] && !!own && own.w > own.h !== (own.rotation % 2 === 1);
+  return ((ORIENTATIONS.indexOf(orientation) + (wideAsItStands ? 3 : 0)) % 4) as 0 | 1 | 2 | 3;
+}
+
 /** The system's Settings, an app of its own, at whatever page it opens. */
 export const SETTINGS_APP: Record<Platform, string> = {
   android: 'com.android.settings',

@@ -56,6 +56,10 @@ export function agentMet(serial: string, pid: number | undefined, why?: string) 
 /** This process ended it: the next is no news. */
 export const agentLeft = (serial: string) => void met.delete(serial);
 
+/** The live processes of this Mac, other than this one, that use the device's agent: nothing is written. */
+export const otherHosts = (serial: string): Owner[] =>
+  (hosts.read(serial) ?? []).filter(heldElsewhere);
+
 /** This process uses the device's agent; the live others that do. */
 function join(serial: string): Owner[] {
   const now = hosts.update(serial, (was = []) => [...was.filter(heldElsewhere), thisOwner('host')]);

@@ -1,5 +1,10 @@
+import { execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { must } from '@appdyno/core';
+import { must, type AppManager } from '@appdyno/core';
+import { holder } from '@appdyno/ops';
+import { tree } from '@appdyno/testing/fake-screens.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { openDevice } from '../src/device.js';
 import { connect } from '../src/library.js';
@@ -144,5 +149,303 @@ describe('the signing a program gives', () => {
     await tools.tool('screen', {});
     expect(providersGiven[4]).toEqual(signing);
     await tools.close();
+  });
+});
+
+const state = () => must(process.env.APPDYNO_STATE_DIR, 'APPDYNO_STATE_DIR');
+
+describe('a picture of the screen', () => {
+  it('is its bytes, or a file inside the folders the program may write in', async () => {
+    const d = await opened();
+    const shot = await d.screenshot({ format: 'jpeg', quality: 60 });
+    expect(shot).toMatchObject({ format: 'jpeg', width: 460, height: 1024 });
+    expect([...shot.data]).toEqual([1, 2, 3]);
+    const to = join(state(), 'shots', 'one.jpg');
+    const saved = await d.screenshot({ path: to });
+    expect(saved).toEqual({ format: 'jpeg', width: 460, height: 1024, path: to });
+    expect([...readFileSync(to)]).toEqual([1, 2, 3]);
+    await d.close();
+  });
+
+  it('is refused outside them with nothing asked of the device, and written where policy.write says', async () => {
+    const out = join(state(), '..', `appdyno-shots-${process.pid}`);
+    const d = await opened();
+    await expect(d.screenshot({ path: join(out, 'a.png') })).rejects.toMatchObject({
+      code: 'POLICY_DENIED',
+    });
+    expect(device.calls.some((c) => c.name === 'screenshot')).toBe(false);
+    await d.close();
+    const allowed = await openDevice(SERIAL, { share: true, policy: { write: [out] } });
+    try {
+      await allowed.screenshot({ path: join(out, 'a.png') });
+      expect(existsSync(join(out, 'a.png'))).toBe(true);
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+      await allowed.close();
+    }
+  });
+});
+
+describe('the log of an app', () => {
+  it('is lines of data, secrets hidden, for the app the device was opened for', async () => {
+    device.logLines = ['I/app: signed in', 'E/app: token=abcdef123456 refused for hunter2'];
+    device.logNote = 'a note';
+    const d = await openDevice(SERIAL, {
+      app: 'dev.app',
+      share: true,
+      policy: { secrets: ['hunter2'] },
+    });
+    const logs = await d.logs({ since: 1_000, maxLines: 50, level: 'warn' });
+    expect(logs).toEqual({
+      lines: [{ text: 'I/app: signed in' }, { text: 'E/app: token=••• refused for •••' }],
+      source: 'fake log',
+      note: 'a note',
+    });
+    expect(device.logAsked).toEqual({
+      app: 'dev.app',
+      level: 'warn',
+      maxLines: 50,
+      timed: true,
+      since: 1_000,
+    });
+    await d.close();
+  });
+
+  it("carries each line's time and rank where the platform tells them", async () => {
+    const d = await opened();
+    device.logs = () =>
+      Promise.resolve({
+        lines: ['a', 'b'],
+        marks: [{ at: 5 }, { at: 9, level: 'error' as const }],
+        source: 'logcat',
+      });
+    expect((await d.logs()).lines).toEqual([
+      { text: 'a', at: 5 },
+      { text: 'b', at: 9, level: 'error' },
+    ]);
+    await d.close();
+  });
+
+  it('is refused with no app to read, a count out of range, or an app the policy does not list', async () => {
+    const none = await openDevice(SERIAL, { share: true, policy: { apps: ['dev.app'] } });
+    await expect(none.logs()).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    await expect(none.logs({ app: 'dev.app', maxLines: 0 })).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
+    await expect(none.logs({ app: 'other.app' })).rejects.toMatchObject({ code: 'POLICY_DENIED' });
+    await none.close();
+  });
+});
+
+describe('a link', () => {
+  const opens = () => device.calls.filter((c) => c.name === 'openUrl').map((c) => c.args);
+
+  it('is opened, in the app named, and the screen it opens is waited for', async () => {
+    const d = await opened();
+    await expect(d.openLink(' https://example.com/a ')).resolves.toEqual({ settled: true });
+    await d.openLink('app://item/1', { app: 'dev.app' });
+    expect(opens()).toEqual([
+      ['https://example.com/a', undefined],
+      ['app://item/1', 'dev.app'],
+    ]);
+    await d.close();
+  });
+
+  it('goes through the policy a tool keeps: a scheme that reaches files, the list of links, a call', async () => {
+    const d = await openDevice(SERIAL, {
+      share: true,
+      policy: { urls: /^https:\/\/example\.com\// },
+    });
+    const denied = { code: 'POLICY_DENIED' };
+    await expect(d.openLink('https://other.example/')).rejects.toMatchObject(denied);
+    await d.close();
+    const open = await opened();
+    await expect(open.openLink('file:///etc/hosts')).rejects.toMatchObject(denied);
+    await expect(open.openLink('tel:112')).rejects.toMatchObject(denied);
+    await expect(open.openLink('no scheme')).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    await open.close();
+    expect(opens()).toEqual([]);
+    const calls = await openDevice(SERIAL, { share: true, policy: { urls: /^tel:/ } });
+    await calls.openLink('tel:112');
+    expect(opens()).toEqual([['tel:112', undefined]]);
+    await calls.close();
+  });
+
+  it('opens under a list of apps only where the device says it opens in one of them', async () => {
+    const d = await openDevice(SERIAL, { share: true, policy: { apps: ['dev.app'] } });
+    // this fake, as an iPhone, cannot tell which app a link opens in
+    await expect(d.openLink('app://item/1')).rejects.toMatchObject({ code: 'POLICY_DENIED' });
+    device.apps = { opener: () => Promise.resolve('dev.app') } as unknown as AppManager;
+    await d.openLink('app://item/1');
+    device.apps = { opener: () => Promise.resolve('other.app') } as unknown as AppManager;
+    await expect(d.openLink('app://item/2')).rejects.toMatchObject({ code: 'POLICY_DENIED' });
+    await expect(d.openLink('app://item/3', { app: 'other.app' })).rejects.toMatchObject({
+      code: 'POLICY_DENIED',
+    });
+    expect(opens()).toEqual([['app://item/1', undefined]]);
+    await d.close();
+  });
+});
+
+describe('the windows of a screen', () => {
+  it('are listed as the device has them, with where the keyboard is while it is open', async () => {
+    const d = await opened();
+    expect(await d.windows()).toEqual({
+      windows: [
+        {
+          type: 'app',
+          pkg: 'dev.app',
+          rect: { x: 0, y: 0, width: 1080, height: 2400 },
+          layer: 1,
+          active: true,
+          focused: true,
+        },
+      ],
+    });
+    const t = tree([]);
+    t.windows.push({ type: 2, layer: 3, b: [0, 1500, 1080, 2400], active: false, focused: false });
+    device.fixture = t;
+    const { windows, keyboard } = await d.windows();
+    expect(windows[1]).toMatchObject({ type: 'keyboard', layer: 3 });
+    expect(windows[1]).not.toHaveProperty('pkg');
+    expect(keyboard).toEqual({ x: 0, y: 1500, width: 1080, height: 900 });
+    await d.close();
+  });
+});
+
+describe('a turn of the device', () => {
+  it('is by the name a tool takes, counted from the shape the device has standing', async () => {
+    const d = await opened();
+    await d.setOrientation('landscape_left');
+    // a tablet, wide as it stands: its own portrait is three quarter turns on
+    device.hello = { ...device.hello, screen: { w: 2560, h: 1600, density: 320, rotation: 0 } };
+    await d.setOrientation('portrait');
+    expect(device.calls.filter((c) => c.name === 'setOrientation').map((c) => c.args)).toEqual([
+      [1],
+      [3],
+    ]);
+    await expect(d.setOrientation('sideways' as never)).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
+    await d.close();
+  });
+});
+
+describe('an audit', () => {
+  it('gives its issues with the elements the checks ran on and the order they are read in', async () => {
+    const read = tree([
+      { t: 'One', b: [0, 100, 1080, 200] },
+      { t: 'Two', b: [0, 200, 1080, 300] },
+      { t: 'hunter2', b: [0, 300, 1080, 400] },
+    ]);
+    device.audit = () =>
+      Promise.resolve({
+        engine: 'rules',
+        issues: [
+          {
+            type: 'hitRegion',
+            rule: 'android.touchTarget',
+            message: 'hunter2 is 20 dp tall',
+            b: [0, 300, 1080, 400],
+            element: { c: 'android.widget.TextView', t: 'hunter2' },
+          },
+        ],
+        truncated: false,
+        elapsedMs: 1,
+        // the third is read before the first
+        read: { tree: read, traversal: [{ n: 3, before: 1 }] },
+      });
+    const d = await openDevice(SERIAL, { share: true, policy: { secrets: ['hunter2'] } });
+    const audit = await d.audit({ types: ['hitRegion'], maxIssues: 5 });
+    expect(audit.issues).toEqual([
+      {
+        type: 'hitRegion',
+        rule: 'android.touchTarget',
+        message: '••• is 20 dp tall',
+        label: '•••',
+        rect: { x: 0, y: 300, width: 1080, height: 100 },
+      },
+    ]);
+    expect(audit.elements.map((e) => [e.label, e.order])).toEqual([
+      ['One', 1],
+      ['Two', 2],
+      ['•••', 0],
+    ]);
+    expect(audit.order).toEqual([2, 0, 1].map((n) => must(audit.elements[n], 'an element').ref));
+    // the audit's own read: no second one
+    expect(device.calls.some((c) => c.name === 'tree')).toBe(false);
+    await d.close();
+  });
+
+  it('reads the screen once where the device gives no read of its own, and refuses a kind it has not', async () => {
+    const d = await opened();
+    const audit = await d.audit();
+    expect(audit).toMatchObject({ issues: [], truncated: false });
+    expect(audit.order).toEqual(audit.elements.map((e) => e.ref));
+    expect(device.calls.filter((c) => c.name === 'tree')).toHaveLength(1);
+    await expect(d.audit({ types: ['colour'] })).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
+    await d.close();
+  });
+});
+
+describe('the data of an app', () => {
+  it('is cleared on an emulator or a simulator, and on a phone refused', async () => {
+    const cleared: string[] = [];
+    device.apps = {
+      clearData: (app: string) => Promise.resolve(void cleared.push(app)),
+    } as unknown as AppManager;
+    const d = await openDevice(SERIAL, { share: true, policy: { apps: ['dev.app'] } });
+    await d.clearData('dev.app');
+    await expect(d.clearData('other.app')).rejects.toMatchObject({ code: 'POLICY_DENIED' });
+    await d.close();
+    device.virtual = false;
+    const phone = await opened();
+    await expect(phone.clearData('dev.app')).rejects.toMatchObject({ code: 'UNSUPPORTED' });
+    await phone.close();
+    expect(cleared).toEqual(['dev.app']);
+  });
+});
+
+describe("the device's agent", () => {
+  it('is ended by stopAgent, which lets the device go, and left running by close', async () => {
+    const stops = vi.spyOn(device, 'stopAgent');
+    const d = await openDevice(SERIAL);
+    expect(holder(SERIAL)).toMatchObject({ pid: process.pid });
+    await d.stopAgent();
+    expect(stops).toHaveBeenCalledTimes(1);
+    expect(holder(SERIAL)).toBeUndefined();
+    const again = await openDevice(SERIAL);
+    await again.close();
+    expect(stops).toHaveBeenCalledTimes(1);
+  });
+
+  it('is not ended under another live process that uses it, unless forced', async () => {
+    const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+    const pid = must(child.pid, "the child's pid");
+    const file = join(state(), 'agent-hosts', `${SERIAL}.json`);
+    try {
+      const started = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
+        encoding: 'utf8',
+      }).trim();
+      mkdirSync(join(state(), 'agent-hosts'), { recursive: true });
+      writeFileSync(
+        file,
+        JSON.stringify([{ pid, started, tool: 'host', since: '2026-11-03T00:00:00Z' }]),
+      );
+      const stops = vi.spyOn(device, 'stopAgent');
+      const d = await opened();
+      await expect(d.stopAgent()).rejects.toMatchObject({
+        code: 'AGENT_CONFLICT',
+        message: `pid ${pid} uses the agent on ${SERIAL}`,
+      });
+      expect(stops).not.toHaveBeenCalled();
+      await d.stopAgent({ force: true });
+      expect(stops).toHaveBeenCalledTimes(1);
+    } finally {
+      child.kill('SIGKILL');
+      rmSync(file, { force: true });
+    }
   });
 });

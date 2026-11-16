@@ -2,7 +2,8 @@ import {
   kindOf,
   must,
   osName,
-  TURNS_FROM_OWN_SHAPE,
+  ORIENTATIONS as ROTATIONS,
+  rotationOf,
   type ListedDevice,
   type Screen,
 } from '@appdyno/core';
@@ -16,7 +17,6 @@ import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
 
 /** Shapes, a quarter turn each, in the order of a phone's own rotations, which a tablet wide as it stands has at others. */
-const ROTATIONS = ['portrait', 'landscape_left', 'upside_down', 'landscape_right'] as const;
 
 /** The app's window as a turn leaves it: wide in landscape, tall else, with something on it. */
 const turnedTo = (wide: boolean) => (x: Screen) =>
@@ -138,13 +138,7 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
         const named = ROTATIONS.indexOf(orientation);
-        const own = s.device.hello?.screen;
-        const wideAsItStands =
-          TURNS_FROM_OWN_SHAPE[s.device.platform] &&
-          !!own &&
-          own.w > own.h !== (own.rotation % 2 === 1);
-        // a tablet wide as it stands is tall three quarter turns on, where Android puts its own portrait
-        const rotation = ((named + (wideAsItStands ? 3 : 0)) % 4) as 0 | 1 | 2 | 3;
+        const rotation = rotationOf(orientation, s.device.platform, s.device.hello?.screen);
         const wide = named % 2 === 1;
         // a window of that shape already, as upside down, has no turn to wait for
         const before =
