@@ -55,5 +55,12 @@ export async function pastKeyboard(
   const k = platform.keyboardArea(screen.tree);
   const { x, y } = aimed.point;
   if (!k || x < k.x || x > k.x + k.width || y < k.y || y > k.y + k.height) return aimed;
-  return (await hideKeyboard(s)) ? aim(true) : aimed;
+  if (await hideKeyboard(s)) return aim(true);
+  // a keyboard the app keeps, as a web form's: the touch would type a key, and say it tapped the element
+  throw new ToolError(
+    `${aimed.name} is under the on-screen keyboard, which stayed open: a touch there would type`,
+    'UNSUPPORTED',
+    'tap what the app closes the keyboard with, as its Done, or swipe_screen until the element is above the keyboard',
+    false,
+  );
 }

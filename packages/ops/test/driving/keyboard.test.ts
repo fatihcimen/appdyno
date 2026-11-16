@@ -73,6 +73,24 @@ describe('keyboard', () => {
   });
 
   it(
+    'refuses a touch on an element under a keyboard the app keeps open, which would type a key',
+    fakeTimed(async () => {
+      withScreen('low', [
+        { c: 'android.widget.Button', t: 'Send', b: [0, 1700, 1080, 1800], f: 19, go: 'sent' },
+      ]);
+      const d = new WithKeyboard();
+      d.screen = 'low';
+      d.closes = false;
+      const { call } = await connect(d);
+      const r = await call('tap_screen', { selector: { text: 'Send' } });
+      expect(r.data.code).toBe('UNSUPPORTED');
+      expect(r.text).toContain('"Send" is under the on-screen keyboard, which stayed open');
+      expect(r.text).toContain('no touch was sent');
+      expect(act(d).some((a) => a.kind === 'tap')).toBe(false);
+    }),
+  );
+
+  it(
     'closes no keyboard the app has closed since the last read, as the back key would leave the screen',
     fakeTimed(async () => {
       const d = new WithKeyboard();
