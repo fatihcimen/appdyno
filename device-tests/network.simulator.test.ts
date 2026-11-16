@@ -24,7 +24,7 @@ import { Simctl, simulatorProvider, sleep } from './workspace.js';
 const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
 const SECRET = 'gizli-kod-9911';
-/** An address whose certificate the system trusts, for the one case that is about trust: skipped with no network. */
+/** An address whose certificate the system trusts, for the one case that is about trust: not held to where it does not answer. */
 const TRUSTED =
   process.env.APPDYNO_TRUSTED_URL ?? 'https://www.apple.com/library/test/success.html';
 const OUT = process.env.APPDYNO_NETWORK_OUT;
@@ -140,6 +140,13 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     };
   }, 240_000);
 
+  /** Whether the trusted address answers from this Mac: the simulator has the Mac's network. */
+  const trusted = () =>
+    fetch(TRUSTED).then(
+      (r) => r.ok,
+      () => false,
+    );
+
   /** What the fixture's other ways of asking come to: with the probe in the app, or without. */
   const ways = async (label: string) => {
     const headers = await send(`http://${a.at}/headers`, 'config');
@@ -164,7 +171,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(slow.ms).toBeLessThan(4_000);
     expect(upload.text).toContain('{"got":100000}');
     // a server the system trusts, refused by the app's own check
-    expect(pin.said).toMatch(/^failed: cancelled/);
+    if (await trusted()) expect(pin.said).toMatch(/^failed: cancelled/);
   }, 180_000);
 
   it('keeps headers and bodies when asked, with what names a credential hidden', async () => {
@@ -229,7 +236,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(asked).toContain('  Authorization: •••');
     expect(asked).not.toContain('config-bearer');
     // the app's delegate refused this server before; under the probe it is not asked, and the request goes through
-    expect(pin.said).toMatch(/^fetched 200/);
+    if (await trusted()) expect(pin.said).toMatch(/^fetched 200/);
     const paths = await ok('network', { action: 'paths' });
     expect(paths.text).toMatch(
       /^probe: .*the app's own check of a server's certificate \(pinning\) and its answers to a login or client-certificate challenge are not asked/m,
@@ -365,6 +372,13 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect(read.text).toMatch(/\/moved 200 .* \[sent to 127\.0\.0\.1\]/);
     expect(read.text).toMatch(/\/late 200 .* \[delayed by a rule\]/);
     expect(read.text).toMatch(/^rule 4 \(off\): .* \(0 taken\)$/m);
+    // held back longer than the app's session waits: the app gives it up, and so does the log
+    await rules(`${a.at}/headers delayMs=5000`);
+    const given = await send(`http://${a.at}/headers`, 'config');
+    expect(given.said).toMatch(/^failed: The request timed out/);
+    const after = await ok('network', { action: 'read', contains: '/headers', status: 'failed' });
+    expect(after.text).not.toContain('in flight');
+    expect(after.text).toMatch(/GET http:\/\/127\.0\.0\.1:\d+\/headers \d+ ms 0 B failed: /);
   }, 180_000);
 
   it('keeps its rules in the app started again, and adds to them', async () => {

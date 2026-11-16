@@ -38,6 +38,8 @@ static AppdynoNetRouter *router;
 @property(nonatomic) int64_t sentSize;
 @property(nonatomic, strong) NSDictionary *timings;
 @property(atomic) BOOL stopped;
+/// Its last line is written: once, whichever of its ends comes first.
+@property(nonatomic) BOOL ended;
 /// The loader's own thread and the modes its run loop was in: what it is told, it is told there.
 @property(nonatomic, strong) NSThread *loader;
 @property(nonatomic, copy) NSArray<NSRunLoopMode> *modes;
@@ -182,6 +184,10 @@ static AppdynoNetRouter *router;
 
 /// The request's line in the log, its headers and bodies beside it where they are kept, and its end told to the app.
 - (void)finish:(NSError *)error {
+  @synchronized(self) {
+    if (self.ended) return;
+    self.ended = YES;
+  }
   NSMutableDictionary *entry = [@{
     @"at": @([[NSDate date] timeIntervalSince1970] * 1000),
     @"method": self.request.HTTPMethod ?: @"GET",
@@ -224,7 +230,10 @@ static AppdynoNetRouter *router;
 
 - (void)stopLoading {
   self.stopped = YES;
-  [self.task cancel];
+  if (self.task) [self.task cancel];
+  // given up while it waited for a rule or the throttle, or while a rule's answer was on its way: no task ends it, and
+  // without its last line it would stand as in flight for as long as the app runs
+  else [self finish:[NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCancelled userInfo:nil]];
 }
 
 @end

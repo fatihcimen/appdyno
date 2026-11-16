@@ -183,7 +183,13 @@ export function dropRules(s: Session, lines: string[]) {
   if (lines.length === 0 || !now?.rules || now.via !== 'probe' || !s.device.network?.control)
     return;
   const gone = lines.map(ruleLine);
-  tellProbe(s, { ...now, rules: now.rules.filter((l) => !gone.includes(l)) });
+  const next = { ...now, rules: now.rules.filter((l) => !gone.includes(l)) };
+  try {
+    tellProbe(s, next);
+  } catch {
+    // a rule that stays has lost the file it answers with: the list is kept, and the next change says so
+    captures.write(s.device.serial, next);
+  }
 }
 
 /** How slow the capture's probe makes the app's network, by its word; `full` is no slower. */

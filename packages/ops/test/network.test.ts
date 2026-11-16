@@ -24,24 +24,22 @@ describe('an address in a capture', () => {
     const clean = (url: string) => redactLog(DEFAULT_POLICY, url);
     expect(
       clean(
-        'https://bucket.s3.amazonaws.com/a.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20261116&X-Amz-Date=20261116T000000Z&X-Amz-Security-Token=FwoGZXIvYXdzEJr&X-Amz-Signature=5d672d79c15b13162d9279b0855cfba6',
+        'https://files.store.example/a.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20261116&X-Amz-Date=20261116T000000Z&X-Amz-Security-Token=FwoGZXIvYXdzEJr&X-Amz-Signature=5d672d79c15b13162d9279b0855cfba6',
       ),
     ).toBe(
-      'https://bucket.s3.amazonaws.com/a.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=•••&X-Amz-Date=20261116T000000Z&X-Amz-Security-Token=•••&X-Amz-Signature=•••',
+      'https://files.store.example/a.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=•••&X-Amz-Date=20261116T000000Z&X-Amz-Security-Token=•••&X-Amz-Signature=•••',
     );
     expect(
       clean(
-        'https://acct.blob.core.windows.net/c/a.jpg?sv=2026-01-01&se=2026-11-17T00%3A00Z&sig=Zm9vYmFyYmF6cXV4',
+        'https://acct.store.example/c/a.jpg?sv=2026-01-01&se=2026-11-17T00%3A00Z&sig=Zm9vYmFyYmF6cXV4',
       ),
-    ).toBe(
-      'https://acct.blob.core.windows.net/c/a.jpg?sv=2026-01-01&se=2026-11-17T00%3A00Z&sig=•••',
-    );
+    ).toBe('https://acct.store.example/c/a.jpg?sv=2026-01-01&se=2026-11-17T00%3A00Z&sig=•••');
     expect(
       clean(
-        'https://d111.cloudfront.net/a.mp4?Expires=1794787200&Signature=nitfHRCrtziwO2HwPfWw~yYDhUF5EwRunQA&Key-Pair-Id=K2JCJMDEHXQW5F',
+        'https://d111.cdn.example/a.mp4?Expires=1794787200&Signature=nitfHRCrtziwO2HwPfWw~yYDhUF5EwRunQA&Key-Pair-Id=K2JCJMDEHXQW5F',
       ),
     ).toBe(
-      'https://d111.cloudfront.net/a.mp4?Expires=1794787200&Signature=•••&Key-Pair-Id=K2JCJMDEHXQW5F',
+      'https://d111.cdn.example/a.mp4?Expires=1794787200&Signature=•••&Key-Pair-Id=K2JCJMDEHXQW5F',
     );
   });
 });

@@ -119,7 +119,8 @@ export class SimulatorNetwork implements NetworkSource {
   async stop(h: NetworkHandle): Promise<NetworkAnswer> {
     const answer = await this.read(h);
     // with its folder gone the probe in a running app does nothing more: no rule, no delay, no file
-    rmSync(String(h.dir), { recursive: true, force: true });
+    if (h.dir) rmSync(String(h.dir), { recursive: true, force: true });
+    else rmSync(String(h.log), { force: true });
     if (h.app) this.holds.drop(String(h.app), PROBE);
     return {
       ...answer,
