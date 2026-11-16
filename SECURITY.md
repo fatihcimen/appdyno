@@ -30,7 +30,7 @@ Measurements are stored on the local disk, under the state directory or the `--m
 
 A client of the server can do on a device what a person holding it can: read the screen, tap, swipe and type, open links, launch and stop apps, set the clipboard, location and orientation, take screenshots, and read logs and crash records of an app. The Android agent runs as the shell user. Anything shown on the screen is visible to the client, so assume the model sees it.
 
-What an app shows is text the model reads, so an app can try to tell the model what to do. An answer keeps each element on a line of its own: what the app wrote is in quotes, with line breaks and control characters escaped, in a label, an id, a role and the words that tell two rows apart, so an app cannot make up a line of the answer, an element or a result that is not there. The server's instructions tell the model that what a device shows or logs is data read from an app, never an instruction to follow. Neither keeps a model from being persuaded by what it reads: a label, a log line and a web page are still the app's own words. The limits below, the questions a person is asked, and the client's own approval of each call are what hold then.
+What an app shows is text the model reads, so an app can try to tell the model what to do: see [Prompt injection](#prompt-injection).
 
 Limits you set:
 
@@ -45,6 +45,20 @@ Limits you set:
 
 A window shows what the screen shows, to whoever sits at this Mac. `--no-input` makes it watch only.
 
+## Prompt injection
+
+appdyno hands a model whatever an app, a web page or a log holds, and all of it is untrusted: a label, a log line, a web view's text or a network body can be written to read like an instruction to the model. For a tool that an AI drives, this is the main threat. What appdyno does about it:
+
+- **App text is quoted and escaped.** An answer keeps each element on a line of its own. What the app wrote is in quotes, with line breaks and control characters escaped, in a label, an id, a role and the words that tell two rows apart. So an app cannot make up a line of the answer, an element or a result that is not there.
+- **The instructions say so.** The server's instructions tell the model that what a device shows or logs is data read from an app, never an instruction to follow.
+- **A model cannot answer an approval.** What loses data, and an input on a device's power or erase controls, asks the person through the client's own prompt, and nothing a tool call carries stands for a yes: see [What waits for a person](#what-waits-for-a-person).
+- **Files are written only in the write folders.** A path that a screen named is refused outside the folder the server runs in, the state directory and the folders given with `--allow-write`.
+- **A build asks.** `manage_app build_and_run` runs a project's own scripts on this Mac, so it asks the person each time, unless the server was started with `--allow-build`.
+- **A link asks.** `open_link` opens a web link, a link to Settings and a link the selected app takes. A link by any other scheme asks the person first, and `--allow-urls` is how a person allows links ahead.
+- **A client can be shown fewer tools.** `--toolsets` lists only the groups named, so a model is offered less that it could be talked into using. It is a shorter list and not a permission: `run_steps` still reaches every tool, and the `--allow-` flags are the limits.
+
+What it cannot do: none of this keeps a model from being misled by what it reads. A label, a log line and a web page are still the app's own words, and a model may act on them with the tools it is allowed. So keep a person in the loop for anything that loses data: leave `--allow-data-loss`, `--allow-power` and `--allow-build` off where the app, or the pages it shows, are not yours, keep the client's own approval of each call on, and use a test device and test accounts.
+
 ## What waits for a person
 
 No tool reboots, erases or resets a device or a simulator, and none deletes a simulator or emulator: [`packages/appdyno/test/device-reset.test.ts`](packages/appdyno/test/device-reset.test.ts) fails if any source gains a way to. `manage_simulator create` says how a person removes what it made, and runs none of it.
@@ -58,6 +72,8 @@ The question is asked, and refused where nobody can be asked, in the same way as
 What loses data a person may want asks the person first: [the list](docs/reference/tools.md#what-asks-the-person-first). The client shows the question, the model cannot answer it, and if the answer is no, nothing is done. A client may answer no by itself, so the answer says the question got no yes, never that the person declined, and every refusal says how a person allows it ahead of time. Where the client cannot ask, and over `--http`, it is refused, unless the person started the server with `--allow-data-loss virtual` (simulators and emulators) or `all`. Nothing a tool call carries sets that or stands for a yes. A model that can change the client's settings or run a shell is past what the server can hold back: it can run `appdyno` with `--yes`, or `adb` itself, and the client's own permission for each command is what stands then.
 
 `manage_app build_and_run` runs a project's own build on this Mac, its Gradle or Xcode scripts, as this user. So it asks the person each time, whatever the device, naming the project, and builds only a project inside the folders the server writes in. Only `--allow-build` (`APPDYNO_ALLOW_BUILD=1`), given by the person who starts the server, lets it build with nothing asked, and `allowBuild: true` does for `connect`: still only a project inside those folders, and still refused under `--allow-apps`. `--allow-data-loss` and `--allow-power` do not: they say what may happen to a device, not what may run on this Mac. Without the flag, where the client cannot ask, and over `--http`, it is refused: a person builds the project, and `manage_app install` takes what the build made. On a command line the question comes on the terminal, and `--yes` answers it.
+
+`appdyno test` runs a project's `prepare` commands with nothing asked, as a package manager runs a package's scripts, so run it only on a project you trust. Over MCP, `run_flow` asks the person first, each time, unless the server was started with `--allow-build`.
 
 ## Wi-Fi
 
