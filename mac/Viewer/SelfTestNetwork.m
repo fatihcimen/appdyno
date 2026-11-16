@@ -147,6 +147,20 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
   filter.stringValue = @"post 500";
   actions.onChange();
   MVCheck(@"requests: words in the filter leave the rows that hold them all, in any case", pane.rows.count == 1 && [pane.rows[0].title isEqual:@"POST /pay"] && [hosts() isEqual:@[@"b.test"]], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  // the op's words for how a request stands find it in either language, however they are typed
+  NSString * (^found)(NSString *) = ^(NSString *typed) {
+    filter.stringValue = typed;
+    actions.onChange();
+    return [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"];
+  };
+  MVTestTurkish(YES);
+  [pane show:again];
+  NSString *turkish = [@[found(@"başarısız"), found(@"BAŞARISIZ"), found(@"basarisiz"), found(@"failed"), found(@"FAILED"), found(@"5xx")] componentsJoinedByString:@" "];
+  NSString *mocked = [@[found(@"sahte"), found(@"SAHTE"), found(@"mocked"), found(@"2xx get")] componentsJoinedByString:@" "];
+  MVTestTurkish(NO);
+  [pane show:again];
+  NSString *english = [@[found(@"failed"), found(@"Failed"), found(@"başarısız"), found(@"mocked")] componentsJoinedByString:@" "];
+  MVCheck(@"requests: `failed` and `başarısız` find what failed in a Turkish window and an English one, in capitals and without the marks", [turkish isEqual:@"POST /pay POST /pay POST /pay POST /pay POST /pay POST /pay"] && [mocked isEqual:@"GET /x GET /x GET /x GET /x"] && [english isEqual:@"POST /pay POST /pay POST /pay GET /x"], [NSString stringWithFormat:@"%@ ; %@ ; %@", turkish, mocked, english]);
   filter.stringValue = @"";
   actions.onChange();
   MVPokeListRow([pane valueForKey:@"_list"], @"GET /x");

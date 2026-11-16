@@ -166,13 +166,14 @@ static NSString *unseenLine(NSDictionary *unseen) {
   else MVPaneSend(self, @{@"op": @"control", @"name": @"networkStart", @"via": _ways[chosen]});
 }
 
-/// The rows a person's words leave: each word in a row's method and address, or in its figures, in any case.
+/// The rows a person's words leave: each word in a row's method and address, in its figures or in how it stands, in any
+/// case and with or without the marks on a letter.
 - (void)listRows {
-  NSArray<NSString *> *words = [_actions.filter.lowercaseString componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+  NSArray<NSString *> *words = [MVFolded(_actions.filter) componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
   NSString *chosen = _list.selected.key;
   // those left stand under their hosts, a host with none left gone with them
   _list.rows = MVNetworkGrouped([_allRows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, __unused NSDictionary *bindings) {
-                                            NSString *all = [NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.help ?: @""].lowercaseString;
+                                            NSString *all = MVFolded([NSString stringWithFormat:@"%@ %@ %@", row.title, row.detail, row.finds ?: @""]);
                                             for (NSString *word in words)
                                               if (word.length && ![all containsString:word]) return NO;
                                             return YES;

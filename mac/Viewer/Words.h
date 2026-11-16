@@ -28,6 +28,9 @@ void MVTestTurkish(BOOL on);
 NSString *MVPercent(double value);
 /// The same for a number with one decimal.
 NSString *MVDecimal(double value);
+/// Text as a search compares it: no capitals and no marks on its letters, so that `BAŞARISIZ`, `başarısız` and `basarisiz`
+/// are one word, and `FAILED` is `failed` in Turkish too, where a capital I is otherwise a dotless one.
+NSString *MVFolded(NSString *text);
 /// A count, its thousands set apart as the Mac's language sets them.
 NSString *MVCount(NSUInteger count);
 

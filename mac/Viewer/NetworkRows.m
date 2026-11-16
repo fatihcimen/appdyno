@@ -60,6 +60,14 @@ MVRow *MVNetworkRow(NSDictionary *e, NSUInteger at) {
   row.title = [NSString stringWithFormat:@"%@ %@", e[@"method"] ?: @"GET", where];
   row.help = url;
   BOOL failed = [e[@"error"] length] || [e[@"status"] integerValue] >= 400;
+  // the op's own words for how a request stands, in English and in Turkish whatever the window speaks: a person
+  // types `failed`, `başarısız`, `5xx` or `mocked` as an agent's `status` takes them
+  NSMutableArray<NSString *> *finds = [NSMutableArray arrayWithObject:url];
+  NSInteger status = [e[@"status"] integerValue];
+  if (status >= 100) [finds addObject:[NSString stringWithFormat:@"%ldxx", (long)(status / 100)]];
+  for (NSString *word in @[failed ? @"failed" : @"", [e[@"inFlight"] boolValue] ? @"in flight" : @"", [e[@"how"] isKindOfClass:NSString.class] ? e[@"how"] : @""])
+    if (word.length) [finds addObjectsFromArray:@[word, MVInTurkish(word)]];
+  row.finds = [finds componentsJoinedByString:@" "];
   // one under way has no answer yet, and one a rule took is no answer of the server's: each stands apart
   row.symbol = [e[@"inFlight"] boolValue] ? @"hourglass" : failed  ? @"exclamationmark.triangle.fill"
                                                        : e[@"how"] ? @"arrow.triangle.branch"

@@ -183,6 +183,11 @@ NSString *MVDecimal(double value) {
   return [[NSString alloc] initWithFormat:@"%.1f" locale:locale(), value];
 }
 
+NSString *MVFolded(NSString *text) {
+  NSString *plain = [text stringByFoldingWithOptions:NSCaseInsensitiveSearch | NSDiacriticInsensitiveSearch locale:[NSLocale localeWithLocaleIdentifier:@"en_US"]];
+  return [plain stringByReplacingOccurrencesOfString:@"ı" withString:@"i"];
+}
+
 NSString *MVCount(NSUInteger count) {
   NSNumberFormatter *format = [NSNumberFormatter new];
   format.numberStyle = NSNumberFormatterDecimalStyle;
