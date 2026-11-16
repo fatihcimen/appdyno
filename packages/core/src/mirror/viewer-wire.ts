@@ -111,9 +111,10 @@ type Control =
   | { name: 'networkStart'; via: NetworkVia; bodies?: boolean }
   | { name: 'networkDetail' | 'networkCurl'; id: number; real?: boolean }
   | { name: 'networkMockFrom'; id: number }
-  | { name: 'networkRules'; rules: string[] }
-  | { name: 'networkRuleSwitch'; at: number; on: boolean }
-  | { name: 'networkRuleFields'; at: number; fields: Record<string, string> }
+  /** One rule, by the name the window was told it by: with none, a new one after the rest. */
+  | { name: 'networkRuleSave'; id?: string; rule?: string; fields?: Record<string, string> }
+  | { name: 'networkRuleRemove'; id: string }
+  | { name: 'networkRuleSwitch'; id: string; on: boolean }
   | { name: 'networkKeep'; strict?: boolean; unmatched?: 'pass' | 'fail' }
   | { name: 'networkThrottle'; value: string }
   | { name: 'openLink'; url?: string; app?: string }
@@ -318,6 +319,8 @@ export type ViewerOrder = Staged &
         /** Whether a failed request fails an action, and what becomes of a request no rule takes. */
         strict?: boolean;
         unmatched?: 'pass' | 'fail';
+        /** The rules, the speed or what is held beside them changed since this window was last told, and not by it. */
+        elsewhere?: boolean;
         /** What the app made that the capture cannot see, each kind counted. */
         unseen?: unknown;
         /** One request whole, as its lines. */

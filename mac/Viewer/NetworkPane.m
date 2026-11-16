@@ -241,6 +241,11 @@ static NSString *unseenLine(NSDictionary *unseen) {
   if ([m[@"rules"] isKindOfClass:NSArray.class]) [_rules show:m[@"rules"]];
   else if (!capturing) [_rules show:@[]];
   if ([m[@"throttle"] isKindOfClass:NSString.class]) [self showThrottle:m[@"throttle"]];
+  // set by an agent, or in another window, since this one was last told: said once, and to a screen reader
+  if ([m[@"elsewhere"] boolValue]) {
+    [_answer show:@{@"ok": @YES, @"text": @"The rules or the speed were changed elsewhere"}];
+    MVAnnounce(MVWord(@"The rules or the speed were changed elsewhere"));
+  }
   if (m[@"strict"] || m[@"unmatched"]) [_rules showStrict:[m[@"strict"] boolValue] unmatched:[m[@"unmatched"] isEqual:@"fail"]];
   if (m[@"ways"]) {
     _ways = [m[@"ways"] isKindOfClass:NSArray.class] ? m[@"ways"] : @[];

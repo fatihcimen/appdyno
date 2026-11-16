@@ -20,6 +20,7 @@ import {
   windowNetwork,
 } from '../src/window-network.js';
 import { NO_REQUEST } from '../src/window-network-tools.js';
+import { RULE_MOVED, ruleId } from '../src/window-network-rules.js';
 import { windowSends } from '../src/window-sends.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 
@@ -368,30 +369,35 @@ describe("a window's Network pane", () => {
     Object.assign(t.device, { network: source });
     const pane = open(t);
     // with no capture a rule would restart the app under a person: it is refused, and says what to do
-    pane.onWindow({ op: 'control', name: 'networkRules', rules: ['a.test/x status=503'] });
+    pane.onWindow({ op: 'control', name: 'networkRuleSave', rule: 'a.test/x status=503' });
     await expect.poll(() => answered(t)).toMatchObject({ ok: false, text: NO_PROBE });
     pane.onWindow({ op: 'control', name: 'networkStart', via: 'probe', bodies: true });
     await expect.poll(() => said(t)).toMatchObject({ capturing: 'probe', bodies: true, rules: [] });
     expect(starts).toEqual([{ via: 'probe', app: 'dev.app', bodies: true }]);
-    pane.onWindow({
-      op: 'control',
-      name: 'networkRules',
-      rules: ['a.test/x status=503', 'a.test/y fail=offline'],
-    });
-    await expect.poll(() => answered(t)).toMatchObject({ ok: true, text: 'Rules set' });
+    // each rule is added by itself, after the rest
+    pane.onWindow({ op: 'control', name: 'networkRuleSave', rule: 'a.test/x status=503' });
+    await expect.poll(() => said(t)?.rules).toHaveLength(1);
+    pane.onWindow({ op: 'control', name: 'networkRuleSave', rule: 'a.test/y fail=offline' });
+    await expect.poll(() => answered(t)).toMatchObject({ ok: true, text: 'Rule added' });
     await expect
       .poll(() => said(t))
       .toMatchObject({
         rules: [
-          { rule: '"a.test/x" status=503', hits: 0 },
-          { rule: '"a.test/y" fail=offline', hits: 0 },
+          { rule: '"a.test/x" status=503', hits: 0, id: ruleId('a.test/x status=503') },
+          { rule: '"a.test/y" fail=offline', hits: 0, id: ruleId('a.test/y fail=offline') },
         ],
         throttle: 'full',
         entries: [expect.objectContaining({ id: 0, how: 'mocked' })],
       });
-    pane.onWindow({ op: 'control', name: 'networkRuleSwitch', at: 1, on: false });
+    // a rule is switched by its name, which is the same on and off
+    const second = ruleId('a.test/y fail=offline');
+    pane.onWindow({ op: 'control', name: 'networkRuleSwitch', id: second, on: false });
     await expect.poll(() => told.at(-1)?.rules[1]).toMatchObject({ fail: 'offline', off: true });
-    pane.onWindow({ op: 'control', name: 'networkRuleSwitch', at: 1, on: true });
+    expect(said(t)?.rules).toEqual([
+      expect.anything(),
+      expect.objectContaining({ id: second, off: true }),
+    ]);
+    pane.onWindow({ op: 'control', name: 'networkRuleSwitch', id: second, on: true });
     await expect.poll(() => told.at(-1)?.rules[1]?.off).toBeUndefined();
     pane.onWindow({ op: 'control', name: 'networkThrottle', value: 'slow' });
     await expect.poll(() => said(t)).toMatchObject({ throttle: 'slow' });
@@ -399,8 +405,8 @@ describe("a window's Network pane", () => {
     // a rule from a window's fields goes in place of the one named, each rule told with its own parts
     pane.onWindow({
       op: 'control',
-      name: 'networkRuleFields',
-      at: 1,
+      name: 'networkRuleSave',
+      id: second,
       fields: {
         method: 'POST',
         host: 'a.test',
@@ -424,7 +430,7 @@ describe("a window's Network pane", () => {
           },
         }),
       ]);
-    pane.onWindow({ op: 'control', name: 'networkRuleFields', at: -1, fields: { path: '/none' } });
+    pane.onWindow({ op: 'control', name: 'networkRuleSave', fields: { path: '/none' } });
     await expect
       .poll(() => answered(t))
       .toMatchObject({ ok: false, text: expect.stringMatching(/not a rule/) as unknown });
@@ -454,10 +460,80 @@ describe("a window's Network pane", () => {
         },
       });
     // a rule that is none is said as the op says it
-    pane.onWindow({ op: 'control', name: 'networkRules', rules: ['a.test/x'] });
+    pane.onWindow({ op: 'control', name: 'networkRuleSave', rule: 'a.test/x' });
     await expect
       .poll(() => answered(t))
       .toMatchObject({ ok: false, text: expect.stringMatching(/not a rule/) as unknown });
+    await pane.end();
+  });
+
+  it("changes one rule by its name in the list as it stands, so an agent's rule is kept, and says what changed elsewhere", async () => {
+    const t = on();
+    const told: NetworkControl[] = [];
+    Object.assign(t.device, {
+      network: { ...probe(), control: (_: unknown, c: NetworkControl) => void told.push(c) },
+    });
+    const pane = open(t);
+    const sends = windowSends(t.ctx, t.device, t.session);
+    const agent = (args: Record<string, unknown>) =>
+      sends.call('capture_network', 'capture_network', { action: 'mock', ...args });
+    const lines = () => (said(t)?.rules as { rule: string }[] | undefined)?.map((r) => r.rule);
+    pane.onWindow({ op: 'control', name: 'networkStart', via: 'probe' });
+    await expect.poll(() => said(t)).toMatchObject({ capturing: 'probe', rules: [] });
+    pane.onWindow({ op: 'control', name: 'networkRuleSave', rule: 'a.test/mine status=500' });
+    await expect.poll(lines).toEqual(['"a.test/mine" status=500']);
+    // what the window changed itself is not said to have changed elsewhere
+    expect(t.of('network').some((m) => m.elsewhere)).toBe(false);
+    const mineId = ruleId('a.test/mine status=500');
+    // an agent adds a rule the window has not read yet: the person's change of their own rule keeps it
+    await agent({ rules: ['a.test/agents fail=offline'], add: true });
+    pane.onWindow({
+      op: 'control',
+      name: 'networkRuleSave',
+      id: mineId,
+      rule: 'a.test/mine status=404',
+    });
+    await expect.poll(lines).toEqual(['"a.test/mine" status=404', '"a.test/agents" fail=offline']);
+    pane.onWindow({
+      op: 'control',
+      name: 'networkRuleSwitch',
+      id: ruleId('a.test/mine status=404'),
+      on: false,
+    });
+    await expect
+      .poll(lines)
+      .toEqual(['"a.test/mine" status=404 off', '"a.test/agents" fail=offline']);
+    // a rule saved over keeps being off
+    pane.onWindow({
+      op: 'control',
+      name: 'networkRuleSave',
+      id: ruleId('a.test/mine status=404'),
+      rule: 'a.test/mine status=418',
+    });
+    await expect
+      .poll(lines)
+      .toEqual(['"a.test/mine" status=418 off', '"a.test/agents" fail=offline']);
+    // a rule that is gone is not set again over what an agent left: the window is told, and reads the list anew
+    await agent({ rules: ['a.test/other status=200'] });
+    pane.onWindow({
+      op: 'control',
+      name: 'networkRuleSwitch',
+      id: ruleId('a.test/mine status=418'),
+      on: true,
+    });
+    await expect.poll(() => answered(t)).toMatchObject({ ok: false, text: RULE_MOVED });
+    await expect.poll(lines).toEqual(['"a.test/other" status=200']);
+    expect(told.at(-1)?.rules).toHaveLength(1);
+    // and that read says the list changed elsewhere, once
+    expect(t.of('network').filter((m) => m.elsewhere)).toHaveLength(1);
+    pane.onWindow({
+      op: 'control',
+      name: 'networkRuleRemove',
+      id: ruleId('a.test/other status=200'),
+    });
+    await expect.poll(lines).toEqual([]);
+    expect(answered(t)).toMatchObject({ ok: true, text: 'Rule removed' });
+    expect(t.of('network').filter((m) => m.elsewhere)).toHaveLength(1);
     await pane.end();
   });
 

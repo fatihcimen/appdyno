@@ -1,5 +1,5 @@
 import type { ViewerControl } from '@appdyno/core';
-import { stepLine } from '@appdyno/flows';
+import { mockRule, stepLine } from '@appdyno/flows';
 import { captures, ruleLine, ruleStep, ruleSwitched } from '@appdyno/ops';
 
 /** The parts of a rule a window has a field for; what has none stays as the words of its line, in `match`. */
@@ -73,35 +73,110 @@ export function fieldsLine(f: RuleFields): string {
   );
 }
 
-/** A rule with its parts, for a window's fields: its line alone where that reads as no rule. */
+export const RULE_MOVED = 'That rule was changed elsewhere';
+
+/** A rule's own name: the same on and off, and another once what it takes or does is changed. */
+export const ruleId = (line: string) => mockRule(ruleStep(line)).id;
+
+/** A rule with its name and its parts, for a window's fields: its line alone where that reads as no rule. */
 export const withFields = (rule: { rule: string }) => {
   try {
-    return { ...rule, fields: ruleFields(rule.rule) };
+    return { ...rule, id: ruleId(rule.rule), fields: ruleFields(rule.rule) };
   } catch {
     return rule;
   }
 };
 
 /**
+ * What a probe's capture holds beside its requests, as a window is told it: its rules with what each took, its throttle,
+ * and whether a failed request fails an action and one no rule takes fails, as the op an agent sets them by lists
+ * them. `elsewhere` says that they are not what this window was last told, and that it did not change them: an agent
+ * did, or another window.
+ */
+export function heldBy(
+  serial: string,
+  op: (args: Record<string, unknown>) => Promise<{ data: Record<string, unknown> | undefined }>,
+) {
+  let known: string | undefined;
+  let mine = false;
+  return {
+    /** A new capture holds nothing yet for anyone to have changed. */
+    forget: () => {
+      known = undefined;
+    },
+    /** What holds once `change` is done is this window's own doing. */
+    async changing(change: () => Promise<void>) {
+      mine = true;
+      try {
+        await change();
+      } finally {
+        mine = false;
+      }
+    },
+    async now() {
+      const { data } = await op({ action: 'mock' });
+      const c = captures.read(serial);
+      if (!data) return {};
+      const held = {
+        rules: ((data.rules as { rule: string }[] | undefined) ?? []).map(withFields),
+        throttle: typeof data.throttle === 'string' ? data.throttle : 'full',
+        strict: c?.strict === true,
+        unmatched: c?.unmatched ?? ('pass' as const),
+      };
+      const now = JSON.stringify([
+        held.rules.map((r) => r.rule),
+        held.throttle,
+        held.strict,
+        held.unmatched,
+      ]);
+      const elsewhere = known !== undefined && now !== known && !mine;
+      if (now !== known) mine = false;
+      known = now;
+      return { ...held, ...(elsewhere && { elsewhere }) };
+    },
+  };
+}
+
+/**
  * What a person changes of the probe's rules, its speed and what it holds beside them, each by the op an agent makes
- * the change with, through `change`.
+ * the change with, through `change`. One rule at a time, by its name, in the list as it stands the moment the change
+ * is made: a rule an agent added since the window last read is kept, and a rule that is no longer there is said to
+ * have been changed elsewhere, through `moved`, with nothing set.
  */
 export function ruleControls(
   serial: string,
   change: (args: Record<string, unknown>, done: string) => Promise<void>,
+  moved: () => Promise<void>,
 ) {
   const lines = () => captures.read(serial)?.rules ?? [];
-  const setRules = (rules: string[]) => change({ action: 'mock', rules }, 'Rules set');
+  /** The list with the rule of that name changed by `to`, or taken out where it gives none; nothing where it is gone. */
+  const one = async (id: string, done: string, to: (line: string) => string | undefined) => {
+    const now = lines();
+    const at = now.findIndex((line) => ruleId(line) === id);
+    if (at < 0) return moved();
+    const next = to(now[at] ?? '');
+    const rules = now.flatMap((line, i) =>
+      // a rule changed into one that is there already is that one, once
+      i === at ? (next === undefined ? [] : [next]) : line === next ? [] : [line],
+    );
+    await change({ action: 'mock', rules }, done);
+  };
   return {
-    networkRules: (m: ViewerControl<'networkRules'>) => setRules(m.rules),
-    networkRuleSwitch: (m: ViewerControl<'networkRuleSwitch'>) =>
-      setRules(lines().map((line, i) => (i === m.at ? ruleSwitched(line, m.on) : line))),
-    /** In place of the rule at `at`, or after the rest: refused as the op refuses a line. */
-    networkRuleFields: async ({ at, fields }: ViewerControl<'networkRuleFields'>) => {
-      const next = [...lines()];
-      next.splice(at >= 0 && at < next.length ? at : next.length, 1, fieldsLine(fields));
-      await setRules(next);
+    /** A new rule after the rest, as the op adds one; with `id`, in place of the rule of that name, on or off as it was. */
+    networkRuleSave: async ({ id, rule, fields }: ViewerControl<'networkRuleSave'>) => {
+      const line = rule === undefined ? fieldsLine(fields ?? {}) : ruleLine(rule);
+      if (id === undefined)
+        return change({ action: 'mock', rules: [line], add: true }, 'Rule added');
+      await one(id, 'Rule saved', (was) =>
+        'off' in ruleStep(was).args && !('off' in ruleStep(line).args)
+          ? ruleSwitched(line, false)
+          : line,
+      );
     },
+    networkRuleRemove: ({ id }: ViewerControl<'networkRuleRemove'>) =>
+      one(id, 'Rule removed', () => undefined),
+    networkRuleSwitch: ({ id, on }: ViewerControl<'networkRuleSwitch'>) =>
+      one(id, on ? 'Rule turned on' : 'Rule turned off', (was) => ruleSwitched(was, on)),
     networkKeep: ({ strict, unmatched }: ViewerControl<'networkKeep'>) =>
       change(
         {

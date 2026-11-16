@@ -8,7 +8,7 @@ import type {
   WindowControl,
 } from '@appdyno/core';
 import { captures, type Policy } from '@appdyno/ops';
-import { ruleControls, withFields } from './window-network-rules.js';
+import { heldBy, RULE_MOVED, ruleControls } from './window-network-rules.js';
 import { networkTools } from './window-network-tools.js';
 import { frontApp, type WindowSession } from './controls.js';
 import type { windowSends } from './window-sends.js';
@@ -85,19 +85,7 @@ export function windowNetwork(
 
   const ways = () => waysOf(device);
 
-  /** The probe's rules with what each took, and its throttle, as the op an agent sets them by lists them. */
-  const controlled = async () => {
-    const { data } = await op({ action: 'mock' });
-    const c = captures.read(serial);
-    return data
-      ? {
-          rules: ((data.rules as { rule: string }[] | undefined) ?? []).map(withFields),
-          throttle: typeof data.throttle === 'string' ? data.throttle : 'full',
-          strict: c?.strict === true,
-          unmatched: c?.unmatched ?? ('pass' as const),
-        }
-      : {};
-  };
+  const held = heldBy(serial, op);
 
   /** What the capture has seen so far, by the op an agent reads it with. */
   const read = async () => {
@@ -123,7 +111,7 @@ export function windowNetwork(
         entries,
         ...(note ? { note } : {}),
         ...(data.unseen ? { unseen: data.unseen } : {}),
-        ...(c.via === 'probe' ? await controlled() : {}),
+        ...(c.via === 'probe' ? await held.now() : {}),
       });
     } finally {
       reading = false;
@@ -164,8 +152,9 @@ export function windowNetwork(
     // what the op says it sees is the pane's to say, in its own words
     answer(said.ok ? { ok: true, text: 'Capture started' } : said);
     if (said.ok) ours = true;
-    // a new capture numbers its requests from the start
+    // a new capture numbers its requests from the start, and holds nothing yet for anyone to have changed
     cleared = undefined;
+    held.forget();
     await look();
   };
 
@@ -204,8 +193,15 @@ export function windowNetwork(
       answer({ ok: false, text: NO_PROBE });
       return;
     }
-    const { answer: said } = await op(args);
-    answer(said.ok ? { ok: true, text: done } : said);
+    await held.changing(async () => {
+      const { answer: said } = await op(args);
+      answer(said.ok ? { ok: true, text: done } : said);
+      await read();
+    });
+  };
+  /** The rule a person changed is no longer in the list: nothing is set, and the list as it stands is told again. */
+  const moved = async () => {
+    answer({ ok: false, text: RULE_MOVED });
     await read();
   };
   const controls = {
@@ -217,7 +213,7 @@ export function windowNetwork(
     networkMockFrom: (m: ViewerControl<'networkMockFrom'>) => tools.mockFrom(m.id),
     networkSave: () => tools.save(new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')),
     networkClear: clear,
-    ...ruleControls(serial, change),
+    ...ruleControls(serial, change, moved),
   };
 
   return {

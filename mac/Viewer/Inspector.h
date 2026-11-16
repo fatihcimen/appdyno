@@ -201,7 +201,7 @@ NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows);
 @end
 
 @interface MVNetworkRules : NSView
-/// Where a change goes: the whole list as it would stand, or one rule's switch.
+/// Where a change goes: one rule saved, removed or switched, by its name.
 @property(nonatomic, copy, nullable) void (^onSend)(NSDictionary *message);
 /// The parent's rules, each with its line, what it took, and whether it is off.
 - (void)show:(NSArray<NSDictionary *> *)rules;
@@ -211,6 +211,8 @@ NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows);
 - (void)showStrict:(BOOL)strict unmatched:(BOOL)fails;
 @property(nonatomic, readonly) MVNetworkRuleForm *form;
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
+/// The rule in the field went from the list by another's doing, and the pane says so.
+@property(nonatomic, readonly) BOOL moved;
 @end
 
 /// What is done with the requests listed: the words that narrow the list, a request copied as a command or made a

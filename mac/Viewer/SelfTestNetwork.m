@@ -17,6 +17,7 @@ static void MVCheckRuleFields(MVWindow *window, MVNetworkPane *pane, NSMutableAr
                @"strict": @YES,
                @"unmatched": @"fail",
                @"rules": @[@{@"rule": @"\"a.test/x\" method=POST status=503",
+                             @"id": @"cc3333",
                              @"hits": @2,
                              @"fields": @{@"method": @"POST", @"host": @"a.test", @"path": @"/x", @"status": @"503"}}],
                @"entries": @[]}];
@@ -33,10 +34,10 @@ static void MVCheckRuleFields(MVWindow *window, MVNetworkPane *pane, NSMutableAr
   [window pokeClick:@"networkRuleSave"];
   MVPump(0.1);
   NSDictionary *fields = @{@"op": @"control",
-                           @"name": @"networkRuleFields",
-                           @"at": @0,
+                           @"name": @"networkRuleSave",
+                           @"id": @"cc3333",
                            @"fields": @{@"method": @"POST", @"host": @"a.test", @"path": @"/x", @"status": @"404"}};
-  MVCheck(@"rules: changed in its fields, the rule is sent as fields, in its place", [sent.lastObject isEqual:fields], [sent.lastObject description]);
+  MVCheck(@"rules: changed in its fields, the rule is sent as fields, by its name", [sent.lastObject isEqual:fields], [sent.lastObject description]);
   NSButton *strict = [pane.rules valueForKey:@"_strict"], *unmatched = [pane.rules valueForKey:@"_unmatched"];
   MVCheck(@"rules: what the capture holds beside them stands as an agent set it", strict.state == NSControlStateValueOn && unmatched.state == NSControlStateValueOn, nil);
   unmatched.state = NSControlStateValueOff;
@@ -77,8 +78,10 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
                @"bodies": @YES,
                @"throttle": @"edge",
                @"rules": @[@{@"rule": first,
+                             @"id": @"aa1111",
                              @"hits": @2},
                            @{@"rule": second,
+                             @"id": @"bb2222",
                              @"hits": @0,
                              @"off": @YES}],
                @"entries": @[@{@"id": @7,
@@ -201,9 +204,9 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
   [window pokeClick:@"networkRuleSave"];
   MVPump(0.1);
   NSDictionary *added = @{@"op": @"control",
-                          @"name": @"networkRules",
-                          @"rules": @[first, second, @"a.test/z delayMs=300"]};
-  MVCheck(@"rules: a line typed goes after the rest, the list sent whole", [sent.lastObject isEqual:added], [sent.lastObject description]);
+                          @"name": @"networkRuleSave",
+                          @"rule": @"a.test/z delayMs=300"};
+  MVCheck(@"rules: a line typed is sent as one new rule, and never the whole list", [sent.lastObject isEqual:added], [sent.lastObject description]);
   MVPokeListRow([pane.rules valueForKey:@"_list"], second);
   MVPump(0.1);
   MVCheck(@"rules: one chosen stands in the field to be changed, and one that is off can be turned on", [field.stringValue isEqual:second] && [[[pane.rules valueForKey:@"_switch"] title] isEqual:MVWord(@"Turn On")] && [[[pane.rules valueForKey:@"_save"] title] isEqual:MVWord(@"Save Rule")], field.stringValue);
@@ -211,12 +214,39 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
   MVPump(0.1);
   NSDictionary *switched = @{@"op": @"control",
                              @"name": @"networkRuleSwitch",
-                             @"at": @1,
+                             @"id": @"bb2222",
                              @"on": @YES};
-  MVCheck(@"rules: turned on by its place in the list", [sent.lastObject isEqual:switched], [sent.lastObject description]);
+  MVCheck(@"rules: turned on by its name", [sent.lastObject isEqual:switched], [sent.lastObject description]);
   [window pokeClick:@"networkRuleRemove"];
   MVPump(0.1);
-  MVCheck(@"rules: and removed, the rest sent", [sent.lastObject[@"rules"] isEqual:@[first]], [sent.lastObject description]);
+  NSDictionary *removed = @{@"op": @"control", @"name": @"networkRuleRemove", @"id": @"bb2222"};
+  MVCheck(@"rules: and removed by its name, the rest left as they are", [sent.lastObject isEqual:removed], [sent.lastObject description]);
+  NSDictionary *both = @{@"op": @"network",
+                         @"capturing": @"probe",
+                         @"rules": @[@{@"rule": first,
+                                       @"id": @"aa1111",
+                                       @"hits": @2},
+                                     @{@"rule": second,
+                                       @"id": @"bb2222",
+                                       @"hits": @0,
+                                       @"off": @YES}],
+                         @"entries": @[]};
+  [pane show:both];
+  MVCheck(@"rules: a change of this window's own is not said to be another's", !pane.rules.moved, nil);
+  MVPokeListRow([pane.rules valueForKey:@"_list"], first);
+  MVPump(0.1);
+  field.stringValue = @"a.test/x status=418";
+  [pane show:@{@"op": @"network",
+               @"capturing": @"probe",
+               @"elsewhere": @YES,
+               @"rules": @[@{@"rule": second,
+                             @"id": @"bb2222",
+                             @"hits": @0,
+                             @"off": @YES}],
+               @"entries": @[]}];
+  MVCheck(@"rules: the rule in the field taken out elsewhere is said to be, and what was typed is kept to add again", pane.rules.moved && [field.stringValue isEqual:@"a.test/x status=418"] && [[[pane.rules valueForKey:@"_save"] title] isEqual:MVWord(@"Add Rule")] && [pane.answer.said isEqual:MVWord(@"The rules or the speed were changed elsewhere")], pane.answer.said);
+  field.stringValue = @"";
+  [pane show:both];
   MVCheckRuleFields(window, pane, sent);
   [speed selectItemAtIndex:1];
   [speed sendAction:speed.action to:speed.target];
