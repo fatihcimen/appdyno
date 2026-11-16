@@ -16,6 +16,7 @@ import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
 import { NO_MATCH_WAIT_MS } from '../steps.js';
 import type { Op, ToolResult } from '../tool.js';
 import { BY_STEP, NOT_ACTIONS } from '../tool-kinds.js';
+import { ruleStep } from '../network-rules.js';
 import { DEFAULT_TOLERANCE } from '../visual.js';
 import { type Aim, aimAt, fieldName, named, notReplayed, stepOf, unrecorded } from './aim.js';
 import { activeRecording, addSteps, defined } from './shared.js';
@@ -324,6 +325,15 @@ const OPS: Record<string, ToStep> = {
             },
           )
         : undefined,
+  // each rule set is a step, which a replay adds and takes out at its end; a capture, a throttle and a clearing have none
+  network: (a) =>
+    a.action === 'mock' && (a.rules as string[] | undefined)?.length
+      ? (a.rules as string[]).map((rule) => ({ ...ruleStep(rule), line: 0 }))
+      : LOOKS.network?.includes(a.action as string) ||
+          (a.action === 'mock' && !a.rules) ||
+          (a.action === 'throttle' && a.throttle === undefined)
+        ? undefined
+        : unrecorded(`network ${String(a.action)}`),
   // a picture only shown to the agent is a look
   screenshot: (a, data) =>
     a.file && !a.watchMs

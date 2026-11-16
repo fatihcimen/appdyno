@@ -12,6 +12,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import { harEntries } from './network-har.js';
+import { ruleLine, rulesOf } from './network-rules.js';
 import { Handle } from './schemas.js';
 import type { Session } from './session.js';
 import { restoreCondition } from './settings.js';
@@ -26,6 +27,8 @@ const Capture = z.object({
   proxy: z.string().optional(),
   /** The probe keeps each request's headers and bodies. */
   bodies: z.boolean().optional(),
+  /** The probe's rules, each as its line. */
+  rules: z.array(z.string()).optional(),
   owner: Owner.optional(),
 });
 export type Capture = z.infer<typeof Capture>;
@@ -111,4 +114,62 @@ export async function startOwn(
   captures.write(s.device.serial, capture);
   if (via === 'probe') s.acted();
   return { capture, sees: way?.sees };
+}
+
+const NO_PROBE_HINT = 'a simulator has the probe';
+
+/**
+ * The probe's capture, which its rules live in: the one that runs, or one started for `app`, which
+ * restarts it.
+ */
+async function probeCapture(s: Session, app: string | undefined, what: string) {
+  const serial = s.device.serial;
+  const now = captures.read(serial);
+  if (now && now.via !== 'probe')
+    throw new ToolError(
+      `${what} goes by the probe, and ${now.via} is capturing on ${serial}: stop it first`,
+      'INVALID_ARGUMENT',
+    );
+  if (!s.device.network?.control)
+    throw new ToolError(
+      `${what} goes by the probe, which this device has not`,
+      'UNSUPPORTED',
+      NO_PROBE_HINT,
+    );
+  if (now) return { capture: now, started: false };
+  if (!app) throw new ToolError(`${what} goes into one app: give app`, 'INVALID_ARGUMENT');
+  return { capture: (await startOwn(s, 'probe', app, false)).capture, started: true };
+}
+
+/** What the capture's probe does from now on, as the capture has it. */
+function tellProbe(s: Session, c: Capture) {
+  const network = must(s.device.network, 'a capture');
+  if (!network.control)
+    throw new ToolError('this device has no probe', 'UNSUPPORTED', NO_PROBE_HINT);
+  network.control(must(c.handle, 'its handle'), {
+    bodies: c.bodies === true,
+    rules: rulesOf(c.rules ?? []),
+  });
+  captures.write(s.device.serial, c);
+}
+
+/** The capture's rules replaced by `lines`, or with `add` those after the ones there; `started`: the app restarted. */
+export async function setRules(s: Session, app: string | undefined, lines: string[], add = false) {
+  // refused before anything starts, where a line is no rule
+  rulesOf(lines);
+  const given = lines.map(ruleLine);
+  const { capture, started } = await probeCapture(s, app, 'a rule');
+  const kept = add ? (capture.rules ?? []).filter((l) => !given.includes(l)) : [];
+  const next: Capture = { ...capture, rules: [...kept, ...given] };
+  tellProbe(s, next);
+  return { capture: next, started };
+}
+
+/** Takes out the rules of those lines, as a flow's end takes out what its steps added; the rest stay. */
+export function dropRules(s: Session, lines: string[]) {
+  const now = captures.read(s.device.serial);
+  if (lines.length === 0 || !now?.rules || now.via !== 'probe' || !s.device.network?.control)
+    return;
+  const gone = lines.map(ruleLine);
+  tellProbe(s, { ...now, rules: now.rules.filter((l) => !gone.includes(l)) });
 }

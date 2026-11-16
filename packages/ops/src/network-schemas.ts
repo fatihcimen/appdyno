@@ -39,4 +39,7 @@ export const NetworkOut = z.object({
   saved: z.string().optional(),
   /** One request whole, as its lines. */
   detail: z.array(z.string()).optional(),
+  rules: z
+    .array(z.object({ rule: z.string(), hits: z.number().int(), off: z.boolean().optional() }))
+    .optional(),
 });

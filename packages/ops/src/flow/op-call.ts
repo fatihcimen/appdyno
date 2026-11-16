@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { maskOf, type FlowStep } from '@appdyno/flows';
+import { dirname, join, resolve } from 'node:path';
+import { maskOf, stepLine, type FlowStep } from '@appdyno/flows';
 import { ToolError } from '../tool.js';
 import { defined } from './shared.js';
 
@@ -22,6 +22,8 @@ export type StepPlace = {
   shots: string;
   /** A person's `--update-baselines`: a `visual` step saves its baseline in place of comparing. */
   update: boolean;
+  /** The rules the run's `mock` steps have added so far, each as its line. */
+  mocked: string[];
 };
 
 /** A `visual` step's comparison, refused before the run when there is nothing to compare with. */
@@ -43,6 +45,17 @@ function visualCall(st: FlowStep, at: StepPlace): Record<string, unknown> {
       masks: (st.args.mask as string[] | undefined)?.map((m) => maskOf(m)),
     }),
   };
+}
+
+/** A `mock` step's rule as `network` takes it: its line, a file it answers with found from the flow's folder. */
+export function mockLine(st: FlowStep, at: Pick<StepPlace, 'file'>) {
+  const body = st.args.body;
+  const placed =
+    typeof body === 'string' && body.startsWith('@')
+      ? `@${resolve(dirname(st.file ?? at.file), body.slice(1))}`
+      : body;
+  const args = { ...st.args, ...(placed !== undefined && { body: placed }) };
+  return stepLine({ ...st, args }).replace(/^mock /, '');
 }
 
 /** One step as the op it runs through. */
@@ -137,6 +150,9 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
         'device_setting',
         defined({ name: a.name, value: a.value, app: a.app, title: a.title }),
       ];
+    case 'mock':
+      // added to the rules there, and taken out when the run of its file ends
+      return ['network', { action: 'mock', rules: [mockLine(st, at)], add: true }];
     case 'unrecorded':
       throw new ToolError(
         `this action has no step and was not recorded: ${String(a.what)}. Replace or delete this line`,

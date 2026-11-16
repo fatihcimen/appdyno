@@ -1,5 +1,6 @@
 export * from './format.js';
 export * from './device-steps.js';
+export * from './mock.js';
 export * from './compose.js';
 export * from './select.js';
 export * from './recording.js';

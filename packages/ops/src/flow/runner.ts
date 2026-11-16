@@ -26,7 +26,8 @@ import type { Steps } from '../steps.js';
 import { keyboardFirst } from '../keyboard.js';
 import { refused, ToolError, type Op } from '../tool.js';
 import { WHOLE_STEP } from '../tool-kinds.js';
-import { opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
+import { dropRules } from '../network-capture.js';
+import { mockLine, opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
 import { loadRecording } from './shared.js';
 import { looksStill } from './still.js';
 
@@ -76,6 +77,17 @@ const keepEvidence = async (s: Session, dir: string, clean: (s: string) => strin
   }
   return out;
 };
+
+const lineOf = (r: RunResult['steps'][number]) =>
+  `${r.n}. ${r.step}: ${r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;
+
+const failureText = (file: string, f: RunFailure) =>
+  [
+    `${f.file ?? file}:${f.line}: step ${f.n} failed: ${f.step}`,
+    f.message,
+    ...(f.screen ? [f.screen] : []),
+    `to go on from here: appdyno flow run ${file} --from ${f.n}`,
+  ].join('\n');
 
 /** Runs flows through the operations themselves, as an agent's calls would. */
 export function flowRunner(
@@ -148,6 +160,7 @@ export function flowRunner(
         'TIMEOUT',
       );
     });
+    if (st.action === 'mock') at.mocked.push(mockLine(st, at));
     const data = (answered?.data ?? {}) as Partial<ActionOut>;
     const whole = Date.now() - t0;
     const settledMs = WHOLE_STEP.has(st.action)
@@ -206,6 +219,7 @@ export function flowRunner(
       file,
       shots: o.shots ?? SHOTS_DIR,
       update: ctx.options.updateBaselines === true,
+      mocked: [],
     };
     validate(flow, at);
     let values: Record<string, string>;
@@ -261,19 +275,10 @@ export function flowRunner(
       return result;
     } finally {
       undo();
+      // the rules its mock steps added, on a pass and on a failure alike: one a person or an agent set stays
+      dropRules(s, at.mocked);
     }
   };
-
-  const lineOf = (r: RunResult['steps'][number]) =>
-    `${r.n}. ${r.step}: ${r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;
-
-  const failureText = (file: string, f: RunFailure) =>
-    [
-      `${f.file ?? file}:${f.line}: step ${f.n} failed: ${f.step}`,
-      f.message,
-      ...(f.screen ? [f.screen] : []),
-      `to go on from here: appdyno flow run ${file} --from ${f.n}`,
-    ].join('\n');
 
   return { run, lineOf, failureText };
 }

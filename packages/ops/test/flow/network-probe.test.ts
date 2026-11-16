@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, realpathSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
@@ -10,7 +10,8 @@ import type {
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
-import { callerOf, flowHelpers } from './harness.js';
+import { captures } from '../../src/network-capture.js';
+import { callerOf, flowsFor, flowHelpers } from './harness.js';
 
 /** A probe that keeps what it is told and gives what the test put in it. */
 class FakeProbe implements NetworkSource {
@@ -58,11 +59,11 @@ const DETAIL: NetworkDetail = {
   responseBodySize: 31,
 };
 
-describe('the network probe through its tool', () => {
+describe('the network probe through its tool and a flow', () => {
   let dir: string;
   let device: FakeDevice;
   let probe: FakeProbe;
-  const { context, refusal } = flowHelpers(
+  const { context, refusal, recorded } = flowHelpers(
     () => device,
     () => dir,
   );
@@ -119,7 +120,7 @@ describe('the network probe through its tool', () => {
   it('writes a HAR that hides what an answer hides, and reads it back', async () => {
     const call = callerOf(context(['s3cr3t-pass']));
     await call('network', { action: 'start', via: 'probe', bodies: true });
-    probe.entries = [POST, { ...POST, how: 'mocked' }];
+    probe.entries = [POST, { ...POST, how: 'mocked', rule: 'abc' }];
     probe.details = { 0: DETAIL };
     const saved = await call('network', { action: 'stop', save: 'out/capture' });
     const file = join(dir, 'out/capture.har');
@@ -147,5 +148,98 @@ describe('the network probe through its tool', () => {
     await call('network', { action: 'start', via: 'probe' });
     const out = await refusal(call('network', { action: 'read', save: '/tmp/x.har' }));
     expect(out.code).toBe('POLICY_DENIED');
+  });
+
+  it('sets, adds to, lists and clears rules, starting a capture where none runs', async () => {
+    const call = callerOf(context());
+    writeFileSync(join(dir, 'items.json'), '[]');
+    const set = await call('network', {
+      action: 'mock',
+      rules: ['api.test/items* body=@items.json', 'api.test/pay fail=timeout off'],
+    });
+    expect(set.text).toMatch(/^started a capture by the probe: dev\.app was restarted with it\n/);
+    expect(probe.told?.rules).toMatchObject([
+      { host: '^api\\.test$', path: '^/items.*$', status: 200, bodyFile: join(dir, 'items.json') },
+      { fail: 'timeout', off: true },
+    ]);
+    const first = probe.told?.rules[0]?.id;
+    probe.entries = [{ ...POST, how: 'mocked', rule: String(first) }];
+    await call('network', { action: 'mock', rules: ['*.test/new status=204'], add: true });
+    expect(probe.started).toHaveLength(1);
+    const listed = await call('network', { action: 'mock' });
+    expect(listed.text).toBe(
+      [
+        'rule 1: "api.test/items*" body=@items.json (1 taken)',
+        'rule 2 (off): "api.test/pay" fail=timeout off (0 taken)',
+        'rule 3: "*.test/new" status=204 (0 taken)',
+      ].join('\n'),
+    );
+    expect((await call('network', { action: 'read' })).text).toMatch(
+      /31 B \[mocked\]\nrule 1: .*\nrule 2 .*\nrule 3: /,
+    );
+    await call('network', { action: 'mock', rules: [] });
+    expect(probe.told?.rules).toEqual([]);
+    expect((await call('network', { action: 'mock' })).text).toBe('no rule is set');
+    // a file outside the server's folder, one that is not there, and what is no rule: nothing is told
+    const told = probe.controls.length;
+    const rule = (line: string) => refusal(call('network', { action: 'mock', rules: [line] }));
+    expect((await rule('a.test body=@/etc/hosts')).code).toBe('POLICY_DENIED');
+    expect((await rule('a.test body=@none.json')).code).toBe('NOT_FOUND');
+    expect((await rule('a.test')).message).toMatch(/^not a rule: a\.test: say what it does/);
+    expect(probe.controls).toHaveLength(told);
+  });
+
+  it('refuses rules on a device with no probe, saying what it has', async () => {
+    Object.assign(device, { network: undefined });
+    const call = callerOf(context());
+    const e = await refusal(call('network', { action: 'mock', rules: ['a.test status=500'] }));
+    expect(e.code).toBe('UNSUPPORTED');
+    expect(e.hint).toBe('a simulator has the probe');
+  });
+
+  const flowFile = (body: string) => {
+    mkdirSync(join(dir, 'flows'), { recursive: true });
+    const file = join(dir, 'flows', 'a.flow');
+    writeFileSync(file, `app dev.app\n${body}\n`);
+    return file;
+  };
+
+  it('holds a mock step’s rule while its file runs, a file found from the flow’s folder, and takes it out after', async () => {
+    const ctx = context();
+    const call = callerOf(ctx);
+    await call('network', { action: 'mock', rules: ['api.test/mine status=500'] });
+    const file = flowFile('mock api.test/items body=@items.json\nmock api.test/pay fail=offline');
+    writeFileSync(join(dir, 'flows', 'items.json'), '[]');
+    const during: number[] = [];
+    probe.control = (_, c) => {
+      probe.controls.push(c);
+      during.push(c.rules.length);
+    };
+    expect((await flowsFor(ctx).replay(file)).passed).toBe(true);
+    // one more with each step, then back to the one that was there
+    expect(during).toEqual([2, 3, 1]);
+    expect(probe.controls.at(-2)?.rules[1]?.bodyFile).toBe(join(dir, 'flows', 'items.json'));
+    expect(captures.read(device.serial)?.rules).toEqual(['"api.test/mine" status=500']);
+  });
+
+  it('takes a mock step’s rule out when the flow fails', async () => {
+    const ctx = context();
+    const file = flowFile(
+      'mock api.test/pay fail=offline\nassert text="never there" timeoutMs=100',
+    );
+    const r = await flowsFor(ctx).replay(file);
+    expect(r.passed).toBe(false);
+    expect(probe.told?.rules).toEqual([]);
+    expect(captures.read(device.serial)?.rules).toEqual([]);
+  });
+
+  it('records each rule set as a mock step, and what has no step as unrecorded', async () => {
+    const call = callerOf(context());
+    const { text } = await recorded(call, async () => {
+      await call('network', { action: 'mock', rules: ['api.test/pay fail=offline'] });
+      await call('network', { action: 'mock' });
+    });
+    expect(text).toContain('mock "api.test/pay" fail=offline\n');
+    expect(text.match(/^mock /gm)).toHaveLength(1);
   });
 });

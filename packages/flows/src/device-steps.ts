@@ -1,4 +1,5 @@
 import type { FlowStep } from './format.js';
+import { mockRule } from './mock.js';
 import { FlowError, quote, show, tokens } from './tokens.js';
 
 /** As the `visual` tool takes a name: no folder in it, so a picture stays in the folder it is kept in. */
@@ -55,6 +56,7 @@ export const VALUELESS_SETTINGS: readonly string[] = ['shake', 'memory_warning']
 /** What a `screenshot`, `visual` or `setting` line needs beyond its words, refused as its line's error. */
 export function checkDeviceStep(st: FlowStep, line: number) {
   const a = st.args;
+  if (st.action === 'mock') mockRule(st, line);
   if ((st.action === 'screenshot' || st.action === 'visual') && !PICTURE_NAME.test(String(a.name)))
     throw new FlowError(
       `${st.action}: a name is letters, digits, dot, dash and underscore: ${String(a.name)}`,

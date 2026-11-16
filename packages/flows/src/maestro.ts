@@ -159,6 +159,8 @@ function commands(st: FlowStep): Yaml[] {
     case 'setting':
       // a guessed command would pass an export and fail where it runs
       return unsupported('a device setting has no checked form in Maestro YAML');
+    case 'mock':
+      return unsupported("Maestro YAML has no rule for an app's requests");
     case 'alert':
       return unsupported('Maestro YAML answers a system alert by its words, in one language');
     case 'unrecorded':

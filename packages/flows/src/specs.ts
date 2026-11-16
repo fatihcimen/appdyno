@@ -50,6 +50,17 @@ export const SPECS = {
   visual: { words: ['name'], number: ['tolerance'], list: ['mask'] },
   /** A device setting, as `device_setting` takes it; `setting restore` puts back what was changed. */
   setting: { words: ['name', 'value?'], text: ['app', 'title'] },
+  /**
+   * A rule for the app's requests, as `network` `mock` takes one: `host/path` with `*`, then what it does. It holds
+   * until the file ends.
+   */
+  mock: {
+    words: ['request'],
+    text: ['method', 'query', 'regex', 'type', 'body', 'fail', 'to'],
+    number: ['status', 'delayMs', 'times'],
+    list: ['header'],
+    bool: ['off'],
+  },
   /** An action the format has no step for: replay stops here rather than go on without it. */
   unrecorded: { words: ['what'] },
   /** Another flow's steps go here: `composeFlow` replaces it before anything runs. */

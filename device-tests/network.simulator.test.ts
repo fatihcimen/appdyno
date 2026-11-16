@@ -1,4 +1,11 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -11,7 +18,7 @@ import { Simctl, simulatorProvider, sleep } from './workspace.js';
 
 /**
  * The network probe on a simulator (APPDYNO_IOS_UDID), through the `network` tool: headers and bodies kept and hidden,
- * a HAR that reads back, and nothing left once a capture ends.
+ * a HAR that reads back, each kind of rule, and nothing left once a capture or a session ends.
  */
 const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'dev.appdyno.fixture';
@@ -81,6 +88,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     }
     throw new Error(`no answer to ${url}`);
   };
+  const rules = (...lines: string[]) => ok('network', { action: 'mock', rules: lines });
   /** The folders of captures: the state of the one that runs is a file beside them. */
   const kept = () =>
     existsSync(join(stateDir, 'network'))
@@ -178,4 +186,91 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     expect((await send(`http://${a.at}/json`)).status).toBe(200);
     expect(kept()).toEqual([]);
   });
+
+  it('answers in place of the server by a rule, and says so', async () => {
+    const before = a.seen.length;
+    const set = await rules(`${a.at}/json status=503 body="{\\"error\\":\\"down\\"}"`);
+    console.log(set.text);
+    const got = await send(`http://${a.at}/json`);
+    expect(got.status).toBe(503);
+    expect(got.text).toContain('{"error":"down"}');
+    expect(a.seen.length).toBe(before);
+    const read = await ok('network', { action: 'read', status: '5xx' });
+    console.log(read.text);
+    expect(read.text).toMatch(/GET http:\/\/127\.0\.0\.1:\d+\/json 503 \d+ ms 16 B \[mocked\]/);
+    expect(read.text).toMatch(/^rule 1: .* \(1 taken\)$/m);
+  });
+
+  it('takes a request by its method, its query and a pattern of its path, a file for its answer, and runs out', async () => {
+    writeFileSync(join(dir, 'items.json'), '{"items":["from the file"]}');
+    await rules(
+      `${a.at}/json query="page=2" method=GET body=@items.json times=1`,
+      `${a.at} regex="/v\\\\d+/items" status=201 body=made type=text/plain header="X-Rule: two"`,
+    );
+    expect((await send(`http://${a.at}/json?page=1`)).text).toContain('"from":"a"');
+    expect((await send(`http://${a.at}/json?x=1&page=2`)).text).toContain('from the file');
+    // once, as it says
+    expect((await send(`http://${a.at}/json?page=2`)).text).toContain('"from":"a"');
+    const made = await send(`http://${a.at}/v2/items`);
+    expect(made.status).toBe(201);
+    expect(made.text).toContain('made');
+    const outside = await call('network', {
+      action: 'mock',
+      rules: [`${a.at}/x body=@/etc/hosts`],
+    });
+    expect(outside.text).toMatch(/outside the folder this server runs in/);
+    const none = await call('network', { action: 'mock', rules: [`${a.at}/x`] });
+    expect(none.text).toMatch(/say what it does/);
+  }, 180_000);
+
+  it('fails a request, sends one to another host, delays one, and leaves one that is off alone', async () => {
+    await rules(
+      `${a.at}/offline fail=offline`,
+      `${a.at}/moved to=${b.at}`,
+      `${a.at}/late delayMs=1500`,
+      `${a.at}/json status=500 off`,
+    );
+    expect((await send(`http://${a.at}/offline`)).said).toMatch(/^failed: /);
+    const moved = await send(`http://${a.at}/moved`);
+    expect(moved.text).toContain('"from":"b"');
+    expect(b.seen.at(-1)).toBe('GET /moved');
+    const late = await send(`http://${a.at}/late`);
+    expect(late.status).toBe(200);
+    expect(late.ms).toBeGreaterThanOrEqual(1500);
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    const read = await ok('network', { action: 'read' });
+    console.log(read.text);
+    expect(read.text).toMatch(/\/offline \d+ ms 0 B failed: .* \[failed by a rule\]/);
+    expect(read.text).toMatch(/\/moved 200 .* \[sent to 127\.0\.0\.1\]/);
+    expect(read.text).toMatch(/\/late 200 .* \[delayed by a rule\]/);
+    expect(read.text).toMatch(/^rule 4 \(off\): .* \(0 taken\)$/m);
+  }, 180_000);
+
+  it('keeps its rules in the app started again, and adds to them', async () => {
+    await rules(`${a.at}/json status=418 body=teapot`);
+    await ok('launch_app', { restart: true });
+    expect((await send(`http://${a.at}/json`)).status).toBe(418);
+    await ok('network', { action: 'mock', rules: [`${a.at}/more status=204`], add: true });
+    const listed = await ok('network', { action: 'mock' });
+    console.log(listed.text);
+    expect(listed.data.rules?.map((r) => r.hits)).toEqual([1, 0]);
+    expect((await send(`http://${a.at}/more`)).status).toBe(204);
+    await rules();
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+  }, 180_000);
+
+  it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {
+    await call('network', { action: 'stop' });
+    const set = await rules(`${a.at}/json status=500`);
+    expect(set.text).toMatch(
+      /^started a capture by the probe: dev\.appdyno\.fixture was restarted with it/,
+    );
+    expect((await send(`http://${a.at}/json`)).status).toBe(500);
+    const done = await ctx.end();
+    console.log(done);
+    expect(kept()).toEqual([]);
+    open();
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    expect(kept()).toEqual([]);
+  }, 180_000);
 });

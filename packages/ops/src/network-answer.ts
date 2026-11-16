@@ -2,17 +2,24 @@ import type { NetworkAnswer, NetworkDetail, NetworkEntry } from '@appdyno/core';
 import type { ServerContext } from './context.js';
 import { boundLines } from './diagnose.js';
 import { writeInside } from './flow/shared.js';
-import type { Capture } from './network-capture.js';
+import { readCapture, type Capture } from './network-capture.js';
 import { cleanHeaders, harOf } from './network-har.js';
-import { redactLog } from './policy.js';
+import { ruleHits } from './network-rules.js';
+import { redact, redactLog } from './policy.js';
 import type { Session } from './session.js';
 import { reply } from './tool.js';
 
 /** A body in an answer to here: the rest is in the export. */
 const BODY_CHARS = 4_000;
 
-/** What the probe was told to do to a request, as its line says it. */
-const howOf = (e: NetworkEntry) => (e.how ? ` [${e.how}]` : '');
+/** What a rule did to a request, as its line says it. */
+const HOW: Record<string, (e: NetworkEntry) => string> = {
+  mocked: () => 'mocked',
+  failed: () => 'failed by a rule',
+  delayed: () => 'delayed by a rule',
+  sent: (e) => `sent to ${e.to ?? 'another host'}`,
+};
+const howOf = (e: NetworkEntry) => (e.how ? ` [${HOW[e.how]?.(e) ?? e.how}]` : '');
 
 /** A request, or a count, as one line; a request whose headers and bodies can be asked for starts with its id. */
 export const line = (e: NetworkEntry, ids = false) =>
@@ -34,6 +41,14 @@ export function fits(e: NetworkEntry, { contains, method, status }: Filter) {
   if (status === 'failed') return !!e.error;
   const code = String(e.status ?? '');
   return /^\dxx$/i.test(status) ? code.startsWith(status.charAt(0)) : code === status;
+}
+
+/** The capture's rules with what each took, as the last lines of an answer; none where it has neither. */
+export function controlLines(c: Capture | undefined, entries: NetworkEntry[]) {
+  const hits = ruleHits(c?.rules ?? [], entries);
+  return [
+    ...hits.map((h, i) => `rule ${i + 1}${h.off ? ' (off)' : ''}: ${h.rule} (${h.hits} taken)`),
+  ];
 }
 
 const body = (what: string, text: string | undefined, size: number | undefined) =>
@@ -133,7 +148,8 @@ export function networkAnswers(ctx: ServerContext) {
       bodies,
       ...(saved ? [saved] : []),
     ];
-    return reply([...head, ...kept].join('\n'), {
+    const rules = controlLines(c, entries).map((l) => redact(ctx.policy, l));
+    return reply([...head, ...kept, ...rules].join('\n'), {
       entries: list,
       dropped,
       source,
@@ -143,5 +159,17 @@ export function networkAnswers(ctx: ServerContext) {
     });
   };
 
-  return { clean, shownOf, detailOf, exportHar, answer };
+  /** What the capture's rules are and what each took, which is what `mock` answers with. */
+  const controlAnswer = async (s: Session, c: Capture | undefined, did: string[]) => {
+    const { entries } = (c && (await readCapture(s, c))) ?? { entries: [] };
+    const rules = ruleHits(c?.rules ?? [], entries);
+    const lines = controlLines(c, entries).map((l) => redact(ctx.policy, l));
+    const t = [...did, ...(lines.length > 0 ? lines : ['no rule is set'])].join('\n');
+    return reply(t, {
+      done: t,
+      rules: rules.map((r) => ({ ...r, rule: redact(ctx.policy, r.rule) })),
+    });
+  };
+
+  return { clean, shownOf, detailOf, exportHar, answer, controlAnswer };
 }

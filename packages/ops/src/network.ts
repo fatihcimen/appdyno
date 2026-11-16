@@ -4,8 +4,9 @@ import { must, reportProgress, type NetworkPath } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { detailLines, networkAnswers } from './network-answer.js';
-import { captures, endCapture, readCapture, startOwn, VIA } from './network-capture.js';
+import { captures, endCapture, readCapture, setRules, startOwn, VIA } from './network-capture.js';
 import { harEntries } from './network-har.js';
+import { MAX_RULES } from './network-rules.js';
 import { NetworkOut } from './network-schemas.js';
 import { checkApp } from './policy.js';
 import type { Session } from './session.js';
@@ -14,10 +15,13 @@ import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ENTRIES = 200;
 const DEFAULT_ENTRIES = 50;
-const ACTIONS = ['paths', 'start', 'read', 'stop'] as const;
+const ACTIONS = ['paths', 'start', 'read', 'stop', 'mock'] as const;
 
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
+/** What a rule does not reach: said with each. */
+const APP_ONLY =
+  "only the app's URLSession requests: the system still reads the Mac's network as it is";
 
 const listening = (hostPort: string) =>
   new Promise<boolean>((resolve) => {
@@ -33,7 +37,7 @@ const listening = (hostPort: string) =>
   });
 
 export function networkOps(ctx: ServerContext) {
-  const { clean, shownOf, detailOf, exportHar, answer } = networkAnswers(ctx);
+  const { clean, shownOf, detailOf, exportHar, answer, controlAnswer } = networkAnswers(ctx);
 
   const paths = async (s: Session): Promise<NetworkPath[]> => {
     const own = (await s.device.network?.paths()) ?? [];
@@ -52,7 +56,7 @@ export function networkOps(ctx: ServerContext) {
       name: 'network',
       title: 'Network',
       description:
-        "An app's network traffic (HTTP), bounded. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); stop. Installs no certificate.",
+        "An app's network traffic (HTTP), bounded; mock by the probe, until stop. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); stop. Installs no certificate.",
       input: z
         .object({
           action: z.enum(ACTIONS),
@@ -68,11 +72,19 @@ export function networkOps(ctx: ServerContext) {
           limit: z.number().int().min(1).max(MAX_ENTRIES).default(DEFAULT_ENTRIES),
           save: z.string().max(1_000).optional(),
           overwrite: z.boolean().optional(),
+          rules: z
+            .array(z.string().max(4_000))
+            .max(MAX_RULES)
+            .optional()
+            .describe(
+              'Each "host/path* [method=] [query=] [regex=]" then "status= body= (@file) type= header=", "fail=offline|timeout|reset" or "to=host", and delayMs= times= off. Replaces; [] clears; none lists',
+            ),
+          add: z.boolean().optional(),
         })
         .strict(),
       output: NetworkOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, via, proxy, app, bodies, har, id, ...asked }) => {
+      run: async ({ action, via, proxy, app, bodies, har, id, rules, add, ...asked }) => {
         const s = await ctx.session();
         const serial = s.device.serial;
         const now = captures.read(serial);
@@ -86,6 +98,17 @@ export function networkOps(ctx: ServerContext) {
           const ways = await paths(s);
           const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${String(p.refused)}`}`).join('\n');
           return reply(clean(t), { done: clean(t), paths: ways });
+        }
+        if (action === 'mock') {
+          if (rules === undefined) return controlAnswer(s, now, []);
+          if (target) checkApp(ctx.policy, target);
+          const { capture, started } = await setRules(s, target, rules, add);
+          return controlAnswer(s, capture, [
+            ...(started
+              ? [`started a capture by the probe: ${String(target)} was restarted with it`]
+              : []),
+            `rules set: for ${APP_ONLY}; ended by network stop`,
+          ]);
         }
         if (action === 'start') {
           if (!via) {
