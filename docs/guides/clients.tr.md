@@ -88,7 +88,7 @@ Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hi
 
 **`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta npm registry'sine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
 
-**Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android ajanı ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu ilk kullanımda bir kez derler, bu birkaç dakika sürer.
+**Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android ajanı ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu simülatörde ilk kullanımda bir kez indirir ya da derler, derleme birkaç dakika sürer; ayrıntısı [aşağıda](#iphone-veya-simülatör).
 
 ## Bu Mac'teki istemciler
 

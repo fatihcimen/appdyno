@@ -88,7 +88,7 @@ A failed install leaves the old version working. `update` never moves to an olde
 
 **A client that runs `npx -y appdyno mcp`.** npx asks the registry at each start and moves to the latest release by itself, with none of the checks above. If appdyno is installed globally, npx runs that install instead. So run `npm install -g appdyno` once: what your clients run then changes only when you run `appdyno update`.
 
-**After an update.** A running MCP server keeps the old code until its client restarts it, so restart the client. The Android agent and the iOS runner need nothing: each is replaced by its hash at the next connection, and a release with a new iOS runner builds it once on first use, which takes a few minutes.
+**After an update.** A running MCP server keeps the old code until its client restarts it, so restart the client. The Android agent and the iOS runner need nothing: each is replaced by its hash at the next connection, and a release with a new iOS runner fetches it once on first use on a simulator, or builds it, which takes a few minutes, as [below](#an-iphone-or-a-simulator) says.
 
 ## Clients on this Mac
 

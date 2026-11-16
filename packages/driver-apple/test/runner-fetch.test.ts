@@ -86,6 +86,15 @@ describe("the release's simulator runner", () => {
     expect(readdirSync(join(out, '..'))).toEqual(['simulator']);
   });
 
+  it('that another process put there meanwhile is taken as it is, and nothing is said', async () => {
+    const { src, out, lines } = await release();
+    mkdirSync(out, { recursive: true });
+    writeFileSync(join(out, 'fetched.json'), '{"version":"9.8.7"}');
+    expect(await fetchRunner(src, ID, out, HERE)).toBe(true);
+    expect(lines).toEqual([]);
+    expect(readdirSync(join(out, '..'))).toEqual(['simulator']);
+  });
+
   it('is refused when its sha256 is not the one the package names, and nothing of it is kept', async () => {
     const { src, out, builds, asked, lines } = await release({ sha256: 'f'.repeat(64) });
     expect(await fetchRunner(src, ID, out, HERE)).toBe(false);

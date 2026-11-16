@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promise
 import { arch } from 'node:os';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
-import { downloadPinned, reportProgress, run } from '@appdyno/core';
+import { downloadPinned, noteInAnswer, reportProgress, run } from '@appdyno/core';
 import { xcodeEnv } from './simctl.js';
 
 /**
@@ -63,9 +63,11 @@ export function notFetched(
   return undefined;
 }
 
+/** Said where each can hear it: a terminal, a client's progress, and the answer of the call that waited. */
 const say = (line: string) => {
   process.stderr.write(`${line}\n`);
   reportProgress(line);
+  noteInAnswer(line);
 };
 
 /**
@@ -107,6 +109,8 @@ export async function fetchRunner(
     );
     return true;
   } catch (e) {
+    // another process fetched it meanwhile, and the rename found its folder there
+    if (existsSync(join(out, FETCHED))) return true;
     const why = (e instanceof Error ? e.message : String(e)).split('\n', 1)[0] ?? '';
     say(`the simulator runner is built here, not fetched: ${why}`);
     return false;
