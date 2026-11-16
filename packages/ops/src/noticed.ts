@@ -1,4 +1,4 @@
-import { personNeeded, PICTURE_TEXT, type Screen, type SystemAlert } from '@appdyno/core';
+import { onLine, personNeeded, PICTURE_TEXT, type Screen, type SystemAlert } from '@appdyno/core';
 import type { Point } from '@appdyno/protocol';
 import { inAlert } from './power.js';
 import type { Session } from './session.js';
@@ -35,7 +35,7 @@ const needsPerson = (what: string) => `\nneeds a person: ${what}. hand_off asks 
 
 /** A system alert by its own words and buttons, whatever it asks: a permission, or a link's "Open in …?". */
 export const systemAsks = (a: SystemAlert) =>
-  `the system asks: ${a.texts.join(' ')} (${a.buttons.map((b) => b.label).join(', ')}): answer it with alert`;
+  `the system asks: ${a.texts.map(onLine).join(' ')} (${a.buttons.map((b) => onLine(b.label)).join(', ')}): answer it with alert`;
 
 /** The app check: a system alert points to alert; another app in front is said. */
 function appCheck(s: Session, screen: Screen) {

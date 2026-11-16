@@ -1,5 +1,5 @@
 import { must } from '../must.js';
-import { elementLine, screenHeader } from './diff.js';
+import { asName, elementLine, onLine, quoted, screenHeader } from './diff.js';
 import type { Rect } from './elements.js';
 import { cutContext, type ScreenElement } from './model.js';
 
@@ -121,10 +121,10 @@ export function renderFolded(
     if (run.length < MIN_RUN) lines.push(...run.map((e, k) => line(e, told[k])));
     else
       lines.push(
-        `${[first.role, `x=${first.x}`, ...first.flags].join(' ')}: ref "label" y${apart ? ' — context' : ''}`,
+        `${[asName(first.role), `x=${first.x}`, ...first.flags].join(' ')}: ref "label" y${apart ? ' — context' : ''}`,
         ...run.map(
           (e, k) =>
-            `${e.ref} ${JSON.stringify(say(e.label))} ${e.y}${apart && told[k] ? ` — ${told[k]}` : ''}`,
+            `${e.ref} ${quoted(say(e.label))} ${e.y}${apart && told[k] ? ` — ${onLine(told[k])}` : ''}`,
         ),
       );
   }

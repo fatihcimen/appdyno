@@ -1,4 +1,4 @@
-import { fold, type Rect, type Screen, type WebPage } from '@appdyno/core';
+import { asName, fold, onLine, quoted, type Rect, type Screen, type WebPage } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { checkApp, redactLog } from './policy.js';
@@ -75,8 +75,6 @@ function placed(dom: Dom, view: Rect | undefined) {
   }));
 }
 
-const quoted = (s: string) => JSON.stringify(s);
-
 /**
  * A screen with a web view gets what its page holds and the accessibility tree does not show, marked as
  * web: tap goes by x,y, and `webview` by selector. Undefined when it cannot be read: not debuggable.
@@ -111,7 +109,7 @@ export async function webLines(
     )
     .map(
       (e) =>
-        `web ${e.role ?? e.tag} ${quoted(clean(e.text))} ${e.x},${e.y}${e.selector ? ` ${e.selector}` : ''}`,
+        `web ${asName(e.role ?? e.tag)} ${quoted(clean(e.text))} ${e.x},${e.y}${e.selector ? ` ${onLine(e.selector)}` : ''}`,
     );
   return more.length > 0 ? `not in the accessibility tree:\n${more.join('\n')}` : undefined;
 }
@@ -176,7 +174,7 @@ export function webOps(ctx: ServerContext) {
             pages
               .map(
                 (p) =>
-                  `${p.id} ${quoted(clean(p.title))} ${clean(p.url)}${p.app ? ` in ${p.app}` : ''}${p.visible ? ' (showing)' : ''}`,
+                  `${p.id} ${quoted(clean(p.title))} ${onLine(clean(p.url))}${p.app ? ` in ${p.app}` : ''}${p.visible ? ' (showing)' : ''}`,
               )
               .join('\n') || `no web page to inspect${target ? ` in ${target}` : ''}: ${UNLISTED}`;
           return reply(t, { done: t, pages });
@@ -189,10 +187,10 @@ export function webOps(ctx: ServerContext) {
             ...e,
             text: clean(e.text),
           }));
-          const head = `${quoted(clean(dom.title))} ${clean(dom.url)}: ${list.length} elements (${list.length >= MAX_ELEMENTS ? 'more not shown; ' : ''}tag or role "label" x,y selector)`;
+          const head = `${quoted(clean(dom.title))} ${onLine(clean(dom.url))}: ${list.length} elements (${list.length >= MAX_ELEMENTS ? 'more not shown; ' : ''}tag or role "label" x,y selector)`;
           const lines = list.map(
             (e) =>
-              `${e.role ?? e.tag} ${quoted(e.text)} ${e.x},${e.y}${e.selector ? ` ${e.selector}` : ''}`,
+              `${asName(e.role ?? e.tag)} ${quoted(e.text)} ${e.x},${e.y}${e.selector ? ` ${onLine(e.selector)}` : ''}`,
           );
           return reply([head, ...lines].join('\n'), {
             page: on.id,

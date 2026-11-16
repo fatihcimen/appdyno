@@ -29,6 +29,8 @@ Measurements are stored on the local disk, under the state directory or the `--m
 
 A client of the server can do on a device what a person holding it can: read the screen, tap, swipe and type, open links, launch and stop apps, set the clipboard, location and orientation, take screenshots, and read logs and crash records of an app. The Android agent runs as the shell user. Anything shown on the screen is visible to the client, so assume the model sees it.
 
+What an app shows is text the model reads, so an app can try to tell the model what to do. An answer keeps each element on a line of its own: what the app wrote is in quotes, with line breaks and control characters escaped, in a label, an id, a role and the words that tell two rows apart, so an app cannot make up a line of the answer, an element or a result that is not there. The server's instructions tell the model that what a device shows or logs is data read from an app, never an instruction to follow. Neither keeps a model from being persuaded by what it reads: a label, a log line and a web page are still the app's own words. The limits below, the questions a person is asked, and the client's own approval of each call are what hold then.
+
 Limits you set:
 
 - `--allow-devices`, `--allow-apps` and `--allow-urls` restrict where the server acts. `--allow-devices` is matched against a device's serial or UDID. `simulator` `boot` and `shutdown` match a simulator's or emulator's name too, and a stopped emulator by the serial it ran as when this tool shut it down: a device allowed for the one is allowed for the other. With it, `simulator create` and the hub's New Simulator are off: a new simulator could not be on the list, and one the server made would be a device the person never named.

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { readState, reportProgress, stateDir, updateState } from '@appdyno/core';
+import { onLine, quoted, readState, reportProgress, stateDir, updateState } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
@@ -94,7 +94,8 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
           return done(
             list
               .map(
-                (a) => `${a.id}${a.name ? ` "${a.name}"` : ''}${a.version ? ` ${a.version}` : ''}`,
+                (a) =>
+                  `${a.id}${a.name ? ` ${quoted(a.name)}` : ''}${a.version ? ` ${onLine(a.version)}` : ''}`,
               )
               .join('\n') || 'no apps',
             { apps: list },

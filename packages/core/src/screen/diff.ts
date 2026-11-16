@@ -1,15 +1,35 @@
 import type { ScreenElement } from './model.js';
 
+/** What JSON leaves as it is and a reader may still take for the end of a line: C1 controls, the line and paragraph separators. */
+const ENDS_A_LINE = /[\u007f-\u009f\u2028\u2029]/g;
+const ANY_CONTROL = /[\p{Cc}\u2028\u2029]/u;
+
+/**
+ * What an app wrote, in quotes on one line. An app's words are its own, and an answer is read by a model: a label with
+ * a line break in it would else stand as a line of the answer, an element or a result the app made up.
+ */
+export const quoted = (s: string) =>
+  JSON.stringify(s).replace(
+    ENDS_A_LINE,
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
+
+/** An app's words where a line has them unquoted, as what tells two rows apart: quoted if they could end the line. */
+export const onLine = (s: string) => (ANY_CONTROL.test(s) ? quoted(s) : s);
+
+/** An id or a role an app gave, bare where it is a name and nothing else (a secret hidden in it aside), else quoted. */
+export const asName = (s: string) => (/^[\w.:/#$•-]+$/.test(s) ? s : quoted(s));
+
 /** One element as the screen view shows it: ref, role, "label", id=<id> without a label, x,y, flags. */
 export function elementLine(e: ScreenElement, clean: (s: string) => string = (s) => s): string {
   return [
     e.ref,
-    e.role,
-    JSON.stringify(clean(e.label)),
-    ...(!e.label && e.id ? [`id=${clean(e.id)}`] : []),
+    asName(e.role),
+    quoted(clean(e.label)),
+    ...(!e.label && e.id ? [`id=${asName(clean(e.id))}`] : []),
     `${e.x},${e.y}`,
     ...e.flags,
-    ...(e.refContext ? [`— ${clean(e.refContext)}`] : []),
+    ...(e.refContext ? [`— ${onLine(clean(e.refContext))}`] : []),
   ].join(' ');
 }
 
@@ -86,10 +106,10 @@ export function diffText(
   return [
     `screen changed: +${d.added.length} -${d.removed.length} ~${d.changed.length} (${total} elements; ref role "label" x,y flags)`,
     ...d.added.map((e) => `+ ${elementLine(e, clean)}`),
-    ...d.removed.map((e) => `- ${e.ref} ${JSON.stringify(clean(e.label))}`),
+    ...d.removed.map((e) => `- ${e.ref} ${quoted(clean(e.label))}`),
     ...d.changed.map(
       ({ now, was }) =>
-        `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (was ${JSON.stringify(clean(was.label))})` : ''}`,
+        `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (was ${quoted(clean(was.label))})` : ''}`,
     ),
   ].join('\n');
 }

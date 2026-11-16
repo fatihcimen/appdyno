@@ -1,5 +1,6 @@
 import type { NativeView, ViewTree } from './device-views.js';
 import { must } from './must.js';
+import { asName, onLine, quoted } from './screen/diff.js';
 import { cutAt, idOf } from './screen/model.js';
 
 /** At most this many lines of views in an answer: the rest is counted. */
@@ -9,7 +10,7 @@ const MAX_WORDS = 80;
 /** A class as a line shows it: a generic's arguments, which run to hundreds of characters in SwiftUI's, left out. */
 const shortClass = (cls: string) => {
   const at = cls.indexOf('<');
-  return at > 0 ? `${cls.slice(0, at)}<…>` : cls;
+  return onLine(at > 0 ? `${cls.slice(0, at)}<…>` : cls);
 };
 
 const drawn = (v: NativeView) =>
@@ -28,9 +29,9 @@ function described(v: NativeView, clean: (s: string) => string) {
   const id = idOf(v.id);
   const { x, y, width, height } = v.rect;
   return [
-    ...(id ? [`#${clean(id)}`] : []),
-    ...(words ? [JSON.stringify(words)] : []),
-    ...(label && text && text !== label ? [`text ${JSON.stringify(text)}`] : []),
+    ...(id ? [`#${asName(clean(id))}`] : []),
+    ...(words ? [quoted(words)] : []),
+    ...(label && text && text !== label ? [`text ${quoted(text)}`] : []),
     `${Math.round(x)},${Math.round(y)} ${Math.round(width)}x${Math.round(height)}`,
     ...(v.alpha !== undefined && v.alpha < 1 ? [`alpha ${v.alpha.toFixed(2)}`] : []),
     ...(v.flags ?? []),

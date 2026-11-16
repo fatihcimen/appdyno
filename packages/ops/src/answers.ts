@@ -9,6 +9,7 @@ import {
   type ActOptions,
   type Screen,
   type ScreenDiff,
+  onLine,
 } from '@appdyno/core';
 import { DeviceError, SETTLE_DEFAULT, type ActResult, type TextResult } from '@appdyno/protocol';
 import {
@@ -45,7 +46,7 @@ export function busyReasons(r: ActResult | undefined, screen: Screen): string[] 
       : []),
     ...(r?.animationWaitMs ? [`the app's animations ran ${Math.round(r.animationWaitMs)} ms`] : []),
     ...(spinner
-      ? [`a progress indicator is showing${spinner.label ? ` (${spinner.label})` : ''}`]
+      ? [`a progress indicator is showing${spinner.label ? ` (${onLine(spinner.label)})` : ''}`]
       : []),
   ];
 }

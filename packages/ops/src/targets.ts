@@ -11,6 +11,9 @@ import {
   type Screen,
   type ScreenElement,
   type Selector as SelectorOf,
+  asName,
+  onLine,
+  quoted,
 } from '@appdyno/core';
 import type { Point } from '@appdyno/protocol';
 import { UNREAD } from './checks.js';
@@ -38,7 +41,7 @@ export type Words = {
 export function wordsOf(clean: (s: string) => string): Words {
   // what tells like elements apart is the row each is in, where the list has one
   const line = (e: ScreenElement) =>
-    `${e.ref} ${e.role} ${JSON.stringify(clean(e.label || e.id || ''))} ${e.x},${e.y}${e.refContext ? ` — ${cutContext(clean(e.refContext))}` : ''}`;
+    `${e.ref} ${asName(e.role)} ${quoted(clean(e.label || e.id || ''))} ${e.x},${e.y}${e.refContext ? ` — ${onLine(cutContext(clean(e.refContext)))}` : ''}`;
   const offer = (list: ScreenElement[], want?: string) => {
     const near = nearest(list, want).map(line);
     return near.length > 0 ? `; nearest: ${near.join('; ')}` : '';
