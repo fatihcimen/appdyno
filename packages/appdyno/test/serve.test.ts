@@ -35,6 +35,13 @@ it("writes where a command line's own path says, and holds a server's tool calls
   expect(policyOf(ownPaths({ 'allow-write': ['/a'] }), {}).writeDirs).toEqual(['/a', '/']);
 });
 
+it('allows a build ahead by its own flag or variable, and by no other', () => {
+  expect(policyOf({ 'allow-build': true }, {}).allowBuild).toBe(true);
+  expect(policyOf({}, { APPDYNO_ALLOW_BUILD: '1' }).allowBuild).toBe(true);
+  for (const env of [{}, { APPDYNO_ALLOW_BUILD: '0' }, { APPDYNO_ALLOW_DATA_LOSS: 'all' }])
+    expect(policyOf({}, env).allowBuild).toBeUndefined();
+});
+
 it('reads the secrets of the variable and of the file, and stops at a file it cannot read', () => {
   expect(policyOf({}, { APPDYNO_SECRETS: 'a1,b22' }).secrets).toEqual(['b22', 'a1']);
   expect(() => policyOf({}, { APPDYNO_SECRETS_FILE: '/no/such/file' })).toThrow(

@@ -53,19 +53,21 @@ export async function approve(policy: Policy, s: Session, action: DataLoss, app 
 
 /**
  * A project's build runs the project's own scripts on this Mac, as this user: asked of the person each time, on
- * whatever device, and no flag of the server allows it ahead, as one that lets a simulator lose data says nothing of
- * what may run here.
+ * whatever device, unless the person who started the server allowed builds ahead. A flag that lets a simulator lose
+ * data says nothing of what may run here, and allows none.
  */
-export const approveBuild = (s: Session, project: string) =>
-  askPerson(
+export async function approveBuild(policy: Policy, s: Session, project: string) {
+  if (policy.allowBuild) return;
+  await askPerson(
     s,
     'app build_and_run',
     [
       `Build ${project} on this Mac and run what it makes`,
       "Its build runs the project's own scripts on this Mac, with all that this user may do",
     ],
-    'a person builds it, and app install takes what the build made',
+    "a person builds it, and app install takes what the build made; or a person allows builds ahead in this server's own command line: --allow-build (APPDYNO_ALLOW_BUILD=1)",
   );
+}
 
 /**
  * A link by a scheme the selected app does not say it opens: whatever app or part of the system has that scheme takes

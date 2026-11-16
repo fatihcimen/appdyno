@@ -23,6 +23,8 @@ export type Policy = {
   allowDataLoss?: 'virtual' | 'all';
   /** An input on the system's own power, emergency or erase controls goes ahead with no question asked, as above. */
   allowPower?: 'virtual' | 'all';
+  /** `app build_and_run` runs a project's own build on this Mac with no question asked: `--allow-build`. */
+  allowBuild?: boolean;
   /** Folders a tool call may write in beside the project's and the state folder: `--allow-write`. */
   writeDirs?: string[];
 };

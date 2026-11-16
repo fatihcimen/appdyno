@@ -80,6 +80,7 @@ export function policyOf(values: ServerFlags, env: NodeJS.ProcessEnv = process.e
     secrets: secretsOf(env),
     ...(loss && { allowDataLoss: loss }),
     ...(power && { allowPower: power }),
+    ...((values['allow-build'] || env.APPDYNO_ALLOW_BUILD === '1') && { allowBuild: true }),
     writeDirs: writeDirsOf(values['allow-write'], env),
   };
 }

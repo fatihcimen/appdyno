@@ -48,6 +48,12 @@ export type ConnectOptions = {
    */
   allowWrite?: string[];
   /**
+   * `app` `build_and_run` runs a project's own build scripts on this Mac, as `--allow-build` lets a server: without it
+   * the call is refused `PERMISSION_REQUIRED`, as a program has no person to ask. Only a project inside the folders
+   * above is built.
+   */
+  allowBuild?: boolean;
+  /**
    * Texts never shown back in an answer, typed or put on the clipboard, as a test account's password. `APPDYNO_SECRETS`
    * (`a,b`) and the lines of the file `APPDYNO_SECRETS_FILE` names join them. Hidden in text alone: a screenshot and a
    * video show the screen as it was.
@@ -188,6 +194,7 @@ export function connect(options: ConnectOptions = {}): Appdyno {
       ...DEFAULT_POLICY,
       ...(allowDevices && { devices: allowDevices }),
       ...(urls && { urls }),
+      ...(options.allowBuild === true && { allowBuild: true }),
       secrets: secretsOf(process.env, options.secrets),
       writeDirs: writeDirsOf(options.allowWrite),
     },

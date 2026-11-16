@@ -134,7 +134,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
               byPerson('by starting it without --allow-apps'),
             );
           const project = inside(policy, path, true);
-          await approveBuild(s, project);
+          await approveBuild(policy, s, project);
           reportProgress(`building ${project}`);
           const pkg = await apps.buildAndInstall({
             project,

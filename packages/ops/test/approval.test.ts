@@ -287,9 +287,22 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
       expect(no.done).toEqual([]);
       const nobody = await on({ policy });
       expect((await nobody.call('app', build)).text).toBe(
-        'PERMISSION_REQUIRED: app build_and_run asks the person first, and this client cannot ask: nothing was done\nhint: a person builds it, and app install takes what the build made',
+        "PERMISSION_REQUIRED: app build_and_run asks the person first, and this client cannot ask: nothing was done\nhint: a person builds it, and app install takes what the build made; or a person allows builds ahead in this server's own command line: --allow-build (APPDYNO_ALLOW_BUILD=1)",
       );
       expect(nobody.done).toEqual([]);
+    });
+
+    it('builds with nothing asked where the person who started the server allowed builds, in its folders and under no allowlist', async () => {
+      const ahead = await on({ policy: { allowBuild: true }, answer: 'decline' });
+      expect((await ahead.call('app', build)).error).toBe(false);
+      expect(ahead.asked).toEqual([]);
+      expect(ahead.done).toEqual(['build', 'launch']);
+      const outside = await on({ policy: { allowBuild: true } });
+      const far = await outside.call('app', { ...build, path: join(folder, 'My.xcodeproj') });
+      expect(far.code).toBe('POLICY_DENIED');
+      const listed = await on({ policy: { allowBuild: true, apps: ['dev.app'] } });
+      expect((await listed.call('app', build)).code).toBe('POLICY_DENIED');
+      expect([...outside.done, ...listed.done]).toEqual([]);
     });
 
     it('builds no project outside the folders the server writes in, and asks nobody about one', async () => {
