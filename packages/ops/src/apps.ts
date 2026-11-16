@@ -35,6 +35,7 @@ import { setCondition } from './settings.js';
 import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { ACT, beyond, defineOp, definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import { webViewRect } from './web.js';
 
 /** The app the device says the link opens in, held to `app`; none where it cannot tell. */
 const openerOf = async (s: Session, href: string, app: string) => {
@@ -260,18 +261,19 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         if (CALL_LINK.test(href))
           await approvePower(policy, s, `the link ${href}, which places a call`);
         // a web link that no app holds goes to a browser, which the device puts in front a moment after it took the
-        // link: the screen the link left, still and unchanged, is no answer yet
-        const from = /^https?:/i.test(href)
-          ? (await s.current().catch(() => undefined))?.hash
-          : undefined;
+        // link: the screen the link left is no answer yet, nor is that screen changed by itself, as by a keyboard going
+        const from = /^https?:/i.test(href) ? await s.current().catch(() => undefined) : undefined;
         const {
           result: { result, notIn },
           was,
         } = await changing(s, () => openIn(s, href, app));
         const answered = typeof result === 'object' ? result.answered : undefined;
         const arrived = {
-          met: (x: Screen) => x.hash !== from,
-          otherwise: 'the screen is still the one the link was sent from',
+          // an app that takes the site's links comes in front with no page to show
+          met: (x: Screen) =>
+            x.hash !== from?.hash && (!!webViewRect(x) || x.foreground !== from?.foreground),
+          otherwise:
+            'neither a web page nor another app came on the screen in 3 s: it may still be the one the link was sent from',
         };
         // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
         return afterChange(

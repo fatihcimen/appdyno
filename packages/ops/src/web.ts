@@ -64,8 +64,8 @@ const CLICK = (selector: string) => `(() => {
 
 const endsInWebView = (type: string) => /web.?view$/i.test(type.slice(type.lastIndexOf('.') + 1));
 
-/** Where a web view stands on the screen, for a page's coordinates in tap units. */
-function webViewRect(screen: Screen): Rect | undefined {
+/** Where a web view stands on the screen, for a page's coordinates in tap units: none where the screen shows no page. */
+export function webViewRect(screen: Screen): Rect | undefined {
   return screen.elements.find((e) => e.rect && endsInWebView(e.type))?.rect;
 }
 

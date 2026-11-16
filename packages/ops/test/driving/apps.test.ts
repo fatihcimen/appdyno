@@ -364,7 +364,15 @@ describe('a web link the selected app does not open', () => {
       this.sent.push([url, pkg]);
       if (pkg && !url.startsWith('app:'))
         return Promise.reject(new DeviceError('NOT_FOUND', `${pkg} does not open ${url}`));
-      if (!pkg) this.fixture = tree([{ t: 'Example Domain', b: [0, 300, 1080, 400] }], 'browser');
+      // a browser: its page is a web view
+      if (!pkg)
+        this.fixture = tree(
+          [
+            { c: 'android.webkit.WebView', b: [0, 200, 1080, 2400] },
+            { t: 'Example Domain', b: [0, 300, 1080, 400] },
+          ],
+          'browser',
+        );
       return Promise.resolve();
     }
   }
@@ -394,6 +402,23 @@ describe('a web link the selected app does not open', () => {
     const r = await (await connect(new Late())).call('open_link', { url: 'https://example.com/' });
     expect(r.text).toContain('foreground: browser');
     expect(r.text).not.toContain('no change seen');
+  });
+
+  it("answers with an app that takes the site's links, which shows no web page", async () => {
+    class Claimed extends Held {
+      override openUrl(url: string, pkg?: string) {
+        if (pkg) return super.openUrl(url, pkg);
+        this.fixture = tree([{ t: 'Product 7', b: [0, 300, 1080, 400] }], 'shop');
+        return Promise.resolve();
+      }
+    }
+    const r = await (
+      await connect(new Claimed())
+    ).call('open_link', {
+      url: 'https://example.com/',
+    });
+    expect(r.text).toContain('foreground: shop');
+    expect(r.text).not.toContain('came on the screen in 3 s');
   });
 
   it('stays held to the app for a link of another kind, and under an allowlist', async () => {
