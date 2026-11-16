@@ -240,9 +240,9 @@ describe('policy', () => {
       'nolink',
     ])
       expect((await t.textOf('open_link', { url, read: 'none' })).error, url).toBe(true);
-    expect((await t.textOf('open_link', { url: 'demo://home', read: 'none' })).error).toBe(false);
+    expect((await t.textOf('open_link', { url: 'app://home', read: 'none' })).error).toBe(false);
     expect(t.device.calls.find((c) => c.name === 'openUrl')?.args).toEqual([
-      'demo://home',
+      'app://home',
       'dev.app',
     ]);
   });

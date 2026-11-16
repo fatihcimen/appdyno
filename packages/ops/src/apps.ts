@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
 import { systemAsks } from './noticed.js';
 import type { ServerContext } from './context.js';
-import { approvePower } from './approval.js';
+import { approveLink, approvePower } from './approval.js';
 import {
   APP_ID,
   byPerson,
@@ -15,7 +15,10 @@ import {
   checkUrl,
   noApp,
   noSettings,
+  schemeOf,
   SETTINGS_LINK,
+  WEB_LINK,
+  type Policy,
 } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import type { Session } from './session.js';
@@ -24,6 +27,29 @@ import { setCondition } from './settings.js';
 import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+
+/** What the app says it opens; none where the device cannot tell, which asks as an app that declares none does. */
+const linksOf = async (s: Session, app: string) => {
+  try {
+    return await s.device.apps.links(app);
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * A link that is no web page opens unasked where the person's own list has it, where an allowed app is what the device
+ * says opens it, and where the selected app says it opens that scheme. Any other asks the person: the scheme decides
+ * what takes it, and what no app here declared is the system's or another app's to act on.
+ */
+async function askOfScheme(policy: Policy, s: Session, href: string, app: string | undefined) {
+  const listed = policy.urls !== undefined || policy.apps.length > 0;
+  if (listed || WEB_LINK.test(href) || SETTINGS_LINK.test(href) || CALL_LINK.test(href)) return;
+  const scheme = must(schemeOf(href), 'its scheme');
+  const declared = app ? await linksOf(s, app) : [];
+  if (declared.some((l) => schemeOf(l.url) === scheme)) return;
+  await approveLink(s, href, scheme, app);
+}
 
 /** With `links`, each link the app opens, as its lines say. */
 const LinkOut = ActionOut.extend({
@@ -207,6 +233,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         if (settings) return openSettings(s, settings, read);
         const href = checkUrl(policy, must(url, 'url'), s.device.platform);
         const app = await linkApp(s, href);
+        await askOfScheme(policy, s, href, app);
         if (CALL_LINK.test(href))
           await approvePower(policy, s, `the link ${href}, which places a call`);
         const {

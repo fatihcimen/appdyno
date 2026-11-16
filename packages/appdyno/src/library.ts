@@ -34,6 +34,12 @@ export type ConnectOptions = {
   app?: string;
   /** Devices it may drive; with none, any. */
   allowDevices?: RegExp;
+  /**
+   * Links `open_link` opens with nothing asked, as `--allow-urls` gives a server, and the only ones it opens then. With
+   * none, a web link and a scheme the selected app says it opens: any other is refused `PERMISSION_REQUIRED`, as a
+   * program has no person to ask.
+   */
+  allowUrls?: RegExp;
   /** Drives a device another process holds, beside it, and holds it against none. `APPDYNO_SHARE=1` says so too. */
   share?: boolean;
   /**
@@ -151,10 +157,12 @@ function stoppedBy<T>(signal: StopSignal | undefined, what: string, run: () => P
 export function connect(options: ConnectOptions = {}): Appdyno {
   const { device, app, share = process.env.APPDYNO_SHARE === '1' } = options;
   const allowDevices = regularExpression(options.allowDevices);
+  const urls = regularExpression(options.allowUrls, ['allowUrls', '/^myapp:/']);
   const ctx = new ServerContext(
     {
       ...DEFAULT_POLICY,
       ...(allowDevices && { devices: allowDevices }),
+      ...(urls && { urls }),
       secrets: secretsOf(process.env, options.secrets),
       writeDirs: writeDirsOf(options.allowWrite),
     },

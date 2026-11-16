@@ -351,7 +351,11 @@ describe('a web link the selected app does not open', () => {
   /** As Android, where `-p` holds a link to the app named: the app opens its own scheme, a browser the web. */
   class Held extends FakeDevice {
     sent: [string, string | undefined][] = [];
-    override apps = { opener: (_url: string, app?: string) => Promise.resolve(app) } as never;
+    override apps = {
+      opener: (_url: string, app?: string) => Promise.resolve(app),
+      // a scheme the app says it opens, and then does not
+      links: () => Promise.resolve([{ url: 'other://', kind: 'scheme' }]),
+    } as never;
     override openUrl(url: string, pkg?: string) {
       this.sent.push([url, pkg]);
       if (pkg && !url.startsWith('app:'))

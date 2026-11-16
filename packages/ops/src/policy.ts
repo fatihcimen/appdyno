@@ -10,7 +10,10 @@ export type Policy = {
   devices?: RegExp;
   /** Apps that may be launched and stopped; empty: any. */
   apps: string[];
-  /** Links `open_link` may open; empty: any http(s) link or app scheme. */
+  /**
+   * Links `open_link` may open, and opens with nothing asked. None: a web link, Settings' own, and a scheme the selected
+   * app says it opens; any other asks the person.
+   */
   urls?: RegExp;
   /** The home key leaves the app: off where nothing may leave it. */
   allowHome: boolean;
@@ -81,6 +84,13 @@ export const SETTINGS_LINK =
 
 /** Links that place a call, or ask to: the phone's and FaceTime's. */
 export const CALL_LINK = /^(tel|telprompt|facetime|facetime-audio):/i;
+
+/** A link's scheme, in lower case: `myapp` of `MyApp://open`. */
+export const schemeOf = (url: string) =>
+  /^([a-z][a-z0-9+.-]*):/i.exec(url.trim())?.[1]?.toLowerCase();
+
+/** A web link: what every device opens in a browser or in the app that owns its domain. */
+export const WEB_LINK = /^https?:/i;
 
 /** What a person does to allow what this server refuses by its flag: no call changes one. */
 export const byPerson = (how: string) =>

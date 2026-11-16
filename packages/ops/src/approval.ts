@@ -1,5 +1,5 @@
-import { callAsk, callYes } from '@appdyno/core';
-import type { Policy } from './policy.js';
+import { callAsk, callYes, onLine } from '@appdyno/core';
+import { byPerson, type Policy } from './policy.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 
@@ -65,6 +65,22 @@ export const approveBuild = (s: Session, project: string) =>
       "Its build runs the project's own scripts on this Mac, with all that this user may do",
     ],
     'a person builds it, and app install takes what the build made',
+  );
+
+/**
+ * A link by a scheme the selected app does not say it opens: whatever app or part of the system has that scheme takes
+ * it, as `itms-services:` installs an app, `shortcuts:` runs a shortcut and `sms:` or `mailto:` writes a message. Asked
+ * of the person each time; `--allow-urls` is how one allows links ahead.
+ */
+export const approveLink = (s: Session, href: string, scheme: string, app: string | undefined) =>
+  askPerson(
+    s,
+    `the link ${onLine(href)}`,
+    [
+      `Open ${onLine(href)}`,
+      `${app ?? 'No selected app'} does not say it opens ${scheme}: links, so another app or the system takes it, and may install, send or run what it names`,
+    ],
+    `open_link opens a web link and a scheme the selected app says it opens (open_link links: lists them) with nothing asked; ${byPerson('by --allow-urls with a pattern the link matches (APPDYNO_ALLOW_URLS)')}`,
   );
 
 /** As SECURITY.md has it: no tool does any of this, so a person does it, and a touch that would is asked of them. */

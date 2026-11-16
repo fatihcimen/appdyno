@@ -41,7 +41,11 @@ export class FakeDevice extends DeviceActions implements Device {
   virtual = true;
   lastStartWasCold = true;
   // a device that names no app a call's link opens in, as an iPhone, for the guard every input passes
-  apps = notGiven('apps', { opener: () => Promise.resolve(undefined) }) as AppManager;
+  apps = notGiven('apps', {
+    opener: () => Promise.resolve(undefined),
+    // the fake app's own scheme: a link by another asks the person
+    links: () => Promise.resolve([{ url: 'app://', kind: 'scheme' }]),
+  }) as AppManager;
   recorder = notGiven('recorder') as ScreenRecorder;
   mirror = notGiven('mirror') as Mirror;
   settings: DeviceSettings = {

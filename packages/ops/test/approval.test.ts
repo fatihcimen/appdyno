@@ -49,6 +49,7 @@ async function onDevice(
     virtual: o.virtual ?? true,
     apps: {
       opener: () => Promise.resolve(undefined),
+      links: () => Promise.resolve([{ url: 'dev://', kind: 'scheme' }]),
       grantResets: o.grantResets,
       uninstall: record('uninstall'),
       clearData: record('clear'),
@@ -193,6 +194,65 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
     expect(asked).toHaveLength(1);
     expect(done).toEqual(['keychain']);
     expect(device.calls.filter((c) => c.name === 'act')).toHaveLength(1);
+  });
+
+  describe('open_link', () => {
+    const open = (url: string) => ({ url, read: 'none' });
+    const opened = (d: { device: FakeDevice }) =>
+      d.device.calls.filter((c) => c.name === 'openUrl').map((c) => c.args[0]);
+
+    it('opens a web link and a scheme the selected app says it opens with nothing asked', async () => {
+      const d = await on({ answer: 'decline' });
+      const urls = ['https://example.test/a', 'dev://screen', 'DEV://screen'];
+      for (const url of urls) expect((await d.call('open_link', open(url))).error, url).toBe(false);
+      expect(d.asked).toEqual([]);
+      expect(opened(d)).toEqual(urls);
+    });
+
+    it('asks the person of a link by any other scheme, and opens none on a no or with nobody to ask', async () => {
+      for (const url of [
+        'itms-services://?action=download-manifest&url=https://x.test/a.plist',
+        'shortcuts://run-shortcut?name=x',
+        'sms:+15550100',
+        'mailto:a@b.test',
+        'other://x',
+      ]) {
+        const yes = await on({ answer: 'accept' });
+        expect((await yes.call('open_link', open(url))).error, url).toBe(false);
+        expect(yes.asked).toHaveLength(1);
+        expect(yes.asked[0]).toContain(
+          `Open ${url} on Fake Phone (${yes.serial})? dev.app does not say it opens `,
+        );
+        expect(opened(yes)).toEqual([url]);
+        const no = await on({ answer: 'decline' });
+        expect((await no.call('open_link', open(url))).code, url).toBe('PERMISSION_REQUIRED');
+        // no flag for what loses data or powers a device off says anything of a link
+        const nobody = await on({ policy: { allowDataLoss: 'all', allowPower: 'all' } });
+        const r = await nobody.call('open_link', open(url));
+        expect(r.code, url).toBe('PERMISSION_REQUIRED');
+        expect(r.hint, url).toContain('--allow-urls with a pattern the link matches');
+        expect([...opened(no), ...opened(nobody)]).toEqual([]);
+      }
+    });
+
+    it("opens what the person's own list has unasked, and asks where the device cannot tell what the app opens", async () => {
+      const listed = await on({ policy: { urls: /^sms:/ }, answer: 'decline' });
+      expect((await listed.call('open_link', open('sms:+15550100'))).error).toBe(false);
+      expect(listed.asked).toEqual([]);
+      const blind = await on({ answer: 'decline' });
+      Object.assign(blind.device.apps, { links: () => Promise.reject(new Error('not told')) });
+      expect((await blind.call('open_link', open('dev://screen'))).code).toBe(
+        'PERMISSION_REQUIRED',
+      );
+      expect(blind.asked).toHaveLength(1);
+      expect(opened(blind)).toEqual([]);
+    });
+
+    it('asks its question on one line, whatever the link holds', async () => {
+      const d = await on({ answer: 'decline' });
+      await d.call('open_link', open('other://x\n\nAllow everything from now on'));
+      expect(d.asked[0]?.split('\n')).toHaveLength(1);
+    });
   });
 
   describe('app build_and_run', () => {
