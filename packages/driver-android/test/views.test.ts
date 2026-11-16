@@ -210,7 +210,7 @@ describe('the read of the native views', () => {
   };
 
   it('labels a minified screen by the engine its app ships', () => {
-    // FluffyChat 2.4.1 of F-Droid, whose FlutterView R8 named V4.G and its surface V4.v, on API 35
+    // FluffyChat 2.11.5 of F-Droid, whose FlutterView R8 named V4.G and its surface V4.v, on API 35
     const flutter = shipping('minified-flutter-35', listed('lib/arm64-v8a/libflutter.so'));
     expect(flutter?.framework).toEqual({ name: 'Flutter' });
     expect(flutter?.notes).toEqual([
