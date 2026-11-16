@@ -158,6 +158,8 @@ JUnit, bir hatanın her dosyasını iki biçimde adlandırır, çünkü ekleri g
 
 `--no-report` yalnızca `run.json` ve JUnit yazar.
 
+Mac uygulamasında, hub'ın Araçlar sayfasındaki Flow'ları Çalıştır klasörün flow'larını çalıştırır; çalıştırma bittiğinde, geçse de geçmese de, Aç düğmesi çalıştırmanın `index.html` dosyasını açar.
+
 ## Bir çalıştırmayı CI işlerine bölmek
 
 `--shard i/n` dosyaların bir parçasını çalıştırır, gerisini öteki işlere bırakır: `appdyno test flows/ --shard 2/4` dört parçanın ikincisini çalıştırır. Bölme makineden hiçbir şey okumaz, bu yüzden her iş aynı bölmeyi yapar. Seçilen dosyalar, `--tag` ve `--exclude-tag` sonrasında, paylaştıkları klasörün altındaki yollarının sırasına konur ve sırayla dağıtılır: ilki parça 1'e, ikincisi parça 2'ye. Bir dosyanın `_setup.flow` ve `_teardown.flow` dosyaları, dosya hangi parçaya düşerse orada çevresinde çalışır. Parça; çıktının ilk satırında, `verdict.txt` içinde, sayfada, `run.json` içinde ve JUnit'te, `<testsuites>` adı ve her vakanın `appdyno.shard` özelliği olarak adlandırılır.

@@ -149,6 +149,19 @@ describe('a run under way', () => {
     expect(said.at(-1)?.run.file).toBe('/tmp/x/index.html');
   });
 
+  it("names a test run's page for Run Flows to open, of a run that failed too", async () => {
+    const lines = 'report: /f/appdyno-artifacts/index.html\\n1 passed, 0 flaky, 1 failed';
+    const said = await ran(script(`console.log("${lines}"); process.exit(1)`), 'flows', {
+      folder: '/f',
+      device: 'S',
+    });
+    expect(said.at(-1)?.run).toMatchObject({
+      code: 1,
+      file: '/f/appdyno-artifacts/index.html',
+      count: { passed: 1, failed: 1, all: 2 },
+    });
+  });
+
   it('takes no second click, and a second run comes only after the first', async () => {
     const runs = script('setTimeout(() => process.exit(0), 300)');
     const first = ran(runs, 'tools');

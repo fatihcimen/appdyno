@@ -158,6 +158,8 @@ JUnit names each of a failure's files in two forms, because the CI systems that 
 
 `--no-report` writes `run.json` and JUnit alone.
 
+In the Mac app, Run Flows on the hub's Tools page runs the folder's flows, and when the run ends, passed or failed, its Open button opens the run's `index.html`.
+
 ## Splitting a run across CI jobs
 
 `--shard i/n` runs one part of the files and leaves the rest to other jobs: `appdyno test flows/ --shard 2/4` runs the second of four parts. The split reads nothing of the machine, so every job makes the same one. The selected files, after `--tag` and `--exclude-tag`, are put in the order of their paths under the folder they share and dealt in turn: the first to part 1, the second to part 2. A file's `_setup.flow` and `_teardown.flow` run around it in whichever part it falls to. The part is named in the first line of the output, in `verdict.txt`, on the page, in `run.json` and in JUnit, as the name of `<testsuites>` and as the property `appdyno.shard` of each case.
