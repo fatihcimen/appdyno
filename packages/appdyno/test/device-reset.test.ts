@@ -24,7 +24,7 @@ const FORBIDDEN: Record<string, RegExp> = {
 /**
  * Each simulator deleted, by who made it, and nothing else: each line here, in its file. `create` says how to remove what
  * it made and runs none of it; a device suite deletes the one it made, by the id `create` answered or by the name it
- * gave one that was not there before.
+ * gave one that was not there before, and the simulator smoke the one it made, by the id it was given.
  */
 const OWN: [string, RegExp][] = [
   ['packages/driver-apple/src/simulators.ts', /^return `xcrun simctl delete \$\{id\}`;$/],
@@ -33,6 +33,7 @@ const OWN: [string, RegExp][] = [
     'device-tests/simulator-create.test.ts',
     /^expect\(r\.text\)\.toContain\(`xcrun simctl delete \$\{made\}`\);$/,
   ],
+  ['scripts/sim-smoke.mjs', /^spawnSync\('xcrun', \['simctl', 'delete', udid\]\);$/],
   [
     'device-tests/hub.test.ts',
     /^if \(named\(\)\) execFileSync\('xcrun', \['simctl', 'delete', MADE\], \{ stdio: 'ignore' \}\);$/,

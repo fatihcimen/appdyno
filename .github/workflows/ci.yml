@@ -1,12 +1,13 @@
 name: ci
 
 on:
-  # main as it moves; any other branch runs once, by its pull request
+  # main as it moves; any other branch runs once, by its pull request. A ci-trial branch runs the simulator job alone
   push:
-    branches: [main]
+    branches: [main, 'ci-trial/**']
   pull_request:
   # the gate of a release
   workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,6 +19,8 @@ concurrency:
 
 jobs:
   check:
+    # a trial branch tries the simulator job, and this one keeps a cache, which outlives a run
+    if: ${{ !startsWith(github.ref, 'refs/heads/ci-trial/') }}
     runs-on: macos-latest
     # a run takes 12 to 27 minutes: a hang ends here, not at GitHub's six hours
     timeout-minutes: 45
@@ -64,3 +67,37 @@ jobs:
       - run: pnpm build
       - name: Runner core unit tests
         run: swift test --package-path ios/RunnerCore
+
+  # device suites on a simulator of the image's own Xcode, which scripts/sim-smoke.mjs makes and deletes. It publishes
+  # nothing and keeps no cache: what it leaves is its artifact, with the run
+  sim-smoke:
+    runs-on: macos-latest
+    # 11 minutes on a Mac, and a runner starts with nothing built: a hang ends here, not at GitHub's six hours
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      # the flows run by the built command line
+      - run: pnpm build
+      - run: node scripts/sim-smoke.mjs
+      # report.json and device-summary.md, of a run that failed too; a release attaches the summary
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: sim-smoke
+          path: .ci/smoke
+          if-no-files-found: error
+          # .ci is a hidden folder, which the upload leaves out unless told
+          include-hidden-files: true
+          # a job run again leaves its own
+          overwrite: true
+          retention-days: 30
