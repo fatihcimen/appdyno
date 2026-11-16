@@ -7,6 +7,7 @@ import {
   flowsTagged,
   JOURNEY_ITERATIONS,
   paramsOf,
+  shardOf,
   type ServerContext,
 } from '@appdyno/ops';
 import { COMMANDS, usage } from './usage.js';
@@ -46,8 +47,10 @@ export async function testCommand(rest: string[], open: Opens, err: (line: strin
   });
   const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
   const retries = Number(values.retries ?? 0);
+  const shard = values.shard === undefined ? undefined : shardOf(values.shard);
   if (
     positionals.length === 0 ||
+    (values.shard !== undefined && !shard) ||
     !Number.isInteger(iterations) ||
     iterations < 1 ||
     !Number.isInteger(retries) ||
@@ -75,6 +78,7 @@ export async function testCommand(rest: string[], open: Opens, err: (line: strin
         envFile: values['env-file'],
       }),
       command: asRun(rest),
+      ...(shard && { shard }),
       ...(values['pr-body'] && { prBody: values['pr-body'] }),
       ...(values['no-report'] && { report: false }),
       retries,

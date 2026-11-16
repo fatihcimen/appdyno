@@ -158,6 +158,12 @@ JUnit names each of a failure's files in two forms, because the CI systems that 
 
 `--no-report` writes `run.json` and JUnit alone.
 
+## Splitting a run across CI jobs
+
+`--shard i/n` runs one part of the files and leaves the rest to other jobs: `appdyno test flows/ --shard 2/4` runs the second of four parts. The split reads nothing of the machine, so every job makes the same one. The selected files, after `--tag` and `--exclude-tag`, are put in the order of their paths under the folder they share and dealt in turn: the first to part 1, the second to part 2. A file's `_setup.flow` and `_teardown.flow` run around it in whichever part it falls to. The part is named in the first line of the output, in `verdict.txt`, on the page, in `run.json` and in JUnit, as the name of `<testsuites>` and as the property `appdyno.shard` of each case.
+
+A part that no file falls to runs nothing, opens no device and exits 0. That happens when there are more parts than files. A run that selects no file at all still exits 1. A `--shard` that is not `i/n`, with `i` from 1 to `n`, exits 2.
+
 ## Mock rules
 
 `mock` sets a rule for the app's requests on a simulator, as `capture_network` with `mock` does, and the line after `mock` is the rule as that tool takes it:

@@ -158,6 +158,12 @@ JUnit, bir hatanın her dosyasını iki biçimde adlandırır, çünkü ekleri g
 
 `--no-report` yalnızca `run.json` ve JUnit yazar.
 
+## Bir çalıştırmayı CI işlerine bölmek
+
+`--shard i/n` dosyaların bir parçasını çalıştırır, gerisini öteki işlere bırakır: `appdyno test flows/ --shard 2/4` dört parçanın ikincisini çalıştırır. Bölme makineden hiçbir şey okumaz, bu yüzden her iş aynı bölmeyi yapar. Seçilen dosyalar, `--tag` ve `--exclude-tag` sonrasında, paylaştıkları klasörün altındaki yollarının sırasına konur ve sırayla dağıtılır: ilki parça 1'e, ikincisi parça 2'ye. Bir dosyanın `_setup.flow` ve `_teardown.flow` dosyaları, dosya hangi parçaya düşerse orada çevresinde çalışır. Parça; çıktının ilk satırında, `verdict.txt` içinde, sayfada, `run.json` içinde ve JUnit'te, `<testsuites>` adı ve her vakanın `appdyno.shard` özelliği olarak adlandırılır.
+
+Hiçbir dosyanın düşmediği bir parça hiçbir şey çalıştırmaz, cihaz açmaz ve 0 ile çıkar. Bu, dosyadan çok parça olduğunda olur. Hiç dosya seçmeyen bir çalıştırma yine 1 ile çıkar. `i/n` olmayan, `i` değeri 1 ile `n` arasında bulunmayan bir `--shard` 2 ile çıkar.
+
 ## Sahte yanıt kuralları
 
 `mock`, bir simulator'da uygulamanın istekleri için bir kural koyar; `mock` ile `capture_network` de öyle yapar ve `mock` sözcüğünden sonraki satır, o aracın aldığı biçimiyle kuralın kendisidir:

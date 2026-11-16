@@ -44,6 +44,8 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 
 `test` tek bir kararla biter ve artifacts klasöründe `verdict.txt`, `index.html`, `run.json`, `junit.xml` ve `pr.md` bırakır: bkz. [Bir çalıştırmanın report'u](../guides/flows.tr.md#bir-çalıştırmanın-reportu). `--pr-body file` pull request metnini başka yere koyar, `--no-report` ise yalnızca `run.json` ve JUnit yazar.
 
+`test`, bir CI işinde dosyaların bir parçasını çalıştırmak için `--shard i/n` alır; parçalar her makinede aynıdır: bkz. [Bir çalıştırmayı CI işlerine bölmek](../guides/flows.tr.md#bir-çalıştırmayı-ci-işlerine-bölmek).
+
 `test`, `--retries N` yanında `--fail-on-flaky` alır: bir dosyanın yalnızca yeniden denemede geçtiği bir çalıştırma 1 ile çıkar ve son satırında her birini adıyla söyler; bayrak olmadan 0 ile çıkar. Bkz. [Flow'lar](../guides/flows.tr.md#yeniden-denemeler).
 
 `test`, bir klasörün `_setup.flow` dosyasını altındaki her flow'dan önce, `_teardown.flow` dosyasını da sonra çalıştırır; adı `_` ile başlayan bir dosyayı test olarak çalıştırmaz. Bir flow'un `prepare` komutlarını sormadan çalıştırır, çünkü onu çalıştıran kişi projenin kendi komutlarını çalıştırmıştır, ve her birini önce yazdırır: bkz. [Veri hazırlamak](../guides/flows.tr.md#veri-hazırlamak).

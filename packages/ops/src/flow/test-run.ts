@@ -16,6 +16,7 @@ import type { Session } from '../session.js';
 import { ToolError } from '../tool.js';
 import type { FlowRunner } from './runner.js';
 import { preparedCommand } from './prepare.js';
+import { inShard, type Shard } from './shard.js';
 import { isShared, readFlow } from './shared.js';
 import { fileRunner, type FileOptions } from './test-file.js';
 import {
@@ -79,6 +80,11 @@ export type TestOptions = FileOptions &
     artifacts: string;
     /** A file that passed only on a retry fails the run: for a job that must not go green on a flaky file. */
     failOnFlaky?: boolean;
+    /**
+     * This part alone of `files` split in `n`: the rest are other jobs'. A part no file falls to runs nothing and
+     * passes, as the split is the same on every machine and another part has each file.
+     */
+    shard?: Shard;
     /** The env file `fromFile` was read from, for the command that runs a file again. */
     envFile?: string;
     /** The command as it was run, a param's value left out: what the record says ran. */
@@ -147,7 +153,9 @@ export async function runTests(
     );
   const log = o.log ?? (() => undefined);
   const shared = sharedBy(o.files);
-  const files = o.files;
+  const labelOf = (file: string) => relative(shared, resolve(file));
+  const files = o.shard ? inShard(o.files, labelOf, o.shard) : o.files;
+  if (o.shard) log(`shard ${o.shard.i}/${o.shard.n}: ${files.length} of ${o.files.length} files`);
   for (const line of preparesOf(files)) log(line);
   const run = fileRunner(ctx, runner, o, log);
   const began = new Date();
@@ -163,12 +171,14 @@ export async function runTests(
     ended: new Date().toISOString(),
     ...verdictOf(cases, { failOnFlaky: o.failOnFlaky === true }),
     command: o.command ?? [],
+    ...(o.shard && { shard: o.shard }),
     ...facts,
     devices,
     cases,
     contents: contentsOf(o.artifacts, cases, ctx.policy.secrets.length),
   });
-  for (const device of o.devices.length > 0 ? o.devices : [undefined]) {
+  // a part with no file opens no device
+  for (const device of files.length === 0 ? [] : o.devices.length > 0 ? o.devices : [undefined]) {
     let s: Session | undefined;
     let openError: Error | undefined;
     try {
@@ -180,7 +190,7 @@ export async function runTests(
     log(`${name}:`);
     if (s) devices.push(await deviceFacts(s));
     for (const file of files) {
-      const label = relative(shared, resolve(file));
+      const label = labelOf(file);
       const evidence = join(o.artifacts, safeName(name), safeName(label));
       const changed = changedOn(name);
       const ran = await run(s, openError, file, label, evidence, (f) => relative(o.artifacts, f));
