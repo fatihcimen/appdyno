@@ -269,3 +269,60 @@ describe('what repeats in an answer', () => {
     expect(text).not.toContain('s3cret');
   });
 });
+
+describe('what only holds what is listed', () => {
+  const at = (x: number, y: number, width: number, height: number) => ({
+    rect: { x, y, width, height },
+    x: x + width / 2,
+    y: y + height / 2,
+  });
+  const hidden = (list: ScreenElement[]) => [...insideRows(list)].map((e) => e.ref);
+
+  it('is left out where it has an id and no words, as a view around a button, and stays where it holds nothing', () => {
+    const list = [
+      element('@view', 'other', '', 0, { id: 'PlaceViewController', ...at(0, 0, 400, 800) }),
+      element('@share', 'button', 'Share', 0, { flags: ['clickable'], ...at(20, 500, 50, 50) }),
+      element('@chart', 'other', '', 0, { id: 'chart', ...at(0, 900, 400, 200) }),
+    ];
+    expect(hidden(list)).toEqual(['@view']);
+    expect(renderFolded(list)).toContain('@chart other "" id=chart');
+  });
+
+  it('is left out where its words are those of the pictures it holds and no more, as a grid', () => {
+    const list = [
+      element('@grid', 'text', 'Photo, 10 October, Photo, 13 March', 0, at(0, 100, 400, 300)),
+      element('@p1', 'image', 'Photo, 10 October', 0, at(0, 100, 130, 130)),
+      element('@p2', 'image', 'Photo, 13 March', 0, at(135, 100, 130, 130)),
+    ];
+    expect(hidden(list)).toEqual(['@grid']);
+  });
+
+  it('stays where it says more than what it holds: a paragraph around its links', () => {
+    const list = [
+      element('@p', 'text', 'It stands in Istanbul near the Bosphorus', 0, at(0, 100, 400, 60)),
+      element('@l1', 'link', 'Istanbul', 0, { flags: ['clickable'], ...at(90, 100, 60, 20) }),
+      element('@l2', 'link', 'Bosphorus', 0, { flags: ['clickable'], ...at(250, 100, 80, 20) }),
+    ];
+    expect(hidden(list)).toEqual([]);
+  });
+
+  it('is left out where it is a panel that takes a touch around controls, and what it holds is then said itself', () => {
+    const list = [
+      element('@panel', 'tappable', 'Back Clear Languages', 0, {
+        flags: ['clickable'],
+        ...at(0, 0, 400, 800),
+      }),
+      element('@back', 'button', 'Back', 0, { flags: ['clickable'], ...at(0, 40, 50, 50) }),
+      element('@clear', 'button', 'Clear', 0, { flags: ['clickable'], ...at(300, 40, 50, 50) }),
+      element('@words', 'text', 'Languages', 0, at(100, 400, 200, 40)),
+      // a card of two plain texts is a row, not a panel
+      element('@card', 'tappable', 'Tower Istanbul', 0, {
+        flags: ['clickable'],
+        ...at(0, 900, 400, 100),
+      }),
+      element('@name', 'text', 'Tower', 0, at(20, 910, 100, 30)),
+      element('@place', 'text', 'Istanbul', 0, at(20, 950, 100, 30)),
+    ];
+    expect(hidden(list)).toEqual(['@panel', '@name', '@place']);
+  });
+});

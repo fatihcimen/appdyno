@@ -49,7 +49,10 @@ const clickable = (e: ScreenElement) => e.flags.includes('clickable');
  * A control elsewhere in the row stays: it may do something else than the row.
  */
 export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
-  const rows = list.filter((e) => e.label && (clickable(e) || e.role === 'textField'));
+  const around = holders(list);
+  const rows = list.filter(
+    (e) => e.label && (clickable(e) || e.role === 'textField') && !around.has(e),
+  );
   // a web page's words are plain as any: a link's own text is the link's
   const flagsOf = (e: ScreenElement) => e.flags.filter((f) => f !== 'web').join();
   const plain = (e: ScreenElement) =>
@@ -74,12 +77,40 @@ export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
   return new Set(
     list.filter(
       (e, i) =>
-        e.label &&
-        ((plain(e) &&
-          (rows.some((r) => within(e.rect, r.rect) && holds(r.label, e.label)) ||
-            namedByInner(e))) ||
-          list.slice(0, i).some((r) => sameAs(e, r))),
+        around.has(e) ||
+        (e.label &&
+          ((plain(e) &&
+            (rows.some((r) => within(e.rect, r.rect) && holds(r.label, e.label)) ||
+              namedByInner(e))) ||
+            list.slice(0, i).some((r) => sameAs(e, r)))),
     ),
+  );
+}
+
+/**
+ * What only holds what is listed, and says nothing of its own: an element with an id and no words around listed ones,
+ * as a view controller's view; a text named by nothing but the words of what it holds, as a grid by its pictures; and
+ * a panel that takes a touch, named so around controls of its own, where a touch on its middle is one of theirs.
+ */
+function holders(list: ScreenElement[]): Set<ScreenElement> {
+  const area = (e: ScreenElement) => e.rect.width * e.rect.height;
+  const words = (e: ScreenElement) => e.whole ?? e.label;
+  return new Set(
+    list.filter((e) => {
+      const held = list.filter(
+        (o) => o !== e && o.label && area(o) < area(e) && within(o.rect, e.rect),
+      );
+      if (!e.label) return e.role === 'other' && !!e.id && !clickable(e) && held.length > 0;
+      const panel = e.role === 'tappable' && held.filter(clickable).length >= 2;
+      const text = e.role === 'text' && !clickable(e) && held.length >= 2;
+      if (!panel && !text) return false;
+      // the longest first: a short name may be a part of a long one
+      const rest = held
+        .map(words)
+        .sort((a, b) => b.length - a.length)
+        .reduce((left, w) => left.replaceAll(uncut(w), ''), uncut(words(e)));
+      return !/[\p{L}\p{N}]/u.test(rest);
+    }),
   );
 }
 
