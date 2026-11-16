@@ -29,6 +29,9 @@ const LOOK_MS = 20_000;
 /** A read this recent is what the device shows: a client that reads and at once acts pays for one read. */
 const FRESH_MS = 150;
 
+/** How long a tree with no words is given before its picture is read for them: a sheet coming in has them by then. */
+const WORDS_COME_MS = 400;
+
 /** A read, as of this session's actions (`at`) and of the inputs other sessions had sent its device (`others`). */
 type Latest = { screen: Screen; at: number; taken: number; others: number };
 
@@ -236,9 +239,18 @@ export class Session {
   readWords = readPicture;
 
   /** A tree as a screen, with the words of its picture where it has none of its own. */
-  async seen(tree: Tree): Promise<Screen> {
-    const screen = this.screenOf(tree);
-    this.wordless = !screen.list.some((e) => e.label);
+  async seen(tree: Tree, again = () => this.device.tree()): Promise<Screen> {
+    const worded = (x: Screen) => x.list.some((e) => e.label);
+    let screen = this.screenOf(tree);
+    // a screen on its way in, as a sheet or a page that loads, has no words for a moment where the last had: its
+    // picture would be read in the middle of the move, and give words with no control to touch
+    if (!worded(screen) && !this.wordless) {
+      await pause(WORDS_COME_MS);
+      // by the read the tree came from: a look at a dark screen wakes nothing
+      const next = await again().catch(() => undefined);
+      if (next) screen = this.screenOf((tree = next));
+    }
+    this.wordless = !worded(screen);
     this.pictureFailed = undefined;
     if (!this.wordless) return screen;
     try {
@@ -271,7 +283,8 @@ export class Session {
 
   /** A read for what watches: a dark or locked screen stays as it is. */
   async look(): Promise<Screen> {
-    const screen = await this.seen(await this.device.tree({ asItIs: true }));
+    const asItIs = () => this.device.tree({ asItIs: true });
+    const screen = await this.seen(await asItIs(), asItIs);
     this.remember(screen);
     return screen;
   }

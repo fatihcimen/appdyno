@@ -40,7 +40,7 @@ async function connect(
     const r = (await client.callTool({ name, arguments: args })) as Result;
     return { error: r.isError === true, text: r.content.map((c) => c.text ?? '').join('\n') };
   };
-  return { call, device };
+  return { call, device, s };
 }
 
 SCREENS.blind = [{ c: 'android.view.View', b: [0, 0, 1080, 2400] }];
@@ -56,6 +56,37 @@ describe('a screen with no words in its tree', () => {
   it('says when the fast level read them, and that its letters may be wrong', async () => {
     const { call } = await connect('blind', () => Promise.resolve([word('Start Game')]), 'fast');
     expect((await call('read_screen')).text).toContain('letters outside English');
+  });
+
+  it('reads the tree once more first, as a screen on its way in has no words for a moment', async () => {
+    let reads = 0;
+    const { call, device } = await connect('blind', () => {
+      reads++;
+      return Promise.resolve([word('Half a sheet')]);
+    });
+    const tree = device.tree.bind(device);
+    // the first read falls in the move, the next has the screen
+    device.tree = (...args) => {
+      const first = !device.calls.some((c) => c.name === 'tree');
+      const r = tree(...args);
+      if (first) device.screen = 'home';
+      return r;
+    };
+    const r = await call('read_screen');
+    expect(r.text).not.toContain('read from the picture');
+    expect(reads).toBe(0);
+  });
+
+  it('looks once more as it looked, so that a dark screen is not woken for its words', async () => {
+    const { s, device } = await connect('blind', () => Promise.resolve([]));
+    const how: unknown[] = [];
+    const tree = device.tree.bind(device);
+    device.tree = (...args: unknown[]) => {
+      how.push(args[0]);
+      return tree();
+    };
+    await s.look();
+    expect(how).toEqual([{ asItIs: true }, { asItIs: true }]);
   });
 
   it('takes a tap at their place, by a selector', async () => {
