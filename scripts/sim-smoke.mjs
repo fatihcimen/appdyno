@@ -153,10 +153,12 @@ const parsed = (text) => JSON.parse(text);
 function noHelpers(udid) {
   if (process.env.APPDYNO_SIM_DIRECT === 'off') return 'APPDYNO_SIM_DIRECT=off';
   const doctor = ['packages/appdyno/dist/main.js', 'doctor', '--serial', udid];
-  const r = spawnSync('node', doctor, { cwd: repo, encoding: 'utf8' });
+  // a doctor that never ends is one that did not say
+  const r = spawnSync('node', doctor, { cwd: repo, encoding: 'utf8', timeout: 60_000 });
   const lines = `${r.stdout}\n${r.stderr}`
     .split('\n')
     .filter((l) => / direct (input|read): /.test(l));
+  console.log(lines.join('\n') || `doctor said nothing of the helpers:\n${r.stdout}${r.stderr}`);
   const refused = lines.find((l) => !/: (answers|no-foreground; .*)$/.test(l));
   if (lines.length === 2 && !refused) return undefined;
   if (!refused) return 'doctor did not say whether the helpers answer';
