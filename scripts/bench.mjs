@@ -106,7 +106,7 @@ const TASKS = {
   flow: {
     ask: `Record a flow in the app ${APP}: open the Form screen, type Ada as the name and send the form. Save the flow as ${flowFile}, then replay that file and tell me whether it passed.`,
     done: async (call) =>
-      existsSync(flowFile) && !(await call('flow', { action: 'run', file: flowFile })).isError,
+      existsSync(flowFile) && !(await call('run_flow', { action: 'run', file: flowFile })).isError,
   },
 };
 

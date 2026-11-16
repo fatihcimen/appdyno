@@ -31,10 +31,10 @@ describe('flows', () => {
       const call = callerOf(ctx);
       const ok = join(dir, 'ok.flow');
       writeFileSync(ok, 'app dev.app\nlaunch\ntap id=x\n');
-      expect((await call('flow', { action: 'export', file: ok })).text).toContain('tapOn:');
+      expect((await call('run_flow', { action: 'export', file: ok })).text).toContain('tapOn:');
       const no = join(dir, 'no.flow');
       writeFileSync(no, 'app dev.app\nlaunch\nalert allow\n');
-      const e = await refusal(call('flow', { action: 'export', file: no }));
+      const e = await refusal(call('run_flow', { action: 'export', file: no }));
       expect(e.message).toContain('step 2');
     });
 
@@ -43,25 +43,27 @@ describe('flows', () => {
       const file = join(dir, 'ok.flow');
       writeFileSync(file, 'app dev.app\nlaunch\ntap id=x\n');
       const to = join(dir, 'state', 'flows', 'list.yaml');
-      const out = await call('flow', { action: 'export', file, to });
+      const out = await call('run_flow', { action: 'export', file, to });
       expect(out.data.file).toBe(to);
       expect(out.text).toBe(`${readFileSync(to, 'utf8')}\nwritten to ${to}`);
       expect(out.text).toContain('tapOn:');
-      expect((await refusal(call('flow', { action: 'export', file, to }))).message).toContain(
+      expect((await refusal(call('run_flow', { action: 'export', file, to }))).message).toContain(
         'exists',
       );
-      await call('flow', { action: 'export', file, to, overwrite: true });
+      await call('run_flow', { action: 'export', file, to, overwrite: true });
       const outside = await refusal(
-        call('flow', { action: 'export', file, to: join(dir, 'list.yaml') }),
+        call('run_flow', { action: 'export', file, to: join(dir, 'list.yaml') }),
       );
       expect(outside.code).toBe('POLICY_DENIED');
       expect(existsSync(join(dir, 'list.yaml'))).toBe(false);
       symlinkSync(dir, join(dir, 'state', 'out'));
       const linked = await refusal(
-        call('flow', { action: 'export', file, to: join(dir, 'state', 'out', 'list.yaml') }),
+        call('run_flow', { action: 'export', file, to: join(dir, 'state', 'out', 'list.yaml') }),
       );
       expect(linked.code).toBe('POLICY_DENIED');
-      const named = refusal(call('flow', { action: 'export', file, to: join(dir, 'state', 'a') }));
+      const named = refusal(
+        call('run_flow', { action: 'export', file, to: join(dir, 'state', 'a') }),
+      );
       expect((await named).message).toContain('.yaml');
     });
   });

@@ -82,15 +82,17 @@ tap id=greeting
   describe('params', () => {
     it('names a recorded value at save, which a run takes; a value no step holds is refused', async () => {
       const call = callerOf(context());
-      await call('flow', { action: 'start' });
+      await call('run_flow', { action: 'record' });
       await call('tap', { selector: { text: 'Form' } });
       await call('type_text', { text: 'Grace', selector: { id: 'name' } });
-      await call('flow', { action: 'stop' });
+      await call('run_flow', { action: 'stop' });
       const file = join(dir, 'state', 'named.flow');
-      const none = await refusal(call('flow', { action: 'save', file, params: ['OTHER=Hopper'] }));
+      const none = await refusal(
+        call('run_flow', { action: 'save', file, params: ['OTHER=Hopper'] }),
+      );
       expect(none.message).toContain('no recorded step holds the value of OTHER');
       expect(existsSync(file)).toBe(false);
-      const saved = await call('flow', { action: 'save', file, params: ['NAME=Grace'] });
+      const saved = await call('run_flow', { action: 'save', file, params: ['NAME=Grace'] });
       const text = `app dev.app
 param NAME
 
@@ -101,25 +103,27 @@ type "\${NAME}" id=name
       expect(saved.text).toContain(text);
       expect(saved.text).toContain('param NAME: step 2');
       device.screen = 'home';
-      await call('flow', { action: 'run', file, params: ['NAME=Hopper'] });
+      await call('run_flow', { action: 'run', file, params: ['NAME=Hopper'] });
       expect(device.typed).toEqual(['Grace', 'Hopper']);
     });
 
     it('names at start what is typed later, and refuses a name a placeholder cannot have', async () => {
       const call = callerOf(context());
-      const bad = await refusal(call('flow', { action: 'start', params: ['name=Ada'] }));
+      const bad = await refusal(call('run_flow', { action: 'record', params: ['name=Ada'] }));
       expect(bad.message).toContain("a param's name is like MY_NAME");
-      expect((await refusal(call('flow', { action: 'stop' }))).message).toContain('no recording');
-      await call('flow', { action: 'start', params: ['NAME=Ada'] });
+      expect((await refusal(call('run_flow', { action: 'stop' }))).message).toContain(
+        'no recording',
+      );
+      await call('run_flow', { action: 'record', params: ['NAME=Ada'] });
       await call('tap', { selector: { text: 'Form' } });
       await call('type_text', { text: 'Ada', selector: { id: 'name' } });
-      const stop = await call('flow', { action: 'stop' });
+      const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text).toContain('param NAME\n');
       expect(stop.text).toContain('type "${NAME}" id=name');
       expect(stop.text).not.toContain('secret');
       writeFileSync(join(dir, 'e.flow'), 'app dev.app\nlaunch\n');
       const exported = refusal(
-        call('flow', { action: 'export', file: join(dir, 'e.flow'), params: ['NAME=Ada'] }),
+        call('run_flow', { action: 'export', file: join(dir, 'e.flow'), params: ['NAME=Ada'] }),
       );
       expect((await exported).message).toContain('export takes no params');
     });

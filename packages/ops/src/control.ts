@@ -310,7 +310,7 @@ async function shutDownVirtual(ctx: ServerContext, device: string | undefined, m
 
 function simulatorOp(ctx: ServerContext) {
   return defineOp({
-    name: 'simulator',
+    name: 'manage_simulator',
     title: 'Simulators and emulators',
     description:
       'Start or stop an iOS simulator or Android emulator, only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts and selects it), shutdown (name; none: those this tool started; ends its session and app state).',

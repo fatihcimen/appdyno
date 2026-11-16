@@ -84,21 +84,21 @@ function shared(
 
   it('runs steps across screens with selectors, wait_for and assert, and names a failure', async () => {
     await open('home');
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', selector: { text: 'Form' } },
-        { action: 'wait_for', selector: names.field, timeoutMs: 8_000 },
-        { action: 'assert', selector: names.field, check: 'exists' },
-        { action: 'tap', selector: names.field },
-        { action: 'type_text', text: 'İstanbul' },
+        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'wait_for', selector: names.field, timeoutMs: 8_000 },
+        { tool: 'assert', selector: names.field, check: 'exists' },
+        { tool: 'tap', selector: names.field },
+        { tool: 'type_text', text: 'İstanbul' },
       ],
     });
     ok(r);
     expect(r.text).toContain('5. typed');
-    const fail = await call('steps', {
+    const fail = await call('run_steps', {
       steps: [
-        { action: 'assert', selector: names.field, check: 'enabled' },
-        { action: 'assert', selector: { text: 'Nothing here' } },
+        { tool: 'assert', selector: names.field, check: 'enabled' },
+        { tool: 'assert', selector: { text: 'Nothing here' } },
       ],
     });
     expect(fail.error).toBe(true);
@@ -222,7 +222,7 @@ function shared(
   it('leaves the app’s own dialog alone', async () => {
     await open('dialog');
     ok(await call('tap', { selector: { text: 'Open dialog' } }));
-    expect((await call('alert', { answer: 'OK' })).text).toContain('no system alert');
+    expect((await call('answer_alert', { answer: 'OK' })).text).toContain('no system alert');
   });
 
   it('says what an app is doing, and lists it', async () => {
@@ -239,9 +239,9 @@ function shared(
 
   it('runs 20 steps within a client’s patience', async () => {
     await open('home');
-    const pair = [{ action: 'tap', selector: { text: 'Form' } }, names.back];
+    const pair = [{ tool: 'tap', selector: { text: 'Form' } }, names.back];
     const t0 = Date.now();
-    const r = await call('steps', { steps: Array(10).fill(pair).flat() });
+    const r = await call('run_steps', { steps: Array(10).fill(pair).flat() });
     const ms = Date.now() - t0;
     process.stderr.write(
       `20 steps: ${ms} ms${r.error ? `, failed: ${r.text.slice(0, 300)}` : ''}\n`,
@@ -277,7 +277,7 @@ describe.skipIf(!android)('driving on Android', () => {
     field: { id: 'name_input' },
     row: (n) => `Product ${n}`,
     delayed: { start: 'Load', shows: 'Result 1' },
-    back: { action: 'press_key', key: 'back' },
+    back: { tool: 'press_key', key: 'back' },
   });
 
   it('counts two fingers in a plan', async () => {
@@ -307,11 +307,11 @@ describe.skipIf(!android)('driving on Android', () => {
     ok(await h.call('app', { action: 'revoke', service: 'location' }));
     await open('permission');
     ok(await h.call('tap', { selector: { text: 'Request location' } }));
-    const read = ok(await h.call('alert'));
+    const read = ok(await h.call('answer_alert'));
     expect(read.text).toContain('buttons:');
-    const wrong = await h.call('alert', { answer: 'Definitely not a button' });
+    const wrong = await h.call('answer_alert', { answer: 'Definitely not a button' });
     expect(wrong.error).toBe(true);
-    ok(await h.call('alert', { answer: 'allow' }));
+    ok(await h.call('answer_alert', { answer: 'allow' }));
     expect(await sh(`dumpsys package ${APP}`)).toMatch(
       /ACCESS_(COARSE|FINE)_LOCATION: granted=true/,
     );
@@ -457,7 +457,7 @@ describe.skipIf(!android)('driving on Android', () => {
         .split('\n')
         .filter((l) => l.includes('|com.android.shell|')).length;
     const before = await shell();
-    const r = await h.call('push', { type: 'alert', title: 'appdyno', body: 'merhaba' });
+    const r = await h.call('send_push', { type: 'alert', title: 'appdyno', body: 'merhaba' });
     // the fixture has no Firebase Messaging, the only way an alert reaches its code
     expect(r.text).toContain(`${APP} has no Firebase Messaging`);
     expect(await shell()).toBe(before);
@@ -520,7 +520,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     field: { id: 'name_input' },
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
-    back: { action: 'tap', selector: { text: 'Back' } },
+    back: { tool: 'tap', selector: { text: 'Back' } },
   });
 
   it('pinches with two fingers in a plan, as the app sees it', async () => {
@@ -559,11 +559,11 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     await simctl.privacy(ios, 'reset', 'location', APP).catch(() => undefined);
     await open('permission');
     ok(await h.call('tap', { selector: { text: 'Request location' } }));
-    const read = ok(await h.call('alert'));
+    const read = ok(await h.call('answer_alert'));
     expect(read.text).toContain('buttons:');
-    expect((await h.call('alert', { answer: 'No such button' })).error).toBe(true);
-    ok(await h.call('alert', { answer: 'allow' }));
-    expect(ok(await h.call('alert')).text).toContain('no system alert');
+    expect((await h.call('answer_alert', { answer: 'No such button' })).error).toBe(true);
+    ok(await h.call('answer_alert', { answer: 'allow' }));
+    expect(ok(await h.call('answer_alert')).text).toContain('no system alert');
   });
 
   it('switches to the app switcher, home brings back the app it was opened over, and home again goes home', async () => {
@@ -648,8 +648,8 @@ describe.skipIf(!ios)('driving on a simulator', () => {
       selector: { text: 'Would Like to Send You Notifications' },
       timeoutMs: 3_000,
     });
-    if (!asked.error) ok(await h.call('alert', { answer: 'allow' }));
-    ok(await h.call('push', { type: 'alert', title: 'appdyno', body: 'merhaba' }));
+    if (!asked.error) ok(await h.call('answer_alert', { answer: 'allow' }));
+    ok(await h.call('send_push', { type: 'alert', title: 'appdyno', body: 'merhaba' }));
     ok(await h.call('device_setting', { name: 'biometric', value: 'match' }));
   });
 });
@@ -680,7 +680,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     field: { id: 'name_input' },
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
-    back: { action: 'tap', selector: { text: 'Back' } },
+    back: { tool: 'tap', selector: { text: 'Back' } },
   });
 
   it('lists apps and their state, launches with an environment, uninstalls and installs', async () => {
@@ -762,27 +762,27 @@ describe.skipIf(!emulator)('emulator lifecycle', () => {
     const adb = new Adb();
     const serials = async () => (await adb.devices()).map((d) => d.serial);
     const h = harness(emulator, androidProvider(adb));
-    const list = ok(await h.call('simulator', { action: 'list' }));
+    const list = ok(await h.call('manage_simulator', { action: 'list' }));
     const avd = new RegExp(`${emulator} "([^"]+)"`).exec(list.text)?.[1];
     assert(avd, 'its AVD');
     const others = (await serials()).filter((x) => x !== emulator);
-    expect(ok(await h.call('simulator', { action: 'shutdown' })).text).toContain(
+    expect(ok(await h.call('manage_simulator', { action: 'shutdown' })).text).toContain(
       'none to shut down',
     );
     expect(await serials()).toContain(emulator);
-    ok(await h.call('simulator', { action: 'shutdown', name: emulator }));
+    ok(await h.call('manage_simulator', { action: 'shutdown', name: emulator }));
     expect(await serials()).not.toContain(emulator);
     // other work may run the same AVD: the name is then ambiguous, a refusal, and the driver boots it as asked
-    const up = await h.call('simulator', { action: 'boot', name: avd });
+    const up = await h.call('manage_simulator', { action: 'boot', name: avd });
     if (up.error) expect(up.data.code).toBe('AMBIGUOUS');
     const serial = up.error ? await new AndroidEmulators(adb).boot(avd) : up.data.serial;
     expect(await serials()).toContain(serial);
     if (!up.error) {
-      expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(
+      expect(ok(await h.call('manage_simulator', { action: 'list' })).text).toContain(
         'started by this tool',
       );
-      ok(await h.call('simulator', { action: 'shutdown' }));
-    } else ok(await h.call('simulator', { action: 'shutdown', name: serial }));
+      ok(await h.call('manage_simulator', { action: 'shutdown' }));
+    } else ok(await h.call('manage_simulator', { action: 'shutdown', name: serial }));
     expect(await serials()).not.toContain(serial);
     for (const o of others) expect(await serials()).toContain(o);
   }, 500_000);
@@ -792,17 +792,17 @@ describe.skipIf(!ios)('simulator lifecycle', () => {
   it('lists, shuts down the one named, and boots it again', async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-life-')));
     const h = harness(ios, simulatorProvider());
-    expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(ios);
-    expect(ok(await h.call('simulator', { action: 'shutdown' })).text).toContain(
+    expect(ok(await h.call('manage_simulator', { action: 'list' })).text).toContain(ios);
+    expect(ok(await h.call('manage_simulator', { action: 'shutdown' })).text).toContain(
       'none to shut down',
     );
     expect(await new Simctl().state(ios)).toBe('Booted');
-    ok(await h.call('simulator', { action: 'shutdown', name: ios }));
+    ok(await h.call('manage_simulator', { action: 'shutdown', name: ios }));
     expect(await new Simctl().state(ios)).toBe('Shutdown');
-    ok(await h.call('simulator', { action: 'boot', name: ios }));
+    ok(await h.call('manage_simulator', { action: 'boot', name: ios }));
     expect(await new Simctl().state(ios)).toBe('Booted');
-    ok(await h.call('simulator', { action: 'shutdown' }));
+    ok(await h.call('manage_simulator', { action: 'shutdown' }));
     expect(await new Simctl().state(ios)).toBe('Shutdown');
-    ok(await h.call('simulator', { action: 'boot', name: ios }));
+    ok(await h.call('manage_simulator', { action: 'boot', name: ios }));
   }, 400_000);
 });

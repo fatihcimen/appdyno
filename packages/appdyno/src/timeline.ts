@@ -100,7 +100,7 @@ export async function timelineCommand(
   try {
     await recordTimeline(opsFor(ctx), {
       during: flow
-        ? (ops) => say(ops, 'flow', { action: 'run', file: resolve(flow) }).then(console.log)
+        ? (ops) => say(ops, 'run_flow', { action: 'run', file: resolve(flow) }).then(console.log)
         : () => forThisLong(Number(seconds) * 1_000),
       ...(dir && { dir: resolve(dir) }),
       log: (line) => console.log(line),

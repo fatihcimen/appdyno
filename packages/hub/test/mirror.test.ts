@@ -14,7 +14,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { must, startOf } from '@appdyno/core';
 import { checkedOps } from '@appdyno/testing/calls.js';
 
-const mirrorOp = (ctx: Parameters<typeof checkedOps>[0]) => must(checkedOps(ctx).mirror, 'mirror');
+const mirrorOp = (ctx: Parameters<typeof checkedOps>[0]) =>
+  must(checkedOps(ctx).show_mirror, 'show_mirror');
 import { runMirrors, type MirrorRun } from '../src/parent.js';
 import {
   DEFAULT_POLICY,

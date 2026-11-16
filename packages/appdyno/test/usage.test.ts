@@ -44,8 +44,8 @@ describe('usage', () => {
     expect(helpFor('test', ['a.flow', '--help'])).toContain('usage: appdyno test');
     expect(helpFor('perf', ['compare', '--help'])).toBeUndefined();
     expect(helpFor('push', ['setup', '--help'])).toContain('usage: appdyno push setup');
-    expect(helpFor('push', ['--help'])).toBeUndefined();
-    expect(helpFor('push', ['--type', 'alert', '-h'])).toBeUndefined();
+    expect(helpFor('send-push', ['--help'])).toBeUndefined();
+    expect(helpFor('send-push', ['--type', 'alert', '-h'])).toBeUndefined();
     expect(helpFor('tap', ['--help'])).toBeUndefined();
     expect(helpFor('doctor', ['--serial', 'S'])).toBeUndefined();
     expect(helpFor(undefined, [])).toBeUndefined();

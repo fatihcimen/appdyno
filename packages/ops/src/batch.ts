@@ -56,28 +56,29 @@ const readsScreen = (st: Step | undefined) =>
 /** One step of a call, checked whole before anything acts. */
 function planned(
   tools: () => Record<string, Op>,
-  x: { action: string } & Record<string, unknown>,
+  x: { tool: string } & Record<string, unknown>,
   i: number,
 ): Planned {
-  const { action, ...args } = x;
-  const op = tools()[action];
+  const { tool, ...args } = x;
+  const op = tools()[tool];
   const fail = (why: string, hint?: string) =>
     new ToolError(`step ${i + 1}: ${why}`, 'INVALID_ARGUMENT', hint);
-  const takes = Step.options.find((o) => o.shape.action.value === action);
+  const takes = Step.options.find((o) => o.shape.action.value === tool);
   if (takes) {
-    const { read: own, ...rest } = x;
+    const { read: own, ...rest } = args;
     const reads = StepRead.safeParse(own);
     if (!reads.success) throw fail(z.prettifyError(reads.error));
-    const p = Step.safeParse(rest);
+    const p = Step.safeParse({ action: tool, ...rest });
+    const { read: _, ...call } = x;
     if (p.success) return { st: p.data, ...(reads.data && { read: reads.data }) };
     // a selector's words at the top: shown where they go
     throw fail(
       z.prettifyError(p.error),
-      inSelector(takes, rest, p.error.issues) ?? argumentsHint(p.error.issues),
+      inSelector(takes, call, p.error.issues) ?? argumentsHint(p.error.issues),
     );
   }
   // said, or a client looks for what the steps before it did
-  if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`, CHANGE_HINT);
+  if (!op || NOT_A_STEP.has(tool)) throw fail(`no step ${tool}`, CHANGE_HINT);
   const p = op.input.safeParse(args);
   if (!p.success)
     throw fail(
@@ -95,14 +96,14 @@ export function stepsOp(
   tools: () => Record<string, Op>,
 ) {
   return defineOp({
-    name: 'steps',
-    title: 'Steps',
-    description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }, as { action: tap, selector: { text: OK } }; any tool but steps and those with an action argument (app, keyboard, network…), and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
+    name: 'run_steps',
+    title: 'Run steps',
+    description: `A sequence in one call: at most ${MAX_STEPS}, each { tool: a tool's name, ...its arguments }, as { tool: tap, selector: { text: OK } }; any tool but run_steps and run_flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a step reads the screen only with read on it, or last.`,
     input: z
       .object({
         steps: z
           .array(
-            z.object({ action: z.string({ error: "a tool's name, as tap or type_text" }) }).loose(),
+            z.object({ tool: z.string({ error: "a tool's name, as tap or type_text" }) }).loose(),
           )
           .min(1)
           .max(MAX_STEPS),
@@ -136,7 +137,7 @@ export function stepsOp(
           reportProgress(`step ${i + 1} of ${plan.length}: ${name}`);
           if (p.op) {
             // an image asked for at a step is that step's evidence, even of a screen that has not changed
-            if (name === 'screenshot') s.pictured();
+            if (name === 'take_screenshot') s.pictured();
             // a tool's screen is read as a touch's is: where its step says, or at the last as the call says
             const reads = 'read' in p.op.input.shape && !p.ownRead;
             const r = await p.op.handler(

@@ -143,7 +143,7 @@ describe('an iOS screen', () => {
     };
     // by alert, and by a plain tap on its Allow (3 of 3 answered with the card, on an iPad and an iPhone)
     const answers = [
-      ['alert', { answer: 'Allow' }, 'answered the system alert: "Allow"'],
+      ['answer_alert', { answer: 'Allow' }, 'answered the system alert: "Allow"'],
       ['tap', { x: 275, y: 518 }, 'tapped 275,518'],
     ] as const;
     for (const before of [prompt, alone])

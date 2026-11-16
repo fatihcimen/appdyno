@@ -355,7 +355,7 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
       timeoutMs: 8_000,
     });
     expect(miss.data.met).toBe(true);
-    await call('alert', { answer: 'Try Face ID Again' });
+    await call('answer_alert', { answer: 'Try Face ID Again' });
     await new Promise((r) => setTimeout(r, 2_000));
     await set(call, 'biometric', 'match');
     expect(await result(call, 'Authenticated')).toBe(true);

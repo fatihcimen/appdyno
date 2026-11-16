@@ -3,11 +3,17 @@ import type { FlowStep } from '@appdyno/flows';
 // How a tool is treated by its name where calls are kept or replayed: registry.ts holds each list to the tools there
 // are, so a tool renamed or gone fails the build, and a new one is placed by reading this one file.
 
-const NOT_A_STEP_NAMES = ['steps', 'flow'] as const;
-const NOT_ACTIVITY_NAMES = ['mirror', 'hand_off', 'list_devices'] as const;
-const NOT_STEP_NAMES = ['report', 'list_devices', 'simulator', 'mirror', 'hand_off'] as const;
-const NOT_ACTION_NAMES = [...NOT_STEP_NAMES, 'use_device', 'record', 'flow'] as const;
-const BY_STEP_NAMES = ['tap', 'swipe', 'scroll_to', 'type_text', 'press_key', 'steps'] as const;
+const NOT_A_STEP_NAMES = ['run_steps', 'run_flow'] as const;
+const NOT_ACTIVITY_NAMES = ['show_mirror', 'ask_person', 'list_devices'] as const;
+const NOT_STEP_NAMES = [
+  'report',
+  'list_devices',
+  'manage_simulator',
+  'show_mirror',
+  'ask_person',
+] as const;
+const NOT_ACTION_NAMES = [...NOT_STEP_NAMES, 'use_device', 'record', 'run_flow'] as const;
+const BY_STEP_NAMES = ['tap', 'swipe', 'scroll_to', 'type_text', 'press_key', 'run_steps'] as const;
 
 /** Every name of the lists here, for registry.ts to hold to the tools there are. */
 export const KIND_NAMES = [
@@ -17,7 +23,7 @@ export const KIND_NAMES = [
   ...BY_STEP_NAMES,
 ] as const;
 
-/** What cannot be a step of `steps`: `steps` in itself, and a flow's own sequence. */
+/** What cannot be a step of `run_steps`: `run_steps` in itself, and a flow's own sequence. */
 export const NOT_A_STEP: ReadonlySet<string> = new Set(NOT_A_STEP_NAMES);
 
 /** Calls that are not an agent acting on the device: no line of the activity a person watches. */

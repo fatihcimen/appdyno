@@ -226,8 +226,8 @@ describe('screenshot, visual and setting steps', () => {
         tolerance: 0.5,
         masks: [{ text: 'Ana sayfa' }, { x: -10, y: 2000, w: 1080, h: 400 }],
       });
-      await call('screenshot', { file: join(dir, 'state', 'shots', 'Home page.png') });
-      await call('screenshot');
+      await call('take_screenshot', { file: join(dir, 'state', 'shots', 'Home page.png') });
+      await call('take_screenshot');
       await call('device_setting', { name: 'restore', value: 'all' });
     });
     expect(text).toBe(`app dev.app
@@ -273,7 +273,7 @@ setting memory_warning RUNNING_LOW
 stop background
 `);
     got.length = 0;
-    await call('flow', { action: 'run', file });
+    await call('run_flow', { action: 'run', file });
     expect(got).toEqual([
       'shake',
       'memory warning to dev.app',

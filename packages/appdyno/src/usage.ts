@@ -265,8 +265,8 @@ export function helpFor(command: string | undefined, words: string[]) {
     (Object.keys(COMMANDS) as Name[]).filter((n) => n === prefix || n.startsWith(`${prefix} `));
   const sub = words[0]?.startsWith('-') ? undefined : words[0];
   const exact = sub ? starting(`${command} ${sub}`) : [];
-  // `perf compare` goes on to its operation, and so does any `push` but `push setup`
-  const toOp = (sub && command === 'perf') || command === 'push';
+  // `perf compare` goes on to its operation
+  const toOp = sub && command === 'perf';
   const names = exact.length > 0 || toOp ? exact : starting(command);
   if (names.length === 0) return undefined;
   return names

@@ -263,7 +263,7 @@ async function operationCommand(command: string | undefined, rest: string[]) {
   if (command === 'perf' && rest[0] === 'dashboard') return dashboardCommand(rest.slice(1));
   if (command === 'perf' && rest[0] === 'survey') return surveyCommand(rest.slice(1));
   if (command === 'perf' && rest[0] === 'comment') return commentCommand(rest.slice(1));
-  // `push setup` keeps a push service's credentials; any other `push` is the tool's
+  // `push setup` keeps a push service's credentials; the tool is `send-push`
   if (command === 'push' && rest[0] === 'setup') return pushCommand(rest);
   // `perf compare|baseline|budget [flags]`: the gate's names for one operation
   const gate = command === 'perf' ? rest.shift() : undefined;
@@ -285,7 +285,7 @@ async function operationCommand(command: string | undefined, rest: string[]) {
   const measurements = takeFlag(rest, 'measurements');
   // a person's word for this run, which no tool takes: a flow's visual steps make their baselines
   const updateAt =
-    command === 'flow' && rest[0] === 'run' ? rest.indexOf('--update-baselines') : -1;
+    command === 'run-flow' && rest[0] === 'run' ? rest.indexOf('--update-baselines') : -1;
   if (updateAt >= 0) rest.splice(updateAt, 1);
   const ctx = commandLine(
     {
@@ -308,7 +308,7 @@ async function operationCommand(command: string | undefined, rest: string[]) {
 commands:
 ${commandList()}
 
-operations (--device S selects the device, also for the next commands in this folder; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F --update-baselines):
+operations (--device S selects the device, also for the next commands in this folder; run-flow: appdyno run-flow run a.flow --from 3 --param NAME=value --env-file F --update-baselines):
 ${listOf(ops)}`,
     );
     return asked ? 0 : 2;

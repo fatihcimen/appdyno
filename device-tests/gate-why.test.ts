@@ -233,7 +233,7 @@ for (const t of targets)
       }
       const scenario = `journey-${t.name}`;
       const measure = async () => {
-        const m = await ops.call('flow', { action: 'run', file, iterations: 5 });
+        const m = await ops.call('run_flow', { action: 'run', file, iterations: 5 });
         expect(m.error, m.text).toBe(false);
       };
       await baselined(measure, scenario);

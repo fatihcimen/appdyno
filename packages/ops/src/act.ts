@@ -224,7 +224,7 @@ function assertOp(ctx: ServerContext, { summary, clean }: Answers, { checkNow }:
 
 function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
   return defineOp({
-    name: 'alert',
+    name: 'answer_alert',
     title: 'System alert',
     description:
       "The open system alert: with no answer its text and buttons; answer: a button's label, or on a permission prompt in any language allow (the least it offers: once, else while using) or deny. Never touches the app's own dialogs.",

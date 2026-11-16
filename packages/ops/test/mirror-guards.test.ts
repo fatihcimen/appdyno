@@ -106,8 +106,8 @@ describe('the activity of a device', () => {
     ctx.currentSerial = 'guarded';
     const wrap = activityFor(ctx);
     rmSync(activityFile(), { force: true });
-    await wrap(op('mirror')).handler({});
-    await wrap(op('hand_off')).handler({});
+    await wrap(op('show_mirror')).handler({});
+    await wrap(op('ask_person')).handler({});
     expect(existsSync(activityFile())).toBe(false);
   });
 

@@ -59,7 +59,7 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
       .filter((l) => l.includes('|com.android.shell|')).length;
 
   it('says which types it takes, and how', async () => {
-    const r = await call('push');
+    const r = await call('send_push');
     expect(r.text).toContain('tapped: the launcher activity');
     expect(r.text).toContain(
       "background: no: dev.appdyno.fixture has no Firebase Messaging, which takes FCM's own message",
@@ -74,7 +74,7 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
       'widgets',
     ]);
     // a style is no push of its own
-    const style = await call('push', { type: 'inbox' });
+    const style = await call('send_push', { type: 'inbox' });
     // a refusal says its code first
     expect(style.text).toBe(
       'INVALID_ARGUMENT: type: alert, background, rich, live_activity, tapped, voip, widgets, not inbox',
@@ -89,7 +89,7 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
       ['background', {}],
       ['live_activity', {}],
     ] as const) {
-      const r = await call('push', { type, title: type, ...extra });
+      const r = await call('send_push', { type, title: type, ...extra });
       expect(r.error, type).toBe(true);
       expect(r.text, type).toContain('dev.appdyno.fixture has no Firebase Messaging');
     }
@@ -98,7 +98,7 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
 
   it('opens the app as a tapped push, its data in the extras', async () => {
     const order = String(Date.now());
-    const r = await call('push', { type: 'tapped', data: { order, kind: 'shipped' } });
+    const r = await call('send_push', { type: 'tapped', data: { order, kind: 'shipped' } });
     expect(r.text).toMatch(
       /^opened dev\.appdyno\.fixture as a tapped push, with 2 data keys as extras/,
     );
@@ -132,7 +132,7 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
   const pushed = async (args: Record<string, unknown>) => {
     mark = `push ${Date.now()}`;
     adb('shell', 'log', '-t', 'PushFixture', '-p', 'i', `'${mark}'`);
-    const r = await call('push', args);
+    const r = await call('send_push', args);
     expect(r.error ? r.text : '', String(args.type)).toBe('');
     return r.text;
   };
@@ -143,7 +143,7 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
   };
 
   it('names the route each type takes for its debuggable build', async () => {
-    const types = (await call('push')).text;
+    const types = (await call('send_push')).text;
     expect(types).toMatch(
       /alert: FCM's own message to the app's Firebase SDK, as Google Play services hands it, by run-as on its debuggable build/,
     );
@@ -203,20 +203,20 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
     } finally {
       adb('shell', 'pm', 'grant', PUSH_APP, 'android.permission.POST_NOTIFICATIONS');
     }
-    const named = await call('push', { type: 'background', data: { 'google.x': 'y' } });
+    const named = await call('send_push', { type: 'background', data: { 'google.x': 'y' } });
     expect(named.text).toContain("google.x is FCM's own name");
-    const file = await call('push', { type: 'rich', title: 'T', image: PICTURE });
+    const file = await call('send_push', { type: 'rich', title: 'T', image: PICTURE });
     expect(file.text).toContain('give a link');
   });
 
   it('is a command as the tool is, and `push setup` stays the credentials', () => {
     const cli = (...words: string[]) =>
-      spawnSync(process.execPath, [MAIN, 'push', ...words], { encoding: 'utf8' });
+      spawnSync(process.execPath, [MAIN, ...words], { encoding: 'utf8' });
     // shared: this suite's server holds the device
-    const types = cli('--device', ANDROID, '--share', '--app', PUSH_APP);
+    const types = cli('send-push', '--device', ANDROID, '--share', '--app', PUSH_APP);
     expect(types.status, types.stderr).toBe(0);
     expect(types.stdout).toMatch(/background: FCM's own message .* by run-as/);
-    const setup = cli('setup');
+    const setup = cli('push', 'setup');
     expect(setup.status).toBe(2);
     expect(setup.stdout + setup.stderr).toContain('usage: appdyno push setup');
   });
@@ -229,7 +229,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     /"([^"]*)"/.exec((await call('find', { selector: { id: 'push_last' } })).text)?.[1];
 
   it('says which types it takes, and how', async () => {
-    const r = await call('push');
+    const r = await call('send_push');
     expect(r.text).toContain("alert: simctl push: the app's code gets it");
     expect(r.text).toContain('tapped: no: simctl taps nothing');
     expect(r.text).toContain('live_activity: no: simctl push makes a notification');
@@ -244,8 +244,12 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
       selector: { text: 'Would Like to Send You Notifications' },
       timeoutMs: 5_000,
     });
-    await call('alert', { answer: 'allow' });
-    const alert = await call('push', { type: 'alert', title: 'Order 42', data: { order: '42' } });
+    await call('answer_alert', { answer: 'allow' });
+    const alert = await call('send_push', {
+      type: 'alert',
+      title: 'Order 42',
+      data: { order: '42' },
+    });
     expect(alert.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is in front/);
     await call('wait_for', { selector: { text: 'alert Order 42: order=42' }, timeoutMs: 8_000 });
     expect(await last()).toBe('alert Order 42: order=42');
@@ -254,17 +258,17 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
       aps: { alert: { title: 'Raw' }, badge: 3, sound: 'default', category: 'order' },
       order: '7',
     };
-    await call('push', { type: 'alert', payload: JSON.stringify(payload) });
+    await call('send_push', { type: 'alert', payload: JSON.stringify(payload) });
     await call('wait_for', { selector: { text: 'alert Raw: order=7' }, timeoutMs: 8_000 });
     expect(await last()).toBe('alert Raw: order=7');
     // the simulator takes no push with nothing to see
-    const quiet = await call('push', { type: 'background', data: { sync: '7' } });
+    const quiet = await call('send_push', { type: 'background', data: { sync: '7' } });
     expect(quiet.text).toContain('simctl takes no push with nothing to see');
   });
 
   it('says a push to an app in the background or not running is only shown, and its code got nothing', async () => {
     await goHome(call);
-    const back = await call('push', { type: 'alert', title: 'Back', data: { order: '8' } });
+    const back = await call('send_push', { type: 'alert', title: 'Back', data: { order: '8' } });
     expect(back.text).toMatch(
       /^pushed to dev\.appdyno\.fixture by simctl: it is in the background/,
     );
@@ -272,7 +276,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     await call('launch_app');
     expect(await last()).toBe('alert Raw: order=7');
     await call('terminate_app');
-    const off = await call('push', { type: 'alert', title: 'Off' });
+    const off = await call('send_push', { type: 'alert', title: 'Off' });
     expect(off.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is not running/);
     await call('launch_app');
     await call('open_link', { url: 'appdyno-fixture://open/push' });
@@ -280,9 +284,9 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
   });
 
   it('refuses a payload with no aps, and an extension simctl never runs', async () => {
-    const bad = await call('push', { type: 'alert', payload: '{"x":1}' });
+    const bad = await call('send_push', { type: 'alert', payload: '{"x":1}' });
     expect(bad.text).toContain('an APNs payload has aps: an object');
-    const rich = await call('push', { type: 'rich', title: 'Rich', image: PICTURE });
+    const rich = await call('send_push', { type: 'rich', title: 'Rich', image: PICTURE });
     expect(rich.text).toContain('simctl push runs no Notification Service Extension');
   });
 
@@ -305,7 +309,7 @@ describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
     const back = await call('open_link', { url: 'appdyno-fixture://open/push' });
     expect(back.text).toContain(`foreground: ${APP}`);
     expect((await call('screen')).text).toContain(`foreground: ${APP}`);
-    const pushed = await call('push', { app: APP, type: 'alert', title: 'Linked' });
+    const pushed = await call('send_push', { app: APP, type: 'alert', title: 'Linked' });
     expect(pushed.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is in front/);
   });
 });
@@ -315,24 +319,24 @@ describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
   afterAll(() => new IosSimulatorDevice(SIMULATOR).stopAgent());
 
   it("takes what simctl cannot by APNs' sandbox, and only by a token the app printed in this session", async () => {
-    const types = (await call('push')).text;
+    const types = (await call('send_push')).text;
     expect(types).toContain(
       "rich: APNs' sandbox, by the device token the app printed in this session",
     );
     expect(types).toContain("live_activity: APNs' sandbox, by the activity token");
     expect(types).toContain('alert: simctl push');
-    const rich = await call('push', { type: 'rich', title: 'R' });
+    const rich = await call('send_push', { type: 'rich', title: 'R' });
     expect(rich.text).toContain(`NOT_FOUND: no device token from ${APP} in this session`);
     expect(rich.text).toContain('by NSLog or os_log');
   });
 
   it("refuses a Live Activity's payload that is not ActivityKit's, VoIP the app does not declare, and an app not there", async () => {
     const update = JSON.stringify({ aps: { event: 'update' } });
-    expect((await call('push', { type: 'live_activity', payload: update })).text).toContain(
+    expect((await call('send_push', { type: 'live_activity', payload: update })).text).toContain(
       "a Live Activity's aps.content-state is an object",
     );
-    expect((await call('push', { type: 'voip' })).text).toContain('not known to declare VoIP');
-    expect((await call('push', { type: 'background', app: 'dev.not.here' })).text).toContain(
+    expect((await call('send_push', { type: 'voip' })).text).toContain('not known to declare VoIP');
+    expect((await call('send_push', { type: 'background', app: 'dev.not.here' })).text).toContain(
       'dev.not.here is not installed on this simulator',
     );
   });
@@ -342,16 +346,19 @@ describe.skipIf(!ANDROID)('an Android emulator with FCM set up, over MCP', () =>
   const call = server(ANDROID, APP, madeUp('fcm'));
 
   it('takes what only Google delivers by FCM, by a token the app printed in this session, and nothing aimed elsewhere', async () => {
-    const types = (await call('push')).text;
+    const types = (await call('send_push')).text;
     expect(types).toContain('background: FCM, data alone');
     expect(types).toContain('alert: FCM, a notification');
     expect(types).toContain('tapped: the launcher activity');
     await call('launch_app');
-    const quiet = await call('push', { type: 'background', data: { sync: '7' } });
+    const quiet = await call('send_push', { type: 'background', data: { sync: '7' } });
     expect(quiet.text).toContain(`NOT_FOUND: no registration token from ${APP} in this session`);
-    const topic = await call('push', { type: 'alert', payload: JSON.stringify({ topic: 'news' }) });
+    const topic = await call('send_push', {
+      type: 'alert',
+      payload: JSON.stringify({ topic: 'news' }),
+    });
     expect(topic.text).toContain('an FCM payload names no topic');
-    const away = await call('push', { type: 'alert', app: 'dev.not.here' });
+    const away = await call('send_push', { type: 'alert', app: 'dev.not.here' });
     expect(away.text).toContain('dev.not.here is not installed on this device');
   });
 });

@@ -52,7 +52,7 @@ it('keeps each task within its calls', { timeout: 120_000 }, async () => {
     `instructions: ${String(client.getInstructions()?.length)}`,
     `screen, a list of 49 elements: ${await answer(list(), 'screen')}`,
     `tap by a stale ref, the list: ${await answer(list(), 'tap', { ref: '@gone' }, ['screen'])}`,
-    `steps refused, 70 elements: ${await answer(over(), 'steps', { steps: [{ action: 'tap', selector: { text: 'Nowhere' } }] }, ['screen'])}`,
+    `steps refused, 70 elements: ${await answer(over(), 'run_steps', { steps: [{ tool: 'tap', selector: { text: 'Nowhere' } }] }, ['screen'])}`,
     `logs, 200 lines: ${await answer(logs, 'logs')}`,
   ];
   const out = process.env.APPDYNO_EFFICIENCY_OUT;

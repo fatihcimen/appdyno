@@ -99,7 +99,7 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
 /** The width of the picture saved in `dir`: the answer's own image is the one shown, at most 800 px. */
 const savedWidth = async (call: Call, dir: string) => {
   const file = join(dir, 'screen.png');
-  ok(await call('screenshot', { file }));
+  ok(await call('take_screenshot', { file }));
   return imageSize(readFileSync(file))?.w;
 };
 
@@ -112,18 +112,20 @@ const language = async (call: Call) => {
 };
 
 const inPoints = async (call: Call) => {
-  const r = ok(await call('screenshot', { points: true }));
+  const r = ok(await call('take_screenshot', { points: true }));
   const { w, h } = ok(await call('device_info')).data.screen;
   expect([r.data.width, r.data.height]).toEqual([w, h]);
   expect(r.data.scale).toBe(1);
 };
 
 const atWidth = async (call: Call) => {
-  expect(Math.abs(ok(await call('screenshot', { width: 200 })).data.width - 200)).toBeLessThan(2);
+  expect(Math.abs(ok(await call('take_screenshot', { width: 200 })).data.width - 200)).toBeLessThan(
+    2,
+  );
   const { w, density } = ok(await call('device_info')).data.screen;
   // Android's units are pixels already, and its density is in dpi
   const full = density < 10 ? Math.round(w * density) : w;
-  expect(ok(await call('screenshot', { width: 8_000 })).data.width).toBe(full);
+  expect(ok(await call('take_screenshot', { width: 8_000 })).data.width).toBe(full);
 };
 
 /** A landscape and back, seen in where the app puts a row. */
@@ -266,7 +268,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     const saved = await savedWidth(call, dir);
     const { w, density } = ok(await call('device_info')).data.screen;
     expect(saved).toBe(Math.round(w * density));
-    const again = await call('screenshot', { file: join(dir, 'screen.png') });
+    const again = await call('take_screenshot', { file: join(dir, 'screen.png') });
     expect(again.text).toContain('is there already');
   });
 

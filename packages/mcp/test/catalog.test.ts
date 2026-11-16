@@ -12,15 +12,15 @@ import { createServer } from '../src/server.js';
 
 /** A client's search reads names and descriptions, and may read only the start: each word here finds its tool there. */
 const SEARCHED: Record<string, string> = {
-  emulator: 'simulator',
-  simulator: 'simulator',
+  emulator: 'manage_simulator',
+  simulator: 'manage_simulator',
   'deep link': 'open_link',
   'dark mode': 'device_setting',
   fingerprint: 'device_setting',
   'face id': 'device_setting',
   'memory warning': 'device_setting',
   shake: 'device_setting',
-  'push notification': 'push',
+  'push notification': 'send_push',
   'universal link': 'open_link',
   'app link': 'open_link',
   'long press': 'gesture',
@@ -29,10 +29,10 @@ const SEARCHED: Record<string, string> = {
   install: 'app',
   logcat: 'logs',
   anr: 'crashes',
-  'screen mirror': 'mirror',
-  'network traffic': 'network',
-  mock: 'network',
-  throttle: 'network',
+  'screen mirror': 'show_mirror',
+  'network traffic': 'capture_network',
+  mock: 'capture_network',
+  throttle: 'capture_network',
   'visual regression': 'visual',
   'accessibility tree': 'screen',
   'view hierarchy': 'screen',
@@ -41,7 +41,7 @@ const SEARCHED: Record<string, string> = {
   startup: 'perf_launch',
   'memory leaks': 'perf_heap',
   'regression gate': 'perf_compare',
-  'repeatable test': 'flow',
+  'repeatable test': 'run_flow',
 };
 
 it('is found by the words people search for, where a search reads them', () => {
@@ -74,9 +74,9 @@ it('has every tool in the table of the docs, and what they say of steps as the t
   const start = doc.indexOf('\n## Every tool\n');
   const tables = doc.slice(start, doc.indexOf('\n## ', start + 1));
   expect(Object.keys(ops).filter((name) => !tables.includes(`\n| \`${name}\` `))).toEqual([]);
-  const limit = /at most (\d+),/.exec(ops.steps?.description ?? '')?.[1];
-  assert(limit, 'steps says its limit');
-  expect(doc).toContain(`\`steps\` runs up to ${limit} steps`);
+  const limit = /at most (\d+),/.exec(ops.run_steps?.description ?? '')?.[1];
+  assert(limit, 'run_steps says its limit');
+  expect(doc).toContain(`\`run_steps\` runs up to ${limit} steps`);
   expect(doc).toContain(`${Object.keys(ops).length} tools`);
 });
 

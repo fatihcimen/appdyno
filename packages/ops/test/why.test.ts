@@ -193,7 +193,7 @@ describe('the gate, asked why', () => {
   it('finds nothing to look at on an unchanged build, then names the function of a known cost', async () => {
     const t = phone();
     const file = flowFile();
-    const measure = () => t.call('flow', { action: 'run', file, iterations: 5 });
+    const measure = () => t.call('run_flow', { action: 'run', file, iterations: 5 });
     for (let i = 0; i < 3; i++) {
       await measure();
       await t.call('perf_compare', { action: 'baseline', scenario: SCENARIO });
@@ -496,7 +496,7 @@ describe('the gate, asked why', () => {
     const t = phone();
     t.device.virtual = true;
     const file = flowFile();
-    const measure = () => t.call('flow', { action: 'run', file, iterations: 5 });
+    const measure = () => t.call('run_flow', { action: 'run', file, iterations: 5 });
     for (let i = 0; i < 3; i++) {
       await measure();
       await t.call('perf_compare', { action: 'baseline', scenario: SCENARIO });

@@ -38,12 +38,12 @@ describe('a listed secret', () => {
     // no window's own picture: the device's is the one taken
     const device = () => Object.assign(new FakeDevice(), { mirror: {} });
     const some = await connect(device(), { policy: { secrets: [SECRET] } });
-    expect((await some.call('screenshot')).text).toContain(`${said} picture shows the screen`);
+    expect((await some.call('take_screenshot')).text).toContain(`${said} picture shows the screen`);
     expect(
-      (await some.call('screenshot', { file: join(dir, 'a.png'), inline: false })).text,
+      (await some.call('take_screenshot', { file: join(dir, 'a.png'), inline: false })).text,
     ).toContain(`${said} picture shows the screen`);
     const none = await connect(device());
-    expect((await none.call('screenshot')).text).not.toContain(said);
+    expect((await none.call('take_screenshot')).text).not.toContain(said);
   });
 
   it('is read from the variable, from a file with one to a line where it holds a comma, and from a program', () => {

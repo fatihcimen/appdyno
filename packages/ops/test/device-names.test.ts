@@ -65,7 +65,7 @@ describe('use_device by what a person calls the device', () => {
     const { call } = context({ devices: /^Pixel_8_API_34$/ });
     await call('use_device', { device: 'Pixel_8_API_34' });
     // with no window command here, the step past the allow list
-    await expect(call('mirror', { action: 'open' })).rejects.toMatchObject({
+    await expect(call('show_mirror', { action: 'open' })).rejects.toMatchObject({
       code: 'UNSUPPORTED',
     });
   });

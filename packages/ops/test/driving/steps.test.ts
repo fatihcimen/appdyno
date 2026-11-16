@@ -9,14 +9,14 @@ describe('steps across screens', () => {
   it('runs selectors, wait_for and assert across screens with one read at the end', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', selector: { text: 'Form' } },
-        { action: 'wait_for', selector: { text: 'Bilgiler' } },
-        { action: 'type_text', text: 'x', selector: { role: 'textField' } },
-        { action: 'tap', selector: { text: 'Gönder' } },
+        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'wait_for', selector: { text: 'Bilgiler' } },
+        { tool: 'type_text', text: 'x', selector: { role: 'textField' } },
+        { tool: 'tap', selector: { text: 'Gönder' } },
         {
-          action: 'assert',
+          tool: 'assert',
           selector: { id: 'dev.app:id/result' },
           check: 'text',
           equals: 'Gönderildi',
@@ -38,10 +38,10 @@ describe('steps across screens', () => {
     const send = must(/(@\w+) button "Gönder"/.exec((await call('screen')).text)?.[1], 'its ref');
     d.screen = 'home';
     await call('screen');
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', selector: { text: 'Form' } },
-        { action: 'tap', ref: send },
+        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'tap', ref: send },
       ],
     });
     expect(r.error).toBe(false);
@@ -50,11 +50,11 @@ describe('steps across screens', () => {
 
   it("reads a tool's screen as a touch's is: where its step says, or at the last as the call says", async () => {
     const { call } = await connect(new FakeDevice());
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'open_link', url: 'app://x' },
-        { action: 'launch_app' },
-        { action: 'open_link', url: 'app://y', read: 'full' },
+        { tool: 'open_link', url: 'app://x' },
+        { tool: 'launch_app' },
+        { tool: 'open_link', url: 'app://y', read: 'full' },
       ],
       read: 'none',
     });
@@ -68,23 +68,23 @@ describe('steps across screens', () => {
   it('says no change was seen of no last step that only looked, or found what it scrolled to', async () => {
     const { call } = await connect(new FakeDevice());
     for (const last of [
-      { action: 'wait_for', selector: { text: 'Form' } },
-      { action: 'assert', selector: { text: 'Form' } },
+      { tool: 'wait_for', selector: { text: 'Form' } },
+      { tool: 'assert', selector: { text: 'Form' } },
     ]) {
-      const r = await call('steps', { steps: [{ action: 'press_key', key: 'tab' }, last] });
-      expect(r.error, last.action).toBe(false);
-      expect(r.text, last.action).not.toContain('no change seen');
+      const r = await call('run_steps', { steps: [{ tool: 'press_key', key: 'tab' }, last] });
+      expect(r.error, last.tool).toBe(false);
+      expect(r.text, last.tool).not.toContain('no change seen');
     }
   });
 
   it('settles after a step that may change the screen, not between typing', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    await call('steps', {
+    await call('run_steps', {
       steps: [
-        { action: 'type_text', text: 'a' },
-        { action: 'tap', x: 2, y: 2 },
-        { action: 'tap', selector: { text: 'Form' } },
+        { tool: 'type_text', text: 'a' },
+        { tool: 'tap', x: 2, y: 2 },
+        { tool: 'tap', selector: { text: 'Form' } },
       ],
     });
     const opts = d.calls
@@ -97,11 +97,11 @@ describe('steps across screens', () => {
   it('stops at a failure, saying which step and why, with the screen', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', selector: { text: 'Form' } },
-        { action: 'assert', selector: { text: 'Nope' } },
-        { action: 'tap', selector: { text: 'Gönder' } },
+        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'assert', selector: { text: 'Nope' } },
+        { tool: 'tap', selector: { text: 'Gönder' } },
       ],
     });
     expect(r.error).toBe(true);
@@ -115,18 +115,18 @@ describe('steps across screens', () => {
   it('checks every step before the first runs, and holds a limit', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const bad = await call('steps', {
-      steps: [{ action: 'tap', x: 1, y: 1 }, { action: 'fly' }],
+    const bad = await call('run_steps', {
+      steps: [{ tool: 'tap', x: 1, y: 1 }, { tool: 'fly' }],
     });
     expect(bad.error).toBe(true);
     expect(bad.text).toContain('step 2');
     expect(act(d)).toEqual([]);
-    const long = await call('steps', {
-      steps: Array(31).fill({ action: 'press_key', key: 'tab' }),
+    const long = await call('run_steps', {
+      steps: Array(31).fill({ tool: 'press_key', key: 'tab' }),
     });
     expect(long.error).toBe(true);
-    const most = await call('steps', {
-      steps: Array(30).fill({ action: 'press_key', key: 'tab' }),
+    const most = await call('run_steps', {
+      steps: Array(30).fill({ tool: 'press_key', key: 'tab' }),
     });
     expect(most.error).toBe(false);
     expect(most.text.split('\n')).toContain('30. pressed tab');
@@ -135,13 +135,13 @@ describe('steps across screens', () => {
   it('takes any tool, with what each answers, images too', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'find', selector: { text: 'Form' } },
-        { action: 'screenshot' },
-        { action: 'tap', selector: { text: 'Form' } },
-        { action: 'screenshot' },
-        { action: 'device_info' },
+        { tool: 'find', selector: { text: 'Form' } },
+        { tool: 'take_screenshot' },
+        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'take_screenshot' },
+        { tool: 'device_info' },
       ],
     });
     expect(r.error).toBe(false);
@@ -156,8 +156,8 @@ describe('steps across screens', () => {
 
   it('gives an image at every step that asks, unchanged or not', async () => {
     const { call } = await connect(new FakeDevice());
-    const r = await call('steps', {
-      steps: [{ action: 'screenshot' }, { action: 'screenshot' }],
+    const r = await call('run_steps', {
+      steps: [{ tool: 'take_screenshot' }, { tool: 'take_screenshot' }],
     });
     expect(r.error).toBe(false);
     expect(r.text).toContain('2. image');
@@ -165,17 +165,17 @@ describe('steps across screens', () => {
 
   it("says a touch's target goes in selector, and shows a step that put it at the top in the right shape", async () => {
     const { call, ctx } = await connect(new FakeDevice());
-    expect(must(opsFor(ctx).steps, 'steps').description).toContain(
-      '{ action: tap, selector: { text: OK } }',
+    expect(must(opsFor(ctx).run_steps, 'run_steps').description).toContain(
+      '{ tool: tap, selector: { text: OK } }',
     );
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'wait_for', selector: { text: 'Form' } },
-        { action: 'tap', text: 'Crash', read: 'full' },
+        { tool: 'wait_for', selector: { text: 'Form' } },
+        { tool: 'tap', text: 'Crash', read: 'full' },
       ],
     });
     expect(r.text).toBe(
-      'INVALID_ARGUMENT: step 2: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"action":"tap","selector":{"text":"Crash"}}',
+      'INVALID_ARGUMENT: step 2: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"tool":"tap","selector":{"text":"Crash"}}',
     );
   });
 
@@ -188,8 +188,8 @@ describe('steps across screens', () => {
       expect((await call(tool, { selector: { text: 'Form' } })).error, tool).toBe(false);
     }
     // a tool's step, as a touch's
-    expect((await call('steps', { steps: [{ action: 'find', text: 'Form' }] })).text).toBe(
-      'INVALID_ARGUMENT: step 1: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"action":"find","selector":{"text":"Form"}}',
+    expect((await call('run_steps', { steps: [{ tool: 'find', text: 'Form' }] })).text).toBe(
+      'INVALID_ARGUMENT: step 1: ✖ Unrecognized key: "text"\nhint: a target goes in selector: {"tool":"find","selector":{"text":"Form"}}',
     );
   });
 
@@ -221,9 +221,9 @@ describe('steps across screens', () => {
       /hint: a target goes in selector: \{"kind":"drag","to":\{"selector":\{"id":"b"\}\},"selector":\{"text":"A","index":1\}\}$/,
     );
     expect(
-      (await call('steps', { steps: [{ action: 'drag', ref: '@a1', to: { text: 'B' } }] })).text,
+      (await call('run_steps', { steps: [{ tool: 'drag', ref: '@a1', to: { text: 'B' } }] })).text,
     ).toMatch(
-      /hint: a target goes in selector: \{"action":"drag","ref":"@a1","to":\{"selector":\{"text":"B"\}\}\}$/,
+      /hint: a target goes in selector: \{"tool":"drag","ref":"@a1","to":\{"selector":\{"text":"B"\}\}\}$/,
     );
     // what no selector takes is said as before
     expect((await call('tap', { label: 'OK' })).data.hint).toBe(
@@ -235,30 +235,30 @@ describe('steps across screens', () => {
   it('reads a touch at its own step when the step says so, and refuses what is no step', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', selector: { text: 'Form' }, read: 'full' },
-        { action: 'press_key', key: 'tab' },
+        { tool: 'tap', selector: { text: 'Form' }, read: 'full' },
+        { tool: 'press_key', key: 'tab' },
       ],
     });
     expect(r.text.split('\n')[1]).toContain('foreground: dev.app');
-    for (const action of ['steps', 'flow', 'nothing']) {
-      const no = await call('steps', { steps: [{ action }] });
+    for (const tool of ['run_steps', 'run_flow', 'nothing']) {
+      const no = await call('run_steps', { steps: [{ tool }] });
       expect(no.error).toBe(true);
-      expect(no.text).toContain(`no step ${action}`);
+      expect(no.text).toContain(`no step ${tool}`);
       expect(no.text).toContain('nothing was done');
     }
-    const wrong = await call('steps', { steps: [{ action: 'find', nope: 1 }] });
+    const wrong = await call('run_steps', { steps: [{ tool: 'find', nope: 1 }] });
     expect(wrong.error).toBe(true);
     expect(wrong.text).toContain('step 1');
-    const read = await call('steps', { steps: [{ action: 'tap', x: 1, y: 1, read: 'much' }] });
+    const read = await call('run_steps', { steps: [{ tool: 'tap', x: 1, y: 1, read: 'much' }] });
     expect(read.text).toContain('step 1');
   });
 
   it('says which step failed, with what the others answered', async () => {
     const { call } = await connect(new FakeDevice());
-    const r = await call('steps', {
-      steps: [{ action: 'device_info' }, { action: 'app', action2: 1 }],
+    const r = await call('run_steps', {
+      steps: [{ tool: 'device_info' }, { tool: 'app', action2: 1 }],
     });
     expect(r.error).toBe(true);
     expect(r.text).toContain('step 2');
@@ -420,10 +420,10 @@ describe('steps across screens', () => {
         return own(a, o);
       };
       const { call } = await connect(d, { defaults: { app: undefined } });
-      const r = await call('steps', {
+      const r = await call('run_steps', {
         steps: [
-          { action: 'tap', selector: { text: 'Form' } },
-          { action: 'tap', selector: { text: 'Gönder' } },
+          { tool: 'tap', selector: { text: 'Form' } },
+          { tool: 'tap', selector: { text: 'Gönder' } },
         ],
       });
       expect([r.data.code, r.data.dispatched], after).toEqual(['APP_NOT_RUNNING', true]);
@@ -439,7 +439,7 @@ describe('steps across screens', () => {
       // a repeated crash: the process lives on, held by the system's dialog, which takes the front; no report is written
       for (const [tool, app] of [
         ['tap', 'dev.app'],
-        ['steps', undefined],
+        ['run_steps', undefined],
       ] as const) {
         const d = new FakeDevice();
         d.pid = '100';
@@ -463,10 +463,10 @@ describe('steps across screens', () => {
         const r =
           tool === 'tap'
             ? await call('tap', tap)
-            : await call('steps', {
+            : await call('run_steps', {
                 steps: [
-                  { action: 'tap', ...tap },
-                  { action: 'tap', selector: { text: 'Gönder' } },
+                  { tool: 'tap', ...tap },
+                  { tool: 'tap', selector: { text: 'Gönder' } },
                 ],
               });
         expect([r.data.code, r.data.dispatched], tool).toEqual(['APP_NOT_RUNNING', true]);
@@ -492,12 +492,12 @@ describe('steps across screens', () => {
     ] as const) {
       const d = dying((x) => x.screen === 'form');
       const { call } = await connect(d, { defaults: { app } });
-      const r = await call('steps', {
+      const r = await call('run_steps', {
         steps: [
-          { action: 'wait_for', selector: { text: 'Form' } },
-          { action: 'tap', selector: { text: 'Form' }, ...(read && { read }) },
-          { action: 'tap', selector: { text: 'Gönder' } },
-          { action: 'type_text', text: 'Ada' },
+          { tool: 'wait_for', selector: { text: 'Form' } },
+          { tool: 'tap', selector: { text: 'Form' }, ...(read && { read }) },
+          { tool: 'tap', selector: { text: 'Gönder' } },
+          { tool: 'type_text', text: 'Ada' },
         ],
       });
       expect([r.error, r.data.code, r.data.dispatched], `${String(read)} ${String(app)}`).toEqual([
@@ -516,10 +516,10 @@ describe('steps across screens', () => {
     // an app that was not in front when a step began has no death to tell
     const d = dying(() => true);
     const { call } = await connect(d);
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', x: 5, y: 5, read: 'diff' },
-        { action: 'tap', x: 5, y: 5 },
+        { tool: 'tap', x: 5, y: 5, read: 'diff' },
+        { tool: 'tap', x: 5, y: 5 },
       ],
     });
     expect(r.text).not.toContain('the rest were not run');
@@ -528,12 +528,12 @@ describe('steps across screens', () => {
 
   /** A batch whose third step looks for what the form never has: as a crash leaves it, or the app running still. */
   const cutShort = (call: Awaited<ReturnType<typeof connect>>['call']) =>
-    call('steps', {
+    call('run_steps', {
       steps: [
-        { action: 'wait_for', selector: { text: 'Form' } },
-        { action: 'tap', selector: { text: 'Form' }, read: 'none' },
-        { action: 'tap', selector: { text: 'Kaydet' } },
-        { action: 'type_text', text: 'Ada' },
+        { tool: 'wait_for', selector: { text: 'Form' } },
+        { tool: 'tap', selector: { text: 'Form' }, read: 'none' },
+        { tool: 'tap', selector: { text: 'Kaydet' } },
+        { tool: 'type_text', text: 'Ada' },
       ],
     });
 

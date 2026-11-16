@@ -166,7 +166,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       };
     },
     journey: async (file, app, say) => {
-      const flow = must(opsFor(own).flow, 'flow');
+      const flow = must(opsFor(own).run_flow, 'run_flow');
       const input = flow.input.parse({ action: 'run', file, iterations: JOURNEY_ITERATIONS });
       const data = await held(say, async () => {
         // a flow that names no app takes the one in front, so that two builds can run one file

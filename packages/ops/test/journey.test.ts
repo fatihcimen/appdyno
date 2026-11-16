@@ -95,7 +95,7 @@ describe('a journey as a performance scenario', () => {
   it('keeps a time and what the device reads for each step, the first iteration left out', async () => {
     const { call, measurements, device } = phone();
     const file = flowFile();
-    const r = await call('flow', { action: 'run', file, iterations: 5 });
+    const r = await call('run_flow', { action: 'run', file, iterations: 5 });
     expect(r.data.journey?.scenario).toBe('journey-checkout');
     expect(r.data.journey?.iterations).toBe(5);
     expect(r.text).toContain('tap text="Form": 40');
@@ -117,15 +117,15 @@ describe('a journey as a performance scenario', () => {
     const { device, call, measurements } = phone();
     const file = flowFile();
     for (let i = 0; i < 3; i++) {
-      await call('flow', { action: 'run', file, iterations: 5 });
+      await call('run_flow', { action: 'run', file, iterations: 5 });
       await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
     }
-    await call('flow', { action: 'run', file, iterations: 5 });
+    await call('run_flow', { action: 'run', file, iterations: 5 });
     const same = await call('perf_compare', { action: 'compare' });
     expect(same.data.exitCode).toBe(0);
 
     device.formMs = 1_100;
-    await call('flow', { action: 'run', file, iterations: 5 });
+    await call('run_flow', { action: 'run', file, iterations: 5 });
     const worse = await call('perf_compare', { action: 'compare' });
     expect(worse.data.exitCode).toBe(1);
     expect(worse.text).toMatch(/regression\s+journey\.02_tap_text_Form\.ms: 110\d ms against 40/);
@@ -145,7 +145,7 @@ describe('a journey as a performance scenario', () => {
 
   it('counts a step that never settled, and its whole, at the deadline, which it took at least', async () => {
     const { device, call, measurements } = phone();
-    const r0 = call('flow', { action: 'run', file: flowFile(), iterations: 5 });
+    const r0 = call('run_flow', { action: 'run', file: flowFile(), iterations: 5 });
     // the warm-up settles, and the first two iterations do not
     const left = device.act.bind(device);
     let forms = 0;
@@ -172,7 +172,7 @@ describe('a journey as a performance scenario', () => {
   it('says a step that never settled at all at its deadline, and that it was so', async () => {
     const { device, call, measurements } = phone();
     device.formNeverSettles = Infinity;
-    const r = await call('flow', { action: 'run', file: flowFile(), iterations: 5 });
+    const r = await call('run_flow', { action: 'run', file: flowFile(), iterations: 5 });
     const run = await newestRun(measurements);
     const form = must(named(run, '02_tap_text_Form.ms'), 'the step');
     expect(new Set(form.samples).size).toBe(1);
@@ -187,11 +187,11 @@ describe('a journey as a performance scenario', () => {
     const { device, call } = phone();
     const file = flowFile();
     for (let i = 0; i < 3; i++) {
-      await call('flow', { action: 'run', file, iterations: 5 });
+      await call('run_flow', { action: 'run', file, iterations: 5 });
       await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
     }
     device.formNeverSettles = Infinity;
-    await call('flow', { action: 'run', file, iterations: 5 });
+    await call('run_flow', { action: 'run', file, iterations: 5 });
     const worse = await call('perf_compare', { action: 'compare' });
     expect(worse.data.exitCode).toBe(1);
     expect(worse.text).toMatch(/regression\s+journey\.unsettled: 1 count against 0/);
@@ -202,13 +202,13 @@ describe('a journey as a performance scenario', () => {
     const { device, call } = phone();
     const file = flowFile();
     for (let i = 0; i < 3; i++) {
-      await call('flow', { action: 'run', file, iterations: 5 });
+      await call('run_flow', { action: 'run', file, iterations: 5 });
       const b = await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
       expect(b.data.exitCode).toBe(i < 2 ? 1 : 0);
       expect(b.text).toMatch(/left out, high-host-load: journey\.total_ms, journey\.01_launch\.ms/);
     }
     device.formMs = 1_100;
-    await call('flow', { action: 'run', file, iterations: 5 });
+    await call('run_flow', { action: 'run', file, iterations: 5 });
     const worse = await call('perf_compare', { action: 'compare' });
     expect(worse.text).toMatch(/regression\s+journey\.02_tap_text_Form\.ms/);
     expect(worse.text).toMatch(/new\s+journey\.01_launch\.ms/);
@@ -230,7 +230,7 @@ describe('a journey as a performance scenario', () => {
         };
       },
     });
-    await call('flow', { action: 'run', file: flowFile(), iterations: 2 });
+    await call('run_flow', { action: 'run', file: flowFile(), iterations: 2 });
     const run = await newestRun(measurements);
     expect(named(run, '02_tap_text_Form.frames_p95_ms')?.samples).toEqual([30, 30]);
     expect(named(run, '02_tap_text_Form.frames_worst_ms')?.samples).toEqual([38.4, 38.4]);
@@ -255,7 +255,7 @@ describe('a journey as a performance scenario', () => {
       up = true;
       return launch(pkg);
     };
-    const r = await call('flow', {
+    const r = await call('run_flow', {
       action: 'run',
       file: flowFile('stop\nlaunch\n'),
       iterations: 2,
@@ -271,7 +271,7 @@ describe('a journey as a performance scenario', () => {
     const { device, call, measurements } = phone({
       slowReads: ['memory', 'frames', 'resetFrames'],
     });
-    const r = await call('flow', { action: 'run', file: flowFile(), iterations: 1 });
+    const r = await call('run_flow', { action: 'run', file: flowFile(), iterations: 1 });
     expect(r.data.journey?.note).toMatch(/time only for frames and memory/);
     expect(device.calls.some((c) => c.name === 'perf.memory')).toBe(false);
     const run = await newestRun(measurements);
@@ -287,7 +287,7 @@ describe('a journey as a performance scenario', () => {
       if (++launches === 4) device.fail = new DeviceError('TIMEOUT', 'the phone went away');
       return launch(pkg);
     };
-    const e = await call('flow', { action: 'run', file: flowFile(), iterations: 5 }).then(
+    const e = await call('run_flow', { action: 'run', file: flowFile(), iterations: 5 }).then(
       () => undefined,
       (x: unknown) => x as ToolError,
     );
@@ -303,7 +303,7 @@ describe('a journey as a performance scenario', () => {
     const { device, call, measurements } = phone();
     device.fail = new DeviceError('TIMEOUT', 'the phone went away');
     await expect(
-      call('flow', { action: 'run', file: flowFile(), iterations: 5 }),
+      call('run_flow', { action: 'run', file: flowFile(), iterations: 5 }),
     ).rejects.toBeInstanceOf(ToolError);
     device.fail = undefined;
     expect(await runKeys(measurements)).toEqual([]);
@@ -312,7 +312,7 @@ describe('a journey as a performance scenario', () => {
   it('refuses a start half way and a flow with no owner, by name', async () => {
     const { call } = phone();
     await expect(
-      call('flow', { action: 'run', file: flowFile(), iterations: 2, from: 2 }),
+      call('run_flow', { action: 'run', file: flowFile(), iterations: 2, from: 2 }),
     ).rejects.toThrow(/runs whole/);
     const { device } = phone();
     const ctx = new ServerContext(DEFAULT_POLICY, [
@@ -323,14 +323,14 @@ describe('a journey as a performance scenario', () => {
       },
     ]);
     await expect(
-      callerOf(ctx)('flow', { action: 'run', file: flowFile(), iterations: 2 }),
+      callerOf(ctx)('run_flow', { action: 'run', file: flowFile(), iterations: 2 }),
     ).rejects.toThrow(/names no app/);
   });
 
   it('a value given for a step does not change its key', async () => {
     const { call, measurements } = phone();
     const file = flowFile('param WHERE\nlaunch\ntap text="${WHERE}"\n');
-    await call('flow', { action: 'run', file, iterations: 1, params: ['WHERE=Form'] });
+    await call('run_flow', { action: 'run', file, iterations: 1, params: ['WHERE=Form'] });
     expect(named(await newestRun(measurements), '02_tap_text_WHERE.ms')).toBeDefined();
   });
 
@@ -399,10 +399,10 @@ describe('a measure during a recording', () => {
     actions: () => Promise<unknown>,
   ) => {
     const file = join(must(process.env.APPDYNO_STATE_DIR, 'the state folder'), 'a.flow');
-    await call('flow', { action: 'start' });
+    await call('run_flow', { action: 'record' });
     await actions();
-    await call('flow', { action: 'stop' });
-    await call('flow', { action: 'save', file });
+    await call('run_flow', { action: 'stop' });
+    await call('run_flow', { action: 'save', file });
     return readFileSync(file, 'utf8');
   };
   const stepsOf = (text: string) =>
@@ -507,7 +507,7 @@ describe('a measure during a recording', () => {
       'launch',
     ]);
     const file = flowFile(text, 'b.flow');
-    const r = await call('flow', { action: 'run', file });
+    const r = await call('run_flow', { action: 'run', file });
     expect(r.data.done).toBe('passed');
   });
 

@@ -60,7 +60,7 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
     const started = await t.call('report', { action: 'timeline', dir });
     expect(started.error, started.text).toBe(false);
     console.log(started.text);
-    const ran = await t.call('flow', { action: 'run', file });
+    const ran = await t.call('run_flow', { action: 'run', file });
     const done = await t.call('report', { action: 'stop' });
     expect(ran.error, ran.text).toBe(false);
     expect(done.error, done.text).toBe(false);

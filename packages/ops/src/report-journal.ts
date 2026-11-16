@@ -38,6 +38,7 @@ const NAMES = new Set([
   'selector',
   'service',
   'target',
+  'tool',
   'url',
   'via',
   'what',
@@ -53,7 +54,7 @@ export function shownArgs(op: Op, args: unknown, clean: (s: string) => string): 
     if (Array.isArray(v)) return v.map((x) => walk(x, shown));
     if (!v || typeof v !== 'object') return v;
     const o = v as Record<string, unknown>;
-    const all = shown || LOOKS_ONLY.has(String(o.action));
+    const all = shown || LOOKS_ONLY.has(String(o.tool));
     return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, walk(x, all || NAMES.has(k))]));
   };
   return walk(args, onlyReads(op));

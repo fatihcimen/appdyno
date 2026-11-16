@@ -113,7 +113,7 @@ for (const { platform, serial, form } of targets)
     it(
       'records the form, the list and the dialog through the MCP tools',
       async () => {
-        await call('flow', { action: 'start' });
+        await call('run_flow', { action: 'record' });
         await call('terminate_app');
         await call('launch_app');
         const home = await call('screen');
@@ -143,11 +143,11 @@ for (const { platform, serial, form } of targets)
         await call('tap', { selector: { text: 'OK' } });
         await call('assert', { selector: { id: 'result' }, check: 'text', equals: 'Confirmed' });
 
-        const stop = await call('flow', { action: 'stop' });
+        const stop = await call('run_flow', { action: 'stop' });
         expect(stop.data.flagged).toEqual(
           expect.arrayContaining([expect.stringMatching(/ambiguous/)]),
         );
-        const saved = await call('flow', { action: 'save', file });
+        const saved = await call('run_flow', { action: 'save', file });
         expect(saved.text).toContain(`steps to ${file}`);
 
         const text = readFileSync(file, 'utf8');
@@ -176,7 +176,7 @@ for (const { platform, serial, form } of targets)
     it(
       'replays it on the same device with no model, each step timed from action to settled',
       async () => {
-        const r = await call('flow', { action: 'run', file, params });
+        const r = await call('run_flow', { action: 'run', file, params });
         process.stderr.write(`--- ${platform} replay\n${r.text}\n---\n`);
         expect(secretsIn(r.text)).toEqual([]);
         expect(r.text).toMatch(/^passed: \d+ steps$/m);
@@ -203,7 +203,7 @@ for (const { platform, serial, form } of targets)
           flow,
           `app ${APP}\nstop\nlaunch\n# not a thing\ntap text="${form}x"\ntap text="${form}"\n`,
         );
-        const r = await raw('flow', { action: 'run', file: flow });
+        const r = await raw('run_flow', { action: 'run', file: flow });
         expect(r.error).toBe(true);
         expect(r.data.code).toBe('NOT_FOUND');
         expect(r.text).toContain(`${flow}:5: step 3 failed`);
@@ -213,7 +213,7 @@ for (const { platform, serial, form } of targets)
         expect(r.text).toContain('--from 3');
         await call('assert', { selector: { text: 'appdyno fixture' } });
 
-        const go = await call('flow', { action: 'run', file: flow, from: 4 });
+        const go = await call('run_flow', { action: 'run', file: flow, from: 4 });
         expect(go.text).toContain('passed: 1 steps');
         await call('wait_for', { selector: { id: 'name_input' }, timeoutMs: 8_000 });
       },
@@ -228,7 +228,7 @@ for (const { platform, serial, form } of targets)
           flow,
           `app ${APP}\nopen_link "appdyno-fixture://open/list"\ntap id=add_button\n`,
         );
-        const r = await raw('flow', { action: 'run', file: flow });
+        const r = await raw('run_flow', { action: 'run', file: flow });
         expect(r.error).toBe(true);
         expect(r.data.code).toBe('AMBIGUOUS');
         expect(r.text).toContain(`${flow}:3`);
@@ -312,33 +312,30 @@ for (const { platform, serial, form } of targets)
           expect(r.code).toBe(0);
           return r;
         };
-        await run('flow', 'start');
+        await run('run-flow', 'record');
         await run('terminate-app', '--app', APP);
         await run('launch-app', '--app', APP);
         await run('tap', '--json', JSON.stringify({ selector: { text: form } }));
         await run('assert', '--selector', '{"id":"name_input"}', '--timeout-ms', '8000');
-        await run('flow', 'stop');
-        await run('flow', 'save', flow);
+        await run('run-flow', 'stop');
+        await run('run-flow', 'save', flow);
         const text = readFileSync(flow, 'utf8');
         // Android's home buttons have no id; iOS's do, and an id goes first
         expect(text).toContain(
           platform === 'android' ? 'tap role=button text="FORM"' : 'tap id=open_form',
         );
         expect(text).toContain('assert id=name_input');
-        const again = await run('flow', 'run', flow);
+        const again = await run('run-flow', 'run', flow);
         expect(again.out).toContain('passed: 4 steps');
       },
       LONG_MS,
     );
 
     it('exports to Maestro, or names the step it has no form for', async () => {
-      const yaml = await call('flow', {
-        action: 'export',
-        file: cliFile,
-      });
+      const yaml = await call('run_flow', { action: 'export', file: cliFile });
       expect(yaml.text).toContain(`appId: "${APP}"`);
       expect(yaml.text).toContain('tapOn:');
-      const recorded = await raw('flow', { action: 'export', file });
+      const recorded = await raw('run_flow', { action: 'export', file });
       expect(recorded.error).toBe(true);
       expect(recorded.text).toMatch(/step \d+ \(line \d+, type\): .*whole field/);
     });
@@ -347,7 +344,7 @@ for (const { platform, serial, form } of targets)
       'replays the Android recording on the simulator',
       async () => {
         expect(androidRecording).toBeDefined();
-        const r = await call('flow', { action: 'run', file: androidRecording, params });
+        const r = await call('run_flow', { action: 'run', file: androidRecording, params });
         process.stderr.write(`--- the Android recording on iOS\n${r.text}\n---\n`);
         expect(r.text).toMatch(/^passed: \d+ steps$/m);
         await call('assert', { selector: { id: 'result' }, check: 'text', equals: 'Confirmed' });

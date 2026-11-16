@@ -105,7 +105,7 @@ describe('iOS simulators', () => {
     const home = (await t.textOf('screen')).text;
     const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
     expect(asked.text).toContain('answer it with alert');
-    const r = await t.textOf('alert', { answer: 'allow' });
+    const r = await t.textOf('answer_alert', { answer: 'allow' });
     expect(r.text).toContain('"Erlauben"');
     expect(t.device.permissionUp).toBe(false);
   });

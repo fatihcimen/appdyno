@@ -28,7 +28,7 @@ export const handoffDone = (serial: string, id: string) => writeState(doneFile(s
 export function handoffOps(ctx: ServerContext) {
   return [
     defineOp({
-      name: 'hand_off',
+      name: 'ask_person',
       title: 'Ask a person',
       description:
         'Asks your person to do what you cannot (Face ID, a passcode, a permission) and waits until they say done or, with no window, the screen changes. On this Mac: a banner and a sound in a window, else a sound and a macOS notification of reason; --silent: no sound, no notification.',

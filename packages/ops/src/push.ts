@@ -46,7 +46,7 @@ function payloadOf(text: string) {
 export function pushOps(ctx: ServerContext, { changing, afterChange }: Answers) {
   return [
     defineOp({
-      name: 'push',
+      name: 'send_push',
       title: 'Push notification',
       description:
         'Push notification, remote notification, Live Activity, rich notification, FCM, APNs, to the app. No type lists what this device takes, and how.',

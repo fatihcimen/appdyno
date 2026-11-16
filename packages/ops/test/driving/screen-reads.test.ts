@@ -16,8 +16,8 @@ describe('waiting on the device', () => {
     expect(r.text).toBe(
       'INVALID_ARGUMENT: timeoutMs: Too big: expected number to be <=15000\nhint: timeoutMs is at most 15000: change that and call again: nothing was done',
     );
-    const step = await call('steps', {
-      steps: [{ action: 'wait_for', selector: { text: 'L' }, timeoutMs: 20000 }],
+    const step = await call('run_steps', {
+      steps: [{ tool: 'wait_for', selector: { text: 'L' }, timeoutMs: 20000 }],
     });
     expect(step.text).toMatch(/\nhint: timeoutMs is at most 15000: change that and call again/);
   });

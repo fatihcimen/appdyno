@@ -103,7 +103,7 @@ export function windowSends(
   const pushes = async (named: string) => {
     const front = await ownFront();
     const app = named || front.app;
-    const { answer, data } = await call('push', 'push', app ? { app } : {});
+    const { answer, data } = await call('push', 'send_push', app ? { app } : {});
     // why a type cannot go, in a person's words where the pane has them: the op's are an agent's
     const types = (data?.types as { why?: string }[] | undefined)?.map((t) =>
       t.why ? { ...t, why: personal(t.why) } : t,
@@ -114,7 +114,7 @@ export function windowSends(
   /** What the pane filled in, as the op takes it: the op refuses what does not fit. */
   const push = async (args: unknown) => {
     const given = args && typeof args === 'object' ? (args as Record<string, unknown>) : {};
-    tell('push', (await call('push', 'push', given)).answer);
+    tell('push', (await call('push', 'send_push', given)).answer);
   };
 
   /**

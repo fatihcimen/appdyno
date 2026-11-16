@@ -175,14 +175,14 @@ describe('act and read', () => {
     'runs steps with one read at the end, and stops at a stale ref before doing anything',
     fakeTimed(async () => {
       const home = (await t.textOf('screen')).text;
-      const bad = await t.textOf('steps', { steps: [{ action: 'tap', ref: '@zz99' }] });
+      const bad = await t.textOf('run_steps', { steps: [{ tool: 'tap', ref: '@zz99' }] });
       expect(bad.error).toBe(true);
       expect(t.device.calls.filter((c) => c.name === 'act')).toHaveLength(0);
-      const r = await t.textOf('steps', {
+      const r = await t.textOf('run_steps', {
         steps: [
-          { action: 'tap', ref: refOf(home, 'Form') },
-          { action: 'type_text', text: 'Ali' },
-          { action: 'press_key', key: 'enter' },
+          { tool: 'tap', ref: refOf(home, 'Form') },
+          { tool: 'type_text', text: 'Ali' },
+          { tool: 'press_key', key: 'enter' },
         ],
       });
       expect(r.text.split('\n').slice(0, 3)).toEqual([
@@ -200,21 +200,21 @@ describe('act and read', () => {
 
   it('answers only a system permission prompt', async () => {
     const home = (await t.textOf('screen')).text;
-    const none = await t.textOf('alert', { answer: 'allow' });
+    const none = await t.textOf('answer_alert', { answer: 'allow' });
     expect(none.text).toContain('no system alert is open');
     const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
     expect(asked.text).toContain('answer it with alert');
-    const r = await t.textOf('alert', { answer: 'allow' });
+    const r = await t.textOf('answer_alert', { answer: 'allow' });
     expect(r.text).toContain('"Uygulamayı kullanırken"');
     expect(t.device.permissionUp).toBe(false);
   });
 
   it('sends a screenshot once per screen', async () => {
     await t.textOf('screen');
-    const r = await t.call('screenshot');
+    const r = await t.call('take_screenshot');
     expect(r.content.map((c) => c.type)).toEqual(['text', 'image']);
     expect(r.content[0]?.text).toContain('its pixel x,y is tapped at x × 2.348, y × 2.348');
-    const again = await t.textOf('screenshot');
+    const again = await t.textOf('take_screenshot');
     expect(again).toMatchObject({ error: true });
   });
 

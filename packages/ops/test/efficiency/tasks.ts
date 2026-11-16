@@ -37,7 +37,7 @@ async function reader(device: FakeDevice, app: string) {
   const { call, calls, client } = await clientOf(device, app);
   const words = client.getInstructions() ?? '';
   const readsFirst = words.includes('Read the screen first');
-  const together = words.includes('one steps call');
+  const together = words.includes('one run_steps call');
   const said: string[] = [];
   const say = async (tool: string, args: Record<string, unknown> = {}) => {
     const r = await call(tool, args);
@@ -61,13 +61,15 @@ async function reader(device: FakeDevice, app: string) {
     },
     /** Actions already known: one call, or one each; `then` waits for what takes time. */
     act: async (
-      steps: ({ action: string } & Record<string, unknown>)[],
+      steps: ({ tool: string } & Record<string, unknown>)[],
       then?: { selector: { text: string } },
     ) => {
       if (together)
-        return say('steps', { steps: then ? [...steps, { action: 'wait_for', ...then }] : steps });
+        return say('run_steps', {
+          steps: then ? [...steps, { tool: 'wait_for', ...then }] : steps,
+        });
       let last = { text: '', refused: false, hint: '' };
-      for (const { action, ...args } of steps) last = await say(action, args);
+      for (const { tool, ...args } of steps) last = await say(tool, args);
       // a tap whose result is not there yet says to wait for it
       return then && !last.text.includes(then.selector.text) ? say('wait_for', then) : last;
     },
@@ -83,8 +85,8 @@ async function reader(device: FakeDevice, app: string) {
 
 export type Task = { name: string; run: () => Promise<{ calls: Call[]; proof: boolean }> };
 
-const NAME = { action: 'type_text', selector: { text: 'Your name' }, text: 'Ada' };
-const PASSWORD = { action: 'type_text', selector: { text: 'Password' }, text: 'hunter2' };
+const NAME = { tool: 'type_text', selector: { text: 'Your name' }, text: 'Ada' };
+const PASSWORD = { tool: 'type_text', selector: { text: 'Password' }, text: 'hunter2' };
 
 /** The form of the fixture app: a result line comes `late` reads after Send. */
 const logIn = (late: number) => async () => {
@@ -104,7 +106,7 @@ const logIn = (late: number) => async () => {
   };
   const r = await reader(d, FIXTURE);
   await r.open();
-  await r.act([NAME, PASSWORD, { action: 'tap', selector: { text: 'Send' } }], {
+  await r.act([NAME, PASSWORD, { tool: 'tap', selector: { text: 'Send' } }], {
     selector: { text: 'Sent: Ada' },
   });
   return { calls: r.calls, proof: r.said.join('\n').includes('"Sent: Ada"') };
@@ -127,9 +129,7 @@ export const TASKS: Task[] = [
       };
       const r = await reader(d, FIXTURE);
       const screen = await r.open();
-      await r.act(
-        [35, 36, 37].map((n) => ({ action: 'tap', ref: refOf(screen, `Product ${n}$`) })),
-      );
+      await r.act([35, 36, 37].map((n) => ({ tool: 'tap', ref: refOf(screen, `Product ${n}$`) })));
       const all = r.said.join('\n');
       return {
         calls: r.calls,
@@ -153,8 +153,8 @@ export const TASKS: Task[] = [
       const row = { selector: { text: 'Dark theme' } };
       await r.touch(row);
       await r.act([
-        { action: 'scroll_to', ...row },
-        { action: 'tap', ...row },
+        { tool: 'scroll_to', ...row },
+        { tool: 'tap', ...row },
       ]);
       return { calls: r.calls, proof: must(r.said.at(-1), 'an answer').includes('Dark theme on') };
     },
@@ -205,15 +205,15 @@ export const TASKS: Task[] = [
     run: async () => {
       const file = join(mkdtempSync(join(stateDir(), 'efficiency-')), 'form.flow');
       const r = await reader(new FakeDevice(), 'dev.app');
-      await r.say('flow', { action: 'start' });
+      await r.say('run_flow', { action: 'record' });
       await r.open();
       await r.act([
-        { action: 'tap', selector: { text: 'Form' } },
-        { action: 'type_text', selector: { text: 'Adınız' }, text: 'Ada' },
-        { action: 'tap', selector: { text: 'Gönder' } },
+        { tool: 'tap', selector: { text: 'Form' } },
+        { tool: 'type_text', selector: { text: 'Adınız' }, text: 'Ada' },
+        { tool: 'tap', selector: { text: 'Gönder' } },
       ]);
-      await r.say('flow', { action: 'stop', file });
-      const ran = await r.say('flow', { action: 'run', file });
+      await r.say('run_flow', { action: 'stop', file });
+      const ran = await r.say('run_flow', { action: 'run', file });
       return { calls: r.calls, proof: !ran.refused && r.calls.every((c) => !c.refused) };
     },
   },

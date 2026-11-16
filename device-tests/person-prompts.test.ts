@@ -57,7 +57,7 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
       { timeout: 10_000, interval: 1_000 },
     );
     // a simulator's picture takes the look past the app, which is quick there: a phone's does not
-    expect(ok(await o.call('screenshot')).text).toContain('needs a person: Face ID');
+    expect(ok(await o.call('take_screenshot')).text).toContain('needs a person: Face ID');
     await passes();
     const r = await asks(o.call);
     expect(r.text).toContain('needs a person: Face ID');
@@ -120,7 +120,7 @@ describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {
     if (!enrolled()) return t.skip();
     const r = await asks(o.call);
     expect(r.text).toContain('needs a person: a fingerprint or a face');
-    expect(ok(await o.call('screenshot')).text).toContain('needs a person');
+    expect(ok(await o.call('take_screenshot')).text).toContain('needs a person');
     ok(await o.call('device_setting', { name: 'biometric', value: 'match' }));
     ok(
       await o.call('wait_for', {

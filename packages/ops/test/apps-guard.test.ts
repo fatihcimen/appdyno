@@ -242,7 +242,7 @@ describe('an input under an app allow list', () => {
       ['tap', { selector: { text: 'in com.google.android.apps.nexuslauncher' } }],
       ['swipe', { direction: 'up', x: 540, y: 1000 }],
       ['gesture', { kind: 'long_press', x: 540, y: 1000 }],
-      ['steps', { steps: [{ action: 'tap', x: 540, y: 1000 }] }],
+      ['run_steps', { steps: [{ tool: 'tap', x: 540, y: 1000 }] }],
       ['type_text', { text: 'settings' }],
       ['press_key', { key: 'enter' }],
     ] as const) {

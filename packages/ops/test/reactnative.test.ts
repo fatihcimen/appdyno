@@ -183,7 +183,7 @@ describe('react_native', () => {
       // the recording began in an earlier process, on the device a command line remembers
       const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-rn-')), 'session.json');
       const start = new ServerContext(DEFAULT_POLICY, [provider], { storage: { remember } });
-      await callerOf(start)('flow', { action: 'start' });
+      await callerOf(start)('run_flow', { action: 'record' });
       start.close();
       opens = 0;
 
@@ -192,7 +192,7 @@ describe('react_native', () => {
       await call('react_native', { action: 'targets', metro: metro.metro });
       await call('react_native', { action: 'reload', metro: metro.metro });
       expect(opens).toBe(0);
-      const stop = await call('flow', { action: 'stop' });
+      const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text.split('\n').filter((l) => l.startsWith('unrecorded'))).toEqual([
         'unrecorded "react_native reload"',
       ]);

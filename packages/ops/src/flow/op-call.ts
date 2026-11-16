@@ -49,7 +49,7 @@ function visualCall(st: FlowStep, at: StepPlace): Record<string, unknown> {
   };
 }
 
-/** A `mock` step's rule as `network` takes it: its line, a file it answers with found from the flow's folder. */
+/** A `mock` step's rule as `capture_network` takes it: its line, a file it answers with found from the flow's folder. */
 export function mockLine(st: FlowStep, at: Pick<StepPlace, 'file'>) {
   const body = st.args.body;
   const placed =
@@ -136,13 +136,13 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
     case 'set_location':
       return ['set_location', { lat: a.lat, lon: a.lon }];
     case 'alert':
-      return ['alert', { answer: a.answer }];
+      return ['answer_alert', { answer: a.answer }];
     case 'hide_keyboard':
       return ['keyboard', { action: 'dismiss' }];
     case 'screenshot':
       // a run again, a retry or a journey's next iteration takes the picture anew
       return [
-        'screenshot',
+        'take_screenshot',
         { file: join(at.shots, `${String(a.name)}.png`), overwrite: true, inline: false },
       ];
     case 'visual':
@@ -155,19 +155,19 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
     case 'mock': {
       // added to the rules there, and taken out when the run of its file ends
       if (a.request !== undefined)
-        return ['network', { action: 'mock', rules: [mockLine(st, at)], add: true }];
+        return ['capture_network', { action: 'mock', rules: [mockLine(st, at)], add: true }];
       // a file of answers is found from the flow's folder, as a rule's own file is
       const from =
         typeof a.from === 'string' && !/^\d+$/.test(a.from)
           ? resolve(dirname(st.file ?? at.file), a.from)
           : a.from;
-      return ['network', { action: 'mock', ...defined({ from, unmatched: a.unmatched }) }];
+      return ['capture_network', { action: 'mock', ...defined({ from, unmatched: a.unmatched }) }];
     }
     case 'network':
-      return ['network', { action: 'mock', strict: a.value !== 'off' }];
+      return ['capture_network', { action: 'mock', strict: a.value !== 'off' }];
     case 'request':
       return [
-        'network',
+        'capture_network',
         {
           action: 'check',
           ...defined({

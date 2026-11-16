@@ -60,11 +60,11 @@ describe('the network probe through its tool and a flow', () => {
 
   it('keeps bodies only when asked, and gives one request whole with its credentials hidden', async () => {
     const call = callerOf(context(['s3cr3t-pass']));
-    await call('network', { action: 'start', via: 'probe', bodies: true });
+    await call('capture_network', { action: 'start', via: 'probe', bodies: true });
     expect(probe.started).toEqual([{ app: 'dev.app', bodies: true }]);
     probe.entries = [POST, { ...POST, method: 'GET', url: 'https://api.test/x', status: 404 }];
     probe.details = { 0: DETAIL };
-    const list = await call('network', { action: 'read' });
+    const list = await call('capture_network', { action: 'read' });
     // the one refused first and whole, then each host once with its paths, a query by its names
     expect(list.text.split('\n')).toEqual([
       expect.stringMatching(/^2 of 2 from probe since .*; last id 1$/),
@@ -73,16 +73,20 @@ describe('the network probe through its tool and a flow', () => {
       'api.test:',
       '  0 POST /login?token 200 85 ms 31 B',
     ]);
-    expect((await call('network', { action: 'read', after: 0 })).text).toMatch(
+    expect((await call('capture_network', { action: 'read', after: 0 })).text).toMatch(
       /^1 of 1 from probe/,
     );
-    expect((await call('network', { action: 'read', after: 1 })).text).toMatch(
+    expect((await call('capture_network', { action: 'read', after: 1 })).text).toMatch(
       /^0 of 0 from probe/,
     );
     expect(list.text).toContain('bodies: read with id gives one request whole');
-    expect((await call('network', { action: 'read', status: '4xx' })).text).toMatch(/^1 of 1 /);
-    expect((await call('network', { action: 'read', method: 'post' })).text).toMatch(/^1 of 1 /);
-    const one = await call('network', { action: 'read', id: 0 });
+    expect((await call('capture_network', { action: 'read', status: '4xx' })).text).toMatch(
+      /^1 of 1 /,
+    );
+    expect((await call('capture_network', { action: 'read', method: 'post' })).text).toMatch(
+      /^1 of 1 /,
+    );
+    const one = await call('capture_network', { action: 'read', id: 0 });
     expect(one.text).toBe(
       [
         '0 POST https://api.test/login?token=••• 200 85 ms 31 B',
@@ -100,10 +104,12 @@ describe('the network probe through its tool and a flow', () => {
         '{"ok":true,"note":"•••"}',
       ].join('\n'),
     );
-    expect((await call('network', { action: 'read', id: 1 })).text).toContain(
+    expect((await call('capture_network', { action: 'read', id: 1 })).text).toContain(
       'its headers and bodies were not kept',
     );
-    expect((await refusal(call('network', { action: 'read', id: 7 }))).code).toBe('NOT_FOUND');
+    expect((await refusal(call('capture_network', { action: 'read', id: 7 }))).code).toBe(
+      'NOT_FOUND',
+    );
     // one that started and has not ended is no line of the list: it stands after it, and has its number
     probe.entries = [
       { ...POST, timings: TIMINGS },
@@ -115,16 +121,16 @@ describe('the network probe through its tool and a flow', () => {
         inFlight: true,
       },
     ];
-    const flying = await call('network', { action: 'read' });
+    const flying = await call('capture_network', { action: 'read' });
     expect(flying.text).toMatch(/^1 of 1 from probe/);
     expect(flying.text).toMatch(
       /\nin flight: 1 \(GET https:\/\/api\.test\/events\?token=••• 41 s\)$/,
     );
-    expect((await call('network', { action: 'read', id: 1 })).text).toBe(
+    expect((await call('capture_network', { action: 'read', id: 1 })).text).toBe(
       '1 GET https://api.test/events?token=••• in flight 41 s\nit has not ended: its headers and bodies are kept when it does',
     );
     // what the session measured, said as the probe's own
-    expect((await call('network', { action: 'read', id: 0 })).text.split('\n')[1]).toBe(
+    expect((await call('capture_network', { action: 'read', id: 0 })).text.split('\n')[1]).toBe(
       "h2, connection reused, wait 118 ms, receive 12 ms, 31 B on the wire, 192.0.2.7 (the probe's own connection, not the app's)",
     );
   });
@@ -144,14 +150,14 @@ describe('the network probe through its tool and a flow', () => {
 
   it('writes a HAR that hides what an answer hides, and reads it back', async () => {
     const call = callerOf(context(['s3cr3t-pass']));
-    await call('network', { action: 'start', via: 'probe', bodies: true });
+    await call('capture_network', { action: 'start', via: 'probe', bodies: true });
     probe.entries = [
       { ...POST, timings: TIMINGS },
       { ...POST, how: 'mocked', rule: 'abc' },
       { ...POST, inFlight: true },
     ];
     probe.details = { 0: DETAIL };
-    const saved = await call('network', { action: 'stop', save: 'out/capture' });
+    const saved = await call('capture_network', { action: 'stop', save: 'out/capture' });
     const file = join(dir, 'appdyno-network/out/capture.har');
     expect(saved.text).toContain(
       `saved 2 requests as HAR 1.2 in ${file}; it holds 1 response body: keep it out of git`,
@@ -183,19 +189,19 @@ describe('the network probe through its tool and a flow', () => {
       timings: { send: 0, wait: 85, receive: 0 },
     });
     expect(har.log.entries).toHaveLength(2);
-    const back = await call('network', { action: 'read', har: file });
+    const back = await call('capture_network', { action: 'read', har: file });
     expect(back.text).toMatch(/^2 of 2 from/);
     expect(back.text).toContain('api.test:\n  POST /login?token ×2 200 median 85 ms');
     // outside the folders this server writes to
-    await call('network', { action: 'start', via: 'probe' });
-    const out = await refusal(call('network', { action: 'read', save: '/tmp/x.har' }));
+    await call('capture_network', { action: 'start', via: 'probe' });
+    const out = await refusal(call('capture_network', { action: 'read', save: '/tmp/x.har' }));
     expect(out.code).toBe('POLICY_DENIED');
   });
 
   it('sets, adds to, lists and clears rules, starting a capture where none runs', async () => {
     const call = callerOf(context());
     writeFileSync(join(dir, 'items.json'), '[]');
-    const set = await call('network', {
+    const set = await call('capture_network', {
       action: 'mock',
       rules: ['api.test/items* body=@items.json', 'api.test/pay fail=timeout off'],
     });
@@ -206,9 +212,9 @@ describe('the network probe through its tool and a flow', () => {
     ]);
     const first = probe.told?.rules[0]?.id;
     probe.entries = [{ ...POST, how: 'mocked', rule: String(first) }];
-    await call('network', { action: 'mock', rules: ['*.test/new status=204'], add: true });
+    await call('capture_network', { action: 'mock', rules: ['*.test/new status=204'], add: true });
     expect(probe.started).toHaveLength(1);
-    const listed = await call('network', { action: 'mock' });
+    const listed = await call('capture_network', { action: 'mock' });
     expect(listed.text).toBe(
       [
         'rule 1: "api.test/items*" body=@items.json (1 taken)',
@@ -216,15 +222,16 @@ describe('the network probe through its tool and a flow', () => {
         'rule 3: "*.test/new" status=204 (0 taken)',
       ].join('\n'),
     );
-    expect((await call('network', { action: 'read' })).text).toMatch(
+    expect((await call('capture_network', { action: 'read' })).text).toMatch(
       /\napi\.test:\n {2}0 POST \/login\?token 200 85 ms 31 B \[mocked\]\nrule 1: .*\nrule 2 .*\nrule 3: /,
     );
-    await call('network', { action: 'mock', rules: [] });
+    await call('capture_network', { action: 'mock', rules: [] });
     expect(probe.told?.rules).toEqual([]);
-    expect((await call('network', { action: 'mock' })).text).toBe('no rule is set');
+    expect((await call('capture_network', { action: 'mock' })).text).toBe('no rule is set');
     // a file outside the server's folder, one that is not there, and what is no rule: nothing is told
     const told = probe.controls.length;
-    const rule = (line: string) => refusal(call('network', { action: 'mock', rules: [line] }));
+    const rule = (line: string) =>
+      refusal(call('capture_network', { action: 'mock', rules: [line] }));
     expect((await rule('a.test body=@/etc/hosts')).code).toBe('POLICY_DENIED');
     expect((await rule('a.test body=@none.json')).code).toBe('NOT_FOUND');
     expect((await rule('a.test')).message).toMatch(/^not a rule: a\.test: say what it does/);
@@ -234,7 +241,7 @@ describe('the network probe through its tool and a flow', () => {
   it('sends requests only to this Mac or its own network, unless the person listed the host', async () => {
     const call = callerOf(context());
     const to = (host: string) =>
-      call('network', { action: 'mock', rules: [`api.test to=${host}`] });
+      call('capture_network', { action: 'mock', rules: [`api.test to=${host}`] });
     for (const near of [
       'localhost:8080',
       '127.0.0.1:9',
@@ -262,21 +269,24 @@ describe('the network probe through its tool and a flow', () => {
         },
       ),
     );
-    await listed('network', { action: 'mock', rules: ['api.test to=staging.example.com'] });
+    await listed('capture_network', { action: 'mock', rules: ['api.test to=staging.example.com'] });
     expect(probe.told?.rules[0]?.to).toEqual({ host: 'staging.example.com' });
   });
 
   it('slows by a name, a number or its parts, and stop ends it', async () => {
     const call = callerOf(context());
-    const slow = await call('network', { action: 'throttle', throttle: 'slow' });
+    const slow = await call('capture_network', { action: 'throttle', throttle: 'slow' });
     expect(slow.text).toMatch(/throttle slow: for only the app's URLSession requests/);
     expect(probe.told?.throttle).toEqual({ delayMs: [40, 100], down: 29_600, up: 14_800, loss: 0 });
-    await call('network', { action: 'throttle', throttle: 'delayMs=300 down=50000 loss=5' });
+    await call('capture_network', {
+      action: 'throttle',
+      throttle: 'delayMs=300 down=50000 loss=5',
+    });
     expect(probe.told?.throttle).toEqual({ delayMs: [300, 300], down: 50_000, up: 0, loss: 5 });
-    expect((await call('network', { action: 'throttle' })).data.throttle).toBe(
+    expect((await call('capture_network', { action: 'throttle' })).data.throttle).toBe(
       'delayMs=300 down=50000 loss=5',
     );
-    await call('network', { action: 'throttle', throttle: 'full' });
+    await call('capture_network', { action: 'throttle', throttle: 'full' });
     expect(probe.told?.throttle).toBeUndefined();
     expect(throttleOf('30000')).toEqual({ delayMs: [0, 0], down: 30_000, up: 0, loss: 0 });
     expect(throttleOf('lte')?.down).toBe(21_625_000);
@@ -284,7 +294,7 @@ describe('the network probe through its tool and a flow', () => {
     expect(throttleOf('offline')).toEqual({ delayMs: [0, 0], down: 0, up: 0, loss: 100 });
     for (const wrong of ['warp', 'loss=101', 'down=', 'delayMs=-1'])
       expect(() => throttleOf(wrong)).toThrow(/throttle is full, slow, gsm/);
-    await call('network', { action: 'stop' });
+    await call('capture_network', { action: 'stop' });
     expect(probe.stopped).toBe(1);
     expect(captures.read(device.serial)).toBeUndefined();
   });
@@ -292,7 +302,7 @@ describe('the network probe through its tool and a flow', () => {
   it('refuses rules and a throttle on a device with no probe, saying what it has', async () => {
     Object.assign(device, { network: undefined });
     const call = callerOf(context());
-    const e = await refusal(call('network', { action: 'throttle', throttle: 'slow' }));
+    const e = await refusal(call('capture_network', { action: 'throttle', throttle: 'slow' }));
     expect(e.code).toBe('UNSUPPORTED');
     expect(e.hint).toMatch(/an Android device is slowed by device_setting network/);
   });
@@ -302,7 +312,7 @@ describe('the network probe through its tool and a flow', () => {
   it('holds a mock step’s rule while its file runs, a file found from the flow’s folder, and takes it out after', async () => {
     const ctx = context();
     const call = callerOf(ctx);
-    await call('network', { action: 'mock', rules: ['api.test/mine status=500'] });
+    await call('capture_network', { action: 'mock', rules: ['api.test/mine status=500'] });
     const file = flowFile('mock api.test/items body=@items.json\nmock api.test/pay fail=offline');
     writeFileSync(join(dir, 'flows', 'items.json'), '[]');
     const during: number[] = [];
@@ -331,12 +341,12 @@ describe('the network probe through its tool and a flow', () => {
   it('records each rule set as a mock step, and what has no step as unrecorded', async () => {
     const call = callerOf(context());
     const { text } = await recorded(call, async () => {
-      await call('network', { action: 'mock', rules: ['api.test/pay fail=offline'] });
-      await call('network', { action: 'mock' });
-      await call('network', { action: 'throttle', throttle: 'slow' });
+      await call('capture_network', { action: 'mock', rules: ['api.test/pay fail=offline'] });
+      await call('capture_network', { action: 'mock' });
+      await call('capture_network', { action: 'throttle', throttle: 'slow' });
     });
     expect(text).toContain('mock "api.test/pay" fail=offline\n');
-    expect(text).toContain('unrecorded "network throttle"');
+    expect(text).toContain('unrecorded "capture_network throttle"');
     expect(text.match(/^mock /gm)).toHaveLength(1);
   });
 });

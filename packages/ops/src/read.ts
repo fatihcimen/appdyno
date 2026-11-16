@@ -296,7 +296,7 @@ export function readOps(
       },
     }),
     defineOp({
-      name: 'screenshot',
+      name: 'take_screenshot',
       title: 'Screenshot',
       description: `An image of the screen (at most ${SHOT_PX} px unless width) and its scale to tap units. Tree first, then watchMs (no image: what moved, way, speed, jumps; not intent), then video. strip: 8 timed frames. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size to a .png, .jpg or folder, shown too unless inline: false; overwrite replaces.`,
       input: z

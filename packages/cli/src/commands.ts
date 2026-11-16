@@ -182,7 +182,7 @@ const FLOW_VALUES = new Set([
   '--out',
 ]);
 
-/** `flow run a.flow --from 3 --param A=1` as the op's flags: action, file, then the rest. */
+/** `run-flow run a.flow --from 3 --param A=1` as the op's flags: action, file, then the rest. */
 export function flowWords(argv: string[]): string[] {
   const out: string[] = [];
   const params: string[] = [];
@@ -215,7 +215,7 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
         }
         let call;
         try {
-          call = parse(op, op.name === 'flow' ? flowWords(argv) : argv);
+          call = parse(op, op.name === 'run_flow' ? flowWords(argv) : argv);
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
           io.err(`${name}: ${e.message}`);

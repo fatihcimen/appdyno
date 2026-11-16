@@ -232,8 +232,8 @@ describe('failed answers', () => {
       noteInAnswer('fetched a tool');
       return real();
     };
-    const r = await call('steps', {
-      steps: [{ action: 'screenshot' }, { action: 'screenshot' }],
+    const r = await call('run_steps', {
+      steps: [{ tool: 'take_screenshot' }, { tool: 'take_screenshot' }],
     });
     expect(r.isError).toBeUndefined();
     expect(r.text.match(/fetched a tool/g)).toHaveLength(1);
@@ -250,10 +250,10 @@ describe('failed answers', () => {
       if (++acts === 2) throw new DeviceError('TIMEOUT', 'act did not answer');
       return real(action, opts);
     };
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', x: 5, y: 2390 },
-        { action: 'tap', x: 6, y: 2390 },
+        { tool: 'tap', x: 5, y: 2390 },
+        { tool: 'tap', x: 6, y: 2390 },
       ],
     });
     expect(r.isError).toBe(true);
@@ -265,7 +265,10 @@ describe('failed answers', () => {
     expect(r.text).toContain('\nscreen unchanged (3 elements)\n');
     // and whole where the call asked for the whole screen
     acts = 1;
-    const whole = await call('steps', { steps: [{ action: 'tap', x: 6, y: 2390 }], read: 'full' });
+    const whole = await call('run_steps', {
+      steps: [{ tool: 'tap', x: 6, y: 2390 }],
+      read: 'full',
+    });
     expect(whole.text).toMatch(
       /^TIMEOUT: 1\. tap failed[^\n]+\nforeground: dev\.app\n3 elements: [^\n]+\n[^]*"Form"/,
     );
@@ -306,7 +309,7 @@ describe('failed answers', () => {
     expect(await code('clipboard', { text: 'a s3cr3t b' })).toBe('POLICY_DENIED');
     expect(await code('logs')).toBe('UNSUPPORTED');
     expect(await code('crashes')).toBe('UNSUPPORTED');
-    expect(await code('flow', { action: 'stop' })).toBe('NOT_FOUND');
+    expect(await code('run_flow', { action: 'stop' })).toBe('NOT_FOUND');
   });
 });
 

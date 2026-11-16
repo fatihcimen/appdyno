@@ -220,7 +220,7 @@ describe('device conditions', () => {
     await ctx.use('B');
     await call('device_setting', { name: 'dark_mode', value: 'on' });
     await call('device_setting', { name: 'text_size', value: '1.3' });
-    const r = await call('simulator', { action: 'shutdown', name: 'B' });
+    const r = await call('manage_simulator', { action: 'shutdown', name: 'B' });
     expect(r.text).toBe(
       'shut down two: the session on two ended, and what its apps held with it; what the session changed went back first: text_size: 1.0; dark_mode: off',
     );
@@ -230,7 +230,7 @@ describe('device conditions', () => {
     await ctx.use('B');
     await call('device_setting', { name: 'dark_mode', value: 'on' });
     settings.failing = true;
-    expect((await call('simulator', { action: 'shutdown', name: 'B' })).text).toMatch(
+    expect((await call('manage_simulator', { action: 'shutdown', name: 'B' })).text).toMatch(
       /; could not put back dark_mode \(was no\): broke$/,
     );
   });
@@ -285,11 +285,13 @@ describe('device conditions', () => {
     const net = await call('device_setting', { name: 'network', value: 'slow' });
     expect(net.data.code).toBe('UNSUPPORTED');
     expect(net.text).toContain('a phone has no network shaping');
-    expect((await call('push')).text).toBe('alert: by hand\ntapped: no: no hand\nwidgets: by APNs');
-    await call('push', { app: 'dev.other' });
+    expect((await call('send_push')).text).toBe(
+      'alert: by hand\ntapped: no: no hand\nwidgets: by APNs',
+    );
+    await call('send_push', { app: 'dev.other' });
     // the session's app, then the one named: a route may depend on the app's build
     expect(settings.routesFor).toEqual(['dev.app', 'dev.other']);
-    const pushed = await call('push', {
+    const pushed = await call('send_push', {
       type: 'alert',
       title: 'T',
       data: { k: 'v' },
@@ -297,13 +299,13 @@ describe('device conditions', () => {
     });
     expect(pushed.text).toBe('pushed to dev.app');
     expect(settings.pushed).toEqual([['dev.app', { type: 'alert', title: 'T', data: { k: 'v' } }]]);
-    expect((await call('push', { type: 'tapped' })).text).toBe(
+    expect((await call('send_push', { type: 'tapped' })).text).toBe(
       'UNSUPPORTED: no hand\nhint: type alert, widgets still work here',
     );
-    expect((await call('push', { type: 'widgets', title: 'T' })).text).toBe(
+    expect((await call('send_push', { type: 'widgets', title: 'T' })).text).toBe(
       'INVALID_ARGUMENT: widgets here takes payload alone: not title',
     );
-    expect((await call('push', { type: 'loud' })).text).toMatch(
+    expect((await call('send_push', { type: 'loud' })).text).toMatch(
       /^INVALID_ARGUMENT: type: alert, background, .*, not loud$/,
     );
     for (const [payload, why] of [
@@ -311,7 +313,7 @@ describe('device conditions', () => {
       ['{', 'payload is JSON: an object'],
       [`{"a":"${'x'.repeat(4_100)}"}`, 'a payload is 4096 bytes at most'],
     ] as const)
-      expect((await call('push', { type: 'alert', payload })).text).toBe(
+      expect((await call('send_push', { type: 'alert', payload })).text).toBe(
         `INVALID_ARGUMENT: ${why}`,
       );
     const b = await call('device_setting', { name: 'biometric', value: 'match' });
@@ -326,7 +328,7 @@ describe('device conditions', () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings, events: settings });
     const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
-    expect((await call('push', { app: 'dev.other' })).data.code).toBe('POLICY_DENIED');
+    expect((await call('send_push', { app: 'dev.other' })).data.code).toBe('POLICY_DENIED');
     expect(settings.routesFor).toEqual([]);
   });
 
@@ -334,21 +336,23 @@ describe('device conditions', () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings, events: settings });
     const { call } = await connect(d);
-    const sent = await call('push', { title: 'Order 42 shipped', read: 'none' });
+    const sent = await call('send_push', { title: 'Order 42 shipped', read: 'none' });
     expect(sent.text).toBe('pushed to dev.app (as alert: no type was given)');
     expect(settings.pushed).toEqual([['dev.app', { type: 'alert', title: 'Order 42 shipped' }]]);
     // what no alert takes with no type is refused, naming the types that go
-    const data = await call('push', { data: { k: 'v' } });
+    const data = await call('send_push', { data: { k: 'v' } });
     expect(data.text).toBe(
       'INVALID_ARGUMENT: data with no type: give one, as only a title or body goes as alert by itself\nhint: type alert, widgets still work here',
     );
-    expect((await call('push')).text).toBe('alert: by hand\ntapped: no: no hand\nwidgets: by APNs');
+    expect((await call('send_push')).text).toBe(
+      'alert: by hand\ntapped: no: no hand\nwidgets: by APNs',
+    );
     settings.pushRoutes = () =>
       Promise.resolve([
         { type: 'alert', why: 'the app has no Firebase Messaging' },
         { type: 'background', route: 'by hand', fields: ['data'], template: '{}' },
       ]);
-    expect((await call('push', { body: 'Order 42 shipped' })).text).toBe(
+    expect((await call('send_push', { body: 'Order 42 shipped' })).text).toBe(
       'UNSUPPORTED: a title or body with no type goes as alert, and alert cannot go here: the app has no Firebase Messaging\nhint: type background still works here',
     );
     expect(settings.pushed).toHaveLength(1);

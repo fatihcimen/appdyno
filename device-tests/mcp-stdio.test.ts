@@ -100,7 +100,7 @@ for (const revision of REVISIONS)
         const after = await call('screen');
         expect(after.text).not.toContain('gizli-kod-9911');
         expect(after.text).toContain('•••');
-        const shot = await call('screenshot');
+        const shot = await call('take_screenshot');
         expect(shot.content.map((c) => c.type)).toEqual(['text', 'image']);
         expect(stderr.join('')).not.toContain('gizli-kod-9911');
       });

@@ -130,14 +130,14 @@ describe('what did not happen is no success', () => {
   it('and so does a steps call that fails, which shows the screen', async () => {
     const call = callerOf(contextOf(new FakeDevice()));
     const waited = await refusal(
-      call('steps', {
-        steps: [{ action: 'wait_for', selector: { text: 'Never' }, timeoutMs: 300 }],
+      call('run_steps', {
+        steps: [{ tool: 'wait_for', selector: { text: 'Never' }, timeoutMs: 300 }],
       }),
     );
     expect(waited.message).toMatch(/\nforeground: dev\.app\n3 elements: /);
     expect(waited.hint).toBe('call again to wait longer');
     const missed = await refusal(
-      call('steps', { steps: [{ action: 'tap', selector: { text: 'Never' } }] }),
+      call('run_steps', { steps: [{ tool: 'tap', selector: { text: 'Never' } }] }),
     );
     expect(missed.hint).toBe(
       'the screen now is above; use scroll_to if it may be further along a list',
@@ -158,7 +158,7 @@ describe('what did not happen is no success', () => {
 
   it('an answer to no alert refuses, and touched nothing', async () => {
     const device = new FakeDevice();
-    const r = await asked(device, 'alert', { answer: 'allow' });
+    const r = await asked(device, 'answer_alert', { answer: 'allow' });
     expect(r.isError).toBe(true);
     expect(r.structuredContent).toMatchObject({ code: 'NOT_FOUND', dispatched: false });
     expect(r.content[0]?.text).toContain('no system alert is open');
@@ -166,7 +166,7 @@ describe('what did not happen is no success', () => {
   });
 
   it('asking whether an alert is open is no refusal', async () => {
-    const r = await asked(new FakeDevice(), 'alert', {});
+    const r = await asked(new FakeDevice(), 'answer_alert', {});
     expect(r.isError).toBeFalsy();
     expect(r.content[0]?.text).toContain('no system alert is open');
   });
@@ -176,10 +176,10 @@ describe('what did not happen is no success', () => {
     fakeTimed(async () => {
       const device = new FakeDevice();
       const e = await refusal(
-        callerOf(contextOf(device))('steps', {
+        callerOf(contextOf(device))('run_steps', {
           steps: [
-            { action: 'alert', answer: 'allow' },
-            { action: 'press_key', key: 'back' },
+            { tool: 'answer_alert', answer: 'allow' },
+            { tool: 'press_key', key: 'back' },
           ],
         }),
       );
@@ -281,8 +281,8 @@ describe('a failed action says whether its touch went out', () => {
       const device = new FakeDevice();
       const ctx = contextOf(device);
       const e = await refusal(
-        callerOf(ctx)('steps', {
-          steps: [{ action: 'tap', selector: { text: 'Nothing like it' } }],
+        callerOf(ctx)('run_steps', {
+          steps: [{ tool: 'tap', selector: { text: 'Nothing like it' } }],
         }),
       );
       expect(e.dispatched).toBe(false);

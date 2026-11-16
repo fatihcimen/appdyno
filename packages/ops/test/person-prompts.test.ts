@@ -36,13 +36,13 @@ describe('a prompt over the app that no read of it has', () => {
     const { call, looks } = await connect(['Face ID']);
     expect(await call('screen')).toContain('needs a person: Face ID');
     const before = looks();
-    expect(await call('screenshot')).toContain('image');
+    expect(await call('take_screenshot')).toContain('image');
     expect(looks()).toBe(before);
   });
 
   it("is said with a simulator's picture too, where the look past the app costs no seconds", async () => {
     const { call, looks } = await connect(['Face ID'], true);
-    expect(await call('screenshot')).toContain('needs a person: Face ID');
+    expect(await call('take_screenshot')).toContain('needs a person: Face ID');
     expect(looks()).toBe(1);
   });
 

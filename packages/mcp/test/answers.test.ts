@@ -56,7 +56,7 @@ it('gives steps and a tap their text once, through a client', async () => {
   const form = must(/(@[a-z0-9-]+) \w+ "Form"/.exec(home)?.[1], 'the ref of Form');
   for (const r of [
     await call('tap', { ref: form, read: 'none' }),
-    await call('steps', { steps: [{ action: 'press_key', key: 'back' }], read: 'none' }),
+    await call('run_steps', { steps: [{ tool: 'press_key', key: 'back' }], read: 'none' }),
   ]) {
     expect(r.structuredContent?.text).toBe(r.content.map((c) => c.text).join('\n'));
     expect(r.structuredContent).not.toHaveProperty('done');

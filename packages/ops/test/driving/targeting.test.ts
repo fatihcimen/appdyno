@@ -226,7 +226,7 @@ describe('targeting', () => {
       const { call } = await connect(d);
       await call('screen');
       d.permissionUp = true;
-      const r = await call('steps', { steps: [{ action: 'tap', selector: ALLOW }] });
+      const r = await call('run_steps', { steps: [{ tool: 'tap', selector: ALLOW }] });
       expect(r.error).toBe(false);
       expect(d.permissionUp).toBe(false);
     });

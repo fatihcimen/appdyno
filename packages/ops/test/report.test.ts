@@ -163,22 +163,24 @@ describe('report', () => {
       app: 'dev.app',
       selector: { text: 'Form' },
     });
-    await call('steps', {
+    await call('run_steps', {
       steps: [
-        { action: 'wait_for', selector: { text: 'Form' }, timeoutMs: 300 },
-        { action: 'type_text', text: 'hidden-step', x: 5, y: 5 },
+        { tool: 'wait_for', selector: { text: 'Form' }, timeoutMs: 300 },
+        { tool: 'type_text', text: 'hidden-step', x: 5, y: 5 },
       ],
     });
-    await call('flow', { action: 'run', file: '/no/such.flow', params: ['A=hidden-param'] }).catch(
-      () => undefined,
-    );
+    await call('run_flow', {
+      action: 'run',
+      file: '/no/such.flow',
+      params: ['A=hidden-param'],
+    }).catch(() => undefined);
     await made(READ).handler({ text: 'on the screen' });
     await call('report', { action: 'stop' });
     const journal = readFileSync(join(dir, 'steps.jsonl'), 'utf8');
     for (const typed of ['hidden-words', 'hidden-deep', 'hidden-step', 'hidden-param'])
       expect(journal).not.toContain(typed);
     expect(journal).toContain('(12 characters)');
-    for (const named of ['dev.app', '"text":"Form"', 'on the screen', '"action":"wait_for"'])
+    for (const named of ['dev.app', '"text":"Form"', 'on the screen', '"tool":"wait_for"'])
       expect(journal).toContain(named);
   });
 

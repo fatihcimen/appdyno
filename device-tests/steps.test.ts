@@ -25,15 +25,15 @@ function stepsOf(get: () => Call) {
     await call('terminate_app');
     ok(await call('launch_app'));
     const r = ok(
-      await call('steps', {
+      await call('run_steps', {
         steps: [
-          { action: 'screenshot' },
-          { action: 'tap', selector: { text: 'Form' }, read: 'diff' },
-          { action: 'wait_for', selector: { id: 'name_input' } },
-          { action: 'type_text', selector: { id: 'name_input' }, text: 'Ali' },
-          { action: 'find', selector: { id: 'name_input' } },
-          { action: 'screenshot' },
-          { action: 'device_info' },
+          { tool: 'take_screenshot' },
+          { tool: 'tap', selector: { text: 'Form' }, read: 'diff' },
+          { tool: 'wait_for', selector: { id: 'name_input' } },
+          { tool: 'type_text', selector: { id: 'name_input' }, text: 'Ali' },
+          { tool: 'find', selector: { id: 'name_input' } },
+          { tool: 'take_screenshot' },
+          { tool: 'device_info' },
         ],
       }),
     );
@@ -50,10 +50,10 @@ function stepsOf(get: () => Call) {
     ok(await call('open_link', { url: 'appdyno-fixture://open/form' }));
     const started = Date.now();
     const r = ok(
-      await call('steps', {
+      await call('run_steps', {
         steps: [
-          { action: 'tap', selector: { id: 'name_input' } },
-          ...Array.from({ length: 29 }, (_, i) => ({ action: 'press_key', key: `${i % 10}` })),
+          { tool: 'tap', selector: { id: 'name_input' } },
+          ...Array.from({ length: 29 }, (_, i) => ({ tool: 'press_key', key: `${i % 10}` })),
         ],
       }),
     );

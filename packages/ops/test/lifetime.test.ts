@@ -528,7 +528,7 @@ describe('what a process leaves running', () => {
     const device = equipped();
     const { ctx, call } = connect(device);
     await call('record', { action: 'start', file: join(tmpdir(), 'appdyno-own.mp4') });
-    await call('network', { action: 'start', via: 'bytes' });
+    await call('capture_network', { action: 'start', via: 'bytes' });
     expect(await ctx.end()).toEqual([]);
     expect(stops.recording).toHaveBeenCalledOnce();
     expect(stops.network).toHaveBeenCalledOnce();
@@ -560,7 +560,7 @@ describe('a flow recording', () => {
 
   it('a dead process left is stopped with its steps kept', async () => {
     const device = new FakeDevice();
-    await connect(device).call('flow', { action: 'start' });
+    await connect(device).call('run_flow', { action: 'record' });
     expect(recording(device.serial).owner?.pid).toBe(process.pid);
     const left = {
       ...recording(device.serial),
@@ -579,7 +579,7 @@ describe('a flow recording', () => {
     const device = new FakeDevice();
     const other = liveProcess();
     try {
-      await connect(device).call('flow', { action: 'start' });
+      await connect(device).call('run_flow', { action: 'record' });
       leave('recordings', device.serial, { ...recording(device.serial), owner: other.owner });
       const { ctx, call } = connect(device);
       await call('use_device', { device: device.serial });
@@ -593,7 +593,7 @@ describe('a flow recording', () => {
   it('a command line started has no owner, and goes on across its commands', async () => {
     const device = new FakeDevice();
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
-    await connect(device, { storage: { remember } }).call('flow', { action: 'start' });
+    await connect(device, { storage: { remember } }).call('run_flow', { action: 'record' });
     expect(recording(device.serial).owner).toBeUndefined();
     const { ctx, call } = connect(device);
     await call('use_device', { device: device.serial });

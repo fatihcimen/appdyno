@@ -52,7 +52,7 @@ describe('logs', () => {
       push: () => slowly(() => Promise.resolve('pushed')),
     } as unknown as Device['events'];
     const { call } = await connect(device);
-    await call('push', { type: 'background', data: { orderId: '43' }, read: 'none' });
+    await call('send_push', { type: 'background', data: { orderId: '43' }, read: 'none' });
     await call('logs');
     expect(device.logAsked?.since).toBeLessThanOrEqual(reached);
     await call('screen');
@@ -460,9 +460,9 @@ describe('crashes', () => {
     expect(asked).toBe(1);
     device.crashReports = [];
     // a batch's steps that read nothing take it from their answers too
-    const tap = { action: 'tap', x: 5, y: 2390 };
+    const tap = { tool: 'tap', x: 5, y: 2390 };
     device.calls = [];
-    expect((await call('steps', { steps: [tap, tap, tap] })).isError).toBeFalsy();
+    expect((await call('run_steps', { steps: [tap, tap, tap] })).isError).toBeFalsy();
     const named = device.calls
       .filter((c) => c.name === 'act')
       .map((c) => (c.args[1] as { pidOf?: string }).pidOf);

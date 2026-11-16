@@ -37,7 +37,7 @@ function watchOf(get: () => Call, ctx: () => ServerContext, serial: string) {
   const watched = async (screen: string) => {
     await open(screen);
     const at = Date.now();
-    const { text } = ok(await call('screenshot', { watchMs: WATCH_MS }));
+    const { text } = ok(await call('take_screenshot', { watchMs: WATCH_MS }));
     console.log(`WATCH ${screen} in ${Date.now() - at} ms: ${text.replace(/\n/g, ' | ')}`);
     return text;
   };
@@ -60,7 +60,7 @@ function watchOf(get: () => Call, ctx: () => ServerContext, serial: string) {
 
   it('gives a film strip of timed frames on request', async () => {
     await open('marquee');
-    const r = ok(await call('screenshot', { watchMs: 2_000, strip: true }));
+    const r = ok(await call('take_screenshot', { watchMs: 2_000, strip: true }));
     expect(r.text).toMatch(/frames at (\d\.\d, ){3,}/);
   });
 
@@ -82,7 +82,7 @@ function watchOf(get: () => Call, ctx: () => ServerContext, serial: string) {
       });
       expect(liveMirror(serial)).toBeDefined();
       await open('marquee');
-      expect(ok(await call('screenshot', { watchMs: WATCH_MS })).text).toContain('moves left');
+      expect(ok(await call('take_screenshot', { watchMs: WATCH_MS })).text).toContain('moves left');
     } finally {
       await parent.stopAll('the test is over');
     }

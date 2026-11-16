@@ -177,26 +177,26 @@ describe('a turn of the screen', () => {
     const d = new Landscape();
     Object.defineProperty(d, 'mirror', { value: {} });
     const { call } = await connect(d);
-    expect((await call('screenshot')).text).toMatch(
+    expect((await call('take_screenshot')).text).toMatch(
       /^image 800x360 px; its pixel x,y is tapped at x × 3\.000, y × 3\.000/,
     );
-    const asked = await call('screenshot', { width: 600 });
+    const asked = await call('take_screenshot', { width: 600 });
     expect([asked.text.split('\n')[0], asked.data.width, asked.data.scale]).toEqual([
       'image 600x270 px; its pixel x,y is tapped at x × 4.000, y × 4.000',
       600,
       4,
     ]);
-    expect((await call('screenshot', { points: true })).text).toMatch(
+    expect((await call('take_screenshot', { points: true })).text).toMatch(
       /^image 2400x1080 px; a pixel of it is a tap unit/,
     );
     expect(d.asked).toEqual([800, 600, 2400]);
     const file = join(dir, 'full.png');
-    expect((await call('screenshot', { file, inline: false })).text).toBe(
+    expect((await call('take_screenshot', { file, inline: false })).text).toBe(
       `saved ${file} (2400x1080 px; a pixel of it is a tap unit)`,
     );
     // a file as wide as asked too, not at full size
     const narrow = join(dir, 'narrow.png');
-    expect((await call('screenshot', { file: narrow, width: 600, inline: false })).text).toBe(
+    expect((await call('take_screenshot', { file: narrow, width: 600, inline: false })).text).toBe(
       `saved ${narrow} (600x270 px; its pixel x,y is tapped at x × 4.000, y × 4.000)`,
     );
     const info = await call('device_info');
@@ -212,7 +212,7 @@ describe('a turn of the screen', () => {
       const d = new Turning();
       const { call } = await connect(d);
       await call('set_orientation', { orientation: 'landscape_left', read: 'none' });
-      const shot = await call('screenshot');
+      const shot = await call('take_screenshot');
       expect(shot.text).toMatch(
         /^image 460x1024 px; the screen stands turned from it, 2400x1080 in tap units/,
       );

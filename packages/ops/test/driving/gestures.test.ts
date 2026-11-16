@@ -276,10 +276,10 @@ describe('gestures, keys, clipboard', () => {
         return shot();
       },
     });
-    await call('screenshot', { points: true });
-    await call('screenshot');
-    await call('screenshot', { width: 540 });
-    await call('screenshot', { width: 8_000 });
+    await call('take_screenshot', { points: true });
+    await call('take_screenshot');
+    await call('take_screenshot', { width: 540 });
+    await call('take_screenshot', { width: 8_000 });
     expect(asked).toMatchObject([
       { maxPx: 2400 },
       { maxPx: 800 },
@@ -451,15 +451,15 @@ describe('gestures, keys, clipboard', () => {
     Object.defineProperty(d, 'mirror', { value: {} });
     const { call } = await connect(d);
     const file = join(dir, 'a.png');
-    expect((await call('screenshot', { file })).text).toContain(`saved ${file}`);
+    expect((await call('take_screenshot', { file })).text).toContain(`saved ${file}`);
     expect(readFileSync(file)).toEqual(Buffer.from([1, 2, 3]));
-    const again = await call('screenshot', { file });
+    const again = await call('take_screenshot', { file });
     expect(again.error).toBe(true);
     expect(again.text).toContain('is there already');
-    expect((await call('screenshot', { file, overwrite: true })).error).toBe(false);
-    const named = await call('screenshot', { file: dir });
+    expect((await call('take_screenshot', { file, overwrite: true })).error).toBe(false);
+    const named = await call('take_screenshot', { file: dir });
     expect(named.data.file).toMatch(/emulator-5580-.*\.png$/);
-    expect((await call('screenshot', { file: join(dir, 'a.gif') })).error).toBe(true);
+    expect((await call('take_screenshot', { file: join(dir, 'a.gif') })).error).toBe(true);
     // a picture at full size, 3 pixels to a tap unit, says to tap at a third
     const png = Buffer.alloc(24);
     png[0] = 0x89;
@@ -467,7 +467,7 @@ describe('gestures, keys, clipboard', () => {
     png.writeUInt32BE(7200, 20);
     d.screenshot = () =>
       Promise.resolve({ meta: { w: 3240, h: 7200, format: 'png', bytes: 24 }, data: png });
-    const full = await call('screenshot', { file: join(dir, 'full.png'), inline: false });
+    const full = await call('take_screenshot', { file: join(dir, 'full.png'), inline: false });
     expect([full.text, full.data.scale, full.images]).toEqual([
       `saved ${join(dir, 'full.png')} (3240x7200 px; its pixel x,y is tapped at x/3, y/3)`,
       0.333,
@@ -490,7 +490,7 @@ describe('gestures, keys, clipboard', () => {
     });
     const { call } = await connect(d);
     const file = join(dir, 'a.png');
-    const r = await call('screenshot', { file });
+    const r = await call('take_screenshot', { file });
     expect(r.images).toBe(1);
     expect(r.text).toMatch(new RegExp(`^saved ${file}.*; the image here: \\d+x\\d+ px`));
     expect(r.data.file).toBe(file);

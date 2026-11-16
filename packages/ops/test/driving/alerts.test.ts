@@ -39,19 +39,19 @@ describe('system alerts', () => {
     const d = new WithDialog();
     d.add = dialog('android', 3);
     const { call } = await connect(d);
-    const read = await call('alert');
+    const read = await call('answer_alert');
     expect(read.text).toContain('Pixel keeps stopping');
     expect(read.text).toContain('"Close app"');
     expect(read.data).not.toHaveProperty('answered');
-    const wrong = await call('alert', { answer: 'Reboot' });
+    const wrong = await call('answer_alert', { answer: 'Reboot' });
     expect(wrong.error).toBe(true);
     expect(wrong.text).toContain('"Close app"');
     expect(act(d)).toEqual([]);
-    const r = await call('alert', { answer: 'close APP' });
+    const r = await call('answer_alert', { answer: 'close APP' });
     expect(r.error).toBe(false);
     expect(r.data.answered).toBe('Close app');
     expect(act(d).at(-1)).toMatchObject({ kind: 'tap', x: 250, y: 1050 });
-    expect((await call('alert')).text).toContain('no system alert');
+    expect((await call('answer_alert')).text).toContain('no system alert');
   });
 
   it("says in the screen's answer that an app's crash dialog asks, by its words and buttons", async () => {
@@ -108,11 +108,15 @@ describe('system alerts', () => {
     const d = new FakeDevice();
     d.permissionUp = true;
     const { call } = await connect(d);
-    expect((await call('alert', { answer: 'allow' })).text).toContain('"Uygulamayı kullanırken"');
+    expect((await call('answer_alert', { answer: 'allow' })).text).toContain(
+      '"Uygulamayı kullanırken"',
+    );
     const own = new WithDialog();
     own.add = dialog('dev.app', 1);
     const { call: call2 } = await connect(own);
-    expect((await call2('alert', { answer: 'Close app' })).text).toContain('no system alert');
+    expect((await call2('answer_alert', { answer: 'Close app' })).text).toContain(
+      'no system alert',
+    );
     expect(act(own)).toEqual([]);
   });
 });

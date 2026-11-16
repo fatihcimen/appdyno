@@ -81,7 +81,7 @@ export function windowNetwork(
   const answer = (m: Record<string, unknown>) =>
     session().tell({ op: 'answer', name: 'network', ...m });
   const op = (args: Record<string, unknown>) =>
-    call('network', 'network', { ...args, limit: MOST });
+    call('network', 'capture_network', { ...args, limit: MOST });
 
   const ways = () => waysOf(device);
 

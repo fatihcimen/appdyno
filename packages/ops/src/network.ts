@@ -55,7 +55,7 @@ export function networkOps(ctx: ServerContext) {
 
   return [
     defineOp({
-      name: 'network',
+      name: 'capture_network',
       title: 'Network',
       description:
         "An app's network traffic (HTTP), bounded; mock and throttle by the probe, until stop. paths: what each way sees; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); check: waits for a request, else refuses with the nearest; stop. Installs no certificate.",

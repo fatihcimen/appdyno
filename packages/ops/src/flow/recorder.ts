@@ -31,7 +31,12 @@ type ToStep = (
 ) => FlowStep | FlowStep[] | undefined;
 
 /** Ops that only look and are steps all the same: a check, a picture kept, a comparison. */
-const LOOKING_STEPS: ReadonlySet<string> = new Set(['wait_for', 'assert', 'screenshot', 'visual']);
+const LOOKING_STEPS: ReadonlySet<string> = new Set([
+  'wait_for',
+  'assert',
+  'take_screenshot',
+  'visual',
+]);
 
 /** A picture's file as a `screenshot` step names it. */
 const pictureName = (file: string) => safeName(basename(file, extname(file))).slice(0, 100);
@@ -40,7 +45,7 @@ const pictureName = (file: string) => safeName(basename(file, extname(file))).sl
 const LOOKS: Record<string, string[]> = {
   app: ['list', 'state'],
   inspector: ['list'],
-  network: ['paths', 'read'],
+  capture_network: ['paths', 'read'],
   webview: ['pages', 'elements'],
   react_native: ['targets', 'logs'],
 };
@@ -301,7 +306,7 @@ const OPS: Record<string, ToStep> = {
           { url: a.url as string | undefined, settings: a.settings as string | undefined },
         ),
   set_location: (a) => stepOf('set_location', {}, { lat: a.lat as number, lon: a.lon as number }),
-  alert: (a, data) =>
+  answer_alert: (a, data) =>
     data.answered !== undefined ? stepOf('alert', {}, { answer: a.answer as string }) : undefined,
   keyboard: (_a, data) => (data.closed ? stepOf('hide_keyboard', {}) : undefined),
   gesture: (a) =>
@@ -325,9 +330,9 @@ const OPS: Record<string, ToStep> = {
             },
           )
         : undefined,
-  network: (a, data) => networkSteps(a, LOOKS.network ?? [], data),
+  capture_network: (a, data) => networkSteps(a, LOOKS.capture_network ?? [], data),
   // a picture only shown to the agent is a look
-  screenshot: (a, data) =>
+  take_screenshot: (a, data) =>
     a.file && !a.watchMs
       ? stepOf('screenshot', {}, { name: pictureName(data.file as string) || 'screen' })
       : undefined,

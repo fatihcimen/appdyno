@@ -166,7 +166,7 @@ async function drive(device, app, keys) {
     if (!ref) throw new Error(`nothing to tap on the screen:\n${screen}`);
     await call('tap', { ref: ref[1] });
     for (const key of keys) await call('press_key', { key });
-    const shot = await call('screenshot');
+    const shot = await call('take_screenshot');
     if (!shot.content.some((c) => c.type === 'image' && c.data)) throw new Error('no image');
     console.log(`     ${notifications} progress notifications`);
   });

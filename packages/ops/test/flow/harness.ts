@@ -66,11 +66,11 @@ export function flowHelpers(deviceOf: () => FakeDevice, dirOf: () => string) {
     actions: () => Promise<unknown>,
     name = 'a.flow',
   ) => {
-    await call('flow', { action: 'start' });
+    await call('run_flow', { action: 'record' });
     await actions();
-    await call('flow', { action: 'stop' });
+    await call('run_flow', { action: 'stop' });
     const file = join(dirOf(), 'state', name);
-    await call('flow', { action: 'save', file });
+    await call('run_flow', { action: 'save', file });
     return { file, text: readFileSync(file, 'utf8') };
   };
 

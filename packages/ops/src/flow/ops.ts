@@ -36,7 +36,7 @@ export function paramsOf(words: string[] = []): Record<string, string> {
 }
 
 /**
- * `params` on start, stop or save: each value named in the recording, as a param. At stop and save a name no step holds
+ * `params` on record, stop or save: each value named in the recording, as a param. At stop and save a name no step holds
  * is refused, as it would name nothing; what it says is where each is.
  */
 function nameParams(r: Recording, params: string[] | undefined, held: boolean): string[] {
@@ -89,13 +89,13 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
   const done = (t: string, data: Record<string, unknown> = {}) => reply(t, { done: t, ...data });
   return [
     defineOp({
-      name: 'flow',
+      name: 'run_flow',
       title: 'Flow',
       description:
-        'Record your actions as a repeatable test, replayed with no model: start, your calls, stop (file: saves a .flow), run (file). save: the last recording to file. params NAME=value: on start, stop or save, the recorded value becomes ${NAME}; on run, its value. run: from a step; iterations: a journey timed by step, for perf_compare. export: Maestro YAML, to a .yaml path.',
+        'Record your actions as a repeatable test, replayed with no model: record, your calls, stop (file: saves a .flow), run (file). save: the last recording to file. params NAME=value: on record, stop or save, the recorded value becomes ${NAME}; on run, its value. run: from a step; iterations: a journey timed by step, for perf_compare. export: Maestro YAML, to a .yaml path.',
       input: z
         .object({
-          action: z.enum(['start', 'stop', 'save', 'run', 'export']),
+          action: z.enum(['record', 'stop', 'save', 'run', 'export']),
           file: z.string().max(1_000).optional(),
           to: z.string().max(1_000).optional(),
           from: z.number().refine(Number.isInteger, 'a step number').optional(),
@@ -138,7 +138,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
         const serial = s.device.serial;
         const held = loadRecording(ctx, serial);
         switch (action) {
-          case 'start': {
+          case 'record': {
             if (held?.state.running)
               throw new ToolError(
                 `a recording is running on ${serial}: stop it first`,
@@ -150,7 +150,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           }
           case 'stop': {
             if (!held)
-              throw new ToolError('no recording to stop: flow start begins one', 'NOT_FOUND');
+              throw new ToolError('no recording to stop: run_flow record begins one', 'NOT_FOUND');
             // a file refused before anything stops leaves the recording running, as it was
             const path = file === undefined ? undefined : inside(ctx.policy, need());
             const named = nameParams(held, params, true);
@@ -161,7 +161,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
             const notes = flagged(held.flow());
             const t =
               n > 0
-                ? `stopped: ${n} steps, kept until the next start; flow save with file writes them`
+                ? `stopped: ${n} steps, kept until the next record; run_flow save with file writes them`
                 : 'stopped: nothing was recorded';
             return reply(
               [
@@ -175,7 +175,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           }
           case 'save': {
             if (!held)
-              throw new ToolError('no recording to save: flow start begins one', 'NOT_FOUND');
+              throw new ToolError('no recording to save: run_flow record begins one', 'NOT_FOUND');
             if (held.state.steps.length === 0)
               throw new ToolError('nothing was recorded yet', 'NOT_FOUND');
             const path = inside(ctx.policy, need());

@@ -92,7 +92,7 @@ describe.skipIf(!FOLDABLE)('a fold on a foldable emulator', () => {
     expect(cover).toContain(`Window ${String(/display (\d+x\d+)/.exec(closed.text)?.[1])} px`);
     // and the picture of the screen is of that display, whole
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-fold-')), 'cover.png');
-    ok(await call('screenshot', { file, inline: false }));
+    ok(await call('take_screenshot', { file, inline: false }));
     const png = readFileSync(file);
     expect(`${String(png.readUInt32BE(16))}x${String(png.readUInt32BE(20))}`).toBe(
       /display (\d+x\d+)/.exec(closed.text)?.[1],
@@ -212,7 +212,7 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
   /** The size of a full picture of the screen, from the PNG's own header. */
   const pictured = async (name: string) => {
     const file = join(shots, `${name}.png`);
-    ok(await call('screenshot', { file, inline: false, overwrite: true }));
+    ok(await call('take_screenshot', { file, inline: false, overwrite: true }));
     const png = readFileSync(file);
     return `${String(png.readUInt32BE(16))}x${String(png.readUInt32BE(20))}`;
   };
@@ -261,7 +261,7 @@ describe.skipIf(!DUO)('a fold on a foldable simulator', () => {
     expect(await active()).toBe(3);
     // at once, with no look between: the screen is the inner display's, and so is the small picture an answer shows
     expect(ok(await call('device_info')).text).toContain('screen 951x669, density 3');
-    expect(ok(await call('screenshot', { inline: false })).text).toMatch(/^image 800x56\d px/);
+    expect(ok(await call('take_screenshot', { inline: false })).text).toMatch(/^image 800x56\d px/);
     expect(await shows(call, 'fold_window', 'Window 951x669 points')).toBe(true);
     expect(await shows(call, 'fold_size_class', 'Size class: regular wide, regular high')).toBe(
       true,

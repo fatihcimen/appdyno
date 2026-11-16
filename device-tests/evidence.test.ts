@@ -355,7 +355,7 @@ describe.skipIf(!android)('network on Android', () => {
   }, 240_000);
 
   it('says what each way sees', async () => {
-    const r = await h.ok('network', { action: 'paths' });
+    const r = await h.ok('capture_network', { action: 'paths' });
     expect(r.text).toMatch(/^proxy: .*Now: none/m);
     expect(r.text).toMatch(/^bytes: .*no URLs, no bodies/m);
     // a `user` build has no packet source, and says so
@@ -364,7 +364,11 @@ describe.skipIf(!android)('network on Android', () => {
   });
 
   it('refuses a proxy nothing listens on, leaving the device as it was', async () => {
-    const r = await h.call('network', { action: 'start', via: 'proxy', proxy: '127.0.0.1:1' });
+    const r = await h.call('capture_network', {
+      action: 'start',
+      via: 'proxy',
+      proxy: '127.0.0.1:1',
+    });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(/nothing listens/);
     expect(await proxySetting()).toBe('null');
@@ -375,23 +379,23 @@ describe.skipIf(!android)('network on Android', () => {
     'sends an app through a proxy on this Mac, lists it from the export and puts it back',
     async () => {
       const proxy = `127.0.0.1:${web.proxyPort}`;
-      await h.ok('network', { action: 'start', via: 'proxy', proxy });
+      await h.ok('capture_network', { action: 'start', via: 'proxy', proxy });
       expect(await proxySetting()).toBe(proxy);
-      expect((await h.call('network', { action: 'start', via: 'bytes' })).text).toMatch(
+      expect((await h.call('capture_network', { action: 'start', via: 'bytes' })).text).toMatch(
         /stop it first/,
       );
       await fetchIn(h.ok, 'http://proxied.test/hello?token=abc123');
       const har = join(dir, 'proxy.har');
       writeFileSync(har, web.har());
       // a proxy on the device takes every app's traffic, the system's own checks too
-      const read = await h.ok('network', { action: 'read', har, contains: 'proxied.test' });
+      const read = await h.ok('capture_network', { action: 'read', har, contains: 'proxied.test' });
       expect(read.text).toMatch(/GET http:\/\/proxied\.test\/hello\?token=••• 200/);
       expect(read.text).not.toContain('abc123');
       expect(read.text).toMatch(/bodies: 1 of 1 in the export/);
-      const none = await h.call('network', { action: 'read' });
+      const none = await h.call('capture_network', { action: 'read' });
       expect(none.error).toBe(true);
       expect(none.text).toMatch(/export the proxy's session as HAR/);
-      await h.ok('network', { action: 'stop' });
+      await h.ok('capture_network', { action: 'stop' });
       expect(await proxySetting()).toBe('null');
       expect(await adb.run(['-s', android, 'reverse', '--list'])).not.toContain(`${web.proxyPort}`);
     },
@@ -399,9 +403,9 @@ describe.skipIf(!android)('network on Android', () => {
   );
 
   it('counts an app by its bytes, with no URL and no body', async () => {
-    await h.ok('network', { action: 'start', via: 'bytes' });
+    await h.ok('capture_network', { action: 'start', via: 'bytes' });
     await fetchIn(h.ok, `http://${String(macHost())}:${web.webPort}/big`);
-    const r = await h.ok('network', { action: 'stop' });
+    const r = await h.ok('capture_network', { action: 'stop' });
     const got = r.data.entries?.find((e) => e.direction === 'Received');
     assert(got);
     expect(got.bytes).toBeGreaterThan(200_000);
@@ -409,15 +413,17 @@ describe.skipIf(!android)('network on Android', () => {
   }, 120_000);
 
   it('traces an app by its packets, read at the end', async () => {
-    const started = await h.call('network', { action: 'start', via: 'packets' });
+    const started = await h.call('capture_network', { action: 'start', via: 'packets' });
     // a Xiaomi's user build has no packet source, and says so before it records
     if (started.error && !android.startsWith('emulator-')) {
       expect(started.text).toMatch(/does not register android.network_packets/);
       return;
     }
     await fetchIn(h.ok, `http://${String(macHost())}:${web.webPort}/big`);
-    expect((await h.ok('network', { action: 'read' })).text).toMatch(/can be read when it ends/);
-    const r = await h.ok('network', { action: 'stop' });
+    expect((await h.ok('capture_network', { action: 'read' })).text).toMatch(
+      /can be read when it ends/,
+    );
+    const r = await h.ok('capture_network', { action: 'stop' });
     const { entries } = r.data;
     assert(entries);
     const port = entries.find(
@@ -428,12 +434,12 @@ describe.skipIf(!android)('network on Android', () => {
   }, 120_000);
 
   it('works from the command line, one process per step', async () => {
-    const start = await cli(android, 'network', 'start', '--via', 'bytes', '--app', APP);
+    const start = await cli(android, 'capture-network', 'start', '--via', 'bytes', '--app', APP);
     expect(faults(start.err)).toBe('');
-    const read = await cli(android, 'network', 'read');
+    const read = await cli(android, 'capture-network', 'read');
     expect(read.err).toBe('');
     expect(read.out).toMatch(/Received uid \d+/);
-    expect((await cli(android, 'network', 'stop')).code).toBe(0);
+    expect((await cli(android, 'capture-network', 'stop')).code).toBe(0);
   }, 120_000);
 });
 
@@ -451,7 +457,7 @@ describe.skipIf(!simulator)('network on a simulator', () => {
   }, 240_000);
 
   it('says what each way sees and what it follows', async () => {
-    const r = await h.ok('network', { action: 'paths' });
+    const r = await h.ok('capture_network', { action: 'paths' });
     expect(r.text).toMatch(/^proxy: .*Now: /m);
     expect(r.text).toMatch(/^probe: .*Not background sessions, WKWebView or Network.framework/m);
     expect(r.text).toMatch(/^packets: no:/m);
@@ -459,7 +465,7 @@ describe.skipIf(!simulator)('network on a simulator', () => {
   });
 
   it("will not change the Mac's proxy", async () => {
-    const r = await h.call('network', {
+    const r = await h.call('capture_network', {
       action: 'start',
       via: 'proxy',
       proxy: `127.0.0.1:${web.proxyPort}`,
@@ -469,12 +475,12 @@ describe.skipIf(!simulator)('network on a simulator', () => {
   });
 
   it('lists the requests of an app with the probe in it', async () => {
-    await h.ok('network', { action: 'start', via: 'probe' });
+    await h.ok('capture_network', { action: 'start', via: 'probe' });
     await fetchIn(h.ok, `http://127.0.0.1:${web.webPort}/seen?token=abc123`);
-    const read = await h.ok('network', { action: 'read' });
+    const read = await h.ok('capture_network', { action: 'read' });
     expect(read.text).toMatch(/\n127\.0\.0\.1:\d+:\n {2}\d+ GET \/seen\?token 200 \d+ ms 200000 B/);
     expect(read.text).not.toContain('abc123');
-    const stop = await h.ok('network', { action: 'stop' });
+    const stop = await h.ok('capture_network', { action: 'stop' });
     expect(stop.text).toMatch(/stays in the app until it next starts/);
     await h.ok('terminate_app');
     await h.ok('launch_app');

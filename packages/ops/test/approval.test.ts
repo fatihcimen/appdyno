@@ -174,8 +174,8 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
     const { call, done } = await on();
     for (const word of ['yes', 'approved', 'confirm', 'allowDataLoss'])
       expect((await call('app', { action: 'clear', [word]: true })).code).toBe('INVALID_ARGUMENT');
-    const r = await call('steps', {
-      steps: [{ action: 'device_setting', name: 'keychain', value: 'reset' }],
+    const r = await call('run_steps', {
+      steps: [{ tool: 'device_setting', name: 'keychain', value: 'reset' }],
     });
     expect(r.error).toBe(true);
     expect(r.text).toContain('device_setting keychain asks the person first');
@@ -184,10 +184,10 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
 
   it('stops at its question in the middle of steps, and goes on from there with the yes: what came before is done once', async () => {
     const { call, done, asked, device } = await on({ answer: 'accept' });
-    const r = await call('steps', {
+    const r = await call('run_steps', {
       steps: [
-        { action: 'tap', x: 1, y: 1 },
-        { action: 'device_setting', name: 'keychain', value: 'reset' },
+        { tool: 'tap', x: 1, y: 1 },
+        { tool: 'device_setting', name: 'keychain', value: 'reset' },
       ],
     });
     expect(r.error ? r.text : '').toBe('');

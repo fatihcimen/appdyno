@@ -138,11 +138,11 @@ describe('commands from the operations', () => {
       },
     });
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'a.png');
-    expect((await run('screenshot', '--out', file)).code).toBe(0);
-    expect((await run('screenshot', '--out', file)).code).toBe(0);
+    expect((await run('take-screenshot', '--out', file)).code).toBe(0);
+    expect((await run('take-screenshot', '--out', file)).code).toBe(0);
     expect(existsSync(file)).toBe(true);
     expect(asked).toEqual(['png', 'png']);
-    const notes = await run('screenshot', '--out', file.replace('a.png', 'a.txt'));
+    const notes = await run('take-screenshot', '--out', file.replace('a.png', 'a.txt'));
     expect(notes.code).toBe(1);
     expect(notes.err[0]).toContain('a .png, .jpg or .jpeg');
   });
@@ -165,7 +165,7 @@ describe('commands from the operations', () => {
   });
 
   it('takes the arguments as JSON', async () => {
-    const r = await run('steps', '--json', '{"steps":[{"action":"tap","x":100,"y":350}]}');
+    const r = await run('run-steps', '--json', '{"steps":[{"tool":"tap","x":100,"y":350}]}');
     expect(r.code).toBe(0);
     expect(r.out[0]).toContain('tapped 100,350');
     expect((await run('tap', '--json', '{"x":100,"y":350}')).out[0]).toContain('tapped 100,350');
@@ -360,11 +360,11 @@ describe('commands from the operations', () => {
   it('writes an image to --out, or to a temporary file it names', async () => {
     const out = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'shot.jpg');
     Object.defineProperty(device, 'mirror', { value: {} });
-    const named = await run('screenshot', '--out', out);
+    const named = await run('take-screenshot', '--out', out);
     expect(named.out).toEqual([expect.stringContaining(`saved ${out}`)]);
     expect(readFileSync(out).length).toBeGreaterThan(0);
     await run('tap', '--x', '100', '--y', '350');
-    const temp = await run('screenshot');
+    const temp = await run('take-screenshot');
     expect(temp.out[1]).toMatch(/appdyno-[0-9a-f]{8}\.jpeg$/);
     expect(existsSync(must(temp.out[1], 'its file'))).toBe(true);
   });

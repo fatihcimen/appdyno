@@ -16,7 +16,7 @@ import { connect } from './driving/shared.js';
 
 /** Each tool that writes where its caller says, with the argument that says where. */
 const WRITERS: [string, Record<string, unknown>, string][] = [
-  ['screenshot', {}, 'file'],
+  ['take_screenshot', {}, 'file'],
   ['visual', { action: 'baseline', name: 'home' }, 'dir'],
   ['visual', { action: 'compare', name: 'home' }, 'dir'],
   ['record', { action: 'start' }, 'file'],
@@ -25,10 +25,10 @@ const WRITERS: [string, Record<string, unknown>, string][] = [
   ['report', { action: 'timeline' }, 'dir'],
   ['report', { action: 'flight' }, 'dir'],
   ['app', { action: 'download_data' }, 'path'],
-  ['network', { action: 'read' }, 'save'],
-  ['flow', { action: 'save' }, 'file'],
-  ['flow', { action: 'stop' }, 'file'],
-  ['flow', { action: 'export', file: 'a.flow' }, 'to'],
+  ['capture_network', { action: 'read' }, 'save'],
+  ['run_flow', { action: 'save' }, 'file'],
+  ['run_flow', { action: 'stop' }, 'file'],
+  ['run_flow', { action: 'export', file: 'a.flow' }, 'to'],
 ];
 
 describe('a file a tool writes where its caller says', () => {
@@ -49,12 +49,12 @@ describe('a file a tool writes where its caller says', () => {
     const ops = opsFor(ctx);
     for (const [tool, args, name] of WRITERS) {
       // a capture or a recording has to be there before its file is looked at: the flow tests have those refusals
-      if (tool === 'network' || tool === 'flow') continue;
+      if (tool === 'capture_network' || tool === 'run_flow') continue;
       const said = `${tool} ${JSON.stringify(args)}`;
       expect(ops[tool]?.annotations.readOnlyHint, said).not.toBe(true);
-      const ext = tool === 'record' ? 'mp4' : tool === 'flow' ? 'flow' : 'png';
+      const ext = tool === 'record' ? 'mp4' : tool === 'run_flow' ? 'flow' : 'png';
       const to = join(out, name === 'file' ? `a.${ext}` : name === 'to' ? 'a.yaml' : 'sub');
-      const r = await call(tool as 'screenshot', { ...args, [name]: to });
+      const r = await call(tool as 'take_screenshot', { ...args, [name]: to });
       expect(r.text, said).toMatch(
         /^POLICY_DENIED: .* is outside the folders this server writes to/,
       );

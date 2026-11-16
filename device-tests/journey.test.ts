@@ -71,7 +71,7 @@ for (const t of targets)
   describe.skipIf(!t.serial)(`a journey on ${t.name}`, () => {
     const ops = opsOn(t.provider(), t.serial, APP);
     const file = join(dir, `${t.name}.flow`);
-    const measure = () => ops.call('flow', { action: 'run', file, iterations: 5 });
+    const measure = () => ops.call('run_flow', { action: 'run', file, iterations: 5 });
     const newest = async (scenario: string): Promise<PerfRecord[]> => {
       const [key] = await runKeys(ops.measurements, { app: APP, scenario });
       assert(key !== undefined, scenario);
@@ -146,7 +146,7 @@ for (const t of targets)
           f,
           `app ${APP}\nopen_link "appdyno-fixture://open/memory"\ntap id=memory_free\ntap id=memory_alloc\ntap id=memory_free\nopen_link "appdyno-fixture://open/frames"\ntap id=frames_light\nwait_for id=frames_light\ntap id=frames_heavy\n`,
         );
-        const m = await ops.call('flow', { action: 'run', file: f, iterations: 3 });
+        const m = await ops.call('run_flow', { action: 'run', file: f, iterations: 3 });
         expect(m.error, m.text).toBe(false);
         console.log(m.text);
         assert(m.data.journey);

@@ -105,7 +105,7 @@ describe('a proxy export', () => {
       ],
       { app: 'dev.app' },
     );
-    const op = must(checkedOps(ctx).network, 'network');
+    const op = must(checkedOps(ctx).capture_network, 'capture_network');
     const list = Array.from({ length: 10 }, (_, i) => ({
       ...entry('2026-01-01T00:00:00Z'),
       request: { method: 'GET', url: `https://a.test/${i}?token=abc` },

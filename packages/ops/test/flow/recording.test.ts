@@ -118,14 +118,14 @@ swipe up
     it('records an ambiguous target with its index, flagged, and says so', async () => {
       device.screen = 'login';
       const call = callerOf(context());
-      await call('flow', { action: 'start' });
+      await call('run_flow', { action: 'record' });
       const s = await call('screen');
       const second = must(
         [...s.text.matchAll(/(@[a-z0-9-]+) button "Add"/g)][1]?.[1],
         'the second Add',
       );
       await call('tap', { ref: second });
-      const stop = await call('flow', { action: 'stop' });
+      const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text).toContain('tap role=button text="Add" index=1 !ambiguous');
       expect(stop.text).toContain('look at step 1: ambiguous');
       expect(stop.data.flagged).toEqual(['step 1: ambiguous']);
@@ -136,7 +136,7 @@ swipe up
       const { text } = await recorded(call, async () => {
         await call('screen');
         await call('find', { selector: { text: 'Form' } });
-        await call('screenshot');
+        await call('take_screenshot');
         await call('device_info');
         await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
         await refusal(call('assert', { selector: { text: 'Nothing like it' } }));
@@ -149,13 +149,13 @@ swipe up
     it('logs every step of a `steps` call, each named on its own screen', async () => {
       const call = callerOf(context());
       const { text } = await recorded(call, () =>
-        call('steps', {
+        call('run_steps', {
           steps: [
-            { action: 'tap', selector: { text: 'Form' } },
-            { action: 'wait_for', selector: { id: 'name' } },
-            { action: 'type_text', text: 'x', selector: { id: 'name' } },
-            { action: 'tap', selector: { text: 'Gönder' } },
-            { action: 'assert', selector: { id: 'result' }, check: 'text', equals: 'Gönderildi' },
+            { tool: 'tap', selector: { text: 'Form' } },
+            { tool: 'wait_for', selector: { id: 'name' } },
+            { tool: 'type_text', text: 'x', selector: { id: 'name' } },
+            { tool: 'tap', selector: { text: 'Gönder' } },
+            { tool: 'assert', selector: { id: 'result' }, check: 'text', equals: 'Gönderildi' },
           ],
         }),
       );
@@ -171,16 +171,16 @@ assert id=result check=text equals="Gönderildi"
 
     it('keeps the steps of a `steps` call that ran before one failed', async () => {
       const call = callerOf(context());
-      await call('flow', { action: 'start' });
+      await call('run_flow', { action: 'record' });
       await refusal(
-        call('steps', {
+        call('run_steps', {
           steps: [
-            { action: 'tap', selector: { text: 'Form' } },
-            { action: 'tap', selector: { text: 'Nothing like it' } },
+            { tool: 'tap', selector: { text: 'Form' } },
+            { tool: 'tap', selector: { text: 'Nothing like it' } },
           ],
         }),
       );
-      const stop = await call('flow', { action: 'stop' });
+      const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text).toContain('tap role=button text="Form"');
       expect(stop.text).not.toContain('Nothing like it');
     });
@@ -199,21 +199,21 @@ assert id=result check=text equals="Gönderildi"
 
       it('says so in its own answer, in a line, and again at the end of the recording', async () => {
         const call = callerOf(context());
-        await call('flow', { action: 'start' });
+        await call('run_flow', { action: 'record' });
         const pinch = await call('gesture', { kind: 'pinch', scale: 2, read: 'full' });
         expect(pinch.text.split('\n')[0]).toBe(pinch.data.done);
         expect(second(pinch)).toBe(NOT('gesture pinch'));
         expect(pinch.text.split('\n').length).toBeGreaterThan(2);
         const turned = await call('set_orientation', { orientation: 'landscape_left' });
         expect(second(turned)).toBe(NOT('set_orientation landscape_left'));
-        const stop = await call('flow', { action: 'stop' });
+        const stop = await call('run_flow', { action: 'stop' });
         expect(stop.text).toContain('step 1: not recorded: gesture pinch');
         expect(stop.text).toContain('step 2: not recorded: set_orientation landscape_left');
       });
 
       it('names the step that does the same, where the flow has one', async () => {
         const call = callerOf(context());
-        await call('flow', { action: 'start' });
+        await call('run_flow', { action: 'record' });
         const drag = await call('gesture', { kind: 'drag', x: 10, y: 20, to: { x: 500, y: 600 } });
         expect(second(drag)).toBe(
           `${NOT('gesture drag')}: a straight drag made by \`swipe\` is recorded, as a \`swipe\` step`,
@@ -229,9 +229,9 @@ assert id=result check=text equals="Gönderildi"
         expect(named).toEqual(['swipe', 'type']);
         await call('swipe', { direction: 'up' });
         await call('type_text', { text: 'Merhaba' });
-        await call('flow', { action: 'stop' });
+        await call('run_flow', { action: 'stop' });
         const file = join(dir, 'state', 'named.flow');
-        await call('flow', { action: 'save', file });
+        await call('run_flow', { action: 'save', file });
         const kept = parseFlow(readFileSync(file, 'utf8')).steps.map((st) => st.action);
         expect(kept.slice(-2)).toEqual(named);
       });
@@ -241,7 +241,7 @@ assert id=result check=text equals="Gönderildi"
         expect((await call('gesture', { kind: 'pinch', scale: 2 })).text).not.toContain(
           'not recorded',
         );
-        await call('flow', { action: 'start' });
+        await call('run_flow', { action: 'record' });
         expect((await call('tap', { selector: { text: 'Form' } })).text).not.toContain(
           'not recorded',
         );
@@ -253,8 +253,8 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       await expect(
         recorded(call, async () => {
-          await call('mirror', { action: 'status' });
-          await call('hand_off', { reason: 'Face ID', timeoutS: 1 });
+          await call('show_mirror', { action: 'status' });
+          await call('ask_person', { reason: 'Face ID', timeoutS: 1 });
         }),
       ).rejects.toThrow('nothing was recorded yet');
     });
@@ -264,8 +264,8 @@ assert id=result check=text equals="Gönderildi"
       device.permissionUp = true;
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
-        await call('alert', { answer: 'allow' });
-        await refusal(call('alert', { answer: 'allow' }));
+        await call('answer_alert', { answer: 'allow' });
+        await refusal(call('answer_alert', { answer: 'allow' }));
         await call('keyboard', { action: 'status' });
         await call('keyboard', { action: 'dismiss' });
         await call('keyboard', { action: 'dismiss' });
@@ -297,18 +297,18 @@ assert id=result check=text equals="Gönderildi"
         await call('webview', { action: 'elements' });
         clicked = (await call('webview', { action: 'click', selector: '#go' })).text;
         await call('webview', { action: 'eval', js: 'secretWork()' });
-        await call('network', { action: 'paths' });
-        await call('network', { action: 'start', via: 'bytes' });
-        await call('network', { action: 'read' });
-        await call('network', { action: 'stop' });
+        await call('capture_network', { action: 'paths' });
+        await call('capture_network', { action: 'start', via: 'bytes' });
+        await call('capture_network', { action: 'read' });
+        await call('capture_network', { action: 'stop' });
         await call('perf_launch', { repeats: 1 });
       });
       const unrecorded = text.split('\n').filter((l) => l.startsWith('unrecorded'));
       expect(unrecorded).toEqual([
         'unrecorded "webview click"',
         'unrecorded "webview eval"',
-        'unrecorded "network start"',
-        'unrecorded "network stop"',
+        'unrecorded "capture_network start"',
+        'unrecorded "capture_network stop"',
       ]);
       expect(clicked).toContain(
         'not recorded: webview click. A flow has no step for it, so a replay stops there: a `tap` at the x, y that `screen` gives the element is recorded, as a `tap` step',
@@ -347,7 +347,7 @@ assert id=result check=text equals="Gönderildi"
       const { text } = await recorded(call, async () => {
         await call('list_devices');
         await call('use_device', { device: device.serial });
-        await call('simulator', { action: 'list' });
+        await call('manage_simulator', { action: 'list' });
         await call('record', { action: 'start', file: join(dir, 'shots', 'a.mp4') });
         await call('record', { action: 'stop' });
         await call('report', { action: 'write', dir: join(dir, 'shots', 'report') });
@@ -379,12 +379,12 @@ assert id=result check=text equals="Gönderildi"
       );
       expect(stopped.text).toBe(started.text);
       device.running = true;
-      await call('flow', { action: 'start' });
+      await call('run_flow', { action: 'record' });
       await call('launch_app');
-      const stop = await call('flow', { action: 'stop' });
+      const stop = await call('run_flow', { action: 'stop' });
       expect(stop.text).toContain('\nlaunch !running\n');
       expect(stop.text).toMatch(
-        /^stopped: 1 steps, kept until the next start; flow save with file writes them\n/,
+        /^stopped: 1 steps, kept until the next record; run_flow save with file writes them\n/,
       );
       expect(stop.data.flagged).toEqual([
         expect.stringMatching(
@@ -396,25 +396,26 @@ assert id=result check=text equals="Gönderildi"
     it('saves at stop to the file it is given, and keeps a recording whose file is refused', async () => {
       const call = callerOf(context());
       const file = join(dir, 'state', 'tapped.flow');
-      await call('flow', { action: 'start' });
+      await call('run_flow', { action: 'record' });
       const home = await call('screen');
       await call('tap', { ref: refOf(home.text, 'Form') });
       // a path refused before the stop: the recording goes on
       expect(
-        (await refusal(call('flow', { action: 'stop', file: join(dir, 'state', 'a.txt') }))).code,
+        (await refusal(call('run_flow', { action: 'stop', file: join(dir, 'state', 'a.txt') })))
+          .code,
       ).toBe('INVALID_ARGUMENT');
-      const stop = await call('flow', { action: 'stop', file });
+      const stop = await call('run_flow', { action: 'stop', file });
       expect(stop.text).toMatch(new RegExp(`^stopped, and saved 1 steps to ${file}\n`));
       expect(readFileSync(file, 'utf8')).toContain('tap ');
       // a file there already: stopped all the same, and what it held is still to save
-      await call('flow', { action: 'start' });
+      await call('run_flow', { action: 'record' });
       await call('press_key', { key: 'back' });
-      const there = await refusal(call('flow', { action: 'stop', file }));
+      const there = await refusal(call('run_flow', { action: 'stop', file }));
       expect(there.message).toMatch(
         /exists: overwrite true replaces it; the recording stopped, and its 1 steps are kept: flow save writes them$/,
       );
       expect(
-        (await call('flow', { action: 'save', file: join(dir, 'state', 'again.flow') })).text,
+        (await call('run_flow', { action: 'save', file: join(dir, 'state', 'again.flow') })).text,
       ).toMatch(/^saved 1 steps/);
     });
 
@@ -431,7 +432,7 @@ assert id=result check=text equals="Gönderildi"
       expect(text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual([
         'launch language=tr',
       ]);
-      await call('flow', { action: 'run', file });
+      await call('run_flow', { action: 'run', file });
       expect(launched).toEqual([
         ['dev.app', { language: 'tr' }],
         ['dev.app', { language: 'tr' }],
@@ -441,7 +442,7 @@ assert id=result check=text equals="Gönderildi"
         named,
         'app dev.app\nlaunch arg=-UITests arg=YES env="API_URL=https://a.test/?a=b"\n',
       );
-      await call('flow', { action: 'run', file: named });
+      await call('run_flow', { action: 'run', file: named });
       expect(launched.at(-1)).toEqual([
         'dev.app',
         { args: ['-UITests', 'YES'], env: { API_URL: 'https://a.test/?a=b' } },
@@ -470,7 +471,7 @@ assert id=result check=text equals="Gönderildi"
       const restarted = await recorded(call, launch, 'restarted.flow');
       expect(restarted.text).toBe(started.text);
       device.calls = [];
-      await call('flow', { action: 'run', file: restarted.file });
+      await call('run_flow', { action: 'run', file: restarted.file });
       expect(device.calls.map((c) => c.name)).toContain('terminate');
       expect(launched.at(-1)).toEqual(['dev.app', how]);
       const plain = await recorded(call, () => call('launch_app', { restart: true }), 'plain.flow');
@@ -492,7 +493,7 @@ assert id=result check=text equals="Gönderildi"
         'stop',
         'launch probe',
       ]);
-      await call('flow', { action: 'run', file });
+      await call('run_flow', { action: 'run', file });
       expect(launched).toEqual([
         ['dev.app', { probe: true }],
         ['dev.app', { probe: true }],
@@ -500,48 +501,52 @@ assert id=result check=text equals="Gönderildi"
     });
 
     it('holds across the processes of a command line, on the device it began on', async () => {
-      await callerOf(context())('flow', { action: 'start' });
+      await callerOf(context())('run_flow', { action: 'record' });
       await callerOf(context())('tap', { selector: { text: 'Form' } });
       device = new FakeDevice('emulator-9999');
       device.screen = 'form';
       await callerOf(context())('assert', { selector: { text: 'Bilgiler' } });
       device = new FakeDevice();
-      const stop = await callerOf(context())('flow', { action: 'stop' });
+      const stop = await callerOf(context())('run_flow', { action: 'stop' });
       expect(stop.data.steps).toBe(1);
     });
 
     it('refuses a second start, a replay during a recording, and an empty or unnamed save', async () => {
       const call = callerOf(context());
-      const stopped = await refusal(call('flow', { action: 'stop' }));
+      const stopped = await refusal(call('run_flow', { action: 'stop' }));
       expect(stopped.message).toContain('no recording');
-      await call('flow', { action: 'start' });
-      expect((await refusal(call('flow', { action: 'start' }))).message).toContain('running');
+      await call('run_flow', { action: 'record' });
+      expect((await refusal(call('run_flow', { action: 'record' }))).message).toContain('running');
       expect(
-        (await refusal(call('flow', { action: 'save', file: join(dir, 'e.flow') }))).message,
+        (await refusal(call('run_flow', { action: 'save', file: join(dir, 'e.flow') }))).message,
       ).toContain('nothing was recorded');
       await call('launch_app');
-      expect((await refusal(call('flow', { action: 'save' }))).message).toContain('needs file');
+      expect((await refusal(call('run_flow', { action: 'save' }))).message).toContain('needs file');
       expect(
-        (await refusal(call('flow', { action: 'save', file: join(dir, 'x.txt') }))).message,
+        (await refusal(call('run_flow', { action: 'save', file: join(dir, 'x.txt') }))).message,
       ).toContain('.flow');
       writeFileSync(join(dir, 'r.flow'), 'launch\n');
       expect(
-        (await refusal(call('flow', { action: 'run', file: join(dir, 'r.flow') }))).message,
+        (await refusal(call('run_flow', { action: 'run', file: join(dir, 'r.flow') }))).message,
       ).toContain('stop the recording');
     });
 
     it('saves inside the state or project folder alone, and replaces a saved flow only when told to', async () => {
       const call = callerOf(context());
       const { file, text } = await recorded(call, () => call('launch_app'));
-      expect((await refusal(call('flow', { action: 'save', file }))).message).toContain('exists');
+      expect((await refusal(call('run_flow', { action: 'save', file }))).message).toContain(
+        'exists',
+      );
       expect(readFileSync(file, 'utf8')).toBe(text);
-      await call('flow', { action: 'save', file, overwrite: true });
-      const outside = await refusal(call('flow', { action: 'save', file: join(dir, 'a.flow') }));
+      await call('run_flow', { action: 'save', file, overwrite: true });
+      const outside = await refusal(
+        call('run_flow', { action: 'save', file: join(dir, 'a.flow') }),
+      );
       expect(outside.code).toBe('POLICY_DENIED');
       expect(existsSync(join(dir, 'a.flow'))).toBe(false);
       symlinkSync(dir, join(dir, 'state', 'out'));
       const linked = await refusal(
-        call('flow', { action: 'save', file: join(dir, 'state', 'out', 'a.flow') }),
+        call('run_flow', { action: 'save', file: join(dir, 'state', 'out', 'a.flow') }),
       );
       expect(linked.code).toBe('POLICY_DENIED');
       expect(existsSync(join(dir, 'a.flow'))).toBe(false);

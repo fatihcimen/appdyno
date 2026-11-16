@@ -25,13 +25,15 @@ describe.skipIf(!SIMULATOR)('a simulator of a model', () => {
   }, 240_000);
 
   it('is created on a runtime that runs it, and started', async () => {
-    const r = ok(await call('simulator', { action: 'create', name: 'iPhone SE (3rd generation)' }));
+    const r = ok(
+      await call('manage_simulator', { action: 'create', name: 'iPhone SE (3rd generation)' }),
+    );
     made = r.data.serial;
     assert(made);
     expect(await simctl.state(made)).toBe('Booted');
     expect(ok(await call('device_info')).data.serial).toBe(made);
     expect(r.text).toContain(`xcrun simctl delete ${made}`);
-    const none = await call('simulator', { action: 'create', name: 'Nokia 3310' });
+    const none = await call('manage_simulator', { action: 'create', name: 'Nokia 3310' });
     expect(none.data.code).toBe('NOT_FOUND');
     expect(none.text).toContain('no runtime on this Mac runs a Nokia 3310');
   }, 240_000);

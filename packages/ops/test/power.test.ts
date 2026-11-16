@@ -234,7 +234,7 @@ describe('an input on them', () => {
       ['gesture', { kind: 'double_tap', ...restart }],
       ['gesture', { kind: 'plan', pointers: [[{ ...restart, t: 0 }]] }],
       ['swipe', { direction: 'up', ...restart }],
-      ['steps', { steps: [{ action: 'tap', ...restart }] }],
+      ['run_steps', { steps: [{ tool: 'tap', ...restart }] }],
       ['press_key', { key: 'enter' }],
       ['type_text', { text: 'x' }],
     ];
@@ -260,7 +260,7 @@ describe('an input on them', () => {
       const { call, sent } = await onDevice('android-power-en');
       const dir = mkdtempSync(join(tmpdir(), 'appdyno-power-flow-'));
       writeFileSync(join(dir, 'r.flow'), 'tap text="Restart"\n');
-      const r = await call('flow', { action: 'run', file: join(dir, 'r.flow') });
+      const r = await call('run_flow', { action: 'run', file: join(dir, 'r.flow') });
       expect(r.error).toBe(true);
       expect(r.text).toContain('asks the person first');
       expect(sent()).toEqual([]);
@@ -272,7 +272,7 @@ describe('an input on them', () => {
     const power = middle(qs, 'Güç menüsü');
     for (const [tool, args] of [
       ['swipe', { direction: 'down' }],
-      ['steps', { steps: [{ action: 'swipe', direction: 'down' }] }],
+      ['run_steps', { steps: [{ tool: 'swipe', direction: 'down' }] }],
     ] as const) {
       const { call, sent, device } = await onDevice('android-system-en');
       await call('screen', {});
