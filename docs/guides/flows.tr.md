@@ -127,9 +127,9 @@ audit types="contrast,hitRegion" max=2
 
 ## Flow'ları CI'da çalıştırmak
 
-`appdyno test`, `.flow` dosyalarını ya da klasörlerini her `--device` üzerinde sırayla, birer birer çalıştırır. Bir hatadan sonra sonraki dosyaya geçer. Çalıştırmanın kararı FAIL ise ya da çalıştırılacak bir şey yoksa 1 ile çıkar. Doğrulamalar birer adımdır. `--artifacts` altında (varsayılan `appdyno-artifacts`) bıraktığı şey [çalıştırmanın report'udur](#bir-çalıştırmanın-reportu).
+`appdyno test`, `.flow` dosyalarını ya da klasörlerini her `--device` üzerinde sırayla, birer birer çalıştırır. Bir hatadan sonra sonraki dosyaya geçer. Çalıştırmanın kararı FAIL ise ya da çalıştırılacak bir şey yoksa 1 ile çıkar. Doğrulamalar birer adımdır. `--artifacts` altında (varsayılan `appdyno-artifacts`) bıraktığı şey [çalıştırmanın raporudur](#bir-çalıştırmanın-raporu).
 
-## Bir çalıştırmanın report'u
+## Bir çalıştırmanın raporu
 
 Bir çalıştırma tek bir kararla biter: PASS ya da FAIL. Bir dosya başarısız olduğunda, bir temizlik başarısız olduğunda ya da `--fail-on-flaky` kararsız bir dosyayla karşılaştığında karar FAIL olur. Çalıştırma, artifacts klasöründe şunları bırakır:
 
@@ -174,7 +174,7 @@ Klasörler tek bir çalıştırma olamıyorsa `merge` 2 ile çıkar ve hiçbir �
 - ikisi aynı parçaysa ya da farklı bölmelerin parçalarıysa;
 - farklı commit'lere aitlerse. `--allow-mixed` bunları yine de birleştirir.
 
-## Bir report'u birine göndermek
+## Bir raporu birine göndermek
 
 appdyno hiçbir şey yüklemez. `appdyno test share <dir>`, bir çalıştırmanın klasörünün ne tuttuğunu, en az gizlenmiş olandan başlayarak yazdırır:
 

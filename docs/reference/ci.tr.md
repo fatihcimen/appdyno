@@ -87,7 +87,7 @@ appdyno test flows/ --shard 2/4 --artifacts part-2             # dört işin her
 appdyno test merge part-1 part-2 part-3 part-4 --out report    # son bir işte, dört klasör indirilmiş olarak
 ```
 
-Her iş, geçse de geçmese de klasörünü yüklesin, çünkü son işin gereksindiği şey başarısız bir parçanın klasörüdür. Bir parça başarısız olduysa ya da eksikse son iş başarısız olur. `report/pr.md`, pull request'e yazılacak metindir; `report/junit.xml` ise her hatanın görüntüsünü, komutun çalıştığı klasörün altındaki yoluyla adlandırır. appdyno hiçbir şey yazmaz ve yüklemez. Her dosyanın ne tuttuğunu [Flow'lar](../guides/flows.tr.md#bir-çalıştırmanın-reportu) söyler.
+Her iş, geçse de geçmese de klasörünü yüklesin, çünkü son işin gereksindiği şey başarısız bir parçanın klasörüdür. Bir parça başarısız olduysa ya da eksikse son iş başarısız olur. `report/pr.md`, pull request'e yazılacak metindir; `report/junit.xml` ise her hatanın görüntüsünü, komutun çalıştığı klasörün altındaki yoluyla adlandırır. appdyno hiçbir şey yazmaz ve yüklemez. Her dosyanın ne tuttuğunu [Flow'lar](../guides/flows.tr.md#bir-çalıştırmanın-raporu) söyler.
 
 ## Sürüm
 
