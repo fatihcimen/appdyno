@@ -8,11 +8,12 @@ What [the tools](tools.md) were run on, and what each run showed. The device sui
 
 Each device, OS and Xcode that a run on this page names whole, newest first. The simulator smoke of [CI and releases](ci.md) writes the same four columns at the top of its `device-summary.md`, which each release holds as a file: a row there that is not here names a pair that only the smoke's suites ran on.
 
-| device              | OS                                      | Xcode        | date       | what ran                                                                                                                                                    |
-| ------------------- | --------------------------------------- | ------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.5 (17F42) | 2026-11-16 | the simulator smoke on a Mac: its 18 cases passed by the simulator's helpers in 189 s, and by the runner alone in 219 s, at host load 40 to 329 on 10 cores |
-| iPhone 17 simulator | iOS 27.2 (24B8117)                      | 27.2 (27B52) | 2026-11-16 | the simulator suites, one file at a time: [Xcode 27.2](#xcode-272)                                                                                          |
-| Android emulator    | Android 17, API 37 (CE2A.260420.051.A3) | none         | 2026-11-08 | every Android suite: [Android 17](#android-17)                                                                                                              |
+| device              | OS                                      | Xcode         | date       | what ran                                                                                                                                                                              |
+| ------------------- | --------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | the simulator smoke on GitHub's hosted macOS runner: its 18 cases passed by the runner alone, as the host has no simulator HID service, in 417 s of suites (15 min for the whole job) |
+| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | the simulator smoke on a Mac: its 18 cases passed by the simulator's helpers in 189 s, and by the runner alone in 219 s, at host load 40 to 329 on 10 cores                           |
+| iPhone 17 simulator | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | the simulator suites, one file at a time: [Xcode 27.2](#xcode-272)                                                                                                                    |
+| Android emulator    | Android 17, API 37 (CE2A.260420.051.A3) | none          | 2026-11-08 | every Android suite: [Android 17](#android-17)                                                                                                                                        |
 
 ## Android 17
 
