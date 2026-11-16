@@ -11,10 +11,12 @@ import {
   type MirrorOptions,
   type MirrorSource,
   type ViewerOrder,
+  imageSize,
   must,
 } from '@appdyno/core';
 import { DeviceError, type Key, KEY_USAGES, keyOfUsage } from '@appdyno/protocol';
 import { applePress } from './mirror-press.js';
+import { ShownDisplay, simDisplays } from './sim-fold.js';
 import { Simctl, xcodeEnv } from './simctl.js';
 import { startSimAx, startSimHid, type HelperProcess } from './simhelper.js';
 import { usageOf } from './simtouch.js';
@@ -76,6 +78,8 @@ export class SimulatorMirror implements Mirror {
   private reader: Promise<HelperProcess> | undefined;
   private turns = 0;
   private turnsTimer: NodeJS.Timeout | undefined;
+  /** A foldable's other display, while it is the one shown: a person's touches go to it. */
+  private readonly shown: ShownDisplay;
 
   constructor(
     private readonly udid: string,
@@ -84,7 +88,10 @@ export class SimulatorMirror implements Mirror {
     private readonly paste: (udid: string, text: string) => Promise<void> = (u, text) =>
       simctl.pbcopy(u, text),
     private readonly startReader: (udid: string) => Promise<HelperProcess> = startSimAx,
-  ) {}
+    private readonly displays = simDisplays,
+  ) {
+    this.shown = new ShownDisplay(udid, displays);
+  }
 
   async check(): Promise<MirrorCheck> {
     return (await this.simctl.state(this.udid)) === 'Booted'
@@ -113,6 +120,7 @@ export class SimulatorMirror implements Mirror {
     if (!this.turnsTimer) return true;
     if (!running || running.closed) this.reader = this.startReader(this.udid);
     const a = await (await must(this.reader, 'the reader')).call({ op: 'orientation' }, INPUT_MS);
+    if (a.ok) await this.shown.seen(a.screen, a.main, a.orientation);
     const turns = turnsOf(a.orientation as number);
     if (turns !== undefined && turns !== this.turns) {
       this.turns = turns;
@@ -198,6 +206,7 @@ export class SimulatorMirror implements Mirror {
           op: 'touch',
           quick: true,
           events: [{ ...turnedTouch(e, this.turns), at: 0 }],
+          ...(this.shown.inner && { target: this.shown.inner.id }),
         });
         return;
       }
@@ -215,17 +224,34 @@ export class SimulatorMirror implements Mirror {
     }
   }
 
-  /** Lossless and at once, where the runner's would first have to be built. */
-  async screenshot(format: 'png' | 'jpeg') {
+  /** Lossless and at once, where the runner's would first have to be built; `maxPx`: its long side at most that. */
+  async screenshot(format: 'png' | 'jpeg', maxPx?: number) {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
     const file = join(dir, `shot.${format}`);
+    const shot = (...display: string[]) =>
+      this.simctl.exec(
+        ['io', this.udid, 'screenshot', `--type=${format}`, ...display, file],
+        SHOT_MS,
+      );
     try {
-      await this.simctl.exec(['io', this.udid, 'screenshot', `--type=${format}`, file], SHOT_MS);
+      // a simulator with two displays is asked which: the one shown, which comes as it stands
+      const active = await shot().then(
+        () => undefined,
+        async (e: unknown) => {
+          const id = (await this.displays(this.udid)).find((d) => d.active)?.id;
+          if (id === undefined) throw e;
+          await shot(`--display=${String(id)}`);
+          return id;
+        },
+      );
       // the surface keeps the shape it was built in: stood up as the app in front stands, as a viewer stands it
-      const turns = await this.turnsNow().catch(() => undefined);
+      const turns = active === undefined ? await this.turnsNow().catch(() => undefined) : 0;
       if (turns)
         await run('sips', ['--rotate', String((4 - turns) * 90), file], { timeout: SHOT_MS });
-      return { data: readFileSync(file) };
+      if (maxPx) await run('sips', ['-Z', String(maxPx), file], { timeout: SHOT_MS });
+      const data = readFileSync(file);
+      const size = must(imageSize(data), 'a picture');
+      return { meta: { ...size, format, bytes: data.length }, data };
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

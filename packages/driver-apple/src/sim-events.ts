@@ -16,7 +16,7 @@ import type { Simctl } from './simctl.js';
 
 /** What a simulator has no way to take, as each refusal says it. */
 export const SIM_CANNOT = {
-  fold: 'simctl has no fold pose (its ui and io options name none)',
+  fold: 'simctl has no fold pose (its ui and io options name none), and this simulator has one display',
   call: 'a simulator has no telephony: it cannot take a call',
   sms: 'a simulator has no telephony: it cannot take an SMS',
   radio: "a simulator has no radios: it uses the Mac's network",

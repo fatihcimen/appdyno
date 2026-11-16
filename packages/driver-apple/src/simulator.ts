@@ -36,7 +36,7 @@ import { SimulatorLock } from './sim-lock.js';
 import { SimulatorLifecycle } from './sim-lifecycle.js';
 import { type Capture, nodesBusy, settleAfter } from './simsettle.js';
 import { HelperActs } from './sim-act.js';
-import { HelperReads } from './sim-read.js';
+import { afterHelper, HelperReads } from './sim-read.js';
 import { helperSeesFront, looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
 import { pasteOnMac, setSimClipboard } from './sim-clipboard.js';
 import { IosRunnerLauncher } from './runner.js';
@@ -170,14 +170,7 @@ export class IosSimulatorDevice extends IosDevice {
     reportProgress(
       `the simulator's helper did not answer (${why}): the iOS runner starts in its place`,
     );
-    return super.open().catch((e: unknown) => {
-      if (!(e instanceof DeviceError)) throw e;
-      throw new DeviceError(
-        e.code,
-        `${e.message}, after the simulator's helper did not answer: ${why}`,
-        e.hint,
-      );
-    });
+    return super.open().catch(afterHelper(why));
   }
 
   protected override startAgent() {
@@ -424,9 +417,16 @@ export class IosSimulatorDevice extends IosDevice {
 
   /** As the app in front stands, by the read helper: the runner's hello, as the helper's, is of the screen at its start. */
   async screenNow() {
-    const own = this.hello?.screen;
-    const turns = own && (await this.direct.turnsNow().catch(() => undefined));
+    const turns = await this.direct.turnsNow().catch(() => undefined);
+    // a foldable's other display, where that look found it shown
+    const own = this.direct.inner ?? this.hello?.screen;
     return own && turns !== undefined ? turnedBy(own, turns) : undefined;
+  }
+
+  /** A foldable's other display by simctl: the runner's picture is of the main one, black while the other is shown. */
+  override async screenshot(opts: Parameters<IosDevice['screenshot']>[0] = {}) {
+    const shown = this.direct.inner && this.mirror.screenshot(opts.format ?? 'jpeg', opts.maxPx);
+    return (await shown) ?? super.screenshot(opts);
   }
 
   override close() {

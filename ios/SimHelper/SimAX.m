@@ -178,6 +178,19 @@ static NSDictionary *refuse(NSString *why) {
            @"refused": why};
 }
 
+// The main display's size in points, upright, as the simulator was started with it: a foldable's other display has
+// another, and the system's frame is then not this.
+static NSArray<NSNumber *> *mainSize(void) {
+  NSDictionary<NSString *, NSString *> *env = NSProcessInfo.processInfo.environment;
+  double scale = [env[@"SIMULATOR_MAINSCREEN_SCALE"] doubleValue] ?: 1;
+  return @[@([env[@"SIMULATOR_MAINSCREEN_WIDTH"] doubleValue] / scale), @([env[@"SIMULATOR_MAINSCREEN_HEIGHT"] doubleValue] / scale)];
+}
+
+static NSArray<NSNumber *> *systemSize(void) {
+  CGRect frame = [[(id<AX>)gAXElement systemApplication] frame];
+  return @[@(CGRectGetWidth(frame)), @(CGRectGetHeight(frame))];
+}
+
 static NSDictionary *readApp(NSDictionary *q) {
   id<AX> primary = [(id<AX>)gAXElement primaryApp];
   pid_t pid = [(id)primary respondsToSelector:@selector(pid)] ? [primary pid] : 0;
@@ -215,6 +228,7 @@ static NSDictionary *readApp(NSDictionary *q) {
            @"pid": @(pid),
            @"tree": tree,
            @"requests": @(c.requests),
+           @"main": mainSize(),
            @"screen": @[@(CGRectGetWidth(screen)), @(CGRectGetHeight(screen))]};
 }
 
@@ -293,8 +307,8 @@ static NSDictionary *hello(void) {
   CGRect frame = [[(id<AX>)gAXElement systemApplication] frame];
   NSDictionary<NSString *, NSString *> *env = NSProcessInfo.processInfo.environment;
   double scale = [env[@"SIMULATOR_MAINSCREEN_SCALE"] doubleValue];
-  double w = CGRectGetWidth(frame) > 0 ? CGRectGetWidth(frame) : [env[@"SIMULATOR_MAINSCREEN_WIDTH"] doubleValue] / scale;
-  double h = CGRectGetHeight(frame) > 0 ? CGRectGetHeight(frame) : [env[@"SIMULATOR_MAINSCREEN_HEIGHT"] doubleValue] / scale;
+  double w = CGRectGetWidth(frame) > 0 ? CGRectGetWidth(frame) : mainSize()[0].doubleValue;
+  double h = CGRectGetHeight(frame) > 0 ? CGRectGetHeight(frame) : mainSize()[1].doubleValue;
   NSOperatingSystemVersion v = NSProcessInfo.processInfo.operatingSystemVersion;
   NSString *os = v.patchVersion ? [NSString stringWithFormat:@"%ld.%ld.%ld", (long)v.majorVersion, (long)v.minorVersion, (long)v.patchVersion]
                                 : [NSString stringWithFormat:@"%ld.%ld", (long)v.majorVersion, (long)v.minorVersion];
@@ -302,6 +316,7 @@ static NSDictionary *hello(void) {
            @"osVersion": os,
            @"model": env[@"SIMULATOR_MODEL_IDENTIFIER"] ?: @"iPhone",
            @"scale": @(scale),
+           @"main": mainSize(),
            @"screen": @[@(w), @(h)]};
 }
 
@@ -340,6 +355,8 @@ static void handle(NSData *line) {
       } else if ([q[@"op"] isEqual:@"orientation"]) {
         // how the app in front is drawn: one that does not turn stays upright though the device has turned
         a = @{@"ok": @YES,
+              @"screen": systemSize(),
+              @"main": mainSize(),
               @"orientation": @([(id<AX>)[(id<AX>)gAXElement systemApplication] applicationOrientation])};
       } else if ([q[@"op"] isEqual:@"ping"]) a = gBlind ? @{@"ok": @YES,
                                                             @"blind": gBlind}

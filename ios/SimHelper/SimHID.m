@@ -3,6 +3,7 @@
 // The wire shape follows idb's DTUHID transport (MIT, see THIRD_PARTY_NOTICES). Private API: appdyno
 // checks it at start and falls back to the runner's input.
 #import <Foundation/Foundation.h>
+#import <IOKit/IOCFSerialize.h>
 #import <dlfcn.h>
 #import <mach/mach.h>
 #import <objc/runtime.h>
@@ -10,6 +11,8 @@
 #import <xpc/xpc.h>
 
 static const char *const kService = "com.apple.coredevice.feature.remote.hid.digitizer";
+// where a device's own controls go, as a foldable's hinge: a service of its own beside the digitizer's
+static const char *const kVendorService = "com.apple.coredevice.feature.remote.hid.vendordefined";
 
 @protocol Sim
 + (id)sharedServiceContextForDeveloperDir:(NSString *)dir error:(NSError **)error;
@@ -19,13 +22,15 @@ static const char *const kService = "com.apple.coredevice.feature.remote.hid.dig
 @end
 
 static xpc_connection_t gConnection;
+// the display a touch goes to, by its screen id: 0 is the main one, and a foldable's inner display has its own
+static uint64_t gTarget;
 
 static void fail(NSString *why) {
   fprintf(stderr, "%s\n", why.UTF8String);
   exit(3);
 }
 
-static xpc_connection_t connectTo(NSString *udid) {
+static xpc_connection_t connectTo(NSString *udid, const char *service) {
   dlopen("/Library/Developer/PrivateFrameworks/CoreSimulator.framework/CoreSimulator", RTLD_NOW);
   Class contextClass = objc_getClass("SimServiceContext");
   if (!contextClass) fail(@"CoreSimulator is missing");
@@ -35,7 +40,7 @@ static xpc_connection_t connectTo(NSString *udid) {
   id<Sim> set = [context defaultDeviceSetWithError:&error];
   id<Sim> device = set.devicesByUDID[[[NSUUID alloc] initWithUUIDString:udid]];
   if (!device) fail(@"no such simulator");
-  mach_port_t port = [device lookup:@(kService) error:&error];
+  mach_port_t port = [device lookup:@(service) error:&error];
   if (port == MACH_PORT_NULL) fail(error.localizedDescription ?: @"the service is not there");
   // the endpoint takes over the lookup's send right; without the sim2host mark the daemon sees the peer
   // but no payload
@@ -52,13 +57,17 @@ static xpc_connection_t connectTo(NSString *udid) {
   return c;
 }
 
-static xpc_object_t message(const char *type, xpc_object_t payload, bool barrier) {
+static xpc_object_t messageFor(const char *service, const char *type, xpc_object_t payload, bool barrier) {
   xpc_object_t m = xpc_dictionary_create(NULL, NULL, 0);
   xpc_dictionary_set_string(m, "messageType", type);
   xpc_dictionary_set_bool(m, "isBarrier", barrier);
-  xpc_dictionary_set_string(m, "featureIdentifier", kService);
+  xpc_dictionary_set_string(m, "featureIdentifier", service);
   xpc_dictionary_set_value(m, "payload", payload);
   return m;
+}
+
+static xpc_object_t message(const char *type, xpc_object_t payload, bool barrier) {
+  return messageFor(kService, type, payload, barrier);
 }
 
 static xpc_object_t point(double x, double y) {
@@ -70,13 +79,13 @@ static xpc_object_t point(double x, double y) {
 
 // Usage 0 ("no event"): the daemon answers and the guest sees no key. A send to a dead daemon reports no
 // error, so this answer is the only proof that one is there.
-static BOOL barrier(int64_t timeoutMs) {
+static BOOL barrierOn(xpc_connection_t connection, const char *service, int64_t timeoutMs) {
   xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
   xpc_dictionary_set_uint64(payload, "usageCode", 0);
   xpc_dictionary_set_uint64(payload, "state", 2);
   dispatch_semaphore_t done = dispatch_semaphore_create(0);
   __block BOOL ok = NO;
-  xpc_connection_send_message_with_reply(gConnection, message("IndigoKeyboardButtonEvent", payload, true),
+  xpc_connection_send_message_with_reply(connection, messageFor(service, "IndigoKeyboardButtonEvent", payload, true),
                                          dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0),
                                          ^(xpc_object_t reply) {
                                            ok = xpc_get_type(reply) != XPC_TYPE_ERROR;
@@ -84,6 +93,35 @@ static BOOL barrier(int64_t timeoutMs) {
                                          });
   if (dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW, timeoutMs * NSEC_PER_MSEC))) return NO;
   return ok;
+}
+
+static BOOL barrier(int64_t timeoutMs) {
+  return barrierOn(gConnection, kService, timeoutMs);
+}
+
+// A foldable's hinge at `degrees`, 0 closed to 180 flat, as Device Hub's slider sets it: a vendor-defined event with a
+// dictionary the simulator's motion service reads. The daemon answers and drops one sent as a barrier, and opens its
+// services a moment after a connection's first message: an answered ping before, the event plain, a ping after.
+static NSString *sendHinge(NSString *udid, double degrees) {
+  static xpc_connection_t vendor;
+  if (!vendor) {
+    vendor = connectTo(udid, kVendorService);
+    if (!barrierOn(vendor, kVendorService, 4000)) return @"dtuhidd did not answer on the hinge's service";
+    usleep(100000);
+  }
+  CFDataRef data = IOCFSerialize((__bridge CFTypeRef) @{@"source": @"hinge-slider-control",
+                                                        @"type": @"range",
+                                                        @"value": @(degrees)},
+                                 kIOCFSerializeToBinary);
+  if (!data) return @"the hinge's value did not serialize";
+  xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
+  xpc_dictionary_set_uint64(payload, "usagePage", 0xff61);
+  xpc_dictionary_set_uint64(payload, "usage", 0x5b);
+  xpc_dictionary_set_uint64(payload, "version", 0);
+  xpc_dictionary_set_data(payload, "data", CFDataGetBytePtr(data), (size_t)CFDataGetLength(data));
+  CFRelease(data);
+  xpc_connection_send_message(vendor, messageFor(kVendorService, "IndigoVendorDefinedEvent", payload, false));
+  return barrierOn(vendor, kVendorService, 2000) ? nil : @"dtuhidd did not answer after the hinge event";
 }
 
 // What is down now, let go of when the helper ends, however it ends (its stdin closed, or a SIGTERM in the middle of a
@@ -100,7 +138,7 @@ static void postTouch(NSDictionary *e, uint64_t phase) {
   if (e[@"x2"]) xpc_dictionary_set_value(payload, "pointTwo", point([e[@"x2"] doubleValue], [e[@"y2"] doubleValue]));
   xpc_dictionary_set_uint64(payload, "eventType", phase);
   xpc_dictionary_set_uint64(payload, "edge", 0);
-  xpc_dictionary_set_uint64(payload, "target", 0);
+  xpc_dictionary_set_uint64(payload, "target", gTarget);
   xpc_connection_send_message(gConnection, message("IndigoDigitizerEvent", payload, false));
 }
 
@@ -112,9 +150,13 @@ static void postKeyState(uint64_t page, uint64_t usage, uint64_t state) {
   xpc_connection_send_message(gConnection, message(page == 7 ? "IndigoKeyboardButtonEvent" : "IndigoButtonEvent", payload, false));
 }
 
-// [{p: 0 start, 1 move, 2 end; x, y, x2?, y2? normalized; at: ms from the first}]
+// [{p: 0 start, 1 move, 2 end; x, y, x2?, y2? normalized; at: ms from the first}], on the display `target` names
 // `quick`: a person's finger in a live window, where the next move is the proof, not a round trip
-static NSString *sendTouches(NSArray<NSDictionary *> *events, BOOL quick) {
+static NSString *sendTouches(NSArray<NSDictionary *> *events, uint64_t target, BOOL quick) {
+  os_unfair_lock_lock(&gHeldLock);
+  // a finger still down ends on the display it came down on
+  if (!gFinger) gTarget = target;
+  os_unfair_lock_unlock(&gHeldLock);
   uint64_t start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
   for (NSDictionary *e in events) {
     uint64_t due = start + (uint64_t)([e[@"at"] doubleValue] * NSEC_PER_MSEC);
@@ -173,7 +215,8 @@ static NSString *sendKey(uint64_t page, uint64_t usage, NSArray<NSNumber *> *mod
 int main(int argc, char **argv) {
   @autoreleasepool {
     if (argc != 2) fail(@"usage: SimHID <udid>");
-    gConnection = connectTo(@(argv[1]));
+    NSString *udid = @(argv[1]);
+    gConnection = connectTo(udid, kService);
     gHeldKeys = [NSMutableSet set];
     // the host ends a helper by closing its stdin and a SIGTERM at once, which may come inside a request
     signal(SIGTERM, SIG_IGN);
@@ -193,7 +236,8 @@ int main(int argc, char **argv) {
         NSString *error = nil;
         uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
         if ([op isEqual:@"ping"]) error = barrier([q[@"timeoutMs"] longLongValue] ?: 4000) ? nil : @"dtuhidd did not answer";
-        else if ([op isEqual:@"touch"]) error = sendTouches(q[@"events"], [q[@"quick"] boolValue]);
+        else if ([op isEqual:@"touch"]) error = sendTouches(q[@"events"], [q[@"target"] unsignedLongLongValue], [q[@"quick"] boolValue]);
+        else if ([op isEqual:@"hinge"]) error = sendHinge(udid, [q[@"degrees"] doubleValue]);
         else if ([op isEqual:@"keyState"]) sendKeyState([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue], [q[@"state"] unsignedLongLongValue]);
         else if ([op isEqual:@"key"]) error = sendKey([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue], q[@"modifiers"]);
         else error = @"unknown request";

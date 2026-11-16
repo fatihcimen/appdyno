@@ -17,7 +17,7 @@ const IN_A_SIMULATOR = [
 
 const SDK_FLAGS = {
   // SimHID and SimEnergy run on the Mac, SimAX and SimOpen inside the simulator
-  SimHID: ['clang', '-fobjc-arc', '-framework', 'Foundation'],
+  SimHID: ['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'IOKit'],
   SimEnergy: ['clang'],
   SimAX: [...IN_A_SIMULATOR, '-framework', 'CoreGraphics'],
   SimOpen: IN_A_SIMULATOR,

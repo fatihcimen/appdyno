@@ -88,6 +88,59 @@ describe('the helpers prove themselves', () => {
     await expect(off.hello()).rejects.toThrow(/APPDYNO_SIM_DIRECT=off/);
   });
 
+  it("sends a touch to a foldable's inner display while it is the one shown, and to the cover once it is closed", async () => {
+    // the system frame as the helper gives it: the cover's closed, another once the device is open
+    let open = false;
+    const main = [466, 678];
+    const look = () => ({ screen: open ? [155.33, 226] : main, main, orientation: open ? 4 : 1 });
+    const sent: { events?: { x: number; y: number }[]; target?: number }[] = [];
+    const reader = helper((q) =>
+      q.op === 'read'
+        ? { ok: true, tree: app(cell('A', 0)), ...look() }
+        : { ok: true, osVersion: '27.2', model: 'iPhone19,4', scale: 3, ...look() },
+    );
+    const hid = helper((q) => (sent.push(q), { ok: true }));
+    const inner = { id: 3, active: true, main: false, w: 669, h: 951, px: '2007x2853', scale: 3 };
+    const cover = { id: 1, active: false, main: true, w: 466, h: 678, px: '1398x2034', scale: 3 };
+    const d = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(reader), hid: () => Promise.resolve(hid) },
+      undefined,
+      () => Promise.resolve([cover, inner]),
+    );
+    const tap = async (x: number, y: number) => {
+      sent.length = 0;
+      expect(await d.send({ kind: 'tap', x, y })).toBe(true);
+      const touch = must(
+        sent.find((q) => q.events),
+        'a touch',
+      );
+      const at = must(touch.events?.[0], 'a point');
+      return [at.x.toFixed(3), at.y.toFixed(3), touch.target];
+    };
+    expect((await d.hello()).screen).toMatchObject({ w: 466, h: 678 });
+    expect(await tap(233, 339)).toEqual(['0.500', '0.500', undefined]);
+    // opened by a person or another process: nothing told this one, and the helper's next look says so
+    open = true;
+    expect(await tap(40, 129)).toEqual(['0.193', '0.958', 3]);
+    expect(d.reads).toBe(false);
+    expect(await d.read('a.b')).toEqual({ refused: 'other-display' });
+    // closed again: the cover, in its own size
+    open = false;
+    expect(await tap(233, 339)).toEqual(['0.500', '0.500', undefined]);
+    expect(d.reads).toBe(true);
+    // a session that begins on the open device leaves its hello to the runner, and its touches still go
+    open = true;
+    const late = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(reader), hid: () => Promise.resolve(hid) },
+      undefined,
+      () => Promise.resolve([cover, inner]),
+    );
+    await expect(late.hello()).rejects.toThrow(/other display/);
+    expect(late.screenKnown).toBe(true);
+  });
+
   it('turns a touch as a window turns one, by what the app in front says of itself', async () => {
     const touch = async (screen: number[], orientation: number) => {
       const sent: { events?: { x: number; y: number }[] }[] = [];

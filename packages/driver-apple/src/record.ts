@@ -15,6 +15,7 @@ import {
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { devicectlReady } from './first-launch.js';
+import { simDisplays } from './sim-fold.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 
 const START_MS = 15_000;
@@ -156,19 +157,53 @@ const SIMULATOR_LEAD = { ms: 150, withinMs: 150 };
  */
 const STREAM_LEAD = { ms: -220, withinMs: 620 };
 
+/**
+ * A simulator's own recorder. One with two displays, as a foldable, is asked which to record and refuses to start
+ * until it is told: the one shown is then named, as devicectl says it, and the start made once more.
+ */
+class SimulatorRecorder extends ToolRecorder {
+  private display: string[] = [];
+
+  constructor(
+    private readonly udid: string,
+    private readonly displays = simDisplays,
+  ) {
+    super(
+      'mov',
+      (file) => [
+        'simctl',
+        'io',
+        assertUdid(udid),
+        'recordVideo',
+        '--codec=h264',
+        '--force',
+        ...this.display,
+        file,
+      ],
+      /Recording started/,
+      'recordVideo',
+      false,
+      'a simulator writes a frame only when the screen changes, so a still screen gives a very short video',
+      undefined,
+      undefined,
+      SIMULATOR_LEAD,
+    );
+  }
+
+  override async start(file: string, limit: { maxSeconds: number }) {
+    try {
+      return await super.start(file, limit);
+    } catch (e) {
+      const shown = (await this.displays(this.udid)).find((d) => d.active)?.id;
+      if (shown === undefined) throw e;
+      this.display = [`--display=${String(shown)}`];
+      return await super.start(file, limit).finally(() => (this.display = []));
+    }
+  }
+}
+
 /** It writes a QuickTime movie, whatever the file is called. */
-export const simulatorRecorder = (udid: string): ScreenRecorder =>
-  new ToolRecorder(
-    'mov',
-    (file) => ['simctl', 'io', assertUdid(udid), 'recordVideo', '--codec=h264', '--force', file],
-    /Recording started/,
-    'recordVideo',
-    false,
-    'a simulator writes a frame only when the screen changes, so a still screen gives a very short video',
-    undefined,
-    undefined,
-    SIMULATOR_LEAD,
-  );
+export const simulatorRecorder = (udid: string): ScreenRecorder => new SimulatorRecorder(udid);
 
 // shortcut: what `devicectl` prints once it records has not been seen, as the one phone tried (iPhone 13 Pro Max,
 // iOS 27.0.1) lacks the capability and refuses at once; a process still there after QUIET_MS counts as recording.

@@ -276,6 +276,66 @@ describe("a simulator's picture", () => {
     expect(await shot()).toEqual({ w: 2, h: 1, at: ['red', 'blue'] });
     await mirror.close();
   });
+
+  it('pictures and touches the display a foldable shows: simctl asks which, and it comes as it stands', async () => {
+    const asked: string[][] = [];
+    const exec = vi.fn((args: string[]) => {
+      asked.push(args);
+      if (!args.some((a) => a.startsWith('--display=')))
+        return Promise.reject(new Error('--display=1 LCD (primary) 1398x2034 Invalid argument'));
+      writeFileSync(must(args.at(-1), 'a file'), surface);
+      return Promise.resolve('');
+    });
+    const calls: Record<string, unknown>[] = [];
+    const hid = {
+      closed: false,
+      call: (q: Record<string, unknown>) => (calls.push(q), Promise.resolve({ ok: true })),
+      close: vi.fn(),
+    };
+    // open: the app in front lies on its side, and the system frame is not the cover's
+    const reader = {
+      closed: false,
+      call: () =>
+        Promise.resolve({ ok: true, orientation: 4, screen: [155.33, 226], main: [466, 678] }),
+      close: vi.fn(),
+    };
+    const display = (id: number, active: boolean) => ({
+      id,
+      active,
+      main: id === 1,
+      w: 466,
+      h: 678,
+      px: '1398x2034',
+      scale: 3,
+    });
+    const mirror = new SimulatorMirror(
+      UDID,
+      { exec } as unknown as Simctl,
+      () => Promise.resolve(hid as unknown as HelperProcess),
+      vi.fn(),
+      () => Promise.resolve(reader as unknown as HelperProcess),
+      () => Promise.resolve([display(1, false), display(3, true)]),
+    );
+    const shot = pixels(must(await mirror.screenshot('png'), 'a picture').data);
+    // not turned again, as the app's orientation would have it
+    expect(shot).toEqual({ w: 2, h: 1, at: ['red', 'blue'] });
+    expect(asked.map((a) => a.filter((w) => w.startsWith('--display=')))).toEqual([
+      [],
+      ['--display=3'],
+    ]);
+    const told: unknown[] = [];
+    await mirror.open(undefined, undefined, (m) => told.push(m));
+    await vi.waitFor(() => expect(told).toEqual([{ op: 'turns', turns: 3 }]), { timeout: 3_000 });
+    await mirror.input({ kind: 'touch', p: 0, x: 40 / 951, y: 129 / 669 });
+    const touch = must(
+      calls.find((q) => q.op === 'touch'),
+      'a touch',
+    ) as { target?: number; events: { x: number; y: number }[] };
+    expect(touch.target).toBe(3);
+    expect(touch.events[0]?.x).toBeCloseTo(0.193, 3);
+    expect(touch.events[0]?.y).toBeCloseTo(0.958, 3);
+    await mirror.close();
+  });
 });
 
 describe('a US keyboard', () => {

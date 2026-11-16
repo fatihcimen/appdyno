@@ -2,6 +2,7 @@ import { must, throwIfCancelled } from '@appdyno/core';
 import { DeviceError, PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
 import { turnedTouch, turnsOf } from './mirror-sim.js';
 import { HOME_SCREEN_APP } from './platform-screen.js';
+import { ShownDisplay, type SimDisplay } from './sim-fold.js';
 import { type HelperProcess, startSimAx, startSimHid, type HelperAnswer } from './simhelper.js';
 import { type DirectRead, type Refusal, toTree, type RawAx, sameTree } from './simtree.js';
 import { hidKey, HID_MODIFIERS, touchEvents } from './simtouch.js';
@@ -73,6 +74,8 @@ export class DirectSim {
   private readOff: string | undefined;
   private inputOff: string | undefined;
   private screen: { w: number; h: number } | undefined;
+  /** A foldable's other display, while it is the one shown: touches go to it by its id, and the runner reads it. */
+  private readonly shown: ShownDisplay;
   private rotated = false;
   private axDeaths = 0;
   private misreads = 0;
@@ -86,7 +89,9 @@ export class DirectSim {
     private readonly udid: string,
     private readonly start: Starters = { ax: startSimAx, hid: startSimHid },
     mode = process.env.APPDYNO_SIM_DIRECT,
+    displays?: (udid: string) => Promise<SimDisplay[]>,
   ) {
+    this.shown = new ShownDisplay(udid, displays);
     if (mode === 'off') this.readOff = this.inputOff = 'APPDYNO_SIM_DIRECT=off';
     if (mode === 'read') this.inputOff = 'APPDYNO_SIM_DIRECT=read';
   }
@@ -96,6 +101,24 @@ export class DirectSim {
       input: this.inputOff ? `runner: ${this.inputOff}` : this.hid ? 'direct' : 'not used yet',
       read: this.readOff ? `runner: ${this.readOff}` : this.screen ? 'direct' : 'not used yet',
     };
+  }
+
+  /** A foldable's other display while it is the one shown, as a screen: upright, in points. */
+  get inner() {
+    const d = this.shown.inner;
+    return d && { w: d.w, h: d.h, density: d.scale };
+  }
+
+  /** Whether a look of the helper's shows a foldable's other display, which is then the screen touches are sent in. */
+  private async onInner(a: HelperAnswer) {
+    const was = this.shown.inner;
+    const inner = (await this.shown.seen(a.screen, a.main, a.orientation))
+      ? this.shown.inner
+      : undefined;
+    if (inner) this.screen = upright([inner.w, inner.h]);
+    // folded back: the main display's size again, which only a read would say otherwise
+    else if (was) this.screen = upright(a.main as [number, number]);
+    return !!inner;
   }
 
   /**
@@ -109,6 +132,8 @@ export class DirectSim {
     const size = a.screen as [number, number] | undefined;
     if (!a.ok) throw new Error(`it refused: ${a.error ?? a.refused ?? 'no reason given'}`);
     if (!size?.[0] || !size[1]) throw new Error('it gave no screen size');
+    if (await this.onInner(a))
+      throw new Error("the simulator shows its other display, and it reads the main one's only");
     this.screen = upright(size);
     if (size[0] > size[1]) throw new Error('the screen is turned, and it reads it upright only');
     return {
@@ -174,9 +199,13 @@ export class DirectSim {
   /** A read of `bundle` in front, in the runner's shape; a refusal when the runner must answer this one. */
   async read(bundle: string | undefined): Promise<DirectRead | Refusal> {
     if (this.readOff || this.rotated || !bundle) return { refused: this.readOff ?? 'no-target' };
+    // folded back since: the helper's own look says so
+    if (this.shown.inner) await this.turns();
+    if (this.shown.inner) return { refused: 'other-display' };
     const a = this.note(await (await this.helperAx()).call({ op: 'read', bundle }, 10_000));
     if (!a.ok) return { refused: a.refused ?? 'refused' };
     const size = a.screen as [number, number];
+    if (await this.onInner(a)) return { refused: 'other-display' };
     this.screen = upright(size);
     if (size[0] > size[1])
       return bundle === HOME_SCREEN_APP
@@ -212,7 +241,7 @@ export class DirectSim {
 
   /** Whether a read or a look at what is in front can be asked of the helper. */
   get reads() {
-    return !this.readOff && !this.rotated;
+    return !this.readOff && !this.rotated && !this.shown.inner;
   }
 
   /** A touch is sent in the screen's points, which a read or the hello tell. */
@@ -276,6 +305,7 @@ export class DirectSim {
   /** The turns that stand the app in front up; undefined where it will not say and it was turned. */
   private async turns() {
     const a = await (await this.helperAx()).call({ op: 'orientation' }, 3_000);
+    if (a.ok) await this.onInner(a);
     return (a.ok ? turnsOf(a.orientation as number) : undefined) ?? (this.rotated ? undefined : 0);
   }
 
@@ -316,7 +346,9 @@ export class DirectSim {
     // a stop that came while the helper started, answered its ping or told the turns holds the stroke too
     throwIfCancelled('the action');
     const a = await hid.call(
-      key ? { op: 'key', ...key, ...(held && { modifiers: held }) } : { op: 'touch', events },
+      key
+        ? { op: 'key', ...key, ...(held && { modifiers: held }) }
+        : { op: 'touch', events, ...(this.shown.inner && { target: this.shown.inner.id }) },
       last + 5_000,
     );
     if (!a.ok) {
@@ -336,6 +368,8 @@ export class DirectSim {
 
   /** A touch the app never reported: the runner takes over the input from now on. */
   touchLost() {
+    // but on a foldable's other display, where the runner has no touch at all: one lost as the device folded is one
+    if (this.shown.inner) return;
     this.inputOff = 'a touch sent directly did not reach the app';
   }
 

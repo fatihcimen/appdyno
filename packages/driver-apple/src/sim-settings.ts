@@ -2,6 +2,7 @@ import type { DeviceSettings, SettingName } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { macProxy } from './network.js';
 import { SIM_CANNOT } from './sim-events.js';
+import { SimulatorFold } from './sim-fold.js';
 import type { Simctl } from './simctl.js';
 import { appLanguage, heldSize, holdAppLanguage, on, textSize } from './manage.js';
 
@@ -11,7 +12,12 @@ export class SimulatorSettings implements DeviceSettings {
   constructor(
     private readonly simctl: Simctl,
     private readonly udid: string,
+    private readonly fold = new SimulatorFold(udid),
   ) {}
+
+  async choices(name: SettingName) {
+    return name === 'fold' ? this.fold.poses() : undefined;
+  }
 
   /** An app that runs starts again, in what it is held in now. */
   private async restart(app: string) {
@@ -72,7 +78,7 @@ export class SimulatorSettings implements DeviceSettings {
       case 'orientation':
         throw new DeviceError('UNSUPPORTED', 'a simulator has no rotation lock to set');
       case 'fold':
-        throw new DeviceError('UNSUPPORTED', SIM_CANNOT.fold);
+        return this.fold.get();
       case 'thermal':
         throw new DeviceError(
           'UNSUPPORTED',
@@ -137,6 +143,8 @@ export class SimulatorSettings implements DeviceSettings {
         return "the whole simulator: app for one app's launches";
       case 'proxy':
         throw new DeviceError('UNSUPPORTED', await this.followsMac());
+      case 'fold':
+        return this.fold.set(value);
       default:
         await this.get(name);
     }

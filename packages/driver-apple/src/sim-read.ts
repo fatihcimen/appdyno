@@ -1,5 +1,5 @@
 import { must, pause } from '@appdyno/core';
-import type { Tree } from '@appdyno/protocol';
+import { DeviceError, type Tree } from '@appdyno/protocol';
 import { HOME_SCREEN_APP } from './platform-screen.js';
 import type { DirectSim } from './simdirect.js';
 import { type Capture, nodesBusy } from './simsettle.js';
@@ -80,3 +80,15 @@ export class HelperReads {
     return { tree: withoutCopies(r.tree, verdict), busy: r.busy };
   }
 }
+
+/** A runner's refusal to start, said with why the helper, which was asked first, did not answer. */
+export const afterHelper =
+  (why: string) =>
+  (e: unknown): never => {
+    if (!(e instanceof DeviceError)) throw e;
+    throw new DeviceError(
+      e.code,
+      `${e.message}, after the simulator's helper did not answer: ${why}`,
+      e.hint,
+    );
+  };

@@ -22,3 +22,4 @@ export * from './perf-parse.js';
 export * from './trace.js';
 export * from './trace-parse.js';
 export { DirectSim, type DirectStatus } from './simdirect.js';
+export { simDisplays, type SimDisplay } from './sim-fold.js';
