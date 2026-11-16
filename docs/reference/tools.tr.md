@@ -4,15 +4,59 @@
 
 Bir MCP istemcisinin çağırabildiği 28 araç. Her biri aynı zamanda [bir komut](cli.tr.md) ve [kütüphanede](library.tr.md) bir çağrıdır. Her birinin neyin üzerinde çalıştırıldığı ve çalıştırmaların ne gösterdiği [Araçlar nasıl test edildi](tools-tested.tr.md) sayfasındadır.
 
-Bu sayfada _pencere_, bir cihazın `show_mirror`'ın, hub'ın ya da Mac uygulamasının açtığı canlı penceresidir. _Runner_, appdyno'nun bir iPhone'daki ya da simülatördeki yardımcı uygulaması, _ajan_ ise Android'deki yardımcısıdır. _Koşul_, appdyno'nun değiştirdiği ve geri koyduğu bir cihaz ayarıdır. _İzin listesi_, `--allow-devices`, `--allow-apps` ve `--allow-urls` seçeneklerinin bu sunucunun dokunmasına izin verdiği şeylerdir.
+## Bir bakışta
+
+| grup                                | araç                  | ne için                                                                                   |
+| ----------------------------------- | --------------------- | ----------------------------------------------------------------------------------------- |
+| [Cihazlar](#cihazlar)               | `list_devices`        | neyin bağlı olduğunu ve hangi cihazın kullanıldığını görmek                               |
+|                                     | `use_device`          | kullanılacak cihazı ve test edilen uygulamayı seçmek                                      |
+|                                     | `set_device`          | bir koşulu okumak ya da değiştirmek: dark mode, konum, ağ, katlanma                       |
+|                                     | `manage_simulator`    | bir simulator ya da emulator listelemek, başlatmak, oluşturmak ya da kapatmak             |
+| [Pencere](#pencere)                 | `show_mirror`         | bir kişinin izleyip dokunabildiği canlı bir pencere açmak                                 |
+|                                     | `ask_person`          | Face ID'de olduğu gibi işi bir kişiye bırakmak ve beklemek                                |
+| [Okuma](#okuma)                     | `read_screen`         | ekranı öğeler ya da native view'lar olarak okumak                                         |
+|                                     | `check_element`       | bir öğeyi denetlemek ya da denetim tutana kadar beklemek                                  |
+|                                     | `take_screenshot`     | bir resim almak ya da neyin hareket ettiğini görmek                                       |
+| [İşlem](#i̇şlem)                     | `tap_screen`          | dokunmak, çift dokunmak ya da uzun basmak                                                 |
+|                                     | `swipe_screen`        | kaydırmak, bir öğeye kadar kaydırmak, sürüklemek ya da kıstırmak                          |
+|                                     | `type_text`           | bir alana yazmak                                                                          |
+|                                     | `press_key`           | bir tuşa ya da düğmeye basmak, klavyeyi kapatmak                                          |
+|                                     | `run_steps`           | tek çağrıda birkaç araç çalıştırmak                                                       |
+|                                     | `answer_alert`        | bir sistem uyarısını okumak ya da yanıtlamak                                              |
+| [Uygulamalar](#uygulamalar)         | `open_link`           | bir deep link ya da bir Ayarlar sayfası açmak, bir uygulamanın bağlantılarını listelemek  |
+|                                     | `launch_app`          | uygulamayı başlatmak ya da baştan başlatmak                                               |
+|                                     | `manage_app`          | kurmak, durdurmak, temizlemek, izin vermek, derleyip çalıştırmak                          |
+|                                     | `transfer_files`      | bir uygulamanın verisini almak ya da koymak, galeriye fotoğraf eklemek                    |
+|                                     | `send_push`           | uygulamaya bir push bildirimi göndermek                                                   |
+| [Denetim](#denetim)                 | `check_screen`        | erişilebilirliği denetlemek ya da kayıtlı bir görüntüyle karşılaştırmak                   |
+|                                     | `read_logs`           | uygulamanın logunu ya da crash'lerini okumak                                              |
+| [Kanıt](#kanıt)                     | `record_session`      | bir video, bir rapor, bir zaman çizelgesi ya da bir uygulamanın son saniyelerini saklamak |
+|                                     | `capture_network`     | HTTP trafiğini incelemek, mock'lamak, yavaşlatmak ve denetlemek                           |
+| [Uygulamanın içi](#uygulamanın-içi) | `inspect_app`         | bir web view'a, bir React Native uygulamasına ya da imzasız bir iPhone ekranına ulaşmak   |
+| [Ölçüm](#ölçüm)                     | `measure_performance` | açılışı, kaydırmayı, kareleri, CPU'yu, heap'i ya da o anki durumu ölçmek                  |
+|                                     | `compare_performance` | çalıştırmaları bir baseline'a karşı denetlemek ya da saklanan bir trace'i sorgulamak      |
+| [Yeniden oynatma](#yeniden-oynatma) | `run_flow`            | bir flow kaydetmek, modelsiz yeniden oynatmak, dışa aktarmak                              |
+
+Sonra nereye bakmalı:
+
+- [Her araç](#her-araç), her aracın girdilerini grup grup, ayrıntılara bağlantılarla verir.
+- [Bir işlem ne yanıtlar](#bir-işlem-ne-yanıtlar) ve [Hedefler](#hedefler), her dokunuşun nasıl davrandığını anlatır.
+- [Önce kişiye sorulanlar](#önce-kişiye-sorulanlar), bir modelin tek başına yapamadıklarını listeler.
+- [Her platform neyi yapabilir](#her-platform-neyi-yapabilir), Android, simulator ve iPhone için tek bir tablodur.
+- [1.3.0'dan önceki adlar](#130dan-önceki-adlar), her eski aracı yenisiyle eşler.
+
+## Bir çağrı nasıl çalışır
+
+- Bu sayfada _pencere_, bir cihazın `show_mirror`'ın, hub'ın ya da Mac uygulamasının açtığı canlı penceresidir.
+- _Runner_, appdyno'nun bir iPhone'daki ya da simulator'daki yardımcı uygulaması, _ajan_ ise Android'deki yardımcısıdır.
+- _Koşul_, appdyno'nun değiştirdiği ve geri koyduğu bir cihaz ayarıdır.
+- _İzin listesi_, `--allow-devices`, `--allow-apps` ve `--allow-urls` seçeneklerinin bu sunucunun dokunmasına izin verdiği şeylerdir.
 
 Araçlar `device` parametresi almaz. Cihaz, `use_device`'ın seçtiği cihazdır; o yoksa sunucunun `--device`'ı, o da yoksa bu sunucunun yönetebildiği, bağlı tek cihaz.
 
 Bir istemcinin işlem yapan çağrıları, geldikleri sırayla birer birer çalışır. İstemci ikisini aynı anda gönderirse, örneğin bir turda iki ref'in her birine birer `tap_screen`, ikincisi ilkinden sonra çalışır ve ilkinin bıraktığı ekranı hedefler; bu yüzden ilkinin kaldırdığı bir ref `STALE` olarak reddedilir. Sırasını bekleyen bir çağrı bunu ilerlemesinde `waiting its turn` diye bildirir. `read_screen` ve `check_element` gibi yalnızca okuyan çağrılar beklemez; `run_steps`'in çağırdığı bir araç da o `run_steps` çağrısının içinde çalışır.
 
-Sunucu, MCP'nin `initialize` ile açılan 2024-10-07 ile 2025-11-25 arasındaki revizyonlarını ve 2026-07-28 revizyonunu
-konuşur; sonuncusu `server/discover` ile açılır. Bunu stdio üzerinden de `--http` üzerinden de yapar: hangisi olduğunu istemcinin ilk mesajı söyler. Araçlar
-ve kendileri hakkında söyledikleri her birinde bayt bayt aynıdır.
+Sunucu, MCP'nin `initialize` ile açılan 2024-10-07 ile 2025-11-25 arasındaki revizyonlarını ve 2026-07-28 revizyonunu konuşur; sonuncusu `server/discover` ile açılır. Bunu stdio üzerinden de `--http` üzerinden de yapar: hangisi olduğunu istemcinin ilk mesajı söyler. Araçlar ve kendileri hakkında söyledikleri her birinde bayt bayt aynıdır.
 
 ## Her araç
 
@@ -20,12 +64,14 @@ Aşağıdaki girdiler her aracın şemasından okunur. Kalın bir girdi zorunlud
 
 ### Cihazlar
 
-| araç               | ne yapar                                                                                                                                                                                                                                       | girdiler                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_devices`     | Bağlı telefonlar, simülatörler ve emülatörler: bu sunucunun hangilerini yönetebileceği, her birini kimin tuttuğu ve neyin engellediği; `selected` ile kullanılan cihaz: modeli, işletim sistemi sürümü, ekranı, ajan sürümü ve öndeki uygulama | `selected`                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `use_device`       | Yönetilecek cihazı ve test edilen uygulamayı seçer                                                                                                                                                                                             | **`device`**; `app`; `share`                                                                                                                                                                                                                                                                                                                                                                               |
-| `set_device`       | Bir koşulu okur ya da ayarlar: koyu mod, ekran yönü, sahte GPS konumu, pano, metin boyutu ya da yavaş ağ gibi; `value` olmadan okur                                                                                                            | **`name`**: `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `fold`, `thermal`, `restore`, `biometric`, `call`, `sms`, `keychain`, `memory_warning`, `shake`; `value`; `title`; `app`; `read`: `diff` (varsayılan), `full`, `none` |
-| `manage_simulator` | Simülatörleri ve emülatörleri listeler, başlatır, oluşturur ve kapatır                                                                                                                                                                         | **`action`**: `list`, `boot`, `create`, `shutdown`; `name`                                                                                                                                                                                                                                                                                                                                                 |
+| araç               | ne yapar                                                                                                                                                                                                                                         | girdiler                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_devices`     | Bağlı telefonlar, simulator'lar ve emulator'lar: bu sunucunun hangilerini yönetebileceği, her birini kimin tuttuğu ve neyin engellediği; `selected` ile kullanılan cihaz: modeli, işletim sistemi sürümü, ekranı, ajan sürümü ve öndeki uygulama | `selected`                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `use_device`       | Yönetilecek cihazı ve test edilen uygulamayı seçer                                                                                                                                                                                               | **`device`**; `app`; `share`                                                                                                                                                                                                                                                                                                                                                                               |
+| `set_device`       | Bir koşulu okur ya da ayarlar: koyu mod, ekran yönü, sahte GPS konumu, pano, metin boyutu ya da yavaş ağ gibi; `value` olmadan okur                                                                                                              | **`name`**: `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `fold`, `thermal`, `restore`, `biometric`, `call`, `sms`, `keychain`, `memory_warning`, `shake`; `value`; `title`; `app`; `read`: `diff` (varsayılan), `full`, `none` |
+| `manage_simulator` | Simulator'ları ve emulator'ları listeler, başlatır, oluşturur ve kapatır                                                                                                                                                                         | **`action`**: `list`, `boot`, `create`, `shutdown`; `name`                                                                                                                                                                                                                                                                                                                                                 |
+
+Ayrıntılar: [Bir cihazı paylaşmak](#bir-cihazı-paylaşmak), [Bir simulator ya da emulator başlatmak](#bir-simulator-ya-da-emulator-başlatmak), [Bir telefona ulaşmak](#bir-telefona-ulaşmak), [Bir cihazı eski haline getirmek](#bir-cihazı-eski-haline-getirmek), [Kablosuz bağlantılar, biyometri ve anahtar zinciri](#kablosuz-bağlantılar-biyometri-ve-anahtar-zinciri), [Yavaş bir ağ](#yavaş-bir-ağ), [Katlanma](#katlanma), [Diller](#diller), [Bir iPhone'un kendi koşulları, verisi ve izinleri](#bir-iphoneun-kendi-koşulları-verisi-ve-izinleri).
 
 ### Pencere
 
@@ -34,6 +80,8 @@ Aşağıdaki girdiler her aracın şemasından okunur. Kalın bir girdi zorunlud
 | `show_mirror` | Cihazın, bir kişinin izleyip dokunabildiği canlı penceresi                                    | **`action`**: `open`, `close`, `status`, `stats`; `quality`: `auto` (varsayılan), `high`, `standard`; `wifi`: `false` (varsayılan) |
 | `ask_person`  | Kişiden bir aracın yapamadığını, örneğin Face ID'yi, yapmasını ister ve bitirene kadar bekler | **`reason`**; `timeoutS`: `300` (varsayılan)                                                                                       |
 
+Ayrıntılar: [Pencere ve hub](mirror.tr.md).
+
 ### Okuma
 
 | araç              | ne yapar                                                                                                    | girdiler                                                                                                                                                                                                                           |
@@ -41,6 +89,8 @@ Aşağıdaki girdiler her aracın şemasından okunur. Kalın bir girdi zorunlud
 | `read_screen`     | Ekranın öğeleri, her biri bir ref ile; `selector` ile eşleşen öğeler, durumları ve sınırlarıyla             | `selector`; `raw`; `views`                                                                                                                                                                                                         |
 | `check_element`   | Bir öğeyi denetler, geçti ya da kaldı; `timeoutMs` ile denetim tutana kadar bekler: tutmazsa `CHECK_FAILED` | `ref`; `selector`; `check`: `exists` (varsayılan), `absent`, `text`, `enabled`, `checked`, `focused`, `moves`; `equals`; `expect`: `true` (varsayılan); `timeoutMs`: `0` (varsayılan); `read`: `diff` (varsayılan), `full`, `none` |
 | `take_screenshot` | Ekranın bir görüntüsü ya da `watchMs` ile ekranda neyin hareket ettiği                                      | `points`; `width`; `watchMs`; `strip`; `file`; `overwrite`; `inline`                                                                                                                                                               |
+
+Ayrıntılar: [Ekranı okumak](#ekranı-okumak), [Hedefler](#hedefler), [Ekran görüntüleri](#ekran-görüntüleri).
 
 ### İşlem
 
@@ -53,6 +103,8 @@ Aşağıdaki girdiler her aracın şemasından okunur. Kalın bir girdi zorunlud
 | `run_steps`    | Tek çağrıda en çok 30 araç                                                                                                             | **`steps`**; `read`: `diff` (varsayılan), `full`, `none`                                                                                                                                                           |
 | `answer_alert` | Açık sistem uyarısını okur ya da yanıtlar                                                                                              | `answer`; `read`: `diff` (varsayılan), `full`, `none`                                                                                                                                                              |
 
+Ayrıntılar: [Bir işlem ne yanıtlar](#bir-işlem-ne-yanıtlar), [Adımlar, hareketler, uygulamalar ve ayarlar](#adımlar-hareketler-uygulamalar-ve-ayarlar), [Sistem uyarıları](#sistem-uyarıları).
+
 ### Uygulamalar
 
 | araç             | ne yapar                                                                                                           | girdiler                                                                                                                                                                                                                                                               |
@@ -63,19 +115,25 @@ Aşağıdaki girdiler her aracın şemasından okunur. Kalın bir girdi zorunlud
 | `transfer_files` | Bu Mac ile cihaz arasında dosya taşır: bir uygulamanın verisini dışarı ya da içeri, fotoğraf ve videoları galeriye | **`action`**: `pull`, `push`, `media`; **`path`**; `app`                                                                                                                                                                                                               |
 | `send_push`      | Uygulamaya bir push bildirimi gönderir; `type` verilmezse bu cihazın neleri aldığını söyler                        | `app`; `type`; `title`; `body`; `image`; `data`; `payload`; `read`: `diff` (varsayılan), `full`, `none`                                                                                                                                                                |
 
+Ayrıntılar: [Önce kişiye sorulanlar](#önce-kişiye-sorulanlar), [Push bildirimleri](#push-bildirimleri), [Bağlantılar](#bağlantılar), [Bellek uyarıları, sallamalar, fotoğraflar ve arka planda bir son](#bellek-uyarıları-sallamalar-fotoğraflar-ve-arka-planda-bir-son).
+
 ### Denetim
 
 | araç           | ne yapar                                                                                                    | girdiler                                                                                                                                                                                                                                                                                                           |
 | -------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `check_screen` | Ekranın tümünü denetler: erişilebilirlik sorunları ya da ekranın kaydedilmiş bir görüntüyle karşılaştırması | **`check`**: `accessibility`, `visual`, `visual_baseline`; `name`; `dir`; `tolerance`: `0.1` (varsayılan); `masks`; `types`: `contrast`, `elementDetection`, `hitRegion`, `sufficientElementDescription`, `dynamicType`, `textClipped`, `trait`, `imageContrast`, `duplicateLabel`; `maxIssues`: `50` (varsayılan) |
-| `read_logs`    | Uygulamanın logu, gizli değerler saklanmış olarak; `source: crashes` ile çökme, ANR ve çıkış raporları      | `source`: `app` (varsayılan), `crashes`; `app`; `since`; `level`: `verbose`, `debug`, `info` (varsayılan), `warn`, `error`; `contains`; `limit`; `symbols`                                                                                                                                                         |
+| `read_logs`    | Uygulamanın logu, gizli değerler saklanmış olarak; `source: crashes` ile crash, ANR ve çıkış raporları      | `source`: `app` (varsayılan), `crashes`; `app`; `since`; `level`: `verbose`, `debug`, `info` (varsayılan), `warn`, `error`; `contains`; `limit`; `symbols`                                                                                                                                                         |
+
+Ayrıntılar: [Loglar ve crash'ler](#loglar-ve-crashler).
 
 ### Kanıt
 
-| araç              | ne yapar                                                                                                                                                              | girdiler                                                                                                                                                                                                                                                                                                                                                                          |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `record_session`  | Kanıt saklar: ekranın videosu, tek bir HTML dosyasında bir test raporu, bir zaman çizelgesi ya da bir uygulamanın bir çökmede ya da takılmada saklanan son saniyeleri | **`kind`**: `video`, `report`, `timeline`, `flight`; **`action`**: `start`, `stop`, `write`; `file`; `overwrite`; `maxSeconds`: `1800` (varsayılan); `dir`                                                                                                                                                                                                                        |
-| `capture_network` | Uygulamanın HTTP trafiği                                                                                                                                              | **`action`**: `paths`, `start`, `read`, `stop`, `mock`, `throttle`, `check`; `via`: `proxy`, `probe`, `packets`, `bytes`; `proxy`; `app`; `bodies`; `har`; `id`; `path`; `shape`; `diff`; `after`; `contains`; `method`; `status`; `limit`: `50` (varsayılan); `save`; `overwrite`; `rules`; `add`; `has`; `timeoutMs`; `from`; `unmatched`: `pass`, `fail`; `strict`; `throttle` |
+| araç              | ne yapar                                                                                                                                                               | girdiler                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `record_session`  | Kanıt saklar: ekranın videosu, tek bir HTML dosyasında bir test raporu, bir zaman çizelgesi ya da bir uygulamanın bir crash'te ya da takılmada saklanan son saniyeleri | **`kind`**: `video`, `report`, `timeline`, `flight`; **`action`**: `start`, `stop`, `write`; `file`; `overwrite`; `maxSeconds`: `1800` (varsayılan); `dir`                                                                                                                                                                                                                        |
+| `capture_network` | Uygulamanın HTTP trafiği                                                                                                                                               | **`action`**: `paths`, `start`, `read`, `stop`, `mock`, `throttle`, `check`; `via`: `proxy`, `probe`, `packets`, `bytes`; `proxy`; `app`; `bodies`; `har`; `id`; `path`; `shape`; `diff`; `after`; `contains`; `method`; `status`; `limit`: `50` (varsayılan); `save`; `overwrite`; `rules`; `add`; `has`; `timeoutMs`; `from`; `unmatched`: `pass`, `fail`; `strict`; `throttle` |
+
+Ayrıntılar: [Simulator'da ağ](#simulatorda-ağ).
 
 ### Uygulamanın içi
 
@@ -90,11 +148,15 @@ Aşağıdaki girdiler her aracın şemasından okunur. Kalın bir girdi zorunlud
 | `measure_performance` | `metric` ile ölçer: açılış süresi, kayarken bir listenin kareleri, karelerin neden yavaş olduğu ve bir iPhone'un takılmaları, CPU zamanının nereye gittiği, bir heap dökümü ya da şu anki CPU, bellek ve kareler | **`metric`**: `snapshot`, `launch`, `scroll`, `frames`, `cpu`, `heap`; `app`; `cpuWindowMs`: `2000` (varsayılan); `also`: `threads`, `network`, `energy`, `anonMemory`, `startInfo`, `surface`, `battery`, `exits`, `size`; `batteryWindowMs`: `30000` (varsayılan); `scenario`; `mode`: `cold` (varsayılan), `warm`, `hot`; `repeats`; `compile`: `speed`, `speed-profile`, `verify`; `trace`; `baselineProfile`; `probe`; `baseline`; `direction`: `up`, `down`; `swipes`: `5` (varsayılan); `x`; `y`; `selector`; `seconds`; `what`: `frames` (varsayılan), `hangs`, `xct_hitches`, `xct_launch`; `dsym`; `profile`: `java_hprof`, `heapprofd` |
 | `compare_performance` | Performans kapısı: saklanan çalıştırmalar, temel değere ve bütçelere karşı; `query` ile saklanan bir izden, SQL ya da adıyla bir tablo                                                                           | `action`: `compare` (varsayılan), `why`, `reference`, `budget`, `baseline`, `dashboard`, `functions`, `prune`, `query`; `limitGb`; `dryRun`; `from`; `to`; `app`; `scenario`; `deviceClass`; `last`: `1` (varsayılan); `replace`; `kind`; `max`; `min`; `format`: `text` (varsayılan), `json`, `junit`; `dsym`; `trace`; `sql`; `table`; `limit`: `50` (varsayılan)                                                                                                                                                                                                                                                                               |
 
+Ayrıntılar: [Performans ölçümü](perf.tr.md) ve [Performansı ölçmek](../guides/performance.tr.md) rehberi.
+
 ### Yeniden oynatma
 
 | araç       | ne yapar                                                                                                             | girdiler                                                                                                                                  |
 | ---------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `run_flow` | İşlemleri tekrarlanabilir bir test olarak kaydeder, onu modelsiz yeniden oynatır ve Maestro YAML olarak dışa aktarır | **`action`**: `record`, `stop`, `save`, `run`, `export`; `file`; `to`; `from`; `params`; `envFile`; `overwrite`; `iterations`; `scenario` |
+
+`run_flow` `run`, bir flow'un setup'ını adımlarından önce, teardown'unu adımlarından sonra çalıştırır; başarısız olan bir teardown, adımların geçtiği söylendikten sonra `CHECK_FAILED` ile reddedilir. Bir `prepare` adımı bir projenin kendi komutunu bu Mac'te çalıştırır; bu yüzden her seferinde önce kişiye sorar, `--allow-build` ile başlatılmış bir sunucu ise sormadan çalıştırır. Bir kayıt, adımı olan her işlem için bir adım yazar; `scale` ya da `pointers` ile bir `swipe_screen` ve bir `inspect_app` `web_eval` için ise yeniden oynatmanın durduğu `unrecorded` yazar. Biçim ve kaydedilen her işlemin neye dönüştüğü [Akışlar](../guides/flows.tr.md) sayfasındadır.
 
 ## Yalnızca bazı araçları listelemek
 
@@ -111,44 +173,149 @@ Bir istemci her oturumda araç listesinin tümünü okur. `--toolsets` ile ya da
 
 Bir grup daha kısa bir listedir, bir izin değildir. Bir sunucunun ne yapabileceğini `--allow-` bayrakları söyler. `run_steps`, [komut satırı](cli.tr.md) ve [kütüphane](library.tr.md), ne listelenmiş olursa olsun her araca ulaşır. Sunucunun yönergeleri her gruptan araçların adını anar; yalnızca `core` listeleyen bir istemci, elinde olmayan bir aracın adını okuyabilir.
 
-## Ekranı okumak
+## Bir işlem ne yanıtlar
 
-Ekran klavyesi, Android'de olduğu gibi iOS'ta da tek bir öğedir, `@keyboard keyboard`; tuşlarının, çubuklarının ve önerilerinin hiçbiri listelenmez: `type_text` yazar, `press_key` `enter` onun return tuşuna basar, `press_key` `hide_keyboard` onu kapatır ve ona bir dokunuş reddedilir. Onu açan bir alan dokunuşu bunu farkın tek bir satırında söyler. iOS'ta hedefsiz bir `type_text`, hiçbir alan odakta değilken ve klavye açık değilken, bir tuş gönderilmeden `NO_FOCUS` ile reddedilir: iOS odakta hiçbir şey yokken de tuş alır ve ilk tuş, kalanların içine düştüğü bir alanı odaklayabilir. iOS runner'ı `press_key` `delete` ve `tab`'ı da böyle reddeder; XCTest'in kendi yazması orada onu sonlandırıyordu. iOS'ta ekranın üstündeki bir gezinme çubuğunun yukarısında, durum çubuğunun altında kalan ve o çubuğun kendi ekranından çubuğun altına kaymış olan, ekranın kenarının ötesindeki gibi dışarıda bırakılır, çünkü iki çubuktan birine bir dokunuş bir listeyi başına kaydırır; çubuğun kendi düğmeleri kalır, o ekranın üstündeki bir sayfa da. Biri ötekini tutmayan, tek bir noktadaki dört ya da daha çok öğe, bir listenin henüz yerleştirmediği, başladığı yere yığılmış satırlardır: onlar da dışarıda bırakılır. Bir ref bir öğeyi ne olduğuyla adlandırır, bu yüzden kaydırmalarda ve yeniden çizimlerde kalır; kendi kimliği olmayan bir alan çevresindeki sözcüklerle adlandırılır, bu yüzden yer tutucusu gelirken ve içine yazılırken ref'i kalır.
+Bir işlem durulmuş ekranla yanıt verir. `settled`, ekranın bekleme süresi boyunca durgun kaldığı anlamına gelir. `changed`, ekranın işlemden öncekinden düzende ya da metinde farklı olduğu anlamına gelir; farka işlemin yol açtığını söylemez.
 
-Bir yanıttaki bütün bir ekran, tekrar edeni katlar. Etiketi kendisini zaten içeren bir satırın içindeki düz bir metin ya da görsel ayrı bir satır almaz; bir web bağlantısının kendi metni ve bir dipnotun işaretleri de almaz. Satırla aynı adı taşıyan ve satırın tam yerinde duran bir kontrol, uygulamanın bir yerde iki kez verdiği bir öğe ve içindeki düz bir metnin sözleriyle adlanan düz bir öğe de almaz; bir uyarının başlığıyla adlanması gibi, bunlar başlığın yerinde söylenir. İlk satır katlananları sayar. İçindeki sözlerle adlanan bir satır, aynısının hemen ardından gelen bir adı bir kez söyler; harfsiz ya da tek karakterli bir değer, 3'e 3 biten bir skor gibi, kaç kez varsa o kadar kalır. Art arda gelen, birbirine benzeyen üç ya da daha fazla satır tek bir başlığı paylaşır (`cell x=201 clickable: ref "label" y`). Yalnızca bağlamlarının ayırdığı satırlar da bir başlığı paylaşır; her biri bağlamını yerinden sonra taşır (`button x=339 clickable: ref "label" y — context`, ardından `@d62s "Add" 137 — Product 35`). Bir öğenin iki kez verdiği etiket bir kez gösterilir; benzer iki öğeyi ayıran bilgi, örneğin yerleri, yalnızca başka bir satır aynı adı taşıdığında gösterilir. Yalnızca metin katlanır: `selector` ile `read_screen`, seçiciler, ref'ler, diff'ler, akışlar ve `record_session` yine her öğeye ulaşır. `raw: true`, yapılandırılmış yanıtta ağacın her öğesini de dikdörtgeni ve üst öğesinin sırasıyla verir, [kütüphane](library.tr.md) bunu anlatır; verdiği bir ref `tap_screen`'in aldığı bir ref'tir.
+Hiçbir şey değişmediyse yanıt "no change seen in N ms; if a slow reaction is expected, use check_element with timeoutMs" der; listelediği ekran işlemden önce değişmişse "no change seen in N ms after the action: the screen changed before it" der.
 
-Android'de `views` ile `read_screen`, öndeki aktiviteyi sistemin ondan aldığı kendi dökümünden okur; her derlemede, hata ayıklanabilir olsun olmasın, probe olmadan: her görünümün sınıfı, dokunma birimlerinde yeri, kaynak kimliği ve bayrakları (`clickable`, `disabled`, `focused`, `selected`, `gone`, `invisible`), ekranın çoğunu çizen çatının altında. Sözcük vermez: onları `read_screen` okur. Yanıt, görünümlerin dışarıda bıraktıklarıyla biter: gösterdiğinden fazlasını tutan bir kaydırma görünümünün ya da görünüm sayfalayıcının altında yerler onun yerleşiminin yerleridir, çünkü kaydırması görünümlerini değil çizdiğini taşır; aktivitenin üstündeki bir diyalog ya da menü kendi penceresidir ve orada yoktur; küçültülmüş bir derlemenin küçültücüsünün adlandırdığı görünümler ekranı tutuyorsa, R8'in Flutter'ınkini `V4.v`, Compose'unkini `p3` diye adlandırdığı gibi, framework'ü uygulamanın paketinde taşıdığı söyler: Flutter'ın ya da React Native'in motoru (`libflutter.so`, `libreactnative*.so`, `libhermes*.so`), ya da yeniden adlandırılmış bir görünümün Compose'unki gibi odak alıp çizdiği yerde Compose. Not, etiketin neye dayandığını söyler; paket bir şey söylemiyorsa etiket Android views olarak kalır ve not, orada neyin çizdiğini hiçbir adın söylemediğini belirtir. Önce ekran, `read_screen`'in okuduğu gibi okunur: hiçbir şey sormayan bir kilit açılır; PIN, desen ya da parola arkasındaki bir kilit `DEVICE_LOCKED` ile reddedilir. Android'de asistanın sayfası öndeyken bir okuma pencere bulamaz: `read_screen` ve `launch_app` bunu söyleyerek `NOT_FOUND` yanıtını verir, `press_key` `home` sayfayı kapatır. Görevinde başka bir uygulamanın penceresinin arkasında sonlanan bir uygulamayı (`background` ile `manage_app stop`'tan sonraki izin istemi gibi) bir başlatma başlatmaz, yalnızca o pencereyi öne getirir: `launch_app`, öndeki uygulamayı adıyla söyleyerek `APP_NOT_RUNNING` yanıtını verir. Ana iş parçacığı sisteme 5 s içinde yanıt vermeyen bir uygulama `TIMEOUT` ile reddedilir. Android'de `probe` ile `launch_app` istendiği gibi başlatır ve probe gerekmediğini söyler.
+### Yapılandırılmış yanıt
 
-Bir simülatörde `views` ile `read_screen`, uygulamanın görünümlerini, `probe` ile `launch_app`'in uygulamaya koyduğu ve bu aracın uygulamayı sonraki başlatışlarının oturum bitene dek taşıdığı görünüm probe'uyla okur; bir okuma yalnızca probe'a sorar ve uygulamayı asla yeniden başlatmaz. Okumaların aldığı uygulamaya, probe'un tutulduğu her uygulamaya ve öndeki uygulamaya aynı anda sorar ve ekrandakinin görünümlerini verir: her görünümün sınıfı, çözülmüş bir Swift adıyla, dokunma birimlerinde yeri, erişilebilirlik kimliği ve etiketi, metni (bir etiketin, bir alanın, bir düğmenin başlığı; asla bir güvenli alanınki ya da onun içindeki herhangi bir şeyinki değil), ne kadar saydam olduğu ve değiştiği yerde görünüm denetleyicisi, ekranın çoğunu çizen çatının altında, SwiftUI UIKit'ten ayrılarak. SwiftUI kendi metnini ve şekillerini kendisi çizer, bu yüzden bir SwiftUI ekranının az görünümü ve daha az sözcüğü olur: barındıran görünümleri, üzerine kurulduğu UIKit görünümleri, bir alan, bir liste ya da bir gezinme çubuğu gibi, ve uygulamanın UIKit olarak verdikleri. Probe'u olmayan bir uygulamanın okunması `UNSUPPORTED` ile reddedilir; uygulamanın paketinin ne tuttuğunu söyler (Flutter, `Flutter.framework` ile; React Native, Hermes ya da `main.jsbundle` ile) ve ipucunda `launch_app restart:true probe:true` vardır; ana iş parçacığı 2 s içinde yanıt vermemiş bir uygulama `TIMEOUT` ile, iOS'un askıya aldığı, başka birinin arkasındaki bir uygulama da `APP_NOT_RUNNING` ile reddedilir. Bir iPhone 17 simülatöründe, iOS 26.5, bir okuma fixture'ın ekranlarında 2 ile 26 ms, 273 görünüme kadar olan uygulamalarda 2 ile 17 ms sürdü. Çalışmayan ya da probe'u yanıt verirken iOS'un askıya aldığı bir uygulama (`home`'dan bir saniye sonra sorulan gibi) `APP_NOT_RUNNING` ile reddedilir: başlatmaları bir probe tutuyorsa bu aracın onu bir sonraki başlatması probe'u koyar, tutmuyorsa `probe` ile `launch_app`. Komut satırından tutulan bir probe, `set_device restore`'a ya da o simülatörde probe tutan bir sunucu bitene dek kalır; sunucunun sonu hepsini bırakır. `restore` ve oturumun sonu, hâlâ süren bir yakalamanın ağ probe'unu tutulu bırakır ve bunu söyler: onu `capture_network` `stop` bırakır. Görünümler uygulamanın kendisinindir: önlerinde bir sistem uyarısı olduğunda yanıt bunu son satırında ve `warnings` içinde, uyarının sözleri ve düğmeleriyle söyler. Bir iPhone görünüm vermez: orada `views` ve `launch_app` `probe` reddedilir.
+Her yanıtın `structuredContent`'i, özetin yanında metninin tamamını `text` olarak taşır, çünkü bir istemci iki kısımdan yalnızca birini gösterebilir; yapılan iş (`done`) metnin ilk sözleridir ve metin onu tuttuğunda `structuredContent`'e konmaz. Başarısız bir çağrı, metni `code` ile başlayıp `hint` ile biten bir `isError` yanıtıdır, ikisi `structuredContent`'te de vardır; başarısız bir işlem de dokunuşunun gidip gitmediğini söyler (`dispatched`).
 
-Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyler: x ve y'si, dokunuş birimine ölçeğiyle çarpılır; bu bir tam sayıya bölmeyse bölme olarak söylenir, bir iPhone'un tam boyutlu resmi için `x/3`. Ölçek ve `width`, döndürülmüş olsun ya da olmasın ekranın şu anki duruşuna göredir; bir simülatörün resmi öndeki uygulamasının durduğu gibi dikleştirilir. Ekrandan hâlâ başka türlü duran bir resim ölçek almaz ve yanıt ekranın dokunuş birimindeki boyutunu söyler. `file` ile resmi tam boyutta, ya da `width` ne kadar genişlik isterse o genişlikte kaydeder ve yanında görüntüyü bir ekran görüntüsünün yaptığı gibi gösterir, yanıt onun boyutunu ve ölçeğini verir; böylece dosyanın geri okunması gerekmez; `inline: false` yalnızca dosyayı kaydeder.
+Bir işlem, kimsenin görmediği bir ekrana dokunmadan önce onu okur ve kilitli bir telefonda `DEVICE_LOCKED` ile reddedilir. Bir isteğin iptali cihaza ulaşır ve uzun işlemler ilerleme bildirir.
+
+### Önde başka bir uygulama varsa
+
+Bir yanıt, uygulama önden kendiliğinden çıktığında önde olmadığını söyleyerek uyarır ve öndeki uygulamayla beklenen uygulamayı adlandırır; onu bilerek bırakan bir tuştan, bir Ayarlar sayfasından, başka bir uygulamanın başlatılmasından ya da bir durdurmadan sonra uyarmaz. Uygulama öndeyken başlayıp başka bir uygulamayı öne getiren bir işlem, Safari'de açtığı bir bağlantı gibi, hangi uygulamanın öne geldiğini söyler.
+
+**Başarısız bir işlem bir şeye dokunup dokunmadığını söyler.** Yanıtı "no touch was sent", "the touch was sent" ya da yanıt vermeyi bırakan bir cihaz için "the touch may have been sent: read the screen before trying again" ile biter ve bir istemcide `dispatched` vardır: `true`, `false` ya da `unknown`. Orada olmayan bir hedef ve cihazın bir reddi her dokunuştan önce gelir; listesi biten bir kaydırma ise önce kaydırma hareketini yapmıştır. Bir işlemden sonraki okuma da, karanlık bir ekranda ya da donmuş bir uygulamada, başarısız olabilir: işlem gitmiştir, bu yüzden o yanıt, başka ne derse desin, dokunuşun gönderilmiş olabileceğini söyler.
+
+**Bir dokunuş önce bakar.** Son işlemden bu yana ve 20 s'den kısa süre önce bir okuma yapılmadıysa her işlem ekranı okur, çünkü bir telefon son dokunuştan yaklaşık bir dakika sonra kendini kilitler ve kör bir kaydırma bir kilit ekranından Spotlight'ı açabilir. Yalnızca okuma olmayan yerde bir okumaya mal olur. Reddedilen bir okuma dayanacak bir şey bırakmaz, bu yüzden bir sonraki dokunuş yeniden okur. Bu 20 s içinde açıkken kilitlenen bir ekrana yine dokunulur; kararan birini ajan reddeder.
+
+**Kilitli bir telefon `DEVICE_LOCKED` ile reddedilir**; okumalar da dokunuşlar da. Android'de bu, bir uyandırma ve bir kapatmadan sonra yerinde kalan bir keyguard'dır. Parolası olmayan bir iPhone kilit ekranını ana ekran düğmesiyle geçer: karanlık bir ekranda ilk basış yalnızca onu uyandırır, kilit ekranı hâlâ açıktır, bu yüzden üç kereye kadar basar ve uygulama geri gelir. Parolası olan bir iPhone okumayı `devicectl device info lockState` ile reddeder. Neyin çalıştırıldığı [Araçlar nasıl test edildi](tools-tested.tr.md#kilitli-bir-telefon) sayfasındadır.
 
 ## Hedefler
 
-Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce
-yeni bir okumada çözülür. Metin, `selector` ile `read_screen`'deki gibi büyük-küçük harfe ve aksanlara bakmadan eşleşir ("İstanbul", "istanbul");
-bir öğenin bütün sözleriyle, listenin uzun bir etiketi kestiği yerin ötesinde de, bir akışın tutmuş olabileceği kesik etiketle de eşleşir; tam eşleşme kısmi eşleşmeden üstündür. Metni yalnızca bir paragrafın parçası olarak bulan bir dokunuş ya da `until` ile `swipe_screen` bunu söyler, çünkü ekranda onu tek başına okuyan bir şey yoktu. Öğesini, kaydırmalarının yeni şeyleri getirdiği kenarın, benzer komşularının gösterdiğinin yarısından azına kestiği halde bulan `until` ile bir `swipe_screen` bir kez daha kaydırır, çünkü bu kadar azına dokunulamaz. Ortası, başka sözcükleri olan daha küçük bir denetimin olduğu bir denetime dokunuş, bir mini oynatıcının Pause'u gibi, onun o denetimden uzak bir noktasına gider ve nereye gittiğini söyler, uzak bir nokta yoksa ortanın kimin olduğunu söyler; kendi anahtarını tutan bir anahtar satırına, SwiftUI'ın Toggle'ı gibi, o anahtardan dokunulur. Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir, son eşleşmenin ötesindeki bir index de kaç eşleşme olduğunu söyler; eşleşme yoksa
-bir an beklenir, sonra en yakın etiketlerle reddedilir; önde başka bir uygulama varsa ve uygulama bilerek ayrılmadıysa, bunun yerine uygulamanın önde olmadığı söylenir. Süresi dolan `timeoutMs` ile bir `check_element` de aynısını ve yeniden çağırmanın daha uzun beklediğini söyler. `NOT_FOUND` ya da `STALE` ile reddedilen bir dokunuş, bir yanıtın yaptığı gibi ekranı şimdiki haliyle içerir: son gösterilen ekrandan farkını, `read` `full` ise ya da önde başka bir uygulama varsa tamamını, `read` `none` ise hiçbirini. Bir sonraki denemeden önce ekranı okumak gerekmez. Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir akışın adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir.
+Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce yeni bir okumada çözülür.
+
+### Metin nasıl eşleşir
+
+Metin, `selector` ile `read_screen`'deki gibi büyük-küçük harfe ve aksanlara bakmadan eşleşir ("İstanbul", "istanbul"); bir öğenin bütün sözleriyle, listenin uzun bir etiketi kestiği yerin ötesinde de, bir flow'un tutmuş olabileceği kesik etiketle de eşleşir; tam eşleşme kısmi eşleşmeden üstündür. Metni yalnızca bir paragrafın parçası olarak bulan bir dokunuş ya da `until` ile `swipe_screen` bunu söyler, çünkü ekranda onu tek başına okuyan bir şey yoktu.
+
+### Dokunuş nereye düşer
+
+Öğesini, kaydırmalarının yeni şeyleri getirdiği kenarın, benzer komşularının gösterdiğinin yarısından azına kestiği halde bulan `until` ile bir `swipe_screen` bir kez daha kaydırır, çünkü bu kadar azına dokunulamaz. Ortası, başka sözcükleri olan daha küçük bir denetimin olduğu bir denetime dokunuş, bir mini oynatıcının Pause'u gibi, onun o denetimden uzak bir noktasına gider ve nereye gittiğini söyler, uzak bir nokta yoksa ortanın kimin olduğunu söyler; kendi anahtarını tutan bir anahtar satırına, SwiftUI'ın Toggle'ı gibi, o anahtardan dokunulur.
+
+### Eşleşme yoksa ya da birden çoksa
+
+Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir, son eşleşmenin ötesindeki bir index de kaç eşleşme olduğunu söyler; eşleşme yoksa bir an beklenir, sonra en yakın etiketlerle reddedilir; önde başka bir uygulama varsa ve uygulama bilerek ayrılmadıysa, bunun yerine uygulamanın önde olmadığı söylenir. Süresi dolan `timeoutMs` ile bir `check_element` de aynısını ve yeniden çağırmanın daha uzun beklediğini söyler.
+
+`NOT_FOUND` ya da `STALE` ile reddedilen bir dokunuş, bir yanıtın yaptığı gibi ekranı şimdiki haliyle içerir: son gösterilen ekrandan farkını, `read` `full` ise ya da önde başka bir uygulama varsa tamamını, `read` `none` ise hiçbirini. Bir sonraki denemeden önce ekranı okumak gerekmez.
+
+### Klavyenin altındaki bir hedef
+
+Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir flow'un adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir.
+
+## Ekranı okumak
+
+### Ekran klavyesi
+
+Ekran klavyesi, Android'de olduğu gibi iOS'ta da tek bir öğedir, `@keyboard keyboard`; tuşlarının, çubuklarının ve önerilerinin hiçbiri listelenmez: `type_text` yazar, `press_key` `enter` onun return tuşuna basar, `press_key` `hide_keyboard` onu kapatır ve ona bir dokunuş reddedilir. Onu açan bir alan dokunuşu bunu farkın tek bir satırında söyler.
+
+iOS'ta hedefsiz bir `type_text`, hiçbir alan odakta değilken ve klavye açık değilken, bir tuş gönderilmeden `NO_FOCUS` ile reddedilir: iOS odakta hiçbir şey yokken de tuş alır ve ilk tuş, kalanların içine düştüğü bir alanı odaklayabilir. iOS runner'ı `press_key` `delete` ve `tab`'ı da böyle reddeder; XCTest'in kendi yazması orada onu sonlandırıyordu.
+
+### Bir okumanın dışarıda bıraktıkları
+
+iOS'ta ekranın üstündeki bir gezinme çubuğunun yukarısında, durum çubuğunun altında kalan ve o çubuğun kendi ekranından çubuğun altına kaymış olan, ekranın kenarının ötesindeki gibi dışarıda bırakılır, çünkü iki çubuktan birine bir dokunuş bir listeyi başına kaydırır; çubuğun kendi düğmeleri kalır, o ekranın üstündeki bir sayfa da.
+
+Biri ötekini tutmayan, tek bir noktadaki dört ya da daha çok öğe, bir listenin henüz yerleştirmediği, başladığı yere yığılmış satırlardır: onlar da dışarıda bırakılır.
+
+### Ref'ler
+
+Bir ref bir öğeyi ne olduğuyla adlandırır, bu yüzden kaydırmalarda ve yeniden çizimlerde kalır; kendi kimliği olmayan bir alan çevresindeki sözcüklerle adlandırılır, bu yüzden yer tutucusu gelirken ve içine yazılırken ref'i kalır.
+
+### Bütün bir ekranda katlananlar
+
+Bir yanıttaki bütün bir ekran, tekrar edeni katlar.
+
+- Etiketi kendisini zaten içeren bir satırın içindeki düz bir metin ya da görsel ayrı bir satır almaz; bir web bağlantısının kendi metni ve bir dipnotun işaretleri de almaz. Satırla aynı adı taşıyan ve satırın tam yerinde duran bir kontrol, uygulamanın bir yerde iki kez verdiği bir öğe ve içindeki düz bir metnin sözleriyle adlanan düz bir öğe de almaz; bir uyarının başlığıyla adlanması gibi, bunlar başlığın yerinde söylenir. İlk satır katlananları sayar.
+- İçindeki sözlerle adlanan bir satır, aynısının hemen ardından gelen bir adı bir kez söyler; harfsiz ya da tek karakterli bir değer, 3'e 3 biten bir skor gibi, kaç kez varsa o kadar kalır.
+- Art arda gelen, birbirine benzeyen üç ya da daha fazla satır tek bir başlığı paylaşır (`cell x=201 clickable: ref "label" y`).
+- Yalnızca bağlamlarının ayırdığı satırlar da bir başlığı paylaşır; her biri bağlamını yerinden sonra taşır (`button x=339 clickable: ref "label" y — context`, ardından `@d62s "Add" 137 — Product 35`).
+- Bir öğenin iki kez verdiği etiket bir kez gösterilir; benzer iki öğeyi ayıran bilgi, örneğin yerleri, yalnızca başka bir satır aynı adı taşıdığında gösterilir.
+
+Yalnızca metin katlanır: `selector` ile `read_screen`, seçiciler, ref'ler, diff'ler, flow'lar ve `record_session` yine her öğeye ulaşır. `raw: true`, yapılandırılmış yanıtta ağacın her öğesini de dikdörtgeni ve üst öğesinin sırasıyla verir, [kütüphane](library.tr.md) bunu anlatır; verdiği bir ref `tap_screen`'in aldığı bir ref'tir.
+
+### Android'de native view'lar
+
+Android'de `views` ile `read_screen`, öndeki aktiviteyi sistemin ondan aldığı kendi dökümünden okur; her derlemede, hata ayıklanabilir olsun olmasın, probe olmadan: her görünümün sınıfı, dokunma birimlerinde yeri, kaynak kimliği ve bayrakları (`clickable`, `disabled`, `focused`, `selected`, `gone`, `invisible`), ekranın çoğunu çizen çatının altında. Sözcük vermez: onları `read_screen` okur.
+
+Yanıt, görünümlerin dışarıda bıraktıklarıyla biter: gösterdiğinden fazlasını tutan bir kaydırma görünümünün ya da görünüm sayfalayıcının altında yerler onun yerleşiminin yerleridir, çünkü kaydırması görünümlerini değil çizdiğini taşır; aktivitenin üstündeki bir diyalog ya da menü kendi penceresidir ve orada yoktur; küçültülmüş bir derlemenin küçültücüsünün adlandırdığı görünümler ekranı tutuyorsa, R8'in Flutter'ınkini `V4.v`, Compose'unkini `p3` diye adlandırdığı gibi, framework'ü uygulamanın paketinde taşıdığı söyler: Flutter'ın ya da React Native'in motoru (`libflutter.so`, `libreactnative*.so`, `libhermes*.so`), ya da yeniden adlandırılmış bir görünümün Compose'unki gibi odak alıp çizdiği yerde Compose. Not, etiketin neye dayandığını söyler; paket bir şey söylemiyorsa etiket Android views olarak kalır ve not, orada neyin çizdiğini hiçbir adın söylemediğini belirtir.
+
+Önce ekran, `read_screen`'in okuduğu gibi okunur: hiçbir şey sormayan bir kilit açılır; PIN, desen ya da parola arkasındaki bir kilit `DEVICE_LOCKED` ile reddedilir.
+
+Android'de asistanın sayfası öndeyken bir okuma pencere bulamaz: `read_screen` ve `launch_app` bunu söyleyerek `NOT_FOUND` yanıtını verir, `press_key` `home` sayfayı kapatır. Görevinde başka bir uygulamanın penceresinin arkasında sonlanan bir uygulamayı (`background` ile `manage_app stop`'tan sonraki izin istemi gibi) bir başlatma başlatmaz, yalnızca o pencereyi öne getirir: `launch_app`, öndeki uygulamayı adıyla söyleyerek `APP_NOT_RUNNING` yanıtını verir.
+
+Ana iş parçacığı sisteme 5 s içinde yanıt vermeyen bir uygulama `TIMEOUT` ile reddedilir. Android'de `probe` ile `launch_app` istendiği gibi başlatır ve probe gerekmediğini söyler.
+
+### Bir simulator'da native view'lar
+
+Bir simulator'da `views` ile `read_screen`, uygulamanın görünümlerini, `probe` ile `launch_app`'in uygulamaya koyduğu ve bu aracın uygulamayı sonraki başlatışlarının oturum bitene dek taşıdığı görünüm probe'uyla okur; bir okuma yalnızca probe'a sorar ve uygulamayı asla yeniden başlatmaz.
+
+Okumaların aldığı uygulamaya, probe'un tutulduğu her uygulamaya ve öndeki uygulamaya aynı anda sorar ve ekrandakinin görünümlerini verir: her görünümün sınıfı, çözülmüş bir Swift adıyla, dokunma birimlerinde yeri, erişilebilirlik kimliği ve etiketi, metni (bir etiketin, bir alanın, bir düğmenin başlığı; asla bir güvenli alanınki ya da onun içindeki herhangi bir şeyinki değil), ne kadar saydam olduğu ve değiştiği yerde görünüm denetleyicisi, ekranın çoğunu çizen çatının altında, SwiftUI UIKit'ten ayrılarak. SwiftUI kendi metnini ve şekillerini kendisi çizer, bu yüzden bir SwiftUI ekranının az görünümü ve daha az sözcüğü olur: barındıran görünümleri, üzerine kurulduğu UIKit görünümleri, bir alan, bir liste ya da bir gezinme çubuğu gibi, ve uygulamanın UIKit olarak verdikleri.
+
+Probe'u olmayan bir uygulamanın okunması `UNSUPPORTED` ile reddedilir; uygulamanın paketinin ne tuttuğunu söyler (Flutter, `Flutter.framework` ile; React Native, Hermes ya da `main.jsbundle` ile) ve ipucunda `launch_app restart:true probe:true` vardır; ana iş parçacığı 2 s içinde yanıt vermemiş bir uygulama `TIMEOUT` ile, iOS'un askıya aldığı, başka birinin arkasındaki bir uygulama da `APP_NOT_RUNNING` ile reddedilir.
+
+Bir iPhone 17 simulator'ında, iOS 26.5, bir okuma fixture'ın ekranlarında 2 ile 26 ms, 273 görünüme kadar olan uygulamalarda 2 ile 17 ms sürdü.
+
+Çalışmayan ya da probe'u yanıt verirken iOS'un askıya aldığı bir uygulama (`home`'dan bir saniye sonra sorulan gibi) `APP_NOT_RUNNING` ile reddedilir: başlatmaları bir probe tutuyorsa bu aracın onu bir sonraki başlatması probe'u koyar, tutmuyorsa `probe` ile `launch_app`.
+
+Komut satırından tutulan bir probe, `set_device restore`'a ya da o simulator'da probe tutan bir sunucu bitene dek kalır; sunucunun sonu hepsini bırakır. `restore` ve oturumun sonu, hâlâ süren bir yakalamanın ağ probe'unu tutulu bırakır ve bunu söyler: onu `capture_network` `stop` bırakır.
+
+Görünümler uygulamanın kendisinindir: önlerinde bir sistem uyarısı olduğunda yanıt bunu son satırında ve `warnings` içinde, uyarının sözleri ve düğmeleriyle söyler. Bir iPhone görünüm vermez: orada `views` ve `launch_app` `probe` reddedilir.
+
+### Ekran görüntüleri
+
+Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyler: x ve y'si, dokunuş birimine ölçeğiyle çarpılır; bu bir tam sayıya bölmeyse bölme olarak söylenir, bir iPhone'un tam boyutlu resmi için `x/3`. Ölçek ve `width`, döndürülmüş olsun ya da olmasın ekranın şu anki duruşuna göredir; bir simulator'ın resmi öndeki uygulamasının durduğu gibi dikleştirilir. Ekrandan hâlâ başka türlü duran bir resim ölçek almaz ve yanıt ekranın dokunuş birimindeki boyutunu söyler.
+
+`file` ile resmi tam boyutta, ya da `width` ne kadar genişlik isterse o genişlikte kaydeder ve yanında görüntüyü bir ekran görüntüsünün yaptığı gibi gösterir, yanıt onun boyutunu ve ölçeğini verir; böylece dosyanın geri okunması gerekmez; `inline: false` yalnızca dosyayı kaydeder.
 
 ## Adımlar, hareketler, uygulamalar ve ayarlar
 
-`run_steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir.
-İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı çağrının `read`'inin istediği gibi gösterir: son gösterilen ekrandan farkını ya da tamamını. Araç olmayan bir adım, hiçbir şey yapılmadan bütün çağrıyı reddettirir ve yanıt bunu söyler. `timeoutMs` ile `check_element` ve seçiciler
-cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir.
-Uygulama bir işlemin altında ölürse işlem `APP_NOT_RUNNING` ile reddedilir: yanıt, işlemin ne yaptığını, çökme raporundaki nedeni ve uygulamanın son log satırlarını, nedeni söyleyen ilk satırdan başlayarak verir. `run_steps` içinde bu, çağrıyı adımın adını vererek bitirir. İzlenen uygulama seçili olandır, yoksa dokunuş hedeflenirken önde olandır; onu aynı çağrıda daha önceki bir başlatma ya da bağlantı açmış olabilir. Önceki bir çökme geride uygulama bırakmadığı için başarısız olan sonraki bir adım, kendi hatasına `APP_NOT_RUNNING`'i ve ne yapılacağını ekler; bir akışın adımı da öyle. Bir saniyeden uzun süren bir işlemde uygulamanın süreci izlenir ve süreç gider gitmez, cihaz sonra ne yanıtlarsa yanıtlasın, işlem reddedilir: bir dokunuşun altındaki bir çökme cihazın yanıtını tam 15 s tutabiliyordu, bu da takılmış bir ajan gibi okunuyordu.
+### Tek çağrıda adımlar
+
+`run_steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir. İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı çağrının `read`'inin istediği gibi gösterir: son gösterilen ekrandan farkını ya da tamamını. Araç olmayan bir adım, hiçbir şey yapılmadan bütün çağrıyı reddettirir ve yanıt bunu söyler.
+
+`timeoutMs` ile `check_element` ve seçiciler cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir.
+
+### Uygulama bir işlemin altında ölürse
+
+Uygulama bir işlemin altında ölürse işlem `APP_NOT_RUNNING` ile reddedilir: yanıt, işlemin ne yaptığını, crash raporundaki nedeni ve uygulamanın son log satırlarını, nedeni söyleyen ilk satırdan başlayarak verir. `run_steps` içinde bu, çağrıyı adımın adını vererek bitirir.
+
+İzlenen uygulama seçili olandır, yoksa dokunuş hedeflenirken önde olandır; onu aynı çağrıda daha önceki bir başlatma ya da bağlantı açmış olabilir. Önceki bir crash geride uygulama bırakmadığı için başarısız olan sonraki bir adım, kendi hatasına `APP_NOT_RUNNING`'i ve ne yapılacağını ekler; bir flow'un adımı da öyle.
+
+Bir saniyeden uzun süren bir işlemde uygulamanın süreci izlenir ve süreç gider gitmez, cihaz sonra ne yanıtlarsa yanıtlasın, işlem reddedilir: bir dokunuşun altındaki bir crash cihazın yanıtını tam 15 s tutabiliyordu, bu da takılmış bir ajan gibi okunuyordu.
+
+### Beklemeler ve seçiciler
+
 `check_element`, açıklamasının söylediği gibi, bir çağrıda en fazla 15000 ms bekler; bir argümanın sınırını aşan bir sayı, ipucunda sınırıyla reddedilir.
+
 Bir seçici, onu alan her araçta ve adımda, aralarında `read_screen` ve `check_element` de olmak üzere, `selector`'a girer, `{"tool":"tap_screen","selector":{"text":"OK"}}` gibi: sözcükleri en üstte verildiğinde, ipucunda çağrı bu biçimde gösterilerek reddedilir.
 
-`tap_screen`; `count: 2` ile çift dokunuşu ve `holdMs` ile uzun basışı, `swipe_screen`; `to` ile sürüklemeyi, `scale` ile kıstırmayı ve `pointers` ile serbest yolları içerir. `press_key`; düğmeleri (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), bir klavyenin tuşlarını (`enter`, `delete`, `tab`, `escape`, `space`, `arrow_up`, `arrow_down`, `arrow_left` ve `arrow_right` ok tuşları ve önce basılı tutulan tuşlarla bir harf ya da rakam, `command+a` gibi; Android'de `command` Ctrl'dir) ve `home`'un kapattığı `control_center`, `notification_center` ile `spotlight`'ı içerir. Bir tuşun adı büyük küçük harf fark etmeksizin okunur; `return` `enter`, `esc` `escape`, `backspace` de `delete`'tir. Bir harf küçük harftir, çünkü büyük bir harf aynı zamanda bir shift olurdu.
-`manage_app`; `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`, `stop`
-ve bu Mac'teki bir projeden `build_and_run` içerir:
-`scheme` ve `configuration` ile bir Xcode projesi ya da modülü `scheme`,
-varyantı `configuration` olan bir Gradle klasörü.
-`transfer_files`; bir uygulamanın verisini yeni ya da boş bir klasöre alan `pull`, bir klasörden koyan `push`
-(uygulamayı durdurur ve klasörde olmayanı kaldırır) ve `media` içerir.
-`set_device`; `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` ve `fold`'u; tek seferlik `biometric`, `call`, `sms`, `keychain`, `memory_warning` ve `shake`'i; ve değiştirileni geri koyan `restore`'u içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`.
+### Her araç neleri içerir
 
-`launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler; `restart`, `args`, `env` ya da `language` ile çalışan birini önce durdurur ve uygulamayı başlattığını mı, yeniden mi başlattığını söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `manage_app list` vardır. Başlarken sona eren bir uygulama, `read` ne olursa olsun ve hangi uygulama seçili olursa olsun, çökme raporunun nedeni ve son günlük satırlarıyla `APP_NOT_RUNNING` ile reddedilir; nedenini söyleyen satır bütün verilir.
+- `tap_screen`; `count: 2` ile çift dokunuşu ve `holdMs` ile uzun basışı, `swipe_screen`; `to` ile sürüklemeyi, `scale` ile kıstırmayı ve `pointers` ile serbest yolları içerir.
+- `press_key`; düğmeleri (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), bir klavyenin tuşlarını (`enter`, `delete`, `tab`, `escape`, `space`, `arrow_up`, `arrow_down`, `arrow_left` ve `arrow_right` ok tuşları ve önce basılı tutulan tuşlarla bir harf ya da rakam, `command+a` gibi; Android'de `command` Ctrl'dir) ve `home`'un kapattığı `control_center`, `notification_center` ile `spotlight`'ı içerir. Bir tuşun adı büyük küçük harf fark etmeksizin okunur; `return` `enter`, `esc` `escape`, `backspace` de `delete`'tir. Bir harf küçük harftir, çünkü büyük bir harf aynı zamanda bir shift olurdu.
+- `manage_app`; `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`, `stop` ve bu Mac'teki bir projeden `build_and_run` içerir: `scheme` ve `configuration` ile bir Xcode projesi ya da modülü `scheme`, varyantı `configuration` olan bir Gradle klasörü.
+- `transfer_files`; bir uygulamanın verisini yeni ya da boş bir klasöre alan `pull`, bir klasörden koyan `push` (uygulamayı durdurur ve klasörde olmayanı kaldırır) ve `media` içerir.
+- `set_device`; `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` ve `fold`'u; tek seferlik `biometric`, `call`, `sms`, `keychain`, `memory_warning` ve `shake`'i; ve değiştirileni geri koyan `restore`'u içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`.
+
+### Bir uygulamayı başlatmak
+
+`launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler; `restart`, `args`, `env` ya da `language` ile çalışan birini önce durdurur ve uygulamayı başlattığını mı, yeniden mi başlattığını söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `manage_app list` vardır. Başlarken sona eren bir uygulama, `read` ne olursa olsun ve hangi uygulama seçili olursa olsun, crash raporunun nedeni ve son günlük satırlarıyla `APP_NOT_RUNNING` ile reddedilir; nedenini söyleyen satır bütün verilir.
+
+### Bir değişiklik geri okunur
 
 Her değişiklik geri okunur: yanıt `changed`'i yalnızca cihaz sonra öncekinden başka okunduğunda söyler, `restore` da yalnızca yeniden eskisi gibi okunan için "geri konuldu" der. `text_size` iOS'ta kendi boyutlarından biridir, `extra-small`'dan `accessibility-extra-extra-extra-large`'a kadar; Android'de 0,25 ile 5 arasında bir ölçek ya da `default`: başkası, aldıklarıyla birlikte reddedilir. `set_device` `location`'ın sabitlediği bir konum da bir koşul gibi yazılır, böylece `restore` ve oturumun sonu onu gerçek konuma geri götürür.
 
@@ -160,34 +327,64 @@ Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri k
 - `manage_app clear`: uygulamanın tuttuğu her şey
 - `transfer_files push`: uygulamanın şu an tuttuğu her şey; yerini klasördeki veri alır
 - `manage_app revoke`: uygulamaya verilmiş bir izin
-- `manage_app grant`: yalnızca bir iPhone'da; orada `grant` izni "sor" durumuna sıfırlar ve kişinin daha önce verdiği yanıt kaybolur. Bir simülatörünki
-  ve Android'inki hiçbir şey kaybettirmez ve hiçbir şey sormaz
+- `manage_app grant`: yalnızca bir iPhone'da; orada `grant` izni "sor" durumuna sıfırlar ve kişinin daha önce verdiği yanıt kaybolur. Bir simulator'ınki ve Android'inki hiçbir şey kaybettirmez ve hiçbir şey sormaz
 - `set_device keychain`: uygulamaların anahtar zincirinde tuttuğu her öğe
-- sistemin kendi güç, acil durum ya da silme denetimlerine, yani cihazın kendisine bir girdi: herhangi bir araçtan, `run_steps`'ten ya
-  da bir akıştan, Android'in güç menüsüne (Kapat, Yeniden başlat, Acil durum) ya da hızlı ayarlardaki düğmesine, bir kilit ekranının
-  acil aramasına, Ayarlar'ın sıfırlamalarına ve tüm verileri silme ekranına, sistemin sunduğu bir yeniden başlatma ya da sistem güncellemesine (Şimdi yeniden başlat, Şimdi güncelle), iOS'un Vazgeç'i dışındaki kapatma ekranına, güç düğmesinin kendine ait bir işareti olmayan Denetim Merkezi'nin herhangi bir yerine ya da
-  Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'ine bir dokunuş, hareket, kaydırma, uzun basış, yazma ya da tuş; dokunuş nereye
-  düşerse düşsün sistem uygulamasından, her dilde aynı kimliklerden ve İngilizce ve Türkçe sözlerden tanınır; bir de güç ya da yan tuşa
-  5 saniye içinde üçüncü basış, bu birçok telefonda yardım çağırır. appdyno hiçbir cihazı yeniden başlatmaz, sıfırlamaz ya da silmez; `manage_simulator` `shutdown` ile kapattığı bir simülatör ya da emülatör dışında hiçbirini kapatmaz; geri kalanında
-  yanıt bunu kişinin yaptığını söyler. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları
-  da. Bunların hiçbir şey sorulmadan yapılmasına yalnızca `--allow-power virtual` ya da `all` izin verir, asla `--allow-data-loss` değil
-- bir arama: arama başlatan bir bağlantıyla (`tel:`, `telprompt:`, `facetime:` ya da `facetime-audio:`) `open_link` ve bir telefon uygulamasındaki (numara çevirici, arama ekranı ya da FaceTime, kişiler ve mesajlar uygulamaları ya da bir Android cihazın kendi varsayılan çeviricisi) bir dokunuş, tuş ya da metin ya da metni yalnızca bir telefon numarası olan bir iOS sistem uyarısının, her dilde, Vazgeç dışındaki bir düğmesine ya da Call veya Ara diyen bir düğmeye bir dokunuş. appdyno hiçbir arama başlatmaz; bunların seçeneği de `--allow-power`'dır
-- Ayarlar'ı ya da tüm cihazı `launch_app` `language` ya da `set_device` `locale` ile İngilizce ve Türkçe dışında bir dile almak, çünkü sıfırlamaları ve silmesi o zaman hiçbir sözden tanınmazdı; `--allow-power` bunu sormadan geçirir
-- bir iPhone'da bir öğeye yalnızca sözcükleri ya da kimliğiyle, ekranda bunlardan biri olup olmadığını söyleyecek bir yeri olmadan basan `inspect_app` `ax_press`: `--allow-apps` ya da `--no-home` altında reddedilir, `--allow-power all` da hiçbir şey sormadan geçirir
 
-Sunucu, istemcinin bunu yapabildiğini bildirdiği yerde istemcinin kendi sorusuyla, yani MCP elicitation ile sorar; istemci bunu bir 2025
-revizyonunda `initialize`'da, 2026-07-28'de ise her istekte bildirir; soru cihazı, uygulamayı ve neyin kaybolacağını söyler. Model onu yanıtlayamaz.
+### Cihazın kendi denetimleri
+
+Sistemin kendi güç, acil durum ya da silme denetimlerine bir girdi de sorar, çünkü bunlar cihazın kendisine etki eder. Girdi herhangi bir araçtan, `run_steps`'ten ya da bir flow'dan gelen bir dokunuş, hareket, kaydırma, uzun basış, yazma ya da tuş olabilir. Denetimler şunlardır:
+
+- Android'de: güç menüsü (Kapat, Yeniden başlat, Acil durum) ya da hızlı ayarlardaki düğmesi, bir kilit ekranının acil araması, Ayarlar'ın sıfırlamaları ve tüm verileri silme ekranı, bir de sistemin sunduğu bir yeniden başlatma ya da sistem güncellemesi (Şimdi yeniden başlat, Şimdi güncelle)
+- iOS'ta: Vazgeç'i dışındaki kapatma ekranı, güç düğmesinin kendine ait bir işareti olmayan Denetim Merkezi'nin herhangi bir yeri, bir de Ayarlar'ın Sıfırla ve Tüm İçerikleri ve Ayarları Sil'i
+- ikisinde de: güç ya da yan tuşa 5 saniye içinde üçüncü basış; bu birçok telefonda yardım çağırır
+
+Dokunuş nereye düşerse düşsün sistem uygulamasından, her dilde aynı kimliklerden ve İngilizce ve Türkçe sözlerden tanınırlar.
+
+appdyno hiçbir cihazı yeniden başlatmaz, sıfırlamaz ya da silmez; `manage_simulator` `shutdown` ile kapattığı bir simulator ya da emulator dışında hiçbirini kapatmaz; geri kalanında yanıt bunu kişinin yaptığını söyler. Böyle bir ekranı okumak hiçbir şey sormaz, ondan çıkaran geri ve ana ekran tuşları da.
+
+Bunların hiçbir şey sorulmadan yapılmasına yalnızca `--allow-power virtual` ya da `all` izin verir, asla `--allow-data-loss` değil.
+
+### Aramalar, diller ve sözcükle basış
+
+Bir arama da sorar: arama başlatan bir bağlantıyla (`tel:`, `telprompt:`, `facetime:` ya da `facetime-audio:`) `open_link` ve bir telefon uygulamasındaki (numara çevirici, arama ekranı ya da FaceTime, kişiler ve mesajlar uygulamaları ya da bir Android cihazın kendi varsayılan çeviricisi) bir dokunuş, tuş ya da metin ya da metni yalnızca bir telefon numarası olan bir iOS sistem uyarısının, her dilde, Vazgeç dışındaki bir düğmesine ya da Call veya Ara diyen bir düğmeye bir dokunuş. appdyno hiçbir arama başlatmaz; bunların seçeneği de `--allow-power`'dır.
+
+Ayarlar'ı ya da tüm cihazı `launch_app` `language` ya da `set_device` `locale` ile İngilizce ve Türkçe dışında bir dile almak da sorar, çünkü sıfırlamaları ve silmesi o zaman hiçbir sözden tanınmazdı. `--allow-power` bunu sormadan geçirir.
+
+Bir iPhone'da `inspect_app` `ax_press` her basışta sorar: bir öğeye yalnızca sözcükleri ya da kimliğiyle, ekranda bunlardan biri olup olmadığını söyleyecek bir yeri olmadan basar. `--allow-apps` ya da `--no-home` altında reddedilir, `--allow-power all` da hiçbir şey sormadan geçirir.
+
+### Soru nasıl sorulur
+
+Sunucu, istemcinin bunu yapabildiğini bildirdiği yerde istemcinin kendi sorusuyla, yani MCP elicitation ile sorar; istemci bunu bir 2025 revizyonunda `initialize`'da, 2026-07-28'de ise her istekte bildirir; soru cihazı, uygulamayı ve neyin kaybolacağını söyler. Model onu yanıtlayamaz.
+
 Hayır yanıtında ya da kapatılan bir soruda hiçbir şey yapılmaz; yanıt, sorusuna evet gelmediğini söyler, asla bir kişinin reddettiğini değil: bir istemci kendi kendine yanıt verebilir; arayüzü olmadan çalışan biri, soruyu hiçbir kişiye göstermeden 9 ms'de hayır dedi. Her reddin ipucu, bir hayırınki de, bir kişinin buna önceden nasıl izin vereceğini aşağıdaki seçeneklerle söyler.
+
 2026-07-28'de hiçbir istek istemciye geri gitmez, bu yüzden çağrı turunu soruyla bitirir ve istemci yanıtı çağrıyla geri getirir: çağrı durduğu yerde bekler, böylece aynı `run_steps` içinde ondan önceki bir adım yeniden yapılmaz; 5 dakika içinde gelmeyen bir yanıt hayır sayılır.
 
+### Sorulacak kimse yoksa
+
 Soramayan bir istemci `PERMISSION_REQUIRED` ve bir kişinin buna nasıl izin vereceğiyle reddedilir; `--http` üzerinden her istemci de öyle, bir 2026-07-28 istemcisi de: token'ı elinde tutan, kendisine sorulan soruyu kendisi yanıtlardı, bu yüzden orada bir çağıranın verdiği hiçbir yanıt bir kişinin evet'i değildir ve bunların yapılmasına yalnızca sunucunun kendi seçenekleri izin verir.
-Sunucunun komut satırındaki `--allow-data-loss virtual`, bunların simülatörlerde ve emülatörlerde hiçbir şey sorulmadan yapılmasına izin verir, `all` ise telefonlarda da. Bunu yalnızca bir kişinin sunucuyu kaydetmesi ayarlar: bir aracın hiçbir argümanı, adımı ya da dosyası evet yerine geçmez. Bir komut kendi terminalinde sorar ve yanıt olarak `--yes` alır; ikisi de yoksa yalnızca seçenek onun yapılmasına izin verir.
 
-`manage_app install` bunlardan biri değildir: önce bir uygulamayı kaldırmaz. `manage_app build_and_run` da sorar; her seferinde ve her cihazda, çünkü bir projenin derlemesi kendi Gradle ya da Xcode betiklerini bu Mac'te çalıştırır: soru projenin adını verir. Sormadan derlemesine yalnızca sunucunun komut satırındaki `--allow-build` izin verir, `--allow-data-loss` asla; bu seçenek yokken istemci soramıyorsa reddedilir, projeyi bir kişi derler ve `manage_app install` derlemenin ürettiğini kurar. `path`, bu seçenek verilse de, sunucunun yazdığı klasörlerin içindeki bir projedir.
-`manage_app install`, kurduğu uygulamayı dosyanın tuttuğu kimlikle adlandırır. `--allow-apps` ile `manage_app install` yalnızca listenin adlandırdığı
-bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar, başkasını da adlandırarak reddeder; `build_and_run` reddedilir, çünkü bir projenin ne derlediği derlenmeden bilinmez. Android'de cihazın reddettiği bir kurulum nedenini ve bir kişinin ne yapabileceğini söyler: başka bir anahtarla imzalanmış bir uygulama `PERMISSION_REQUIRED`'dır, çünkü ona yer açan yalnızca uygulamanın tuttuğu her şeyi kaybettiren ve bu yüzden bir kişiye soran `manage_app uninstall`'dır; daha eski bir sürüm `INVALID_ARGUMENT`'tır; yer kalmaması, uygulamanın minSdk'sından eski bir Android ya da başka bir işlemcinin native kütüphaneleri `UNSUPPORTED`'dır.
+### Önceden izin vermek
 
-Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün, appdyno'nun durum klasörünün ya da `--allow-write` ile verilen bir klasörün içinde dosya yazar: `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` ve `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` ve `to`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Bu, bir istemcinin yaptığı araç çağrısı için geçerlidir; komut satırına yazılan bir yol söylediği yere yazılır. Listelenen sırlar yalnızca metinde gizlenir: bir ekran görüntüsü, bir `watchMs` şeridi ve bir video ekranı olduğu gibi gösterir; sır listelenmişse yanıtları bunu söyler.
+Sunucunun komut satırındaki `--allow-data-loss virtual`, bunların simulator'larda ve emulator'larda hiçbir şey sorulmadan yapılmasına izin verir, `all` ise telefonlarda da. Bunu yalnızca bir kişinin sunucuyu kaydetmesi ayarlar: bir aracın hiçbir argümanı, adımı ya da dosyası evet yerine geçmez. Bir komut kendi terminalinde sorar ve yanıt olarak `--yes` alır; ikisi de yoksa yalnızca seçenek onun yapılmasına izin verir.
+
+### Kurmak ve derlemek
+
+`manage_app install` bunlardan biri değildir: önce bir uygulamayı kaldırmaz.
+
+`manage_app build_and_run` da sorar; her seferinde ve her cihazda, çünkü bir projenin derlemesi kendi Gradle ya da Xcode betiklerini bu Mac'te çalıştırır: soru projenin adını verir. Sormadan derlemesine yalnızca sunucunun komut satırındaki `--allow-build` izin verir, `--allow-data-loss` asla; bu seçenek yokken istemci soramıyorsa reddedilir, projeyi bir kişi derler ve `manage_app install` derlemenin ürettiğini kurar. `path`, bu seçenek verilse de, sunucunun yazdığı klasörlerin içindeki bir projedir.
+
+`manage_app install`, kurduğu uygulamayı dosyanın tuttuğu kimlikle adlandırır. `--allow-apps` ile `manage_app install` yalnızca listenin adlandırdığı bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar, başkasını da adlandırarak reddeder; `build_and_run` reddedilir, çünkü bir projenin ne derlediği derlenmeden bilinmez.
+
+Android'de cihazın reddettiği bir kurulum nedenini ve bir kişinin ne yapabileceğini söyler: başka bir anahtarla imzalanmış bir uygulama `PERMISSION_REQUIRED`'dır, çünkü ona yer açan yalnızca uygulamanın tuttuğu her şeyi kaybettiren ve bu yüzden bir kişiye soran `manage_app uninstall`'dır; daha eski bir sürüm `INVALID_ARGUMENT`'tır; yer kalmaması, uygulamanın minSdk'sından eski bir Android ya da başka bir işlemcinin native kütüphaneleri `UNSUPPORTED`'dır.
+
+### Bir araç nereye yazar
+
+Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün, appdyno'nun durum klasörünün ya da `--allow-write` ile verilen bir klasörün içinde dosya yazar: `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` ve `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` ve `to`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Bu, bir istemcinin yaptığı araç çağrısı için geçerlidir; komut satırına yazılan bir yol söylediği yere yazılır.
+
+Listelenen sırlar yalnızca metinde gizlenir: bir ekran görüntüsü, bir `watchMs` şeridi ve bir video ekranı olduğu gibi gösterir; sır listelenmişse yanıtları bunu söyler.
+
+### Soran bağlantılar
 
 Seçili uygulamanın almadığı bir şemayla gelen bağlantı kişiye sorar: `open_link` bir web bağlantısını, Ayarlar'a giden bir bağlantıyı ve cihazın seçili uygulamada açılacağını söylediği ya da şemasını o uygulamanın açtığını söylediği bir bağlantıyı sormadan açar. Başkası sorar; örneğin uygulama seçili değilken `itms-services:`, `shortcuts:`, `sms:` ya da `mailto:`. Bir kişi bağlantılara önceden `--allow-urls` ile izin verir.
 
@@ -195,7 +392,7 @@ Seçili uygulamanın almadığı bir şemayla gelen bağlantı kişiye sorar: `o
 
 Bir platformun yapamadığı şey, nedeni söylenerek reddedilir (`UNSUPPORTED`):
 
-| özellik                                  | Android                                                             | simülatör                                                                                              | iPhone                                           |
+| özellik                                  | Android                                                             | simulator                                                                                              | iPhone                                           |
 | ---------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
 | ses düğmeleri                            | evet                                                                | evet (geri okumanın yolu yok)                                                                          | runner                                           |
 | bir uygulamanın verisini silmek          | `pm clear`                                                          | container'ını boşaltır                                                                                 | geliştirme imzalı uygulamalar                    |
@@ -207,21 +404,21 @@ Bir platformun yapamadığı şey, nedeni söylenerek reddedilir (`UNSUPPORTED`)
 | karanlık mod, metin, hareket, kontrast   | evet                                                                | evet                                                                                                   | `devicectl`                                      |
 | saydamlığı azaltma                       | hayır: bulanıklıkları bir geliştirici seçeneğidir                   | evet                                                                                                   | `devicectl`                                      |
 | animasyonlar                             | evet                                                                | hayır: `reduce_motion` kullanın                                                                        | hayır                                            |
-| dil                                      | uygulama başına, API 33+; altında bütün cihaz                       | uygulama başına; `app ""`: bütün simülatör                                                             | uygulama başına, aracın başlattıkları            |
-| yavaş ağ, ısıl durum                     | emülatör; bir telefonun indirmeleri, 13+                            | hayır                                                                                                  | Xcode'un koşulları                               |
-| biyometri                                | bir emülatörün parmak izi                                           | evet                                                                                                   | hayır: `devicectl` hiçbirini taklit etmez        |
+| dil                                      | uygulama başına, API 33+; altında bütün cihaz                       | uygulama başına; `app ""`: bütün simulator                                                             | uygulama başına, aracın başlattıkları            |
+| yavaş ağ, ısıl durum                     | emulator; bir telefonun indirmeleri, 13+                            | hayır                                                                                                  | Xcode'un koşulları                               |
+| biyometri                                | bir emulator'ın parmak izi                                          | evet                                                                                                   | hayır: `devicectl` hiçbirini taklit etmez        |
 | uçak modu, Wi-Fi, mobil veri             | evet, geri okunur                                                   | hayır: Mac'in ağını kullanır                                                                           | hayır                                            |
 | anahtar zinciri                          | hayır: Android'de yok                                               | boşaltılır, sayılır                                                                                    | hayır                                            |
-| katlanma duruşu                          | katlanabilir bir cihaz, API 31+: listelediği her duruş, geri alınır | iki ekranlı bir simülatör (iPhone Duo, Xcode 27.1+): closed, half, open, geri alınır; diğerleri: hayır | hayır                                            |
-| gelen arama, SMS                         | yalnızca emülatör                                                   | hayır: telefon hizmeti yok                                                                             | hayır                                            |
+| katlanma duruşu                          | katlanabilir bir cihaz, API 31+: listelediği her duruş, geri alınır | iki ekranlı bir simulator (iPhone Duo, Xcode 27.1+): closed, half, open, geri alınır; diğerleri: hayır | hayır                                            |
+| gelen arama, SMS                         | yalnızca emulator                                                   | hayır: telefon hizmeti yok                                                                             | hayır                                            |
 | pil seviyesi                             | evet                                                                | hayır: yalnızca bir tane çizer                                                                         | hayır                                            |
 | proxy                                    | evet, geri alınır                                                   | Mac'inkini izler                                                                                       | hayır: Wi-Fi ayarlarında                         |
 | bellek uyarısı                           | uygulamanınkinin üstünde bir trim düzeyi                            | oradaki her uygulama, çağrı başına bir                                                                 | `devicectl` (henüz bir telefonda çalıştırılmadı) |
-| sallamak                                 | bir emülatörün ivmeölçeri                                           | evet                                                                                                   | hayır: yalnızca elle                             |
+| sallamak                                 | bir emulator'ın ivmeölçeri                                          | evet                                                                                                   | hayır: yalnızca elle                             |
 | kitaplığa fotoğraf ve video              | gönderilir, taranır, `restore`'da çıkarılır                         | `simctl addmedia`, silme yok                                                                           | hayır                                            |
 | arka planda bir son                      | `am kill`                                                           | işleminin SIGKILL'i                                                                                    | `devicectl` (henüz bir telefonda çalıştırılmadı) |
 
-API 37'yi hedefleyen bir Android uygulaması bu Mac'e, bir emülatörden `10.0.2.2` üzerinden, ya da yerel ağa yalnızca `ACCESS_LOCAL_NETWORK` izniyle ulaşır: o olmadan istekleri takılı kalır, `measure_performance snapshot` ve `capture_network` de 0 bayt sayar.
+API 37'yi hedefleyen bir Android uygulaması bu Mac'e, bir emulator'dan `10.0.2.2` üzerinden, ya da yerel ağa yalnızca `ACCESS_LOCAL_NETWORK` izniyle ulaşır: o olmadan istekleri takılı kalır, `measure_performance snapshot` ve `capture_network` de 0 bayt sayar.
 
 ## Push bildirimleri
 
@@ -229,7 +426,7 @@ API 37'yi hedefleyen bir Android uygulaması bu Mac'e, bir emülatörden `10.0.2
 
 Tür ve başka hiçbir şey verilmezse bu cihazın kabul ettiği her türü, izlediği yolu ve orada aldığı alanları, göndereceği payload'un bir şablonuyla ya da neden gönderemeyeceğiyle yanıtlar; `data`'sı aynısını `types` olarak tutar; orada APNs ya da FCM üzerinden giden bir yol, dayandığı token türlerini `tokens` içinde adlandırır; bunları bir kişi bir pencereye yazabilir. Türü olmayan bir `title` ya da `body`, cihazın bir `alert` aldığı yerde onun olarak gider ve yanıt bunu söyler; almadığı yerde, ve türü olmadan tek başına `image`, `data` ya da `payload` için, giden türleri adlandırarak reddeder. Bir push, bir işlem gibi, sonraki ekranla yanıtlanır.
 
-| tür           | Android emülatörü ve telefon                                                              | simülatör                                                                                              | iPhone                                                            |
+| tür           | Android emulator'ı ve telefon                                                             | simulator                                                                                              | iPhone                                                            |
 | ------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | alert         | aşağıdaki gibi FCM'in kendi mesajı ya da kurulduktan sonra FCM                            | `simctl push`: uygulama öndeyse uygulamanın kodu alır, değilse yalnızca bir dokunuşta                  | kurulduktan sonra APNs                                            |
 | rich          | alert gibi, bir bağlantıyla gelen bir görselle                                            | kurulduktan sonra APNs'in sandbox'ı; `simctl push` hiçbir Notification Service Extension çalıştırmaz   | kurulduktan sonra APNs                                            |
@@ -241,13 +438,15 @@ Tür ve başka hiçbir şey verilmezse bu cihazın kabul ettiği her türü, izl
 
 `tapped` hiçbir şey çizmez. Uygulama arka plandayken dokunulan bir push için [Firebase'in belgelediği](https://firebase.google.com/docs/cloud-messaging/android/receive) şeydir, "the data payload is delivered in the extras of the intent of your launcher Activity": aktivite, Firebase'in kendi dokunuşunun açtığı gibi, uygulamanın görevinin üstünde yeniden açılır.
 
-Gerçek bir iPhone push'u yalnızca Apple'ın sunucularından, bir kişi APNs'i [Apple ve Google üzerinden bir telefona ve bir simülatöre push](#apple-ve-google-üzerinden-bir-telefona-ve-bir-simülatöre-push) bölümündeki gibi kurduktan sonra alır. O zamana kadar uygulamanın deep link'iyle `open_link`, o bağlantıyı taşıyan bir push'un ulaşacağı koda ulaşır ya da push'u bir simülatör alır. Xcode 27.1'in `devicectl`'inin kendine ait bir push'u yoktur: `devicectl device notification post`, yardımında yazdığı gibi, yalnızca adıyla bir Darwin bildirimi yayımlar, bu bir push değildir. Anahtar olmadan Apple'ın Push Notifications Console'u, ekibin hesabıyla oturum açılmış bir tarayıcıdan, uygulamanın yazdırdığı token'a bir push gönderir, [Apple'ın gösterdiği gibi](https://developer.apple.com/videos/play/wwdc2023/10025/): appdyno onu yönetemez ve bu denenmedi.
+Gerçek bir iPhone push'u yalnızca Apple'ın sunucularından, bir kişi APNs'i [Apple ve Google üzerinden bir telefona ve bir simulator'a push](#apple-ve-google-üzerinden-bir-telefona-ve-bir-simulatora-push) bölümündeki gibi kurduktan sonra alır. O zamana kadar uygulamanın deep link'iyle `open_link`, o bağlantıyı taşıyan bir push'un ulaşacağı koda ulaşır ya da push'u bir simulator alır. Xcode 27.1'in `devicectl`'inin kendine ait bir push'u yoktur: `devicectl device notification post`, yardımında yazdığı gibi, yalnızca adıyla bir Darwin bildirimi yayımlar, bu bir push değildir. Anahtar olmadan Apple'ın Push Notifications Console'u, ekibin hesabıyla oturum açılmış bir tarayıcıdan, uygulamanın yazdırdığı token'a bir push gönderir, [Apple'ın gösterdiği gibi](https://developer.apple.com/videos/play/wwdc2023/10025/): appdyno onu yönetemez ve bu denenmedi.
 
 Bu cihazın ya da uygulamanın derlemesinin alamadığı bir tür nedeniyle reddedilir; ipucu orada hâlâ çalışan türleri adlandırır, örneğin `tapped`.
 
-Bir simülatörde yanıt, uygulamanın koduna neyin ulaştığını, push anında uygulamanın nerede olduğuna göre söyler; bu, push'tan hemen önce okunur: öndeyse kodu alır; arka plandaysa ya da çalışmıyorsa push yalnızca gösterilir ve kod onu banner'ına dokunulduğunda alır. Bildirimlerine kimsenin izin vermediği bir uygulama hiç bildirim göstermez ve `simctl` başarısız olur ("Source is not authorized"); yine de öndeki bir uygulama push'u kodunda alır: yanıt o durumda bunu söyler; uygulama önde değilse `send_push` bildirimlere nasıl izin verileceğini söyleyerek reddeder.
+### Bir simulator'da uygulamanın koduna ne ulaşır
 
-Bir simülatör `simctl push` için hiçbir Notification Service Extension çalıştırmaz, bu yüzden rich bir push uygulamanın koduna değişmeden ulaşır; `simctl push` bir uygulamanınkinden başka topic de almaz, bu yüzden bir Live Activity'nin push'u activity'ye hiç ulaşmaz. Apple bu push'ları bir simülatörde APNs'in sandbox'ı üzerinden, macOS 13 ya da sonrasında Apple silicon ya da T2'li bir Mac'ten, activity'nin kendi push token'ıyla test eder. Yani rich bir push, bir background push, bir Live Activity'ninki, bir VoIP push'u ve bir widget'ınki bir simülatöre yalnızca APNs'in sandbox'ından, uygulamanın ekibinin bir anahtarıyla ulaşır: bir kişi aşağıdaki gibi bir anahtar kurduktan sonra `send_push` onları oraya gönderir; o zamana kadar her ret bunu söyler.
+Bir simulator'da yanıt, uygulamanın koduna neyin ulaştığını, push anında uygulamanın nerede olduğuna göre söyler; bu, push'tan hemen önce okunur: öndeyse kodu alır; arka plandaysa ya da çalışmıyorsa push yalnızca gösterilir ve kod onu banner'ına dokunulduğunda alır. Bildirimlerine kimsenin izin vermediği bir uygulama hiç bildirim göstermez ve `simctl` başarısız olur ("Source is not authorized"); yine de öndeki bir uygulama push'u kodunda alır: yanıt o durumda bunu söyler; uygulama önde değilse `send_push` bildirimlere nasıl izin verileceğini söyleyerek reddeder.
+
+Bir simulator `simctl push` için hiçbir Notification Service Extension çalıştırmaz, bu yüzden rich bir push uygulamanın koduna değişmeden ulaşır; `simctl push` bir uygulamanınkinden başka topic de almaz, bu yüzden bir Live Activity'nin push'u activity'ye hiç ulaşmaz. Apple bu push'ları bir simulator'da APNs'in sandbox'ı üzerinden, macOS 13 ya da sonrasında Apple silicon ya da T2'li bir Mac'ten, activity'nin kendi push token'ıyla test eder. Yani rich bir push, bir background push, bir Live Activity'ninki, bir VoIP push'u ve bir widget'ınki bir simulator'a yalnızca APNs'in sandbox'ından, uygulamanın ekibinin bir anahtarıyla ulaşır: bir kişi aşağıdaki gibi bir anahtar kurduktan sonra `send_push` onları oraya gönderir; o zamana kadar her ret bunu söyler.
 
 ### Android'de FCM'in kendi mesajı, proje ve anahtar olmadan
 
@@ -255,18 +454,24 @@ Firebase Messaging içeren bir Android uygulaması bir alert'i, rich bir push'u,
 
 Alıcı yalnızca sistemi, root'u ve uygulamanın kendisini içeri alır, bu yüzden `send_push` onu hata ayıklanabilir bir build'de `run-as` ile, uygulamanın kendi uid'i olarak, ya da adbd zaten root olarak çalışıyorsa root olarak gönderir; bunu sağlamak için adbd'yi asla yeniden başlatmaz. Shell'in kendi uid'inden bir broadcast sessizce atlanır. Alıcının sonucu mesajı aldığını söyler: hiçbir şey almayan reddedilir, çünkü zorla durdurulmuş bir uygulama FCM'den de hiçbirini almaz.
 
-SDK sonra Google'dan gelen bir mesaj için yaptığını yapar: bir veri mesajı uygulama nerede olursa olsun `onMessageReceived`'e gider ve uygulama çalışmıyorsa onu başlatır; bir bildirim, uygulama öndeyse verisiyle `onMessageReceived`'e gider, değilse SDK onu uygulamanın adı ve simgesiyle, kendi kanalında çizer; orada bir dokunuş, [Firebase'in belgelediği gibi](https://firebase.google.com/docs/cloud-messaging/android/receive), uygulamayı veriyle açar; böyle bir dokunuş denenmedi ve `tapped` uygulamayı aynı şekilde açar. Uygulamaya bildirim izni verilmediğinde yanıt bunu söyler, çünkü SDK o zaman hiçbir şey çizmez. Tür verilmezse `send_push` ve bir pencerenin Bildirim paneli, adı verilen uygulama için her türün izlediği yolu, build'inden okuyarak adlandırır; liste de bir push gibi izin listesinden geçer. FCM kurulduğunda bu push'lar onun yerine Google'ın sunucularından gider.
+SDK sonra Google'dan gelen bir mesaj için yaptığını yapar: bir veri mesajı uygulama nerede olursa olsun `onMessageReceived`'e gider ve uygulama çalışmıyorsa onu başlatır; bir bildirim, uygulama öndeyse verisiyle `onMessageReceived`'e gider, değilse SDK onu uygulamanın adı ve simgesiyle, kendi kanalında çizer; orada bir dokunuş, [Firebase'in belgelediği gibi](https://firebase.google.com/docs/cloud-messaging/android/receive), uygulamayı veriyle açar; böyle bir dokunuş denenmedi ve `tapped` uygulamayı aynı şekilde açar.
 
-Denenmeden kalanlar: Google'ın sunucuları hiçbir şey taşımaz, bu yüzden onların teslimatı, Doze'un ertelemesi, bir TTL ya da gönderimler arası bir collapse ve bir token'ın geçerliliği denenmez; `from` alanında da `appdyno` yazar, bu yüzden onu kendi gönderen kimliğine karşı denetleyen bir uygulama mesajı geri çevirir. Bir görsel, SDK'nın indirdiği bir bağlantıyla gider. FCM'in kendi adı olan bir veri anahtarı, `from`, `notification`, `message_type`, `collapse_key` ya da `google` veya `gcm` ile başlayan biri, FCM'in reddettiği gibi reddedilir. Uygulamada, bir push'un bir Android uygulamasının koduna ulaşmasının tek yolu olan Firebase Messaging yoksa bunların her biri reddedilir ve yanıt bunu söyler; adbd'si root olmayan bir telefonda bir release build ise her biri, onu neyin alabileceği söylenerek reddedilir: hata ayıklanabilir bir build ya da `appdyno push setup fcm` ile kurulmuş FCM. Android'in inbox, messaging ya da media gibi bir stili ayrı bir push değildir: bir uygulama onu koduna verilenden çizer, bu yüzden onun push'u, o kodun okuduğu veriyle `background`'dır.
+Uygulamaya bildirim izni verilmediğinde yanıt bunu söyler, çünkü SDK o zaman hiçbir şey çizmez. Tür verilmezse `send_push` ve bir pencerenin Bildirim paneli, adı verilen uygulama için her türün izlediği yolu, build'inden okuyarak adlandırır; liste de bir push gibi izin listesinden geçer. FCM kurulduğunda bu push'lar onun yerine Google'ın sunucularından gider.
 
-### Apple ve Google üzerinden bir telefona ve bir simülatöre push
+Denenmeden kalanlar: Google'ın sunucuları hiçbir şey taşımaz, bu yüzden onların teslimatı, Doze'un ertelemesi, bir TTL ya da gönderimler arası bir collapse ve bir token'ın geçerliliği denenmez; `from` alanında da `appdyno` yazar, bu yüzden onu kendi gönderen kimliğine karşı denetleyen bir uygulama mesajı geri çevirir. Bir görsel, SDK'nın indirdiği bir bağlantıyla gider.
+
+FCM'in kendi adı olan bir veri anahtarı, `from`, `notification`, `message_type`, `collapse_key` ya da `google` veya `gcm` ile başlayan biri, FCM'in reddettiği gibi reddedilir. Uygulamada, bir push'un bir Android uygulamasının koduna ulaşmasının tek yolu olan Firebase Messaging yoksa bunların her biri reddedilir ve yanıt bunu söyler; adbd'si root olmayan bir telefonda bir release build ise her biri, onu neyin alabileceği söylenerek reddedilir: hata ayıklanabilir bir build ya da `appdyno push setup fcm` ile kurulmuş FCM.
+
+Android'in inbox, messaging ya da media gibi bir stili ayrı bir push değildir: bir uygulama onu koduna verilenden çizer, bu yüzden onun push'u, o kodun okuduğu veriyle `background`'dır.
+
+### Apple ve Google üzerinden bir telefona ve bir simulator'a push
 
 Yalnızca Apple'ın ya da Google'ın sunucularının teslim ettiği şey, bir kişi bu Mac'in bir terminalinde onların kimlik bilgilerini kurduktan sonra onlar üzerinden gider: `appdyno push setup apns` ekibin APNs anahtarını, `.p8` dosyasını, anahtar kimliğini, ekip kimliğini ve bir dağıtım build'inin production'dan push alıp alamayacağını sorar; `appdyno push setup fcm` bir Firebase service account'unun JSON dosyasını sorar. Her biri durum klasöründe, `push/apns.json` ya da `push/fcm.json` olarak, yalnızca bu kullanıcının okuyabileceği biçimde (mod 0600, mod 0700 olan bir klasörde) saklanır ve `--forget` onu siler. Bir MCP istemcisinin gönderdiği hiçbir şey bunları ayarlamaz, okumaz ya da silmez: istemciye yalnızca birinin kurulu olup olmadığı söylenir. İki komut da terminal olmadan çalışmaz ve hiçbiri bir anahtarı, bir kimliği ya da bir token'ı geri söylemez.
 
-APNs kurulduğunda `send_push`, bir simülatörün rich, background, Live Activity, VoIP ve widget push'larını, kabloyla bağlı bir iPhone'a da bunların her birini ve bir alert'i APNs üzerinden, şu denetimlerin arkasında gönderir:
+APNs kurulduğunda `send_push`, bir simulator'ın rich, background, Live Activity, VoIP ve widget push'larını, kabloyla bağlı bir iPhone'a da bunların her birini ve bir alert'i APNs üzerinden, şu denetimlerin arkasında gönderir:
 
-- **Host'lar.** Kodda yazılı `api.sandbox.push.apple.com` ve `api.push.apple.com`, başkası değil; bir simülatör yalnızca sandbox'ınkini alır. Bir istek node'un `http2`'siyle, node'un `crypto`'suyla imzalanmış, 40 dakika tutulan bir ES256 provider token'ıyla gider, çünkü Apple 20 dakikada birden sık yapılanı ve 60 dakikadan eskisini reddeder.
-- **Token.** Yalnızca bu aracın bu oturumda, cihazın kendi logunda uygulamanın kendi satırlarından okuduğu ya da bir kişinin pencereye yazdığı bir token; bir MCP istemcisinin gönderdiği hiçbir şey token değildir. Bir simülatörde satırlar, oturumun başından itibaren yalnızca uygulamanın sürecine ait `log show` satırlarıdır.
+- **Host'lar.** Kodda yazılı `api.sandbox.push.apple.com` ve `api.push.apple.com`, başkası değil; bir simulator yalnızca sandbox'ınkini alır. Bir istek node'un `http2`'siyle, node'un `crypto`'suyla imzalanmış, 40 dakika tutulan bir ES256 provider token'ıyla gider, çünkü Apple 20 dakikada birden sık yapılanı ve 60 dakikadan eskisini reddeder.
+- **Token.** Yalnızca bu aracın bu oturumda, cihazın kendi logunda uygulamanın kendi satırlarından okuduğu ya da bir kişinin pencereye yazdığı bir token; bir MCP istemcisinin gönderdiği hiçbir şey token değildir. Bir simulator'da satırlar, oturumun başından itibaren yalnızca uygulamanın sürecine ait `log show` satırlarıdır.
 - **Bir iPhone'da.** Bu araç orada çalışan hiçbir uygulamanın logunu okumaz, bu yüzden token'ı olmayan bir push uygulamayı `devicectl device process launch --console` ile yeniden başlatır (uygulamanın `os_log` ve `NSLog` çıktısı, Xcode altındaki gibi o konsola düşer) ve yazdırdıklarını en çok 15 s boyunca okur: bunu yalnızca o zaman yapar ve yanıt uygulamanın yeniden başlatıldığını ve durumunu kaybettiğini söyler. Konsol, sonradan yazdırılan bir token için oturum boyunca izlenir ve SIGKILL ile bırakılır; devicectl bunu, yakaladığı bir sinyali uygulamaya ilettiği gibi iletemez. Telefonun kendi logunu geliştirici servisleri üzerinden okumak yeniden başlatmayı gereksiz kılardı; bu sonraki bir iyileştirmedir.
 - **Bir token neye benzer.** Bir token, 32 bayt ya da daha uzun bir hex'tir ve token'dan söz eden bir satır varsa öyle bir satırdan alınır, çünkü bir uygulamanın logunda aynı uzunlukta başka hex'ler de vardır; satırın sözcükleri onun hangisi olduğunu söyler: push to start, bir activity, VoIP (ya da PushKit) ya da bir widget anan bir satır o token'ı verir, diğer her satır cihaz token'ını. Uygulama onu `NSLog` ya da `os_log` ile yazdırır; token'ı olmayan bir push bunu ve nasıl yapılacağını söyler. Apple'ın geçersiz ya da artık kayıtlı değil dediği bir token atılır ve sonraki push uygulamanın satırlarını yeniden okur. Hiçbir yanıt, hata ya da log bir token'ı, anahtarı ya da provider token'ı söylemez: bir token türüyle ve okunduğu zamanla adlandırılır.
 - **Uygulama.** Topic, adı verilen ve o cihaza kurulu uygulamadır ve token o uygulamadandır. Bir iPhone'da build'in imzası ve Info.plist'i yalnızca bu aracın `manage_app install` ya da `manage_app build_and_run` ile kurduğu bir build'den okunur: telefondaki hiçbir şey bunları vermez.
@@ -284,140 +489,259 @@ FCM kurulduğunda `send_push`, bir Android cihazın alert, rich, background ve L
 
 Apple'a ve Google'a giden istekler, her birinin belgelediği biçimde kaydedilmiş isteklere karşı, Apple'a gönderim de yerel bir HTTP/2 sunucusuna karşı test edilir; hiçbir test ikisine de ulaşmaz. Denemelerde henüz hiçbir push Apple'ın ya da Google'ın sunucularından geçmedi: bu, bir ekibin anahtarını, bir projenin hesabını ve bir telefonu bekliyor. Neyin hangi cihazlarda çalıştırıldığı [Araçlar nasıl test edildi](tools-tested.tr.md#push-bildirimleri) sayfasındadır.
 
-Bir uygulamanın kimliğiyle `open_link` `links`, kurulu uygulamadan okuyarak onun açtığı bağlantıları listeler: bir simülatörde URL şemalarını ve imzasının universal link'ler için adını verdiği alan adlarını, Android'de bir bağlantıyı görüntüleyen her filtreyi `scheme://host/path` olarak ve her App Link alan adını Android'in doğrulama durumuyla. `data.links` alanı aynısını tutar; her biri `url`'i, `kind`'ı (`scheme`, `domain` ya da `filter`) ve Android'in doğruladığı yerde bir alan adının `state`'i ile, bir istemcinin sunması ya da tek tek geçmesi için. Bir iPhone'un kurulu uygulaması okunmaz. Android'de bir bağlantı seçili uygulamaya, orada tutularak gider; `--allow-apps` yoksa o uygulamanın açmadığı bir web bağlantısı onu açan uygulamaya, çoğu zaman bir tarayıcıya gider ve yanıt, uygulamanın onu açmadığını söyler.
+## Bağlantılar
 
-`open_link`, yalnızca bağlantının bıraktığı ekranın üstünde bir sistem uyarısı yoksa `opened` der; o ekranı kıpırdamadan durunca, en çok 5 s içinde okur, çünkü bir bağlantının başlattığı uygulama öne geldikten sonra da çizmeyi sürdürür; bir işlem 3 s bekler. Bir simülatör, bir uygulamanın şeması onu ilk kez açmadan önce "Open in …?" diye sorar ve bu yanıtlanana kadar hiçbir şey açılmaz. Seçili uygulamanın kendi şemasındaki bir bağlantı, o uygulama öne gelene kadar, en çok 15 s izlenir ve sorusu, o uygulamayı adlandıran tek bir satırsa, yolda yanıtlanır; böylece tek çağrı uygulamanın ekranıyla yanıt verir ve onu yanıtladığını söyler. Zaten önde olan uygulamanın üstüne gelen soru bir saniye izlenir. Bir soruyu yanıtlayan dokunuş, simülatörün yardımcısı göndermediğinde runner ile gider ve runner Open'a dokunmadan önce soruyu kendisi okur, böylece soruyu dikeyde olduğu gibi yatayda da yanıtlar. Başka bir soru bırakılır ve yanıt o zaman uyarının sözcükleri ve düğmeleriyle `sent` der ve onu `answer_alert` ile yanıtlamayı söyler. `read: none` ile hiçbir şey okunmaz ve `opened` der. Ekranı okuyan her yanıt, üstündeki bir sistem uyarısını böyle adlandırır, bir Android uygulamasının çökme penceresini ("keeps stopping") de, yanıtlamak için `answer_alert` ile; yataydaki bir iOS cihazında uyarı, onu çizen ana ekran uygulaması pencerelerini dik tutsa da ekranın onu gösterdiği yerde okunur. `answer_alert`'in bir uygulamanın üstündeki bir iOS uyarısına yanıtı ve böyle bir uyarıyı kapatan bir `tap_screen`, `count: 2` ya da `holdMs` ile de, o uygulamayı yeniden öne gelince okur: uyarı giderken ana ekran uygulaması bir an önde durur ve yalnızca uygulamanın kartını gösterir.
+Bir uygulamanın kimliğiyle `open_link` `links`, kurulu uygulamadan okuyarak onun açtığı bağlantıları listeler: bir simulator'da URL şemalarını ve imzasının universal link'ler için adını verdiği alan adlarını, Android'de bir bağlantıyı görüntüleyen her filtreyi `scheme://host/path` olarak ve her App Link alan adını Android'in doğrulama durumuyla. `data.links` alanı aynısını tutar; her biri `url`'i, `kind`'ı (`scheme`, `domain` ya da `filter`) ve Android'in doğruladığı yerde bir alan adının `state`'i ile, bir istemcinin sunması ya da tek tek geçmesi için. Bir iPhone'un kurulu uygulaması okunmaz.
+
+Android'de bir bağlantı seçili uygulamaya, orada tutularak gider; `--allow-apps` yoksa o uygulamanın açmadığı bir web bağlantısı onu açan uygulamaya, çoğu zaman bir tarayıcıya gider ve yanıt, uygulamanın onu açmadığını söyler.
+
+### Bir bağlantı ne zaman açılmış sayılır
+
+`open_link`, yalnızca bağlantının bıraktığı ekranın üstünde bir sistem uyarısı yoksa `opened` der; o ekranı kıpırdamadan durunca, en çok 5 s içinde okur, çünkü bir bağlantının başlattığı uygulama öne geldikten sonra da çizmeyi sürdürür; bir işlem 3 s bekler.
+
+Bir simulator, bir uygulamanın şeması onu ilk kez açmadan önce "Open in …?" diye sorar ve bu yanıtlanana kadar hiçbir şey açılmaz. Seçili uygulamanın kendi şemasındaki bir bağlantı, o uygulama öne gelene kadar, en çok 15 s izlenir ve sorusu, o uygulamayı adlandıran tek bir satırsa, yolda yanıtlanır; böylece tek çağrı uygulamanın ekranıyla yanıt verir ve onu yanıtladığını söyler. Zaten önde olan uygulamanın üstüne gelen soru bir saniye izlenir. Bir soruyu yanıtlayan dokunuş, simulator'ın yardımcısı göndermediğinde runner ile gider ve runner Open'a dokunmadan önce soruyu kendisi okur, böylece soruyu dikeyde olduğu gibi yatayda da yanıtlar.
+
+Başka bir soru bırakılır ve yanıt o zaman uyarının sözcükleri ve düğmeleriyle `sent` der ve onu `answer_alert` ile yanıtlamayı söyler. `read: none` ile hiçbir şey okunmaz ve `opened` der.
+
+### Sistem uyarıları
+
+Ekranı okuyan her yanıt, üstündeki bir sistem uyarısını böyle adlandırır, bir Android uygulamasının crash penceresini ("keeps stopping") de, yanıtlamak için `answer_alert` ile; yataydaki bir iOS cihazında uyarı, onu çizen ana ekran uygulaması pencerelerini dik tutsa da ekranın onu gösterdiği yerde okunur. `answer_alert`'in bir uygulamanın üstündeki bir iOS uyarısına yanıtı ve böyle bir uyarıyı kapatan bir `tap_screen`, `count: 2` ya da `holdMs` ile de, o uygulamayı yeniden öne gelince okur: uyarı giderken ana ekran uygulaması bir an önde durur ve yalnızca uygulamanın kartını gösterir.
+
+### Ayarlar sayfaları
 
 `open_link` `settings`, bir kişinin her yere gidebildiği, kendi başına bir uygulama olan Ayarlar'ı açar: `--allow-apps` ile onu, bir sayfasında ya da bir uygulamanınkinde, yalnızca Ayarlar'ın kendi kimliği listedeyse açar, iOS'ta `com.apple.Preferences`, Android'de `com.android.settings`; yoksa `POLICY_DENIED` ile reddeder ve bir kişinin onu nasıl ekleyeceğini söyler. Ayarlar'ı açan bir `url` bağlantısı da aynı kurala bağlıdır: iOS'un `App-prefs:`, `prefs:`, `app-settings:` ve `settings-navigation:` bağlantıları, Android'in `package:` ve `android.settings.…:` bağlantıları. Bu cihazda olmayan bir sayfa, bu cihazın sayfalarıyla, yanlış bir sözcük olarak reddedilir.
 
-## Kablosuz bağlantılar, biyometri ve anahtar zinciri
+## Simulator'da ağ
 
-Bir kablosuz bağlantı, cihaz 10 s içinde istendiği gibi okunduğunda tamamdır: Wi-Fi radyonun durumuna göre, çünkü önce onun ayarı değişir; uçak modu ve mobil veri ise kullanıcının anahtarına göre, böylece uçak modu sırasında yapılan bir geri yükleme kullanıcının seçtiğini geri getirir. Değişmeyen bir cihaz, söylediğiyle reddedilir. Kendi ağı üzerinden ulaşılan bir cihaz (`adb connect`, kablosuz hata ayıklama) `wifi off` ve `airplane on`'u reddeder, çünkü onları geri almak için hiçbir şey ona ulaşamazdı. Bir emülatörde mobil verinin kapatılması ya da uçak modunun açılması cihazın bu Mac'e giden yolunu keser, `restore` da onu geri getirir. Bir anahtar bir bağlantı hakkında hiçbir şey söylemez.
+Simulator'da `capture_network` probe üzerinden çalışır.
 
-Bir emülatörde `biometric` sensörüne dokunur ve yalnızca parmak izi servisi dokunuşu saydığında tamamdır: `match`, `nomatch`; hiçbir uygulama sormuyorsa her biri reddedilir. Parmak izi olmayan bir emülatörde `enroll` kendiliğinden bir tane ekler: ekran kilidini, önce not ederek, PIN 1234'e ayarlar, Ayarlar'ın kayıt adımlarından kontrollerin sözcüklerine değil türlerine göre geçer (PIN alanı, sonra en alttaki ve en sağdaki düğme) ve servis bir tane tutana kadar sensöre dokunur. `restore` PIN'i kaldırır, Android da parmak izlerini onunla birlikte siler. Kendine ait bir kilidi olan bir emülatör reddedilir, çünkü PIN'i yazılamaz; `--no-home` ile başlatılmış bir sunucu da öyle, çünkü Ayarlar uygulamadan çıkar. Gerçek bir telefon reddedilir: sensörü yalnızca bir kişinin parmağını kabul eder ve kilidi sahibinindir. Bir simülatörün `enroll`'u Face ID ya da Touch ID'yi açar. Android'de bir uygulamanın sorusu sistemindir ve odağı tutar: her ekran gibi öğeler halinde okunur, ama ekran görüntüsü boştur, çünkü güvenli bir penceredir.
+### Bir yakalama başlatmak
 
-Bir iPhone'da `devicectl device simulate biometrics`, `Device does not support any biometric simulation, nothing to do` yanıtını verir ve 0 ile çıkar, bu yüzden kullanılmaz: bir yanıt, hiç olmamış bir dokunuş için tamam derdi.
+`bodies` ile `start`, her isteğin başlıklarını ve metin gövdelerini, her biri 64 kB'ye ve yakalama başına 20 MB'ye kadar, durum klasörünün altında yakalamanın kendi klasöründe, yalnızca bu kullanıcı için tutar; `stop` ile ve oturumun sonunda silinirler.
 
-`keychain` `reset` bir simülatörün anahtar zincirini boşaltır ve uygulamaların kaç öğe tuttuğunu deponun kendi satırlarından söyler; bu satırlar sonrasında boş olduğunu da kanıtlar. Sistemin kendi satırları kalır ve sayılmaz. Tek seferliktir: hiçbir şey onları geri getirmez.
+### İstekleri okumak
 
-## Bellek uyarıları, sallamalar, fotoğraflar ve arka planda bir son
+Bütün isteklerin bir `read` çağrısı katlanmış gelir: önce başarısız ve reddedilen istekler, her biri bütün olarak; her ana makine bir kez, altında her yöntem ve yol bir kez, sorgu adlarıyla, yinelenenler sayıları, durumları ve ortanca süreleriyle tek satırda; görseller sayılmış olarak. `contains`, `method` ya da `status` (`404`, `4xx`, `failed`) her isteğe kendi satırını verir. Her yanıt son kimliği söyler; `after` yalnızca bir kimlikten sonra başlayanları verir. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur.
 
-`memory_warning` uygulamaya, `app`'e ya da seçili olana, sistemin bellek azaldığında gönderdiği uyarıyı gönderir. Bir simülatörde orada çalışan her uygulama onu alır, Simulator'ın kendi menüsündeki gibi, her çağrıda bir kez; bir düzey reddedilir. Android'de `value`, `am send-trim-memory`'nin aldığı trim düzeyidir, verilmezse `RUNNING_CRITICAL`: `RUNNING_MODERATE`, `RUNNING_LOW` ve `RUNNING_CRITICAL` öndeki bir uygulamaya, `HIDDEN`, `BACKGROUND`, `MODERATE` ve `COMPLETE` arka plandakine ulaşır. Android bir düzeyi yalnızca işleme en son verdiğinin üstündeyse alır ve yeni bir işlem hiçbir düzeyde değildir; bu yüzden bir ret uygulamanın hangi düzeyde olduğunu söyler. Sistem ana ekrana gönderilen bir uygulamayı yaklaşık bir saniye daha önde saydığı için bir arka plan düzeyi 3 s boyunca yeniden istenir. Her düzey API 35 ve API 36'da fixture'ın `onTrimMemory`'sine ulaştı. Bir iPhone'da `devicectl device process sendMemoryWarning` onu uygulamanın işlemine gönderir; henüz bir telefonda çalıştırılmadı.
+`id` ile `read` tek bir isteğin tamamını verir: oturumun ölçtüğü protokol, adres ve aşamalar (uygulamanın değil, probe'un kendi bağlantısı), ardından başlıklar ve gövdeler; Authorization, Cookie, Set-Cookie ile kimlik bilgisi adı taşıyan başlıklar ve alanlar gizlenir.
 
-`shake`, bir simülatörün UIKit'inin sallama olarak aldığı bildirimi gönderir; öndeki uygulama onu alır, her çağrıda bir kez. Bir emülatörde ivmeölçer yerçekiminin eksenine dik olarak bir yandan öbür yana, 80 ms'lik dört hamleyle çekilir ve okuması geri konur: fixture her çağrıda bir sallama saydı. Bir telefon ve bir iPhone yalnızca elle sallanır ve onu reddeder.
+`save`, isteneni aynı biçimde temizlenmiş olarak HAR 1.2 biçiminde yazar; klasörsüz bir ad `appdyno-network/` altına gider.
 
-`transfer_files` `media`, sunucunun klasöründeki bir fotoğrafı ya da videoyu, ya da bir klasörün fotoğraf ve videolarını cihazın kitaplığına ekler. Bir simülatör onları `simctl addmedia` ile alır ve yanıt Fotoğraflar'ın sonra kaç öğe tuttuğunu sayar; Fotoğraflar'ında silme yoktur, bu yüzden hiçbir şey onları çıkarmaz. Her dosya kendi çağrısıyla gider, çünkü birkaç dosya verilen `simctl addmedia` alabildiklerini içe aktarır, sonra hiçbirini adıyla söylemeyen bir istisnayla biter. Fotoğraflar'ın içe aktaramadığı bir dosya adıyla `INVALID_ARGUMENT` olarak reddedilir; yanıt ötekilerden kaçının eklendiğini, neyin işe yarayabileceğini (bir `.mp4` ya da `.mov` içinde H.264 video, `.png` ya da `.jpg` fotoğraf) ve altında simctl'in satırını verir; bir klasörde bu satır, simctl'in reddettiği son dosya için verdiği satırdır. Android'dekiler her biri yolu ve boyutuyla not edilir, `Pictures/appdyno`'ya gönderilir ve MediaProvider'ın kendi `scan_file`'ı ile taranır, çünkü gönderilen bir dosya taranana dek kitaplığın göremeyeceği yerde kalır; yanıt kitaplığın sonra onlardan kaçını listelediğini sayar. `restore` ve oturumun sonu tam olarak bunları, her birini yalnızca gönderildiği boyuttayken siler ve o zamandan beri değişeni adıyla söyler. Bir iPhone reddeder.
+### Mock kuralları
 
-`background` ile `manage_app stop`, bir uygulamayı sistemin bellek için arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır: ana ekran, uygulama önden çıktıktan sonra durumunu kaydetmesi için 1,5 s, sonra işlemi öldürülür; bir simülatörde SIGKILL ile, Android'de `am kill` ile, bir iPhone'da `devicectl device process terminate --kill` ile, ki henüz bir telefonda çalıştırılmadı. Hâlâ çalışan bir işlem reddedilir, çünkü `am kill` yalnızca sistemin sonlandırabileceği bir işlemi sonlandırır ve bir ön plan hizmeti bir işlemi ayakta tutar. Android'de bulunduğu aktivite, görevi `launch_app` başlattıysa kaydedilmiş örnek durumuyla geri gelir; görevi önce bir bağlantı başlattıysa yeni bir başlatıcı aktivitesinin altında geri gelir. Bir simülatörde fixture'ın `@SceneStorage` ile tuttuğu değer yeni bir işlemde geri geldi; bir başlatmada kaydedilmiş sahneyi bir kez atan bir simülatör, yeniden açılana dek her başlatmada bunu yaptı (iOS 26.5).
+`mock` kuralları koyar: `*` ile `host/path` ya da yol için `regex=`, `method=`, `query=`; ardından `status=`, `type=`, `header=`, `body=` (sunucunun klasörü içinde `body=@file`) ya da `fail=offline|timeout|reset` ya da bu Mac'te veya onun kendi ağında bir ana makineye `to=` (başkası için `--allow-urls` gerekir; yalın bir `localhost`, `http://127.0.0.1` demektir); `delayMs=`, `times=` ve `off` ile birlikte. Verilen kurallar listenin yerini alır, `add` listeye ekler, `[]` temizler, hiçbiri verilmezse her birinin aldıklarıyla listelenir.
 
-## Bir iPhone'un kendi koşulları, verisi ve izinleri
+### Yavaşlatma
 
-Bir iPhone'da `network` ve `thermal`, telefonun kendi koşullarıdır; Xcode'un Devices penceresinin onları ayarladığı gibi, telefonun instruments'ı üzerinden: `network` `slow`, telefonun listelediği ilk EDGE profili ya da adıyla bir profildir, `full` hiçbiri; `thermal` `fair`, `serious` ya da `critical`, `nominal` hiçbiri. Bir seferde biri geçerlidir. Telefon, onu ayarlayan süreç gittikten sonra da tutar: SIGKILL ile öldürülen bir oturum `SlowNetworkEdgeBad`'i açık bıraktı ve sonraki oturumun başlangıcı onu not edilmiş buldu ve kapattı. Bir ısıl profil her yönde saniyelerce kademeli değişir ve telefon bu arada hiçbir şey yanıtlamaz, bu yüzden telefon onu öyle okuduğunda tamamdır. Bunlar, canlı penceresinin kullandığı telefonun özel servisleri üzerinden gider ve bu servislere ulaşılamadığı yerde nedeni söylenerek reddedilir.
+`throttle` şunları alır: `full`, `slow`, `gsm`, `gprs`, `edge`, `umts`, `3g`, `hsdpa`, `lte`, `offline`, saniyede indirilen bayt ya da `delayMs= down= up= loss=`.
 
-Bir iPhone'da `manage_app clear`, boş bir klasörle `transfer_files push`'un yaptığı gibi uygulamanın veri container'ını boşaltır: yalnızca geliştirme imzalı uygulamalar. iOS'ta grant yoktur: `grant` ve `revoke` uygulamanın yanıtını sıfırlar, böylece uygulama yeniden sorar ve `answer_alert` yanıtlar. Bir uygulamayla `locale`, bir simülatörde olduğu gibi, bu aracın yaptığı her başlatmada onu bir dilde tutar.
+### Mock ve throttle'ın ulaştıkları
 
-## Simülatörde ağ
+İkisi de çalışan bir yakalama yoksa probe ile bir yakalama başlatır, bu da uygulamayı yeniden başlatır; ikisi de `stop` ile biter. Yalnızca uygulamanın URLSession isteklerine ulaşırlar: arka plan oturumlarına, WKWebView'a ya da Network.framework'e ulaşmazlar ve sistem Mac'in ağını olduğu gibi okumayı sürdürür. Probe içindeyken uygulamanın bir sunucunun sertifikasına ilişkin kendi denetimi (pinning) ile bir oturum açma ya da istemci sertifikası sorgusuna verdiği yanıtlar sorulmaz. Simulator'da `set_device network` reddedilir ve `capture_network throttle` adını verir.
 
-Simülatörde `capture_network` probe üzerinden çalışır. `bodies` ile `start`, her isteğin başlıklarını ve metin gövdelerini, her biri 64 kB'ye ve yakalama başına 20 MB'ye kadar, durum klasörünün altında yakalamanın kendi klasöründe, yalnızca bu kullanıcı için tutar; `stop` ile ve oturumun sonunda silinirler. Bütün isteklerin bir `read` çağrısı katlanmış gelir: önce başarısız ve reddedilen istekler, her biri bütün olarak; her ana makine bir kez, altında her yöntem ve yol bir kez, sorgu adlarıyla, yinelenenler sayıları, durumları ve ortanca süreleriyle tek satırda; görseller sayılmış olarak. `contains`, `method` ya da `status` (`404`, `4xx`, `failed`) her isteğe kendi satırını verir. Her yanıt son kimliği söyler; `after` yalnızca bir kimlikten sonra başlayanları verir. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur. `id` ile `read` tek bir isteğin tamamını verir: oturumun ölçtüğü protokol, adres ve aşamalar (uygulamanın değil, probe'un kendi bağlantısı), ardından başlıklar ve gövdeler; Authorization, Cookie, Set-Cookie ile kimlik bilgisi adı taşıyan başlıklar ve alanlar gizlenir. `save`, isteneni aynı biçimde temizlenmiş olarak HAR 1.2 biçiminde yazar; klasörsüz bir ad `appdyno-network/` altına gider.
-
-`mock` kuralları koyar: `*` ile `host/path` ya da yol için `regex=`, `method=`, `query=`; ardından `status=`, `type=`, `header=`, `body=` (sunucunun klasörü içinde `body=@file`) ya da `fail=offline|timeout|reset` ya da bu Mac'te veya onun kendi ağında bir ana makineye `to=` (başkası için `--allow-urls` gerekir; yalın bir `localhost`, `http://127.0.0.1` demektir); `delayMs=`, `times=` ve `off` ile birlikte. Verilen kurallar listenin yerini alır, `add` listeye ekler, `[]` temizler, hiçbiri verilmezse her birinin aldıklarıyla listelenir. `throttle` şunları alır: `full`, `slow`, `gsm`, `gprs`, `edge`, `umts`, `3g`, `hsdpa`, `lte`, `offline`, saniyede indirilen bayt ya da `delayMs= down= up= loss=`. İkisi de çalışan bir yakalama yoksa probe ile bir yakalama başlatır, bu da uygulamayı yeniden başlatır; ikisi de `stop` ile biter. Yalnızca uygulamanın URLSession isteklerine ulaşırlar: arka plan oturumlarına, WKWebView'a ya da Network.framework'e ulaşmazlar ve sistem Mac'in ağını olduğu gibi okumayı sürdürür. Probe içindeyken uygulamanın bir sunucunun sertifikasına ilişkin kendi denetimi (pinning) ile bir oturum açma ya da istemci sertifikası sorgusuna verdiği yanıtlar sorulmaz. Simülatörde `set_device network` reddedilir ve `capture_network throttle` adını verir.
+### Bir işlemin yanıtında başarısız istekler
 
 Probe ile bir yakalama çalışırken, bir eylemin yanıtı o eylem başladığından beri başarısız olan istekleri, her biri bir satırda ve en çok üç satırla söyler: `network: POST api.example.com/v1/pay 500 (id 44)`. Sunucunun reddettiği (4xx, 5xx) ya da yolda başarısız olan istek sayılır; uygulamanın vazgeçtiği sayılmaz. Son yanıttan sonra biten istek bir sonraki eylemle söylenir ve `before this action` der. `strict` (`start`, `mock` ya da `throttle` ile), bir kuralın yapmadığı 5xx ya da yol hatasında eylemi `CHECK_FAILED` ile başarısız kılar.
 
+### Bir isteği beklemek
+
 `check`, `contains`, `method`, `status` ve `has` ile uyan, bitmiş bir isteği `timeoutMs` (5 s) kadar bekler ve satırını yanıtlar. `has`, JSON bir gövdede yoluyla verilen bir değerdir (`user.name=Grace`) ya da gövdenin herhangi bir metni; isteğin gövdesinde aranır, başına `response:` yazılırsa yanıtın gövdesinde. `bodies` ister. Bulunamazsa `CHECK_FAILED` olur, en yakın isteği ve neyin farklı olduğunu söyler. `after`, eylemden önceki bir isteği dışarıda tutar. `read`, `paths` ve `check` cihazda sıra beklemez.
 
-Bir kural isteği `has=` (isteğin gövdesi, yukarıdaki gibi) ve `when="Name: value"` (bir başlık, değerde `*`) ile de alır; böylece tek bir GraphQL adresi her işlemi ayrı yanıtlar. `from` ile `mock`, yakalanmış bir isteğin yanıtından kimliğiyle bir kural yapar; gövdesi kimlik bilgileri gizlenerek `appdyno-network/` altındaki bir dosyaya yazılır. Bir `.har` verilirse içindeki her yanıt için bir kural yapar. `from` ile yapılanlar kurallara eklenir. `unmatched: fail`, hiçbir kuralın almadığı her isteği başarısız kılar.
+### Gövdeye ve başlığa göre, bir de yakalamadan kurallar
+
+Bir kural isteği `has=` (isteğin gövdesi, yukarıdaki gibi) ve `when="Name: value"` (bir başlık, değerde `*`) ile de alır; böylece tek bir GraphQL adresi her işlemi ayrı yanıtlar.
+
+`from` ile `mock`, yakalanmış bir isteğin yanıtından kimliğiyle bir kural yapar; gövdesi kimlik bilgileri gizlenerek `appdyno-network/` altındaki bir dosyaya yazılır. Bir `.har` verilirse içindeki her yanıt için bir kural yapar. `from` ile yapılanlar kurallara eklenir.
+
+`unmatched: fail`, hiçbir kuralın almadığı her isteği başarısız kılar.
+
+### Tek değer, biçim, fark
 
 `id` ve `path` ile `read`, yanıt gövdesinden tek bir değer verir (isteğinki için başına `request:`); `shape` değerler olmadan anahtarları ve türleri, `diff` ise başka bir istekten adres, durum, sorgu ve gövdelerde neyin farklı olduğunu verir. `read`, uygulamanın yaptığı ama probe'un göremediği şeylerle biter: `not seen here: 1 web view, 1 background session, 1 WebSocket task`.
 
-Sınırlar: bir WebSocket görevi sisteme bırakılır, bu yüzden probe yokken olduğu gibi açılır ve listede görünmez; akış olarak gönderilen bir istek gövdesi `has=` ve `bodies` için yalnızca 64 kB'ye kadar ve yalnızca uzunluğunu belirttiğinde okunur. Kaynaklardan, burada denenmedi: Server-Sent Events bitene kadar yolda görünür; kendi taşıması üzerinden gRPC ve AVPlayer'ın yüklediği medya görünmez; React Native'in `fetch`'i URLSession'dır ve görünür, WebSocket'i görünmez; Flutter'ın `dart:io`'su görünmez, `cupertino_http` kullanan bir uygulama görünür. Probe altında istekler varsayılan yapılandırmanın tek bir oturumundan geçer; bu yüzden bağlantı sınırları, HTTP/3 seçimi ve önbellek uygulamanınkinden farklı olabilir.
+### Sınırlar
 
-## Yavaş bir ağ
+Sınırlar: bir WebSocket görevi sisteme bırakılır, bu yüzden probe yokken olduğu gibi açılır ve listede görünmez; akış olarak gönderilen bir istek gövdesi `has=` ve `bodies` için yalnızca 64 kB'ye kadar ve yalnızca uzunluğunu belirttiğinde okunur.
 
-Bir emülatörde `network` `slow` konsolu üzerinden gider: iki yönde EDGE hızı ve 40 ile 100 ms arası gecikme. Android 13'ten itibaren bir telefonda yalnızca Android'in kendi sınırı vardır, `ingress_rate_limit_bytes_per_second`: `slow` indirmeyi bir EDGE ağının indirme hızı olan 30 kB/s ile sınırlar; bir sayı da onu bir telefonda ya da emülatörde saniyede o kadar bayta sınırlar. Gecikme eklemez ve yüklemeleri tam hızda bırakır, yanıt da bunu söyler. Sınır cihazın tuttuğu bir ayardır, bu yüzden eskisi not edilir ve `restore` onu siler.
+Kaynaklardan, burada denenmedi: Server-Sent Events bitene kadar yolda görünür; kendi taşıması üzerinden gRPC ve AVPlayer'ın yüklediği medya görünmez; React Native'in `fetch`'i URLSession'dır ve görünür, WebSocket'i görünmez; Flutter'ın `dart:io`'su görünmez, `cupertino_http` kullanan bir uygulama görünür.
 
-## Katlanma
+Probe altında istekler varsayılan yapılandırmanın tek bir oturumundan geçer; bu yüzden bağlantı sınırları, HTTP/3 seçimi ve önbellek uygulamanınkinden farklı olabilir.
 
-Android'de `fold`, `cmd device_state`'ten o adın durumunu oradaki kimliğiyle ister; bu kimlik cihaza göre değişir, cihaz o duruma geçtiğinde tamamdır. Cihazın listelediği her duruşu alır: `open`, `closed`, `half_opened` (`half` de olur), `rear_display` ve iki ekran birlikte için `dual`. Okuma durumu, ardından listeyi söyler. Bir değişiklik, uygulamaların artık gördüğü ekran boyutunu ve yoğunluğunu, öndeki activity'nin yeniden oluşturulduğunu ya da korunduğunu sistemin kendi yeniden başlatma satırından söyler. Masaüstü ve kitap duruşları cihaz durumu değildir: menteşesi yatay ya da dikey duran yarı açık duruştur, bunu uygulama kendisi okur. İstek, menteşe ne yaparsa yapsın ve bu araca ne olursa olsun sıfırlanana kadar geçerlidir, bu yüzden bir koşuldur: `restore` onu sıfırlar ve `default (now open)` bir istek değildir. API 31'den itibaren emülatörde de telefonda da aynıdır. Gerçek katlanabilir bir cihazda çalıştırılmadı. Katlanmış bir emülatörde canlı pencere konuğun kendi görüntüsünü alır; bu daha küçüktür ve gecikir, çünkü emülatör kapak ekranını iç ekranın çerçevesine gererek çizer.
+## Loglar ve crash'ler
 
-İki yerleşik ekranı olan bir iOS simülatöründe, yani Xcode 27.1 ve sonrasıyla iPhone Duo'da, `fold` `closed`, `half` ve `open` alır. `devicectl device info displays`'in hangi ekranı etkin dediğinden okunur, simülatörün menteşe kaydırıcısının gönderdiği menteşe olayıyla ayarlanır; bu özel API'dir. Ekran menteşeyi en çok 2,5 s sonra izler; izlemezse reddedilir, simülatörü yeniden başlatmak bunu giderir. Simülatör sıfırlanacak bir istek tutmaz; bu yüzden bulunan duruş yazılır, `restore` ve oturum sonu onu yeniden ayarlar. Simülatörün dışından yarı açık ile açık ayırt edilemez: `half` yalnızca bu oturum ayarladıysa öyle okunur, yarı açık bulunan bir cihaz açık olarak geri alınır. Açıkken okumalar, dokunuşlar, `take_screenshot` ve `record_session` iç ekranındır; uygulama sürecini korur, sahnesi oraya taşınır. Üç şey farklıdır: ana ekranın öğeleri kapak ekranının koordinatlarında okunur, kayıt döndürülmeden çıkar ve orada yalnızca doğrudan girdi yolu dokunur, runner'ınki değil. Başka her simülatör reddeder.
+### Hangi log okunur
 
-## Diller
+`read_logs` Android'de uygulamanın logcat'ini, bir simulator'da simulator logunu okur. Bir iPhone için `devicectl` çalışan bir uygulamanın logunu okuyamaz ve yanıt bunu söyler. Bir simulator'da, `debug`'ın altında, uygulamanın kendi satırlarını, aralarında `NSLog`'unkileri, Apple'ın çerçevelerinden de yalnızca hatalarını okur; bir simulator'ın klavyesinin çizilirken logladığı binlerce satır bunun dışındadır. `debug` uygulamanın sürecinin hepsini okur. XCTest'in orada logladığı hiç okunmaz: appdyno'nun runner'ı ekranı uygulamanın içinden okur ve dokunur.
 
-Android'de `locale`, API 33'ten itibaren, uygulama verildiğinde ya da biri seçiliyken, `cmd locale` ile uygulamanın kendisinindir. Uygulamaların dili olmadığı API 33'ün altında bütün cihazındır ve ajan onu Ayarlar'ın ayarladığı gibi ayarlar: Android onu `persist.sys.locale` içinde tutar, bu yüzden eski değer önce not edilir ve geri konur. Hiç dil seçmemiş bir cihaz sonrasında eski dili seçilmiş olarak tutar.
+### Satırlar nasıl gösterilir
 
-Bir simülatörde, bir uygulama verildiğinde ya da seçiliyken `locale`, bu aracın yaptığı her başlatmada o uygulamayı bir dilde tutar; bunu bu Mac'te tutulan `-AppleLanguages` ve `-AppleLocale` ile yapar: simülatörde hiçbir şey değişmez. Bir uygulama seçiliyken değişmeyenler, izin soruları ve Ayarlar gibi sistemin kendi metni ve bu aracın yapmadığı bir başlatmadır: bir simge dokunuşu, uygulamayı başlatan bir bağlantı ya da push, uygulamanın kendini yeniden başlatması. `app ""` bütün simülatörü ayarlar ve yanıt hangisini aldığını adlandırır. Çalışan bir uygulama o dilde yeniden başlatılır, `restore`'da da yeniden. XCTest'in açılış ölçümüne de aynı argümanlar verilir, bu denetlenmedi. `launch_app` `language` yalnızca o başlatmanındır, bir simülatörde ve bir iPhone'da: sonraki başlatma tutulan dilde, yoksa sistemin dilinde olur. Bir seferde bir uygulamanın dili tutulur: bir başkası `restore`'a kadar reddedilir.
+Birkaç satırlık bir ileti yanıtın tek satırıdır ve `limit` hiçbirinin ortasından başlamaz. Her satırın yinelediği şey ilk satırın altındaki bir satırda bir kez söylenir (`every line: 11-15, pid 6178, left out below`): gün ve hepsini tek bir süreç yazdıysa süreç; böylece bir satır saatiyle başlar. Gece yarısını aşan bir log günlerini, iki sürecin logu süreçlerini korur.
+
+### Süzme: `contains` ve `since`
+
+`contains`, sözcüklerini büyük küçük harf fark etmeksizin taşıyan satırları tutar; eşleşme gizli değerler saklandıktan sonra yapılır. `since`, burada da `source: crashes` ile de, bir ISO 8601 zamanı ya da ne kadar önce olduğudur: `30s`, `5m` ya da `2h`. `since` verilmezse son işlemin başladığı andan okur, çünkü bir push'un ya da bir dokunuşun tetiklediği şey o sürerken loglanır.
+
+Android'de uygulamanın sürecini ve ölen son sürecini, exit info'nun verdiği pid ile okur: bir telefon çöken süreci hemen bitirir, bir emulator'ın crash penceresi ise onu tutar, ve uygulamayı yeniden başlatabilir; böylece crash'in kendi satırları ondan sonra da okunur.
+
+### Crash'ler
+
+`source: crashes` ile `read_logs`, sistemin uygulama için tuttuğu crash kayıtlarını (Android exit info ve dropbox, simulator'ın DiagnosticReports'u, bir iPhone'un sistem crash logları) sınırlı bir özet ve bir dosya yolu olarak toplar.
+
+Her simulator'ın raporları tek bir klasördedir, bu yüzden bir simulator'ınkiler yalnızca onu adlandıranlardır: uygulamanın yolundan ya da sürecinin içinde çalıştığı coalition'dan, ki bir sistem uygulamasınınkinde de vardır; not kaçının neden dışarıda bırakıldığını söyler. Bir iOS raporu kendi verdiği zamanla tarihlenir, çünkü macOS uygulamanın 25 raporunu tuttuktan sonra her yeni crash'te eski bir raporun dosya zamanını ileri alır; yakalanmamış bir istisnanın raporu da uygulamayı bitiren abort ile değil, istisnanın atıldığı yerle verilir. Gizli değerler çıkarılır.
+
+Android'de sistemin tuttuğu her çıkışı da nedenini eksiksiz yazarak sayar, çünkü kendiliğinden çıkan ya da öldürülen bir uygulama çökmemiştir: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
+
+### Bir release build için semboller
+
+`symbols` ile bir release build'in yığınını adlandırır.
+
+iOS'ta bu bir `.dSYM` ya da build'in ürünleri gibi onları tutan bir klasördür; bir imaj `atos` ile yalnızca `dwarfdump`'a göre UUID'si çöken imajınki olan dSYM'den adlandırılır: başka biri yanlış fonksiyonları adlandırırdı ve yine de doğru görünürdü, bu yüzden eşleşen dSYM bulunmayan bir rapor hangi UUID'yi istediğini ve klasörde hangisinin olduğunu söyler.
+
+Android'de bu, sembollerini tutan kütüphanelerin bir klasörüdür, bir build'in `lib` klasörü gibi (`merged_native_libs/.../out/lib`, ABI tombstone'dan bulunur); SDK'daki en yeni NDK'nın `ndk-stack`'i ile okunur, bu da başka bir build'in kütüphanesini okumadan bırakır ve yanıt hangi kimliklerin farklı olduğunu söyler.
+
+Bir tombstone crash'ten bir an sonra gelir ve bir Java crash'inin hiç tombstone'u yoktur. Android az tombstone tutar: API 34'te bir uygulamanın birkaç dakika içindeki ilk 6 native crash'inden biri bir tombstone bıraktı, sonraki hiç bırakmadı. Yanıt bunu söyler; çöken çalıştırmalardan oluşan bir döngü buna rastlayacaktır. Bütün yığın `named`'in verdiği dosyada bırakılır. Optimize edilmiş Swift, satırı olmayan bir fonksiyon verebilir.
 
 ## Bir cihazı eski haline getirmek
 
-Bir koşulu değiştirmek, önce eski değeri onu değiştiren süreçle birlikte not eder. Değer, o oturum
-bittiğinde ya da `set_device` ile `restore` adıyla geri döner; bu, başka bir canlı sürecin değiştirdiğine
-dokunmaz ve bunu söyler. Ölen bir oturum dosyayı bırakır; o cihazdaki sonraki oturum yalnızca ölü bir sürecin
-bıraktığını geri koyar ve bunu söyler; geri konamayan bildirilir, okunamayan bir dosya da
-yanında `.bad` olarak tutulur. Komut satırında her komut ayrı bir süreçtir, bu yüzden onun değişiklikleri
-oturumlar gelip gitse de `restore`'a kadar kalır. Bir değişikliğin yanıtı bu ikisinden hangisi olduğunu söyler.
+Bir koşulu değiştirmek, önce eski değeri onu değiştiren süreçle birlikte not eder. Değer, o oturum bittiğinde ya da `set_device` ile `restore` adıyla geri döner; bu, başka bir canlı sürecin değiştirdiğine dokunmaz ve bunu söyler.
 
-Bir kayıt, bir ağ yakalaması, açık bir rapor ve bir akış kaydı da aynı yoldan gider. Sonraki oturum
-ölü bir sürecin bıraktığını bitirir ve bunu söyler (bir akış kaydı adımları saklanarak durur), canlı bir sürecin
-çalıştırdığına dokunmaz ve bir komut satırının başlattığını onun sonraki komutu için bırakır.
+Ölen bir oturum dosyayı bırakır; o cihazdaki sonraki oturum yalnızca ölü bir sürecin bıraktığını geri koyar ve bunu söyler; geri konamayan bildirilir, okunamayan bir dosya da yanında `.bad` olarak tutulur.
+
+Komut satırında her komut ayrı bir süreçtir, bu yüzden onun değişiklikleri oturumlar gelip gitse de `restore`'a kadar kalır. Bir değişikliğin yanıtı bu ikisinden hangisi olduğunu söyler.
+
+Bir kayıt, bir ağ yakalaması, açık bir rapor ve bir flow kaydı da aynı yoldan gider. Sonraki oturum ölü bir sürecin bıraktığını bitirir ve bunu söyler (bir flow kaydı adımları saklanarak durur), canlı bir sürecin çalıştırdığına dokunmaz ve bir komut satırının başlattığını onun sonraki komutu için bırakır.
+
+## Kablosuz bağlantılar, biyometri ve anahtar zinciri
+
+### Kablosuz bağlantılar
+
+Bir kablosuz bağlantı, cihaz 10 s içinde istendiği gibi okunduğunda tamamdır: Wi-Fi radyonun durumuna göre, çünkü önce onun ayarı değişir; uçak modu ve mobil veri ise kullanıcının anahtarına göre, böylece uçak modu sırasında yapılan bir geri yükleme kullanıcının seçtiğini geri getirir. Değişmeyen bir cihaz, söylediğiyle reddedilir. Kendi ağı üzerinden ulaşılan bir cihaz (`adb connect`, kablosuz hata ayıklama) `wifi off` ve `airplane on`'u reddeder, çünkü onları geri almak için hiçbir şey ona ulaşamazdı. Bir emulator'da mobil verinin kapatılması ya da uçak modunun açılması cihazın bu Mac'e giden yolunu keser, `restore` da onu geri getirir. Bir anahtar bir bağlantı hakkında hiçbir şey söylemez.
+
+### Biyometri
+
+Bir emulator'da `biometric` sensörüne dokunur ve yalnızca parmak izi servisi dokunuşu saydığında tamamdır: `match`, `nomatch`; hiçbir uygulama sormuyorsa her biri reddedilir. Parmak izi olmayan bir emulator'da `enroll` kendiliğinden bir tane ekler: ekran kilidini, önce not ederek, PIN 1234'e ayarlar, Ayarlar'ın kayıt adımlarından kontrollerin sözcüklerine değil türlerine göre geçer (PIN alanı, sonra en alttaki ve en sağdaki düğme) ve servis bir tane tutana kadar sensöre dokunur. `restore` PIN'i kaldırır, Android da parmak izlerini onunla birlikte siler.
+
+Kendine ait bir kilidi olan bir emulator reddedilir, çünkü PIN'i yazılamaz; `--no-home` ile başlatılmış bir sunucu da öyle, çünkü Ayarlar uygulamadan çıkar. Gerçek bir telefon reddedilir: sensörü yalnızca bir kişinin parmağını kabul eder ve kilidi sahibinindir. Bir simulator'ın `enroll`'u Face ID ya da Touch ID'yi açar.
+
+Android'de bir uygulamanın sorusu sistemindir ve odağı tutar: her ekran gibi öğeler halinde okunur, ama ekran görüntüsü boştur, çünkü güvenli bir penceredir.
+
+Bir iPhone'da `devicectl device simulate biometrics`, `Device does not support any biometric simulation, nothing to do` yanıtını verir ve 0 ile çıkar, bu yüzden kullanılmaz: bir yanıt, hiç olmamış bir dokunuş için tamam derdi.
+
+### Anahtar zinciri
+
+`keychain` `reset` bir simulator'ın anahtar zincirini boşaltır ve uygulamaların kaç öğe tuttuğunu deponun kendi satırlarından söyler; bu satırlar sonrasında boş olduğunu da kanıtlar. Sistemin kendi satırları kalır ve sayılmaz. Tek seferliktir: hiçbir şey onları geri getirmez.
+
+## Bellek uyarıları, sallamalar, fotoğraflar ve arka planda bir son
+
+### Bellek uyarıları
+
+`memory_warning` uygulamaya, `app`'e ya da seçili olana, sistemin bellek azaldığında gönderdiği uyarıyı gönderir. Bir simulator'da orada çalışan her uygulama onu alır, Simulator'ın kendi menüsündeki gibi, her çağrıda bir kez; bir düzey reddedilir.
+
+Android'de `value`, `am send-trim-memory`'nin aldığı trim düzeyidir, verilmezse `RUNNING_CRITICAL`: `RUNNING_MODERATE`, `RUNNING_LOW` ve `RUNNING_CRITICAL` öndeki bir uygulamaya, `HIDDEN`, `BACKGROUND`, `MODERATE` ve `COMPLETE` arka plandakine ulaşır. Android bir düzeyi yalnızca işleme en son verdiğinin üstündeyse alır ve yeni bir işlem hiçbir düzeyde değildir; bu yüzden bir ret uygulamanın hangi düzeyde olduğunu söyler. Sistem ana ekrana gönderilen bir uygulamayı yaklaşık bir saniye daha önde saydığı için bir arka plan düzeyi 3 s boyunca yeniden istenir. Her düzey API 35 ve API 36'da fixture'ın `onTrimMemory`'sine ulaştı.
+
+Bir iPhone'da `devicectl device process sendMemoryWarning` onu uygulamanın işlemine gönderir; henüz bir telefonda çalıştırılmadı.
+
+### Sallamalar
+
+`shake`, bir simulator'ın UIKit'inin sallama olarak aldığı bildirimi gönderir; öndeki uygulama onu alır, her çağrıda bir kez. Bir emulator'da ivmeölçer yerçekiminin eksenine dik olarak bir yandan öbür yana, 80 ms'lik dört hamleyle çekilir ve okuması geri konur: fixture her çağrıda bir sallama saydı. Bir telefon ve bir iPhone yalnızca elle sallanır ve onu reddeder.
+
+### Fotoğraflar ve videolar
+
+`transfer_files` `media`, sunucunun klasöründeki bir fotoğrafı ya da videoyu, ya da bir klasörün fotoğraf ve videolarını cihazın kitaplığına ekler.
+
+Bir simulator onları `simctl addmedia` ile alır ve yanıt Fotoğraflar'ın sonra kaç öğe tuttuğunu sayar; Fotoğraflar'ında silme yoktur, bu yüzden hiçbir şey onları çıkarmaz. Her dosya kendi çağrısıyla gider, çünkü birkaç dosya verilen `simctl addmedia` alabildiklerini içe aktarır, sonra hiçbirini adıyla söylemeyen bir istisnayla biter. Fotoğraflar'ın içe aktaramadığı bir dosya adıyla `INVALID_ARGUMENT` olarak reddedilir; yanıt ötekilerden kaçının eklendiğini, neyin işe yarayabileceğini (bir `.mp4` ya da `.mov` içinde H.264 video, `.png` ya da `.jpg` fotoğraf) ve altında simctl'in satırını verir; bir klasörde bu satır, simctl'in reddettiği son dosya için verdiği satırdır.
+
+Android'dekiler her biri yolu ve boyutuyla not edilir, `Pictures/appdyno`'ya gönderilir ve MediaProvider'ın kendi `scan_file`'ı ile taranır, çünkü gönderilen bir dosya taranana dek kitaplığın göremeyeceği yerde kalır; yanıt kitaplığın sonra onlardan kaçını listelediğini sayar. `restore` ve oturumun sonu tam olarak bunları, her birini yalnızca gönderildiği boyuttayken siler ve o zamandan beri değişeni adıyla söyler. Bir iPhone reddeder.
+
+### Arka planda bir son
+
+`background` ile `manage_app stop`, bir uygulamayı sistemin bellek için arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır: ana ekran, uygulama önden çıktıktan sonra durumunu kaydetmesi için 1,5 s, sonra işlemi öldürülür; bir simulator'da SIGKILL ile, Android'de `am kill` ile, bir iPhone'da `devicectl device process terminate --kill` ile, ki henüz bir telefonda çalıştırılmadı. Hâlâ çalışan bir işlem reddedilir, çünkü `am kill` yalnızca sistemin sonlandırabileceği bir işlemi sonlandırır ve bir ön plan hizmeti bir işlemi ayakta tutar.
+
+Android'de bulunduğu aktivite, görevi `launch_app` başlattıysa kaydedilmiş örnek durumuyla geri gelir; görevi önce bir bağlantı başlattıysa yeni bir başlatıcı aktivitesinin altında geri gelir. Bir simulator'da fixture'ın `@SceneStorage` ile tuttuğu değer yeni bir işlemde geri geldi; bir başlatmada kaydedilmiş sahneyi bir kez atan bir simulator, yeniden açılana dek her başlatmada bunu yaptı (iOS 26.5).
+
+## Bir iPhone'un kendi koşulları, verisi ve izinleri
+
+Bir iPhone'da `network` ve `thermal`, telefonun kendi koşullarıdır; Xcode'un Devices penceresinin onları ayarladığı gibi, telefonun instruments'ı üzerinden: `network` `slow`, telefonun listelediği ilk EDGE profili ya da adıyla bir profildir, `full` hiçbiri; `thermal` `fair`, `serious` ya da `critical`, `nominal` hiçbiri. Bir seferde biri geçerlidir.
+
+Telefon, onu ayarlayan süreç gittikten sonra da tutar: SIGKILL ile öldürülen bir oturum `SlowNetworkEdgeBad`'i açık bıraktı ve sonraki oturumun başlangıcı onu not edilmiş buldu ve kapattı. Bir ısıl profil her yönde saniyelerce kademeli değişir ve telefon bu arada hiçbir şey yanıtlamaz, bu yüzden telefon onu öyle okuduğunda tamamdır. Bunlar, canlı penceresinin kullandığı telefonun özel servisleri üzerinden gider ve bu servislere ulaşılamadığı yerde nedeni söylenerek reddedilir.
+
+Bir iPhone'da `manage_app clear`, boş bir klasörle `transfer_files push`'un yaptığı gibi uygulamanın veri container'ını boşaltır: yalnızca geliştirme imzalı uygulamalar. iOS'ta grant yoktur: `grant` ve `revoke` uygulamanın yanıtını sıfırlar, böylece uygulama yeniden sorar ve `answer_alert` yanıtlar. Bir uygulamayla `locale`, bir simulator'da olduğu gibi, bu aracın yaptığı her başlatmada onu bir dilde tutar.
+
+## Yavaş bir ağ
+
+Bir emulator'da `network` `slow` konsolu üzerinden gider: iki yönde EDGE hızı ve 40 ile 100 ms arası gecikme. Android 13'ten itibaren bir telefonda yalnızca Android'in kendi sınırı vardır, `ingress_rate_limit_bytes_per_second`: `slow` indirmeyi bir EDGE ağının indirme hızı olan 30 kB/s ile sınırlar; bir sayı da onu bir telefonda ya da emulator'da saniyede o kadar bayta sınırlar. Gecikme eklemez ve yüklemeleri tam hızda bırakır, yanıt da bunu söyler. Sınır cihazın tuttuğu bir ayardır, bu yüzden eskisi not edilir ve `restore` onu siler.
+
+## Katlanma
+
+### Katlanabilir bir Android cihaz
+
+Android'de `fold`, `cmd device_state`'ten o adın durumunu oradaki kimliğiyle ister; bu kimlik cihaza göre değişir, cihaz o duruma geçtiğinde tamamdır. Cihazın listelediği her duruşu alır: `open`, `closed`, `half_opened` (`half` de olur), `rear_display` ve iki ekran birlikte için `dual`. Okuma durumu, ardından listeyi söyler. Bir değişiklik, uygulamaların artık gördüğü ekran boyutunu ve yoğunluğunu, öndeki activity'nin yeniden oluşturulduğunu ya da korunduğunu sistemin kendi yeniden başlatma satırından söyler.
+
+Masaüstü ve kitap duruşları cihaz durumu değildir: menteşesi yatay ya da dikey duran yarı açık duruştur, bunu uygulama kendisi okur.
+
+İstek, menteşe ne yaparsa yapsın ve bu araca ne olursa olsun sıfırlanana kadar geçerlidir, bu yüzden bir koşuldur: `restore` onu sıfırlar ve `default (now open)` bir istek değildir.
+
+API 31'den itibaren emulator'da de telefonda da aynıdır. Gerçek katlanabilir bir cihazda çalıştırılmadı. Katlanmış bir emulator'da canlı pencere konuğun kendi görüntüsünü alır; bu daha küçüktür ve gecikir, çünkü emulator kapak ekranını iç ekranın çerçevesine gererek çizer.
+
+### Bir iPhone Duo simulator'ı
+
+İki yerleşik ekranı olan bir iOS simulator'ında, yani Xcode 27.1 ve sonrasıyla iPhone Duo'da, `fold` `closed`, `half` ve `open` alır. `devicectl device info displays`'in hangi ekranı etkin dediğinden okunur, simulator'ın menteşe kaydırıcısının gönderdiği menteşe olayıyla ayarlanır; bu özel API'dir. Ekran menteşeyi en çok 2,5 s sonra izler; izlemezse reddedilir, simulator'ı yeniden başlatmak bunu giderir.
+
+Simulator sıfırlanacak bir istek tutmaz; bu yüzden bulunan duruş yazılır, `restore` ve oturum sonu onu yeniden ayarlar. Simulator'ın dışından yarı açık ile açık ayırt edilemez: `half` yalnızca bu oturum ayarladıysa öyle okunur, yarı açık bulunan bir cihaz açık olarak geri alınır.
+
+Açıkken okumalar, dokunuşlar, `take_screenshot` ve `record_session` iç ekranındır; uygulama sürecini korur, sahnesi oraya taşınır. Üç şey farklıdır: ana ekranın öğeleri kapak ekranının koordinatlarında okunur, kayıt döndürülmeden çıkar ve orada yalnızca doğrudan girdi yolu dokunur, runner'ınki değil. Başka her simulator reddeder.
+
+## Diller
+
+### Android'de dil
+
+Android'de `locale`, API 33'ten itibaren, uygulama verildiğinde ya da biri seçiliyken, `cmd locale` ile uygulamanın kendisinindir. Uygulamaların dili olmadığı API 33'ün altında bütün cihazındır ve ajan onu Ayarlar'ın ayarladığı gibi ayarlar: Android onu `persist.sys.locale` içinde tutar, bu yüzden eski değer önce not edilir ve geri konur. Hiç dil seçmemiş bir cihaz sonrasında eski dili seçilmiş olarak tutar.
+
+### Bir simulator'da dil
+
+Bir simulator'da, bir uygulama verildiğinde ya da seçiliyken `locale`, bu aracın yaptığı her başlatmada o uygulamayı bir dilde tutar; bunu bu Mac'te tutulan `-AppleLanguages` ve `-AppleLocale` ile yapar: simulator'da hiçbir şey değişmez. Bir uygulama seçiliyken değişmeyenler, izin soruları ve Ayarlar gibi sistemin kendi metni ve bu aracın yapmadığı bir başlatmadır: bir simge dokunuşu, uygulamayı başlatan bir bağlantı ya da push, uygulamanın kendini yeniden başlatması.
+
+`app ""` bütün simulator'ı ayarlar ve yanıt hangisini aldığını adlandırır. Çalışan bir uygulama o dilde yeniden başlatılır, `restore`'da da yeniden. XCTest'in açılış ölçümüne de aynı argümanlar verilir, bu denetlenmedi.
+
+`launch_app` `language` yalnızca o başlatmanındır, bir simulator'da ve bir iPhone'da: sonraki başlatma tutulan dilde, yoksa sistemin dilinde olur. Bir seferde bir uygulamanın dili tutulur: bir başkası `restore`'a kadar reddedilir.
 
 ## Bir cihazı paylaşmak
 
-Bir cihazı yöneten süreç onu tutar: durum klasöründe pid'ini ve başlangıç zamanını taşıyan bir dosya.
-Ölü bir sahibin talebi geçersizdir. İkinci bir süreç, paylaşmak istemedikçe sahibin pid'i ve adıyla reddedilir:
-`share: true` ile `use_device`, iki komut satırından birinde `--share` ya da `APPDYNO_SHARE=1`.
-`list_devices` kimin neyi tuttuğunu gösterir. Daemon yoktur. Bitmiş bir sunucunun bıraktığını geri koyan süreç, bunu yaparken
-cihazı `appdyno put-back` olarak tutar; bu arada başlayan bir oturum onu en çok 40 s bekler, oysa başka her tutucu onu hemen reddettirir.
+Bir cihazı yöneten süreç onu tutar: durum klasöründe pid'ini ve başlangıç zamanını taşıyan bir dosya. Ölü bir sahibin talebi geçersizdir. İkinci bir süreç, paylaşmak istemedikçe sahibin pid'i ve adıyla reddedilir: `share: true` ile `use_device`, iki komut satırından birinde `--share` ya da `APPDYNO_SHARE=1`.
 
-Seçili bir cihaz yokken bu sunucunun sürebileceği birden fazla cihaz varsa, cihaz gerektiren bir çağrı reddedilir ve her birini seri numarası, türü ve modeliyle adlandırır; `use_device` birini seçer, seri numarası ya da UDID'si, bir simülatörün ya da bir AVD'nin adı ya da modeliyle, izin listesi her birine karşı denetlenerek; süremeyeceği bir cihaz, sürebilecekleri adlarıyla söylenerek reddedilir. `list_devices` her cihazın `kind`'ını verir: `phone`, `simulator` ya da `emulator`; bir emülatörün `link`'i yoktur, çünkü onu hiçbir kablo bağlamaz.
+`list_devices` kimin neyi tuttuğunu gösterir. Daemon yoktur. Bitmiş bir sunucunun bıraktığını geri koyan süreç, bunu yaparken cihazı `appdyno put-back` olarak tutar; bu arada başlayan bir oturum onu en çok 40 s bekler, oysa başka her tutucu onu hemen reddettirir.
 
-## Bir simülatör ya da emülatör başlatmak
+Seçili bir cihaz yokken bu sunucunun sürebileceği birden fazla cihaz varsa, cihaz gerektiren bir çağrı reddedilir ve her birini seri numarası, türü ve modeliyle adlandırır; `use_device` birini seçer, seri numarası ya da UDID'si, bir simulator'ın ya da bir AVD'nin adı ya da modeliyle, izin listesi her birine karşı denetlenerek; süremeyeceği bir cihaz, sürebilecekleri adlarıyla söylenerek reddedilir. `list_devices` her cihazın `kind`'ını verir: `phone`, `simulator` ya da `emulator`; bir emulator'ın `link`'i yoktur, çünkü onu hiçbir kablo bağlamaz.
 
-`manage_simulator` simülatörleri ve emülatörleri yalnızca istek üzerine başlatır ve kapatır. Ad verilmezse kapatma
-yalnızca bu aracın başlattıklarına dokunur. `APPDYNO_EMULATOR_ARGS` emülatörün varsayılan seçeneklerinin yerini alır, `APPDYNO_EMULATOR_FIRST_PORT` da boş bir port aramasının başladığı yerdir.
+## Bir simulator ya da emulator başlatmak
 
-`--allow-devices` burada bir simülatörü ya da emülatörü kimliğiyle, seri numarasıyla ya da adıyla alır, `name` gibi; böylece `shutdown` için izin verilene ondan sonraki `boot` için de izin verilir. Durmuş bir emülatörün kendi seri numarası yoktur: bu araç onu kapattığında çalıştığı seri numarasıyla anılır ve o port boşken o porttan geri gelir; hub'ın yeniden başlattığı biri de en son listelendiği porttan geri gelir, penceresi de onu orada bekler. Ondan sonraki `boot`'un reddedeceği bir `shutdown` önce reddedilir ve cihaz açık kalır.
+`manage_simulator` simulator'ları ve emulator'ları yalnızca istek üzerine başlatır ve kapatır. Ad verilmezse kapatma yalnızca bu aracın başlattıklarına dokunur. `APPDYNO_EMULATOR_ARGS` emulator'ın varsayılan seçeneklerinin yerini alır, `APPDYNO_EMULATOR_FIRST_PORT` da boş bir port aramasının başladığı yerdir.
+
+`--allow-devices` burada bir simulator'ı ya da emulator'ı kimliğiyle, seri numarasıyla ya da adıyla alır, `name` gibi; böylece `shutdown` için izin verilene ondan sonraki `boot` için de izin verilir. Durmuş bir emulator'ın kendi seri numarası yoktur: bu araç onu kapattığında çalıştığı seri numarasıyla anılır ve o port boşken o porttan geri gelir; hub'ın yeniden başlattığı biri de en son listelendiği porttan geri gelir, penceresi de onu orada bekler. Ondan sonraki `boot`'un reddedeceği bir `shutdown` önce reddedilir ve cihaz açık kalır.
 
 Seçili cihazın `shutdown`'ı üzerindeki oturumu ve uygulamalarının bellekte tuttuğunu bitirir ve kimseye sormaz, çünkü cihazın diskinde tuttuğu hiçbir şey gitmez: ilerlemesi bunu başlamadan önce söyler, yanıtı da bittiğinde. Oturumun değiştirdiği, oturumun sonundaki gibi önce, cihaz hâlâ yanıt verirken geri konur: karanlık mod, metin boyutu, animasyonlar, bir döndürmenin ayarladığı dönüş ve ötekiler; yanıt her birini, ya da geri konamayanı adlandırır. Yeniden başlatma yoktur: [SECURITY.tr.md](../../SECURITY.tr.md)'nin dediği gibi bir `shutdown` ile bir `boot` iki çağrıdır.
 
-`--allow-devices` varken `create` kapalıdır, hub'ın Yeni Simülatör'ü de, hiçbir şey yapılmadan reddedilir: yeni bir simülatörün UDID'si yapılmadan önce bilinmez, bu yüzden hiçbir liste onu adlandırmaz; yalnızca reddetmek için bir tane yapan bir sunucu da onu geride bırakıyordu. Yapılıp başlamayan biri, bir kişinin onu nasıl kaldıracağını söyler, çünkü burada hiçbir şey birini silmez.
-
-## Bir işlem ne yanıtlar
-
-Bir işlem durulmuş ekranla yanıt verir. `settled`, ekranın bekleme süresi boyunca durgun kaldığı anlamına gelir.
-`changed`, ekranın işlemden öncekinden düzende ya da metinde farklı olduğu anlamına gelir; farka işlemin
-yol açtığını söylemez. Hiçbir şey değişmediyse yanıt "no change seen in N ms; if a slow reaction is expected,
-use check_element with timeoutMs" der; listelediği ekran işlemden önce değişmişse "no change seen in N ms after the action: the screen changed before it" der. Her yanıtın `structuredContent`'i, özetin yanında metninin tamamını `text` olarak taşır, çünkü bir istemci iki kısımdan yalnızca birini gösterebilir; yapılan iş (`done`) metnin ilk sözleridir ve metin onu tuttuğunda `structuredContent`'e konmaz. Başarısız bir çağrı, metni `code` ile başlayıp `hint` ile biten bir `isError` yanıtıdır, ikisi `structuredContent`'te de vardır; başarısız bir işlem de dokunuşunun gidip gitmediğini söyler (`dispatched`). Bir işlem, kimsenin görmediği bir ekrana dokunmadan önce onu okur ve kilitli bir telefonda `DEVICE_LOCKED` ile reddedilir. Bir isteğin iptali
-cihaza ulaşır ve uzun işlemler ilerleme bildirir. Bir yanıt, uygulama önden kendiliğinden çıktığında önde olmadığını söyleyerek uyarır ve öndeki uygulamayla beklenen uygulamayı adlandırır; onu bilerek bırakan bir tuştan, bir Ayarlar sayfasından, başka bir uygulamanın başlatılmasından ya da bir durdurmadan sonra uyarmaz. Uygulama öndeyken başlayıp başka bir uygulamayı öne getiren bir işlem, Safari'de açtığı bir bağlantı gibi, hangi uygulamanın öne geldiğini söyler.
-
-**Başarısız bir işlem bir şeye dokunup dokunmadığını söyler.** Yanıtı "no touch was sent", "the touch was sent" ya da yanıt vermeyi bırakan bir cihaz için "the touch may have been sent: read the screen before trying again" ile biter ve bir istemcide `dispatched` vardır: `true`, `false` ya da `unknown`. Orada olmayan bir hedef ve cihazın bir reddi her dokunuştan önce gelir; listesi biten bir kaydırma ise önce kaydırma hareketini yapmıştır. Bir işlemden sonraki okuma da, karanlık bir ekranda ya da donmuş bir uygulamada, başarısız olabilir: işlem gitmiştir, bu yüzden o yanıt, başka ne derse desin, dokunuşun gönderilmiş olabileceğini söyler.
-
-**Bir dokunuş önce bakar.** Son işlemden bu yana ve 20 s'den kısa süre önce bir okuma yapılmadıysa her işlem ekranı okur, çünkü bir telefon son dokunuştan yaklaşık bir dakika sonra kendini kilitler ve kör bir kaydırma bir kilit ekranından Spotlight'ı açabilir. Yalnızca okuma olmayan yerde bir okumaya mal olur. Reddedilen bir okuma dayanacak bir şey bırakmaz, bu yüzden bir sonraki dokunuş yeniden okur. Bu 20 s içinde açıkken kilitlenen bir ekrana yine dokunulur; kararan birini ajan reddeder.
-
-**Kilitli bir telefon `DEVICE_LOCKED` ile reddedilir**; okumalar da dokunuşlar da. Android'de bu, bir uyandırma ve bir kapatmadan sonra yerinde kalan bir keyguard'dır. Parolası olmayan bir iPhone kilit ekranını ana ekran düğmesiyle geçer: karanlık bir ekranda ilk basış yalnızca onu uyandırır, kilit ekranı hâlâ açıktır, bu yüzden üç kereye kadar basar ve uygulama geri gelir. Parolası olan bir iPhone okumayı `devicectl device info lockState` ile reddeder. Neyin çalıştırıldığı [Araçlar nasıl test edildi](tools-tested.tr.md#kilitli-bir-telefon) sayfasındadır.
-
-## Loglar ve çökmeler
-
-`read_logs` Android'de uygulamanın logcat'ini, bir simülatörde simülatör logunu okur. Bir iPhone için
-`devicectl` çalışan bir uygulamanın logunu okuyamaz ve yanıt bunu söyler. Bir simülatörde, `debug`'ın altında, uygulamanın kendi satırlarını, aralarında `NSLog`'unkileri, Apple'ın çerçevelerinden de yalnızca hatalarını okur; bir simülatörün klavyesinin çizilirken logladığı binlerce satır bunun dışındadır. `debug` uygulamanın sürecinin hepsini okur. XCTest'in orada logladığı hiç okunmaz: appdyno'nun runner'ı ekranı uygulamanın içinden okur ve dokunur. Birkaç satırlık bir ileti yanıtın tek satırıdır ve `limit` hiçbirinin ortasından başlamaz. Her satırın yinelediği şey ilk satırın altındaki bir satırda bir kez söylenir (`every line: 11-15, pid 6178, left out below`): gün ve hepsini tek bir süreç yazdıysa süreç; böylece bir satır saatiyle başlar. Gece yarısını aşan bir log günlerini, iki sürecin logu süreçlerini korur. `contains`, sözcüklerini büyük küçük harf fark etmeksizin taşıyan satırları tutar; eşleşme gizli değerler saklandıktan sonra yapılır. `since`, burada da `source: crashes` ile de, bir ISO 8601 zamanı ya da ne kadar önce olduğudur: `30s`, `5m` ya da `2h`. `since` verilmezse son işlemin başladığı andan okur, çünkü bir push'un ya da bir dokunuşun tetiklediği şey o sürerken loglanır. Android'de uygulamanın sürecini ve ölen son sürecini, exit info'nun verdiği pid ile okur: bir telefon çöken süreci hemen bitirir, bir emülatörün çökme penceresi ise onu tutar, ve uygulamayı yeniden başlatabilir; böylece çökmenin kendi satırları ondan sonra da okunur. `source: crashes` ile `read_logs`, sistemin uygulama için
-tuttuğu çökme kayıtlarını (Android exit info ve dropbox, simülatörün DiagnosticReports'u,
-bir iPhone'un sistem çökme logları) sınırlı bir özet ve bir dosya yolu olarak toplar. Her simülatörün raporları tek bir klasördedir, bu yüzden bir simülatörünkiler yalnızca onu adlandıranlardır: uygulamanın yolundan ya da sürecinin içinde çalıştığı coalition'dan, ki bir sistem uygulamasınınkinde de vardır; not kaçının neden dışarıda bırakıldığını söyler. Bir iOS raporu kendi verdiği zamanla tarihlenir, çünkü macOS uygulamanın 25 raporunu tuttuktan sonra her yeni çökmede eski bir raporun dosya zamanını ileri alır; yakalanmamış bir istisnanın raporu da uygulamayı bitiren abort ile değil, istisnanın atıldığı yerle verilir. Gizli değerler çıkarılır. Android'de sistemin tuttuğu her çıkışı da nedenini eksiksiz yazarak sayar, çünkü kendiliğinden çıkan ya da öldürülen bir uygulama çökmemiştir: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
-
-`symbols` ile bir release build'in yığınını adlandırır. iOS'ta bu bir `.dSYM` ya da build'in ürünleri gibi onları tutan bir klasördür; bir imaj `atos` ile yalnızca `dwarfdump`'a göre UUID'si çöken imajınki olan dSYM'den adlandırılır: başka biri yanlış fonksiyonları adlandırırdı ve yine de doğru görünürdü, bu yüzden eşleşen dSYM bulunmayan bir rapor hangi UUID'yi istediğini ve klasörde hangisinin olduğunu söyler. Android'de bu, sembollerini tutan kütüphanelerin bir klasörüdür, bir build'in `lib` klasörü gibi (`merged_native_libs/.../out/lib`, ABI tombstone'dan bulunur); SDK'daki en yeni NDK'nın `ndk-stack`'i ile okunur, bu da başka bir build'in kütüphanesini okumadan bırakır ve yanıt hangi kimliklerin farklı olduğunu söyler. Bir tombstone çökmeden bir an sonra gelir ve bir Java çökmesinin hiç tombstone'u yoktur. Android az tombstone tutar: API 34'te bir uygulamanın birkaç dakika içindeki ilk 6 native çökmesinden biri bir tombstone bıraktı, sonraki hiç bırakmadı. Yanıt bunu söyler; çöken çalıştırmalardan oluşan bir döngü buna rastlayacaktır. Bütün yığın `named`'in verdiği dosyada bırakılır. Optimize edilmiş Swift, satırı olmayan bir fonksiyon verebilir.
+`--allow-devices` varken `create` kapalıdır, hub'ın Yeni Simulator'ı de, hiçbir şey yapılmadan reddedilir: yeni bir simulator'ın UDID'si yapılmadan önce bilinmez, bu yüzden hiçbir liste onu adlandırmaz; yalnızca reddetmek için bir tane yapan bir sunucu da onu geride bırakıyordu. Yapılıp başlamayan biri, bir kişinin onu nasıl kaldıracağını söyler, çünkü burada hiçbir şey birini silmez.
 
 ## Bir telefona ulaşmak
 
-- Android: USB hata ayıklamayı açın, bağlayın ve `appdyno devices` ile kontrol edin. Bir Xiaomi, USB üzerinden her yeni kurulumdan önce ekranında sorar ve
-  10 s sonra kendiliğinden hayır der: `manage_app install` telefonu uyandırır ve o sorunun evet düğmesine dokunur, ama yalnızca kendi başlattığı bir kurulum sırasında; yanıt ve `record_session`
-  bunu söyler (`--no-install-consent` bunu size bırakır). Play Protect'in uygulamayı Google'a gönderme sorusu her zaman hayırla yanıtlanır: özel bir build
-  Google'a gönderilmez. Sunucu `--accept-install-warnings` ile çalışmıyorsa bir Play Protect uyarısına dokunulmaz, metni aktarılır. Hangi telefonda neyin görüldüğü için bkz.
-  [Bir telefonun kurulum soruları](protocol.tr.md#bir-telefonun-kurulum-soruları). One UI'lı bir Samsung'un kendine ait bir sorusu yoktur, Play Protect'inkiler de yalnızca "Verify apps over USB" açıkken gelir. İkisi arasındaki öteki farklar [One UI ile HyperOS karşılaştırması](perf.tr.md#one-ui-ile-hyperos-karşılaştırması) bölümündedir.
-- iPhone: geliştirici modunu açın. Bir telefon, bir geliştirme imzalama kimliğine ve onu adlandıran bir provisioning profile'a ihtiyaç duyar.
-  Wildcard bir uygulama kimliği için kurulu ve imzalama kimliği kilidi açık giriş anahtar zincirinde olan bir profil kendiliğinden bulunur. Başka birini seçmek için
-  `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` ve
-  `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>` ayarlayın. Ne bulduğunu görmek için `appdyno doctor` çalıştırın. Telefona
-  USB üzerinden ulaşılır. Ağ üzerinden yalnızca bir pencere gider. Bir telefonun panosu, runner olmadan ve telefonda hiçbir şey sorulmadan Xcode'un `devicectl`'i üzerinden gider,
-  bir simülatörünki de Mac'ten okunur. iOS'ta metin tuş vuruşlarıyla girilir: bir yapıştırma iOS'un "Allow Paste" uyarısını açar.
+### Bir Android telefon
+
+USB hata ayıklamayı açın, bağlayın ve `appdyno devices` ile kontrol edin.
+
+Bir Xiaomi, USB üzerinden her yeni kurulumdan önce ekranında sorar ve 10 s sonra kendiliğinden hayır der: `manage_app install` telefonu uyandırır ve o sorunun evet düğmesine dokunur, ama yalnızca kendi başlattığı bir kurulum sırasında; yanıt ve `record_session` bunu söyler (`--no-install-consent` bunu size bırakır).
+
+Play Protect'in uygulamayı Google'a gönderme sorusu her zaman hayırla yanıtlanır: özel bir build Google'a gönderilmez. Sunucu `--accept-install-warnings` ile çalışmıyorsa bir Play Protect uyarısına dokunulmaz, metni aktarılır. Hangi telefonda neyin görüldüğü için bkz. [Bir telefonun kurulum soruları](protocol.tr.md#bir-telefonun-kurulum-soruları).
+
+One UI'lı bir Samsung'un kendine ait bir sorusu yoktur, Play Protect'inkiler de yalnızca "Verify apps over USB" açıkken gelir. İkisi arasındaki öteki farklar [One UI ile HyperOS karşılaştırması](perf.tr.md#one-ui-ile-hyperos-karşılaştırması) bölümündedir.
+
+### Bir iPhone
+
+Geliştirici modunu açın. Bir telefon, bir geliştirme imzalama kimliğine ve onu adlandıran bir provisioning profile'a ihtiyaç duyar. Wildcard bir uygulama kimliği için kurulu ve imzalama kimliği kilidi açık giriş anahtar zincirinde olan bir profil kendiliğinden bulunur. Başka birini seçmek için `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` ve `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>` ayarlayın. Ne bulduğunu görmek için `appdyno doctor` çalıştırın.
+
+Telefona USB üzerinden ulaşılır. Ağ üzerinden yalnızca bir pencere gider.
+
+Bir telefonun panosu, runner olmadan ve telefonda hiçbir şey sorulmadan Xcode'un `devicectl`'i üzerinden gider, bir simulator'ınki de Mac'ten okunur. iOS'ta metin tuş vuruşlarıyla girilir: bir yapıştırma iOS'un "Allow Paste" uyarısını açar.
 
 ## 1.3.0'dan önceki adlar
 
