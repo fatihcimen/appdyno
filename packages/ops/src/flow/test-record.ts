@@ -187,7 +187,7 @@ export function contentsOf(dir: string, cases: RunCase[], secretsListed: number)
 }
 
 /** A file of a report: whole or not at all, and for anyone the folder is given to. */
-const put = (file: string, text: string) => {
+export const put = (file: string, text: string) => {
   mkdirSync(dirname(file), { recursive: true });
   writeWhole(file, text, { mode: 0o644 });
 };
@@ -199,6 +199,8 @@ export type RunFiles = {
   prBody?: string;
   /** False: the record and JUnit alone, as a part of a run that another merges. */
   report?: boolean;
+  /** How the verdict and JUnit name a file of the folder: by the working folder unless given. */
+  named?: (under: string) => string;
 };
 
 /** The record alone, as a run keeps it after each case: a run that is killed leaves what it finished. */
@@ -210,10 +212,12 @@ export function saveRecord(dir: string, r: RunRecord) {
 export function writeRun(dir: string, r: RunRecord, o: RunFiles = {}) {
   saveRecord(dir, r);
   // by the working folder, where a CI system looks for a file a report names
-  const fromHere = (under: string) => {
-    const path = relative(process.cwd(), join(dir, under));
-    return path.startsWith('..') ? resolve(dir, under) : path;
-  };
+  const fromHere =
+    o.named ??
+    ((under: string) => {
+      const path = relative(process.cwd(), join(dir, under));
+      return path.startsWith('..') ? resolve(dir, under) : path;
+    });
   const junit = o.junit ?? join(dir, 'junit.xml');
   put(junit, junitXml(suitesOf(r, fromHere), r.shard && `shard ${r.shard.i}/${r.shard.n}`));
   if (o.report === false) return { junit };

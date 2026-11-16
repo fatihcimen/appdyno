@@ -1,13 +1,20 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
+  commentRun,
   envValues,
   flowFiles,
   flowsFor,
   flowsTagged,
   JOURNEY_ITERATIONS,
+  mergeRuns,
   paramsOf,
+  readRun,
   shardOf,
+  shareLines,
+  ToolError,
+  zipRun,
   type ServerContext,
 } from '@appdyno/ops';
 import { COMMANDS, usage } from './usage.js';
@@ -35,11 +42,86 @@ const asRun = (words: string[]) => {
   ];
 };
 
+const one = (words: string[]) => (words.length === 1 ? words[0] : undefined);
+
+/** `test merge|share|comment`: what is made of runs that are already there, with no device. */
+const OF_RUNS: Record<string, (rest: string[], err: (line: string) => void) => number> = {
+  merge: (rest, err) => {
+    const { values, positionals } = parseArgs({
+      args: rest,
+      allowPositionals: true,
+      options: COMMANDS['test merge'].flags,
+    });
+    if (positionals.length === 0 || !values.out) {
+      err(usage('test merge'));
+      return 2;
+    }
+    const { record, page } = mergeRuns(positionals, values.out, {
+      ...(values['allow-mixed'] && { allowMixed: true }),
+      ...(values.junit && { junit: values.junit }),
+      ...(values['pr-body'] && { prBody: values['pr-body'] }),
+    });
+    console.log(readFileSync(join(values.out, 'verdict.txt'), 'utf8').trimEnd());
+    console.log(`report: ${String(page)}`);
+    return record.verdict === 'PASS' ? 0 : 1;
+  },
+  share: (rest, err) => {
+    const { values, positionals } = parseArgs({
+      args: rest,
+      allowPositionals: true,
+      options: COMMANDS['test share'].flags,
+    });
+    const dir = one(positionals);
+    if (!dir) {
+      err(usage('test share'));
+      return 2;
+    }
+    if (!values.zip) {
+      console.log(shareLines(readRun(dir)).join('\n'));
+      return 0;
+    }
+    const packed = zipRun(dir, values.zip, {
+      ...(values.with && { with: values.with }),
+      ...(values.without && { without: values.without }),
+    });
+    console.log(shareLines({ ...readRun(dir), contents: packed.contents }).join('\n'));
+    console.log(`packed in ${packed.file}`);
+    return 0;
+  },
+  comment: (rest, err) => {
+    const { values, positionals } = parseArgs({
+      args: rest,
+      allowPositionals: true,
+      options: COMMANDS['test comment'].flags,
+    });
+    const dir = one(positionals);
+    if (!dir) {
+      err(usage('test comment'));
+      return 2;
+    }
+    console.log(commentRun(dir, values.out));
+    return 0;
+  },
+};
+
+/** One of them, by its word: what it was given wrong is a usage error, exit 2, as a wrong flag is. */
+function ofRuns(run: (typeof OF_RUNS)[string], rest: string[], err: (line: string) => void) {
+  try {
+    return run(rest, err);
+  } catch (e) {
+    if (!(e instanceof ToolError) || e.code !== 'INVALID_ARGUMENT') throw e;
+    err(e.message);
+    return 2;
+  }
+}
+
 /**
  * `test`: flow files on one or more devices, with the run's record, verdict, page, JUnit and pull request text in its
  * artifacts folder; exit 1 when the verdict is FAIL.
  */
 export async function testCommand(rest: string[], open: Opens, err: (line: string) => void) {
+  const ofRun = Object.hasOwn(OF_RUNS, rest[0] ?? '') ? OF_RUNS[rest[0] ?? ''] : undefined;
+  if (ofRun) return ofRuns(ofRun, rest.slice(1), err);
   const { values, positionals } = parseArgs({
     args: rest,
     allowPositionals: true,

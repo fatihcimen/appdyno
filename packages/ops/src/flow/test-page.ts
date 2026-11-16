@@ -26,25 +26,10 @@ const pre = (s: string) => `<pre>${esc(s)}</pre>`;
 /** A case's place on the page. */
 const anchorOf = (r: RunRecord, c: RunCase) => `c${r.cases.indexOf(c) + 1}`;
 
-/** The kinds a copy was made without, by the evidence each takes away. */
-const KIND_OF: Partial<Record<keyof Evidence, string>> = {
-  video: 'video',
-  log: 'logs',
-  crash: 'logs',
-  tree: 'trees',
-};
-
-/** A failed attempt's files, each where the page can show or lead to it; one a copy left out says so. */
-function evidenceHtml(e: Evidence, without: string[]) {
-  const out = (key: keyof Evidence) => without.includes(KIND_OF[key] ?? '');
+/** A failed attempt's files, each where the page can show or lead to it. */
+function evidenceHtml(e: Evidence) {
   const link = (key: keyof Evidence, says: string) =>
-    e[key] === undefined
-      ? []
-      : [
-          out(key)
-            ? `${esc(says)}: left out of this copy`
-            : `<a href="${esc(e[key])}">${esc(says)}</a>`,
-        ];
+    e[key] === undefined ? [] : [`<a href="${esc(e[key])}">${esc(says)}</a>`];
   const links = [
     ...link('tree', 'the screen as a tree'),
     ...link('log', "the app's last log lines"),
@@ -57,12 +42,10 @@ function evidenceHtml(e: Evidence, without: string[]) {
     rest: [
       ...(e.video === undefined
         ? []
-        : out('video')
-          ? ['<p class="note">video: left out of this copy</p>']
-          : [
-              `<video controls src="${esc(e.video)}"></video>`,
-              '<p class="note">A video is NOT painted over: anything the screen showed is in it.</p>',
-            ]),
+        : [
+            `<video controls src="${esc(e.video)}"></video>`,
+            '<p class="note">A video is NOT painted over: anything the screen showed is in it.</p>',
+          ]),
       ...(links.length > 0 ? [`<p class="note">${links.join(' · ')}</p>`] : []),
     ].join(''),
   };
@@ -70,8 +53,7 @@ function evidenceHtml(e: Evidence, without: string[]) {
 
 function caseHtml(r: RunRecord, c: RunCase) {
   const last = failureOf(c);
-  const without = r.contents.without ?? [];
-  const seen = last ? evidenceHtml(last.evidence, without) : { shot: '', rest: '' };
+  const seen = last ? evidenceHtml(last.evidence) : { shot: '', rest: '' };
   const needs = needsLine(c.needs);
   const changed = Object.entries(c.start.changed).map(([k, v]) => `${k} (${v})`);
   const earlier = c.attempts.filter((a) => a !== last && a.failure);
@@ -98,7 +80,7 @@ function caseHtml(r: RunRecord, c: RunCase) {
     seen.rest,
     ...earlier.map(
       (a) =>
-        `<details><summary>attempt ${a.n}: ${esc(a.failure?.message ?? '')}</summary>${pre(a.failure?.detail ?? '')}${evidenceHtml(a.evidence, without).rest}</details>`,
+        `<details><summary>attempt ${a.n}: ${esc(a.failure?.message ?? '')}</summary>${pre(a.failure?.detail ?? '')}${evidenceHtml(a.evidence).rest}</details>`,
     ),
     ...(c.out ? [`<details><summary>the steps that ran</summary>${pre(c.out)}</details>`] : []),
   ].join('');
@@ -141,7 +123,7 @@ export function testPage(r: RunRecord) {
       .map((f) => `<li>${esc(f)}</li>`)
       .join(
         '',
-      )}<li>${esc(`${r.began} to ${r.ended}`)}</li><li>${esc(r.command.join(' '))}</li></ul>`,
+      )}<li>${esc(`${r.began} to ${r.ended}`)}</li>${r.command.length > 0 ? `<li>${esc(r.command.join(' '))}</li>` : ''}</ul>`,
     '<h2>What this folder holds</h2>',
     `<ul class="note">${holdsLines(r.contents)
       .map((l) => `<li>${esc(l)}</li>`)

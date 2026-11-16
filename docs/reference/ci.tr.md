@@ -78,6 +78,17 @@ scripts/ci.sh --iphone <UDID>                      # + iPhone (APPDYNO_IOS_PROFI
 scripts/ci.sh --all-on <serial>                    # + o cihazın alabildiği her suite
 ```
 
+## Kendi pipeline'ınızda flow'lar
+
+`appdyno test`, bir pipeline'ın işleri olarak çalışmak için yapılmıştır. Her iş flow'ların bir parçasını çalıştırır, son bir iş parçaları tek bir kararda birleştirir, pull request metni de sizin adımınızın yazacağı bir dosyadır:
+
+```sh
+appdyno test flows/ --shard 2/4 --artifacts part-2             # dört işin her birinde, kendi numarasıyla
+appdyno test merge part-1 part-2 part-3 part-4 --out report    # son bir işte, dört klasör indirilmiş olarak
+```
+
+Her iş, geçse de geçmese de klasörünü yüklesin, çünkü son işin gereksindiği şey başarısız bir parçanın klasörüdür. Bir parça başarısız olduysa ya da eksikse son iş başarısız olur. `report/pr.md`, pull request'e yazılacak metindir; `report/junit.xml` ise her hatanın görüntüsünü, komutun çalıştığı klasörün altındaki yoluyla adlandırır. appdyno hiçbir şey yazmaz ve yüklemez. Her dosyanın ne tuttuğunu [Flow'lar](../guides/flows.tr.md#bir-çalıştırmanın-reportu) söyler.
+
 ## Sürüm
 
 Bir tag yayımlar, başka hiçbir şey yayımlamaz. `.github/workflows/release.yml`, `v1.2.3` üzerinde çalışır: kapı olarak `ci.yml` ve içindeki simulator smoke'u, böylece commit'i orada bir cihaz suite'inde başarısız olan bir tag hiçbir şey yayımlamaz; sonra tag'in `packages/appdyno/package.json` içindeki sürüm olduğunun denetimi, derlenen ajan ve paket, derlenip çalıştırılan masaüstü eklentisi, Mac uygulaması, kapıdan alınan smoke'un `device-summary.md` dosyası, `SHA256SUMS`, disk imajı ve masaüstü eklentisi için bir derleme provenance'ı, `npm publish --provenance --access public` ve disk imajı, masaüstü eklentisi, cask, appcast, `device-summary.md` ve `SHA256SUMS` ile bir GitHub sürümü. Sürüm notları geri alınamayan her şeyden önce yazılır; sonraki bir adım başarısız olduktan sonra yeniden çalıştırılan bir çalışma sürümü npm'de bulur ve GitHub sürümüne geçer. Actions sekmesinden elle çalıştırılan `release.yml` bir provadır: kapı, imzalanıp noter onayından geçmiş Mac uygulaması ve masaüstü eklentisi, açıp bakmak için çalışmayla birlikte 3 gün tutulur; hiçbir şey yayımlanmaz ve hiçbir şey için provenance kaydedilmez.

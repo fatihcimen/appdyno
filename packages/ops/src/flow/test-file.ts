@@ -99,10 +99,8 @@ export function fileRunner(
       message: f
         ? `${f.file ? `${basename(f.file)} ` : ''}line ${f.line}, step ${f.n}: ${firstLine(f.message)}`
         : firstLine(error?.message ?? 'failed'),
-      detail: [
-        f ? runner.failureText(file, f) : (error?.message ?? ''),
-        ...(f?.saved ?? []).map((x) => `saved ${x}`),
-      ].join('\n'),
+      // the files it left are the record's to name, by where the run's folder is read
+      detail: f ? runner.failureText(file, f) : (error?.message ?? ''),
     };
   };
 

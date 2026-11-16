@@ -78,6 +78,17 @@ scripts/ci.sh --iphone <UDID>                      # + iPhone (APPDYNO_IOS_PROFI
 scripts/ci.sh --all-on <serial>                    # + every suite that device can take
 ```
 
+## Flows in your own pipeline
+
+`appdyno test` is made to run as the jobs of a pipeline. Each job runs one part of the flows, a last job merges the parts into one verdict, and the pull request text is a file for your own step to post:
+
+```sh
+appdyno test flows/ --shard 2/4 --artifacts part-2             # in each of the four jobs, with its own number
+appdyno test merge part-1 part-2 part-3 part-4 --out report    # in a last job, with the four folders downloaded
+```
+
+Have each job upload its folder whether it passed or not, since a failed part's folder is what the last job needs. The last job fails when a part failed or is missing. `report/pr.md` is the text to post on the pull request, and `report/junit.xml` names each failure's picture by its path under the folder the command ran in. appdyno posts and uploads nothing. [Flows](../guides/flows.md#a-runs-report) says what each file holds.
+
 ## Release
 
 A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, the simulator smoke in it, so a tag whose commit failed a device suite there publishes nothing; then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the desktop extension built and run, the Mac app, the smoke's `device-summary.md` taken from the gate, `SHA256SUMS`, a build provenance for the disk image and the desktop extension, `npm publish --provenance --access public`, and a GitHub release with the disk image, the desktop extension, the cask, the appcast, `device-summary.md` and `SHA256SUMS`. The release notes are written before anything that cannot be taken back, and a run again after a later step failed finds the version on npm and goes on to the release. Run by hand from the Actions tab, `release.yml` is a rehearsal: the gate, the Mac app, signed and notarized, and the desktop extension, kept with the run for 3 days to open, with nothing published and nothing attested.

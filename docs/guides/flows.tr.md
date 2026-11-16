@@ -164,6 +164,31 @@ JUnit, bir hatanın her dosyasını iki biçimde adlandırır, çünkü ekleri g
 
 Hiçbir dosyanın düşmediği bir parça hiçbir şey çalıştırmaz, cihaz açmaz ve 0 ile çıkar. Bu, dosyadan çok parça olduğunda olur. Hiç dosya seçmeyen bir çalıştırma yine 1 ile çıkar. `i/n` olmayan, `i` değeri 1 ile `n` arasında bulunmayan bir `--shard` 2 ile çıkar.
 
+Her iş çalıştıktan sonra `appdyno test merge part-1 part-2 --out report`, klasörlerinden tek bir çalıştırma yapar. Her hatanın bıraktığı dosyaları `--out` içine kopyalar ve hepsinin üzerine tek bir `run.json`, `verdict.txt`, `index.html`, `junit.xml` ve `pr.md` yazar. Birleşik karar PASS ise 0, FAIL ise 1 ile çıkar. Herhangi bir parça başarısız olduysa birleşik karar FAIL olur. Bölmenin bir parçası klasörler arasında yoksa da FAIL olur, çünkü hiç çalışmayan şey geçmiş sayılmaz: `because:` satırı onu `shard 2/4 did not run` diye adlandırır. İki işin emulator'ları aynı seri numarasını taşıyabilir; dosyaları onun altında birleşir.
+
+Klasörler tek bir çalıştırma olamıyorsa `merge` 2 ile çıkar ve hiçbir şey yazmaz:
+
+- ikisi aynı dosyayı aynı cihazda tutuyorsa;
+- ikisi aynı parçaysa ya da farklı bölmelerin parçalarıysa;
+- farklı commit'lere aitlerse. `--allow-mixed` bunları yine de birleştirir.
+
+## Bir report'u birine göndermek
+
+appdyno hiçbir şey yüklemez. `appdyno test share <dir>`, bir çalıştırmanın klasörünün ne tuttuğunu, en az gizlenmiş olandan başlayarak yazdırır:
+
+```
+This folder holds:
+  2 videos, NOT painted: anything shown on screen is in them, typed passwords included
+  14 pictures: a failure's is painted over where an element is a password field or holds a listed secret (3 had one); text drawn with no element behind it is not, and neither is a picture a screenshot step saved
+  3 screen trees, 5 log tails and 0 crash reports, with listed secrets and what looks like a credential hidden
+  0 network captures
+  41.0 MB. Listed secrets: 2.
+```
+
+`--zip file` klasörü tek bir dosyaya paketler; klasörün kendisi değişmez. `--without video,logs,trees` bu türleri kopyanın dışında bırakır; burada `logs`, log satırları ve crash raporlarıdır. Kopyanın sayfası, kaydı, kararı ve JUnit dosyası yeniden yazılır; böylece kopyada olmayan hiçbir dosyayı adlandırmazlar ve sayfa neyin dışarıda bırakıldığını söyler. Video tutan bir klasör, siz `--without video` ya da `--with video` diyene kadar paketlenmez, çünkü bir video boyanmaz. `appdyno test` kendisi video kaydetmez: bir video, başka bir şey onu klasöre koyduğunda sayılır.
+
+`appdyno test comment <dir>`, `pr.md` dosyasını klasörün `run.json` dosyasından yeniden yazar; `--out` bir dosya adlandırıyorsa oraya yazar.
+
 ## Sahte yanıt kuralları
 
 `mock`, bir simulator'da uygulamanın istekleri için bir kural koyar; `mock` ile `capture_network` de öyle yapar ve `mock` sözcüğünden sonraki satır, o aracın aldığı biçimiyle kuralın kendisidir:

@@ -95,6 +95,26 @@ export const COMMANDS = {
     },
     what: 'replay flows, one after another, on each device, and leave one verdict, one page, JUnit and a pull request text in the artifacts folder (--no-report: the record and JUnit alone); --shard 2/4 runs the second of four parts of the files, the same parts on every machine; --retries runs a failed file again and calls it flaky, which --fail-on-flaky fails the run for (exit 1); --update-baselines saves what visual steps compare with; --measure keeps each as a scenario, by step',
   },
+  'test merge': {
+    takes: '<dir>...',
+    flags: {
+      out: needed('dir'),
+      'allow-mixed': on,
+      junit: value('file'),
+      'pr-body': value('file'),
+    },
+    what: "several runs' folders, as shards leave them, into one record, verdict, page, JUnit and pull request text; exit 1 when any part failed or a shard is missing, 2 when they cannot be one run",
+  },
+  'test share': {
+    takes: '<dir>',
+    flags: { zip: value('file'), with: value('video'), without: value('video,logs,trees') },
+    what: "what a run's folder holds, to read before it is sent to anyone; --zip packs it, with the kinds --without names left out, and asks which when it holds a video",
+  },
+  'test comment': {
+    takes: '<dir>',
+    flags: { out: value('file') },
+    what: "the pull request text again, from a run's record; no device",
+  },
   doctor: { flags: { serial: value('S') }, what: 'what this machine and that device lack' },
   'ios build': {
     flags: { 'no-fetch': on },

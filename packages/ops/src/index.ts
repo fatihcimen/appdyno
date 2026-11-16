@@ -4,6 +4,7 @@ export type { ReplayOptions } from './flow/runner.js';
 export { envValues } from './flow/shared.js';
 export { flowFiles, flowsTagged, type TestOptions } from './flow/test-run.js';
 export { shardOf } from './flow/shard.js';
+export { commentRun, mergeRuns, readRun, shareLines, zipRun } from './flow/share.js';
 export { JOURNEY_ITERATIONS } from './flow/journey.js';
 export { keepRun, PROBE_HINT } from './perf/shared.js';
 export { survey } from './survey.js';

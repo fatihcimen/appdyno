@@ -164,6 +164,31 @@ JUnit names each of a failure's files in two forms, because the CI systems that 
 
 A part that no file falls to runs nothing, opens no device and exits 0. That happens when there are more parts than files. A run that selects no file at all still exits 1. A `--shard` that is not `i/n`, with `i` from 1 to `n`, exits 2.
 
+When every job has run, `appdyno test merge part-1 part-2 --out report` makes one run of their folders. It copies the files each failure left into `--out` and writes one `run.json`, `verdict.txt`, `index.html`, `junit.xml` and `pr.md` over them all. It exits 0 when the merged verdict is PASS and 1 when it is FAIL. The merged verdict is FAIL when any part failed. It is also FAIL when a part of the split is not among the folders, because what never ran is no pass: the `because:` line names it, as `shard 2/4 did not run`. Two jobs' emulators may have the same serial, and their files merge under it.
+
+`merge` exits 2 and writes nothing when the folders cannot be one run:
+
+- two of them hold the same file on the same device;
+- two of them are the same part, or they are parts of different splits;
+- they are of different commits. `--allow-mixed` merges those all the same.
+
+## Sending a report to someone
+
+appdyno uploads nothing. `appdyno test share <dir>` prints what a run's folder holds, the least hidden first:
+
+```
+This folder holds:
+  2 videos, NOT painted: anything shown on screen is in them, typed passwords included
+  14 pictures: a failure's is painted over where an element is a password field or holds a listed secret (3 had one); text drawn with no element behind it is not, and neither is a picture a screenshot step saved
+  3 screen trees, 5 log tails and 0 crash reports, with listed secrets and what looks like a credential hidden
+  0 network captures
+  41.0 MB. Listed secrets: 2.
+```
+
+`--zip file` packs the folder into one file, and the folder itself is not changed. `--without video,logs,trees` leaves those kinds out of the copy, where `logs` are the log lines and the crash reports. The copy's page, record, verdict and JUnit are written again, so they name no file the copy lacks, and the page says what was left out. A folder that holds a video is not packed until you say `--without video` or `--with video`, because a video is not painted. `appdyno test` records no video itself: one is counted when something else put it in the folder.
+
+`appdyno test comment <dir>` writes `pr.md` again from the folder's `run.json`, or to the file `--out` names.
+
 ## Mock rules
 
 `mock` sets a rule for the app's requests on a simulator, as `capture_network` with `mock` does, and the line after `mock` is the rule as that tool takes it:
