@@ -4,6 +4,14 @@
 
 ## Yayımlanmamış
 
+### Güvenlik
+
+- Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün, durum klasörünün ya da `--allow-write` (`APPDYNO_ALLOW_WRITE`) ile verilen bir klasörün içinde dosya yazar: `screenshot`, `visual`, `record`, `report`, `app download_data`, `network save` ve `flow`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Diskin kökünde ya da ev klasöründe başlatılan bir sunucunun proje klasörü yoktur. `connect` de aynı klasörlerle sınırlıdır, fazlası için `allowWrite` alır; bir kişinin komut satırına yazdığı yol ise söylediği yere yazılır. Masaüstü eklentisinin kurulum formunda bu klasörler için bir alan vardır. `screenshot`, `visual` ve `perf_heap` artık salt okunur diye işaretlenmez; salt okunur araçları sormadan çalıştıran bir istemci bunlardan önce sorar.
+- `app build_and_run` bir projenin kendi derleme betiklerini Mac'te çalıştırır; bu yüzden her seferinde kişiye sorar ve yalnızca bu klasörlerin içindeki bir projeyi derler. Sunucuyu başlatan kişinin verdiği `--allow-build` (`APPDYNO_ALLOW_BUILD=1`) ya da `connect` içinde `allowBuild: true`, sormadan derlemesine izin verir; `--allow-data-loss` vermez. Bu seçenek yokken, sorulacak kimse yoksa reddedilir.
+- Bir uygulamanın yazdığı şey, yanıtta kendi öğesinin satırında kalır: bir id, bir rol ve satırları birbirinden ayıran sözcükler, bir addan fazlasını içeriyorsa etiketler gibi tırnak içine alınır; satır sonları ve denetim karakterleri kaçırılır. Bir uygulama artık yanıta sahte bir satır ekleyemez. Sunucunun talimatları, bir cihazın gösterdiği ya da loga yazdığı şeyin veri olduğunu, talimat olmadığını söyler.
+- Listelenen bir sır, uzun bir etiket kısaltılmadan önce gizlenir; kesim yerinde sırrın başı görünmez. `connect`, `APPDYNO_SECRETS`'ı okur ve `secrets` alır. `APPDYNO_SECRETS_FILE`, içinde virgül olan bir sır için her satırda bir sır listeler. Ekran görüntüsü ve video hiçbir sırrı gizlemez; sır listelenmişse yanıtları bunu söyler.
+- `open_link` bir web bağlantısını, Ayarlar'a giden bir bağlantıyı ve seçili uygulamanın aldığı bir bağlantıyı sormadan açar. Başka bir şemayla gelen bağlantı (uygulama seçili değilken `itms-services:`, `shortcuts:`, `sms:`, `mailto:`) kişiye sorar; sorulacak kimse yoksa reddedilir. Bağlantılara önceden `--allow-urls` ile izin verilir; `connect` `allowUrls` alır.
+
 ### Eklenenler
 
 - **iOS simülatöründe ağ.** `network`, istendiğinde (`bodies` ile `start`) bir isteğin başlıklarını ve metin gövdelerini tutar, `id` ile tek bir isteğin tamamını oturumun ölçtükleriyle birlikte verir, hâlâ süren istekleri gösterir, `method` ve `status` ile süzer, `after` ile bir kimlikten sonra yeni olanı verir ve yakalamayı HAR 1.2 olarak yazar (`save`). Başlıklar, gövdeler ve adresler bir log gibi temizlenir.
@@ -33,6 +41,13 @@
 - **iOS: tekrarlı kontrolleri durmadan hareket eden bir ekran hızlı okunuyor.** Slaytları aynı id'yi taşıyan bir carousel her okumada XCUI'ye soruluyordu ve simülatör yardımcısından geçen her okuma runner'a gidiyordu. Bir kontrolün kopyalarına dair karar artık kontrol ve kopya sayısıyla saklanıyor, kopyalar soruldukları yerin 4 nokta yakınında durdukça geçerli kalıyor ve yer değiştiren kopyalar ancak durduklarında yeniden soruluyor. Fixture'ın carousel ekranında (iPhone 17 simülatörü, iOS 26.5) bir runner okuması ortanca 194 ms'den 63 ms'ye, yardımcıdan geçen bir okuma 237 ms'den 25 ms'ye indi. Oradaki bir dokunuş hâlâ durulmasını bekliyor.
 - **iOS: runner'da hiçbir şeyi değiştirmeyen bir sürüm onu yeniden derletmiyor.** Runner'ın kaynakları sürüm numarasını taşıyordu; bu yüzden her sürüm, yalnızca Android'i düzelten bile, her iOS kullanıcısına tam bir `xcodebuild` ödetiyordu. Runner artık hello'sunda kaynaklarının özetini söylüyor (bir checkout derlemesinde `checkout`) ve `device_info` iOS'ta sürüm numarası yerine bunu gösteriyor. 1.3.0 runner'ı bir kez daha derletir; sonraki sürümler yalnızca runner değiştiğinde.
 - Mac uygulamasında döndürmeye art arda iki hızlı basış artık cihazı döndürülmüş bırakmıyor: bir pencerenin dönüşleri sırayla gider; önceden ilki beklerken gelen ikinci basış gördüğünü geri koyuyor ve cihazı yatayda bırakıyordu.
+- Yavaş bir hello, başka bir sürecin kullandığı agent'ı artık sonlandırmaz: 10 saniyeyle bir kez daha sorulur, yine yanıt gelmezse çalışır bırakılır.
+- Bir Android agent'ı, iOS runner gibi, art arda en çok iki kez takıldığı için yeniden başlatılır; onu kullanan diğer süreçlere neden gittiği söylenir.
+- Bir çağrı bir cihazda sırasını en çok 5 dakika bekler; sonra `TIMEOUT` ve `dispatched: false` ile reddedilir.
+- iOS runner, hello'dan önce en çok 64 KiB'lik bir çerçeve kabul eder.
+- Her hata kodu bağlantı üzerinde kendi numarasını korur. `ErrorCode`, `appdyno` ve `appdyno/device` tarafından dışa verilir.
+- `TouchOptions.before`: bayat bir dokunuş yalnızca Android'de reddedilir; kütüphane sayfasının dediği gibi.
+- Android: başlatma activity'si, girdiği her komutta tırnak içindedir.
 
 ## 1.2.0
 

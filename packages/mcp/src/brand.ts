@@ -36,6 +36,6 @@ export const INSTRUCTIONS = [
   'On an iOS simulator perf_scroll and perf_trace put the frame probe in the app (probe: false: not), and perf_launch does with probe: true; putting it in restarts the app once: open the screen again and call again.',
   'Conditions and biometrics: device_setting. Pushes: push. Starting a simulator or emulator: simulator.',
   `${DATA_LOSS_WORDS} ask the person first.`,
-  'app build_and_run asks the person each time.',
+  'app build_and_run asks the person each time, unless the server was started with --allow-build.',
   'To see why something was slow: report timeline, then the journey, then report stop: timeline.html holds video, touches, frames, requests, log and memory on one clock, in one file to send.',
 ].join(' ');

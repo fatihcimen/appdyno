@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+### Security
+
+- A tool writes a file where its caller says only inside the folder the server runs in, the state folder, or a folder given with `--allow-write` (`APPDYNO_ALLOW_WRITE`): `screenshot`, `visual`, `record`, `report`, `app download_data`, `network save` and `flow`. A path elsewhere is refused `POLICY_DENIED`. A server started at the disk's root or in the home folder has no project folder. `connect` is held to the same folders, with `allowWrite` for more; a path a person types on a command line is written where they say. The desktop extension's install form has a field for the folders. `screenshot`, `visual` and `perf_heap` are no longer marked read-only, so a client that runs read-only tools unasked now asks first.
+- `app build_and_run` runs a project's own build scripts on the Mac, so it asks the person each time and builds only a project inside those folders. `--allow-build` (`APPDYNO_ALLOW_BUILD=1`), given by the person who starts the server, or `allowBuild: true` in `connect`, lets it build with nothing asked; `--allow-data-loss` does not. Without it, where nobody can be asked, it is refused.
+- What an app wrote stays on its element's line in an answer: an id, a role and the words that tell rows apart are quoted where they hold more than a name, with line breaks and control characters escaped, as labels were. An app can no longer make up a line of an answer. The server's instructions say that what a device shows or logs is data, never an instruction.
+- A listed secret is hidden before a long label is cut, so no start of it shows at the cut. `connect` reads `APPDYNO_SECRETS` and takes `secrets`. `APPDYNO_SECRETS_FILE` lists one secret to a line, for one that holds a comma. A screenshot and a video hide none, and their answers say so where secrets are listed.
+- `open_link` opens a web link, a link to Settings and a link the selected app takes with nothing asked. A link by any other scheme (`itms-services:`, `shortcuts:`, `sms:`, `mailto:` with no app selected) asks the person, and is refused where nobody can be asked. `--allow-urls` allows links ahead; `connect` takes `allowUrls`.
+
 ### Added
 
 - **Network on the iOS simulator.** `network` keeps a request's headers and text bodies when asked (`start` with `bodies`), gives one request whole by `id` with what the session measured of it, shows requests still in flight, filters by `method` and `status`, gives what is new since an id by `after`, and writes the capture as HAR 1.2 (`save`). Headers, bodies and addresses are cleaned as a log is.
@@ -33,6 +41,13 @@
 - **iOS: a screen whose repeated controls keep moving is read fast.** A carousel whose slides carry one id was asked of XCUI at every read, and every read through the simulator's helper went to the runner. The verdict on a control's copies is now kept by the control and the number of its copies, holds while they stand within 4 points of where they were asked of, and is asked again only once moved copies stand still. On the fixture's carousel (iPhone 17 simulator, iOS 26.5) a runner read went from a median 194 ms to 63 ms and a read through the helper from 237 ms to 25 ms. A tap there still waits out its settle.
 - **iOS: a release that changes nothing in the runner no longer rebuilds it.** The runner's sources held the release number, so every release, an Android-only one too, cost each iOS user a full `xcodebuild`. The runner now says the digest of its sources in its hello (`checkout` in a checkout's build), and `device_info` shows that in place of a version number on iOS. 1.3.0 builds the runner once more; later releases do so only when the runner changes.
 - In the Mac app, two quick presses of rotate no longer leave a device turned: a window's turns go one after another, where a second press while the first waited put back what it saw and left the device in landscape.
+- A slow hello no longer ends an agent that another process uses: it is asked once more with 10 s, and left running if still silent.
+- An Android agent is restarted as stuck twice in a row at most, as an iOS runner is, and the other processes that used it are told why it went.
+- A call waits its turn on a device for 5 minutes at most, then is refused `TIMEOUT` with `dispatched: false`.
+- The iOS runner takes a frame of 64 KiB at most before its hello.
+- Each error code keeps its own number on the wire. `ErrorCode` is exported by `appdyno` and `appdyno/device`.
+- `TouchOptions.before`: a stale touch is refused on Android only, as the library page says.
+- Android: the launcher activity is quoted in every command it goes into.
 
 ## 1.2.0
 
