@@ -29,7 +29,7 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 | `devices`, `version`                                      | bağlı cihazlar; bunun hangi sürüm olduğu                                                                                                 |
 | `hub`, `mirror`                                           | canlı pencere: bkz. [Pencere ve hub](mirror.tr.md)                                                                                       |
 | `pair`                                                    | bu Mac'i Wi-Fi için bir telefonla bir kez eşleştirir                                                                                     |
-| `ios build`                                               | iOS runner'larını ilk kullanımda değil, şimdi derler                                                                                     |
+| `ios build [--no-fetch]`                                  | simülatörün iOS runner'ını sürümden indirir, iPhone'unkini derler; ilk kullanımda değil, şimdi. `--no-fetch` ikisini de burada derler    |
 | `tools install`                                           | sabitlenmiş Perfetto trace processor'ı indirir                                                                                           |
 | `tools install adb --accept-license`                      | `adb`'si olmayan bir Mac için Google'ın platform-tools paketini indirir ve Google'ın koşullarını kabul ettiğinizi söyler                 |
 | `push setup apns\|fcm [--forget]`                         | bir push servisinin kimlik bilgilerini saklar: bkz. [Araçlar](tools.tr.md#apple-ve-google-üzerinden-bir-telefona-ve-bir-simülatöre-push) |
@@ -65,6 +65,7 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 | `--takeover`                |                                     | Android'de UI otomasyonunu tutan başka bir aracı durdurur                                                                                                                                                 |
 | `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` telefondaki hiçbir soruya dokunmaz: hepsini bir kişi yanıtlar                                                                                                                               |
 | `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` bir Play Protect uyarısını geçer, bunu her zaman söyler ve uyarıyı aktarır                                                                                                                  |
+| `--no-fetch`                | `APPDYNO_NO_FETCH=1`                | simülatörün iOS runner'ı sürümden hiç indirilmez: bu Mac'te derlenir ve ağdan hiçbir şey istenmez                                                                                                         |
 | `--share`                   | `APPDYNO_SHARE=1`                   | başka bir sürecin tuttuğu bir cihazı kullanır                                                                                                                                                             |
 | `--animations V`            | `APPDYNO_ANIMATIONS`                | `off`, bir Android cihaz yönetildiği sürece animasyon ölçeklerini 0'a ayarlar                                                                                                                             |
 | `--trace-limit-gb N`        | `APPDYNO_TRACE_LIMIT_GB`            | saklanan trace'lerin ve heap dump'ların kaplayabileceği yer, varsayılan 10; eskiler silinir, bir baseline'ın ya da yakın tarihli bir çalıştırmanın andıkları asla                                         |
@@ -76,24 +77,24 @@ CI için doğru değer `virtual`'dır. `all` gerçek telefonları da kapsar: `--
 
 Yalnızca değişkeni olan ayarlar:
 
-| ortam                         | ne                                                                                                                                                               |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APPDYNO_HTTP_TOKEN`          | `--http`'nin istediği token, 32 karakter ya da daha uzun: ayarlanmamışsa üretilir ve yazdırılır                                                                  |
-| `APPDYNO_STATE_DIR`           | durum klasörü: varsayılan `~/Library/Caches/appdyno`                                                                                                             |
-| `APPDYNO_TOOLS_DIR`           | indirilen araçların tutulduğu yer, durum klasörü ne olursa olsun: varsayılan `~/Library/Caches/appdyno/tools`                                                    |
-| `APPDYNO_PERF_DIR`            | baseline'ların ve bütçelerin tutulduğu yer: varsayılan, çalışma klasöründeki `.appdyno/perf`; böylece commit edilebilirler                                       |
-| `APPDYNO_TRACE_PROCESSOR`     | Android'in trace'lerini okumak için, uygulamanınkinin ve indirilen sabit olanın yerine bir `trace_processor_shell`                                               |
-| `APPDYNO_SECRETS=a,b`         | hiçbir zaman geri gösterilmeyen ve panoya konmayan değerler                                                                                                      |
-| `APPDYNO_SECRETS_FILE=path`   | içinde virgül olan bir sır için, her satırında bir sır bulunan dosya; okunamayan bir dosya başlangıcı durdurur                                                   |
-| `APPDYNO_FAST_TAP=0`          | iOS runner'ı XCTest'in olay sentezleyicisi yerine, yaklaşık iki kat uzun süren XCUI'nin kendi dokunuşuyla dokunur                                                |
-| `APPDYNO_ANIMATION_WAIT=0`    | bir iOS dokunuşu uygulamanın animasyonlarının bitmesini beklemeden gider                                                                                         |
-| `APPDYNO_HOST_VIRTUAL=0`      | bu Mac, macOS ne derse desin, sanal makine sayılmaz; load average'ı ne kadar meşgul olduğunu gerçekten söyleyen bir sanal Mac için: bkz. [Kapı](perf.tr.md#kapı) |
-| `APPDYNO_IOS_TEAM`            | Xcode'un iPhone runner'ını hazırlarken kullandığı Apple ekibi: bkz. [Xcode halletsin](../guides/clients.tr.md#xcode-halletsin)                                   |
-| `APPDYNO_IOS_PROFILE`         | iPhone runner'ı için bir provisioning profile; `APPDYNO_IOS_KEYCHAIN` ve `APPDYNO_IOS_KEYCHAIN_PASSWORD` ile birlikte                                            |
-| `APPDYNO_EMULATOR_ARGS`       | `simulator` bir emülatör başlatırken verilen seçenekler: bkz. [Bir simülatör ya da emülatör başlatmak](tools.tr.md#bir-simülatör-ya-da-emülatör-başlatmak)       |
-| `APPDYNO_ANDROID_AGENT`       | bu checkout'un build'i ya da paketinki yerine kurulacak bir Android ajanı `.apk` dosyası                                                                         |
-| `APPDYNO_IOS_PRODUCTS`        | bu checkout'un build'i ya da ilk kullanımda yapılan yerine, bir simülatör için derlenmiş iOS runner'ını ve onun `.xctestrun` dosyasını tutan bir klasör          |
-| `APPDYNO_IOS_DEVICE_PRODUCTS` | aynısı, bir telefon için                                                                                                                                         |
+| ortam                         | ne                                                                                                                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `APPDYNO_HTTP_TOKEN`          | `--http`'nin istediği token, 32 karakter ya da daha uzun: ayarlanmamışsa üretilir ve yazdırılır                                                                          |
+| `APPDYNO_STATE_DIR`           | durum klasörü: varsayılan `~/Library/Caches/appdyno`                                                                                                                     |
+| `APPDYNO_TOOLS_DIR`           | indirilen araçların tutulduğu yer, durum klasörü ne olursa olsun: varsayılan `~/Library/Caches/appdyno/tools`                                                            |
+| `APPDYNO_PERF_DIR`            | baseline'ların ve bütçelerin tutulduğu yer: varsayılan, çalışma klasöründeki `.appdyno/perf`; böylece commit edilebilirler                                               |
+| `APPDYNO_TRACE_PROCESSOR`     | Android'in trace'lerini okumak için, uygulamanınkinin ve indirilen sabit olanın yerine bir `trace_processor_shell`                                                       |
+| `APPDYNO_SECRETS=a,b`         | hiçbir zaman geri gösterilmeyen ve panoya konmayan değerler                                                                                                              |
+| `APPDYNO_SECRETS_FILE=path`   | içinde virgül olan bir sır için, her satırında bir sır bulunan dosya; okunamayan bir dosya başlangıcı durdurur                                                           |
+| `APPDYNO_FAST_TAP=0`          | iOS runner'ı XCTest'in olay sentezleyicisi yerine, yaklaşık iki kat uzun süren XCUI'nin kendi dokunuşuyla dokunur                                                        |
+| `APPDYNO_ANIMATION_WAIT=0`    | bir iOS dokunuşu uygulamanın animasyonlarının bitmesini beklemeden gider                                                                                                 |
+| `APPDYNO_HOST_VIRTUAL=0`      | bu Mac, macOS ne derse desin, sanal makine sayılmaz; load average'ı ne kadar meşgul olduğunu gerçekten söyleyen bir sanal Mac için: bkz. [Kapı](perf.tr.md#kapı)         |
+| `APPDYNO_IOS_TEAM`            | Xcode'un iPhone runner'ını hazırlarken kullandığı Apple ekibi: bkz. [Xcode halletsin](../guides/clients.tr.md#xcode-halletsin)                                           |
+| `APPDYNO_IOS_PROFILE`         | iPhone runner'ı için bir provisioning profile; `APPDYNO_IOS_KEYCHAIN` ve `APPDYNO_IOS_KEYCHAIN_PASSWORD` ile birlikte                                                    |
+| `APPDYNO_EMULATOR_ARGS`       | `simulator` bir emülatör başlatırken verilen seçenekler: bkz. [Bir simülatör ya da emülatör başlatmak](tools.tr.md#bir-simülatör-ya-da-emülatör-başlatmak)               |
+| `APPDYNO_ANDROID_AGENT`       | bu checkout'un build'i ya da paketinki yerine kurulacak bir Android ajanı `.apk` dosyası                                                                                 |
+| `APPDYNO_IOS_PRODUCTS`        | bu checkout'un build'i ya da ilk kullanımda indirilen ya da derlenen yerine, bir simülatör için derlenmiş iOS runner'ını ve onun `.xctestrun` dosyasını tutan bir klasör |
+| `APPDYNO_IOS_DEVICE_PRODUCTS` | aynısı, bir telefon için                                                                                                                                                 |
 
 `--allow-devices` ve `--allow-urls` JavaScript düzenli ifadeleridir ve sabitlenmedikçe metnin herhangi bir yerinde eşleşir: `--allow-urls 'https://staging.example.com'`, `https://staging.example.com.evil.test/` ve `evilapp://x?u=https://staging.example.com` bağlantılarını da içeri alır. Onu sabitleyin: `--allow-urls '^https://staging\.example\.com/'` (`/` ana makine adını bitirir) ve `--allow-devices '^emulator-5554$'`; `'^emulator-'` her emülatörü içeri alır. Seçenekle ya da değişkenle boş verilen bir liste, her şeyi içeri alacağından başlangıçta reddedilir; biri tanımsızken `"$A|$B"`'nin verdiği gibi boş metinle eşleşen bir desen de öyle.
 

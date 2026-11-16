@@ -20,25 +20,25 @@ A command that loses data asks on its terminal first, as [Tools](tools.md#what-a
 
 ## Other commands
 
-| command                                                   | what it does                                                                                                          |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `mcp`                                                     | the MCP server: see [Server options](#server-options)                                                                 |
-| `install [--dry-run] [--yes] [--remove]`                  | adds appdyno to the MCP clients on this Mac, or takes it out                                                          |
-| `update [--check]`                                        | moves to the latest release, verified first: see [Keep appdyno current](../guides/clients.md#keep-appdyno-current)    |
-| `doctor [--serial S]`                                     | what this Mac and that device lack, and how to fix it                                                                 |
-| `devices`, `version`                                      | the connected devices; which version this is                                                                          |
-| `hub`, `mirror`                                           | the live window: see [The window and the hub](mirror.md)                                                              |
-| `pair`                                                    | pairs this Mac with a phone for Wi-Fi, once                                                                           |
-| `ios build`                                               | builds the iOS runners now, not on first use                                                                          |
-| `tools install`                                           | fetches the pinned Perfetto trace processor                                                                           |
-| `tools install adb --accept-license`                      | fetches Google's platform-tools, for a Mac with no `adb`, and says you accept Google's terms                          |
-| `push setup apns\|fcm [--forget]`                         | stores a push service's credentials: see [Tools](tools.md#push-to-a-phone-and-a-simulator-by-apple-and-google)        |
-| `test`                                                    | replays flows: see [Flows](../guides/flows.md)                                                                        |
-| `timeline`, `flight`                                      | video, touches, frames, requests, the log and memory on one clock, in one file: see [Evidence](../guides/evidence.md) |
-| `perf compare\|baseline\|budget\|why\|reference\|comment` | the performance gate: see [Measuring performance](../guides/performance.md)                                           |
-| `perf functions\|prune\|dashboard\|survey`                | kept profiles and traces, and the page of every measure: see [Performance](perf.md)                                   |
-| `bench --serial S`                                        | times reads, taps and typing on an Android device                                                                     |
-| `path [--remove]`                                         | from the Mac app: puts `appdyno` on every shell's PATH, or takes it off                                               |
+| command                                                   | what it does                                                                                                                     |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `mcp`                                                     | the MCP server: see [Server options](#server-options)                                                                            |
+| `install [--dry-run] [--yes] [--remove]`                  | adds appdyno to the MCP clients on this Mac, or takes it out                                                                     |
+| `update [--check]`                                        | moves to the latest release, verified first: see [Keep appdyno current](../guides/clients.md#keep-appdyno-current)               |
+| `doctor [--serial S]`                                     | what this Mac and that device lack, and how to fix it                                                                            |
+| `devices`, `version`                                      | the connected devices; which version this is                                                                                     |
+| `hub`, `mirror`                                           | the live window: see [The window and the hub](mirror.md)                                                                         |
+| `pair`                                                    | pairs this Mac with a phone for Wi-Fi, once                                                                                      |
+| `ios build [--no-fetch]`                                  | fetches the simulator's iOS runner from the release and builds the iPhone's now, not on first use; `--no-fetch` builds both here |
+| `tools install`                                           | fetches the pinned Perfetto trace processor                                                                                      |
+| `tools install adb --accept-license`                      | fetches Google's platform-tools, for a Mac with no `adb`, and says you accept Google's terms                                     |
+| `push setup apns\|fcm [--forget]`                         | stores a push service's credentials: see [Tools](tools.md#push-to-a-phone-and-a-simulator-by-apple-and-google)                   |
+| `test`                                                    | replays flows: see [Flows](../guides/flows.md)                                                                                   |
+| `timeline`, `flight`                                      | video, touches, frames, requests, the log and memory on one clock, in one file: see [Evidence](../guides/evidence.md)            |
+| `perf compare\|baseline\|budget\|why\|reference\|comment` | the performance gate: see [Measuring performance](../guides/performance.md)                                                      |
+| `perf functions\|prune\|dashboard\|survey`                | kept profiles and traces, and the page of every measure: see [Performance](perf.md)                                              |
+| `bench --serial S`                                        | times reads, taps and typing on an Android device                                                                                |
+| `path [--remove]`                                         | from the Mac app: puts `appdyno` on every shell's PATH, or takes it off                                                          |
 
 `test` and `flow run` take `--update-baselines`: each `visual` step of a flow saves its baseline in place of comparing, as [Flows](../guides/flows.md#screenshots-visual-checks-and-settings) says. A flow whose `visual` step comes after a step flagged `!ambiguous` that acts is refused before its first step, and none of its baselines is saved.
 
@@ -65,6 +65,7 @@ A command that loses data asks on its terminal first, as [Tools](tools.md#what-a
 | `--takeover`                |                                     | stop another tool that holds UI automation on Android                                                                                                                                                 |
 | `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all                                                                                                                               |
 | `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` passes a Play Protect warning, and always says so and quotes it                                                                                                                         |
+| `--no-fetch`                | `APPDYNO_NO_FETCH=1`                | the simulator's iOS runner is never fetched from the release: it is built on this Mac, and the network is asked for nothing                                                                           |
 | `--share`                   | `APPDYNO_SHARE=1`                   | use a device another process holds                                                                                                                                                                    |
 | `--animations V`            | `APPDYNO_ANIMATIONS`                | `off` sets an Android device's animation scales to 0 while it is driven                                                                                                                               |
 | `--trace-limit-gb N`        | `APPDYNO_TRACE_LIMIT_GB`            | what kept traces and heap dumps may take, 10 by default; older ones go, never what a baseline or a recent run names                                                                                   |
@@ -92,7 +93,7 @@ Settings that have only a variable:
 | `APPDYNO_IOS_PROFILE`         | a provisioning profile for the iPhone runner, with `APPDYNO_IOS_KEYCHAIN` and `APPDYNO_IOS_KEYCHAIN_PASSWORD`                                                              |
 | `APPDYNO_EMULATOR_ARGS`       | the emulator's flags when `simulator` boots one: see [Starting a simulator or emulator](tools.md#starting-a-simulator-or-emulator)                                         |
 | `APPDYNO_ANDROID_AGENT`       | an Android agent `.apk` to install, in place of this checkout's build or the package's                                                                                     |
-| `APPDYNO_IOS_PRODUCTS`        | a folder with the iOS runner built for a simulator and its `.xctestrun`, in place of this checkout's build or one made on first use                                        |
+| `APPDYNO_IOS_PRODUCTS`        | a folder with the iOS runner built for a simulator and its `.xctestrun`, in place of this checkout's build or one fetched or built on first use                            |
 | `APPDYNO_IOS_DEVICE_PRODUCTS` | the same for a phone                                                                                                                                                       |
 
 `--allow-devices` and `--allow-urls` are JavaScript regular expressions, matched anywhere in the text unless anchored: `--allow-urls 'https://staging.example.com'` lets in `https://staging.example.com.evil.test/` and `evilapp://x?u=https://staging.example.com` too. Anchor it: `--allow-urls '^https://staging\.example\.com/'`, where the `/` ends the host, and `--allow-devices '^emulator-5554$'`; `'^emulator-'` lets in every emulator. A list given empty, by flag or variable, is refused at the start, as it would let in every one, and so is a pattern that matches the empty text, as `"$A|$B"` with one of them unset gives.
