@@ -40,7 +40,7 @@ A command that loses data asks on its terminal first, as [Tools](tools.md#what-a
 | `bench --serial S`                                        | times reads, taps and typing on an Android device                                                                     |
 | `path [--remove]`                                         | from the Mac app: puts `appdyno` on every shell's PATH, or takes it off                                               |
 
-`test` and `flow run` take `--update-baselines`: each `visual` step of a flow saves its baseline in place of comparing, as [Flows](../guides/flows.md#screenshots-visual-checks-and-settings) says.
+`test` and `flow run` take `--update-baselines`: each `visual` step of a flow saves its baseline in place of comparing, as [Flows](../guides/flows.md#screenshots-visual-checks-and-settings) says. A flow whose `visual` step comes after a step flagged `!ambiguous` that acts is refused before its first step, and none of its baselines is saved.
 
 `test` takes `--fail-on-flaky` beside `--retries N`: a run with a file that passed only on a retry exits 1 and names each in its last line, where it exits 0 without the flag; see [Flows](../guides/flows.md#retries).
 

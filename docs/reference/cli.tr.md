@@ -40,7 +40,7 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 | `bench --serial S`                                        | bir Android cihazda okumaları, dokunuşları ve yazmayı ölçer                                                                              |
 | `path [--remove]`                                         | Mac uygulamasından: `appdyno`'yu her kabuğun PATH'ine koyar ya da çıkarır                                                                |
 
-`test` ve `flow run`, `--update-baselines` alır: bir akışın her `visual` adımı, [Akışlar](../guides/flows.tr.md#ekran-görüntüleri-görsel-denetimler-ve-ayarlar) sayfasının anlattığı gibi, karşılaştırmak yerine temel görüntüsünü kaydeder.
+`test` ve `flow run`, `--update-baselines` alır: bir akışın her `visual` adımı, [Akışlar](../guides/flows.tr.md#ekran-görüntüleri-görsel-denetimler-ve-ayarlar) sayfasının anlattığı gibi, karşılaştırmak yerine temel görüntüsünü kaydeder. Bir `visual` adımı, `!ambiguous` işaretli ve işlem yapan bir adımdan sonra gelen akış ilk adımından önce reddedilir ve hiçbir temel görüntüsü kaydedilmez.
 
 `test`, `--retries N` yanında `--fail-on-flaky` alır: bir dosyanın yalnızca yeniden denemede geçtiği bir çalıştırma 1 ile çıkar ve son satırında her birini adıyla söyler; bayrak olmadan 0 ile çıkar. Bkz. [Akışlar](../guides/flows.tr.md#yeniden-denemeler).
 
