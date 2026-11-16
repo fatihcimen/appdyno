@@ -188,6 +188,16 @@ MVRow *MVNetworkRow(NSDictionary *entry, NSUInteger at);
 NSString *MVNetworkFigures(NSDictionary *entry);
 NSString *MVNetworkKey(NSDictionary *entry, NSUInteger at);
 NSArray<MVRow *> *MVNetworkGrouped(NSArray<MVRow *> *rows);
+/// How long and how much, as a person reads them: ms, then seconds, then minutes; B, KB, MB to three figures.
+NSString *MVNetworkTook(double ms);
+NSString *MVNetworkSize(double bytes);
+/// A request's phases as the session measured them, each a name here and its milliseconds; and what it says of its connection.
+NSArray<NSArray *> *MVNetworkPhases(NSDictionary *timings);
+NSString *MVNetworkConnection(NSDictionary *timings);
+/// Why a request's detail has no headers and bodies, where it has none.
+NSString *_Nullable MVNetworkNotKept(NSDictionary *detail);
+/// One request whole as text, from the parts the parent gives, each part named in the Mac's language.
+NSString *MVNetworkDetailText(NSDictionary *detail);
 
 /// A rule as fields beside its line: what it takes and what it does, each in its own. The parent reads a line into
 /// them and writes them as one.

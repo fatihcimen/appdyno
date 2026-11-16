@@ -459,6 +459,13 @@ describe("a window's Network pane", () => {
         detail: {
           id: 0,
           lines: expect.arrayContaining(['  Authorization: •••', '{"error":"down"}']) as unknown,
+          // and in its parts, which a window names in its own language: cleaned as the lines are
+          request: { method: 'GET', url: 'https://a.test/x', status: 503, ms: 3, how: 'mocked' },
+          kept: true,
+          requestHeaders: [{ name: 'Authorization', value: '•••' }],
+          responseHeaders: [],
+          responseBody: '{"error":"down"}',
+          responseBodySize: 16,
         },
       });
     // a rule that is none is said as the op says it

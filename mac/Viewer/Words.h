@@ -31,6 +31,8 @@ NSString *MVDecimal(double value);
 /// Text as a search compares it: no capitals and no marks on its letters, so that `BAŞARISIZ`, `başarısız` and `basarisiz`
 /// are one word, and `FAILED` is `failed` in Turkish too, where a capital I is otherwise a dotless one.
 NSString *MVFolded(NSString *text);
+/// A number with that many decimals, its mark the Mac's language's.
+NSString *MVFigure(double value, int decimals);
 /// A count, its thousands set apart as the Mac's language sets them.
 NSString *MVCount(NSUInteger count);
 

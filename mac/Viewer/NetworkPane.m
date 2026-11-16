@@ -231,7 +231,8 @@ static NSString *unseenLine(NSDictionary *unseen) {
   // one request whole, asked for as it was chosen: nothing else of the pane changes
   if ([m[@"detail"] isKindOfClass:NSDictionary.class]) {
     _wholeKey = [m[@"detail"][@"id"] description];
-    _whole = [m[@"detail"][@"lines"] componentsJoinedByString:@"\n"];
+    // its parts, named here in the Mac's language; its lines as the op wrote them where the parent sent no parts
+    _whole = [m[@"detail"][@"request"] isKindOfClass:NSDictionary.class] ? MVNetworkDetailText(m[@"detail"]) : [m[@"detail"][@"lines"] componentsJoinedByString:@"\n"];
     [self showDetail:_list.selected.key];
     return;
   }
@@ -403,7 +404,8 @@ static NSString *unseenLine(NSDictionary *unseen) {
 }
 
 - (NSString *)detail {
-  return _detailCard.hidden ? @"" : _detail.string;
+  // a copy: the text view hands out its own store, which changes under a reader
+  return _detailCard.hidden ? @"" : [_detail.string copy];
 }
 
 @end

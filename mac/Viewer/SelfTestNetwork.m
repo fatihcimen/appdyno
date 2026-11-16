@@ -109,6 +109,38 @@ void MVCheckProbe(MVWindow *window, MVNetworkPane *pane, NSMutableArray<NSDictio
           sent.description);
   [pane show:@{@"op": @"network",
                @"detail": @{@"id": @7, @"lines": @[@"7 GET https://a.test/x 200", @"response body (16 B):", @"{\"error\":\"down\"}"]}}];
+  NSDictionary *parts = @{@"id": @7,
+                          @"lines": @[@"7 GET https://a.test/x 200", @"request headers:"],
+                          @"request": @{@"method": @"GET", @"url": @"https://a.test/x", @"status": @200, @"ms": @3, @"how": @"mocked"},
+                          @"timings": @{@"dns": @1, @"connect": @2, @"tls": @-1, @"wait": @5, @"receive": @1250, @"reused": @NO, @"proto": @"http/1.1", @"wire": @39},
+                          @"kept": @YES,
+                          @"requestHeaders": @[@{@"name": @"Authorization", @"value": @"•••"}],
+                          @"responseHeaders": @[@{@"name": @"Content-Type", @"value": @"application/json"}],
+                          @"responseBody": @"{\"error\":\"down\"}",
+                          @"responseBodySize": @16};
+  [pane show:@{@"op": @"network", @"detail": parts}];
+  NSString *inEnglish = pane.detail;
+  MVTestTurkish(YES);
+  [pane show:@{@"op": @"network", @"detail": parts}];
+  NSString *inTurkish = pane.detail;
+  NSMutableDictionary *bare = [parts mutableCopy];
+  bare[@"kept"] = @NO;
+  [pane show:@{@"op": @"network", @"detail": bare}];
+  NSString *notKept = pane.detail;
+  MVTestTurkish(NO);
+  NSArray<NSString *> *wantEnglish = @[@"#7 GET https://a.test/x", @"DNS 1 ms · Connect 2 ms · Wait 5 ms · Receive 1.25 s", @"http/1.1 · New connection · 39 B on the wire", @"Request headers\n  Authorization: •••", @"Response headers\n  Content-Type: application/json", @"Response body (16 B)\n{\"error\":\"down\"}"];
+  NSArray<NSString *> *wantTurkish = @[@"#7 GET https://a.test/x", @"DNS 1 ms · Bağlantı 2 ms · Bekleme 5 ms · Alma 1,25 s", @"http/1.1 · Yeni bağlantı · hatta 39 B", @"İstek başlıkları\n  Authorization: •••", @"Yanıt başlıkları\n  Content-Type: application/json", @"Yanıt gövdesi (16 B)\n{\"error\":\"down\"}", @"Sahte yanıt"];
+  NSString * (^lacks)(NSString *, NSArray<NSString *> *) = ^(NSString *text, NSArray<NSString *> *all) {
+    NSMutableArray<NSString *> *missing = [NSMutableArray array];
+    for (NSString *one in all)
+      if (![text containsString:one]) [missing addObject:one];
+    return [missing componentsJoinedByString:@" | "];
+  };
+  MVCheck(@"detail: a request's parts stand under names of the window's own, what was sent as it was sent", !lacks(inEnglish, wantEnglish).length, [NSString stringWithFormat:@"%@ in %@", lacks(inEnglish, wantEnglish), inEnglish]);
+  MVCheck(@"detail: and in Turkish every name is Turkish, with nothing of the op's English left", !lacks(inTurkish, wantTurkish).length && ![inTurkish containsString:@"request headers"] && ![inTurkish containsString:@"connection"] && ![inTurkish containsString:@"mocked"], [NSString stringWithFormat:@"%@ in %@", lacks(inTurkish, wantTurkish), inTurkish]);
+  MVCheck(@"detail: one whose headers and bodies were not kept says so and what to do, in Turkish too", [notKept hasSuffix:@"Başlıkları ve gövdeleri tutulmadı. Okumak için onları tutan bir yakalama başlatın."], notKept);
+  [pane show:@{@"op": @"network",
+               @"detail": @{@"id": @7, @"lines": @[@"7 GET https://a.test/x 200", @"response body (16 B):", @"{\"error\":\"down\"}"]}}];
   MVCheck(@"probe: and shows them whole, the list as it was", [pane.detail hasSuffix:@"{\"error\":\"down\"}"] && pane.rows.count == 1, pane.detail);
   MVNetworkActions *actions = pane.actions;
   NSTextField *filter = [actions valueForKey:@"_field"];

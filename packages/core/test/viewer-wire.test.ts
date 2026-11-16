@@ -97,7 +97,7 @@ function literalsIn(text: string): { op: string; keys: string[] }[] {
 }
 
 /** What this side tells the viewer that no code of the viewer reads: each stays until the wire drops it. */
-const UNREAD = ['element.selector', 'measured.kept', 'tick.seq'];
+const UNREAD = ['element.selector', 'tick.seq'];
 
 describe("the fields of the viewer's wire", () => {
   const says = fieldsOf('ViewerMessage');

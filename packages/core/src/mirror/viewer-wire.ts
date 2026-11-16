@@ -325,8 +325,23 @@ export type ViewerOrder = Staged &
         elsewhere?: boolean;
         /** What the app made that the capture cannot see, each kind counted. */
         unseen?: unknown;
-        /** One request whole, as its lines. */
-        detail?: { id: number; lines: string[] };
+        /**
+         * One request whole: as its lines, and in its parts for a window to name in its own language. `kept` says
+         * whether the capture kept its headers and bodies, and each list of headers has a hidden value as `•••`.
+         */
+        detail?: {
+          id: number;
+          lines: string[];
+          request?: Record<string, unknown>;
+          timings?: Record<string, unknown>;
+          kept?: boolean;
+          requestHeaders?: { name: string; value: string }[];
+          responseHeaders?: { name: string; value: string }[];
+          requestBody?: string;
+          requestBodySize?: number;
+          responseBody?: string;
+          responseBodySize?: number;
+        };
         /** A request as a command, for the window to copy; and a rule made of a request's answer, for its field. */
         curl?: string;
         rule?: string;

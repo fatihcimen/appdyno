@@ -188,6 +188,10 @@ NSString *MVFolded(NSString *text) {
   return [plain stringByReplacingOccurrencesOfString:@"ı" withString:@"i"];
 }
 
+NSString *MVFigure(double value, int decimals) {
+  return [[NSString alloc] initWithFormat:@"%.*f" locale:locale(), decimals, value];
+}
+
 NSString *MVCount(NSUInteger count) {
   NSNumberFormatter *format = [NSNumberFormatter new];
   format.numberStyle = NSNumberFormatterDecimalStyle;

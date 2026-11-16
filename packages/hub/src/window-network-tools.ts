@@ -57,6 +57,38 @@ export function networkTools(
     else answer({ ok: false, text: NO_REQUEST });
   };
 
+  /**
+   * One request in its parts, for a window to set out and name in its own language: what the list says of it, what
+   * the session measured, and its headers and bodies where they were kept, cleaned as its lines are.
+   */
+  const parts = (
+    e: NetworkEntry,
+    d: NetworkDetail | undefined,
+    show: (text: string) => string,
+  ) => ({
+    request: {
+      ...(e.method && { method: e.method }),
+      ...(e.url && { url: e.url }),
+      ...(e.status !== undefined && { status: e.status }),
+      ...(e.ms !== undefined && { ms: e.ms }),
+      ...(e.bytes !== undefined && { bytes: e.bytes }),
+      ...(e.error && { error: e.error }),
+      ...(e.how && { how: e.how }),
+      ...(e.to && { to: e.to }),
+      ...(e.inFlight && { inFlight: true }),
+    },
+    ...(e.timings && { timings: e.timings }),
+    kept: d !== undefined,
+    ...(d && {
+      requestHeaders: cleanHeaders(show, d.requestHeaders),
+      responseHeaders: cleanHeaders(show, d.responseHeaders),
+      ...(d.requestBody !== undefined && { requestBody: show(d.requestBody) }),
+      ...(d.requestBodySize !== undefined && { requestBodySize: d.requestBodySize }),
+      ...(d.responseBody !== undefined && { responseBody: show(d.responseBody) }),
+      ...(d.responseBodySize !== undefined && { responseBodySize: d.responseBodySize }),
+    }),
+  });
+
   /** A rule made of a request's answer, with its parts for a window's fields. */
   const told = (rule: string) => tell({ rule, fields: ruleFields(rule) });
 
@@ -66,7 +98,9 @@ export function networkTools(
       withRequest(id, ({ entry, detail }) => {
         const show = as(real);
         const shown = { ...entry, ...(entry.url && { url: show(entry.url) }) };
-        tell({ detail: { id, lines: detailLines(shown, detail, show) } });
+        tell({
+          detail: { id, lines: detailLines(shown, detail, show), ...parts(shown, detail, show) },
+        });
       }),
 
     /** The request as a command that makes it again. */
