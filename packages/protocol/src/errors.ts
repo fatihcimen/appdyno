@@ -74,6 +74,8 @@ export class DeviceError extends Error {
   readonly retryable: boolean;
   /** The action it failed on had left for the device, which may have done it: the read after a touch can fail too. */
   sent = false;
+  /** Nothing of the call left this host, as it never began: its touch did not go, whatever its code says of others. */
+  unsent = false;
   constructor(
     readonly code: ErrorCode,
     message: string,

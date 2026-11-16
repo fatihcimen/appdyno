@@ -62,7 +62,9 @@ const HINTS: Partial<Record<ErrorCode, string>> = {
 export function refused(err: unknown): never {
   if (!(err instanceof DeviceError)) throw err;
   if (err.code === 'NO_FOCUS') throw new ToolError(NO_FOCUS, err.code, NO_FOCUS_HINT);
-  throw new ToolError(err.message, err.code, err.hint ?? HINTS[err.code]);
+  // one that never began says so, whatever its code says of a call that did
+  const dispatched = err.unsent ? false : undefined;
+  throw new ToolError(err.message, err.code, err.hint ?? HINTS[err.code], dispatched);
 }
 
 /** The refusal of a call given up before anything of it left for the device: it says no touch was sent. */

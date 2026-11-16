@@ -32,7 +32,8 @@ const STUCK_WHY = 'stuck: a call and a quick look after it went unanswered, so i
 
 /** The failure of an action that left for the device: unless an agent refused it first, it may have come after the touch. */
 export function failedAfterSending(e: unknown): never {
-  if (e instanceof DeviceError && ERROR_TRAITS[e.code].touch !== 'refused first') e.sent = true;
+  if (e instanceof DeviceError && !e.unsent && ERROR_TRAITS[e.code].touch !== 'refused first')
+    e.sent = true;
   throw e;
 }
 

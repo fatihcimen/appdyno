@@ -29,7 +29,7 @@ import { stepsFor, type Steps } from './steps.js';
 import { KIND_NAMES } from './tool-kinds.js';
 import { visualOps } from './visual.js';
 import { webOps } from './web.js';
-import { givenUp, onlyReads, type Op } from './tool.js';
+import { givenUp, onlyReads, refused, type Op } from './tool.js';
 
 const everyOp = (
   ctx: ServerContext,
@@ -76,11 +76,13 @@ const inTurn = (queue: DeviceQueue, op: Op): Op =>
           if (holding.getStore() === queue || op.readsOnly?.(args)) return op.handler(args);
           if (queue.busy)
             reportProgress('waiting its turn: an action this client sent before it still runs');
-          return queue.run(() => {
-            // a call its client gave up while it waited does nothing
-            if (callSignal()?.aborted) throw givenUp(op.name);
-            return holding.run(queue, () => op.handler(args));
-          });
+          return queue
+            .run(() => {
+              // a call its client gave up while it waited does nothing
+              if (callSignal()?.aborted) throw givenUp(op.name);
+              return holding.run(queue, () => op.handler(args));
+            })
+            .catch(refused);
         },
       };
 
