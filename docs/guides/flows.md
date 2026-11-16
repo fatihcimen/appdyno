@@ -39,19 +39,25 @@ tap id=add_button index=1 !ambiguous
 | `type "text" [target] [replace] [submit]`                                                                                          | `type_text`                                                                |
 | `press_key back [count=]`, `swipe up [target] [distance=] [durationMs=] [exact]`, `scroll_to <selector> [direction=] [maxSwipes=]` | `press_key`, `swipe_screen`, with `until` for `scroll_to`                  |
 | `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `check_element` with `timeoutMs`                                           |
-| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `check_element`                                                            |
+| `assert <selector> [check=] [equals=] [min=] [max=] [expect=false] [timeoutMs=]`                                                   | `check_element`; `check=count` is the run's own read                       |
 | `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | `open_link`, `set_device`, `answer_alert`, `press_key`                     |
 | `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `take_screenshot` with `file`, `check_screen`                              |
-| `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `set_device`                                                               |
+| `setting dark_mode on [app=]`, `setting shake`, `setting restore`, `setting orientation landscape_left`                            | `set_device`                                                               |
 | `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `capture_network` with `mock`                                              |
 | `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `capture_network` with `check`                                             |
 | `network strict`, `network strict off`                                                                                             | `capture_network` with `strict`                                            |
 | `run shared/login.flow`                                                                                                            | that file's steps, in place                                                |
+| `drag <target> to="120,640" [holdMs=] [durationMs=]`, `drag <target> to="id=bin"`                                                  | `swipe_screen` with `to`                                                   |
+| `push alert title="Hi" [body=] [image=] [data=key=value]... [payload=] [app=]`                                                     | `send_push`                                                                |
+| `web_click "#pay" [page=]`                                                                                                         | `inspect_app` with `web_click`                                             |
+| `clipboard "text"`, `clipboard equals="text" [timeoutMs=]`, `clipboard contains="text"`                                            | `set_device` with `clipboard`; a check is the run's own read               |
+| `audit [types=] [max=]`                                                                                                            | `check_screen` with `accessibility`                                        |
+| `only ios <step>`, `only android <step>`                                                                                           | that step, on that platform alone                                          |
 | `prepare seed-user [gives=NAME]...`                                                                                                | the project's own command of that name: [Preparing data](#preparing-data)  |
 
 A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools. `launch` takes a `language=`, an `arg=` for each argument, an `env=NAME=value` for each variable and `probe`, as `launch_app` takes `language`, `args`, `env` and `probe`. `stop background` ends the app as the system ends one in the background, as `manage_app stop` with `background` does.
 
-A `#` starts a comment, to the end of its line. Where a step takes a target, `tap`, `long_press`, `double_tap`, `type` and `swipe` also take `x= y=` with `screen=` and `!coordinates`, which a recording writes where nothing names the place. A `ref=` is refused, as a ref names an element for one session only. Three flags mark a step to look at: `!ambiguous`, `!coordinates` and `!running`, each explained in [Recording](#recording).
+A `#` starts a comment, to the end of its line. Where a step takes a target, `tap`, `long_press`, `double_tap`, `type`, `swipe` and `drag` also take `x= y=` with `screen=` and `!coordinates`, which a recording writes where nothing names the place. A `ref=` is refused, as a ref names an element for one session only. Four flags mark a step to look at: `!ambiguous`, `!coordinates`, `!running` and `!review`, each explained in [Recording](#recording).
 
 ## Recording
 
@@ -61,8 +67,8 @@ one target there, as they are to a tap. Refs never reach the file. What nothing
 finds alone keeps its index and is flagged `!ambiguous`. Only a point on no element, a slider or a large
 area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
 size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
-Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a click in a web view)
-is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. Its own answer says so at once, in a line that begins `not recorded:`, with the action that is recorded in its place where there is one: `swipe_screen` with `direction` for a straight drag, `type_text` for a text put on the clipboard, `tap_screen` for a click in a web view. A `capture_network` `mock` that sets rules is a `mock` line for each, while its other actions that change something are not recorded. A `set_device` given a value is `setting`, as are `shake` and `memory_warning`, which need none, and its `restore` is `setting restore`; a `manage_app stop` with `background` is `stop background`; a `check_screen` `visual` is `visual` with its tolerance and masks, which a replay compares with the flow's own baselines, so run it once with `--update-baselines`; a `take_screenshot` saved to a file is `screenshot` with the file's name. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`measure_performance launch` cold: `stop`, `launch`; `measure_performance scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. A `launch_app` with `restart`, `args` or `env` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. A `launch_app` with `probe` is `launch probe`, after a `stop` where the probe started the app anew. `run_flow stop` and
+Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch or free paths of `swipe_screen`, a script run by `inspect_app` `web_eval`)
+is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. Its own answer says so at once, in a line that begins `not recorded:`. A `swipe_screen` with `to` is `drag`, from its target to where it was let go: an element where the call named one that a selector finds alone, else a point, flagged `!coordinates` with the screen size. A `send_push` that sent something is `push` with its type and fields, and one that only listed the types is nothing. A `set_device` `orientation` is `setting orientation`, put back with the settings a file changed. An `inspect_app` `web_click` is `web_click` with its CSS selector, and with `page=` where the call named a page by its title or URL. A `set_device` `clipboard` with a value is `clipboard`, and a read of it is nothing. A `check_screen` `accessibility` is `audit` with `max=` at the count it found, flagged `!review`, because that count is what the screen held, not what it should hold: set it. A `capture_network` `mock` that sets rules is a `mock` line for each, while its other actions that change something are not recorded. A `set_device` given a value is `setting`, as are `shake` and `memory_warning`, which need none, and its `restore` is `setting restore`; a `manage_app stop` with `background` is `stop background`; a `check_screen` `visual` is `visual` with its tolerance and masks, which a replay compares with the flow's own baselines, so run it once with `--update-baselines`; a `take_screenshot` saved to a file is `screenshot` with the file's name. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`measure_performance launch` cold: `stop`, `launch`; `measure_performance scroll`: its swipes), and it stops no replay. A `launch_app` that started the app is written as `stop`, `launch`, so that a replay starts it anew too; one that brought a running app to the front is `launch !running`, as a replay goes on from the screen the app is on then. A `launch_app` with a `language` is `launch language=tr`, so that a replay launches the app in it too; it restarts the app, so it is not flagged. A `launch_app` with `restart`, `args` or `env` stops a running app before it starts it, on every platform, so it is written as `stop`, `launch` with its arguments and environment, whether the app ran or not. A `launch_app` with `probe` is `launch probe`, after a `stop` where the probe started the app anew. `run_flow stop` and
 `run_flow save` list every step to look at.
 
 A value the agent typed or read becomes a parameter by `params` on `run_flow record`, `stop` or `save` (`--param NAME=Grace` on the command line): in every step that typed or read it, before or after, it becomes `${NAME}`, declared `param NAME`, and `run_flow run` takes its value in `params`. A name no recorded step holds is refused at `stop` and `save`. `stop` with `file` saves as `save` does, and `save` writes the last recording again. `save` writes the file inside the folder the server runs in or its state folder, as `export` `to` does: a path elsewhere, or one a link leads out of them, is refused, and so is a file that is there, unless `overwrite`. It answers with the file it wrote.
@@ -86,6 +92,38 @@ matches refuse too. A step during which the app died fails with the crash's reas
 checked before its first step acts, and a missing value is refused by name before anything runs. Each step's
 time from action to settled is in the answer and the report: the device's own time for a tap or a key, all of
 the step for `launch`, `open_link` and `scroll_to`.
+
+## One file for two platforms
+
+`only ios` or `only android` before a step keeps it to that platform. Alone on a line it opens a block that `end` closes, and before a `run` it keeps every step of that file:
+
+```text
+launch
+only ios tap text="Allow Once"
+only android
+  press_key back
+  tap text="While using the app"
+end
+only android run shared/android-intro.flow
+```
+
+On the other platform the step is skipped: nothing of it reaches the device, it needs no value and no baseline, it keeps its number, and its line in the results reads `skipped, ios only`. The device decides, never what the screen shows, so the same file takes the same path on every run on one platform. A flow with no step left for the device's platform fails, as nothing ran. A file run for one platform may not hold a step for the other. There is no optional step, no repeat and no retry inside a flow, and no condition on what the screen shows: each would let a run pass by a path nobody wrote.
+
+## Counts, the clipboard and an audit
+
+Three checks beyond an element's own:
+
+```text
+assert id=row_name check=count equals=3
+assert role=button text="Add" check=count min=1 max=20
+clipboard "TR33 0006 1005"
+clipboard equals="TR33 0006 1005"
+clipboard contains=0006 timeoutMs=2000
+audit
+audit types="contrast,hitRegion" max=2
+```
+
+`check=count` counts every element the selector names on the screen as read (rows scrolled out of a lazy list are not there), and holds the count to `equals=` or between `min=` and `max=`; an `index=` is refused. `clipboard` with a text puts it on the device's clipboard, as `set_device` with `clipboard` does, which refuses a secret. With `equals=` or `contains=` it checks what the clipboard holds. Both checks wait as an `assert` does, 10 s unless `timeoutMs=` says otherwise, and fail with `CHECK_FAILED`, saying how many matched or what the clipboard held, a secret hidden. A real iPhone's clipboard cannot be read, so the check fails there in the device's own words. `audit` runs the screen's accessibility audit, as `check_screen` with `accessibility` does, and fails when it finds more issues than `max=`, 0 unless given, or when the audit was cut short; the failure lists the first of them. `types=` names the kinds, by commas. The count and the clipboard check are the run's own reads of the device: the tools have no such check.
 
 ## Running flows in CI
 
@@ -177,7 +215,7 @@ A command is the project's own code running on this Mac, so who may start it is 
 
 ## Export
 
-`run_flow export` writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, a `visual`, a `setting`, `replace`,
+`run_flow export` writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, a `visual`, a `setting`, a `drag`, a `push`, a `web_click`, a `clipboard`, an `audit`, a `prepare`, a count, a step for one platform, `replace`,
 coordinates, a role with no id or text); a `screenshot` is its `takeScreenshot`. A role beside a text is left out, because that format has no role, and the YAML
 says so in a comment. A text there matches a whole label, where ours also takes a part of one. There is no
 import.

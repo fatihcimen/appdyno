@@ -39,19 +39,25 @@ tap id=add_button index=1 !ambiguous
 | `type "text" [target] [replace] [submit]`                                                                                          | `type_text`                                                                      |
 | `press_key back [count=]`, `swipe up [target] [distance=] [durationMs=] [exact]`, `scroll_to <selector> [direction=] [maxSwipes=]` | `press_key`, `swipe_screen`, `scroll_to` için `until` ile                        |
 | `wait_for <selector> [gone] [timeoutMs=]`                                                                                          | `check_element` with `timeoutMs`                                                 |
-| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`                                                                 | `check_element`                                                                  |
+| `assert <selector> [check=] [equals=] [min=] [max=] [expect=false] [timeoutMs=]`                                                   | `check_element`; `check=count` çalıştırmanın kendi okumasıdır                    |
 | `open_link "url"` or `open_link settings=`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard`                               | `open_link`, `set_device`, `answer_alert`, `press_key`                           |
 | `screenshot home`, `visual home [tolerance=] [mask=]...`                                                                           | `file` ile `take_screenshot`, `check_screen`                                     |
-| `setting dark_mode on [app=]`, `setting shake`, `setting restore`                                                                  | `set_device`                                                                     |
+| `setting dark_mode on [app=]`, `setting shake`, `setting restore`, `setting orientation landscape_left`                            | `set_device`                                                                     |
 | `mock api.example.com/items* status=503 [body=] [fail=] [to=] [delayMs=]`                                                          | `mock` ile `capture_network`                                                     |
 | `request "/v1/profile" [method=] [status=] [has=] [timeoutMs=]`                                                                    | `check` ile `capture_network`                                                    |
 | `network strict`, `network strict off`                                                                                             | `strict` ile `capture_network`                                                   |
 | `run shared/login.flow`                                                                                                            | o dosyanın adımları, yerinde                                                     |
+| `drag <target> to="120,640" [holdMs=] [durationMs=]`, `drag <target> to="id=bin"`                                                  | `to` ile `swipe_screen`                                                          |
+| `push alert title="Hi" [body=] [image=] [data=key=value]... [payload=] [app=]`                                                     | `send_push`                                                                      |
+| `web_click "#pay" [page=]`                                                                                                         | `web_click` ile `inspect_app`                                                    |
+| `clipboard "text"`, `clipboard equals="text" [timeoutMs=]`, `clipboard contains="text"`                                            | `clipboard` ile `set_device`; bir denetim çalıştırmanın kendi okumasıdır         |
+| `audit [types=] [max=]`                                                                                                            | `accessibility` ile `check_screen`                                               |
+| `only ios <step>`, `only android <step>`                                                                                           | o adım, yalnızca o platformda                                                    |
 | `prepare seed-user [gives=NAME]...`                                                                                                | projenin o adı taşıyan kendi komutu: [Veri hazırlamak](#veri-hazırlamak)         |
 
 Bir seçici `id=`, `role=`, `text=`, `index=` alanlarından herhangi biridir; metin, araçlarda olduğu gibi eşleşir. `launch` bir `language=`, her argüman için bir `arg=`, her değişken için bir `env=NAME=value` ve `probe` alır; `launch_app` da `language`, `args`, `env` ve `probe` alır. `stop background` uygulamayı sistemin arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır; `background` ile `manage_app stop` da öyle yapar.
 
-Bir `#`, satırın sonuna kadar süren bir yorum başlatır. Bir adımın hedef aldığı yerde `tap`, `long_press`, `double_tap`, `type` ve `swipe`, `screen=` ve `!coordinates` ile birlikte `x= y=` de alır; bir kayıt bunu, yeri hiçbir şeyin adlandırmadığı yerde yazar. Bir `ref=` reddedilir, çünkü bir ref bir öğeyi yalnızca tek bir oturum için adlandırır. Üç işaret bakılması gereken bir adımı gösterir: `!ambiguous`, `!coordinates` ve `!running`; her biri [Kaydetmek](#kaydetmek) bölümünde açıklanır.
+Bir `#`, satırın sonuna kadar süren bir yorum başlatır. Bir adımın hedef aldığı yerde `tap`, `long_press`, `double_tap`, `type`, `swipe` ve `drag`, `screen=` ve `!coordinates` ile birlikte `x= y=` de alır; bir kayıt bunu, yeri hiçbir şeyin adlandırmadığı yerde yazar. Bir `ref=` reddedilir, çünkü bir ref bir öğeyi yalnızca tek bir oturum için adlandırır. Dört işaret bakılması gereken bir adımı gösterir: `!ambiguous`, `!coordinates`, `!running` ve `!review`; her biri [Kaydetmek](#kaydetmek) bölümünde açıklanır.
 
 ## Kaydetmek
 
@@ -61,8 +67,8 @@ bir dokunuş için olduğu gibi. Ref'ler dosyaya asla ulaşmaz. Hiçbir seçicin
 bulamadığı hedef index'ini korur ve `!ambiguous` olarak işaretlenir. Yalnızca hiçbir öğenin üstünde olmayan bir nokta, bir kaydırıcı ya da büyük bir
 alan koordinat olarak kalır ve geçerli olduğu ekran boyutuyla `!coordinates` olarak işaretlenir; başka boyuttaki bir
 ekran o adımı reddeder. Bir rol, iki platform onu aynı adla andığında korunur (`button`, `textField`...);
-Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir işlem (bir pinch, bir web görünümünde bir tıklama)
-`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. İşlemin kendi yanıtı bunu hemen, `not recorded:` ile başlayan bir satırda söyler; yerine kaydedilen bir işlem varsa onu da: düz bir sürükleme için `direction` ile `swipe_screen`, panoya konan bir metin için `type_text`, bir web görünümündeki tıklama için `tap_screen`. Kural koyan bir `capture_network` `mock`, her kural için bir `mock` satırı olur; bir şeyi değiştiren öteki eylemleri ise kaydedilmez. Bir değerle verilen bir `set_device`, `setting` olur, değere gerek duymayan `shake` ve `memory_warning` de öyle, `restore`'u da `setting restore`; `background` ile bir `manage_app stop`, `stop background` olur; bir `check_screen` `visual`, toleransı ve maskeleriyle `visual` olur ve bir yeniden oynatma onu akışın kendi temel görüntüleriyle karşılaştırır, bu yüzden akışı bir kez `--update-baselines` ile çalıştırın; bir dosyaya kaydedilen bir `take_screenshot`, dosyanın adıyla `screenshot` olur. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`measure_performance launch` cold: `stop`, `launch`; `measure_performance scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `language` ile bir `launch_app`, `launch language=tr` olur, böylece bir yeniden oynatma da uygulamayı o dilde başlatır; uygulamayı yeniden başlattığı için işaretlenmez. `restart`, `args` ya da `env` ile bir `launch_app` her platformda çalışan bir uygulamayı başlatmadan önce durdurur, bu yüzden uygulama çalışsa da çalışmasa da argümanları ve ortamıyla `stop`, `launch` olarak yazılır. `probe` ile bir `launch_app`, `launch probe` olur; probe uygulamayı yeniden başlattıysa önünde bir `stop` ile. `run_flow stop` ve
+Android'in kendi id'leri (`android:id/button1`) korunmaz. Adımı olmayan bir işlem (bir pinch ya da `swipe_screen` ile serbest yollar, `inspect_app` `web_eval` ile çalıştırılan bir betik)
+`unrecorded "..."` olarak yazılır; yeniden oynatma orada durur, böylece o işlem olmadan geçemez. İşlemin kendi yanıtı bunu hemen, `not recorded:` ile başlayan bir satırda söyler. `to` ile bir `swipe_screen`, `drag` olur: hedefinden bırakıldığı yere; çağrı, bir seçicinin tek başına bulduğu bir öğeyi adlandırdıysa o öğeye, yoksa ekran boyutuyla `!coordinates` olarak işaretlenen bir noktaya. Bir şey gönderen bir `send_push`, türü ve alanlarıyla `push` olur; yalnızca türleri listeleyen biri hiçbir şey olmaz. Bir `set_device` `orientation`, `setting orientation` olur ve bir dosyanın değiştirdiği ayarlarla birlikte geri konur. Bir `inspect_app` `web_click`, CSS seçicisiyle `web_click` olur; çağrı bir sayfayı başlığıyla ya da URL'siyle adlandırdıysa `page=` ile. Değer verilen bir `set_device` `clipboard`, `clipboard` olur; panoyu okumak hiçbir şey olmaz. Bir `check_screen` `accessibility`, bulduğu sayıdaki `max=` ile `audit` olur ve `!review` olarak işaretlenir, çünkü o sayı ekranın tuttuğudur, tutması gereken değil: onu siz belirleyin. Kural koyan bir `capture_network` `mock`, her kural için bir `mock` satırı olur; bir şeyi değiştiren öteki eylemleri ise kaydedilmez. Bir değerle verilen bir `set_device`, `setting` olur, değere gerek duymayan `shake` ve `memory_warning` de öyle, `restore`'u da `setting restore`; `background` ile bir `manage_app stop`, `stop background` olur; bir `check_screen` `visual`, toleransı ve maskeleriyle `visual` olur ve bir yeniden oynatma onu akışın kendi temel görüntüleriyle karşılaştırır, bu yüzden akışı bir kez `--update-baselines` ile çalıştırın; bir dosyaya kaydedilen bir `take_screenshot`, dosyanın adıyla `screenshot` olur. Bir ölçüm yolculuk değil, ajanın ölçmesidir: ekrana yaptığı, aynısını yapan düz adımlar olarak kalır (`measure_performance launch` cold: `stop`, `launch`; `measure_performance scroll`: kaydırmaları) ve hiçbir yeniden oynatmayı durdurmaz. Uygulamayı başlatan bir `launch_app`, `stop`, `launch` olarak yazılır, böylece bir yeniden oynatma da onu yeniden başlatır; çalışan bir uygulamayı öne getiren biri `launch !running` olur, çünkü bir yeniden oynatma uygulamanın o an olduğu ekrandan devam eder. `language` ile bir `launch_app`, `launch language=tr` olur, böylece bir yeniden oynatma da uygulamayı o dilde başlatır; uygulamayı yeniden başlattığı için işaretlenmez. `restart`, `args` ya da `env` ile bir `launch_app` her platformda çalışan bir uygulamayı başlatmadan önce durdurur, bu yüzden uygulama çalışsa da çalışmasa da argümanları ve ortamıyla `stop`, `launch` olarak yazılır. `probe` ile bir `launch_app`, `launch probe` olur; probe uygulamayı yeniden başlattıysa önünde bir `stop` ile. `run_flow stop` ve
 `run_flow save` bakılması gereken her adımı listeler.
 
 Ajanın yazdığı ya da okuduğu bir değer, `run_flow record`, `stop` ya da `save` üzerinde `params` ile bir parametre olur (komut satırında `--param NAME=Grace`): yazıldığı ya da okunduğu her yerde, önce ya da sonra, `${NAME}` olur, `param NAME` olarak bildirilir ve `run_flow run` değerini `params` içinde alır. Hiçbir kaydedilmiş adımın tutmadığı bir ad `stop` ve `save`'de reddedilir. `file` ile `stop`, `save` gibi kaydeder; `save` son kaydı yeniden yazar. `save` dosyayı, `export` `to` gibi, sunucunun çalıştığı klasörün ya da durum klasörünün içine yazar: başka bir yerdeki bir yol ya da bir bağlantının onların dışına çıkardığı bir yol reddedilir; `overwrite` verilmedikçe var olan bir dosya da reddedilir. Yazdığı dosyayla yanıt verir.
@@ -86,6 +92,38 @@ eşleşme de reddedilir. Uygulamanın sırasında öldüğü bir adım, çökmen
 ilk adım iş yapmadan önce denetlenir ve eksik bir değer, hiçbir şey çalışmadan önce adıyla reddedilir. Her adımın
 işlemden durulmaya kadarki süresi yanıtta ve raporda yer alır: bir dokunuş ya da bir tuş için cihazın kendi süresi,
 `launch`, `open_link` ve `scroll_to` için adımın tamamı.
+
+## İki platform için tek dosya
+
+Bir adımdan önceki `only ios` ya da `only android`, onu o platformla sınırlar. Bir satırda tek başına, `end` ile kapanan bir blok açar; bir `run` satırından önce ise o dosyanın her adımını sınırlar:
+
+```text
+launch
+only ios tap text="Allow Once"
+only android
+  press_key back
+  tap text="While using the app"
+end
+only android run shared/android-intro.flow
+```
+
+Öteki platformda adım atlanır: cihaza ondan hiçbir şey ulaşmaz, bir değere de bir temel görüntüye de gerek duymaz, numarasını korur ve sonuçlardaki satırı `skipped, ios only` diye okunur. Karar cihazındır, ekranın gösterdiğinin değil; bu yüzden aynı dosya bir platformdaki her çalıştırmada aynı yolu izler. Cihazın platformu için hiçbir adımı kalmayan bir akış başarısız olur, çünkü hiçbir şey çalışmamıştır. Tek bir platform için çalıştırılan bir dosya öteki için bir adım tutamaz. Bir akışın içinde isteğe bağlı adım, yineleme ve yeniden deneme yoktur, ekranın gösterdiğine bağlı bir koşul da yoktur: her biri bir çalıştırmanın kimsenin yazmadığı bir yoldan geçmesine izin verirdi.
+
+## Sayılar, pano ve bir denetim
+
+Bir öğenin kendi denetimlerinin ötesinde üç denetim:
+
+```text
+assert id=row_name check=count equals=3
+assert role=button text="Add" check=count min=1 max=20
+clipboard "TR33 0006 1005"
+clipboard equals="TR33 0006 1005"
+clipboard contains=0006 timeoutMs=2000
+audit
+audit types="contrast,hitRegion" max=2
+```
+
+`check=count`, seçicinin okunan ekranda adlandırdığı her öğeyi sayar (tembel bir listede ekran dışına kaymış satırlar orada değildir) ve sayıyı `equals=` değerine ya da `min=` ile `max=` arasına bağlar; bir `index=` reddedilir. Bir metinle `clipboard` onu cihazın panosuna koyar, `clipboard` ile `set_device` aracının yaptığı gibi; o araç bir gizli değeri reddeder. `equals=` ya da `contains=` ile panonun tuttuğunu denetler. İki denetim de bir `assert` gibi bekler, `timeoutMs=` başka bir şey demedikçe 10 saniye, ve `CHECK_FAILED` ile başarısız olur; kaç öğenin eşleştiğini ya da panonun ne tuttuğunu, gizli değeri saklayarak söyler. Gerçek bir iPhone'un panosu okunamaz, bu yüzden denetim orada cihazın kendi sözleriyle başarısız olur. `audit`, ekranın erişilebilirlik denetimini `accessibility` ile `check_screen` aracının yaptığı gibi çalıştırır ve `max=` değerinden, verilmediyse 0 sayısından, fazla sorun bulduğunda ya da denetim yarıda kesildiğinde başarısız olur; hata ilk sorunları listeler. `types=` türleri virgüllerle adlandırır. Sayım ve pano denetimi, çalıştırmanın cihazı kendi okumasıdır: araçlarda böyle bir denetim yoktur.
 
 ## Akışları CI'da çalıştırmak
 
@@ -177,7 +215,7 @@ Bir komut, projenin bu Mac'te çalışan kendi kodudur; bu yüzden onu kimin ba�
 
 ## Dışa aktarma
 
-`run_flow export` Maestro YAML'ı yazar ya da karşılığı olmayan her adımı adıyla söyleyerek reddeder (bir `alert`, bir `visual`, bir `setting`, `replace`,
+`run_flow export` Maestro YAML'ı yazar ya da karşılığı olmayan her adımı adıyla söyleyerek reddeder (bir `alert`, bir `visual`, bir `setting`, bir `drag`, bir `push`, bir `web_click`, bir `clipboard`, bir `audit`, bir `prepare`, bir sayım, tek platform için bir adım, `replace`,
 koordinatlar, id'si ya da metni olmayan bir rol); bir `screenshot`, `takeScreenshot` olur. Bir metnin yanındaki rol dışarıda bırakılır, çünkü o biçimde rol yoktur ve YAML
 bunu bir yorumda söyler. Oradaki bir metin bütün bir etiketle eşleşir, bizimki ise bir etiketin bir parçasını da kabul eder. İçe
 aktarma yoktur.
