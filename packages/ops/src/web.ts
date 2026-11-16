@@ -10,6 +10,11 @@ const MAX_ELEMENTS = 200;
 const MAX_ANSWER = 20_000;
 /** How long a screen waits for its web view's page: what it adds is beside what the screen already holds. */
 const WEB_LINES_MS = 3_000;
+/** An inspector that did not answer in that time is not asked again for this long: each read of the screen would wait for it. */
+const WEB_LINES_REST_MS = 30_000;
+const UNREAD = `a web view's page not read within ${WEB_LINES_MS / 1000} s, and not asked again for ${WEB_LINES_REST_MS / 1000} s: inspect_app reads it`;
+/** Until when a session's screens leave their web view's page unasked. */
+const rests = new WeakMap<Session, number>();
 /** Why no page is listed: a page between two loads is not, as Safari's was not just after a click that navigated. */
 const UNLISTED =
   "one that is loading shows here once it has loaded, and an app's web view only while it is on the screen and the app is debuggable, or set its debugging on";
@@ -87,6 +92,7 @@ export async function webLines(
   const web = s.device.web;
   const view = webViewRect(screen);
   if (!web || !view) return undefined;
+  if (Date.now() < (rests.get(s) ?? 0)) return UNREAD;
   const read = async () => {
     const pages = await web.pages(s.appId).catch(() => [] as WebPage[]);
     const page = pages.find((p) => p.visible) ?? pages[0];
@@ -98,14 +104,22 @@ export async function webLines(
   );
   // a simulator's inspector serves a new connection some 10 s after the last closed: the screen does not wait for it
   const dom = await Promise.race([read(), late]).finally(() => clearTimeout(timer));
-  if (dom === 'late')
-    return `a web view's page not read within ${WEB_LINES_MS / 1000} s: inspect_app reads it`;
+  if (dom === 'late') {
+    rests.set(s, Date.now() + WEB_LINES_REST_MS);
+    return UNREAD;
+  }
   if (!dom) return undefined;
   const known = screen.list.map((e) => fold(e.label));
   const ids = new Set(screen.list.map((e) => e.id && `#${e.id}`));
+  // what the page holds past the web view's edges is not on the screen, and a touch at its place lands elsewhere
+  const shown = (e: { x: number; y: number }) =>
+    e.x >= view.x && e.x <= view.x + view.width && e.y >= view.y && e.y <= view.y + view.height;
   const more = placed(dom, view)
     .filter(
-      (e) => !ids.has(e.selector) && (!e.text || !known.some((k) => k.includes(fold(e.text)))),
+      (e) =>
+        shown(e) &&
+        !ids.has(e.selector) &&
+        (!e.text || !known.some((k) => k.includes(fold(e.text)))),
     )
     .map(
       (e) =>

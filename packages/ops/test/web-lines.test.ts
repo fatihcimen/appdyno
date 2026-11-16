@@ -26,9 +26,47 @@ describe("a screen's web lines", () => {
         screen,
         (t) => t,
       );
-      expect(lines).toMatch(/not read within 3 s: inspect_app reads it/);
+      expect(lines).toMatch(
+        /not read within 3 s, and not asked again for 30 s: inspect_app reads it/,
+      );
     }),
   );
+
+  it(
+    'do not ask an inspector that was slow again at the next reads, which would each wait for it',
+    fakeTimed(async () => {
+      let asked = 0;
+      const s = sessionWith(() => {
+        asked++;
+        return new Promise(() => undefined);
+      });
+      const first = await webLines(s, screen, (t) => t);
+      expect(await webLines(s, screen, (t) => t)).toBe(first);
+      expect(asked).toBe(1);
+    }),
+  );
+
+  it('leave out what the page holds past the web view, where a touch would land on something else', async () => {
+    const el = (text: string, y: number) => ({ tag: 'a', text, x: 10, y, w: 100, h: 20 });
+    const dom = {
+      title: '',
+      url: '',
+      width: 400,
+      elements: [el('On the screen', 300), el('Far below', 3000)],
+    };
+    const s = {
+      appId: 'com.example',
+      device: {
+        web: {
+          pages: () => Promise.resolve([{ visible: true }]),
+          evaluate: () => Promise.resolve(dom),
+        },
+      },
+    } as unknown as Session;
+    expect(await webLines(s, screen, (t) => t)).toBe(
+      'not in the accessibility tree:\nweb a "On the screen" 60,410',
+    );
+  });
 });
 
 describe('webview', () => {
