@@ -70,9 +70,10 @@ describe('an agent reached', () => {
     Object.assign(device, { adb: { exec: assistant } });
     const sheet = {
       code: 'NOT_FOUND',
-      message:
-        "no window to read: the assistant is in front, a sheet of the system's that gives no elements",
-      hint: 'the home key closes it, and the app launched again comes back on the screen it was on',
+      message: "no window to read: the assistant's sheet is in front, which gives no elements",
+      hint: expect.stringMatching(
+        /^read again in a moment: the assistant may open a screen of its own.*the home key closes the sheet now/,
+      ) as unknown,
     };
     await expect(device.tree()).rejects.toMatchObject(sheet);
     await expect(device.tree({ asItIs: true })).rejects.toMatchObject(sheet);

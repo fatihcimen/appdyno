@@ -24,8 +24,9 @@ export async function noWindowHint(e: unknown, focus: () => Promise<string>): Pr
   if (hint === NOT_ANSWERING && ASSISTANT.test(await focus().catch(() => '')))
     throw new DeviceError(
       e.code,
-      "no window to read: the assistant is in front, a sheet of the system's that gives no elements",
-      'the home key closes it, and the app launched again comes back on the screen it was on',
+      "no window to read: the assistant's sheet is in front, which gives no elements",
+      // an emulator's assistant took some 10 s to put its own screen in the sheet's place
+      'read again in a moment: the assistant may open a screen of its own, which reads and which the back key leaves; the home key closes the sheet now, and the app launched again comes back on the screen it was on',
     );
   throw hint ? new DeviceError(e.code, e.message, hint) : e;
 }
