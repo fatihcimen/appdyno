@@ -217,7 +217,7 @@ Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir
 
 ### Klavyenin altındaki bir hedef
 
-Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir flow'un adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir.
+Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir flow'un adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir. Uygulamanın açık tuttuğu bir klavyeye, bir web formununki gibi, yazılmaz: dokunuş `UNSUPPORTED` ile reddedilir ve öğenin klavyenin altında olduğunu söyler.
 
 ## Ekranı okumak
 
@@ -235,7 +235,7 @@ Biri ötekini tutmayan, tek bir noktadaki dört ya da daha çok öğe, bir liste
 
 ### Ref'ler
 
-Bir ref bir öğeyi ne olduğuyla adlandırır, bu yüzden kaydırmalarda ve yeniden çizimlerde kalır; kendi kimliği olmayan bir alan çevresindeki sözcüklerle adlandırılır, bu yüzden yer tutucusu gelirken ve içine yazılırken ref'i kalır.
+Bir ref bir öğeyi ne olduğuyla adlandırır, bu yüzden kaydırmalarda ve yeniden çizimlerde kalır; kendi kimliği olmayan bir alan çevresindeki sözcüklerle adlandırılır, bu yüzden yer tutucusu gelirken ve içine yazılırken ref'i kalır. Kendi adı olan bir alan, adından sonra içinde ne olduğuyla listelenir, `textField "Search" ="shoes"` gibi; bir parolanınki yazılmaz. İçine yazılan her şey, uygulama ona ne derse desin, bir `textField`'dır.
 
 ### Bütün bir ekranda katlananlar
 

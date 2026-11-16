@@ -217,7 +217,7 @@ A touch refused as `NOT_FOUND` or `STALE` holds the screen as it is now, as an a
 
 ### A target under the keyboard
 
-When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app.
+When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app. A keyboard the app keeps open, as a web form's does, is not typed on: the touch is refused as `UNSUPPORTED`, saying the element is under it.
 
 ## Reading the screen
 
@@ -235,7 +235,7 @@ Four or more elements at one point, none holding another, are rows a list has no
 
 ### Refs
 
-A ref names an element by what it is, so it holds across scrolls and redraws; a field with no id of its own is named by the words around it, so its ref holds while its placeholder comes and as it is typed in.
+A ref names an element by what it is, so it holds across scrolls and redraws; a field with no id of its own is named by the words around it, so its ref holds while its placeholder comes and as it is typed in. A field with a name of its own is listed with what it holds after the name, as `textField "Search" ="shoes"`, and a password's is left out; what takes typing is a `textField` whatever the app calls it.
 
 ### What a whole screen folds
 

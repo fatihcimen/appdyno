@@ -171,7 +171,8 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
     const role =
       known === 'image' && el.clickable
         ? 'button'
-        : (known ?? (el.clickable ? ('tappable' as const) : undefined));
+        : // what takes typing is a field whatever its type is called, as a web page's text area
+          (known ?? (el.editable ? 'textField' : el.clickable ? ('tappable' as const) : undefined));
     const { x, y, width, height } = el.rect;
     items.set(index, { el, index, type, role, r: { x, y, w: width, h: height } });
   });
@@ -203,6 +204,8 @@ export type ScreenElement = {
   rect: Rect;
   /** The words uncut, where `label` is cut short for the list: what a selector's text is matched against. */
   whole?: string;
+  /** What a field with a name of its own holds, whole: with only the name listed, what was typed could not be read. */
+  value?: string;
   /** A path or a position: the text next to it. */
   context?: string;
   /** The text that tells identical elements apart (the stable refs' context). */
@@ -222,6 +225,16 @@ export type ScreenElement = {
   /** The app of its window. */
   pkg?: string;
 };
+
+/**
+ * What a field with a name of its own holds: none where that is nothing, a password, its name again, or its
+ * placeholder, which an empty field's value is on iOS.
+ */
+function heldBy(el: UiElement, name: string) {
+  const held = el.text?.trim();
+  const told = el.label?.trim() && held && !el.password && !name.includes(held);
+  return told && held !== el.placeholder?.trim() ? held : undefined;
+}
 
 /**
  * The elements a tester reads or taps: controls, elements with a label or text, and where the platform
@@ -278,6 +291,7 @@ export function screenElements(
     const role = i.role ?? (label ? 'text' : i.type);
     // an empty field is named by its placeholder
     const said = words || (field && i.el.placeholder) || '';
+    const value = field ? heldBy(i.el, said) : undefined;
     const shown = cut(said);
     const path = !shown && !id ? pathOf(i, i.role ?? i.type) : undefined;
     const [name, nameKind] = id
@@ -292,6 +306,7 @@ export function screenElements(
       role,
       label: shown,
       ...(said !== shown && { whole: said }),
+      ...(value && { value }),
       ...(id && { id: cut(id) }),
       name,
       nameKind,

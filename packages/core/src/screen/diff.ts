@@ -1,4 +1,4 @@
-import { shownLabel, type ScreenElement } from './model.js';
+import { cutAt, shownLabel, type ScreenElement } from './model.js';
 
 /** What JSON leaves as it is and a reader may still take for the end of a line: C1 controls, the line and paragraph separators. */
 const ENDS_A_LINE = /[\u007f-\u009f\u2028\u2029]/g;
@@ -20,12 +20,17 @@ export const onLine = (s: string) => (ANY_CONTROL.test(s) ? quoted(s) : s);
 /** An id or a role an app gave, bare where it is a name and nothing else (a secret hidden in it aside), else quoted. */
 export const asName = (s: string) => (/^[\w.:/#$•-]+$/.test(s) ? s : quoted(s));
 
-/** One element as the screen view shows it: ref, role, "label", id=<id> without a label, x,y, flags. */
+/** As much of what a field holds as a line says. */
+const MAX_VALUE = 60;
+
+/** One element as the screen view shows it: ref, role, "label", ="what a named field holds", id=<id> without a label, x,y, flags. */
 export function elementLine(e: ScreenElement, clean: (s: string) => string = (s) => s): string {
   return [
     e.ref,
     asName(e.role),
     quoted(shownLabel(e, clean)),
+    // hidden of secrets while whole, then cut, as a label is
+    ...(e.value ? [`=${quoted(cutAt(clean(e.value), MAX_VALUE))}`] : []),
     ...(!e.label && e.id ? [`id=${asName(clean(e.id))}`] : []),
     `${e.x},${e.y}`,
     ...e.flags,
@@ -68,6 +73,7 @@ export function diffScreens(prev: ScreenElement[], next: ScreenElement[]): Scree
     if (!was) added.push(e);
     else if (
       was.label !== e.label ||
+      was.value !== e.value ||
       meaningful(was.flags) !== meaningful(e.flags) ||
       Math.abs(was.x - e.x) >= MOVED ||
       Math.abs(was.y - e.y) >= MOVED

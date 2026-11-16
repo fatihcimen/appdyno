@@ -84,7 +84,13 @@ export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
 }
 
 const alike = (a: ScreenElement, b: ScreenElement) =>
-  !!b.label && a.role === b.role && a.x === b.x && a.flags.join() === b.flags.join();
+  !!b.label &&
+  a.role === b.role &&
+  a.x === b.x &&
+  a.flags.join() === b.flags.join() &&
+  // a field that holds something says it on a line of its own
+  !a.value &&
+  !b.value;
 
 /**
  * The screen as an answer says it: what repeats is folded, and only in this text. The list itself stays

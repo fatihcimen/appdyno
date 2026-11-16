@@ -227,6 +227,52 @@ describe('wire tree to screen', () => {
     expect(s.window).toEqual({ w: 1080, h: 2400 });
   });
 
+  it('says what a field with a name of its own holds beside the name, and in a change, but no password', () => {
+    const field = (t: string, f = 0) =>
+      wireTree([
+        {
+          c: 'android.widget.EditText',
+          d: 'Username',
+          t,
+          b: [0, 100, 1000, 200],
+          f: 1 | 4 | 16 | f,
+        },
+      ]);
+    const list = (t: string, f = 0) => buildScreen(field(t, f), { port: plainScreen }).list;
+    const [empty] = list('');
+    const [typed] = list('ada.example');
+    expect(elementLine(must(typed, 'the field'))).toBe(
+      `${must(typed, 'the field').ref} textField "Username" ="ada.example" 500,150`,
+    );
+    expect(typed?.ref).toBe(empty?.ref);
+    // typing changes the screen an answer shows, where the name alone stayed the same
+    expect(
+      diffScreens([must(empty, 'the field')], [must(typed, 'the field')]).changed,
+    ).toHaveLength(1);
+    expect(selectIn([must(typed, 'the field')], { text: 'Username' })).toHaveLength(1);
+    expect(list('hunter2', 512)[0]?.value).toBeUndefined();
+    // an empty field's value is its placeholder on iOS: it holds nothing
+    const hint = 'name@example.com';
+    const empty2 = wireTree([
+      {
+        c: 'TextField',
+        d: 'E-mail',
+        t: hint,
+        h: hint,
+        b: [0, 100, 1000, 200],
+        f: 1 | 4 | 16 | 128,
+      },
+    ]);
+    expect(buildScreen(empty2, { port: plainScreen }).list[0]?.value).toBeUndefined();
+  });
+
+  it('lists what takes typing as a field, whatever its type is called', () => {
+    const tree = wireTree([
+      { c: 'TextView', d: 'Delivery instructions', b: [0, 100, 1000, 200], f: 1 | 4 | 16 | 128 },
+    ]);
+    expect(buildScreen(tree, { port: plainScreen }).list[0]?.role).toBe('textField');
+  });
+
   it('says a web element has the focus only where it is a field, as XCUI says every one of a page has it', () => {
     const tree = wireTree([
       { c: 'WebView', b: [0, 100, 1080, 2000] },
