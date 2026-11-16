@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 1.2.0
+
 appdyno 1.2.0 reads what a screen is made of and does more to the app: the native views under an iOS simulator's app or an Android activity, memory warnings, a shake, photos and videos added, and an app ended as the system ends it. A program gets the device itself through `appdyno/device`, desktop installs come as one `.mcpb` file, and a screen with a part that never stops moving no longer slows Android down. It is tested on Xcode 26.5 and Xcode 27.2.
 
 ### Highlights

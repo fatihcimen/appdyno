@@ -4,6 +4,8 @@
 
 ## Yayımlanmamış
 
+## 1.2.0
+
 appdyno 1.2.0 bir ekranın neyden yapıldığını okur ve uygulamaya daha fazlasını yapar: bir iOS simülatöründeki uygulamanın ya da bir Android activity'sinin native view'ları, bellek uyarıları, sallama, eklenen fotoğraf ve videolar, ve sistemin sonlandırdığı gibi sonlandırılan bir uygulama. Bir program `appdyno/device` ile cihazın kendisini alır, masaüstü kurulumu tek bir `.mcpb` dosyasıyla gelir ve hiç durmadan hareket eden bir parçası olan ekran artık Android'i yavaşlatmaz. Xcode 26.5 ve Xcode 27.2'de test edildi.
 
 ### Öne çıkanlar
