@@ -6,7 +6,7 @@ appdyno'yu denemek için küçük bir iOS uygulaması: bir katalog, bir sepet ve
 
 ## Derleyin
 
-Xcode'lu bir Mac'te, bir simülatör açıkken:
+Xcode'lu bir Mac'te, bir simulator açıkken:
 
 ```sh
 cd docs/examples/shop
@@ -33,10 +33,10 @@ its last log lines:
 
 ## Düzeltin ve düzeltilmiş kalsın
 
-[`flows/checkout.flow`](flows/checkout.flow) aynı ödemedir, bir akış olarak. Hata düzeltilene kadar siparişte başarısız olur, sonra geçer:
+[`flows/checkout.flow`](flows/checkout.flow) aynı ödemedir, bir flow olarak. Hata düzeltilene kadar siparişte başarısız olur, sonra geçer:
 
 ```sh
 npx -y appdyno test flows/checkout.flow --device <simulator id>
 ```
 
-`Shop/ShopApp.swift`'teki düzeltme: `discounts[min(quantity, discounts.count - 1)]`. CI'da çalışan akış, hatayı geri getiren bir pull request'i başarısız sayar.
+`Shop/ShopApp.swift`'teki düzeltme: `discounts[min(quantity, discounts.count - 1)]`. CI'da çalışan flow, hatayı geri getiren bir pull request'i başarısız sayar.

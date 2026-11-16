@@ -4,7 +4,7 @@
 
 appdyno performans sayılarını cihazın kendisinden okur, saklar ve bir uygulama yavaşladığında size söyler. Bu rehber ilk sayıdan pull request'leriniz için bir kapıya kadar gider.
 
-**Gerçek ölçüm gerçek bir cihaz ister.** Bir emülatörün ya da simülatörün sayıları Mac'inize göredir. Gerçek kare hızları, donmuş kareler, takılmalar ve enerji bir telefon ister. Bir simülatör yine de tek bir makinede iki build arasındaki bir değişikliği yakalamak için iyidir.
+**Gerçek ölçüm gerçek bir cihaz ister.** Bir emulator'ın ya da simulator'ın sayıları Mac'inize göredir. Gerçek kare hızları, donmuş kareler, takılmalar ve enerji bir telefon ister. Bir simulator yine de tek bir makinede iki build arasındaki bir değişikliği yakalamak için iyidir.
 
 ## İlk sayı
 
@@ -39,7 +39,7 @@ Baseline `.appdyno/perf/baselines/` altına gider. Onu commit edin. Kendi sını
 [{ "kind": "launch.ttid_ms", "max": 2000 }]
 ```
 
-Ajanınız üzerinden "soğuk açılışı 200 ms'nin altında tut", `kind` ve `max` ile `compare_performance` `budget`'tır; ölçülmüş bir çalıştırma olsun ya da olmasın o dosyayı yazar: Android'de `launch.ttid_ms`, bir iPhone'da ya da simülatörde `launch.until_ms`.
+Ajanınız üzerinden "cold launch'ı 200 ms'nin altında tut", `kind` ve `max` ile `compare_performance` `budget`'tır; ölçülmüş bir çalıştırma olsun ya da olmasın o dosyayı yazar: Android'de `launch.ttid_ms`, bir iPhone'da ya da simulator'da `launch.until_ms`.
 
 ## Kapı nasıl karar verir
 
@@ -56,7 +56,7 @@ Karar veremeyen bir kapı geçit vermez. `few-samples`, `noisy` ve `refused`, ü
 
 ## Bir yolculuk
 
-Uygulamanızın içinden geçen bütün bir yolu ölçmek için bir [akış](flows.tr.md) kaydedin ve [onu `--measure` ile çalıştırın](flows.tr.md#ölçülen-ve-kapıyla-denetlenen-bir-yolculuk). Her adım kendi süresini alır, böylece kapı yavaşlayan adımı adıyla söyleyebilir.
+Uygulamanızın içinden geçen bütün bir yolu ölçmek için bir [flow](flows.tr.md) kaydedin ve [onu `--measure` ile çalıştırın](flows.tr.md#ölçülen-ve-kapıyla-denetlenen-bir-yolculuk). Her adım kendi süresini alır, böylece kapı yavaşlayan adımı adıyla söyleyebilir.
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # üç kez, sonra:
@@ -67,16 +67,16 @@ appdyno perf compare --app A --scenario journey-flows-login       # 1 ile çıka
 
 ## Bir pull request'te
 
-[`perf-gate.yml`](../examples/perf-gate.yml), `.github/workflows/perf-gate.yml` konumuna kopyalanacak bir job'dır. `env` altındaki değerleri ayarlayın: uygulama, akış, simülatör ve uygulamanın nasıl derlendiği.
+[`perf-gate.yml`](../examples/perf-gate.yml), `.github/workflows/perf-gate.yml` konumuna kopyalanacak bir job'dır. `env` altındaki değerleri ayarlayın: uygulama, flow, simulator ve uygulamanın nasıl derlendiği.
 
-Job olduğu gibi GitHub'ın `macos-latest` runner'ında, Xcode 26.6 ve iOS 26.5'li bir iPhone 17 simülatörüyle çalıştı: hiç kod değiştirmeyen bir pull request gerileme olmadan geçti, bir adımı yavaşlatan bir pull request ise job'ı o adımda, adıyla bir gerileme olarak başarısız kıldı. Sizinkinde başarısız olursa lütfen bildirin.
+Job olduğu gibi GitHub'ın `macos-latest` runner'ında, Xcode 26.6 ve iOS 26.5'li bir iPhone 17 simulator'ıyla çalıştı: hiç kod değiştirmeyen bir pull request gerileme olmadan geçti, bir adımı yavaşlatan bir pull request ise job'ı o adımda, adıyla bir gerileme olarak başarısız kıldı. Sizinkinde başarısız olursa lütfen bildirin.
 
-Job, simülatörlü bir macOS runner'ında çalışır, bu yüzden sayıları o runner'a göredir. Yaptığı iş, tek bir makinede iki build arasındaki bir değişikliği yakalamak ve nedenini söylemektir.
+Job, simulator'lı bir macOS runner'ında çalışır, bu yüzden sayıları o runner'a göredir. Yaptığı iş, tek bir makinede iki build arasındaki bir değişikliği yakalamak ve nedenini söylemektir.
 
 Pull request'in base'ini ve head'ini tek bir job'da ölçer, çünkü başka bir makineden gelen bir baseline karşılaştırılamaz:
 
-1. base'i derler, baseline'da üç çalıştırma olana kadar akışı ölçer ve [referansı](../reference/perf.tr.md#neden-kötüleşti) alır;
-2. head'i derler ve akışı ölçer;
+1. base'i derler, baseline'da üç çalıştırma olana kadar flow'u ölçer ve [referansı](../reference/perf.tr.md#neden-kötüleşti) alır;
+2. head'i derler ve flow'u ölçer;
 3. `appdyno perf why`; bir gerilemede, aşılan bir bütçede ya da karar veremediği bir değişiklikte (`few-samples`, `noisy`, `refused` ya da hiç baseline yoksa) job'ı en sonda başarısız kılar;
 4. kapı ne demiş olursa olsun `appdyno perf comment --out perf-comment.md`;
 5. o dosyayı yükler ve `gh pr comment` ile, deponun kendi token'ıyla gönderir.
@@ -87,6 +87,6 @@ appdyno'nun servisi de token'ı da yoktur ve hiçbir şey göndermez. Bir dosya 
 
 - Yük altında görülen bir değişiklik `noisy` sayılır, job'ı başarısız kılar ve yanıt yeniden ölçmenizi söyler. Yük altındaki bir çalıştırma baseline olarak reddedilir.
 - GitHub'ın arm64 runner'larında 3 çekirdek vardır, bu da sınırı 2,4 yük yapar; bir build arkasında bundan fazlasını bırakır. Job'ın üç çalıştırma tamamlanana kadar ölçmesinin nedeni budur.
-- Yeni bir simülatör başta kendi kendine meşguldür: iOS 27.2 ile bir M5 Pro'da yaklaşık 3 dakika ve 7 çekirdek. Bu yüzden job önce yükün düşmesini bekler, her build'den sonra da yeniden.
-- `macos-latest` bir arm64 runner'ıdır ve [bunlarda iç içe sanallaştırma yoktur](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). Bir Android emülatörü bir Intel etiketi ya da size ait bir Mac ister.
-- Yeni bir simülatör bir bağlantının uygulamayı açıp açamayacağını bir kez sorar ve bu, bir akışı ilk `open_link`'inde durdurur. Ölçülen ilk çalıştırmadan önce bir kez yanıtlayın ya da ekrana düğmeleriyle ulaşın.
+- Yeni bir simulator başta kendi kendine meşguldür: iOS 27.2 ile bir M5 Pro'da yaklaşık 3 dakika ve 7 çekirdek. Bu yüzden job önce yükün düşmesini bekler, her build'den sonra da yeniden.
+- `macos-latest` bir arm64 runner'ıdır ve [bunlarda iç içe sanallaştırma yoktur](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). Bir Android emulator'ı bir Intel etiketi ya da size ait bir Mac ister.
+- Yeni bir simulator bir bağlantının uygulamayı açıp açamayacağını bir kez sorar ve bu, bir flow'u ilk `open_link`'inde durdurur. Ölçülen ilk çalıştırmadan önce bir kez yanıtlayın ya da ekrana düğmeleriyle ulaşın.

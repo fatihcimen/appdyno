@@ -3,7 +3,7 @@
 [English](mirror.md)
 
 `appdyno mirror` her cihaz için bir native pencere açar; pencere fare, trackpad ve klavyeyle yönetilir, bu sırada bir ajan
-da aynı cihazı yönetebilir. Pencere küçük bir Objective-C programıdır ve simülatör yardımcıları gibi ilk kullanımda `clang` ile
+da aynı cihazı yönetebilir. Pencere küçük bir Objective-C programıdır ve simulator yardımcıları gibi ilk kullanımda `clang` ile
 derlenir: Command Line Tools yeterlidir. Kontrol düzlemi Node'dur: yayınları başlatır ve durdurur,
 girdiyi taşır, neyin yanlış olduğunu söyler ve yeniden bağlanır. Bize ait bir sunucu, daemon ya da dinleyici yoktur.
 Bir pencerenin içte nasıl çalıştığı ve her iddiayı tutmak için neyin çalıştırıldığı [Pencere nasıl çalışır](mirror-internals.tr.md) sayfasındadır.
@@ -27,31 +27,31 @@ ve `record_session` araçları vardır. `ask_person`, bir ajanın yapamadığın
 
 | cihaz     | nasıl                                                                                               | bilinmesi gerekenler                                                                                                                                                                                                                                                                                      |
 | --------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| simülatör | CoreSimulator'ın kendi yüzeyi, kodlama yok: her kare sunumunda geri çağrılan framebuffer'ın kendisi | durgun bir ekranın hiçbir maliyeti yoktur. Çalışma anında yüklenen özel API; başarısız olan şey bunu söyler                                                                                                                                                                                               |
+| simulator | CoreSimulator'ın kendi yüzeyi, kodlama yok: her kare sunumunda geri çağrılan framebuffer'ın kendisi | durgun bir ekranın hiçbir maliyeti yoktur. Çalışma anında yüklenen özel API; başarısız olan şey bunu söyler                                                                                                                                                                                               |
 | telefon   | ajanın yayını, kendine ait bir bağlantıda: Node'dan hiçbir şey geçmez                               | varsayılan olarak H.264, siz isterseniz HEVC. Android 10 ve üstü. Güvenli bir pencere, `screencap`'te olduğu gibi siyahtır (Android 16'da görüldü)                                                                                                                                                        |
 | iPhone    | iOS 27'nin ekran servisi, bu sürecin kendi tüneli üzerinden, USB ile; telefonda hiçbir şey yok      | belgelenmemiştir ve değişebilir. Telefonun kendi boyutunda 4:4:4, ekranının hızına kadar. Durgun bir ekran göndermeyi sürdürür, saniyede yaklaşık 20 kare; bu yüzden penceresi diğerleri gibi bedava değildir. Açık tutulan bir yayın, hiçbir şey dokunmadan bir telefonun ekranını 30 dakika yanık tuttu |
-| emülatör  | emülatörün kendi gRPC portu, ekranı paylaşılan bir dosyada; misafir sistemde hiçbir şey yok         | port emülatörün kendi portudur, bizim değil. Portu olmayan yerde kodlamayı misafir sistem yapar; bu saniyelerce gecikme getirir ve bunu söyler                                                                                                                                                            |
+| emulator  | emulator'ın kendi gRPC portu, ekranı paylaşılan bir dosyada; misafir sistemde hiçbir şey yok        | port emulator'ın kendi portudur, bizim değil. Portu olmayan yerde kodlamayı misafir sistem yapar; bu saniyelerce gecikme getirir ve bunu söyler                                                                                                                                                           |
 
 ## Bir pencerenin durumları
 
 `connecting`, `live`, `waiting {need}`, `reconnecting {attempt}`, `stopped {why}`. Bir pencerenin neyi beklediği uyarı bandında, `show_mirror status`'ta ve bir retta aynı biçimde, her seferinde kendi sözleri ve çözümüyle söylenir. Bir bekleme her saniye yeniden sorar ve engel kalkınca kendiliğinden sürer.
 
-| ne olur                             | ne yapar                                                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| yayın sırasında cihaz gider         | son görüntü soluklaşır, uyarı bandı, `waiting not-connected`; geri gelince: yeniden canlı                                          |
-| simülatör kapatılır                 | `waiting simulator-off`; başlatılınca: yeniden canlı                                                                               |
-| ekran kapalı                        | `waiting asleep`; bir kişi uyandırınca yeniden açık                                                                                |
-| kodlayıcı başarısız olur            | 500 ms arayla 3 kez yeniden başlatma; daha küçük boyut; diğer codec; yazılım; ardından nedeniyle birlikte `stopped`                |
-| çözücü başarısız olur               | bir anahtar kare istenir ve görüntü tutulur; art arda üç kez olursa yeni bir yayın; ardından `stopped`                             |
-| görüntüleyici ölür                  | hemen, aynı yakınlaştırmayla yeniden başlatılır; bir dakikada iki kez olursa, söylediğiyle birlikte `stopped`                      |
-| üst süreç ölür                      | görüntüleyicinin stdin'i biter, böylece görüntüleyici de biter; ajan bunu görür ve ekranı ve codec'i bırakır                       |
-| ajan durur                          | `reconnecting` ve ajan, her sürücünün kullandığı yoldan başlar                                                                     |
-| Mac uyur, uyanır                    | yayın biter ve uyanınca geri gelir                                                                                                 |
-| pencere örtülür                     | kareler okunur, çözülmez ve çizilmez; bir anahtar kareyle geri gelir                                                               |
-| döndürme, katlama                   | yeni oturum olmadan yeni bir boyut: ajanın kodlayıcısı yeniden başlar, bir emülatörün görüntüsü dik çevrilir, bir simülatörünki de |
-| bir cihazda ikinci pencere          | ilki öne gelir ve ret onu kimin tuttuğunu söyler                                                                                   |
-| birkaç cihaz                        | her birine bir görüntüleyici, `--max`; biri başarısız olunca diğerleri sürer                                                       |
-| derleyici yok, pencere sunucusu yok | hiçbir şey açılmadan, ihtiyacıyla birlikte `stopped`                                                                               |
+| ne olur                             | ne yapar                                                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| yayın sırasında cihaz gider         | son görüntü soluklaşır, uyarı bandı, `waiting not-connected`; geri gelince: yeniden canlı                                            |
+| simulator kapatılır                 | `waiting simulator-off`; başlatılınca: yeniden canlı                                                                                 |
+| ekran kapalı                        | `waiting asleep`; bir kişi uyandırınca yeniden açık                                                                                  |
+| kodlayıcı başarısız olur            | 500 ms arayla 3 kez yeniden başlatma; daha küçük boyut; diğer codec; yazılım; ardından nedeniyle birlikte `stopped`                  |
+| çözücü başarısız olur               | bir anahtar kare istenir ve görüntü tutulur; art arda üç kez olursa yeni bir yayın; ardından `stopped`                               |
+| görüntüleyici ölür                  | hemen, aynı yakınlaştırmayla yeniden başlatılır; bir dakikada iki kez olursa, söylediğiyle birlikte `stopped`                        |
+| üst süreç ölür                      | görüntüleyicinin stdin'i biter, böylece görüntüleyici de biter; ajan bunu görür ve ekranı ve codec'i bırakır                         |
+| ajan durur                          | `reconnecting` ve ajan, her sürücünün kullandığı yoldan başlar                                                                       |
+| Mac uyur, uyanır                    | yayın biter ve uyanınca geri gelir                                                                                                   |
+| pencere örtülür                     | kareler okunur, çözülmez ve çizilmez; bir anahtar kareyle geri gelir                                                                 |
+| döndürme, katlama                   | yeni oturum olmadan yeni bir boyut: ajanın kodlayıcısı yeniden başlar, bir emulator'ın görüntüsü dik çevrilir, bir simulator'ınki de |
+| bir cihazda ikinci pencere          | ilki öne gelir ve ret onu kimin tuttuğunu söyler                                                                                     |
+| birkaç cihaz                        | her birine bir görüntüleyici, `--max`; biri başarısız olunca diğerleri sürer                                                         |
+| derleyici yok, pencere sunucusu yok | hiçbir şey açılmadan, ihtiyacıyla birlikte `stopped`                                                                                 |
 
 ## Pencere
 
@@ -70,10 +70,10 @@ Pencere en çok basılanları gösterir; geri kalanı **Diğer Denetimler** içi
 | Uygulama Değiştirici                                                              | ⇧⌘A             | iOS: iki kez Ana Ekran. Android: kendi tuşu                                                                                       |
 | Siri                                                                              | ⇧⌘K             | iOS: yan düğme basılı tutulur                                                                                                     |
 | Denetim Merkezi (iOS) ya da Hızlı Ayarlar (Android), Bildirimler, Spotlight (iOS) | ⌃⌘C, ⌃⌘N, ⌃⌘F   | bir parmağın sürüklemesi                                                                                                          |
-| Sola Döndür, Sağa Döndür                                                          | ⌘←, ⌘→          | cihazın kendi yönü: ilk döndürme ajanı başlatır, bir simülatörün önce onu derlemesi gerekebilir                                   |
+| Sola Döndür, Sağa Döndür                                                          | ⌘←, ⌘→          | cihazın kendi yönü: ilk döndürme ajanı başlatır, bir simulator'ın önce onu derlemesi gerekebilir                                  |
 | Ekran Görüntüsünü Kaydet, Ekranı Kopyala                                          | ⌘S, ⌘C          | cihazın kendi kayıpsız görüntüsü, Masaüstüne ve panoya ya da yalnızca panoya. Cihazın ajansız bir yolu olduğu yerde ajan gerekmez |
 | Ekranı Kayda Al                                                                   | ⌥⌘R             | Filmler'e: bir yayının kendi kareleri ya da görüntüsü yayın olmayan yerde cihazın kaydedicisi                                     |
-| Akışı Kayda Al                                                                    | ⌥⌘T             | bir kişinin yaptığı, bir akış olarak: bkz. [Bir akış kaydetmek](#bir-akış-kaydetmek)                                              |
+| Flow'u Kayda Al                                                                   | ⌥⌘T             | bir kişinin yaptığı, bir flow olarak: bkz. [Bir flow kaydetmek](#bir-flow-kaydetmek)                                              |
 | Bağlantı Aç…                                                                      | ⌘O              | aşağıdaki Bağlantılar paneli                                                                                                      |
 | Bildirim Gönder…                                                                  | ⇧⌘P             | aşağıdaki Bildirim paneli                                                                                                         |
 | Sığacak Kadar Büyüt, Gerçek Boyut, Yakınlaştır, Uzaklaştır                        | ⌘9, ⌘0, ⌘=, ⌘-  | Gerçek Boyut, bir cihaz noktasını bir Mac noktasına eşler                                                                         |
@@ -96,33 +96,33 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 - Bir pencereden alınan bir çalıştırmada kodlayıcı cihazda çalışmaktadır, bu yüzden hiçbir referansa girmez; daha kötü okunan böyle bir çalıştırma "Karar verilemedi: yansıtma açıkken ölçüldü" olarak görünür. Bir gerileme, pencere açık olmayan çalıştırmalarda bulunur.
 - Yalnızca dosya okur, bu yüzden bunun için bir telefona dokunulmaz.
 
-#### Akışlar
+#### Flow'lar
 
-- Bir kişinin yaptığını bir akış olarak kaydeder: bkz. [Bir akış kaydetmek](#bir-akış-kaydetmek).
+- Bir kişinin yaptığını bir flow olarak kaydeder: bkz. [Bir flow kaydetmek](#bir-flow-kaydetmek).
 - İmlecin altında ne olduğunu ve oraya bir tıklamanın ne yazacağını söyler.
 
 #### Uygulamalar
 
 - Uygulamaları listeler, açar, kapatır ve kaldırır; birini ancak onunla birlikte neyin gittiğini söyleyen bir sayfadan sonra kaldırır.
-- iOS'ta liste sistemin uygulamalarını da içerir, çünkü yeni bir simülatörde başkası yoktur; Android'de yalnızca kurulmuş olanları.
+- iOS'ta liste sistemin uygulamalarını da içerir, çünkü yeni bir simulator'da başkası yoktur; Android'de yalnızca kurulmuş olanları.
 
 #### Etkinlik
 
 - Bir ajanın yaptığını iş parçaları halinde anlatır, örneğin "40 saniye çalıştı · 23 çağrı"; her biri çağrılarına açılır, örneğin "Sign in öğesine dokunuldu".
 - Bir kişinin pencereden gönderdiği bir bağlantı ya da push hiçbir ajanın değildir ve listelenmez.
 
-#### Loglar ve Çökmeler
+#### Loglar ve Crash'ler
 
 - **Loglar**, öndeki uygulamanın logunu geldikçe gösterir: `read_logs` aracının okuduğu satırları aynı gizlemeyle; bir satırdaki belirteç, parola ya da anahtar gizlenir.
 - Öndeki uygulamayı Performans gibi izler, her 5 s'de bir sorar ve başka bir uygulama için baştan başlar. Kişinin kendi uygulaması olmayan ya da sunucunun uygulama listesinde bulunmayan bir uygulama adıyla söylenir ve hiçbir şey okunmaz.
 - Ayrıntılı'dan Hatalar'a bir düzeyi, bir araması, durduğu yerden okumayı sürdüren Duraklat ve Sürdür'ü, bir seçimin dokunduğu satırların tamamını alan Kopyala'sı ve görünümü boşaltıp cihazın logunu asla silmeyen Temizle'si vardır.
-- Yanındaki **Çökmeler**, uygulamanın son 5 raporunu `read_logs` aracının `source: crashes` ile verdiği gibi listeler; her biri ilk satırlarına ve raporun tamamının bu Mac'teki yoluna açılır.
+- Yanındaki **Crash'ler**, uygulamanın son 5 raporunu `read_logs` aracının `source: crashes` ile verdiği gibi listeler; her biri ilk satırlarına ve raporun tamamının bu Mac'teki yoluna açılır.
 - Log yalnızca panel görünürken ve duraklatılmamışken 2 s'de bir okunur ve arkada çalışan bir şey bırakılmaz. Bir iPhone'da çalışan uygulamanın bu Mac'in okuyabileceği bir logu yoktur; panel bunu, neyin okunabildiğiyle birlikte söyler.
 
 #### Ağ
 
 - Uygulamanın isteklerini `capture_network` aracının verdiği gibi, o aracın cihaz için tuttuğu yakalamadan gösterir: bir ajanın başlattığı yakalama burada, burada başlatılan da ajana görünür ve ikisi de aynı biçimde gizlenir. Her isteğin yöntemi, adresi, durumu, süresi ve boyutu vardır; seçilen istek tam olarak görünür.
-- Yalnızca bu cihazın sahip olduğu yolları sunar: simülatörde uygulamayı yeniden başlatan, bu yüzden bir kayıt ya da ölçüm sürerken reddedilen sonda; Android'de baytlar ve build'in kaydettiği yerlerde Android 14'ten itibaren paketler; ikisi de adres olmadan sayar.
+- Yalnızca bu cihazın sahip olduğu yolları sunar: simulator'da uygulamayı yeniden başlatan, bu yüzden bir kayıt ya da ölçüm sürerken reddedilen sonda; Android'de baytlar ve build'in kaydettiği yerlerde Android 14'ten itibaren paketler; ikisi de adres olmadan sayar.
 - Proxy yalnızca cihaz zaten birinden geçiyorsa sunulur ve listesi, bu araç proxy'nin kendi dışa aktarımını okuyabiliyorsa okunur. Hiçbir pencere, hiçbir cihazda proxy ayarlamaz.
 - Hiçbir yolun istekleri listelemediği yerde, bir iPhone'da ya da proxy'si olmayan bir Android'de, panel kişinin neye ihtiyacı olduğunu söyler.
 - Sondanın listesi panel görünürken 3 s'de bir, diğerleri Yeniden Oku ile okunur. Burada başlatılan bir yakalama pencere kapanınca durur.
@@ -141,7 +141,7 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 - Bir kişinin gönderdiği bir arama bağlantısı, `tel:` ya da `facetime:`, onundur ve hiçbir şey sormaz; bir ajanınki ise kişiye sorar. Bir kişinin gönderdiği bağlantı hiçbir ajanın değildir: kapsül bir yapay zekâ istemcisinin yönettiğini söylemez ve Etkinlik onu listelemez. İlki, bir ajanın ilk çağrısı gibi, cihazda bir oturum açar.
 - Yanıtı iş ilerledikçe gelir ve bir ret tam olarak, hub'ın sözleri varsa yapılacak şey de bir kişinin sözleriyle, İngilizce ve Türkçe gösterilir. Aracın bir ajana verdiği, bir çağrıyı değiştirip yeniden yapmasını söyleyen ipucu gösterilmez.
 - Açılan bağlantılar o cihaz için saklanır, son sekizi, en yenisi önce. Altlarında, uygulama alanındaki uygulamanın açtığı bağlantılar, `open_link` `links`'in listelediği gibi, her birinin türü ve bir alan adının durumuyla durur. Seçilen biri alana yerleşir; bir filtrenin `*` kısmı bir kişinin doldurması için bırakılır.
-- Bir simülatör, bir uygulamanın şeması onu ilk kez açmadan önce sorar ve yanıt bunu söyler, çünkü bir kişi pencerede yanıtlayana kadar hiçbir şey açılmamıştır.
+- Bir simulator, bir uygulamanın şeması onu ilk kez açmadan önce sorar ve yanıt bunu söyler, çünkü bir kişi pencerede yanıtlayana kadar hiçbir şey açılmamıştır.
 
 #### Bildirim
 
@@ -165,24 +165,24 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 Bir cihaz her saniye kendi ölçümlerinin okuduğunu, `perf_*`'ın kullandığı aynı okuyucularla verir; belleğini ise her beş saniyede bir, çünkü en ağırı odur. Bir okuma yalnızca bakar: bir kişinin kapattığı ekran kapalı kalır. Veremediği şey nedeniyle birlikte bir tiredir, asla 0 değil. Bir cihazın kare saymadığı yerde kare hızı pencerenin kendisinin gösterdiğidir ve durgun bir ekran Durgun der. Bir kare hızının doğru bir değeri yoktur, çünkü bir ekran ne çizmesi gerekiyorsa onu çizer: yalnızca karelerinin ne kadarının geç geldiğine göre değerlendirilir; geç karelerin sayılmadığı yerde karar olmadan durur.
 
-| cihaz             | kare hızı  | takılma, donma               | CPU, bellek, ağ |
-| ----------------- | ---------- | ---------------------------- | --------------- |
-| simülatör         | pencerenin | yalnızca kare ölçeri altında | okunur          |
-| Android emülatörü | cihazın    | okunur                       | okunur          |
-| Android telefon   | cihazın    | okunur                       | okunur          |
-| iPhone            | ekranın    | hayır                        | CPU ve bellek   |
+| cihaz              | kare hızı  | takılma, donma               | CPU, bellek, ağ |
+| ------------------ | ---------- | ---------------------------- | --------------- |
+| simulator          | pencerenin | yalnızca kare ölçeri altında | okunur          |
+| Android emulator'ı | cihazın    | okunur                       | okunur          |
+| Android telefon    | cihazın    | okunur                       | okunur          |
+| iPhone             | ekranın    | hayır                        | CPU ve bellek   |
 
 Bir iPhone'un kare hızı ekranınınkidir; tek başına bir yansıtma onu 20 civarında tutar ve bu, sayının yanında yazar. Runner'ı yalnızca kendisine verilen uygulama hakkında bilgi verebilir, bu yüzden bir pencere bunu bir kişinin uygulamalarının her biri için sorar ve onları izlemek için her beş saniyede bir yeniden sorar: aynı uygulama önde kaldıkça tek çağrı.
 
-Bir simülatörün bunların hiçbiri için runner'a ihtiyacı yoktur: öndeki uygulamayı okuma yardımcısıyla okur ve ana ekran da herhangi bir uygulama gibi ölçülür. Ajanı olmadan önde ne olduğunu söyleyemeyen bir cihaz, kartlar açılınca ajanı başlatır ve kartlar ajan ayağa kalkana kadar bunu söyler.
+Bir simulator'ın bunların hiçbiri için runner'a ihtiyacı yoktur: öndeki uygulamayı okuma yardımcısıyla okur ve ana ekran da herhangi bir uygulama gibi ölçülür. Ajanı olmadan önde ne olduğunu söyleyemeyen bir cihaz, kartlar açılınca ajanı başlatır ve kartlar ajan ayağa kalkana kadar bunu söyler.
 
 Denetçi'deki **Performans**, aynı okumaları gösterildiği süre boyunca on dakikaya kadar tutar ve öndeki uygulamanın gerçek bir ölçümünü alır. **Açılışı Ölç** `measure_performance launch`, **Kaydırmayı Ölç** de `measure_performance scroll`'dur; bir ajanın çağırdığı gibi, varsayılanlarıyla: uygulama yeniden başlar ve çalıştırma diğer hepsiyle birlikte, yayın açıkken okunmuş olarak işaretlenip saklanır. **Gösterge Panelini Aç**, saklanan tüm çalıştırmaların sayfasını yazar ve açar. Bir ölçüm sürerken okumalar durur, çünkü ölçümün saydığını sıfırlarlardı. Bir ölçüm cihazı bir ajanın oturumu gibi tutar ve cihazı başka bir şey tutarken adıyla reddedilir. Sisteme ait olan, örneğin bir ana ekran, ölçülmez.
 
-## Bir akış kaydetmek
+## Bir flow kaydetmek
 
-**Akışı Kayda Al** (⌥⌘T), bir kişinin pencerede yaptığını bir akış olarak, yani `run_flow run`'ın yeniden oynattığı dosya olarak yazar. **Akışlar** paneli cihazın yanında açılır ve her adımı yazıldıkça listeler. İkinci bir basış kaydı durdurur ve Masaüstüne `<device> <date>.flow` olarak kaydeder; pencereyi kapatmak da bir film için olduğu gibi aynısını yapar.
+**Flow'u Kayda Al** (⌥⌘T), bir kişinin pencerede yaptığını bir flow olarak, yani `run_flow run`'ın yeniden oynattığı dosya olarak yazar. **Flow'lar** paneli cihazın yanında açılır ve her adımı yazıldıkça listeler. İkinci bir basış kaydı durdurur ve Masaüstüne `<device> <date>.flow` olarak kaydeder; pencereyi kapatmak da bir film için olduğu gibi aynısını yapar.
 
-Bir kişinin ne demek istediğini, yerle değil öğeyle yazar. Her tıklama, `run_flow record`'un kuralıyla, bir aracın o tıklamanın indiği ekranda kullanacağı seçiciyle adlandırılır; böylece bir cihazda yapılan bir akış, seçicinin tuttuğu her yerde aynı uygulamanın başka bir cihazında çalışır.
+Bir kişinin ne demek istediğini, yerle değil öğeyle yazar. Her tıklama, `run_flow record`'un kuralıyla, bir aracın o tıklamanın indiği ekranda kullanacağı seçiciyle adlandırılır; böylece bir cihazda yapılan bir flow, seçicinin tuttuğu her yerde aynı uygulamanın başka bir cihazında çalışır.
 
 | pencerede                                    | dosyada                                                                                                                                                                                                                                                               |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -197,23 +197,23 @@ Bir kişinin ne demek istediğini, yerle değil öğeyle yazar. Her tıklama, `r
 | Ana Ekran, Geri, bir düğme, bir tuş          | `press_key home`; basılı tutulan bir tuş `count` olur                                                                                                                                                                                                                 |
 | Uygulamalar panelinde Aç ve Kapat            | `launch`, `stop`                                                                                                                                                                                                                                                      |
 
-Önde bir kişinin kendi uygulaması varsa akış `launch` ile başlar; bu, uygulamayı öne getirir ve hiçbir şeyi yeniden başlatmaz, böylece başka bir cihazın oraya varmanın bir yolu olur. Bir kayıt uygulamanın bulunduğu yerde başlar: uygulamanın derinlerindeki bir ekrandaysa yeniden oynatma da orada başlamalıdır.
+Önde bir kişinin kendi uygulaması varsa flow `launch` ile başlar; bu, uygulamayı öne getirir ve hiçbir şeyi yeniden başlatmaz, böylece başka bir cihazın oraya varmanın bir yolu olur. Bir kayıt uygulamanın bulunduğu yerde başlar: uygulamanın derinlerindeki bir ekrandaysa yeniden oynatma da orada başlamalıdır.
 
 Bir kayıt söylemeden hiçbir şeyi atlamaz. Adımı olmayan şey (bir kıstırma, bir döndürme, Hızlı Ayarlar, hiçbir eksen boyunca olmayan ya da bir uzun basıştan sonraki sürükleme, Page Up ve benzerleri, kaldırılan bir uygulama) o anda pencerede söylenir ve `unrecorded` olarak yazılır; bu, bir yeniden oynatmayı onsuz sürdürmek yerine orada durdurur. Hiçbir şeyin adlandırmadığı bir yer ya da kenardan gelen bir parmak koordinat olarak yazılır, geçerli olduğu ekran boyutuyla `!coordinates` olarak işaretlenir ve pencere bunu söyler. İkisi de nedenleriyle panelin listesinde durur. Bir ölçüm uygulamayı yeniden başlatır, bu yüzden bir kayıt sürerken adıyla reddedilir.
 
 **Bir tıklamanın kastettiği ekran.** Bir tıklama, tıklamadan hemen önceki ekrana göre adlandırılır. Pencere bir tıklamayı duyduğunda cihaz çoktan tepki vermeye başlamıştır. Bu yüzden bir kayıt sürerken ya da panel açıkken ekran, dokunuşların yanında sürekli okunur: bir dokunuş, buradaki herhangi bir şey onu duymadan önce cihaza yola çıkmıştır; parmak basılıyken ya da sonraki 100 ms boyunca hiçbir okuma başlamaz ve bir okuma zamanın en çok yarısını alır. Bir tıklama son girdiden bu yana en yeni okumayı, yoksa sürmekte olanı alır. İmleci üzerinde tutmak cihaza hiçbir şey sormaz. İkisi de kullanımda değilken, yayın kapalıyken ya da bir ölçüm sürerken hiçbir şey okunmaz. Böyle bir okuma bir bakıştır: bir araç için `tree`'nin yaptığı gibi, karanlık bir ekranı uyandırmaz ve kilit açmaz.
 
-**İmlecin altında.** Akışlar paneli açıkken cihazın üzerindeki imleç, altındaki öğeyi görüntü üzerinde işaretleyerek gösterir: rolünü, sözlerini, ref'ini ve id'sini, oraya bir tıklamanın ne yazacağını ve `check_screen`'in kontrastı hakkında ne dediğini; bu, ekran başına bir kez okunur. Bir denetim imlecin durmasını bekler, bir simülatörün runner'ını başlatabilir ve panel, bitene kadar okuduğunu söyler. Bir kayıt sırasında hiçbir denetim çalışmaz, çünkü bir denetimin arkasında bekleyen bir okuma, adlandıracağı tıklamadan sonra gelirdi; panel bunu söyler. Cihazdaki bir tıklamanın ne yapacağı orada seçilir: cihaza **Dokunur**, öğenin seçicisini **Kopyalar** ya da kayda bir doğrulama ekleyen ve hiçbir şeye dokunmayan **Doğrular**: `assert id=result check=text equals="Sent: Ada"` ya da öğeyi sözleri adlandırıyorsa `assert text="Bilgiler"`.
+**İmlecin altında.** Flow'lar paneli açıkken cihazın üzerindeki imleç, altındaki öğeyi görüntü üzerinde işaretleyerek gösterir: rolünü, sözlerini, ref'ini ve id'sini, oraya bir tıklamanın ne yazacağını ve `check_screen`'in kontrastı hakkında ne dediğini; bu, ekran başına bir kez okunur. Bir denetim imlecin durmasını bekler, bir simulator'ın runner'ını başlatabilir ve panel, bitene kadar okuduğunu söyler. Bir kayıt sırasında hiçbir denetim çalışmaz, çünkü bir denetimin arkasında bekleyen bir okuma, adlandıracağı tıklamadan sonra gelirdi; panel bunu söyler. Cihazdaki bir tıklamanın ne yapacağı orada seçilir: cihaza **Dokunur**, öğenin seçicisini **Kopyalar** ya da kayda bir doğrulama ekleyen ve hiçbir şeye dokunmayan **Doğrular**: `assert id=result check=text equals="Sent: Ada"` ya da öğeyi sözleri adlandırıyorsa `assert text="Bilgiler"`.
 
-Kayıt, `run_flow`'un tuttuğu kayıttır, cihaz başına bir dosya. Bu yüzden bir ajandan ya da komut satırından gelen `run_flow record` bir kişinin tıklamalarını da alır, bir pencerenin kaydı da bir ajanın çağrılarını alır; her biri geldiği sırayla. Bir akışın `stop` ve `save`'i ikisinde de çalışır.
+Kayıt, `run_flow`'un tuttuğu kayıttır, cihaz başına bir dosya. Bu yüzden bir ajandan ya da komut satırından gelen `run_flow record` bir kişinin tıklamalarını da alır, bir pencerenin kaydı da bir ajanın çağrılarını alır; her biri geldiği sırayla. Bir flow'un `stop` ve `save`'i ikisinde de çalışır.
 
 ## Hub
 
-`appdyno hub` tek bir penceredir: bu Mac'in ulaşabildiği her cihaz bir kenar çubuğunda, önce telefonlar, sonra çalışanlar, kapalı olanlar katlanmış halde; seçilen cihaz da yanında canlıdır ve orada denetlenir. Yalnızca pencerede duran yayın yapar ve bir telefon yalnızca bir kişi onu seçtiğinde başlar: zaten çalışan bir simülatör ya da emülatör hemen görünebilir ve hiçbir seçim bir açılıştan diğerine saklanmaz. Araç çubuğu sistemin kendi araç çubuğudur; kendi penceresindekiyle aynı denetimleri taşır ve yalnızca o cihazda olanları. Denetçi bir tık uzaklıktadır, önce Performans. Arama katlanmış olanları da kapsar. Hub sanal olanları başlatır ve durdurur, bu Mac'te kurulu olandan yeni bir simülatör ya da emülatör oluşturur. Gösterilecek bir şey olmayan yerde sıradaki adımı söyler.
+`appdyno hub` tek bir penceredir: bu Mac'in ulaşabildiği her cihaz bir kenar çubuğunda, önce telefonlar, sonra çalışanlar, kapalı olanlar katlanmış halde; seçilen cihaz da yanında canlıdır ve orada denetlenir. Yalnızca pencerede duran yayın yapar ve bir telefon yalnızca bir kişi onu seçtiğinde başlar: zaten çalışan bir simulator ya da emulator hemen görünebilir ve hiçbir seçim bir açılıştan diğerine saklanmaz. Araç çubuğu sistemin kendi araç çubuğudur; kendi penceresindekiyle aynı denetimleri taşır ve yalnızca o cihazda olanları. Denetçi bir tık uzaklıktadır, önce Performans. Arama katlanmış olanları da kapsar. Hub sanal olanları başlatır ve durdurur, bu Mac'te kurulu olandan yeni bir simulator ya da emulator oluşturur. Gösterilecek bir şey olmayan yerde sıradaki adımı söyler.
 
 Cihazların altındaki **Yapay Zekâ İstemcileri**, `appdyno install`'ın bildiği her MCP istemcisini gerçek durumuyla listeler. Bağlı sözünü yalnızca gerçek bir çağrı kazandırır: sunucu her istemcinin adını, sürümünü, giriş yolunu ve son çağrısını tutar, gönderdiği hiçbir şeyi tutmaz. Ekle ve Kaldır önce satırların tam halini gösterir ve ikinci bir tıklama ister; Geri Al da o tek girdiyi geri alır. Test Et, bir girdinin çalıştırdığını araç listesine kadar çalıştırır ve başarısız olursa ne yapılacağını söyler; hiçbir araç çağırmaz. Tarayıcıdaki bir istemci için `appdyno mcp --http`'yi, hub ile biten bir süreçte, token istenene kadar gizli olarak başlatır ve durdurur. Bkz. [İstemci bağlamak](../guides/clients.tr.md).
 
-Yapay Zekâ İstemcileri'nin altındaki **Yardım** ya da command-? ağ gerektirmez. appdyno'nun ne olduğunu söyler, en son önde olan cihaz ve uygulamayla doldurulmuş, hedefe göre istemler sunar, her biri cihaza ne yaptığını söyler; her panelin ve sayının ne anlama geldiğini anlatır ve `doctor`'ı çalıştırır. Uygulama, Performans panelinin en son adını verdiği uygulamadır; bu yüzden bir sistem uygulaması ya da bir simülatörde yayını başladıktan sonra açılan bir uygulama, `my app` diyen bir istem bırakır. Bir yer, bir cihazın duracağı yerde durur, bu yüzden cihazın yayını biter ve bir cihaz seçilene kadar Denetçi kapanır. Yardım görünürken istemci listesi her 2 s'de bir okunur, görünmezken hiçbir şey çalışmaz.
+Yapay Zekâ İstemcileri'nin altındaki **Yardım** ya da command-? ağ gerektirmez. appdyno'nun ne olduğunu söyler, en son önde olan cihaz ve uygulamayla doldurulmuş, hedefe göre istemler sunar, her biri cihaza ne yaptığını söyler; her panelin ve sayının ne anlama geldiğini anlatır ve `doctor`'ı çalıştırır. Uygulama, Performans panelinin en son adını verdiği uygulamadır; bu yüzden bir sistem uygulaması ya da bir simulator'da yayını başladıktan sonra açılan bir uygulama, `my app` diyen bir istem bırakır. Bir yer, bir cihazın duracağı yerde durur, bu yüzden cihazın yayını biter ve bir cihaz seçilene kadar Denetçi kapanır. Yardım görünürken istemci listesi her 2 s'de bir okunur, görünmezken hiçbir şey çalışmaz.
 
 Diğer Denetimler menüsünde, bir satırın menüsünde ya da shift-command-N ile bulunan **Yeni Pencerede Aç**, bir cihaza kendi penceresini verir; bu, `appdyno mirror`'ın aynı kodla açtığı penceredir: hub onun orada olduğunu gösterir ve onu kapatabilir. Ölen bir görüntüleyici içinde duranı da götürür ve hub onu sahip olduğu cihazla geri getirir. Bir dakikada üç kez olunca durur.
 
@@ -245,7 +245,7 @@ Araçlar, appdyno'nun bir terminalde yaptığını çalıştırır; her satır k
 | ------------------------------------------------------------------ | ----------------------------------------------------- |
 | Temel Ölçüm Olarak Kaydet, Temel Ölçümle Karşılaştır, Nedenini Bul | `perf baseline`, `perf compare`, `perf why`           |
 | Her Şeyi Ölç                                                       | `perf survey`                                         |
-| Akışları Çalıştır                                                  | `test`, çıktıları seçilen klasöre                     |
+| Flow'ları Çalıştır                                                 | `test`, çıktıları seçilen klasöre                     |
 | Zaman Çizelgesi, Uçuş Kaydedici                                    | `timeline`, `flight`                                  |
 | Gösterge Paneli                                                    | `perf dashboard` ve açılır                            |
 | İz Araçlarını Al, uygulamanın dışında, adb'yi edinin               | `tools install`, `tools install adb --accept-license` |
@@ -255,7 +255,7 @@ Araçlar, appdyno'nun bir terminalde yaptığını çalıştırır; her satır k
 | Güncellemeleri Denetle, Güncelle                                   | `update --check`, `update`                            |
 | Telefon Bağla içinde Çalıştırıcıyı Derle                           | `ios build`                                           |
 
-Hub'ın başka yerlerinde: Doktor Yardım'dadır; kenar çubuğunda `devices`, yeni bir simülatör ya da emülatör oluşturma ve birini başlatıp kapatma vardır; Yapay Zekâ İstemcileri'nde de `mcp --http` ve her istemcinin `install`'ı vardır.
+Hub'ın başka yerlerinde: Doktor Yardım'dadır; kenar çubuğunda `devices`, yeni bir simulator ya da emulator oluşturma ve birini başlatıp kapatma vardır; Yapay Zekâ İstemcileri'nde de `mcp --http` ve her istemcinin `install`'ı vardır.
 
 CI ya da betikler için oldukları ya da bir oturuma ait oldukları için bilerek dışarıda bırakılanlar:
 
@@ -277,11 +277,11 @@ CI ya da betikler için oldukları ya da bir oturuma ait oldukları için bilere
 
 Hub'ın kenar çubuğundaki bir satırda bulunan **Bunun Yanında Göster**, penceresini iki cihaz arasında böler: bir iPhone ve bir Android telefon ya da iki cihazın her birinde bir build. `appdyno mirror --device A --device B --pair`, aynısını tek bir süreçten yan yana iki pencere olarak açar. Birini kapatmak diğerini tek başına bırakır. İkisinden birinde zaten açık olan bir pencere önce kapanır.
 
-İki pencereden birindeki bir dokunuş ikisine de gider. Ne kastettiği inmeden önceki haliyle okunsun diye iki ekranın da okunmasını bekler, sonra ikisine birden aynı anda gider. **İkisine de**'nin bedeli bu beklemedir: bir okuma bir simülatörde ve bir Android emülatöründe 30 ile 60 ms sürdü, iki telefonda ise bekleme, 150 ile 250 ms'ye varır. Diğer cihazda, id'ye ya da sözlere göre aynı şeye gider ve aynı biçimde adlandırılanlar arasından aynısına; çünkü iki cihazda bir şey nadiren aynı yerdedir. Adı olan hiçbir şeyin üstünde olmayan bir parmak aynı yere gider ve bir sürükleme indiği yerden uzunluğunu korur. Tuşlar, metin ve pencerenin cihaz denetimleri ikisine de gider.
+İki pencereden birindeki bir dokunuş ikisine de gider. Ne kastettiği inmeden önceki haliyle okunsun diye iki ekranın da okunmasını bekler, sonra ikisine birden aynı anda gider. **İkisine de**'nin bedeli bu beklemedir: bir okuma bir simulator'da ve bir Android emulator'ında 30 ile 60 ms sürdü, iki telefonda ise bekleme, 150 ile 250 ms'ye varır. Diğer cihazda, id'ye ya da sözlere göre aynı şeye gider ve aynı biçimde adlandırılanlar arasından aynısına; çünkü iki cihazda bir şey nadiren aynı yerdedir. Adı olan hiçbir şeyin üstünde olmayan bir parmak aynı yere gider ve bir sürükleme indiği yerden uzunluğunu korur. Tuşlar, metin ve pencerenin cihaz denetimleri ikisine de gider.
 
 Her cihaz bir dokunuşun nereye gittiğini ve ona ne olduğunu söyler. Alt başlık, cihazın çevresinde vurgu renginde bir kenarla **İkisine de** ya da bağlantı denetimi kapalıysa **Yalnızca burada** der ve bir halka bir dokunuşun her ekranda nereye indiğini gösterir. Başarısız olduğu yerde cihazın kenarı kırmızıya döner ve alt başlık, bir dokunuş yerine ulaşana kadar nedenini söyler: o cihazda öyle bir şey yoksa "Burada Send yok" ve başka hiçbir şeye dokunulmaz, "iPhone 17 Pro canlı değil", "Dokunuş yerine ulaşmadı". Böyle bir şeyin üstünde başlayan bir sürükleme aynı yerden sürer, çünkü tek bir şeyi kastetmez. Çubuğu bir tarafı anlatan hub penceresinde her görüntü, altında kimin olduğunu ve bir dokunuşun nereye gittiğini ya da neyin başarısız olduğunu kırmızıyla söyler, kenar çubuğu da çubuğu açık olan cihazı seçer.
 
-Performans'taki **Yolculuğu Ölç…**, bir akışı `iterations` ile `run_flow` `run`'ın yaptığı gibi ölçer: ilk çalıştırma dışarıda bırakılır, beşi saklanır, aynı depoda: `compare_performance` onu kapıdan geçirir ve dashboard onu diğer her cihazın yanında gösterir. Uygulama adı vermeyen bir akış öndeki uygulamanızı alır, böylece iki kimlik altındaki build'ler tek bir dosyayı çalıştırabilir. İki pencerede önce bir cihazda sonra diğerinde çalışır, çünkü ikisi aynı anda birbirine yük bindirirdi; bu arada dokunuşlar kendi pencerelerinde kalır. Her pencere sonra durumunu söyler: "97 % slower, 1641 ms there" ve en çok değişen adım, kapının sırayla ölçülen iki koşul için kullandığı sıra testi ve tabana göre; ya da "Belirgin fark yok". Her adımın sayıları satırın araç ipucundadır. Yolculuğun başarısız olduğu pencere bunu kırmızıyla söyler, diğerinin karşılaştıracak bir şeyi yoktur.
+Performans'taki **Yolculuğu Ölç…**, bir flow'u `iterations` ile `run_flow` `run`'ın yaptığı gibi ölçer: ilk çalıştırma dışarıda bırakılır, beşi saklanır, aynı depoda: `compare_performance` onu kapıdan geçirir ve dashboard onu diğer her cihazın yanında gösterir. Uygulama adı vermeyen bir flow öndeki uygulamanızı alır, böylece iki kimlik altındaki build'ler tek bir dosyayı çalıştırabilir. İki pencerede önce bir cihazda sonra diğerinde çalışır, çünkü ikisi aynı anda birbirine yük bindirirdi; bu arada dokunuşlar kendi pencerelerinde kalır. Her pencere sonra durumunu söyler: "97 % slower, 1641 ms there" ve en çok değişen adım, kapının sırayla ölçülen iki koşul için kullandığı sıra testi ve tabana göre; ya da "Belirgin fark yok". Her adımın sayıları satırın araç ipucundadır. Yolculuğun başarısız olduğu pencere bunu kırmızıyla söyler, diğerinin karşılaştıracak bir şeyi yoktur.
 
 ## İmleç ve trackpad
 
@@ -303,7 +303,7 @@ Klavyeyi bir kişinin tıklaması ya da ilk açılışta `--focus` verir. Klavye
 yere gitmez. Bir ajanın açtığı bir pencere de bir kişinin tıklamasına kadar tüm girdiyi tutar ve o tıklama daha öteye gitmez.
 Yazılan cihaza ulaşır, başka hiçbir yere değil: ne bir log, ne Etkinlik paneli ne de `record_session` onu tutar. Bir iPhone'da runner, XCTest'in her tuştan tutacağını kapatır, böylece orada da böyledir.
 
-Yazma sistemin kendi metin girişinden geçer, bu yüzden ölü tuş, basılı tutulan bir aksan ve bir giriş yöntemi çalışır. ⌘V, Mac'in metnini aynı yolla, en çok 4.096 karakter gönderir ve bir metni kısa kestiğinde pencere bunu söyler, çünkü uzun bir metin tuş tuş gider. Bir simülatör, ABD klavyesinde tuşu olanı tuş olarak, geri kalan her şeyi panosu ve command V ile yazar; bu yüzden bir uygulama Yapıştırmaya İzin Ver diye sorabilir.
+Yazma sistemin kendi metin girişinden geçer, bu yüzden ölü tuş, basılı tutulan bir aksan ve bir giriş yöntemi çalışır. ⌘V, Mac'in metnini aynı yolla, en çok 4.096 karakter gönderir ve bir metni kısa kestiğinde pencere bunu söyler, çünkü uzun bir metin tuş tuş gider. Bir simulator, ABD klavyesinde tuşu olanı tuş olarak, geri kalan her şeyi panosu ve command V ile yazar; bu yüzden bir uygulama Yapıştırmaya İzin Ver diye sorabilir.
 
 Bir iPhone'da yazılan metni runner bir dize olarak gönderir, bu yüzden telefonun klavye düzeni onu değiştirmez. İlk harfler runner'ı başlatır; bu yaklaşık 3 s sürer. Bir metin alanına dokunduktan sonra yazılan harfler, o alan odağı alınca gider; 6 s içinde hiçbir alan onları almazsa atılır ve pencere bunu söyler.
 
@@ -347,11 +347,11 @@ Varsayılan olan `--quality auto`, bir kişiye yetişen en büyük boyutu alır;
 - Çerçevenin Eylem düğmesi ve Kamera Denetimi çizilir ve hiçbir şey yapmaz: onlara basan bilinen bir girdi yoktur.
 - Bir telefonda `auto` ekranın boyutunda başlar ve kodlayıcının geride kaldığını gösteren ilk harekette onu bir kez değiştirir, bu yüzden bir kişi ilk dokunuşlarında görüntünün yeniden başladığını görebilir. `--quality high` ve `standard` ekranın boyutunu korur.
 
-Bir akış kaydetmek:
+Bir flow kaydetmek:
 
 - Bir kaydırma yönünü korur, uzunluğunu değil: bir yeniden oynatmanınki ekranın %40'ı kadar gider. Ardından bir tıklama ya da doğrulama geldiyse, ulaştığı şey `scroll_to` olarak saklanır.
 - Bir adım, girdi cihaza yola çıktığında yazılır, bu yüzden bir cihazın sonra reddettiği şey, örneğin bir iPhone'un güvenli alanına yapıştırma, dosyada yerine ulaşmış gibi durur. Pencere reddi söyler.
-- Bir akış cihazın adıyla Masaüstüne gider: onu orada yeniden adlandırın. Adımlar panelde geri alınamaz: bir akış bir metin dosyasıdır, onu düzenleyin.
+- Bir flow cihazın adıyla Masaüstüne gider: onu orada yeniden adlandırın. Adımlar panelde geri alınamaz: bir flow bir metin dosyasıdır, onu düzenleyin.
 
 ## Wi-Fi
 
@@ -381,7 +381,7 @@ satır tutar. Wi-Fi için eşleştirilmiş bir iPhone, bu Mac'te olana dayanarak
 durur; telefon orada değilse penceresi bunu söyler. `--wifi` olmadan da ağ üzerinden gider, çünkü başka bir yolu yoktur.
 
 Giden bir ağ okunacak bir son bırakmaz, bu yüzden bunu sessizlik söyler: sessizlik sürünce son görüntü soluklaşır ve pencere,
-çekilmiş bir kablodaki gibi `waiting not-connected` der. Adresle, sessizleşen bir aktarıcı üzerinden ulaşılan bir emülatörde
+çekilmiş bir kablodaki gibi `waiting not-connected` der. Adresle, sessizleşen bir aktarıcı üzerinden ulaşılan bir emulator'da
 ölçüldü: 20 s'lik bir sessizliğin 7 s'si içinde söylendi, dönüşten sonra 1 s içinde kendiliğinden canlı.
 
 Wi-Fi zaman kaybettirir: bir Android telefonda bir dokunuşun görünmesi kabloyla olduğunun yaklaşık iki katı sürer, bir iPhone'un görüntüsü de daha az düzgündür. Ölçümler [Wi-Fi, çalıştırıldığı haliyle](mirror-internals.tr.md#wi-fi-çalıştırıldığı-haliyle) bölümündedir.

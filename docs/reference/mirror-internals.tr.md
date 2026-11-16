@@ -6,33 +6,33 @@
 
 ## Görüntü nereden gelir
 
-Emülatörün karesi, tam kendi boyutundaki bir dosyada RGBA'dır, en üst satır önce (proto'nun yorumu aşağıdan yukarı der,
+Emulator'ın karesi, tam kendi boyutundaki bir dosyada RGBA'dır, en üst satır önce (proto'nun yorumu aşağıdan yukarı der,
 `screencap` ile karşılaştırılan bir kare öyle olmadığını söyler). Boyut verilmeden ya da daha büyük bir dosyaya istendiğinde her kareye yanıt verir ve
 hiçbir şey yazmaz. Dönen bir misafir sistem aynı biçimdeki bir karede yana yatık çizer; bu yüzden görüntü, yeni bir oturum açılmadan
-görüntüleyicide dik çevrilir. Bir simülatör de yüzeyinde aynısını yapar, geri çağrı olmadan: okuma yardımcısı öndeki uygulamanın nasıl çizildiğini saniyede dört kez söyler; böylece dönmeyen bir uygulama döndürülmüş bir cihazda dik kalır ve bir dokunuş inerken geri döndürülür. `manage_simulator` ile başlatılan bir emülatör, `APPDYNO_EMULATOR_ARGS` yanında `-grpc <free port> -grpc-use-token` alır (bunlar
-`-grpc` içermiyorsa). Port, adb'ninki adb'ye ait olduğu gibi, emülatöre aittir. Görüntünün dosyası `0600` izniyle durum
+görüntüleyicide dik çevrilir. Bir simulator de yüzeyinde aynısını yapar, geri çağrı olmadan: okuma yardımcısı öndeki uygulamanın nasıl çizildiğini saniyede dört kez söyler; böylece dönmeyen bir uygulama döndürülmüş bir cihazda dik kalır ve bir dokunuş inerken geri döndürülür. `manage_simulator` ile başlatılan bir emulator, `APPDYNO_EMULATOR_ARGS` yanında `-grpc <free port> -grpc-use-token` alır (bunlar
+`-grpc` içermiyorsa). Port, adb'ninki adb'ye ait olduğu gibi, emulator'a aittir. Görüntünün dosyası `0600` izniyle durum
 klasöründedir ve oturumla birlikte gider.
 
 ## Durumlar ve her birini neyin test ettiği
 
 Bir pencerenin neyi beklediği tek bir tablodadır, `packages/core/src/mirror/need.ts` içindeki `NEEDS`; bunu pencerenin uyarı bandı, `show_mirror status` ve bir ret kullanır.
 
-| ne olur                             | neyle test edildi                                              |
-| ----------------------------------- | -------------------------------------------------------------- |
-| yayın sırasında cihaz gider         | yayını altında öldürülen bir emülatör; kablo için elle denendi |
-| simülatör kapatılır                 | penceresi altında kapatılan bir simülatör                      |
-| ekran kapalı                        | emülatörler ve Xiaomi                                          |
-| kodlayıcı başarısız olur            | ajan birim testi; emülatörlerde ve Xiaomi'de `failFirst`       |
-| çözücü başarısız olur               | görüntüleyici öz testi; oturum birim testi                     |
-| görüntüleyici ölür                  | her türde SIGKILL; oturum birim testi                          |
-| üst süreç ölür                      | `appdyno mirror` için SIGKILL, ardından `dumpsys`              |
-| ajan durur                          | emülatörlerde ve Xiaomi'de `shutdown`                          |
-| Mac uyur, uyanır                    | oturum birim testi; elle denendi                               |
-| pencere örtülür                     | görüntüleyici öz testi                                         |
-| döndürme, katlama                   | emülatörler; bir simülatörünki bir suite ile, dokunuşlar dahil |
-| bir cihazda ikinci pencere          | üst süreç birim testi; Xiaomi'de iki çalıştırma                |
-| birkaç cihaz                        | üst süreç birim testi; biri öldürülen üç cihaz                 |
-| derleyici yok, pencere sunucusu yok | oturum birim testi                                             |
+| ne olur                             | neyle test edildi                                                |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| yayın sırasında cihaz gider         | yayını altında öldürülen bir emulator; kablo için elle denendi   |
+| simulator kapatılır                 | penceresi altında kapatılan bir simulator                        |
+| ekran kapalı                        | emulator'lar ve Xiaomi                                           |
+| kodlayıcı başarısız olur            | ajan birim testi; emulator'larda ve Xiaomi'de `failFirst`        |
+| çözücü başarısız olur               | görüntüleyici öz testi; oturum birim testi                       |
+| görüntüleyici ölür                  | her türde SIGKILL; oturum birim testi                            |
+| üst süreç ölür                      | `appdyno mirror` için SIGKILL, ardından `dumpsys`                |
+| ajan durur                          | emulator'larda ve Xiaomi'de `shutdown`                           |
+| Mac uyur, uyanır                    | oturum birim testi; elle denendi                                 |
+| pencere örtülür                     | görüntüleyici öz testi                                           |
+| döndürme, katlama                   | emulator'lar; bir simulator'ınki bir suite ile, dokunuşlar dahil |
+| bir cihazda ikinci pencere          | üst süreç birim testi; Xiaomi'de iki çalıştırma                  |
+| birkaç cihaz                        | üst süreç birim testi; biri öldürülen üç cihaz                   |
+| derleyici yok, pencere sunucusu yok | oturum birim testi                                               |
 
 ## Bir iPhone
 
@@ -75,11 +75,11 @@ Dönen bir telefon, uygulama yan yatmış halde aynı biçimde bir görüntü g�
 
 Cihaz, sistemin araç çubuğunun altında, hub'ın paletinden boyanmış bir zeminde durur. Sistemin camının kendine ait bir rengi yoktur, bu yüzden bir pencere arkasında duran kadar zengindir; renk görüntünün üstünde değil, çevresinde yaşar.
 
-Pencere çoğu zaman bir kişinin yazdığı pencerenin arkasındadır, bu yüzden söyledikleri orada da gücünü koruyacak biçimde yapılmıştır. AppKit, anahtar (key) olmayan bir pencerenin çubuğundaki sistem renklerini ve her görüntüyü soldurur: kendi başlığını 2:1'e kadar. Bu yüzden çubuktaki ad bize ait bir etikettir, renkler düz renklere çözülür ve simgeleri bize ait bir görünüm çizer. Gerçek pencerenin pikselleri koyu ve açık olarak, bir simülatörde, hub'ın her yerinde, kullanımdaymış gibi ve diğerlerinin arkasındaymış gibi çizilmiş halleriyle okundu: her iki biçimde 854 sözcük ve simgeden her sözcük 4,5:1 ya da üstünde, her simge 3:1'de; Reduce Transparency, Increase Contrast ve Differentiate Without Color açıkken de, Liquid Glass ayarının iki ucunda da öyle. Arkada tutulan bir pencere anahtar yapılamaz; bu yüzden kullanımdaki hal, pencerenin öyle çizilmiş halidir ve gerçek bir anahtar pencere okunmadı.
+Pencere çoğu zaman bir kişinin yazdığı pencerenin arkasındadır, bu yüzden söyledikleri orada da gücünü koruyacak biçimde yapılmıştır. AppKit, anahtar (key) olmayan bir pencerenin çubuğundaki sistem renklerini ve her görüntüyü soldurur: kendi başlığını 2:1'e kadar. Bu yüzden çubuktaki ad bize ait bir etikettir, renkler düz renklere çözülür ve simgeleri bize ait bir görünüm çizer. Gerçek pencerenin pikselleri koyu ve açık olarak, bir simulator'da, hub'ın her yerinde, kullanımdaymış gibi ve diğerlerinin arkasındaymış gibi çizilmiş halleriyle okundu: her iki biçimde 854 sözcük ve simgeden her sözcük 4,5:1 ya da üstünde, her simge 3:1'de; Reduce Transparency, Increase Contrast ve Differentiate Without Color açıkken de, Liquid Glass ayarının iki ucunda da öyle. Arkada tutulan bir pencere anahtar yapılamaz; bu yüzden kullanımdaki hal, pencerenin öyle çizilmiş halidir ve gerçek bir anahtar pencere okunmadı.
 
 Sözleri, Mac'in diline göre Türkçe ya da İngilizcedir ve tek bir tablodan, `mac/Viewer/WordsTable.m` dosyasından gelir. Anahtar İngilizcedir, bu yüzden üst sürecin bir komut satırı için gönderdiğinin ikinci bir ada ihtiyacı yoktur: bir etiket pencerenin kendi sözlerini tabloda arar; tablonun içermediği, örneğin bir aracın kendi hatası, İngilizce kalır. Bir uygulamanın ya da cihazın adlandırdığı, örneğin bir öğenin etiketi, bir uygulamanın ya da cihazın adı, bir adres, bir log satırı ya da bir ajanın ona yaptığı, tabloda asla aranmaz, çünkü oradaki `Settings` ya da `Small` bir addır: geldiği gibi durur, pencerenin bir cümlesinin içinde de; cümle onun çevresinde söylenir.
 
-Çerçeve, modele göre küçük bir tablodan kodla çizilir: köşeleri, adası ya da çentiği, düğmeleri. Hiçbir parçası hazır bir görsel değildir ve her boyut için bir kez çizilir; bu yüzden durgun bir pencerede çerçevenin hiçbir maliyeti yoktur. Bir simülatörün görüntüsü kendi adasını taşır, bu yüzden çerçeve adayı yalnızca görüntüde ada olmayan yerde ekler. **Cihaz Çerçevesini Göster** (⌥⌘F) onu kaldırır ve ayar kalıcıdır. Zemin, paletten karıştırılmış ve katman tarafından gerilmiş küçük bir görüntüdür, bulanıklaştırma geçişi yoktur ve renkleri gösterilen yerle birlikte döner. Bir cihazın renkleri zemine yalnızca ton olarak ulaşır; iki cihaz yan yana durduğunda her biri kendi tarafında; en çok 2 s'de bir ve bir ekran durunca bir kez daha okunur. macOS 26'nın altında kenar çubuğu ve Denetçi sistemin eski malzemesidir ve zemin onların arkasından görünmez. Reduce Transparency düz bir zemin ve dolu kartlar, Increase Contrast daha güçlü çizgiler ve sözler, Differentiate Without Color da her durum için bir biçim verir.
+Çerçeve, modele göre küçük bir tablodan kodla çizilir: köşeleri, adası ya da çentiği, düğmeleri. Hiçbir parçası hazır bir görsel değildir ve her boyut için bir kez çizilir; bu yüzden durgun bir pencerede çerçevenin hiçbir maliyeti yoktur. Bir simulator'ın görüntüsü kendi adasını taşır, bu yüzden çerçeve adayı yalnızca görüntüde ada olmayan yerde ekler. **Cihaz Çerçevesini Göster** (⌥⌘F) onu kaldırır ve ayar kalıcıdır. Zemin, paletten karıştırılmış ve katman tarafından gerilmiş küçük bir görüntüdür, bulanıklaştırma geçişi yoktur ve renkleri gösterilen yerle birlikte döner. Bir cihazın renkleri zemine yalnızca ton olarak ulaşır; iki cihaz yan yana durduğunda her biri kendi tarafında; en çok 2 s'de bir ve bir ekran durunca bir kez daha okunur. macOS 26'nın altında kenar çubuğu ve Denetçi sistemin eski malzemesidir ve zemin onların arkasından görünmez. Reduce Transparency düz bir zemin ve dolu kartlar, Increase Contrast daha güçlü çizgiler ve sözler, Differentiate Without Color da her durum için bir biçim verir.
 
 Yalnızca bir durumu değiştiren şey hareket eder ve 300 ms içinde durulur: bir yerin zemini geçiş yapar, bir adım tek bir halkayla geçer, bir çalıştırma işaretiyle yerine oturur, bir sonuç listesine gelir ve kapsül bir durum için geçiş yapar. Bir kişinin tekrarladığı şey, bir satır, bir sekme ya da bir düğme, hemen olur ve bir okuma solmadan değişir. İki şey açıkladıkları için daha uzun sürer: yapılacak adımdaki halkalar ve onun resmindeki vuruşlar, her biri üç kez, sonra dururlar. Dönen bir gösterge yalnızca bir çalıştırma sürerken döner. Durgun bir pencerede hiçbir şey hareket etmez ve Reduce Motion açıkken hareket bir kesmeye dönüşür.
 
@@ -87,28 +87,28 @@ Hareket değişen şey içindir: kenar çubuğunda gelen ya da giden bir cihaz, 
 
 ## Paneller, çalıştırıldığı haliyle
 
-**Loglar, Çökmeler, Ağ ve Erişilebilirlik.** iOS 27.2 yüklü bir iPhone 17 Pro simülatöründe ve API 34 bir emülatörde, arkada tutulan hub'dan, 4 ile 10 arası yüklerde, her görünüm ve dilde çalıştırıldı: fixture'ın logu geldi, çökmesi raporları arasında durdu, yaptığı bir istek simülatörde belirteci gizlenmiş olarak, emülatörde bayt olarak durdu, erişilebilirlik ekranının sorunları da türlerine göre durdu, biri görüntüde işaretlendi.
+**Loglar, Crash'ler, Ağ ve Erişilebilirlik.** iOS 27.2 yüklü bir iPhone 17 Pro simulator'ında ve API 34 bir emulator'da, arkada tutulan hub'dan, 4 ile 10 arası yüklerde, her görünüm ve dilde çalıştırıldı: fixture'ın logu geldi, crash'i raporları arasında durdu, yaptığı bir istek simulator'da belirteci gizlenmiş olarak, emulator'da bayt olarak durdu, erişilebilirlik ekranının sorunları da türlerine göre durdu, biri görüntüde işaretlendi.
 
-**Bağlantılar.** Arkada tutulan bir pencereden, iOS 27.2'li bir iPhone 17 Pro simülatöründe ve bir API 34 emülatöründe, 7 ile 57 arası yüklerde çalıştırıldı: `appdyno-fixture://open/form` fixture'ı formunda açtı ve `javascript:alert(1)` reddedildi, hiçbir şey açılmadı. Aynısı iOS 27.2'li bir iPhone 13 Pro Max'te (fixture uygulama alanında adıyla verildi) ve USB üzerinden Android 14'lü bir Samsung Galaxy A52'de, 6 ile 11 arası yüklerde.
+**Bağlantılar.** Arkada tutulan bir pencereden, iOS 27.2'li bir iPhone 17 Pro simulator'ında ve bir API 34 emulator'ında, 7 ile 57 arası yüklerde çalıştırıldı: `appdyno-fixture://open/form` fixture'ı formunda açtı ve `javascript:alert(1)` reddedildi, hiçbir şey açılmadı. Aynısı iOS 27.2'li bir iPhone 13 Pro Max'te (fixture uygulama alanında adıyla verildi) ve USB üzerinden Android 14'lü bir Samsung Galaxy A52'de, 6 ile 11 arası yüklerde.
 
-**Bildirim.** Arkada tutulan bir pencereden, iOS 27.2'li bir iPhone 17 Pro simülatöründe 5 ile 12 arası yüklerde, uydurma APNs kimlik bilgileriyle ve push Apple'ın yerine teste gönderilerek çalıştırıldı: alan bu bilgilerle göründü, onlarsız yok oldu ve zengin bir push yazılan token ile gitti. Arkada tutulan bir pencereden 40 ile 52 arası yüklerde çalıştırıldı: iOS 27.2'li, yeni silinmiş bir iPhone 17 Pro simülatöründe başlığı ve bir veri anahtarı olan bir uyarı, bir kişi pencerede uygulamanın bildirimlerine izin verdikten sonra fixture'ın koduna ulaştı; bir API 34 emülatöründe ve Samsung'da dokunulan bir push, fixture'ı iki veri anahtarı extras olarak verilmiş halde açtı ve fixture bunları gösterdi. iPhone'da panel her türü iPhone'un kendi nedeniyle listeledi ve bu yüzden gönderilecek hiçbirini sunmadı.
+**Bildirim.** Arkada tutulan bir pencereden, iOS 27.2'li bir iPhone 17 Pro simulator'ında 5 ile 12 arası yüklerde, uydurma APNs kimlik bilgileriyle ve push Apple'ın yerine teste gönderilerek çalıştırıldı: alan bu bilgilerle göründü, onlarsız yok oldu ve zengin bir push yazılan token ile gitti. Arkada tutulan bir pencereden 40 ile 52 arası yüklerde çalıştırıldı: iOS 27.2'li, yeni silinmiş bir iPhone 17 Pro simulator'ında başlığı ve bir veri anahtarı olan bir uyarı, bir kişi pencerede uygulamanın bildirimlerine izin verdikten sonra fixture'ın koduna ulaştı; bir API 34 emulator'ında ve Samsung'da dokunulan bir push, fixture'ı iki veri anahtarı extras olarak verilmiş halde açtı ve fixture bunları gösterdi. iPhone'da panel her türü iPhone'un kendi nedeniyle listeledi ve bu yüzden gönderilecek hiçbirini sunmadı.
 
-**Cihaz.** Arkada tutulan bir pencereden, bir API 34 emülatöründe 5 ile 10 arası yüklerde çalıştırıldı: panelin ayarladığı karanlık mod ve 1.3 metin boyutu emülatörde öyle okundu; bir konum, bir arama ve bitişi ve bir kısa mesaj ona ulaştı; koyu ve açık görünümde, İngilizce ve Türkçe, hub penceresi kapandıktan 2,4 ile 2,9 s sonra bitti ve ikisi de önceki gibi okundu. iOS 27.2'li bir iPhone 17 Pro simülatöründe 7 ile 33 arası yüklerde aynı ikisi ayarlandı ve öyle okundu; telsizler, ağın hızı, pil, ısıl durum, katlama, animasyonlar, bir arama ve bir kısa mesaj simülatörün kendi nedenleriyle devre dışı durdu; bir konum ayarlanıp temizlendi ve hub penceresi kapandıktan 0,5 ile 1 s sonra bitti, ikisi de önceki gibi okundu.
+**Cihaz.** Arkada tutulan bir pencereden, bir API 34 emulator'ında 5 ile 10 arası yüklerde çalıştırıldı: panelin ayarladığı karanlık mod ve 1.3 metin boyutu emulator'da öyle okundu; bir konum, bir arama ve bitişi ve bir kısa mesaj ona ulaştı; koyu ve açık görünümde, İngilizce ve Türkçe, hub penceresi kapandıktan 2,4 ile 2,9 s sonra bitti ve ikisi de önceki gibi okundu. iOS 27.2'li bir iPhone 17 Pro simulator'ında 7 ile 33 arası yüklerde aynı ikisi ayarlandı ve öyle okundu; telsizler, ağın hızı, pil, ısıl durum, katlama, animasyonlar, bir arama ve bir kısa mesaj simulator'ın kendi nedenleriyle devre dışı durdu; bir konum ayarlanıp temizlendi ve hub penceresi kapandıktan 0,5 ile 1 s sonra bitti, ikisi de önceki gibi okundu.
 
 ## Bir tıklama, ölçülmüş
 
-Bir tıklamadan değiştirdiği ilk görüntüye kadar, her iki durumda 15 tıklama, her biri durgun bir ekrandan, arkada tutulan bir pencere üzerinden. Simülatörde tıklama bir listenin ilk Add'ine, Android'de ise bench'inki gibi fixture'ın frames düğmesine yapılır; bu düğme her kareyi 2 s boyunca çizer. Kaydı olmayan bir pencere Android'de UI otomasyonu tutmaz ve bunlar onsuz başlar. Bir iPhone'da tıklamanın yerine listede bir fiske kullanılır, çünkü küçük bir değişiklik yayınının sürekli gönderdikleri içinde kaybolur.
+Bir tıklamadan değiştirdiği ilk görüntüye kadar, her iki durumda 15 tıklama, her biri durgun bir ekrandan, arkada tutulan bir pencere üzerinden. Simulator'da tıklama bir listenin ilk Add'ine, Android'de ise bench'inki gibi fixture'ın frames düğmesine yapılır; bu düğme her kareyi 2 s boyunca çizer. Kaydı olmayan bir pencere Android'de UI otomasyonu tutmaz ve bunlar onsuz başlar. Bir iPhone'da tıklamanın yerine listede bir fiske kullanılır, çünkü küçük bir değişiklik yayınının sürekli gönderdikleri içinde kaybolur.
 
 | cihaz                | kayıt yok, p50, ms | kayıt, p50, ms | Mac'in yükü |
 | -------------------- | ------------------ | -------------- | ----------- |
-| simülatör, iOS 27.2  | 102,3              | 109,8          | 4           |
-| emülatör, Android 14 | 33,2               | 35,1           | 3           |
+| simulator, iOS 27.2  | 102,3              | 109,8          | 4           |
+| emulator, Android 14 | 33,2               | 35,1           | 3           |
 | Xiaomi, Android 16   | 68,2               | 67,1           | 3           |
 | iPhone 13 Pro Max    | 110,7              | 109,0          | 10          |
 
 ## Hub, ölçülmüş
 
-Bir simülatörle bir Android emülatörü arasında başka birini seçmek, yaklaşık 250 yükte 0,4 ile 0,8 s sürdü. Hub'ın altında öldürülen bir görüntüleyici, bir Android emülatöründe ve bir simülatörde, sahip olduğu cihazla 0,6 s'de geri geldi.
+Bir simulator'la bir Android emulator'ı arasında başka birini seçmek, yaklaşık 250 yükte 0,4 ile 0,8 s sürdü. Hub'ın altında öldürülen bir görüntüleyici, bir Android emulator'ında ve bir simulator'da, sahip olduğu cihazla 0,6 s'de geri geldi.
 
 Bir istemcinin adı üst süreç tarafından `packages/cli/src/clients.ts`'ten gelir, asla görüntüleyiciden değil.
 
@@ -151,7 +151,7 @@ Bir kişinin okuyabileceği en küçük boyutta durur ve cihazın yetişemediği
 
 Göz de aynı fikirde: 360x800'de 9 sp'lik bir metin satırı seçilemez, 456x1024'te seçilebilir. Gövde metni tek başına burada bir şey söylemez; taban bu yüzden en küçükten alınır. Bir boyutu reddeden kodlayıcı başka bir konudur ve yine de tabanın altına inebilir: herhangi bir boyutta bir görüntü hiç olmamasından iyidir.
 
-Bir boyut yeniden büyüyebilir. Bu boyutta 30 s geçtikten sonra, aynı piksel kuralına göre bir üst boyut için yeterince hızlı art arda üç dizi olursa bir boyut yukarı çıkar; fazla yavaş olduğu görülen bir boyut 5 dakika bırakılır, bir büyüme her geri dönmek zorunda kaldığında bu süre iki katına çıkar, en çok bir saate kadar, yeni bir yayına dek. Durgun bir ekranda hiçbir şey okunmaz, bu yüzden görüntü bir kişi onu hareket ettirdikçe büyür. Bir emülatörde misafir sistem yük altındayken bir görüntü 456x1024'te kaldı ve bunu söyledi; `device-tests/mirror.android.test.ts`, istenen okumayla, gerçek bir yeniden başlatmada bir yayının büyüdüğünü doğrular, çünkü yoğun bir Mac altında bir dizi o boyutta 968 ms okudu ve kendiliğinden hiçbir sakinlik gelmedi. Android 14'lü bir Samsung A52'de, 8 ile 25 arası yükte, istenen okumayla (`roomMs` 1500, böylece her sakin dizi yer var diye okunur ve gerçek olan geri dönüş ve beklemedir), bir yayın 0,51 dk'da 1600 satırdan 1920'ye çıktı ve 2 s sonra geri döndü; bir sonraki deneme bundan 10,0 dk sonra, 5 dakikanın iki katı sonra geldi ve 19 s içinde geri döndü.
+Bir boyut yeniden büyüyebilir. Bu boyutta 30 s geçtikten sonra, aynı piksel kuralına göre bir üst boyut için yeterince hızlı art arda üç dizi olursa bir boyut yukarı çıkar; fazla yavaş olduğu görülen bir boyut 5 dakika bırakılır, bir büyüme her geri dönmek zorunda kaldığında bu süre iki katına çıkar, en çok bir saate kadar, yeni bir yayına dek. Durgun bir ekranda hiçbir şey okunmaz, bu yüzden görüntü bir kişi onu hareket ettirdikçe büyür. Bir emulator'da misafir sistem yük altındayken bir görüntü 456x1024'te kaldı ve bunu söyledi; `device-tests/mirror.android.test.ts`, istenen okumayla, gerçek bir yeniden başlatmada bir yayının büyüdüğünü doğrular, çünkü yoğun bir Mac altında bir dizi o boyutta 968 ms okudu ve kendiliğinden hiçbir sakinlik gelmedi. Android 14'lü bir Samsung A52'de, 8 ile 25 arası yükte, istenen okumayla (`roomMs` 1500, böylece her sakin dizi yer var diye okunur ve gerçek olan geri dönüş ve beklemedir), bir yayın 0,51 dk'da 1600 satırdan 1920'ye çıktı ve 2 s sonra geri döndü; bir sonraki deneme bundan 10,0 dk sonra, 5 dakikanın iki katı sonra geldi ve 19 s içinde geri döndü.
 
 | Samsung SM-A525F, 90 Hz | kare/s | yakalamadan varışa p50; p95, ms | dokunuş p50, ms |
 | ----------------------- | ------ | ------------------------------- | --------------- |
@@ -194,7 +194,7 @@ Aldıkları:
 | `clients`    | Yapay Zekâ İstemcileri panelinin gösterdiği.                            |
 | `copied`     | Bu görüntüyü panoya koy.                                                |
 | `copyText`   | Bu metni panoya koy.                                                    |
-| `crashes`    | Loglar paneli için uygulamanın çökme raporları.                         |
+| `crashes`    | Loglar paneli için uygulamanın crash raporları.                         |
 | `detach`     | Kaynağı bırak; pencere kalır.                                           |
 | `element`    | İmlecin altında ne olduğu.                                              |
 | `flow`       | Kaydın adımları.                                                        |
@@ -262,23 +262,23 @@ Söyledikleri:
 - En ağır görüntüde, 167 Mbit/s, yük altındaki bir iPhone: 361 yükünde başlayan 30 dakika boyunca paketlerinin %0,25'i kayboldu, her kayıp görüntüyü bir anahtar kareye kadar dondurdu. 8 yükünde 15 dakika boyunca, görüntü ağırlaşırken bir kez %0,01 kaybetti ve 1,1 s donma oldu.
 - Performans panelindeki **Gösterge Panelini Aç** sayfasını yazar ve `open` ile açar: sayfanın ardından bir tarayıcıda göründüğünü elle denemek gerekir, çünkü bir test hiçbir şeyi öne getirmemelidir.
 - Bir kişinin tıklamadığı bir pencerede tuşlar hiçbir yere gitmez: bir pencereye yazmayı elle denemek gerekir, çünkü bir testin penceresi klavyeyi hiç tutmaz.
-- Bir simülatörün katlanması: bir simülatörü katlayan bir denetim bulunamadı, bu yüzden bir katlanmada yeni bir yüzey test edilmedi.
-- Canlı sayılar bir simülatörde, bir Android emülatöründe, bir Samsung'da, bir Xiaomi'de ve bir iPhone'da çalıştırıldı. Bir iPhone'da bir kişiyi bir uygulamadan diğerine izleyen bir pencere telefonsuz test edildi.
-- Bir pencerenin ölçümleri bir simülatörde ve bir Android emülatöründe çalıştırıldı. Bir iPhone'da bir açılış çalıştırıldı; bir kaydırma turlarını çalıştırır, sonra trace aracı kendi trace'inde başarısız olur ve pencere bunu söyler.
-- Okumaların bir cihaza bedeli tek bir Android 14 emülatöründe, saniyede on kez değişen bir ekranda dururken ölçüldü: pencere açık ve sayılar kapalıyken bütün CPU'sunun %6,0'ı, sayılar gösterilirken %10,8'i, 30 s'lik sekiz dönem boyunca. Hiçbir telefon ölçülmedi.
+- Bir simulator'ın katlanması: bir simulator'ı katlayan bir denetim bulunamadı, bu yüzden bir katlanmada yeni bir yüzey test edilmedi.
+- Canlı sayılar bir simulator'da, bir Android emulator'ında, bir Samsung'da, bir Xiaomi'de ve bir iPhone'da çalıştırıldı. Bir iPhone'da bir kişiyi bir uygulamadan diğerine izleyen bir pencere telefonsuz test edildi.
+- Bir pencerenin ölçümleri bir simulator'da ve bir Android emulator'ında çalıştırıldı. Bir iPhone'da bir açılış çalıştırıldı; bir kaydırma turlarını çalıştırır, sonra trace aracı kendi trace'inde başarısız olur ve pencere bunu söyler.
+- Okumaların bir cihaza bedeli tek bir Android 14 emulator'ında, saniyede on kez değişen bir ekranda dururken ölçüldü: pencere açık ve sayılar kapalıyken bütün CPU'sunun %6,0'ı, sayılar gösterilirken %10,8'i, 30 s'lik sekiz dönem boyunca. Hiçbir telefon ölçülmedi.
 - Bir cihazın rengi: çerçeve bir renk alır ama henüz hiçbir şey onu bir cihazdan okumaz, bu yüzden her çerçeve tablonun kendi grafit ya da karbon rengidir.
 - Runner yokken, bir iPhone klavyesinde tuşu olmayan metin panosu üzerinden gider: telefon bir kişiden yapıştırmaya izin vermesini ister ve panonun tuttuğu, metinse sonra geri gelir. Güvenli bir alanda hiç gitmez ve pencere bunu söyler. Orada karar veren tek bakış yalnızca birim testleriyle, turlar halinde ve hiçbir telefon olmadan denendi.
 - Yeni bir pencerede ilk dokunuşun bir alana odağı vermesinin neden 2,3 s sürdüğü bilinmiyor. Turdan tura bu değere yakın kalır ve araya erişilebilirlik servisinin hiçbir okuması girmez.
 - Hiçbir alan almadığı için atılan harfler yine de bir kayda ulaşır; kayıt onları pencereden çıkarken not eder: bir yeniden oynatma onları yazar.
 - Diğer Denetimler menüsü, çerçevenin üzerinde durma, bir pencerenin hatırlanan boyutu ve yeri ve bir trackpad'de kıstırma ya da gerçek bir klavyede ölü tuş elle denenmedi; hesapları öz testle denetlenir.
 - Bir telefonun dokunuşunun, hiçbir boyutun altına indiremediği bir tabanı vardır: bir Samsung SM-A525F'de 1024 satırda 94 ms, 1280'de çalıştırmalar boyunca 95 ile 107 arası; hedef olan 80'in üstünde. Bir Xiaomi'ninki kendi boyutunda 92 olarak okunur, bu da bir ıskalama.
-- İki cihaz, her birinde fixture ile, bir simülatörde ve bir Android emülatöründe ve bir Samsung ile bir Xiaomi'de çalıştırıldı. Bir ekranda yan yana duran iki pencere gözle değil öz testin hesaplarıyla denetlenir, çünkü bir testin pencereleri her ekranın dışında tutulur; döndürülmüş bir cihaz bir çiftte çalıştırılmadı. İki kimlik altında iki build çalıştırılmadı.
-- `key` ile girdi: Android ajanın tuşlarına basar ve orada Esc, Geri'dir; bir kayıt da bunu yazar, böylece bir yeniden oynatma yapılanı yapar. Bir simülatörde bir klavyenin karakterleri ABD tuşları olarak gider; diğer her metin panosu ve command V ile.
+- İki cihaz, her birinde fixture ile, bir simulator'da ve bir Android emulator'ında ve bir Samsung ile bir Xiaomi'de çalıştırıldı. Bir ekranda yan yana duran iki pencere gözle değil öz testin hesaplarıyla denetlenir, çünkü bir testin pencereleri her ekranın dışında tutulur; döndürülmüş bir cihaz bir çiftte çalıştırılmadı. İki kimlik altında iki build çalıştırılmadı.
+- `key` ile girdi: Android ajanın tuşlarına basar ve orada Esc, Geri'dir; bir kayıt da bunu yazar, böylece bir yeniden oynatma yapılanı yapar. Bir simulator'da bir klavyenin karakterleri ABD tuşları olarak gider; diğer her metin panosu ve command V ile.
 
-Bir akış kaydetmek:
+Bir flow kaydetmek:
 
 - Bir iPhone'da bir kayıt ve panel, ilk kullanımın başlattığı runner'ı ile okur: `inspect_app` `ax_list` yerleri olmadan sözler ve id'ler verir, bu yüzden runner yokken bir tıklamanın adlandırılacağı bir öğe olmaz ve pencere nedenini söyler.
-- Bir iPhone'da ya da bir Xiaomi'de yapılan bir akış orada, bir simülatörde ve bir emülatörde yeniden oynatıldı. Bir simülatörde ya da emülatörde yapılan, diğerinde yeniden oynatıldı, hiçbir telefonda değil.
+- Bir iPhone'da ya da bir Xiaomi'de yapılan bir flow orada, bir simulator'da ve bir emulator'da yeniden oynatıldı. Bir simulator'da ya da emulator'da yapılan, diğerinde yeniden oynatıldı, hiçbir telefonda değil.
 - Bir cihazın kendi klavyesindeki tıklamalar yalnızca yerine geçen bir cihazda kaydedildi. Gerçek bir imlecin üzerinde durması, bir tekerlek ve bir trackpad elle denenmedi: bir testin penceresine gönderilmiş tıklamalar, sürüklemeler ve üzerinde durmalar verilir.
 - Cihazın kendi klavyesindeki tıklamalar sonradan alandan anlaşılır, bu yüzden Return tuşu görülmez: onu Mac'in klavyesi kaydeder ve pencere bunu söyler.
 - Başka bir süreçten gelen `run_flow record` bir pencereye çeyrek saniye içinde ulaşır ve bu sürede yapılan tıklamalar kaydedilmez. Aynı anda tek bir kayda yazan iki süreç bir adım kaybedebilir.

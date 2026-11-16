@@ -10,7 +10,7 @@ appdyno'da yeni misiniz? Sırasıyla üç sayfa:
 
 1. [İstemci bağlamak](guides/clients.tr.md): appdyno'yu kurun, MCP istemcinize bağlayın ve bir simulator, bir emulator ya da bir telefon hazırlayın.
 2. [Araçlar, bir bakışta](reference/tools.tr.md#bir-bakışta): tek ekranda 28 araç ve her birinin ayrıntılarının yeri.
-3. [Akışlar](guides/flows.tr.md): bir ajanın yaptığını kaydedin, modelsiz yeniden oynatın ve CI'da çalıştırın.
+3. [Flow'lar](guides/flows.tr.md): bir ajanın yaptığını kaydedin, modelsiz yeniden oynatın ve CI'da çalıştırın.
 
 Bunlardan sonra: bir rehber sizi bir işin içinden geçirir, başvuru bir şeye bakmak içindir, bir örnek de olduğu gibi çalışır.
 
@@ -21,7 +21,7 @@ Her biri sizi bir işin baştan sonuna götürür.
 | rehber                                         | ne için okunur                                                                                      |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | [İstemci bağlamak](guides/clients.tr.md)       | appdyno'yu MCP istemcinize bağlamak ve imzalama dahil bir telefonu hazırlamak                       |
-| [Akışlar](guides/flows.tr.md)                  | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak                       |
+| [Flow'lar](guides/flows.tr.md)                 | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak                       |
 | [Kanıt](guides/evidence.tr.md)                 | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                                        |
 | [Performansı ölçmek](guides/performance.tr.md) | bir uygulamayı ölçmek, baseline tutmak ve uygulamayı yavaşlatan bir pull request'i başarısız saymak |
 
@@ -49,7 +49,7 @@ Her biri olduğu gibi çalışır.
 
 | örnek                                     | şunun için deneyin                                                               |
 | ----------------------------------------- | -------------------------------------------------------------------------------- |
-| [Shop](examples/shop/README.tr.md)        | bir ödemedeki crash'i bir ajanla bulmak, sonra bir akışla düzeltilmiş tutmak     |
+| [Shop](examples/shop/README.tr.md)        | bir ödemedeki crash'i bir ajanla bulmak, sonra bir flow'la düzeltilmiş tutmak    |
 | [`perf-gate.yml`](examples/perf-gate.yml) | uygulamayı yavaşlatan bir pull request'i bir GitHub runner'ında başarısız saymak |
 
 ## Nasıl çalışır

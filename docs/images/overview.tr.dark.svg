@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" width="960" height="500" role="img" aria-labelledby="title desc">
   <title id="title">appdyno nedir</title>
-  <desc id="desc">Bir yapay zekâ ajanı, bir kişi ya da bir betik sorar. appdyno Mac’inizde çalışır; yönetir, gösterir, ölçer ve saklar. Bir iOS simülatörüne, bir iPhone’a, bir Android emülatörüne ve bir Android telefona ulaşır. Bulutu, telemetrisi ve daemon’u yoktur.</desc>
+  <desc id="desc">Bir yapay zekâ ajanı, bir kişi ya da bir betik sorar. appdyno Mac’inizde çalışır; yönetir, gösterir, ölçer ve saklar. Bir iOS simulator'ına, bir iPhone’a, bir Android emulator'ına ve bir Android telefona ulaşır. Bulutu, telemetrisi ve daemon’u yoktur.</desc>
   <style>
     svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -57,23 +57,23 @@
   <text class="name on-h" x="340" y="150">Yönetir</text>
   <text class="text" x="340" y="174">ekranı okur, dokunur, yazar, kaydırır</text>
   <text class="name on-h" x="340" y="222">Gösterir</text>
-  <text class="text" x="340" y="246">canlı pencere, video, loglar, çökmeler</text>
+  <text class="text" x="340" y="246">canlı pencere, video, loglar, crash'ler</text>
   <text class="name on-h" x="340" y="294">Ölçer</text>
   <text class="text" x="340" y="318">kareler, bellek, CPU, açılış süresi</text>
   <text class="name on-h" x="340" y="366">Saklar</text>
-  <text class="text" x="340" y="390">oynatılacak akışlar, kapının baseline’ları</text>
+  <text class="text" x="340" y="390">oynatılacak flow'lar, kapının baseline’ları</text>
   <text class="note mid" x="468" y="458">bulut yok, telemetri yok, daemon yok</text>
 
   <rect class="band-d" x="690" y="24" width="246" height="452" rx="20"/>
   <text class="label" x="714" y="50">CİHAZLARINIZ</text>
   <rect class="card s-d" x="706" y="66" width="214" height="82" rx="12"/>
-  <text class="name" x="724" y="100">iOS simülatörü</text>
+  <text class="name" x="724" y="100">iOS simulator'ı</text>
   <text class="text" x="724" y="124">yardımcılar ve bir runner</text>
   <rect class="card s-d" x="706" y="162" width="214" height="82" rx="12"/>
   <text class="name" x="724" y="196">iPhone</text>
   <text class="text" x="724" y="220">bir runner</text>
   <rect class="card s-d" x="706" y="258" width="214" height="82" rx="12"/>
-  <text class="name" x="724" y="292">Android emülatörü</text>
+  <text class="name" x="724" y="292">Android emulator'ı</text>
   <text class="text" x="724" y="316">bir ajan</text>
   <rect class="card s-d" x="706" y="354" width="214" height="82" rx="12"/>
   <text class="name" x="724" y="388">Android telefon</text>

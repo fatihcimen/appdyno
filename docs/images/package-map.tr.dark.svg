@@ -91,7 +91,7 @@
   <g data-package="driver-apple" data-row="2">
     <rect class="card s-d" x="444" y="278" width="188" height="72" rx="12"/>
     <text class="name" x="460" y="308">driver-apple</text>
-    <text class="text" x="460" y="332">simülatörler ve iPhone’lar</text>
+    <text class="text" x="460" y="332">simulator'lar ve iPhone’lar</text>
   </g>
 
   <g data-package="core" data-row="4">

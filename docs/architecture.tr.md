@@ -6,7 +6,7 @@ Bu sayfa appdyno'yu değiştirmek üzere olan kişi içindir. Parçaların nası
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/overview.tr.dark.svg">
-  <img src="images/overview.tr.svg" alt="Bir yapay zekâ ajanı, bir kişi ya da bir betik sorar; Mac'inizdeki appdyno yönetir, gösterir, ölçer ve saklar; simülatörlere, emülatörlere ve telefonlara ulaşır">
+  <img src="images/overview.tr.svg" alt="Bir yapay zekâ ajanı, bir kişi ya da bir betik sorar; Mac'inizdeki appdyno yönetir, gösterir, ölçer ve saklar; simulator'lara, emulator'lara ve telefonlara ulaşır">
 </picture>
 
 appdyno Mac'inizde çalışır, başka hiçbir yerde değil. Servis yok, daemon yok, telemetri yok. Her komut, MCP sunucusu ya da pencere kendi başına bir süreçtir; süreçler bir cihazı, onu kimin tuttuğunu söyleyen küçük bir dosya aracılığıyla paylaşır.
@@ -25,7 +25,7 @@ TypeScript'teki her şey `packages/` altındadır. Bir paket yalnızca buradaki 
 | `protocol`       | Host ile bir cihaz arasındaki her mesaj, bir şema olarak. Hiçbir şeye bağımlı değildir. |
 | `core`           | `Device` portu, bir ekranı okumak, yansıtma oturumu, durum dosyaları.                   |
 | `driver-android` | adb, Android ajanı, Android'in ölçümleri.                                               |
-| `driver-apple`   | Simülatörler ve iPhone'lar, runner, yardımcılar, Apple'ın ölçümleri.                    |
+| `driver-apple`   | Simulator'lar ve iPhone'lar, runner, yardımcılar, Apple'ın ölçümleri.                   |
 | `flows`          | `.flow` biçimi: ayrıştırma, kaydetme, yeniden oynatma, dışa aktarma.                    |
 | `perf`           | Bir ölçümün kayıtları, kapı, dashboard. Cihaz yok.                                      |
 | `ops`            | Araçlar. Her biri bir `Op`: bir ad, bir şema, bir handler.                              |
@@ -38,7 +38,7 @@ TypeScript'teki her şey `packages/` altındadır. Bir paket yalnızca buradaki 
 
 Bunu üç karar biçimlendirir.
 
-**Bir araç bir kez yazılır.** `packages/ops` içindeki bir `Op`, bir MCP istemcisi için bir araç, komut satırında bir komut, bir akışta bir adım ve kütüphanede bir çağrıdır. Böylece bir düzeltme dördüne birden ulaşır ve hiçbiri diğerlerinden ayrı düşemez.
+**Bir araç bir kez yazılır.** `packages/ops` içindeki bir `Op`, bir MCP istemcisi için bir araç, komut satırında bir komut, bir flow'da bir adım ve kütüphanede bir çağrıdır. Böylece bir düzeltme dördüne birden ulaşır ve hiçbiri diğerlerinden ayrı düşemez.
 
 **Bir sürücünün adını yalnızca en üstteki paket anar.** `ops`, `core` içindeki `Device` portuna karşı çalışır. Ona Android ve Apple sürücülerini veren tek yer `appdyno/src/providers.ts`'dir. Bu, iki platformun birbirine yaslanmasını önler; yeni bir platformun tek bir paket olmasının nedeni de budur. Başka nelere dokunduğunu [CONTRIBUTING](../CONTRIBUTING.tr.md#yeni-bir-platform) listeler.
 
@@ -55,18 +55,18 @@ Bir ajanın en çok yaptığı şey bakmak, işlem yapmak ve yeniden bakmaktır.
 
 **Yanıt ekranı taşır.** Bir işlem durulmuş ekranı, neyin değiştiğini gösteren bir diff olarak döndürür; böylece bir istemcinin ne olduğunu görmek için ikinci bir çağrıya ihtiyacı olmaz. `settled`, ekranın durgunlaştığını söyler. `changed`, öncekinden farklı olduğunu söyler.
 
-**Ekranın ne zaman durgun olduğuna ekrana en yakın taraf karar verir.** Ajan ya da runner ekranı izler ve ekran 200 ms boyunca sessiz kaldığında, en çok 3 s içinde, yanıt verir. Bunu cihazda yapmak gidiş-dönüş gerektirmez ve hiçbir şey kıpırdamazken hat sessiz kalır. Runner'ı olmayan bir simülatör aynısını Mac'te, `packages/driver-apple/src/simsettle.ts` içinde, kendi zamanlamalarıyla yapar: orada bir okuma yaklaşık 30 ms sürer, bu yüzden daha sık bakabilir. Kurallar ve pencerenin neleri yakaladığı [protokolde](reference/protocol.tr.md#durulma).
+**Ekranın ne zaman durgun olduğuna ekrana en yakın taraf karar verir.** Ajan ya da runner ekranı izler ve ekran 200 ms boyunca sessiz kaldığında, en çok 3 s içinde, yanıt verir. Bunu cihazda yapmak gidiş-dönüş gerektirmez ve hiçbir şey kıpırdamazken hat sessiz kalır. Runner'ı olmayan bir simulator aynısını Mac'te, `packages/driver-apple/src/simsettle.ts` içinde, kendi zamanlamalarıyla yapar: orada bir okuma yaklaşık 30 ms sürer, bu yüzden daha sık bakabilir. Kurallar ve pencerenin neleri yakaladığı [protokolde](reference/protocol.tr.md#durulma).
 
 **Bir seçici son anda çözülür.** Hedef, dokunuştan hemen önce, yeni bir okumada bulunur. Arada kıpırdayan bir ekran onu yanlış yere gönderemez. Birden çok eşleşme, ref'leriyle birlikte reddedilir. Bir tahmin başarı gibi görünürdü.
 
 **Bir ret öğretir.** Başarısız bir çağrı, bir `code` ve bir `hint` taşıyan bir `isError` yanıtıdır; başarısız bir işlem dokunuşunun gidip gitmediğini de söyler. Argümanlar geldiklerinde sıkı biçimde denetlenir; bir sunucunun neye dokunabileceğini her zaman seçenekleri belirler, hiçbir zaman bir araç çağrısı değil.
 
-Her platformun kendi giriş yolu vardır. Bir simülatörün hiç ajana ihtiyaç duymadığı yer dışında hepsi aynı protokolü konuşur.
+Her platformun kendi giriş yolu vardır. Bir simulator'ın hiç ajana ihtiyaç duymadığı yer dışında hepsi aynı protokolü konuşur.
 
 | cihaz     | orada ne çalışır                                              | Mac ona nasıl ulaşır                                     |
 | --------- | ------------------------------------------------------------- | -------------------------------------------------------- |
 | Android   | ajan: shell kullanıcısı olarak çalışan bir `app_process`      | adb sunucusu üzerinden, token ile bir abstract soket     |
-| simülatör | başta hiçbir şey: Mac'teki yardımcılar okur, dokunur ve yazar | yardımcılar; runner ilk okumada onların arkasında başlar |
+| simulator | başta hiçbir şey: Mac'teki yardımcılar okur, dokunur ve yazar | yardımcılar; runner ilk okumada onların arkasında başlar |
 | iPhone    | runner, bir XCTest paketi                                     | `usbmuxd`                                                |
 
 ## Bir pencere
@@ -80,7 +80,7 @@ Bir pencere cihazın kendisi gibi hissettirmelidir. Biçimini bu belirler.
 
 **Pencere native'dir, kontrol düzlemi Node'dur.** `mac/Viewer` içindeki görüntüleyici Objective-C'dir; her pencere için bir süreçtir ve ilk kullanımda `clang` ile derlenir. Görüntüyü çözer ve çizer. Node yayınları başlatır ve durdurur, girdiyi taşır ve neyin yanlış olduğunu adıyla söyler. İkisi görüntüleyicinin stdin ve stdout'unda, her seferinde bir satır JSON konuşur. Her mesajı, pencerenin nasıl çalıştığını anlatan sayfadaki [iletişim protokolü](reference/mirror-internals.tr.md#pencerenin-iletişim-protokolü) listeler.
 
-**Bir görüntü var olan en kısa yolu izler.** Bir Android telefonda görüntüleyici ajana kendisi bağlanır, böylece Node hiçbir kareyi görmez. Bir simülatör yüzeyini paylaşır, bir emülatör de bir dosyayı doldurur. Node'un bunlardaki tek payı yeni bir karenin geldiğini söylemektir. İstisna iPhone'dur: yayınını Node sürecinin bir worker thread'i tutar ve bu thread adlandırılmış bir pipe'a yazar.
+**Bir görüntü var olan en kısa yolu izler.** Bir Android telefonda görüntüleyici ajana kendisi bağlanır, böylece Node hiçbir kareyi görmez. Bir simulator yüzeyini paylaşır, bir emulator de bir dosyayı doldurur. Node'un bunlardaki tek payı yeni bir karenin geldiğini söylemektir. İstisna iPhone'dur: yayınını Node sürecinin bir worker thread'i tutar ve bu thread adlandırılmış bir pipe'a yazar.
 
 **Bir dokunuş tek bir yol izler ve bir kişinin girdisi hiç beklemez.** Her dokunuş `MirrorSession` ve cihazın `Mirror.input`'u üzerinden geçer. Android'de bu kendi başına bir bağlantıdır, böylece bir parmak bir sürücünün yaptığı işin arkasında sıraya girmez.
 
@@ -103,15 +103,15 @@ Karar veremeyen bir kapı geçirmemelidir. Bu yüzden `few-samples`, `noisy` ve 
 
 ## Native kod
 
-| klasör           | dil         | ne olduğu                                                                                   |
-| ---------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| `android/agent`  | Kotlin      | Cihazdaki ajan: ağaç, girdi, durulma, video yayını.                                         |
-| `ios/Runner`     | Swift       | XCTest runner'ı, bir simülatörde ya da bir telefonda.                                       |
-| `ios/RunnerCore` | Swift       | Runner'ın cihaz olmadan verdiği kararlar, `swift test` ile test edilir.                     |
-| `ios/SimHelper`  | Objective-C | Bir simülatörün ihtiyaç duyduğu yardımcılar: dokunma, erişilebilirlik, başlatma, probe'lar. |
-| `mac/Viewer`     | Objective-C | Pencere ve hub.                                                                             |
-| `mac/App`        | karışık     | Mac uygulamasının kabuğu: menü çubuğu, başlatıcı, simge, cask.                              |
-| `mac/TextScan`   | Objective-C | Bir ekranın sözcüklerini ağaç olmadan okuyan `TextScan`.                                    |
+| klasör           | dil         | ne olduğu                                                                                    |
+| ---------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `android/agent`  | Kotlin      | Cihazdaki ajan: ağaç, girdi, durulma, video yayını.                                          |
+| `ios/Runner`     | Swift       | XCTest runner'ı, bir simulator'da ya da bir telefonda.                                       |
+| `ios/RunnerCore` | Swift       | Runner'ın cihaz olmadan verdiği kararlar, `swift test` ile test edilir.                      |
+| `ios/SimHelper`  | Objective-C | Bir simulator'ın ihtiyaç duyduğu yardımcılar: dokunma, erişilebilirlik, başlatma, probe'lar. |
+| `mac/Viewer`     | Objective-C | Pencere ve hub.                                                                              |
+| `mac/App`        | karışık     | Mac uygulamasının kabuğu: menü çubuğu, başlatıcı, simge, cask.                               |
+| `mac/TextScan`   | Objective-C | Bir ekranın sözcüklerini ağaç olmadan okuyan `TextScan`.                                     |
 
 `android/fixture` ve `ios/Fixture` test uygulamalarıdır. Her birinde bilinen maliyetler yerleşiktir, böylece bir ölçüm bir doğruya karşı denetlenebilir: 40 ms çizen bir ekran, 50 MB'lık bir ayırma, 500 ms'lik bir takılma.
 
@@ -123,7 +123,7 @@ Karar veremeyen bir kapı geçirmemelidir. Bu yüzden `few-samples`, `noisy` ve 
 | çalıştırmalar, trace'ler               | aynı klasörün altında ya da `--measurements`         |
 | baseline'lar ve bütçeler               | projenizde `.appdyno/perf/`, commit etmek için       |
 
-Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece ölü bir sahibin talebi talep sayılmaz ve bir çökmeden sonra temizlenecek bir şey kalmaz. Her birim testi çalıştırması kendi klasörünü alır ve sizin gerçek durumunuza ulaşamaz.
+Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece ölü bir sahibin talebi talep sayılmaz ve bir crash'ten sonra temizlenecek bir şey kalmaz. Her birim testi çalıştırması kendi klasörünü alır ve sizin gerçek durumunuza ulaşamaz.
 
 **Bir oturumun değiştirdiği, bir öldürmeden sonra bile geri gider.** Her koşul değişmeden önce eski değeri ve sahibiyle yazılır ve oturumun sonu onu geri koyar. Bir cihazda başlayan oturum, artık ölmüş bir sahibin orada bıraktığını geri koyar. İstemcisinin bitirdiği bir sunucu, bıraktığını sunucunun grubu dışında kendine ait bir süreç olan `appdyno mcp --put-back-after <pid>`'e (appdyno'nun kendi süreçleri arasındaki bir seçenek; elle yazılmaz) devreder; o sunucunun gitmesini bekler ve sonra böyle bir oturum başlatır: bir istemci sunucusunu, bitmesini istedikten yarım saniye sonra, bir cihazın geri gidebileceğinden önce öldürebilir.
 

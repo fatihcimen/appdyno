@@ -2,7 +2,7 @@
 
 [English](clients.md)
 
-appdyno, Mac'inizde, kullandığı telefonun ya da simülatörün yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
+appdyno, Mac'inizde, kullandığı telefonun ya da simulator'ın yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
 
 İstemcilerin çoğu appdyno'yu Mac'inizde kendisi başlatır ve appdyno kurulduktan sonra bunun için ağ gerekmez. Tek istisna: Mac uygulaması olmadan, ilk Android trace'i kendi trace processor'ını bir kez indirir. Tarayıcıda çalışan bir istemci ise Mac'inizde hiçbir şey başlatamaz. Zor olan durum budur.
 
@@ -15,7 +15,7 @@ appdyno, Mac'inizde, kullandığı telefonun ya da simülatörün yanında çal�
 | Tarayıcıda ChatGPT                          | sizin çalıştırdığınız bir tünel; Business, Enterprise, Edu | [Tarayıcıda ChatGPT](#tarayıcıda-chatgpt)        |
 | Tarayıcıda, telefonda, Cowork'te Claude     | sizin çalıştırdığınız bir tünel                            | [Tarayıcıda Claude](#tarayıcıda-claude)          |
 
-Sonra cihazınızı hazırlayın: [Android](#android-telefon-veya-emülatör), [iPhone veya simülatör](#iphone-veya-simülatör). Bir şey ters giderse [Çalışmıyorsa](#çalışmıyorsa) bölümüne bakın.
+Sonra cihazınızı hazırlayın: [Android](#android-telefon-veya-emulator), [iPhone veya simulator](#iphone-veya-simulator). Bir şey ters giderse [Çalışmıyorsa](#çalışmıyorsa) bölümüne bakın.
 
 ## appdyno'yu kurmak
 
@@ -88,7 +88,7 @@ Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hi
 
 **`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta npm registry'sine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
 
-**Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android ajanı ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu simülatörde ilk kullanımda bir kez indirir ya da derler, derleme birkaç dakika sürer; ayrıntısı [aşağıda](#iphone-veya-simülatör).
+**Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android ajanı ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu simulator'da ilk kullanımda bir kez indirir ya da derler, derleme birkaç dakika sürer; ayrıntısı [aşağıda](#iphone-veya-simulator).
 
 ## Bu Mac'teki istemciler
 
@@ -375,7 +375,7 @@ Claude'un sayfaları bir konuda çelişiyor. Yardım makalesi sabit token için 
 
 Bir araç çağrısının yaklaşık 240 saniyesi, bir yanıtın yaklaşık 150.000 karakteri vardır. Claude'un kendi MCP tünelleri, sunucuda OAuth isteyen bir Enterprise önizlemesidir, dolayısıyla appdyno için bir yol değildir.
 
-## Android telefon veya emülatör
+## Android telefon veya emulator
 
 Android cihazlarla konuşan `adb` aracı gerekir.
 
@@ -390,11 +390,11 @@ Telefon yok mu? Android Studio'nun Device Manager'ında sanal bir cihaz oluştur
 
 appdyno ilk kullanımda cihaza kendi ajanını kurar. Xiaomi her yeni kurulumda ekranda sorar, appdyno da yalnızca kendi başlattığı kurulumda bu tek soruyu yanıtlar. Bkz. [Bir telefona ulaşmak](../reference/tools.tr.md#bir-telefona-ulaşmak).
 
-## iPhone veya simülatör
+## iPhone veya simulator
 
 App Store'dan [Xcode](https://apps.apple.com/app/xcode/id497799835) kurun, bir kez açıp sorduklarını onaylayın. Bulunduğunu görmek için `appdyno doctor` çalıştırın.
 
-**Simülatör için başka bir şey gerekmez**: ne hesap ne imzalama. Xcode'un Simulator uygulamasıyla açın ya da istemcinizden başlatmasını isteyin. appdyno'nun yardımcısını gerektiren ilk işlem, sürümün derlediği yardımcıyı (1 MB'tan küçük) sürümün GitHub'daki sayfasından indirir ve yalnızca sha256'sı paketin taşıdığıyla aynıysa kullanır. Mac'te hiç yardımcı yokken bu ilk yanıt 5 s'de geldi; yardımcı indirilmeyip derlendiğinde, Xcode'u onu daha önce derlemiş bir Mac'te 21 s'de. Hiç derlememiş bir Mac'te birkaç dakika sürer.
+**Simulator için başka bir şey gerekmez**: ne hesap ne imzalama. Xcode'un Simulator uygulamasıyla açın ya da istemcinizden başlatmasını isteyin. appdyno'nun yardımcısını gerektiren ilk işlem, sürümün derlediği yardımcıyı (1 MB'tan küçük) sürümün GitHub'daki sayfasından indirir ve yalnızca sha256'sı paketin taşıdığıyla aynıysa kullanır. Mac'te hiç yardımcı yokken bu ilk yanıt 5 s'de geldi; yardımcı indirilmeyip derlendiğinde, Xcode'u onu daha önce derlemiş bir Mac'te 21 s'de. Hiç derlememiş bir Mac'te birkaç dakika sürer.
 
 Sürümün yardımcısı kullanılamıyorsa appdyno yardımcıyı derler ve nedenini tek satırda söyler: indirme başarısız olur ya da sha256'sı farklıdır, Mac Intel'dir, Xcode'u sürümünkinden birden fazla ana sürüm uzaktadır ya da indirilen yardımcı başlamaz. Xcode 26.5'in derlediği Xcode 27.2 altında, 27.2'nin derlediği 26.5 altında çalıştı. Sunucuda ya da `appdyno ios build`'de `--no-fetch`, ya da `APPDYNO_NO_FETCH=1`, ağdan hiçbir şey istemez ve derler. `appdyno doctor` buradaki yardımcının indirildiğini mi derlendiğini mi söyler.
 
@@ -491,7 +491,7 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 | `no connected device this server may drive`               | `appdyno devices` hiçbir cihaz listelemiyor ya da `--allow-devices` onu dışarıda bırakıyor                                               |
 | `more than one device this server may drive`              | istemcinize hangi cihazı kullanacağını söyleyin ya da girdiye `--device` ekleyin                                                         |
 | `is held by pid ...`                                      | o cihazı başka bir program kullanıyor. Durdurun ya da `--share` kullanın                                                                 |
-| `no signing for the iPhone runner`                        | bkz. [iPhone veya simülatör](#iphone-veya-simülatör)                                                                                     |
+| `no signing for the iPhone runner`                        | bkz. [iPhone veya simulator](#iphone-veya-simulator)                                                                                     |
 | `DEVICE_LOCKED`                                           | telefonun kilidini açın                                                                                                                  |
 | iOS'ta ilk çağrı hata veriyor ya da zaman aşımına uğruyor | runner hâlâ derleniyor, istemci vazgeçti: `appdyno ios build` çalıştırıp yeniden deneyin                                                 |
 | Codex'te çağrı 60 saniyede kesiliyor                      | [girdiye](#codex-ve-chatgpt-masaüstü-uygulaması) `tool_timeout_sec` ekleyin                                                              |
@@ -518,6 +518,6 @@ macOS'ta, geçici bir ev klasörüyle, paketinden derlenip kurulan sürümle, b�
 
 Yapay Zekâ İstemcileri'nin bir istemcinin çağırdığını bilmesini sağlayan `clientInfo` adı, Claude Code 2.1.318 için istemcinin kendi çağrısından okundu: `claude-code`. Diğer istemciler için `packages/cli/src/clients.ts` içindeki kalıp, gönderdiği bilinen addan gelir ve burada görülmedi. Biri yanlışsa o istemci verdiği adla kendi satırında görünür, başkasının yerine asla Bağlı denmez.
 
-Claude Code 2.1.319 bir aracın yapılandırılmış yanıtını görselleriyle birlikte bütünüyle, bir reddi de kodu ve ipucuyla gösterir. Bu, 2026-11-08 ve 2026-11-09'da arayüzsüz akışından (`claude -p`), iOS 27.2'li bir iPhone 17 Pro simülatöründe ve bir API 34 emülatöründe okundu.
+Claude Code 2.1.319 bir aracın yapılandırılmış yanıtını görselleriyle birlikte bütünüyle, bir reddi de kodu ve ipucuyla gösterir. Bu, 2026-11-08 ve 2026-11-09'da arayüzsüz akışından (`claude -p`), iOS 27.2'li bir iPhone 17 Pro simulator'ında ve bir API 34 emulator'ında okundu.
 
 Hesap, lisans ya da pencere gerektirdiği için denenmeyenler: ChatGPT uygulaması ve web sürümü, Claude Desktop ve web'deki Claude, Secure MCP Tunnel, herkese açık herhangi bir tünel, Codex'ten bağlantı, Cursor, VS Code, Devin Desktop, Antigravity ve Zed. Buradaki adımlar kendi belgelerinden alındı. `scripts/check-mcpb.mjs` masaüstü eklentisini açar ve sunucusunu manifest dosyasının dediği gibi stdio üzerinden, form boşken ve doluyken çalıştırır; dosyayı uygulamada açmak, formu ve uygulamadan ilk çağrı denenmedi. Ücretsiz Apple kimliğiyle imzalama da denenmedi.

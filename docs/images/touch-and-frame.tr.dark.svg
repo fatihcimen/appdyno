@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 690" width="960" height="690" role="img" aria-labelledby="title desc">
   <title id="title">Bir dokunuş ve bir görüntü nasıl ilerler</title>
-  <desc id="desc">Her cihaz pencereyi kendi yoluyla besler. Bir Android telefonun ajanı H.264 ya da HEVC’yi adb üzerinden doğrudan pencereye gönderir. Bir emülatörün gRPC portu ortak bir dosyayı doldurur, Node da ne zaman olduğunu bir tikle söyler. Bir simülatör framebuffer’ını paylaşır. Bir iPhone’un yayınını Node sürecinin bir worker thread’i tutar ve bu thread adlandırılmış bir pipe’a yazar. Bir dokunuş her zaman pencereden Node’a bir satır JSON olarak, sonra cihaza gider: Android’de ajanın isteğiyle, simülatörde SimHID yardımcısıyla, iPhone’da yayının üzerinden.</desc>
+  <desc id="desc">Her cihaz pencereyi kendi yoluyla besler. Bir Android telefonun ajanı H.264 ya da HEVC’yi adb üzerinden doğrudan pencereye gönderir. Bir emulator'ın gRPC portu ortak bir dosyayı doldurur, Node da ne zaman olduğunu bir tikle söyler. Bir simulator framebuffer’ını paylaşır. Bir iPhone’un yayınını Node sürecinin bir worker thread’i tutar ve bu thread adlandırılmış bir pipe’a yazar. Bir dokunuş her zaman pencereden Node’a bir satır JSON olarak, sonra cihaza gider: Android’de ajanın isteğiyle, simulator'da SimHID yardımcısıyla, iPhone’da yayının üzerinden.</desc>
   <style>
     svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -68,7 +68,7 @@
 
   <!-- Android emulator -->
   <rect class="card s-d" x="32" y="214" width="190" height="120" rx="12"/>
-  <text class="name" x="50" y="246">Android emülatörü</text>
+  <text class="name" x="50" y="246">Android emulator'ı</text>
   <text class="text" x="50" y="270">kendi gRPC portu</text>
   <text class="text" x="50" y="290">ortak dosyayı doldurur</text>
   <rect class="card s-h" x="386" y="266" width="188" height="56" rx="12"/>
@@ -82,7 +82,7 @@
 
   <!-- simulator -->
   <rect class="card s-d" x="32" y="350" width="190" height="120" rx="12"/>
-  <text class="name" x="50" y="382">iOS simülatörü</text>
+  <text class="name" x="50" y="382">iOS simulator'ı</text>
   <text class="text" x="50" y="406">framebuffer’ı,</text>
   <text class="text" x="50" y="426">kodlama olmadan</text>
   <rect class="card s-h" x="386" y="402" width="188" height="56" rx="12"/>

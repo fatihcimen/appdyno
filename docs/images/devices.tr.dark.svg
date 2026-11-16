@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 708" width="960" height="708" role="img" aria-labelledby="title desc">
   <title id="title">Hangi cihazda ne çalışır</title>
-  <desc id="desc">iOS’ta simülatör ve iPhone, Android’de emülatör ve telefon. Ekranı okumak, dokunmak, yazmak, kaydırmak: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Deep link, universal link, App Link: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, seçili uygulamada; Emülatör çalışır; Telefon çalışır. Uygulamanın bağlantılarını listelemek: Simülatör çalışır, şema, alan adı; iPhone hayır, simülatörde okunur; Emülatör çalışır, App Link durumu; Telefon telefonda henüz denenmedi. Push bildirimi göndermek: Simülatör bir kısmı, notta yazdığı gibi, 7’de 1; APNs ile 6; iPhone telefonda henüz denenmedi, APNs ile 7’de 6; Emülatör bir kısmı, notta yazdığı gibi, 7’de 5; Telefon bir kısmı, notta yazdığı gibi, 7’de 5; veri denendi. Dokunabildiğiniz canlı pencere: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, deneysel; Emülatör çalışır; Telefon çalışır, Android 10 ve üstü. Açılış, kare, bellek, CPU: Simülatör bir kısmı, notta yazdığı gibi, main thread kareleri; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Video, log, çökme kaydı: Simülatör çalışır; iPhone bir kısmı, notta yazdığı gibi, uygulama logu yok; Emülatör çalışır; Telefon çalışır. Karanlık mod, yazı boyutu: Simülatör çalışır; iPhone çalışır; Emülatör çalışır; Telefon çalışır. Biyometri: Simülatör çalışır, Face ID, Touch ID; iPhone hayır; Emülatör çalışır, parmak izi; Telefon hayır. Uçak modu, Wi-Fi, mobil veri: Simülatör hayır, Mac’in ağı; iPhone hayır; Emülatör çalışır; Telefon çalışır.</desc>
+  <desc id="desc">iOS’ta simulator ve iPhone, Android’de emulator ve telefon. Ekranı okumak, dokunmak, yazmak, kaydırmak: Simulator çalışır; iPhone çalışır; Emulator çalışır; Telefon çalışır. Deep link, universal link, App Link: Simulator çalışır; iPhone bir kısmı, notta yazdığı gibi, seçili uygulamada; Emulator çalışır; Telefon çalışır. Uygulamanın bağlantılarını listelemek: Simulator çalışır, şema, alan adı; iPhone hayır, simulator'da okunur; Emulator çalışır, App Link durumu; Telefon telefonda henüz denenmedi. Push bildirimi göndermek: Simulator bir kısmı, notta yazdığı gibi, 7’de 1; APNs ile 6; iPhone telefonda henüz denenmedi, APNs ile 7’de 6; Emulator bir kısmı, notta yazdığı gibi, 7’de 5; Telefon bir kısmı, notta yazdığı gibi, 7’de 5; veri denendi. Dokunabildiğiniz canlı pencere: Simulator çalışır; iPhone bir kısmı, notta yazdığı gibi, deneysel; Emulator çalışır; Telefon çalışır, Android 10 ve üstü. Açılış, kare, bellek, CPU: Simulator bir kısmı, notta yazdığı gibi, main thread kareleri; iPhone çalışır; Emulator çalışır; Telefon çalışır. Video, log, crash kaydı: Simulator çalışır; iPhone bir kısmı, notta yazdığı gibi, uygulama logu yok; Emulator çalışır; Telefon çalışır. Karanlık mod, yazı boyutu: Simulator çalışır; iPhone çalışır; Emulator çalışır; Telefon çalışır. Biyometri: Simulator çalışır, Face ID, Touch ID; iPhone hayır; Emulator çalışır, parmak izi; Telefon hayır. Uçak modu, Wi-Fi, mobil veri: Simulator hayır, Mac’in ağı; iPhone hayır; Emulator çalışır; Telefon çalışır.</desc>
   <style>
     svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -42,11 +42,11 @@
   <text class="label" x="44" y="50">BİR AJANIN YAPABİLDİKLERİ</text>
   <text class="label" x="398" y="50">iOS</text>
   <text class="label" x="682" y="50">ANDROID</text>
-  <text class="name mid" x="446" y="84">Simülatör</text>
+  <text class="name mid" x="446" y="84">Simulator</text>
   <text class="text mid" x="446" y="106">Xcode ile</text>
   <text class="name mid" x="586" y="84">iPhone</text>
   <text class="text mid" x="586" y="106">Geliştirici Modu</text>
-  <text class="name mid" x="726" y="84">Emülatör</text>
+  <text class="name mid" x="726" y="84">Emulator</text>
   <text class="text mid" x="726" y="106">bir AVD</text>
   <text class="name mid" x="866" y="84">Telefon</text>
   <text class="text mid" x="866" y="106">USB hata ayıklama</text>
@@ -69,7 +69,7 @@
   <circle class="f-h" cx="446" cy="245" r="7"/>
   <text class="text mid" x="446" y="271">şema, alan adı</text>
   <text class="name mid" x="586" y="250">–</text>
-  <text class="text mid" x="586" y="271">simülatörde okunur</text>
+  <text class="text mid" x="586" y="271">simulator'da okunur</text>
   <circle class="f-d" cx="726" cy="245" r="7"/>
   <text class="text mid" x="726" y="271">App Link durumu</text>
   <circle class="card s-d dash" cx="866" cy="254" r="7"/>
@@ -99,7 +99,7 @@
   <circle class="f-d" cx="726" cy="410" r="7"/>
   <circle class="f-d" cx="866" cy="410" r="7"/>
   <path class="rule" d="M32 436H936"/>
-  <text class="note" x="44" y="467">Video, log, çökme kaydı</text>
+  <text class="note" x="44" y="467">Video, log, crash kaydı</text>
   <circle class="f-h" cx="446" cy="462" r="7"/>
   <circle class="card s-h" cx="586" cy="453" r="7"/><path class="f-h" d="M586 446A7 7 0 0 0 586 460Z"/>
   <text class="text mid" x="586" y="479">uygulama logu yok</text>
