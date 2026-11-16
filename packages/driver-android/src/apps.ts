@@ -73,6 +73,9 @@ const PERMISSIONS: Record<string, string> = {
   photos: 'READ_MEDIA_IMAGES',
 };
 
+/** What a start prints after `am start` where the app has no process then. */
+const NO_PROCESS = 'Process: none';
+
 export class AndroidApps implements AppManager {
   readonly languageStays = true;
 
@@ -300,8 +303,19 @@ export class AndroidApps implements AppManager {
     // first, which takes the dialog with it, the start is a new one
     const pkg = shq(app);
     const stopHeld = `pidof ${pkg} >/dev/null && ${heldForDialog(app)} && am force-stop ${pkg}`;
-    const out = await this.sh(`${stopHeld}; am start -W -n ${shq(activity)} ${args.join(' ')}`);
+    const out = await this.sh(
+      `${stopHeld}; am start -W -n ${shq(activity)} ${args.join(' ')} 2>&1; pidof ${pkg} >/dev/null || echo '${NO_PROCESS}'`,
+    );
     const error = amStartError(out);
     if (error) throw new DeviceError('APP_NOT_RUNNING', `${app} did not start: ${error}`);
+    // another app's window at the top of the app's task, as a permission prompt the app's end left there, is what a
+    // start brings to the front: the app gets no process, and that read as its death
+    const front = /^Activity: ([^/\s]+)\//m.exec(out)?.[1];
+    if (front && front !== app && out.includes(NO_PROCESS))
+      throw new DeviceError(
+        'APP_NOT_RUNNING',
+        `${app} did not start: the start brought ${front} to the front, whose window was left in the app's task when the app ended`,
+        'screen reads that window: once it is answered or closed, the app starts',
+      );
   }
 }

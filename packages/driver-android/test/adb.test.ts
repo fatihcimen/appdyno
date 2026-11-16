@@ -211,6 +211,23 @@ describe('launching an app', () => {
     });
   });
 
+  it("says that a window left in the app's task came to the front in its place, not that it started", async () => {
+    // as API 35 answers a start of the fixture, ended behind its permission prompt
+    const prompt = 'com.google.android.permissioncontroller';
+    const brought = `${STARTED}Warning: Activity not started, intent has been delivered to currently running top-most instance.\nStatus: ok\nLaunchState: UNKNOWN (0)\nActivity: ${prompt}/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity\nComplete\n`;
+    const { d, ran } = device(`${brought}Process: none\n`);
+    await expect(d.launch('a.b')).rejects.toMatchObject({
+      code: 'APP_NOT_RUNNING',
+      message: `a.b did not start: the start brought ${prompt} to the front, whose window was left in the app's task when the app ended`,
+      hint: 'screen reads that window: once it is answered or closed, the app starts',
+    });
+    expect(starts(ran)[0]).toContain(" 2>&1; pidof 'a.b' >/dev/null || echo 'Process: none'");
+    // an app that runs behind another's window started, and one in front already is no other app's
+    await expect(device(brought).d.launch('a.b')).resolves.toBeUndefined();
+    const own = brought.replace(/Activity: .*/, 'Activity: a.b/.Main');
+    await expect(device(`${own}Process: none\n`).d.launch('a.b')).resolves.toBeUndefined();
+  });
+
   it('starts the first of two launcher activities, not the chooser they resolve to', async () => {
     const ran: string[] = [];
     const adb = {
