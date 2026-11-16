@@ -24,8 +24,8 @@ export type StepPlace = {
   update: boolean;
   /** The rules the run's `mock` steps have added so far, each as its line. */
   mocked: string[];
-  /** The capture's newest request as the run began, and when that capture began: a `request` step looks past it. */
-  before?: { since: number; id: number } | undefined;
+  /** The request a `request` step looks past: the capture's newest as the run began, while that capture runs. */
+  after?: () => number | undefined;
 };
 
 /** A `visual` step's comparison, refused before the run when there is nothing to compare with. */
@@ -152,9 +152,17 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
         'device_setting',
         defined({ name: a.name, value: a.value, app: a.app, title: a.title }),
       ];
-    case 'mock':
+    case 'mock': {
       // added to the rules there, and taken out when the run of its file ends
-      return ['network', { action: 'mock', rules: [mockLine(st, at)], add: true }];
+      if (a.request !== undefined)
+        return ['network', { action: 'mock', rules: [mockLine(st, at)], add: true }];
+      // a file of answers is found from the flow's folder, as a rule's own file is
+      const from =
+        typeof a.from === 'string' && !/^\d+$/.test(a.from)
+          ? resolve(dirname(st.file ?? at.file), a.from)
+          : a.from;
+      return ['network', { action: 'mock', ...defined({ from, unmatched: a.unmatched }) }];
+    }
     case 'network':
       return ['network', { action: 'mock', strict: a.value !== 'off' }];
     case 'request':
@@ -162,7 +170,13 @@ export function opCall(st: FlowStep, at: StepPlace): [string, Record<string, unk
         'network',
         {
           action: 'check',
-          ...defined({ contains: a.part, method: a.method, status: a.status, has: a.has }),
+          ...defined({
+            contains: a.part,
+            method: a.method,
+            status: a.status,
+            has: a.has,
+            after: at.after?.(),
+          }),
           timeoutMs: a.timeoutMs ?? REPLAY_WAIT_MS,
         },
       ];

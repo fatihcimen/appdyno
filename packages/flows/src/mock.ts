@@ -26,6 +26,8 @@ const globPattern = (glob: string) =>
 export function mockRule(st: FlowStep, line = st.line): NetworkRule {
   const a = st.args;
   const wrong = (what: string) => new FlowError(`mock: ${what}`, line);
+  if (a.request === undefined || a.from !== undefined || a.unmatched !== undefined)
+    throw wrong('a rule is a request, host, host/path or *, then what it does');
   const request = String(a.request);
   const slash = request.indexOf('/');
   const host = (slash < 0 ? request : request.slice(0, slash)).toLowerCase();

@@ -549,6 +549,55 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     await ok('network', { action: 'stop' });
   }, 180_000);
 
+  it('makes a rule of an answer it saw, replays a HAR it saved, and fails what no rule takes', async () => {
+    await ok('network', { action: 'start', via: 'probe', bodies: true });
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    const seen = await ok('network', { action: 'read', contains: '/json' });
+    const id = /^(\d+) GET/m.exec(seen.text)?.[1];
+    const made = await ok('network', { action: 'mock', from: String(id) });
+    out(`FROM ${made.text.replaceAll('\n', ' | ')}`);
+    const file = /body=@(\S+\.json)/.exec(made.data.added?.[0] ?? '')?.[1] ?? '';
+    // the answer as the server gave it, less what names a credential and the policy's own secret
+    expect(readFileSync(file, 'utf8')).toBe('{"from":"a","note":"•••","api_key":"•••"}');
+    const before = a.seen.length;
+    const again = await send(`http://${a.at}/json`);
+    expect(again.status).toBe(200);
+    expect(again.text).toContain('{"from":"a","note":"•••"');
+    expect(a.seen.length).toBe(before);
+    // the capture kept as a file, and its answers given again from the file with the server left out
+    await ok('network', { action: 'mock', rules: [] });
+    await ok('network', { action: 'read', save: 'replay.har', contains: '/json' });
+    const replay = await ok('network', {
+      action: 'mock',
+      from: 'replay.har',
+      unmatched: 'fail',
+      strict: true,
+    });
+    out(`FROM har: ${replay.text.replaceAll('\n', ' | ')}`);
+    expect(replay.data.added).toHaveLength(1);
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    expect(a.seen.length).toBe(before);
+    // what the recording lacks fails, is marked, and under strict fails the tap that asked for it
+    await ok('open_link', { url: 'appdyno-fixture://open/network' });
+    await ok('type_text', {
+      selector: { id: 'url_input' },
+      text: `http://${a.at}/headers`,
+      replace: true,
+    });
+    const tap = await call('tap', { selector: { id: 'fetch' } });
+    await sleep(1_000);
+    const late = tap.error ? tap : await call('tap', { selector: { id: 'fetch_result' } });
+    out(`UNMATCHED ${late.text.replaceAll('\n', ' | ')}`);
+    expect(late.data.code).toBe('CHECK_FAILED');
+    expect(late.text).toMatch(
+      /network strict: GET 127\.0\.0\.1:\d+\/headers failed: .* \[failed: no rule took it\]/,
+    );
+    expect(a.seen.length).toBe(before);
+    await ok('network', { action: 'mock', unmatched: 'pass', strict: false });
+    expect((await send(`http://${a.at}/headers`)).status).toBe(200);
+    await ok('network', { action: 'stop' });
+  }, 240_000);
+
   it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {
     await call('network', { action: 'stop' });
     const set = await rules(`${a.at}/json status=500`);

@@ -2,42 +2,22 @@ import { existsSync } from 'node:fs';
 import { connect } from 'node:net';
 import { must, reportProgress, type NetworkPath } from '@appdyno/core';
 import { STATUS } from '@appdyno/flows';
-import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { detailLines, line, networkAnswers } from './network-answer.js';
-import {
-  captures,
-  endCapture,
-  readCapture,
-  setRules,
-  setStrict,
-  setThrottle,
-  startOwn,
-  VIA,
-} from './network-capture.js';
+import { captures, endCapture, readCapture, setKept, startOwn, VIA } from './network-capture.js';
 import { awaitRequest } from './network-check.js';
 import { harEntries } from './network-har.js';
-import { MAX_RULES } from './network-rules.js';
-import { NetworkOut } from './network-schemas.js';
+import { NetworkIn, NetworkOut } from './network-schemas.js';
+import { networkSetting, STRICT_ON } from './network-set.js';
 import { checkApp } from './policy.js';
 import type { Session } from './session.js';
 import { setCondition } from './settings.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
-const MAX_ENTRIES = 200;
-const DEFAULT_ENTRIES = 50;
-const ACTIONS = ['paths', 'start', 'read', 'stop', 'mock', 'throttle', 'check'] as const;
-
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
-/** What a rule that fails a request, or a throttle, does not reach: said with each. */
-const APP_ONLY =
-  "only the app's URLSession requests: the system still reads the Mac's network as it is";
-
 /** The actions that take `strict`: each starts the probe's capture, or changes what it does. */
 const SETS: readonly string[] = ['start', 'mock', 'throttle'];
-const STRICT_ON =
-  'strict on: an action fails when a request of the app got a 5xx or failed on its way, unless a rule made it';
 
 const listening = (hostPort: string) =>
   new Promise<boolean>((resolve) => {
@@ -53,7 +33,8 @@ const listening = (hostPort: string) =>
   });
 
 export function networkOps(ctx: ServerContext) {
-  const { clean, shownOf, detailOf, exportHar, answer, controlAnswer } = networkAnswers(ctx);
+  const answers = networkAnswers(ctx);
+  const { clean, shownOf, detailOf, exportHar, answer } = answers;
 
   const paths = async (s: Session): Promise<NetworkPath[]> => {
     const own = (await s.device.network?.paths()) ?? [];
@@ -67,52 +48,19 @@ export function networkOps(ctx: ServerContext) {
     return [proxy, ...own];
   };
 
+  const setting = networkSetting(ctx, answers);
+
   return [
     defineOp({
       name: 'network',
       title: 'Network',
       description:
         "An app's network traffic (HTTP), bounded; mock and throttle by the probe, until stop. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app; bodies: keeps headers and text bodies); read (har: a proxy's export; id: one request whole; save: a .har); check: waits for a request that fits, or refuses with the nearest; stop. Installs no certificate.",
-      input: z
-        .object({
-          action: z.enum(ACTIONS),
-          via: z.enum(VIA).optional(),
-          proxy: z.string().max(100).optional(),
-          app: z.string().max(200).optional(),
-          bodies: z.boolean().optional(),
-          har: z.string().max(1_000).optional(),
-          id: z.number().int().min(0).optional(),
-          after: z.number().int().min(0).optional().describe('only requests after this id'),
-          contains: z.string().max(200).optional(),
-          method: z.string().max(10).optional(),
-          status: z.string().max(6).optional().describe('404, 4xx, failed'),
-          limit: z.number().int().min(1).max(MAX_ENTRIES).default(DEFAULT_ENTRIES),
-          save: z.string().max(1_000).optional(),
-          overwrite: z.boolean().optional(),
-          rules: z
-            .array(z.string().max(4_000))
-            .max(MAX_RULES)
-            .optional()
-            .describe(
-              'Each "host/path* [method=] [query=] [regex=] [has=] [when=]" then "status= body= (@file) type= header=", "fail=offline|timeout|reset" or "to=host", and delayMs= times= off. Replaces; [] clears; none lists',
-            ),
-          add: z.boolean().optional(),
-          has: z.string().max(1_000).optional().describe('in its body: path=value or text'),
-          timeoutMs: z.number().int().min(0).max(60_000).optional(),
-          strict: z.boolean().optional().describe('a 5xx or a failed request fails the action'),
-          throttle: z
-            .string()
-            .max(100)
-            .optional()
-            .describe(
-              'full, slow, edge, 3g, lte, offline, bytes/s down, or "delayMs= down= up= loss="',
-            ),
-        })
-        .strict(),
+      input: NetworkIn,
       output: NetworkOut,
       annotations: DESTRUCTIVE,
       run: async ({ action, via, proxy, app, bodies, har, id, rules, add, throttle, ...given }) => {
-        const { strict, has, timeoutMs, ...asked } = given;
+        const { strict, has, timeoutMs, from, unmatched, ...asked } = given;
         const s = await ctx.session();
         const serial = s.device.serial;
         const now = captures.read(serial);
@@ -129,30 +77,16 @@ export function networkOps(ctx: ServerContext) {
         }
         if (strict !== undefined && !SETS.includes(action))
           throw new ToolError('strict goes with start, mock or throttle', 'INVALID_ARGUMENT');
-        if (action === 'mock' || action === 'throttle') {
-          const sets = action === 'mock' ? rules : throttle;
-          if (sets === undefined && strict === undefined) return controlAnswer(s, now, []);
-          if (target) checkApp(ctx.policy, target);
-          const set =
-            sets === undefined
-              ? undefined
-              : action === 'mock'
-                ? await setRules(s, ctx.policy, target, rules ?? [], add)
-                : await setThrottle(s, target, throttle ?? 'full');
-          const judged = strict === undefined ? undefined : await setStrict(s, target, strict);
-          const capture = must(judged?.capture ?? set?.capture, 'the capture');
-          return controlAnswer(s, capture, [
-            ...((set ?? judged)?.started
-              ? [`started a capture by the probe: ${String(target)} was restarted with it`]
-              : []),
-            ...(set
-              ? [
-                  `${action === 'mock' ? 'rules set' : `throttle ${capture.throttle ?? 'full'}`}: for ${APP_ONLY}; ended by network stop`,
-                ]
-              : []),
-            ...(strict === undefined ? [] : [strict ? STRICT_ON : 'strict off']),
-          ]);
-        }
+        if (action !== 'mock' && (from ?? unmatched) !== undefined)
+          throw new ToolError('from and unmatched go with mock', 'INVALID_ARGUMENT');
+        if (action === 'mock' || action === 'throttle')
+          return setting(
+            s,
+            now,
+            target,
+            { action, rules, add, from, unmatched, strict, throttle },
+            asked,
+          );
         if (action === 'start') {
           if (!via) {
             const here = (await paths(s)).filter((p) => p.sees).map((p) => p.via);
@@ -192,7 +126,7 @@ export function networkOps(ctx: ServerContext) {
             return reply(t, { done: t });
           }
           const { sees } = await startOwn(s, via, target, bodies === true);
-          if (strict !== undefined) await setStrict(s, target, strict);
+          if (strict !== undefined) await setKept(s, target, { strict });
           const t = `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${sees ? `; it sees ${sees}` : ''}${strict ? `; ${STRICT_ON}` : ''}`;
           return reply(t, { done: t });
         }

@@ -33,6 +33,8 @@ const Capture = z.object({
   throttle: z.string().optional(),
   /** An action fails when a request of the app's got a 5xx or failed on its way, and no rule made it. */
   strict: z.boolean().optional(),
+  /** A request no rule takes fails. */
+  unmatched: z.literal('fail').optional(),
   owner: Owner.optional(),
 });
 export type Capture = z.infer<typeof Capture>;
@@ -160,6 +162,7 @@ function tellProbe(s: Session, c: Capture) {
   network.control(must(c.handle, 'its handle'), {
     bodies: c.bodies === true,
     rules: rulesOf(c.rules ?? []),
+    ...(c.unmatched && { unmatched: c.unmatched }),
     ...(throttle && { throttle }),
   });
   captures.write(s.device.serial, c);
@@ -185,8 +188,11 @@ export async function setRules(
 }
 
 /** What a flow's steps change of a capture beside its rules, as it stood before the flow. */
-export type Held = Pick<Capture, 'strict'>;
-export const heldNow = (serial: string): Held => ({ strict: captures.read(serial)?.strict });
+export type Held = Pick<Capture, 'strict' | 'unmatched'>;
+export const heldNow = (serial: string): Held => {
+  const c = captures.read(serial);
+  return { strict: c?.strict, unmatched: c?.unmatched };
+};
 
 /**
  * Takes out the rules of those lines, as a flow's end takes out what its steps added, and puts back what else its
@@ -195,13 +201,14 @@ export const heldNow = (serial: string): Held => ({ strict: captures.read(serial
 export function dropRules(s: Session, lines: string[], was: Held = heldNow(s.device.serial)) {
   const now = captures.read(s.device.serial);
   if (now?.via !== 'probe' || !s.device.network?.control) return;
-  if (lines.length === 0 && now.strict === was.strict) return;
+  if (lines.length === 0 && now.strict === was.strict && now.unmatched === was.unmatched) return;
   const gone = lines.map(ruleLine);
-  const { strict: _, ...rest } = now;
+  const { strict: _, unmatched: __, ...rest } = now;
   const next: Capture = {
     ...rest,
     ...(now.rules && { rules: now.rules.filter((l) => !gone.includes(l)) }),
     ...(was.strict && { strict: true }),
+    ...(was.unmatched && { unmatched: was.unmatched }),
   };
   try {
     tellProbe(s, next);
@@ -221,11 +228,22 @@ export async function setThrottle(s: Session, app: string | undefined, word: str
   return { capture: next, started };
 }
 
-/** Whether an action fails for a request that failed under it, kept with the probe's capture as its rules are. */
-export async function setStrict(s: Session, app: string | undefined, on: boolean) {
-  const { capture, started } = await probeCapture(s, app, 'strict');
-  const { strict: _, ...rest } = capture;
-  const next: Capture = on ? { ...rest, strict: true } : rest;
-  captures.write(s.device.serial, next);
+/**
+ * What a capture holds beside its rules, kept with the probe's capture as they are: whether an action fails for a
+ * request that failed under it, and whether a request no rule takes fails.
+ */
+export async function setKept(
+  s: Session,
+  app: string | undefined,
+  to: { strict?: boolean | undefined; unmatched?: 'pass' | 'fail' | undefined },
+) {
+  const { capture, started } = await probeCapture(s, app, 'strict and unmatched');
+  const { strict, unmatched, ...rest } = capture;
+  const next: Capture = {
+    ...rest,
+    ...((to.strict ?? strict) && { strict: true }),
+    ...((to.unmatched ?? unmatched) === 'fail' && { unmatched: 'fail' as const }),
+  };
+  tellProbe(s, next);
   return { capture: next, started };
 }

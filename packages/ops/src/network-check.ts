@@ -105,12 +105,17 @@ export async function awaitRequest(
   );
 }
 
-/** The newest request of the capture that runs: what a flow's `request` steps look past, as they ask of the run alone. */
-export async function lastRequest(s: Session) {
-  const c = captures.read(s.device.serial);
-  if (!c?.handle || !s.device.network) return undefined;
-  const { entries } = await s.device.network
+/**
+ * Where a flow's `request` steps look from: past the newest request of the capture as the run began, as they ask of
+ * the run alone. A capture the run itself starts has only the run's own, and is looked at whole.
+ */
+export async function requestsFrom(s: Session) {
+  const { serial, network } = s.device;
+  const c = captures.read(serial);
+  if (!c?.handle || !network) return () => undefined;
+  const { entries } = await network
     .read(c.handle, true)
     .catch(() => ({ entries: [] as NetworkEntry[] }));
-  return { since: c.since, id: entries.at(-1)?.id ?? -1 };
+  const last = entries.at(-1)?.id ?? -1;
+  return () => (captures.read(serial)?.since === c.since && last >= 0 ? last : undefined);
 }

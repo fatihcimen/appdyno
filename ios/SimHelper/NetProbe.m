@@ -118,11 +118,15 @@ static AppdynoNetRouter *router;
   if (latency.count == 2) wait += (latency[0].doubleValue + arc4random_uniform((uint32_t)(latency[1].doubleValue - latency[0].doubleValue) + 1)) / 1000;
   wait += linkPassed(1, [slow[@"up"] doubleValue], up) - CFAbsoluteTimeGetCurrent();
   BOOL lost = [slow[@"loss"] doubleValue] > 0 && arc4random_uniform(10000) < [slow[@"loss"] doubleValue] * 100;
-  NSString *fail = lost ? @"reset" : self.rule[@"fail"];
+  // with unmatched as fail, what no rule takes goes nowhere: as with no network
+  BOOL unruled = now && !self.rule && [now[@"unmatched"] isEqual:@"fail"];
+  NSString *fail = lost ? @"reset" : unruled ? @"offline"
+                                             : self.rule[@"fail"];
   void (^go)(void) = ^{
     if (self.stopped) return;
     if (fail) {
-      self.how = lost ? @"lost" : @"failed";
+      self.how = lost ? @"lost" : unruled ? @"unmatched"
+                                          : @"failed";
       NSInteger code = [fail isEqual:@"offline"] ? NSURLErrorNotConnectedToInternet : [fail isEqual:@"timeout"] ? NSURLErrorTimedOut
                                                                                                                 : NSURLErrorNetworkConnectionLost;
       [self finish:[NSError errorWithDomain:NSURLErrorDomain code:code userInfo:@{NSURLErrorFailingURLErrorKey: self.request.URL}]];

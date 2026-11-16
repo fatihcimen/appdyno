@@ -7,6 +7,7 @@ import {
   cleanHeaders,
   detailLines,
   redactLog,
+  ruleFromRequest,
   ruleLine,
   type Policy,
 } from '@appdyno/ops';
@@ -14,7 +15,7 @@ import {
 export const NO_REQUEST = 'That request is no longer in the capture';
 export const TOO_LONG =
   'Its answer is too long for a rule here. Save it to a file and use body=@file';
-/** A rule's line holds this much: an answer past it goes in a file. */
+/** A rule's line holds this much: an answer past it goes in a file, where this window's server has a folder for one. */
 const MAX_RULE = 4_000;
 
 type Whole = { entry: NetworkEntry; detail: NetworkDetail | undefined };
@@ -95,8 +96,16 @@ export function networkTools(
             ? []
             : [`body=${JSON.stringify(clean(detail.responseBody))}`]),
         ].join(' ');
-        if (line.length > MAX_RULE) answer({ ok: false, text: TOO_LONG });
-        else tell({ rule: ruleLine(line) });
+        if (line.length <= MAX_RULE) {
+          tell({ rule: ruleLine(line) });
+          return;
+        }
+        // too long for a line: in a file, as an agent's rule of the same request has it, where this may write one
+        try {
+          tell({ rule: ruleFromRequest(policy, entry, detail, clean, true).lines[0] });
+        } catch {
+          answer({ ok: false, text: TOO_LONG });
+        }
       }),
 
     /** The capture as a HAR on the Desktop, by the op's own export: as clean as an agent's. */

@@ -1,8 +1,14 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LogsQuery, NetworkControl, NetworkHandle, NetworkSource } from '@appdyno/core';
+import type {
+  LogsQuery,
+  NetworkControl,
+  NetworkDetail,
+  NetworkHandle,
+  NetworkSource,
+} from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '@appdyno/ops';
 import { NO_PHONE_LOG, OPEN_AN_APP, windowLogs } from '../src/window-logs.js';
 import {
@@ -421,12 +427,13 @@ describe("a window's Network pane", () => {
       },
       { id: 1, method: 'GET', url: 'https://a.test/later', status: 200, ms: 1 },
     ];
+    const LONG = 'x'.repeat(5_000);
     const source: NetworkSource = {
       ...probe(),
       read: () => Promise.resolve({ entries }),
       control: () => undefined,
       detail: (_, id) =>
-        Promise.resolve(
+        Promise.resolve<NetworkDetail | undefined>(
           id === 0
             ? {
                 requestHeaders: { Authorization: 'Bearer abcdefgh12345678', Accept: '*/*' },
@@ -435,7 +442,7 @@ describe("a window's Network pane", () => {
                 responseBody: '{"token":"tok-0042","ok":true}',
                 responseBodySize: 31,
               }
-            : undefined,
+            : { requestHeaders: {}, responseHeaders: {}, responseBody: LONG },
         ),
     };
     Object.assign(t.device, { network: source });
@@ -483,6 +490,14 @@ describe("a window's Network pane", () => {
       .poll(() => said(t)?.rule)
       .toBe(
         '"a.test/login" method=POST status=200 type=application/json body="{\\"token\\":\\"•••\\",\\"ok\\":true}"',
+      );
+    // an answer too long for a line is a file the rule reads, in the folder this window's server runs in
+    vi.spyOn(process, 'cwd').mockReturnValue(realpathSync(mkdtempSync(join(state, 'project-'))));
+    pane.onWindow({ op: 'control', name: 'networkMockFrom', id: 1 });
+    await expect
+      .poll(() => said(t)?.rule)
+      .toMatch(
+        /^"a\.test\/later" status=200 body=@.*\/appdyno-network\/mock-a\.test-later-1\.txt$/,
       );
     pane.onWindow({ op: 'control', name: 'networkCurl', id: 9 });
     await expect.poll(() => answered(t)).toMatchObject({ ok: false, text: NO_REQUEST });

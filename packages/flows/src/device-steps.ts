@@ -55,10 +55,22 @@ export function maskText(m: Mask): string {
 /** The settings a line names with no value, each a one-shot that takes none, or none it needs. */
 export const VALUELESS_SETTINGS: readonly string[] = ['shake', 'memory_warning'];
 
+/** A `mock` line is a rule, or with no request what rules are made of and what becomes of a request none takes. */
+function checkMock(st: FlowStep, line: number) {
+  const { from, unmatched, ...rule } = st.args;
+  if (st.args.request !== undefined) return void mockRule(st, line);
+  if (from === undefined && unmatched === undefined)
+    throw new FlowError('mock needs request', line);
+  if (Object.keys(rule).length > 0)
+    throw new FlowError('mock: with no request, only from= and unmatched=', line);
+  if (unmatched !== undefined && unmatched !== 'pass' && unmatched !== 'fail')
+    throw new FlowError(`mock: unmatched is pass or fail: ${String(unmatched)}`, line);
+}
+
 /** What a `screenshot`, `visual` or `setting` line needs beyond its words, refused as its line's error. */
 export function checkDeviceStep(st: FlowStep, line: number) {
   const a = st.args;
-  if (st.action === 'mock') mockRule(st, line);
+  if (st.action === 'mock') checkMock(st, line);
   if (
     st.action === 'network' &&
     (a.name !== 'strict' || !['on', 'off', undefined].includes(a.value as string | undefined))

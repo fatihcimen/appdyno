@@ -27,6 +27,7 @@ const HOW: Record<string, (e: NetworkEntry) => string> = {
   delayed: () => 'delayed by a rule',
   sent: (e) => `sent to ${e.to ?? 'another host'}`,
   lost: () => 'lost by the throttle',
+  unmatched: () => 'failed: no rule took it',
 };
 export const howOf = (e: NetworkEntry) => (e.how ? ` [${HOW[e.how]?.(e) ?? e.how}]` : '');
 
@@ -67,6 +68,7 @@ export function controlLines(c: Capture | undefined, entries: NetworkEntry[]) {
     ...hits.map((h, i) => `rule ${i + 1}${h.off ? ' (off)' : ''}: ${h.rule} (${h.hits} taken)`),
     ...(c?.throttle ? [`throttle: ${c.throttle}`] : []),
     ...(c?.strict ? ['strict: on'] : []),
+    ...(c?.unmatched ? [`unmatched: ${c.unmatched}`] : []),
   ];
 }
 
@@ -237,7 +239,12 @@ export function networkAnswers(ctx: ServerContext) {
   };
 
   /** What the capture's rules are and what each took, and its throttle: what `mock` and `throttle` answer with. */
-  const controlAnswer = async (s: Session, c: Capture | undefined, did: string[]) => {
+  const controlAnswer = async (
+    s: Session,
+    c: Capture | undefined,
+    did: string[],
+    added?: string[],
+  ) => {
     const { entries } = (c && (await readCapture(s, c))) ?? { entries: [] };
     const rules = ruleHits(c?.rules ?? [], entries);
     const lines = controlLines(c, entries).map((l) => redact(ctx.policy, l));
@@ -246,6 +253,7 @@ export function networkAnswers(ctx: ServerContext) {
       done: t,
       rules: rules.map((r) => ({ ...r, rule: redact(ctx.policy, r.rule) })),
       throttle: c?.throttle ?? 'full',
+      ...(added && { added: added.map((l) => redact(ctx.policy, l)) }),
     });
   };
 

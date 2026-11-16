@@ -22,7 +22,10 @@ export type NetworkEntry = {
   code?: number;
   /** Its place in the capture, by which its headers and bodies are asked for where the capture keeps them. */
   id?: number;
-  /** What a rule did to it: `mocked`, `failed`, `delayed`, `sent` to another host; `lost` by the throttle. */
+  /**
+   * What a rule did to it: `mocked`, `failed`, `delayed`, `sent` to another host; `lost` by the throttle; `unmatched`:
+   * failed as no rule took it.
+   */
   how?: string;
   /** The rule that took it. */
   rule?: string;
@@ -78,7 +81,13 @@ export type NetworkRule = {
 export type NetworkThrottle = { delayMs: [number, number]; down: number; up: number; loss: number };
 
 /** What a capture does beside listing requests. */
-export type NetworkControl = { bodies: boolean; rules: NetworkRule[]; throttle?: NetworkThrottle };
+export type NetworkControl = {
+  bodies: boolean;
+  rules: NetworkRule[];
+  throttle?: NetworkThrottle;
+  /** A request no rule takes fails, as with no network: a run in which nothing leaves the device unseen. */
+  unmatched?: 'fail';
+};
 
 /** A request's headers and bodies as they were kept: a body's text where it is one, to the cap. */
 export type NetworkDetail = {

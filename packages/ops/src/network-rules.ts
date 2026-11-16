@@ -35,10 +35,10 @@ export function ruleSwitched(line: string, on: boolean) {
 }
 
 /**
- * The file a rule answers with, inside the folder this server runs in once its links are followed, as `media` has it:
+ * A file a rule answers with, or one rules are made of, inside the folder this server runs in once its links are followed, as `media` has it:
  * a client names the path, and what it reads goes to an app and from there into a capture.
  */
-function bodyFile(name: string) {
+export function fileInside(name: string) {
   const root = realpathSync(process.cwd());
   const given = resolve(name);
   let real: string;
@@ -85,7 +85,7 @@ export function rulesOf(lines: string[]): NetworkRule[] {
     throw new ToolError(`${lines.length} rules: at most ${MAX_RULES}`, 'INVALID_ARGUMENT');
   return lines.map((line) => {
     const rule = mockRule(ruleStep(line));
-    return rule.bodyFile ? { ...rule, bodyFile: bodyFile(rule.bodyFile) } : rule;
+    return rule.bodyFile ? { ...rule, bodyFile: fileInside(rule.bodyFile) } : rule;
   });
 }
 

@@ -325,7 +325,7 @@ const OPS: Record<string, ToStep> = {
             },
           )
         : undefined,
-  network: (a) => networkSteps(a, LOOKS.network ?? []),
+  network: (a, data) => networkSteps(a, LOOKS.network ?? [], data),
   // a picture only shown to the agent is a look
   screenshot: (a, data) =>
     a.file && !a.watchMs

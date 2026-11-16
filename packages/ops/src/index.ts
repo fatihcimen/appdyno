@@ -48,6 +48,7 @@ export { conditions, readCondition } from './settings.js';
 export { captures } from './network-capture.js';
 export { ruleLine, ruleSwitched } from './network-rules.js';
 export { detailLines } from './network-answer.js';
+export { ruleFromRequest } from './network-from.js';
 export { cleanHeaders } from './network-har.js';
 export { answerWatches } from './watch.js';
 export { swipeLine, pinchPaths } from './gesture-paths.js';

@@ -10,10 +10,19 @@ import { stepOf, unrecorded } from './aim.js';
 export function networkSteps(
   a: Record<string, unknown>,
   looks: readonly string[],
+  data: Record<string, unknown> = {},
 ): FlowStep | FlowStep[] | undefined {
-  const rules = a.action === 'mock' ? ((a.rules as string[] | undefined) ?? []) : [];
+  // a request's id means nothing to another capture: its rule is written in its place
+  const byId = typeof a.from === 'string' && /^\d+$/.test(a.from);
+  const rules = [
+    ...(a.action === 'mock' ? ((a.rules as string[] | undefined) ?? []) : []),
+    ...(byId ? ((data.added as string[] | undefined) ?? []) : []),
+  ];
+  const from = byId ? undefined : (a.from as string | undefined);
+  const unmatched = a.unmatched as string | undefined;
   const steps = [
     ...rules.map((rule) => ({ ...ruleStep(rule), line: 0 })),
+    ...((from ?? unmatched) === undefined ? [] : [stepOf('mock', {}, { from, unmatched })]),
     ...(a.strict === undefined
       ? []
       : [stepOf('network', {}, { name: 'strict', ...(a.strict === false && { value: 'off' }) })]),
