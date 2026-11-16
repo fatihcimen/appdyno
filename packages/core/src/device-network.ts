@@ -59,6 +59,10 @@ export type NetworkRule = {
   host?: string;
   path?: string;
   query?: [string, string][];
+  /** What the request's body holds, each: a text of it, and where it is JSON the value at a path. */
+  has?: { text: string; path?: (string | number)[]; equals?: string }[];
+  /** Headers of the request, each by its name with a pattern over its whole value. */
+  when?: { name: string; value: string }[];
   /** Its own answer, and none from the network. */
   status?: number;
   headers?: Record<string, string>;

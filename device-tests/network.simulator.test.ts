@@ -527,6 +527,28 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     await ok('network', { action: 'stop' });
   }, 180_000);
 
+  it('takes a request by what its body holds and by a header it carries', async () => {
+    await ok('network', { action: 'start', via: 'probe' });
+    // the first that fits wins: the fixture posts {"user":"fixture","password":…} with an Authorization header
+    await rules(
+      `${a.at}/echo has=user=someone status=418`,
+      `${a.at}/echo has=user=fixture has="\\"password\\"" status=202 body=matched`,
+      `${a.at}/json when="Authorization: Bearer fixture-*" status=203`,
+      `${a.at}/json when="Authorization: Basic *" status=418`,
+    );
+    const post = await send(`http://${a.at}/echo`, 'post');
+    out(`HAS post ${post.said}`);
+    expect(post.status).toBe(202);
+    // with no body, and with no such header, the server answers
+    expect((await send(`http://${a.at}/echo`)).status).toBe(200);
+    expect((await send(`http://${a.at}/json`)).status).toBe(200);
+    expect((await send(`http://${a.at}/json`, 'post')).status).toBe(203);
+    const listed = await ok('network', { action: 'mock' });
+    out(`HAS ${listed.text.replaceAll('\n', ' | ')}`);
+    expect(listed.data.rules?.map((r) => r.hits)).toEqual([0, 1, 1, 0]);
+    await ok('network', { action: 'stop' });
+  }, 180_000);
+
   it('starts a capture for a rule where none runs, and a session that ends takes it all back', async () => {
     await call('network', { action: 'stop' });
     const set = await rules(`${a.at}/json status=500`);

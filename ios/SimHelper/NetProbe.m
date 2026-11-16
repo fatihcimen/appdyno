@@ -101,16 +101,16 @@ static AppdynoNetRouter *router;
   // said as it starts: one that hangs, or a stream that stays open, is in the log before it ends
   if (now) writeEntry(@{@"begin": @(self.number), @"at": @([[NSDate date] timeIntervalSince1970] * 1000), @"method": self.request.HTTPMethod ?: @"GET", @"url": self.request.URL.absoluteString ?: @""});
   NSDictionary *slow = [now[@"throttle"] isKindOfClass:NSDictionary.class] ? now[@"throttle"] : nil;
-  self.rule = now ? ruleFor(self.request) : nil;
   self.keeps = [now[@"bodies"] boolValue];
   self.down = [slow[@"down"] doubleValue];
   NSMutableURLRequest *inner = [self.request mutableCopy];
   [NSURLProtocol setProperty:@YES forKey:kHandled inRequest:inner];
   NSUInteger length = (NSUInteger)MAX(0, [[inner valueForHTTPHeaderField:@"Content-Length"] integerValue]);
-  // an upload by a stream is read to be kept only where it says it is no longer than what is kept: a longer one, or
+  // an upload by a stream is read, to be kept or for a rule that asks what it holds, only where it says it is no longer than what is kept: a longer one, or
   // one of no stated length, goes on as it came, untouched, and only its size is known
-  if (self.keeps && inner.HTTPBodyStream && length > 0 && length <= kBodyCap) inner.HTTPBody = drained(inner.HTTPBodyStream);
+  if ((self.keeps || rulesReadBody) && inner.HTTPBodyStream && length > 0 && length <= kBodyCap) inner.HTTPBody = drained(inner.HTTPBodyStream);
   self.sent = inner.HTTPBody;
+  self.rule = now ? ruleFor(self.request, self.sent) : nil;
   NSUInteger up = inner.HTTPBody.length ?: length;
   self.sentSize = (int64_t)up;
   NSArray<NSNumber *> *latency = slow[@"delayMs"];

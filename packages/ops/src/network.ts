@@ -94,7 +94,7 @@ export function networkOps(ctx: ServerContext) {
             .max(MAX_RULES)
             .optional()
             .describe(
-              'Each "host/path* [method=] [query=] [regex=]" then "status= body= (@file) type= header=", "fail=offline|timeout|reset" or "to=host", and delayMs= times= off. Replaces; [] clears; none lists',
+              'Each "host/path* [method=] [query=] [regex=] [has=] [when=]" then "status= body= (@file) type= header=", "fail=offline|timeout|reset" or "to=host", and delayMs= times= off. Replaces; [] clears; none lists',
             ),
           add: z.boolean().optional(),
           has: z.string().max(1_000).optional().describe('in its body: path=value or text'),

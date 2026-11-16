@@ -103,6 +103,25 @@ describe('a mock step', () => {
     expect(refused('status=200')).toMatch(/mock needs request/);
   });
 
+  it('takes a request by what its body holds and by a header, so one address answers each operation apart', () => {
+    const r = rule(
+      'api.test/graphql has="\\"operationName\\":\\"Cart\\"" has=variables.id=7 when="X-Api-Version: 2*" body="{}"',
+    );
+    expect(r.has).toEqual([
+      { text: '"operationName":"Cart"' },
+      { text: 'variables.id=7', path: ['variables', 'id'], equals: '7' },
+    ]);
+    expect(r.when).toEqual([{ name: 'X-Api-Version', value: '^2.*$' }]);
+    // another operation is another rule, by its id too
+    expect(rule('api.test/graphql has=operationName=Pay body="{}"').id).not.toBe(
+      rule('api.test/graphql has=operationName=Cart body="{}"').id,
+    );
+    expect(() => rule('a.test when=none status=200')).toThrow(/a when is "Name: value": none/);
+    const text =
+      'mock "api.test/graphql" status=200 has="\\"operationName\\":\\"Cart\\"" when="A: b"\n';
+    expect(flowText(parseFlow(text))).toBe(text);
+  });
+
   it('is written as it was read, and has no form in the other format', () => {
     const text =
       'mock "api.example.com/v1/*" status=503 body="{}" header="A: b" header="C: d" off\n';

@@ -18,6 +18,8 @@ static struct timespec controlChanged;
 static NSDictionary *control;
 static NSArray<NSDictionary *> *rules;
 static NSMutableDictionary<NSString *, NSNumber *> *ruleUses;
+/// A rule asks what a request's body holds: a body that comes by a stream is read before the rules are.
+static BOOL rulesReadBody;
 /// When the link is next free, down and up: requests in parallel share it.
 static CFAbsoluteTime linkFree[2];
 static int64_t bodiesKept;
@@ -60,14 +62,23 @@ static NSDictionary *controlNow(void) {
     controlChanged = s.st_mtimespec;
     control = read;
     NSMutableArray *compiled = [NSMutableArray array];
+    BOOL reads = NO;
     for (NSDictionary *rule in [read[@"rules"] isKindOfClass:NSArray.class] ? read[@"rules"] : @[]) {
       NSMutableDictionary *one = [rule mutableCopy];
       // a host is the same in any case, and a path is not
       one[@"hostPattern"] = pattern(rule[@"host"], NSRegularExpressionCaseInsensitive);
       one[@"pathPattern"] = pattern(rule[@"path"], 0);
+      NSMutableArray *when = [NSMutableArray array];
+      for (NSDictionary *header in rule[@"when"]) {
+        NSRegularExpression *value = pattern(header[@"value"], 0);
+        if (value && header[@"name"]) [when addObject:@[header[@"name"], value]];
+      }
+      one[@"whenPatterns"] = when;
+      if ([rule[@"has"] count] && ![rule[@"off"] boolValue]) reads = YES;
       [compiled addObject:one];
     }
     rules = compiled;
+    rulesReadBody = reads;
     return control;
   }
 }
@@ -76,8 +87,38 @@ static BOOL whole(NSRegularExpression *re, NSString *text) {
   return [re firstMatchInString:text options:0 range:NSMakeRange(0, text.length)] != nil;
 }
 
-/// The first rule that takes this request, and one use of it counted.
-static NSDictionary *ruleFor(NSURLRequest *request) {
+/// The value at a path of a JSON value as a rule's words name it: a text as it is, a number or a truth as JSON writes it.
+static NSString *valueAt(id json, NSArray *path) {
+  for (id key in path) {
+    if ([key isKindOfClass:NSNumber.class]) json = [json isKindOfClass:NSArray.class] && [key unsignedIntegerValue] < [json count] ? json[[key unsignedIntegerValue]] : nil;
+    else json = [json isKindOfClass:NSDictionary.class] ? json[key] : nil;
+    if (!json) return nil;
+  }
+  if ([json isKindOfClass:NSString.class]) return json;
+  if (json == (id)kCFBooleanTrue || json == (id)kCFBooleanFalse) return [json boolValue] ? @"true" : @"false";
+  if ([json isKindOfClass:NSNumber.class]) return [json stringValue];
+  if (json == NSNull.null) return @"null";
+  NSData *written = [NSJSONSerialization dataWithJSONObject:json options:0 error:nil];
+  return written ? [[NSString alloc] initWithData:written encoding:NSUTF8StringEncoding] : nil;
+}
+
+/// Whether a body holds all a rule asks of it: the value at a path where the body is JSON, else the words as written.
+static BOOL bodyHolds(NSArray<NSDictionary *> *has, NSData *body) {
+  if (!has.count) return YES;
+  if (!body.length) return NO;
+  id json = [NSJSONSerialization JSONObjectWithData:body options:NSJSONReadingFragmentsAllowed error:nil];
+  NSString *text = [[NSString alloc] initWithData:body encoding:NSUTF8StringEncoding] ?: @"";
+  for (NSDictionary *one in has) {
+    NSArray *path = [one[@"path"] isKindOfClass:NSArray.class] ? one[@"path"] : nil;
+    if (path && json) {
+      if (![valueAt(json, path) isEqual:one[@"equals"]]) return NO;
+    } else if (![one[@"text"] isKindOfClass:NSString.class] || [text rangeOfString:one[@"text"]].location == NSNotFound) return NO;
+  }
+  return YES;
+}
+
+/// The first rule that takes this request, with the body it sends, and one use of it counted.
+static NSDictionary *ruleFor(NSURLRequest *request, NSData *body) {
   NSURL *url = request.URL;
   NSString *host = url.host.lowercaseString ?: @"";
   NSString *withPort = url.port ? [NSString stringWithFormat:@"%@:%@", host, url.port] : host;
@@ -98,7 +139,11 @@ static NSDictionary *ruleFor(NSURLRequest *request) {
         }];
         if (at == NSNotFound) asked = NO;
       }
-      if (!asked) continue;
+      for (NSArray *header in rule[@"whenPatterns"]) {
+        NSString *value = [request valueForHTTPHeaderField:header[0]];
+        if (!value || !whole(header[1], value)) asked = NO;
+      }
+      if (!asked || !bodyHolds(rule[@"has"], body)) continue;
       NSString *ruleId = rule[@"id"] ?: @"";
       NSInteger used = ruleUses[ruleId].integerValue;
       if (rule[@"times"] && used >= [rule[@"times"] integerValue]) continue;

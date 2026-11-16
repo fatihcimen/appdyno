@@ -58,7 +58,7 @@ export const SPECS = {
     words: ['request'],
     text: ['method', 'query', 'regex', 'type', 'body', 'fail', 'to'],
     number: ['status', 'delayMs', 'times'],
-    list: ['header'],
+    list: ['header', 'has', 'when'],
     bool: ['off'],
   },
   /**

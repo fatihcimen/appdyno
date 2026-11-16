@@ -19,7 +19,7 @@ export function ruleStep(line: string): FlowStep {
     throw new ToolError(
       `not a rule: ${line}: ${e.message.replace(/^line 1: (mock: )?/, '')}`,
       'INVALID_ARGUMENT',
-      'host/path* then status=, body=, type=, header=, delayMs=, fail=offline|timeout|reset, to=host, method=, query=, regex=, times=, off',
+      'host/path* then status=, body=, type=, header=, delayMs=, fail=offline|timeout|reset, to=host, method=, query=, regex=, has=, when=, times=, off',
     );
   }
 }

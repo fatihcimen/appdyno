@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { NetworkRule } from '@appdyno/core';
+import { bodyMatch } from './body-match.js';
 import type { FlowStep } from './format.js';
 import { FlowError } from './tokens.js';
 
@@ -16,7 +17,8 @@ const globPattern = (glob: string) =>
 
 /**
  * The rule a `mock` step makes, as the probe reads it: the first word is `host[:port][/path]` with `*` for any run, or
- * `*` alone for every request, and `regex` a pattern for the whole path in its place. It answers by itself with
+ * `*` alone for every request, and `regex` a pattern for the whole path in its place; `has` is what the request's body
+ * holds and `when` a header it carries, as `Name: value` with `*` in the value. It answers by itself with
  * `status`, `type`, `header` and `body` (`@file`: that file's bytes, `bodyFile` here, for the caller to place), fails
  * with `fail`, sends the request elsewhere with `to` (a bare `localhost`: `http://127.0.0.1`), and waits `delayMs`
  * before any of them or before the real one.
@@ -55,13 +57,15 @@ export function mockRule(st: FlowStep, line = st.line): NetworkRule {
       throw wrong(`${name} is a whole number from ${min} to ${max}`);
     return n;
   };
-  const headers = Object.fromEntries(
-    ((a.header as string[] | undefined) ?? []).map((h): [string, string] => {
+  const pairs = (name: string) =>
+    ((a[name] as string[] | undefined) ?? []).map((h): [string, string] => {
       const colon = h.indexOf(':');
-      if (colon < 1) throw wrong(`a header is "Name: value": ${h}`);
+      if (colon < 1) throw wrong(`a ${name} is "Name: value": ${h}`);
       return [h.slice(0, colon).trim(), h.slice(colon + 1).trim()];
-    }),
-  );
+    });
+  const headers = Object.fromEntries(pairs('header'));
+  const when = pairs('when').map(([name, value]) => ({ name, value: globPattern(value) }));
+  const has = ((a.has as string[] | undefined) ?? []).map(bodyMatch);
   const file = body?.startsWith('@') ? body.slice(1) : undefined;
   const json = file ? /\.json$/i.test(file) : /^\s*[{[]/.test(body ?? '');
   const type =
@@ -89,6 +93,8 @@ export function mockRule(st: FlowStep, line = st.line): NetworkRule {
     ...(path !== undefined && { path: globPattern(path) }),
     ...(a.regex !== undefined && { path: `^(?:${String(a.regex)})$` }),
     ...(query && { query }),
+    ...(has.length > 0 && { has }),
+    ...(when.length > 0 && { when }),
     ...(answers && { status: status ?? 200, headers }),
     ...(body !== undefined && (file ? { bodyFile: file } : { body })),
     ...(delayMs !== undefined && { delayMs }),
