@@ -94,7 +94,8 @@ const pairs = english
 const otherOf = (file: string) => {
   const other = file.includes('.tr.')
     ? file.replace('.tr.', '.')
-    : file.replace(/^(.*\/)?([^./]+)\./, '$1$2.tr.');
+    : // a name may hold a dot of its own, as upgrade-1.3.md
+      file.replace(/^(.*\/)?([^/]+?)((?:\.dark)?\.\w+)$/, '$1$2.tr$3');
   return existsSync(join(root, other)) ? other : file;
 };
 

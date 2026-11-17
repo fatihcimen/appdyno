@@ -18,12 +18,13 @@ Bunlardan sonra: bir rehber bir işi adım adım anlatır, başvuru bir şeye ba
 
 Her biri sizi bir işin baştan sonuna götürür.
 
-| rehber                                         | ne için okunur                                                                                      |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [İstemci bağlamak](guides/clients.tr.md)       | appdyno'yu MCP istemcinize bağlamak ve imzalama dahil bir telefonu hazırlamak                       |
-| [Flow'lar](guides/flows.tr.md)                 | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak                       |
-| [Kanıt](guides/evidence.tr.md)                 | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                                        |
-| [Performansı ölçmek](guides/performance.tr.md) | bir uygulamayı ölçmek, baseline tutmak ve uygulamayı yavaşlatan bir pull request'i başarısız saymak |
+| rehber                                          | ne için okunur                                                                                      |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [İstemci bağlamak](guides/clients.tr.md)        | appdyno'yu MCP istemcinize bağlamak ve imzalama dahil bir telefonu hazırlamak                       |
+| [Flow'lar](guides/flows.tr.md)                  | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak                       |
+| [Kanıt](guides/evidence.tr.md)                  | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                                        |
+| [Performansı ölçmek](guides/performance.tr.md)  | bir uygulamayı ölçmek, baseline tutmak ve uygulamayı yavaşlatan bir pull request'i başarısız saymak |
+| [1.2'den 1.3'e geçiş](guides/upgrade-1.3.tr.md) | bir istemciyi, bir betiği ya da bir programı 1.3'ün araç adlarına taşımak                           |
 
 ## Başvuru
 

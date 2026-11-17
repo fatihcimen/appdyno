@@ -21,7 +21,7 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Uyumluluğu bozan değişiklikler
 
-**48 araç artık 28 ve hepsi fiil_ad biçiminde adlandırıldı. Eski adlar kaldırıldı, takma ad yok.** Eski bir adla yapılan çağrı reddedilir ve ipucu çağrılacak aracın adını söyler.
+**48 araç artık 28 ve hepsi fiil_ad biçiminde adlandırıldı. Eski adlar kaldırıldı, takma ad yok.** Eski bir adla yapılan çağrı reddedilir ve ipucu çağrılacak aracın adını söyler. [1.2'den 1.3'e geçiş](docs/guides/upgrade-1.3.tr.md), değişecek her şeyi verir: adlar, kaydedilmiş izinler, komutlar, `run_steps` ve kütüphane.
 
 - Bir istemcide eski adla kaydedilmiş izin (`mcp__appdyno__screen`) artık eşleşmez: sunucunun tümüne izin verin (`mcp__appdyno`).
 - Komutlar adları tireyle izler (`appdyno read-screen`, `appdyno manage-app stop`, `appdyno run-flow run a.flow`, `appdyno record-session video start`). `appdyno perf compare|why|reference|baseline|budget|functions|prune`, `perf dashboard|survey|comment`, `push setup`, `mirror`, `timeline`, `flight`, `devices` ve `test` aynı kalır.

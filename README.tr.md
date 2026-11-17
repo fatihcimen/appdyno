@@ -19,6 +19,8 @@
 [![CI](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml/badge.svg)](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml)
 [![Lisans: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+**1.2'den mi geçiyorsunuz?** 1.3 araçların adlarını değiştirdi: neyin değişeceği [geçiş kılavuzunda](docs/guides/upgrade-1.3.tr.md).
+
 </div>
 
 ![Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub'ındaki bir iPhone simulator'ında alışveriş örneğinin ödemesinden geçiyor; sepete üç paket kahve çekirdeği koyup Place order'a geliyor, bu da uygulamayı çökertiyor ve yanıt öldüğünü son log satırıyla söylüyor: Fatal error: Index out of range](docs/images/checkout.webp)
@@ -85,7 +87,7 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 | **Flow'lar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                                                                                      | `run_flow`                                                                                    |
 | **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                                                                                  | `show_mirror` `ask_person`                                                                    |
 
-28 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında; [1.3.0'dan önceki adlar](docs/reference/tools.tr.md#130dan-önceki-adlar) da orada. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
+28 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında; [1.3.0'dan önceki adlar](docs/guides/upgrade-1.3.tr.md#130dan-önceki-adlar) da orada. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
 
 ### Push bildirimleri ve bağlantılar
 

@@ -21,7 +21,7 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Breaking
 
-**The 48 tools are now 28, named verb_noun. The old names are removed, with no aliases.** A call by an old name is refused, and its hint names the tool to call.
+**The 48 tools are now 28, named verb_noun. The old names are removed, with no aliases.** A call by an old name is refused, and its hint names the tool to call. [Upgrading from 1.2 to 1.3](docs/guides/upgrade-1.3.md) has all there is to change: names, saved permissions, commands, `run_steps` and the library.
 
 - A client's saved permission by an old name (`mcp__appdyno__screen`) no longer matches: allow the server whole (`mcp__appdyno`).
 - Commands follow the names with dashes (`appdyno read-screen`, `appdyno manage-app stop`, `appdyno run-flow run a.flow`, `appdyno record-session video start`). `appdyno perf compare|why|reference|baseline|budget|functions|prune`, `perf dashboard|survey|comment`, `push setup`, `mirror`, `timeline`, `flight`, `devices` and `test` keep their words.

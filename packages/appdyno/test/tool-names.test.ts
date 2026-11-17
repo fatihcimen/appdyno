@@ -38,14 +38,11 @@ const STEP_WORDS = new Set(['set_location', 'wait_for', 'double_tap', 'long_pres
 const NEVER = new RegExp(
   `(?<![\\w-])(?:${RENAMED_NAMES.filter((n) => n.includes('_') && !STEP_WORDS.has(n)).join('|')})(?![\\w-])`,
 );
-/** Where the names of then are said as such: the section of what each became, left blank with its lines kept. */
-const OLD_NAMES = /^## (?:Names before 1\.3\.0|1\.3\.0'dan önceki adlar)\n[^]*?(?=^## |(?![^]))/m;
-
 /** The library's own words name its methods, of which `logs`, `screenshot` and `audit` share a name with a tool of then. */
 const LIBRARY =
   /^(packages\/appdyno\/src\/device-members\.ts|docs\/reference\/library(\.tr)?\.md)$/;
-// a changelog is what was true then
-const HISTORY = /^CHANGELOG(\.tr)?\.md$/;
+// a changelog is what was true then, and the upgrade guide says the old names to say what takes their place
+const HISTORY = /^(CHANGELOG(\.tr)?\.md|docs\/guides\/upgrade-1\.3(\.tr)?\.md)$/;
 
 /** Each string a TypeScript file holds, by its line: what a model, a person or a page is told is among them. */
 function stringsOf(file: string, text: string): [string, string][] {
@@ -71,10 +68,7 @@ const quotedIn = (file: string, text: string): [string, string][] =>
 
 /** Each line of a page, code blocks too: a page quotes what a tool answers. */
 const linesOf = (file: string, text: string): [string, string][] =>
-  text
-    .replace(OLD_NAMES, (section) => section.replace(/[^\n]/g, ''))
-    .split('\n')
-    .map((line, i) => [`${file}:${String(i + 1)}`, line]);
+  text.split('\n').map((line, i) => [`${file}:${String(i + 1)}`, line]);
 
 function told(file: string): [string, string][] {
   if (LIBRARY.test(file) || HISTORY.test(file)) return [];

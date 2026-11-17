@@ -18,12 +18,13 @@ After those, a guide takes you through a task, the reference is for looking thin
 
 Each one takes you through a task.
 
-| guide                                          | read it to                                                                    |
-| ---------------------------------------------- | ----------------------------------------------------------------------------- |
-| [Connecting a client](guides/clients.md)       | join appdyno to your MCP client and get a phone ready, signing included       |
-| [Flows](guides/flows.md)                       | record what an agent did, replay it with no model, run it in CI               |
-| [Evidence](guides/evidence.md)                 | leave a video, a report, a network log or a visual diff behind                |
-| [Measuring performance](guides/performance.md) | measure an app, keep a baseline, and fail a pull request that makes it slower |
+| guide                                              | read it to                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Connecting a client](guides/clients.md)           | join appdyno to your MCP client and get a phone ready, signing included       |
+| [Flows](guides/flows.md)                           | record what an agent did, replay it with no model, run it in CI               |
+| [Evidence](guides/evidence.md)                     | leave a video, a report, a network log or a visual diff behind                |
+| [Measuring performance](guides/performance.md)     | measure an app, keep a baseline, and fail a pull request that makes it slower |
+| [Upgrading from 1.2 to 1.3](guides/upgrade-1.3.md) | move a client, a script or a program to the tool names of 1.3                 |
 
 ## Reference
 

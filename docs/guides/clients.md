@@ -145,7 +145,7 @@ The name a client gave is also what the status capsule says while it drives a de
 
 `--scope user` makes it available in every project. Without it the server is added to the current folder only.
 
-A permission saved for a tool by a name from before 1.3.0, such as `mcp__appdyno__screen`, no longer matches a tool: allow the whole server instead, as `mcp__appdyno` in `permissions.allow`.
+A permission saved for a tool by a name from before 1.3.0, such as `mcp__appdyno__screen`, no longer matches a tool: allow the whole server instead, as `mcp__appdyno` in `permissions.allow` of `~/.claude/settings.json`, or of a project's `.claude/settings.json`: see [Upgrading from 1.2](upgrade-1.3.md#saved-permissions).
 
 ### Claude Desktop
 

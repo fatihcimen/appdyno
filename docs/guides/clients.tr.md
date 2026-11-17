@@ -145,7 +145,7 @@ Kenar çubuğundaki **Yardım** ya da command-?, en son önünüzde açık olan 
 
 `--scope user` sunucuyu bütün projelerde kullanılabilir kılar. Bu seçenek olmadan sunucu yalnızca bulunduğunuz klasöre eklenir.
 
-Bir araç için 1.3.0'dan önceki bir adla kaydedilmiş bir izin, örneğin `mcp__appdyno__screen`, artık hiçbir araçla eşleşmez: bunun yerine bütün sunucuya izin verin, `permissions.allow` içinde `mcp__appdyno` olarak.
+Bir araç için 1.3.0'dan önceki bir adla kaydedilmiş bir izin, örneğin `mcp__appdyno__screen`, artık hiçbir araçla eşleşmez: bunun yerine bütün sunucuya izin verin, `~/.claude/settings.json` dosyasının ya da bir projenin `.claude/settings.json` dosyasının `permissions.allow` alanında `mcp__appdyno` olarak: bkz. [1.2'den geçiş](upgrade-1.3.tr.md#kaydedilmiş-izinler).
 
 ### Claude Desktop
 

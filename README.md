@@ -19,6 +19,8 @@
 [![CI](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml/badge.svg)](https://github.com/fatihcimen/appdyno/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+**Upgrading from 1.2?** 1.3 renamed the tools: [the upgrade guide](docs/guides/upgrade-1.3.md) has what to change.
+
 </div>
 
 ![A real run: a terminal of MCP tool calls goes through the checkout of the shop example on an iPhone simulator in the appdyno hub, three bags of coffee beans into the cart and on to Place order, which takes the app down, and the answer says it died, with its last log line: Fatal error: Index out of range](docs/images/checkout.webp)
@@ -85,7 +87,7 @@ There is no second call to look, and no fixed sleep: an answer says `settled` wh
 | **Flows.** What an agent did once runs again with no model, on another device, and in CI.                                                                                                                                                                                                                        | `run_flow`                                                                                    |
 | **A person, too.** A live window you can touch while the agent drives. When only a person can go on, such as at Face ID, the agent asks one and waits until they say done.                                                                                                                                       | `show_mirror` `ask_person`                                                                    |
 
-All 28 tools are in [Tools](docs/reference/tools.md), with [the names from before 1.3.0](docs/reference/tools.md#names-before-130). Each is also [a command](docs/reference/cli.md), and a call in [the library](docs/reference/library.md).
+All 28 tools are in [Tools](docs/reference/tools.md), with [the names from before 1.3.0](docs/guides/upgrade-1.3.md#names-before-130). Each is also [a command](docs/reference/cli.md), and a call in [the library](docs/reference/library.md).
 
 ### Push notifications and links
 
