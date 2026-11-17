@@ -158,7 +158,7 @@ Diyagramlar `docs/images` içinde elle yazılmış SVG'lerdir, üreteç yoktur. 
 
 ## Sürümler
 
-[CI başvurusunun](docs/reference/ci.tr.md#sürüm) anlattığı gibi bir tag yayımlar ve npm yayımlamayı workflow'dan token olmadan kabul eder. Bu, npmjs.com'da paketi elinde tutan kişinin bir kez yaptığı tek bir ayara dayanır: `appdyno` paketinin Settings sayfasında, Trusted Publisher altında GitHub Actions seçilir ve kullanıcı olarak `fatihcimen`, depo olarak `appdyno`, workflow dosyası olarak `release.yml` verilir, environment boş bırakılır. npm bunların hiçbirini kaydederken denetlemez, bu yüzden yanlış bir harf ancak bir sonraki yayımlamada görünür. Bir sürüm bu yolla çıktıktan sonra deponun `NPM_TOKEN` secret'ı silinebilir, token'ı npmjs.com'da iptal edilebilir ve paketin yayımlama erişimi iki adımlı doğrulama isteyip token'ları reddedecek şekilde ayarlanabilir.
+[CI başvurusunun](docs/reference/ci.tr.md#sürüm) anlattığı gibi bir tag yayımlar ve npm yayımlamayı workflow'dan token olmadan kabul eder. Bu, npmjs.com'da paketi elinde tutan kişinin bir kez yaptığı tek bir ayara dayanır: `appdyno` paketinin Settings sayfasında, Trusted Publisher altında GitHub Actions seçilir ve kullanıcı olarak `fatihcimen`, depo olarak `appdyno`, workflow dosyası olarak `release.yml` verilir, environment boş bırakılır. npm bunların hiçbirini kaydederken denetlemez, bu yüzden yanlış bir harf ancak bir sonraki yayımlamada görünür. Sürümler 1.3.0'dan beri bu yolla çıkar ve depo hiçbir npm token'ı tutmaz. Paketin yayımlama erişimi ayrıca iki adımlı doğrulama isteyecek ve token'ları reddedecek şekilde ayarlanabilir.
 
 ## Site
 

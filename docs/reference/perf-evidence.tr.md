@@ -18,13 +18,13 @@ Xcode 27.1, kabloda iOS 27.0.1, simulator'da iOS 26.5, 2026-11-03. Host yükü, 
 
 **Ağ, iPhone.**
 
-| biçim                                             | ne yaptı                                                                                                                                                                                                                                            |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Network şablonu, durdurma ya da süre sınırı       | sonunda `xctrace`'i çökertir, `NetworkConnectionStatsModeling`, trace yok                                                                                                                                                                           |
-| `--instrument "Network Connections"`, süre sınırı | aynısı, çıkış 133                                                                                                                                                                                                                                   |
-| `--instrument "HTTP Traffic"`, süre sınırı        | kaydeder; HAR satırlarında `response.content.size`. Dışarıda bırakıldı: yalnızca URL Loading System'i kapsar ve Apple şifreli trafiği trace'te şifresiz sakladığını söyler                                                                          |
-| Activity Monitor'ün tabloları                     | disk baytları, ağ sütunu yok                                                                                                                                                                                                                        |
-| `--instrument "Power Profiler"`, bağlanarak       | **çalışıyor**: sürece göre `wifi-received` ve `cellular-received`, 5 s'lik dönemlerle: 5.000.000'luk bir indirme için 5.322.769 bayt (+%6,5) ve 10.432 gönderilen; istek doğrudan bu Mac'e gidiyor, yolunda proxy yok. `get-task-allow` gerektirmez |
+| biçim                                             | ne yaptı                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Network şablonu, durdurma ya da süre sınırı       | sonunda `xctrace`'i çökertir, `NetworkConnectionStatsModeling`, trace yok                                                                                                                                                                                                            |
+| `--instrument "Network Connections"`, süre sınırı | aynısı, çıkış 133                                                                                                                                                                                                                                                                    |
+| `--instrument "HTTP Traffic"`, süre sınırı        | kaydeder; HAR satırlarında `response.content.size`. Dışarıda bırakıldı: yalnızca URL Loading System'i kapsar ve Apple şifreli trafiği trace'te şifresiz sakladığını söyler                                                                                                           |
+| Activity Monitor'ün tabloları                     | disk baytları, ağ sütunu yok                                                                                                                                                                                                                                                         |
+| `--instrument "Power Profiler"`, bağlanarak       | **çalışıyor**: sürece göre `wifi-received` ve `cellular-received`, 5 s'lik dönemlerle: 2026-11-04'teki bir çalıştırmada 5.000.000'luk bir indirme için 5.322.769 bayt (+%6,5) ve 10.432 gönderilen; istek doğrudan bu Mac'e gidiyor, yolunda proxy yok. `get-task-allow` gerektirmez |
 
 `rvictl` ve `tcpdump` denenmedi: `/dev/bpf0` yalnızca root içindir.
 
@@ -314,13 +314,13 @@ Denenip bırakılanlar:
 
 Bir sunucu simulator'ını adlandırıyordu (`--device`, `use_device` ya da onu açan ilk çağrı) ve bir çağrı ihtiyaç duyana kadar hiçbir şey başlatmıyordu: okuma yardımcısı ilk okumanın yaklaşık 400 ms'sini, girdi yardımcısı ilk dokunuşun yaklaşık 200'ünü alıyordu, çünkü simulator'a ilk mesajı, yardımcı ayaktayken bile, bir sonrakinden 120 ms daha uzun sürüyordu. İkisi de artık cihaz adlandırılır adlandırılmaz arka planda başlar ve girdi yardımcısına hiçbir uygulamanın görmediği bir ping gönderilir. Hiçbir şey bunu beklemez ve hiçbir şey onun yüzünden reddedilmez; sunucunun yönetmesine izin verilmeyen bir cihaza dokunulmaz. iOS 27.2'li bir iPhone 17 Pro simulator'ında, önce `52726c2e`'de ve sonra sırayla, ms olarak medyanlar:
 
-| ms, medyan                                                       | önce | sonra | host yükü, önce; sonra |
-| ---------------------------------------------------------------- | ---- | ----- | ---------------------- |
-| `read_screen`, bir sunucunun ilki, hız tablosunda (5 çalıştırma) | 555  | 347   | 6,3-7,6; 5,9-8,4       |
-| `read_screen`, bir sunucunun ilki, istemci listesinden 1 s sonra | 505  | 98    | 6,5-6,6; 5,4-5,6       |
-| `read_screen`, bir sunucunun ilki, istemci hemen (7 çalıştırma)  | 488  | 490   | 6,9-7,1; 5,6-6,1       |
-| ilk dokunuş, `read: none`, istemci hemen (7 çalıştırma)          | 263  | 65-71 | 6,9-7,1; 5,6-6,1       |
-| ilk dokunuş, `read: none`, istemci listesinden 1 s sonra         | 261  | 70    | 6,5-6,6; 5,4-5,6       |
+| ms, medyan                                                                                       | önce | sonra | host yükü, önce; sonra |
+| ------------------------------------------------------------------------------------------------ | ---- | ----- | ---------------------- |
+| `read_screen`, bir sunucunun ilki, hız tablosunun 2026-11-08'de çalıştırdığı gibi (5 çalıştırma) | 555  | 347   | 6,3-7,6; 5,9-8,4       |
+| `read_screen`, bir sunucunun ilki, istemci listesinden 1 s sonra                                 | 505  | 98    | 6,5-6,6; 5,4-5,6       |
+| `read_screen`, bir sunucunun ilki, istemci hemen (7 çalıştırma)                                  | 488  | 490   | 6,9-7,1; 5,6-6,1       |
+| ilk dokunuş, `read: none`, istemci hemen (7 çalıştırma)                                          | 263  | 65-71 | 6,9-7,1; 5,6-6,1       |
+| ilk dokunuş, `read: none`, istemci listesinden 1 s sonra                                         | 261  | 70    | 6,5-6,6; 5,4-5,6       |
 
 Hız tablosunun ilk okuması, başlatmanın yanında çalıştığı `list_devices`'tan sonra gelir. Listeyi aldığı anda çağıran bir istemci okuma yardımcısını yine bekler. 21 ilk dokunuştan biri sonrasında 1.010 ms sürdü, öncesinde hiçbiri; 14 tanesinde daha yeniden görülmedi. Hız tablosunun her yanıtı aynıydı, sözleriyle kanıtlandı.
 

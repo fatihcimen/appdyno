@@ -18,13 +18,13 @@ Xcode 27.1, iOS 27.0.1 on a cable, iOS 26.5 on the simulator, 2026-11-03. Host l
 
 **Network, iPhone.**
 
-| variant                                            | what it did                                                                                                                                                                                                                                        |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Network template, a stop or a time limit           | crashes `xctrace` at the end, `NetworkConnectionStatsModeling`, no trace                                                                                                                                                                           |
-| `--instrument "Network Connections"`, a time limit | the same, exit 133                                                                                                                                                                                                                                 |
-| `--instrument "HTTP Traffic"`, a time limit        | records; `response.content.size` in its HAR rows. Left out: it covers the URL Loading System only, and Apple says it stores encrypted traffic unencrypted in the trace                                                                             |
-| Activity Monitor's tables                          | disk bytes, no network column                                                                                                                                                                                                                      |
-| `--instrument "Power Profiler"`, attached          | **works**: `wifi-received` and `cellular-received` by process, in periods of 5 s: 5,322,769 bytes for a download of 5,000,000 (+6.5 %), and 10,432 sent, the fetch going straight to this Mac with no proxy on its path. Needs no `get-task-allow` |
+| variant                                            | what it did                                                                                                                                                                                                                                                                |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Network template, a stop or a time limit           | crashes `xctrace` at the end, `NetworkConnectionStatsModeling`, no trace                                                                                                                                                                                                   |
+| `--instrument "Network Connections"`, a time limit | the same, exit 133                                                                                                                                                                                                                                                         |
+| `--instrument "HTTP Traffic"`, a time limit        | records; `response.content.size` in its HAR rows. Left out: it covers the URL Loading System only, and Apple says it stores encrypted traffic unencrypted in the trace                                                                                                     |
+| Activity Monitor's tables                          | disk bytes, no network column                                                                                                                                                                                                                                              |
+| `--instrument "Power Profiler"`, attached          | **works**: `wifi-received` and `cellular-received` by process, in periods of 5 s: 5,322,769 bytes for a download of 5,000,000 (+6.5 %), in a run on 2026-11-04, and 10,432 sent, the fetch going straight to this Mac with no proxy on its path. Needs no `get-task-allow` |
 
 `rvictl` and `tcpdump` were not tried: `/dev/bpf0` is root-only.
 
@@ -314,13 +314,13 @@ Tried and dropped:
 
 A server named its simulator (`--device`, `use_device`, or the first call that opens it) and started nothing until a call needed it: the read helper took about 400 ms of the first read, and the input helper about 200 of the first touch, as its first message to the simulator took 120 ms more than the next, even with the helper up. Both now start in the background once the device is named, and the input helper is sent a ping no app sees. Nothing waits on that and nothing is refused by it, and a device the server may not drive is left alone. On an iPhone 17 Pro simulator with iOS 27.2, before at `52726c2e` and after in turn, medians in ms:
 
-| ms, median                                                      | before | after | host load, before; after |
-| --------------------------------------------------------------- | ------ | ----- | ------------------------ |
-| `read_screen`, first of a server, in the speed table (5 runs)   | 555    | 347   | 6.3-7.6; 5.9-8.4         |
-| `read_screen`, first of a server, the client 1 s after its list | 505    | 98    | 6.5-6.6; 5.4-5.6         |
-| `read_screen`, first of a server, the client at once (7 runs)   | 488    | 490   | 6.9-7.1; 5.6-6.1         |
-| first touch, `read: none`, the client at once (7 runs)          | 263    | 65-71 | 6.9-7.1; 5.6-6.1         |
-| first touch, `read: none`, the client 1 s after its list        | 261    | 70    | 6.5-6.6; 5.4-5.6         |
+| ms, median                                                                         | before | after | host load, before; after |
+| ---------------------------------------------------------------------------------- | ------ | ----- | ------------------------ |
+| `read_screen`, first of a server, as the speed table ran it on 2026-11-08 (5 runs) | 555    | 347   | 6.3-7.6; 5.9-8.4         |
+| `read_screen`, first of a server, the client 1 s after its list                    | 505    | 98    | 6.5-6.6; 5.4-5.6         |
+| `read_screen`, first of a server, the client at once (7 runs)                      | 488    | 490   | 6.9-7.1; 5.6-6.1         |
+| first touch, `read: none`, the client at once (7 runs)                             | 263    | 65-71 | 6.9-7.1; 5.6-6.1         |
+| first touch, `read: none`, the client 1 s after its list                           | 261    | 70    | 6.5-6.6; 5.4-5.6         |
 
 The speed table's first read comes after `list_devices`, which the start runs beside. A client that calls the moment it has the list still waits for the read helper. One first touch of 21 took 1,010 ms after, none before; it did not come again in 14 more. Every answer of the speed table was the same, proved by its words.
 
