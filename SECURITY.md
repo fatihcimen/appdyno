@@ -55,7 +55,7 @@ appdyno hands a model whatever an app, a web page or a log holds, and all of it 
 - **Files are written only in the write folders.** A path that a screen named is refused outside the folder the server runs in, the state directory and the folders given with `--allow-write`.
 - **A build asks.** `manage_app build_and_run` runs a project's own scripts on this Mac, so it asks the person each time, unless the server was started with `--allow-build`.
 - **A link asks.** `open_link` opens a web link, a link to Settings and a link the selected app takes. A link by any other scheme asks the person first, and `--allow-urls` is how a person allows links ahead.
-- **A client can be shown fewer tools.** `--toolsets` lists only the groups named, so a model is offered less that it could be talked into using. It is a shorter list and not a permission: `run_steps` still reaches every tool, and the `--allow-` flags are the limits.
+- **A client can be shown fewer tools.** `--toolsets` lists only the groups named, so a model is offered less that it could be talked into using. It is a shorter list and not a permission: `run_steps` still reaches every tool but itself and `run_flow`, and the `--allow-` flags are the limits.
 
 What it cannot do: none of this keeps a model from being misled by what it reads. A label, a log line and a web page are still the app's own words, and a model may act on them with the tools it is allowed. So keep a person in the loop for anything that loses data: leave `--allow-data-loss`, `--allow-power` and `--allow-build` off where the app, or the pages it shows, are not yours, keep the client's own approval of each call on, and use a test device and test accounts.
 
