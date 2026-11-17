@@ -151,6 +151,10 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Düzeltilenler
 
+- Android: öne getirilen bir uygulama, penceresi yerine kadar büyüdükten sonra yanıtlanır. Bir pencere boyundan küçük çizilirken, ekranın dışına taşarken ya da yeri olmayan node'larla kayarken bir okuma bekler; böylece hemen ardından ref ile yapılan bir tap doğru yere varır.
+- iOS: bir web formunun üstündeki klavye her dilde kapanır: üstündeki bar'ın Done'ı İngilizce sözcüğüyle değil, yeriyle bulunur.
+- iOS: scroll bar'lar nerede durursa dursun ekranın listesinden çıkarılır; her dilde tuttukları yüzdeyle tanınır.
+- iOS: uygulamayı başlatan bir launch, ilk ekranı durgunlaştıktan hemen sonra gelen first-run sheet'i gösterir. Yeni bir başlatma 1 sn daha izlenir; öne getirilen bir uygulama izlenmez.
 - Android: sistem, çöken uygulamayı "sürekli olarak duruyor" penceresi için tuttuğunda flight recorder hiçbir crash'i saklamıyordu: süreç, pencere yanıtlanana kadar pid'iyle kalır ve uygulama hâlâ çalışıyor sanılıyordu. Böyle tutulan bir süreç artık crash olarak okunur ve son saniyeleri saklanır.
 - Android: crash penceresi için tutulan bir uygulamaya `send_push` `tapped`, uygulamayı açtığını söylüyordu; oysa `am start` ölü süreci 10 s beklemiş, hiçbir şey açmamıştı ve veri uygulamaya hiç ulaşmamıştı. Artık böyle bir uygulamayı, `launch_app` gibi, önce durdurur ve veriyi extras olarak vererek yeniden açar. Böyle bir uygulamaya yönelik `open_link` de aynısını yapar.
 - Android: kurulumdan önce soran bir telefonda `manage_app install`, istemi okuduğu anda ekran karardığında, karanlık bir ekranda olmayan bir odağı bekleyerek istemin 10 saniyesinin yaklaşık 5'ini kaybediyordu. Artık ekranı hemen uyandırır ve dosyanın adlarını istemden önce okur; böylece dokunuş okumanın hemen ardından gelir.

@@ -151,6 +151,10 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Fixed
 
+- Android: an app brought to the front is answered once its window has grown to its place. A read waits while a window is drawn smaller than its size, sticks out of the display, or slides with nodes that have no place, so a tap by ref right after lands where it should.
+- iOS: the keyboard over a web form closes in any language: the Done of the bar over it is found by its place, not its English word.
+- iOS: scroll bars are left out of the screen's list wherever they stand, told by the percentage they hold, in any language.
+- iOS: a launch that starts the app shows a first-run sheet that comes just after its first screen held still. A fresh start is watched 1 s more; an app brought to the front is not.
 - Android: the flight recorder kept no crash when the system held the crashed app for its "keeps stopping" dialog: the process stays, with its pid, until the dialog is answered, and it was read as the app still running. A process held so is now read as a crash, and its last seconds are kept.
 - Android: `send_push` `tapped` to an app held for its crash dialog said it had opened the app, where `am start` had waited 10 s on the dead process and opened nothing, so the data never reached it. It now stops such an app first, as `launch_app` does, and opens it anew with the data as extras. `open_link` held to such an app does the same.
 - Android: `manage_app install`, on a phone that asks before an install, lost about 5 s of the prompt's 10 when the screen went dark just as it read the prompt, waiting for a focus a dark screen does not have. It now wakes the screen at once, and reads the file's names before the prompt, so that its touch follows the read.
