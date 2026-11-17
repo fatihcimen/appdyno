@@ -334,12 +334,13 @@ describe.skipIf(!android)('driving on Android', () => {
     ok(await h.call('press_key', { key: 'volume_down' }));
     await expect.poll(volume, { timeout: 5_000 }).not.toBe(raised);
     ok(await h.call('press_key', { key: 'lock' }));
+    // dark as a person sees it: the system dozes while the display is still on, and a read then rightly reads it lit;
     // a Pixel image dozes for seconds first, with its windows still there to read, and an always-on display stays so
     await expect
-      .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1], {
+      .poll(async () => /mScreenState=(\w+)/.exec(await sh('dumpsys display'))?.[1], {
         timeout: 15_000,
       })
-      .not.toBe('Awake');
+      .not.toBe('ON');
     ok(await h.call('read_screen'));
     await expect
       .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
