@@ -77,16 +77,20 @@ function keysOf(get: () => Call) {
   });
 }
 
-/** What each view shows, by words a fresh device has. */
-function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 'search', RegExp>) {
+/** What each view shows, by words a fresh device has, or by the id of a view the read leaves out as it says nothing. */
+function viewsOf(
+  get: () => Call,
+  shows: Record<'control' | 'notifications' | 'search', RegExp | { id: string }>,
+) {
   const call: Call = (n, a) => get()(n, a);
-  const opens = async (key: string, shown: RegExp) => {
+  const opens = async (key: string, shown: RegExp | { id: string }) => {
     await call('manage_app', { action: 'stop' });
     ok(await call('launch_app'));
     try {
       const r = ok(await call('press_key', { key, read: 'full' }));
       expect(r.text).toMatch(new RegExp(`^opened ${key}`));
-      expect(r.text).toMatch(shown);
+      if (shown instanceof RegExp) expect(r.text).toMatch(shown);
+      else ok(await call('check_element', { selector: shown }));
       expect(r.text).not.toContain('no change seen');
     } finally {
       await call('press_key', { key: 'home' });
@@ -154,7 +158,8 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
   keysOf(() => o.call);
   viewsOf(() => o.call, {
     control: /"Add Controls"/,
-    notifications: /id=lockscreen-date-view/,
+    // the date view holds only the date and time it lists, so a read leaves it out and a selector reaches it
+    notifications: { id: 'lockscreen-date-view' },
     // its own field: inputView is the keyboard's, which the runner's keys bring a second later
     search: /foreground: com\.apple\.Spotlight[\s\S]*textField "Search/,
   });
