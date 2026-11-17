@@ -91,10 +91,11 @@ export async function launcherOf(sh: (command: string) => Promise<string>, pkg: 
 
 /**
  * `am start`'s `-n` with the app's launcher activity, quoted for the device's shell: the name is what the device said
- * of an app, and goes into a command line.
+ * of an app, and goes into a command line. With the launcher's action and category, as an icon's tap sends: Android 16
+ * blocks an intent its filter does not match from an app that asks so, a bare `-n` with it ("does not exist").
  */
 export const launcherArg = async (sh: (command: string) => Promise<string>, pkg: string) =>
-  `-n ${shq(await launcherOf(sh, pkg))}`;
+  `${LAUNCHER} -n ${shq(await launcherOf(sh, pkg))}`;
 
 /** Printed after a command whose answer decides something, as its end: a cut-off answer lacks it. */
 const END = ':appdyno-end:';

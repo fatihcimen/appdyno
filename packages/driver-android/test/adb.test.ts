@@ -246,7 +246,12 @@ describe('launching an app', () => {
       },
     } as unknown as Adb;
     await new AndroidDevice('emulator-5640', adb).launch('a.b');
-    expect(starts(ran)).toEqual([expect.stringContaining("am start -W -n 'a.b/.Main' ")]);
+    // as an icon's tap: an app on Android 16 may refuse an intent its launcher's filter does not match
+    expect(starts(ran)).toEqual([
+      expect.stringContaining(
+        "am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n 'a.b/.Main' ",
+      ),
+    ]);
   });
 
   it('says an emulator is virtual and a phone is not', () => {
