@@ -121,8 +121,16 @@ static MVRow *sayRow(NSString *kind, NSString *title, NSString *detail, NSString
   if (foldable) header.key = [MVFoldKey stringByAppendingString:kind];
   [rows addObject:header];
   NSDictionary *problem = [about[@"problem"] isKindOfClass:NSDictionary.class] ? about[@"problem"] : nil;
-  if (problem) [rows addObject:sayRow(kind, MVSentence(problem[@"said"] ?: @""), MVCapitalized(MVSentence(problem[@"fix"] ?: @"")), @"exclamationmark.triangle")];
-  else if (!count && [about[@"waiting"] boolValue]) [rows addObject:sayRow(kind, MVWord(@"Asking for them…"), MVWord(@"The first answer after a Mac starts can take a minute."), @"hourglass")];
+  if (problem) {
+    // its head on the line, as a line is cut where the sidebar ends; the rest and what to do wrap beneath
+    NSString *said = MVSentence(problem[@"said"] ?: @""), *fix = MVCapitalized(MVSentence(problem[@"fix"] ?: @""));
+    NSRange colon = [said rangeOfString:@": "];
+    NSString *head = colon.location == NSNotFound ? said : [said substringToIndex:colon.location];
+    NSString *rest = colon.location == NSNotFound ? @"" : [MVCapitalized([said substringFromIndex:NSMaxRange(colon)]) stringByAppendingString:@". "];
+    MVRow *why = sayRow(kind, head, [rest stringByAppendingString:fix], @"exclamationmark.triangle");
+    why.help = [NSString stringWithFormat:@"%@\n%@", said, fix];
+    [rows addObject:why];
+  } else if (!count && [about[@"waiting"] boolValue]) [rows addObject:sayRow(kind, MVWord(@"Asking for them…"), MVWord(@"The first answer after a Mac starts can take a minute."), @"hourglass")];
   else if (!count && !words.length) {
     MVRow *none = sayRow(kind, MVWord([kind isEqual:@"emulator"] ? @"No emulator yet" : @"No simulator yet"), @"", [kind isEqual:@"emulator"] ? @"candybarphone" : @"iphone");
     none.button = @"New…";
