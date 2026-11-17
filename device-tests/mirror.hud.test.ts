@@ -11,6 +11,7 @@ import {
   ViewerProcess,
   type Device,
   type LiveSample,
+  type ViewerMessage,
 } from '../packages/core/src/index.js';
 import { Adb, AndroidDevice } from '../packages/driver-android/src/index.js';
 import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
@@ -57,6 +58,8 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
       );
   };
   const told: Record<string, unknown>[] = [];
+  /** What the window says back, as its answer to a click. */
+  const heard: ViewerMessage[] = [];
   let session: MirrorSession;
   const runs = mkdtempSync(join(tmpdir(), 'appdyno-window-runs-'));
   const control = (name: string) => session.tell({ op: 'poke', control: name });
@@ -84,7 +87,9 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
       mirror: device.mirror,
       viewer: () =>
         new Promise((resolve) => {
-          resolve(new ViewerProcess(binary, ['--behind']));
+          const viewer = new ViewerProcess(binary, ['--behind']);
+          viewer.onMessage((m) => heard.push(m));
+          resolve(viewer);
         }),
       options: { quality: 'auto' },
       title: 'a window under test',
@@ -119,12 +124,27 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
     rmSync(runs, { recursive: true, force: true });
   });
 
+  // a fact of the layout, not of the numbers: at the window's opening width, 780 pt, an Android device's bar holds four
+  // device buttons and, once its capsule says the picture's rate, folds Show Performance into its » overflow, where no
+  // click on the bar reaches it
+  it.runIf(!udid)("folds Show Performance into the bar's overflow on Android", async () => {
+    await until('a picture rate', () => heard.some((m) => m.op === 'stats' && m.decoded > 0));
+    await new Promise((r) => setTimeout(r, 1_500));
+    session.tell({ op: 'poke', clickOn: 'hud' });
+    await until('the answer to the click', () => heard.some((m) => m.op === 'clicked'));
+    const clicked = heard.find((m) => m.op === 'clicked');
+    // one that landed turned the numbers on, which the next case must find off
+    if (clicked?.found) control('hud');
+    expect(clicked).toMatchObject({ name: 'hud', found: false });
+  });
+
   it(
     "reads nothing until asked, then a real app's numbers, and nothing after",
     async () => {
       await new Promise((r) => setTimeout(r, OUT_OF_A_READING));
       expect(perf()).toEqual([]);
-      session.tell({ op: 'poke', clickOn: 'hud' });
+      // as the View menu's Show Performance and its ⌥⌘P run it, which reach it however narrow the bar is
+      control('hud');
       const read = (m: Record<string, unknown>) =>
         m.op === 'perf' && (m.sample as LiveSample).memoryMb !== undefined;
       await until('a real reading', () => told.some(read), READING_MS).catch((e: unknown) => {
