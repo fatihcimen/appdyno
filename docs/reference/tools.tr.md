@@ -323,7 +323,7 @@ Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyle
 
 ### Uygulama bir işlemin altında ölürse
 
-Uygulama bir işlemin altında ölürse işlem `APP_NOT_RUNNING` ile reddedilir: yanıt, işlemin ne yaptığını, crash raporundaki nedeni ve uygulamanın son log satırlarını, nedeni söyleyen ilk satırdan başlayarak verir. `run_steps` içinde bu, çağrıyı adımın adını vererek bitirir.
+Uygulama bir işlemin altında ölürse işlem `APP_NOT_RUNNING` ile reddedilir: yanıt, işlemin ne yaptığını, crash raporundaki nedeni ve uygulamanın son log satırlarını, nedeni söyleyen ilk satırdan başlayarak verir. `run_steps` içinde bu, çağrıyı adımın adını vererek bitirir. Uygulamanın ölümüne bakış, uygulamanın hâlâ çalışıp çalışmadığı ya da crash raporları gibi gereken bir şeyi okuyamadığında hiçbir ölüm bilinmez ve yanıt bunu bir satırda söyler: `not checked for a crash: could not read whether it still runs: …`.
 
 İzlenen uygulama seçili olandır, yoksa dokunuş hedeflenirken önde olandır; onu aynı çağrıda daha önceki bir başlatma ya da bağlantı açmış olabilir. Önceki bir crash geride uygulama bırakmadığı için başarısız olan sonraki bir adım, kendi hatasına `APP_NOT_RUNNING`'i ve ne yapılacağını ekler; bir flow'un adımı da öyle.
 

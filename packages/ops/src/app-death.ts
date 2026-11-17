@@ -41,6 +41,24 @@ export function asStepBegan(s: Session, seen: string | undefined) {
   return { app, up: !!app && seen === app, pid: s.appPid };
 }
 
+/** What the last look for the app's end could not read, by session: no death is then known, and the answer says so. */
+const unread = new WeakMap<Session, string>();
+
+/** A look that could not read `what` goes on with `fallback`, the side that says no death, and is noted for the answer. */
+const unknown =
+  <T>(s: Session, what: string, fallback: T) =>
+  (e: unknown) => {
+    unread.set(s, `could not read ${what}: ${e instanceof Error ? e.message : String(e)}`);
+    return fallback;
+  };
+
+/** The line an action's answer adds where a look for its app's end could not read what it needed; taken once. */
+export function deathUnread(s: Session) {
+  const line = unread.get(s);
+  unread.delete(s);
+  return line === undefined ? [] : [`not checked for a crash: ${line}`];
+}
+
 /**
  * What the report of the app's own process says of its end since `since`, else why none will come; a new process with no
  * report is no death. An extension's report of the same moment is not why the app ended.
@@ -55,7 +73,7 @@ async function reportOf(
   for (let i = 0; app && i < tries; i++) {
     const { reports, unkept } = await s.device
       .crashes({ app, since: since - CLOCK_SLACK_MS, limit: 1, own: true })
-      .catch(() => ({ reports: [], unkept: undefined }));
+      .catch(unknown(s, 'its crash reports', { reports: [], unkept: undefined }));
     const r = reports[0];
     if (r) return { report: { reason: clean(r.reason), ...(r.file && { file: r.file }) } };
     // the system keeps no more of the app's reports: none is waited for
@@ -70,7 +88,9 @@ async function reportOf(
  * its pid, until the dialog is answered, and no report is written meanwhile, so only this tells that death.
  */
 const heldForDialog = async (s: Session, app: string) =>
-  (await s.device.appCrashing?.(app).catch(() => false)) ?? false;
+  (await s.device
+    .appCrashing?.(app)
+    .catch(unknown(s, 'whether its crash dialog holds it', false))) ?? false;
 
 /**
  * A death, as its report says, else as it was seen: a process held for its crash dialog, read once as that writes none
@@ -143,10 +163,7 @@ export async function appDeath(
     // what the device could not tell is the process known before
     const asked =
       now ??
-      (await s.device.appPid(app).then(
-        (p) => ({ pid: p }),
-        () => undefined,
-      ));
+      (await s.device.appPid(app).then((p) => ({ pid: p }), unknown(s, 'its process', undefined)));
     const pid = asked ? asked.pid : wasPid;
     s.sawProcess(app, pid);
     // another process than before, or none of an app that ran where none was known before, as one a touch aimed at
@@ -165,8 +182,8 @@ export async function appDeath(
   // "keeps stopping" stands over the app's screen, which then has no app in front, and none if dropbox's rate limit
   // drops its report
   const held = await heldForDialog(s, app);
-  if (!held && (!foreground || (await s.device.appRunning(app).catch(() => true))))
-    return undefined;
+  const runs = () => s.device.appRunning(app).catch(unknown(s, 'whether it still runs', true));
+  if (!held && (!foreground || (await runs()))) return undefined;
   reportProgress('the app is gone: looking for its crash report');
   return deathOf(s, app, since, clean, { held });
 }
@@ -200,10 +217,12 @@ async function deathWhile(
   since: number,
   clean: Clean,
 ) {
-  const pid = s.device.appPid ? await s.device.appPid(app).catch(() => wasPid) : undefined;
+  const pid = s.device.appPid
+    ? await s.device.appPid(app).catch(unknown(s, 'its process', wasPid))
+    : undefined;
   // a process not known before the action is only looked for: none is an end, any one is the app's
   const gone = !s.device.appPid
-    ? !(await s.device.appRunning(app).catch(() => true))
+    ? !(await s.device.appRunning(app).catch(unknown(s, 'whether it still runs', true)))
     : wasPid
       ? pid !== wasPid
       : !pid;

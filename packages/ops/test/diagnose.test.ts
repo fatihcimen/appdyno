@@ -502,6 +502,22 @@ describe('crashes', () => {
     const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.text).not.toContain('the app died');
   });
+
+  it('says where it could not read whether the app still runs, as no death is then known', async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    await call('read_screen');
+    device.permissionUp = true;
+    device.appRunning = () => Promise.reject(new Error('adb: device offline'));
+    const r = await call('tap_screen', { x: 5, y: 2390 });
+    expect(r.text).not.toContain('the app died');
+    expect(r.text).toContain(
+      'not checked for a crash: could not read whether it still runs: adb: device offline',
+    );
+    // said once: an answer after a look that read is clean
+    device.appRunning = () => Promise.resolve(true);
+    expect((await call('tap_screen', { x: 5, y: 2390 })).text).not.toContain('not checked');
+  });
 });
 
 describe('audit', () => {

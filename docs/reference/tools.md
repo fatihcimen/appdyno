@@ -323,7 +323,7 @@ With `file` it saves the picture at full size, or as wide as `width` asks, and s
 
 ### When the app dies under an action
 
-If the app dies under an action, the action is refused with `APP_NOT_RUNNING`: the answer says what the action did, the crash report's reason and the app's last log lines, from the first line that says why. In `run_steps` this ends the call, naming the step.
+If the app dies under an action, the action is refused with `APP_NOT_RUNNING`: the answer says what the action did, the crash report's reason and the app's last log lines, from the first line that says why. In `run_steps` this ends the call, naming the step. Where the look for the app's end could not read what it needed, as whether the app still runs or its crash reports, no death is known, and the answer says so in a line: `not checked for a crash: could not read whether it still runs: …`.
 
 The app watched is the selected one, else the one in front as the touch was aimed, which a launch or a link earlier in the call may have opened. A later step that fails because an earlier crash left no app adds `APP_NOT_RUNNING` and what to do to its own error, and so does a flow's step.
 

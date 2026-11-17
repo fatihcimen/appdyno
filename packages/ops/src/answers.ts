@@ -15,6 +15,7 @@ import { DeviceError, SETTLE_DEFAULT, type ActResult, type TextResult } from '@a
 import {
   aimedApp,
   appDeath,
+  deathUnread,
   diedRefusal,
   endedUnder,
   launchDied,
@@ -214,6 +215,7 @@ async function afterAction(
   const notes = [
     ...(o.notes ?? []),
     ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs, !!d && differs(d))] : []),
+    ...deathUnread(s),
     // what the app asked for and did not get, said with the action that asked
     ...(await failedSince(s, o.started, done, clean)),
   ];
