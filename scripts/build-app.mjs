@@ -396,8 +396,16 @@ async function diskImage() {
     background: join(art, 'background.png'),
     icon_size: DMG.icon,
     text_size: DMG.text,
-    window_rect: [[200, 120], DMG.size],
-    icon_locations: { [`${NAME}.app`]: DMG.app, Applications: DMG.applications },
+    window_rect: [
+      [200, 120],
+      [DMG.size[0], DMG.size[1] + DMG.title],
+    ],
+    icon_locations: {
+      [`${NAME}.app`]: DMG.app,
+      Applications: DMG.applications,
+      '.background.tiff': DMG.hidden,
+      '.VolumeIcon.icns': DMG.hidden,
+    },
   };
   // its settings are Python, and these values read the same in JSON
   const file = join(art, 'settings.py');

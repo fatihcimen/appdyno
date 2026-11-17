@@ -1,12 +1,17 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { decodePng, must } from '@appdyno/core';
 
+type Point = [number, number];
 const root = join(import.meta.dirname, '../../..');
 const art = (await import(join(root, 'scripts/icon-art.mjs'))) as {
   GENERATED: Record<string, string>;
   macIcon(px: number): string;
+  luminance(color: string): number;
+  DMG: { size: Point; icon: number; app: Point; applications: Point; hidden: Point };
 };
 
 describe('the icon', () => {
@@ -45,4 +50,47 @@ describe('the icon', () => {
     });
     expect(found.stdout).toBe('');
   });
+});
+
+describe("the disk image's window", () => {
+  const { size, icon, app, applications, hidden } = art.DMG;
+
+  it('holds every item, the hidden two too: Finder lays one out below as room to scroll to', () => {
+    // an item's box as Finder said it through Accessibility, its name under it, and the 10 points it keeps below the last
+    for (const [x, y] of [app, applications, hidden]) {
+      expect(x - 95).toBeGreaterThanOrEqual(0);
+      expect(x + 95).toBeLessThanOrEqual(size[0]);
+      expect(y - 72).toBeGreaterThanOrEqual(0);
+      expect(y + 114 + 10).toBeLessThanOrEqual(size[1]);
+    }
+  });
+
+  it.runIf(process.platform === 'darwin')(
+    'has plates where a name reads at 4.5:1 in black and in white, as sips draws them at either scale',
+    async () => {
+      const icons = (await import(join(root, 'scripts/build-icons.mjs'))) as {
+        buildDmgBackground(dir: string): void;
+      };
+      const dir = mkdtempSync(join(tmpdir(), 'appdyno-dmg-'));
+      icons.buildDmgBackground(dir);
+      for (const [file, scale] of [
+        ['background.png', 1],
+        ['background@2x.png', 2],
+      ] as const) {
+        const image = must(decodePng(readFileSync(join(dir, file))), file);
+        for (const [x, y] of [app, applications]) {
+          const at =
+            (Math.round((y + icon / 2 + 13) * scale) * image.width + x * scale) * image.channels;
+          const hex = [...image.data.subarray(at, at + 3)].map((v) =>
+            v.toString(16).padStart(2, '0'),
+          );
+          const l = art.luminance(`#${hex.join('')}`);
+          expect((l + 0.05) / 0.05, `black on ${file}`).toBeGreaterThanOrEqual(4.5);
+          expect(1.05 / (l + 0.05), `white on ${file}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+      rmSync(dir, { recursive: true, force: true });
+    },
+    30_000,
+  );
 });

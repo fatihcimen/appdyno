@@ -314,16 +314,20 @@ export function social(hub) {
 }
 
 /**
- * The disk image's window in points, from its top left: its size, and where the app and Applications stand, each the
- * centre of its icon. scripts/build-app.mjs writes the same into the image's .DS_Store.
- * @type {{ size: [number, number]; icon: number; text: number; app: [number, number]; applications: [number, number] }}
+ * The disk image's window in points, from its top left: the room under its title bar, and where the app and Applications
+ * stand, each the centre of its icon. `hidden` is where the two files Finder hides stand, the dragon's place: Finder lays
+ * out a hidden file as any other, and one placed below the room is room to scroll to. scripts/build-app.mjs writes the
+ * same into the image's .DS_Store, the window `title` taller than `size` as macOS 26 draws its title bar.
+ * @type {{ size: [number, number]; title: number; icon: number; text: number; app: [number, number]; applications: [number, number]; hidden: [number, number] }}
  */
 export const DMG = {
-  size: [640, 400],
+  size: [720, 400],
+  title: 32,
   icon: 128,
   text: 13,
-  app: [160, 204],
-  applications: [480, 204],
+  app: [150, 214],
+  applications: [430, 214],
+  hidden: [612, 190],
 };
 
 /** The ground of the hub in dark (mac/Viewer/Palette.m): where each bloom is, as shares of the window, its reach and strength. */
@@ -333,73 +337,121 @@ const BLOOMS = /** @type {const} */ ([
   [0.94, 1.04, 0.24, 0.66, '#B81C68'],
   [0.02, 0, 0.2, 0.5, '#0B6DBD'],
 ]);
-/** Past the window on the right and below, as Finder's title bar may take some of its height: the ground, never white. */
+/** The same in light, which the disk image wears as the site does. */
+const LIGHT_BLOOMS = /** @type {const} */ ([
+  [0.98, 0.04, 0.42, 1, '#A6B8FF'],
+  [0, 1, 0.44, 1, '#D3AFFF'],
+  [0.94, 1.04, 0.3, 0.92, '#FFB3D1'],
+  [0.02, 0, 0.26, 0.8, '#A8DEFF'],
+]);
+const GROUND = '#EEF0FF';
+const ACCENT_FROM = '#2F52F0';
+const ACCENT_TO = '#7A2EE0';
+/** Below the room, as an older Finder's title bar is shorter: the ground, never white. */
 const BLEED = 40;
 const FONT = 'font-family="Helvetica Neue, Helvetica, Arial, sans-serif" text-anchor="middle"';
 
+/** @param {string} color */
+const rgb = (color) => [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
 /**
- * The disk image's background, `scale` pixels to a point. Finder may draw the names under the icons in black or in
- * white, by the person's light or dark: each stands on the hub's blue, darkened until black and white text both read on
- * it at 4.5:1 or more as drawn, #4170DA, as sips draws an SVG's colours a little lighter than they are written.
- * @param {number} scale
+ * WCAG's relative luminance.
+ * @param {string} color
  */
-export function dmgBackground(scale) {
+export function luminance(color) {
+  const linear = (/** @type {number} */ v) =>
+    v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4;
+  const [r = 0, g = 0, b = 0] = rgb(color).map(linear);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * The plate under an icon's name. Finder writes a name in black or in white, by the person's light or dark, whatever the
+ * picture, so both must read on it, which only a narrow band of luminance around 0.179 allows: the accent's violet,
+ * lightened to the middle of it. `brand.test.ts` holds the picture sips draws to 4.5:1 for each.
+ */
+export const PLATE = (() => {
+  const middle = Math.sqrt(1.05 * 0.05) - 0.05;
+  const toward = (/** @type {number} */ t) =>
+    `#${rgb(ACCENT_TO)
+      .map((v) =>
+        Math.round(v + (255 - v) * t)
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')}`;
+  let [lo, hi] = [0, 1];
+  for (let i = 0; i < 20; i += 1) {
+    const t = (lo + hi) / 2;
+    if (luminance(toward(t)) < middle) lo = t;
+    else hi = t;
+  }
+  return toward(lo);
+})();
+
+/**
+ * The disk image's background, `scale` pixels to a point: the house's light ground, the way from the app to
+ * Applications in one stroke of the accent, and the site's dragon beside Applications, turned to the app, waiting for
+ * it. `dragon` is scripts/render-dragon.py's still, mac/App/dragon.png, as base64: drawn at twice the size it stands.
+ * @param {number} scale
+ * @param {string} dragon
+ */
+export function dmgBackground(scale, dragon) {
   const [w, h] = DMG.size;
-  const [W, H] = [w + BLEED, h + BLEED];
+  const H = h + BLEED;
   const half = DMG.icon / 2;
-  const blooms = BLOOMS.map(
+  const blooms = LIGHT_BLOOMS.map(
     ([x, y, reach, strength, color], i) =>
-      `<radialGradient id="b${String(i)}" gradientUnits="userSpaceOnUse" cx="${n(x * w)}" cy="${n(y * h)}" r="${n(reach * w * 1.6)}">` +
+      `<radialGradient id="b${String(i)}" gradientUnits="userSpaceOnUse" cx="${n(x * w)}" cy="${n(y * h)}" r="${n(reach * w * 1.5)}">` +
       `<stop offset="0" stop-color="${color}" stop-opacity="${String(strength)}"/>` +
-      `<stop offset=".45" stop-color="${color}" stop-opacity="${n(strength * 0.35)}"/>` +
+      `<stop offset=".5" stop-color="${color}" stop-opacity="${n(strength * 0.35)}"/>` +
       `<stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`,
   );
-  /** A pane of glass under an icon, and its name on a plate of light at its foot. */
-  const well = (/** @type {[number, number]} */ [x, y]) => {
-    const body = rounded(x - 88, y - half - 24, 176, DMG.icon + 70, 36);
-    const plate = `x="${x - 66}" y="${y + half - 2}" width="132" height="28" rx="14"`;
+  /** Where an icon stands: a pool of light behind it, its shadow on the floor, and a plate as wide as its name. */
+  const stand = (/** @type {[number, number]} */ [x, y], /** @type {number} */ wide) => {
+    const plate = `x="${x - wide / 2}" y="${y + half + 1}" width="${wide}" height="24" rx="12"`;
     return (
-      `<path d="${body}" fill="url(#glass)"/>` +
-      `<path d="${body}" fill="none" stroke="url(#rim)" stroke-width="1.5"/>` +
-      `<rect ${plate} fill="${BLUE}" filter="url(#halo)" opacity=".7"/>` +
-      `<rect ${plate} fill="${BLUE}"/><rect ${plate} fill="${NIGHT}" opacity=".22"/>` +
-      `<rect ${plate} fill="none" stroke="url(#rim)" stroke-width="1"/>`
+      `<circle cx="${x}" cy="${y}" r="${half + 34}" fill="url(#pool)"/>` +
+      `<ellipse cx="${x}" cy="${y + half - 2}" rx="${half - 6}" ry="12" fill="url(#shade)"/>` +
+      `<rect ${plate} fill="${PLATE}"/><rect ${plate} fill="none" stroke="${WHITE}" stroke-opacity=".5"/>`
     );
   };
-  // from a pane of glass to the next, 22 points short of each
-  const [from, to] = [DMG.app[0] + 110, DMG.applications[0] - 110];
-  const y = DMG.app[1];
-  const arrow = `M${from} ${y}H${to}M${to - 13} ${y - 13}L${to} ${y}L${to - 13} ${y + 13}`;
+  // one stroke over the gap, from beside the app to beside Applications, rising as a hand that carries it would
+  const [x0, x1, y] = [DMG.app[0] + half + 16, DMG.applications[0] - half - 18, DMG.app[1] - 6];
+  const way = `M${x0} ${y}Q${(x0 + x1) / 2} ${y - 84} ${x1} ${y}`;
+  const angle = Math.atan2(84, (x1 - x0) / 2);
+  const tip = (/** @type {number} */ turn) =>
+    `${n(x1 - 15 * Math.cos(angle + turn))} ${n(y - 15 * Math.sin(angle + turn))}`;
+  // its feet on the floor, at half the size it was drawn
+  const [dw, dh] = [183.5, 220];
+  const [dx, feet] = [DMG.hidden[0] - dw / 2 + 6, DMG.app[1] + half + 22];
   return (
-    `<svg ${SVG} width="${W * scale}" height="${H * scale}" viewBox="0 0 ${W} ${H}"><defs>${blooms.join('')}` +
+    `<svg ${SVG} width="${w * scale}" height="${H * scale}" viewBox="0 0 ${w} ${H}"><defs>${blooms.join('')}` +
+    gradient('floor', [
+      [0, GROUND],
+      [1, MIST],
+    ]) +
     gradient(
       'lit',
       [
-        [0, BLUE],
-        [0.55, VIOLET],
+        [0, ACCENT_FROM],
+        [0.6, ACCENT_TO],
         [1, PINK],
       ],
       'x1="0" y1="0" x2="1" y2="0"',
     ) +
-    gradient('glass', [
-      [0, WHITE, 0.1],
-      [1, WHITE, 0.04],
-    ]) +
-    gradient('rim', [
-      [0, WHITE, 0.4],
-      [0.5, WHITE, 0.08],
-      [1, WHITE, 0.16],
-    ]) +
-    '<filter id="soft" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="7"/></filter>' +
-    '<filter id="halo" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="9"/></filter></defs>' +
-    `<rect width="${W}" height="${H}" fill="${NIGHT}"/>` +
-    blooms.map((_, i) => `<rect width="${W}" height="${H}" fill="url(#b${String(i)})"/>`).join('') +
-    `<text x="${w / 2}" y="70" ${FONT} font-size="22" font-weight="500" fill="${PALE}">Drag appdyno to Applications</text>` +
-    `<text x="${w / 2}" y="96" ${FONT} font-size="13" fill="${QUIET}" opacity=".75">Then open it from Applications. It lives in the menu bar.</text>` +
-    well(DMG.app) +
-    well(DMG.applications) +
-    `<path d="${arrow}" fill="none" stroke="url(#lit)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#soft)" opacity=".9"/>` +
-    `<path d="${arrow}" fill="none" stroke="url(#lit)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<radialGradient id="pool"><stop offset="0" stop-color="${WHITE}" stop-opacity=".95"/><stop offset=".55" stop-color="${WHITE}" stop-opacity=".5"/><stop offset="1" stop-color="${WHITE}" stop-opacity="0"/></radialGradient>` +
+    `<radialGradient id="shade"><stop offset="0" stop-color="${ACCENT_TO}" stop-opacity=".28"/><stop offset="1" stop-color="${ACCENT_TO}" stop-opacity="0"/></radialGradient>` +
+    '<filter id="soft" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="6"/></filter></defs>' +
+    `<rect width="${w}" height="${H}" fill="url(#floor)"/>` +
+    blooms.map((_, i) => `<rect width="${w}" height="${H}" fill="url(#b${String(i)})"/>`).join('') +
+    `<text x="${w / 2}" y="60" ${FONT} font-size="24" font-weight="600" fill="${INK}">Drag appdyno to Applications</text>` +
+    `<ellipse cx="${DMG.hidden[0]}" cy="${feet}" rx="150" ry="24" fill="${WHITE}" opacity=".55" filter="url(#soft)"/>` +
+    stand(DMG.app, 84) +
+    stand(DMG.applications, 104) +
+    `<path d="${way}" fill="none" stroke="url(#lit)" stroke-width="10" stroke-linecap="round" opacity=".25" filter="url(#soft)"/>` +
+    `<path d="${way}M${tip(0.6)}L${x1} ${y}L${tip(-0.6)}" fill="none" stroke="url(#lit)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<ellipse cx="${DMG.hidden[0] + 4}" cy="${feet - 4}" rx="56" ry="9" fill="${ACCENT_TO}" opacity=".2" filter="url(#soft)"/>` +
+    `<g transform="translate(${n(dx + dw)} ${n(feet - dh)}) scale(-1 1)"><image width="${dw}" height="${dh}" href="data:image/png;base64,${dragon}"/></g>` +
     '</svg>\n'
   );
 }

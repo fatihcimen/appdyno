@@ -78,8 +78,9 @@ export function buildMenuGlyph(dir) {
  * @param {string} dir
  */
 export function buildDmgBackground(dir) {
-  render(dmgBackground(1), join(dir, 'background.png'));
-  render(dmgBackground(2), join(dir, 'background@2x.png'));
+  const dragon = readFileSync(join(repo, 'mac/App/dragon.png')).toString('base64');
+  render(dmgBackground(1, dragon), join(dir, 'background.png'));
+  render(dmgBackground(2, dragon), join(dir, 'background@2x.png'));
 }
 
 /**
