@@ -233,7 +233,7 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       name: 'open_link',
       title: 'Open link',
       description:
-        "Open one of: url, a web URL, deep link, universal link or App Link, in the selected app if any (an unknown scheme asks first); settings, a Settings page (about, privacy…) or an app's (its id, or app); links, an app's id: lists the links it opens. An app by id: launch_app. Returns the screen after, or links.",
+        "Open one of: url, a web URL, deep link, universal link or App Link, in the selected app if any (unknown schemes ask first); settings, a Settings page (about, privacy) or an app's (its id, or app); links, an app's id: the links it opens. An app by id: launch_app. Returns the screen after, or links.",
       input: z
         .object({
           url: z.string().min(3).max(2_000).optional(),

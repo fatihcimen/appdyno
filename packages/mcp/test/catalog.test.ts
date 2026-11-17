@@ -154,7 +154,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(26_848);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(26_838);
   expect(JSON.stringify(tools)).not.toMatch(
     /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
   );
@@ -280,20 +280,20 @@ it('has every tool in one group, and lists a group at the size it was measured',
   for (const set of TOOLSET_NAMES) sizes[set] = await sizeOf([set]);
   // tools, then characters as the budget above counts them; each list is 12 characters of its own
   expect(sizes).toEqual({
-    core: [13, 10_113],
+    core: [13, 10_104],
     device: [4, 3_240],
     apps: [4, 3_645],
-    evidence: [4, 4_081],
+    evidence: [4, 4_056],
     network: [1, 2_247],
-    perf: [2, 3_577],
+    perf: [2, 3_601],
   });
-  expect(await sizeOf(['core', 'network', 'perf'])).toEqual([16, 15_915]);
+  expect(await sizeOf(['core', 'network', 'perf'])).toEqual([16, 15_930]);
 });
 
 /** A page of the repository, as a reader is given it. */
 const page = (path: string) => readFileSync(new URL(`../../../${path}`, import.meta.url), 'utf8');
 
-/** A count as a page writes it: 26,848 in English, 26.848 in Turkish. */
+/** A count as a page writes it: 26,838 in English, 26.838 in Turkish. */
 const written = (n: number, mark: ',' | '.') => String(n).replace(/\B(?=(\d{3})+$)/g, mark);
 
 /**

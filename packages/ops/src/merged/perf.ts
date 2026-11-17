@@ -54,7 +54,7 @@ export const comparePerformance = ({
     name: 'compare_performance',
     title: 'Performance baseline and gate',
     description:
-      "Performance regression gate over runs measure_performance kept. compare (default): the last runs against baseline and budgets in .appdyno/perf/, failing a change both statistically and practically significant. baseline: keeps the last runs (3 needed); budget: a kind's max or min. why: a regression's cause, by its flow, restarting the app; reference: its baseline side. functions: two cpu ids (from, to). query: a kept trace, by sql or table. prune: old traces. Returns the verdict.",
+      "Performance regression gate on runs measure_performance kept. compare (default): the last runs against baseline and budgets in .appdyno/perf/, failing a change statistically and practically significant. baseline: keeps the last runs (3 needed; replace anew); budget: a kind's max, min. why: a regression's cause by its flow, restarting the app; reference: its baseline side. functions: two cpu ids, from, to. query: a bounded table of a kept trace (read-only sql, table). prune: traces. Returns the verdict.",
     input: z
       .object({
         ...gate.input.shape,

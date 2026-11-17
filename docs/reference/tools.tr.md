@@ -162,16 +162,16 @@ Ayrıntılar: [Performans ölçümü](perf.tr.md) ve [Performansı ölçmek](../
 
 ## Yalnızca bazı araçları listelemek
 
-Bir istemci her oturumda araç listesinin tümünü okur. `--toolsets` ile ya da ortamında `APPDYNO_TOOLSETS` ile başlatılan bir sunucu, yalnızca adı verilen grupları listeler; gruplar virgülle ayrılır: `appdyno mcp --toolsets core,network,perf`. Verilmezse her aracı listeler. Hiçbir grubun adı olmayan bir sözcük reddedilir ve sunucu başlamaz. Boyutlar, istemciye gönderilen listenin karakter sayısıdır; listenin tümü 26.848 karakterdir.
+Bir istemci her oturumda araç listesinin tümünü okur. `--toolsets` ile ya da ortamında `APPDYNO_TOOLSETS` ile başlatılan bir sunucu, yalnızca adı verilen grupları listeler; gruplar virgülle ayrılır: `appdyno mcp --toolsets core,network,perf`. Verilmezse her aracı listeler. Hiçbir grubun adı olmayan bir sözcük reddedilir ve sunucu başlamaz. Boyutlar, istemciye gönderilen listenin karakter sayısıdır; listenin tümü 26.838 karakterdir.
 
 | grup       | araçlar                                                                                                                                                                                         | boyut  |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `core`     | `list_devices`, `use_device`, `read_screen`, `take_screenshot`, `check_element`, `tap_screen`, `swipe_screen`, `type_text`, `press_key`, `run_steps`, `answer_alert`, `launch_app`, `open_link` | 10.113 |
+| `core`     | `list_devices`, `use_device`, `read_screen`, `take_screenshot`, `check_element`, `tap_screen`, `swipe_screen`, `type_text`, `press_key`, `run_steps`, `answer_alert`, `launch_app`, `open_link` | 10.104 |
 | `device`   | `manage_simulator`, `set_device`, `ask_person`, `show_mirror`                                                                                                                                   | 3.240  |
 | `apps`     | `manage_app`, `transfer_files`, `send_push`, `inspect_app`                                                                                                                                      | 3.645  |
-| `evidence` | `read_logs`, `check_screen`, `record_session`, `run_flow`                                                                                                                                       | 4.081  |
+| `evidence` | `read_logs`, `check_screen`, `record_session`, `run_flow`                                                                                                                                       | 4.056  |
 | `network`  | `capture_network`                                                                                                                                                                               | 2.247  |
-| `perf`     | `measure_performance`, `compare_performance`                                                                                                                                                    | 3.577  |
+| `perf`     | `measure_performance`, `compare_performance`                                                                                                                                                    | 3.601  |
 
 Bir grup daha kısa bir listedir, bir izin değildir. Bir sunucunun ne yapabileceğini `--allow-` bayrakları söyler. [Komut satırı](cli.tr.md) ve [kütüphane](library.tr.md), ne listelenmiş olursa olsun her araca ulaşır; `run_steps` ise `run_steps` ve `run_flow` dışında her araca. Sunucunun yönergeleri her gruptan araçların adını anar; yalnızca `core` listeleyen bir istemci, elinde olmayan bir aracın adını okuyabilir.
 

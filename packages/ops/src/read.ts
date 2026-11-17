@@ -283,7 +283,7 @@ export function readOps(
     defineOp({
       name: 'take_screenshot',
       title: 'Screenshot',
-      description: `An image of the screen, for a visual judgement only: read_screen is cheaper and gives refs. Returns it (at most ${SHOT_PX} px unless width) with its scale to tap units; points: 1 pixel is 1 unit. watchMs: no image, what moved (way, speed, jumps); strip: 8 timed frames. file: full size to a .png, .jpg or folder; inline: false hides it; overwrite. An unchanged screen is refused a second image. Diffs: check_screen; video: record_session.`,
+      description: `An image of the screen, for a visual judgement only: read_screen is cheaper and gives refs. Returns it (at most ${SHOT_PX} px unless width) with its scale to tap units; points: 1 pixel is 1 unit. watchMs: no image, what moved (way, speed, jumps); strip: 8 timed frames. file: full size to a .png, .jpg or folder; inline: false hides it; overwrite. An unchanged screen gets no second image. Visual diffs: check_screen; video: record_session.`,
       input: z
         .object({
           points: z.boolean().optional(),
