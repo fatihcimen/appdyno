@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 1.3.0
+
 appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tools are now 28, named verb_noun, and the old names are gone: a call by one is refused, with the new name in its hint. On an iOS simulator it inspects, mocks and throttles an app's requests. Foldables fold on both platforms, a tool writes and builds only where a person allowed, and each release is held to a run on a simulator in CI. It is a breaking release: the table of old and new names is under Breaking.
 
 ### Highlights

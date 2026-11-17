@@ -4,6 +4,8 @@
 
 ## Yayımlanmamış
 
+## 1.3.0
+
 appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fazlasını yapar. 48 araç artık 28'dir, hepsi fiil_ad biçiminde adlandırılmıştır ve eski adlar kaldırılmıştır: eski bir adla yapılan çağrı, ipucunda yeni ad söylenerek reddedilir. Bir iOS simulator'ında uygulamanın isteklerini inceler, mock'lar ve yavaşlatır. Katlanabilir cihazlar iki platformda da katlanır, bir araç yalnızca bir kişinin izin verdiği yere yazar ve yalnızca orada derler, her sürüm de CI'da bir simulator üzerindeki çalıştırmaya bağlıdır. Uyumluluğu bozan bir sürümdür: eski ve yeni adların tablosu "Uyumluluğu bozan değişiklikler" başlığının altındadır.
 
 ### Öne çıkanlar
