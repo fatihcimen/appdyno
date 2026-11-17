@@ -290,7 +290,7 @@ A phone's own Wi-Fi going is another matter on Android. On a Samsung SM-A525F by
 
 What Wi-Fi costs, measured on a Samsung SM-A525F against itself by cable (the table is in [Mirror](perf-evidence.md#mirror)): a touch takes about twice as long to show, 168 to 208 ms for 103 to 110, and a window opens 100 to 150 ms later, and once 1.4 s later. Most pictures arrive about as soon as by cable, and the slowest one in twenty about 50 ms later, which a person sees as an uneven picture on a phone that is moving. The network's round trip is the likely cause, though it was not measured apart: a ping to that phone took from 6 to 170 ms.
 
-What it costs on an iPhone 13 Pro Max against itself by cable, in the same place: a window opens in 1.5 to 2.5 s for 0.5, a picture takes 44 to 59 frames a second for 60 and freezes 13 to 18 times a run for 0 to 4, each time for under a second, and a flick shows in 121 to 470 ms for 93 to 98. By Wi-Fi only 2 to 5 flicks of 10 showed at all in three runs of five, and no cause has been found.
+What it costs on an iPhone 13 Pro Max against itself by cable, in the same place: a window opens in 1.5 to 2.5 s for 0.5, a picture takes 44 to 59 frames a second for 60 and freezes 13 to 18 times a run for 0 to 4, each time for under a second, and a flick shows in 121 to 470 ms for 93 to 98. By Wi-Fi, three of five runs showed only 2 to 5 of their 10 flicks, and no cause has been found.
 
 Run on that Samsung by its Wi-Fi serial with its cable in, by the window suite kept behind, 12 of 12 at load 4: a picture, a tap, typing, a long press, a drag, Home, Recents, Back, turning it, a screenshot, the Inspector, its agent killed and back, a close and a new open. One phone has one agent whichever way it is reached.
 

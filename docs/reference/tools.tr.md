@@ -115,7 +115,7 @@ Ayrıntılar: [Bir işlem ne yanıtlar](#bir-işlem-ne-yanıtlar), [Adımlar, ha
 | `transfer_files` | Bu Mac ile cihaz arasında dosya taşır: bir uygulamanın verisini dışarı ya da içeri, fotoğraf ve videoları galeriye | **`action`**: `pull`, `push`, `media`; **`path`**; `app`                                                                                                                                                                                                                        |
 | `send_push`      | Uygulamaya bir push bildirimi gönderir; `type` verilmezse bu cihazın neleri aldığını söyler                        | `app`; `type`; `title`; `body`; `image`; `data`; `payload`; `read`: `diff` (varsayılan), `full`, `none`                                                                                                                                                                         |
 
-Ayrıntılar: [Önce kişiye sorulanlar](#önce-kişiye-sorulanlar), [Push bildirimleri](#push-bildirimleri), [Bağlantılar](#bağlantılar), [Bellek uyarıları, sallamalar, fotoğraflar ve arka planda bir son](#bellek-uyarıları-sallamalar-fotoğraflar-ve-arka-planda-bir-son).
+Ayrıntılar: [Önce kişiye sorulanlar](#önce-kişiye-sorulanlar), [Push bildirimleri](#push-bildirimleri), [Bağlantılar](#bağlantılar), [Bellek uyarıları, sallamalar, fotoğraflar ve arka planda sonlandırılan bir uygulama](#bellek-uyarıları-sallamalar-fotoğraflar-ve-arka-planda-sonlandırılan-bir-uygulama).
 
 ### Denetim
 
@@ -281,7 +281,7 @@ Yalnızca metin katlanır: `selector` ile `read_screen`, seçiciler, ref'ler, di
 
 ### Android'de native view'lar
 
-Android'de `views` ile `read_screen`, öndeki aktiviteyi sistemin ondan aldığı kendi dökümünden okur; her derlemede, hata ayıklanabilir olsun olmasın, probe olmadan: her görünümün sınıfı, dokunma birimlerinde yeri, kaynak kimliği ve bayrakları (`clickable`, `disabled`, `focused`, `selected`, `gone`, `invisible`), ekranın çoğunu çizen çatının altında. Sözcük vermez: onları `read_screen` okur.
+Android'de `views` ile `read_screen`, öndeki aktiviteyi sistemin ondan aldığı kendi dökümünden okur; her derlemede, hata ayıklanabilir olsun olmasın, probe olmadan: her görünümün sınıfı, dokunma birimlerinde yeri, kaynak kimliği ve bayrakları (`clickable`, `disabled`, `focused`, `selected`, `gone`, `invisible`), başlarında ekranın çoğunu çizen çatının adıyla. Sözcük vermez: onları `read_screen` okur.
 
 Yanıt, görünümlerin dışarıda bıraktıklarıyla biter: gösterdiğinden fazlasını tutan bir kaydırma görünümünün ya da görünüm sayfalayıcının altında yerler onun yerleşiminin yerleridir, çünkü kaydırması görünümlerini değil çizdiğini taşır; aktivitenin üstündeki bir diyalog ya da menü kendi penceresidir ve orada yoktur; küçültülmüş bir derlemenin küçültücüsünün adlandırdığı görünümler ekranı tutuyorsa, R8'in Flutter'ınkini `V4.v`, Compose'unkini `p3` diye adlandırdığı gibi, framework'ü uygulamanın paketinde taşıdığı söyler: Flutter'ın ya da React Native'in motoru (`libflutter.so`, `libreactnative*.so`, `libhermes*.so`), ya da yeniden adlandırılmış bir görünümün Compose'unki gibi odak alıp çizdiği yerde Compose. Not, etiketin neye dayandığını söyler; paket bir şey söylemiyorsa etiket Android views olarak kalır ve not, orada neyin çizdiğini hiçbir adın söylemediğini belirtir.
 
@@ -295,7 +295,7 @@ Ana iş parçacığı sisteme 5 s içinde yanıt vermeyen bir uygulama `TIMEOUT`
 
 Bir simulator'da `views` ile `read_screen`, uygulamanın görünümlerini, `probe` ile `launch_app`'in uygulamaya koyduğu ve bu aracın uygulamayı sonraki başlatışlarının oturum bitene dek taşıdığı görünüm probe'uyla okur; bir okuma yalnızca probe'a sorar ve uygulamayı asla yeniden başlatmaz.
 
-Okumaların aldığı uygulamaya, probe'un tutulduğu her uygulamaya ve öndeki uygulamaya aynı anda sorar ve ekrandakinin görünümlerini verir: her görünümün sınıfı, çözülmüş bir Swift adıyla, dokunma birimlerinde yeri, erişilebilirlik kimliği ve etiketi, metni (bir etiketin, bir alanın, bir düğmenin başlığı; asla bir güvenli alanınki ya da onun içindeki herhangi bir şeyinki değil), ne kadar saydam olduğu ve değiştiği yerde görünüm denetleyicisi, ekranın çoğunu çizen çatının altında, SwiftUI UIKit'ten ayrılarak. SwiftUI kendi metnini ve şekillerini kendisi çizer, bu yüzden bir SwiftUI ekranının az görünümü ve daha az sözcüğü olur: barındıran görünümleri, üzerine kurulduğu UIKit görünümleri, bir alan, bir liste ya da bir gezinme çubuğu gibi, ve uygulamanın UIKit olarak verdikleri.
+Okumaların aldığı uygulamaya, probe'un tutulduğu her uygulamaya ve öndeki uygulamaya aynı anda sorar ve ekrandakinin görünümlerini verir: her görünümün sınıfı, çözülmüş bir Swift adıyla, dokunma birimlerinde yeri, erişilebilirlik kimliği ve etiketi, metni (bir etiketin, bir alanın, bir düğmenin başlığı; asla bir güvenli alanınki ya da onun içindeki herhangi bir şeyinki değil), ne kadar saydam olduğu ve değiştiği yerde görünüm denetleyicisi, başlarında ekranın çoğunu çizen çatının adıyla, SwiftUI UIKit'ten ayrılarak. SwiftUI kendi metnini ve şekillerini kendisi çizer, bu yüzden bir SwiftUI ekranının az görünümü ve daha az sözcüğü olur: barındıran görünümleri, üzerine kurulduğu UIKit görünümleri, bir alan, bir liste ya da bir gezinme çubuğu gibi, ve uygulamanın UIKit olarak verdikleri.
 
 Probe'u olmayan bir uygulamanın okunması `UNSUPPORTED` ile reddedilir; uygulamanın paketinin ne tuttuğunu söyler (Flutter, `Flutter.framework` ile; React Native, Hermes ya da `main.jsbundle` ile) ve ipucunda `launch_app restart:true probe:true` vardır; ana iş parçacığı 2 s içinde yanıt vermemiş bir uygulama `TIMEOUT` ile, iOS'un askıya aldığı, başka birinin arkasındaki bir uygulama da `APP_NOT_RUNNING` ile reddedilir.
 
@@ -667,7 +667,7 @@ Bir iPhone'da `devicectl device simulate biometrics`, `Device does not support a
 
 `keychain` `reset` bir simulator'ın anahtar zincirini boşaltır ve uygulamaların kaç öğe tuttuğunu deponun kendi satırlarından söyler; bu satırlar sonrasında boş olduğunu da kanıtlar. Sistemin kendi satırları kalır ve sayılmaz. Tek seferliktir: hiçbir şey onları geri getirmez.
 
-## Bellek uyarıları, sallamalar, fotoğraflar ve arka planda bir son
+## Bellek uyarıları, sallamalar, fotoğraflar ve arka planda sonlandırılan bir uygulama
 
 ### Bellek uyarıları
 
@@ -689,7 +689,7 @@ Bir simulator onları `simctl addmedia` ile alır ve yanıt Fotoğraflar'ın son
 
 Android'dekiler her biri yolu ve boyutuyla not edilir, `Pictures/appdyno`'ya gönderilir ve MediaProvider'ın kendi `scan_file`'ı ile taranır, çünkü gönderilen bir dosya taranana dek kitaplığın göremeyeceği yerde kalır; yanıt kitaplığın sonra onlardan kaçını listelediğini sayar. `restore` ve oturumun sonu tam olarak bunları, her birini yalnızca gönderildiği boyuttayken siler ve o zamandan beri değişeni adıyla söyler. Bir iPhone reddeder.
 
-### Arka planda bir son
+### Arka planda sonlandırılan bir uygulama
 
 `background` ile `manage_app stop`, bir uygulamayı sistemin bellek için arka plandaki bir uygulamayı sonlandırdığı gibi sonlandırır: ana ekran, uygulama önden çıktıktan sonra durumunu kaydetmesi için 1,5 s, sonra süreci öldürülür; bir simulator'da SIGKILL ile, Android'de `am kill` ile, bir iPhone'da `devicectl device process terminate --kill` ile, ki henüz bir telefonda çalıştırılmadı. Hâlâ çalışan bir süreç reddedilir, çünkü `am kill` yalnızca sistemin sonlandırabileceği bir süreci sonlandırır ve bir ön plan hizmeti bir süreci ayakta tutar.
 

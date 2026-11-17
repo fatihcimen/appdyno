@@ -28,5 +28,5 @@ lint'in nasıl çalıştığını ve bir kuralın bir satır için ne zaman kapa
   mock olarak okunur, hiçbir zaman portunun tipinden değil.
 - Bir şablon string'ler ve sayılar tutar: bir undefined, olamayacağı yerde daraltmayla gider; `String(x)` ise metnin
   kastedildiği yerde onu korur. vitest'in asimetrik eşleştiricileri `any` tiplidir: bir nesnenin içindeki `as unknown` olur.
-- Bir birleşimdeki `void`, `undefined`'dır; hiçbir şey yanıtlamayan bir fonksiyon `Promise<undefined>` der, çünkü TypeScript
-  `void` için `return` kabul etmez.
+- Bir birleşimdeki `void`, `undefined`'dır; hiçbir şey yanıtlamayan bir fonksiyon `Promise<undefined>` der: TypeScript,
+  `void`'den istemediği gibi ondan da bir `return` istemez.

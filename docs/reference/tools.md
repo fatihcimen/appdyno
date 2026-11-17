@@ -115,7 +115,7 @@ More: [What an action answers](#what-an-action-answers), [Steps, gestures, apps 
 | `transfer_files` | Moves files between this Mac and the device: an app's data out or in, and photos or videos into the gallery | **`action`**: `pull`, `push`, `media`; **`path`**; `app`                                                                                                                                                                                                                  |
 | `send_push`      | Sends the app a push notification; with no `type`, says what this device takes                              | `app`; `type`; `title`; `body`; `image`; `data`; `payload`; `read`: `diff` (default), `full`, `none`                                                                                                                                                                      |
 
-More: [What asks the person first](#what-asks-the-person-first), [Push notifications](#push-notifications), [Links](#links), [Memory warnings, shakes, photos and an end in the background](#memory-warnings-shakes-photos-and-an-end-in-the-background).
+More: [What asks the person first](#what-asks-the-person-first), [Push notifications](#push-notifications), [Links](#links), [Memory warnings, shakes, photos and an app ended in the background](#memory-warnings-shakes-photos-and-an-app-ended-in-the-background).
 
 ### Checks
 
@@ -281,7 +281,7 @@ Only the text is folded: `read_screen` with `selector`, selectors, refs, diffs, 
 
 ### Native views on Android
 
-`read_screen` with `views` on Android reads the activity in front from the system's own dump of it, of any build, debuggable or not, with no probe: each view's class, its place in tap units, its resource id and its flags (`clickable`, `disabled`, `focused`, `selected`, `gone`, `invisible`), under the framework that draws most of the screen. It gives no words: `read_screen` reads them.
+`read_screen` with `views` on Android reads the activity in front from the system's own dump of it, of any build, debuggable or not, with no probe: each view's class, its place in tap units, its resource id and its flags (`clickable`, `disabled`, `focused`, `selected`, `gone`, `invisible`), headed by the framework that draws most of the screen. It gives no words: `read_screen` reads them.
 
 The answer ends with what the views leave out: under a scroll view or a view pager that holds more than it shows, places are its layout's, as its scroll moves what it draws and not its views; a dialog or a menu over the activity is a window of its own and is not there; and where views a minified build's shrinker named hold the screen, as R8 names Flutter's `V4.v` and Compose's `p3`, the framework is told by what the app's package ships: Flutter's or React Native's engine (`libflutter.so`, `libreactnative*.so`, `libhermes*.so`), or Compose where a renamed view takes the focus and draws as Compose's own does. The note says what the label goes by; where the package tells nothing, the label stays Android views and the note says that no name tells what draws there.
 
@@ -295,7 +295,7 @@ An app whose main thread does not answer the system within 5 s is refused with `
 
 `read_screen` with `views` on a simulator reads the app's views by the view probe, which `launch_app` with `probe` puts in the app and this tool's later launches of it keep until the session ends; a read only asks the probe, and never starts the app again.
 
-It asks at once the app reads take, each app the probe is held in and the app in front, and gives the views of the one on the screen: each view's class, a Swift name demangled, its place in tap units, its accessibility identifier and label, its text (a label's, a field's, a button's title; never a secure field's, nor that of anything in one), how clear it is, and the view controller where it changes, under the framework that draws most of the screen, SwiftUI told from UIKit. SwiftUI draws its own text and shapes, so a SwiftUI screen has few views and fewer words: its hosting views, the UIKit views it is built on, as a field, a list or a navigation bar, and what the app gives as UIKit.
+It asks at once the app reads take, each app the probe is held in and the app in front, and gives the views of the one on the screen: each view's class, a Swift name demangled, its place in tap units, its accessibility identifier and label, its text (a label's, a field's, a button's title; never a secure field's, nor that of anything in one), how clear it is, and the view controller where it changes, headed by the framework that draws most of the screen, SwiftUI told from UIKit. SwiftUI draws its own text and shapes, so a SwiftUI screen has few views and fewer words: its hosting views, the UIKit views it is built on, as a field, a list or a navigation bar, and what the app gives as UIKit.
 
 A read of an app without the probe is refused with `UNSUPPORTED`, saying what the app's bundle holds (Flutter, by `Flutter.framework`; React Native, by Hermes or `main.jsbundle`), with `launch_app restart:true probe:true` in its hint; an app whose main thread has not answered within 2 s is refused with `TIMEOUT`, and one behind another, which iOS suspends, with `APP_NOT_RUNNING`.
 
@@ -450,7 +450,7 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | memory warning                       | a trim level above the app's                       | every app on it, one a call                                                                          | `devicectl` (not yet run on a phone)   |
 | shake                                | an emulator's accelerometer                        | yes                                                                                                  | no: only by hand                       |
 | photos and videos into the library   | pushed, scanned, taken out at `restore`            | `simctl addmedia`, no delete                                                                         | no                                     |
-| end in the background                | `am kill`                                          | SIGKILL of its process                                                                               | `devicectl` (not yet run on a phone)   |
+| app ended in the background          | `am kill`                                          | SIGKILL of its process                                                                               | `devicectl` (not yet run on a phone)   |
 
 An Android app that targets API 37 reaches this Mac, at `10.0.2.2` from an emulator, or the local network only with the `ACCESS_LOCAL_NETWORK` permission: without it, its requests hang, and `measure_performance snapshot` and `capture_network` count 0 bytes.
 
@@ -667,7 +667,7 @@ On an iPhone `devicectl device simulate biometrics` answers `Device does not sup
 
 `keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
 
-## Memory warnings, shakes, photos and an end in the background
+## Memory warnings, shakes, photos and an app ended in the background
 
 ### Memory warnings
 
@@ -689,7 +689,7 @@ A simulator takes them by `simctl addmedia`, and the answer counts what Photos t
 
 Android's are each written down by path and size, pushed into `Pictures/appdyno` and scanned by MediaProvider's own `scan_file`, as a pushed file stays out of the library's sight until it is scanned, and the answer counts how many of them the library then lists. `restore` and the session's end delete exactly those, each only while it has the size it was pushed with, and name any that changed. An iPhone refuses it.
 
-### An end in the background
+### An app ended in the background
 
 `manage_app stop` with `background` ends an app as the system ends one in the background for memory: home, 1.5 s once the app has left the front to save its state, then its process killed, by SIGKILL on a simulator, `am kill` on Android and `devicectl device process terminate --kill` on an iPhone, which has not been run on a phone yet. A process that still runs is refused, as `am kill` ends only a process the system may end, and a foreground service keeps one.
 

@@ -28,5 +28,5 @@ says how the lint runs, and when a rule may be turned off for a line.
   is, never off its port's type.
 - A template holds strings and numbers: an undefined goes by narrowing where it cannot be, and `String(x)` keeps the
   text where it is meant. vitest's asymmetric matchers are typed `any`: one inside an object is `as unknown`.
-- `void` in a union is `undefined`, and a function that answers nothing says `Promise<undefined>`, as TypeScript takes
-  no `return` for `void`.
+- `void` in a union is `undefined`, and a function that answers nothing says `Promise<undefined>`: TypeScript asks no
+  `return` of it, as it asks none of `void`.
