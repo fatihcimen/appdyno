@@ -12,9 +12,10 @@ on:
 permissions:
   contents: read
 
-# a newer push to a branch or a pull request leaves the run before it nothing to say
+# a newer push to a branch or a pull request leaves the run before it nothing to say; a release's gate, which calls this
+# for the same ref by hand or by its tag, is a run of its own and cancels no push's
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
