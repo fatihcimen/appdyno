@@ -130,6 +130,7 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Değişenler
 
+- iOS 27.2 ve Xcode 27.2 ile gerçek bir iPhone 13 Pro Max'te ve Android 16 ve HyperOS 3.0 ile gerçek bir Xiaomi REDMI 15C'de, telefon alan her suite ile test edildi: test edilen sürümlere bakın.
 - `NOT_FOUND` ya da `STALE` ile reddedilen bir dokunuş, bir yanıtın yaptığı gibi ekranı şimdiki haliyle içerir: son gösterilen ekrandan farkını ya da tamamını. Önceden bir sonraki denemeden önce bir `read_screen` çağrısı ve bir tur gerekiyordu. Başarısız olan bir `run_steps` çağrısı da ekranı aynı biçimde gösterir; önceden hep tamamını gösteriyordu, `read: full` yine öyle yapar. İkisinin ipucu da artık `read_screen`'e yollamaz.
 - Sunucunun yönergeleri, `launch_app`, `open_link` ve her işlemin ekranla yanıt verdiğini, yani `read_screen`'in hiçbir yanıtın ekranı göstermediği durum için olduğunu ve bilinen işlemlerin tek bir `run_steps` çağrısına, sonucun zaman aldığı yerde sonda `check_element` ile konduğunu söyler. Süresi dolan ve yanıtında ekran bulunan bir `check_element` beklemesi artık ekranı okumayı söylemez.
 - MCP üzerinde bir yanıtın yapılandırılmış içeriği, metninin söylediği her uyarıyı ve hiçbiri kalmadığında `warnings` alanını dışarıda bırakır: modele yalnızca yapılandırılmış içeriği veren bir istemci her uyarıyı iki kez okuyordu.
@@ -151,6 +152,8 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Düzeltilenler
 
+- `measure_performance` `launch`, `mode: hot` ya da `warm` ile, uygulamayı ancak sistem onu durdurduktan sonra yeniden başlatır: uygulamayı hâlâ duraklatmakta olan bir emulator'da `UNKNOWN` yanıtı verip hiçbir şey ölçmüyordu.
+- Android'de appdyno'nun geri koyduğu bir ekran dönüşü (`set_device` `restore` ile, bir flow'un sonunda ya da agent'ı bırakırken) otomatik döndürmeyi bulduğu gibi bırakır; bir dönüşten sonra kendi döndürme kilidini yazan bir telefonda da (HyperOS 3'lü bir Xiaomi REDMI 15C).
 - Android: öne getirilen bir uygulama, penceresi yerine kadar büyüdükten sonra yanıtlanır. Bir pencere boyundan küçük çizilirken, ekranın dışına taşarken ya da yeri olmayan node'larla kayarken bir okuma bekler; böylece hemen ardından ref ile yapılan bir tap doğru yere varır.
 - iOS: bir web formunun üstündeki klavye her dilde kapanır: üstündeki bar'ın Done'ı İngilizce sözcüğüyle değil, yeriyle bulunur.
 - iOS: scroll bar'lar nerede durursa dursun ekranın listesinden çıkarılır; her dilde tuttukları yüzdeyle tanınır.

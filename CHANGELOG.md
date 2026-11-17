@@ -130,6 +130,7 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Changed
 
+- Tested on a real iPhone 13 Pro Max with iOS 27.2 and Xcode 27.2, and on a real Xiaomi REDMI 15C with Android 16 and HyperOS 3.0, every suite that takes a phone: see the tested versions.
 - A touch refused as `NOT_FOUND` or `STALE` holds the screen as it is now, as an answer does: what differs from the screen shown last, or all of it. It took a `read_screen` call and a turn before the next try. A `run_steps` call that fails shows the screen the same way, where it always showed all of it; `read: full` still does. Neither hint sends to `read_screen` any more.
 - The server's instructions say that `launch_app`, `open_link` and every action answer with the screen, so `read_screen` is for when no answer has shown it, and that the actions already known go in one `run_steps` call, with `check_element` last where a result takes time. A `check_element` wait that runs out with the screen in its answer no longer says to read the screen.
 - Over MCP, an answer's structured content leaves out each warning its text says, and `warnings` where none is left: a client that hands a model the structured content alone read every warning twice.
@@ -151,6 +152,8 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Fixed
 
+- `measure_performance` `launch` with `mode: hot` or `warm` starts the app again only once the system has stopped it: on an emulator still pausing the app it answered `UNKNOWN` and measured nothing.
+- On Android, a turn of the screen that appdyno puts back, by `set_device` `restore`, at a flow's end or as its agent lets go, leaves auto-rotate as it was found, also on a phone that writes a rotation lock of its own after a turn (a Xiaomi REDMI 15C with HyperOS 3).
 - Android: an app brought to the front is answered once its window has grown to its place. A read waits while a window is drawn smaller than its size, sticks out of the display, or slides with nodes that have no place, so a tap by ref right after lands where it should.
 - iOS: the keyboard over a web form closes in any language: the Done of the bar over it is found by its place, not its English word.
 - iOS: scroll bars are left out of the screen's list wherever they stand, told by the percentage they hold, in any language.
