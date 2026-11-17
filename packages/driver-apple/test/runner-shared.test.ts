@@ -254,7 +254,8 @@ describe('a start that cannot come', () => {
     );
     const runner = new IosRunnerLauncher(UDID, { ...through(2), tunnels: () => tunnels });
     const { rpc } = await runner.connect();
-    await vi.waitFor(() => expect(readFileSync(heard, 'utf8')).toBe(told), { timeout: 5_000 });
+    // a loaded Mac can take seconds to start the stand-in xcodebuild's node: wait as long as the test may
+    await vi.waitFor(() => expect(readFileSync(heard, 'utf8')).toBe(told), { timeout: 25_000 });
     await runner.stop(rpc);
   });
 
