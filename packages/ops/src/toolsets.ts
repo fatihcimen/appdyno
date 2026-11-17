@@ -4,7 +4,8 @@ import type { Op } from './tool.js';
 /**
  * The tools in groups, each tool in one: a client that needs few of them lists only the groups it names, and its
  * catalog is that much shorter in every session. It is no permission: what a server may do is its policy's to say,
- * and run_steps, a command line and the library reach every tool whatever is listed.
+ * and a command line and the library reach every tool whatever is listed, as run_steps reaches every tool but itself
+ * and run_flow.
  */
 export const TOOLSETS = {
   core: [
