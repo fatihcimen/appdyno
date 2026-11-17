@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   Adb,
   androidProvider,
@@ -19,8 +19,9 @@ import { opsOn, SIM_FIXTURE, type Answer, type Call } from './helpers.js';
  * APPDYNO_ANDROID_SERIAL names: a phone's accelerometer takes no shake, and its library is a person's.
  *
  * A simulator that has once discarded the fixture's saved scene at a launch discards it at every launch until it boots
- * again (iOS 26.5): boot it anew where the kept value does not come back. This file stops the app on iOS only as the
- * system does, in the background, since a stop in front came before each simulator that began to discard it.
+ * again (iOS 26.5), and a stop in front came before each that began to: a sweep's keys suite, run just before, made one
+ * so. This file boots the simulator anew before it starts, and stops the app on iOS only as the system does, in the
+ * background.
  */
 const APP = 'dev.appdyno.fixture';
 const LIFECYCLE = 'appdyno-fixture://open/lifecycle';
@@ -73,7 +74,13 @@ const ON_SIMULATOR: Platform = {
   name: 'a simulator',
   serial: SIMULATOR,
   provider: () => simulatorProvider(),
-  ready: () => new Simctl().install(SIMULATOR, SIM_FIXTURE),
+  ready: async () => {
+    const simulators = simulatorProvider().virtual;
+    assert(simulators, 'the simulators');
+    await simulators.shutdown(SIMULATOR);
+    await simulators.boot(SIMULATOR);
+    await new Simctl().install(SIMULATOR, SIM_FIXTURE);
+  },
   stop: (call) => call('manage_app', { action: 'stop', background: true }),
   plainStop: false,
   back: (call) => call('open_link', { url: LIFECYCLE, read: 'none' }),
