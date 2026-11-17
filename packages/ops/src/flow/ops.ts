@@ -132,7 +132,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'run_flow',
       title: 'Record and replay a flow',
       description:
-        'Record your actions as a repeatable test, replayed with no model. record, your calls, stop (file: saves a .flow); save: the last recording; run (file; from: a step; iterations: a journey timed by step, for compare_performance); test (file or folder; to: a folder for its report): one verdict; export: Maestro YAML. params NAME=value: recorded, the value becomes ${NAME}; on run, its value. A one-off sequence: run_steps. Returns the steps, or each result.',
+        'Record your calls as a repeatable test, a .flow file replayed with no model: record, then stop to write it to file (or save it later); run replays file (from: a step; iterations: timed by step, for compare_performance); test: a file or folder to one verdict, its report in to; export: Maestro YAML. params NAME=value: recorded, a value becomes ${NAME}; on run, fills it. One-off calls: run_steps. Returns the steps, times or verdict.',
       input: z
         .object({
           action: z.enum(['record', 'stop', 'save', 'run', 'test', 'export']),

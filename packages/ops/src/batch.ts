@@ -96,7 +96,7 @@ export function stepsOp(
   return defineOp({
     name: 'run_steps',
     title: 'Run steps',
-    description: `Run known actions as one call: at most ${MAX_STEPS}, each { tool: a tool's name, ...its arguments }, as { tool: tap_screen, selector: { text: OK } }; any tool but run_steps and run_flow. Stops at the first failure, saying which and why. Returns every answer, images too; a step reads the screen only with read on it, or last. A saved sequence: run_flow.`,
+    description: `Run known actions as one call: at most ${MAX_STEPS}, each { tool: a tool's name, ...its arguments }, as { tool: tap_screen, selector: { text: OK } }; any tool but run_steps and run_flow. Stops at the first failure, saying which and why. Returns every answer, images too; a step reads the screen only with read on it, or last. As a test: run_flow.`,
     input: z
       .object({
         steps: z

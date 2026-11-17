@@ -162,16 +162,16 @@ More: [Performance](perf.md), and the guide [Measuring performance](../guides/pe
 
 ## Listing only some tools
 
-A client reads the whole list of tools in every session. A server started with `--toolsets`, or with `APPDYNO_TOOLSETS` in its environment, lists only the groups it names, with a comma between them, as `appdyno mcp --toolsets core,network,perf`. Left out, it lists every tool. A word that names no group is refused, and the server does not start. The sizes are characters of the list a client is sent; the whole list is 26,851.
+A client reads the whole list of tools in every session. A server started with `--toolsets`, or with `APPDYNO_TOOLSETS` in its environment, lists only the groups it names, with a comma between them, as `appdyno mcp --toolsets core,network,perf`. Left out, it lists every tool. A word that names no group is refused, and the server does not start. The sizes are characters of the list a client is sent; the whole list is 26,848.
 
 | group      | tools                                                                                                                                                                                           | size   |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `core`     | `list_devices`, `use_device`, `read_screen`, `take_screenshot`, `check_element`, `tap_screen`, `swipe_screen`, `type_text`, `press_key`, `run_steps`, `answer_alert`, `launch_app`, `open_link` | 10,074 |
+| `core`     | `list_devices`, `use_device`, `read_screen`, `take_screenshot`, `check_element`, `tap_screen`, `swipe_screen`, `type_text`, `press_key`, `run_steps`, `answer_alert`, `launch_app`, `open_link` | 10,113 |
 | `device`   | `manage_simulator`, `set_device`, `ask_person`, `show_mirror`                                                                                                                                   | 3,240  |
 | `apps`     | `manage_app`, `transfer_files`, `send_push`, `inspect_app`                                                                                                                                      | 3,645  |
-| `evidence` | `read_logs`, `check_screen`, `record_session`, `run_flow`                                                                                                                                       | 4,100  |
+| `evidence` | `read_logs`, `check_screen`, `record_session`, `run_flow`                                                                                                                                       | 4,081  |
 | `network`  | `capture_network`                                                                                                                                                                               | 2,247  |
-| `perf`     | `measure_performance`, `compare_performance`                                                                                                                                                    | 3,600  |
+| `perf`     | `measure_performance`, `compare_performance`                                                                                                                                                    | 3,577  |
 
 A group is a shorter list, not a permission. What a server may do is said by its `--allow-` flags. [The command line](cli.md) and [the library](library.md) reach every tool, whatever is listed, and `run_steps` every tool but `run_steps` and `run_flow`. The server's instructions name tools of every group, so a client that lists `core` alone may read of a tool it does not have.
 

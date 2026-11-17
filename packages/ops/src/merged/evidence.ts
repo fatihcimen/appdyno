@@ -30,7 +30,7 @@ export const checkScreen = ({ audit, visual }: Pick<Pieces, 'audit' | 'visual'>)
     name: 'check_screen',
     title: 'Check the whole screen',
     description:
-      'Check the whole screen. accessibility: an accessibility audit of contrast, touch targets, labels, reading order (types, maxIssues). visual: a visual regression test against the image name in dir (./appdyno-baselines), failing with CHECK_FAILED and a diff image past tolerance (percent of pixels); masks are left out. visual_baseline saves it. One element: check_element. Returns the issues or the difference.',
+      'Check the whole screen. accessibility: an accessibility audit of contrast, touch targets, labels, reading order (types, maxIssues). visual: a visual regression test against the image name in dir, failing with CHECK_FAILED and a diff image past tolerance (percent of pixels); masks are left out. visual_baseline saves it. One element: check_element; pixels: take_screenshot. Returns the issues or the difference.',
     input: z
       .object({
         check: z.enum(['accessibility', 'visual', 'visual_baseline']),

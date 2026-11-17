@@ -221,7 +221,7 @@ function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
     name: 'answer_alert',
     title: 'System alert',
     description:
-      "Read or answer the open system alert, as a permission prompt. No answer: its text and buttons. answer: a button's label, or in any language allow (the least it offers: once, else while using) or deny. The app's own dialogs: tap_screen. Returns the screen after.",
+      "Read or answer the open system alert, as a permission prompt; an app's own dialog: tap_screen. answer: a button's label to touch, or allow (the least: once, else while using) or deny, in any language. Returns its text and buttons, or the screen after; NOT_FOUND where none is open.",
     input: z.object({ answer: z.string().min(1).max(200).optional(), read: Read }).strict(),
     output: ActionOut,
     annotations: ACT,

@@ -10,7 +10,7 @@ export const readScreen = ({ screen, find }: Pick<Pieces, 'screen' | 'find'>) =>
     name: 'read_screen',
     title: 'Read screen',
     description:
-      'Read the screen as text. Returns each element of the accessibility tree as ref role "label" x,y flags; views: the native view hierarchy instead. selector: only its matches, with state, value and bounds. Needed only when no answer showed the screen: every action returns it. Pass or fail: check_element; pixels: take_screenshot. Like rows fold under a header; refs hold across scrolls. raw: every node, as data.',
+      'Read the screen as text. Returns each element of the accessibility tree as ref role "label" x,y flags; views: the native view hierarchy instead. selector: only its matches, with state, value and bounds. Assert: check_element; pixels: take_screenshot; audits, diffs: check_screen; web views: inspect_app. Like rows fold under a header; refs hold across scrolls. raw: every node, as data.',
     input: z.object({ ...find.input.shape, ...screen.input.shape }).strict(),
     annotations: READ,
     parts: [screen, find],
@@ -21,7 +21,7 @@ export const checkElement = ({ wait_for: wait, assert }: Pick<Pieces, 'wait_for'
   mergeOp({
     name: 'check_element',
     title: 'Check or wait for an element',
-    description: `Assert or wait for an element, touching nothing: check exists, absent, text (equals), enabled, checked, focused, moves; expect: false for the opposite. timeoutMs (at most ${MAX_WAIT_MS}) waits until it holds, in place of a sleep. Returns one line, or fails with CHECK_FAILED saying what it found. To look only: read_screen.`,
+    description: `Assert or wait for an element, touching nothing: check exists, absent, text (equals), enabled, checked, focused, moves; expect: false for the opposite. timeoutMs (at most ${MAX_WAIT_MS}) waits until it holds. Returns one line, or fails with CHECK_FAILED saying what it found. Whole screen: check_screen; look only: read_screen.`,
     input: z.object({ ...assert.input.shape, read: wait.input.shape.read }).strict(),
     annotations: READ,
     parts: [wait, assert],
