@@ -4,3 +4,10 @@ packages:
 # its postinstall only checks the binary its platform package already put in place
 allowBuilds:
   esbuild: false
+# patched versions of what the lock held: hono through the MCP SDK's HTTP transport, the rest through dev tools
+overrides:
+  hono: ^4.13.16
+  '@hono/node-server': ^2.1.6
+  tmp: ^0.2.6
+  'minimatch@>=7 <11.0.1': ^11.0.1
+  'glob@>=9 <14.0.2': ^14.0.2
