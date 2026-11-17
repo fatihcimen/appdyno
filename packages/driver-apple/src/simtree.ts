@@ -134,7 +134,11 @@ export function sameContent(a: Node[], b: Node[]): boolean {
   });
 }
 
-/** A scroll view's bars: told by their shape (RunnerCore's `scrollIndicators`). */
+/** A scroll bar's value: a percentage as the system's language writes it ("0%", "%0", "0 %", "٪٠"). */
+const PERCENT = /^(?:[%٪％]\s*\p{Nd}+|\p{Nd}+\s*[%٪％])$/u;
+const percentage = (s: string | undefined) => !!s && PERCENT.test(s.trim());
+
+/** A scroll view's bars: told by their shape and value (RunnerCore's `scrollIndicators`). */
 export function scrollIndicators(nodes: Node[]): number[] {
   const named = nodes.map(() => false);
   for (let i = nodes.length - 1; i >= 0; i--) {
@@ -142,12 +146,17 @@ export function scrollIndicators(nodes: Node[]): number[] {
     if ((n.id !== undefined || n.d !== undefined || named[i]) && n.p >= 0 && n.p < i)
       named[n.p] = true;
   }
+  const inScroller = (i: number): boolean => {
+    const p = must(nodes[i], 'a node').p;
+    return p >= 0 && p < i && (SCROLLERS.has(must(nodes[p], 'a parent').c) || inScroller(p));
+  };
   return nodes.flatMap((n, i) => {
     if (n.c !== 'Other' || n.id !== undefined || named[i] || n.p < 0) return [];
-    const p = must(nodes[n.p], 'a parent');
-    if (!SCROLLERS.has(p.c)) return [];
     const w = n.b[2] - n.b[0];
     const h = n.b[3] - n.b[1];
+    if (percentage(n.t) && ((w > 0 && w <= 40) || (h > 0 && h <= 40)) && inScroller(i)) return [i];
+    const p = must(nodes[n.p], 'a parent');
+    if (!SCROLLERS.has(p.c)) return [];
     const pw = p.b[2] - p.b[0];
     const ph = p.b[3] - p.b[1];
     const vertical = w > 0 && w <= 40 && h * 2 >= ph && Math.abs(p.b[2] - n.b[2]) <= 40;

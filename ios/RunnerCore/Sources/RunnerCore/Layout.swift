@@ -205,11 +205,27 @@ public func containerBars(_ nodes: [Node], screenW: Int, screenH: Int) -> [Int] 
 /// Containers that draw scroll indicators.
 private let scrollers: Set<String> = ["ScrollView", "Table", "CollectionView", "WebView", "TextView"]
 
+/// A scroll bar's value: a percentage as the system's language writes it ("0%", "%0", "0 %", "٪٠").
+func isPercentage(_ value: String?) -> Bool {
+    guard var text = value?.trimmingCharacters(in: .whitespaces) else { return false }
+    let signs: Set<Character> = ["%", "٪", "％"]
+    if let first = text.first, signs.contains(first) {
+        text.removeFirst()
+    } else if let last = text.last, signs.contains(last) {
+        text.removeLast()
+    } else {
+        return false
+    }
+    let digits = text.trimmingCharacters(in: .whitespaces)
+    return !digits.isEmpty && digits.unicodeScalars.allSatisfy { CharacterSet.decimalDigits.contains($0) }
+}
+
 /**
  * The scroll indicators XCUI reports as elements (a scroll view's bars, labelled "Vertical scroll bar, 2
- * pages" in the system's language): `Other` nodes with no identifier and nothing named inside, a thin
- * strip along a scroll container's right or bottom edge spanning most of it. Told by their shape, never their
- * words; they are no control of the app and only show while it scrolls.
+ * pages" in the system's language): `Other` nodes with no identifier and nothing named inside, thin, with a percentage
+ * for their value and inside something that scrolls (a bar over a tab bar, in a wrapper or in a link stands apart from
+ * its scroll view); or a thin strip along a scroll container's right or bottom edge spanning most of it. Told by their
+ * shape and value, never their words; they are no control of the app and only show while it scrolls.
  */
 public func scrollIndicators(_ nodes: [Node]) -> [Int] {
     // a node with a named or labelled descendant is the app's (a table's section index), never a bar
@@ -218,15 +234,25 @@ public func scrollIndicators(_ nodes: [Node]) -> [Int] {
         let p = nodes[index].parent
         if p >= 0 && p < nodes.count && p < index { named[p] = true }
     }
+    func inScroller(_ index: Int) -> Bool {
+        var child = index
+        while true {
+            let p = nodes[child].parent
+            guard p >= 0, p < child else { return false }
+            if scrollers.contains(nodes[p].type) { return true }
+            child = p
+        }
+    }
     let edge = 40, thin = 40
     return nodes.indices.filter { index in
         let node = nodes[index]
         guard node.type == "Other", node.id == nil, !named[index], node.parent >= 0, node.parent < nodes.count else {
             return false
         }
+        let w = node.right - node.left, h = node.bottom - node.top
+        if isPercentage(node.text), (w > 0 && w <= thin) || (h > 0 && h <= thin), inScroller(index) { return true }
         let p = nodes[node.parent]
         guard scrollers.contains(p.type) else { return false }
-        let w = node.right - node.left, h = node.bottom - node.top
         let vertical = w > 0 && w <= thin && h * 2 >= p.bottom - p.top && abs(p.right - node.right) <= edge
         let horizontal = h > 0 && h <= thin && w * 2 >= p.right - p.left && abs(p.bottom - node.bottom) <= edge
         return vertical || horizontal

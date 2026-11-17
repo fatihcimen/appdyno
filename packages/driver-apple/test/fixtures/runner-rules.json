@@ -922,6 +922,93 @@
         }
       ],
       "bars": [1]
+    },
+    {
+      "why": "told by a percentage for their value in any language, wherever they stand inside what scrolls: 117 pt over a sheet's bottom, in a wrapper, in a link, shortened by a keyboard; not a gauge, a bar with an id, one in nothing that scrolls, nor a value with digits apart",
+      "nodes": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 402, 874], "f": 1 },
+        { "p": 0, "w": 0, "c": "ScrollView", "b": [0, 62, 402, 874], "f": 1 },
+        {
+          "p": 1,
+          "w": 0,
+          "c": "Other",
+          "d": "Yatay sarma çubuğu, 1 sayfa",
+          "t": "%0",
+          "b": [62, 727, 340, 757],
+          "f": 1
+        },
+        { "p": 2, "w": 0, "c": "Other", "b": [65, 754, 337, 757], "f": 1 },
+        { "p": 1, "w": 0, "c": "Other", "id": "group", "b": [0, 136, 402, 414], "f": 1 },
+        {
+          "p": 4,
+          "w": 0,
+          "c": "Other",
+          "d": "Vertical scroll bar, 1 page",
+          "t": "0%",
+          "b": [369, 136, 399, 791],
+          "f": 1
+        },
+        { "p": 0, "w": 0, "c": "Table", "b": [0, 0, 402, 874], "f": 1 },
+        { "p": 6, "w": 0, "c": "Other", "b": [0, 345, 402, 394], "f": 1 },
+        { "p": 7, "w": 0, "c": "Link", "d": "What’s new", "b": [35, 350, 367, 384], "f": 1 },
+        {
+          "p": 8,
+          "w": 0,
+          "c": "Other",
+          "d": "Horizontal scroll bar, 1 page",
+          "t": "0 %",
+          "b": [35, 364, 367, 381],
+          "f": 1
+        },
+        { "p": 9, "w": 0, "c": "Other", "b": [-4, 378, 32, 381], "f": 1 },
+        { "p": 0, "w": 0, "c": "WebView", "b": [0, 0, 402, 874], "f": 1 },
+        {
+          "p": 11,
+          "w": 0,
+          "c": "Other",
+          "d": "شريط التمرير العمودي",
+          "t": "٪٠",
+          "b": [369, 62, 399, 466],
+          "f": 1
+        },
+        {
+          "p": 1,
+          "w": 0,
+          "c": "Other",
+          "d": "Battery",
+          "t": "45%",
+          "b": [100, 200, 300, 300],
+          "f": 1
+        },
+        {
+          "p": 1,
+          "w": 0,
+          "c": "Other",
+          "id": "progress",
+          "t": "50%",
+          "b": [20, 600, 380, 610],
+          "f": 1
+        },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "Other",
+          "d": "Upload",
+          "t": "%50",
+          "b": [20, 850, 380, 856],
+          "f": 1
+        },
+        {
+          "p": 1,
+          "w": 0,
+          "c": "Other",
+          "d": "Volume",
+          "t": "5 0%",
+          "b": [20, 620, 380, 630],
+          "f": 1
+        }
+      ],
+      "bars": [2, 5, 9, 12]
     }
   ],
   "containerBars": {
