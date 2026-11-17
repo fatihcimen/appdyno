@@ -398,6 +398,24 @@ describe('flow on the command line', () => {
       '--params',
       '["A=1","B=x=y"]',
     ]);
+    // every input of run_flow that takes a value takes the word after it, as --retries 2 and --tags smoke do
+    const kebab = (key: string) => `--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+    type Input = { safeParse: (value: unknown) => { success: boolean } };
+    const shape = must(opsFor(new ServerContext(DEFAULT_POLICY, [])).run_flow, 'run_flow').input
+      .shape as Record<string, Input>;
+    const valued = Object.entries(shape)
+      .filter(([key, type]) => !['action', 'file'].includes(key) && !type.safeParse(true).success)
+      .map(([key]) => kebab(key));
+    expect(valued).toEqual(expect.arrayContaining(['--retries', '--tags']));
+    for (const flag of valued)
+      expect(flowWords(['test', 'flows', flag, 'v']), flag).toEqual([
+        '--action',
+        'test',
+        '--file',
+        'flows',
+        flag,
+        'v',
+      ]);
     expect(flowWords(['save', 'a.flow', '--overwrite'])).toEqual([
       '--action',
       'save',
